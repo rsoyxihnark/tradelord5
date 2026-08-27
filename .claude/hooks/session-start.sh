@@ -22,18 +22,6 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
 fi
 
 DOTNET_DIR="$HOME/.dotnet"
-export DOTNET_CLI_TELEMETRY_OPTOUT=1
-export DOTNET_NOLOGO=1
-export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
-
-if [ ! -x "$DOTNET_DIR/dotnet" ]; then
-  curl -sSL --retry 3 --max-time 600 -o /tmp/dotnet-install.sh https://dot.net/v1/dotnet-install.sh
-  bash /tmp/dotnet-install.sh --channel 8.0 --install-dir "$DOTNET_DIR" --no-path
-  rm -f /tmp/dotnet-install.sh
-fi
-
-export DOTNET_ROOT="$DOTNET_DIR"
-export PATH="$DOTNET_DIR:$PATH"
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   {
@@ -44,9 +32,9 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   } >> "$CLAUDE_ENV_FILE"
 fi
 
-if dotnet restore src/TradeLord.csproj >/dev/null 2>&1 &&
-   dotnet restore mcm/TradeLord.MCM.csproj >/dev/null 2>&1; then
-  echo "dotnet $(dotnet --version) ready, packages restored - build both csproj before pushing"
+if [ -x "$DOTNET_DIR/dotnet" ]; then
+  echo "dotnet $("$DOTNET_DIR/dotnet" --version) ready - build both csproj before pushing"
 else
-  echo "dotnet $(dotnet --version) ready, but package restore failed - run dotnet restore and check the proxy"
+  echo "no .NET here yet - both csproj must still build clean before any push, so install it when code work starts:"
+  echo "  curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir \"\$HOME/.dotnet\" --no-path"
 fi
