@@ -9,19 +9,58 @@ namespace TradeLord
 {
     internal static class McmLoader
     {
+        private const int McmGeneration = 5;
+        private const int GenerationsAhead = 2;
+
+        private static string Named(int generation) => "MCMv" + generation;
+
         private static bool Loaded(string prefix)
         {
             return AppDomain.CurrentDomain.GetAssemblies()
                 .Any(a => (a.GetName().Name ?? "").StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
         }
 
+        private static string GenerationOf(string assemblyName)
+        {
+            string name = assemblyName ?? "";
+            if (!name.StartsWith("MCMv", StringComparison.OrdinalIgnoreCase)) return null;
+            int end = 4;
+            while (end < name.Length && char.IsDigit(name[end])) end++;
+            return end > 4 ? name.Substring(0, end) : null;
+        }
+
+        private static string Detect()
+        {
+            string other = null;
+            foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                string generation = GenerationOf(a.GetName().Name);
+                if (generation == null) continue;
+                if (string.Equals(generation, Named(McmGeneration), StringComparison.OrdinalIgnoreCase))
+                    return generation;
+                if (other == null) other = generation;
+            }
+            if (other != null) return other;
+            for (int g = McmGeneration; g <= McmGeneration + GenerationsAhead; g++)
+                try { if (Assembly.Load(Named(g)) != null) return Named(g); }
+                catch { }
+            return null;
+        }
+
         internal static void TryLoad()
         {
-            bool mcm = Loaded("MCMv5");
-            if (!mcm) { try { mcm = Assembly.Load("MCMv5") != null; } catch { } }
-            if (!mcm)
+            string found = Detect();
+            if (found == null)
             {
                 Log.Write("MCM not detected - running on built-in defaults");
+                return;
+            }
+            if (!string.Equals(found, Named(McmGeneration), StringComparison.OrdinalIgnoreCase))
+            {
+                Log.Write("MCM is installed, but this build of TradeLord was made against " + Named(McmGeneration) +
+                          " and the game has loaded " + found + " - TradeLord runs on built-in defaults. Trading is " +
+                          "unaffected; only the settings screen is missing. Update TradeLord to a build made for " +
+                          found + ", or run the " + Named(McmGeneration) + " line of MCM alongside it.");
                 return;
             }
 
