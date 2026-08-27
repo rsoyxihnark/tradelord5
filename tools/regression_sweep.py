@@ -7,6 +7,7 @@ M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
 PROJ = [io.open(f, encoding='utf-8').read() for f in
         ['src/TradeLord.csproj', 'mcm/TradeLord.MCM.csproj']]
+PREFAB = io.open('TradeLord/GUI/Prefabs/TradeLordPanel.xml', encoding='utf-8').read()
 
 def panel_columns():
     import xml.etree.ElementTree as ET
@@ -950,7 +951,7 @@ chk("1.6.7", "the panel's own pin list, not the map's marker state, decides what
 
 chk("1.6.8", "the map button reserves the mouse over the button, not over the map around it",
     (lambda b: "m.x >= 0.90f" in b and "m.y >= 0.46f && m.y <= 0.54f" in b)
-    (method_body(S['Panel.cs'], "private static void UpdateIdleInput")))
+    (method_body(S['Panel.cs'], "private static bool OverAssumedBounds")))
 chk("1.6.8", "the food reserve is spent only on goods the sell rules would actually move",
     (lambda b: b.index("why = Block.NotTradable; return false;")
              < b.index("foodKeep[item] = reserved - keepCount;"))
@@ -961,6 +962,19 @@ chk("1.6.8", "another mod handles its own notification before TradeLord may hold
 
 chk("1.6.9", "every setting name, hint and group heading carries a translation marker",
     every_setting_line_is_translatable())
+
+chk("1.6.10", "the button's own measured size decides the reserved region, so it holds at any aspect ratio",
+    (lambda b: "Screen.RealScreenResolutionWidth" in b and "button.ScaledSuggestedWidth" in b
+           and "button.ScaledMarginRight" in b and "0.90f" not in b)
+    (method_body(S['Panel.cs'], "private static bool OverButtonBounds")))
+chk("1.6.10", "the prefab carries the id the panel looks the button up by",
+    'Id="TradeLordMapButton"' in PREFAB and 'MapButtonId = "TradeLordMapButton"' in S['Panel.cs'])
+chk("1.6.10", "the button still sits flush right and centred, which is what the reserved region assumes",
+    re.search(r'Id="TradeLordMapButton"[\s\S]{0,400}?HorizontalAlignment="Right"', PREFAB) is not None and
+    re.search(r'Id="TradeLordMapButton"[\s\S]{0,400}?VerticalAlignment="Center"', PREFAB) is not None)
+chk("1.6.10", "an unreadable button falls back to the old region instead of reserving nothing",
+    "return OverAssumedBounds(m);" in method_body(S['Panel.cs'], "private static bool OverButtonBounds") and
+    "_mapButton = null;" in method_body(S['Panel.cs'], "internal static void Cleanup"))
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
