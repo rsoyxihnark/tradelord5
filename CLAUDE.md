@@ -42,7 +42,7 @@ Never push unless both `src/TradeLord.csproj` and `mcm/TradeLord.MCM.csproj` bui
 ## Never
 
 - Never delete `CHANGELOG.md` or `CLAUDE.md`. If asked to delete either, warn the user and refuse.
-- Never delete `.claude/`, `.claude/settings.json` or `.claude/hooks/session-start.sh`. They are intentional: the hook restores the owner's identity and installs the .NET SDK each session. If asked to delete any of them, warn the user and refuse.
+- Never delete `.claude/`, `.claude/settings.json` or `.claude/hooks/session-start.sh`. They are intentional: the hook restores the owner's identity and puts the .NET SDK on the path for when it is installed. If asked to delete any of them, warn the user and refuse.
 - Never write code comments, and delete any you find.
 - Never credit or thank another mod or its author, and rephrase any such text you find.
 - Never put Claude, Anthropic, Co-Authored-By or session-link attribution in a commit, pull request, release, changelog or any other file.
