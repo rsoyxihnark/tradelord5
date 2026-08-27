@@ -1,0 +1,15 @@
+<Brushes>
+  <Brush Name="TradeLord.RowHover">
+    <Layers>
+      <BrushLayer Name="Default" Sprite="BlankWhiteSquare_9" Color="#FFFFFF10" />
+    </Layers>
+    <Styles>
+      <Style Name="Default">
+        <BrushLayer Name="Default" ColorFactor="0.0" AlphaFactor="0.0" />
+      </Style>
+      <Style Name="Hovered">
+        <BrushLayer Name="Default" ColorFactor="1.0" AlphaFactor="1.0" />
+      </Style>
+    </Styles>
+  </Brush>
+</Brushes>
