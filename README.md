@@ -57,7 +57,7 @@ you cannot change them in game.
 |---|---|
 | Game | Built and tested against Bannerlord **1.4.7**. See [Game versions](#game-versions). |
 | Harmony | **Required.** The mod will not load without `Bannerlord.Harmony`. |
-| MCM | **Optional**, but needed for the settings screen. |
+| MCM | **Optional**, but needed for the settings screen. This build talks to the **MCM 5** line; a newer line runs the mod on its defaults and says so in the log. |
 | War Sails | Optional. If installed, routes and travel estimates account for sea legs, and the menu entries appear in port menus too. |
 
 The settings screen needs **all three** of MCM, ButterLib and UIExtenderEx enabled. With a partial
@@ -229,6 +229,7 @@ just played. Start at the top.
 | `TradeLord v… loaded \| game …` | The mod loaded. If this line is missing, it did not. |
 | `ERROR in patching …` | One feature failed to attach. It names which. The rest of the mod continues. |
 | `MCM not detected - running on built-in defaults` | No settings screen. Trading still works. |
+| `MCM is installed, but this build of TradeLord was made against MCMv5 …` | A newer line of MCM is installed than this build talks to, so the settings screen cannot be registered. It names what it found. Trading still works; update TradeLord. |
 | `MCM is installed but its ButterLib/UIExtenderEx stack is not fully loaded` | Enable all three, or remove the MCM stack entirely. |
 | `herd guard: …` | Livestock buying is off because the party speed model was not where it should be. Selling is unaffected. |
 | `transaction direction changed on this game version` | TradeLord watched the gold move the wrong way and stopped immediately rather than continue. Report this one. |
