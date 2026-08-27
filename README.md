@@ -136,7 +136,10 @@ not get bored. If that is not what you want, these are the dials:
 - **Live world prices OFF** is the big one. In observed mode TradeLord only knows what you have
   personally seen, and forgets it after 45 days. This is the closest thing to an honest-merchant mode.
 - **Trade XP multiplier 0%** stops automated profit feeding your Trade skill at all. At the default
-  100%, profit from an automated pass earns Trade XP exactly as the same profit earned by hand would.
+  100%, an automated pass earns Trade XP on the profit it made. Goods you never bought — loot, spoils,
+  the contents of a raided village — are valued at the cheapest market you know of rather than at
+  nothing, so clearing out a pile of loot does not train Trade the way a real buy-low-sell-high run
+  does. Selling one below that value earns no profit and no XP.
 - **Minimum profit margin** up, **Max spend per visit** down, and **Travel ceiling** down all make it
   pickier and slower.
 - **Economy settling delay** keeps TradeLord out of a fresh campaign for a set number of days, since

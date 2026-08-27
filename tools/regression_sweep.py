@@ -977,8 +977,8 @@ chk("1.6.10", "an unreadable button falls back to the old region instead of rese
     "_mapButton = null;" in method_body(S['Panel.cs'], "internal static void Cleanup"))
 
 chk("1.6.11", "a purchase record with nothing left in it is dropped rather than saved forever",
-    "PruneSettledPurchases();" in method_body(S['Ledger.cs'], "private void Prune()") and
-    "rec.Count <= 0" in method_body(S['Ledger.cs'], "private void PruneSettledPurchases"))
+    re.search(r'PruneSettledPurchases\(\) =>\s*_purchases\?\.RemoveAll\(rec => rec == null \|\| '
+              r'rec\.ItemId == null \|\| rec\.Count <= 0\);', S['Ledger.cs']) is not None)
 chk("1.6.11", "the purchase index is rebuilt after a prune, never left pointing at dropped records",
     (lambda b: b.rindex("Reindex();") > b.rindex("PruneExpired();"))
     (method_body(S['Ledger.cs'], "public override void SyncData")))
@@ -988,7 +988,35 @@ chk("1.6.11", "every reader of a purchase record already requires units left, so
          method_body(S['Ledger.cs'], "public int PurchasedUnits"),
          method_body(S['Ledger.cs'], "public int GetCostBasis")]))
 chk("1.6.11", "shelf-life pruning stays independent of purchase pruning, so 'never expire' does not keep spent records",
-    "ObservationShelfLifeDays" not in method_body(S['Ledger.cs'], "private void PruneSettledPurchases"))
+    "ObservationShelfLifeDays" in method_body(S['Ledger.cs'], "private void PruneObservations") and
+    re.search(r'private void Prune\(\)\s*\{\s*PruneObservations\(\);\s*PruneSettledPurchases\(\);\s*\}',
+              S['Ledger.cs']) is not None)
+
+chk("1.6.12", "goods with no price paid are credited at what the cheapest market would have charged",
+    (lambda b: "BestBuy(item)" in b and "item.Value" in b)
+    (method_body(S['Trading.cs'], "internal static int UnpaidWorth")))
+chk("1.6.12", "a paid unit is still credited exactly as before, against what was paid for it",
+    "if (basis > 0) return proceeds - basis;" in method_body(S['Trading.cs'], "internal static int Credit"))
+chk("1.6.12", "an unpaid unit sold below that worth credits nothing rather than a loss",
+    "return gain > 0 ? gain : 0;" in method_body(S['Trading.cs'], "internal static int Credit"))
+chk("1.6.12", "the simulated pass and the real one credit profit through the same rule",
+    S['Trading.cs'].count("TradePolicy.Credit(") == 2 and
+    "TradePolicy.Credit(price, basis, unpaidWorth)" in S['Trading.cs'] and
+    "TradePolicy.Credit(proceeds, basis, unpaidWorth)" in S['Trading.cs'])
+chk("1.6.12", "what quick-sell agrees to sell is unchanged, since the decision still runs on the bare basis",
+    "if (!TradePolicy.ProfitAcceptable(basis, price))" in S['Trading.cs'] and
+    re.search(r'ProfitAcceptable\(int costBasis, int townSellPrice\) =>\s*costBasis > 0\s*\?\s*'
+              r'townSellPrice >= costBasis \* \(1f \+ Options\.Current\.MinProfitMargin\)\s*:\s*'
+              r'townSellPrice > 0;', S['Trading.cs']) is not None)
+chk("1.6.12", "loot is still held back from a poor market by the same best-market floor",
+    "if (Options.Current.PreferBestSellTown || basis == 0)" in S['Trading.cs'])
+chk("1.6.12", "that worth is looked up once per good, not once per unit sold",
+    "if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);" in S['Trading.cs'] and
+    S['Trading.cs'].count("TradePolicy.UnpaidWorth(") == 1)
+chk("1.6.12", "the tooltip and the sale summary now value an unbought good the same way",
+    "var best = BestBuy(item);" in method_body(S['Ledger.cs'], "public int GetCostBasis") and
+    "best.price > 0 ? best.price : item.Value" in method_body(S['Ledger.cs'], "public int GetCostBasis") and
+    "best.Item2 > 0 ? best.Item2 : item.Value" in method_body(S['Trading.cs'], "internal static int UnpaidWorth"))
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
