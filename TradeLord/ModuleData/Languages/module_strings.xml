@@ -143,7 +143,7 @@
 		<string id="TL324" text="What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Mounts and pack animals are never bought or sold by policy and this setting does not affect them; only an explicit always-sell entry can move one."/>
 		<string id="TL325" text="Never auto-trade unique or player-crafted items. Mounts and pack animals are protected by policy regardless of this setting; only an explicit always-sell entry can move those."/>
 		<string id="TL326" text="Locked items in the inventory screen are never auto-traded. Locks are matched as the game stores them, by item and modifier."/>
-		<string id="TL327" text="How profit is measured. 0: average of what you paid. 1: last price you paid. 2: cheapest known buy price."/>
+		<string id="TL327" text="How profit is measured, and so how much Trade XP a sale earns. 0: average of what you paid. 1: last price you paid. 2: cheapest known buy price. Goods you never bought have no price you paid, so every mode values those at the cheapest market you know of; selling one below that earns no profit and no Trade XP."/>
 		<string id="TL328" text="Also quick-sell weapons and armor of this tier and below. Locks and protections still apply."/>
 		<string id="TL329" text="Skip selling here when this market pays clearly less than the best known market. Goods you never bought have no cost basis, so the floor always applies to those; this setting controls whether it also applies to goods you bought, which the profit margin already covers."/>
 		<string id="TL330" text="With the above ON: sell here anyway if this market pays at least this fraction of the best known price."/>

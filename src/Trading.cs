@@ -271,6 +271,20 @@ namespace TradeLord
         internal static int CostBasis(ItemObject item) =>
             HasCostBasis(item) ? (LedgerBehavior.Instance?.GetCostBasis(item) ?? item.Value) : 0;
 
+        internal static int UnpaidWorth(ItemObject item)
+        {
+            if (item == null) return 0;
+            var best = LedgerBehavior.Instance?.BestBuy(item) ?? (null, 0);
+            return best.Item2 > 0 ? best.Item2 : item.Value;
+        }
+
+        internal static int Credit(int proceeds, int basis, int unpaidWorth)
+        {
+            if (basis > 0) return proceeds - basis;
+            int gain = proceeds - unpaidWorth;
+            return gain > 0 ? gain : 0;
+        }
+
         public static bool ProfitAcceptable(int costBasis, int townSellPrice) =>
             costBasis > 0
                 ? townSellPrice >= costBasis * (1f + Options.Current.MinProfitMargin)
@@ -713,10 +727,12 @@ namespace TradeLord
 
                     int unpaidFloor = 0;
                     bool floorKnown = false;
+                    int unpaidWorth = -1;
 
                     while (remaining > 0)
                     {
                         int basis = basisIsMarket || paidLeft > 0 ? paid : 0;
+                        if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);
                         int holdFloor = 0;
                         if (Options.Current.PreferBestSellTown || basis == 0)
                         {
@@ -745,7 +761,7 @@ namespace TradeLord
                         {
                             simTill -= price;
                             simGold += price;
-                            profit += price - basis;
+                            profit += TradePolicy.Credit(price, basis, unpaidWorth);
                             soldItems++;
                             remaining--;
                             if (paidLeft > 0) paidLeft--;
@@ -770,7 +786,7 @@ namespace TradeLord
                         if (paidLeft > 0) { paidLeft--; LedgerBehavior.Instance?.RecordSale(item.StringId, 1); }
                         _soldThisVisit.Add(item.StringId);
                         soldItems++;
-                        profit += proceeds - basis;
+                        profit += TradePolicy.Credit(proceeds, basis, unpaidWorth);
                         remaining--;
                         Tally(detail, item, 1, proceeds);
                     }

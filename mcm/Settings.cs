@@ -181,7 +181,7 @@ namespace TradeLord.Mcm
         public bool RespectLocks { get => Options.Current.RespectLocks; set { Options.Current.RespectLocks = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL227}Cost basis mode (0 avg paid, 1 last paid, 2 cheapest known)", 0, 2, Order = 9, RequireRestart = false,
-            HintText = "{=TL327}How profit is measured. 0: average of what you paid. 1: last price you paid. 2: cheapest known buy price.")]
+            HintText = "{=TL327}How profit is measured, and so how much Trade XP a sale earns. 0: average of what you paid. 1: last price you paid. 2: cheapest known buy price. Goods you never bought have no price you paid, so every mode values those at the cheapest market you know of; selling one below that earns no profit and no Trade XP.")]
         [SettingPropertyGroup("{=TL103}Action")]
         public int CostBasisMode { get => Options.Current.CostBasisMode; set { Options.Current.CostBasisMode = value; Options.Bump(); } }
 
