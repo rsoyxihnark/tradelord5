@@ -31,6 +31,7 @@ The release workflow publishes the commit body as the release notes, so a commit
 - Changelog entries, release notes and commit messages: one sentence per entry, matching the style already in the file.
 - Plain language a player understands. No internal mechanism, no asides, no restating the same point twice.
 - Never drop changelog bullet-point entry for being minor, internal or cosmetic.
+- Never mention the source checks in `tools/regression_sweep.py` in a changelog entry, release note or commit message - not their count, not their running total, not that any were added, rewritten or removed. They verify the mod, they are not part of it, so there is no player-facing change for the rule above to protect.
 - Start every commit subject with the version it ships in in square brackets, then the part of the mod it touches, then one plain-English clause saying what changed - `[1.6.8] Ledger: villages now say why they refuse to trade`, or `[no release]` when the change ships nothing to players - and leave the commit body exactly as it is, because the body is the published release note.
 - Full technical changelog detail belongs in chat, never in the repository.
 

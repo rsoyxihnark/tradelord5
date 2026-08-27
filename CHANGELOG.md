@@ -5,7 +5,6 @@
 - The TradeLord button on the campaign map no longer swallows map clicks well above and below the button itself.
 - The days of food you asked to keep are no longer partly spent on goods quick-sell was never going to sell.
 - Other mods now get first say over their own notifications while TradeLord is trading.
-- Added three internal checks. 211 in total.
 
 ## 1.6.7
 
@@ -13,14 +12,12 @@
 - Clicking a town in the ledger panel now pins it even when TradeLord is already marking that town as your best place to sell.
 - Quick-sell no longer spends part of your food reserve on goods it then passes over because you bought them here on this visit.
 - A trade message the game refuses to show no longer leaves the rest of that pass's messages repeating.
-- Added four internal checks. 208 in total.
 
 ## 1.6.6
 
 - Putting an item on the always-sell list no longer makes quick-buy purchase it against your category policy.
 - Loading your settings no longer switches quick-buy back on when your saved settings say it should be off.
 - The route lines in the ledger popup are now translatable, like every other line the mod shows.
-- Added three internal checks. 204 in total.
 
 ## 1.6.5
 
@@ -28,18 +25,15 @@
 - The ledger panel now reopens instantly within the same game hour, and the Refresh button rescans whenever you want fresh numbers.
 - Trade messages left over from a campaign you have closed no longer appear once you are back at the main menu.
 - A damaged never-sell, always-sell or never-buy list in the settings file no longer stops trading outright.
-- Added four internal checks. 201 in total.
 
 ## 1.6.4
 
 - TradeLord now warns you in red when your cargo is full, both as you walk into a market and as you leave it, instead of quietly buying nothing.
 - Restored the working-notes file to the repository; nothing that ships with the mod changed.
-- Added three internal checks. 197 in total.
 
 ## 1.6.3
 
 - A release whose commit body is blank is now stopped before it publishes, instead of going out with an empty description as 1.6.1 did.
-- Rewrote one internal check to run that guard on any build machine rather than just look for it. 194 in total.
 
 ## 1.6.2
 
@@ -50,13 +44,11 @@
 - Asking the ledger what a good cost when it has never seen that good now answers instead of faulting.
 - Tidied the layout of the two trading passes; they behave exactly as before.
 - Removed the working-notes file from the repository; nothing that ships with the mod changed.
-- Added six internal checks. 194 in total.
 
 ## 1.6.1
 
 - The Trade XP a trade earns is now reported in amber, right after the sold and bought lines instead of before them.
 - Raised the default gold reserve from 100 to 300, enough for two bribes for safe passage and a wage payment. Your own setting is unchanged.
-- Added four internal checks. 188 in total.
 
 ## 1.6.0
 
@@ -64,8 +56,6 @@
 - Ending a campaign no longer leaves leftover trade state behind for the next one.
 - Rewrote every settings description in plain English.
 - The panel and the ledger popup now say "resale safety factor", the same name the settings screen uses, instead of "resale haircut".
-- Rewrote the internal check names in plain English and settled on one spelling throughout.
-- Added three internal checks covering the notification fix. 184 in total.
 - Added this changelog.
 - Added zip files and generated release notes to the ignore list.
 
@@ -75,27 +65,23 @@
 - Fixed the panel's workshop board listing every workshop in Calradia even with live world prices switched off; it now lists your own.
 - Renamed the panel's "Total profit" line to "TradeLord profit", which is what it actually counts.
 - Removed the mentions of other trade mods from the settings hints.
-- Added four internal checks. 181 in total.
 
 ## 1.5.10
 
 - Fixed a town with no price for a good being called the cheapest place to buy it, because a missing price read as 0 and 0 sorts cheapest.
 - Fixed the log setup being able to stop the whole mod loading if your Documents folder path could not be built.
 - Moved the build onto checkout v7, setup-dotnet v6 and upload-artifact v7, off the retired Node 20 runtime the old versions needed. The compiler and the DLLs are unchanged.
-- Added two internal checks and rewrote one. 177 in total.
 
 ## 1.5.9
 
 - Fixed a town pinned in the ledger panel not being unpinnable after you reloaded the campaign.
 - Fixed the same problem letting the automatic marker delete a pin you had placed by hand.
-- Added one internal check. 175 in total.
 
 ## 1.5.8
 
 - Fixed the ledger panel having no translatable text at all, so players on any other language got an English panel.
 - Fixed the tooltip's "Profit: +N%", "Stock: N" and "~N days" labels not being translatable.
 - Every line the mod shows now carries a translation marker and ships in the language file, so the whole mod can be translated or forked without touching the source.
-- Added three internal checks. 174 in total.
 
 ## 1.5.7
 
@@ -115,14 +101,12 @@
 - A failed panel setup is now retried twice more before being given up on.
 - A panel hotkey the game cannot name is now reported in the log instead of silently becoming T.
 - Fixed the cargo marker picking the first town it scanned even when the cargo was worth nothing anywhere.
-- The internal check suite lost the eleven checks that held the documentation to the repository; four were replaced with source-only equivalents. 169 in total.
 
 ## 1.5.5
 
 - Fixed a dry run blocking the real trade that followed it in the same visit.
 - Fixed the best-market floor never reaching the loot it exists to protect.
 - Fixed a mixed stack charging the looted units a cost they never had.
-- Added two internal checks and rewrote one. 166 in total.
 
 ## 1.5.4
 
@@ -131,7 +115,6 @@
 - The panel now marks which routes it could not price unit by unit.
 - Fixed an English footnote sitting in an otherwise translated dialog.
 - Removed every comment from the C# sources and the build workflow.
-- Added four internal checks. 164 in total.
 
 ## 1.5.3
 
@@ -139,7 +122,6 @@
 - Corrected the README's count of releases and the version it named.
 - Corrected the Nexus description of what the four Harmony patches do.
 - Corrected a wrong check count printed in the 1.5.2 notes.
-- Added twelve internal checks that hold the written pages to the actual repository.
 - Noted that all four wrong numbers were the same failure: a fact written by hand that nothing verified.
 
 ## 1.5.2
@@ -149,7 +131,6 @@
 - Fixed the panel and the tooltip quoting different prices for the same shelf.
 - Removed two fields from the internal price quote that nothing ever read.
 - Fixed a release being lost when the publish step timed out.
-- Added seven internal checks and rewrote one. 148 in total.
 
 ## 1.5.1
 
@@ -158,9 +139,7 @@
 - Fixed the confidence score partly measuring two of the game's own price functions disagreeing with each other.
 - Fixed the "nothing traded" message usually naming the wrong reason, because loot in your inventory drowned out the real one.
 - Fixed two settings sharing a position with two others in the Action group.
-- Fixed the internal check suite stopping early instead of reporting a failure and carrying on.
 - The quiet no-trade log line no longer repeats itself at every town gate.
-- Added five internal checks. 140 in total.
 
 ## 1.5.0
 
@@ -169,7 +148,6 @@
 - When a pass trades nothing, it now says which rule stopped it.
 - Food, smithing materials and livestock each take a policy now - ignore, sell only, buy only, or buy and sell - instead of a plain on/off switch.
 - Added the mod's menu entries to the War Sails port menus.
-- Added twenty-one internal checks and rewrote seven. 135 in total.
 
 ## 1.4.3
 
@@ -178,7 +156,6 @@
 - The cost basis now asks the same livestock question the rest of the mod asks.
 - Fixed Trade XP collapsing to almost nothing on goods you had not bought.
 - The best-market floor now always guards goods with no cost basis, replacing a cost the mod used to invent for them.
-- Added six internal checks and rewrote two. 112 in total.
 
 ## 1.4.2
 
@@ -213,7 +190,6 @@
 - Buying a ship now clears both travel caches at once instead of leaving land-only distances in place for up to an hour.
 - Fixed prices going stale after a manual trade in the vanilla trade screen, the same way they did after the mod's own trades.
 - Fixed the last price paid being rounded down where the average paid is rounded properly.
-- Added a check that every panel display element matches something in the code. 94 internal checks.
 
 ## 1.3.33
 
@@ -221,7 +197,6 @@
 - Prices are now refreshed after the mod's own trading moves them, instead of the panel and tooltips quoting stale numbers for the rest of the hour.
 - Renamed "Protect mounts, unique and crafted items" to "Protect unique and crafted items", because mounts are protected regardless of the setting.
 - Removed the leftover chunk-size constant and the two lines that could no longer run.
-- Added a check that every settings change clears the caches. 89 internal checks.
 
 ## 1.3.32
 
