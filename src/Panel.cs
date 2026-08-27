@@ -373,7 +373,7 @@ namespace TradeLord
         private static void UpdateIdleInput(bool buttonOn)
         {
             Vec2 m = Input.MousePositionRanged;
-            bool wantMouse = buttonOn && m.x >= 0.90f && m.y >= 0.42f && m.y <= 0.58f;
+            bool wantMouse = buttonOn && m.x >= 0.90f && m.y >= 0.46f && m.y <= 0.54f;
             if (wantMouse == _idleMouseActive) return;
             _idleMouseActive = wantMouse;
             if (wantMouse)

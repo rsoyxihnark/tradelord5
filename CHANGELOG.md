@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.8
+
+- The TradeLord button on the campaign map no longer swallows map clicks well above and below the button itself.
+- The days of food you asked to keep are no longer partly spent on goods quick-sell was never going to sell.
+- Other mods now get first say over their own notifications while TradeLord is trading.
+- Added three internal checks. 211 in total.
+
 ## 1.6.7
 
 - The Trade XP message now names its number for what it is: the denars of profit credited to your Trade skill.
