@@ -751,7 +751,7 @@ chk("1.5.6", "expired observations are pruned on both save and load",
     method_body(S['Ledger.cs'], "public override void SyncData").count("PruneExpired();") == 2 and
     "if (!dataStore.IsLoading) PruneExpired();" in S['Ledger.cs'] and
     "if (dataStore.IsLoading) PruneExpired();" in S['Ledger.cs'] and
-    "if (shelf <= 0f || _ledger == null) return;" in method_body(S['Ledger.cs'], "private void Prune"))
+    "if (shelf <= 0f || _ledger == null) return;" in method_body(S['Ledger.cs'], "private void PruneObservations"))
 chk("1.5.6", "the message filter is armed only around the SellItemsAction call",
     len(re.findall(r'OpenTransaction\(\);\s*try \{ SellItemsAction\.Apply\([^)]*\); \}\s*'
                    r'finally \{ CloseTransaction\(\); \}', S['Trading.cs'])) == 2 and
@@ -975,6 +975,20 @@ chk("1.6.10", "the button still sits flush right and centred, which is what the 
 chk("1.6.10", "an unreadable button falls back to the old region instead of reserving nothing",
     "return OverAssumedBounds(m);" in method_body(S['Panel.cs'], "private static bool OverButtonBounds") and
     "_mapButton = null;" in method_body(S['Panel.cs'], "internal static void Cleanup"))
+
+chk("1.6.11", "a purchase record with nothing left in it is dropped rather than saved forever",
+    "PruneSettledPurchases();" in method_body(S['Ledger.cs'], "private void Prune()") and
+    "rec.Count <= 0" in method_body(S['Ledger.cs'], "private void PruneSettledPurchases"))
+chk("1.6.11", "the purchase index is rebuilt after a prune, never left pointing at dropped records",
+    (lambda b: b.rindex("Reindex();") > b.rindex("PruneExpired();"))
+    (method_body(S['Ledger.cs'], "public override void SyncData")))
+chk("1.6.11", "every reader of a purchase record already requires units left, so dropping a spent one changes nothing",
+    all("rec.Count > 0" in line for line in
+        [method_body(S['Ledger.cs'], "public bool HasPurchaseRecord"),
+         method_body(S['Ledger.cs'], "public int PurchasedUnits"),
+         method_body(S['Ledger.cs'], "public int GetCostBasis")]))
+chk("1.6.11", "shelf-life pruning stays independent of purchase pruning, so 'never expire' does not keep spent records",
+    "ObservationShelfLifeDays" not in method_body(S['Ledger.cs'], "private void PruneSettledPurchases"))
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

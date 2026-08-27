@@ -87,6 +87,12 @@ namespace TradeLord
 
         private void Prune()
         {
+            PruneObservations();
+            PruneSettledPurchases();
+        }
+
+        private void PruneObservations()
+        {
             float shelf = Options.Current.ObservationShelfLifeDays;
             if (shelf <= 0f || _ledger == null) return;
             float now = (float)CampaignTime.Now.ToDays;
@@ -98,6 +104,9 @@ namespace TradeLord
             }
             for (int i = 0; i < spent.Count; i++) _ledger.Remove(spent[i]);
         }
+
+        private void PruneSettledPurchases() =>
+            _purchases?.RemoveAll(rec => rec == null || rec.ItemId == null || rec.Count <= 0);
 
         private Dictionary<string, PurchaseRecord> Paid
         {
