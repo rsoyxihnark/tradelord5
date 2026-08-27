@@ -213,6 +213,11 @@ namespace TradeLord
             else if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))
             { why = Block.Protected; return false; }
 
+            bool sellable = livestock || item.IsTradeGood ||
+                (s.MaxLootTier > 0 && !item.IsFood && !item.IsAnimal && !item.IsMountable &&
+                 (int)item.Tier + 1 <= s.MaxLootTier);
+            if (!sellable) { why = Block.NotTradable; return false; }
+
             if (foodKeep != null && foodKeep.TryGetValue(item, out int reserved) && reserved > 0)
             {
                 keepCount = Math.Min(el.Amount, reserved);
@@ -220,14 +225,7 @@ namespace TradeLord
                 if (el.Amount <= keepCount) { why = Block.FoodReserve; return false; }
             }
 
-            if (livestock || item.IsTradeGood) return true;
-
-            if (s.MaxLootTier > 0 && !item.IsFood && !item.IsAnimal && !item.IsMountable &&
-                (int)item.Tier + 1 <= s.MaxLootTier)
-                return true;
-
-            why = Block.NotTradable;
-            return false;
+            return true;
         }
 
         internal static bool Priced(ItemObject item) =>
@@ -1085,6 +1083,7 @@ namespace TradeLord
     [HarmonyPatch(typeof(InformationManager), "DisplayMessage")]
     internal static class Patch_SilenceChunkedTradeLines
     {
+        [HarmonyPriority(Priority.Last)]
         private static bool Prefix()
         {
             if (!TradeActionBehavior.InGameTransaction) return true;
