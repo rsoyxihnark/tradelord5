@@ -160,6 +160,7 @@ namespace TradeLord
 
         private string _capturedTown;
         private int _capturedHour = -1;
+        private int _capturedGen = -1;
 
         public void CaptureSettlement(Settlement settlement, bool force = false)
         {
@@ -167,9 +168,11 @@ namespace TradeLord
             SettlementComponent market = settlement.SettlementComponent;
             if (market == null) return;
             int hour = (int)CampaignTime.Now.ToHours;
-            if (!force && hour == _capturedHour && settlement.StringId == _capturedTown) return;
+            if (!force && hour == _capturedHour && settlement.StringId == _capturedTown &&
+                Options.Generation == _capturedGen) return;
             _capturedHour = hour;
             _capturedTown = settlement.StringId;
+            _capturedGen = Options.Generation;
             ForgetMarketRankings();
             if (Options.Current.Omniscient) return;
             float day = (float)CampaignTime.Now.ToDays;
