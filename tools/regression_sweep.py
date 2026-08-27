@@ -86,8 +86,13 @@ def every_option_has_a_control():
     exposed = set(re.findall(r'Options\.Current\.(\w+)', M))
     return not (declared - exposed - {'AutoTradeBoth'})
 
+LITERAL = r'\{=(TL\d+)\}((?:[^"\\]|\\.)*)"'
+
+def unescape(text):
+    return text.replace('\\"', '"').replace('\\\\', '\\')
+
 def strings_used():
-    return set(re.findall(r'\{=(TL\d+)\}', ALL))
+    return set(re.findall(r'\{=(TL\d+)\}', ALL + "\n" + M))
 
 MANIFEST = io.open('TradeLord/SubModule.xml', encoding='utf-8').read()
 
@@ -172,8 +177,8 @@ def shipped_text_matches_the_fallback():
     import xml.etree.ElementTree as ET
     shipped = {e.get('id'): e.get('text') for e in
                ET.parse('TradeLord/ModuleData/Languages/module_strings.xml').getroot().iter('string')}
-    pairs = re.findall(r'\{=(TL\d+)\}([^"]*)"', ALL)
-    return len(pairs) > 0 and all(shipped.get(sid) == text for sid, text in pairs)
+    pairs = re.findall(LITERAL, ALL + "\n" + M)
+    return len(pairs) > 0 and all(shipped.get(sid) == unescape(text) for sid, text in pairs)
 
 def actions_are_off_the_node20_runtime():
     floors = {'checkout': 5, 'setup-dotnet': 5, 'upload-artifact': 5}
@@ -203,6 +208,14 @@ def setting_blocks():
 def every_setting_has_a_hint():
     blocks = setting_blocks()
     return len(blocks) > 40 and all('HintText' in b for b in blocks)
+
+def every_setting_line_is_translatable():
+    lit = r'"((?:[^"\\]|\\.)*)"'
+    names = re.findall(r'\[SettingProperty(?:Bool|Integer|FloatingInteger|Text)\(' + lit, M)
+    hints = re.findall(r'HintText = ' + lit, M)
+    groups = re.findall(r'\[SettingPropertyGroup\(' + lit + r'\)\]', M)
+    return (len(names) > 40 and len(names) == len(hints) == len(groups)
+            and all(re.match(r'\{=TL\d+\}', text) for text in names + hints + groups))
 
 def settings_declared_in_display_order():
     seen = {}
@@ -849,7 +862,7 @@ chk("1.6.1", "ending a campaign drops trade XP that was queued but not yet hande
     "_pendingXp = 0;" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.1", "the gold reserve default leaves room for two safe passages and a wage run",
     "public int GoldReserve = 300;" in S['Options.cs'] and
-    'HintText = "Never spend below this much gold. Default 300' in M)
+    re.search(r'HintText = "\{=TL\d+\}Never spend below this much gold\. Default 300', M) is not None)
 
 chk("1.6.2", "every per-frame and shutdown call runs inside the crash guard",
     all(f'Guard.Run("{c}"' in S['SubModule.cs'] for c in
@@ -945,6 +958,9 @@ chk("1.6.8", "the food reserve is spent only on goods the sell rules would actua
 chk("1.6.8", "another mod handles its own notification before TradeLord may hold one back",
     "[HarmonyPriority(Priority.Last)]" in
         method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines"))
+
+chk("1.6.9", "every setting name, hint and group heading carries a translation marker",
+    every_setting_line_is_translatable())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
