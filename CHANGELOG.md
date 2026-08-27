@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.13
+
+- A line of MCM newer than the one this build was made for is now named in the log as exactly that, instead of being reported as MCM missing entirely.
+
 ## 1.6.12
 
 - Selling goods you never bought, such as loot, now counts profit and Trade XP against what those goods would have cost you at the cheapest market you know of, instead of treating the whole sale price as profit.
