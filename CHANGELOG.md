@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.14
+
+- The town TradeLord marks as your best place to sell no longer removes a marker you had placed on that town yourself.
+- A town you pinned in the ledger panel is marked on the map again as soon as you load the save.
+- Turning live world prices off while you are standing in a market now records that market at once, instead of leaving it blank until you leave and come back.
+
 ## 1.6.13
 
 - A line of MCM newer than the one this build was made for is now named in the log as exactly that, instead of being reported as MCM missing entirely.

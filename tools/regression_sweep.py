@@ -1046,5 +1046,21 @@ chk("1.6.13", "an already-loaded usable line wins over a newer one, so the setti
 chk("1.6.13", "a line newer than this build is still found when nothing has loaded it yet",
     "g <= McmGeneration + GenerationsAhead" in method_body(S['Support.cs'], "private static string Detect"))
 
+chk("1.6.14", "the auto-marker claims a town only when it placed the marker itself, so it never removes one you set",
+    re.search(r'if \(target != null && !tracker\.CheckTracked\(target\)\)\s*\{\s*'
+              r'tracker\.RegisterObject\(target\);\s*_trackedTown = target;\s*\}',
+              method_body(S['Trading.cs'], "private void UpdateBestSellTownTracker")) is not None and
+    "if (_trackedTown != null && !LedgerPanel.IsPinned(_trackedTown) && tracker.CheckTracked(_trackedTown))"
+        in S['Trading.cs'])
+chk("1.6.14", "a pin restored from a save is put back on the map, so the panel and the map agree",
+    (lambda b: "VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;" in b
+           and "if (tracker != null && !tracker.CheckTracked(s)) tracker.RegisterObject(s);" in b
+           and b.index("_panelPins.Add(s);") < b.index("tracker.RegisterObject(s);"))
+    (method_body(S['Panel.cs'], "internal static void RestorePins")))
+chk("1.6.14", "a settings change reopens the hourly capture, so a market is not left unrecorded for the whole visit",
+    (lambda b: "Options.Generation == _capturedGen) return;" in b
+           and b.index("Options.Generation == _capturedGen") < b.index("_capturedGen = Options.Generation;"))
+    (method_body(S['Ledger.cs'], "public void CaptureSettlement")))
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
