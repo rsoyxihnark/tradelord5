@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.11
+
+- Your save no longer keeps a purchase record for every good you have finished selling, so a long campaign stops collecting a dead entry for each item you have ever traded.
+
 ## 1.6.10
 
 - The TradeLord button on the campaign map now reserves only the space the button itself covers, instead of a fixed strip that reached well past it on ultrawide and other non-16:9 screens.
