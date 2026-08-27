@@ -8,6 +8,7 @@ The mod is built against Bannerlord `1.4.7.117484`. Players are already on `1.4.
 | From | 1.4.7.117484 |
 | To | 1.4.8.119303 |
 | Method | NuGet reference assemblies for both versions, plus the mod's own compiled output. No game install involved. |
+| Reproduce it | `dotnet run --project tools/compat -- 1.4.8.119303` |
 
 ## Verdict
 
@@ -48,6 +49,25 @@ The reference assemblies carry signatures only, so this proves the mod still *fi
 **Building against 1.4.8 changes nothing in the output.** Because the bound surface and the assembly identities are both unchanged, the compiler emits the same references either way. Both builds come out the same size with the same external reference set - `TradeLord.dll` at 83,968 bytes, `TradeLord.MCM.dll` at 25,088, 32 identical TaleWorlds reference names. The version bump is a statement of which game the mod is tested against, not a change to what ships.
 
 **The naval surface survived, which was the likeliest casualty.** The only churn anywhere in 1.4.8 is inside NavalDLC, and the mod reaches into naval territory twice: the sailing-aware travel estimate and the port menu entries. `NavigationType` kept its values, and so did the naval members of `LeaveType` - `VisitPort=41`, `SetSail=43`, `ManageFleet=44`, `CallFleet=45`, `RepairShips=47`.
+
+## Also checked: the 1.5.1 beta
+
+`1.5.1.120547-beta` was published while this was being written, and the same method reaches the same
+verdict on it. Nothing found that blocks it.
+
+- all 103 bound game types and 201 bound members still resolve
+- all four Harmony patch targets unchanged in shape, still one overload each
+- `GetHerdingModifier` and `ItemMenuVM._targetItem` intact
+- no value of any enum the mod reads has moved
+- assembly identities unchanged, so a 1.4.7-built assembly still binds with no redirect
+- both projects compile clean against it with warnings as errors
+
+Two differences exist and neither touches the mod. `LeaveType` gains `TakeFerry=48` on the end, which
+renumbers nothing before it. `TaleWorlds.CampaignSystem.FastMode` is no longer shipped, and the mod
+never bound to it.
+
+The same caveat as 1.4.8 applies twice over: this is signatures, not behaviour, and 1.5.1 is a beta
+that can still move. The test pass below is written for 1.4.8 and is the thing that settles either.
 
 ## What could not be checked without the game
 
