@@ -570,10 +570,13 @@ namespace TradeLord
         {
             _panelPins.Clear();
             if (string.IsNullOrEmpty(ids)) return;
+            VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;
             foreach (string id in ids.Split('|'))
             {
                 Settlement s = Settlement.Find(id);
-                if (s != null) _panelPins.Add(s);
+                if (s == null) continue;
+                _panelPins.Add(s);
+                if (tracker != null && !tracker.CheckTracked(s)) tracker.RegisterObject(s);
             }
         }
 

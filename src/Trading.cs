@@ -1042,9 +1042,9 @@ namespace TradeLord
             if (_trackedTown != null && !LedgerPanel.IsPinned(_trackedTown) && tracker.CheckTracked(_trackedTown))
                 tracker.RemoveTrackedObject(_trackedTown);
             _trackedTown = null;
-            if (target != null)
+            if (target != null && !tracker.CheckTracked(target))
             {
-                if (!tracker.CheckTracked(target)) tracker.RegisterObject(target);
+                tracker.RegisterObject(target);
                 _trackedTown = target;
             }
         }
