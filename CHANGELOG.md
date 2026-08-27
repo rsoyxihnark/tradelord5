@@ -94,7 +94,6 @@
 
 ## 1.5.6
 
-- Removed the project documentation from the repository.
 - The build no longer needs a changelog entry to publish a release; the notes come from the commit instead.
 - Moved both build projects next to the source they compile, so CI and a local build compile the same thing.
 - Added the build output folder, IDE folders and the log to the ignore list.
