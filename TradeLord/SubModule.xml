@@ -1,0 +1,29 @@
+<Module>
+	<Name value="TradeLord - One Trade Mod"/>
+	<Id value="TradeLord"/>
+	<Version value="v1.6.7"/>
+	<Official value="false"/>
+	<DefaultModule value="false"/>
+	<SingleplayerModule value="true"/>
+	<MultiplayerModule value="false"/>
+	<DependedModules>
+	</DependedModules>
+	<DependedModuleMetadatas>
+		<DependedModuleMetadata id="Native" order="LoadBeforeThis" optional="true"/>
+		<DependedModuleMetadata id="SandBoxCore" order="LoadBeforeThis" optional="true"/>
+		<DependedModuleMetadata id="Sandbox" order="LoadBeforeThis" optional="true"/>
+		<DependedModuleMetadata id="StoryMode" order="LoadBeforeThis" optional="true"/>
+		<DependedModuleMetadata id="CustomBattle" order="LoadBeforeThis" optional="true"/>
+		<DependedModuleMetadata id="Bannerlord.Harmony" order="LoadBeforeThis" optional="false"/>
+		<DependedModuleMetadata id="Bannerlord.MBOptionScreen" order="LoadBeforeThis" optional="true"/>
+		<DependedModuleMetadata id="NavalDLC" order="LoadBeforeThis" optional="true"/>
+	</DependedModuleMetadatas>
+	<SubModules>
+		<SubModule>
+			<Name value="TradeLord"/>
+			<DLLName value="TradeLord.dll"/>
+			<SubModuleClassType value="TradeLord.SubModule"/>
+			<Tags><Tag key="DedicatedServerType" value="none"/><Tag key="IsNoRenderModeElement" value="false"/></Tags>
+		</SubModule>
+	</SubModules>
+</Module>

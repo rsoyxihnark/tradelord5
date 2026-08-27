@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="string">
+	<tags><tag language="English"/></tags>
+	<strings>
+		<string id="TL01" text="Quick-sell trade goods (TradeLord)"/>
+		<string id="TL02" text="TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit)."/>
+		<string id="TL20" text="Best sell prices"/>
+		<string id="TL21" text="Best buy prices"/>
+		<string id="TL22" text="* Best market to sell this!"/>
+		<string id="TL23" text="* Cheapest market to buy this!"/>
+		<string id="TL24" text="Cheaper in {TOWN}: {PRICE}{GOLD}"/>
+		<string id="TL06" text="TradeLord bought {ITEMS} for {GOLD} denars."/>
+		<string id="TL07" text="TradeLord ledger"/>
+		<string id="TL08" text="No profitable routes within reach yet. Visit more markets, or raise the travel ceilings."/>
+		<string id="TL09" text="Close"/>
+		<string id="TL10" text="Quick-buy trade goods (TradeLord)"/>
+		<string id="TL11" text="Consult the TradeLord ledger"/>
+		<string id="TL26" text="Quick-trade: sell, then buy (TradeLord)"/>
+		<string id="TL29" text="and {COUNT} more"/>
+		<string id="TL31" text="{COUNT} items"/>
+		<string id="TL13" text="[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit)."/>
+		<string id="TL14" text="[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars."/>
+		<string id="TL15" text="+{PCT}% if sold there instead"/>
+		<string id="TL18" text="The market is still settling ({DAYS} more days)."/>
+		<string id="TL32" text="Nothing sold here - {REASON}."/>
+		<string id="TL33" text="Nothing bought here - {REASON}."/>
+		<string id="TL40" text="your protections held it back"/>
+		<string id="TL41" text="your category policy excludes it"/>
+		<string id="TL42" text="prices here miss your margin"/>
+		<string id="TL43" text="your purse or spending caps are spent"/>
+		<string id="TL44" text="there is no room to carry more"/>
+		<string id="TL45" text="this market has nothing worth trading"/>
+		<string id="TL46" text="the merchant has run out of gold"/>
+		<string id="TL47" text="there is nowhere in reach to resell it"/>
+		<string id="TL48" text="you already traded these on this visit"/>
+		<string id="TL49" text="Profit already has the resale safety factor applied, so it is lower than the prices above suggest."/>
+		<string id="TL50" text="Item"/>
+		<string id="TL51" text="Buy From"/>
+		<string id="TL52" text="Price"/>
+		<string id="TL53" text="Sell At"/>
+		<string id="TL54" text="Qty"/>
+		<string id="TL55" text="Profit"/>
+		<string id="TL56" text="Days"/>
+		<string id="TL57" text="Data"/>
+		<string id="TL58" text="Carv."/>
+		<string id="TL59" text="Conf"/>
+		<string id="TL60" text="Score"/>
+		<string id="TL61" text="Most profitable workshops (recent profit)"/>
+		<string id="TL80" text="Your workshops (recent profit)"/>
+		<string id="TL62" text="Refresh"/>
+		<string id="TL63" text="Gold: {AMOUNT}"/>
+		<string id="TL64" text="Cargo: {CARRIED} / {CAPACITY}"/>
+		<string id="TL65" text="Speed: {SPEED}"/>
+		<string id="TL66" text="TradeLord profit: {AMOUNT}"/>
+		<string id="TL67" text="No profitable routes in reach"/>
+		<string id="TL68" text="{COUNT} profitable routes, best first"/>
+		<string id="TL69" text="No routes are within your travel ceilings yet. Visit more markets, or raise the ceilings in the Knowledge settings."/>
+		<string id="TL70" text="Click a town name to jump to it and pin or unpin it | Days = you -&gt; buy town -&gt; sell town | Carv. = caravans at those towns | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit"/>
+		<string id="TL71" text=" | Score = profit per day discounted by Conf"/>
+		<string id="TL72" text=" | Score = profit per day"/>
+		<string id="TL73" text=" | resale safety factor applied"/>
+		<string id="TL74" text="live"/>
+		<string id="TL75" text="today"/>
+		<string id="TL76" text="{DAYS}d old"/>
+		<string id="TL77" text="Profit: +{PCT}%"/>
+		<string id="TL78" text="Stock: {COUNT}"/>
+		<string id="TL79" text="~{DAYS} days"/>
+		<string id="TL81" text="TradeLord credited {GOLD} denars of profit to your Trade skill."/>
+		<string id="TL82" text="Cargo is full - TradeLord cannot buy here until you free up carry weight."/>
+		<string id="TL83" text="the village is down to its last of each good"/>
+		<string id="TL84" text="{ITEM}: buy {FROM} ({BUY} denars) -&gt; sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} days from here"/>
+	</strings>
+</base>

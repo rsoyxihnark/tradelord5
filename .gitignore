@@ -1,0 +1,10 @@
+bin/
+obj/
+dist/
+.vs/
+.idea/
+*.user
+*.suo
+TradeLord.log
+*.zip
+release-notes.md
