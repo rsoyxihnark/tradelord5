@@ -1,0 +1,112 @@
+using System;
+using System.Collections.Generic;
+
+namespace TradeLord
+{
+    public class Options
+    {
+        public static Options Current { get; } = new Options();
+
+        public static int Generation { get; private set; }
+        public static void Bump() { Generation++; }
+
+        public bool Omniscient = true;
+        public int ObservationShelfLifeDays = 45;
+
+        public int CostBasisMode = 0;
+
+        public bool ExcludeHostileTowns = true;
+
+        public float ScanRadius = 0f;
+
+        public int MinTownStock = 10;
+
+        public float MaxTravelDays = 3f;
+        public float MaxVillageTravelDays = 1f;
+
+        public bool ConservativeRouteProjection = true;
+
+        public bool BulkSimulation = true;
+
+        public bool ConfidenceRanking = true;
+
+        public bool TooltipHints = true;
+        public bool SuppressVanillaTradeLines = true;
+
+        public bool ProfitColoring = true;
+
+        public bool ShowMapButton = true;
+
+        public bool QuickSellMenu = true;
+
+        public bool AutoSellOnEntry = true;
+
+        public bool AutoBuyOnEntry = true;
+
+        public bool AutoTradeBoth => AutoSellOnEntry && AutoBuyOnEntry && EnableBuying;
+
+        public bool DetailedTradeSummary = true;
+        public float MinProfitMargin = 0.15f;
+        public int KeepFoodDays = 5;
+        public const int PolicyIgnore = 0, PolicySellOnly = 1, PolicyBuyOnly = 2, PolicyBuySell = 3;
+
+        public int FoodPolicy = PolicyBuySell;
+        public int CraftingPolicy = PolicyBuySell;
+        public int LivestockPolicy = PolicyBuySell;
+        public bool ProtectSpecial = true;
+        public bool RespectLocks = true;
+
+        public int MaxLootTier = 0;
+
+        public bool PreferBestSellTown = false;
+        public float BestSellTownTolerance = 0.95f;
+
+        public bool EnableBuying = true;
+        public int GoldReserve = 300;
+
+        public bool NeverBuyGrain = true;
+        public int BuyCapPerItem = 32;
+
+        public int BuyValueCapPerItem = 0;
+
+        public int MaxSpendPerVisit = 1000;
+
+        public float ResaleSafetyFactor = 0.85f;
+
+        public string PanelKey = "T";
+
+        public bool TradeWithVillages = true;
+        public bool SimulationMode = false;
+        public int EconomySettlingDays = 0;
+        public float TradeXpMultiplier = 1f;
+
+        public bool MarkBestSellTownOnMap = true;
+
+        public float MarkerMaxTravelDays = 1.5f;
+        public bool CoinSound = true;
+
+        public string NeverSellItems = "";
+        public string AlwaysSellItems = "";
+        public string NeverBuyItems = "";
+
+        private HashSet<string> _never, _always, _neverBuy;
+        private string _nSrc, _aSrc, _nbSrc;
+
+        private static HashSet<string> Parsed(string src, ref string seen, ref HashSet<string> set)
+        {
+            if (set == null || seen != src)
+            {
+                set = new HashSet<string>(
+                    (src ?? "").Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries),
+                    StringComparer.OrdinalIgnoreCase);
+                seen = src;
+            }
+            return set;
+        }
+
+        public HashSet<string> NeverSet => Parsed(NeverSellItems, ref _nSrc, ref _never);
+        public HashSet<string> AlwaysSet => Parsed(AlwaysSellItems, ref _aSrc, ref _always);
+        public HashSet<string> NeverBuySet => Parsed(NeverBuyItems, ref _nbSrc, ref _neverBuy);
+    }
+
+}

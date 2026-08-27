@@ -1,0 +1,120 @@
+name: Build TradeLord
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag override (leave empty to release the version SubModule.xml declares)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve version from SubModule.xml
+        id: ver
+        shell: bash
+        run: |
+          MODVER=$(sed -n 's/.*<Version value="\(v[0-9][^"]*\)".*/\1/p' TradeLord/SubModule.xml)
+          if [ -z "$MODVER" ]; then
+            echo "no version found in TradeLord/SubModule.xml"
+            exit 1
+          fi
+          INPUT="${{ github.event.inputs.version }}"
+          if [ -n "$INPUT" ] && [ "$INPUT" != "$MODVER" ]; then
+            echo "requested $INPUT but SubModule.xml declares $MODVER - bump SubModule.xml first"
+            exit 1
+          fi
+          echo "version=$MODVER" >> "$GITHUB_OUTPUT"
+
+      - name: Source checks
+        shell: bash
+        run: python3 tools/regression_sweep.py
+
+      - name: Build from source
+        shell: bash
+        run: |
+          NUMERIC="${{ steps.ver.outputs.version }}"
+          NUMERIC="${NUMERIC#v}"
+          dotnet build src/TradeLord.csproj -c Release -p:Version="$NUMERIC"
+          dotnet build mcm/TradeLord.MCM.csproj -c Release -p:Version="$NUMERIC"
+
+      - name: Assemble the module folder
+        shell: bash
+        run: |
+          mkdir -p dist/Modules/TradeLord/bin/Win64_Shipping_Client
+          cp TradeLord/SubModule.xml dist/Modules/TradeLord/
+          cp -r TradeLord/ModuleData dist/Modules/TradeLord/
+          cp -r TradeLord/GUI dist/Modules/TradeLord/
+          cp src/bin/Release/net472/TradeLord.dll dist/Modules/TradeLord/bin/Win64_Shipping_Client/
+          cp src/bin/Release/net472/TradeLord.pdb dist/Modules/TradeLord/bin/Win64_Shipping_Client/
+          cp mcm/bin/Release/net472/TradeLord.MCM.dll dist/Modules/TradeLord/bin/Win64_Shipping_Client/
+          cp mcm/bin/Release/net472/TradeLord.MCM.pdb dist/Modules/TradeLord/bin/Win64_Shipping_Client/
+
+      - name: Zip the module
+        shell: bash
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          cd dist && 7z a -tzip "TradeLord-$VERSION.zip" Modules
+
+      - name: Upload the built module
+        uses: actions/upload-artifact@v7
+        with:
+          name: TradeLord-module
+          path: dist/*.zip
+
+      - name: Publish release
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          if gh release view "$VERSION" --json tagName -q .tagName >/dev/null 2>&1; then
+            draft=$(gh release view "$VERSION" --json isDraft -q .isDraft 2>/dev/null || echo false)
+            if [ "$draft" = "true" ]; then
+              echo "$VERSION exists only as a draft left by a timed-out attempt - discarding it and publishing cleanly"
+              gh release delete "$VERSION" --yes
+            elif [ "${{ github.event_name }}" = "push" ]; then
+              echo "release $VERSION is already published - nothing to publish for this push"
+              exit 0
+            else
+              echo "release $VERSION is already published - bump the version in SubModule.xml instead of replacing history"
+              exit 1
+            fi
+          fi
+          git log -1 --format=%b "$GITHUB_SHA" > release-notes.md
+          if [ -z "$(tr -d '[:space:]' < release-notes.md)" ]; then
+            echo "release notes came out empty - the commit body is the notes, so write one"
+            exit 1
+          fi
+          for attempt in 1 2 3 4 5; do
+            if gh release create "$VERSION" "dist/TradeLord-$VERSION.zip" \
+                 --target "$GITHUB_SHA" \
+                 --title "TradeLord ${VERSION#v}" \
+                 --notes-file release-notes.md; then
+              echo "published $VERSION on attempt $attempt"
+              exit 0
+            fi
+            if gh release view "$VERSION" --json tagName -q .tagName >/dev/null 2>&1; then
+              if [ "$(gh release view "$VERSION" --json isDraft -q .isDraft 2>/dev/null || echo false)" = "true" ]; then
+                echo "attempt $attempt stranded a draft - discarding it before trying again"
+                gh release delete "$VERSION" --yes
+              else
+                echo "$VERSION is published after a failed attempt - the request landed despite the error"
+                exit 0
+              fi
+            fi
+            echo "publish attempt $attempt failed"
+            if [ "$attempt" -lt 5 ]; then sleep $((attempt * 15)); fi
+          done
+          echo "could not publish $VERSION after 5 attempts - the module zip is still on the run as an artifact"
+          exit 1
