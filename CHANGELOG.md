@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.12
+
+- Selling goods you never bought, such as loot, now counts profit and Trade XP against what those goods would have cost you at the cheapest market you know of, instead of treating the whole sale price as profit.
+
 ## 1.6.11
 
 - Your save no longer keeps a purchase record for every good you have finished selling, so a long campaign stops collecting a dead entry for each item you have ever traded.
