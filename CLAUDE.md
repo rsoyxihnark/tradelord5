@@ -37,7 +37,7 @@ The release workflow publishes the commit body as the release notes, so a commit
 
 ## Build
 
-The container is fresh each session with no .NET, so install the .NET 8 SDK before any code work and never push unless both `src/TradeLord.csproj` and `mcm/TradeLord.MCM.csproj` build clean locally, because `main` auto-publishes a release - and never commit game DLLs or NuGet packages to this public repository, since nuget.org is reachable and `Bannerlord.ReferenceAssemblies` already supplies those assemblies legally.
+Never push unless both `src/TradeLord.csproj` and `mcm/TradeLord.MCM.csproj` build clean locally, because `main` auto-publishes a release - and never commit game DLLs or NuGet packages to this public repository, since nuget.org is reachable and `Bannerlord.ReferenceAssemblies` already supplies those assemblies legally.
 
 ## Never
 
