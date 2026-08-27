@@ -8,6 +8,7 @@ WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
 PROJ = [io.open(f, encoding='utf-8').read() for f in
         ['src/TradeLord.csproj', 'mcm/TradeLord.MCM.csproj']]
 PREFAB = io.open('TradeLord/GUI/Prefabs/TradeLordPanel.xml', encoding='utf-8').read()
+COMPAT = io.open('tools/compat/Program.cs', encoding='utf-8').read()
 
 def panel_columns():
     import xml.etree.ElementTree as ET
@@ -117,6 +118,22 @@ def every_declared_patch_is_installed():
     installed = sorted(re.findall(
         r'Patcher\.TryPatch\(harmony, typeof\((\w+)\)\)', S['SubModule.cs']))
     return len(declared) > 0 and declared == installed and len(harmony_targets()) == len(declared)
+
+def compat_list(name):
+    m = re.search(re.escape(name) + r'\s*=\s*\{(.*?)\};', COMPAT, re.S)
+    return None if m is None else sorted(
+        t.split('.')[-1] + '.' + member for t, member in
+        re.findall(r'\(\s*(?:Inventory \+ )?"([\w.]+)"\s*,\s*"(\w+)"\s*\)', m.group(1)))
+
+def compat_checks_every_game_hook():
+    reflected = sorted(t.split('.')[-1] + '.' + m for t, m in
+                       re.findall(r'typeof\((\w+)\)\.GetMethod\(\s*"(\w+)"', ALL))
+    fields = sorted({'_' + n for n in re.findall(r'____(\w+)', ALL)})
+    compat_fields = sorted({p.split('.')[-1] for p in (compat_list('ReflectedFields') or [])})
+    return (len(reflected) > 0 and len(fields) > 0
+            and compat_list('HarmonyTargets') == harmony_targets()
+            and compat_list('ReflectedMethods') == reflected
+            and compat_fields == fields)
 
 def refusal_reasons_are_named():
     promised = {'Locked', 'CategoryPolicy', 'FoodReserve', 'BelowMargin',
@@ -1057,6 +1074,13 @@ chk("1.6.14", "a pin restored from a save is put back on the map, so the panel a
            and "if (tracker != null && !tracker.CheckTracked(s)) tracker.RegisterObject(s);" in b
            and b.index("_panelPins.Add(s);") < b.index("tracker.RegisterObject(s);"))
     (method_body(S['Panel.cs'], "internal static void RestorePins")))
+chk("1.6.14", "the compatibility tool drains the restore output it redirected, so a noisy restore cannot wedge it",
+    (lambda b: "ReadToEndAsync()" in b and "p.StandardOutput.ReadToEnd()" in b
+           and b.index("ReadToEndAsync()") < b.index("p.WaitForExit()")
+           and b.index("p.StandardOutput.ReadToEnd()") < b.index("p.WaitForExit()"))
+    (method_body(COMPAT, "private static bool Fetch")))
+chk("1.6.14", "the compatibility tool checks every game member the mod patches or reaches for by name",
+    compat_checks_every_game_hook())
 chk("1.6.14", "a settings change reopens the hourly capture, so a market is not left unrecorded for the whole visit",
     (lambda b: "Options.Generation == _capturedGen) return;" in b
            and b.index("Options.Generation == _capturedGen") < b.index("_capturedGen = Options.Generation;"))
