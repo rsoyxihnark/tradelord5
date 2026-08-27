@@ -1018,5 +1018,33 @@ chk("1.6.12", "the tooltip and the sale summary now value an unbought good the s
     "best.price > 0 ? best.price : item.Value" in method_body(S['Ledger.cs'], "public int GetCostBasis") and
     "best.Item2 > 0 ? best.Item2 : item.Value" in method_body(S['Trading.cs'], "internal static int UnpaidWorth"))
 
+def mcm_generation_matches_the_package():
+    pkg = re.search(r'Bannerlord\.MCM"\s+Version="(\d+)\.', "\n".join(PROJ))
+    code = re.search(r'McmGeneration = (\d+);', S['Support.cs'])
+    return bool(pkg) and bool(code) and pkg.group(1) == code.group(1)
+
+chk("1.6.13", "the MCM line the loader expects is the one the settings companion is built against",
+    mcm_generation_matches_the_package())
+chk("1.6.13", "no MCM line is written into the loader by hand, so bumping the package moves it",
+    '"MCMv5"' not in S['Support.cs'] and 'Named(int generation) => "MCMv" + generation;' in S['Support.cs'])
+chk("1.6.13", "an MCM this build was not made for is reported as a mismatch, not as MCM being absent",
+    (lambda b: "MCM not detected" in b and "the game has loaded" in b and
+               b.index("MCM not detected") < b.index("the game has loaded"))
+    (method_body(S['Support.cs'], "internal static void TryLoad")))
+chk("1.6.13", "the mismatch line names both the line found and the line this build needs",
+    (lambda b: 'Named(McmGeneration) +' in b and '" and the game has loaded " + found' in b)
+    (method_body(S['Support.cs'], "internal static void TryLoad")))
+chk("1.6.13", "a settings screen is only registered for the line the companion can actually talk to",
+    (lambda b: b.index("string.Equals(found, Named(McmGeneration)") < b.index("Bannerlord.ButterLib"))
+    (method_body(S['Support.cs'], "internal static void TryLoad")))
+chk("1.6.13", "detection reads the line off the assembly name rather than testing for one known line",
+    (lambda b: "while (end < name.Length && char.IsDigit(name[end])) end++;" in b and "return end > 4" in b)
+    (method_body(S['Support.cs'], "private static string GenerationOf")))
+chk("1.6.13", "an already-loaded usable line wins over a newer one, so the settings screen still opens",
+    (lambda b: b.index("return generation;") < b.index("if (other == null) other = generation;"))
+    (method_body(S['Support.cs'], "private static string Detect")))
+chk("1.6.13", "a line newer than this build is still found when nothing has loaded it yet",
+    "g <= McmGeneration + GenerationsAhead" in method_body(S['Support.cs'], "private static string Detect"))
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
