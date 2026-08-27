@@ -935,5 +935,16 @@ chk("1.6.7", "the panel's own pin list, not the map's marker state, decides what
     (method_body(S['Panel.cs'], "private static void ToggleMarker")) and
     "LedgerPanel.IsPinned(_trackedTown)" in S['Trading.cs'])
 
+chk("1.6.8", "the map button reserves the mouse over the button, not over the map around it",
+    (lambda b: "m.x >= 0.90f" in b and "m.y >= 0.46f && m.y <= 0.54f" in b)
+    (method_body(S['Panel.cs'], "private static void UpdateIdleInput")))
+chk("1.6.8", "the food reserve is spent only on goods the sell rules would actually move",
+    (lambda b: b.index("why = Block.NotTradable; return false;")
+             < b.index("foodKeep[item] = reserved - keepCount;"))
+    (method_body(S['Trading.cs'], "internal static bool MaySell")))
+chk("1.6.8", "another mod handles its own notification before TradeLord may hold one back",
+    "[HarmonyPriority(Priority.Last)]" in
+        method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines"))
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
