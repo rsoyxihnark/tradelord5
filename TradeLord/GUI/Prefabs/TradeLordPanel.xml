@@ -4,7 +4,8 @@
             DoNotAcceptEvents="true">
       <Children>
 
-        <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+        <ButtonWidget Id="TradeLordMapButton"
+                      WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
                       SuggestedWidth="120" SuggestedHeight="36"
                       HorizontalAlignment="Right" VerticalAlignment="Center"
                       MarginRight="5"
