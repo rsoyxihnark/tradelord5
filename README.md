@@ -190,15 +190,25 @@ repeat within the hour.
 
 ## Game versions
 
-The released build is compiled against Bannerlord **1.4.7.117484** and that is the version it is
-tested on.
+The released build is compiled against Bannerlord **1.4.7.117484**, and that is the version it has
+been played on.
 
-An inspection of **1.4.8.119303** found nothing that blocks it — every game type, method, enum value
-and UI binding the mod uses is unchanged between the two versions, and the mod compiles clean against
-either. That check reads signatures, not behaviour, so it proves the mod still *fits* 1.4.8, not that
-it still *behaves* the same. The in-game pass on 1.4.8 has not been completed yet. If you are on
-1.4.8, the mod should load and run as it stands, and the log will tell you if a patch failed to
-attach.
+| Game version | Does the mod fit it | Played on it |
+|---|---|---|
+| 1.4.7.117484 | yes | yes |
+| 1.4.8.119303 | yes | not yet |
+| 1.5.1.120547-beta | yes | not yet |
+
+*Fits* means all 103 game types and 201 members the compiled mod binds to still resolve, all four
+Harmony patch targets still exist with the same shape and no new overload to make the lookup
+ambiguous, both private members the mod reaches for by name are intact, no value of any enum it
+reads has moved, the game's assembly identities have not changed, and both projects compile clean
+against that version with warnings as errors. The only differences found above 1.4.7 are additive:
+1.5.1 adds one unrelated menu action and drops one assembly the mod never touches.
+
+That check reads signatures, not behaviour, so it proves the mod still fits a version, not that it
+still behaves the same there. If you are on 1.4.8 or the 1.5.1 beta, the mod should load and run as
+it stands, and the log will tell you if a patch failed to attach.
 
 ## Troubleshooting
 
@@ -257,6 +267,16 @@ Game assemblies come from the `Bannerlord.ReferenceAssemblies` NuGet package, so
 needed to build and no game DLLs are in this repository. Both projects build with warnings as errors.
 
 `python3 tools/regression_sweep.py` runs the source checks the build workflow runs.
+
+To ask whether the mod still fits a game version, build both projects in Release and then:
+
+```
+dotnet run --project tools/compat -- 1.4.8.119303 1.5.1.120547-beta
+```
+
+It fetches the reference assemblies for each version named, compares them against the version in
+`src/TradeLord.csproj`, and exits non-zero if anything the mod binds to has moved. This is what the
+table under [Game versions](#game-versions) is built from.
 
 ## License
 
