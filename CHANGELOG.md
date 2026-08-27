@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.10
+
+- The TradeLord button on the campaign map now reserves only the space the button itself covers, instead of a fixed strip that reached well past it on ultrawide and other non-16:9 screens.
+
 ## 1.6.9
 
 - The settings screen was the last part of the mod left in English only; every setting name, hint and heading now ships in the language file and can be translated.

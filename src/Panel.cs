@@ -6,6 +6,7 @@ using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.CampaignSystem.Settlements.Workshops;
 using TaleWorlds.Engine.GauntletUI;
+using TaleWorlds.GauntletUI.BaseTypes;
 using TaleWorlds.InputSystem;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
@@ -369,11 +370,52 @@ namespace TradeLord
         }
 
         private static bool _idleMouseActive;
+        private static Widget _mapButton;
+        private const string MapButtonId = "TradeLordMapButton";
+        private static bool _loggedButtonFallback;
+
+        private static Widget FindMapButton(Widget root)
+        {
+            if (root == null) return null;
+            var all = root.GetAllChildrenAndThisRecursive();
+            for (int i = 0; i < all.Count; i++)
+                if (all[i] != null && all[i].Id == MapButtonId) return all[i];
+            return null;
+        }
+
+        private static bool OverButtonBounds(Vec2 m)
+        {
+            Widget button = _mapButton;
+            if (button == null) return OverAssumedBounds(m);
+            float screenW = TaleWorlds.Engine.Screen.RealScreenResolutionWidth;
+            float screenH = TaleWorlds.Engine.Screen.RealScreenResolutionHeight;
+            float width = button.ScaledSuggestedWidth;
+            float height = button.ScaledSuggestedHeight;
+            if (screenW < 1f || screenH < 1f || width < 1f || height < 1f ||
+                width > screenW || height > screenH) return OverAssumedBounds(m);
+
+            float padX = 6f / screenW, padY = 6f / screenH;
+            float right = 1f - button.ScaledMarginRight / screenW;
+            float left = right - width / screenW;
+            float half = height / screenH * 0.5f;
+            return m.x >= left - padX && m.x <= right + padX &&
+                   m.y >= 0.5f - half - padY && m.y <= 0.5f + half + padY;
+        }
+
+        private static bool OverAssumedBounds(Vec2 m)
+        {
+            if (!_loggedButtonFallback)
+            {
+                _loggedButtonFallback = true;
+                Log.Write("map button bounds unreadable - falling back to an assumed strip on the right edge. " +
+                          "Map clicks near that edge may be taken by the button; turn the map button off if it gets in the way.");
+            }
+            return m.x >= 0.90f && m.y >= 0.46f && m.y <= 0.54f;
+        }
 
         private static void UpdateIdleInput(bool buttonOn)
         {
-            Vec2 m = Input.MousePositionRanged;
-            bool wantMouse = buttonOn && m.x >= 0.90f && m.y >= 0.46f && m.y <= 0.54f;
+            bool wantMouse = buttonOn && OverButtonBounds(Input.MousePositionRanged);
             if (wantMouse == _idleMouseActive) return;
             _idleMouseActive = wantMouse;
             if (wantMouse)
@@ -452,6 +494,7 @@ namespace TradeLord
             _vm = new LedgerPanelVM(Hide, ShowFromButton, CenterOn);
             _layer = new GauntletLayer("TradeLordPanel", 250);
             _movie = _layer.LoadMovie("TradeLordPanel", _vm);
+            _mapButton = FindMapButton(_layer.UIContext?.Root);
             _mapScreen.AddLayer(_layer);
             _vm.IsVisible = false;
             ApplyIdleInput();
@@ -556,7 +599,7 @@ namespace TradeLord
             GauntletLayer layer = _layer;
             GauntletMovieIdentifier movie = _movie;
             LedgerPanelVM vm = _vm;
-            _mapScreen = null; _layer = null; _movie = null; _vm = null;
+            _mapScreen = null; _layer = null; _movie = null; _vm = null; _mapButton = null;
             if (layer != null)
             {
                 try
