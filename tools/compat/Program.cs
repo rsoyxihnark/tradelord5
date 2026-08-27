@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace TradeLord.Compat
 {
@@ -147,10 +148,13 @@ namespace TradeLord.Compat
             Console.WriteLine("fetch   " + version);
             var p = Process.Start(new ProcessStartInfo("dotnet", "restore \"" + work + "/fetch.csproj\"")
             { RedirectStandardOutput = true, RedirectStandardError = true });
+            Task<string> errors = p.StandardError.ReadToEndAsync();
+            string output = p.StandardOutput.ReadToEnd();
             p.WaitForExit();
             if (p.ExitCode == 0) return true;
             Console.Error.WriteLine("could not fetch reference assemblies for " + version);
-            Console.Error.WriteLine(p.StandardError.ReadToEnd());
+            Console.Error.WriteLine(output);
+            Console.Error.WriteLine(errors.Result);
             return false;
         }
 
