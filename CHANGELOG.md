@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.9
+
+- The settings screen was the last part of the mod left in English only; every setting name, hint and heading now ships in the language file and can be translated.
+
 ## 1.6.8
 
 - The TradeLord button on the campaign map no longer swallows map clicks well above and below the button itself.
