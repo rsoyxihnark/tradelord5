@@ -72,6 +72,7 @@
 		<string id="TL85" text="you are holding this cargo for a better market"/>
 		<string id="TL86" text="your party cannot drive any more livestock"/>
 		<string id="TL87" text="TradeLord buys and sells for you as you enter a market. Turn auto-sell and auto-buy on entry off in its settings to trade by hand."/>
+		<string id="TL88" text="TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."/>
 		<string id="TL201" text="Live world prices (default)"/>
 		<string id="TL202" text="Observation shelf life (days)"/>
 		<string id="TL203" text="Exclude hostile markets"/>
