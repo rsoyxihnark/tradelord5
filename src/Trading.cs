@@ -119,12 +119,14 @@ namespace TradeLord
              (item.Name != null && list.Contains(item.Name.ToString())));
 
         private static int _auditedGeneration = -1;
-        private static bool _auditSpoke;
 
         internal static bool ItemListsNameNothing()
         {
             if (_auditedGeneration == Options.Generation) return false;
             _auditedGeneration = Options.Generation;
+            Options s = Options.Current;
+            if (string.IsNullOrEmpty(s.NeverSellItems) && string.IsNullOrEmpty(s.AlwaysSellItems) &&
+                string.IsNullOrEmpty(s.NeverBuyItems)) return false;
             var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (ItemObject item in Items.All)
             {
@@ -133,25 +135,13 @@ namespace TradeLord
                 if (item.Name != null) known.Add(item.Name.ToString());
             }
             bool missed = false;
-            missed |= Unmatched("never sell", Options.Current.NeverSellItems, known);
-            missed |= Unmatched("always sell", Options.Current.AlwaysSellItems, known);
-            missed |= Unmatched("never buy", Options.Current.NeverBuyItems, known);
-            if (!missed) _auditSpoke = false;
+            missed |= Unmatched("never sell", s.NeverSellItems, known);
+            missed |= Unmatched("always sell", s.AlwaysSellItems, known);
+            missed |= Unmatched("never buy", s.NeverBuyItems, known);
             return missed;
         }
 
-        internal static bool AuditShouldSpeak()
-        {
-            if (_auditSpoke) return false;
-            _auditSpoke = true;
-            return true;
-        }
-
-        internal static void ForgetItemListAudit()
-        {
-            _auditedGeneration = -1;
-            _auditSpoke = false;
-        }
+        internal static void ForgetItemListAudit() => _auditedGeneration = -1;
 
         private static bool Unmatched(string label, string written, HashSet<string> known)
         {
@@ -464,7 +454,7 @@ namespace TradeLord
 
         private static void WarnUnmatchedItemLists()
         {
-            if (!TradePolicy.ItemListsNameNothing() || !TradePolicy.AuditShouldSpeak()) return;
+            if (!TradePolicy.ItemListsNameNothing()) return;
             Toast(new TextObject("{=TL91}An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which."), ToastAlert);
         }
 

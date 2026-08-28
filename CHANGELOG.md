@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.27
+
+- An entry on one of your item lists that still matches no good after you correct it now says so on screen again, instead of going quiet after the first warning.
+- Changing a setting no longer sends TradeLord through every good in the game when your never-sell, always-sell and never-buy lists are all empty.
+
 ## 1.6.26
 
 - The never-sell, always-sell and never-buy lists now take the name a good is shown under, such as Iron Ore, as well as its item id, so a name with a space in it no longer reads as two entries that match nothing.
