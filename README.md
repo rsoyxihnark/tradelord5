@@ -33,7 +33,7 @@
 - ✅ Auto-sell and auto-buy the moment you enter a market, if you leave that switched on
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
-- ✅ Holds cargo back rather than dumping it one town short of the one that pays best
+- ✅ Holds cargo back for the market that pays best rather than dumping it one town short, off by default
 - ✅ Clears looted gear too, up to a tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set
 - ✅ Trades in villages as well, under their own stricter travel limit
@@ -68,7 +68,6 @@
 - ✅ An honest-merchant mode you can switch on, using only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
 - ✅ A rebindable panel hotkey, and a map button you can hide
-- 
 
 **And**
 
