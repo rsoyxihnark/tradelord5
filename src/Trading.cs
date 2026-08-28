@@ -424,11 +424,7 @@ namespace TradeLord
         private void OnSettlementLeft(MobileParty party, Settlement settlement)
         {
             if (party != MobileParty.MainParty) return;
-            Guard.Run("Action.OnSettlementLeft", () =>
-            {
-                if (Options.Current.EnableBuying && CanTradeHere(settlement)) WarnNoRoomToCarry(countPass: false);
-                UpdateBestSellTownTracker();
-            });
+            Guard.Run("Action.OnSettlementLeft", UpdateBestSellTownTracker);
         }
 
         private static void ResetVisit()
@@ -458,10 +454,10 @@ namespace TradeLord
             Toast(new TextObject("{=TL91}An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which."), ToastAlert);
         }
 
-        private static void WarnNoRoomToCarry(bool countPass)
+        private static void WarnNoRoomToCarry()
         {
             if (TradedThisVisit()) return;
-            if (!NoRoomToCarry() && !(countPass && _cargoWasFull)) return;
+            if (!NoRoomToCarry() && !_cargoWasFull) return;
             Toast(new TextObject("{=TL82}Cargo is full - TradeLord cannot buy here until you free up carry weight."),
                   ToastAlert);
         }
@@ -558,7 +554,7 @@ namespace TradeLord
                     if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
                     if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
                 }
-                if (Options.Current.EnableBuying && CanTradeHere(settlement)) WarnNoRoomToCarry(countPass: true);
+                if (Options.Current.EnableBuying && CanTradeHere(settlement)) WarnNoRoomToCarry();
                 UpdateBestSellTownTracker();
             });
         }
