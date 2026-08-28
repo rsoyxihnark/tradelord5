@@ -56,7 +56,7 @@ you cannot change them in game.
 
 | | |
 |---|---|
-| Game | Built and tested against Bannerlord **1.4.7**. See [Game versions](#game-versions). |
+| Game | Built and tested against Bannerlord **1.4.8**. See [Game versions](#game-versions). |
 | Harmony | **Required.** The mod will not load without `Bannerlord.Harmony`. |
 | MCM | **Optional**, but needed for the settings screen. This build talks to the **MCM 5** line; a newer line runs the mod on its defaults and says so in the log. |
 | War Sails | Optional. If installed, routes and travel estimates account for sea legs, and the menu entries appear in port menus too. |
@@ -151,17 +151,18 @@ actions at the game's own prices — it moves your goods, it does not invent gol
 
 ## Saves and uninstalling
 
-TradeLord stores its price ledger, your purchase records and your lifetime profit **inside your save
-file**, written as plain text. A save carries nothing that only TradeLord knows how to read, so:
+**TradeLord is plug and play. Add it to a campaign, remove it from a campaign, at any point, and the
+campaign keeps working.**
 
-- **You can remove TradeLord from a campaign and go on playing it.** The save still opens without the
-  mod installed. You lose the ledger, the purchase records and the lifetime profit figure. You do not
-  lose the campaign.
-- **A campaign last saved by 1.6.18 or earlier will not open.** Those saves keep their records in a
-  form only TradeLord could read, and TradeLord no longer reads it. Start a fresh campaign.
-- Adding TradeLord to an existing campaign is fine. It starts with an empty ledger and fills it in as
-  you travel.
-- Updating TradeLord over an existing install is fine from 1.6.19 onwards.
+That is a design decision, not an accident. TradeLord keeps its price ledger, your purchase records
+and your lifetime profit inside your save, written as plain text - `string`, `int`, `bool` and the
+game's own settlement references, nothing else. A TradeLord save contains no type that only TradeLord
+knows how to read, which is the thing that normally ties a campaign to a mod for good.
+
+- **Remove it whenever you like.** The save opens without the mod installed. You lose the ledger, the
+  purchase records and the lifetime profit figure. You keep the campaign.
+- **Add it whenever you like.** It starts with an empty ledger and fills it in as you travel.
+- **Update it whenever you like.** Straight over the top of an existing install.
 
 Nothing TradeLord saves affects vanilla data. It does not touch your items, your party, your heroes
 or the world economy's own records.
@@ -194,25 +195,29 @@ repeat within the hour.
 
 ## Game versions
 
-The released build is compiled against Bannerlord **1.4.7.117484**, and that is the version it has
-been played on.
+The released build is compiled against Bannerlord **1.4.8.119303**, and that is the version it is
+played on.
 
 | Game version | Does the mod fit it | Played on it |
 |---|---|---|
-| 1.4.7.117484 | yes | yes |
-| 1.4.8.119303 | yes | not yet |
+| 1.4.8.119303 | yes | yes |
+| 1.4.7.117484 | yes | not needed |
 | 1.5.1.120547-beta | yes | not yet |
 
-*Fits* means all 103 game types and 201 members the compiled mod binds to still resolve, all four
-Harmony patch targets still exist with the same shape and no new overload to make the lookup
-ambiguous, both private members the mod reaches for by name are intact, no value of any enum it
-reads has moved, the game's assembly identities have not changed, and both projects compile clean
-against that version with warnings as errors. The only differences found above 1.4.7 are additive:
-1.5.1 adds one unrelated menu action and drops one assembly the mod never touches.
+*Fits* means all 102 game types and 200 members the compiled mod binds to resolve, all four Harmony
+patch targets exist with the same shape and no new overload to make the lookup ambiguous, both
+private members the mod reaches for by name are intact, no value of any enum it reads has moved, the
+game's assembly identities match, and both projects compile clean against that version with warnings
+as errors. The game's assemblies are unsigned and permanently versioned 1.0.0.0, which is why one
+build binds across all three with no redirect - so a 1.4.8 build still runs on 1.4.7, and the only
+difference above 1.4.8 is additive: 1.5.1 adds one unrelated menu action and drops one assembly the
+mod never touches.
 
-That check reads signatures, not behaviour, so it proves the mod still fits a version, not that it
-still behaves the same there. If you are on 1.4.8 or the 1.5.1 beta, the mod should load and run as
-it stands, and the log will tell you if a patch failed to attach.
+That check reads signatures, not behaviour. Behaviour is covered separately: the full pass - menus,
+quick-sell, quick-buy with livestock, both tooltip patches, inventory colouring, the panel, the
+settings screen and a save carried across versions - was walked on 1.4.8 and every step passed. On
+the 1.5.1 beta the mod should load and run as it stands, and the log will tell you if a patch failed
+to attach.
 
 ## Troubleshooting
 
@@ -237,9 +242,10 @@ just played. Start at the top.
 | `quick-sell moved nothing at … :` | Followed by the reasons, counted. This is the answer to "why did it not sell my stuff". |
 | `ledger panel setup …` | The map panel could not build. The town-menu popup still works. |
 
-**"My campaign will not load."** If its last save was written by TradeLord 1.6.18 or earlier, it needs
-1.6.19 or earlier installed to open, because 1.6.20 no longer reads the form those saves used. Any
-campaign saved by 1.6.19 or later opens either way, with TradeLord installed or removed.
+**"My campaign will not load."** Only one case does this, and only for builds before the plain-text
+save landed in 1.6.19: a campaign whose last save was written by 1.6.18 or earlier needs 1.6.19 or
+earlier installed to open it. Every campaign saved by 1.6.19 or later opens either way, with
+TradeLord installed or removed.
 
 **"It sold something I wanted to keep."** Lock it in the inventory screen, or put its item id on the
 never-sell list. Unique and player-crafted items, quest items, mounts and pack animals are already
@@ -280,7 +286,7 @@ needed to build and no game DLLs are in this repository. Both projects build wit
 To ask whether the mod still fits a game version, build both projects in Release and then:
 
 ```
-dotnet run --project tools/compat -- 1.4.8.119303 1.5.1.120547-beta
+dotnet run --project tools/compat -- 1.4.7.117484 1.5.1.120547-beta
 ```
 
 It fetches the reference assemblies for each version named, compares them against the version in
