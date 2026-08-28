@@ -1103,5 +1103,24 @@ chk("1.6.15", "ending a campaign clears what the log has already reported, so th
     "_errors.Clear();" in method_body(S['Support.cs'], "internal static void Forget") and
     'Guard.Run("GameEnd.Log", Log.Forget)' in S['SubModule.cs'])
 
+chk("1.6.16", "holding cargo for a better market is named as its own reason, not as the profit margin",
+    (lambda b: b.count("case Block.BelowBestMarket:") == 1
+           and '{=TL85}' in b and '{=TL42}' in b
+           and b.index("case Block.BelowMargin:") < b.index('{=TL42}') < b.index("case Block.BelowBestMarket:"))
+    (method_body(S['Trading.cs'], "internal static TextObject Phrase")) and
+    "TL85" in strings_declared())
+chk("1.6.16", "a full herd is named as its own reason, not as a full cargo hold",
+    (lambda b: b.count("case Block.HerdFull:") == 1
+           and '{=TL86}' in b and '{=TL44}' in b
+           and b.index("case Block.CarryWeight:") < b.index('{=TL44}') < b.index("case Block.HerdFull:"))
+    (method_body(S['Trading.cs'], "internal static TextObject Phrase")) and
+    "TL86" in strings_declared() and
+    "if (tally.Saw(Block.CarryWeight)) _cargoWasFull = true;" in S['Trading.cs'])
+chk("1.6.16", "the auto-marker is put back on the map when a save loads, as the panel's own pins are",
+    (lambda b: "LedgerPanel.RestorePins(_pinnedTowns);" in b
+           and "UpdateBestSellTownTracker();" in b
+           and b.index("LedgerPanel.RestorePins") < b.index("UpdateBestSellTownTracker();"))
+    (method_body(S['Trading.cs'], "private void OnSessionLaunched")))
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
