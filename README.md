@@ -16,7 +16,7 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 
 ## Everything it does
 
-- ✅ Plug and play, unlike similar mods. Install it or remove it before, during or after a campaign, and load a save made with it or without it. It cannot break a save, because it never writes a thing of its own making into one: the whole ledger goes in as ordinary text and numbers the game already knows how to read, so once TradeLord is gone there is nothing left in the save for the game to go looking for.
+- ✅ Plug and play, unlike some other mods. Install or remove it, before, during or after a campaign, and load a save made with it or without it. It does not matter. This mod cannot break a save. It used to register a `SaveableTypeDefiner` declaring classes of its own, `PriceObservation` and `PurchaseRecord`, that only this mod knew how to read, so a save written that way would not open again until you put the mod back. That is gone. All it ever puts in a save now is two strings, a number, a settlement reference and a flag, every one of them something vanilla already knows how to read.
 
 **What it tells you**
 
@@ -30,9 +30,9 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 - ✅ One clean set of price hints, bypassing the vanilla rumour system, which is usually out of date by the time you get there
 - ✅ A ledger panel on the campaign map ranking every profitable route, on hotkey **L** or the map button
 - ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get
-- ✅ A confidence score on each route: profit per day, discounted by how deep the seller's stock is, how long the trip is, how old the prices are, and how many NPC caravans are already working those two towns
+- ✅ A confidence score on each route: profit per day, discounted by how much of the good the market you are buying from has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
-- ✅ The buyer's own purse counted in, so it never plans a sale nobody can pay for
+- ✅ The buying market's gold counted in, so it never plans a sale nobody can pay for
 - ✅ Click any town to jump the camera there and pin a marker on it
 - ✅ The best town for the cargo you are carrying, marked on the map for you
 - ✅ Your workshops and their recent profit, on the same panel
@@ -41,7 +41,7 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 
 - ✅ Quick-sell, quick-buy and quick-trade in the town menu, whenever you want them
 - ✅ Auto-sell and auto-buy the moment you enter a market, if you leave that switched on
-- ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or on its own as you walk in
+- ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds cargo back rather than dumping it one town short of the one that pays best
 - ✅ Clears looted gear too, up to a tier you choose
@@ -52,7 +52,7 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen
-- ✅ A dry run that works through every trade it would have made, moves nothing, and shows you the estimate
+- ✅ A dry run that simulates every trade it would have made, and shows you the estimate (moves nothing)
 
 **What it will never touch**
 
@@ -82,7 +82,7 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM
 - ✅ One build runs on Bannerlord 1.4.8, 1.4.7 and the 1.5.1 beta
-- ✅ Everything it did goes to `Documents/Mount and Blade II Bannerlord/TradeLord.log`
+- ✅ Everything it did goes to `TradeLord.log`, in `Documents/Mount and Blade II Bannerlord`. Read it yourself, or send it to me when something goes wrong and I will debug it
 
 **All of it is yours to change.** Every feature above is a switch or a number on the settings screen.
 Turn any one of them off, or set it to whatever you like.
