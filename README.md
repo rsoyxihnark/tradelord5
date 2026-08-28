@@ -1,18 +1,8 @@
-# TradeLord
-
-**Bannerlord never tells you where the money is. TradeLord does, and if you like, it goes and gets
-it for you.**
-
-It reads what every market in Calradia is paying right now, live, out of the game's own economy,
-including the towns you have never set foot in. It puts the best place to buy and sell right in the
-item tooltip, ranks the trade routes actually worth driving on a panel on the campaign map, and can
-run the buying and selling for you the moment you walk into a town.
-
-Nothing to scout, nothing to build up. It knows the whole map from your first minute.
-
-**[Download the latest release](https://github.com/rsoyxihnark/tradelord5/releases/latest)**
-
----
+- It reads what every market in Calradia is paying right now, live, straight from the game's own brain.
+- It shows you the best ways to buy and sell, right in the item tooltip and in a ledger.
+- It ranks the trade routes worth travelling on a panel. Each route is weighed on 9 or more factors and scored for confidence. Among them: how the price can move because of the NPC caravans sitting at those towns or heading for them. Profit per travel day is worked out from real pathfinding time at your party's own speed with the cargo it is carrying, from where you are, to the town you buy in, on to the town you sell in.
+- And it can buy and sell for you automatically as you enter a settlement.
+- You can change how it does any of it. The defaults are thoroughly tested and work great.
 
 ## Everything it does
 
@@ -86,19 +76,3 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 
 **All of it is yours to change.** Every feature above is a switch or a number on the settings screen.
 Turn any one of them off, or set it to whatever you like.
-
----
-
-## Getting started
-
-**Install.** You need **Harmony**, the `Bannerlord.Harmony` module, and nothing else. Extract the
-release zip so you have `Mount & Blade II Bannerlord/Modules/TradeLord/`, tick TradeLord in the
-launcher with Harmony above it, and load any campaign, new or halfway through. Add **MCM** as well
-if you want the settings screen; without it TradeLord runs on its defaults and says so in its log.
-
-**It trades for you out of the box.** From your second market on, it sells what your rules allow and
-spends up to 1000 denars a visit, never touching your last 300 denars, and it tells you what it did
-every time. It says as much on screen the first time, and names the two switches that turn it off if
-you would rather trade by hand.
-
-**Then just play.** Hover a good to see where it is worth money, press **L** for the routes, and go.

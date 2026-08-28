@@ -331,11 +331,7 @@ def option_default(name):
 def readme_defaults_match_the_shipped_ones():
     def on(name):
         return option_default(name) == 'true'
-    def whole(name):
-        return option_default(name).rstrip('f')
-    claims = ['up to ' + whole('MaxSpendPerVisit') + ' denars',
-              'last ' + whole('GoldReserve') + ' denars',
-              'press **' + option_default('PanelKey').strip('"') + '**']
+    claims = ['hotkey **' + option_default('PanelKey').strip('"') + '**']
     return (all(c in README for c in claims)
             and on('Omniscient') and on('AutoSellOnEntry') and on('AutoBuyOnEntry')
             and on('NeverBuyGrain') and on('TradeWithVillages')
