@@ -26,11 +26,12 @@ Defaults for these and the rest are in the [README](../README.md#what-it-does-ou
 
 ## Knowledge — where prices come from
 
-How TradeLord learns prices, and how far it is willing to look.
+Where TradeLord's prices come from, and how far it is willing to look.
 
-- **Live world prices** — ON, prices are read from the live world economy, including markets you
-  have never set foot in. OFF, only prices you have seen in person count. This is the single biggest
-  switch in the mod.
+- **Live world prices** — ON, TradeLord reads prices, stock and merchant gold live from the world
+  economy, for every market on the map, including ones you have never set foot in; nothing has to be
+  scouted first. OFF, it records only what you see as you walk a market, and only those prices count.
+  This is the single biggest switch in the mod.
 - **Observation shelf life** — with live prices OFF, how long a price you saw stays trustworthy
   before it is forgotten. 0 means never forget.
 - **Exclude hostile markets** — never scan, suggest or trade with settlements at war with you.
