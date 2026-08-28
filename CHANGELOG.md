@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.17
+
+- The TradeLord entries in the town and village menus no longer go missing when the map marker cannot be restored as your save loads.
+- A menu the game does not have no longer costs TradeLord the entries in the menus that it does have.
+- Starting another campaign without closing the game no longer leaves livestock buying switched off because of something that happened in the first one.
+
 ## 1.6.16
 
 - A market that pays less than the town you are holding your cargo for now says so, instead of blaming your profit margin.

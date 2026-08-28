@@ -349,6 +349,7 @@ namespace TradeLord
             _pending.Clear();
             _pendingXp = 0;
             AutomatedTradeInProgress = false;
+            _herdLookupFailed = false;
         }
 
         public override void SyncData(IDataStore dataStore)
@@ -409,12 +410,13 @@ namespace TradeLord
             {
                 ResetVisit();
                 LedgerPanel.RestorePins(_pinnedTowns);
-                UpdateBestSellTownTracker();
+                Guard.Run("Action.RestoreMarker", UpdateBestSellTownTracker);
                 Log.Write(Travel.NavalActive
                     ? "naval capability: party can sail - routes and travel times include sea legs"
                     : "naval capability: land-only - land routing in effect");
 
-                void AddOptions(string menu)
+                void AddOptions(string menu) => Guard.Run(
+                    "menu " + menu + " (the other menus are unaffected)", () =>
                 {
                     starter.AddGameMenuOption(menu, "tradelord_quicksell",
                         "{=TL01}Quick-sell trade goods (TradeLord)",
@@ -459,17 +461,14 @@ namespace TradeLord
                         },
                         args => Guard.Run("Action.LedgerReport", () => ShowLedgerReport()),
                         false, 7);
-                }
+                });
 
                 AddOptions("town");
                 AddOptions("village");
 
                 if (NavalModulePresent())
                     foreach (string port in new[] { "port_menu", "naval_storyline_virtualport" })
-                    {
-                        try { AddOptions(port); }
-                        catch (Exception e) { Log.Error(e, "port menu " + port + " (town and village menus unaffected)"); }
-                    }
+                        AddOptions(port);
             });
         }
 
