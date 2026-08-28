@@ -1022,7 +1022,9 @@ namespace TradeLord
             Log.Write("ledger report: " + (routes?.Count ?? 0) + " profitable routes");
             string body;
             if (routes == null || routes.Count == 0)
-                body = new TextObject("{=TL08}No profitable routes within reach yet. Visit more markets, or raise the travel ceilings.").ToString();
+                body = new TextObject(Options.Current.Omniscient
+                    ? "{=TL08}No profitable routes within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."
+                    : "{=TL89}No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings.").ToString();
             else
             {
                 var sb = new StringBuilder();

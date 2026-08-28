@@ -260,7 +260,9 @@ namespace TradeLord
                 ? new TextObject("{=TL67}No profitable routes in reach").ToString()
                 : Line("{=TL68}{COUNT} profitable routes, best first", "COUNT", rows.Count.ToString());
             LegendText = empty
-                ? new TextObject("{=TL69}No routes are within your travel ceilings yet. Visit more markets, or raise the ceilings in the Knowledge settings.").ToString()
+                ? new TextObject(Options.Current.Omniscient
+                        ? "{=TL69}No routes are within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."
+                        : "{=TL90}No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings.").ToString()
                 : new TextObject("{=TL70}Click a town name to jump to it and pin or unpin it | Days = you -> buy town -> sell town | Carv. = caravans at those towns | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit").ToString()
                   + (Options.Current.ConfidenceRanking
                         ? new TextObject("{=TL71} | Score = profit per day discounted by Conf").ToString()

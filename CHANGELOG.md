@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.25
+
+- The message shown when the ledger has no routes for you now points at your travel ceilings, and only asks you to visit more markets when TradeLord is set to use the prices you have seen in person.
+
 ## 1.6.24
 
 - The first market of a campaign is now left alone when TradeLord tells you it trades on entry, so you can turn that off before it does anything, and it starts trading from the next market.

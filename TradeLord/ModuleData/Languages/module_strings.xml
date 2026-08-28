@@ -11,7 +11,7 @@
 		<string id="TL24" text="Cheaper in {TOWN}: {PRICE}{GOLD}"/>
 		<string id="TL06" text="TradeLord bought {ITEMS} for {GOLD} denars."/>
 		<string id="TL07" text="TradeLord ledger"/>
-		<string id="TL08" text="No profitable routes within reach yet. Visit more markets, or raise the travel ceilings."/>
+		<string id="TL08" text="No profitable routes within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."/>
 		<string id="TL09" text="Close"/>
 		<string id="TL10" text="Quick-buy trade goods (TradeLord)"/>
 		<string id="TL11" text="Consult the TradeLord ledger"/>
@@ -54,7 +54,7 @@
 		<string id="TL66" text="TradeLord profit: {AMOUNT}"/>
 		<string id="TL67" text="No profitable routes in reach"/>
 		<string id="TL68" text="{COUNT} profitable routes, best first"/>
-		<string id="TL69" text="No routes are within your travel ceilings yet. Visit more markets, or raise the ceilings in the Knowledge settings."/>
+		<string id="TL69" text="No routes are within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."/>
 		<string id="TL70" text="Click a town name to jump to it and pin or unpin it | Days = you -&gt; buy town -&gt; sell town | Carv. = caravans at those towns | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit"/>
 		<string id="TL71" text=" | Score = profit per day discounted by Conf"/>
 		<string id="TL72" text=" | Score = profit per day"/>
@@ -73,6 +73,8 @@
 		<string id="TL86" text="your party cannot drive any more livestock"/>
 		<string id="TL87" text="TradeLord buys and sells for you as you enter a market, starting at the next one. Turn auto-sell and auto-buy on entry off in its settings to trade by hand."/>
 		<string id="TL88" text="TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."/>
+		<string id="TL89" text="No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
+		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
 		<string id="TL201" text="Live world prices (default)"/>
 		<string id="TL202" text="Observation shelf life (days, 0 = never expire)"/>
 		<string id="TL203" text="Exclude hostile markets"/>
