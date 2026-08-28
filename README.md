@@ -237,6 +237,10 @@ just played. Start at the top.
 | `quick-sell moved nothing at … :` | Followed by the reasons, counted. This is the answer to "why did it not sell my stuff". |
 | `ledger panel setup …` | The map panel could not build. The town-menu popup still works. |
 
+**"My campaign will not load."** If its last save was written by TradeLord 1.6.18 or earlier, it needs
+1.6.19 or earlier installed to open, because 1.6.20 no longer reads the form those saves used. Any
+campaign saved by 1.6.19 or later opens either way, with TradeLord installed or removed.
+
 **"It sold something I wanted to keep."** Lock it in the inventory screen, or put its item id on the
 never-sell list. Unique and player-crafted items, quest items, mounts and pack animals are already
 protected.
