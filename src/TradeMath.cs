@@ -1,3 +1,5 @@
+using System;
+
 namespace TradeLord
 {
     public static class TradeMath
@@ -23,5 +25,14 @@ namespace TradeLord
 
         public static bool BuyAcceptable(int buyPrice, float realizable, float margin) =>
             buyPrice > 0 && realizable >= buyPrice * (1f + margin);
+
+        public static int Budget(int gold, int goldReserve, int maxSpendPerVisit,
+                                 int spentThisVisit, int spentThisPass)
+        {
+            int left = gold - spentThisPass - goldReserve;
+            return maxSpendPerVisit > 0
+                ? Math.Min(left, maxSpendPerVisit - spentThisVisit - spentThisPass)
+                : left;
+        }
     }
 }

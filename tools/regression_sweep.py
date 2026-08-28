@@ -1,10 +1,11 @@
 import io, re, sys
 
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
-     ['Trading.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Panel.cs', 'Travel.cs', 'Support.cs',
+     ['Trading.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs', 'Travel.cs', 'Support.cs',
       'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
+ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -474,6 +475,21 @@ def the_money_rules_are_covered_by_tests_the_build_runs():
             and 'TradeMath.Credit' in MATHTESTS and 'TradeMath.BuyAcceptable' in MATHTESTS
             and 'TradeMath.ProfitAcceptable' in MATHTESTS and 'TradeMath.PolicyAllows' in MATHTESTS)
 
+def the_route_rules_need_nothing_from_the_game():
+    return ('TaleWorlds' not in S['Confidence.cs']
+            and 'public static class Confidence' in S['Confidence.cs']
+            and 'Confidence' not in S['Market.cs']
+            and 'public static int Budget(' in S['TradeMath.cs']
+            and "TradeMath.Budget(Hero.MainHero.Gold, Options.Current.GoldReserve," in S['Trading.cs']
+            and 'Options.Current.MaxSpendPerVisit > 0' not in
+                method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
+
+def the_route_rules_are_covered_by_tests_the_build_runs():
+    return ('Confidence.cs' in TESTPROJ
+            and ROUTETESTS.count('[Fact]') + ROUTETESTS.count('[Theory]') >= 15
+            and 'TradeMath.Budget' in ROUTETESTS and 'Confidence.Of' in ROUTETESTS
+            and 'NeverSet' in ROUTETESTS)
+
 def saved_field_types():
     types = {}
     for text in (S['Ledger.cs'], S['Trading.cs']):
@@ -884,7 +900,7 @@ chk("1.5.0", "caravan pressure is counted once, by the planner that scores on it
     S['Ledger.cs'].count("var pressure = CaravanPressure();") == 1)
 chk("1.5.0", "every confidence factor is a fraction of one",
     "return c < 0.01f ? 0.01f : (c > 1f ? 1f : c);" in
-    method_body(S['Market.cs'], "internal static float Of(bool simulated"))
+    method_body(S['Confidence.cs'], "public static float Of(bool simulated"))
 
 chk("1.5.0", "one place decides which category policy governs an item",
     S['Trading.cs'].count("internal static int PolicyFor(ItemObject item)") == 1 and
@@ -1451,6 +1467,10 @@ chk("1.6.24", "the policy layer forwards to those rules instead of keeping a sec
     the_policy_layer_keeps_no_second_copy_of_the_money_rules())
 chk("1.6.24", "margin, resale factor and profit credit are proved by tests the build runs",
     the_money_rules_are_covered_by_tests_the_build_runs())
+chk("1.6.24", "the purse rule and the route confidence need nothing from the game",
+    the_route_rules_need_nothing_from_the_game())
+chk("1.6.24", "the purse rule, route confidence and the item lists are proved by tests the build runs",
+    the_route_rules_are_covered_by_tests_the_build_runs())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
