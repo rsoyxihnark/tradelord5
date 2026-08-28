@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.19
+
+- A campaign saved by this version can have TradeLord removed from it later and still open, instead of the save refusing to load without the mod.
+- The price ledger and your purchase records carry over from a campaign that was saved by an earlier version.
+
 ## 1.6.18
 
 - TradeLord now says once in each campaign that it buys and sells for you as you enter a market, and names the two settings that turn that off.
