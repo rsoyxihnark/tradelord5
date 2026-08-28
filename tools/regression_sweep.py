@@ -153,7 +153,8 @@ def one_hard_dependency():
 def method_body(src, signature):
     i = src.find(signature)
     if i < 0:
-        return ''
+        raise LookupError('no method matching ' + repr(signature)
+                          + " - a check names a method that is no longer there")
     j = src.index('{', i)
     depth, k = 0, j
     while True:
