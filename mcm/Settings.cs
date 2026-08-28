@@ -200,13 +200,13 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL103}Action")]
         public float BestSellTownTolerance { get => Options.Current.BestSellTownTolerance; set { Options.Current.BestSellTownTolerance = value; Options.Bump(); } }
 
-        [SettingPropertyText("{=TL231}Never sell (item ids, comma separated)", Order = 13, RequireRestart = false,
-            HintText = "{=TL331}Goods quick-sell must never sell, by item id. An item id is the short internal name of a good, such as grain, wine or iron_ore. TradeLord.log names the id of every good it moves, so trade once and read the ids off the log. Quick-buy leaves these alone too, since it would have no way to sell them on.")]
+        [SettingPropertyText("{=TL231}Never sell (item ids or names, comma separated)", Order = 13, RequireRestart = false,
+            HintText = "{=TL331}Goods quick-sell must never sell. Name each one either by the item id, the short internal name such as grain, wine or iron_ore that TradeLord.log prints for every good it moves, or by the name the game shows you, such as Iron Ore. Separate them with commas. An entry matching no good in this game is named in the log and said on screen, rather than passing quietly. Quick-buy leaves these alone too, since it would have no way to sell them on.")]
         [SettingPropertyGroup("{=TL103}Action")]
         public string NeverSellItems { get => Options.Current.NeverSellItems; set { Options.Current.NeverSellItems = value; Options.Bump(); } }
 
-        [SettingPropertyText("{=TL232}Always sell (item ids, comma separated)", Order = 14, RequireRestart = false,
-            HintText = "{=TL332}Goods quick-sell always sells, by item id, past the category policies, the unique and crafted protection and the food reserve. The never-sell list above and an inventory lock still hold. This is the only way to sell a mount or a pack animal.")]
+        [SettingPropertyText("{=TL232}Always sell (item ids or names, comma separated)", Order = 14, RequireRestart = false,
+            HintText = "{=TL332}Goods quick-sell always sells, past the category policies, the unique and crafted protection and the food reserve. Named by item id or by the name the game shows, comma separated, as above. The never-sell list above and an inventory lock still hold. This is the only way to sell a mount or a pack animal.")]
         [SettingPropertyGroup("{=TL103}Action")]
         public string AlwaysSellItems { get => Options.Current.AlwaysSellItems; set { Options.Current.AlwaysSellItems = value; Options.Bump(); } }
 
@@ -245,8 +245,8 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL105}Buying")]
         public bool NeverBuyGrain { get => Options.Current.NeverBuyGrain; set { Options.Current.NeverBuyGrain = value; Options.Bump(); } }
 
-        [SettingPropertyText("{=TL240}Never buy (item ids, comma separated)", Order = 7, RequireRestart = false,
-            HintText = "{=TL340}Items quick-buy must never purchase. Selling them is unaffected.")]
+        [SettingPropertyText("{=TL240}Never buy (item ids or names, comma separated)", Order = 7, RequireRestart = false,
+            HintText = "{=TL340}Items quick-buy must never purchase. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected.")]
         [SettingPropertyGroup("{=TL105}Buying")]
         public string NeverBuyItems { get => Options.Current.NeverBuyItems; set { Options.Current.NeverBuyItems = value; Options.Bump(); } }
 
@@ -289,5 +289,10 @@ namespace TradeLord.Mcm
             HintText = "{=TL348}Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log.")]
         [SettingPropertyGroup("{=TL106}General")]
         public bool DetailedTradeSummary { get => Options.Current.DetailedTradeSummary; set { Options.Current.DetailedTradeSummary = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL249}Quiet automation", Order = 8, RequireRestart = false,
+            HintText = "{=TL349}Trading done automatically as you enter a market reports to TradeLord.log only, with no lines on screen. The quick-sell, quick-buy and quick-trade menu entries always report, since you asked for those. The first-run automation notice and the cargo-full warning are unaffected.")]
+        [SettingPropertyGroup("{=TL106}General")]
+        public bool QuietAutomation { get => Options.Current.QuietAutomation; set { Options.Current.QuietAutomation = value; Options.Bump(); } }
     }
 }

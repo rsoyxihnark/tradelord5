@@ -1,10 +1,10 @@
 # TradeLord
 
-**Bannerlord never tells you where the money is. TradeLord does — and if you like, it goes and gets
+**Bannerlord never tells you where the money is. TradeLord does, and if you like, it goes and gets
 it for you.**
 
-It reads what every market in Calradia is paying right now — live, out of the game's own economy,
-including the towns you have never set foot in — puts the best place to buy and sell right in the
+It reads what every market in Calradia is paying right now, live, out of the game's own economy,
+including the towns you have never set foot in. It puts the best place to buy and sell right in the
 item tooltip, ranks the trade routes actually worth driving on a panel on the campaign map, and can
 run the buying and selling for you the moment you walk into a town.
 
@@ -24,7 +24,7 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 - ✅ Stock counts, so you know the deal is actually there
 - ✅ Inventory rows tinted good to bad against the best price known
 - ✅ One clean set of price hints, with the vanilla rumour block kept out of the way
-- ✅ A ledger panel on the campaign map ranking every profitable route — hotkey **L**, or the map button
+- ✅ A ledger panel on the campaign map ranking every profitable route, on hotkey **L** or the map button
 - ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
 - ✅ A confidence score on each route: profit per day, discounted by how likely it is to survive the trip
@@ -48,6 +48,7 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 - ✅ Tells you on screen exactly what it moved, and names the reason when it moves nothing
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
 - ✅ A coin sound on a trade that lands, silence on one that does not
+- ✅ A quiet mode that keeps automated trading to the log and off your screen
 - ✅ A dry run that reports every trade it would have made and moves nothing
 
 **What it will never touch**
@@ -56,10 +57,10 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 - ✅ Unique and player-crafted gear, quest items, mounts and pack animals
 - ✅ Your food reserve, and grain
 - ✅ Your gold reserve, or anything past your spending cap for the visit
-- ✅ Any item id you put on the never-sell or never-buy list
+- ✅ Any good you put on the never-sell or never-buy list, named however the game names it
 - ✅ More livestock than your party can drive, so a purchase never slows you down
 - ✅ Markets belonging to a faction you are at war with
-- ✅ The game's economy — it trades at the game's own prices, through the game's own actions
+- ✅ The game's economy: it trades at the game's own prices, through the game's own actions
 
 **Dials, when you want them**
 
@@ -68,8 +69,8 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 - ✅ A minimum stock before it calls something worth buying
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ Caps on one good by count or by denars, and on the whole visit
-- ✅ Never-sell, always-sell and never-buy lists, by item id
-- ✅ Profit measured against what you paid — the average, the last, or the cheapest you know of
+- ✅ Never-sell, always-sell and never-buy lists, by item id or by the name on screen
+- ✅ Profit measured against what you paid: the average, the last, or the cheapest you know of
 - ✅ An honest-merchant mode that uses only the prices you have seen in person
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
 - ✅ A rebindable panel hotkey, and a map button you can hide
@@ -78,14 +79,14 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM
 - ✅ One build runs on Bannerlord 1.4.8, 1.4.7 and the 1.5.1 beta
-- ✅ Add it or remove it mid-campaign — your save keeps working either way
+- ✅ Add it or remove it mid-campaign, and your save keeps working either way
 - ✅ Everything it did goes to `Documents/Mount and Blade II Bannerlord/TradeLord.log`
 
 ---
 
 ## Getting started
 
-**Install.** You need **Harmony** — the `Bannerlord.Harmony` module — and nothing else. Extract the
+**Install.** You need **Harmony**, the `Bannerlord.Harmony` module, and nothing else. Extract the
 release zip so you have `Mount & Blade II Bannerlord/Modules/TradeLord/`, tick TradeLord in the
 launcher with Harmony above it, and load any campaign, new or halfway through. Add **MCM** as well
 if you want the settings screen; without it TradeLord runs on its defaults and says so in its log.

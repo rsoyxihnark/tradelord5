@@ -392,7 +392,7 @@ def every_numeric_setting_that_switches_off_at_zero_says_so():
 
 def the_purse_speaks_up_even_on_a_quiet_pass():
     body = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
-    return ("if (!quiet || PurseHeldItBack(tally))" in body
+    return ("if (!Muted(quiet) && (!quiet || PurseHeldItBack(tally)))" in body
             and "tally.Any && tally.Dominant() == Block.BudgetSpent;" in S['Trading.cs']
             and "if (!quiet)" in method_body(S['Trading.cs'], "public static void ExecuteQuickSell"))
 
@@ -1117,11 +1117,11 @@ chk("1.6.1", "the trade XP the pass earns reaches the game only once the pass is
 chk("1.6.1", "the XP line is queued last, in amber, and is translatable",
     'private static readonly Color ToastXp = new Color(1f, 0.72f, 0.20f);' in S['Trading.cs'] and
     'Toast(earned, ToastXp);' in method_body(S['Trading.cs'], "private static void CreditTradeSkill") and
-    method_body(S['Trading.cs'], "internal static void FlushToasts").index("CreditTradeSkill(xp)")
+    method_body(S['Trading.cs'], "internal static void FlushToasts").index("CreditTradeSkill(xp, muted)")
         < method_body(S['Trading.cs'], "internal static void FlushToasts").index("InformationManager.DisplayMessage") and
     '{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.' in S['Trading.cs'] and
     method_body(S['Trading.cs'], "public static void ExecuteQuickSell").index("Toast(msg, profit > 0")
-        < method_body(S['Trading.cs'], "public static void ExecuteQuickSell").index("AwardTradeXp(profit)"))
+        < method_body(S['Trading.cs'], "public static void ExecuteQuickSell").index("AwardTradeXp(profit, Muted(quiet))"))
 chk("1.6.1", "ending a campaign drops trade XP that was queued but not yet handed over",
     "_pendingXp = 0;" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.1", "the gold reserve default leaves room for two safe passages and a wage run",
@@ -1141,9 +1141,9 @@ chk("1.6.2", "every setting carries a hint",
 chk("1.6.2", "each settings group is written in the order it is shown",
     settings_declared_in_display_order())
 chk("1.6.2", "an always-sell entry still yields to the never-sell list and to an inventory lock",
-    (lambda b: b.index("NeverSet.Contains") < b.index("AlwaysSet.Contains")
-           and b.index("IsLocked(lockedKeys") < b.index("AlwaysSet.Contains")
-           and b.index("AlwaysSet.Contains") < b.index("PolicyAllows(PolicyFor(item)"))
+    (lambda b: b.index("Listed(s.NeverSet, item)") < b.index("Listed(s.AlwaysSet, item)")
+           and b.index("IsLocked(lockedKeys") < b.index("Listed(s.AlwaysSet, item)")
+           and b.index("Listed(s.AlwaysSet, item)") < b.index("PolicyAllows(PolicyFor(item)"))
     (method_body(S['Trading.cs'], "internal static bool MaySell")))
 chk("1.6.2", "the cost basis lookup answers for a good it has never seen instead of throwing",
     "if (item == null) return 0;" in method_body(S['Ledger.cs'], "public int GetCostBasis"))
@@ -1185,8 +1185,8 @@ chk("1.6.5", "a village keeping its last unit of each good says so",
 
 chk("1.6.6", "the always-sell list governs selling only, never what quick-buy purchases",
     "AlwaysSet" not in method_body(S['Trading.cs'], "internal static bool MayBuy") and
-    "AlwaysSet.Contains(item.StringId)" in method_body(S['Trading.cs'], "internal static bool MaySell") and
-    "Options.Current.AlwaysSet.Contains(item.StringId) ||" in
+    "Listed(s.AlwaysSet, item)" in method_body(S['Trading.cs'], "internal static bool MaySell") and
+    "Listed(Options.Current.AlwaysSet, item) ||" in
         method_body(S['Trading.cs'], "internal static bool MayRoundTrip"))
 chk("1.6.6", "the ledger popup builds its route lines from a translatable string",
     '"{=TL84}{ITEM}: buy {FROM}' in S['Trading.cs'] and
@@ -1454,6 +1454,78 @@ chk("1.6.24", "the purse rule and the route confidence need nothing from the gam
     the_route_rules_need_nothing_from_the_game())
 chk("1.6.24", "the purse rule, route confidence and the item lists are proved by tests the build runs",
     the_route_rules_are_covered_by_tests_the_build_runs())
+
+def an_item_list_is_matched_by_name_as_well_as_by_id():
+    listed = method_body(S['Trading.cs'], "internal static bool Listed")
+    return ("list.Contains(item.StringId)" in listed and
+            "list.Contains(item.Name.ToString())" in listed)
+
+def no_rule_compares_a_list_against_an_id_by_hand():
+    return not re.search(r'(NeverSet|AlwaysSet|NeverBuySet)\.Contains\(', S['Trading.cs'])
+
+def a_list_entry_survives_the_space_inside_a_name():
+    parsed = method_body(S['Options.cs'], "private static HashSet<string> Parsed")
+    return ("Split(EntryMarks" in parsed and "built.Add(whole)" in parsed and
+            "Split(WordMarks" in parsed and "' '" not in parsed)
+
+def a_list_entry_that_names_nothing_is_reported_both_ways():
+    audit = method_body(S['Trading.cs'], "internal static bool ItemListsNameNothing")
+    warn = method_body(S['Trading.cs'], "private static void WarnUnmatchedItemLists")
+    return ("Items.All" in audit and audit.count("Unmatched(") == 3 and
+            "Log.Write" in method_body(S['Trading.cs'], "private static bool Unmatched") and
+            "TradePolicy.ItemListsNameNothing()" in warn and "Toast(" in warn and
+            "WarnUnmatchedItemLists();" in method_body(S['Trading.cs'], "private void OnSettlementEntered"))
+
+def the_list_audit_is_redone_when_the_lists_are_edited():
+    audit = method_body(S['Trading.cs'], "internal static bool ItemListsNameNothing")
+    return ("_auditedGeneration == Options.Generation" in audit and
+            "TradePolicy.ForgetItemListAudit();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
+
+def quiet_automation_silences_only_the_automated_lines():
+    sell = method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
+    buy = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
+    credit = method_body(S['Trading.cs'], "private static void CreditTradeSkill")
+    return ("automated && Options.Current.QuietAutomation" in
+                method_body(S['Trading.cs'], "private static bool Muted") and
+            "if (!Muted(quiet)) Toast(msg, profit > 0" in sell and
+            "if (!Muted(quiet)) Toast(msg, ToastSpend);" in buy and
+            "if (!muted) Toast(earned, ToastXp);" in credit and
+            "AwardTradeXp(profit, Muted(quiet));" in sell)
+
+def quiet_automation_leaves_the_notice_and_the_cargo_warning_alone():
+    return ("Muted(" not in method_body(S['Trading.cs'], "private bool AnnounceAutomation") and
+            "Muted(" not in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry"))
+
+def a_second_campaign_starts_the_panel_from_scratch():
+    reset = method_body(S['Panel.cs'], "internal static void Reset")
+    return all(f in reset for f in
+               ("_loggedArmed = false;", "_loggedButtonFallback = false;",
+                "_idleMouseActive = false;", "_keySource = null;"))
+
+def the_item_list_reading_is_covered_by_tests_the_build_runs():
+    return ("A_name_with_a_space_in_it_is_kept_whole" in ROUTETESTS and
+            "Ids_written_the_old_way_with_spaces_between_them_still_read" in ROUTETESTS and
+            "A_multi_word_name_is_not_confused_with_a_neighbouring_entry" in ROUTETESTS and
+            'Include="..\\src\\Options.cs"' in TESTPROJ)
+
+chk("1.6.26", "a good on an item list is matched by the name the game shows as well as by its id",
+    an_item_list_is_matched_by_name_as_well_as_by_id())
+chk("1.6.26", "every rule reads the item lists through that one matcher",
+    no_rule_compares_a_list_against_an_id_by_hand())
+chk("1.6.26", "a name with a space in it is read as one entry rather than split into words",
+    a_list_entry_survives_the_space_inside_a_name())
+chk("1.6.26", "an entry matching no good is named in the log and said on screen",
+    a_list_entry_that_names_nothing_is_reported_both_ways())
+chk("1.6.26", "editing a list has it checked again rather than answered from the last check",
+    the_list_audit_is_redone_when_the_lists_are_edited())
+chk("1.6.26", "quiet automation silences the entry summaries, the buy line and the skill line",
+    quiet_automation_silences_only_the_automated_lines())
+chk("1.6.26", "quiet automation leaves the first-run notice and the cargo warning speaking",
+    quiet_automation_leaves_the_notice_and_the_cargo_warning_alone())
+chk("1.6.26", "a second campaign in one sitting starts the panel from scratch",
+    a_second_campaign_starts_the_panel_from_scratch())
+chk("1.6.26", "the item lists are read the way the tests the build runs say they are",
+    the_item_list_reading_is_covered_by_tests_the_build_runs())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
