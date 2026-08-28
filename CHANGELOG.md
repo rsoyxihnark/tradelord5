@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.28
+
+- The warning that your cargo is full is now given once, as you enter a market, instead of a second time as you leave it.
+
 ## 1.6.27
 
 - An entry on one of your item lists that still matches no good after you correct it now says so on screen again, instead of going quiet after the first warning.
