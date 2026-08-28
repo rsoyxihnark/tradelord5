@@ -168,6 +168,24 @@ def method_body(src, signature):
             if depth == 0: return src[i:k + 1]
         k += 1
 
+def ordered(text, *needles):
+    at = -1
+    for needle in needles:
+        found = text.find(needle)
+        if found < 0 or found <= at:
+            return False
+        at = found
+    return True
+
+def ordered_last(text, *needles):
+    at = -1
+    for needle in needles:
+        found = text.rfind(needle)
+        if found < 0 or found <= at:
+            return False
+        at = found
+    return True
+
 def log_prefers_the_user_folder():
     body = method_body(S['Support.cs'], "private static List<string> Candidates")
     docs = body.find('"Mount and Blade II Bannerlord"')
@@ -181,7 +199,7 @@ def capture_skipped_after_the_caches_are_dropped():
     body = method_body(S['Ledger.cs'], "public void CaptureSettlement")
     if "ForgetMarketRankings();" not in body or "if (Options.Current.Omniscient) return;" not in body:
         return False
-    return (body.index("ForgetMarketRankings();") < body.index("if (Options.Current.Omniscient) return;")
+    return (ordered(body, "ForgetMarketRankings();", "if (Options.Current.Omniscient) return;")
             and "Options.Current.Omniscient" in method_body(S['Ledger.cs'],
                     "private List<(Settlement, int)> TopMarkets"))
 
@@ -190,7 +208,7 @@ def hotkey_fallback_is_reported():
     if 'Log.Write("panel hotkey' not in body or "if (!named)" not in body:
         return False
     return ("_key = InputKey.T;" in body and "named = true;" in body
-            and body.index("if (!named)") < body.index('Log.Write("panel hotkey'))
+            and ordered(body, "if (!named)", 'Log.Write("panel hotkey'))
 
 def prefab_text_is_all_bound():
     xml = io.open('TradeLord/GUI/Prefabs/TradeLordPanel.xml', encoding='utf-8').read()
@@ -354,18 +372,19 @@ def the_filter_is_armed_only_around_a_game_call_that_talks():
 def the_full_cargo_warning_waits_for_a_visit_that_traded_nothing():
     body = method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
     return ('if (TradedThisVisit()) return;' in body
-            and body.index('if (TradedThisVisit()) return;') < body.index('NoRoomToCarry()')
+            and ordered(body, 'if (TradedThisVisit()) return;', 'NoRoomToCarry()')
             and 'private static bool TradedThisVisit() => _soldThisVisit.Count > 0 || '
                 '_boughtThisVisit.Count > 0;' in S['Trading.cs'])
 
 def the_trade_skill_gain_is_reported_in_one_line():
     body = method_body(S['Trading.cs'], "private static void CreditTradeSkill")
     return ('finally { CloseTransaction(); ReportSilenced(); }' in body
-            and body.index('int before = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);')
-                < body.index('OpenTransaction();')
-                < body.index('SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);')
-                < body.index('int now = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);')
-                < body.index('Toast(earned, ToastXp);')
+            and ordered(body,
+                        'int before = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);',
+                        'OpenTransaction();',
+                        'SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);',
+                        'int now = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);',
+                        'Toast(earned, ToastXp);')
             and '{=TL88}' in body and '{=TL81}' in body
             and 'earned.SetTextVariable("LEVEL", now);' in body
             and 'SkillLevelingManager' not in
@@ -423,7 +442,7 @@ def a_menu_id_the_mod_does_not_guard_fails_the_run():
     body = method_body(COMPAT, "private static void CheckMenuIds")
     return ('Failures.Add(id + " is in no assembly of this install' in body
             and 'if (guarded)' in body
-            and body.index('if (guarded)') < body.index('Failures.Add(id + " is in no assembly')
+            and ordered(body, 'if (guarded)', 'Failures.Add(id + " is in no assembly')
             and '("town", false)' in COMPAT and '("village", false)' in COMPAT
             and '("port_menu", true)' in COMPAT
             and '("naval_storyline_virtualport", true)' in COMPAT)
@@ -432,7 +451,7 @@ def the_menu_id_check_is_skipped_rather_than_failed_when_unset():
     body = method_body(COMPAT, "private static void CheckMenuIds")
     return ('if (string.IsNullOrWhiteSpace(root))' in body
             and '  skipped  set " + GameBinVariable' in body
-            and body.index('if (string.IsNullOrWhiteSpace(root))') < body.index('if (!Directory.Exists(root))')
+            and ordered(body, 'if (string.IsNullOrWhiteSpace(root))', 'if (!Directory.Exists(root))')
             and 'Failures.Add(GameBinVariable + " points at "' in body)
 
 def the_money_rules_need_nothing_from_the_game():
@@ -599,13 +618,15 @@ chk("1.3.6", "smithing materials still ship tradable, as the old switch shipped 
     "CraftingPolicy = PolicyBuySell" in S['Options.cs'])
 chk("1.3.8", "food reserve covers livestock",
     "IsTradableLivestock(item) ? item.HorseComponent.MeatCount : 0" in S['Trading.cs'] and
-    S['Trading.cs'].index("bool livestock = item.HasHorseComponent") < S['Trading.cs'].index("if (foodKeep != null && foodKeep.TryGetValue"))
+    ordered(S['Trading.cs'],
+            "bool livestock = item.HasHorseComponent",
+            "if (foodKeep != null && foodKeep.TryGetValue"))
 chk("1.3.8", "quick-buy respects inventory locks",
     "IsLocked(lockedKeys, new EquipmentElement(item))" in S['Trading.cs'])
 chk("1.3.8", "Harmony field injection uses four underscores", "____targetItem" in S['TooltipPatches.cs'])
 chk("1.3.8", "quick-buy stops when the budget is spent", "if (directionError || Budget() <= 0) break;" in S['Trading.cs'])
 chk("1.3.9", "per-hour cache serves both price modes",
-    S['Ledger.cs'].index("_marketCache.TryGetValue") < S['Ledger.cs'].index("? TopLive"))
+    ordered(S['Ledger.cs'], "_marketCache.TryGetValue", "? TopLive"))
 chk("1.3.9", "entering a market drops cached rankings", "ForgetMarketRankings();" in S['Ledger.cs'])
 chk("1.3.9", "panel respects locks", "ISet<string> locked = TradePolicy.LockedKeys();" in S['Ledger.cs'])
 chk("1.3.9", "summary names the six biggest by gold",
@@ -687,12 +708,10 @@ chk("1.3.25", "the herd probe runs only once livestock is actually on the shelf"
 
 chk("1.3.26", "pathfinder calls are gated behind a straight-line lower bound",
     "float soonest = toBuy + Travel.StraightDaysBetween(from, to);" in S['Ledger.cs'] and
-    S['Ledger.cs'].index("float soonest = toBuy") <
-    S['Ledger.cs'].index("float days = toBuy + Travel.EstimateDaysBetween"))
+    ordered(S['Ledger.cs'], "float soonest = toBuy", "float days = toBuy + Travel.EstimateDaysBetween"))
 chk("1.3.26", "the best route so far prunes pairs before they cost a path query",
     "if (best != null && ceiling / Math.Max(soonest, 0.25f) <= bestKey) continue;" in S['Ledger.cs'] and
-    S['Ledger.cs'].index("ceiling / Math.Max(soonest, 0.25f)") <
-    S['Ledger.cs'].index("Travel.EstimateDaysBetween(from, to)"))
+    ordered(S['Ledger.cs'], "ceiling / Math.Max(soonest, 0.25f)", "Travel.EstimateDaysBetween(from, to)"))
 chk("1.3.26", "both straight-line estimates share one implementation",
     S['Travel.cs'].count("private static float StraightDays(float distance)") == 1 and
     "return StraightDays(party.GetPosition2D.Distance(target.GetPosition2D));" in S['Travel.cs'] and
@@ -797,8 +816,7 @@ chk("1.4.0", "the hotkey honors its modifiers on both the open and the close edg
 
 chk("1.4.1", "quick-buy prices the shelf only when there is a budget to spend",
     "if (Budget() > 0)" in method_body(S['Trading.cs'], "public static void ExecuteQuickBuy") and
-    S['Trading.cs'].index("int Budget()") <
-    S['Trading.cs'].index("ItemRoster shopRoster = settlement.ItemRoster;"))
+    ordered(S['Trading.cs'], "int Budget()", "ItemRoster shopRoster = settlement.ItemRoster;"))
 chk("1.4.1", "a pass the gold-direction guard stopped does not blame the trade policy",
     S['Trading.cs'].count("else if (!directionError)") == 2 and
     S['Trading.cs'].count("else if (!quiet && !directionError)") == 0 and
@@ -871,7 +889,7 @@ chk("1.5.0", "buying strips the shelf and selling stocks it",
     "buy.Restock(-1);" in S['Market.cs'] and "sell.Restock(1);" in S['Market.cs'])
 chk("1.5.0", "route pruning uses the flat-quote upper bound, so it cannot discard a viable route",
     "float ceiling = (float)(sellPrice - buyPrice) * qtyCap;" in S['Ledger.cs'] and
-    S['Ledger.cs'].index("float ceiling =") < S['Ledger.cs'].index("Bulk.Walk(from, to, item"))
+    ordered(S['Ledger.cs'], "float ceiling =", "Bulk.Walk(from, to, item"))
 chk("1.5.0", "a broke selling town is no destination, in the mode that can see its till",
     "if (till <= 0) continue;" in S['Ledger.cs'])
 chk("1.5.0", "the panel is ordered by the column it shows",
@@ -892,8 +910,7 @@ chk("1.5.0", "one place decides which category policy governs an item",
     S['Trading.cs'].count("Options.Current.CraftingPolicy") == 1 and
     S['Trading.cs'].count("Options.Current.LivestockPolicy") == 1)
 chk("1.5.0", "a head of cattle is asked as livestock, not as food",
-    method_body(S['Trading.cs'], "internal static int PolicyFor").index("LivestockPolicy") <
-    method_body(S['Trading.cs'], "internal static int PolicyFor").index("FoodPolicy"))
+    ordered(method_body(S['Trading.cs'], "internal static int PolicyFor"), "LivestockPolicy", "FoodPolicy"))
 chk("1.5.0", "the mounts and pack-animal fence outlived the matrix",
     "if (!IsTradableLivestock(item)) { why = Block.MountOrPackAnimal; return false; }" in
     method_body(S['Trading.cs'], "internal static bool MaySell") and
@@ -1028,8 +1045,7 @@ chk("1.5.12", "the message filter uses a depth counter, so nesting cannot disarm
         method_body(S['Trading.cs'], "private static void CloseTransaction"))
 chk("1.5.12", "an armed message filter is cleared at the start of the next frame",
     'Guard.Run("Tick.ReleaseMessageFilter", TradeActionBehavior.ReleaseMessageFilter)' in S['SubModule.cs'] and
-    S['SubModule.cs'].index("TradeActionBehavior.ReleaseMessageFilter")
-        < S['SubModule.cs'].index("TradeActionBehavior.FlushToasts") and
+    ordered(S['SubModule.cs'], "TradeActionBehavior.ReleaseMessageFilter", "TradeActionBehavior.FlushToasts") and
     "_transactionDepth = 0;" in method_body(S['Trading.cs'], "internal static void ReleaseMessageFilter"))
 chk("1.5.12", "ending a campaign clears the message filter and per-visit state",
     'Guard.Run("GameEnd.Visit", TradeActionBehavior.ForgetVisit)' in S['SubModule.cs'] and
@@ -1117,11 +1133,13 @@ chk("1.6.1", "the trade XP the pass earns reaches the game only once the pass is
 chk("1.6.1", "the XP line is queued last, in amber, and is translatable",
     'private static readonly Color ToastXp = new Color(1f, 0.72f, 0.20f);' in S['Trading.cs'] and
     'Toast(earned, ToastXp);' in method_body(S['Trading.cs'], "private static void CreditTradeSkill") and
-    method_body(S['Trading.cs'], "internal static void FlushToasts").index("CreditTradeSkill(xp, muted)")
-        < method_body(S['Trading.cs'], "internal static void FlushToasts").index("InformationManager.DisplayMessage") and
+    ordered(method_body(S['Trading.cs'], "internal static void FlushToasts"),
+            "CreditTradeSkill(xp, muted)",
+            "InformationManager.DisplayMessage") and
     '{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.' in S['Trading.cs'] and
-    method_body(S['Trading.cs'], "public static void ExecuteQuickSell").index("Toast(msg, profit > 0")
-        < method_body(S['Trading.cs'], "public static void ExecuteQuickSell").index("AwardTradeXp(profit, Muted(quiet))"))
+    ordered(method_body(S['Trading.cs'], "public static void ExecuteQuickSell"),
+            "Toast(msg, profit > 0",
+            "AwardTradeXp(profit, Muted(quiet))"))
 chk("1.6.1", "ending a campaign drops trade XP that was queued but not yet handed over",
     "_pendingXp = 0;" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.1", "the gold reserve default leaves room for two safe passages and a wage run",
@@ -1141,9 +1159,9 @@ chk("1.6.2", "every setting carries a hint",
 chk("1.6.2", "each settings group is written in the order it is shown",
     settings_declared_in_display_order())
 chk("1.6.2", "an always-sell entry still yields to the never-sell list and to an inventory lock",
-    (lambda b: b.index("Listed(s.NeverSet, item)") < b.index("Listed(s.AlwaysSet, item)")
-           and b.index("IsLocked(lockedKeys") < b.index("Listed(s.AlwaysSet, item)")
-           and b.index("Listed(s.AlwaysSet, item)") < b.index("PolicyAllows(PolicyFor(item)"))
+    (lambda b: ordered(b, "Listed(s.NeverSet, item)", "Listed(s.AlwaysSet, item)")
+           and ordered(b, "IsLocked(lockedKeys", "Listed(s.AlwaysSet, item)")
+           and ordered(b, "Listed(s.AlwaysSet, item)", "PolicyAllows(PolicyFor(item)"))
     (method_body(S['Trading.cs'], "internal static bool MaySell")))
 chk("1.6.2", "the cost basis lookup answers for a good it has never seen instead of throwing",
     "if (item == null) return 0;" in method_body(S['Ledger.cs'], "public int GetCostBasis"))
@@ -1206,11 +1224,11 @@ chk("1.6.7", "the queued trade messages are dropped even if one of them cannot b
     "finally { _pending.Clear(); }" in method_body(S['Trading.cs'], "internal static void FlushToasts") and
     method_body(S['Trading.cs'], "internal static void FlushToasts").count("_pending.Clear()") == 1)
 chk("1.6.7", "a good already bought here is passed over before the food reserve is spent on it",
-    (lambda b: b.index("_boughtThisVisit.ContainsKey") < b.index("TradePolicy.MaySell("))
+    (lambda b: ordered(b, "_boughtThisVisit.ContainsKey", "TradePolicy.MaySell("))
     (method_body(S['Trading.cs'], "public static void ExecuteQuickSell")))
 chk("1.6.7", "the panel's own pin list, not the map's marker state, decides what a click on a town pins and unpins",
-    (lambda b: b.index("_panelPins.Remove(settlement)") < b.index("tracker.CheckTracked(")
-           and b.index("_panelPins.Remove(settlement)") < b.index("_panelPins.Add(settlement)"))
+    (lambda b: ordered(b, "_panelPins.Remove(settlement)", "tracker.CheckTracked(")
+           and ordered(b, "_panelPins.Remove(settlement)", "_panelPins.Add(settlement)"))
     (method_body(S['Panel.cs'], "private static void ToggleMarker")) and
     "LedgerPanel.IsPinned(_trackedTown)" in S['Trading.cs'])
 
@@ -1218,8 +1236,7 @@ chk("1.6.8", "the map button reserves the mouse over the button, not over the ma
     (lambda b: "m.x >= 0.90f" in b and "m.y >= 0.46f && m.y <= 0.54f" in b)
     (method_body(S['Panel.cs'], "private static bool OverAssumedBounds")))
 chk("1.6.8", "the food reserve is spent only on goods the sell rules would actually move",
-    (lambda b: b.index("why = Block.NotTradable; return false;")
-             < b.index("foodKeep[item] = reserved - keepCount;"))
+    (lambda b: ordered(b, "why = Block.NotTradable; return false;", "foodKeep[item] = reserved - keepCount;"))
     (method_body(S['Trading.cs'], "internal static bool MaySell")))
 chk("1.6.8", "another mod handles its own notification before TradeLord may hold one back",
     "[HarmonyPriority(Priority.Last)]" in
@@ -1245,7 +1262,7 @@ chk("1.6.11", "a purchase record with nothing left in it is dropped rather than 
     re.search(r'PruneSettledPurchases\(\) =>\s*_purchases\?\.RemoveAll\(rec => rec == null \|\| '
               r'rec\.ItemId == null \|\| rec\.Count <= 0\);', S['Ledger.cs']) is not None)
 chk("1.6.11", "the purchase index is rebuilt after a prune, never left pointing at dropped records",
-    (lambda b: b.rindex("Reindex();") > b.rindex("PruneExpired();"))
+    (lambda b: ordered_last(b, "PruneExpired();", "Reindex();"))
     (method_body(S['Ledger.cs'], "public override void SyncData")))
 chk("1.6.11", "every reader of a purchase record already requires units left, so dropping a spent one changes nothing",
     all("rec.Count > 0" in line for line in
@@ -1297,19 +1314,19 @@ chk("1.6.13", "no MCM line is written into the loader by hand, so bumping the pa
     '"MCMv5"' not in S['Support.cs'] and 'Named(int generation) => "MCMv" + generation;' in S['Support.cs'])
 chk("1.6.13", "an MCM this build was not made for is reported as a mismatch, not as MCM being absent",
     (lambda b: "MCM not detected" in b and "the game has loaded" in b and
-               b.index("MCM not detected") < b.index("the game has loaded"))
+               ordered(b, "MCM not detected", "the game has loaded"))
     (method_body(S['Support.cs'], "internal static void TryLoad")))
 chk("1.6.13", "the mismatch line names both the line found and the line this build needs",
     (lambda b: 'Named(McmGeneration) +' in b and '" and the game has loaded " + found' in b)
     (method_body(S['Support.cs'], "internal static void TryLoad")))
 chk("1.6.13", "a settings screen is only registered for the line the companion can actually talk to",
-    (lambda b: b.index("string.Equals(found, Named(McmGeneration)") < b.index("Bannerlord.ButterLib"))
+    (lambda b: ordered(b, "string.Equals(found, Named(McmGeneration)", "Bannerlord.ButterLib"))
     (method_body(S['Support.cs'], "internal static void TryLoad")))
 chk("1.6.13", "detection reads the line off the assembly name rather than testing for one known line",
     (lambda b: "while (end < name.Length && char.IsDigit(name[end])) end++;" in b and "return end > 4" in b)
     (method_body(S['Support.cs'], "private static string GenerationOf")))
 chk("1.6.13", "an already-loaded usable line wins over a newer one, so the settings screen still opens",
-    (lambda b: b.index("return generation;") < b.index("if (other == null) other = generation;"))
+    (lambda b: ordered(b, "return generation;", "if (other == null) other = generation;"))
     (method_body(S['Support.cs'], "private static string Detect")))
 chk("1.6.13", "a line newer than this build is still found when nothing has loaded it yet",
     "g <= McmGeneration + GenerationsAhead" in method_body(S['Support.cs'], "private static string Detect"))
@@ -1323,24 +1340,24 @@ chk("1.6.14", "the auto-marker claims a town only when it placed the marker itse
 chk("1.6.14", "a pin restored from a save is put back on the map, so the panel and the map agree",
     (lambda b: "VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;" in b
            and "if (tracker != null && !tracker.CheckTracked(s)) tracker.RegisterObject(s);" in b
-           and b.index("_panelPins.Add(s);") < b.index("tracker.RegisterObject(s);"))
+           and ordered(b, "_panelPins.Add(s);", "tracker.RegisterObject(s);"))
     (method_body(S['Panel.cs'], "internal static void RestorePins")))
 chk("1.6.14", "the compatibility tool drains the restore output it redirected, so a noisy restore cannot wedge it",
     (lambda b: "ReadToEndAsync()" in b and "p.StandardOutput.ReadToEnd()" in b
-           and b.index("ReadToEndAsync()") < b.index("p.WaitForExit()")
-           and b.index("p.StandardOutput.ReadToEnd()") < b.index("p.WaitForExit()"))
+           and ordered(b, "ReadToEndAsync()", "p.WaitForExit()")
+           and ordered(b, "p.StandardOutput.ReadToEnd()", "p.WaitForExit()"))
     (method_body(COMPAT, "private static bool Fetch")))
 chk("1.6.14", "the compatibility tool checks every game member the mod patches or reaches for by name",
     compat_checks_every_game_hook())
 chk("1.6.14", "a settings change reopens the hourly capture, so a market is not left unrecorded for the whole visit",
     (lambda b: "Options.Generation == _capturedGen) return;" in b
-           and b.index("Options.Generation == _capturedGen") < b.index("_capturedGen = Options.Generation;"))
+           and ordered(b, "Options.Generation == _capturedGen", "_capturedGen = Options.Generation;"))
     (method_body(S['Ledger.cs'], "public void CaptureSettlement")))
 
 chk("1.6.15", "an unreadable price observation is dropped whatever the shelf life is set to",
     (lambda b: "if (_ledger == null) return;" in b
            and "o == null || o.TownId == null" in b
-           and b.index("if (_ledger == null) return;") < b.index("ObservationShelfLifeDays"))
+           and ordered(b, "if (_ledger == null) return;", "ObservationShelfLifeDays"))
     (method_body(S['Ledger.cs'], "private void PruneObservations")))
 chk("1.6.15", "an item whose observations have all gone is dropped from the save whatever the shelf life is set to",
     (lambda b: "if (kv.Value == null || kv.Value.Count == 0) spent.Add(kv.Key);" in b
@@ -1357,7 +1374,7 @@ chk("1.6.15", "ending a campaign clears what the log has already reported, so th
 chk("1.6.16", "holding cargo for a better market is named as its own reason, not as the profit margin",
     (lambda b: b.count("case Block.BelowBestMarket:") == 1
            and '{=TL85}' in b and '{=TL42}' in b
-           and b.index("case Block.BelowMargin:") < b.index('{=TL42}') < b.index("case Block.BelowBestMarket:"))
+           and ordered(b, "case Block.BelowMargin:", '{=TL42}', "case Block.BelowBestMarket:"))
     (method_body(S['Trading.cs'], "internal static TextObject Phrase")) and
     "TL85" in strings_declared())
 chk("1.6.16", "a campaign starts with the herd guard re-armed, so an earlier one cannot leave livestock buying off",
@@ -1368,16 +1385,14 @@ chk("1.6.16", "a campaign starts with the herd guard re-armed, so an earlier one
 chk("1.6.16", "a full herd is named as its own reason, not as a full cargo hold",
     (lambda b: b.count("case Block.HerdFull:") == 1
            and '{=TL86}' in b and '{=TL44}' in b
-           and b.index("case Block.CarryWeight:") < b.index('{=TL44}') < b.index("case Block.HerdFull:"))
+           and ordered(b, "case Block.CarryWeight:", '{=TL44}', "case Block.HerdFull:"))
     (method_body(S['Trading.cs'], "internal static TextObject Phrase")) and
     "TL86" in strings_declared() and
     "if (tally.Saw(Block.CarryWeight)) _cargoWasFull = true;" in S['Trading.cs'])
 chk("1.6.16", "the auto-marker is put back on the map when a save loads, and cannot cost the menus if it fails",
     (lambda b: "LedgerPanel.RestorePins(_pinnedTowns);" in b
            and 'Guard.Run("Action.RestoreMarker", UpdateBestSellTownTracker);' in b
-           and b.index("LedgerPanel.RestorePins")
-               < b.index('Guard.Run("Action.RestoreMarker"')
-               < b.index('AddOptions("town");'))
+           and ordered(b, "LedgerPanel.RestorePins", 'Guard.Run("Action.RestoreMarker"', 'AddOptions("town");'))
     (method_body(S['Trading.cs'], "private void OnSessionLaunched")))
 chk("1.6.18", "a campaign is told once that entering a market trades for it, before the pass that does so",
     (lambda b: "if (_announcedAutomation) return false;" in b
@@ -1388,8 +1403,8 @@ chk("1.6.18", "a campaign is told once that entering a market trades for it, bef
     "TL87" in strings_declared())
 chk("1.6.24", "the market that carries the notice is left alone, so a campaign can turn automation off before it runs",
     (lambda b: "if (!AnnounceAutomation(settlement))" in b
-           and b.index("if (!AnnounceAutomation(settlement))") < b.index("ExecuteQuickSell(settlement, quiet: true)")
-           and b.index("ExecuteQuickBuy(settlement, quiet: true)") < b.index("WarnNoRoomToCarry(countPass: true)"))
+           and ordered(b, "if (!AnnounceAutomation(settlement))", "ExecuteQuickSell(settlement, quiet: true)")
+           and ordered(b, "ExecuteQuickBuy(settlement, quiet: true)", "WarnNoRoomToCarry(countPass: true)"))
     (method_body(S['Trading.cs'], "private void OnSettlementEntered")) and
     "starting at the next one" in S['Trading.cs'])
 chk("1.6.18", "the notice is remembered in the save, so it is shown once per campaign and not once per market",
@@ -1411,9 +1426,10 @@ chk("1.6.20", "no collection of the module's own making is written into a save",
 chk("1.6.20", "the ledger a save carries is written and read without the game being involved",
     the_codec_needs_nothing_from_the_game())
 chk("1.6.20", "the ledger text is rebuilt from pruned data every time the campaign is saved",
-    (lambda b: b.index("if (!dataStore.IsLoading) PruneExpired();")
-             < b.index("_ledgerText = LedgerCodec.WriteLedger(_ledger);")
-             < b.index('dataStore.SyncData("TradeLord_LedgerText"'))
+    (lambda b: ordered(b,
+                       "if (!dataStore.IsLoading) PruneExpired();",
+                       "_ledgerText = LedgerCodec.WriteLedger(_ledger);",
+                       'dataStore.SyncData("TradeLord_LedgerText"'))
     (method_body(S['Ledger.cs'], "public override void SyncData")) and
     "if (dataStore.IsSaving)" in S['Ledger.cs'])
 chk("1.6.20", "numbers in a saved ledger are written and read the same way in every language",
