@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.16
+
+- A market that pays less than the town you are holding your cargo for now says so, instead of blaming your profit margin.
+- A herd already as large as your party can drive now says so, instead of reporting that there is no room to carry more.
+- The town TradeLord marks as your best place to sell is put back on the map as soon as you load a save, instead of waiting for the next day or the next settlement you enter.
+
 ## 1.6.15
 
 - The log now names every market that traded nothing, instead of falling silent after the first market that gave the same reasons.
