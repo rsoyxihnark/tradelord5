@@ -37,6 +37,7 @@ How TradeLord learns prices, and how far it is willing to look.
 - **Scan radius** — limit price scanning to markets within a straight-line distance. 0 is the whole
   map.
 - **Minimum stock for buy suggestions** — do not suggest buying somewhere that only has a handful.
+  Live prices only: observed mode records prices, not stock levels.
 - **Travel ceiling** and **Village travel ceiling** — how many days of travel a route may cost.
   Markets beyond the ceiling vanish from tooltips, and no suggested trip may exceed it. Villages get
   their own, stricter ceiling.
@@ -105,10 +106,11 @@ it does it.
 
 ## General
 
-- **Trade with villages** — include villages, which trade smaller amounts under a stricter travel
-  ceiling.
+- **Trade with villages** — villages join the price scans and get the quick-sell and quick-buy
+  entries in their menus. They keep their own, stricter travel ceiling.
 - **Simulation mode (dry run)** — TradeLord reports what it would have done and moves nothing. The
-  safest way to watch it work before you trust it with your purse.
+  safest way to watch it work before you trust it with your purse. Read the result as a best case:
+  nothing moves, so the market never reacts, and a real pass usually trades a little less.
 - **Economy settling delay** — keep TradeLord out of a brand new campaign for a number of days,
   since prices have not settled yet.
 - **Trade XP multiplier** — how much of the profit from automated trades feeds your Trade skill.
@@ -116,7 +118,8 @@ it does it.
 - **Auto-mark best sell town on map** and **Auto-marker travel ceiling** — pin the best place to
   sell your cargo on the campaign map.
 - **Coin sound on trade** — the coin noise on a completed trade.
-- **Detailed trade summary** — the itemised on-screen report after a pass, rather than a one-liner.
+- **Detailed trade summary** — name the goods in the on-screen trade summary rather than counting
+  them. The full list goes to the log either way.
 
 ## Item id lists
 
