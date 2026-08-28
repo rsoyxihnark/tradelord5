@@ -1,9 +1,10 @@
 import io, re, sys
 
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
-     ['Trading.cs', 'Ledger.cs', 'LedgerCodec.cs', 'Panel.cs', 'Travel.cs', 'Support.cs',
+     ['Trading.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Panel.cs', 'Travel.cs', 'Support.cs',
       'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
+MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -449,6 +450,29 @@ def the_menu_id_check_is_skipped_rather_than_failed_when_unset():
             and '  skipped  set " + GameBinVariable' in body
             and body.index('if (string.IsNullOrWhiteSpace(root))') < body.index('if (!Directory.Exists(root))')
             and 'Failures.Add(GameBinVariable + " points at "' in body)
+
+def the_money_rules_need_nothing_from_the_game():
+    return ('TaleWorlds' not in S['TradeMath.cs']
+            and 'public static class TradeMath' in S['TradeMath.cs']
+            and all(m in S['TradeMath.cs'] for m in
+                    ('PolicyAllows', 'Credit', 'ProfitAcceptable', 'Realizable', 'BuyAcceptable')))
+
+def the_policy_layer_keeps_no_second_copy_of_the_money_rules():
+    body = S['Trading.cs']
+    forwards = ('TradeMath.PolicyAllows(policy, buying);',
+                'TradeMath.Credit(proceeds, basis, unpaidWorth);',
+                'TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);',
+                'TradeMath.Realizable(farSellPrice, Options.Current.ResaleSafetyFactor);',
+                'TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin);')
+    return (all(f in body for f in forwards)
+            and 'gain > 0 ? gain : 0' not in body
+            and 'ResaleSafetyFactor;' not in body.replace('Options.Current.ResaleSafetyFactor);', ''))
+
+def the_money_rules_are_covered_by_tests_the_build_runs():
+    return ('TradeMath.cs' in TESTPROJ and 'Options.cs' in TESTPROJ
+            and MATHTESTS.count('[Fact]') + MATHTESTS.count('[Theory]') >= 12
+            and 'TradeMath.Credit' in MATHTESTS and 'TradeMath.BuyAcceptable' in MATHTESTS
+            and 'TradeMath.ProfitAcceptable' in MATHTESTS and 'TradeMath.PolicyAllows' in MATHTESTS)
 
 def saved_field_types():
     types = {}
@@ -1238,18 +1262,21 @@ chk("1.6.12", "goods with no price paid are credited at what the cheapest market
     (lambda b: "BestBuy(item)" in b and "item.Value" in b)
     (method_body(S['Trading.cs'], "internal static int UnpaidWorth")))
 chk("1.6.12", "a paid unit is still credited exactly as before, against what was paid for it",
-    "if (basis > 0) return proceeds - basis;" in method_body(S['Trading.cs'], "internal static int Credit"))
+    "if (basis > 0) return proceeds - basis;" in
+        method_body(S['TradeMath.cs'], "public static int Credit"))
 chk("1.6.12", "an unpaid unit sold below that worth credits nothing rather than a loss",
-    "return gain > 0 ? gain : 0;" in method_body(S['Trading.cs'], "internal static int Credit"))
+    "return gain > 0 ? gain : 0;" in
+        method_body(S['TradeMath.cs'], "public static int Credit"))
 chk("1.6.12", "the simulated pass and the real one credit profit through the same rule",
     S['Trading.cs'].count("TradePolicy.Credit(") == 2 and
     "TradePolicy.Credit(price, basis, unpaidWorth)" in S['Trading.cs'] and
     "TradePolicy.Credit(proceeds, basis, unpaidWorth)" in S['Trading.cs'])
 chk("1.6.12", "what quick-sell agrees to sell is unchanged, since the decision still runs on the bare basis",
     "if (!TradePolicy.ProfitAcceptable(basis, price))" in S['Trading.cs'] and
-    re.search(r'ProfitAcceptable\(int costBasis, int townSellPrice\) =>\s*costBasis > 0\s*\?\s*'
-              r'townSellPrice >= costBasis \* \(1f \+ Options\.Current\.MinProfitMargin\)\s*:\s*'
-              r'townSellPrice > 0;', S['Trading.cs']) is not None)
+    "TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);" in S['Trading.cs'] and
+    re.search(r'ProfitAcceptable\(int costBasis, int townSellPrice, float margin\) =>\s*costBasis > 0\s*\?\s*'
+              r'townSellPrice >= costBasis \* \(1f \+ margin\)\s*:\s*'
+              r'townSellPrice > 0;', S['TradeMath.cs']) is not None)
 chk("1.6.12", "loot is still held back from a poor market by the same best-market floor",
     "if (Options.Current.PreferBestSellTown || basis == 0)" in S['Trading.cs'])
 chk("1.6.12", "that worth is looked up once per good, not once per unit sold",
@@ -1354,14 +1381,18 @@ chk("1.6.16", "the auto-marker is put back on the map when a save loads, and can
                < b.index('AddOptions("town");'))
     (method_body(S['Trading.cs'], "private void OnSessionLaunched")))
 chk("1.6.18", "a campaign is told once that entering a market trades for it, before the pass that does so",
-    (lambda b: "if (_announcedAutomation) return;" in b
-           and "if (!Options.Current.AutoSellOnEntry && !Options.Current.AutoBuyOnEntry) return;" in b
-           and "if (!CanTradeHere(settlement)) return;" in b
-           and "_announcedAutomation = true;" in b and '{=TL87}' in b)
-    (method_body(S['Trading.cs'], "private void AnnounceAutomation")) and
-    "TL87" in strings_declared() and
-    (lambda b: b.index("AnnounceAutomation(settlement);") < b.index("ExecuteQuickSell(settlement, quiet: true)"))
-    (method_body(S['Trading.cs'], "private void OnSettlementEntered")))
+    (lambda b: "if (_announcedAutomation) return false;" in b
+           and "if (!Options.Current.AutoSellOnEntry && !Options.Current.AutoBuyOnEntry) return false;" in b
+           and "if (!CanTradeHere(settlement)) return false;" in b
+           and "_announcedAutomation = true;" in b and '{=TL87}' in b and b.rstrip().endswith("return true;\n        }"))
+    (method_body(S['Trading.cs'], "private bool AnnounceAutomation")) and
+    "TL87" in strings_declared())
+chk("1.6.24", "the market that carries the notice is left alone, so a campaign can turn automation off before it runs",
+    (lambda b: "if (!AnnounceAutomation(settlement))" in b
+           and b.index("if (!AnnounceAutomation(settlement))") < b.index("ExecuteQuickSell(settlement, quiet: true)")
+           and b.index("ExecuteQuickBuy(settlement, quiet: true)") < b.index("WarnNoRoomToCarry(countPass: true)"))
+    (method_body(S['Trading.cs'], "private void OnSettlementEntered")) and
+    "starting at the next one" in S['Trading.cs'])
 chk("1.6.18", "the notice is remembered in the save, so it is shown once per campaign and not once per market",
     'dataStore.SyncData("TradeLord_AutomationNotice", ref _announcedAutomation);' in S['Trading.cs'] and
     "_announcedAutomation" not in method_body(S['Trading.cs'], "internal static void ForgetVisit") and
@@ -1414,6 +1445,12 @@ chk("1.6.22", "a menu id the mod does not guard fails the run, and a guarded one
     a_menu_id_the_mod_does_not_guard_fails_the_run())
 chk("1.6.22", "with no game install named, the menu-id check is skipped rather than failed",
     the_menu_id_check_is_skipped_rather_than_failed_when_unset())
+chk("1.6.24", "the rules that decide what a trade is worth need nothing from the game",
+    the_money_rules_need_nothing_from_the_game())
+chk("1.6.24", "the policy layer forwards to those rules instead of keeping a second copy",
+    the_policy_layer_keeps_no_second_copy_of_the_money_rules())
+chk("1.6.24", "margin, resale factor and profit credit are proved by tests the build runs",
+    the_money_rules_are_covered_by_tests_the_build_runs())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

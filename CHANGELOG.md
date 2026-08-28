@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.24
+
+- The first market of a campaign is now left alone when TradeLord tells you it trades on entry, so you can turn that off before it does anything, and it starts trading from the next market.
+
 ## 1.6.23
 
 - TradeLord is now built against Bannerlord 1.4.8.119303, the version it is played and tested on, and it still runs on 1.4.7 and the 1.5.1 beta.

@@ -9,6 +9,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\src\LedgerCodec.cs" Link="LedgerCodec.cs"/>
+    <Compile Include="..\src\TradeMath.cs" Link="TradeMath.cs"/>
+    <Compile Include="..\src\Options.cs" Link="Options.cs"/>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1"/>
