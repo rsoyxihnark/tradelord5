@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.21
+
+- The cargo-full warning now appears only on a visit where TradeLord traded nothing, instead of following a pass that had just bought until the hold was full.
+- Profit credited to your Trade skill is reported in one line instead of two, and that line names your new Trade level when the skill rises.
+
 ## 1.6.20
 
 - A campaign last saved by TradeLord 1.6.18 or earlier no longer opens; campaigns saved by 1.6.19 and later are unaffected.
