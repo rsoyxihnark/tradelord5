@@ -82,7 +82,7 @@ namespace TradeLord.Compat
                 Console.WriteLine("usage: dotnet run --project tools/compat -- <game version> [more versions]");
                 Console.WriteLine("       the version in src/TradeLord.csproj is always the baseline");
                 Console.WriteLine();
-                Console.WriteLine("example: dotnet run --project tools/compat -- 1.4.8.119303 1.5.1.120547-beta");
+                Console.WriteLine("example: dotnet run --project tools/compat -- <a version to compare against>");
                 Console.WriteLine();
                 Console.WriteLine("set " + GameBinVariable + " to a Bannerlord install to also check the menu ids the");
                 Console.WriteLine("mod hangs its entries off. Reference assemblies carry no string literals, so that");
