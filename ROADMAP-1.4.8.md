@@ -23,7 +23,7 @@ The reference assemblies carry signatures only, so this proves the mod still *fi
 
 **The bound API surface is unchanged.** Reading the two compiled assemblies' type and member reference tables gives the exact game surface the mod binds to. All of it resolved in both versions and compared by signature, accessibility and parameter name.
 
-- 100 game types bound, 198 distinct members bound, 100/100 resolved in both versions
+- 100 game types bound, 192 distinct members bound, every one of them resolved in both versions
 - 0 differences affecting anything the mod calls
 - the only difference inside any bound type is `ApplicationVersion.DefaultChangeSet`, 117484 -> 119303, which the mod never reads
 
@@ -56,7 +56,7 @@ The reference assemblies carry signatures only, so this proves the mod still *fi
 `1.5.1.120547-beta` was published while this was being written, and the same method reaches the same
 verdict on it. Nothing found that blocks it.
 
-- all 103 bound game types and 201 bound members still resolve
+- all 100 bound game types and 192 bound members still resolve
 - all four Harmony patch targets unchanged in shape, still one overload each
 - `GetHerdingModifier` and `ItemMenuVM._targetItem` intact
 - no value of any enum the mod reads has moved
@@ -101,9 +101,14 @@ the tool and their reference tables diffed, so the whole of that difference is a
 | members | `SaveableTypeDefiner::.ctor`, `SaveableTypeDefiner::AddClassDefinition`, `SaveableTypeDefiner::ConstructContainerDefinition`, `SaveableFieldAttribute::.ctor` |
 
 Nothing was added, and nothing outside that group was lost. Every one of them is a save-system type
-the mod stopped needing when it stopped defining saveable types of its own. Counts quoted in the
-sections above were measured at the mod version those sections name - this number moves with the
-mod, not with the game.
+the mod stopped needing when it stopped defining saveable types of its own. This number moves with
+the mod, not with the game.
+
+The two sections above once disagreed with each other, quoting 198 members in one and 103 types and
+201 members in the other, because an earlier version of the compatibility tool counted members
+differently. Both now carry the same figure, taken by running the current tool against a rebuild of
+the v1.6.9 assemblies: 100 game types and 192 distinct members, all resolving on all three
+versions.
 
 ### One open question is closed, and without needing the game
 
