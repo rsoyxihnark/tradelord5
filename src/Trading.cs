@@ -48,6 +48,7 @@ namespace TradeLord
 
         internal Block Dominant()
         {
+            if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;
             Block top = Block.None;
             int best = 0;
             foreach (var kv in _counts)
@@ -454,6 +455,21 @@ namespace TradeLord
             Toast(new TextObject("{=TL91}An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which."), ToastAlert);
         }
 
+        private static int SpendableGold() =>
+            TradeMath.Budget(Hero.MainHero.Gold, Options.Current.GoldReserve,
+                             Options.Current.MaxSpendPerVisit, _spentThisVisit, 0);
+
+        private static bool WarnPurseBelowReserve()
+        {
+            if (TradedThisVisit()) return false;
+            if (SpendableGold() > 0) return false;
+            TextObject msg = new TextObject("{=TL92}Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings.");
+            msg.SetTextVariable("GOLD", Hero.MainHero.Gold);
+            msg.SetTextVariable("RESERVE", Options.Current.GoldReserve);
+            Toast(msg, ToastAlert);
+            return true;
+        }
+
         private static void WarnNoRoomToCarry()
         {
             if (TradedThisVisit()) return;
@@ -554,7 +570,10 @@ namespace TradeLord
                     if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
                     if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
                 }
-                if (Options.Current.EnableBuying && CanTradeHere(settlement)) WarnNoRoomToCarry();
+                if (Options.Current.EnableBuying && CanTradeHere(settlement))
+                {
+                    if (!WarnPurseBelowReserve()) WarnNoRoomToCarry();
+                }
                 UpdateBestSellTownTracker();
             });
         }
