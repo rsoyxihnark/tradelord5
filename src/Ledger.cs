@@ -93,13 +93,14 @@ namespace TradeLord
 
         private void PruneObservations()
         {
+            if (_ledger == null) return;
             float shelf = Options.Current.ObservationShelfLifeDays;
-            if (shelf <= 0f || _ledger == null) return;
             float now = (float)CampaignTime.Now.ToDays;
             var spent = new List<string>();
             foreach (var kv in _ledger)
             {
-                kv.Value?.RemoveAll(o => o == null || now - o.CapturedDay > shelf);
+                kv.Value?.RemoveAll(o => o == null || o.TownId == null ||
+                                         (shelf > 0f && now - o.CapturedDay > shelf));
                 if (kv.Value == null || kv.Value.Count == 0) spent.Add(kv.Key);
             }
             for (int i = 0; i < spent.Count; i++) _ledger.Remove(spent[i]);

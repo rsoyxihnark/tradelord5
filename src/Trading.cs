@@ -819,7 +819,7 @@ namespace TradeLord
             }
             else if (!directionError)
             {
-                if (tally.Any) Log.Repeatable("quick-sell-empty", tally.Summary(),
+                if (tally.Any) Log.Repeatable("quick-sell-empty " + settlement.StringId, tally.Summary(),
                     "quick-sell moved nothing at " + settlement.Name + ": " + tally.Summary());
                 if (!quiet)
                 {
@@ -978,7 +978,7 @@ namespace TradeLord
             }
             else if (!directionError)
             {
-                if (tally.Any) Log.Repeatable("quick-buy-empty", tally.Summary(),
+                if (tally.Any) Log.Repeatable("quick-buy-empty " + settlement.StringId, tally.Summary(),
                     "quick-buy moved nothing at " + settlement.Name + ": " + tally.Summary());
                 if (!quiet)
                 {

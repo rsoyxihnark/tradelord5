@@ -768,7 +768,7 @@ chk("1.5.6", "expired observations are pruned on both save and load",
     method_body(S['Ledger.cs'], "public override void SyncData").count("PruneExpired();") == 2 and
     "if (!dataStore.IsLoading) PruneExpired();" in S['Ledger.cs'] and
     "if (dataStore.IsLoading) PruneExpired();" in S['Ledger.cs'] and
-    "if (shelf <= 0f || _ledger == null) return;" in method_body(S['Ledger.cs'], "private void PruneObservations"))
+    "(shelf > 0f && now - o.CapturedDay > shelf)" in method_body(S['Ledger.cs'], "private void PruneObservations"))
 chk("1.5.6", "the message filter is armed only around the SellItemsAction call",
     len(re.findall(r'OpenTransaction\(\);\s*try \{ SellItemsAction\.Apply\([^)]*\); \}\s*'
                    r'finally \{ CloseTransaction\(\); \}', S['Trading.cs'])) == 2 and
@@ -1085,6 +1085,23 @@ chk("1.6.14", "a settings change reopens the hourly capture, so a market is not 
     (lambda b: "Options.Generation == _capturedGen) return;" in b
            and b.index("Options.Generation == _capturedGen") < b.index("_capturedGen = Options.Generation;"))
     (method_body(S['Ledger.cs'], "public void CaptureSettlement")))
+
+chk("1.6.15", "an unreadable price observation is dropped whatever the shelf life is set to",
+    (lambda b: "if (_ledger == null) return;" in b
+           and "o == null || o.TownId == null" in b
+           and b.index("if (_ledger == null) return;") < b.index("ObservationShelfLifeDays"))
+    (method_body(S['Ledger.cs'], "private void PruneObservations")))
+chk("1.6.15", "an item whose observations have all gone is dropped from the save whatever the shelf life is set to",
+    (lambda b: "if (kv.Value == null || kv.Value.Count == 0) spent.Add(kv.Key);" in b
+           and "_ledger.Remove(spent[i]);" in b and "shelf <= 0f" not in b)
+    (method_body(S['Ledger.cs'], "private void PruneObservations")))
+chk("1.6.15", "each market that trades nothing is named in the log, not just the first with those reasons",
+    S['Trading.cs'].count('Log.Repeatable("quick-sell-empty " + settlement.StringId') == 1 and
+    S['Trading.cs'].count('Log.Repeatable("quick-buy-empty " + settlement.StringId') == 1)
+chk("1.6.15", "ending a campaign clears what the log has already reported, so the next one reports it again",
+    "_repeats.Clear();" in method_body(S['Support.cs'], "internal static void Forget") and
+    "_errors.Clear();" in method_body(S['Support.cs'], "internal static void Forget") and
+    'Guard.Run("GameEnd.Log", Log.Forget)' in S['SubModule.cs'])
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
