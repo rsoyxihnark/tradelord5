@@ -1455,6 +1455,28 @@ chk("1.6.24", "the purse rule and the route confidence need nothing from the gam
 chk("1.6.24", "the purse rule, route confidence and the item lists are proved by tests the build runs",
     the_route_rules_are_covered_by_tests_the_build_runs())
 
+def no_tracked_file_carries_a_machine_written_dash():
+    import subprocess
+    dashes = "\u2012\u2013\u2014\u2015\u2212\ufe58\uff0d"
+    listed = subprocess.run(["git", "ls-files", "-z"], capture_output=True)
+    if listed.returncode != 0:
+        return False
+    for name in listed.stdout.decode("utf-8").split("\0"):
+        if not name:
+            continue
+        try:
+            body = io.open(name, encoding="utf-8").read()
+        except (IOError, OSError, UnicodeDecodeError):
+            continue
+        if any(d in body for d in dashes):
+            return False
+    return True
+
+def a_list_entry_is_matched_whatever_its_capitalisation():
+    parsed = method_body(S['Options.cs'], "private static HashSet<string> Parsed")
+    return ("StringComparer.OrdinalIgnoreCase" in parsed and
+            "A_name_is_matched_whatever_its_capitalisation" in ROUTETESTS)
+
 def an_item_list_is_matched_by_name_as_well_as_by_id():
     listed = method_body(S['Trading.cs'], "internal static bool Listed")
     return ("list.Contains(item.StringId)" in listed and
@@ -1526,6 +1548,10 @@ chk("1.6.26", "a second campaign in one sitting starts the panel from scratch",
     a_second_campaign_starts_the_panel_from_scratch())
 chk("1.6.26", "the item lists are read the way the tests the build runs say they are",
     the_item_list_reading_is_covered_by_tests_the_build_runs())
+chk("1.6.26", "an entry is matched whatever its capitalisation, and the tests the build runs say so",
+    a_list_entry_is_matched_whatever_its_capitalisation())
+chk("1.6.26", "no file in the repository carries an em dash or an en dash",
+    no_tracked_file_carries_a_machine_written_dash())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
