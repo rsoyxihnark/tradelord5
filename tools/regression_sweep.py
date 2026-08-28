@@ -422,6 +422,34 @@ def the_panel_legend_is_legible():
                   PREFAB)
     return m is not None and int(m.group(1)) >= 14 and int(m.group(3), 16) >= 0xCC
 
+GITIGNORE = io.open('.gitignore', encoding='utf-8').read()
+
+def the_game_assemblies_are_read_from_a_variable_and_never_copied():
+    return ('private const string GameBinVariable = "TRADELORD_GAME_BIN";' in COMPAT
+            and 'Environment.GetEnvironmentVariable(GameBinVariable)' in COMPAT
+            and 'SearchOption.AllDirectories' in COMPAT
+            and not re.search(r'File\.(Copy|WriteAllBytes|Move|Delete)\(', COMPAT)
+            and COMPAT.count('File.WriteAllText(') == 1
+            and 'File.WriteAllText(Path.Combine(work, "fetch.csproj")' in COMPAT
+            and 'File.OpenRead(dll)' in method_body(COMPAT, "private static HashSet<string> UserStrings")
+            and '*.dll' in GITIGNORE.split())
+
+def a_menu_id_the_mod_does_not_guard_fails_the_run():
+    body = method_body(COMPAT, "private static void CheckMenuIds")
+    return ('Failures.Add(id + " is in no assembly of this install' in body
+            and 'if (guarded)' in body
+            and body.index('if (guarded)') < body.index('Failures.Add(id + " is in no assembly')
+            and '("town", false)' in COMPAT and '("village", false)' in COMPAT
+            and '("port_menu", true)' in COMPAT
+            and '("naval_storyline_virtualport", true)' in COMPAT)
+
+def the_menu_id_check_is_skipped_rather_than_failed_when_unset():
+    body = method_body(COMPAT, "private static void CheckMenuIds")
+    return ('if (string.IsNullOrWhiteSpace(root))' in body
+            and '  skipped  set " + GameBinVariable' in body
+            and body.index('if (string.IsNullOrWhiteSpace(root))') < body.index('if (!Directory.Exists(root))')
+            and 'Failures.Add(GameBinVariable + " points at "' in body)
+
 def saved_field_types():
     types = {}
     for text in (S['Ledger.cs'], S['Trading.cs']):
@@ -1380,6 +1408,12 @@ chk("1.6.22", "the item tooltip adds its prices without announcing the mod by na
     the_item_tooltip_does_not_announce_the_mod())
 chk("1.6.22", "the line under the ledger is set at a size that can be read",
     the_panel_legend_is_legible())
+chk("1.6.22", "the tool reads a game install from a variable, copies nothing, and the repository refuses to carry a game assembly",
+    the_game_assemblies_are_read_from_a_variable_and_never_copied())
+chk("1.6.22", "a menu id the mod does not guard fails the run, and a guarded one does not",
+    a_menu_id_the_mod_does_not_guard_fails_the_run())
+chk("1.6.22", "with no game install named, the menu-id check is skipped rather than failed",
+    the_menu_id_check_is_skipped_rather_than_failed_when_unset())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
