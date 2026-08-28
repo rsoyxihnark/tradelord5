@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.22
+
+- The ledger panel now opens with L instead of T, because T also opens the game's own message panel and the two fought over the key.
+- Buy cap per item can now be set to 0 to turn the cap off, the way the two settings beside it already could.
+- Scan radius, observation shelf life and buy cap per item now say on the setting itself what 0 does.
+- A market where TradeLord bought nothing because your gold reserve or spending cap was reached now says so, instead of trading quietly and leaving you to guess.
+- The item tooltip no longer puts a TradeLord heading above the prices it adds.
+- The line of notes under the ledger is now large enough to read.
+
 ## 1.6.21
 
 - The cargo-full warning now appears only on a visit where TradeLord traded nothing, instead of following a pass that had just bought until the hold was full.
