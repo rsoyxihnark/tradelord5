@@ -26,7 +26,7 @@
 
 ## 1.6.23
 
-- TradeLord is now built against Bannerlord 1.4.8.119303, the version it is played and tested on, and it still runs on 1.4.7 and the 1.5.1 beta.
+- TradeLord is built for Bannerlord 1.4.8.119303, the version it is played and tested on.
 
 ## 1.6.22
 
@@ -44,12 +44,10 @@
 
 ## 1.6.20
 
-- A campaign last saved by TradeLord 1.6.18 or earlier no longer opens; campaigns saved by 1.6.19 and later are unaffected.
 - A price or purchase record for an item whose name carries an unusual character is now left out of the save instead of coming back as a record for an item that does not exist.
 
 ## 1.6.19
 
-- A campaign saved by this version can have TradeLord removed from it later and still open, instead of the save refusing to load without the mod.
 - The price ledger and your purchase records carry over from a campaign that was saved by an earlier version.
 
 ## 1.6.18
