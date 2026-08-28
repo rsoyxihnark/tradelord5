@@ -69,6 +69,8 @@
 		<string id="TL82" text="Cargo is full - TradeLord cannot buy here until you free up carry weight."/>
 		<string id="TL83" text="the village is down to its last of each good"/>
 		<string id="TL84" text="{ITEM}: buy {FROM} ({BUY} denars) -&gt; sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} days from here"/>
+		<string id="TL85" text="you are holding this cargo for a better market"/>
+		<string id="TL86" text="your party cannot drive any more livestock"/>
 		<string id="TL201" text="Live world prices (default)"/>
 		<string id="TL202" text="Observation shelf life (days)"/>
 		<string id="TL203" text="Exclude hostile markets"/>

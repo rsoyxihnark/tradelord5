@@ -75,15 +75,17 @@ namespace TradeLord
                 case Block.CategoryPolicy:
                     return new TextObject("{=TL41}your category policy excludes it");
                 case Block.BelowMargin:
-                case Block.BelowBestMarket:
                     return new TextObject("{=TL42}prices here miss your margin");
+                case Block.BelowBestMarket:
+                    return new TextObject("{=TL85}you are holding this cargo for a better market");
                 case Block.BudgetSpent:
                 case Block.ItemCountCap:
                 case Block.ItemValueCap:
                     return new TextObject("{=TL43}your purse or spending caps are spent");
                 case Block.CarryWeight:
-                case Block.HerdFull:
                     return new TextObject("{=TL44}there is no room to carry more");
+                case Block.HerdFull:
+                    return new TextObject("{=TL86}your party cannot drive any more livestock");
                 case Block.MerchantTillEmpty:
                     return new TextObject("{=TL46}the merchant has run out of gold");
                 case Block.NoResaleMarket:
@@ -407,6 +409,7 @@ namespace TradeLord
             {
                 ResetVisit();
                 LedgerPanel.RestorePins(_pinnedTowns);
+                UpdateBestSellTownTracker();
                 Log.Write(Travel.NavalActive
                     ? "naval capability: party can sail - routes and travel times include sea legs"
                     : "naval capability: land-only - land routing in effect");
