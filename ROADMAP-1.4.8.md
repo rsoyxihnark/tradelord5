@@ -4,17 +4,18 @@ The mod is built against Bannerlord `1.4.7.117484`. Players are already on `1.4.
 
 | | |
 |---|---|
-| Mod version inspected | 1.6.9 |
+| Mod version first inspected | 1.6.9 |
+| Re-checked at | 1.6.20 |
 | From | 1.4.7.117484 |
-| To | 1.4.8.119303 |
-| Method | NuGet reference assemblies for both versions, plus the mod's own compiled output. No game install involved. |
-| Reproduce it | `dotnet run --project tools/compat -- 1.4.8.119303` |
+| To | 1.4.8.119303, and 1.5.1.120547-beta |
+| Method | NuGet reference assemblies for every version, plus the mod's own compiled output. No game install involved. |
+| Reproduce it | `dotnet run --project tools/compat -- 1.4.8.119303 1.5.1.120547-beta` |
 
 ## Verdict
 
 Nothing found that blocks 1.4.8. Every game type, member, enum value and UI binding the mod touches is unchanged between the two versions, and both projects compile clean against 1.4.8 with warnings as errors.
 
-The reference assemblies carry signatures only, so this proves the mod still *fits* 1.4.8, not that it still *behaves* the same. Five things can only be settled by loading the game; the test pass below is what settles them.
+The reference assemblies carry signatures only, so this proves the mod still *fits* 1.4.8, not that it still *behaves* the same. Four things can only be settled by loading the game; the test pass below is what settles them. A fifth was closed by the 1.6.20 save change, as recorded further down.
 
 ## Verified compatible
 
@@ -69,6 +70,50 @@ never bound to it.
 The same caveat as 1.4.8 applies twice over: this is signatures, not behaviour, and 1.5.1 is a beta
 that can still move. The test pass below is written for 1.4.8 and is the thing that settles either.
 
+## Re-checked at 1.6.20
+
+The compatibility tool was run again on the 1.6.20 build, against all three versions at once, and
+reaches the same verdict. Nothing found that blocks any of them.
+
+| | |
+|---|---|
+| Command | `dotnet run --project tools/compat -- 1.4.8.119303 1.5.1.120547-beta` |
+| Result | exit 0, `the mod fits every version checked` |
+
+- assembly identity unchanged - 75 game assemblies on 1.4.7 and on 1.4.8, 74 on 1.5.1-beta, 0 identity differences
+- all four Harmony patch targets resolve with the same signatures and the same parameter names, and `DisplayMessage` still has exactly one overload
+- `GetHerdingModifier` and `ItemMenuVM._targetItem` both intact
+- all eight enums held member for member - `SettlementAction` 8, `LeaveType` 48, `InventorySide` 6, `VillageStates` 5, `NavigationType` 4, `ItemTiers` 7, `TooltipPropertyFlags` 15, `InputKey` 146
+- the mod binds 100 game types and 198 distinct members, with 0 unresolved types and 0 unresolved members on all three versions
+
+The tool raises two notes and neither touches the mod: `TaleWorlds.CampaignSystem.FastMode` is no
+longer shipped in 1.5.1-beta, and `LeaveType` gains `TakeFerry=48` on the end, which renumbers
+nothing before it.
+
+### The bound surface shrank, and only where the save definer was
+
+1.6.19 bound 103 game types and 202 members; 1.6.20 binds 100 and 198. Both builds were put through
+the tool and their reference tables diffed, so the whole of that difference is accounted for:
+
+| Gone from the bound surface | |
+|---|---|
+| types | `SaveableTypeDefiner`, `SaveableFieldAttribute`, `IObjectResolver` |
+| members | `SaveableTypeDefiner::.ctor`, `SaveableTypeDefiner::AddClassDefinition`, `SaveableTypeDefiner::ConstructContainerDefinition`, `SaveableFieldAttribute::.ctor` |
+
+Nothing was added, and nothing outside that group was lost. Every one of them is a save-system type
+the mod stopped needing when it stopped defining saveable types of its own. Counts quoted in the
+sections above were measured at the mod version those sections name - this number moves with the
+mod, not with the game.
+
+### One open question is closed, and without needing the game
+
+Whether a vanilla definer collides with the mod's own save type-definer id range, base
+`724,501,000`, cannot arise any more. 1.6.20 registers no definer and defines no saveable type, so a
+campaign it saves carries `string`, `int`, `bool` and `Settlement` and nothing else. There is no id
+left to collide with. That was one of the five open questions this document opened with, and the
+only one that could have shown up as a save which will not open. It is struck from the table below,
+and it is why T9 now reads the way it does.
+
 ## What could not be checked without the game
 
 The reference assemblies are signatures without implementation. Every method body in them is `throw null;`, and the string-literal heap is empty - `TaleWorlds.CampaignSystem.dll` contains zero user strings. Anything that depends on what the game's code *does*, or on a string the game holds, is invisible to this method. That is where the remaining risk lives.
@@ -78,18 +123,17 @@ The reference assemblies are signatures without implementation. Every method bod
 | Whether the patched methods still behave the same | Signature-identical is not behaviour-identical. If the inside of `SetMerchandiseComponentTooltip` or `UpdateProfitType` changed, the patches still attach cleanly and then act on assumptions that no longer hold. | T4, T7, T8 |
 | The four game menu ids | `town`, `village`, `port_menu`, `naval_storyline_virtualport` are registered as string literals in game code, unrecoverable from stripped bodies. All four are wrapped and fail soft: a menu id the game does not have costs the other three nothing and writes a line naming it. | T2, T3 |
 | Five game brushes and one sprite | `Frame1Brush`, `Popup.Button.Text`, `Popup.Done.Button.NineGrid`, `Recruitment.Popup.Title.Text`, `FaceGen.Scrollbar.Handle`, sprite `BlankWhiteSquare_9`. These live in the game's GUI data files, which the NuGet packages do not ship. A missing brush does not crash the panel - it draws unstyled. | T6 |
-| Whether a 1.4.7 campaign still loads | The mod claims a save type-definer id range of its own, base `724,501,000`. Whether 1.4.8 introduced a vanilla definer colliding with it is not something signatures can answer, and a collision shows up as a save that will not open. | T9 |
 | Whether the MCM stack has caught up | A separate axis. The settings screen needs MCM, ButterLib and UIExtenderEx to have 1.4.8 builds of their own. The mod already degrades to built-in defaults when the stack is missing or half-loaded, so this affects the settings screen, not trading. | T10 |
 
 ## Test pass in game
 
-Install the released v1.6.9 zip on 1.4.8 and change nothing else - it should load as it stands. Nearly all of this lands in `Documents\Mount and Blade II Bannerlord\TradeLord.log`, which starts fresh on every launch, so one clean session covers most of the list.
+Install the released v1.6.20 zip on 1.4.8 and change nothing else - it should load as it stands. Nearly all of this lands in `Documents\Mount and Blade II Bannerlord\TradeLord.log`, which starts fresh on every launch, so one clean session covers most of the list.
 
 ### T1 - Launch, then read the first line of the log
 
 Before touching anything else. This one line settles whether the 1.4.7-built assembly binds to 1.4.8 at all, and the lines under it say whether each of the four patches attached.
 
-- **Want:** `TradeLord v1.6.9 loaded | game 1.4.8.x`
+- **Want:** `TradeLord v1.6.20 loaded | game 1.4.8.x`
 - **Trouble:** no log file at all, or any line reading `ERROR in patching ...`, which names exactly which patch failed
 - **Result:** _not yet run_
 
@@ -149,12 +193,15 @@ Open the inventory in a market. Trade goods and livestock should be tinted by ho
 - **Trouble:** everything grey, or only some categories tinted
 - **Result:** _not yet run_
 
-### T9 - Load a campaign saved on 1.4.7
+### T9 - Load a campaign saved on 1.4.7, then take the mod out of it
 
-One with TradeLord history in it. The only test of whether the mod's saved prices and purchase records survive the version change.
+One saved by 1.6.19 or later, with TradeLord history in it. A campaign whose last save was written by
+1.6.18 or earlier will not open on 1.6.20 at all, by design, and is not what this tests. Two things
+settle here: that the saved prices and purchase records survive the version change, and that the save
+no longer needs the mod in order to open.
 
-- **Want:** `ledger restored: N observed items...`, and the campaign profit total intact in the panel's top row
-- **Trouble:** the save refusing to load, or the ledger coming back empty
+- **Want:** `ledger restored: N observed items...`, the campaign profit total intact in the panel's top row, and then, with TradeLord disabled in the launcher, that same campaign still loading and playing without its ledger
+- **Trouble:** the save refusing to load with the mod on, the ledger coming back empty, or the save refusing to load with the mod off - the last of those means something the mod owns is still reaching the save file
 - **Result:** _not yet run_
 
 ### T10 - Open the settings screen and read the labels closely
@@ -175,7 +222,7 @@ Every failure above is caught and logged rather than thrown, so none of it shoul
 
 ## Roadmap
 
-1. **Run the test pass on the current build.** Nothing needs changing first. The released v1.6.9 should load on 1.4.8 as it stands, which is what makes this cheap - it answers four of the five open questions without committing the repository to anything.
+1. **Run the test pass on the current build.** Nothing needs changing first. The released v1.6.20 should load on 1.4.8 as it stands, which is what makes this cheap - it answers three of the four open questions without committing the repository to anything.
 
 2. **Fix whatever the pass turns up, if anything.** A failure at T2 or T3 is a menu id to chase; at T6, a brush to replace; at T4, T5 or T7, a patch to re-fit against changed game behaviour. Each ships as its own release, still on 1.4.7 references, because none of them need the bump.
 
