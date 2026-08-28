@@ -158,6 +158,12 @@ namespace TradeLord
             if (seen == 0) Write("ERROR in " + context + ": " + e);
             else if (seen == 1) Write("ERROR in " + context + " is recurring - not reporting it again");
         }
+
+        internal static void Forget()
+        {
+            _repeats.Clear();
+            _errors.Clear();
+        }
     }
 
     internal static class Guard
