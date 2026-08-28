@@ -30,8 +30,8 @@ Best buy prices
   Marunath         ~2 days   103    Stock: 26
 ```
 
-Inventory rows are tinted at the same time, so a good price and a bad one are obvious before you
-read a single number.
+The starred line is the market you are standing in. Inventory rows are tinted at the same time, so
+a good price and a bad one are obvious before you read a single number.
 
 ### The routes worth driving, ranked
 
