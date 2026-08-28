@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.15
+
+- The log now names every market that traded nothing, instead of falling silent after the first market that gave the same reasons.
+- Ending a campaign and starting another without closing the game no longer leaves the log silent about problems in the second one.
+- A recorded price your save cannot read is now dropped as the ledger loads, instead of stopping the ledger from loading at all.
+- With observed prices set never to expire, your save no longer keeps an entry for a good whose recorded prices have all gone.
+
 ## 1.6.14
 
 - The town TradeLord marks as your best place to sell no longer removes a marker you had placed on that town yourself.
