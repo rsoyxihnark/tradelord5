@@ -877,13 +877,9 @@ namespace TradeLord
             var tally = new BlockTally();
             var detail = new Dictionary<ItemObject, (int count, int gold)>();
 
-            int Budget()
-            {
-                int left = (sim ? Hero.MainHero.Gold - simSpent : Hero.MainHero.Gold) - Options.Current.GoldReserve;
-                return Options.Current.MaxSpendPerVisit > 0
-                    ? Math.Min(left, Options.Current.MaxSpendPerVisit - _spentThisVisit - (sim ? simSpent : 0))
-                    : left;
-            }
+            int Budget() =>
+                TradeMath.Budget(Hero.MainHero.Gold, Options.Current.GoldReserve,
+                                 Options.Current.MaxSpendPerVisit, _spentThisVisit, sim ? simSpent : 0);
 
             var stock = new List<(ItemRosterElement el, float realizable, float margin)>();
             if (Budget() > 0)
