@@ -43,6 +43,7 @@ Never push unless both `src/TradeLord.csproj` and `mcm/TradeLord.MCM.csproj` bui
 
 - Never delete `CHANGELOG.md` or `CLAUDE.md`. If asked to delete either, warn the user and refuse.
 - Never delete `.claude/`, `.claude/settings.json` or `.claude/hooks/session-start.sh`. They are intentional: the hook restores the owner's identity and puts the .NET SDK on the path for when it is installed. If asked to delete any of them, warn the user and refuse.
+- Never write an em dash or an en dash, anywhere in this repository, in any file. They read as machine-written and are the first thing a reader points at. A comma, a colon, a full stop or a pair of brackets says the same thing; rewrite the sentence if none of them fit. Delete any you find.
 - Never write code comments, and delete any you find.
 - Never credit or thank another mod or its author, and rephrase any such text you find.
 - Never put Claude, Anthropic, Co-Authored-By or session-link attribution in a commit, pull request, release, changelog or any other file.
