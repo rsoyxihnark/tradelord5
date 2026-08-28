@@ -241,6 +241,18 @@ namespace TradeLord.Tests
             Assert.DoesNotContain("Iron Ore, Fine Velvet", options.NeverSet);
         }
 
+        [Theory]
+        [InlineData("grain", "GRAIN")]
+        [InlineData("GRAIN", "grain")]
+        [InlineData("Grain", "gRaIn")]
+        [InlineData("IRON ORE", "iron ore")]
+        [InlineData("iron ore", "Iron Ore")]
+        [InlineData("Iron_Ore", "iron_ore")]
+        public void A_name_is_matched_whatever_its_capitalisation(string written, string looked)
+        {
+            Assert.Contains(looked, new Options { NeverSellItems = written }.NeverSet);
+        }
+
         [Fact]
         public void A_list_of_nothing_but_separators_still_holds_nothing()
         {

@@ -57,7 +57,7 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 - ✅ Unique and player-crafted gear, quest items, mounts and pack animals
 - ✅ Your food reserve, and grain
 - ✅ Your gold reserve, or anything past your spending cap for the visit
-- ✅ Any good you put on the never-sell or never-buy list, named however the game names it
+- ✅ Any good you put on the never-sell or never-buy list, named by its item id or by the name on screen
 - ✅ More livestock than your party can drive, so a purchase never slows you down
 - ✅ Markets belonging to a faction you are at war with
 - ✅ The game's economy: it trades at the game's own prices, through the game's own actions
@@ -69,7 +69,7 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 - ✅ A minimum stock before it calls something worth buying
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ Caps on one good by count or by denars, and on the whole visit
-- ✅ Never-sell, always-sell and never-buy lists, by item id or by the name on screen
+- ✅ Never-sell, always-sell and never-buy lists, taking item ids or item names, in any capitalisation
 - ✅ Profit measured against what you paid: the average, the last, or the cheapest you know of
 - ✅ An honest-merchant mode that uses only the prices you have seen in person
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
