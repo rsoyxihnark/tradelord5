@@ -201,5 +201,51 @@ namespace TradeLord.Tests
             Assert.DoesNotContain("grain", options.AlwaysSet);
             Assert.DoesNotContain("fish", options.NeverSet);
         }
+
+        [Theory]
+        [InlineData("Iron Ore")]
+        [InlineData("iron ore")]
+        [InlineData(" IRON ORE ")]
+        [InlineData("Iron Ore, Hardwood")]
+        [InlineData("Hardwood;Iron Ore")]
+        public void A_name_with_a_space_in_it_is_kept_whole(string written)
+        {
+            Assert.Contains("Iron Ore", new Options { NeverSellItems = written }.NeverSet);
+        }
+
+        [Fact]
+        public void A_name_with_a_space_in_it_still_offers_each_word_on_its_own()
+        {
+            var options = new Options { NeverSellItems = "Iron Ore" };
+            Assert.Contains("Iron Ore", options.NeverSet);
+            Assert.Contains("iron", options.NeverSet);
+            Assert.Contains("ore", options.NeverSet);
+        }
+
+        [Fact]
+        public void Ids_written_the_old_way_with_spaces_between_them_still_read()
+        {
+            var options = new Options { NeverSellItems = "grain hardwood iron_ore" };
+            Assert.Contains("grain", options.NeverSet);
+            Assert.Contains("hardwood", options.NeverSet);
+            Assert.Contains("iron_ore", options.NeverSet);
+        }
+
+        [Fact]
+        public void A_multi_word_name_is_not_confused_with_a_neighbouring_entry()
+        {
+            var options = new Options { NeverSellItems = "Iron Ore, Fine Velvet" };
+            Assert.Contains("Iron Ore", options.NeverSet);
+            Assert.Contains("Fine Velvet", options.NeverSet);
+            Assert.DoesNotContain("Ore, Fine", options.NeverSet);
+            Assert.DoesNotContain("Iron Ore, Fine Velvet", options.NeverSet);
+        }
+
+        [Fact]
+        public void A_list_of_nothing_but_separators_still_holds_nothing()
+        {
+            Assert.Empty(new Options { NeverSellItems = " , ; ,, ;; " }.NeverSet);
+            Assert.Empty(new Options { NeverSellItems = "\t" }.NeverSet);
+        }
     }
 }

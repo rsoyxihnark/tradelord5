@@ -113,6 +113,67 @@ namespace TradeLord
             item == DefaultItems.IronIngot1 || item == DefaultItems.IronIngot2 || item == DefaultItems.IronIngot3 ||
             item == DefaultItems.IronIngot4 || item == DefaultItems.IronIngot5 || item == DefaultItems.IronIngot6;
 
+        internal static bool Listed(HashSet<string> list, ItemObject item) =>
+            item != null && list.Count > 0 &&
+            (list.Contains(item.StringId) ||
+             (item.Name != null && list.Contains(item.Name.ToString())));
+
+        private static int _auditedGeneration = -1;
+        private static bool _auditSpoke;
+
+        internal static bool ItemListsNameNothing()
+        {
+            if (_auditedGeneration == Options.Generation) return false;
+            _auditedGeneration = Options.Generation;
+            var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (ItemObject item in Items.All)
+            {
+                if (item == null) continue;
+                known.Add(item.StringId);
+                if (item.Name != null) known.Add(item.Name.ToString());
+            }
+            bool missed = false;
+            missed |= Unmatched("never sell", Options.Current.NeverSellItems, known);
+            missed |= Unmatched("always sell", Options.Current.AlwaysSellItems, known);
+            missed |= Unmatched("never buy", Options.Current.NeverBuyItems, known);
+            if (!missed) _auditSpoke = false;
+            return missed;
+        }
+
+        internal static bool AuditShouldSpeak()
+        {
+            if (_auditSpoke) return false;
+            _auditSpoke = true;
+            return true;
+        }
+
+        internal static void ForgetItemListAudit()
+        {
+            _auditedGeneration = -1;
+            _auditSpoke = false;
+        }
+
+        private static bool Unmatched(string label, string written, HashSet<string> known)
+        {
+            if (string.IsNullOrEmpty(written)) return false;
+            var missing = new List<string>();
+            foreach (string entry in written.Split(Options.EntryMarks, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string whole = entry.Trim();
+                if (whole.Length == 0 || known.Contains(whole)) continue;
+                bool everyWordKnown = true;
+                foreach (string word in whole.Split(Options.WordMarks, StringSplitOptions.RemoveEmptyEntries))
+                    if (!known.Contains(word)) { everyWordKnown = false; break; }
+                if (!everyWordKnown) missing.Add(whole);
+            }
+            if (missing.Count == 0) return false;
+            Log.Write("the " + label + " list names " + missing.Count +
+                      " thing(s) no good in this game matches, so those entries do nothing: " +
+                      string.Join(", ", missing.ToArray()) +
+                      ". Write either the item id TradeLord.log prints, or the name the game shows.");
+            return true;
+        }
+
         internal static int PolicyFor(ItemObject item)
         {
             if (item == null) return Options.PolicyBuySell;
@@ -158,7 +219,7 @@ namespace TradeLord
                 ItemRosterElement el = roster.GetElementCopyAtIndex(i);
                 ItemObject item = el.EquipmentElement.Item;
                 if (el.Amount > 0 && FoodValue(item) > 0 &&
-                    !Options.Current.AlwaysSet.Contains(item.StringId))
+                    !Listed(Options.Current.AlwaysSet, item))
                     food.Add(el);
             }
             food.Sort((x, y) =>
@@ -200,10 +261,10 @@ namespace TradeLord
             ItemObject item = el.EquipmentElement.Item;
 
             if (item == null || item.NotMerchandise || el.EquipmentElement.IsQuestItem) { why = Block.NotMerchandise; return false; }
-            if (s.NeverSet.Contains(item.StringId)) { why = Block.NeverList; return false; }
+            if (Listed(s.NeverSet, item)) { why = Block.NeverList; return false; }
 
             if (IsLocked(lockedKeys, el.EquipmentElement)) { why = Block.Locked; return false; }
-            if (s.AlwaysSet.Contains(item.StringId)) return true;
+            if (Listed(s.AlwaysSet, item)) return true;
             if (!PolicyAllows(PolicyFor(item), buying: false)) { why = Block.CategoryPolicy; return false; }
 
             bool livestock = item.HasHorseComponent;
@@ -244,7 +305,7 @@ namespace TradeLord
             why = Block.None;
             Options s = Options.Current;
             if (item == null || item.NotMerchandise) { why = Block.NotMerchandise; return false; }
-            if (s.NeverSet.Contains(item.StringId) || s.NeverBuySet.Contains(item.StringId)) { why = Block.NeverList; return false; }
+            if (Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)) { why = Block.NeverList; return false; }
             if (s.NeverBuyGrain && item == DefaultItems.Grain) { why = Block.NeverList; return false; }
             if (IsLocked(lockedKeys, new EquipmentElement(item))) { why = Block.Locked; return false; }
 
@@ -262,7 +323,7 @@ namespace TradeLord
 
         internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys) =>
             MayBuy(item, lockedKeys) &&
-            (Options.Current.AlwaysSet.Contains(item.StringId) ||
+            (Listed(Options.Current.AlwaysSet, item) ||
              PolicyAllows(PolicyFor(item), buying: false));
 
         private static bool HasCostBasis(ItemObject item) =>
@@ -342,8 +403,10 @@ namespace TradeLord
             _silenced = 0;
             _pending.Clear();
             _pendingXp = 0;
+            _pendingXpMuted = true;
             AutomatedTradeInProgress = false;
             _herdLookupFailed = false;
+            TradePolicy.ForgetItemListAudit();
         }
 
         public override void SyncData(IDataStore dataStore)
@@ -396,6 +459,14 @@ namespace TradeLord
             tally.Any && tally.Dominant() == Block.BudgetSpent;
 
         private static bool TradedThisVisit() => _soldThisVisit.Count > 0 || _boughtThisVisit.Count > 0;
+
+        private static bool Muted(bool automated) => automated && Options.Current.QuietAutomation;
+
+        private static void WarnUnmatchedItemLists()
+        {
+            if (!TradePolicy.ItemListsNameNothing() || !TradePolicy.AuditShouldSpeak()) return;
+            Toast(new TextObject("{=TL91}An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which."), ToastAlert);
+        }
 
         private static void WarnNoRoomToCarry(bool countPass)
         {
@@ -490,6 +561,7 @@ namespace TradeLord
             Guard.Run("Action.OnSettlementEntered", () =>
             {
                 ResetVisit();
+                WarnUnmatchedItemLists();
 
                 if (!AnnounceAutomation(settlement))
                 {
@@ -551,6 +623,7 @@ namespace TradeLord
 
         private static readonly List<InformationMessage> _pending = new List<InformationMessage>();
         private static int _pendingXp;
+        private static bool _pendingXpMuted = true;
 
         private static void Toast(TextObject msg) => Toast(msg, ToastNote);
 
@@ -560,8 +633,10 @@ namespace TradeLord
         internal static void FlushToasts()
         {
             int xp = _pendingXp;
+            bool muted = _pendingXpMuted;
             _pendingXp = 0;
-            if (xp > 0) CreditTradeSkill(xp);
+            _pendingXpMuted = true;
+            if (xp > 0) CreditTradeSkill(xp, muted);
             if (_pending.Count > 0)
             {
                 try
@@ -574,7 +649,7 @@ namespace TradeLord
             }
         }
 
-        private static void CreditTradeSkill(int xp)
+        private static void CreditTradeSkill(int xp, bool muted)
         {
             if (Campaign.Current == null || Hero.MainHero == null) return;
             int before = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
@@ -588,7 +663,7 @@ namespace TradeLord
                 : "{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.");
             earned.SetTextVariable("GOLD", xp);
             if (rose) earned.SetTextVariable("LEVEL", now);
-            Toast(earned, ToastXp);
+            if (!muted) Toast(earned, ToastXp);
             if (rose) Log.Write("trade skill rose to " + now + " - named in TradeLord's own line");
         }
 
@@ -842,8 +917,8 @@ namespace TradeLord
                 msg.SetTextVariable("ITEMS", ItemSummary(detail, soldItems));
                 msg.SetTextVariable("GOLD", goldGained);
                 msg.SetTextVariable("PROFIT", profit);
-                Toast(msg, profit > 0 ? ToastGain : ToastFlat);
-                if (!sim && profit > 0) AwardTradeXp(profit);
+                if (!Muted(quiet)) Toast(msg, profit > 0 ? ToastGain : ToastFlat);
+                if (!sim && profit > 0) AwardTradeXp(profit, Muted(quiet));
             }
             else if (!directionError)
             {
@@ -999,13 +1074,13 @@ namespace TradeLord
                     : "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.");
                 msg.SetTextVariable("ITEMS", ItemSummary(detail, bought));
                 msg.SetTextVariable("GOLD", spent);
-                Toast(msg, ToastSpend);
+                if (!Muted(quiet)) Toast(msg, ToastSpend);
             }
             else if (!directionError)
             {
                 if (tally.Any) Log.Repeatable("quick-buy-empty " + settlement.StringId, tally.Summary(),
                     "quick-buy moved nothing at " + settlement.Name + ": " + tally.Summary());
-                if (!quiet || PurseHeldItBack(tally))
+                if (!Muted(quiet) && (!quiet || PurseHeldItBack(tally)))
                 {
                     TextObject none = new TextObject("{=TL33}Nothing bought here - {REASON}.");
                     none.SetTextVariable("REASON", BlockTally.Phrase(tally.Dominant()));
@@ -1114,11 +1189,12 @@ namespace TradeLord
             return bestTown;
         }
 
-        private static void AwardTradeXp(int profit)
+        private static void AwardTradeXp(int profit, bool muted)
         {
             int xp = (int)(profit * Options.Current.TradeXpMultiplier);
             if (xp <= 0) return;
             _pendingXp += xp;
+            if (!muted) _pendingXpMuted = false;
             Log.Write("trade profit fed to the XP system: " + xp + " denars");
         }
     }

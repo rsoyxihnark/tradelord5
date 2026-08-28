@@ -46,6 +46,7 @@ namespace TradeLord
         public bool AutoTradeBoth => AutoSellOnEntry && AutoBuyOnEntry && EnableBuying;
 
         public bool DetailedTradeSummary = true;
+        public bool QuietAutomation = false;
         public float MinProfitMargin = 0.15f;
         public int KeepFoodDays = 5;
         public const int PolicyIgnore = 0, PolicySellOnly = 1, PolicyBuyOnly = 2, PolicyBuySell = 3;
@@ -92,13 +93,23 @@ namespace TradeLord
         private HashSet<string> _never, _always, _neverBuy;
         private string _nSrc, _aSrc, _nbSrc;
 
+        internal static readonly char[] EntryMarks = { ',', ';' };
+        internal static readonly char[] WordMarks = { ' ', '\t' };
+
         private static HashSet<string> Parsed(string src, ref string seen, ref HashSet<string> set)
         {
             if (set == null || seen != src)
             {
-                set = new HashSet<string>(
-                    (src ?? "").Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries),
-                    StringComparer.OrdinalIgnoreCase);
+                var built = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string entry in (src ?? "").Split(EntryMarks, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string whole = entry.Trim();
+                    if (whole.Length == 0) continue;
+                    built.Add(whole);
+                    foreach (string word in whole.Split(WordMarks, StringSplitOptions.RemoveEmptyEntries))
+                        built.Add(word);
+                }
+                set = built;
                 seen = src;
             }
             return set;
