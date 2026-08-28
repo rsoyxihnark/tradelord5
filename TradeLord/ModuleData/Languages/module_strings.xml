@@ -75,6 +75,7 @@
 		<string id="TL88" text="TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."/>
 		<string id="TL89" text="No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
 		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
+		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
 		<string id="TL201" text="Live world prices (default)"/>
 		<string id="TL202" text="Observation shelf life (days, 0 = never expire)"/>
 		<string id="TL203" text="Exclude hostile markets"/>
@@ -105,8 +106,8 @@
 		<string id="TL228" text="Sell loot up to tier (0 = off)"/>
 		<string id="TL229" text="Hold cargo for the best market"/>
 		<string id="TL230" text="Best-market tolerance"/>
-		<string id="TL231" text="Never sell (item ids, comma separated)"/>
-		<string id="TL232" text="Always sell (item ids, comma separated)"/>
+		<string id="TL231" text="Never sell (item ids or names, comma separated)"/>
+		<string id="TL232" text="Always sell (item ids or names, comma separated)"/>
 		<string id="TL233" text="Enable quick-buy"/>
 		<string id="TL234" text="Gold reserve"/>
 		<string id="TL235" text="Buy cap per item (count, 0 = off)"/>
@@ -114,7 +115,7 @@
 		<string id="TL237" text="Max spend per visit (0 = unlimited)"/>
 		<string id="TL238" text="Resale safety factor"/>
 		<string id="TL239" text="Never buy grain"/>
-		<string id="TL240" text="Never buy (item ids, comma separated)"/>
+		<string id="TL240" text="Never buy (item ids or names, comma separated)"/>
 		<string id="TL241" text="Trade with villages"/>
 		<string id="TL242" text="Simulation mode (dry run)"/>
 		<string id="TL243" text="Economy settling delay (days, 0 = off)"/>
@@ -123,6 +124,7 @@
 		<string id="TL246" text="Auto-marker travel ceiling (days, 0 = off)"/>
 		<string id="TL247" text="Coin sound on trade"/>
 		<string id="TL248" text="Detailed trade summary"/>
+		<string id="TL249" text="Quiet automation" />
 		<string id="TL301" text="ON (default): prices are read live from the world economy, including markets you have not visited. OFF: only prices you have seen in person are used."/>
 		<string id="TL302" text="Observed prices older than this are ignored. 0 = never expire."/>
 		<string id="TL303" text="Never scan, suggest or auto-trade with settlements at war with you."/>
@@ -153,8 +155,8 @@
 		<string id="TL328" text="Also quick-sell weapons and armor of this tier and below. Locks and protections still apply."/>
 		<string id="TL329" text="Skip selling here when this market pays clearly less than the best known market. Goods you never bought have no cost basis, so the floor always applies to those; this setting controls whether it also applies to goods you bought, which the profit margin already covers."/>
 		<string id="TL330" text="With the above ON: sell here anyway if this market pays at least this fraction of the best known price."/>
-		<string id="TL331" text="Goods quick-sell must never sell, by item id. An item id is the short internal name of a good, such as grain, wine or iron_ore. TradeLord.log names the id of every good it moves, so trade once and read the ids off the log. Quick-buy leaves these alone too, since it would have no way to sell them on."/>
-		<string id="TL332" text="Goods quick-sell always sells, by item id, past the category policies, the unique and crafted protection and the food reserve. The never-sell list above and an inventory lock still hold. This is the only way to sell a mount or a pack animal."/>
+		<string id="TL331" text="Goods quick-sell must never sell. Name each one either by the item id, the short internal name such as grain, wine or iron_ore that TradeLord.log prints for every good it moves, or by the name the game shows you, such as Iron Ore. Separate them with commas. An entry matching no good in this game is named in the log and said on screen, rather than passing quietly. Quick-buy leaves these alone too, since it would have no way to sell them on."/>
+		<string id="TL332" text="Goods quick-sell always sells, past the category policies, the unique and crafted protection and the food reserve. Named by item id or by the name the game shows, comma separated, as above. The never-sell list above and an inventory lock still hold. This is the only way to sell a mount or a pack animal."/>
 		<string id="TL333" text="Buy goods here that sell for more elsewhere, within the caps below. Only goods actually in stock are bought."/>
 		<string id="TL334" text="Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip."/>
 		<string id="TL335" text="Most units of one item quick-buy takes per visit. 0 = no limit on the count. Default 32."/>
@@ -162,7 +164,7 @@
 		<string id="TL337" text="Total denars quick-buy may spend per settlement visit. Default 1000."/>
 		<string id="TL338" text="Assume only this fraction of the best sell price is still available by the time you arrive."/>
 		<string id="TL339" text="Grain is heavy and low margin, so buying it fills the cargo for little return. Selling and the food reserve are unaffected. ON by default."/>
-		<string id="TL340" text="Items quick-buy must never purchase. Selling them is unaffected."/>
+		<string id="TL340" text="Items quick-buy must never purchase. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected."/>
 		<string id="TL341" text="Quick-sell/quick-buy also in village menus; villages join the price scans."/>
 		<string id="TL342" text="Report what quick-sell and quick-buy would do, without trading. Treat the result as a best case: nothing moves, so the market does not react and every unit is priced at today's opening price. A real pass stops at the unit where the margin runs out, so it usually trades less and gets less per unit. The merchant's gold, your carry weight, the gold reserve and every per-item and per-visit cap are modelled exactly; only your own effect on the price is not."/>
 		<string id="TL343" text="No TradeLord trading before this campaign day, from the menu or on entry. Prices in a new campaign have not settled yet."/>
@@ -171,6 +173,7 @@
 		<string id="TL346" text="The auto-marker ignores towns farther than this many travel days away. Default 1.5."/>
 		<string id="TL347" text="Play a coin sound when a quick-sell or quick-buy pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
+		<string id="TL349" text="Trading done automatically as you enter a market reports to TradeLord.log only, with no lines on screen. The quick-sell, quick-buy and quick-trade menu entries always report, since you asked for those. The first-run automation notice and the cargo-full warning are unaffected." />
 		<string id="TL101" text="Knowledge"/>
 		<string id="TL102" text="Insight"/>
 		<string id="TL103" text="Action"/>

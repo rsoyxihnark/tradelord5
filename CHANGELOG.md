@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.26
+
+- The never-sell, always-sell and never-buy lists now take the name a good is shown under, such as Iron Ore, as well as its item id, so a name with a space in it no longer reads as two entries that match nothing.
+- An entry on one of those lists that matches no good in the game is now named on screen and in the log, instead of quietly doing nothing.
+- A new quiet automation setting keeps trading done on entry to the log, off your screen.
+- Starting a second campaign without closing the game now logs the ledger panel's hotkey and map button again, rather than staying silent about the second one.
+
 ## 1.6.25
 
 - The message shown when the ledger has no routes for you now points at your travel ceilings, and only asks you to visit more markets when TradeLord is set to use the prices you have seen in person.

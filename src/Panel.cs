@@ -596,6 +596,10 @@ namespace TradeLord
             _setupFailures = 0;
             _setupCooldown = 0;
             _dead = false;
+            _loggedArmed = false;
+            _loggedButtonFallback = false;
+            _idleMouseActive = false;
+            _keySource = null;
         }
 
         internal static void Cleanup()
