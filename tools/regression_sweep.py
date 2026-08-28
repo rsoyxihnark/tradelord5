@@ -680,10 +680,13 @@ chk("1.5.0", "every stop in the buy pass is counted",
 chk("1.5.0", "localization ids used in code and declared in the language file match exactly",
     strings_declared() == strings_used())
 
-chk("1.5.0", "a port menu that is not installed costs the town and village entries nothing",
-    'AddOptions("town");' in S['Trading.cs'] and 'AddOptions("village");' in S['Trading.cs'] and
-    'foreach (string port in new[] { "port_menu", "naval_storyline_virtualport" })' in S['Trading.cs'] and
-    "try { AddOptions(port); }" in S['Trading.cs'])
+chk("1.5.0", "a menu the game does not have costs the other menus nothing",
+    (lambda b: "void AddOptions(string menu) => Guard.Run(" in b
+           and '"menu " + menu + " (the other menus are unaffected)"' in b
+           and 'AddOptions("town");' in b and 'AddOptions("village");' in b
+           and 'foreach (string port in new[] { "port_menu", "naval_storyline_virtualport" })' in b
+           and "try { AddOptions(port); }" not in b)
+    (method_body(S['Trading.cs'], "private void OnSessionLaunched")))
 
 chk("1.5.1", "the walk asks no market for a price, so observed mode stays observed",
     "GetItemPrice" not in S['Market.cs'] and
@@ -1109,6 +1112,11 @@ chk("1.6.16", "holding cargo for a better market is named as its own reason, not
            and b.index("case Block.BelowMargin:") < b.index('{=TL42}') < b.index("case Block.BelowBestMarket:"))
     (method_body(S['Trading.cs'], "internal static TextObject Phrase")) and
     "TL85" in strings_declared())
+chk("1.6.16", "a campaign starts with the herd guard re-armed, so an earlier one cannot leave livestock buying off",
+    "_herdLookupFailed = false;" in method_body(S['Trading.cs'], "internal static void ForgetVisit") and
+    "if (_herdLookupFailed) return 0;" in
+        method_body(S['Trading.cs'], "internal static int HerdRoomForLivestock") and
+    "_herdModifier = null" not in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.16", "a full herd is named as its own reason, not as a full cargo hold",
     (lambda b: b.count("case Block.HerdFull:") == 1
            and '{=TL86}' in b and '{=TL44}' in b
@@ -1116,10 +1124,12 @@ chk("1.6.16", "a full herd is named as its own reason, not as a full cargo hold"
     (method_body(S['Trading.cs'], "internal static TextObject Phrase")) and
     "TL86" in strings_declared() and
     "if (tally.Saw(Block.CarryWeight)) _cargoWasFull = true;" in S['Trading.cs'])
-chk("1.6.16", "the auto-marker is put back on the map when a save loads, as the panel's own pins are",
+chk("1.6.16", "the auto-marker is put back on the map when a save loads, and cannot cost the menus if it fails",
     (lambda b: "LedgerPanel.RestorePins(_pinnedTowns);" in b
-           and "UpdateBestSellTownTracker();" in b
-           and b.index("LedgerPanel.RestorePins") < b.index("UpdateBestSellTownTracker();"))
+           and 'Guard.Run("Action.RestoreMarker", UpdateBestSellTownTracker);' in b
+           and b.index("LedgerPanel.RestorePins")
+               < b.index('Guard.Run("Action.RestoreMarker"')
+               < b.index('AddOptions("town");'))
     (method_body(S['Trading.cs'], "private void OnSessionLaunched")))
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
