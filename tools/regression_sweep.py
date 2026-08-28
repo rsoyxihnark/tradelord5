@@ -372,7 +372,7 @@ def the_filter_is_armed_only_around_a_game_call_that_talks():
 def the_full_cargo_warning_waits_for_a_visit_that_traded_nothing():
     body = method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
     return ('if (TradedThisVisit()) return;' in body
-            and ordered(body, 'if (TradedThisVisit()) return;', 'NoRoomToCarry()')
+            and ordered(body, 'if (TradedThisVisit()) return;', '!NoRoomToCarry()')
             and 'private static bool TradedThisVisit() => _soldThisVisit.Count > 0 || '
                 '_boughtThisVisit.Count > 0;' in S['Trading.cs'])
 
@@ -1168,11 +1168,12 @@ chk("1.6.2", "the cost basis lookup answers for a good it has never seen instead
 chk("1.6.2", "every source line is indented to its brace depth",
     indentation_matches_brace_depth())
 
-chk("1.6.4", "a full cargo is reported on the way into a market and on the way out",
-    "WarnNoRoomToCarry(countPass: true)" in
+chk("1.6.28", "a full cargo is reported on the way into a market and not again on the way out",
+    "WarnNoRoomToCarry()" in
         method_body(S['Trading.cs'], "private void OnSettlementEntered") and
-    "WarnNoRoomToCarry(countPass: false)" in
+    "WarnNoRoomToCarry" not in
         method_body(S['Trading.cs'], "private void OnSettlementLeft") and
+    S['Trading.cs'].count("WarnNoRoomToCarry()") == 2 and
     "if (tally.Saw(Block.CarryWeight)) _cargoWasFull = true;" in
         method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
 chk("1.6.4", "the full-cargo warning is red, translatable, and not silenced by a quiet pass",
@@ -1183,7 +1184,6 @@ chk("1.6.4", "the full-cargo warning is red, translatable, and not silenced by a
     "quiet" not in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry"))
 chk("1.6.4", "the warning asks the same trading question the menu asks, and clears with the visit",
     method_body(S['Trading.cs'], "private void OnSettlementEntered").count("CanTradeHere(settlement)") == 1 and
-    method_body(S['Trading.cs'], "private void OnSettlementLeft").count("CanTradeHere(settlement)") == 1 and
     "_cargoWasFull = false;" in method_body(S['Trading.cs'], "private static void ResetVisit"))
 
 chk("1.6.5", "an item list is parsed once per edit and never left unset",
@@ -1404,7 +1404,7 @@ chk("1.6.18", "a campaign is told once that entering a market trades for it, bef
 chk("1.6.24", "the market that carries the notice is left alone, so a campaign can turn automation off before it runs",
     (lambda b: "if (!AnnounceAutomation(settlement))" in b
            and ordered(b, "if (!AnnounceAutomation(settlement))", "ExecuteQuickSell(settlement, quiet: true)")
-           and ordered(b, "ExecuteQuickBuy(settlement, quiet: true)", "WarnNoRoomToCarry(countPass: true)"))
+           and ordered(b, "ExecuteQuickBuy(settlement, quiet: true)", "WarnNoRoomToCarry()"))
     (method_body(S['Trading.cs'], "private void OnSettlementEntered")) and
     "starting at the next one" in S['Trading.cs'])
 chk("1.6.18", "the notice is remembered in the save, so it is shown once per campaign and not once per market",
