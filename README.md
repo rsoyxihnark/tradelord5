@@ -152,13 +152,14 @@ actions at the game's own prices — it moves your goods, it does not invent gol
 ## Saves and uninstalling
 
 TradeLord stores its price ledger, your purchase records and your lifetime profit **inside your save
-file**. That means:
+file**, written as plain text. A save carries nothing that only TradeLord knows how to read, so:
 
-- **Do not remove TradeLord from a campaign you want to keep playing.** A save written with the mod
-  installed expects the mod to be there when it loads. Removing it mid-campaign is the usual way to
-  end up with a save that will not open.
-- If you want to remove it, keep a save from before you installed it, or accept that the campaign
-  goes with it.
+- **You can remove TradeLord from a campaign and go on playing it.** The save still opens without the
+  mod installed. You lose the ledger, the purchase records and the lifetime profit figure. You do not
+  lose the campaign.
+- **A campaign older than 1.6.19 needs to be saved once first.** Load it with 1.6.19 installed and let
+  it save - any save will do, including an autosave. Until then that campaign still needs the mod in
+  order to open. The log says so when it loads.
 - Adding TradeLord to an existing campaign is fine. It starts with an empty ledger and fills it in as
   you travel.
 - Updating TradeLord over an existing install is fine.
@@ -236,6 +237,7 @@ just played. Start at the top.
 | `transaction direction changed on this game version` | TradeLord watched the gold move the wrong way and stopped immediately rather than continue. Report this one. |
 | `quick-sell moved nothing at … :` | Followed by the reasons, counted. This is the answer to "why did it not sell my stuff". |
 | `ledger panel setup …` | The map panel could not build. The town-menu popup still works. |
+| `ledger read from a save written by an older TradeLord` | This campaign still carries its records in the old form. Save it once and they are rewritten in the form that lets you remove the mod later. |
 
 **"It sold something I wanted to keep."** Lock it in the inventory screen, or put its item id on the
 never-sell list. Unique and player-crafted items, quest items, mounts and pack animals are already

@@ -350,6 +350,53 @@ def changelog_opens_on_the_shipped_version():
     newest = CHANGES.split('## ' + heads[0], 1)[1].split('\n## ', 1)[0]
     return any(line.startswith('- ') for line in newest.split('\n'))
 
+PLAIN_SAVED_TYPES = {'string', 'int', 'bool', 'float', 'Settlement'}
+LEGACY_SAVED_FIELDS = {'_ledger', '_purchases'}
+
+def saved_field_types():
+    types = {}
+    for text in (S['Ledger.cs'], S['Trading.cs']):
+        for m in re.finditer(r'private\s+([\w<>,\.\[\]\s]+?)\s+(_\w+)\s*(?:=[^;]*)?;', text):
+            types[m.group(2)] = ' '.join(m.group(1).split())
+    return types
+
+def every_saved_value_is_a_plain_one():
+    types = saved_field_types()
+    seen = 0
+    for name in ('Ledger.cs', 'Trading.cs'):
+        body = method_body(S[name], "public override void SyncData")
+        for field in re.findall(r'dataStore\.SyncData\("[^"]+",\s*ref\s+(_\w+)\)', body):
+            if field in LEGACY_SAVED_FIELDS:
+                continue
+            seen += 1
+            if types.get(field) not in PLAIN_SAVED_TYPES:
+                return False
+    return seen >= 6
+
+def legacy_collections_are_read_but_never_written():
+    body = method_body(S['Ledger.cs'], "public override void SyncData")
+    guarded = ('if (dataStore.IsLoading)\n'
+               '            {\n'
+               '                dataStore.SyncData("TradeLord_Ledger", ref _ledger);\n'
+               '                dataStore.SyncData("TradeLord_Purchases", ref _purchases);\n'
+               '            }')
+    return (guarded in body
+            and body.count('ref _ledger)') == 1 and body.count('ref _purchases)') == 1
+            and 'dataStore.SyncData("TradeLord_LedgerText", ref _ledgerText);' in body
+            and 'dataStore.SyncData("TradeLord_PurchaseText", ref _purchaseText);' in body)
+
+def saved_numbers_read_the_same_in_every_language():
+    ledger = S['Ledger.cs']
+    numeric = [c for c in re.findall(
+        r'\w+\.ToString\([^)]*\)|\b(?:int|float|double|long)\.(?:Try)?Parse\([^;]*', ledger)
+        if not c.startswith('sb.ToString')]
+    return (len(numeric) == 4
+            and all('CultureInfo.InvariantCulture' in c for c in numeric)
+            and 'NumberStyles.Integer, CultureInfo.InvariantCulture' in ledger
+            and 'NumberStyles.Float, CultureInfo.InvariantCulture' in ledger
+            and not re.search(r'\.Append\(\w+\.(?:BuyPrice|SellPrice|CapturedDay|TotalPaid|Count|LastUnitPaid)\)',
+                              ledger))
+
 results = []
 def chk(ver, claim, ok):
     results.append(ok)
@@ -1202,6 +1249,38 @@ chk("1.6.18", "the defaults the README publishes are the defaults the module shi
     readme_defaults_match_the_shipped_ones())
 chk("1.6.18", "the changelog opens on the version the manifest ships, and that entry says something",
     changelog_opens_on_the_shipped_version())
+chk("1.6.19", "a campaign save carries no type this module defines, so removing the mod cannot cost the save",
+    every_saved_value_is_a_plain_one() and
+    "private string _ledgerText" in S['Ledger.cs'] and
+    "private string _purchaseText" in S['Ledger.cs'])
+chk("1.6.19", "the old collections are read out of a save and never written back into one",
+    legacy_collections_are_read_but_never_written())
+chk("1.6.19", "the type definer is kept, so a save written by an older build still loads",
+    "AddClassDefinition(typeof(PriceObservation), 1);" in S['SubModule.cs'] and
+    "AddClassDefinition(typeof(PurchaseRecord), 2);" in S['SubModule.cs'] and
+    "ConstructContainerDefinition(typeof(Dictionary<string, List<PriceObservation>>));" in S['SubModule.cs'])
+chk("1.6.19", "the ledger text is rebuilt from pruned data every time the campaign is saved",
+    (lambda b: b.index("if (!dataStore.IsLoading) PruneExpired();")
+             < b.index("_ledgerText = WriteLedger();")
+             < b.index('dataStore.SyncData("TradeLord_LedgerText"'))
+    (method_body(S['Ledger.cs'], "public override void SyncData")) and
+    "if (dataStore.IsSaving)" in S['Ledger.cs'])
+chk("1.6.19", "numbers in a saved ledger are written and read the same way in every language",
+    saved_numbers_read_the_same_in_every_language())
+chk("1.6.19", "a line of saved text that cannot be read is dropped on its own, not with the whole ledger",
+    "private void ReadSavedText() => Guard.Run(\"Ledger.ReadSaved\", RestoreSaved);" in S['Ledger.cs'] and
+    method_body(S['Ledger.cs'], "private void ReadLedger").count("continue;") == 3 and
+    method_body(S['Ledger.cs'], "private void ReadPurchases").count("continue;") == 3)
+chk("1.6.19", "an older save is carried over, and a campaign that simply traded nothing is not mistaken for one",
+    (lambda b: "string.IsNullOrEmpty(_ledgerText) && string.IsNullOrEmpty(_purchaseText)" in b
+           and "(_ledger.Count > 0 || _purchases.Count > 0)" in b
+           and b.index("bool carriedOver") < b.index("ReadLedger();") < b.index("if (carriedOver)"))
+    (method_body(S['Ledger.cs'], "private void RestoreSaved")))
+chk("1.6.19", "reading saved text replaces the ledger only when there is text to read",
+    "if (string.IsNullOrEmpty(_ledgerText)) return;" in
+        method_body(S['Ledger.cs'], "private void ReadLedger") and
+    "if (string.IsNullOrEmpty(_purchaseText)) return;" in
+        method_body(S['Ledger.cs'], "private void ReadPurchases"))
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
