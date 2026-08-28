@@ -26,8 +26,10 @@ Raise **Gold reserve**, lower **Max spend per visit**, or turn **Auto-buy on ent
 through the town menu instead.
 
 **"The ledger panel is empty."**
-No route is inside your travel ceilings yet. Visit a few more markets, or raise **Travel ceiling**
-in the Knowledge settings.
+No route is inside your travel ceilings. On live prices this is never about how much of the map you
+have seen — TradeLord reads all of it — so raise **Travel ceiling** in the Knowledge settings, or
+move somewhere with more towns in reach. With live prices off, it can also mean you have not walked
+enough markets yet to have prices to compare.
 
 **"The map button gets in the way of my clicks."**
 Turn off **TradeLord button on the map screen** in the Insight settings. The hotkey still opens the

@@ -3,9 +3,12 @@
 **Bannerlord never tells you where the money is. TradeLord does — and if you like, it goes and gets
 it for you.**
 
-It remembers what every market pays, puts the best place to buy and sell right in the item tooltip,
-ranks the trade routes actually worth driving on a panel on the campaign map, and can run the buying
-and selling for you the moment you walk into a town.
+It reads what every market in Calradia is paying right now — live, out of the game's own economy,
+including the towns you have never set foot in — puts the best place to buy and sell right in the
+item tooltip, ranks the trade routes actually worth driving on a panel on the campaign map, and can
+run the buying and selling for you the moment you walk into a town.
+
+Nothing to scout, nothing to build up. It knows the whole map from your first minute.
 
 No spreadsheet. No second monitor. No riding to Sargot to find out grain is cheap there too.
 
@@ -15,7 +18,7 @@ No spreadsheet. No second monitor. No riding to Sargot to find out grain is chea
 
 ## What you get
 
-### Every price you have ever seen, in the tooltip
+### Every price on the map, in the tooltip
 
 Hover any trade good, anywhere, and the bottom of the tooltip tells you where it is worth money and
 what the trip costs you:
@@ -36,7 +39,8 @@ a good price and a bad one are obvious before you read a single number.
 ### The routes worth driving, ranked
 
 Press **L** on the campaign map for the ledger panel — every profitable run TradeLord can see, best
-first, with the quantity to buy and the days it takes:
+first, with the quantity to buy and the days it takes. It is full before you have entered a single
+town:
 
 ```
 Item        Buy From     Price    Sell At      Qty    Profit    Days
@@ -76,8 +80,9 @@ Want the settings screen? Install **MCM** (Mod Configuration Menu) as well — s
    before it does it.
 2. **Open your inventory and hover a trade good.** The TradeLord block is at the bottom of the
    tooltip. That is the whole "where do I sell this" problem, solved.
-3. **Back on the map, press L.** That is the ledger panel. Empty? You have not seen enough markets
-   yet — trade in two or three more towns and come back.
+3. **Back on the map, press L.** That is the ledger panel, and it is already populated — TradeLord
+   has read the whole map. Empty means nothing profitable is inside your travel ceilings: raise
+   **Travel ceiling** in the Knowledge settings, or ride somewhere with more towns in reach.
 4. **Click the most profitable route's buy town.** The camera jumps there and pins a marker. Go.
 5. **When you are comfortable, open the settings** and set **Gold reserve** and **Max spend per
    visit** to numbers that suit how you play.
@@ -118,9 +123,11 @@ If you have no settings screen, the defaults below are what you get.
 | Sell loot up to tier | OFF |
 | Panel hotkey | L |
 
-**Live world prices** is the one worth knowing about. ON, TradeLord reads prices from markets you
-have never visited, so the panel is useful from your first hour. Turn it OFF for an honest-merchant
-game where only prices you have seen in person count, and each one is forgotten after 45 days.
+**Live world prices** is the one worth knowing about. ON, TradeLord reads prices, stock and each
+merchant's purse straight from the live world economy, for every market on the map, whether you have
+been there or not — which is why the panel works before you have entered a single town. Turn it OFF
+for an honest-merchant game: then it records only what you see as you walk a market, only those
+prices count, and each one is forgotten after 45 days.
 
 Nothing here changes the game's economy. TradeLord buys and sells through the game's own trade
 actions at the game's own prices — it moves your goods, it does not invent gold.
@@ -128,8 +135,9 @@ actions at the game's own prices — it moves your goods, it does not invent gol
 ## Add it, remove it, update it
 
 **TradeLord is plug and play.** Put it in a campaign, take it out of a campaign, at any point, and
-the campaign still opens. Take it out and you lose the price ledger and the lifetime profit figure;
-you keep everything else. Updates go straight over the top of an existing install.
+the campaign still opens. Take it out and you lose your purchase records and the lifetime profit
+figure; you keep everything else. Put it back in and it is up to speed at once — on live prices
+there is nothing to rebuild. Updates go straight over the top of an existing install.
 
 ## Requirements
 
