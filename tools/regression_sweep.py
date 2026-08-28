@@ -386,6 +386,42 @@ def the_trade_skill_gain_is_reported_in_one_line():
             and 'SkillLevelingManager' not in
                 method_body(S['Trading.cs'], "internal static void FlushToasts"))
 
+def a_zero_cap_never_means_buy_nothing():
+    body = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
+    return ("if (Options.Current.BuyCapPerItem > 0 &&" in body
+            and "countThis >= Options.Current.BuyCapPerItem" in body
+            and "Options.Current.BuyCapPerItem > 0\n                        ? Options.Current.BuyCapPerItem : UncappedBuyProjection;"
+                in S['Ledger.cs']
+            and "private const int UncappedBuyProjection" in S['Ledger.cs'])
+
+def every_numeric_setting_that_switches_off_at_zero_says_so():
+    off = {'TL202': 'Observation shelf life', 'TL204': 'Scan radius', 'TL206': 'Travel ceiling',
+           'TL207': 'Village travel ceiling', 'TL228': 'Sell loot up to tier',
+           'TL235': 'Buy cap per item (count', 'TL236': 'Buy cap per item (denars',
+           'TL237': 'Max spend per visit', 'TL243': 'Economy settling delay', 'TL246': 'Auto-marker travel ceiling'}
+    for marker in off:
+        label = re.search(r'\{=' + marker + r'\}([^"]*)"', M)
+        if label is None or '0 = ' not in label.group(1):
+            return False
+    return True
+
+def the_purse_speaks_up_even_on_a_quiet_pass():
+    body = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
+    return ("if (!quiet || PurseHeldItBack(tally))" in body
+            and "tally.Any && tally.Dominant() == Block.BudgetSpent;" in S['Trading.cs']
+            and "if (!quiet)" in method_body(S['Trading.cs'], "public static void ExecuteQuickSell"))
+
+def the_item_tooltip_does_not_announce_the_mod():
+    body = method_body(S['TooltipPatches.cs'], "internal static void Append")
+    return ("{=TL07}" not in body
+            and "TooltipProperty.TooltipPropertyFlags.Title" not in body
+            and "AddSeparator(vm);" in body)
+
+def the_panel_legend_is_legible():
+    m = re.search(r'Brush\.FontSize="(\d+)"\s*\n\s*Brush\.FontColor="#(\w{6})(\w{2})"\s*\n\s*Text="@LegendText"',
+                  PREFAB)
+    return m is not None and int(m.group(1)) >= 14 and int(m.group(3), 16) >= 0xCC
+
 def saved_field_types():
     types = {}
     for text in (S['Ledger.cs'], S['Trading.cs']):
@@ -1334,6 +1370,16 @@ chk("1.6.21", "a visit that traded something is not then told its cargo is full"
     the_full_cargo_warning_waits_for_a_visit_that_traded_nothing())
 chk("1.6.21", "the trade skill gain is reported once, in TradeLord's own line",
     the_trade_skill_gain_is_reported_in_one_line())
+chk("1.6.22", "a buy cap of zero turns the cap off instead of stopping every purchase",
+    a_zero_cap_never_means_buy_nothing())
+chk("1.6.22", "every numeric setting that switches off at zero says so on its own label",
+    every_numeric_setting_that_switches_off_at_zero_says_so())
+chk("1.6.22", "a pass that bought nothing because of your purse says so, even when it is trading quietly",
+    the_purse_speaks_up_even_on_a_quiet_pass())
+chk("1.6.22", "the item tooltip adds its prices without announcing the mod by name",
+    the_item_tooltip_does_not_announce_the_mod())
+chk("1.6.22", "the line under the ledger is set at a size that can be read",
+    the_panel_legend_is_legible())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

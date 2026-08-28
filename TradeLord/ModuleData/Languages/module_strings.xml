@@ -74,9 +74,9 @@
 		<string id="TL87" text="TradeLord buys and sells for you as you enter a market. Turn auto-sell and auto-buy on entry off in its settings to trade by hand."/>
 		<string id="TL88" text="TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."/>
 		<string id="TL201" text="Live world prices (default)"/>
-		<string id="TL202" text="Observation shelf life (days)"/>
+		<string id="TL202" text="Observation shelf life (days, 0 = never expire)"/>
 		<string id="TL203" text="Exclude hostile markets"/>
-		<string id="TL204" text="Scan radius (map units)"/>
+		<string id="TL204" text="Scan radius (map units, 0 = whole map)"/>
 		<string id="TL205" text="Minimum stock for buy suggestions"/>
 		<string id="TL206" text="Travel ceiling (days, 0 = off)"/>
 		<string id="TL207" text="Village travel ceiling (days, 0 = off)"/>
@@ -107,7 +107,7 @@
 		<string id="TL232" text="Always sell (item ids, comma separated)"/>
 		<string id="TL233" text="Enable quick-buy"/>
 		<string id="TL234" text="Gold reserve"/>
-		<string id="TL235" text="Buy cap per item (count)"/>
+		<string id="TL235" text="Buy cap per item (count, 0 = off)"/>
 		<string id="TL236" text="Buy cap per item (denars, 0 = off)"/>
 		<string id="TL237" text="Max spend per visit (0 = unlimited)"/>
 		<string id="TL238" text="Resale safety factor"/>
@@ -155,7 +155,7 @@
 		<string id="TL332" text="Goods quick-sell always sells, by item id, past the category policies, the unique and crafted protection and the food reserve. The never-sell list above and an inventory lock still hold. This is the only way to sell a mount or a pack animal."/>
 		<string id="TL333" text="Buy goods here that sell for more elsewhere, within the caps below. Only goods actually in stock are bought."/>
 		<string id="TL334" text="Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip."/>
-		<string id="TL335" text="Most units of one item quick-buy takes per visit. Default 32."/>
+		<string id="TL335" text="Most units of one item quick-buy takes per visit. 0 = no limit on the count. Default 32."/>
 		<string id="TL336" text="Also cap spending per item per visit in denars."/>
 		<string id="TL337" text="Total denars quick-buy may spend per settlement visit. Default 1000."/>
 		<string id="TL338" text="Assume only this fraction of the best sell price is still available by the time you arrive."/>

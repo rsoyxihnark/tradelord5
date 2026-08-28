@@ -296,6 +296,8 @@ namespace TradeLord
             return v != null && v.VillageState != Village.VillageStates.Normal;
         }
 
+        private const int UncappedBuyProjection = 500;
+
         internal static bool WithinRadius(Settlement s)
         {
             float radius = Options.Current.ScanRadius;
@@ -488,7 +490,8 @@ namespace TradeLord
                     if (buyPrice <= 0) continue;
                     if (!TradePolicy.BuyAcceptable(buyPrice, TradePolicy.Realizable(sells[0].price))) break;
 
-                    int stocked = Options.Current.BuyCapPerItem;
+                    int stocked = Options.Current.BuyCapPerItem > 0
+                        ? Options.Current.BuyCapPerItem : UncappedBuyProjection;
                     if (Options.Current.BuyValueCapPerItem > 0)
                         stocked = Math.Min(stocked, Options.Current.BuyValueCapPerItem / buyPrice);
                     if (Options.Current.MaxSpendPerVisit > 0)

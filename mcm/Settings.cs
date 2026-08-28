@@ -34,7 +34,7 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL101}Knowledge")]
         public bool Omniscient { get => Options.Current.Omniscient; set { Options.Current.Omniscient = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL202}Observation shelf life (days)", 0, 200, Order = 1, RequireRestart = false,
+        [SettingPropertyInteger("{=TL202}Observation shelf life (days, 0 = never expire)", 0, 200, Order = 1, RequireRestart = false,
             HintText = "{=TL302}Observed prices older than this are ignored. 0 = never expire.")]
         [SettingPropertyGroup("{=TL101}Knowledge")]
         public int ObservationShelfLifeDays { get => Options.Current.ObservationShelfLifeDays; set { Options.Current.ObservationShelfLifeDays = value; Options.Bump(); } }
@@ -44,7 +44,7 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL101}Knowledge")]
         public bool ExcludeHostileTowns { get => Options.Current.ExcludeHostileTowns; set { Options.Current.ExcludeHostileTowns = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL204}Scan radius (map units)", 0f, 1000f, "0", Order = 3, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL204}Scan radius (map units, 0 = whole map)", 0f, 1000f, "0", Order = 3, RequireRestart = false,
             HintText = "{=TL304}Limit price scans to markets within this straight-line distance. 0 = whole map.")]
         [SettingPropertyGroup("{=TL101}Knowledge")]
         public float ScanRadius { get => Options.Current.ScanRadius; set { Options.Current.ScanRadius = value; Options.Bump(); } }
@@ -220,8 +220,8 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL105}Buying")]
         public int GoldReserve { get => Options.Current.GoldReserve; set { Options.Current.GoldReserve = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL235}Buy cap per item (count)", 1, 500, Order = 2, RequireRestart = false,
-            HintText = "{=TL335}Most units of one item quick-buy takes per visit. Default 32.")]
+        [SettingPropertyInteger("{=TL235}Buy cap per item (count, 0 = off)", 0, 500, Order = 2, RequireRestart = false,
+            HintText = "{=TL335}Most units of one item quick-buy takes per visit. 0 = no limit on the count. Default 32.")]
         [SettingPropertyGroup("{=TL105}Buying")]
         public int BuyCapPerItem { get => Options.Current.BuyCapPerItem; set { Options.Current.BuyCapPerItem = value; Options.Bump(); } }
 

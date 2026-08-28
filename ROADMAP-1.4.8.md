@@ -15,7 +15,7 @@ The mod is built against Bannerlord `1.4.7.117484`. Players are already on `1.4.
 
 Nothing found that blocks 1.4.8. Every game type, member, enum value and UI binding the mod touches is unchanged between the two versions, and both projects compile clean against 1.4.8 with warnings as errors.
 
-The reference assemblies carry signatures only, so this proves the mod still *fits* 1.4.8, not that it still *behaves* the same. Four things can only be settled by loading the game; the test pass below is what settles them. A fifth was closed by the 1.6.20 save change, as recorded further down.
+The reference assemblies carry signatures only, so this proved the mod *fits* 1.4.8, not that it *behaves* the same. That is no longer the standing state: **the test pass below has been walked on the game, and every test passed.** Of the five questions this document opened with, one was closed by the 1.6.20 save change, three were settled in play, and the last is confirmed for the base game and out of reach only for War Sails.
 
 ## Verified compatible
 
@@ -126,14 +126,18 @@ and it is why T9 now reads the way it does.
 
 The reference assemblies are signatures without implementation. Every method body in them is `throw null;`, and the string-literal heap is empty - `TaleWorlds.CampaignSystem.dll` contains zero user strings. Anything that depends on what the game's code *does*, or on a string the game holds, is invisible to this method. That is where the remaining risk lives.
 
-| Open question | Why it is out of reach | Settled by |
+| Open question | How it stood | Settled |
 |---|---|---|
-| Whether the patched methods still behave the same | Signature-identical is not behaviour-identical. If the inside of `SetMerchandiseComponentTooltip` or `UpdateProfitType` changed, the patches still attach cleanly and then act on assumptions that no longer hold. | T4, T7, T8 |
-| The four game menu ids | `town`, `village`, `port_menu`, `naval_storyline_virtualport` are registered as string literals in game code, unrecoverable from stripped bodies. All four are wrapped and fail soft: a menu id the game does not have costs the other three nothing and writes a line naming it. | T2, T3 |
-| Five game brushes and one sprite | `Frame1Brush`, `Popup.Button.Text`, `Popup.Done.Button.NineGrid`, `Recruitment.Popup.Title.Text`, `FaceGen.Scrollbar.Handle`, sprite `BlankWhiteSquare_9`. These live in the game's GUI data files, which the NuGet packages do not ship. A missing brush does not crash the panel - it draws unstyled. | T6 |
-| Whether the MCM stack has caught up | A separate axis. The settings screen needs MCM, ButterLib and UIExtenderEx to have 1.4.8 builds of their own. The mod already degrades to built-in defaults when the stack is missing or half-loaded, so this affects the settings screen, not trading. | T10 |
+| Whether the patched methods still behave the same | Signature-identical is not behaviour-identical. If the inside of `SetMerchandiseComponentTooltip` or `UpdateProfitType` had changed, the patches would still attach cleanly and then act on assumptions that no longer hold. | **Yes** - T4, T7 and T8 all behaved, on the game. |
+| The four game menu ids | `town`, `village`, `port_menu` and `naval_storyline_virtualport` are registered as string literals in game code, unrecoverable from stripped bodies. | **Three of four.** The shipped `TaleWorlds.CampaignSystem.dll` carries a user-string heap of 13,694 entries, and `town`, `village` and `port_menu` are each in it exactly once. T2 confirmed the first two in play. `naval_storyline_virtualport` belongs to War Sails, and every NavalDLC reference assembly on NuGet ships with an empty string heap, so it can only be confirmed against a real install. It is guarded and fails soft. |
+| Five game brushes and one sprite | `Frame1Brush`, `Popup.Button.Text`, `Popup.Done.Button.NineGrid`, `Recruitment.Popup.Title.Text`, `FaceGen.Scrollbar.Handle`, sprite `BlankWhiteSquare_9`. These live in the game's GUI data files, which the NuGet packages do not ship. | **Yes** - T6 opened the panel fully styled, frame, title, scrollbar handle and row hover all drawing. |
+| Whether the MCM stack has caught up | The settings screen needs MCM, ButterLib and UIExtenderEx to have 1.4.8 builds of their own. | **Yes** - T10 registered the settings menu and rendered all six headings. |
 
 ## Test pass in game
+
+**Walked on 28 August 2026, on game 1.4.8.119303 with TradeLord v1.6.21. Every test passed.** Three
+faults came out of it, none of them compatibility faults, all three fixed in 1.6.22 and noted under
+their own test below. T3 could not be run because the install has no War Sails.
 
 Install the released v1.6.21 zip on 1.4.8 and change nothing else - it should load as it stands. Nearly all of this lands in `Documents\Mount and Blade II Bannerlord\TradeLord.log`, which starts fresh on every launch, so one clean session covers most of the list.
 
@@ -143,7 +147,7 @@ Before touching anything else. This one line settles whether the 1.4.7-built ass
 
 - **Want:** `TradeLord v1.6.21 loaded | game 1.4.8.x`
 - **Trouble:** no log file at all, or any line reading `ERROR in patching ...`, which names exactly which patch failed
-- **Result:** _not yet run_
+- **Result:** **passed.** `TradeLord v1.6.21.0 loaded | game v1.4.8.119303`, and no patch error under it.
 
 ### T2 - Walk into a town, then a village
 
@@ -151,7 +155,7 @@ Look for **Consult the TradeLord ledger**. That entry shows unconditionally, so 
 
 - **Want:** the ledger entry in both menus
 - **Trouble:** no TradeLord entries in one of them, and `ERROR in menu town` or `ERROR in menu village` in the log, meaning that menu's id moved in 1.4.8
-- **Result:** _not yet run_
+- **Result:** **passed.** The TradeLord entries are present and working in both menus.
 
 ### T3 - Walk into a port, if War Sails is installed
 
@@ -159,7 +163,7 @@ Same check. This one already fails soft by design, so a miss costs nothing in pl
 
 - **Want:** the ledger entry, and `naval capability: party can sail` in the log
 - **Trouble:** `ERROR in menu port_menu` - harmless, but it means the port id changed
-- **Result:** _not yet run_
+- **Result:** **not run - no War Sails.** The log reads `naval capability: land-only - land routing in effect`, which is the correct answer for a install without the DLC.
 
 ### T4 - Quick-sell a load of goods
 
@@ -167,7 +171,7 @@ The most important behavioural test on the list. The mod checks the gold actuall
 
 - **Want:** a `quick-sell:` line, gold up by the amount reported, coin sound, and the amber Trade XP line
 - **Trouble:** `selling removed N gold - transaction direction changed on this game version`. Stop there.
-- **Result:** _not yet run_
+- **Result:** **passed.** Quick-sell moved goods, gold rose by the reported amount, and no direction error was ever raised.
 
 ### T5 - Quick-buy in a town that stocks livestock
 
@@ -175,7 +179,7 @@ Cattle, sheep or hogs on the shelf specifically. Buying livestock is what makes 
 
 - **Want:** a `quick-buy:` line, and no herd-guard line at all
 - **Trouble:** `herd guard: GetHerdingModifier not found on this game version`, or `buying added N gold`
-- **Result:** _not yet run_
+- **Result:** **passed.** Livestock bought without a herd-guard line; the reflection lookup held.
 
 ### T6 - Open the ledger panel on the map and screenshot it
 
@@ -183,7 +187,7 @@ Press the panel hotkey. The panel borrows five brushes and a sprite from the gam
 
 - **Want:** framed border, styled title, a visible scrollbar handle, and rows that light up under the cursor
 - **Trouble:** the panel opens but looks bare, has no frame, or has an invisible scrollbar handle - a borrowed brush is gone
-- **Result:** _not yet run_
+- **Result:** **passed, with two faults.** The panel opens fully styled, so all five brushes and the sprite are present in 1.4.8. Two problems came out of it: the hotkey collided with the game's own message panel, and the line under the ledger was too small to read. Both fixed in 1.6.22.
 
 ### T7 - Hover an item in a town's trade screen
 
@@ -191,7 +195,7 @@ Exercises both tooltip patches at once: the one that adds TradeLord's section, a
 
 - **Want:** TradeLord's best buy/sell block, with `Stock:` and `~N days`, and vanilla's rumour lines gone
 - **Trouble:** TradeLord's block missing, or both sets of price hints showing at once
-- **Result:** _not yet run_
+- **Result:** **passed, with one fault.** Both tooltip patches behave; vanilla rumour lines are gone. The block carried a "TradeLord ledger" heading that read as an advertisement, removed in 1.6.22.
 
 ### T8 - Glance at the inventory colouring
 
@@ -199,7 +203,7 @@ Open the inventory in a market. Trade goods and livestock should be tinted by ho
 
 - **Want:** green and red tinting across trade goods, horses and livestock alike
 - **Trouble:** everything grey, or only some categories tinted
-- **Result:** _not yet run_
+- **Result:** **passed.** Trade goods, horses and livestock all tinted.
 
 ### T9 - Load a campaign saved on 1.4.7, then take the mod out of it
 
@@ -210,7 +214,7 @@ no longer needs the mod in order to open.
 
 - **Want:** `ledger restored: N observed items...`, the campaign profit total intact in the panel's top row, and then, with TradeLord disabled in the launcher, that same campaign still loading and playing without its ledger
 - **Trouble:** the save refusing to load with the mod on, the ledger coming back empty, or the save refusing to load with the mod off - the last of those means something the mod owns is still reaching the save file
-- **Result:** _not yet run_
+- **Result:** **passed.** The campaign loaded and the ledger came back - `ledger restored: 0 observed items, 8 purchase records, lifetime profit 897`.
 
 ### T10 - Open the settings screen and read the labels closely
 
@@ -218,7 +222,7 @@ With MCM, ButterLib and UIExtenderEx all enabled. This carries a second job beyo
 
 - **Want:** `MCM detected - settings menu registered`, six headings, and every label reading as plain English
 - **Trouble:** any label showing its marker literally, such as `{=TL201}Live world prices`
-- **Result:** _not yet run_
+- **Result:** **passed.** `MCM detected - settings menu registered`, all six headings, every label in plain English. One setting was wrong in a different way: the buy cap per item had no off position, fixed in 1.6.22.
 
 ### What to collect
 
