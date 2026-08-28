@@ -82,7 +82,7 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM
 - ✅ One build runs on Bannerlord 1.4.8, 1.4.7 and the 1.5.1 beta
-- ✅ Everything it did goes to `TradeLord.log`, in `Documents/Mount and Blade II Bannerlord`. Read it yourself, or send it to me when something goes wrong and I will debug it
+- ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it
 
 **All of it is yours to change.** Every feature above is a switch or a number on the settings screen.
 Turn any one of them off, or set it to whatever you like.
