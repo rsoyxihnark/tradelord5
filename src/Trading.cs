@@ -399,8 +399,11 @@ namespace TradeLord
             return party != null && party.InventoryCapacity - party.TotalWeightCarried < 1f;
         }
 
+        private static bool TradedThisVisit() => _soldThisVisit.Count > 0 || _boughtThisVisit.Count > 0;
+
         private static void WarnNoRoomToCarry(bool countPass)
         {
+            if (TradedThisVisit()) return;
             if (!NoRoomToCarry() && !(countPass && _cargoWasFull)) return;
             Toast(new TextObject("{=TL82}Cargo is full - TradeLord cannot buy here until you free up carry weight."),
                   ToastAlert);
@@ -559,12 +562,7 @@ namespace TradeLord
         {
             int xp = _pendingXp;
             _pendingXp = 0;
-            if (xp > 0)
-            {
-                TextObject earned = new TextObject("{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.");
-                earned.SetTextVariable("GOLD", xp);
-                Toast(earned, ToastXp);
-            }
+            if (xp > 0) CreditTradeSkill(xp);
             if (_pending.Count > 0)
             {
                 try
@@ -575,8 +573,24 @@ namespace TradeLord
                 }
                 finally { _pending.Clear(); }
             }
-            if (xp > 0 && Campaign.Current != null && Hero.MainHero != null)
-                SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);
+        }
+
+        private static void CreditTradeSkill(int xp)
+        {
+            if (Campaign.Current == null || Hero.MainHero == null) return;
+            int before = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
+            OpenTransaction();
+            try { SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp); }
+            finally { CloseTransaction(); ReportSilenced(); }
+            int now = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
+            bool rose = now > before;
+            TextObject earned = new TextObject(rose
+                ? "{=TL88}TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."
+                : "{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.");
+            earned.SetTextVariable("GOLD", xp);
+            if (rose) earned.SetTextVariable("LEVEL", now);
+            Toast(earned, ToastXp);
+            if (rose) Log.Write("trade skill rose to " + now + " - named in TradeLord's own line");
         }
 
         private const int NamedItemCap = 6;
