@@ -76,7 +76,7 @@ The reference assemblies are signatures without implementation. Every method bod
 | Open question | Why it is out of reach | Settled by |
 |---|---|---|
 | Whether the patched methods still behave the same | Signature-identical is not behaviour-identical. If the inside of `SetMerchandiseComponentTooltip` or `UpdateProfitType` changed, the patches still attach cleanly and then act on assumptions that no longer hold. | T4, T7, T8 |
-| The four game menu ids | `town`, `village`, `port_menu`, `naval_storyline_virtualport` are registered as string literals in game code, unrecoverable from stripped bodies. The two port ids are already wrapped and fail soft; `town` and `village` are not. | T2, T3 |
+| The four game menu ids | `town`, `village`, `port_menu`, `naval_storyline_virtualport` are registered as string literals in game code, unrecoverable from stripped bodies. All four are wrapped and fail soft: a menu id the game does not have costs the other three nothing and writes a line naming it. | T2, T3 |
 | Five game brushes and one sprite | `Frame1Brush`, `Popup.Button.Text`, `Popup.Done.Button.NineGrid`, `Recruitment.Popup.Title.Text`, `FaceGen.Scrollbar.Handle`, sprite `BlankWhiteSquare_9`. These live in the game's GUI data files, which the NuGet packages do not ship. A missing brush does not crash the panel - it draws unstyled. | T6 |
 | Whether a 1.4.7 campaign still loads | The mod claims a save type-definer id range of its own, base `724,501,000`. Whether 1.4.8 introduced a vanilla definer colliding with it is not something signatures can answer, and a collision shows up as a save that will not open. | T9 |
 | Whether the MCM stack has caught up | A separate axis. The settings screen needs MCM, ButterLib and UIExtenderEx to have 1.4.8 builds of their own. The mod already degrades to built-in defaults when the stack is missing or half-loaded, so this affects the settings screen, not trading. | T10 |
@@ -98,7 +98,7 @@ Before touching anything else. This one line settles whether the 1.4.7-built ass
 Look for **Consult the TradeLord ledger**. That entry shows unconditionally, so it is the clean test of the menu id - the quick-sell and quick-buy entries hide themselves when auto-trade is on.
 
 - **Want:** the ledger entry in both menus
-- **Trouble:** no TradeLord entries in one of them, meaning that menu's id moved in 1.4.8
+- **Trouble:** no TradeLord entries in one of them, and `ERROR in menu town` or `ERROR in menu village` in the log, meaning that menu's id moved in 1.4.8
 - **Result:** _not yet run_
 
 ### T3 - Walk into a port, if War Sails is installed
@@ -106,7 +106,7 @@ Look for **Consult the TradeLord ledger**. That entry shows unconditionally, so 
 Same check. This one already fails soft by design, so a miss costs nothing in play; it just writes a line worth reading.
 
 - **Want:** the ledger entry, and `naval capability: party can sail` in the log
-- **Trouble:** `ERROR in port menu port_menu` - harmless, but it means the port id changed
+- **Trouble:** `ERROR in menu port_menu` - harmless, but it means the port id changed
 - **Result:** _not yet run_
 
 ### T4 - Quick-sell a load of goods
