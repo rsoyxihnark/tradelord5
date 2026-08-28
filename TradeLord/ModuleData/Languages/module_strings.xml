@@ -76,6 +76,7 @@
 		<string id="TL89" text="No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
 		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
 		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
+		<string id="TL92" text="Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings."/>
 		<string id="TL201" text="Live world prices (default)"/>
 		<string id="TL202" text="Observation shelf life (days, 0 = never expire)"/>
 		<string id="TL203" text="Exclude hostile markets"/>
@@ -173,7 +174,7 @@
 		<string id="TL346" text="The auto-marker ignores towns farther than this many travel days away. Default 1.5."/>
 		<string id="TL347" text="Play a coin sound when a quick-sell or quick-buy pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
-		<string id="TL349" text="Trading done automatically as you enter a market reports to TradeLord.log only, with no lines on screen. The quick-sell, quick-buy and quick-trade menu entries always report, since you asked for those. The first-run automation notice and the cargo-full warning are unaffected." />
+		<string id="TL349" text="Trading done automatically as you enter a market reports to TradeLord.log only, with no lines on screen. The quick-sell, quick-buy and quick-trade menu entries always report, since you asked for those. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected." />
 		<string id="TL101" text="Knowledge"/>
 		<string id="TL102" text="Insight"/>
 		<string id="TL103" text="Action"/>
