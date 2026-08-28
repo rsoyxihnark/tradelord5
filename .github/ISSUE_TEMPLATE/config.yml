@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Troubleshooting guide
+    url: https://github.com/rsoyxihnark/tradelord5/blob/main/docs/troubleshooting.md
+    about: Why it did not sell, why the panel is empty, and how to read the log.
+  - name: Settings guide
+    url: https://github.com/rsoyxihnark/tradelord5/blob/main/docs/settings.md
+    about: Every switch, what it does, and which ones to reach for first.
