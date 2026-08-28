@@ -1519,6 +1519,17 @@ def the_list_audit_is_redone_when_the_lists_are_edited():
     return ("_auditedGeneration == Options.Generation" in audit and
             "TradePolicy.ForgetItemListAudit();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 
+def a_list_still_naming_nothing_after_an_edit_is_said_again():
+    warn = method_body(S['Trading.cs'], "private static void WarnUnmatchedItemLists")
+    return ("if (!TradePolicy.ItemListsNameNothing()) return;" in warn
+            and "_auditSpoke" not in S['Trading.cs']
+            and "AuditShouldSpeak" not in S['Trading.cs'])
+
+def the_audit_reads_the_game_only_for_a_list_with_something_in_it():
+    audit = method_body(S['Trading.cs'], "internal static bool ItemListsNameNothing")
+    return ordered(audit, "string.IsNullOrEmpty(s.NeverSellItems)",
+                   "string.IsNullOrEmpty(s.NeverBuyItems)) return false;", "Items.All")
+
 def quiet_automation_silences_only_the_automated_lines():
     sell = method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
     buy = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
@@ -1568,6 +1579,11 @@ chk("1.6.26", "an entry is matched whatever its capitalisation, and the tests th
     a_list_entry_is_matched_whatever_its_capitalisation())
 chk("1.6.26", "no file in the repository carries an em dash or an en dash",
     no_tracked_file_carries_a_machine_written_dash())
+
+chk("1.6.27", "a list edited into a state that still names nothing is said on screen again",
+    a_list_still_naming_nothing_after_an_edit_is_said_again())
+chk("1.6.27", "the audit reads the game's goods only when a list has something to check",
+    the_audit_reads_the_game_only_for_a_list_with_something_in_it())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
