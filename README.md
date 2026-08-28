@@ -1,6 +1,6 @@
 - It reads what every market in Calradia is paying right now, live, straight from the game's own brain.
 - It shows you the best ways to buy and sell, right in the item tooltip and in a ledger.
-- It ranks the trade routes worth travelling on a panel. Each route is weighed on 9 or more factors and scored for confidence. Among them: how the price can move because of the NPC caravans sitting at those towns or heading for them. Profit per travel day is worked out from real pathfinding time at your party's own speed with the cargo it is carrying, from where you are, to the town you buy in, on to the town you sell in.
+- It ranks the trade routes worth travelling on panel. Each route's profit is evaluated on 9+ factors and travel time on 5+. Then the two are scored together for confidence. Respecting how the price moves because of the NPC caravans enroute there. Profit per travel day is calculated by real pathfinding with party's own speed, with the cargo carrying, from where you are, to the buy town, on to the sell town.
 - And it can buy and sell for you automatically as you enter a settlement.
 - You can change how it does any of it. The defaults are thoroughly tested and work great.
 
@@ -44,11 +44,12 @@
 - ✅ A quiet mode that keeps automated trading to the log and off your screen
 - ✅ A dry run that simulates every trade it would have made, and shows you the estimate (moves nothing)
 
-**What it will never touch**
+**What it doesn't touch**
 
 - ✅ Anything you locked in the inventory screen
 - ✅ Unique and player-crafted gear, quest items, mounts and pack animals
-- ✅ Your food reserve, and grain
+- ✅ Your food reserve (accounted for the men in your party)
+- ✅ Buying grain (its a low profit high weight good to trade)
 - ✅ Your gold reserve, or anything past your spending cap for the visit
 - ✅ Any good you put on the never-sell or never-buy list, named by its item id or by the name on screen
 - ✅ More livestock than your party can drive, so a purchase never slows you down
@@ -67,6 +68,7 @@
 - ✅ An honest-merchant mode you can switch on, using only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
 - ✅ A rebindable panel hotkey, and a map button you can hide
+- 
 
 **And**
 
