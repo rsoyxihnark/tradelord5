@@ -123,8 +123,7 @@ namespace TradeLord
         }
 
         internal static bool PolicyAllows(int policy, bool buying) =>
-            buying ? policy == Options.PolicyBuyOnly || policy == Options.PolicyBuySell
-                   : policy == Options.PolicySellOnly || policy == Options.PolicyBuySell;
+            TradeMath.PolicyAllows(policy, buying);
 
         internal static ISet<string> LockedKeys()
         {
@@ -280,23 +279,17 @@ namespace TradeLord
             return best.Item2 > 0 ? best.Item2 : item.Value;
         }
 
-        internal static int Credit(int proceeds, int basis, int unpaidWorth)
-        {
-            if (basis > 0) return proceeds - basis;
-            int gain = proceeds - unpaidWorth;
-            return gain > 0 ? gain : 0;
-        }
+        internal static int Credit(int proceeds, int basis, int unpaidWorth) =>
+            TradeMath.Credit(proceeds, basis, unpaidWorth);
 
         public static bool ProfitAcceptable(int costBasis, int townSellPrice) =>
-            costBasis > 0
-                ? townSellPrice >= costBasis * (1f + Options.Current.MinProfitMargin)
-                : townSellPrice > 0;
+            TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);
 
         internal static float Realizable(int farSellPrice) =>
-            farSellPrice * Options.Current.ResaleSafetyFactor;
+            TradeMath.Realizable(farSellPrice, Options.Current.ResaleSafetyFactor);
 
         internal static bool BuyAcceptable(int buyPrice, float realizable) =>
-            buyPrice > 0 && realizable >= buyPrice * (1f + Options.Current.MinProfitMargin);
+            TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin);
     }
 
     public class TradeActionBehavior : CampaignBehaviorBase
@@ -412,14 +405,15 @@ namespace TradeLord
                   ToastAlert);
         }
 
-        private void AnnounceAutomation(Settlement settlement)
+        private bool AnnounceAutomation(Settlement settlement)
         {
-            if (_announcedAutomation) return;
-            if (!Options.Current.AutoSellOnEntry && !Options.Current.AutoBuyOnEntry) return;
-            if (!CanTradeHere(settlement)) return;
+            if (_announcedAutomation) return false;
+            if (!Options.Current.AutoSellOnEntry && !Options.Current.AutoBuyOnEntry) return false;
+            if (!CanTradeHere(settlement)) return false;
             _announcedAutomation = true;
-            Toast(new TextObject("{=TL87}TradeLord buys and sells for you as you enter a market. Turn auto-sell and auto-buy on entry off in its settings to trade by hand."), ToastAlert);
-            Log.Write("automation notice shown - this campaign had not been told that auto-sell/auto-buy are on");
+            Toast(new TextObject("{=TL87}TradeLord buys and sells for you as you enter a market, starting at the next one. Turn auto-sell and auto-buy on entry off in its settings to trade by hand."), ToastAlert);
+            Log.Write("automation notice shown - this market is left alone so the campaign can turn it off first");
+            return true;
         }
 
         private void OnSessionLaunched(CampaignGameStarter starter)
@@ -497,9 +491,11 @@ namespace TradeLord
             {
                 ResetVisit();
 
-                AnnounceAutomation(settlement);
-                if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
-                if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
+                if (!AnnounceAutomation(settlement))
+                {
+                    if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
+                    if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
+                }
                 if (Options.Current.EnableBuying && CanTradeHere(settlement)) WarnNoRoomToCarry(countPass: true);
                 UpdateBestSellTownTracker();
             });
