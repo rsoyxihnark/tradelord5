@@ -73,7 +73,7 @@ namespace TradeLord
 
         public float ResaleSafetyFactor = 0.85f;
 
-        public string PanelKey = "T";
+        public string PanelKey = "L";
 
         public bool TradeWithVillages = true;
         public bool SimulationMode = false;

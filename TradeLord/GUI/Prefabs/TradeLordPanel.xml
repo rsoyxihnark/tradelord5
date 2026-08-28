@@ -258,9 +258,9 @@
                     </ScrollablePanel>
 
                     <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
-                                SuggestedHeight="16" MarginTop="6"
-                                Brush="Popup.Button.Text" Brush.FontSize="11"
-                                Brush.FontColor="#AAAAAA88"
+                                SuggestedHeight="34" MarginTop="6"
+                                Brush="Popup.Button.Text" Brush.FontSize="14"
+                                Brush.FontColor="#CFCFCFDD"
                                 Text="@LegendText" />
 
                     <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"

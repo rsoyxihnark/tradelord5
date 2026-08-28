@@ -56,8 +56,6 @@ namespace TradeLord
             var ledger = LedgerBehavior.Instance;
 
             AddSeparator(vm);
-            AddLine(vm, new TextObject("{=TL07}TradeLord ledger").ToString(), "", Title,
-                TooltipProperty.TooltipPropertyFlags.Title);
 
             Settlement here = Settlement.CurrentSettlement;
             SettlementComponent market = here?.SettlementComponent;
