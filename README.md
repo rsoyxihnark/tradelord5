@@ -10,7 +10,7 @@ run the buying and selling for you the moment you walk into a town.
 
 Nothing to scout, nothing to build up. It knows the whole map from your first minute.
 
-**[Download the latest release](https://github.com/rsoyxihnark/tradelord5/releases/latest)**  ·  Single-player  ·  Bannerlord 1.4.8.119303
+**[Download the latest release](https://github.com/rsoyxihnark/tradelord5/releases/latest)**
 
 ---
 
