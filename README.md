@@ -157,12 +157,11 @@ file**, written as plain text. A save carries nothing that only TradeLord knows 
 - **You can remove TradeLord from a campaign and go on playing it.** The save still opens without the
   mod installed. You lose the ledger, the purchase records and the lifetime profit figure. You do not
   lose the campaign.
-- **A campaign older than 1.6.19 needs to be saved once first.** Load it with 1.6.19 installed and let
-  it save - any save will do, including an autosave. Until then that campaign still needs the mod in
-  order to open. The log says so when it loads.
+- **A campaign last saved by 1.6.18 or earlier will not open.** Those saves keep their records in a
+  form only TradeLord could read, and TradeLord no longer reads it. Start a fresh campaign.
 - Adding TradeLord to an existing campaign is fine. It starts with an empty ledger and fills it in as
   you travel.
-- Updating TradeLord over an existing install is fine.
+- Updating TradeLord over an existing install is fine from 1.6.19 onwards.
 
 Nothing TradeLord saves affects vanilla data. It does not touch your items, your party, your heroes
 or the world economy's own records.
@@ -237,7 +236,6 @@ just played. Start at the top.
 | `transaction direction changed on this game version` | TradeLord watched the gold move the wrong way and stopped immediately rather than continue. Report this one. |
 | `quick-sell moved nothing at … :` | Followed by the reasons, counted. This is the answer to "why did it not sell my stuff". |
 | `ledger panel setup …` | The map panel could not build. The town-menu popup still works. |
-| `ledger read from a save written by an older TradeLord` | This campaign still carries its records in the old form. Save it once and they are rewritten in the form that lets you remove the mod later. |
 
 **"It sold something I wanted to keep."** Lock it in the inventory screen, or put its item id on the
 never-sell list. Unique and player-crafted items, quest items, mounts and pack animals are already

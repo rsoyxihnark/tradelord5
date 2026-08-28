@@ -1,9 +1,7 @@
-using System.Collections.Generic;
 using HarmonyLib;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.Core;
 using TaleWorlds.MountAndBlade;
-using TaleWorlds.SaveSystem;
 
 namespace TradeLord
 {
@@ -64,24 +62,6 @@ namespace TradeLord
             Guard.Run("GameEnd.Visit", TradeActionBehavior.ForgetVisit);
             LedgerBehavior.Instance = null;
             Guard.Run("GameEnd.Log", Log.Forget);
-        }
-    }
-
-    public class TradeLordSaveDefiner : SaveableTypeDefiner
-    {
-        public TradeLordSaveDefiner() : base(724_501_000) { }
-
-        protected override void DefineClassTypes()
-        {
-            AddClassDefinition(typeof(PriceObservation), 1);
-            AddClassDefinition(typeof(PurchaseRecord), 2);
-        }
-
-        protected override void DefineContainerDefinitions()
-        {
-            ConstructContainerDefinition(typeof(List<PriceObservation>));
-            ConstructContainerDefinition(typeof(Dictionary<string, List<PriceObservation>>));
-            ConstructContainerDefinition(typeof(List<PurchaseRecord>));
         }
     }
 }
