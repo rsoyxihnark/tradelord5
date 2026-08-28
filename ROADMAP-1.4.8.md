@@ -5,7 +5,7 @@ The mod is built against Bannerlord `1.4.7.117484`. Players are already on `1.4.
 | | |
 |---|---|
 | Mod version first inspected | 1.6.9 |
-| Re-checked at | 1.6.20 |
+| Re-checked at | 1.6.21 |
 | From | 1.4.7.117484 |
 | To | 1.4.8.119303, and 1.5.1.120547-beta |
 | Method | NuGet reference assemblies for every version, plus the mod's own compiled output. No game install involved. |
@@ -70,9 +70,9 @@ never bound to it.
 The same caveat as 1.4.8 applies twice over: this is signatures, not behaviour, and 1.5.1 is a beta
 that can still move. The test pass below is written for 1.4.8 and is the thing that settles either.
 
-## Re-checked at 1.6.20
+## Re-checked at 1.6.21
 
-The compatibility tool was run again on the 1.6.20 build, against all three versions at once, and
+The compatibility tool was run again on the 1.6.21 build, against all three versions at once, and
 reaches the same verdict. Nothing found that blocks any of them.
 
 | | |
@@ -84,7 +84,7 @@ reaches the same verdict. Nothing found that blocks any of them.
 - all four Harmony patch targets resolve with the same signatures and the same parameter names, and `DisplayMessage` still has exactly one overload
 - `GetHerdingModifier` and `ItemMenuVM._targetItem` both intact
 - all eight enums held member for member - `SettlementAction` 8, `LeaveType` 48, `InventorySide` 6, `VillageStates` 5, `NavigationType` 4, `ItemTiers` 7, `TooltipPropertyFlags` 15, `InputKey` 146
-- the mod binds 100 game types and 198 distinct members, with 0 unresolved types and 0 unresolved members on all three versions
+- the mod binds 102 game types and 200 distinct members, with 0 unresolved types and 0 unresolved members on all three versions
 
 The tool raises two notes and neither touches the mod: `TaleWorlds.CampaignSystem.FastMode` is no
 longer shipped in 1.5.1-beta, and `LeaveType` gains `TakeFerry=48` on the end, which renumbers
@@ -102,7 +102,8 @@ the tool and their reference tables diffed, so the whole of that difference is a
 
 Nothing was added, and nothing outside that group was lost. Every one of them is a save-system type
 the mod stopped needing when it stopped defining saveable types of its own. This number moves with
-the mod, not with the game.
+the mod, not with the game: 1.6.21 took it back up to 102 and 200 by reading the hero's Trade skill
+level, and those bindings resolve on all three versions too.
 
 The two sections above once disagreed with each other, quoting 198 members in one and 103 types and
 201 members in the other, because an earlier version of the compatibility tool counted members
@@ -113,8 +114,8 @@ versions.
 ### One open question is closed, and without needing the game
 
 Whether a vanilla definer collides with the mod's own save type-definer id range, base
-`724,501,000`, cannot arise any more. 1.6.20 registers no definer and defines no saveable type, so a
-campaign it saves carries `string`, `int`, `bool` and `Settlement` and nothing else. There is no id
+`724,501,000`, cannot arise any more. Since 1.6.20 TradeLord registers no definer and defines no
+saveable type, so a campaign it saves carries `string`, `int`, `bool` and `Settlement` and nothing else. There is no id
 left to collide with. That was one of the five open questions this document opened with, and the
 only one that could have shown up as a save which will not open. It is struck from the table below,
 and it is why T9 now reads the way it does.
@@ -132,13 +133,13 @@ The reference assemblies are signatures without implementation. Every method bod
 
 ## Test pass in game
 
-Install the released v1.6.20 zip on 1.4.8 and change nothing else - it should load as it stands. Nearly all of this lands in `Documents\Mount and Blade II Bannerlord\TradeLord.log`, which starts fresh on every launch, so one clean session covers most of the list.
+Install the released v1.6.21 zip on 1.4.8 and change nothing else - it should load as it stands. Nearly all of this lands in `Documents\Mount and Blade II Bannerlord\TradeLord.log`, which starts fresh on every launch, so one clean session covers most of the list.
 
 ### T1 - Launch, then read the first line of the log
 
 Before touching anything else. This one line settles whether the 1.4.7-built assembly binds to 1.4.8 at all, and the lines under it say whether each of the four patches attached.
 
-- **Want:** `TradeLord v1.6.20 loaded | game 1.4.8.x`
+- **Want:** `TradeLord v1.6.21 loaded | game 1.4.8.x`
 - **Trouble:** no log file at all, or any line reading `ERROR in patching ...`, which names exactly which patch failed
 - **Result:** _not yet run_
 
@@ -201,7 +202,7 @@ Open the inventory in a market. Trade goods and livestock should be tinted by ho
 ### T9 - Load a campaign saved on 1.4.7, then take the mod out of it
 
 One saved by 1.6.19 or later, with TradeLord history in it. A campaign whose last save was written by
-1.6.18 or earlier will not open on 1.6.20 at all, by design, and is not what this tests. Two things
+1.6.18 or earlier will not open on 1.6.20 or later at all, by design, and is not what this tests. Two things
 settle here: that the saved prices and purchase records survive the version change, and that the save
 no longer needs the mod in order to open.
 
@@ -227,7 +228,7 @@ Every failure above is caught and logged rather than thrown, so none of it shoul
 
 ## Roadmap
 
-1. **Run the test pass on the current build.** Nothing needs changing first. The released v1.6.20 should load on 1.4.8 as it stands, which is what makes this cheap - it answers three of the four open questions without committing the repository to anything.
+1. **Run the test pass on the current build.** Nothing needs changing first. The released v1.6.21 should load on 1.4.8 as it stands, which is what makes this cheap - it answers three of the four open questions without committing the repository to anything.
 
 2. **Fix whatever the pass turns up, if anything.** A failure at T2 or T3 is a menu id to chase; at T6, a brush to replace; at T4, T5 or T7, a patch to re-fit against changed game behaviour. Each ships as its own release, still on 1.4.7 references, because none of them need the bump.
 

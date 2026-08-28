@@ -354,6 +354,38 @@ def changelog_opens_on_the_shipped_version():
 
 PLAIN_SAVED_TYPES = {'string', 'int', 'bool', 'float', 'Settlement'}
 
+def the_filter_is_armed_only_around_a_game_call_that_talks():
+    t = S['Trading.cs']
+    armed = re.findall(r'OpenTransaction\(\);\s*try \{ ([\w\.]+)\([^)]*\); \}\s*'
+                       r'finally \{ CloseTransaction\(\);( ReportSilenced\(\);)? \}', t)
+    return (t.count('OpenTransaction();') == len(armed) == 3
+            and sorted(c for c, _ in armed) == ['SellItemsAction.Apply', 'SellItemsAction.Apply',
+                                                'SkillLevelingManager.OnTradeProfitMade']
+            and 'InGameTransaction = true' not in t
+            and 'if (!TradeActionBehavior.InGameTransaction) return true;' in t
+            and 'AutomatedTradeInProgress' not in
+                method_body(t, "internal static class Patch_SilenceChunkedTradeLines"))
+
+def the_full_cargo_warning_waits_for_a_visit_that_traded_nothing():
+    body = method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
+    return ('if (TradedThisVisit()) return;' in body
+            and body.index('if (TradedThisVisit()) return;') < body.index('NoRoomToCarry()')
+            and 'private static bool TradedThisVisit() => _soldThisVisit.Count > 0 || '
+                '_boughtThisVisit.Count > 0;' in S['Trading.cs'])
+
+def the_trade_skill_gain_is_reported_in_one_line():
+    body = method_body(S['Trading.cs'], "private static void CreditTradeSkill")
+    return ('finally { CloseTransaction(); ReportSilenced(); }' in body
+            and body.index('int before = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);')
+                < body.index('OpenTransaction();')
+                < body.index('SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);')
+                < body.index('int now = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);')
+                < body.index('Toast(earned, ToastXp);')
+            and '{=TL88}' in body and '{=TL81}' in body
+            and 'earned.SetTextVariable("LEVEL", now);' in body
+            and 'SkillLevelingManager' not in
+                method_body(S['Trading.cs'], "internal static void FlushToasts"))
+
 def saved_field_types():
     types = {}
     for text in (S['Ledger.cs'], S['Trading.cs']):
@@ -897,15 +929,10 @@ chk("1.5.6", "expired observations are pruned on both save and load",
     "if (!dataStore.IsLoading) PruneExpired();" in S['Ledger.cs'] and
     "if (dataStore.IsLoading) PruneExpired();" in S['Ledger.cs'] and
     "(shelf > 0f && now - o.CapturedDay > shelf)" in method_body(S['Ledger.cs'], "private void PruneObservations"))
-chk("1.5.6", "the message filter is armed only around the SellItemsAction call",
-    len(re.findall(r'OpenTransaction\(\);\s*try \{ SellItemsAction\.Apply\([^)]*\); \}\s*'
-                   r'finally \{ CloseTransaction\(\); \}', S['Trading.cs'])) == 2 and
-    "InGameTransaction = true" not in S['Trading.cs'] and
-    "if (!TradeActionBehavior.InGameTransaction) return true;" in S['Trading.cs'] and
-    "AutomatedTradeInProgress" not in
-        method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines"))
-chk("1.5.6", "each pass logs how many messages it suppressed",
-    "ReportSilenced();" in S['Trading.cs'] and S['Trading.cs'].count("ReportSilenced();") == 3 and
+chk("1.5.6", "the message filter is armed only around a game call that talks back",
+    the_filter_is_armed_only_around_a_game_call_that_talks())
+chk("1.5.6", "every place the filter comes down logs how many messages it suppressed",
+    S['Trading.cs'].count("ReportSilenced();") == 4 and
     "NoteSilenced();" in method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines"))
 chk("1.5.12", "the message filter uses a depth counter, so nesting cannot disarm it early",
     "internal static bool InGameTransaction => _transactionDepth > 0;" in S['Trading.cs'] and
@@ -991,16 +1018,20 @@ chk("1.5.11", "the panel profit line counts only profit made by this module",
         method_body(S['Trading.cs'], "public static void ExecuteQuickSell") and
     "AddProfit" not in method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
 
-chk("1.6.1", "the trade XP the pass earns reaches the game only after the pass has reported itself",
+chk("1.6.1", "the trade XP the pass earns reaches the game only once the pass is over",
     "_pendingXp += xp;" in method_body(S['Trading.cs'], "private static void AwardTradeXp") and
     "SkillLevelingManager.OnTradeProfitMade" not in
         method_body(S['Trading.cs'], "private static void AwardTradeXp") and
     S['Trading.cs'].count("SkillLevelingManager.OnTradeProfitMade") == 1 and
-    method_body(S['Trading.cs'], "internal static void FlushToasts").index("InformationManager.DisplayMessage")
-        < method_body(S['Trading.cs'], "internal static void FlushToasts").index("SkillLevelingManager.OnTradeProfitMade"))
+    "SkillLevelingManager.OnTradeProfitMade" in
+        method_body(S['Trading.cs'], "private static void CreditTradeSkill") and
+    all("SkillLevelingManager" not in method_body(S['Trading.cs'], m)
+        for m in ("public static void ExecuteQuickSell", "public static void ExecuteQuickBuy")))
 chk("1.6.1", "the XP line is queued last, in amber, and is translatable",
     'private static readonly Color ToastXp = new Color(1f, 0.72f, 0.20f);' in S['Trading.cs'] and
-    'Toast(earned, ToastXp);' in method_body(S['Trading.cs'], "internal static void FlushToasts") and
+    'Toast(earned, ToastXp);' in method_body(S['Trading.cs'], "private static void CreditTradeSkill") and
+    method_body(S['Trading.cs'], "internal static void FlushToasts").index("CreditTradeSkill(xp)")
+        < method_body(S['Trading.cs'], "internal static void FlushToasts").index("InformationManager.DisplayMessage") and
     '{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.' in S['Trading.cs'] and
     method_body(S['Trading.cs'], "public static void ExecuteQuickSell").index("Toast(msg, profit > 0")
         < method_body(S['Trading.cs'], "public static void ExecuteQuickSell").index("AwardTradeXp(profit)"))
@@ -1079,7 +1110,9 @@ chk("1.6.6", "the auto-trade switch lets the settings file speak for itself whil
     "Options.Current.AutoSellOnEntry = value;" in M)
 
 chk("1.6.7", "the Trade XP line reports the denars of profit it hands the skill system, the number it actually passes",
-    'earned.SetTextVariable("GOLD", xp);' in method_body(S['Trading.cs'], "internal static void FlushToasts") and
+    (lambda b: 'earned.SetTextVariable("GOLD", xp);' in b
+           and "SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);" in b)
+    (method_body(S['Trading.cs'], "private static void CreditTradeSkill")) and
     "Trade XP." not in S['Trading.cs'] and
     "trade profit fed to the XP system: " in S['Trading.cs'])
 chk("1.6.7", "the queued trade messages are dropped even if one of them cannot be shown",
@@ -1297,6 +1330,10 @@ chk("1.6.20", "a line of saved text that cannot be read is dropped on its own, n
     a_record_that_cannot_be_read_is_dropped_on_its_own())
 chk("1.6.20", "the saved ledger is proved to survive a save and a load by tests the build runs",
     the_codec_is_covered_by_tests_the_build_runs())
+chk("1.6.21", "a visit that traded something is not then told its cargo is full",
+    the_full_cargo_warning_waits_for_a_visit_that_traded_nothing())
+chk("1.6.21", "the trade skill gain is reported once, in TradeLord's own line",
+    the_trade_skill_gain_is_reported_in_one_line())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
