@@ -48,3 +48,4 @@ Never push unless both `src/TradeLord.csproj` and `mcm/TradeLord.MCM.csproj` bui
 - Never put Claude, Anthropic, Co-Authored-By or session-link attribution in a commit, pull request, release, changelog or any other file.
 - Never write an email address or other personal contact detail into a file. If you find one, warn the user and remove it.
 - Never append install instructions to a release body.
+- Never add a file because convention expects one. A licence, an issue or pull request template, a contributing guide, a code of conduct, a documentation folder: none of these exist here and none are to be created. A file that is written to look the part rather than to be read has no place in this repository.
