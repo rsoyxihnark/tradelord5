@@ -336,7 +336,8 @@ def readme_defaults_match_the_shipped_ones():
             and on('Omniscient') and on('AutoSellOnEntry') and on('AutoBuyOnEntry')
             and on('NeverBuyGrain') and on('TradeWithVillages')
             and on('ProtectSpecial') and on('RespectLocks') and on('ExcludeHostileTowns')
-            and option_default('PreferBestSellTown') == 'false')
+            and option_default('PreferBestSellTown') == 'false'
+            and option_default('CraftingPolicy') == 'PolicyBuySell')
 
 def every_text_variable_is_supplied():
     placeholders = set()

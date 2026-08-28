@@ -51,6 +51,7 @@
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ Buying grain (its a low profit high weight good to trade)
 - ✅ Your gold reserve, or anything past your spending cap for the visit
+- ✅ Smithing materials such as iron ore, ingots, charcoal and hardwood, once you switch their policy to leave them alone, off by default
 - ✅ Any good you put on the never-sell or never-buy list, named by its item id or by the name on screen
 - ✅ More livestock than your party can drive, so a purchase never slows you down
 - ✅ Markets belonging to a faction you are at war with
