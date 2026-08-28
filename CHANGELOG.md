@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.18
+
+- TradeLord now says once in each campaign that it buys and sells for you as you enter a market, and names the two settings that turn that off.
+
 ## 1.6.17
 
 - The TradeLord entries in the town and village menus no longer go missing when the map marker cannot be restored as your save loads.
