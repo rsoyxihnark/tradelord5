@@ -1467,6 +1467,34 @@ chk("1.6.24", "the purse rule and the route confidence need nothing from the gam
 chk("1.6.24", "the purse rule, route confidence and the item lists are proved by tests the build runs",
     the_route_rules_are_covered_by_tests_the_build_runs())
 
+def the_purse_outranks_the_reasons_that_are_merely_counted():
+    body = method_body(S['Trading.cs'], "internal Block Dominant")
+    return ("if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;" in body
+            and ordered(body, "if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;",
+                        "foreach (var kv in _counts)")
+            and "tally.Any && tally.Dominant() == Block.BudgetSpent;" in S['Trading.cs'])
+
+def an_empty_purse_is_reported_on_the_way_into_a_market():
+    body = method_body(S['Trading.cs'], "private static bool WarnPurseBelowReserve")
+    entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
+    return ("if (TradedThisVisit()) return false;" in body
+            and ordered(body, "if (TradedThisVisit()) return false;",
+                        "if (SpendableGold() > 0) return false;")
+            and 'new TextObject("{=TL92}' in body
+            and 'Toast(msg, ToastAlert);' in body
+            and 'TL92' in strings_declared()
+            and "quiet" not in body and "Muted(" not in body
+            and "if (!WarnPurseBelowReserve()) WarnNoRoomToCarry();" in entered
+            and ordered(entered, "ExecuteQuickBuy(settlement, quiet: true)",
+                        "WarnPurseBelowReserve()"))
+
+def what_is_left_to_spend_is_worked_out_in_one_place():
+    return ("private static int SpendableGold() =>\n"
+            "            TradeMath.Budget(Hero.MainHero.Gold, Options.Current.GoldReserve,\n"
+            "                             Options.Current.MaxSpendPerVisit, _spentThisVisit, 0);"
+                in S['Trading.cs']
+            and S['Trading.cs'].count("TradeMath.Budget(") == 2)
+
 def no_tracked_file_carries_a_machine_written_dash():
     import subprocess
     dashes = "\u2012\u2013\u2014\u2015\u2212\ufe58\uff0d"
@@ -1580,6 +1608,13 @@ chk("1.6.27", "a list edited into a state that still names nothing is said on sc
     a_list_still_naming_nothing_after_an_edit_is_said_again())
 chk("1.6.27", "the audit reads the game's goods only when a list has something to check",
     the_audit_reads_the_game_only_for_a_list_with_something_in_it())
+
+chk("1.6.29", "an empty purse outranks the reasons that are merely counted, so it is named rather than the shop",
+    the_purse_outranks_the_reasons_that_are_merely_counted())
+chk("1.6.29", "a purse at or under the reserve is reported on the way into a market, past a quiet pass",
+    an_empty_purse_is_reported_on_the_way_into_a_market())
+chk("1.6.29", "what is left to spend is worked out in one place for both the warning and the buying",
+    what_is_left_to_spend_is_worked_out_in_one_place())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.29
+
+- TradeLord now tells you as you enter a market when your purse is at or under your gold reserve, so you know why it is buying nothing.
+- A pass that bought nothing now names your purse or your spending caps as the reason whenever that is what stopped it, instead of blaming prices or saying nothing at all.
+- The cargo-full warning stays quiet when the purse warning has already been given, since selling clears both.
+
 ## 1.6.28
 
 - The warning that your cargo is full is now given once, as you enter a market, instead of a second time as you leave it.

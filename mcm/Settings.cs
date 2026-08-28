@@ -291,7 +291,7 @@ namespace TradeLord.Mcm
         public bool DetailedTradeSummary { get => Options.Current.DetailedTradeSummary; set { Options.Current.DetailedTradeSummary = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL249}Quiet automation", Order = 8, RequireRestart = false,
-            HintText = "{=TL349}Trading done automatically as you enter a market reports to TradeLord.log only, with no lines on screen. The quick-sell, quick-buy and quick-trade menu entries always report, since you asked for those. The first-run automation notice and the cargo-full warning are unaffected.")]
+            HintText = "{=TL349}Trading done automatically as you enter a market reports to TradeLord.log only, with no lines on screen. The quick-sell, quick-buy and quick-trade menu entries always report, since you asked for those. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected.")]
         [SettingPropertyGroup("{=TL106}General")]
         public bool QuietAutomation { get => Options.Current.QuietAutomation; set { Options.Current.QuietAutomation = value; Options.Bump(); } }
     }
