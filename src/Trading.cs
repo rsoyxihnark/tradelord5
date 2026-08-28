@@ -399,6 +399,9 @@ namespace TradeLord
             return party != null && party.InventoryCapacity - party.TotalWeightCarried < 1f;
         }
 
+        private static bool PurseHeldItBack(BlockTally tally) =>
+            tally.Any && tally.Dominant() == Block.BudgetSpent;
+
         private static bool TradedThisVisit() => _soldThisVisit.Count > 0 || _boughtThisVisit.Count > 0;
 
         private static void WarnNoRoomToCarry(bool countPass)
@@ -936,7 +939,8 @@ namespace TradeLord
                         int price = market.GetItemPrice(el.EquipmentElement, MobileParty.MainParty, false);
                         if (!TradePolicy.BuyAcceptable(price, realizable)) { tally.Note(Block.BelowMargin); break; }
                         if (price > Budget()) { tally.Note(Block.BudgetSpent); break; }
-                        if (countThis >= Options.Current.BuyCapPerItem) { tally.Note(Block.ItemCountCap); break; }
+                        if (Options.Current.BuyCapPerItem > 0 &&
+                            countThis >= Options.Current.BuyCapPerItem) { tally.Note(Block.ItemCountCap); break; }
                         if (Options.Current.BuyValueCapPerItem > 0 &&
                             spentThis + price > Options.Current.BuyValueCapPerItem) { tally.Note(Block.ItemValueCap); break; }
                         if (livestock && herdRoom <= 0) { tally.Note(Block.HerdFull); break; }
@@ -1009,7 +1013,7 @@ namespace TradeLord
             {
                 if (tally.Any) Log.Repeatable("quick-buy-empty " + settlement.StringId, tally.Summary(),
                     "quick-buy moved nothing at " + settlement.Name + ": " + tally.Summary());
-                if (!quiet)
+                if (!quiet || PurseHeldItBack(tally))
                 {
                     TextObject none = new TextObject("{=TL33}Nothing bought here - {REASON}.");
                     none.SetTextVariable("REASON", BlockTally.Phrase(tally.Dominant()));
