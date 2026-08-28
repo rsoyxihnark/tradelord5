@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="..\src\LedgerCodec.cs" Link="LedgerCodec.cs"/>
     <Compile Include="..\src\TradeMath.cs" Link="TradeMath.cs"/>
+    <Compile Include="..\src\Confidence.cs" Link="Confidence.cs"/>
     <Compile Include="..\src\Options.cs" Link="Options.cs"/>
   </ItemGroup>
   <ItemGroup>
