@@ -13,7 +13,8 @@ Single-player only.
 **Out of the box, TradeLord trades for you.** Auto-sell and auto-buy are both ON by default, so the
 first town you walk into, it will sell what your policies allow and spend up to 1000 denars on goods
 it can resell. It tells you what it did on screen every time, and it never spends below your gold
-reserve of 300 denars, but it does not ask first.
+reserve of 300 denars, but it does not ask first. The first market you enter in a campaign, it also
+says on screen that it trades for you, and names the two settings that stop it.
 
 That is deliberate: the defaults are set up for someone who installed a trading mod to have trading
 happen. If you would rather drive it by hand, turn off **Auto-sell on entry** and **Auto-buy on

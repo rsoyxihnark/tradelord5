@@ -299,6 +299,57 @@ def empty_release_notes_are_rejected():
     return (blocks('') and blocks('\n') and blocks('  \n \t\n')
             and not blocks('- a real release note\n'))
 
+README = io.open('README.md', encoding='utf-8').read()
+CHANGES = io.open('CHANGELOG.md', encoding='utf-8').read()
+
+def option_default(name):
+    m = re.search(r'public\s+(?:bool|int|float|string)\s+' + name + r'\s*=\s*([^;]+);', S['Options.cs'])
+    return None if m is None else m.group(1).strip()
+
+def readme_defaults_match_the_shipped_ones():
+    def flag(name):
+        return {'true': 'ON', 'false': 'OFF'}.get(option_default(name))
+    def whole(name):
+        return option_default(name).rstrip('f')
+    def percent(name):
+        return '%d%%' % round(float(option_default(name).rstrip('f')) * 100)
+    def days(name):
+        count = int(float(option_default(name).rstrip('f')))
+        return '%d day%s' % (count, '' if count == 1 else 's')
+    want = {
+        'Live world prices': flag('Omniscient'),
+        'Auto-sell on entry / Auto-buy on entry': flag('AutoSellOnEntry') + ' / ' + flag('AutoBuyOnEntry'),
+        'Gold reserve': whole('GoldReserve'),
+        'Max spend per visit': whole('MaxSpendPerVisit'),
+        'Buy cap per item': whole('BuyCapPerItem'),
+        'Minimum profit margin': percent('MinProfitMargin'),
+        'Resale safety factor': percent('ResaleSafetyFactor'),
+        'Keep food': days('KeepFoodDays'),
+        'Never buy grain': flag('NeverBuyGrain'),
+        'Travel ceiling / village ceiling': days('MaxTravelDays') + ' / ' + days('MaxVillageTravelDays'),
+        'Trade with villages': flag('TradeWithVillages'),
+        'Sell loot up to tier': 'OFF' if option_default('MaxLootTier') == '0' else whole('MaxLootTier'),
+        'Panel hotkey': option_default('PanelKey').strip('"'),
+    }
+    rows = {k.strip(): v.strip() for k, v in
+            re.findall(r'^\|\s*([^|\n]+?)\s*\|\s*([^|\n]+?)\s*\|$', README, re.M)}
+    return (len(want) == 13 and all(rows.get(k) == v for k, v in want.items())
+            and option_default('ObservationShelfLifeDays') + ' days' in README)
+
+def every_text_variable_is_supplied():
+    placeholders = set()
+    for text in re.findall(LITERAL, ALL + "\n" + M):
+        placeholders |= set(re.findall(r'\{([A-Z][A-Z0-9_]*)\}', unescape(text[1])))
+    supplied = set(re.findall(r'"([A-Z][A-Z0-9_]*)"', ALL + "\n" + M))
+    return len(placeholders) > 10 and not (placeholders - supplied)
+
+def changelog_opens_on_the_shipped_version():
+    heads = re.findall(r'^## (.+)$', CHANGES, re.M)
+    if not heads or heads[0].strip() != module_version():
+        return False
+    newest = CHANGES.split('## ' + heads[0], 1)[1].split('\n## ', 1)[0]
+    return any(line.startswith('- ') for line in newest.split('\n'))
+
 results = []
 def chk(ver, claim, ok):
     results.append(ok)
@@ -1132,6 +1183,25 @@ chk("1.6.16", "the auto-marker is put back on the map when a save loads, and can
                < b.index('Guard.Run("Action.RestoreMarker"')
                < b.index('AddOptions("town");'))
     (method_body(S['Trading.cs'], "private void OnSessionLaunched")))
+chk("1.6.18", "a campaign is told once that entering a market trades for it, before the pass that does so",
+    (lambda b: "if (_announcedAutomation) return;" in b
+           and "if (!Options.Current.AutoSellOnEntry && !Options.Current.AutoBuyOnEntry) return;" in b
+           and "if (!CanTradeHere(settlement)) return;" in b
+           and "_announcedAutomation = true;" in b and '{=TL87}' in b)
+    (method_body(S['Trading.cs'], "private void AnnounceAutomation")) and
+    "TL87" in strings_declared() and
+    (lambda b: b.index("AnnounceAutomation(settlement);") < b.index("ExecuteQuickSell(settlement, quiet: true)"))
+    (method_body(S['Trading.cs'], "private void OnSettlementEntered")))
+chk("1.6.18", "the notice is remembered in the save, so it is shown once per campaign and not once per market",
+    'dataStore.SyncData("TradeLord_AutomationNotice", ref _announcedAutomation);' in S['Trading.cs'] and
+    "_announcedAutomation" not in method_body(S['Trading.cs'], "internal static void ForgetVisit") and
+    "private bool _announcedAutomation;" in S['Trading.cs'])
+chk("1.6.18", "every variable a shipped line leaves a slot for is filled in by name",
+    every_text_variable_is_supplied())
+chk("1.6.18", "the defaults the README publishes are the defaults the module ships",
+    readme_defaults_match_the_shipped_ones())
+chk("1.6.18", "the changelog opens on the version the manifest ships, and that entry says something",
+    changelog_opens_on_the_shipped_version())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

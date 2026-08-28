@@ -303,6 +303,7 @@ namespace TradeLord
     {
         private Settlement _trackedTown;
         private string _pinnedTowns = "";
+        private bool _announcedAutomation;
         private static int _spentThisVisit;
         private static readonly HashSet<string> _soldThisVisit = new HashSet<string>();
         private static readonly Dictionary<string, (int count, int spent)> _boughtThisVisit =
@@ -357,6 +358,7 @@ namespace TradeLord
             if (!dataStore.IsLoading) _pinnedTowns = LedgerPanel.PinnedIds();
             dataStore.SyncData("TradeLord_TrackedTown", ref _trackedTown);
             dataStore.SyncData("TradeLord_PanelPins", ref _pinnedTowns);
+            dataStore.SyncData("TradeLord_AutomationNotice", ref _announcedAutomation);
             if (_pinnedTowns == null) _pinnedTowns = "";
         }
 
@@ -402,6 +404,16 @@ namespace TradeLord
             if (!NoRoomToCarry() && !(countPass && _cargoWasFull)) return;
             Toast(new TextObject("{=TL82}Cargo is full - TradeLord cannot buy here until you free up carry weight."),
                   ToastAlert);
+        }
+
+        private void AnnounceAutomation(Settlement settlement)
+        {
+            if (_announcedAutomation) return;
+            if (!Options.Current.AutoSellOnEntry && !Options.Current.AutoBuyOnEntry) return;
+            if (!CanTradeHere(settlement)) return;
+            _announcedAutomation = true;
+            Toast(new TextObject("{=TL87}TradeLord buys and sells for you as you enter a market. Turn auto-sell and auto-buy on entry off in its settings to trade by hand."), ToastAlert);
+            Log.Write("automation notice shown - this campaign had not been told that auto-sell/auto-buy are on");
         }
 
         private void OnSessionLaunched(CampaignGameStarter starter)
@@ -479,6 +491,7 @@ namespace TradeLord
             {
                 ResetVisit();
 
+                AnnounceAutomation(settlement);
                 if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
                 if (Options.Current.EnableBuying && CanTradeHere(settlement)) WarnNoRoomToCarry(countPass: true);
