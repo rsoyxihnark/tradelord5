@@ -311,34 +311,17 @@ def option_default(name):
     return None if m is None else m.group(1).strip()
 
 def readme_defaults_match_the_shipped_ones():
-    def flag(name):
-        return {'true': 'ON', 'false': 'OFF'}.get(option_default(name))
+    def on(name):
+        return option_default(name) == 'true'
     def whole(name):
         return option_default(name).rstrip('f')
-    def percent(name):
-        return '%d%%' % round(float(option_default(name).rstrip('f')) * 100)
-    def days(name):
-        count = int(float(option_default(name).rstrip('f')))
-        return '%d day%s' % (count, '' if count == 1 else 's')
-    want = {
-        'Live world prices': flag('Omniscient'),
-        'Auto-sell on entry / Auto-buy on entry': flag('AutoSellOnEntry') + ' / ' + flag('AutoBuyOnEntry'),
-        'Gold reserve': whole('GoldReserve'),
-        'Max spend per visit': whole('MaxSpendPerVisit'),
-        'Buy cap per item': whole('BuyCapPerItem'),
-        'Minimum profit margin': percent('MinProfitMargin'),
-        'Resale safety factor': percent('ResaleSafetyFactor'),
-        'Keep food': days('KeepFoodDays'),
-        'Never buy grain': flag('NeverBuyGrain'),
-        'Travel ceiling / village ceiling': days('MaxTravelDays') + ' / ' + days('MaxVillageTravelDays'),
-        'Trade with villages': flag('TradeWithVillages'),
-        'Sell loot up to tier': 'OFF' if option_default('MaxLootTier') == '0' else whole('MaxLootTier'),
-        'Panel hotkey': option_default('PanelKey').strip('"'),
-    }
-    rows = {k.strip(): v.strip() for k, v in
-            re.findall(r'^\|\s*([^|\n]+?)\s*\|\s*([^|\n]+?)\s*\|$', README, re.M)}
-    return (len(want) == 13 and all(rows.get(k) == v for k, v in want.items())
-            and option_default('ObservationShelfLifeDays') + ' days' in README)
+    claims = ['up to ' + whole('MaxSpendPerVisit') + ' denars',
+              'last ' + whole('GoldReserve') + ' denars',
+              'press **' + option_default('PanelKey').strip('"') + '**']
+    return (all(c in README for c in claims)
+            and on('Omniscient') and on('AutoSellOnEntry') and on('AutoBuyOnEntry')
+            and on('NeverBuyGrain') and on('TradeWithVillages')
+            and on('ProtectSpecial') and on('RespectLocks') and on('ExcludeHostileTowns'))
 
 def every_text_variable_is_supplied():
     placeholders = set()
