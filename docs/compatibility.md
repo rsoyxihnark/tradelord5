@@ -5,9 +5,12 @@
 **TradeLord is plug and play.** Add it to a campaign, remove it from a campaign, at any point, and
 the campaign keeps working.
 
-- **Remove it whenever you like.** The save opens without the mod installed. You lose the price
-  ledger, the purchase records and the lifetime profit figure. You keep the campaign.
-- **Add it whenever you like.** It starts with an empty ledger and fills it in as you travel.
+- **Remove it whenever you like.** The save opens without the mod installed. You lose your purchase
+  records and the lifetime profit figure, and in observed mode the prices you had recorded. You keep
+  the campaign.
+- **Add it whenever you like.** On live prices it is working the moment the campaign loads: it reads
+  the world as it finds it, so there is nothing to build up. In observed mode it starts blank and
+  records prices as you walk markets.
 - **Update it whenever you like.** Straight over the top of an existing install.
 
 Nothing TradeLord stores affects vanilla data. It does not touch your items, your party, your heroes
