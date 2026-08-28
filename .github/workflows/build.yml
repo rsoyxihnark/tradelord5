@@ -39,6 +39,10 @@ jobs:
         shell: bash
         run: python3 tools/regression_sweep.py
 
+      - name: Codec tests
+        shell: bash
+        run: dotnet test tests/TradeLord.Tests.csproj -c Release --nologo
+
       - name: Build from source
         shell: bash
         run: |

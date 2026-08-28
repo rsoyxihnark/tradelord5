@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.20
+
+- A campaign last saved by TradeLord 1.6.18 or earlier no longer opens; campaigns saved by 1.6.19 and later are unaffected.
+- A price or purchase record for an item whose name carries an unusual character is now left out of the save instead of coming back as a record for an item that does not exist.
+
 ## 1.6.19
 
 - A campaign saved by this version can have TradeLord removed from it later and still open, instead of the save refusing to load without the mod.

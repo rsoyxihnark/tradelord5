@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Extensions;
 using TaleWorlds.CampaignSystem.Party;
@@ -12,23 +10,6 @@ using TaleWorlds.SaveSystem;
 
 namespace TradeLord
 {
-    public class PriceObservation
-    {
-        [SaveableField(1)] public string ItemId;
-        [SaveableField(2)] public string TownId;
-        [SaveableField(3)] public int BuyPrice;
-        [SaveableField(4)] public int SellPrice;
-        [SaveableField(5)] public float CapturedDay;
-    }
-
-    public class PurchaseRecord
-    {
-        [SaveableField(1)] public string ItemId;
-        [SaveableField(2)] public int TotalPaid;
-        [SaveableField(3)] public int Count;
-        [SaveableField(4)] public int LastUnitPaid;
-    }
-
     public class TradeRoute
     {
         public ItemObject Item;
@@ -77,19 +58,12 @@ namespace TradeLord
             if (!dataStore.IsLoading) PruneExpired();
             if (dataStore.IsSaving)
             {
-                _ledgerText = WriteLedger();
-                _purchaseText = WritePurchases();
-            }
-            if (dataStore.IsLoading)
-            {
-                dataStore.SyncData("TradeLord_Ledger", ref _ledger);
-                dataStore.SyncData("TradeLord_Purchases", ref _purchases);
+                _ledgerText = LedgerCodec.WriteLedger(_ledger);
+                _purchaseText = LedgerCodec.WritePurchases(_purchases);
             }
             dataStore.SyncData("TradeLord_LedgerText", ref _ledgerText);
             dataStore.SyncData("TradeLord_PurchaseText", ref _purchaseText);
             dataStore.SyncData("TradeLord_LifetimeProfit", ref _lifetimeProfit);
-            if (_ledger == null) _ledger = new Dictionary<string, List<PriceObservation>>();
-            if (_purchases == null) _purchases = new List<PurchaseRecord>();
             if (dataStore.IsLoading) ReadSavedText();
             if (dataStore.IsLoading) PruneExpired();
             Reindex();
@@ -98,108 +72,12 @@ namespace TradeLord
                           _purchases.Count + " purchase records, lifetime profit " + _lifetimeProfit);
         }
 
-        private const char FieldMark = '|';
-        private const char RecordMark = ';';
-
-        private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
-
-        private static string Number(float value) => value.ToString("0.###", CultureInfo.InvariantCulture);
-
-        private static bool Whole(string text, out int value) =>
-            int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
-
-        private string WriteLedger()
-        {
-            var sb = new StringBuilder();
-            foreach (var kv in _ledger)
-            {
-                if (string.IsNullOrEmpty(kv.Key) || kv.Value == null) continue;
-                for (int i = 0; i < kv.Value.Count; i++)
-                {
-                    PriceObservation o = kv.Value[i];
-                    if (o == null || string.IsNullOrEmpty(o.TownId)) continue;
-                    if (sb.Length > 0) sb.Append(RecordMark);
-                    sb.Append(kv.Key).Append(FieldMark)
-                      .Append(o.TownId).Append(FieldMark)
-                      .Append(Number(o.BuyPrice)).Append(FieldMark)
-                      .Append(Number(o.SellPrice)).Append(FieldMark)
-                      .Append(Number(o.CapturedDay));
-                }
-            }
-            return sb.ToString();
-        }
-
-        private string WritePurchases()
-        {
-            var sb = new StringBuilder();
-            for (int i = 0; i < _purchases.Count; i++)
-            {
-                PurchaseRecord rec = _purchases[i];
-                if (rec == null || string.IsNullOrEmpty(rec.ItemId) || rec.Count <= 0) continue;
-                if (sb.Length > 0) sb.Append(RecordMark);
-                sb.Append(rec.ItemId).Append(FieldMark)
-                  .Append(Number(rec.TotalPaid)).Append(FieldMark)
-                  .Append(Number(rec.Count)).Append(FieldMark)
-                  .Append(Number(rec.LastUnitPaid));
-            }
-            return sb.ToString();
-        }
-
         private void ReadSavedText() => Guard.Run("Ledger.ReadSaved", RestoreSaved);
 
         private void RestoreSaved()
         {
-            bool carriedOver = string.IsNullOrEmpty(_ledgerText) && string.IsNullOrEmpty(_purchaseText) &&
-                               (_ledger.Count > 0 || _purchases.Count > 0);
-            ReadLedger();
-            ReadPurchases();
-            if (carriedOver)
-                Log.Write("ledger read from a save written by an older TradeLord - saving this campaign once " +
-                          "rewrites it as plain text, after which the mod can be removed without the save minding");
-        }
-
-        private void ReadLedger()
-        {
-            if (string.IsNullOrEmpty(_ledgerText)) return;
-            var book = new Dictionary<string, List<PriceObservation>>();
-            string[] records = _ledgerText.Split(RecordMark);
-            for (int i = 0; i < records.Length; i++)
-            {
-                string[] parts = records[i].Split(FieldMark);
-                if (parts.Length != 5 || parts[0].Length == 0 || parts[1].Length == 0) continue;
-                if (!Whole(parts[2], out int buy) || !Whole(parts[3], out int sell)) continue;
-                if (!float.TryParse(parts[4], NumberStyles.Float, CultureInfo.InvariantCulture, out float day)) continue;
-                if (!book.TryGetValue(parts[0], out var list))
-                {
-                    list = new List<PriceObservation>();
-                    book[parts[0]] = list;
-                }
-                list.Add(new PriceObservation
-                {
-                    ItemId = parts[0], TownId = parts[1], BuyPrice = buy, SellPrice = sell, CapturedDay = day
-                });
-            }
-            _ledger = book;
-        }
-
-        private void ReadPurchases()
-        {
-            if (string.IsNullOrEmpty(_purchaseText)) return;
-            var kept = new List<PurchaseRecord>();
-            string[] records = _purchaseText.Split(RecordMark);
-            for (int i = 0; i < records.Length; i++)
-            {
-                string[] parts = records[i].Split(FieldMark);
-                if (parts.Length != 4 || parts[0].Length == 0) continue;
-                if (!Whole(parts[1], out int total) || !Whole(parts[2], out int count) ||
-                    !Whole(parts[3], out int last)) continue;
-                if (count <= 0) continue;
-                kept.Add(new PurchaseRecord
-                {
-                    ItemId = parts[0], TotalPaid = total, Count = count, LastUnitPaid = last
-                });
-            }
-            _purchases = kept;
+            _ledger = LedgerCodec.ReadLedger(_ledgerText);
+            _purchases = LedgerCodec.ReadPurchases(_purchaseText);
         }
 
         private void PruneExpired() => Guard.Run("Ledger.Prune", Prune);

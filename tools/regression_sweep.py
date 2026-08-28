@@ -1,8 +1,10 @@
 import io, re, sys
 
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
-     ['Trading.cs', 'Ledger.cs', 'Panel.cs', 'Travel.cs', 'Support.cs',
+     ['Trading.cs', 'Ledger.cs', 'LedgerCodec.cs', 'Panel.cs', 'Travel.cs', 'Support.cs',
       'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs']}
+TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
+TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
 PROJ = [io.open(f, encoding='utf-8').read() for f in
@@ -351,7 +353,6 @@ def changelog_opens_on_the_shipped_version():
     return any(line.startswith('- ') for line in newest.split('\n'))
 
 PLAIN_SAVED_TYPES = {'string', 'int', 'bool', 'float', 'Settlement'}
-LEGACY_SAVED_FIELDS = {'_ledger', '_purchases'}
 
 def saved_field_types():
     types = {}
@@ -366,36 +367,61 @@ def every_saved_value_is_a_plain_one():
     for name in ('Ledger.cs', 'Trading.cs'):
         body = method_body(S[name], "public override void SyncData")
         for field in re.findall(r'dataStore\.SyncData\("[^"]+",\s*ref\s+(_\w+)\)', body):
-            if field in LEGACY_SAVED_FIELDS:
-                continue
             seen += 1
             if types.get(field) not in PLAIN_SAVED_TYPES:
                 return False
     return seen >= 6
 
-def legacy_collections_are_read_but_never_written():
+def nothing_this_module_defines_is_saveable():
+    return all('SaveableTypeDefiner' not in text and 'SaveableField' not in text
+               and 'AddClassDefinition' not in text and 'ConstructContainerDefinition' not in text
+               for text in S.values())
+
+def no_collection_of_our_own_reaches_a_save():
     body = method_body(S['Ledger.cs'], "public override void SyncData")
-    guarded = ('if (dataStore.IsLoading)\n'
-               '            {\n'
-               '                dataStore.SyncData("TradeLord_Ledger", ref _ledger);\n'
-               '                dataStore.SyncData("TradeLord_Purchases", ref _purchases);\n'
-               '            }')
-    return (guarded in body
-            and body.count('ref _ledger)') == 1 and body.count('ref _purchases)') == 1
+    return ('ref _ledger)' not in body and 'ref _purchases)' not in body
             and 'dataStore.SyncData("TradeLord_LedgerText", ref _ledgerText);' in body
             and 'dataStore.SyncData("TradeLord_PurchaseText", ref _purchaseText);' in body)
 
+def the_codec_needs_nothing_from_the_game():
+    return ('TaleWorlds' not in S['LedgerCodec.cs']
+            and 'public static class LedgerCodec' in S['LedgerCodec.cs'])
+
 def saved_numbers_read_the_same_in_every_language():
-    ledger = S['Ledger.cs']
+    codec = S['LedgerCodec.cs']
     numeric = [c for c in re.findall(
-        r'\w+\.ToString\([^)]*\)|\b(?:int|float|double|long)\.(?:Try)?Parse\([^;]*', ledger)
+        r'\w+\.ToString\([^)]*\)|\b(?:int|float|double|long)\.(?:Try)?Parse\([^;]*', codec)
         if not c.startswith('sb.ToString')]
     return (len(numeric) == 4
             and all('CultureInfo.InvariantCulture' in c for c in numeric)
-            and 'NumberStyles.Integer, CultureInfo.InvariantCulture' in ledger
-            and 'NumberStyles.Float, CultureInfo.InvariantCulture' in ledger
+            and 'NumberStyles.Integer, CultureInfo.InvariantCulture' in codec
+            and 'NumberStyles.Float, CultureInfo.InvariantCulture' in codec
             and not re.search(r'\.Append\(\w+\.(?:BuyPrice|SellPrice|CapturedDay|TotalPaid|Count|LastUnitPaid)\)',
-                              ledger))
+                              codec))
+
+def a_name_that_looks_like_a_separator_is_left_out():
+    codec = S['LedgerCodec.cs']
+    guard = ("!string.IsNullOrEmpty(id) && id.IndexOf(FieldMark) < 0 && id.IndexOf(RecordMark) < 0"
+             in codec)
+    ledger = method_body(codec, "public static string WriteLedger")
+    purchases = method_body(codec, "public static string WritePurchases")
+    return (guard
+            and 'Storable(kv.Key)' in ledger and 'Storable(o.TownId)' in ledger
+            and 'Storable(o.CapturedDay)' in ledger
+            and 'Storable(rec.ItemId)' in purchases)
+
+def a_record_that_cannot_be_read_is_dropped_on_its_own():
+    ledger = method_body(S['LedgerCodec.cs'], "public static Dictionary<string, List<PriceObservation>> ReadLedger")
+    purchases = method_body(S['LedgerCodec.cs'], "public static List<PurchaseRecord> ReadPurchases")
+    return (ledger.count('continue;') == 4 and purchases.count('continue;') == 3
+            and 'return book;' in ledger and 'return kept;' in purchases
+            and 'throw' not in ledger and 'throw' not in purchases)
+
+def the_codec_is_covered_by_tests_the_build_runs():
+    return ('dotnet test tests/TradeLord.Tests.csproj' in WORKFLOW
+            and 'LedgerCodec.cs' in TESTPROJ
+            and TESTS.count('[Fact]') + TESTS.count('[Theory]') >= 12
+            and 'InvariantCulture' not in TESTS)
 
 results = []
 def chk(ver, claim, ok):
@@ -1249,38 +1275,28 @@ chk("1.6.18", "the defaults the README publishes are the defaults the module shi
     readme_defaults_match_the_shipped_ones())
 chk("1.6.18", "the changelog opens on the version the manifest ships, and that entry says something",
     changelog_opens_on_the_shipped_version())
-chk("1.6.19", "a campaign save carries no type this module defines, so removing the mod cannot cost the save",
-    every_saved_value_is_a_plain_one() and
+chk("1.6.20", "a campaign save carries no type this module defines, so removing the mod cannot cost the save",
+    every_saved_value_is_a_plain_one() and nothing_this_module_defines_is_saveable() and
     "private string _ledgerText" in S['Ledger.cs'] and
     "private string _purchaseText" in S['Ledger.cs'])
-chk("1.6.19", "the old collections are read out of a save and never written back into one",
-    legacy_collections_are_read_but_never_written())
-chk("1.6.19", "the type definer is kept, so a save written by an older build still loads",
-    "AddClassDefinition(typeof(PriceObservation), 1);" in S['SubModule.cs'] and
-    "AddClassDefinition(typeof(PurchaseRecord), 2);" in S['SubModule.cs'] and
-    "ConstructContainerDefinition(typeof(Dictionary<string, List<PriceObservation>>));" in S['SubModule.cs'])
-chk("1.6.19", "the ledger text is rebuilt from pruned data every time the campaign is saved",
+chk("1.6.20", "no collection of the module's own making is written into a save",
+    no_collection_of_our_own_reaches_a_save())
+chk("1.6.20", "the ledger a save carries is written and read without the game being involved",
+    the_codec_needs_nothing_from_the_game())
+chk("1.6.20", "the ledger text is rebuilt from pruned data every time the campaign is saved",
     (lambda b: b.index("if (!dataStore.IsLoading) PruneExpired();")
-             < b.index("_ledgerText = WriteLedger();")
+             < b.index("_ledgerText = LedgerCodec.WriteLedger(_ledger);")
              < b.index('dataStore.SyncData("TradeLord_LedgerText"'))
     (method_body(S['Ledger.cs'], "public override void SyncData")) and
     "if (dataStore.IsSaving)" in S['Ledger.cs'])
-chk("1.6.19", "numbers in a saved ledger are written and read the same way in every language",
+chk("1.6.20", "numbers in a saved ledger are written and read the same way in every language",
     saved_numbers_read_the_same_in_every_language())
-chk("1.6.19", "a line of saved text that cannot be read is dropped on its own, not with the whole ledger",
-    "private void ReadSavedText() => Guard.Run(\"Ledger.ReadSaved\", RestoreSaved);" in S['Ledger.cs'] and
-    method_body(S['Ledger.cs'], "private void ReadLedger").count("continue;") == 3 and
-    method_body(S['Ledger.cs'], "private void ReadPurchases").count("continue;") == 3)
-chk("1.6.19", "an older save is carried over, and a campaign that simply traded nothing is not mistaken for one",
-    (lambda b: "string.IsNullOrEmpty(_ledgerText) && string.IsNullOrEmpty(_purchaseText)" in b
-           and "(_ledger.Count > 0 || _purchases.Count > 0)" in b
-           and b.index("bool carriedOver") < b.index("ReadLedger();") < b.index("if (carriedOver)"))
-    (method_body(S['Ledger.cs'], "private void RestoreSaved")))
-chk("1.6.19", "reading saved text replaces the ledger only when there is text to read",
-    "if (string.IsNullOrEmpty(_ledgerText)) return;" in
-        method_body(S['Ledger.cs'], "private void ReadLedger") and
-    "if (string.IsNullOrEmpty(_purchaseText)) return;" in
-        method_body(S['Ledger.cs'], "private void ReadPurchases"))
+chk("1.6.20", "an item or town whose name could pass for a separator is left out of the save whole",
+    a_name_that_looks_like_a_separator_is_left_out())
+chk("1.6.20", "a line of saved text that cannot be read is dropped on its own, not with the whole ledger",
+    a_record_that_cannot_be_read_is_dropped_on_its_own())
+chk("1.6.20", "the saved ledger is proved to survive a save and a load by tests the build runs",
+    the_codec_is_covered_by_tests_the_build_runs())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
