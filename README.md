@@ -34,7 +34,7 @@ you cannot change them in game.
   in, with travel time from where you are standing, and stock counts where the mod can see them.
 - Inventory rows are tinted by how this market's price compares with the best one known, so a good
   deal and a bad one are obvious at a glance.
-- A ledger panel on the campaign map (hotkey **T**, or the TradeLord button on the right edge) ranks
+- A ledger panel on the campaign map (hotkey **L**, or the TradeLord button on the right edge) ranks
   profitable routes: what to buy, where, how many, where to sell it, what the trip is worth and how
   many days it takes. Click a town name to jump the camera there and pin a marker on it.
 - The panel also tracks your workshops and their recent profit.
@@ -119,7 +119,7 @@ Settings live in
 | Travel ceiling / village ceiling | 3 days / 1 day |
 | Trade with villages | ON |
 | Sell loot up to tier | OFF |
-| Panel hotkey | T |
+| Panel hotkey | L |
 
 ### Never-sell, always-sell and never-buy lists
 
