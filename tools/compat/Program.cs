@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -45,6 +46,16 @@ namespace TradeLord.Compat
             "TaleWorlds.InputSystem.InputKey",
         };
 
+        private static readonly (string id, bool guarded)[] MenuIds =
+        {
+            ("town", false),
+            ("village", false),
+            ("port_menu", true),
+            ("naval_storyline_virtualport", true),
+        };
+
+        private const string GameBinVariable = "TRADELORD_GAME_BIN";
+
         private static readonly string[] ModAssemblies =
         {
             "src/bin/Release/net472/TradeLord.dll",
@@ -72,6 +83,10 @@ namespace TradeLord.Compat
                 Console.WriteLine("       the version in src/TradeLord.csproj is always the baseline");
                 Console.WriteLine();
                 Console.WriteLine("example: dotnet run --project tools/compat -- 1.4.8.119303 1.5.1.120547-beta");
+                Console.WriteLine();
+                Console.WriteLine("set " + GameBinVariable + " to a Bannerlord install to also check the menu ids the");
+                Console.WriteLine("mod hangs its entries off. Reference assemblies carry no string literals, so that");
+                Console.WriteLine("check needs the shipped assemblies. Nothing is copied and nothing is written.");
                 return 2;
             }
 
@@ -98,6 +113,7 @@ namespace TradeLord.Compat
             CheckReflectedMembers(versions);
             CheckEnums(versions);
             CheckBoundSurface(versions);
+            CheckMenuIds();
 
             Console.WriteLine();
             foreach (string n in Notes) Console.WriteLine("note    " + n);
@@ -215,6 +231,72 @@ namespace TradeLord.Compat
             catch { parameters = "?"; }
             return (m.IsPublic ? "public" : m.IsPrivate ? "private" : "protected/internal")
                  + (m.IsStatic ? " static " : " ") + m.ReturnType.Name + "(" + parameters + ")";
+        }
+
+        private static void CheckMenuIds()
+        {
+            Console.WriteLine("== game menu ids - string literals, so only a real install can answer for them ==");
+            string root = Environment.GetEnvironmentVariable(GameBinVariable);
+            if (string.IsNullOrWhiteSpace(root))
+            {
+                Console.WriteLine("  skipped  set " + GameBinVariable + " to a Bannerlord install to run this check");
+                Console.WriteLine();
+                return;
+            }
+            if (!Directory.Exists(root))
+            {
+                Failures.Add(GameBinVariable + " points at " + root + ", which is not a directory");
+                Console.WriteLine("  BROKEN  " + GameBinVariable + " points at a directory that is not there");
+                Console.WriteLine();
+                return;
+            }
+
+            var holders = new Dictionary<string, string>();
+            int scanned = 0;
+            foreach (string dll in Directory.EnumerateFiles(root, "*.dll", SearchOption.AllDirectories))
+            {
+                HashSet<string> strings;
+                try { strings = UserStrings(dll); }
+                catch { continue; }
+                scanned++;
+                foreach (var (id, _) in MenuIds)
+                    if (!holders.ContainsKey(id) && strings.Contains(id))
+                        holders[id] = Path.GetFileName(dll);
+            }
+            Console.WriteLine("  read    " + scanned + " assemblies under " + root);
+
+            foreach (var (id, guarded) in MenuIds)
+            {
+                if (holders.TryGetValue(id, out string where)) { Line(true, id + "  in " + where); continue; }
+                if (guarded)
+                {
+                    Line(true, id + "  not in this install - guarded, the menu is skipped and logged");
+                    Notes.Add(id + " is not in this install, which is expected without the module that registers it");
+                }
+                else
+                {
+                    Failures.Add(id + " is in no assembly of this install - the menu entries would not appear");
+                    Line(false, id + "  in no assembly of this install");
+                }
+            }
+            Console.WriteLine();
+        }
+
+        private static HashSet<string> UserStrings(string dll)
+        {
+            var found = new HashSet<string>(StringComparer.Ordinal);
+            using var stream = File.OpenRead(dll);
+            using var pe = new PEReader(stream);
+            if (!pe.HasMetadata) return found;
+            MetadataReader md = pe.GetMetadataReader();
+            var handle = MetadataTokens.UserStringHandle(0);
+            while (true)
+            {
+                handle = md.GetNextHandle(handle);
+                if (handle.IsNil) break;
+                found.Add(md.GetUserString(handle));
+            }
+            return found;
         }
 
         private static void Line(bool ok, string label) =>

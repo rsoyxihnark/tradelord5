@@ -10,6 +10,7 @@ The mod is built against Bannerlord `1.4.7.117484`. Players are already on `1.4.
 | To | 1.4.8.119303, and 1.5.1.120547-beta |
 | Method | NuGet reference assemblies for every version, plus the mod's own compiled output. No game install involved. |
 | Reproduce it | `dotnet run --project tools/compat -- 1.4.8.119303 1.5.1.120547-beta` |
+| Menu ids too | set `TRADELORD_GAME_BIN` to a Bannerlord install first - see below |
 
 ## Verdict
 
@@ -121,6 +122,31 @@ saveable type, so a campaign it saves carries `string`, `int`, `bool` and `Settl
 left to collide with. That was one of the five open questions this document opened with, and the
 only one that could have shown up as a save which will not open. It is struck from the table below,
 and it is why T9 now reads the way it does.
+
+### The menu ids can now be checked, against an install rather than a package
+
+The reference assemblies carry no string literals, so the four menu ids the mod hangs its entries off
+were out of reach of this method from the start. The shipped assemblies do carry them: the
+`TaleWorlds.CampaignSystem.dll` that ships with 1.4.8 holds a user-string heap of 13,694 entries,
+with `town`, `village` and `port_menu` each in it exactly once.
+
+`tools/compat` reads those if you point it at an install:
+
+```
+TRADELORD_GAME_BIN="C:/Program Files (x86)/Steam/steamapps/common/Mount & Blade II Bannerlord" \
+  dotnet run --project tools/compat -- 1.4.8.119303
+```
+
+It walks every assembly under that path, reads each user-string heap, and reports which assembly
+holds each id. An id the mod does not guard - `town`, `village` - failing to appear anywhere is a
+break, because the entries would silently stop showing. A guarded one - `port_menu`,
+`naval_storyline_virtualport` - is only a note, since a menu the game does not have is skipped and
+logged by design. With the variable unset the check is skipped and the run is unaffected, which is
+how it behaves in CI.
+
+Nothing is copied and nothing is written: the tool opens each file to read and closes it. **The game
+assemblies must stay outside the repository.** They are TaleWorlds' to distribute, not this
+project's, and `.gitignore` refuses `*.dll` so a stray copy cannot be committed by accident.
 
 ## What could not be checked without the game
 
