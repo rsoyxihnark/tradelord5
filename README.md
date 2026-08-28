@@ -10,7 +10,7 @@ run the buying and selling for you the moment you walk into a town.
 
 Nothing to scout, nothing to build up. It knows the whole map from your first minute.
 
-**[Download the latest release](https://github.com/rsoyxihnark/tradelord5/releases/latest)**  ·  Single-player  ·  Bannerlord 1.4.8
+**[Download the latest release](https://github.com/rsoyxihnark/tradelord5/releases/latest)**  ·  Single-player  ·  Bannerlord 1.4.8.119303
 
 ---
 
@@ -81,7 +81,7 @@ Nothing to scout, nothing to build up. It knows the whole map from your first mi
 **And**
 
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM
-- ✅ One build runs on Bannerlord 1.4.8, 1.4.7 and the 1.5.1 beta
+- ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303
 - ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it
 
 **All of it is yours to change.** Every feature above is a switch or a number on the settings screen.
