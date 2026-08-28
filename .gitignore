@@ -8,3 +8,4 @@ dist/
 TradeLord.log
 *.zip
 release-notes.md
+*.dll
