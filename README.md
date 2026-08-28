@@ -10,15 +10,57 @@ run the buying and selling for you the moment you walk into a town.
 
 Nothing to scout, nothing to build up. It knows the whole map from your first minute.
 
-No spreadsheet. No second monitor. No riding to Sargot to find out grain is cheap there too.
-
 **[Download the latest release](https://github.com/rsoyxihnark/tradelord5/releases/latest)**  ·  Single-player  ·  Bannerlord 1.4.8
 
 ---
 
-## What you get
+## Everything it does
 
-### Every price on the map, in the tooltip
+**What it tells you**
+
+- ✅ Live prices from every market on the map, read straight from the game's own economy
+- ✅ The five best places to sell and the five cheapest to buy, in every item tooltip
+- ✅ Travel time to each of them, from wherever you happen to be standing
+- ✅ Stock counts, so you know the deal is actually there
+- ✅ Inventory rows tinted good to bad against the best price known
+- ✅ A ledger panel on the campaign map ranking every profitable route — hotkey **L**, or the map button
+- ✅ Every route priced unit by unit through the game's own model, so the profit is what you will really get
+- ✅ A confidence score on each route: profit per day, discounted by how likely it is to survive the trip
+- ✅ Click any town to jump the camera there and pin a marker on it
+- ✅ The best town for the cargo you are carrying, marked on the map for you
+- ✅ Your workshops and their recent profit, on the same panel
+
+**What it does for you**
+
+- ✅ Quick-sell, quick-buy and quick-trade in the town menu, whenever you want them
+- ✅ Auto-sell and auto-buy the moment you enter a market, if you leave that switched on
+- ✅ Sells one unit at a time and stops the moment the price stops clearing your margin
+- ✅ Buys only what it can resell at a profit somewhere within reach
+- ✅ Credits the profit to your Trade skill
+- ✅ Trades in villages too, under their own stricter travel limit
+- ✅ Counts sea legs and appears in port menus if you have War Sails
+- ✅ Tells you on screen exactly what it moved, and why it moved nothing
+- ✅ A dry-run mode that reports every trade it would have made and moves nothing
+
+**What it will never touch**
+
+- ✅ Anything you locked in the inventory screen
+- ✅ Unique and player-crafted gear, quest items, mounts and pack animals
+- ✅ Your food reserve, and grain
+- ✅ Your gold reserve, or anything past your spending cap for the visit
+- ✅ Any item id you put on the never-sell or never-buy list
+- ✅ The game's economy — it trades at the game's own prices, through the game's own actions
+
+**And the rest**
+
+- ✅ A settings screen with every switch explained on hover, translatable, through MCM
+- ✅ One build runs on Bannerlord 1.4.8, 1.4.7 and the 1.5.1 beta
+- ✅ Add it or remove it mid-campaign — your save keeps working either way
+- ✅ Everything it did goes to `Documents/Mount and Blade II Bannerlord/TradeLord.log`
+
+---
+
+## What it looks like
 
 Hover any trade good, anywhere, and the bottom of the tooltip tells you where it is worth money and
 what the trip costs you:
@@ -33,10 +75,7 @@ Best buy prices
   Marunath         ~2 days   103    Stock: 26
 ```
 
-The starred line is the market you are standing in. Inventory rows are tinted at the same time, so
-a good price and a bad one are obvious before you read a single number.
-
-### The routes worth driving, ranked
+The starred line is the market you are standing in.
 
 Press **L** on the campaign map for the ledger panel — every profitable run TradeLord can see, best
 first, with the quantity to buy and the days it takes. It is full before you have entered a single
@@ -47,15 +86,6 @@ Item        Buy From     Price    Sell At      Qty    Profit    Days
 Wine        Zeonica         96    Danustica     24    +2,184     3.1
 Iron        Marunath       143    Sargot        18    +1,097     2.4
 ```
-
-Click a town name to jump the camera there and pin a marker on it. The panel tracks your workshops
-and their recent profit too.
-
-### And it can do the trading
-
-Walk into a market and TradeLord sells what your rules allow, buys what it can resell at a profit,
-and tells you on screen exactly what it did. Or leave that switched off and use the **Quick-sell**,
-**Quick-buy** and **Quick-trade** entries in the town menu whenever you feel like it.
 
 ---
 
@@ -70,8 +100,9 @@ and tells you on screen exactly what it did. Or leave that switched off and use 
 That is it. Load order does not otherwise matter, and you can add TradeLord to a campaign you are
 already halfway through.
 
-Want the settings screen? Install **MCM** (Mod Configuration Menu) as well — see
-[Requirements](#requirements).
+Want the settings screen? Install **MCM** (Mod Configuration Menu) as well, with ButterLib and
+UIExtenderEx enabled alongside it. Without them TradeLord runs on the defaults below and says so in
+its log — it does not crash, and trading works either way.
 
 ## Your first ten minutes
 
@@ -87,8 +118,6 @@ Want the settings screen? Install **MCM** (Mod Configuration Menu) as well — s
 5. **When you are comfortable, open the settings** and set **Gold reserve** and **Max spend per
    visit** to numbers that suit how you play.
 
-You do not have to do anything else. Everything below this line is here for when you want it.
-
 ---
 
 ## TradeLord trades for you out of the box
@@ -102,8 +131,6 @@ That is deliberate — a trading mod should trade. If you would rather drive it 
 **Auto-sell on entry** and **Auto-buy on entry** in the Automation settings and use the town-menu
 entries instead. TradeLord says so on screen the first time you enter a market in a campaign, and
 names those two switches.
-
-If you have no settings screen, the defaults below are what you get.
 
 ### What it does out of the box
 
@@ -129,39 +156,9 @@ been there or not — which is why the panel works before you have entered a sin
 for an honest-merchant game: then it records only what you see as you walk a market, only those
 prices count, and each one is forgotten after 45 days.
 
-Nothing here changes the game's economy. TradeLord buys and sells through the game's own trade
-actions at the game's own prices — it moves your goods, it does not invent gold.
-
 ## Add it, remove it, update it
 
 **TradeLord is plug and play.** Put it in a campaign, take it out of a campaign, at any point, and
 the campaign still opens. Take it out and you lose your purchase records and the lifetime profit
 figure; you keep everything else. Put it back in and it is up to speed at once — on live prices
 there is nothing to rebuild. Updates go straight over the top of an existing install.
-
-## Requirements
-
-| | |
-|---|---|
-| Game | Bannerlord **1.4.8**. It also runs on 1.4.7 and the 1.5.1 beta — see [Compatibility](docs/compatibility.md). |
-| Harmony | **Required.** TradeLord will not load without it. |
-| MCM | **Optional.** Needed only for the settings screen, and it wants ButterLib and UIExtenderEx enabled alongside it. Without the full stack TradeLord runs on the defaults above and says so in its log — it does not crash, and trading works either way. |
-| War Sails | **Optional.** If you have it, routes and travel times account for sea legs and the menu entries appear in port menus. |
-
-## Read more
-
-- **[Settings](docs/settings.md)** — every switch, what it does, and which ones to reach for first.
-- **[Troubleshooting](docs/troubleshooting.md)** — "why did it not sell my stuff", and how to read the log.
-- **[Compatibility](docs/compatibility.md)** — other mods, game versions, saves and performance.
-- **[Building from source](docs/building.md)** — for anyone who wants to patch or fork it.
-- **[Changelog](CHANGELOG.md)** — what changed, release by release.
-
-## Found a bug?
-
-[Open an issue](https://github.com/rsoyxihnark/tradelord5/issues) and attach `TradeLord.log` from
-`Documents/Mount and Blade II Bannerlord/`. The log is the useful part — with it, most problems are
-one read away from an answer. Details in [Troubleshooting](docs/troubleshooting.md).
-
-## License
-
-MIT. See [LICENSE](LICENSE). Fork it, patch it, ship a compatibility fix — you do not need to ask.
