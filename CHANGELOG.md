@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.23
+
+- TradeLord is now built against Bannerlord 1.4.8.119303, the version it is played and tested on, and it still runs on 1.4.7 and the 1.5.1 beta.
+
 ## 1.6.22
 
 - The ledger panel now opens with L instead of T, because T also opens the game's own message panel and the two fought over the key.
