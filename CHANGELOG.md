@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.31
+
+- The town marked on the map for your cargo is now one whose merchants can actually pay for it, instead of one that quotes a high price but has run out of gold.
+- A map pin that cannot be put back when a save loads no longer takes the TradeLord entries out of the town menu with it.
+
 ## 1.6.30
 
 - A pass that trades nothing now gives the same reason every time, instead of naming a different one from visit to visit when two rules held back as much as each other.

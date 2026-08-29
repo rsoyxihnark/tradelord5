@@ -1093,7 +1093,7 @@ chk("1.5.9", "panel-owned map pins survive a save/load cycle",
     'dataStore.SyncData("TradeLord_PanelPins", ref _pinnedTowns);' in S['Trading.cs'] and
     "if (!dataStore.IsLoading) _pinnedTowns = LedgerPanel.PinnedIds();" in
         method_body(S['Trading.cs'], "public override void SyncData") and
-    "LedgerPanel.RestorePins(_pinnedTowns);" in
+    "LedgerPanel.RestorePins(_pinnedTowns)" in
         method_body(S['Trading.cs'], "private void OnSessionLaunched") and
     "internal static void RestorePins(string ids)" in S['Panel.cs'] and
     "internal static string PinnedIds()" in S['Panel.cs'])
@@ -1388,9 +1388,9 @@ chk("1.6.16", "a full herd is named as its own reason, not as a full cargo hold"
     "TL86" in strings_declared() and
     "if (tally.Saw(Block.CarryWeight)) _cargoWasFull = true;" in S['Trading.cs'])
 chk("1.6.16", "the auto-marker is put back on the map when a save loads, and cannot cost the menus if it fails",
-    (lambda b: "LedgerPanel.RestorePins(_pinnedTowns);" in b
+    (lambda b: 'Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));' in b
            and 'Guard.Run("Action.RestoreMarker", UpdateBestSellTownTracker);' in b
-           and ordered(b, "LedgerPanel.RestorePins", 'Guard.Run("Action.RestoreMarker"', 'AddOptions("town");'))
+           and ordered(b, 'Guard.Run("Action.RestorePins"', 'Guard.Run("Action.RestoreMarker"', 'AddOptions("town");'))
     (method_body(S['Trading.cs'], "private void OnSessionLaunched")))
 chk("1.6.18", "a campaign is told once that entering a market trades for it, before the pass that does so",
     (lambda b: "if (_announcedAutomation) return false;" in b
@@ -1634,6 +1634,13 @@ chk("1.6.30", "two reasons that stopped as much as each other are ranked the sam
     a_tie_between_reasons_is_broken_the_same_way_every_time())
 chk("1.6.30", "the party speed behind every travel estimate is read once an hour, not once per estimate",
     the_party_speeds_are_read_once_an_hour())
+
+def the_cargo_marker_counts_the_town_till():
+    return ("if (town.Gold > 0 && total > town.Gold) total = town.Gold;" in
+            method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo"))
+
+chk("1.6.31", "the cargo marker never points at a town that cannot pay for the cargo",
+    the_cargo_marker_counts_the_town_till())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
