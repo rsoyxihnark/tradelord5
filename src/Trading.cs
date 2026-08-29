@@ -499,7 +499,7 @@ namespace TradeLord
             Guard.Run("Action.OnSessionLaunched", () =>
             {
                 ResetVisit();
-                LedgerPanel.RestorePins(_pinnedTowns);
+                Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));
                 Guard.Run("Action.RestoreMarker", UpdateBestSellTownTracker);
                 Log.Write(Travel.NavalActive
                     ? "naval capability: party can sail - routes and travel times include sea legs"
@@ -1194,6 +1194,7 @@ namespace TradeLord
                 long total = 0;
                 foreach (var (item, amount) in cargo)
                     total += (long)town.GetItemPrice(item, party, true) * amount;
+                if (town.Gold > 0 && total > town.Gold) total = town.Gold;
                 if (total > bestValue) { bestValue = total; bestTown = s; }
             }
             return bestTown;
