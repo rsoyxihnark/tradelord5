@@ -958,7 +958,7 @@ chk("1.5.1", "confidence measures the walk, not two price APIs disagreeing",
     "- q.OpeningBuyPrice * q.Units;" in S['Ledger.cs'])
 chk("1.5.1", "the no-trade message reports a blocking rule, not a structural exclusion",
     "private static bool Structural(Block reason)" in S['Trading.cs'] and
-    "if (!Structural(kv.Key) && kv.Value > best)" in
+    "if (!Structural(kv.Key) && (kv.Value > best" in
     method_body(S['Trading.cs'], "internal Block Dominant") and
     "Structural" not in method_body(S['Trading.cs'], "internal string Summary"))
 chk("1.5.1", "no two settings in one MCM group claim the same position",
@@ -1617,6 +1617,23 @@ chk("1.6.29", "a purse at or under the reserve is reported on the way into a mar
     an_empty_purse_is_reported_on_the_way_into_a_market())
 chk("1.6.29", "what is left to spend is worked out in one place for both the warning and the buying",
     what_is_left_to_spend_is_worked_out_in_one_place())
+
+def a_tie_between_reasons_is_broken_the_same_way_every_time():
+    dominant = method_body(S['Trading.cs'], "internal Block Dominant")
+    summary = method_body(S['Trading.cs'], "internal string Summary")
+    return ("kv.Value == best && kv.Key < top" in dominant and
+            "x.Key.CompareTo(y.Key)" in summary)
+
+def the_party_speeds_are_read_once_an_hour():
+    body = method_body(S['Travel.cs'], "private static void Speeds")
+    return ("if (hour == _speedHour) { land = _landSpeed; sea = _seaSpeed; return; }" in body and
+            "_speedHour = -1;" in method_body(S['Travel.cs'], "internal static void Forget") and
+            "_speedHour = -1;" in method_body(S['Travel.cs'], "private static void DropIfNavalChanged"))
+
+chk("1.6.30", "two reasons that stopped as much as each other are ranked the same way on every pass",
+    a_tie_between_reasons_is_broken_the_same_way_every_time())
+chk("1.6.30", "the party speed behind every travel estimate is read once an hour, not once per estimate",
+    the_party_speeds_are_read_once_an_hour())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
