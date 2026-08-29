@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.30
+
+- A pass that trades nothing now gives the same reason every time, instead of naming a different one from visit to visit when two rules held back as much as each other.
+- Working out how far away a market is no longer re-reads your party speed for every market measured, so the ledger panel and the price tooltips open with less of a pause.
+
 ## 1.6.29
 
 - TradeLord now tells you as you enter a market when your purse is at or under your gold reserve, so you know why it is buying nothing.

@@ -52,14 +52,19 @@ namespace TradeLord
             Block top = Block.None;
             int best = 0;
             foreach (var kv in _counts)
-                if (!Structural(kv.Key) && kv.Value > best) { best = kv.Value; top = kv.Key; }
+                if (!Structural(kv.Key) && (kv.Value > best || (kv.Value == best && kv.Key < top)))
+                { best = kv.Value; top = kv.Key; }
             return top;
         }
 
         internal string Summary()
         {
             var order = new List<KeyValuePair<Block, int>>(_counts);
-            order.Sort((x, y) => y.Value.CompareTo(x.Value));
+            order.Sort((x, y) =>
+            {
+                int byCount = y.Value.CompareTo(x.Value);
+                return byCount != 0 ? byCount : x.Key.CompareTo(y.Key);
+            });
             var sb = new StringBuilder();
             foreach (var kv in order)
             {

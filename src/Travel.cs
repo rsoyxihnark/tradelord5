@@ -79,12 +79,20 @@ namespace TradeLord
                 MobileParty.MainParty.NavigationCapability, out landRatio);
         }
 
+        private static int _speedHour = -1;
+        private static float _landSpeed, _seaSpeed;
+
         private static void Speeds(out float land, out float sea)
         {
+            int hour = (int)CampaignTime.Now.ToHours;
+            if (hour == _speedHour) { land = _landSpeed; sea = _seaSpeed; return; }
             land = MobileParty.MainParty.Speed;
             if (land <= 0.01f) land = 5f;
             sea = SeaSpeed();
             if (sea <= 0.01f) sea = land;
+            _speedHour = hour;
+            _landSpeed = land;
+            _seaSpeed = sea;
         }
 
         internal static float Days(float distance, float landRatio)
@@ -109,6 +117,7 @@ namespace TradeLord
             bool naval = NavalActive;
             if (naval == _cachedNaval) return;
             _cachedNaval = naval;
+            _speedHour = -1;
             _partyDist.Clear();
             _pairDist.Clear();
         }
@@ -119,6 +128,7 @@ namespace TradeLord
             _partyHour = -1;
             _pairDist.Clear();
             _cachedNaval = false;
+            _speedHour = -1;
         }
 
         internal static float StraightDaysFromParty(Settlement target)
