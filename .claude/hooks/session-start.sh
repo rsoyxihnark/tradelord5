@@ -3,18 +3,36 @@ set -euo pipefail
 
 cd "${CLAUDE_PROJECT_DIR:-$PWD}"
 
-ROOT_COMMIT=$(git rev-list --max-parents=0 HEAD 2>/dev/null | tail -1 || true)
-if [ -n "${ROOT_COMMIT:-}" ]; then
-  OWNER_NAME=$(git log -1 --format=%an "$ROOT_COMMIT")
-  OWNER_ADDRESS=$(git log -1 --format=%ae "$ROOT_COMMIT")
-  if [ -n "$OWNER_NAME" ] && [ "${OWNER_ADDRESS##*@}" != "anthropic.com" ]; then
-    git config --local user.name "$OWNER_NAME"
-    git config --local user.email "$OWNER_ADDRESS"
-    git config --local commit.gpgsign false
-    echo "commits are authored as $OWNER_NAME, signing off"
-  else
-    echo "could not read the owner from the first commit - set user.name and user.email before committing"
-  fi
+OWNER_LINE=$(git log --format='%an%x1f%ae' 2>/dev/null | awk -F'\037' '
+  {
+    name = tolower($1)
+    host = tolower($2)
+    sub(/.*@/, "", host)
+  }
+  name ~ /claude/ { next }
+  host == "anthropic.com" { next }
+  { print; exit }
+' || true)
+
+if [ -n "${OWNER_LINE:-}" ]; then
+  OWNER_NAME=${OWNER_LINE%%$'\037'*}
+  OWNER_ADDRESS=${OWNER_LINE##*$'\037'}
+  OWNER_SOURCE="the most recent commit the owner authored"
+else
+  FALLBACK=$(sed -n 's/.*commit as `\([^`]*\)`.*/\1/p' CLAUDE.md | head -1)
+  OWNER_NAME=${FALLBACK%% <*}
+  OWNER_ADDRESS=${FALLBACK#*<}
+  OWNER_ADDRESS=${OWNER_ADDRESS%>}
+  OWNER_SOURCE="the working rules, since no commit in the history was authored by the owner"
+fi
+
+if [ -n "${OWNER_NAME:-}" ] && [ -n "${OWNER_ADDRESS:-}" ]; then
+  git config --local user.name "$OWNER_NAME"
+  git config --local user.email "$OWNER_ADDRESS"
+  git config --local commit.gpgsign false
+  echo "commits are authored as $OWNER_NAME, read from $OWNER_SOURCE, signing off"
+else
+  echo "could not work out who the owner is, so set user.name and user.email before committing"
 fi
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
