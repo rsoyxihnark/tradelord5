@@ -15,9 +15,32 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0.x'
+
+      - name: Changelog gate
+        shell: bash
+        run: |
+          CHANGED=$(git diff --name-only "$GITHUB_SHA^" "$GITHUB_SHA" 2>/dev/null || git show --pretty=format: --name-only "$GITHUB_SHA")
+          CHANGED=$(printf '%s\n' "$CHANGED" | sed '/^$/d')
+          if [ -z "$CHANGED" ]; then
+            echo "this commit changes no file at all"
+            exit 1
+          fi
+          if printf '%s\n' "$CHANGED" | grep -qx 'CHANGELOG.md'; then
+            echo "the changelog carries this commit's entries"
+            exit 0
+          fi
+          OUTSIDE=$(printf '%s\n' "$CHANGED" | grep -Ev '^(tests/|tools/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$)' || true)
+          if [ -n "$OUTSIDE" ]; then
+            echo "this commit changes what a user gets and leaves CHANGELOG.md untouched:"
+            printf '  %s\n' $OUTSIDE
+            exit 1
+          fi
+          echo "this commit touches only the project's own checks, workflow and working rules, so it writes no changelog entry"
 
       - name: Resolve version from SubModule.xml
         id: ver
@@ -94,6 +117,14 @@ jobs:
               echo "release $VERSION is already published - bump the version in SubModule.xml instead of replacing history"
               exit 1
             fi
+          fi
+          if grep -qiE '^##[[:space:]]+Unreleased' CHANGELOG.md; then
+            echo "CHANGELOG.md still carries an Unreleased heading - rename it to $VERSION before this version is published"
+            exit 1
+          fi
+          if ! grep -qE "^##[[:space:]]+${VERSION#v}([[:space:]]|$)" CHANGELOG.md; then
+            echo "CHANGELOG.md carries no section for ${VERSION#v} - open one before this version is published"
+            exit 1
           fi
           git log -1 --format=%b "$GITHUB_SHA" > release-notes.md
           if [ -z "$(tr -d '[:space:]' < release-notes.md)" ]; then
