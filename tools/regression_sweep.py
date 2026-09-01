@@ -346,12 +346,21 @@ def every_text_variable_is_supplied():
     supplied = set(re.findall(r'"([A-Z][A-Z0-9_]*)"', ALL + "\n" + M))
     return len(placeholders) > 10 and not (placeholders - supplied)
 
+def section_has_entries(head):
+    body = CHANGES.split('## ' + head, 1)[1].split('\n## ', 1)[0]
+    return any(line.startswith('- ') for line in body.split('\n'))
+
 def changelog_opens_on_the_shipped_version():
-    heads = re.findall(r'^## (.+)$', CHANGES, re.M)
-    if not heads or heads[0].strip() != module_version():
+    heads = [h.strip() for h in re.findall(r'^## (.+)$', CHANGES, re.M)]
+    if not heads:
         return False
-    newest = CHANGES.split('## ' + heads[0], 1)[1].split('\n## ', 1)[0]
-    return any(line.startswith('- ') for line in newest.split('\n'))
+    if heads[0].lower() == 'unreleased':
+        if not section_has_entries(heads[0]):
+            return False
+        heads = heads[1:]
+    if not heads or heads[0] != module_version():
+        return False
+    return section_has_entries(heads[0])
 
 PLAIN_SAVED_TYPES = {'string', 'int', 'bool', 'float', 'Settlement'}
 
@@ -1010,9 +1019,97 @@ chk("1.5.4", "an unsimulated route is marked in the confidence column",
 chk("1.5.4", "publish retries re-check draft state before giving up",
     WORKFLOW.count("--json isDraft -q .isDraft") == 2 and
     "stranded a draft - discarding it before trying again" in WORKFLOW)
+def csharp_comment_spans(src):
+    out, i, n, line = [], 0, len(src), 1
+    while i < n:
+        c = src[i]
+        if c == "\n":
+            line += 1; i += 1; continue
+        if c == '"':
+            if src.startswith('\"\"\"', i):
+                j = src.find('\"\"\"', i + 3)
+                j = n if j < 0 else j + 3
+                line += src.count("\n", i, j); i = j; continue
+            i += 1
+            while i < n and src[i] != '"':
+                if src[i] == "\\": i += 1
+                if i < n and src[i] == "\n": line += 1
+                i += 1
+            i += 1; continue
+        if c == "@" and i + 1 < n and src[i + 1] == '"':
+            i += 2
+            while i < n:
+                if src[i] == '"':
+                    if i + 1 < n and src[i + 1] == '"': i += 2; continue
+                    i += 1; break
+                if src[i] == "\n": line += 1
+                i += 1
+            continue
+        if c == "$" and i + 1 < n and src[i + 1] == '"':
+            i += 2; depth = 0
+            while i < n:
+                if src[i] == "\\": i += 2; continue
+                if src[i] == "{": depth += 1
+                elif src[i] == "}" and depth: depth -= 1
+                elif src[i] == '"' and not depth: i += 1; break
+                if src[i] == "\n": line += 1
+                i += 1
+            continue
+        if c == "'":
+            i += 1
+            while i < n and src[i] != "'":
+                if src[i] == "\\": i += 1
+                i += 1
+            i += 1; continue
+        if src.startswith("//", i):
+            j = src.find("\n", i)
+            j = n if j < 0 else j
+            out.append(line); i = j; continue
+        if src.startswith("/*", i):
+            j = src.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            out.append(line)
+            line += src.count("\n", i, j); i = j; continue
+        i += 1
+    return out
+
+def tracked_files():
+    import subprocess
+    listed = subprocess.run(["git", "ls-files", "-z"], capture_output=True)
+    if listed.returncode != 0:
+        return None
+    return [n for n in listed.stdout.decode("utf-8").split("\0") if n]
+
+def no_tracked_source_carries_a_comment():
+    import tokenize
+    names = tracked_files()
+    if not names:
+        return False
+    found = []
+    for name in names:
+        try:
+            body = io.open(name, encoding="utf-8").read()
+        except (IOError, OSError, UnicodeDecodeError):
+            return False
+        if name.endswith(".cs"):
+            found += [(name, ln) for ln in csharp_comment_spans(body)]
+        elif name.endswith(".py"):
+            try:
+                with io.open(name, "rb") as fh:
+                    found += [(name, t.start[0]) for t in tokenize.tokenize(fh.readline)
+                              if t.type == tokenize.COMMENT]
+            except (tokenize.TokenError, IndentationError, SyntaxError):
+                return False
+        elif name.endswith((".xml", ".csproj")):
+            found += [(name, body.count("\n", 0, m.start()) + 1)
+                      for m in re.finditer(r"<!--", body)]
+        elif name.endswith((".yml", ".yaml", ".sh")):
+            found += [(name, i) for i, line in enumerate(body.split("\n"), 1)
+                      if line.strip().startswith("#") and not line.strip().startswith("#!")]
+    return found == []
+
 chk("1.5.4", "the source carries no comments",
-    not any(line.lstrip().startswith("//") for src in list(S.values()) + [M]
-            for line in src.split("\n")))
+    no_tracked_source_carries_a_comment())
 
 chk("1.5.5", "simulation mode mutates no per-visit state",
     method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
@@ -1641,6 +1738,50 @@ def the_cargo_marker_counts_the_town_till():
 
 chk("1.6.31", "the cargo marker never points at a town that cannot pay for the cargo",
     the_cargo_marker_counts_the_town_till())
+
+def the_workflow_gates_the_changelog():
+    return ("this commit changes what a user gets and leaves CHANGELOG.md untouched" in WORKFLOW
+            and "grep -qx 'CHANGELOG.md'" in WORKFLOW
+            and "fetch-depth: 2" in WORKFLOW)
+
+def the_gate_lets_a_checks_only_commit_through():
+    return (r"grep -Ev '^(tests/|tools/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$)'" in WORKFLOW
+            and "so it writes no changelog entry" in WORKFLOW)
+
+def the_workflow_refuses_to_publish_an_unfinished_changelog():
+    return ("still carries an Unreleased heading" in WORKFLOW
+            and "carries no section for" in WORKFLOW
+            and ordered(WORKFLOW,
+                        "nothing to publish for this push",
+                        "still carries an Unreleased heading",
+                        "carries no section for",
+                        "gh release create"))
+
+HOOK = io.open('.claude/hooks/session-start.sh', encoding='utf-8').read()
+
+def the_hook_reads_the_owner_off_the_newest_commit():
+    return ("git log --format='%an%x1f%ae'" in HOOK
+            and "rev-list --max-parents=0" not in HOOK
+            and "{ print; exit }" in HOOK)
+
+def the_hook_falls_back_to_the_signature_the_rules_name():
+    rules = io.open('CLAUDE.md', encoding='utf-8').read()
+    return ("commit as `" in rules
+            and r"sed -n 's/.*commit as `\([^`]*\)`.*/\1/p' CLAUDE.md" in HOOK)
+
+chk("1.6.32", "a commit that changes what a user gets is refused when it leaves the changelog untouched",
+    the_workflow_gates_the_changelog())
+chk("1.6.32", "a commit that touches only the checks, the workflow and the working rules is let through",
+    the_gate_lets_a_checks_only_commit_through())
+chk("1.6.32", "a version is not published while the changelog still says Unreleased or has no section for it",
+    the_workflow_refuses_to_publish_an_unfinished_changelog())
+chk("1.6.32", "the changelog may open on an Unreleased heading, and that heading has to say something",
+    changelog_opens_on_the_shipped_version())
+chk("1.6.32", "the owner is read off the most recent commit he authored, never off the first commit in the log",
+    the_hook_reads_the_owner_off_the_newest_commit())
+chk("1.6.32", "with no commit of his in the history, the signature comes from the one place that carries it",
+    the_hook_falls_back_to_the_signature_the_rules_name())
+
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
