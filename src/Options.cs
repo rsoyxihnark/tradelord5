@@ -3,6 +3,18 @@ using System.Collections.Generic;
 
 namespace TradeLord
 {
+    public sealed class ItemList
+    {
+        public readonly HashSet<string> Entries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        public readonly HashSet<string> Words = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        public bool Empty => Entries.Count == 0;
+
+        public bool HasId(string id) => !Empty && (Entries.Contains(id) || Words.Contains(id));
+
+        public bool HasName(string shown) => !Empty && Entries.Contains(shown);
+    }
+
     public class Options
     {
         public static Options Current { get; } = new Options();
@@ -90,24 +102,24 @@ namespace TradeLord
         public string AlwaysSellItems = "";
         public string NeverBuyItems = "";
 
-        private HashSet<string> _never, _always, _neverBuy;
+        private ItemList _never, _always, _neverBuy;
         private string _nSrc, _aSrc, _nbSrc;
 
         internal static readonly char[] EntryMarks = { ',', ';' };
         internal static readonly char[] WordMarks = { ' ', '\t' };
 
-        private static HashSet<string> Parsed(string src, ref string seen, ref HashSet<string> set)
+        private static ItemList Parsed(string src, ref string seen, ref ItemList set)
         {
             if (set == null || seen != src)
             {
-                var built = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var built = new ItemList();
                 foreach (string entry in (src ?? "").Split(EntryMarks, StringSplitOptions.RemoveEmptyEntries))
                 {
                     string whole = entry.Trim();
                     if (whole.Length == 0) continue;
-                    built.Add(whole);
+                    built.Entries.Add(whole);
                     foreach (string word in whole.Split(WordMarks, StringSplitOptions.RemoveEmptyEntries))
-                        built.Add(word);
+                        built.Words.Add(word);
                 }
                 set = built;
                 seen = src;
@@ -115,9 +127,9 @@ namespace TradeLord
             return set;
         }
 
-        public HashSet<string> NeverSet => Parsed(NeverSellItems, ref _nSrc, ref _never);
-        public HashSet<string> AlwaysSet => Parsed(AlwaysSellItems, ref _aSrc, ref _always);
-        public HashSet<string> NeverBuySet => Parsed(NeverBuyItems, ref _nbSrc, ref _neverBuy);
+        public ItemList NeverSet => Parsed(NeverSellItems, ref _nSrc, ref _never);
+        public ItemList AlwaysSet => Parsed(AlwaysSellItems, ref _aSrc, ref _always);
+        public ItemList NeverBuySet => Parsed(NeverBuyItems, ref _nbSrc, ref _neverBuy);
     }
 
 }
