@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.33
+
+- The settings screen is now built against Mount and Blade Mod Configuration Menu 5.12.3.
+
 ## 1.6.32
 
 - Naming a good on the never-sell, always-sell or never-buy list no longer quietly catches a second good whose whole name is one of the words you wrote, so putting Iron Ore on a list leaves Iron alone.

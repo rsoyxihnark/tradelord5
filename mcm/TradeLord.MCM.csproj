@@ -9,7 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all"/>
     <PackageReference Include="Bannerlord.ReferenceAssemblies" Version="1.4.8.119303"/>
-    <PackageReference Include="Bannerlord.MCM" Version="5.12.2"/>
+    <PackageReference Include="Bannerlord.MCM" Version="5.12.3"/>
     <ProjectReference Include="../src/TradeLord.csproj"/>
   </ItemGroup>
 </Project>
