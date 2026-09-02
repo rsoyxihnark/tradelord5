@@ -77,6 +77,8 @@
 		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
 		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
 		<string id="TL92" text="Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings."/>
+		<string id="TL250" text="Language"/>
+		<string id="TL350" text="The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This settings screen follows the language the game itself is set to. Town menu entries take the new language when you next load a campaign."/>
 		<string id="TL201" text="Live world prices (default)"/>
 		<string id="TL202" text="Observation shelf life (days, 0 = never expire)"/>
 		<string id="TL203" text="Exclude hostile markets"/>
@@ -175,6 +177,7 @@
 		<string id="TL347" text="Play a coin sound when a quick-sell or quick-buy pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Trading done automatically as you enter a market reports to TradeLord.log only, with no lines on screen. The quick-sell, quick-buy and quick-trade menu entries always report, since you asked for those. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected." />
+		<string id="TL100" text="Language"/>
 		<string id="TL101" text="Knowledge"/>
 		<string id="TL102" text="Insight"/>
 		<string id="TL103" text="Action"/>

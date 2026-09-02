@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.0
+
+- TradeLord now speaks Turkish. A new Language setting at the top of its options switches what it says in the game, and it starts on English.
+- Playing Bannerlord in Turkish now puts the whole of TradeLord into Turkish, its settings screen included.
+
 ## 1.6.33
 
 - The settings screen is now built against Mount and Blade Mod Configuration Menu 5.12.3.

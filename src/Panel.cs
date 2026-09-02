@@ -48,9 +48,9 @@ namespace TradeLord
         {
             get
             {
-                if (_route.DataAgeDays < 0f) return new TextObject("{=TL74}live").ToString();
-                if (_route.DataAgeDays < 1f) return new TextObject("{=TL75}today").ToString();
-                TextObject age = new TextObject("{=TL76}{DAYS}d old");
+                if (_route.DataAgeDays < 0f) return Tongue.Text("{=TL74}live").ToString();
+                if (_route.DataAgeDays < 1f) return Tongue.Text("{=TL75}today").ToString();
+                TextObject age = Tongue.Text("{=TL76}{DAYS}d old");
                 age.SetTextVariable("DAYS", (int)Math.Ceiling(_route.DataAgeDays));
                 return age.ToString();
             }
@@ -180,20 +180,20 @@ namespace TradeLord
         }
 
         [DataSourceProperty] public string BrandLabel => "TradeLord";
-        [DataSourceProperty] public string TitleLabel => new TextObject("{=TL07}TradeLord ledger").ToString();
-        [DataSourceProperty] public string RefreshLabel => new TextObject("{=TL62}Refresh").ToString();
-        [DataSourceProperty] public string CloseLabel => new TextObject("{=TL09}Close").ToString();
-        [DataSourceProperty] public string HeadItem => new TextObject("{=TL50}Item").ToString();
-        [DataSourceProperty] public string HeadBuyTown => new TextObject("{=TL51}Buy From").ToString();
-        [DataSourceProperty] public string HeadPrice => new TextObject("{=TL52}Price").ToString();
-        [DataSourceProperty] public string HeadSellTown => new TextObject("{=TL53}Sell At").ToString();
-        [DataSourceProperty] public string HeadQuantity => new TextObject("{=TL54}Qty").ToString();
-        [DataSourceProperty] public string HeadProfit => new TextObject("{=TL55}Profit").ToString();
-        [DataSourceProperty] public string HeadDays => new TextObject("{=TL56}Days").ToString();
-        [DataSourceProperty] public string HeadData => new TextObject("{=TL57}Data").ToString();
-        [DataSourceProperty] public string HeadCaravans => new TextObject("{=TL58}Carv.").ToString();
-        [DataSourceProperty] public string HeadConfidence => new TextObject("{=TL59}Conf").ToString();
-        [DataSourceProperty] public string HeadScore => new TextObject("{=TL60}Score").ToString();
+        [DataSourceProperty] public string TitleLabel => Tongue.Text("{=TL07}TradeLord ledger").ToString();
+        [DataSourceProperty] public string RefreshLabel => Tongue.Text("{=TL62}Refresh").ToString();
+        [DataSourceProperty] public string CloseLabel => Tongue.Text("{=TL09}Close").ToString();
+        [DataSourceProperty] public string HeadItem => Tongue.Text("{=TL50}Item").ToString();
+        [DataSourceProperty] public string HeadBuyTown => Tongue.Text("{=TL51}Buy From").ToString();
+        [DataSourceProperty] public string HeadPrice => Tongue.Text("{=TL52}Price").ToString();
+        [DataSourceProperty] public string HeadSellTown => Tongue.Text("{=TL53}Sell At").ToString();
+        [DataSourceProperty] public string HeadQuantity => Tongue.Text("{=TL54}Qty").ToString();
+        [DataSourceProperty] public string HeadProfit => Tongue.Text("{=TL55}Profit").ToString();
+        [DataSourceProperty] public string HeadDays => Tongue.Text("{=TL56}Days").ToString();
+        [DataSourceProperty] public string HeadData => Tongue.Text("{=TL57}Data").ToString();
+        [DataSourceProperty] public string HeadCaravans => Tongue.Text("{=TL58}Carv.").ToString();
+        [DataSourceProperty] public string HeadConfidence => Tongue.Text("{=TL59}Conf").ToString();
+        [DataSourceProperty] public string HeadScore => Tongue.Text("{=TL60}Score").ToString();
         [DataSourceProperty]
         public string WorkshopsHeader
         {
@@ -221,14 +221,14 @@ namespace TradeLord
 
         private static string Line(string template, string key, string value)
         {
-            TextObject t = new TextObject(template);
+            TextObject t = Tongue.Text(template);
             t.SetTextVariable(key, value);
             return t.ToString();
         }
 
         private static string Line(string template, string k1, string v1, string k2, string v2)
         {
-            TextObject t = new TextObject(template);
+            TextObject t = Tongue.Text(template);
             t.SetTextVariable(k1, v1);
             t.SetTextVariable(k2, v2);
             return t.ToString();
@@ -257,18 +257,18 @@ namespace TradeLord
             Routes = rows;
             bool empty = rows.Count == 0;
             StatusText = empty
-                ? new TextObject("{=TL67}No profitable routes in reach").ToString()
+                ? Tongue.Text("{=TL67}No profitable routes in reach").ToString()
                 : Line("{=TL68}{COUNT} profitable routes, best first", "COUNT", rows.Count.ToString());
             LegendText = empty
-                ? new TextObject(Options.Current.Omniscient
+                ? Tongue.Text(Options.Current.Omniscient
                         ? "{=TL69}No routes are within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."
                         : "{=TL90}No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings.").ToString()
-                : new TextObject("{=TL70}Click a town name to jump to it and pin or unpin it | Days = you -> buy town -> sell town | Carv. = caravans at those towns | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit").ToString()
+                : Tongue.Text("{=TL70}Click a town name to jump to it and pin or unpin it | Days = you -> buy town -> sell town | Carv. = caravans at those towns | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit").ToString()
                   + (Options.Current.ConfidenceRanking
-                        ? new TextObject("{=TL71} | Score = profit per day discounted by Conf").ToString()
-                        : new TextObject("{=TL72} | Score = profit per day").ToString())
+                        ? Tongue.Text("{=TL71} | Score = profit per day discounted by Conf").ToString()
+                        : Tongue.Text("{=TL72} | Score = profit per day").ToString())
                   + (Options.Current.ConservativeRouteProjection
-                        ? new TextObject("{=TL73} | resale safety factor applied").ToString() : "");
+                        ? Tongue.Text("{=TL73} | resale safety factor applied").ToString() : "");
 
             RefreshWorkshops();
         }
@@ -277,8 +277,8 @@ namespace TradeLord
         {
             bool ownedOnly = !Options.Current.Omniscient;
             WorkshopsHeader = ownedOnly
-                ? new TextObject("{=TL80}Your workshops (recent profit)").ToString()
-                : new TextObject("{=TL61}Most profitable workshops (recent profit)").ToString();
+                ? Tongue.Text("{=TL80}Your workshops (recent profit)").ToString()
+                : Tongue.Text("{=TL61}Most profitable workshops (recent profit)").ToString();
             var best = new List<Workshop>();
             foreach (Town town in Town.AllTowns)
             {
