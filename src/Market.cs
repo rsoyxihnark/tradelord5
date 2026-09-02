@@ -74,7 +74,7 @@ namespace TradeLord
     internal static class Bulk
     {
         internal static RouteQuote Walk(Settlement from, Settlement to, ItemObject item,
-                                        int maxUnits, int merchantTill,
+                                        int maxUnits, int merchantTill, int spendCap,
                                         int quotedBuyPrice, int quotedSellPrice)
         {
             RouteQuote q = default(RouteQuote);
@@ -91,6 +91,7 @@ namespace TradeLord
                 if (buyPrice <= 0 || sellPrice <= 0) break;
                 if (!TradePolicy.BuyAcceptable(buyPrice, TradePolicy.Realizable(sellPrice))) break;
                 if (merchantTill > 0 && q.SellTotal + sellPrice > merchantTill) break;
+                if (spendCap > 0 && q.BuyTotal + buyPrice > spendCap) break;
 
                 if (q.Units == 0) { q.OpeningBuyPrice = buyPrice; q.OpeningSellPrice = sellPrice; }
                 q.BuyTotal += buyPrice;
