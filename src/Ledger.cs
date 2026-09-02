@@ -492,10 +492,11 @@ namespace TradeLord
 
                     int stocked = Options.Current.BuyCapPerItem > 0
                         ? Options.Current.BuyCapPerItem : UncappedBuyProjection;
-                    if (Options.Current.BuyValueCapPerItem > 0)
-                        stocked = Math.Min(stocked, Options.Current.BuyValueCapPerItem / buyPrice);
-                    if (Options.Current.MaxSpendPerVisit > 0)
-                        stocked = Math.Min(stocked, Options.Current.MaxSpendPerVisit / buyPrice);
+                    int spendCap = Options.Current.BuyValueCapPerItem;
+                    if (Options.Current.MaxSpendPerVisit > 0 &&
+                        (spendCap <= 0 || Options.Current.MaxSpendPerVisit < spendCap))
+                        spendCap = Options.Current.MaxSpendPerVisit;
+                    if (spendCap > 0) stocked = Math.Min(stocked, spendCap / buyPrice);
                     if (item.HasHorseComponent)
                     {
                         if (herdRoom < 0) herdRoom = TradeActionBehavior.HerdRoomForLivestock(MobileParty.MainParty);
@@ -534,7 +535,7 @@ namespace TradeLord
                         if (cap > 0f && days > cap) continue;
                         if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey) continue;
 
-                        RouteQuote q = Bulk.Walk(from, to, item, qtyCap, till, buyPrice, sellPrice);
+                        RouteQuote q = Bulk.Walk(from, to, item, qtyCap, till, spendCap, buyPrice, sellPrice);
                         if (q.Units <= 0) continue;
 
                         int proceeds = Options.Current.ConservativeRouteProjection

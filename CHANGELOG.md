@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.32
+
+- Naming a good on the never-sell, always-sell or never-buy list no longer quietly catches a second good whose whole name is one of the words you wrote, so putting Iron Ore on a list leaves Iron alone.
+- The ledger panel now spends your per-item and per-visit denar caps unit by unit, the way a buying pass spends them, so a route no longer offers a quantity your caps would stop you buying.
+
 ## 1.6.31
 
 - The town marked on the map for your cargo is now one whose merchants can actually pay for it, instead of one that quotes a high price but has run out of gold.

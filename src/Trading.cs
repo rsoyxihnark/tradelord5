@@ -119,10 +119,9 @@ namespace TradeLord
             item == DefaultItems.IronIngot1 || item == DefaultItems.IronIngot2 || item == DefaultItems.IronIngot3 ||
             item == DefaultItems.IronIngot4 || item == DefaultItems.IronIngot5 || item == DefaultItems.IronIngot6;
 
-        internal static bool Listed(HashSet<string> list, ItemObject item) =>
-            item != null && list.Count > 0 &&
-            (list.Contains(item.StringId) ||
-             (item.Name != null && list.Contains(item.Name.ToString())));
+        internal static bool Listed(ItemList list, ItemObject item) =>
+            item != null && (list.HasId(item.StringId) ||
+                             (item.Name != null && list.HasName(item.Name.ToString())));
 
         private static int _auditedGeneration = -1;
 
@@ -133,33 +132,34 @@ namespace TradeLord
             Options s = Options.Current;
             if (string.IsNullOrEmpty(s.NeverSellItems) && string.IsNullOrEmpty(s.AlwaysSellItems) &&
                 string.IsNullOrEmpty(s.NeverBuyItems)) return false;
-            var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (ItemObject item in Items.All)
             {
                 if (item == null) continue;
-                known.Add(item.StringId);
-                if (item.Name != null) known.Add(item.Name.ToString());
+                ids.Add(item.StringId);
+                if (item.Name != null) names.Add(item.Name.ToString());
             }
             bool missed = false;
-            missed |= Unmatched("never sell", s.NeverSellItems, known);
-            missed |= Unmatched("always sell", s.AlwaysSellItems, known);
-            missed |= Unmatched("never buy", s.NeverBuyItems, known);
+            missed |= Unmatched("never sell", s.NeverSellItems, ids, names);
+            missed |= Unmatched("always sell", s.AlwaysSellItems, ids, names);
+            missed |= Unmatched("never buy", s.NeverBuyItems, ids, names);
             return missed;
         }
 
         internal static void ForgetItemListAudit() => _auditedGeneration = -1;
 
-        private static bool Unmatched(string label, string written, HashSet<string> known)
+        private static bool Unmatched(string label, string written, HashSet<string> ids, HashSet<string> names)
         {
             if (string.IsNullOrEmpty(written)) return false;
             var missing = new List<string>();
             foreach (string entry in written.Split(Options.EntryMarks, StringSplitOptions.RemoveEmptyEntries))
             {
                 string whole = entry.Trim();
-                if (whole.Length == 0 || known.Contains(whole)) continue;
+                if (whole.Length == 0 || ids.Contains(whole) || names.Contains(whole)) continue;
                 bool everyWordKnown = true;
                 foreach (string word in whole.Split(Options.WordMarks, StringSplitOptions.RemoveEmptyEntries))
-                    if (!known.Contains(word)) { everyWordKnown = false; break; }
+                    if (!ids.Contains(word)) { everyWordKnown = false; break; }
                 if (!everyWordKnown) missing.Add(whole);
             }
             if (missing.Count == 0) return false;

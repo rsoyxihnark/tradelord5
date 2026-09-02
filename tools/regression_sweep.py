@@ -88,9 +88,9 @@ def mcm_defaults_within_range():
     return len(defaults) > 10
 
 def every_option_has_a_control():
-    declared = set(re.findall(r'public\s+(?:bool|int|float|string)\s+(\w+)\s*=', S['Options.cs']))
+    declared = set(re.findall(r'public\s+(?:bool|int|float|string)\s+(\w+)\s*=(?!>)', S['Options.cs']))
     exposed = set(re.findall(r'Options\.Current\.(\w+)', M))
-    return not (declared - exposed - {'AutoTradeBoth'})
+    return not (declared - exposed)
 
 LITERAL = r'\{=(TL\d+)\}((?:[^"\\]|\\.)*)"'
 
@@ -679,7 +679,8 @@ chk("1.3.17", "scan radius reaches the marker", "LedgerBehavior.WithinRadius(s)"
 chk("1.3.17", "haircut always filters routes",
     "float realizable = TradePolicy.Realizable(sellPrice);" in S['Ledger.cs'] and
     "!TradePolicy.BuyAcceptable(buyPrice, realizable)) break;" in S['Ledger.cs'])
-chk("1.3.18", "denar cap reaches route quantities", "Options.Current.BuyValueCapPerItem / buyPrice" in S['Ledger.cs'])
+chk("1.3.18", "denar cap reaches route quantities",
+    "int spendCap = Options.Current.BuyValueCapPerItem;" in S['Ledger.cs'])
 chk("1.3.19", "marker re-evaluated on settlement exit", "OnSettlementLeftEvent.AddNonSerializedListener" in S['Trading.cs'])
 chk("1.3.22", "looted and raided villages refused and unscanned",
     "VillageShut" in method_body(S['Trading.cs'], "private static bool CanTradeHere") and
@@ -707,7 +708,8 @@ chk("1.3.24", "livestock reserved only after ordinary food",
 chk("1.3.25", "routes pair every top buy market against every top sell market",
     "foreach (var (to, sellPrice) in sells)" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"))
 chk("1.3.25", "the per-visit spend cap reaches route quantities",
-    "Options.Current.MaxSpendPerVisit / buyPrice" in S['Ledger.cs'])
+    "spendCap = Options.Current.MaxSpendPerVisit;" in S['Ledger.cs'] and
+    "if (spendCap > 0) stocked = Math.Min(stocked, spendCap / buyPrice);" in S['Ledger.cs'])
 chk("1.3.25", "the herd probe runs only once livestock is actually on the shelf",
     "int herdRoom = -1;" in method_body(S['Trading.cs'], "public static void ExecuteQuickBuy") and
     "if (herdRoom < 0) herdRoom = HerdRoomForLivestock(MobileParty.MainParty);" in
@@ -959,7 +961,7 @@ chk("1.5.0", "a menu the game does not have costs the other menus nothing",
 chk("1.5.1", "the walk asks no market for a price, so observed mode stays observed",
     "GetItemPrice" not in S['Market.cs'] and
     "if (!_walkable) return _quoted;" in method_body(S['Market.cs'], "internal int Price()") and
-    "Bulk.Walk(from, to, item, qtyCap, till, buyPrice, sellPrice)" in S['Ledger.cs'])
+    "Bulk.Walk(from, to, item, qtyCap, till, spendCap, buyPrice, sellPrice)" in S['Ledger.cs'])
 chk("1.5.1", "an unwalkable shelf reads its quote once",
     method_body(S['Market.cs'], "internal int Price()").count("_quoted") == 2)
 chk("1.5.1", "confidence measures the walk, not two price APIs disagreeing",
@@ -1283,7 +1285,7 @@ chk("1.6.4", "the warning asks the same trading question the menu asks, and clea
 
 chk("1.6.5", "an item list is parsed once per edit and never left unset",
     "if (set == null || seen != src)" in
-        method_body(S['Options.cs'], "private static HashSet<string> Parsed") and
+        method_body(S['Options.cs'], "private static ItemList Parsed") and
     S['Options.cs'].count("Parsed(") == 4)
 chk("1.6.5", "ending a campaign drops trade messages queued but not yet shown",
     "_pending.Clear();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
@@ -1612,22 +1614,31 @@ def no_tracked_file_carries_a_machine_written_dash():
     return True
 
 def a_list_entry_is_matched_whatever_its_capitalisation():
-    parsed = method_body(S['Options.cs'], "private static HashSet<string> Parsed")
-    return ("StringComparer.OrdinalIgnoreCase" in parsed and
+    return ("StringComparer.OrdinalIgnoreCase" in S['Options.cs'] and
             "A_name_is_matched_whatever_its_capitalisation" in ROUTETESTS)
 
 def an_item_list_is_matched_by_name_as_well_as_by_id():
     listed = method_body(S['Trading.cs'], "internal static bool Listed")
-    return ("list.Contains(item.StringId)" in listed and
-            "list.Contains(item.Name.ToString())" in listed)
+    return ("list.HasId(item.StringId)" in listed and
+            "list.HasName(item.Name.ToString())" in listed)
+
+def a_written_word_stands_for_an_id_and_never_for_another_goods_name():
+    return ("public bool HasId(string id) => !Empty && (Entries.Contains(id) || Words.Contains(id));"
+                in S['Options.cs']
+            and "public bool HasName(string shown) => !Empty && Entries.Contains(shown);"
+                in S['Options.cs']
+            and "Words" not in method_body(S['Trading.cs'], "private static bool Unmatched")
+            and "if (!ids.Contains(word))" in method_body(S['Trading.cs'], "private static bool Unmatched")
+            and "Naming_one_good_never_catches_another_whose_name_is_a_word_of_it" in ROUTETESTS)
 
 def no_rule_compares_a_list_against_an_id_by_hand():
     return not re.search(r'(NeverSet|AlwaysSet|NeverBuySet)\.Contains\(', S['Trading.cs'])
 
 def a_list_entry_survives_the_space_inside_a_name():
-    parsed = method_body(S['Options.cs'], "private static HashSet<string> Parsed")
-    return ("Split(EntryMarks" in parsed and "built.Add(whole)" in parsed and
-            "Split(WordMarks" in parsed and "' '" not in parsed)
+    parsed = method_body(S['Options.cs'], "private static ItemList Parsed")
+    return ("Split(EntryMarks" in parsed and "built.Entries.Add(whole)" in parsed and
+            "Split(WordMarks" in parsed and "built.Words.Add(word)" in parsed and
+            "' '" not in parsed)
 
 def a_list_entry_that_names_nothing_is_reported_both_ways():
     audit = method_body(S['Trading.cs'], "internal static bool ItemListsNameNothing")
@@ -1739,6 +1750,14 @@ def the_cargo_marker_counts_the_town_till():
 chk("1.6.31", "the cargo marker never points at a town that cannot pay for the cargo",
     the_cargo_marker_counts_the_town_till())
 
+def the_spend_cap_is_walked_not_divided():
+    walk = method_body(S['Market.cs'], "internal static RouteQuote Walk")
+    return ("int maxUnits, int merchantTill, int spendCap," in S['Market.cs']
+            and "if (spendCap > 0 && q.BuyTotal + buyPrice > spendCap) break;" in walk
+            and ordered(walk, "q.BuyTotal + buyPrice > spendCap", "q.BuyTotal += buyPrice;")
+            and "Options.Current.MaxSpendPerVisit / buyPrice" not in S['Ledger.cs']
+            and "Options.Current.BuyValueCapPerItem / buyPrice" not in S['Ledger.cs'])
+
 def the_workflow_gates_the_changelog():
     return ("this commit changes what a user gets and leaves CHANGELOG.md untouched" in WORKFLOW
             and "grep -qx 'CHANGELOG.md'" in WORKFLOW
@@ -1781,6 +1800,10 @@ chk("1.6.32", "the owner is read off the most recent commit he authored, never o
     the_hook_reads_the_owner_off_the_newest_commit())
 chk("1.6.32", "with no commit of his in the history, the signature comes from the one place that carries it",
     the_hook_falls_back_to_the_signature_the_rules_name())
+chk("1.6.32", "a good named on an item list never drags in a second good whose whole name is one of its words",
+    a_written_word_stands_for_an_id_and_never_for_another_goods_name())
+chk("1.6.32", "a route's spending caps are spent unit by unit, the way a buying pass spends them",
+    the_spend_cap_is_walked_not_divided())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
