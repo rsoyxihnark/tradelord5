@@ -2,7 +2,7 @@ import io, re, sys
 
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs', 'Travel.cs', 'Support.cs',
-      'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs']}
+      'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -243,8 +243,8 @@ def settings_name_no_other_mod():
     return len(hints) > 40 and not any(foreign.search(h) for h in hints)
 
 def setting_blocks():
-    return [b for b in re.split(r'\n\s*(?=\[SettingProperty(?:Bool|Integer|FloatingInteger|Text)\()', M)
-            if re.match(r'\s*\[SettingProperty(?:Bool|Integer|FloatingInteger|Text)\(', b)]
+    return [b for b in re.split(r'\n\s*(?=\[SettingProperty(?:Bool|Integer|FloatingInteger|Text|Dropdown)\()', M)
+            if re.match(r'\s*\[SettingProperty(?:Bool|Integer|FloatingInteger|Text|Dropdown)\(', b)]
 
 def every_setting_has_a_hint():
     blocks = setting_blocks()
@@ -252,9 +252,9 @@ def every_setting_has_a_hint():
 
 def every_setting_line_is_translatable():
     lit = r'"((?:[^"\\]|\\.)*)"'
-    names = re.findall(r'\[SettingProperty(?:Bool|Integer|FloatingInteger|Text)\(' + lit, M)
+    names = re.findall(r'\[SettingProperty(?:Bool|Integer|FloatingInteger|Text|Dropdown)\(' + lit, M)
     hints = re.findall(r'HintText = ' + lit, M)
-    groups = re.findall(r'\[SettingPropertyGroup\(' + lit + r'\)\]', M)
+    groups = re.findall(r'\[SettingPropertyGroup\(' + lit + r'[^\]]*\)\]', M)
     return (len(names) > 40 and len(names) == len(hints) == len(groups)
             and all(re.match(r'\{=TL\d+\}', text) for text in names + hints + groups))
 
@@ -262,7 +262,7 @@ def settings_declared_in_display_order():
     seen = {}
     for b in setting_blocks():
         order = re.search(r'Order\s*=\s*(\d+)', b)
-        group = re.search(r'\[SettingPropertyGroup\("([^"]+)"\)\]', b)
+        group = re.search(r'\[SettingPropertyGroup\("([^"]+)"[^\]]*\)\]', b)
         if not order or not group:
             return False
         seen.setdefault(group.group(1), []).append(int(order.group(1)))
@@ -781,7 +781,7 @@ chk("1.3.33", "automated trading recaptures prices after it moves them",
 _setters = [b for b in re.findall(r'\bset\b\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', M)
             if "Options.Bump();" in b]
 chk("1.3.33", "every settings write bumps the generation every cache keys on",
-    len(_setters) == len(re.findall(r'\[SettingProperty(?:Bool|Integer|FloatingInteger|Text)\(', M)))
+    len(_setters) == len(re.findall(r'\[SettingProperty(?:Bool|Integer|FloatingInteger|Text|Dropdown)\(', M)))
 
 chk("1.3.34", "one naval gate for both map-distance calls",
     S['Travel.cs'].count("HasPort && naval") == 2 and
@@ -829,8 +829,8 @@ chk("1.4.1", "quick-buy prices the shelf only when there is a budget to spend",
 chk("1.4.1", "a pass the gold-direction guard stopped does not blame the trade policy",
     S['Trading.cs'].count("else if (!directionError)") == 2 and
     S['Trading.cs'].count("else if (!quiet && !directionError)") == 0 and
-    'TextObject("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
-    'TextObject("{=TL33}Nothing bought here - {REASON}.")' in S['Trading.cs'])
+    'Tongue.Text("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
+    'Tongue.Text("{=TL33}Nothing bought here - {REASON}.")' in S['Trading.cs'])
 chk("1.4.1", "the automatic path asks the same market question the menu does",
     "IsMarket" not in method_body(S['Trading.cs'], "private void OnSettlementEntered"))
 chk("1.4.1", "planner and executor apply the same village last-unit clamp",
@@ -934,8 +934,8 @@ chk("1.5.0", "the food reserve is not a trading policy and is not governed by on
     "FoodPolicy" not in method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> FoodKeep"))
 
 chk("1.5.0", "a pass that moves nothing names the rule that stopped it",
-    'TextObject("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
-    'TextObject("{=TL33}Nothing bought here - {REASON}.")' in S['Trading.cs'] and
+    'Tongue.Text("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
+    'Tongue.Text("{=TL33}Nothing bought here - {REASON}.")' in S['Trading.cs'] and
     S['Trading.cs'].count("BlockTally.Phrase(tally.Dominant())") == 2)
 chk("1.5.0", "both gates report a reason whenever they refuse",
     method_body(S['Trading.cs'], "internal static bool MaySell").count("why = Block.") >= 6 and
@@ -1181,11 +1181,11 @@ chk("1.5.8", "release notes come from the commit body, and an empty body fails t
     "Install: extract the zip" not in WORKFLOW)
 chk("1.5.8", "every panel line is localizable",
     prefab_text_is_all_bound() and
-    S['Panel.cs'].count('new TextObject("{=TL') >= 20)
+    S['Panel.cs'].count('Tongue.Text("{=TL') >= 20)
 chk("1.5.8", "tooltip row suffixes carry localization markers",
-    'new TextObject("{=TL77}Profit: +{PCT}%")' in S['TooltipPatches.cs'] and
-    'new TextObject("{=TL78}Stock: {COUNT}")' in S['TooltipPatches.cs'] and
-    'new TextObject("{=TL79}~{DAYS} days")' in S['Travel.cs'])
+    'Tongue.Text("{=TL77}Profit: +{PCT}%")' in S['TooltipPatches.cs'] and
+    'Tongue.Text("{=TL78}Stock: {COUNT}")' in S['TooltipPatches.cs'] and
+    'Tongue.Text("{=TL79}~{DAYS} days")' in S['Travel.cs'])
 chk("1.5.8", "each language-file entry matches the source fallback text",
     shipped_text_matches_the_fallback())
 chk("1.5.9", "panel-owned map pins survive a save/load cycle",
@@ -1275,7 +1275,7 @@ chk("1.6.28", "a full cargo is reported on the way into a market and not again o
         method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
 chk("1.6.4", "the full-cargo warning is red, translatable, and not silenced by a quiet pass",
     'ToastAlert = new Color(0.90f, 0.28f, 0.28f)' in S['Trading.cs'] and
-    'Toast(new TextObject("{=TL82}' in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry") and
+    'Toast(Tongue.Text("{=TL82}' in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry") and
     'ToastAlert)' in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry") and
     'TL82' in strings_declared() and
     "quiet" not in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry"))
@@ -1581,7 +1581,7 @@ def an_empty_purse_is_reported_on_the_way_into_a_market():
     return ("if (TradedThisVisit()) return false;" in body
             and ordered(body, "if (TradedThisVisit()) return false;",
                         "if (SpendableGold() > 0) return false;")
-            and 'new TextObject("{=TL92}' in body
+            and 'Tongue.Text("{=TL92}' in body
             and 'Toast(msg, ToastAlert);' in body
             and 'TL92' in strings_declared()
             and "quiet" not in body and "Muted(" not in body
@@ -1758,6 +1758,43 @@ def the_spend_cap_is_walked_not_divided():
             and "Options.Current.MaxSpendPerVisit / buyPrice" not in S['Ledger.cs']
             and "Options.Current.BuyValueCapPerItem / buyPrice" not in S['Ledger.cs'])
 
+TURKISH = 'TradeLord/ModuleData/Languages/TR/module_strings_tr.xml'
+
+def spoken(path):
+    import xml.etree.ElementTree as ET
+    return {e.get('id'): e.get('text') for e in ET.parse(path).getroot().iter('string')}
+
+def the_turkish_file_says_everything_the_english_one_does():
+    en = spoken('TradeLord/ModuleData/Languages/module_strings.xml')
+    tr = spoken(TURKISH)
+    return (set(en) == set(tr) and len(en) > 150
+            and all(tr[k] and tr[k].strip() and tr[k] != en[k] for k in en)
+            and '<tag language="T\u00fcrk\u00e7e"/>' in io.open(TURKISH, encoding='utf-8').read())
+
+def every_translated_line_keeps_its_placeholders():
+    en = spoken('TradeLord/ModuleData/Languages/module_strings.xml')
+    tr = spoken(TURKISH)
+    holes = lambda text: sorted(re.findall(r'\{([A-Z][A-Z0-9_]*)\}', text))
+    return all(holes(en[k]) == holes(tr[k]) for k in en)
+
+def every_line_the_mod_says_can_change_language():
+    said = "\n".join(v for k, v in S.items() if k != 'Tongue.cs')
+    return ('new TextObject(' not in said
+            and said.count('Tongue.Text(') > 50
+            and 'if (Options.Current.Language == English) return new TextObject(written);'
+                in method_body(S['Tongue.cs'], "internal static TextObject Text")
+            and method_body(S['Trading.cs'], "private void OnSessionLaunched").count('Tongue.Text("{=TL') == 4)
+
+def the_language_setting_leads_the_screen_and_starts_on_english():
+    return ('[SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]' in M
+            and 'public int Language = 0;' in S['Options.cs']
+            and 'Options.Current.Language = Language.SelectedIndex;' in M
+            and 'instance?.FollowLanguage();' in M
+            and all('GroupOrder = ' + str(n) + ')]' in M for n in range(1, 7)))
+
+def the_language_files_reach_the_download():
+    return 'cp -r TradeLord/ModuleData dist/Modules/TradeLord/' in WORKFLOW
+
 def the_workflow_gates_the_changelog():
     return ("this commit changes what a user gets and leaves CHANGELOG.md untouched" in WORKFLOW
             and "grep -qx 'CHANGELOG.md'" in WORKFLOW
@@ -1804,6 +1841,17 @@ chk("1.6.32", "a good named on an item list never drags in a second good whose w
     a_written_word_stands_for_an_id_and_never_for_another_goods_name())
 chk("1.6.32", "a route's spending caps are spent unit by unit, the way a buying pass spends them",
     the_spend_cap_is_walked_not_divided())
+
+chk("1.7.0", "the Turkish file carries every line the English one does, translated",
+    the_turkish_file_says_everything_the_english_one_does())
+chk("1.7.0", "a translated line keeps every value the English one fills in",
+    every_translated_line_keeps_its_placeholders())
+chk("1.7.0", "every line the mod says on screen is built where the language is chosen",
+    every_line_the_mod_says_can_change_language())
+chk("1.7.0", "the language setting opens the screen and starts on English",
+    the_language_setting_leads_the_screen_and_starts_on_english())
+chk("1.7.0", "the language files are packed into the download",
+    the_language_files_reach_the_download())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

@@ -157,6 +157,7 @@ namespace TradeLord.Tests
         public void The_shipped_defaults_are_the_ones_the_rules_were_written_for()
         {
             var fresh = new Options();
+            Assert.Equal(0, fresh.Language);
             Assert.Equal(0.15f, fresh.MinProfitMargin, 3);
             Assert.Equal(0.85f, fresh.ResaleSafetyFactor, 3);
             Assert.Equal(Options.PolicyBuySell, fresh.FoodPolicy);

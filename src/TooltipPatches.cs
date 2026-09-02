@@ -66,7 +66,7 @@ namespace TradeLord
 
             if (sells.Count > 0)
             {
-                AddLine(vm, new TextObject("{=TL20}Best sell prices").ToString(), "", Title);
+                AddLine(vm, Tongue.Text("{=TL20}Best sell prices").ToString(), "", Title);
                 int lo = sells[sells.Count - 1].price, hi = sells[0].price;
                 for (int i = 0; i < sells.Count; i++)
                 {
@@ -75,7 +75,7 @@ namespace TradeLord
                     string pct = "";
                     if (basis > 0 && price > basis)
                     {
-                        TextObject p = new TextObject("{=TL77}Profit: +{PCT}%");
+                        TextObject p = Tongue.Text("{=TL77}Profit: +{PCT}%");
                         p.SetTextVariable("PCT", (int)((price - basis) * 100f / basis));
                         pct = "  " + p.ToString();
                     }
@@ -86,7 +86,7 @@ namespace TradeLord
 
             if (buys.Count > 0)
             {
-                AddLine(vm, new TextObject("{=TL21}Best buy prices").ToString(), "", Title);
+                AddLine(vm, Tongue.Text("{=TL21}Best buy prices").ToString(), "", Title);
                 int lo = buys[0].price, hi = buys[buys.Count - 1].price;
                 for (int i = 0; i < buys.Count; i++)
                 {
@@ -96,7 +96,7 @@ namespace TradeLord
                     string st = "";
                     if (stock > 0)
                     {
-                        TextObject k = new TextObject("{=TL78}Stock: {COUNT}");
+                        TextObject k = Tongue.Text("{=TL78}Stock: {COUNT}");
                         k.SetTextVariable("COUNT", stock);
                         st = "  " + k.ToString();
                     }
@@ -111,10 +111,10 @@ namespace TradeLord
                 {
                     int local = market.GetItemPrice(item, MobileParty.MainParty, true);
                     if (sells[0].town == here || local >= sells[0].price)
-                        AddLine(vm, "", new TextObject("{=TL22}* Best market to sell this!").ToString(), Good);
+                        AddLine(vm, "", Tongue.Text("{=TL22}* Best market to sell this!").ToString(), Good);
                     else if (local > 0 && sells[0].price > local)
                     {
-                        TextObject w = new TextObject("{=TL15}+{PCT}% if sold there instead");
+                        TextObject w = Tongue.Text("{=TL15}+{PCT}% if sold there instead");
                         w.SetTextVariable("PCT", (int)((sells[0].price - local) * 100f / local));
                         AddLine(vm, "", w.ToString(), Warn);
                     }
@@ -123,10 +123,10 @@ namespace TradeLord
                 {
                     int local = market.GetItemPrice(item, MobileParty.MainParty, false);
                     if (buys[0].town == here || (local > 0 && local <= buys[0].price))
-                        AddLine(vm, "", new TextObject("{=TL23}* Cheapest market to buy this!").ToString(), Good);
+                        AddLine(vm, "", Tongue.Text("{=TL23}* Cheapest market to buy this!").ToString(), Good);
                     else if (local > buys[0].price)
                     {
-                        TextObject w = new TextObject("{=TL24}Cheaper in {TOWN}: {PRICE}{GOLD}");
+                        TextObject w = Tongue.Text("{=TL24}Cheaper in {TOWN}: {PRICE}{GOLD}");
                         w.SetTextVariable("TOWN", buys[0].town.Name);
                         w.SetTextVariable("PRICE", buys[0].price);
                         w.SetTextVariable("GOLD", GoldIcon);

@@ -22,6 +22,8 @@ namespace TradeLord
         public static int Generation { get; private set; }
         public static void Bump() { Generation++; }
 
+        public int Language = 0;
+
         public bool Omniscient = true;
         public int ObservationShelfLifeDays = 45;
 
