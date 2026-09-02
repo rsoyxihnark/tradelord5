@@ -156,34 +156,34 @@ namespace TradeLord.Tests
         public void An_item_list_is_read_however_it_is_punctuated(string written)
         {
             var options = new Options { NeverSellItems = written };
-            Assert.Contains("grain", options.NeverSet);
+            Assert.True(options.NeverSet.HasId("grain"));
         }
 
         [Fact]
         public void Item_names_are_matched_whatever_the_casing()
         {
             var options = new Options { NeverSellItems = "Grain" };
-            Assert.Contains("grain", options.NeverSet);
-            Assert.Contains("GRAIN", options.NeverSet);
+            Assert.True(options.NeverSet.HasId("grain"));
+            Assert.True(options.NeverSet.HasId("GRAIN"));
         }
 
         [Fact]
         public void An_empty_list_holds_nothing_and_throws_on_nothing()
         {
-            Assert.Empty(new Options { NeverSellItems = "" }.NeverSet);
-            Assert.Empty(new Options { NeverSellItems = null }.NeverSet);
-            Assert.Empty(new Options { NeverSellItems = "  ,, ; " }.NeverSet);
+            Assert.True(new Options { NeverSellItems = "" }.NeverSet.Empty);
+            Assert.True(new Options { NeverSellItems = null }.NeverSet.Empty);
+            Assert.True(new Options { NeverSellItems = "  ,, ; " }.NeverSet.Empty);
         }
 
         [Fact]
         public void Editing_the_list_is_seen_at_once_rather_than_served_from_the_last_read()
         {
             var options = new Options { NeverSellItems = "grain" };
-            Assert.Contains("grain", options.NeverSet);
+            Assert.True(options.NeverSet.HasId("grain"));
 
             options.NeverSellItems = "hardwood";
-            Assert.DoesNotContain("grain", options.NeverSet);
-            Assert.Contains("hardwood", options.NeverSet);
+            Assert.False(options.NeverSet.HasId("grain"));
+            Assert.True(options.NeverSet.HasId("hardwood"));
         }
 
         [Fact]
@@ -195,11 +195,11 @@ namespace TradeLord.Tests
                 AlwaysSellItems = "hardwood",
                 NeverBuyItems = "fish",
             };
-            Assert.Contains("grain", options.NeverSet);
-            Assert.Contains("hardwood", options.AlwaysSet);
-            Assert.Contains("fish", options.NeverBuySet);
-            Assert.DoesNotContain("grain", options.AlwaysSet);
-            Assert.DoesNotContain("fish", options.NeverSet);
+            Assert.True(options.NeverSet.HasId("grain"));
+            Assert.True(options.AlwaysSet.HasId("hardwood"));
+            Assert.True(options.NeverBuySet.HasId("fish"));
+            Assert.False(options.AlwaysSet.HasId("grain"));
+            Assert.False(options.NeverSet.HasId("fish"));
         }
 
         [Theory]
@@ -210,35 +210,46 @@ namespace TradeLord.Tests
         [InlineData("Hardwood;Iron Ore")]
         public void A_name_with_a_space_in_it_is_kept_whole(string written)
         {
-            Assert.Contains("Iron Ore", new Options { NeverSellItems = written }.NeverSet);
+            Assert.True(new Options { NeverSellItems = written }.NeverSet.HasName("Iron Ore"));
         }
 
         [Fact]
-        public void A_name_with_a_space_in_it_still_offers_each_word_on_its_own()
+        public void A_word_of_a_written_name_still_stands_for_an_id_of_its_own()
         {
             var options = new Options { NeverSellItems = "Iron Ore" };
-            Assert.Contains("Iron Ore", options.NeverSet);
-            Assert.Contains("iron", options.NeverSet);
-            Assert.Contains("ore", options.NeverSet);
+            Assert.True(options.NeverSet.HasName("Iron Ore"));
+            Assert.True(options.NeverSet.HasId("iron"));
+            Assert.True(options.NeverSet.HasId("ore"));
+        }
+
+        [Fact]
+        public void Naming_one_good_never_catches_another_whose_name_is_a_word_of_it()
+        {
+            var options = new Options { NeverSellItems = "Iron Ore, Fine Steel" };
+            Assert.False(options.NeverSet.HasName("Iron"));
+            Assert.False(options.NeverSet.HasName("Ore"));
+            Assert.False(options.NeverSet.HasName("Steel"));
+            Assert.True(options.NeverSet.HasName("Iron Ore"));
+            Assert.True(options.NeverSet.HasName("Fine Steel"));
         }
 
         [Fact]
         public void Ids_written_the_old_way_with_spaces_between_them_still_read()
         {
             var options = new Options { NeverSellItems = "grain hardwood iron_ore" };
-            Assert.Contains("grain", options.NeverSet);
-            Assert.Contains("hardwood", options.NeverSet);
-            Assert.Contains("iron_ore", options.NeverSet);
+            Assert.True(options.NeverSet.HasId("grain"));
+            Assert.True(options.NeverSet.HasId("hardwood"));
+            Assert.True(options.NeverSet.HasId("iron_ore"));
         }
 
         [Fact]
         public void A_multi_word_name_is_not_confused_with_a_neighbouring_entry()
         {
             var options = new Options { NeverSellItems = "Iron Ore, Fine Velvet" };
-            Assert.Contains("Iron Ore", options.NeverSet);
-            Assert.Contains("Fine Velvet", options.NeverSet);
-            Assert.DoesNotContain("Ore, Fine", options.NeverSet);
-            Assert.DoesNotContain("Iron Ore, Fine Velvet", options.NeverSet);
+            Assert.True(options.NeverSet.HasName("Iron Ore"));
+            Assert.True(options.NeverSet.HasName("Fine Velvet"));
+            Assert.False(options.NeverSet.HasName("Ore, Fine"));
+            Assert.False(options.NeverSet.HasName("Iron Ore, Fine Velvet"));
         }
 
         [Theory]
@@ -250,14 +261,15 @@ namespace TradeLord.Tests
         [InlineData("Iron_Ore", "iron_ore")]
         public void A_name_is_matched_whatever_its_capitalisation(string written, string looked)
         {
-            Assert.Contains(looked, new Options { NeverSellItems = written }.NeverSet);
+            var list = new Options { NeverSellItems = written }.NeverSet;
+            Assert.True(list.HasId(looked) || list.HasName(looked));
         }
 
         [Fact]
         public void A_list_of_nothing_but_separators_still_holds_nothing()
         {
-            Assert.Empty(new Options { NeverSellItems = " , ; ,, ;; " }.NeverSet);
-            Assert.Empty(new Options { NeverSellItems = "\t" }.NeverSet);
+            Assert.True(new Options { NeverSellItems = " , ; ,, ;; " }.NeverSet.Empty);
+            Assert.True(new Options { NeverSellItems = "\t" }.NeverSet.Empty);
         }
     }
 }
