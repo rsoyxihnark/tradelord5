@@ -79,36 +79,36 @@ namespace TradeLord
             switch (reason)
             {
                 case Block.CategoryPolicy:
-                    return new TextObject("{=TL41}your category policy excludes it");
+                    return Tongue.Text("{=TL41}your category policy excludes it");
                 case Block.BelowMargin:
-                    return new TextObject("{=TL42}prices here miss your margin");
+                    return Tongue.Text("{=TL42}prices here miss your margin");
                 case Block.BelowBestMarket:
-                    return new TextObject("{=TL85}you are holding this cargo for a better market");
+                    return Tongue.Text("{=TL85}you are holding this cargo for a better market");
                 case Block.BudgetSpent:
                 case Block.ItemCountCap:
                 case Block.ItemValueCap:
-                    return new TextObject("{=TL43}your purse or spending caps are spent");
+                    return Tongue.Text("{=TL43}your purse or spending caps are spent");
                 case Block.CarryWeight:
-                    return new TextObject("{=TL44}there is no room to carry more");
+                    return Tongue.Text("{=TL44}there is no room to carry more");
                 case Block.HerdFull:
-                    return new TextObject("{=TL86}your party cannot drive any more livestock");
+                    return Tongue.Text("{=TL86}your party cannot drive any more livestock");
                 case Block.MerchantTillEmpty:
-                    return new TextObject("{=TL46}the merchant has run out of gold");
+                    return Tongue.Text("{=TL46}the merchant has run out of gold");
                 case Block.NoResaleMarket:
-                    return new TextObject("{=TL47}there is nowhere in reach to resell it");
+                    return Tongue.Text("{=TL47}there is nowhere in reach to resell it");
                 case Block.TradedHereAlready:
-                    return new TextObject("{=TL48}you already traded these on this visit");
+                    return Tongue.Text("{=TL48}you already traded these on this visit");
                 case Block.VillageLastUnit:
-                    return new TextObject("{=TL83}the village is down to its last of each good");
+                    return Tongue.Text("{=TL83}the village is down to its last of each good");
                 case Block.NotMerchandise:
                 case Block.NeverList:
                 case Block.Locked:
                 case Block.Protected:
                 case Block.MountOrPackAnimal:
                 case Block.FoodReserve:
-                    return new TextObject("{=TL40}your protections held it back");
+                    return Tongue.Text("{=TL40}your protections held it back");
                 default:
-                    return new TextObject("{=TL45}this market has nothing worth trading");
+                    return Tongue.Text("{=TL45}this market has nothing worth trading");
             }
         }
     }
@@ -457,7 +457,7 @@ namespace TradeLord
         private static void WarnUnmatchedItemLists()
         {
             if (!TradePolicy.ItemListsNameNothing()) return;
-            Toast(new TextObject("{=TL91}An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which."), ToastAlert);
+            Toast(Tongue.Text("{=TL91}An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which."), ToastAlert);
         }
 
         private static int SpendableGold() =>
@@ -468,7 +468,7 @@ namespace TradeLord
         {
             if (TradedThisVisit()) return false;
             if (SpendableGold() > 0) return false;
-            TextObject msg = new TextObject("{=TL92}Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings.");
+            TextObject msg = Tongue.Text("{=TL92}Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings.");
             msg.SetTextVariable("GOLD", Hero.MainHero.Gold);
             msg.SetTextVariable("RESERVE", Options.Current.GoldReserve);
             Toast(msg, ToastAlert);
@@ -479,7 +479,7 @@ namespace TradeLord
         {
             if (TradedThisVisit()) return;
             if (!NoRoomToCarry() && !_cargoWasFull) return;
-            Toast(new TextObject("{=TL82}Cargo is full - TradeLord cannot buy here until you free up carry weight."),
+            Toast(Tongue.Text("{=TL82}Cargo is full - TradeLord cannot buy here until you free up carry weight."),
                   ToastAlert);
         }
 
@@ -489,7 +489,7 @@ namespace TradeLord
             if (!Options.Current.AutoSellOnEntry && !Options.Current.AutoBuyOnEntry) return false;
             if (!CanTradeHere(settlement)) return false;
             _announcedAutomation = true;
-            Toast(new TextObject("{=TL87}TradeLord buys and sells for you as you enter a market, starting at the next one. Turn auto-sell and auto-buy on entry off in its settings to trade by hand."), ToastAlert);
+            Toast(Tongue.Text("{=TL87}TradeLord buys and sells for you as you enter a market, starting at the next one. Turn auto-sell and auto-buy on entry off in its settings to trade by hand."), ToastAlert);
             Log.Write("automation notice shown - this market is left alone so the campaign can turn it off first");
             return true;
         }
@@ -509,7 +509,7 @@ namespace TradeLord
                     "menu " + menu + " (the other menus are unaffected)", () =>
                 {
                     starter.AddGameMenuOption(menu, "tradelord_quicksell",
-                        "{=TL01}Quick-sell trade goods (TradeLord)",
+                        Tongue.Text("{=TL01}Quick-sell trade goods (TradeLord)").ToString(),
                         args =>
                         {
                             args.optionLeaveType = GameMenuOption.LeaveType.Trade;
@@ -519,7 +519,7 @@ namespace TradeLord
                         false, 4);
 
                     starter.AddGameMenuOption(menu, "tradelord_quickbuy",
-                        "{=TL10}Quick-buy trade goods (TradeLord)",
+                        Tongue.Text("{=TL10}Quick-buy trade goods (TradeLord)").ToString(),
                         args =>
                         {
                             args.optionLeaveType = GameMenuOption.LeaveType.Trade;
@@ -529,7 +529,7 @@ namespace TradeLord
                         false, 5);
 
                     starter.AddGameMenuOption(menu, "tradelord_quicktrade",
-                        "{=TL26}Quick-trade: sell, then buy (TradeLord)",
+                        Tongue.Text("{=TL26}Quick-trade: sell, then buy (TradeLord)").ToString(),
                         args =>
                         {
                             args.optionLeaveType = GameMenuOption.LeaveType.Trade;
@@ -543,7 +543,7 @@ namespace TradeLord
                         false, 6);
 
                     starter.AddGameMenuOption(menu, "tradelord_report",
-                        "{=TL11}Consult the TradeLord ledger",
+                        Tongue.Text("{=TL11}Consult the TradeLord ledger").ToString(),
                         args =>
                         {
                             args.optionLeaveType = GameMenuOption.LeaveType.Submenu;
@@ -617,7 +617,7 @@ namespace TradeLord
             if (elapsed >= wait) return true;
             if (!quiet)
             {
-                TextObject msg = new TextObject("{=TL18}The market is still settling ({DAYS} more days).");
+                TextObject msg = Tongue.Text("{=TL18}The market is still settling ({DAYS} more days).");
                 msg.SetTextVariable("DAYS", (int)Math.Ceiling(wait - elapsed));
                 Toast(msg);
             }
@@ -668,7 +668,7 @@ namespace TradeLord
             finally { CloseTransaction(); ReportSilenced(); }
             int now = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
             bool rose = now > before;
-            TextObject earned = new TextObject(rose
+            TextObject earned = Tongue.Text(rose
                 ? "{=TL88}TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."
                 : "{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.");
             earned.SetTextVariable("GOLD", xp);
@@ -690,7 +690,7 @@ namespace TradeLord
         {
             if (!Options.Current.DetailedTradeSummary)
             {
-                TextObject count = new TextObject("{=TL31}{COUNT} items");
+                TextObject count = Tongue.Text("{=TL31}{COUNT} items");
                 count.SetTextVariable("COUNT", totalItems);
                 return count.ToString();
             }
@@ -709,7 +709,7 @@ namespace TradeLord
             }
             if (detail.Count > named)
             {
-                TextObject more = new TextObject("{=TL29}and {COUNT} more");
+                TextObject more = Tongue.Text("{=TL29}and {COUNT} more");
                 more.SetTextVariable("COUNT", detail.Count - named);
                 sb.Append(" ").Append(more.ToString());
             }
@@ -921,7 +921,7 @@ namespace TradeLord
                           " items, +" + goldGained + " gold, profit " + profit + " at " + settlement.Name);
                 LogDetail(selling: true, sim, detail);
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
-                TextObject msg = new TextObject(sim
+                TextObject msg = Tongue.Text(sim
                     ? "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit)."
                     : "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).");
                 msg.SetTextVariable("ITEMS", ItemSummary(detail, soldItems));
@@ -936,7 +936,7 @@ namespace TradeLord
                     "quick-sell moved nothing at " + settlement.Name + ": " + tally.Summary());
                 if (!quiet)
                 {
-                    TextObject none = new TextObject("{=TL32}Nothing sold here - {REASON}.");
+                    TextObject none = Tongue.Text("{=TL32}Nothing sold here - {REASON}.");
                     none.SetTextVariable("REASON", BlockTally.Phrase(tally.Dominant()));
                     Toast(none);
                 }
@@ -1079,7 +1079,7 @@ namespace TradeLord
                     CoinSound();
                     LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
                 }
-                TextObject msg = new TextObject(sim
+                TextObject msg = Tongue.Text(sim
                     ? "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars."
                     : "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.");
                 msg.SetTextVariable("ITEMS", ItemSummary(detail, bought));
@@ -1092,7 +1092,7 @@ namespace TradeLord
                     "quick-buy moved nothing at " + settlement.Name + ": " + tally.Summary());
                 if (!Muted(quiet) && (!quiet || PurseHeldItBack(tally)))
                 {
-                    TextObject none = new TextObject("{=TL33}Nothing bought here - {REASON}.");
+                    TextObject none = Tongue.Text("{=TL33}Nothing bought here - {REASON}.");
                     none.SetTextVariable("REASON", BlockTally.Phrase(tally.Dominant()));
                     Toast(none);
                 }
@@ -1107,7 +1107,7 @@ namespace TradeLord
             Log.Write("ledger report: " + (routes?.Count ?? 0) + " profitable routes");
             string body;
             if (routes == null || routes.Count == 0)
-                body = new TextObject(Options.Current.Omniscient
+                body = Tongue.Text(Options.Current.Omniscient
                     ? "{=TL08}No profitable routes within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."
                     : "{=TL89}No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings.").ToString();
             else
@@ -1115,7 +1115,7 @@ namespace TradeLord
                 var sb = new StringBuilder();
                 foreach (var r in routes)
                 {
-                    TextObject line = new TextObject(
+                    TextObject line = Tongue.Text(
                         "{=TL84}{ITEM}: buy {FROM} ({BUY} denars) -> sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} days from here");
                     line.SetTextVariable("ITEM", r.Item.Name);
                     line.SetTextVariable("FROM", r.From.Name);
@@ -1130,13 +1130,13 @@ namespace TradeLord
                 if (Options.Current.ConservativeRouteProjection)
                 {
                     sb.AppendLine();
-                    sb.Append(new TextObject("{=TL49}Profit already has the resale safety factor applied, so it is lower than the prices above suggest.").ToString());
+                    sb.Append(Tongue.Text("{=TL49}Profit already has the resale safety factor applied, so it is lower than the prices above suggest.").ToString());
                 }
                 body = sb.ToString();
             }
             InformationManager.ShowInquiry(new InquiryData(
-                new TextObject("{=TL07}TradeLord ledger").ToString(), body,
-                true, false, new TextObject("{=TL09}Close").ToString(), "", null, null));
+                Tongue.Text("{=TL07}TradeLord ledger").ToString(), body,
+                true, false, Tongue.Text("{=TL09}Close").ToString(), "", null, null));
         }
 
         private void UpdateBestSellTownTracker()
