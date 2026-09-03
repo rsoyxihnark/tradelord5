@@ -143,6 +143,7 @@ namespace TradeLord
 
         private static float StraightDays(float distance)
         {
+            DropIfNavalChanged();
             Speeds(out float land, out float sea);
             return distance / (Math.Max(land, sea) * 24f);
         }
