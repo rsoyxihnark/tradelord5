@@ -2187,7 +2187,7 @@ def the_paste_text_is_the_changelog_without_its_markup():
                           capture_output=True)
     if made.returncode != 0:
         return False
-    out = made.stdout.decode('utf-8').split('\n')
+    out = made.stdout.decode('utf-8').splitlines()
     said = section_entries(version)
     return (len(said) > 0 and out[0] == '[' + version + ']'
             and [line for line in out[1:] if line] == said
