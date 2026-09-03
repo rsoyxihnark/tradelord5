@@ -13,6 +13,7 @@ PROJ = [io.open(f, encoding='utf-8').read() for f in
         ['src/TradeLord.csproj', 'mcm/TradeLord.MCM.csproj']]
 PREFAB = io.open('TradeLord/GUI/Prefabs/TradeLordPanel.xml', encoding='utf-8').read()
 COMPAT = io.open('tools/compat/Program.cs', encoding='utf-8').read()
+SWEEP = io.open('tools/regression_sweep.py', encoding='utf-8').read()
 
 def panel_columns():
     import xml.etree.ElementTree as ET
@@ -154,19 +155,29 @@ def one_hard_dependency():
                           MANIFEST)
     return required == ['Bannerlord.Harmony']
 
+_lost = []
+
 def method_body(src, signature):
     i = src.find(signature)
+    j = src.find('{', i) if i >= 0 else -1
+    if j >= 0:
+        depth, k = 0, j
+        while k < len(src):
+            if src[k] == '{': depth += 1
+            elif src[k] == '}':
+                depth -= 1
+                if depth == 0: return src[i:k + 1]
+            k += 1
+    _lost.append(signature)
+    return ''
+
+def between(body, opening, closing):
+    i = body.find(opening)
     if i < 0:
-        raise LookupError('no method matching ' + repr(signature)
-                          + " - a check names a method that is no longer there")
-    j = src.index('{', i)
-    depth, k = 0, j
-    while True:
-        if src[k] == '{': depth += 1
-        elif src[k] == '}':
-            depth -= 1
-            if depth == 0: return src[i:k + 1]
-        k += 1
+        _lost.append(opening)
+        return ''
+    j = body.find(closing, i + len(opening))
+    return body[i + len(opening):j if j >= 0 else len(body)]
 
 def ordered(text, *needles):
     at = -1
@@ -569,7 +580,14 @@ def the_codec_is_covered_by_tests_the_build_runs():
             and 'InvariantCulture' not in TESTS)
 
 results = []
+_read = 0
 def chk(ver, claim, ok):
+    global _read
+    if len(_lost) > _read:
+        gone = ', '.join(sorted(set(_lost[_read:])))
+        _read = len(_lost)
+        ok = False
+        claim += ' - this rule reads ' + gone + ', which the source no longer has'
     results.append(ok)
     print(('  ok      ' if ok else '  BROKEN  ') + f"[{ver}] {claim}")
 
@@ -1114,10 +1132,10 @@ chk("1.5.4", "the source carries no comments",
     no_tracked_source_carries_a_comment())
 
 chk("1.5.5", "simulation mode mutates no per-visit state",
-    method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
-        .split("if (sim)")[1].split("continue;")[0].count("_soldThisVisit") == 0 and
-    method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
-        .split("if (sim)")[1].split("continue;")[0].count("_boughtThisVisit") == 0 and
+    between(method_body(S['Trading.cs'], "public static void ExecuteQuickSell"),
+            "if (sim)", "continue;").count("_soldThisVisit") == 0 and
+    between(method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"),
+            "if (sim)", "continue;").count("_boughtThisVisit") == 0 and
     "best case" in M and "nothing moves" in M)
 chk("1.5.6", "the log prefers the game's user folder over the module folder",
     log_prefers_the_user_folder())
@@ -1852,6 +1870,19 @@ chk("1.7.0", "the language setting opens the screen and starts on English",
     the_language_setting_leads_the_screen_and_starts_on_english())
 chk("1.7.0", "the language files are packed into the download",
     the_language_files_reach_the_download())
+
+def a_rule_that_names_missing_source_reports_itself_broken():
+    mark = len(_lost)
+    lost_body = method_body("class Sample { }", "private static void Absent")
+    lost_region = between("private static void Present() { }", "if (absent)", ";")
+    grew = len(_lost) - mark
+    del _lost[mark:]
+    return (lost_body == '' and lost_region == '' and grew == 2
+            and "if len(_lost) > _read:" in SWEEP
+            and "which the source no longer has" in SWEEP)
+
+chk("1.7.0", "a rule naming source that is no longer there reports itself broken, and every later rule is still read",
+    a_rule_that_names_missing_source_reports_itself_broken())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
