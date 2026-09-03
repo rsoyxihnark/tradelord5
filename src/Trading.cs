@@ -133,7 +133,7 @@ namespace TradeLord
             _auditedGeneration = Options.Generation;
             Options s = Options.Current;
             if (string.IsNullOrEmpty(s.NeverSellItems) && string.IsNullOrEmpty(s.AlwaysSellItems) &&
-                string.IsNullOrEmpty(s.NeverBuyItems)) return false;
+                string.IsNullOrEmpty(s.NeverBuyItems) && string.IsNullOrEmpty(s.AlwaysBuyItems)) return false;
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (ItemObject item in Items.All)
@@ -146,6 +146,7 @@ namespace TradeLord
             missed |= Unmatched("never sell", s.NeverSellItems, ids, names);
             missed |= Unmatched("always sell", s.AlwaysSellItems, ids, names);
             missed |= Unmatched("never buy", s.NeverBuyItems, ids, names);
+            missed |= Unmatched("always buy", s.AlwaysBuyItems, ids, names);
             return missed;
         }
 
@@ -304,10 +305,11 @@ namespace TradeLord
             Options s = Options.Current;
             if (item == null || item.NotMerchandise) { why = Block.NotMerchandise; return false; }
             if (Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)) { why = Block.NeverList; return false; }
-            if (s.NeverBuyGrain && item == DefaultItems.Grain) { why = Block.NeverList; return false; }
             if (IsLocked(lockedKeys, new EquipmentElement(item))) { why = Block.Locked; return false; }
 
-            if (!PolicyAllows(PolicyFor(item), buying: true)) { why = Block.CategoryPolicy; return false; }
+            bool always = Listed(s.AlwaysBuySet, item);
+            if (!always && s.NeverBuyGrain && item == DefaultItems.Grain) { why = Block.NeverList; return false; }
+            if (!always && !PolicyAllows(PolicyFor(item), buying: true)) { why = Block.CategoryPolicy; return false; }
             if (item.HasHorseComponent)
             {
                 if (IsTradableLivestock(item)) return true;

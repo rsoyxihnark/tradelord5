@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
@@ -82,6 +83,35 @@ namespace TradeLord.Mcm
         private Dropdown<string> _language =
             new Dropdown<string>(new[] { "English", "T\u00FCrk\u00E7e" }, Options.Current.Language);
 
+        private static readonly string[] PolicyWords =
+        {
+            "{=TL253}Leave alone", "{=TL254}Sell only", "{=TL255}Buy only", "{=TL256}Buy and sell"
+        };
+
+        private static readonly string[] BasisWords =
+        {
+            "{=TL257}Average of what you paid", "{=TL258}Last price you paid", "{=TL259}Cheapest market you know"
+        };
+
+        private Dropdown<string> _foodPolicy = Choice(PolicyWords, Options.Current.FoodPolicy);
+        private Dropdown<string> _craftingPolicy = Choice(PolicyWords, Options.Current.CraftingPolicy);
+        private Dropdown<string> _livestockPolicy = Choice(PolicyWords, Options.Current.LivestockPolicy);
+        private Dropdown<string> _costBasis = Choice(BasisWords, Options.Current.CostBasisMode);
+
+        private static Dropdown<string> Choice(string[] words, int picked) =>
+            new Dropdown<string>(Spoken(words), picked);
+
+        private static string[] Spoken(string[] words)
+        {
+            var said = new string[words.Length];
+            for (int i = 0; i < words.Length; i++) said[i] = Tongue.Plain(words[i]);
+            Guard.Run("Mcm.Choice", () =>
+            {
+                for (int i = 0; i < words.Length; i++) said[i] = Tongue.Text(words[i]).ToString();
+            });
+            return said;
+        }
+
         [SettingPropertyDropdown("{=TL250}Language", Order = 0, RequireRestart = false,
             HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This settings screen takes the new language the next time you open it. Town menu entries take it when you next load a campaign.")]
         [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
@@ -93,13 +123,38 @@ namespace TradeLord.Mcm
 
         internal void FollowLanguage()
         {
-            Options.Current.Language = Language.SelectedIndex;
-            Language.PropertyChanged += (sender, args) =>
+            Follows(Language, () => Options.Current.Language, picked => Options.Current.Language = picked);
+            Follows(FoodPolicy, () => Options.Current.FoodPolicy, picked => Options.Current.FoodPolicy = picked);
+            Follows(CraftingPolicy, () => Options.Current.CraftingPolicy, picked => Options.Current.CraftingPolicy = picked);
+            Follows(LivestockPolicy, () => Options.Current.LivestockPolicy, picked => Options.Current.LivestockPolicy = picked);
+            Follows(CostBasisMode, () => Options.Current.CostBasisMode, picked => Options.Current.CostBasisMode = picked);
+            Language.PropertyChanged += (sender, args) => Retell();
+            Retell();
+        }
+
+        private static void Follows(Dropdown<string> from, Func<int> held, Action<int> keep)
+        {
+            keep(from.SelectedIndex);
+            from.PropertyChanged += (sender, args) =>
             {
-                if (Options.Current.Language == Language.SelectedIndex) return;
-                Options.Current.Language = Language.SelectedIndex;
+                if (held() == from.SelectedIndex) return;
+                keep(from.SelectedIndex);
                 Options.Bump();
             };
+        }
+
+        private void Retell()
+        {
+            Retold(FoodPolicy, PolicyWords);
+            Retold(CraftingPolicy, PolicyWords);
+            Retold(LivestockPolicy, PolicyWords);
+            Retold(CostBasisMode, BasisWords);
+        }
+
+        private static void Retold(Dropdown<string> shown, string[] words)
+        {
+            shown.Clear();
+            shown.AddRange(Spoken(words));
         }
 
         [SettingPropertyBool("{=TL201}Live world prices (default)", Order = 0, RequireRestart = false,
@@ -212,20 +267,32 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL103}Action", GroupOrder = 3)]
         public int KeepFoodDays { get => Options.Current.KeepFoodDays; set { Options.Current.KeepFoodDays = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL222}Food policy (0 ignore, 1 sell only, 2 buy only, 3 buy and sell)", 0, 3, Order = 4, RequireRestart = false,
+        [SettingPropertyDropdown("{=TL222}Food policy", Order = 4, RequireRestart = false,
             HintText = "{=TL322}What automated trading may do with food. The days-of-supply reserve above is separate and still applies.")]
         [SettingPropertyGroup("{=TL103}Action", GroupOrder = 3)]
-        public int FoodPolicy { get => Options.Current.FoodPolicy; set { Options.Current.FoodPolicy = value; Options.Bump(); } }
+        public Dropdown<string> FoodPolicy
+        {
+            get => _foodPolicy;
+            set { _foodPolicy = value; Options.Current.FoodPolicy = value?.SelectedIndex ?? 0; Options.Bump(); }
+        }
 
-        [SettingPropertyInteger("{=TL223}Smithing material policy (0 ignore, 1 sell only, 2 buy only, 3 buy and sell)", 0, 3, Order = 5, RequireRestart = false,
-            HintText = "{=TL323}What automated trading may do with charcoal, hardwood, iron ore and ingots. Set 0 to keep smithing stock out of automated trading entirely.")]
+        [SettingPropertyDropdown("{=TL223}Smithing material policy", Order = 5, RequireRestart = false,
+            HintText = "{=TL323}What automated trading may do with charcoal, hardwood, iron ore and ingots. Pick Leave alone to keep smithing stock out of automated trading entirely.")]
         [SettingPropertyGroup("{=TL103}Action", GroupOrder = 3)]
-        public int CraftingPolicy { get => Options.Current.CraftingPolicy; set { Options.Current.CraftingPolicy = value; Options.Bump(); } }
+        public Dropdown<string> CraftingPolicy
+        {
+            get => _craftingPolicy;
+            set { _craftingPolicy = value; Options.Current.CraftingPolicy = value?.SelectedIndex ?? 0; Options.Bump(); }
+        }
 
-        [SettingPropertyInteger("{=TL224}Livestock policy (0 ignore, 1 sell only, 2 buy only, 3 buy and sell)", 0, 3, Order = 6, RequireRestart = false,
+        [SettingPropertyDropdown("{=TL224}Livestock policy", Order = 6, RequireRestart = false,
             HintText = "{=TL324}What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Mounts and pack animals are never bought or sold by policy and this setting does not affect them; only an explicit always-sell entry can move one.")]
         [SettingPropertyGroup("{=TL103}Action", GroupOrder = 3)]
-        public int LivestockPolicy { get => Options.Current.LivestockPolicy; set { Options.Current.LivestockPolicy = value; Options.Bump(); } }
+        public Dropdown<string> LivestockPolicy
+        {
+            get => _livestockPolicy;
+            set { _livestockPolicy = value; Options.Current.LivestockPolicy = value?.SelectedIndex ?? 0; Options.Bump(); }
+        }
 
         [SettingPropertyBool("{=TL225}Protect unique and crafted items", Order = 7, RequireRestart = false,
             HintText = "{=TL325}Never auto-trade unique or player-crafted items. Mounts and pack animals are protected by policy regardless of this setting; only an explicit always-sell entry can move those.")]
@@ -237,13 +304,17 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL103}Action", GroupOrder = 3)]
         public bool RespectLocks { get => Options.Current.RespectLocks; set { Options.Current.RespectLocks = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL227}Cost basis mode (0 avg paid, 1 last paid, 2 cheapest known)", 0, 2, Order = 9, RequireRestart = false,
-            HintText = "{=TL327}How profit is measured, and so how much Trade XP a sale earns. 0: average of what you paid. 1: last price you paid. 2: cheapest known buy price. Goods you never bought have no price you paid, so every mode values those at the cheapest market you know of; selling one below that earns no profit and no Trade XP.")]
+        [SettingPropertyDropdown("{=TL227}What a good counts as having cost you", Order = 9, RequireRestart = false,
+            HintText = "{=TL327}The price a sale is measured against, so it sets both the profit TradeLord reports and the Trade XP the sale earns. Anything you never bought, loot included, is valued at the cheapest market you know of whichever one you pick.")]
         [SettingPropertyGroup("{=TL103}Action", GroupOrder = 3)]
-        public int CostBasisMode { get => Options.Current.CostBasisMode; set { Options.Current.CostBasisMode = value; Options.Bump(); } }
+        public Dropdown<string> CostBasisMode
+        {
+            get => _costBasis;
+            set { _costBasis = value; Options.Current.CostBasisMode = value?.SelectedIndex ?? 0; Options.Bump(); }
+        }
 
         [SettingPropertyInteger("{=TL228}Sell loot up to tier (0 = off)", 0, 6, Order = 10, RequireRestart = false,
-            HintText = "{=TL328}Also sells weapons and armor of this tier and below. Locks and protections still apply.")]
+            HintText = "{=TL328}Also sells weapons and armor of this tier and below. Starts at tier 1, which is the gear looters and bandits drop. Locks and protections still apply.")]
         [SettingPropertyGroup("{=TL103}Action", GroupOrder = 3)]
         public int MaxLootTier { get => Options.Current.MaxLootTier; set { Options.Current.MaxLootTier = value; Options.Bump(); } }
 
@@ -311,6 +382,11 @@ namespace TradeLord.Mcm
             HintText = "{=TL340}Goods TradeLord must never buy. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 5)]
         public string NeverBuyItems { get => Options.Current.NeverBuyItems; set { Options.Current.NeverBuyItems = value; Options.Bump(); } }
+
+        [SettingPropertyText("{=TL252}Always buy (item ids or names, comma separated)", Order = 9, RequireRestart = false,
+            HintText = "{=TL352}Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 5)]
+        public string AlwaysBuyItems { get => Options.Current.AlwaysBuyItems; set { Options.Current.AlwaysBuyItems = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL241}Trade with villages", Order = 0, RequireRestart = false,
             HintText = "{=TL341}TradeLord trades in village menus as well as town menus, and villages join the price scans.")]
