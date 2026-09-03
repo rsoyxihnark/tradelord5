@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.0
+
+- The switches that decide when TradeLord sells and buys now say plainly what they do, instead of naming quick-sell and quick-buy entries the town menu no longer has.
+- Every other setting that still talked about quick-sell and quick-buy now names selling and buying instead, in English and in Turkish.
+- The auto-trade switch is gone, since it only read back the two switches above it and turned them on and off together.
+
 ## 1.8.0
 
 - A new setting stops quick-buy adding to a good once you already carry as many as you allow, so a stock of hundreds no longer grows every time you walk into a market.
