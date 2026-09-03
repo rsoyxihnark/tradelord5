@@ -2,7 +2,6 @@
 <base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="string">
 	<tags><tag language="English"/></tags>
 	<strings>
-		<string id="TL01" text="Quick-sell trade goods (TradeLord)"/>
 		<string id="TL02" text="TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit)."/>
 		<string id="TL20" text="Best sell prices"/>
 		<string id="TL21" text="Best buy prices"/>
@@ -13,9 +12,8 @@
 		<string id="TL07" text="TradeLord ledger"/>
 		<string id="TL08" text="No profitable routes within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."/>
 		<string id="TL09" text="Close"/>
-		<string id="TL10" text="Quick-buy trade goods (TradeLord)"/>
 		<string id="TL11" text="Consult the TradeLord ledger"/>
-		<string id="TL26" text="Quick-trade: sell, then buy (TradeLord)"/>
+		<string id="TL26" text="Trade here now (TradeLord)"/>
 		<string id="TL29" text="and {COUNT} more"/>
 		<string id="TL31" text="{COUNT} items"/>
 		<string id="TL13" text="[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit)."/>
@@ -67,6 +65,7 @@
 		<string id="TL79" text="~{DAYS} days"/>
 		<string id="TL81" text="TradeLord credited {GOLD} denars of profit to your Trade skill."/>
 		<string id="TL82" text="Cargo is full - TradeLord cannot buy here until you free up carry weight."/>
+		<string id="TL93" text="you are already carrying as many of these as you allow"/>
 		<string id="TL83" text="the village is down to its last of each good"/>
 		<string id="TL84" text="{ITEM}: buy {FROM} ({BUY} denars) -&gt; sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} days from here"/>
 		<string id="TL85" text="you are holding this cargo for a better market"/>
@@ -77,7 +76,9 @@
 		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
 		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
 		<string id="TL92" text="Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings."/>
+		<string id="TL251" text="Stop buying at this many held (0 = off)"/>
 		<string id="TL250" text="Language"/>
+		<string id="TL351" text="Once your party already carries this many of a good, quick-buy leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit."/>
 		<string id="TL350" text="The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This settings screen follows the language the game itself is set to. Town menu entries take the new language when you next load a campaign."/>
 		<string id="TL201" text="Live world prices (default)"/>
 		<string id="TL202" text="Observation shelf life (days, 0 = never expire)"/>
@@ -94,7 +95,7 @@
 		<string id="TL213" text="Color prices by world market"/>
 		<string id="TL214" text="Ledger panel hotkey (map screen)"/>
 		<string id="TL215" text="TradeLord button on the map screen"/>
-		<string id="TL216" text="Quick-sell option in town menu"/>
+		<string id="TL216" text="Trade entry in town menu"/>
 		<string id="TL217" text="Auto-sell on entry"/>
 		<string id="TL218" text="Auto-buy on entry"/>
 		<string id="TL219" text="Auto-trade (sell, then buy)"/>
@@ -143,7 +144,7 @@
 		<string id="TL313" text="Colors trade-good and livestock rows in the inventory by how this market's price compares with the best known market."/>
 		<string id="TL314" text="Key that opens the ledger panel on the campaign map. A single key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, e.g. &quot;Ctrl+T&quot;. This mod does not take keys away from the game, so a bare key the game also uses will trigger both actions. Use a modifier to avoid that."/>
 		<string id="TL315" text="A clickable TradeLord button on the right edge of the campaign map that opens the ledger panel. Turn OFF if it interferes with map clicks."/>
-		<string id="TL316" text="Shows the quick-sell entry in town and village menus. It also controls the quick-trade entry, which sells before it buys; with this off, neither appears."/>
+		<string id="TL316" text="Shows the single TradeLord trade entry in town and village menus, which sells and then buys in one go. Turn it off to leave the menu to trading done automatically as you arrive."/>
 		<string id="TL317" text="Sells policy-approved goods automatically when you enter a market. Trade XP is awarded."/>
 		<string id="TL318" text="Buys profitable goods automatically when you enter a market, after any auto-sell. Turning this on also enables quick-buy."/>
 		<string id="TL319" text="Full automation. Reads as ON exactly when both toggles above are ON, and switches them together. Selling runs first, so profit and Trade XP are awarded before any buying. With this ON the separate quick-sell and quick-buy menu entries are hidden; quick-trade remains for manual re-runs."/>
