@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.12.1
+
+- A market where TradeLord traded nothing at all now says so in one line instead of two, naming what stopped it.
+- A market where TradeLord did trade no longer also tells you the other half of the pass moved nothing.
+
 ## 1.12.0
 
 - TradeLord now tells you on screen why it traded nothing at a market, when it trades as you arrive, instead of writing the reason to its log alone.
