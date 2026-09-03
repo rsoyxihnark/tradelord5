@@ -84,6 +84,8 @@ namespace TradeLord
 
         public int BuyValueCapPerItem = 0;
 
+        public int MaxHeldPerItem = 0;
+
         public int MaxSpendPerVisit = 1000;
 
         public float ResaleSafetyFactor = 0.85f;

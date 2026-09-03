@@ -1831,7 +1831,8 @@ def every_line_the_mod_says_can_change_language():
             and said.count('Tongue.Text(') > 50
             and 'if (Options.Current.Language == English) return new TextObject(written);'
                 in method_body(S['Tongue.cs'], "internal static TextObject Text")
-            and method_body(S['Trading.cs'], "private void OnSessionLaunched").count('Tongue.Text("{=TL') == 4)
+            and (lambda b: b.count('Tongue.Text("{=TL') == b.count('starter.AddGameMenuOption(') > 0)
+                (method_body(S['Trading.cs'], "private void OnSessionLaunched")))
 
 def the_language_setting_leads_the_screen_and_starts_on_english():
     return ('[SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]' in M
@@ -1861,6 +1862,35 @@ def the_gate_lets_a_behaviour_neutral_change_through_but_never_a_version():
                         "so it writes no changelog entry",
                         'SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")',
                         "a [no release] commit may not ship a version"))
+
+def a_good_you_already_hold_enough_of_is_not_bought_again():
+    body = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
+    return ("int holdCap = Options.Current.MaxHeldPerItem;" in body
+            and "if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }" in body
+            and "held >= Options.Current.MaxHeldPerItem) { tally.Note(Block.HeldEnough); break; }" in body
+            and body.count("held++;") == 2
+            and "Block.HeldEnough" in method_body(S['Trading.cs'], "internal static TextObject Phrase"))
+
+def the_holding_cap_leaves_selling_alone():
+    return ("MaxHeldPerItem" not in method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
+            and "MaxHeldPerItem" not in method_body(S['Trading.cs'], "internal static bool MaySell")
+            and "MaxHeldPerItem" not in S['Ledger.cs'])
+
+def the_town_menu_carries_one_trade_entry():
+    body = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    return (body.count("starter.AddGameMenuOption(") == 2
+            and '"tradelord_quicktrade"' in body
+            and '"tradelord_report"' in body
+            and '"tradelord_quicksell"' not in body
+            and '"tradelord_quickbuy"' not in body
+            and ordered(body, '"tradelord_quicktrade"',
+                        "ExecuteQuickSell(Settlement.CurrentSettlement);",
+                        "ExecuteQuickBuy(Settlement.CurrentSettlement);"))
+
+def the_one_entry_still_shows_when_buying_is_off():
+    body = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    return ("return Options.Current.QuickSellMenu && CanTradeHere(Settlement.CurrentSettlement);" in body
+            and "Options.Current.AutoTradeBoth" not in body)
 
 def the_rules_name_the_one_code_change_that_writes_no_entry():
     return ("moves working code without altering a single thing the user sees or gets" in RULES
@@ -1949,6 +1979,15 @@ chk("1.7.0", "a change that alters nothing a user sees may skip the changelog, b
     the_gate_lets_a_behaviour_neutral_change_through_but_never_a_version())
 chk("1.7.0", "the working rules name that one case, and still refuse an invented entry",
     the_rules_name_the_one_code_change_that_writes_no_entry())
+
+chk("1.8.0", "a good you already hold enough of is left alone, on a real pass and a dry run alike",
+    a_good_you_already_hold_enough_of_is_not_bought_again())
+chk("1.8.0", "the holding cap binds buying only, never selling",
+    the_holding_cap_leaves_selling_alone())
+chk("1.8.0", "the town menu carries one trade entry, which sells before it buys",
+    the_town_menu_carries_one_trade_entry())
+chk("1.8.0", "that entry still shows when buying is switched off, so selling by hand stays reachable",
+    the_one_entry_still_shows_when_buying_is_off())
 chk("1.6.32", "a good named on an item list never drags in a second good whose whole name is one of its words",
     a_written_word_stands_for_an_id_and_never_for_another_goods_name())
 chk("1.6.32", "a route's spending caps are spent unit by unit, the way a buying pass spends them",

@@ -2,7 +2,6 @@
 <base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="string">
 	<tags><tag language="Türkçe"/></tags>
 	<strings>
-		<string id="TL01" text="Ticaret mallarını hızlı sat (TradeLord)"/>
 		<string id="TL02" text="TradeLord {ITEMS} sattı, {GOLD} dinar ({PROFIT} kâr)."/>
 		<string id="TL20" text="En iyi satış fiyatları"/>
 		<string id="TL21" text="En iyi alış fiyatları"/>
@@ -13,9 +12,8 @@
 		<string id="TL07" text="TradeLord defteri"/>
 		<string id="TL08" text="Yol süresi sınırlarınız içinde kârlı bir rota yok. Bilgi ayarlarından sınırları yükseltin ya da daha çok pazarın yakınına gidin."/>
 		<string id="TL09" text="Kapat"/>
-		<string id="TL10" text="Ticaret mallarını hızlı al (TradeLord)"/>
 		<string id="TL11" text="TradeLord defterine bak"/>
-		<string id="TL26" text="Hızlı ticaret: önce sat, sonra al (TradeLord)"/>
+		<string id="TL26" text="Burada hemen ticaret yap (TradeLord)"/>
 		<string id="TL29" text="ve {COUNT} tane daha"/>
 		<string id="TL31" text="{COUNT} parça"/>
 		<string id="TL13" text="[Benzetim, en iyi durum] TradeLord {ITEMS} satardı, {GOLD} dinar ({PROFIT} kâr)."/>
@@ -67,6 +65,7 @@
 		<string id="TL79" text="~{DAYS} gün"/>
 		<string id="TL81" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi."/>
 		<string id="TL82" text="Yük dolu: siz yer açana kadar TradeLord burada bir şey alamaz."/>
+		<string id="TL93" text="bu maldan izin verdiğiniz kadarını zaten taşıyorsunuz"/>
 		<string id="TL83" text="köyün her maldan son parçası kaldı"/>
 		<string id="TL84" text="{ITEM}: {FROM} şehrinden al ({BUY} dinar) -&gt; {TO} şehrinde sat ({SELL})  x{QTY} = +{PROFIT} dinar, buradan ~{DAYS} gün"/>
 		<string id="TL85" text="bu yükü daha iyi bir pazar için tutuyorsunuz"/>
@@ -77,7 +76,9 @@
 		<string id="TL90" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde rota yok. Daha çok pazar gezin ya da Bilgi ayarlarından sınırları yükseltin."/>
 		<string id="TL91" text="TradeLord mal listelerinizden birindeki bir girdi bu oyundaki hiçbir mala uymuyor ve hiçbir işe yaramıyor. Hangisi olduğunu TradeLord.log yazıyor."/>
 		<string id="TL92" text="Keseniz {GOLD} dinar, altın rezerviniz {RESERVE}, bu yüzden TradeLord burada bir şey almayacak. Biraz yük satın ya da ayarlardan rezervi düşürün."/>
+		<string id="TL251" text="Elinizde bu kadar varken almayı bırak (0 = kapalı)"/>
 		<string id="TL250" text="Dil"/>
+		<string id="TL351" text="Kervanınız bir maldan bu kadarını taşıdığında hızlı alım o malı bırakır ve parayı başka bir şeye harcar. Şu anda taşıdığınız miktarı ve bu ziyarette alınanları birlikte sayar. Satışı etkilemez. 0 = sınır yok."/>
 		<string id="TL350" text="TradeLord'un oyun içinde konuştuğu dil: ticaret iletileri, defter paneli, fiyat ipuçları ve şehir menüsü girdileri. Varsayılan İngilizce. Bu ayar ekranı oyunun kendi dilini izler. Şehir menüsü girdileri yeni dile, bir sonraki oyun yüklemenizde geçer."/>
 		<string id="TL201" text="Canlı dünya fiyatları (varsayılan)"/>
 		<string id="TL202" text="Gözlem raf ömrü (gün, 0 = hiç eskimez)"/>
@@ -94,7 +95,7 @@
 		<string id="TL213" text="Fiyatları dünya pazarına göre renklendir"/>
 		<string id="TL214" text="Defter paneli kısayolu (harita ekranı)"/>
 		<string id="TL215" text="Harita ekranında TradeLord düğmesi"/>
-		<string id="TL216" text="Şehir menüsünde hızlı satış seçeneği"/>
+		<string id="TL216" text="Şehir menüsünde ticaret girdisi"/>
 		<string id="TL217" text="Girişte otomatik satış"/>
 		<string id="TL218" text="Girişte otomatik alış"/>
 		<string id="TL219" text="Otomatik ticaret (önce sat, sonra al)"/>
@@ -143,7 +144,7 @@
 		<string id="TL313" text="Envanterdeki ticaret malı ve hayvan satırlarını, bu pazarın fiyatının bilinen en iyi pazarla karşılaştırmasına göre renklendirir."/>
 		<string id="TL314" text="Sefer haritasında defter panelini açan tuş. T, Y ya da F5 gibi tek bir tuş adı, istenirse önünde Ctrl, Alt ya da Shift ile, örneğin &quot;Ctrl+T&quot;. Bu mod oyundan tuş almaz, bu yüzden oyunun da kullandığı yalın bir tuş iki işi birden tetikler. Bunu önlemek için bir değiştirici tuş kullanın."/>
 		<string id="TL315" text="Sefer haritasının sağ kenarında, defter panelini açan tıklanabilir bir TradeLord düğmesi. Harita tıklamalarına karışıyorsa KAPATIN."/>
-		<string id="TL316" text="Şehir ve köy menülerinde hızlı satış girdisini gösterir. Önce satıp sonra alan hızlı ticaret girdisini de bu ayar yönetir; kapalıyken ikisi de görünmez."/>
+		<string id="TL316" text="Şehir ve köy menülerinde, önce satıp sonra alan tek TradeLord ticaret girdisini gösterir. Menüyü vardığınızda kendiliğinden yapılan ticarete bırakmak için kapatın."/>
 		<string id="TL317" text="Bir pazara girdiğinizde kurallarınızın onayladığı malları kendiliğinden satar. Ticaret tecrübesi verilir."/>
 		<string id="TL318" text="Bir pazara girdiğinizde, varsa otomatik satıştan sonra kârlı malları kendiliğinden alır. Bunu açmak hızlı alışı da açar."/>
 		<string id="TL319" text="Tam otomasyon. Yukarıdaki iki anahtar da AÇIK olduğunda AÇIK görünür ve ikisini birlikte çevirir. Önce satış çalışır, böylece kâr ve Ticaret tecrübesi alıştan önce verilir. Bu AÇIKKEN ayrı hızlı satış ve hızlı alış menü girdileri gizlenir; elle yeniden çalıştırmak için hızlı ticaret kalır."/>
