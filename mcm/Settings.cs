@@ -1,3 +1,7 @@
+using System.Collections.Generic;
+using System.Reflection;
+using HarmonyLib;
+using MCM.Abstractions;
 using MCM.Abstractions.Attributes;
 using MCM.Abstractions.Attributes.v2;
 using MCM.Abstractions.Base.Global;
@@ -12,6 +16,50 @@ namespace TradeLord.Mcm
             Settings instance = Settings.Instance;
             Settings.Loaded = true;
             instance?.FollowLanguage();
+            Guard.Run("Mcm.ScreenTongue", ScreenTongue.Follow);
+        }
+    }
+
+    internal static class ScreenTongue
+    {
+        private static AccessTools.FieldRef<SettingsPropertyDefinition, string> _name, _hint, _group;
+
+        internal static void Follow()
+        {
+            _name = Reaches("<DisplayName>k__BackingField");
+            _hint = Reaches("<HintText>k__BackingField");
+            _group = Reaches("<GroupName>k__BackingField");
+            ConstructorInfo built = AccessTools.Constructor(typeof(SettingsPropertyDefinition), new[]
+            {
+                typeof(IEnumerable<IPropertyDefinitionBase>), typeof(IPropertyGroupDefinition),
+                typeof(IRef), typeof(char)
+            });
+            if (_name == null || _hint == null || _group == null || built == null)
+            {
+                Log.Write("the settings screen could not be wired to TradeLord's own language - it follows the game's language instead");
+                return;
+            }
+            new Harmony(SubModule.HarmonyId + ".mcm").Patch(built,
+                postfix: new HarmonyMethod(typeof(ScreenTongue), nameof(Spoken)));
+        }
+
+        private static AccessTools.FieldRef<SettingsPropertyDefinition, string> Reaches(string field)
+        {
+            FieldInfo found = AccessTools.Field(typeof(SettingsPropertyDefinition), field);
+            return found == null ? null : AccessTools.FieldRefAccess<SettingsPropertyDefinition, string>(found);
+        }
+
+        private static void Spoken(SettingsPropertyDefinition __instance)
+        {
+            Say(_name, __instance);
+            Say(_hint, __instance);
+            Say(_group, __instance);
+        }
+
+        private static void Say(AccessTools.FieldRef<SettingsPropertyDefinition, string> at, SettingsPropertyDefinition of)
+        {
+            string said = Tongue.Said(at(of));
+            if (said != null) at(of) = said;
         }
     }
 
@@ -35,7 +83,7 @@ namespace TradeLord.Mcm
             new Dropdown<string>(new[] { "English", "T\u00FCrk\u00E7e" }, Options.Current.Language);
 
         [SettingPropertyDropdown("{=TL250}Language", Order = 0, RequireRestart = false,
-            HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This settings screen follows the language the game itself is set to. Town menu entries take the new language when you next load a campaign.")]
+            HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This settings screen takes the new language the next time you open it. Town menu entries take it when you next load a campaign.")]
         [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
         public Dropdown<string> Language
         {
