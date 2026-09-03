@@ -122,8 +122,9 @@ namespace TradeLord
             item == DefaultItems.IronIngot4 || item == DefaultItems.IronIngot5 || item == DefaultItems.IronIngot6;
 
         internal static bool Listed(ItemList list, ItemObject item) =>
-            item != null && (list.HasId(item.StringId) ||
-                             (item.Name != null && list.HasName(item.Name.ToString())));
+            item != null && !list.Empty &&
+            (list.HasId(item.StringId) ||
+             (item.Name != null && list.HasName(item.Name.ToString())));
 
         private static int _auditedGeneration = -1;
 
@@ -564,7 +565,8 @@ namespace TradeLord
                     if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
                     ReportStalledPasses();
                 }
-                if (CanTradeHere(settlement))
+                if (CanTradeHere(settlement) &&
+                    (Options.Current.AutoBuyOnEntry || Options.Current.QuickSellMenu))
                 {
                     if (!WarnPurseBelowReserve()) WarnNoRoomToCarry();
                 }
@@ -1228,7 +1230,7 @@ namespace TradeLord
                 long total = 0;
                 foreach (var (item, amount) in cargo)
                     total += (long)town.GetItemPrice(item, party, true) * amount;
-                if (town.Gold > 0 && total > town.Gold) total = town.Gold;
+                if (total > town.Gold) total = town.Gold;
                 if (total > bestValue) { bestValue = total; bestTown = s; }
             }
             return bestTown;
