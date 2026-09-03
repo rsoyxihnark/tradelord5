@@ -14,6 +14,7 @@ PROJ = [io.open(f, encoding='utf-8').read() for f in
 PREFAB = io.open('TradeLord/GUI/Prefabs/TradeLordPanel.xml', encoding='utf-8').read()
 COMPAT = io.open('tools/compat/Program.cs', encoding='utf-8').read()
 SWEEP = io.open('tools/regression_sweep.py', encoding='utf-8').read()
+NEXUS = io.open('tools/nexus_changelog.py', encoding='utf-8').read()
 
 def panel_columns():
     import xml.etree.ElementTree as ET
@@ -157,17 +158,75 @@ def one_hard_dependency():
 
 _lost = []
 
+_masked = {}
+
+def code_only(src):
+    if src in _masked:
+        return _masked[src]
+    out, i, n = list(src), 0, len(src)
+
+    def blank(start, stop):
+        for k in range(start, stop):
+            if out[k] != '\n':
+                out[k] = ' '
+
+    while i < n:
+        c = src[i]
+        if c == '"':
+            if src.startswith('\"\"\"', i):
+                j = src.find('\"\"\"', i + 3)
+                j = n if j < 0 else j + 3
+            else:
+                j = i + 1
+                while j < n and src[j] != '"':
+                    j += 2 if src[j] == '\\' else 1
+                j = min(j + 1, n)
+            blank(i, j); i = j; continue
+        if c in '@$' and i + 1 < n and src[i + 1] == '"':
+            j, depth = i + 2, 0
+            while j < n:
+                if src[j] == '\\' and c == '$':
+                    j += 2; continue
+                if src[j] == '{' and c == '$':
+                    depth += 1
+                elif src[j] == '}' and c == '$' and depth:
+                    depth -= 1
+                elif src[j] == '"' and not depth:
+                    if c == '@' and j + 1 < n and src[j + 1] == '"':
+                        j += 2; continue
+                    j += 1; break
+                j += 1
+            blank(i, j); i = j; continue
+        if c == "'":
+            j = i + 1
+            while j < n and src[j] != "'":
+                j += 2 if src[j] == '\\' else 1
+            j = min(j + 1, n)
+            blank(i, j); i = j; continue
+        if src.startswith('//', i):
+            j = src.find('\n', i)
+            j = n if j < 0 else j
+            blank(i, j); i = j; continue
+        if src.startswith('/*', i):
+            j = src.find('*/', i + 2)
+            j = n if j < 0 else j + 2
+            blank(i, j); i = j; continue
+        i += 1
+    _masked[src] = ''.join(out)
+    return _masked[src]
+
 def method_body(src, signature):
     i = src.find(signature)
-    j = src.find('{', i) if i >= 0 else -1
-    if j >= 0:
-        depth, k = 0, j
-        while k < len(src):
-            if src[k] == '{': depth += 1
-            elif src[k] == '}':
-                depth -= 1
-                if depth == 0: return src[i:k + 1]
-            k += 1
+    if i >= 0:
+        code = code_only(src)
+        j = code.find('{', i)
+        if j >= 0:
+            depth = 0
+            for k in range(j, len(code)):
+                if code[k] == '{': depth += 1
+                elif code[k] == '}':
+                    depth -= 1
+                    if depth == 0: return src[i:k + 1]
     _lost.append(signature)
     return ''
 
@@ -2084,6 +2143,68 @@ chk("1.11.0", "a good on the always-buy list clears the policies and the grain s
     a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists())
 chk("1.11.0", "looted gear is cleared from the first tier out of the box, and the hint says so",
     looted_gear_is_cleared_from_the_first_tier_by_default())
+
+def a_brace_inside_text_is_not_read_as_the_end_of_a_method():
+    sample = ("class Sample {\n"
+              "    void One() { char c = '}'; string s = \"}\"; int a = 1; }\n"
+              "    void Two() { int b = 2; }\n"
+              "    void Three() { int d = 3; }\n"
+              "}\n")
+    mark = len(_lost)
+    one = method_body(sample, "void One")
+    two = method_body(sample, "void Two")
+    lined = "class S {\n    void Four() { int e = 4; // } and /* } too\n    }\n}\n"
+    blocked = "class S {\n    void Five() { int f = 5; /* } */ }\n}\n"
+    commented = method_body(lined, "void Four")
+    spanned = method_body(blocked, "void Five")
+    grew = len(_lost) - mark
+    return (grew == 0
+            and one == "void One() { char c = '}'; string s = \"}\"; int a = 1; }"
+            and two == "void Two() { int b = 2; }"
+            and commented == "void Four() { int e = 4; // } and /* } too\n    }"
+            and spanned == "void Five() { int f = 5; /* } */ }"
+            and code_only(sample).count('}') == sample.count('}') - 2)
+
+chk("1.11.0", "a brace inside a string, a character or a comment is not read as the end of a method",
+    a_brace_inside_text_is_not_read_as_the_end_of_a_method())
+
+def section_entries(head):
+    body = CHANGES.split('## ' + head, 1)[1].split('\n## ', 1)[0]
+    return [line[2:] for line in body.split('\n') if line.startswith('- ')]
+
+def every_changelog_entry_stands_on_one_line():
+    loose = [line for line in CHANGES.split('\n')
+             if line.strip() and not line.startswith('## ') and not line.startswith('- ')
+             and line != '# Changelog' and line != '---']
+    entries = [line for line in CHANGES.split('\n') if line.startswith('- ')]
+    return (len(entries) > 300 and len(loose) == 1
+            and loose[0].startswith('The versions below are'))
+
+def the_paste_text_is_the_changelog_without_its_markup():
+    import subprocess
+    version = module_version()
+    made = subprocess.run([sys.executable, 'tools/nexus_changelog.py', version],
+                          capture_output=True)
+    if made.returncode != 0:
+        return False
+    out = made.stdout.decode('utf-8').split('\n')
+    said = section_entries(version)
+    return (len(said) > 0 and out[0] == '[' + version + ']'
+            and [line for line in out[1:] if line] == said
+            and "sections(text)" in NEXUS)
+
+def a_version_that_has_not_shipped_is_refused_by_the_paste_tool():
+    import subprocess
+    made = subprocess.run([sys.executable, 'tools/nexus_changelog.py', '99.99.99'],
+                          capture_output=True)
+    return made.returncode != 0 and b'no section for 99.99.99' in made.stderr
+
+chk("1.11.0", "every changelog entry stands on one line, which is what a Nexus entry takes",
+    every_changelog_entry_stands_on_one_line())
+chk("1.11.0", "the paste text for the shipped version is its changelog entries with the markup dropped",
+    the_paste_text_is_the_changelog_without_its_markup())
+chk("1.11.0", "the paste tool refuses a version the changelog does not carry",
+    a_version_that_has_not_shipped_is_refused_by_the_paste_tool())
 
 def a_rule_that_names_missing_source_reports_itself_broken():
     mark = len(_lost)
