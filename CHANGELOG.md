@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.10.0
+
+- The settings screen now reads in the language you picked in TradeLord's own Language setting, instead of the language the game itself is set to.
+- The screen takes a new language the next time you open it, and the note under the Language setting now says so.
+
 ## 1.9.1
 
 - The ledger panel now opens with T instead of L, which the game already uses for one of its own screens.
