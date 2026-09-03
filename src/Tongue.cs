@@ -20,6 +20,11 @@ namespace TradeLord
             return new TextObject(said ?? written);
         }
 
+        internal static string Said(string written)
+        {
+            return Options.Current.Language == English ? null : Translated(Id(written));
+        }
+
         private static string Id(string written)
         {
             if (written == null || !written.StartsWith("{=")) return null;
