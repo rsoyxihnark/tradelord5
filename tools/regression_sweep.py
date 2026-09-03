@@ -256,6 +256,13 @@ def ordered_last(text, *needles):
         at = found
     return True
 
+def every_switch_keeps_to_its_own_value():
+    for name in re.findall(r'public\s+bool\s+(\w+)\s*(?:\{|$)', M):
+        body = method_body(M, "public bool " + name)
+        if body.count("Options.Current.") != body.count("Options.Current." + name):
+            return False
+    return "Options.Bump();" in M
+
 def log_prefers_the_user_folder():
     body = method_body(S['Support.cs'], "private static List<string> Candidates")
     docs = body.find('"Mount and Blade II Bannerlord"')
@@ -717,9 +724,13 @@ chk("1.3.2", "ExcludeHostileTowns blocks trading, not just scans",
 chk("1.3.2", "ScanRadius applied in observed mode",
     "if (!WithinRadius(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "!Eligible(town, out float lower)" in S['Ledger.cs'])
-chk("1.9.0", "turning on buying as you arrive turns buying on too, so the pair can never disagree",
-    "if (value && Loaded) Options.Current.EnableBuying = true;" in M and
-    "AutoTradeBoth" not in M and "AutoTradeBoth" not in S['Options.cs'])
+chk("1.13.0", "no switch quietly writes another one, so what you set is what is kept",
+    "EnableBuying" not in M and "EnableBuying" not in S['Options.cs'] and
+    "EnableBuying" not in S['Trading.cs'] and "Loaded" not in M and
+    "AutoTradeBoth" not in M and "AutoTradeBoth" not in S['Options.cs'] and
+    all("Options.Current." + other not in body
+        for name, other in (("AutoBuyOnEntry", "AutoSellOnEntry"), ("AutoSellOnEntry", "AutoBuyOnEntry"))
+        for body in [method_body(M, "public bool " + name)]))
 chk("1.3.2", "zero-gold purchase not recorded",
     re.search(r'if \(cost == 0\) break;[\s\S]{0,80}RecordPurchase', S['Trading.cs']) is not None)
 chk("1.3.2", "panel tracks a set of pins", "_panelPins = new HashSet<Settlement>" in S['Panel.cs'])
@@ -776,8 +787,8 @@ chk("1.3.9", "panel respects locks", "ISet<string> locked = TradePolicy.LockedKe
 chk("1.3.9", "summary names the six biggest by gold",
     "byValue.Sort((x, y) => y.Value.gold.CompareTo(x.Value.gold));" in S['Trading.cs'])
 chk("1.3.9", "null item lists tolerated", '(src ?? "")' in S['Options.cs'])
-chk("1.3.10", "automation setters gated on Loaded (what makes an MCM load order-independent)",
-    "if (value && Loaded) Options.Current.EnableBuying = true;" in M)
+chk("1.13.0", "every switch reads and writes its own value only, so load order cannot matter",
+    every_switch_keeps_to_its_own_value())
 chk("1.3.10", "hotkey rejects non-key text", "Enum.IsDefined(typeof(InputKey), k)" in S['Panel.cs'])
 chk("1.3.11", "quest items never sold", "el.EquipmentElement.IsQuestItem" in S['Trading.cs'])
 chk("1.3.11", "NotMerchandise never sold",
@@ -791,8 +802,10 @@ chk("1.3.12", "NotMerchandise on the buy side",
     "item.NotMerchandise" in method_body(S['Trading.cs'], "internal static bool MayBuy"))
 chk("1.3.13", "buy shelf ordered by margin", "stock.Sort((x, y) => y.margin.CompareTo(x.margin));" in S['Trading.cs'])
 chk("1.3.13", "cost basis read once per stack", "ProfitAcceptable(int costBasis, int townSellPrice)" in S['Trading.cs'])
-chk("1.3.13", "MCM automation setters idempotent",
-    "if (value == Options.Current.AutoBuyOnEntry) return;" in M)
+chk("1.13.0", "the automation switches are plain switches like the rest, with nothing behind them",
+    "if (value == Options.Current.AutoBuyOnEntry) return;" not in M and
+    M.count("set { Options.Current.AutoBuyOnEntry = value; Options.Bump(); } }") == 1 and
+    M.count("set { Options.Current.AutoSellOnEntry = value; Options.Bump(); } }") == 1)
 chk("1.3.13", "caravan pressure is one pass",
     "internal static Dictionary<Settlement, int> CaravanPressure()" in S['Ledger.cs'])
 chk("1.3.13", "main-party check ahead of the guard",
@@ -1445,9 +1458,9 @@ chk("1.6.6", "the ledger popup builds its route lines from a translatable string
     '"{=TL84}{ITEM}: buy {FROM}' in S['Trading.cs'] and
     'r.Item.Name + ": buy "' not in S['Trading.cs'] and
     "TL84" in strings_declared())
-chk("1.9.0", "a value the settings file carries is not overwritten while the screen is still loading",
-    "internal static bool Loaded;" in M and "Settings.Loaded = true;" in M and
-    "if (value && Loaded) Options.Current.EnableBuying = true;" in M)
+chk("1.13.0", "a value the settings file carries is never overwritten as the screen loads",
+    "internal static bool Loaded;" not in M and "Settings.Loaded" not in M
+    and every_switch_keeps_to_its_own_value())
 
 chk("1.6.7", "the Trade XP line reports the denars of profit it hands the skill system, the number it actually passes",
     (lambda b: 'earned.SetTextVariable("GOLD", xp);' in b
@@ -2102,18 +2115,36 @@ chk("1.8.0", "the holding cap binds buying only, never selling",
     the_holding_cap_leaves_selling_alone())
 chk("1.8.0", "the town menu carries one trade entry, which sells before it buys",
     the_town_menu_carries_one_trade_entry())
-chk("1.8.0", "that entry still shows when buying is switched off, so selling by hand stays reachable",
+chk("1.8.0", "the trade entry shows on its own switch alone, so trading by hand stays reachable",
     the_one_entry_still_shows_when_buying_is_off())
 
+def selling_and_buying_close_the_screen():
+    seen = []
+    for b in setting_blocks():
+        g = re.search(r'\[SettingPropertyGroup\("\{=TL\d+\}([^"]+)",\s*GroupOrder = (\d+)\)\]', b)
+        if g is None:
+            return False
+        pair = (int(g.group(2)), g.group(1))
+        if pair not in seen:
+            seen.append(pair)
+    seen.sort()
+    return (len(seen) == 7
+            and [name for _, name in seen][-2:] == ['Selling', 'Buying']
+            and seen[-1][0] - seen[-2][0] == 1
+            and '{=TL103}Selling' in M and '{=TL103}Action' not in M
+            and 'Selling' == spoken(ENGLISH)['TL103'])
+
 def the_switches_say_what_they_do():
-    return ("Buy as well as sell" in M and "Sell automatically as you arrive" in M
-            and "Buy automatically as you arrive" in M
+    return ("{=TL217}Auto sell" in M and "{=TL218}Auto buy" in M
+            and "as well as sell" not in M
             and "quick-buy" not in M and "quick-sell" not in M
             and "Auto-trade" not in M
             and M.count("SettingPropertyGroup(\"{=TL104}Automation\"") == 2)
 
 chk("1.9.0", "the switches name selling and buying plainly, and none names an entry the menu no longer has",
     the_switches_say_what_they_do())
+chk("1.13.0", "selling and buying are the last two groups on the screen, side by side",
+    selling_and_buying_close_the_screen())
 chk("1.6.32", "a good named on an item list never drags in a second good whose whole name is one of its words",
     a_written_word_stands_for_an_id_and_never_for_another_goods_name())
 chk("1.6.32", "a route's spending caps are spent unit by unit, the way a buying pass spends them",
