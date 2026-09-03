@@ -493,6 +493,37 @@ def a_silent_pass_still_names_what_stopped_it():
             and "if (!quiet)" not in sell and "if (!quiet)" not in buy
             and "PurseHeldItBack" not in S['Trading.cs'])
 
+def a_market_that_traded_nothing_is_reported_once():
+    report = method_body(S['Trading.cs'], "private static void ReportStalledPasses")
+    entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
+    launched = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    return (report.count("Toast(none);") == 1
+            and ordered(report, 'Tongue.Text("{=TL94}Nothing traded here - {REASON}.")',
+                        'Tongue.Text("{=TL95}Nothing sold here - {REASON}, '
+                        'and nothing bought - {SECOND}.")',
+                        'Tongue.Text("{=TL32}', 'Tongue.Text("{=TL33}', 'Toast(none);')
+            and 'TL94' in strings_declared() and 'TL95' in strings_declared()
+            and S['Trading.cs'].count("ReportStalledPasses();") == 2
+            and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
+                        "ExecuteQuickBuy(settlement, quiet: true)", "ReportStalledPasses();")
+            and ordered(launched, "ExecuteQuickSell(Settlement.CurrentSettlement);",
+                        "ExecuteQuickBuy(Settlement.CurrentSettlement);", "ReportStalledPasses();"))
+
+def a_market_that_traded_something_drops_the_empty_lines():
+    report = method_body(S['Trading.cs'], "private static void ReportStalledPasses")
+    sell = method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
+    buy = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
+    reset = method_body(S['Trading.cs'], "private static void ResetVisit")
+    return ("if (moved || (!sell.HasValue && !buy.HasValue)) return;" in report
+            and ordered(report, "bool moved = _runMovedGoods;", "_sellStalled = null;",
+                        "_buyStalled = null;", "_runMovedGoods = false;", "if (moved ||")
+            and "_runMovedGoods = true;" in sell and "_runMovedGoods = true;" in buy
+            and "if (!Muted(quiet)) NoteStalled(selling: true, tally.Dominant());" in sell
+            and "if (!Muted(quiet)) NoteStalled(selling: false, tally.Dominant());" in buy
+            and "{=TL32}" not in sell and "{=TL33}" not in buy
+            and all(field in reset for field in
+                    ("_runMovedGoods = false;", "_sellStalled = null;", "_buyStalled = null;")))
+
 def the_item_tooltip_does_not_announce_the_mod():
     body = method_body(S['TooltipPatches.cs'], "internal static void Append")
     return ("{=TL07}" not in body
@@ -1041,7 +1072,9 @@ chk("1.5.0", "the food reserve is not a trading policy and is not governed by on
 chk("1.5.0", "a pass that moves nothing names the rule that stopped it",
     'Tongue.Text("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
     'Tongue.Text("{=TL33}Nothing bought here - {REASON}.")' in S['Trading.cs'] and
-    S['Trading.cs'].count("BlockTally.Phrase(tally.Dominant())") == 2)
+    S['Trading.cs'].count("NoteStalled(selling: ") == 2 and
+    method_body(S['Trading.cs'],
+                "private static void ReportStalledPasses").count("BlockTally.Phrase(") == 4)
 chk("1.5.0", "both gates report a reason whenever they refuse",
     method_body(S['Trading.cs'], "internal static bool MaySell").count("why = Block.") >= 6 and
     method_body(S['Trading.cs'], "internal static bool MayBuy").count("why = Block.") >= 5)
@@ -1655,6 +1688,10 @@ chk("1.6.22", "every numeric setting that switches off at zero says so on its ow
     every_numeric_setting_that_switches_off_at_zero_says_so())
 chk("1.12.0", "a pass that moved nothing names the rule that stopped it, on an automatic pass too",
     a_silent_pass_still_names_what_stopped_it())
+chk("1.12.1", "a market that traded nothing says so once, after both passes have run",
+    a_market_that_traded_nothing_is_reported_once())
+chk("1.12.1", "a market that traded something is never also told nothing moved",
+    a_market_that_traded_something_drops_the_empty_lines())
 chk("1.6.22", "the item tooltip adds its prices without announcing the mod by name",
     the_item_tooltip_does_not_announce_the_mod())
 chk("1.6.22", "the line under the ledger is set at a size that can be read",

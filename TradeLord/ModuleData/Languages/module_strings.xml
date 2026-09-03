@@ -62,6 +62,8 @@
 		<string id="TL81" text="TradeLord credited {GOLD} denars of profit to your Trade skill."/>
 		<string id="TL82" text="Cargo is full - TradeLord cannot buy here until you free up carry weight."/>
 		<string id="TL93" text="you are already carrying as many of these as you allow"/>
+		<string id="TL94" text="Nothing traded here - {REASON}."/>
+		<string id="TL95" text="Nothing sold here - {REASON}, and nothing bought - {SECOND}."/>
 		<string id="TL83" text="the village is down to its last of each good"/>
 		<string id="TL84" text="{ITEM}: buy {FROM} ({BUY} denars) -&gt; sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} days from here"/>
 		<string id="TL85" text="you are holding this cargo for a better market"/>

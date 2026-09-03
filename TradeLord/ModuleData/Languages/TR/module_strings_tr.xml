@@ -62,6 +62,8 @@
 		<string id="TL81" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi."/>
 		<string id="TL82" text="Yük dolu: siz yer açana kadar TradeLord burada bir şey alamaz."/>
 		<string id="TL93" text="bu maldan izin verdiğiniz kadarını zaten taşıyorsunuz"/>
+		<string id="TL94" text="Burada ticaret yapılmadı: {REASON}."/>
+		<string id="TL95" text="Burada bir şey satılmadı: {REASON}, bir şey de alınmadı: {SECOND}."/>
 		<string id="TL83" text="köyün her maldan son parçası kaldı"/>
 		<string id="TL84" text="{ITEM}: {FROM} şehrinden al ({BUY} dinar) -&gt; {TO} şehrinde sat ({SELL})  x{QTY} = +{PROFIT} dinar, buradan ~{DAYS} gün"/>
 		<string id="TL85" text="bu yükü daha iyi bir pazar için tutuyorsunuz"/>
