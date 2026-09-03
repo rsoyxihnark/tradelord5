@@ -79,7 +79,7 @@
 		<string id="TL251" text="Elinizde bu kadar varken almayı bırak (0 = kapalı)"/>
 		<string id="TL250" text="Dil"/>
 		<string id="TL351" text="Kervanınız bir maldan bu kadarını taşıdığında TradeLord o malı bırakır ve parayı başka bir şeye harcar. Şu anda taşıdığınız miktarı ve bu ziyarette alınanları birlikte sayar. Satışı etkilemez. 0 = sınır yok."/>
-		<string id="TL350" text="TradeLord'un oyun içinde konuştuğu dil: ticaret iletileri, defter paneli, fiyat ipuçları ve şehir menüsü girdileri. Varsayılan İngilizce. Bu ayar ekranı oyunun kendi dilini izler. Şehir menüsü girdileri yeni dile, bir sonraki oyun yüklemenizde geçer."/>
+		<string id="TL350" text="TradeLord'un oyun içinde konuştuğu dil: ticaret iletileri, defter paneli, fiyat ipuçları ve şehir menüsü girdileri. Varsayılan İngilizce. Bu ayar ekranı yeni dile, ekranı bir sonraki açışınızda geçer. Şehir menüsü girdileri ise bir sonraki oyun yüklemenizde geçer."/>
 		<string id="TL201" text="Canlı dünya fiyatları (varsayılan)"/>
 		<string id="TL202" text="Gözlem raf ömrü (gün, 0 = hiç eskimez)"/>
 		<string id="TL203" text="Düşman pazarları dışarıda bırak"/>
