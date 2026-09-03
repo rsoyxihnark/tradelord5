@@ -25,6 +25,12 @@ namespace TradeLord
             return Options.Current.Language == English ? null : Translated(Id(written));
         }
 
+        internal static string Plain(string written)
+        {
+            string id = Id(written);
+            return id == null ? written : written.Substring(id.Length + 3);
+        }
+
         private static string Id(string written)
         {
             if (written == null || !written.StartsWith("{=")) return null;

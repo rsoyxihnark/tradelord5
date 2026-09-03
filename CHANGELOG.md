@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.11.0
+
+- The food, smithing material and livestock rules are now picked from a list that names each choice, instead of a slider you set to 0, 1, 2 or 3.
+- The setting that decides what a good counts as having cost you is picked from a list too, and it and its note are written in plain words now.
+- Selling looted gear now starts switched on at tier 1, which is what looters and bandits drop, and you can still raise or switch it off.
+- A new always-buy list matches the always-sell one: name a good on it and TradeLord buys it past the category rules and past the never-buy-grain switch.
+- Your never-sell and never-buy lists and anything you locked in the inventory still hold, and it still buys only what it can sell on for more somewhere in reach.
+- Switching those four settings over to lists keeps whatever you had already picked, so nothing resets.
+
 ## 1.10.0
 
 - The settings screen now reads in the language you picked in TradeLord's own Language setting, instead of the language the game itself is set to.
