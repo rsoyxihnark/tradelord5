@@ -77,6 +77,15 @@
 		<string id="TL91" text="TradeLord mal listelerinizden birindeki bir girdi bu oyundaki hiçbir mala uymuyor ve hiçbir işe yaramıyor. Hangisi olduğunu TradeLord.log yazıyor."/>
 		<string id="TL92" text="Keseniz {GOLD} dinar, altın rezerviniz {RESERVE}, bu yüzden TradeLord burada bir şey almayacak. Biraz yük satın ya da ayarlardan rezervi düşürün."/>
 		<string id="TL251" text="Elinizde bu kadar varken almayı bırak (0 = kapalı)"/>
+		<string id="TL252" text="Her zaman al (mal kimlikleri ya da adları, virgülle ayrılmış)"/>
+		<string id="TL253" text="Dokunma"/>
+		<string id="TL254" text="Yalnızca sat"/>
+		<string id="TL255" text="Yalnızca al"/>
+		<string id="TL256" text="Al ve sat"/>
+		<string id="TL257" text="Ödediğinizin ortalaması"/>
+		<string id="TL258" text="Son ödediğiniz fiyat"/>
+		<string id="TL259" text="Bildiğiniz en ucuz pazar"/>
+		<string id="TL352" text="TradeLord'un her zaman aldığı mallar: kategori kurallarını ve tahıl alma yasağını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla listeleri ve envanter kilidi yine geçerlidir, ve yine ancak erişimdeki bir yerde daha pahalıya satabileceğini alır."/>
 		<string id="TL250" text="Dil"/>
 		<string id="TL351" text="Kervanınız bir maldan bu kadarını taşıdığında TradeLord o malı bırakır ve parayı başka bir şeye harcar. Şu anda taşıdığınız miktarı ve bu ziyarette alınanları birlikte sayar. Satışı etkilemez. 0 = sınır yok."/>
 		<string id="TL350" text="TradeLord'un oyun içinde konuştuğu dil: ticaret iletileri, defter paneli, fiyat ipuçları ve şehir menüsü girdileri. Varsayılan İngilizce. Bu ayar ekranı yeni dile, ekranı bir sonraki açışınızda geçer. Şehir menüsü girdileri ise bir sonraki oyun yüklemenizde geçer."/>
@@ -100,12 +109,12 @@
 		<string id="TL218" text="Vardığınızda kendiliğinden al"/>
 		<string id="TL220" text="En az kâr payı"/>
 		<string id="TL221" text="Yiyecek sakla (kaç günlük)"/>
-		<string id="TL222" text="Yiyecek kuralı (0 karışma, 1 sadece sat, 2 sadece al, 3 al ve sat)"/>
-		<string id="TL223" text="Demircilik malzemesi kuralı (0 karışma, 1 sadece sat, 2 sadece al, 3 al ve sat)"/>
-		<string id="TL224" text="Hayvan kuralı (0 karışma, 1 sadece sat, 2 sadece al, 3 al ve sat)"/>
+		<string id="TL222" text="Yiyecek kuralı"/>
+		<string id="TL223" text="Demircilik malzemesi kuralı"/>
+		<string id="TL224" text="Hayvan kuralı"/>
 		<string id="TL225" text="Eşsiz ve dövülmüş eşyaları koru"/>
 		<string id="TL226" text="Envanter kilitlerine uy"/>
-		<string id="TL227" text="Maliyet ölçüsü (0 ortalama ödenen, 1 son ödenen, 2 bilinen en ucuz)"/>
+		<string id="TL227" text="Bir malın size neye mal olduğu"/>
 		<string id="TL228" text="Ganimeti şu seviyeye kadar sat (0 = kapalı)"/>
 		<string id="TL229" text="Yükü en iyi pazar için tut"/>
 		<string id="TL230" text="En iyi pazar toleransı"/>
@@ -149,12 +158,12 @@
 		<string id="TL320" text="Her ticaretin iki yönde de geçmesi gereken kâr payı. Yalnızca fiyat maliyetinizi en az bu kadar aşıyorsa satın. Yalnızca uzak pazar, yeniden satış güvenlik payından sonra yerel fiyatı bu kadar aşıyorsa alın ya da rotayı listeleyin. Yükseltmek daha az ticaret yapar."/>
 		<string id="TL321" text="Yiyecek satmadan önce bu kadar günlük yiyeceği ayırın. Önce günlük besleme başına en ucuz yiyecek ayrılır, hayvanlar ise ancak başka bir şey rezervi karşılamıyorsa. 0 her kırıntıyı satar."/>
 		<string id="TL322" text="Otomatik ticaretin yiyecekle ne yapabileceği. Yukarıdaki günlük rezerv ayrıdır ve yine geçerlidir."/>
-		<string id="TL323" text="Otomatik ticaretin kömür, sert odun, demir cevheri ve külçelerle ne yapabileceği. Demircilik stokunu otomatik ticaretin tümüyle dışında tutmak için 0 yapın."/>
+		<string id="TL323" text="Otomatik ticaretin kömür, sert odun, demir cevheri ve külçelerle ne yapabileceği. Demircilik stokunu otomatik ticaretin tümüyle dışında tutmak için Dokunma seçin."/>
 		<string id="TL324" text="Otomatik ticaretin koyun, sığır ve domuzla ne yapabileceği. Alış, oyunun kendi sürü hesabıyla sınırlanır, bu yüzden müfrezeyi sürü hız cezasına sokmaz. Binekler ve yük hayvanları kural gereği asla alınmaz ve satılmaz, bu ayar onlara işlemez; onları ancak açık bir her zaman sat girdisi kımıldatabilir."/>
 		<string id="TL325" text="Eşsiz ya da oyuncunun dövdüğü eşyaları asla otomatik satma. Binekler ve yük hayvanları bu ayardan bağımsız olarak kural gereği korunur; onları ancak açık bir her zaman sat girdisi kımıldatabilir."/>
 		<string id="TL326" text="Envanter ekranında kilitli eşyalar asla otomatik satılmaz. Kilitler oyunun sakladığı gibi, eşya ve niteliğiyle eşleştirilir."/>
-		<string id="TL327" text="Kârın nasıl ölçüldüğü, dolayısıyla bir satışın ne kadar Ticaret tecrübesi kazandırdığı. 0: ödediğinizin ortalaması. 1: son ödediğiniz fiyat. 2: bilinen en ucuz alış fiyatı. Hiç almadığınız malların ödediğiniz bir fiyatı yoktur, bu yüzden her kip onları bildiğiniz en ucuz pazara göre değerler; birini onun altına satmak kâr da tecrübe de getirmez."/>
-		<string id="TL328" text="Bu kademeye kadar olan silah ve zırhları da satar. Kilitler ve korumalar yine geçerlidir."/>
+		<string id="TL327" text="Bir satışın ölçüldüğü fiyat: hem TradeLord'un bildirdiği kârı hem de satışın kazandırdığı Ticaret tecrübesini belirler. Hiç almadıklarınız, ganimet dâhil, hangisini seçerseniz seçin bildiğiniz en ucuz pazara göre değerlenir."/>
+		<string id="TL328" text="Bu kademeye kadar olan silah ve zırhları da satar. 1. kademeden başlar, yani çapulcuların ve haydutların düşürdüğü teçhizattan. Kilitler ve korumalar yine geçerlidir."/>
 		<string id="TL329" text="Bu pazar bilinen en iyi pazardan açıkça az ödüyorsa burada satmayı atla. Hiç almadığınız malların maliyeti yoktur, bu yüzden taban onlara her zaman uygulanır; bu ayar, kâr payının zaten kapsadığı, aldığınız mallara da uygulanıp uygulanmayacağını belirler."/>
 		<string id="TL330" text="Yukarıdaki AÇIKKEN: bu pazar bilinen en iyi fiyatın en az bu oranını ödüyorsa yine de burada sat."/>
 		<string id="TL331" text="TradeLord'un asla satmaması gereken mallar. Her birini ya eşya kimliğiyle, ya TradeLord.log'un taşıdığı her mal için yazdığı grain, wine veya iron_ore gibi kısa iç adla, ya da oyunun size gösterdiği Iron Ore gibi adla yazın. Aralarına virgül koyun. Bu oyunda hiçbir mala uymayan bir girdi sessizce geçmek yerine günlükte adlandırılır ve ekranda söylenir. Alırken de bunlara dokunmaz, çünkü sonra satmanın bir yolu olmaz."/>

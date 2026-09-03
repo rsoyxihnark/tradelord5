@@ -77,6 +77,15 @@
 		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
 		<string id="TL92" text="Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings."/>
 		<string id="TL251" text="Stop buying at this many held (0 = off)"/>
+		<string id="TL252" text="Always buy (item ids or names, comma separated)"/>
+		<string id="TL253" text="Leave alone"/>
+		<string id="TL254" text="Sell only"/>
+		<string id="TL255" text="Buy only"/>
+		<string id="TL256" text="Buy and sell"/>
+		<string id="TL257" text="Average of what you paid"/>
+		<string id="TL258" text="Last price you paid"/>
+		<string id="TL259" text="Cheapest market you know"/>
+		<string id="TL352" text="Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach."/>
 		<string id="TL250" text="Language"/>
 		<string id="TL351" text="Once your party already carries this many of a good, TradeLord leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit."/>
 		<string id="TL350" text="The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This settings screen takes the new language the next time you open it. Town menu entries take it when you next load a campaign."/>
@@ -100,12 +109,12 @@
 		<string id="TL218" text="Buy automatically as you arrive"/>
 		<string id="TL220" text="Minimum profit margin"/>
 		<string id="TL221" text="Keep food (days of supply)"/>
-		<string id="TL222" text="Food policy (0 ignore, 1 sell only, 2 buy only, 3 buy and sell)"/>
-		<string id="TL223" text="Smithing material policy (0 ignore, 1 sell only, 2 buy only, 3 buy and sell)"/>
-		<string id="TL224" text="Livestock policy (0 ignore, 1 sell only, 2 buy only, 3 buy and sell)"/>
+		<string id="TL222" text="Food policy"/>
+		<string id="TL223" text="Smithing material policy"/>
+		<string id="TL224" text="Livestock policy"/>
 		<string id="TL225" text="Protect unique and crafted items"/>
 		<string id="TL226" text="Respect inventory locks"/>
-		<string id="TL227" text="Cost basis mode (0 avg paid, 1 last paid, 2 cheapest known)"/>
+		<string id="TL227" text="What a good counts as having cost you"/>
 		<string id="TL228" text="Sell loot up to tier (0 = off)"/>
 		<string id="TL229" text="Hold cargo for the best market"/>
 		<string id="TL230" text="Best-market tolerance"/>
@@ -149,12 +158,12 @@
 		<string id="TL320" text="The margin every trade must clear, in both directions. Sell only if the price exceeds your cost basis by at least this much. Buy, or list a route, only if the far market exceeds the local price by this much after the resale safety factor. Raising it trades less."/>
 		<string id="TL321" text="Hold back this many days of food before selling any. The cheapest food per day fed is reserved first, and livestock only if nothing else covers the reserve. 0 sells every scrap of food."/>
 		<string id="TL322" text="What automated trading may do with food. The days-of-supply reserve above is separate and still applies."/>
-		<string id="TL323" text="What automated trading may do with charcoal, hardwood, iron ore and ingots. Set 0 to keep smithing stock out of automated trading entirely."/>
+		<string id="TL323" text="What automated trading may do with charcoal, hardwood, iron ore and ingots. Pick Leave alone to keep smithing stock out of automated trading entirely."/>
 		<string id="TL324" text="What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Mounts and pack animals are never bought or sold by policy and this setting does not affect them; only an explicit always-sell entry can move one."/>
 		<string id="TL325" text="Never auto-trade unique or player-crafted items. Mounts and pack animals are protected by policy regardless of this setting; only an explicit always-sell entry can move those."/>
 		<string id="TL326" text="Locked items in the inventory screen are never auto-traded. Locks are matched as the game stores them, by item and modifier."/>
-		<string id="TL327" text="How profit is measured, and so how much Trade XP a sale earns. 0: average of what you paid. 1: last price you paid. 2: cheapest known buy price. Goods you never bought have no price you paid, so every mode values those at the cheapest market you know of; selling one below that earns no profit and no Trade XP."/>
-		<string id="TL328" text="Also sells weapons and armor of this tier and below. Locks and protections still apply."/>
+		<string id="TL327" text="The price a sale is measured against, so it sets both the profit TradeLord reports and the Trade XP the sale earns. Anything you never bought, loot included, is valued at the cheapest market you know of whichever one you pick."/>
+		<string id="TL328" text="Also sells weapons and armor of this tier and below. Starts at tier 1, which is the gear looters and bandits drop. Locks and protections still apply."/>
 		<string id="TL329" text="Skip selling here when this market pays clearly less than the best known market. Goods you never bought have no cost basis, so the floor always applies to those; this setting controls whether it also applies to goods you bought, which the profit margin already covers."/>
 		<string id="TL330" text="With the above ON: sell here anyway if this market pays at least this fraction of the best known price."/>
 		<string id="TL331" text="Goods TradeLord must never sell. Name each one either by the item id, the short internal name such as grain, wine or iron_ore that TradeLord.log prints for every good it moves, or by the name the game shows you, such as Iron Ore. Separate them with commas. An entry matching no good in this game is named in the log and said on screen, rather than passing quietly. It leaves these alone when buying too, since it would have no way to sell them on."/>
