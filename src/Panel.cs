@@ -438,8 +438,10 @@ namespace TradeLord
             _keySource = source;
             _modifiers.Clear();
             string[] parts = (source ?? "").Split('+');
+            string stray = null;
             for (int i = 0; i < parts.Length - 1; i++)
                 if (ParseModifier(parts[i].Trim(), out var pair)) _modifiers.Add(pair);
+                else if (stray == null) stray = parts[i].Trim();
             string raw = parts[parts.Length - 1].Trim();
             bool numeric = raw.Length > 0;
             for (int i = 0; i < raw.Length; i++)
@@ -455,6 +457,9 @@ namespace TradeLord
             if (!named)
                 Log.Write("panel hotkey \"" + source + "\" names no key this game knows - falling back to T. " +
                           "Number keys are named D1 through D0.");
+            if (stray != null)
+                Log.Write("panel hotkey \"" + source + "\" puts \"" + stray + "\" in front of the key, which is " +
+                          "not Ctrl, Alt or Shift - that part is dropped and the panel opens on the key alone.");
             _keyLabel = "";
             for (int i = 0; i < _modifiers.Count; i++)
                 _keyLabel += _modifiers[i].left.ToString().Replace("Left", "") + "+";

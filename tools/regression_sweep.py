@@ -285,7 +285,9 @@ def hotkey_fallback_is_reported():
     if 'Log.Write("panel hotkey' not in body or "if (!named)" not in body:
         return False
     return ("_key = InputKey.T;" in body and "named = true;" in body
-            and ordered(body, "if (!named)", 'Log.Write("panel hotkey'))
+            and ordered(body, "if (!named)", 'Log.Write("panel hotkey')
+            and "if (stray != null)" in body
+            and ordered(body, "else if (stray == null) stray =", "if (stray != null)"))
 
 def prefab_text_is_all_bound():
     xml = io.open('TradeLord/GUI/Prefabs/TradeLordPanel.xml', encoding='utf-8').read()
@@ -1443,8 +1445,10 @@ chk("1.6.4", "the full-cargo warning is red, translatable, and not silenced by a
     'ToastAlert)' in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry") and
     'TL82' in strings_declared() and
     "quiet" not in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry"))
-chk("1.6.4", "the warning asks the same trading question the menu asks, and clears with the visit",
+chk("1.6.4", "the buying warnings are held back where the mod cannot buy, and clear with the visit",
     method_body(S['Trading.cs'], "private void OnSettlementEntered").count("CanTradeHere(settlement)") == 1 and
+    "(Options.Current.AutoBuyOnEntry || Options.Current.QuickSellMenu)" in
+        method_body(S['Trading.cs'], "private void OnSettlementEntered") and
     "_cargoWasFull = false;" in method_body(S['Trading.cs'], "private static void ResetVisit"))
 
 chk("1.6.5", "an item list is parsed once per edit and never left unset",
@@ -1792,7 +1796,8 @@ def a_list_entry_is_matched_whatever_its_capitalisation():
 def an_item_list_is_matched_by_name_as_well_as_by_id():
     listed = method_body(S['Trading.cs'], "internal static bool Listed")
     return ("list.HasId(item.StringId)" in listed and
-            "list.HasName(item.Name.ToString())" in listed)
+            "list.HasName(item.Name.ToString())" in listed and
+            ordered(listed, "!list.Empty", "list.HasName(item.Name.ToString())"))
 
 def a_written_word_stands_for_an_id_and_never_for_another_goods_name():
     return ("public bool HasId(string id) => !Empty && (Entries.Contains(id) || Words.Contains(id));"
@@ -1916,7 +1921,7 @@ chk("1.6.30", "the party speed behind every travel estimate is read once an hour
     the_party_speeds_are_read_once_an_hour())
 
 def the_cargo_marker_counts_the_town_till():
-    return ("if (town.Gold > 0 && total > town.Gold) total = town.Gold;" in
+    return ("if (total > town.Gold) total = town.Gold;" in
             method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo"))
 
 chk("1.6.31", "the cargo marker never points at a town that cannot pay for the cargo",

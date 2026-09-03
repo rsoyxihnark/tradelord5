@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.13.1
+
+- The best-market marker no longer points at a town whose merchant has no gold left to pay for your cargo.
+- TradeLord no longer warns that it cannot buy at a market when you have turned both auto buy and its town menu trade entry off.
+- A panel hotkey with something other than Ctrl, Alt or Shift in front of the key now says so in the log, rather than quietly opening on the bare key.
+- Walking into a market is a little quicker when your never-sell, always-sell, never-buy and always-buy lists are all empty.
+
 ## 1.13.0
 
 - The settings screen now ends with Selling and Buying, side by side, with every other setting above them.
