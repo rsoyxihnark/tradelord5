@@ -451,9 +451,6 @@ namespace TradeLord
             return party != null && party.InventoryCapacity - party.TotalWeightCarried < 1f;
         }
 
-        private static bool PurseHeldItBack(BlockTally tally) =>
-            tally.Any && tally.Dominant() == Block.BudgetSpent;
-
         private static bool TradedThisVisit() => _soldThisVisit.Count > 0 || _boughtThisVisit.Count > 0;
 
         private static bool Muted(bool automated) => automated && Options.Current.QuietAutomation;
@@ -531,7 +528,7 @@ namespace TradeLord
                         args =>
                         {
                             args.optionLeaveType = GameMenuOption.LeaveType.Submenu;
-                            return true;
+                            return Options.Current.LedgerMenuEntry;
                         },
                         args => Guard.Run("Action.LedgerReport", () => ShowLedgerReport()),
                         false, 7);
@@ -918,7 +915,7 @@ namespace TradeLord
             {
                 if (tally.Any) Log.Repeatable("quick-sell-empty " + settlement.StringId, tally.Summary(),
                     "quick-sell moved nothing at " + settlement.Name + ": " + tally.Summary());
-                if (!quiet)
+                if (!Muted(quiet))
                 {
                     TextObject none = Tongue.Text("{=TL32}Nothing sold here - {REASON}.");
                     none.SetTextVariable("REASON", BlockTally.Phrase(tally.Dominant()));
@@ -1083,7 +1080,7 @@ namespace TradeLord
             {
                 if (tally.Any) Log.Repeatable("quick-buy-empty " + settlement.StringId, tally.Summary(),
                     "quick-buy moved nothing at " + settlement.Name + ": " + tally.Summary());
-                if (!Muted(quiet) && (!quiet || PurseHeldItBack(tally)))
+                if (!Muted(quiet))
                 {
                     TextObject none = Tongue.Text("{=TL33}Nothing bought here - {REASON}.");
                     none.SetTextVariable("REASON", BlockTally.Phrase(tally.Dominant()));

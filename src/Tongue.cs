@@ -8,10 +8,10 @@ namespace TradeLord
 {
     internal static class Tongue
     {
-        internal const int English = 0, Turkish = 1;
+        internal const int English = 0, Turkish = 1, Russian = 2;
 
         private static Dictionary<string, string> _said;
-        private static bool _read;
+        private static int _saidFor = English - 1;
 
         internal static TextObject Text(string written)
         {
@@ -41,23 +41,29 @@ namespace TradeLord
         private static string Translated(string id)
         {
             if (id == null) return null;
-            if (!_read)
+            int language = Options.Current.Language;
+            if (_saidFor != language)
             {
-                _read = true;
-                Guard.Run("Tongue.Read", () => _said = Read(Where()));
+                _saidFor = language;
+                _said = null;
+                Guard.Run("Tongue.Read", () => _said = Read(Where(language)));
                 if (_said == null || _said.Count == 0)
-                    Log.Write("the Turkish strings could not be read from the module folder - TradeLord speaks English");
+                    Log.Write("the " + Named(language) + " strings could not be read from the module folder - TradeLord speaks English");
                 else
-                    Log.Write("Turkish selected - " + _said.Count + " strings read from the module folder");
+                    Log.Write(Named(language) + " selected - " + _said.Count + " strings read from the module folder");
             }
             return _said != null && _said.TryGetValue(id, out string text) ? text : null;
         }
 
-        private static string Where()
+        private static string Named(int language) => language == Russian ? "Russian" : "Turkish";
+
+        private static string Where(int language)
         {
             string bin = Path.GetDirectoryName(typeof(Tongue).Assembly.Location);
             string module = Path.GetDirectoryName(Path.GetDirectoryName(bin));
-            return Path.Combine(module ?? "", "ModuleData", "Languages", "TR", "module_strings_tr.xml");
+            return language == Russian
+                ? Path.Combine(module ?? "", "ModuleData", "Languages", "RU", "module_strings_ru.xml")
+                : Path.Combine(module ?? "", "ModuleData", "Languages", "TR", "module_strings_tr.xml");
         }
 
         private static Dictionary<string, string> Read(string path)

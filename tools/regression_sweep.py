@@ -24,9 +24,9 @@ def panel_columns():
                 else k.get('WidthSizePolicy') for k in kids]
     head = next((widths(c) for lp in root.iter('ListPanel')
                  for c in [lp.find('Children')]
-                 if c is not None and len(c) == 12 and all(k.tag == 'TextWidget' for k in c)), None)
+                 if c is not None and len(c) == 11 and all(k.tag == 'TextWidget' for k in c)), None)
     row = next((widths(c) for lp in root.find('.//ItemTemplate').iter('ListPanel')
-                for c in [lp.find('Children')] if c is not None and len(c) == 12), None)
+                for c in [lp.find('Children')] if c is not None and len(c) == 11), None)
     return head, row
 
 def panel_paths():
@@ -486,11 +486,12 @@ def every_numeric_setting_that_switches_off_at_zero_says_so():
             return False
     return True
 
-def the_purse_speaks_up_even_on_a_quiet_pass():
-    body = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
-    return ("if (!Muted(quiet) && (!quiet || PurseHeldItBack(tally)))" in body
-            and "tally.Any && tally.Dominant() == Block.BudgetSpent;" in S['Trading.cs']
-            and "if (!quiet)" in method_body(S['Trading.cs'], "public static void ExecuteQuickSell"))
+def a_silent_pass_still_names_what_stopped_it():
+    sell = method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
+    buy = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
+    return ("if (!Muted(quiet))" in sell and "if (!Muted(quiet))" in buy
+            and "if (!quiet)" not in sell and "if (!quiet)" not in buy
+            and "PurseHeldItBack" not in S['Trading.cs'])
 
 def the_item_tooltip_does_not_announce_the_mod():
     body = method_body(S['TooltipPatches.cs'], "internal static void Append")
@@ -1652,8 +1653,8 @@ chk("1.6.22", "a buy cap of zero turns the cap off instead of stopping every pur
     a_zero_cap_never_means_buy_nothing())
 chk("1.6.22", "every numeric setting that switches off at zero says so on its own label",
     every_numeric_setting_that_switches_off_at_zero_says_so())
-chk("1.6.22", "a pass that bought nothing because of your purse says so, even when it is trading quietly",
-    the_purse_speaks_up_even_on_a_quiet_pass())
+chk("1.12.0", "a pass that moved nothing names the rule that stopped it, on an automatic pass too",
+    a_silent_pass_still_names_what_stopped_it())
 chk("1.6.22", "the item tooltip adds its prices without announcing the mod by name",
     the_item_tooltip_does_not_announce_the_mod())
 chk("1.6.22", "the line under the ledger is set at a size that can be read",
@@ -1679,8 +1680,7 @@ def the_purse_outranks_the_reasons_that_are_merely_counted():
     body = method_body(S['Trading.cs'], "internal Block Dominant")
     return ("if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;" in body
             and ordered(body, "if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;",
-                        "foreach (var kv in _counts)")
-            and "tally.Any && tally.Dominant() == Block.BudgetSpent;" in S['Trading.cs'])
+                        "foreach (var kv in _counts)"))
 
 def an_empty_purse_is_reported_on_the_way_into_a_market():
     body = method_body(S['Trading.cs'], "private static bool WarnPurseBelowReserve")
@@ -1865,24 +1865,44 @@ def the_spend_cap_is_walked_not_divided():
             and "Options.Current.MaxSpendPerVisit / buyPrice" not in S['Ledger.cs']
             and "Options.Current.BuyValueCapPerItem / buyPrice" not in S['Ledger.cs'])
 
-TURKISH = 'TradeLord/ModuleData/Languages/TR/module_strings_tr.xml'
+ENGLISH = 'TradeLord/ModuleData/Languages/module_strings.xml'
+TRANSLATIONS = {
+    'T\u00fcrk\u00e7e': 'TradeLord/ModuleData/Languages/TR/module_strings_tr.xml',
+    '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': 'TradeLord/ModuleData/Languages/RU/module_strings_ru.xml',
+}
 
 def spoken(path):
     import xml.etree.ElementTree as ET
     return {e.get('id'): e.get('text') for e in ET.parse(path).getroot().iter('string')}
 
-def the_turkish_file_says_everything_the_english_one_does():
-    en = spoken('TradeLord/ModuleData/Languages/module_strings.xml')
-    tr = spoken(TURKISH)
-    return (set(en) == set(tr) and len(en) > 150
-            and all(tr[k] and tr[k].strip() and tr[k] != en[k] for k in en)
-            and '<tag language="T\u00fcrk\u00e7e"/>' in io.open(TURKISH, encoding='utf-8').read())
+def every_translation_says_everything_the_english_one_does():
+    en = spoken(ENGLISH)
+    if len(en) <= 150:
+        return False
+    for tag, path in TRANSLATIONS.items():
+        said = spoken(path)
+        if set(en) != set(said):
+            return False
+        if not all(said[k] and said[k].strip() and said[k] != en[k] for k in en):
+            return False
+        if '<tag language="' + tag + '"/>' not in io.open(path, encoding='utf-8').read():
+            return False
+    return True
 
 def every_translated_line_keeps_its_placeholders():
-    en = spoken('TradeLord/ModuleData/Languages/module_strings.xml')
-    tr = spoken(TURKISH)
+    en = spoken(ENGLISH)
     holes = lambda text: sorted(re.findall(r'\{([A-Z][A-Z0-9_]*)\}', text))
-    return all(holes(en[k]) == holes(tr[k]) for k in en)
+    return all(holes(en[k]) == holes(spoken(path)[k])
+               for path in TRANSLATIONS.values() for k in en)
+
+def every_language_the_screen_offers_has_a_file_the_mod_reads():
+    choices = re.search(r'new Dropdown<string>\(new\[\] \{([^}]*)\}', M)
+    return (choices is not None
+            and len(choices.group(1).split(',')) == len(TRANSLATIONS) + 1
+            and 'internal const int English = 0, Turkish = 1, Russian = 2;' in S['Tongue.cs']
+            and S['Tongue.cs'].count('module_strings_') == len(TRANSLATIONS)
+            and 'if (_saidFor != language)' in method_body(S['Tongue.cs'], "private static string Translated")
+            and '_saidFor = language;' in method_body(S['Tongue.cs'], "private static string Translated"))
 
 def every_line_the_mod_says_can_change_language():
     said = "\n".join(v for k, v in S.items() if k != 'Tongue.cs')
@@ -2062,8 +2082,10 @@ chk("1.6.32", "a good named on an item list never drags in a second good whose w
 chk("1.6.32", "a route's spending caps are spent unit by unit, the way a buying pass spends them",
     the_spend_cap_is_walked_not_divided())
 
-chk("1.7.0", "the Turkish file carries every line the English one does, translated",
-    the_turkish_file_says_everything_the_english_one_does())
+chk("1.12.0", "every translation carries every line the English one does, translated",
+    every_translation_says_everything_the_english_one_does())
+chk("1.12.0", "every language the screen offers has a file the mod reads, and switching re-reads it",
+    every_language_the_screen_offers_has_a_file_the_mod_reads())
 chk("1.7.0", "a translated line keeps every value the English one fills in",
     every_translated_line_keeps_its_placeholders())
 chk("1.7.0", "every line the mod says on screen is built where the language is chosen",

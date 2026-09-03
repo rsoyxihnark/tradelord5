@@ -39,7 +39,6 @@
 		<string id="TL54" text="Adet"/>
 		<string id="TL55" text="Kâr"/>
 		<string id="TL56" text="Gün"/>
-		<string id="TL57" text="Veri"/>
 		<string id="TL58" text="Kerv."/>
 		<string id="TL59" text="Güven"/>
 		<string id="TL60" text="Puan"/>
@@ -57,9 +56,6 @@
 		<string id="TL71" text=" | Puan = güvene göre indirilmiş günlük kâr"/>
 		<string id="TL72" text=" | Puan = günlük kâr"/>
 		<string id="TL73" text=" | yeniden satış güvenlik payı uygulandı"/>
-		<string id="TL74" text="canlı"/>
-		<string id="TL75" text="bugün"/>
-		<string id="TL76" text="{DAYS} günlük"/>
 		<string id="TL77" text="Kâr: +%{PCT}"/>
 		<string id="TL78" text="Stok: {COUNT}"/>
 		<string id="TL79" text="~{DAYS} gün"/>
@@ -85,10 +81,12 @@
 		<string id="TL257" text="Ödediğinizin ortalaması"/>
 		<string id="TL258" text="Son ödediğiniz fiyat"/>
 		<string id="TL259" text="Bildiğiniz en ucuz pazar"/>
+		<string id="TL260" text="Kasaba menüsünde defter girişi"/>
 		<string id="TL352" text="TradeLord'un her zaman aldığı mallar: kategori kurallarını ve tahıl alma yasağını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla listeleri ve envanter kilidi yine geçerlidir, ve yine ancak erişimdeki bir yerde daha pahalıya satabileceğini alır."/>
 		<string id="TL250" text="Dil"/>
 		<string id="TL351" text="Kervanınız bir maldan bu kadarını taşıdığında TradeLord o malı bırakır ve parayı başka bir şeye harcar. Şu anda taşıdığınız miktarı ve bu ziyarette alınanları birlikte sayar. Satışı etkilemez. 0 = sınır yok."/>
 		<string id="TL350" text="TradeLord'un oyun içinde konuştuğu dil: ticaret iletileri, defter paneli, fiyat ipuçları ve şehir menüsü girdileri. Varsayılan İngilizce. Bu ayar ekranı yeni dile, ekranı bir sonraki açışınızda geçer. Şehir menüsü girdileri ise bir sonraki oyun yüklemenizde geçer."/>
+		<string id="TL360" text="TradeLord'un rota panelini açan defter girişini kasaba ve köy menülerinde gösterir. Paneli kısayol tuşuyla ya da harita düğmesiyle açmayı yeğliyorsanız kapatın."/>
 		<string id="TL201" text="Canlı dünya fiyatları (varsayılan)"/>
 		<string id="TL202" text="Gözlem raf ömrü (gün, 0 = hiç eskimez)"/>
 		<string id="TL203" text="Düşman pazarları dışarıda bırak"/>
