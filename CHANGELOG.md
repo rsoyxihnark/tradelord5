@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.11.1
+
+- Gaining or losing ships now changes which markets TradeLord counts as being in reach straight away, instead of leaving some of them out until the hour turns.
+
 ## 1.11.0
 
 - The food, smithing material and livestock rules are now picked from a list that names each choice, instead of a slider you set to 0, 1, 2 or 3.
