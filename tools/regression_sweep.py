@@ -894,10 +894,11 @@ chk("1.3.34", "both travel caches hold geometry and re-time it at the current sp
     method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty") and
     "return Days(hit.dist, hit.landRatio);" in
     method_body(S['Travel.cs'], "internal static float EstimateDaysBetween"))
-chk("1.3.34", "one naval invalidation rule, for both travel caches",
-    S['Travel.cs'].count("DropIfNavalChanged();") == 2 and
+chk("1.11.1", "one naval invalidation rule, read by every travel estimate it feeds",
+    S['Travel.cs'].count("DropIfNavalChanged();") == 3 and
     "DropIfNavalChanged();" in method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty") and
     "DropIfNavalChanged();" in method_body(S['Travel.cs'], "internal static float EstimateDaysBetween") and
+    "DropIfNavalChanged();" in method_body(S['Travel.cs'], "private static float StraightDays") and
     "_partyDist.Clear();" in method_body(S['Travel.cs'], "private static void DropIfNavalChanged") and
     "_pairDist.Clear();" in method_body(S['Travel.cs'], "private static void DropIfNavalChanged"))
 chk("1.3.34", "manual trading recaptures prices after it moves them",
