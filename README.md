@@ -34,7 +34,7 @@
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, off by default
-- ✅ Clears looted gear too, up to a tier you choose
+- ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set
 - ✅ Trades in villages as well, under their own stricter travel limit
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
@@ -64,7 +64,7 @@
 - ✅ A minimum stock before it calls something worth buying
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ Caps on one good by count or by denars, on how many of it you will carry, and on the whole visit
-- ✅ Never-sell, always-sell and never-buy lists, taking item ids or item names, in any capitalisation
+- ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ Profit measured against what you paid: the average, the last, or the cheapest you know of
 - ✅ An honest-merchant mode you can switch on, using only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
