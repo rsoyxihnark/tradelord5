@@ -2013,6 +2013,37 @@ chk("1.7.0", "the language setting opens the screen and starts on English",
 chk("1.7.0", "the language files are packed into the download",
     the_language_files_reach_the_download())
 
+def the_settings_screen_follows_the_mods_own_language():
+    follow = method_body(M, "internal static void Follow")
+    spoken = method_body(M, "private static void Spoken")
+    return ('Guard.Run("Mcm.ScreenTongue", ScreenTongue.Follow);' in M
+            and 'typeof(SettingsPropertyDefinition)' in follow
+            and all(field in follow for field in ('"<DisplayName>k__BackingField"',
+                                                  '"<HintText>k__BackingField"',
+                                                  '"<GroupName>k__BackingField"'))
+            and 'postfix: new HarmonyMethod(typeof(ScreenTongue), nameof(Spoken))' in follow
+            and spoken.count('Say(_') == 3)
+
+def the_screen_reads_the_translation_the_mod_already_has():
+    said = method_body(S['Tongue.cs'], "internal static string Said")
+    return ('Tongue.Said(at(of))' in method_body(M, "private static void Say")
+            and 'Translated(Id(written))' in said
+            and 'Options.Current.Language == English ? null' in said
+            and 'module_strings' not in M)
+
+def a_screen_that_cannot_be_wired_leaves_the_rest_of_the_mod_alone():
+    follow = method_body(M, "internal static void Follow")
+    return (ordered(follow, 'if (_name == null', 'Log.Write(', 'return;')
+            and 'new Harmony(SubModule.HarmonyId + ".mcm")' in follow
+            and follow.find('return;') < follow.find('new Harmony('))
+
+chk("1.10.0", "the settings screen is relabelled in the language TradeLord is set to",
+    the_settings_screen_follows_the_mods_own_language())
+chk("1.10.0", "the screen reads the translation the mod already carries, not a second copy",
+    the_screen_reads_the_translation_the_mod_already_has())
+chk("1.10.0", "a settings screen that cannot be relabelled says so and leaves the rest alone",
+    a_screen_that_cannot_be_wired_leaves_the_rest_of_the_mod_alone())
+
 def a_rule_that_names_missing_source_reports_itself_broken():
     mark = len(_lost)
     lost_body = method_body("class Sample { }", "private static void Absent")

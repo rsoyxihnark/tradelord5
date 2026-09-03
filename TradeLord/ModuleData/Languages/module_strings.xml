@@ -79,7 +79,7 @@
 		<string id="TL251" text="Stop buying at this many held (0 = off)"/>
 		<string id="TL250" text="Language"/>
 		<string id="TL351" text="Once your party already carries this many of a good, TradeLord leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit."/>
-		<string id="TL350" text="The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This settings screen follows the language the game itself is set to. Town menu entries take the new language when you next load a campaign."/>
+		<string id="TL350" text="The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This settings screen takes the new language the next time you open it. Town menu entries take it when you next load a campaign."/>
 		<string id="TL201" text="Live world prices (default)"/>
 		<string id="TL202" text="Observation shelf life (days, 0 = never expire)"/>
 		<string id="TL203" text="Exclude hostile markets"/>
