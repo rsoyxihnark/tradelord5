@@ -26,6 +26,34 @@ namespace TradeLord
         public static bool BuyAcceptable(int buyPrice, float realizable, float margin) =>
             buyPrice > 0 && realizable >= buyPrice * (1f + margin);
 
+        public const int NoRecordedBasis = -1;
+
+        public static void AddPurchase(PurchaseRecord rec, int count, int totalPaid)
+        {
+            if (rec == null) return;
+            rec.TotalPaid += totalPaid;
+            rec.Count += count;
+            if (count > 0) rec.LastUnitPaid = (int)Math.Round((double)totalPaid / count);
+        }
+
+        public static void DrainSale(PurchaseRecord rec, int count)
+        {
+            if (rec == null || rec.Count <= 0) return;
+            int drain = Math.Min(count, rec.Count);
+            rec.TotalPaid -= (int)Math.Round((double)rec.TotalPaid / rec.Count * drain);
+            rec.Count -= drain;
+            if (rec.Count <= 0) { rec.Count = 0; rec.TotalPaid = 0; }
+            else if (rec.TotalPaid < 0) rec.TotalPaid = 0;
+        }
+
+        public static int UnitBasis(PurchaseRecord rec, int mode)
+        {
+            if (mode == 2 || rec == null || rec.Count <= 0) return NoRecordedBasis;
+            return mode == 1 && rec.LastUnitPaid > 0
+                ? rec.LastUnitPaid
+                : (int)Math.Round((double)rec.TotalPaid / rec.Count);
+        }
+
         public static int Budget(int gold, int goldReserve, int maxSpendPerVisit,
                                  int spentThisVisit, int spentThisPass)
         {

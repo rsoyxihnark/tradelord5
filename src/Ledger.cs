@@ -222,19 +222,12 @@ namespace TradeLord
                 Paid[itemId] = rec;
                 _purchases.Add(rec);
             }
-            rec.TotalPaid += totalPaid;
-            rec.Count += count;
-            rec.LastUnitPaid = count > 0 ? (int)Math.Round((double)totalPaid / count) : rec.LastUnitPaid;
+            TradeMath.AddPurchase(rec, count, totalPaid);
         }
 
         public void RecordSale(string itemId, int count)
         {
-            if (!Paid.TryGetValue(itemId, out var rec) || rec.Count <= 0) return;
-            int drain = Math.Min(count, rec.Count);
-            rec.TotalPaid -= (int)Math.Round((double)rec.TotalPaid / rec.Count * drain);
-            rec.Count -= drain;
-            if (rec.Count <= 0) { rec.Count = 0; rec.TotalPaid = 0; }
-            else if (rec.TotalPaid < 0) rec.TotalPaid = 0;
+            if (Paid.TryGetValue(itemId, out var rec)) TradeMath.DrainSale(rec, count);
         }
 
         public bool HasPurchaseRecord(ItemObject item) =>
@@ -246,11 +239,9 @@ namespace TradeLord
         public int GetCostBasis(ItemObject item)
         {
             if (item == null) return 0;
-            int mode = Options.Current.CostBasisMode;
-            if (mode != 2 && Paid.TryGetValue(item.StringId, out var rec) && rec.Count > 0)
-                return mode == 1 && rec.LastUnitPaid > 0
-                    ? rec.LastUnitPaid
-                    : (int)Math.Round((double)rec.TotalPaid / rec.Count);
+            Paid.TryGetValue(item.StringId, out var rec);
+            int unit = TradeMath.UnitBasis(rec, Options.Current.CostBasisMode);
+            if (unit != TradeMath.NoRecordedBasis) return unit;
             var best = BestBuy(item);
             return best.price > 0 ? best.price : item.Value;
         }
