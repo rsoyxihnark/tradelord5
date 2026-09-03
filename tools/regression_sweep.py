@@ -1330,7 +1330,7 @@ chk("1.6.4", "the warning asks the same trading question the menu asks, and clea
 chk("1.6.5", "an item list is parsed once per edit and never left unset",
     "if (set == null || seen != src)" in
         method_body(S['Options.cs'], "private static ItemList Parsed") and
-    S['Options.cs'].count("Parsed(") == 4)
+    S['Options.cs'].count("Parsed(") == 5)
 chk("1.6.5", "ending a campaign drops trade messages queued but not yet shown",
     "_pending.Clear();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.5", "the route scan is reused within the hour and dropped with the market rankings",
@@ -1690,7 +1690,7 @@ def a_list_entry_survives_the_space_inside_a_name():
 def a_list_entry_that_names_nothing_is_reported_both_ways():
     audit = method_body(S['Trading.cs'], "internal static bool ItemListsNameNothing")
     warn = method_body(S['Trading.cs'], "private static void WarnUnmatchedItemLists")
-    return ("Items.All" in audit and audit.count("Unmatched(") == 3 and
+    return ("Items.All" in audit and audit.count("Unmatched(") == 4 and
             "Log.Write" in method_body(S['Trading.cs'], "private static bool Unmatched") and
             "TradePolicy.ItemListsNameNothing()" in warn and "Toast(" in warn and
             "WarnUnmatchedItemLists();" in method_body(S['Trading.cs'], "private void OnSettlementEntered"))
@@ -1709,7 +1709,7 @@ def a_list_still_naming_nothing_after_an_edit_is_said_again():
 def the_audit_reads_the_game_only_for_a_list_with_something_in_it():
     audit = method_body(S['Trading.cs'], "internal static bool ItemListsNameNothing")
     return ordered(audit, "string.IsNullOrEmpty(s.NeverSellItems)",
-                   "string.IsNullOrEmpty(s.NeverBuyItems)) return false;", "Items.All")
+                   "string.IsNullOrEmpty(s.AlwaysBuyItems)) return false;", "Items.All")
 
 def quiet_automation_silences_only_the_automated_lines():
     sell = method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
@@ -1836,7 +1836,7 @@ def every_line_the_mod_says_can_change_language():
 def the_language_setting_leads_the_screen_and_starts_on_english():
     return ('[SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]' in M
             and 'public int Language = 0;' in S['Options.cs']
-            and 'Options.Current.Language = Language.SelectedIndex;' in M
+            and 'Follows(Language, () => Options.Current.Language, picked => Options.Current.Language = picked);' in M
             and 'instance?.FollowLanguage();' in M
             and all('GroupOrder = ' + str(n) + ')]' in M for n in range(1, 7)))
 
@@ -2043,6 +2043,47 @@ chk("1.10.0", "the screen reads the translation the mod already carries, not a s
     the_screen_reads_the_translation_the_mod_already_has())
 chk("1.10.0", "a settings screen that cannot be relabelled says so and leaves the rest alone",
     a_screen_that_cannot_be_wired_leaves_the_rest_of_the_mod_alone())
+
+def a_choice_between_named_things_is_picked_from_a_list():
+    numbered = re.findall(r'\[SettingPropertyInteger\("\{=TL\d+\}[^"]*", 0, [0-3],', M)
+    picked = set(re.findall(r'\[SettingPropertyDropdown\("\{=(TL\d+)\}', M))
+    return (numbered == [] and picked == {'TL250', 'TL222', 'TL223', 'TL224', 'TL227'}
+            and all('public Dropdown<string> ' + named in M for named in
+                    ('Language', 'FoodPolicy', 'CraftingPolicy', 'LivestockPolicy', 'CostBasisMode')))
+
+def the_words_in_a_choice_follow_the_mods_language():
+    follow = method_body(M, "internal void FollowLanguage")
+    return ('Tongue.Text(words[i]).ToString()' in method_body(M, "private static string[] Spoken")
+            and method_body(M, "private void Retell").count('Retold(') == 4
+            and 'Language.PropertyChanged += (sender, args) => Retell();' in follow
+            and follow.count('Retell();') == 2
+            and follow.count('Follows(') == 5)
+
+def a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists():
+    body = method_body(S['Trading.cs'], "internal static bool MayBuy")
+    return (ordered(body, 'Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)',
+                    'IsLocked(lockedKeys',
+                    'bool always = Listed(s.AlwaysBuySet, item);',
+                    '!always && s.NeverBuyGrain',
+                    '!always && !PolicyAllows(PolicyFor(item), buying: true)')
+            and 'AlwaysBuySet => Parsed(AlwaysBuyItems' in S['Options.cs']
+            and 'Unmatched("always buy", s.AlwaysBuyItems, ids, names);' in S['Trading.cs']
+            and 'Options.Current.AlwaysBuyItems' in M)
+
+def looted_gear_is_cleared_from_the_first_tier_by_default():
+    hint = re.search(r'\{=TL328\}([^"]*)"', M)
+    return (option_default('MaxLootTier') == '1'
+            and '(int)item.Tier + 1 <= s.MaxLootTier' in S['Trading.cs']
+            and hint is not None and 'tier 1' in hint.group(1))
+
+chk("1.11.0", "a setting with named choices is picked from a list rather than typed as a number",
+    a_choice_between_named_things_is_picked_from_a_list())
+chk("1.11.0", "the choices in those lists are written in the language TradeLord is set to",
+    the_words_in_a_choice_follow_the_mods_language())
+chk("1.11.0", "a good on the always-buy list clears the policies and the grain switch, never the never lists or a lock",
+    a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists())
+chk("1.11.0", "looted gear is cleared from the first tier out of the box, and the hint says so",
+    looted_gear_is_cleared_from_the_first_tier_by_default())
 
 def a_rule_that_names_missing_source_reports_itself_broken():
     mark = len(_lost)
