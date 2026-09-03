@@ -57,8 +57,6 @@ namespace TradeLord
 
         public bool AutoBuyOnEntry = true;
 
-        public bool AutoTradeBoth => AutoSellOnEntry && AutoBuyOnEntry && EnableBuying;
-
         public bool DetailedTradeSummary = true;
         public bool QuietAutomation = false;
         public float MinProfitMargin = 0.15f;
