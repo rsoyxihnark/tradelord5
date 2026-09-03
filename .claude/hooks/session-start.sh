@@ -3,27 +3,15 @@ set -euo pipefail
 
 cd "${CLAUDE_PROJECT_DIR:-$PWD}"
 
-OWNER_LINE=$(git log --format='%an%x1f%ae' 2>/dev/null | awk -F'\037' '
-  {
-    name = tolower($1)
-    host = tolower($2)
-    sub(/.*@/, "", host)
-  }
-  name ~ /claude/ { next }
-  host == "anthropic.com" { next }
-  { print; exit }
-' || true)
+SIGNATURE=$(sed -n 's/.*commit as `\([^`]*\)`.*/\1/p' CLAUDE.md | head -1)
+OWNER_NAME=${SIGNATURE%% <*}
+OWNER_ADDRESS=${SIGNATURE#*<}
+OWNER_ADDRESS=${OWNER_ADDRESS%>}
+OWNER_SOURCE="the working rules, which carry the one signature this repository commits under"
 
-if [ -n "${OWNER_LINE:-}" ]; then
-  OWNER_NAME=${OWNER_LINE%%$'\037'*}
-  OWNER_ADDRESS=${OWNER_LINE##*$'\037'}
-  OWNER_SOURCE="the most recent commit the owner authored"
-else
-  FALLBACK=$(sed -n 's/.*commit as `\([^`]*\)`.*/\1/p' CLAUDE.md | head -1)
-  OWNER_NAME=${FALLBACK%% <*}
-  OWNER_ADDRESS=${FALLBACK#*<}
-  OWNER_ADDRESS=${OWNER_ADDRESS%>}
-  OWNER_SOURCE="the working rules, since no commit in the history was authored by the owner"
+if [ "$OWNER_NAME" = "$SIGNATURE" ] || [ "$OWNER_ADDRESS" = "$SIGNATURE" ]; then
+  OWNER_NAME=""
+  OWNER_ADDRESS=""
 fi
 
 if [ -n "${OWNER_NAME:-}" ] && [ -n "${OWNER_ADDRESS:-}" ]; then
