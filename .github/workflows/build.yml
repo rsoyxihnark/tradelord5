@@ -35,12 +35,24 @@ jobs:
             exit 0
           fi
           OUTSIDE=$(printf '%s\n' "$CHANGED" | grep -Ev '^(tests/|tools/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$)' || true)
-          if [ -n "$OUTSIDE" ]; then
-            echo "this commit changes what a user gets and leaves CHANGELOG.md untouched:"
-            printf '  %s\n' $OUTSIDE
+          if [ -z "$OUTSIDE" ]; then
+            echo "this commit touches only the project's own checks, workflow and working rules, so it writes no changelog entry"
+            exit 0
+          fi
+          SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")
+          case "$SUBJECT" in
+            "[no release]"*) ;;
+            *)
+              echo "this commit changes what a user gets and leaves CHANGELOG.md untouched:"
+              printf '  %s\n' $OUTSIDE
+              exit 1 ;;
+          esac
+          if printf '%s\n' "$CHANGED" | grep -qx 'TradeLord/SubModule.xml'; then
+            echo "a [no release] commit may not ship a version, and this one changes TradeLord/SubModule.xml"
             exit 1
           fi
-          echo "this commit touches only the project's own checks, workflow and working rules, so it writes no changelog entry"
+          echo "this commit is marked [no release] and ships no version, so it writes no changelog entry:"
+          printf '  %s\n' $OUTSIDE
 
       - name: Resolve version from SubModule.xml
         id: ver

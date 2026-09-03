@@ -6,6 +6,90 @@ namespace TradeLord.Tests
 {
     public class TradeMathTests
     {
+        private const int AveragePaid = 0, LastPaid = 1, CheapestKnown = 2;
+
+        private static PurchaseRecord Bought(int count, int totalPaid)
+        {
+            var rec = new PurchaseRecord { ItemId = "grain" };
+            TradeMath.AddPurchase(rec, count, totalPaid);
+            return rec;
+        }
+
+        [Fact]
+        public void What_a_lot_cost_per_unit_is_what_you_paid_for_it()
+        {
+            Assert.Equal(12, TradeMath.UnitBasis(Bought(10, 120), AveragePaid));
+            Assert.Equal(12, TradeMath.UnitBasis(Bought(10, 120), LastPaid));
+        }
+
+        [Fact]
+        public void Buying_again_at_a_new_price_averages_the_lot_and_remembers_the_last()
+        {
+            var rec = Bought(10, 100);
+            TradeMath.AddPurchase(rec, 10, 300);
+            Assert.Equal(20, TradeMath.UnitBasis(rec, AveragePaid));
+            Assert.Equal(30, TradeMath.UnitBasis(rec, LastPaid));
+        }
+
+        [Fact]
+        public void Selling_part_of_a_lot_leaves_the_rest_costing_what_it_did()
+        {
+            var rec = Bought(10, 120);
+            TradeMath.DrainSale(rec, 4);
+            Assert.Equal(6, rec.Count);
+            Assert.Equal(12, TradeMath.UnitBasis(rec, AveragePaid));
+        }
+
+        [Fact]
+        public void Selling_the_whole_lot_clears_what_it_cost()
+        {
+            var rec = Bought(10, 120);
+            TradeMath.DrainSale(rec, 10);
+            Assert.Equal(0, rec.Count);
+            Assert.Equal(0, rec.TotalPaid);
+            Assert.Equal(TradeMath.NoRecordedBasis, TradeMath.UnitBasis(rec, AveragePaid));
+        }
+
+        [Fact]
+        public void Selling_more_than_you_hold_never_takes_the_lot_below_nothing()
+        {
+            var rec = Bought(3, 30);
+            TradeMath.DrainSale(rec, 99);
+            Assert.Equal(0, rec.Count);
+            Assert.Equal(0, rec.TotalPaid);
+            TradeMath.DrainSale(rec, 99);
+            Assert.Equal(0, rec.Count);
+            Assert.Equal(0, rec.TotalPaid);
+        }
+
+        [Fact]
+        public void A_good_you_never_bought_has_no_price_you_paid()
+        {
+            Assert.Equal(TradeMath.NoRecordedBasis, TradeMath.UnitBasis(null, AveragePaid));
+            Assert.Equal(TradeMath.NoRecordedBasis, TradeMath.UnitBasis(Bought(0, 0), AveragePaid));
+        }
+
+        [Fact]
+        public void The_cheapest_known_mode_never_reads_what_you_paid()
+        {
+            Assert.Equal(TradeMath.NoRecordedBasis, TradeMath.UnitBasis(Bought(10, 120), CheapestKnown));
+        }
+
+        [Fact]
+        public void Buying_and_selling_over_and_over_never_leaves_a_negative_cost()
+        {
+            var rec = Bought(7, 93);
+            for (int round = 1; round <= 200; round++)
+            {
+                TradeMath.AddPurchase(rec, round % 5 + 1, round * 13 % 97 + 1);
+                TradeMath.DrainSale(rec, round % 7 + 1);
+                Assert.True(rec.Count >= 0);
+                Assert.True(rec.TotalPaid >= 0);
+                int unit = TradeMath.UnitBasis(rec, AveragePaid);
+                Assert.True(unit == TradeMath.NoRecordedBasis || unit >= 0);
+            }
+        }
+
         [Theory]
         [InlineData(Options.PolicyIgnore, true, false)]
         [InlineData(Options.PolicyIgnore, false, false)]
