@@ -564,7 +564,7 @@ namespace TradeLord
                     if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
                     ReportStalledPasses();
                 }
-                if (Options.Current.EnableBuying && CanTradeHere(settlement))
+                if (CanTradeHere(settlement))
                 {
                     if (!WarnPurseBelowReserve()) WarnNoRoomToCarry();
                 }
@@ -975,7 +975,6 @@ namespace TradeLord
 
         public static void ExecuteQuickBuy(Settlement settlement, bool quiet = false)
         {
-            if (!Options.Current.EnableBuying) return;
             if (!MarketOpen(settlement, quiet)) return;
 
             SettlementComponent market = settlement.SettlementComponent;
