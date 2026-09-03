@@ -69,7 +69,7 @@ namespace TradeLord
         public bool ProtectSpecial = true;
         public bool RespectLocks = true;
 
-        public int MaxLootTier = 0;
+        public int MaxLootTier = 1;
 
         public bool PreferBestSellTown = false;
         public float BestSellTownTolerance = 0.95f;
@@ -103,9 +103,10 @@ namespace TradeLord
         public string NeverSellItems = "";
         public string AlwaysSellItems = "";
         public string NeverBuyItems = "";
+        public string AlwaysBuyItems = "";
 
-        private ItemList _never, _always, _neverBuy;
-        private string _nSrc, _aSrc, _nbSrc;
+        private ItemList _never, _always, _neverBuy, _alwaysBuy;
+        private string _nSrc, _aSrc, _nbSrc, _abSrc;
 
         internal static readonly char[] EntryMarks = { ',', ';' };
         internal static readonly char[] WordMarks = { ' ', '\t' };
@@ -132,6 +133,7 @@ namespace TradeLord
         public ItemList NeverSet => Parsed(NeverSellItems, ref _nSrc, ref _never);
         public ItemList AlwaysSet => Parsed(AlwaysSellItems, ref _aSrc, ref _always);
         public ItemList NeverBuySet => Parsed(NeverBuyItems, ref _nbSrc, ref _neverBuy);
+        public ItemList AlwaysBuySet => Parsed(AlwaysBuyItems, ref _abSrc, ref _alwaysBuy);
     }
 
 }
