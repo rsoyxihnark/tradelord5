@@ -30,7 +30,7 @@
 **What it does for you**
 
 - ✅ One trade entry in the town menu, selling then buying in one go, whenever you want it
-- ✅ Auto-sell and auto-buy the moment you enter a market, if you leave that switched on
+- ✅ Sells and buys the moment you enter a market, if you leave that switched on
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, off by default
