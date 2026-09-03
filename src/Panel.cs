@@ -44,18 +44,6 @@ namespace TradeLord
         [DataSourceProperty] public string Profit => "+" + _route.TotalProfit;
         [DataSourceProperty] public string Days => "~" + _route.TravelDays.ToString("0.#");
 
-        [DataSourceProperty] public string DataAge
-        {
-            get
-            {
-                if (_route.DataAgeDays < 0f) return Tongue.Text("{=TL74}live").ToString();
-                if (_route.DataAgeDays < 1f) return Tongue.Text("{=TL75}today").ToString();
-                TextObject age = Tongue.Text("{=TL76}{DAYS}d old");
-                age.SetTextVariable("DAYS", (int)Math.Ceiling(_route.DataAgeDays));
-                return age.ToString();
-            }
-        }
-
         [DataSourceProperty] public string Caravans => _route.Caravans.ToString();
 
         [DataSourceProperty] public string Confidence =>
@@ -190,7 +178,6 @@ namespace TradeLord
         [DataSourceProperty] public string HeadQuantity => Tongue.Text("{=TL54}Qty").ToString();
         [DataSourceProperty] public string HeadProfit => Tongue.Text("{=TL55}Profit").ToString();
         [DataSourceProperty] public string HeadDays => Tongue.Text("{=TL56}Days").ToString();
-        [DataSourceProperty] public string HeadData => Tongue.Text("{=TL57}Data").ToString();
         [DataSourceProperty] public string HeadCaravans => Tongue.Text("{=TL58}Carv.").ToString();
         [DataSourceProperty] public string HeadConfidence => Tongue.Text("{=TL59}Conf").ToString();
         [DataSourceProperty] public string HeadScore => Tongue.Text("{=TL60}Score").ToString();
