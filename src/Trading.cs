@@ -363,6 +363,9 @@ namespace TradeLord
         private static readonly Dictionary<string, (int count, int spent)> _boughtThisVisit =
             new Dictionary<string, (int, int)>();
         private static bool _cargoWasFull;
+        private static bool _runMovedGoods;
+        private static Block? _sellStalled;
+        private static Block? _buyStalled;
 
         internal static bool AutomatedTradeInProgress { get; private set; }
 
@@ -443,6 +446,9 @@ namespace TradeLord
             _soldThisVisit.Clear();
             _boughtThisVisit.Clear();
             _cargoWasFull = false;
+            _runMovedGoods = false;
+            _sellStalled = null;
+            _buyStalled = null;
         }
 
         private static bool NoRoomToCarry()
@@ -520,6 +526,7 @@ namespace TradeLord
                         {
                             ExecuteQuickSell(Settlement.CurrentSettlement);
                             ExecuteQuickBuy(Settlement.CurrentSettlement);
+                            ReportStalledPasses();
                         }),
                         false, 6);
 
@@ -555,6 +562,7 @@ namespace TradeLord
                 {
                     if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
                     if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
+                    ReportStalledPasses();
                 }
                 if (Options.Current.EnableBuying && CanTradeHere(settlement))
                 {
@@ -778,6 +786,51 @@ namespace TradeLord
             catch {  }
         }
 
+        private static void NoteStalled(bool selling, Block why)
+        {
+            if (selling) _sellStalled = why; else _buyStalled = why;
+        }
+
+        private static void ReportStalledPasses()
+        {
+            Block? sell = _sellStalled;
+            Block? buy = _buyStalled;
+            bool moved = _runMovedGoods;
+            _sellStalled = null;
+            _buyStalled = null;
+            _runMovedGoods = false;
+            if (moved || (!sell.HasValue && !buy.HasValue)) return;
+
+            TextObject none;
+            if (sell.HasValue && buy.HasValue)
+            {
+                string stoppedSelling = BlockTally.Phrase(sell.Value).ToString();
+                string stoppedBuying = BlockTally.Phrase(buy.Value).ToString();
+                if (stoppedSelling == stoppedBuying)
+                {
+                    none = Tongue.Text("{=TL94}Nothing traded here - {REASON}.");
+                    none.SetTextVariable("REASON", stoppedSelling);
+                }
+                else
+                {
+                    none = Tongue.Text("{=TL95}Nothing sold here - {REASON}, and nothing bought - {SECOND}.");
+                    none.SetTextVariable("REASON", stoppedSelling);
+                    none.SetTextVariable("SECOND", stoppedBuying);
+                }
+            }
+            else if (sell.HasValue)
+            {
+                none = Tongue.Text("{=TL32}Nothing sold here - {REASON}.");
+                none.SetTextVariable("REASON", BlockTally.Phrase(sell.Value));
+            }
+            else
+            {
+                none = Tongue.Text("{=TL33}Nothing bought here - {REASON}.");
+                none.SetTextVariable("REASON", BlockTally.Phrase(buy.Value));
+            }
+            Toast(none);
+        }
+
         public static void ExecuteQuickSell(Settlement settlement, bool quiet = false)
         {
             if (!MarketOpen(settlement, quiet)) return;
@@ -892,6 +945,7 @@ namespace TradeLord
 
             if (soldItems > 0)
             {
+                _runMovedGoods = true;
                 if (!sim)
                 {
                     LedgerBehavior.Instance?.AddProfit(profit);
@@ -915,12 +969,7 @@ namespace TradeLord
             {
                 if (tally.Any) Log.Repeatable("quick-sell-empty " + settlement.StringId, tally.Summary(),
                     "quick-sell moved nothing at " + settlement.Name + ": " + tally.Summary());
-                if (!Muted(quiet))
-                {
-                    TextObject none = Tongue.Text("{=TL32}Nothing sold here - {REASON}.");
-                    none.SetTextVariable("REASON", BlockTally.Phrase(tally.Dominant()));
-                    Toast(none);
-                }
+                if (!Muted(quiet)) NoteStalled(selling: true, tally.Dominant());
             }
         }
 
@@ -1060,6 +1109,7 @@ namespace TradeLord
             int spent = sim ? simSpent : goldBefore - Hero.MainHero.Gold;
             if (bought > 0)
             {
+                _runMovedGoods = true;
                 Log.Write((sim ? "quick-buy (simulated, best case): " : "quick-buy: ") + bought +
                           " items, -" + spent + " gold at " + settlement.Name);
                 LogDetail(selling: false, sim, detail);
@@ -1080,12 +1130,7 @@ namespace TradeLord
             {
                 if (tally.Any) Log.Repeatable("quick-buy-empty " + settlement.StringId, tally.Summary(),
                     "quick-buy moved nothing at " + settlement.Name + ": " + tally.Summary());
-                if (!Muted(quiet))
-                {
-                    TextObject none = Tongue.Text("{=TL33}Nothing bought here - {REASON}.");
-                    none.SetTextVariable("REASON", BlockTally.Phrase(tally.Dominant()));
-                    Toast(none);
-                }
+                if (!Muted(quiet)) NoteStalled(selling: false, tally.Dominant());
             }
         }
 
