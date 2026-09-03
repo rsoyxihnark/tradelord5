@@ -476,7 +476,34 @@ def the_money_rules_need_nothing_from_the_game():
     return ('TaleWorlds' not in S['TradeMath.cs']
             and 'public static class TradeMath' in S['TradeMath.cs']
             and all(m in S['TradeMath.cs'] for m in
-                    ('PolicyAllows', 'Credit', 'ProfitAcceptable', 'Realizable', 'BuyAcceptable')))
+                    ('PolicyAllows', 'Credit', 'ProfitAcceptable', 'Realizable', 'BuyAcceptable',
+                     'AddPurchase', 'DrainSale', 'UnitBasis')))
+
+def the_ledger_keeps_no_second_copy_of_the_cost_basis_rules():
+    body = S['Ledger.cs']
+    forwards = ('TradeMath.AddPurchase(rec, count, totalPaid);',
+                'TradeMath.DrainSale(rec, count);',
+                'TradeMath.UnitBasis(rec, Options.Current.CostBasisMode);')
+    return (all(f in body for f in forwards)
+            and 'rec.LastUnitPaid > 0' not in body
+            and 'rec.TotalPaid / rec.Count' not in body
+            and 'TradeMath.NoRecordedBasis' in body)
+
+def a_good_you_never_bought_still_falls_through_to_the_market():
+    body = method_body(S['Ledger.cs'], "public int GetCostBasis")
+    return (ordered(body,
+                    "Paid.TryGetValue(item.StringId, out var rec);",
+                    "TradeMath.UnitBasis(rec, Options.Current.CostBasisMode);",
+                    "if (unit != TradeMath.NoRecordedBasis) return unit;",
+                    "BestBuy(item);")
+            and "best.price > 0 ? best.price : item.Value;" in body)
+
+def the_cost_basis_rules_are_covered_by_tests_the_build_runs():
+    return ('TradeMath.UnitBasis' in MATHTESTS
+            and 'TradeMath.AddPurchase' in MATHTESTS
+            and 'TradeMath.DrainSale' in MATHTESTS
+            and 'TradeMath.NoRecordedBasis' in MATHTESTS
+            and 'LedgerCodec.cs' in TESTPROJ)
 
 def the_policy_layer_keeps_no_second_copy_of_the_money_rules():
     body = S['Trading.cs']
@@ -791,7 +818,7 @@ chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log an
 
 chk("1.3.33", "a fully sold stack clears its cost basis",
     "if (rec.Count <= 0) { rec.Count = 0; rec.TotalPaid = 0; }" in
-    method_body(S['Ledger.cs'], "public void RecordSale"))
+    method_body(S['TradeMath.cs'], "public static void DrainSale"))
 chk("1.3.33", "automated trading recaptures prices after it moves them",
     S['Trading.cs'].count("LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);") == 2 and
     "internal void ForgetMarketRankings()" in S['Ledger.cs'] and
@@ -1382,8 +1409,11 @@ chk("1.6.11", "the purchase index is rebuilt after a prune, never left pointing 
 chk("1.6.11", "every reader of a purchase record already requires units left, so dropping a spent one changes nothing",
     all("rec.Count > 0" in line for line in
         [method_body(S['Ledger.cs'], "public bool HasPurchaseRecord"),
-         method_body(S['Ledger.cs'], "public int PurchasedUnits"),
-         method_body(S['Ledger.cs'], "public int GetCostBasis")]))
+         method_body(S['Ledger.cs'], "public int PurchasedUnits")])
+    and "rec.Count <= 0) return NoRecordedBasis;" in
+        method_body(S['TradeMath.cs'], "public static int UnitBasis")
+    and "TradeMath.UnitBasis(rec, Options.Current.CostBasisMode);" in
+        method_body(S['Ledger.cs'], "public int GetCostBasis"))
 chk("1.6.11", "shelf-life pruning stays independent of purchase pruning, so 'never expire' does not keep spent records",
     "ObservationShelfLifeDays" in method_body(S['Ledger.cs'], "private void PruneObservations") and
     re.search(r'private void Prune\(\)\s*\{\s*PruneObservations\(\);\s*PruneSettledPurchases\(\);\s*\}',
@@ -1822,6 +1852,21 @@ def the_gate_lets_a_checks_only_commit_through():
     return (r"grep -Ev '^(tests/|tools/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$)'" in WORKFLOW
             and "so it writes no changelog entry" in WORKFLOW)
 
+def the_gate_lets_a_behaviour_neutral_change_through_but_never_a_version():
+    return ('"[no release]"*) ;;' in WORKFLOW
+            and "a [no release] commit may not ship a version" in WORKFLOW
+            and "grep -qx 'TradeLord/SubModule.xml'" in WORKFLOW
+            and ordered(WORKFLOW,
+                        "the changelog carries this commit's entries",
+                        "so it writes no changelog entry",
+                        'SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")',
+                        "a [no release] commit may not ship a version"))
+
+def the_rules_name_the_one_code_change_that_writes_no_entry():
+    return ("moves working code without altering a single thing the user sees or gets" in RULES
+            and "ships as `[no release]`, and leaves the version alone" in RULES
+            and "Never invent an entry to get a commit past a gate" in RULES)
+
 def the_workflow_refuses_to_publish_an_unfinished_changelog():
     return ("still carries an Unreleased heading" in WORKFLOW
             and "carries no section for" in WORKFLOW
@@ -1833,15 +1878,44 @@ def the_workflow_refuses_to_publish_an_unfinished_changelog():
 
 HOOK = io.open('.claude/hooks/session-start.sh', encoding='utf-8').read()
 
+RULES = io.open('CLAUDE.md', encoding='utf-8').read()
+GUARD = io.open('.claude/hooks/no-new-branch.sh', encoding='utf-8').read()
+SETTINGS = io.open('.claude/settings.json', encoding='utf-8').read()
+
 def the_hook_reads_the_owner_off_the_newest_commit():
     return ("git log --format='%an%x1f%ae'" in HOOK
             and "rev-list --max-parents=0" not in HOOK
             and "{ print; exit }" in HOOK)
 
 def the_hook_falls_back_to_the_signature_the_rules_name():
-    rules = io.open('CLAUDE.md', encoding='utf-8').read()
-    return ("commit as `" in rules
+    return ("commit as `" in RULES
             and r"sed -n 's/.*commit as `\([^`]*\)`.*/\1/p' CLAUDE.md" in HOOK)
+
+def the_signature_is_written_in_one_place_and_is_the_noreply_address():
+    written = re.findall(r'commit as `([^`]*)`', RULES)
+    return (written == ['rsoyxihnark <rsoyxihnark@users.noreply.github.com>']
+            and 'ozzeytinh' not in RULES
+            and 'never by Claude' in RULES)
+
+def the_rules_keep_one_branch():
+    return ('`main` is the only branch this repository keeps' in RULES
+            and 'Never start another one' in RULES
+            and 'no-new-branch.sh' in RULES
+            and 'Leave the assigned branch unpushed' in RULES)
+
+def a_git_command_that_would_start_a_branch_is_refused():
+    return ('no-new-branch.sh' in SETTINGS
+            and '"PreToolUse"' in SETTINGS
+            and '"matcher": "Bash"' in SETTINGS
+            and 'session-start.sh' in SETTINGS
+            and all(f in GUARD for f in ('checkout|switch', 'worktree', 'branch', 'push'))
+            and 'exit 2' in GUARD)
+
+def only_main_may_be_pushed():
+    return ('main|refs/heads/main' in GUARD
+            and 'would create the remote branch' in GUARD
+            and 'main is the only place it may go' in GUARD
+            and '--delete|-d) DELETING=1' in GUARD)
 
 chk("1.6.32", "a commit that changes what a user gets is refused when it leaves the changelog untouched",
     the_workflow_gates_the_changelog())
@@ -1855,6 +1929,24 @@ chk("1.6.32", "the owner is read off the most recent commit he authored, never o
     the_hook_reads_the_owner_off_the_newest_commit())
 chk("1.6.32", "with no commit of his in the history, the signature comes from the one place that carries it",
     the_hook_falls_back_to_the_signature_the_rules_name())
+chk("1.7.0", "the commit signature is the noreply address, written in one place and nowhere else",
+    the_signature_is_written_in_one_place_and_is_the_noreply_address())
+chk("1.7.0", "the rules keep one branch and say to leave an assigned branch unpushed",
+    the_rules_keep_one_branch())
+chk("1.7.0", "a git command that would start a branch is refused before it runs",
+    a_git_command_that_would_start_a_branch_is_refused())
+chk("1.7.0", "a push may name main and nothing else, and deleting a branch is still allowed",
+    only_main_may_be_pushed())
+chk("1.7.0", "the cost-basis arithmetic lives beside the other money rules and needs nothing from the game",
+    the_ledger_keeps_no_second_copy_of_the_cost_basis_rules())
+chk("1.7.0", "a good with no price you paid still falls through to the cheapest market known",
+    a_good_you_never_bought_still_falls_through_to_the_market())
+chk("1.7.0", "what a lot cost is covered by tests the build runs",
+    the_cost_basis_rules_are_covered_by_tests_the_build_runs())
+chk("1.7.0", "a change that alters nothing a user sees may skip the changelog, but may never ship a version",
+    the_gate_lets_a_behaviour_neutral_change_through_but_never_a_version())
+chk("1.7.0", "the working rules name that one case, and still refuse an invented entry",
+    the_rules_name_the_one_code_change_that_writes_no_entry())
 chk("1.6.32", "a good named on an item list never drags in a second good whose whole name is one of its words",
     a_written_word_stands_for_an_id_and_never_for_another_goods_name())
 chk("1.6.32", "a route's spending caps are spent unit by unit, the way a buying pass spends them",
