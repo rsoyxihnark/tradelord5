@@ -25,7 +25,7 @@ namespace TradeLord
         None, NotMerchandise, NeverList, Locked, CategoryPolicy, Protected,
         MountOrPackAnimal, NotTradable, FoodReserve, TradedHereAlready, NoStock,
         NoResaleMarket, BelowMargin, BelowBestMarket, MerchantTillEmpty, BudgetSpent,
-        ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit
+        ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit, HeldEnough
     }
 
     internal sealed class BlockTally
@@ -100,6 +100,8 @@ namespace TradeLord
                     return Tongue.Text("{=TL48}you already traded these on this visit");
                 case Block.VillageLastUnit:
                     return Tongue.Text("{=TL83}the village is down to its last of each good");
+                case Block.HeldEnough:
+                    return Tongue.Text("{=TL93}you are already carrying as many of these as you allow");
                 case Block.NotMerchandise:
                 case Block.NeverList:
                 case Block.Locked:
@@ -508,32 +510,12 @@ namespace TradeLord
                 void AddOptions(string menu) => Guard.Run(
                     "menu " + menu + " (the other menus are unaffected)", () =>
                 {
-                    starter.AddGameMenuOption(menu, "tradelord_quicksell",
-                        Tongue.Text("{=TL01}Quick-sell trade goods (TradeLord)").ToString(),
-                        args =>
-                        {
-                            args.optionLeaveType = GameMenuOption.LeaveType.Trade;
-                            return Options.Current.QuickSellMenu && !Options.Current.AutoTradeBoth && CanTradeHere(Settlement.CurrentSettlement);
-                        },
-                        args => Guard.Run("Action.QuickSellMenu", () => ExecuteQuickSell(Settlement.CurrentSettlement)),
-                        false, 4);
-
-                    starter.AddGameMenuOption(menu, "tradelord_quickbuy",
-                        Tongue.Text("{=TL10}Quick-buy trade goods (TradeLord)").ToString(),
-                        args =>
-                        {
-                            args.optionLeaveType = GameMenuOption.LeaveType.Trade;
-                            return Options.Current.EnableBuying && !Options.Current.AutoTradeBoth && CanTradeHere(Settlement.CurrentSettlement);
-                        },
-                        args => Guard.Run("Action.QuickBuyMenu", () => ExecuteQuickBuy(Settlement.CurrentSettlement)),
-                        false, 5);
-
                     starter.AddGameMenuOption(menu, "tradelord_quicktrade",
-                        Tongue.Text("{=TL26}Quick-trade: sell, then buy (TradeLord)").ToString(),
+                        Tongue.Text("{=TL26}Trade here now (TradeLord)").ToString(),
                         args =>
                         {
                             args.optionLeaveType = GameMenuOption.LeaveType.Trade;
-                            return Options.Current.QuickSellMenu && Options.Current.EnableBuying && CanTradeHere(Settlement.CurrentSettlement);
+                            return Options.Current.QuickSellMenu && CanTradeHere(Settlement.CurrentSettlement);
                         },
                         args => Guard.Run("Action.QuickTradeMenu", () =>
                         {
@@ -966,11 +948,13 @@ namespace TradeLord
                 TradeMath.Budget(Hero.MainHero.Gold, Options.Current.GoldReserve,
                                  Options.Current.MaxSpendPerVisit, _spentThisVisit, sim ? simSpent : 0);
 
-            var stock = new List<(ItemRosterElement el, float realizable, float margin)>();
+            var stock = new List<(ItemRosterElement el, float realizable, float margin, int held)>();
             if (Budget() > 0)
             {
                 ISet<string> locked = TradePolicy.LockedKeys();
                 ItemRoster shopRoster = settlement.ItemRoster;
+                ItemRoster mine = MobileParty.MainParty.ItemRoster;
+                int holdCap = Options.Current.MaxHeldPerItem;
                 for (int i = 0; i < shopRoster.Count; i++)
                 {
                     ItemRosterElement el = shopRoster.GetElementCopyAtIndex(i);
@@ -978,6 +962,8 @@ namespace TradeLord
                     if (el.Amount <= 0) { tally.Note(Block.NoStock); continue; }
                     if (!TradePolicy.MayBuy(it, locked, out Block whyBuy)) { tally.Note(whyBuy); continue; }
                     if (_soldThisVisit.Contains(it.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
+                    int held = mine.GetItemNumber(it);
+                    if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }
 
                     var elsewhere = LedgerBehavior.Instance?.BestSell(it) ?? (null, 0);
                     if (elsewhere.Item1 == null || elsewhere.Item1 == settlement) { tally.Note(Block.NoResaleMarket); continue; }
@@ -986,7 +972,7 @@ namespace TradeLord
                     if (here <= 0) { tally.Note(Block.NoStock); continue; }
                     float realizable = TradePolicy.Realizable(elsewhere.Item2);
                     if (!TradePolicy.BuyAcceptable(here, realizable)) { tally.Note(Block.BelowMargin); continue; }
-                    stock.Add((el, realizable, (realizable - here) / here));
+                    stock.Add((el, realizable, (realizable - here) / here, held));
                 }
                 stock.Sort((x, y) => y.margin.CompareTo(x.margin));
             }
@@ -996,7 +982,7 @@ namespace TradeLord
             AutomatedTradeInProgress = true;
             try
             {
-                foreach (var (el, realizable, _) in stock)
+                foreach (var (el, realizable, _, alreadyHeld) in stock)
                 {
                     if (directionError || Budget() <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
@@ -1010,6 +996,7 @@ namespace TradeLord
                     _boughtThisVisit.TryGetValue(item.StringId, out var prior);
                     int remaining = el.Amount;
                     int countThis = prior.count, spentThis = prior.spent;
+                    int held = alreadyHeld;
 
                     while (remaining > 0)
                     {
@@ -1020,6 +1007,8 @@ namespace TradeLord
                             countThis >= Options.Current.BuyCapPerItem) { tally.Note(Block.ItemCountCap); break; }
                         if (Options.Current.BuyValueCapPerItem > 0 &&
                             spentThis + price > Options.Current.BuyValueCapPerItem) { tally.Note(Block.ItemValueCap); break; }
+                        if (Options.Current.MaxHeldPerItem > 0 &&
+                            held >= Options.Current.MaxHeldPerItem) { tally.Note(Block.HeldEnough); break; }
                         if (livestock && herdRoom <= 0) { tally.Note(Block.HerdFull); break; }
                         if (settlement.IsVillage && remaining <= 1) { tally.Note(Block.VillageLastUnit); break; }
                         if (item.Weight > 0.01f && item.Weight > MobileParty.MainParty.InventoryCapacity
@@ -1030,6 +1019,7 @@ namespace TradeLord
                             simSpent += price;
                             spentThis += price;
                             countThis++;
+                            held++;
                             bought++;
                             remaining--;
                             simWeight += item.Weight;
@@ -1055,6 +1045,7 @@ namespace TradeLord
                         _spentThisVisit += cost;
                         spentThis += cost;
                         countThis++;
+                        held++;
                         _boughtThisVisit[item.StringId] = (countThis, spentThis);
                         bought++;
                         remaining--;
