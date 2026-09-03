@@ -129,8 +129,8 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 2)]
         public bool ShowMapButton { get => Options.Current.ShowMapButton; set { Options.Current.ShowMapButton = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL216}Quick-sell option in town menu", Order = 0, RequireRestart = false,
-            HintText = "{=TL316}Shows the quick-sell entry in town and village menus. It also controls the quick-trade entry, which sells before it buys; with this off, neither appears.")]
+        [SettingPropertyBool("{=TL216}Trade entry in town menu", Order = 0, RequireRestart = false,
+            HintText = "{=TL316}Shows the single TradeLord trade entry in town and village menus, which sells and then buys in one go. Turn it off to leave the menu to trading done automatically as you arrive.")]
         [SettingPropertyGroup("{=TL103}Action", GroupOrder = 3)]
         public bool QuickSellMenu { get => Options.Current.QuickSellMenu; set { Options.Current.QuickSellMenu = value; Options.Bump(); } }
 
@@ -255,22 +255,27 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 5)]
         public int BuyValueCapPerItem { get => Options.Current.BuyValueCapPerItem; set { Options.Current.BuyValueCapPerItem = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL237}Max spend per visit (0 = unlimited)", 0, 100000, Order = 4, RequireRestart = false,
+        [SettingPropertyInteger("{=TL251}Stop buying at this many held (0 = off)", 0, 5000, Order = 4, RequireRestart = false,
+            HintText = "{=TL351}Once your party already carries this many of a good, quick-buy leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 5)]
+        public int MaxHeldPerItem { get => Options.Current.MaxHeldPerItem; set { Options.Current.MaxHeldPerItem = value; Options.Bump(); } }
+
+        [SettingPropertyInteger("{=TL237}Max spend per visit (0 = unlimited)", 0, 100000, Order = 5, RequireRestart = false,
             HintText = "{=TL337}Total denars quick-buy may spend per settlement visit. Default 1000.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 5)]
         public int MaxSpendPerVisit { get => Options.Current.MaxSpendPerVisit; set { Options.Current.MaxSpendPerVisit = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL238}Resale safety factor", 0.5f, 1f, "#0%", Order = 5, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL238}Resale safety factor", 0.5f, 1f, "#0%", Order = 6, RequireRestart = false,
             HintText = "{=TL338}Assume only this fraction of the best sell price is still available by the time you arrive.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 5)]
         public float ResaleSafetyFactor { get => Options.Current.ResaleSafetyFactor; set { Options.Current.ResaleSafetyFactor = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL239}Never buy grain", Order = 6, RequireRestart = false,
+        [SettingPropertyBool("{=TL239}Never buy grain", Order = 7, RequireRestart = false,
             HintText = "{=TL339}Grain is heavy and low margin, so buying it fills the cargo for little return. Selling and the food reserve are unaffected. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 5)]
         public bool NeverBuyGrain { get => Options.Current.NeverBuyGrain; set { Options.Current.NeverBuyGrain = value; Options.Bump(); } }
 
-        [SettingPropertyText("{=TL240}Never buy (item ids or names, comma separated)", Order = 7, RequireRestart = false,
+        [SettingPropertyText("{=TL240}Never buy (item ids or names, comma separated)", Order = 8, RequireRestart = false,
             HintText = "{=TL340}Items quick-buy must never purchase. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 5)]
         public string NeverBuyItems { get => Options.Current.NeverBuyItems; set { Options.Current.NeverBuyItems = value; Options.Bump(); } }

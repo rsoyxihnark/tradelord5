@@ -29,7 +29,7 @@
 
 **What it does for you**
 
-- ✅ Quick-sell, quick-buy and quick-trade in the town menu, whenever you want them
+- ✅ One trade entry in the town menu, selling then buying in one go, whenever you want it
 - ✅ Auto-sell and auto-buy the moment you enter a market, if you leave that switched on
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
@@ -63,7 +63,7 @@
 - ✅ A scan radius, if you would rather it thought locally
 - ✅ A minimum stock before it calls something worth buying
 - ✅ Separate rules for food, smithing materials and livestock
-- ✅ Caps on one good by count or by denars, and on the whole visit
+- ✅ Caps on one good by count or by denars, on how many of it you will carry, and on the whole visit
 - ✅ Never-sell, always-sell and never-buy lists, taking item ids or item names, in any capitalisation
 - ✅ Profit measured against what you paid: the average, the last, or the cheapest you know of
 - ✅ An honest-merchant mode you can switch on, using only the prices you have seen in person, recorded market by market as you walk them
