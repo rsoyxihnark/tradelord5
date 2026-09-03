@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.0
+
+- A new setting stops quick-buy adding to a good once you already carry as many as you allow, so a stock of hundreds no longer grows every time you walk into a market.
+- The town and village menus now carry one TradeLord trade entry instead of three, and it sells and then buys in one go.
+- Trading done automatically as you arrive is unchanged, and the setting that showed the old entries now shows or hides the single one.
+
 ## 1.7.0
 
 - TradeLord now speaks Turkish. A new Language setting at the top of its options switches what it says in the game, and it starts on English.
