@@ -76,7 +76,6 @@ namespace TradeLord
         public bool PreferBestSellTown = false;
         public float BestSellTownTolerance = 0.95f;
 
-        public bool EnableBuying = true;
         public int GoldReserve = 300;
 
         public bool NeverBuyGrain = true;

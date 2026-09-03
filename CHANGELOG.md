@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.13.0
+
+- The settings screen now ends with Selling and Buying, side by side, with every other setting above them.
+- The settings that shape both halves of a trade, along with the two town menu entries, have moved into General.
+- The two switches that trade as you arrive are now called Auto sell and Auto buy.
+- The separate switch that decided whether TradeLord could buy at all is gone, so buying now follows Auto buy and the trade entry in the menu alone.
+- The note under the food policy no longer says where on the screen the food reserve sits, since it has moved.
+
 ## 1.12.1
 
 - A market where TradeLord traded nothing at all now says so in one line instead of two, naming what stopped it.
