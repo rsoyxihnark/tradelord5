@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.1
+
+- The ledger panel now opens with T instead of L, which the game already uses for one of its own screens.
+- The key is still yours to set in TradeLord's settings, and one you have already chosen there is left alone.
+
 ## 1.9.0
 
 - The switches that decide when TradeLord sells and buys now say plainly what they do, instead of naming quick-sell and quick-buy entries the town menu no longer has.
