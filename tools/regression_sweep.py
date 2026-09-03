@@ -405,6 +405,19 @@ def option_default(name):
     m = re.search(r'public\s+(?:bool|int|float|string)\s+' + name + r'\s*=\s*([^;]+);', S['Options.cs'])
     return None if m is None else m.group(1).strip()
 
+def the_readme_counts_the_saved_values_right():
+    types = saved_field_types()
+    tally = {}
+    for name in ('Ledger.cs', 'Trading.cs'):
+        body = method_body(S[name], "public override void SyncData")
+        for field in re.findall(r'dataStore\.SyncData\("[^"]+",\s*ref\s+(_\w+)\)', body):
+            tally[types.get(field)] = tally.get(types.get(field), 0) + 1
+    words = {1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six'}
+    said = ('All it ever puts in a save now is ' + words.get(tally.get('string'), 'no') +
+            ' strings, a number, a settlement reference and a flag')
+    return (said in README and tally.get('int') == 1
+            and tally.get('Settlement') == 1 and tally.get('bool') == 1)
+
 def readme_defaults_match_the_shipped_ones():
     def on(name):
         return option_default(name) == 'true'
@@ -1664,6 +1677,8 @@ chk("1.6.18", "the notice is remembered in the save, so it is shown once per cam
     "private bool _announcedAutomation;" in S['Trading.cs'])
 chk("1.6.18", "every variable a shipped line leaves a slot for is filled in by name",
     every_text_variable_is_supplied())
+chk("1.13.0", "the README counts what goes into a save as the source actually saves it",
+    the_readme_counts_the_saved_values_right())
 chk("1.6.18", "the defaults the README publishes are the defaults the module ships",
     readme_defaults_match_the_shipped_ones())
 chk("1.6.18", "the changelog opens on the version the manifest ships, and that entry says something",
