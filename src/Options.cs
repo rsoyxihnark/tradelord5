@@ -53,6 +53,8 @@ namespace TradeLord
 
         public bool QuickSellMenu = true;
 
+        public bool LedgerMenuEntry = true;
+
         public bool AutoSellOnEntry = true;
 
         public bool AutoBuyOnEntry = true;

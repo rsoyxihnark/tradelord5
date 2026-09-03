@@ -81,7 +81,8 @@ namespace TradeLord.Mcm
         }
 
         private Dropdown<string> _language =
-            new Dropdown<string>(new[] { "English", "T\u00FCrk\u00E7e" }, Options.Current.Language);
+            new Dropdown<string>(new[] { "English", "T\u00FCrk\u00E7e", "\u0420\u0443\u0441\u0441\u043A\u0438\u0439" },
+                                 Options.Current.Language);
 
         private static readonly string[] PolicyWords =
         {
@@ -236,6 +237,11 @@ namespace TradeLord.Mcm
             HintText = "{=TL316}Shows the single TradeLord trade entry in town and village menus, which sells and then buys in one go. Turn it off to leave the menu to trading done automatically as you arrive.")]
         [SettingPropertyGroup("{=TL103}Action", GroupOrder = 3)]
         public bool QuickSellMenu { get => Options.Current.QuickSellMenu; set { Options.Current.QuickSellMenu = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL260}Ledger entry in town menu", Order = 1, RequireRestart = false,
+            HintText = "{=TL360}Shows the TradeLord ledger entry in town and village menus, which opens the route panel. Turn it off if you would rather open the panel with its hotkey or its map button.")]
+        [SettingPropertyGroup("{=TL103}Action", GroupOrder = 3)]
+        public bool LedgerMenuEntry { get => Options.Current.LedgerMenuEntry; set { Options.Current.LedgerMenuEntry = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL217}Sell automatically as you arrive", Order = 0, RequireRestart = false,
             HintText = "{=TL317}Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu.")]
