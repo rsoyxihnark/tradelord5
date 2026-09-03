@@ -88,13 +88,13 @@
                                SuggestedHeight="25"
                                StackLayout.LayoutMethod="HorizontalLeftToRight">
                       <Children>
-                        <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="130" HeightSizePolicy="StretchToParent"
+                        <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="150" HeightSizePolicy="StretchToParent"
                                     Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadItem" />
-                        <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="105" HeightSizePolicy="StretchToParent"
+                        <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="125" HeightSizePolicy="StretchToParent"
                                     Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadBuyTown" />
                         <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="55" HeightSizePolicy="StretchToParent"
                                     Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadPrice" />
-                        <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="105" HeightSizePolicy="StretchToParent"
+                        <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="125" HeightSizePolicy="StretchToParent"
                                     Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadSellTown" />
                         <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="55" HeightSizePolicy="StretchToParent"
                                     Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadPrice" />
@@ -104,8 +104,6 @@
                                     Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadProfit" />
                         <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="60" HeightSizePolicy="StretchToParent"
                                     Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadDays" />
-                        <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="60" HeightSizePolicy="StretchToParent"
-                                    Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadData" />
                         <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="45" HeightSizePolicy="StretchToParent"
                                     Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadCaravans" />
                         <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="45" HeightSizePolicy="StretchToParent"
@@ -146,11 +144,11 @@
                                         <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                                                    StackLayout.LayoutMethod="HorizontalLeftToRight">
                                           <Children>
-                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="130"
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="150"
                                                         HeightSizePolicy="StretchToParent"
                                                         Brush="Popup.Button.Text" Brush.FontSize="16"
                                                         Text="@ItemName" />
-                                            <ButtonWidget WidthSizePolicy="Fixed" SuggestedWidth="105" HeightSizePolicy="StretchToParent"
+                                            <ButtonWidget WidthSizePolicy="Fixed" SuggestedWidth="125" HeightSizePolicy="StretchToParent"
                                                           DoNotPassEventsToChildren="true" Command.Click="ExecuteClickBuyTown"
                                                           UpdateChildrenStates="true">
                                               <Children>
@@ -163,7 +161,7 @@
                                                         HeightSizePolicy="StretchToParent"
                                                         Brush="Popup.Button.Text" Brush.FontSize="16"
                                                         Text="@BuyPrice" />
-                                            <ButtonWidget WidthSizePolicy="Fixed" SuggestedWidth="105" HeightSizePolicy="StretchToParent"
+                                            <ButtonWidget WidthSizePolicy="Fixed" SuggestedWidth="125" HeightSizePolicy="StretchToParent"
                                                           DoNotPassEventsToChildren="true" Command.Click="ExecuteClickSellTown"
                                                           UpdateChildrenStates="true">
                                               <Children>
@@ -188,11 +186,6 @@
                                                         HeightSizePolicy="StretchToParent"
                                                         Brush="Popup.Button.Text" Brush.FontSize="16"
                                                         Text="@Days" />
-                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="60"
-                                                        HeightSizePolicy="StretchToParent"
-                                                        Brush="Popup.Button.Text" Brush.FontSize="14"
-                                                        Brush.FontColor="#BBBBBBFF"
-                                                        Text="@DataAge" />
                                             <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="45"
                                                         HeightSizePolicy="StretchToParent"
                                                         Brush="Popup.Button.Text" Brush.FontSize="16"
