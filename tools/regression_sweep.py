@@ -1882,10 +1882,12 @@ RULES = io.open('CLAUDE.md', encoding='utf-8').read()
 GUARD = io.open('.claude/hooks/no-new-branch.sh', encoding='utf-8').read()
 SETTINGS = io.open('.claude/settings.json', encoding='utf-8').read()
 
-def the_hook_reads_the_owner_off_the_newest_commit():
-    return ("git log --format='%an%x1f%ae'" in HOOK
-            and "rev-list --max-parents=0" not in HOOK
-            and "{ print; exit }" in HOOK)
+def the_hook_never_reads_an_address_out_of_the_history():
+    return ("git log" not in HOOK
+            and "rev-list" not in HOOK
+            and "%ae" not in HOOK
+            and "git config --local user.email" in HOOK
+            and "git config --local commit.gpgsign false" in HOOK)
 
 def the_hook_falls_back_to_the_signature_the_rules_name():
     return ("commit as `" in RULES
@@ -1925,9 +1927,9 @@ chk("1.6.32", "a version is not published while the changelog still says Unrelea
     the_workflow_refuses_to_publish_an_unfinished_changelog())
 chk("1.6.32", "the changelog may open on an Unreleased heading, and that heading has to say something",
     changelog_opens_on_the_shipped_version())
-chk("1.6.32", "the owner is read off the most recent commit he authored, never off the first commit in the log",
-    the_hook_reads_the_owner_off_the_newest_commit())
-chk("1.6.32", "with no commit of his in the history, the signature comes from the one place that carries it",
+chk("1.7.0", "the session signature never comes from an address left in the history",
+    the_hook_never_reads_an_address_out_of_the_history())
+chk("1.7.0", "the session signature comes from the one place in the working rules that carries it",
     the_hook_falls_back_to_the_signature_the_rules_name())
 chk("1.7.0", "the commit signature is the noreply address, written in one place and nowhere else",
     the_signature_is_written_in_one_place_and_is_the_noreply_address())
