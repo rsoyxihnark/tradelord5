@@ -1,5 +1,5 @@
 #!/bin/bash
-set -uo pipefail
+set -uof pipefail
 
 COMMAND=$(jq -r '.tool_input.command // empty' 2>/dev/null || true)
 [ -n "${COMMAND:-}" ] || exit 0
@@ -13,66 +13,75 @@ refuse() {
   exit 2
 }
 
-segment_after() {
-  printf '%s' "$COMMAND" | grep -oE "\\bgit\\b[^|;&]*\\b$1\\b[^|;&]*" || true
-}
+SEGMENTS=$(printf '%s\n' "$COMMAND" | tr '|;&()' '\n\n\n\n\n')
 
-if printf '%s' "$COMMAND" | grep -Eq '\bgit\b[^|;&]*\b(checkout|switch)\b[^|;&]*(-b|-B|-c|-C|--create|--orphan)([[:space:]]|$)'; then
-  refuse "that command starts a new branch"
-fi
-
-if printf '%s' "$COMMAND" | grep -Eq '\bgit\b[^|;&]*\bworktree[[:space:]]+add\b'; then
-  refuse "git worktree add starts a new branch"
-fi
-
-BRANCH_SEGMENT=$(segment_after branch)
-if [ -n "$BRANCH_SEGMENT" ]; then
-  NAMES=0
-  READS=0
-  for token in ${BRANCH_SEGMENT#*branch}; do
-    case "$token" in
-      -d|-D|--delete|-r|--remotes|-a|--all|-l|--list|--show-current|--contains|--no-contains|--merged|--no-merged|--points-at|--sort=*|--format=*|-v|-vv|--verbose|-q|--quiet|--color|--no-color|-i|--ignore-case) READS=1 ;;
-      -*) ;;
-      *) NAMES=1 ;;
+while IFS= read -r segment; do
+  set -- $segment
+  [ "${1:-}" = "git" ] || continue
+  shift
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -C|-c) shift; shift ;;
+      --git-dir=*|--work-tree=*|--namespace=*|--exec-path=*|-p|--paginate|--no-pager|--bare|--literal-pathspecs|--no-replace-objects) shift ;;
+      *) break ;;
     esac
   done
-  if [ "$NAMES" = 1 ] && [ "$READS" = 0 ]; then
-    refuse "git branch with a name starts a new branch"
-  fi
-fi
+  SUB=${1:-}
+  [ $# -gt 0 ] && shift
 
-PUSH_SEGMENT=$(segment_after push)
-if [ -n "$PUSH_SEGMENT" ]; then
-  DELETING=0
-  TAGS=0
-  REMOTE=0
-  TOMAIN=0
-  WRONG=""
-  for token in ${PUSH_SEGMENT#*push}; do
-    case "$token" in
-      --delete|-d) DELETING=1 ;;
-      --tags|--follow-tags) TAGS=1 ;;
-      -*) ;;
-      *)
-        if [ "$REMOTE" = 0 ]; then
-          REMOTE=1
-        else
-          DEST=${token##*:}
-          case "$DEST" in
-            main|refs/heads/main) TOMAIN=1 ;;
-            *) WRONG=$DEST ;;
-          esac
-        fi ;;
-    esac
-  done
-  if [ "$DELETING" = 0 ]; then
-    if [ -n "$WRONG" ]; then
-      refuse "that push would create the remote branch $WRONG"
-    fi
-    if [ "$TOMAIN" = 0 ] && [ "$TAGS" = 0 ]; then
-      refuse "a push has to name where it goes, and main is the only place it may go"
-    fi
-  fi
-fi
+  case "$SUB" in
+    checkout|switch)
+      for token in "$@"; do
+        case "$token" in
+          --) break ;;
+          -b|-B|-c|-C|--create|--force-create|--orphan)
+            refuse "that command starts a new branch" ;;
+        esac
+      done ;;
+
+    worktree)
+      [ "${1:-}" = "add" ] && refuse "git worktree add starts a new branch" ;;
+
+    branch)
+      NAMES=0; READS=0; SKIP=0
+      for token in "$@"; do
+        if [ "$SKIP" = 1 ]; then SKIP=0; continue; fi
+        case "$token" in
+          *'>'*|*'<'*) case "$token" in *'>'|*'<') SKIP=1 ;; esac ;;
+          -d|-D|--delete|-r|--remotes|-a|--all|-l|--list|--show-current|--contains|--no-contains|--merged|--no-merged|--points-at|--sort=*|--format=*|-v|-vv|--verbose|-q|--quiet|--color|--no-color|-i|--ignore-case) READS=1 ;;
+          -*) ;;
+          *) NAMES=1 ;;
+        esac
+      done
+      [ "$NAMES" = 1 ] && [ "$READS" = 0 ] &&
+        refuse "git branch with a name starts a new branch" ;;
+
+    push)
+      DELETING=0; TAGS=0; REMOTE=0; TOMAIN=0; SKIP=0; WRONG=""
+      for token in "$@"; do
+        if [ "$SKIP" = 1 ]; then SKIP=0; continue; fi
+        case "$token" in
+          *'>'*|*'<'*) case "$token" in *'>'|*'<') SKIP=1 ;; esac ;;
+          --delete|-d) DELETING=1 ;;
+          --tags|--follow-tags) TAGS=1 ;;
+          -*) ;;
+          *)
+            if [ "$REMOTE" = 0 ]; then
+              REMOTE=1
+            else
+              case "${token##*:}" in
+                main|refs/heads/main) TOMAIN=1 ;;
+                *) WRONG=${token##*:} ;;
+              esac
+            fi ;;
+        esac
+      done
+      if [ "$DELETING" = 0 ]; then
+        [ -n "$WRONG" ] && refuse "that push would create the remote branch $WRONG"
+        [ "$TOMAIN" = 0 ] && [ "$TAGS" = 0 ] &&
+          refuse "a push has to name where it goes, and main is the only place it may go"
+      fi ;;
+  esac
+done <<<"$SEGMENTS"
 
 exit 0
