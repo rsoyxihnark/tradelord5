@@ -39,7 +39,6 @@
 		<string id="TL54" text="Qty"/>
 		<string id="TL55" text="Profit"/>
 		<string id="TL56" text="Days"/>
-		<string id="TL57" text="Data"/>
 		<string id="TL58" text="Carv."/>
 		<string id="TL59" text="Conf"/>
 		<string id="TL60" text="Score"/>
@@ -57,9 +56,6 @@
 		<string id="TL71" text=" | Score = profit per day discounted by Conf"/>
 		<string id="TL72" text=" | Score = profit per day"/>
 		<string id="TL73" text=" | resale safety factor applied"/>
-		<string id="TL74" text="live"/>
-		<string id="TL75" text="today"/>
-		<string id="TL76" text="{DAYS}d old"/>
 		<string id="TL77" text="Profit: +{PCT}%"/>
 		<string id="TL78" text="Stock: {COUNT}"/>
 		<string id="TL79" text="~{DAYS} days"/>
@@ -85,10 +81,12 @@
 		<string id="TL257" text="Average of what you paid"/>
 		<string id="TL258" text="Last price you paid"/>
 		<string id="TL259" text="Cheapest market you know"/>
+		<string id="TL260" text="Ledger entry in town menu"/>
 		<string id="TL352" text="Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach."/>
 		<string id="TL250" text="Language"/>
 		<string id="TL351" text="Once your party already carries this many of a good, TradeLord leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit."/>
 		<string id="TL350" text="The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This settings screen takes the new language the next time you open it. Town menu entries take it when you next load a campaign."/>
+		<string id="TL360" text="Shows the TradeLord ledger entry in town and village menus, which opens the route panel. Turn it off if you would rather open the panel with its hotkey or its map button."/>
 		<string id="TL201" text="Live world prices (default)"/>
 		<string id="TL202" text="Observation shelf life (days, 0 = never expire)"/>
 		<string id="TL203" text="Exclude hostile markets"/>

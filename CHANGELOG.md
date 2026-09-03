@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.12.0
+
+- TradeLord now tells you on screen why it traded nothing at a market, when it trades as you arrive, instead of writing the reason to its log alone.
+- Turning quiet automation on keeps those new lines off the screen along with the rest.
+- TradeLord now speaks Russian, chosen from the same Language setting that already offered English and Turkish.
+- A new setting hides the TradeLord ledger entry in the town and village menus, the way the trade entry could already be hidden.
+- The ledger panel has dropped its Data column, and its item, buy town and sell town columns are wider for the room.
+
 ## 1.11.1
 
 - Gaining or losing ships now changes which markets TradeLord counts as being in reach straight away, instead of leaving some of them out until the hour turns.
