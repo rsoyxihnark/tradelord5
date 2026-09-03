@@ -18,7 +18,7 @@
 - ✅ Stock counts, so you know the deal is actually there
 - ✅ Inventory rows tinted good to bad against the best price known
 - ✅ One clean set of price hints, bypassing the vanilla rumour system, which is usually out of date by the time you get there
-- ✅ A ledger panel on the campaign map ranking every profitable route, on hotkey **L** or the map button
+- ✅ A ledger panel on the campaign map ranking every profitable route, on hotkey **T** or the map button
 - ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get
 - ✅ A confidence score on each route: profit per day, discounted by how much of the good the market you are buying from has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
