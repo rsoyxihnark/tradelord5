@@ -497,8 +497,11 @@ namespace TradeLord
             if (!Options.Current.AutoSellOnEntry && !Options.Current.AutoBuyOnEntry) return false;
             if (!CanTradeHere(settlement)) return false;
             _announcedAutomation = true;
-            Toast(Tongue.Text("{=TL87}TradeLord buys and sells for you as you enter a market, starting at the next one. Turn auto-sell and auto-buy on entry off in its settings to trade by hand."), ToastAlert);
-            Log.Write("automation notice shown - this market is left alone so the campaign can turn it off first");
+            Toast(McmLoader.SettingsReachable
+                ? Tongue.Text("{=TL87}TradeLord buys and sells for you as you enter a market, starting at the next one. Turn auto-sell and auto-buy on entry off in its settings to trade by hand.")
+                : Tongue.Text("{=TL96}TradeLord buys and sells for you as you enter a market, starting at the next one. Turning that off needs its settings screen, which needs MCM, and MCM is not installed. Install MCM alongside TradeLord to change this."), ToastAlert);
+            Log.Write("automation notice shown - this market is left alone so the campaign can turn it off first"
+                      + (McmLoader.SettingsReachable ? "" : "; MCM is absent, so the notice names it"));
             return true;
         }
 
