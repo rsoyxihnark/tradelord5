@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.14.0
+
+- TradeLord now speaks Simplified Chinese, chosen from the same Language setting that already offered English, Turkish and Russian.
+
 ## 1.13.3
 
 - The notice that TradeLord trades as you arrive is shorter, so it sits on screen like its other messages instead of running long.
