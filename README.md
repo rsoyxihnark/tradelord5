@@ -1,12 +1,12 @@
 - It reads what every market in Calradia is paying right now, live, straight from the game's own brain.
 - It shows you the best ways to buy and sell, right in the item tooltip and in a ledger.
-- It ranks the trade routes worth travelling on panel. Each route's profit is evaluated on 9+ factors and travel time on 5+. Then the two are scored together for confidence. Respecting how the price moves because of the NPC caravans enroute there. Profit per travel day is calculated by real pathfinding with party's own speed, with the cargo carrying, from where you are, to the buy town, on to the sell town.
+- It ranks the trade routes worth travelling, in a panel on the campaign map. A route's profit is priced unit by unit through the game's own model, then discounted for how deep the seller's stock is, how long the trip takes, how old the prices are, and how many NPC caravans are sitting at or heading for the two towns. Travel time comes from the game's own pathfinding, at your party's real speed with the cargo you are carrying, from where you are to the buy town and on to the sell town.
 - And it can buy and sell for you automatically as you enter a settlement.
-- You can change how it does any of it. The defaults are thoroughly tested and work great.
+- You can change how it does any of it, or turn any of it off.
 
 ## Everything it does
 
-- ✅ Plug and play, unlike some other mods. Install or remove it, before, during or after a campaign, and load a save made with it or without it. It does not matter. This mod cannot break a save. It used to register a `SaveableTypeDefiner` declaring classes of its own, `PriceObservation` and `PurchaseRecord`, that only this mod knew how to read, so a save written that way would not open again until you put the mod back. That is gone. All it ever puts in a save now is three strings, a number, a settlement reference and a flag, every one of them something vanilla already knows how to read.
+- ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is three strings, a number, a settlement reference and a flag, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
 
 **What it tells you**
 
@@ -49,7 +49,7 @@
 - ✅ Anything you locked in the inventory screen
 - ✅ Unique and player-crafted gear, quest items, mounts and pack animals
 - ✅ Your food reserve (accounted for the men in your party)
-- ✅ Buying grain (its a low profit high weight good to trade)
+- ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
 - ✅ Your gold reserve, or anything past your spending cap for the visit
 - ✅ Smithing materials such as iron ore, ingots, charcoal and hardwood, once you switch their policy to leave them alone, off by default
 - ✅ Any good you put on the never-sell or never-buy list, named by its item id or by the name on screen
@@ -77,5 +77,6 @@
 - ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303
 - ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it
 
-**All of it is yours to change.** Every feature above is a switch or a number on the settings screen.
-Turn any one of them off, or set it to whatever you like.
+**All of it is yours to change.** Every feature above is a switch or a number on the settings screen,
+which TradeLord puts there through MCM. Install MCM alongside it and you can turn any one of them off,
+or set it to whatever you like.

@@ -415,7 +415,7 @@ def the_readme_counts_the_saved_values_right():
         for field in re.findall(r'dataStore\.SyncData\("[^"]+",\s*ref\s+(_\w+)\)', body):
             tally[types.get(field)] = tally.get(types.get(field), 0) + 1
     words = {1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six'}
-    said = ('All it ever puts in a save now is ' + words.get(tally.get('string'), 'no') +
+    said = ('All it puts in a save is ' + words.get(tally.get('string'), 'no') +
             ' strings, a number, a settlement reference and a flag')
     return (said in README and tally.get('int') == 1
             and tally.get('Settlement') == 1 and tally.get('bool') == 1)
