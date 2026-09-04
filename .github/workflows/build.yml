@@ -138,9 +138,12 @@ jobs:
             echo "CHANGELOG.md carries no section for ${VERSION#v} - open one before this version is published"
             exit 1
           fi
-          git log -1 --format=%b "$GITHUB_SHA" > release-notes.md
+          if ! python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md; then
+            echo "the notes for ${VERSION#v} could not be read out of CHANGELOG.md - its section is the release notes, so write one"
+            exit 1
+          fi
           if [ -z "$(tr -d '[:space:]' < release-notes.md)" ]; then
-            echo "release notes came out empty - the commit body is the notes, so write one"
+            echo "release notes came out empty - the changelog section for ${VERSION#v} is the notes, so write one"
             exit 1
           fi
           for attempt in 1 2 3 4 5; do

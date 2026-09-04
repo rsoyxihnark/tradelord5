@@ -20,7 +20,9 @@ def sections(text):
     return out
 
 def main(argv):
-    wanted = argv[1] if len(argv) > 1 else None
+    rest = [arg for arg in argv[1:] if arg != '--notes']
+    as_notes = len(rest) < len(argv) - 1
+    wanted = rest[0] if rest else None
     text = io.open('CHANGELOG.md', encoding='utf-8').read()
     found = sections(text)
     if not found:
@@ -37,6 +39,9 @@ def main(argv):
         if not said:
             sys.stderr.write(version + ' has no entries\n')
             return 1
+        if as_notes:
+            sys.stdout.write('\n'.join('- ' + line for line in said) + '\n')
+            continue
         sys.stdout.write('[' + version + ']\n')
         sys.stdout.write('\n'.join(said) + '\n\n')
     return 0
