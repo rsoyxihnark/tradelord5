@@ -387,6 +387,7 @@ namespace TradeLord
             var all = new List<(Settlement s, int price, float days)>();
             foreach (var (s, lower) in LiveCandidates(hour))
             {
+                if (selling && s.SettlementComponent.Gold <= 0) continue;
                 if (!selling && minStock > 0 && StockOf(s, item) < minStock) continue;
                 int price = s.SettlementComponent.GetItemPrice(item, MobileParty.MainParty, selling);
                 if (price <= 0) continue;
