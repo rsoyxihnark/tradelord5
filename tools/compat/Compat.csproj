@@ -7,6 +7,6 @@
     <RootNamespace>TradeLord.Compat</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="8.0.0"/>
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="10.0.11"/>
   </ItemGroup>
 </Project>
