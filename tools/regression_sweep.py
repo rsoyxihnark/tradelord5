@@ -735,7 +735,15 @@ chk("1.3.2", "smithing compares live DefaultItems, no cached static set",
     "item == DefaultItems.Charcoal" in S['Trading.cs'] and not re.search(r'static.*HashSet<ItemObject>', ALL))
 chk("1.3.2", "one food reserve in total, not per type", S['Trading.cs'].count("KeepFoodDays") == 2)
 chk("1.3.2", "ExcludeHostileTowns blocks trading, not just scans",
-    "CanTradeHere" in S['Trading.cs'] and "ExcludeHostileTowns && LedgerBehavior.IsHostile" in S['Trading.cs'])
+    (lambda gate: "IsMarket(s)" in gate
+              and "Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)" in gate)
+    (between(S['Trading.cs'], "private static bool CanTradeHere(Settlement s) =>", ";")) and
+    "if (!CanTradeHere(settlement)) return false;" in method_body(S['Trading.cs'], "private static bool MarketOpen"))
+chk("1.3.18", "neither pass trades before the settling delay is served",
+    (lambda b: ordered(b, "int wait = Options.Current.EconomySettlingDays;", "if (wait <= 0) return true;",
+                       "CampaignStartTime.ElapsedDaysUntilNow", "if (elapsed >= wait) return true;"))
+    (method_body(S['Trading.cs'], "private static bool MarketOpen")) and
+    S['Trading.cs'].count("if (!MarketOpen(settlement, quiet)) return;") == 2)
 chk("1.3.2", "ScanRadius applied in observed mode",
     "if (!WithinRadius(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "!Eligible(town, out float lower)" in S['Ledger.cs'])
@@ -750,8 +758,18 @@ chk("1.3.2", "zero-gold purchase not recorded",
     re.search(r'if \(cost == 0\) break;[\s\S]{0,80}RecordPurchase', S['Trading.cs']) is not None)
 chk("1.3.2", "panel tracks a set of pins", "_panelPins = new HashSet<Settlement>" in S['Panel.cs'])
 chk("1.3.2", "marker never removes a panel pin", "LedgerPanel.IsPinned(_trackedTown)" in S['Trading.cs'])
-chk("1.3.2", "sim honors the same-stop rule",
-    "_soldThisVisit.Add" in S['Trading.cs'] and "_boughtThisVisit[item.StringId] = (countThis, spentThis);" in S['Trading.cs'])
+chk("1.3.2", "a good one half of the pass moved here is left alone by the other half",
+    (lambda b: "if (item != null && _boughtThisVisit.ContainsKey(item.StringId)) { tally.Note(Block.TradedHereAlready); continue; }" in b
+           and "_soldThisVisit.Add(item.StringId);" in b)
+    (method_body(S['Trading.cs'], "public static void ExecuteQuickSell")) and
+    (lambda b: "if (_soldThisVisit.Contains(it.StringId)) { tally.Note(Block.TradedHereAlready); continue; }" in b
+           and "_boughtThisVisit[item.StringId] = (countThis, spentThis);" in b)
+    (method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")))
+chk("1.3.2", "a transaction that moves gold the wrong way stops the pass instead of draining the purse",
+    (lambda b: ordered(b, "int proceeds = Hero.MainHero.Gold - before;", "if (proceeds < 0)", "directionError = true;"))
+    (method_body(S['Trading.cs'], "public static void ExecuteQuickSell")) and
+    (lambda b: ordered(b, "int cost = before - Hero.MainHero.Gold;", "if (cost < 0)", "directionError = true;"))
+    (method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")))
 chk("1.3.2", "sim honors carry weight", "simWeight" in S['Trading.cs'])
 chk("1.3.2", "observed mode uses Settlement.Find", "Settlement.Find(o.TownId)" in S['Ledger.cs'])
 chk("1.3.2", "Instance cleared on game end", "LedgerBehavior.Instance = null" in S['SubModule.cs'])
@@ -795,6 +813,19 @@ chk("1.3.8", "quick-buy respects inventory locks",
     "IsLocked(lockedKeys, new EquipmentElement(item))" in S['Trading.cs'])
 chk("1.3.8", "Harmony field injection uses four underscores", "____targetItem" in S['TooltipPatches.cs'])
 chk("1.3.8", "quick-buy stops when the budget is spent", "if (directionError || Budget() <= 0) break;" in S['Trading.cs'])
+chk("1.3.8", "the buying pass takes only what a market in reach pays more for, and only above the margin",
+    (lambda b: "if (elsewhere.Item1 == null || elsewhere.Item1 == settlement) { tally.Note(Block.NoResaleMarket); continue; }" in b
+           and "if (!TradePolicy.BuyAcceptable(price, realizable)) { tally.Note(Block.BelowMargin); break; }" in b)
+    (method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")))
+chk("1.3.2", "the buying pass stops at the purse, the per-item denar cap, the carry weight and the herd",
+    (lambda b: "if (price > Budget()) { tally.Note(Block.BudgetSpent); break; }" in b
+           and "spentThis + price > Options.Current.BuyValueCapPerItem) { tally.Note(Block.ItemValueCap); break; }" in b
+           and "- MobileParty.MainParty.TotalWeightCarried - simWeight) { tally.Note(Block.CarryWeight); break; }" in b
+           and "if (livestock && herdRoom <= 0) { tally.Note(Block.HerdFull); break; }" in b)
+    (method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")))
+chk("1.3.14", "the selling pass stops when the merchant's till cannot cover the next unit, on a dry run too",
+    "if ((sim ? simTill : market.Gold) < price) { tally.Note(Block.MerchantTillEmpty); break; }" in
+    method_body(S['Trading.cs'], "public static void ExecuteQuickSell"))
 chk("1.3.9", "per-hour cache serves both price modes",
     ordered(S['Ledger.cs'], "_marketCache.TryGetValue", "? TopLive"))
 chk("1.3.9", "entering a market drops cached rankings", "ForgetMarketRankings();" in S['Ledger.cs'])
@@ -808,6 +839,9 @@ chk("1.3.10", "hotkey rejects non-key text", "Enum.IsDefined(typeof(InputKey), k
 chk("1.3.11", "quest items never sold", "el.EquipmentElement.IsQuestItem" in S['Trading.cs'])
 chk("1.3.11", "NotMerchandise never sold",
     "item.NotMerchandise" in method_body(S['Trading.cs'], "internal static bool MaySell"))
+chk("1.3.33", "unique and player-crafted gear is left alone while the protection is on",
+    "else if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))" in
+    method_body(S['Trading.cs'], "internal static bool MaySell"))
 chk("1.3.11", "panel drops input restrictions on teardown",
     "SetInputRestrictions(false, InputUsageMask.All)" in method_body(S['Panel.cs'], "internal static void Cleanup"))
 chk("1.3.12", "sieges/raids excluded from scans",
@@ -884,6 +918,9 @@ chk("1.3.26", "pathfinder calls are gated behind a straight-line lower bound",
 chk("1.3.26", "the best route so far prunes pairs before they cost a path query",
     "if (best != null && ceiling / Math.Max(soonest, 0.25f) <= bestKey) continue;" in S['Ledger.cs'] and
     ordered(S['Ledger.cs'], "ceiling / Math.Max(soonest, 0.25f)", "Travel.EstimateDaysBetween(from, to)"))
+chk("1.3.26", "a route's whole trip stays inside the travel ceiling, on the straight line and on the real path",
+    (lambda b: ordered(b, "if (cap > 0f && soonest > cap) continue;", "if (cap > 0f && days > cap) continue;"))
+    (method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")))
 chk("1.3.26", "both straight-line estimates share one implementation",
     S['Travel.cs'].count("private static float StraightDays(float distance)") == 1 and
     "return StraightDays(party.GetPosition2D.Distance(target.GetPosition2D));" in S['Travel.cs'] and
