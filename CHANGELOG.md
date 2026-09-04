@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.14.4
+
+- TradeLord no longer says a market has nothing worth trading when the reason nothing sold was your own cargo.
+
 ## 1.14.3
 
 - A market whose merchant has run out of gold is no longer named as the best place to sell, so TradeLord stops buying cargo for a town that cannot pay for it and stops holding goods back for one.
