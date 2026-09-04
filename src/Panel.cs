@@ -221,8 +221,16 @@ namespace TradeLord
             return t.ToString();
         }
 
+        private static readonly string[] SpokenLabels =
+        {
+            "BrandLabel", "TitleLabel", "RefreshLabel", "CloseLabel", "HeadItem", "HeadBuyTown",
+            "HeadPrice", "HeadSellTown", "HeadQuantity", "HeadProfit", "HeadDays", "HeadCaravans",
+            "HeadConfidence", "HeadScore"
+        };
+
         private void Refresh()
         {
+            for (int i = 0; i < SpokenLabels.Length; i++) OnPropertyChanged(SpokenLabels[i]);
             var hero = Hero.MainHero;
             var party = MobileParty.MainParty;
             PlayerGold = Line("{=TL63}Gold: {AMOUNT}", "AMOUNT", (hero?.Gold ?? 0).ToString("N0"));
