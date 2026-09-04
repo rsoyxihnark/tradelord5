@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.14.3
+
+- A market whose merchant has run out of gold is no longer named as the best place to sell, so TradeLord stops buying cargo for a town that cannot pay for it and stops holding goods back for one.
+
 ## 1.14.2
 
 - TradeLord no longer buys a good that your own settings will never let it sell, so a category you set to buy only no longer fills your cargo with goods it will not move on.
