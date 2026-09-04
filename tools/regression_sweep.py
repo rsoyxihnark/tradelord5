@@ -2459,6 +2459,16 @@ chk("1.14.2", "the ladders are dropped when a scan starts and when the campaign 
     'Guard.Run("GameEnd.Bulk", Bulk.Forget);' in S['SubModule.cs'] and
     "internal static void Forget() => _rungs.Clear();" in S['Market.cs'])
 
+chk("1.14.3", "a market whose merchant has no gold is no destination in any list the mod ranks, not just the route scan",
+    (lambda body: "if (selling && s.SettlementComponent.Gold <= 0) continue;" in body
+              and ordered(body, "if (selling && s.SettlementComponent.Gold <= 0) continue;",
+                          "int price = s.SettlementComponent.GetItemPrice("))
+    (method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")) and
+    "LedgerBehavior.Instance?.BestSell(it) ?? (null, 0)" in
+        method_body(S['Trading.cs'], "public static void ExecuteQuickBuy") and
+    "LedgerBehavior.Instance?.BestSell(item) ?? (null, 0)" in
+        method_body(S['Trading.cs'], "public static void ExecuteQuickSell"))
+
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
     'git log -1 --format=%b "$GITHUB_SHA" > release-notes.md' not in WORKFLOW and
