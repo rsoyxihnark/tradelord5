@@ -2426,6 +2426,18 @@ def the_tolerance_hint_names_goods_that_were_never_bought():
 chk("1.14.1", "the best-market tolerance hint says the floor always binds goods that were never bought",
     the_tolerance_hint_names_goods_that_were_never_bought())
 
+def the_panel_relabels_every_line_it_speaks():
+    src = S['Panel.cs']
+    vm = src[src.index('public class LedgerPanelVM'):src.index('internal static class LedgerPanel')]
+    spoken = re.findall(r'\[DataSourceProperty\]\s*public\s+string\s+(\w+)\s*=>', vm)
+    listed = re.search(r'private static readonly string\[\] SpokenLabels\s*=\s*\{(.*?)\};', vm, re.S)
+    named = re.findall(r'"(\w+)"', listed.group(1)) if listed else []
+    body = method_body(S['Panel.cs'], "private void Refresh()")
+    raise_all = "for (int i = 0; i < SpokenLabels.Length; i++) OnPropertyChanged(SpokenLabels[i]);"
+    return (len(spoken) > 10 and sorted(spoken) == sorted(named) and len(named) == len(set(named))
+            and raise_all in body
+            and ordered(body, raise_all, "PlayerGold ="))
+
 def the_notes_are_the_changelog_section_for_the_version():
     import subprocess
     version = module_version()
@@ -2478,6 +2490,9 @@ chk("1.14.4", "the sell pass names a stopping rule only when one fired, so a car
     "if (!Structural(kv.Key) &&" in method_body(S['Trading.cs'], "internal Block Dominant") and
     "if (!Muted(quiet)) NoteStalled(selling: false, tally.Dominant());" in
         method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
+
+chk("1.14.5", "every line the panel speaks is raised again when it refreshes, so a language change reaches its headings too",
+    the_panel_relabels_every_line_it_speaks())
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
