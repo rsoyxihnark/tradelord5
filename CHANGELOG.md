@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.13.3
+
+- The notice that TradeLord trades as you arrive is shorter, so it sits on screen like its other messages instead of running long.
+
 ## 1.13.2
 
 - Without MCM installed there is no settings screen, so the notice that TradeLord trades as you arrive now says that plainly and names MCM, instead of sending you to settings you do not have.
