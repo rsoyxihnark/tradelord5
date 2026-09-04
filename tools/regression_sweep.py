@@ -1718,6 +1718,11 @@ chk("1.6.18", "the notice is remembered in the save, so it is shown once per cam
     "private bool _announcedAutomation;" in S['Trading.cs'])
 chk("1.6.18", "every variable a shipped line leaves a slot for is filled in by name",
     every_text_variable_is_supplied())
+chk("1.13.2", "the automation notice names MCM when there is no settings screen to send you to",
+    (lambda b: ordered(b, "Toast(McmLoader.SettingsReachable", "{=TL87}", "{=TL96}"))
+    (method_body(S['Trading.cs'], "private bool AnnounceAutomation")) and
+    "SettingsReachable = true;" in method_body(S['Support.cs'], "internal static void TryLoad") and
+    S['Support.cs'].count("SettingsReachable = true;") == 1)
 chk("1.13.0", "the README counts what goes into a save as the source actually saves it",
     the_readme_counts_the_saved_values_right())
 chk("1.6.18", "the defaults the README publishes are the defaults the module ships",

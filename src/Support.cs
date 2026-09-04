@@ -12,6 +12,8 @@ namespace TradeLord
         private const int McmGeneration = 5;
         private const int GenerationsAhead = 2;
 
+        internal static bool SettingsReachable { get; private set; }
+
         private static string Named(int generation) => "MCMv" + generation;
 
         private static bool Loaded(string prefix)
@@ -84,6 +86,7 @@ namespace TradeLord
                 return;
             }
             init.Invoke(null, null);
+            SettingsReachable = true;
             Log.Write("MCM detected - settings menu registered");
         }
     }
