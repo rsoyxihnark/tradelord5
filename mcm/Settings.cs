@@ -363,7 +363,7 @@ namespace TradeLord.Mcm
         public bool PreferBestSellTown { get => Options.Current.PreferBestSellTown; set { Options.Current.PreferBestSellTown = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL230}Best-market tolerance", 0.5f, 1f, "#0%", Order = 4, RequireRestart = false,
-            HintText = "{=TL330}With the above ON: sell here anyway if this market pays at least this fraction of the best known price.")]
+            HintText = "{=TL330}Sell here anyway if this market pays at least this fraction of the best known price. This always applies to goods you never bought, such as loot; with the setting above ON it applies to goods you bought too.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public float BestSellTownTolerance { get => Options.Current.BestSellTownTolerance; set { Options.Current.BestSellTownTolerance = value; Options.Bump(); } }
 
