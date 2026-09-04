@@ -974,7 +974,8 @@ namespace TradeLord
             {
                 if (tally.Any) Log.Repeatable("quick-sell-empty " + settlement.StringId, tally.Summary(),
                     "quick-sell moved nothing at " + settlement.Name + ": " + tally.Summary());
-                if (!Muted(quiet)) NoteStalled(selling: true, tally.Dominant());
+                Block stopped = tally.Dominant();
+                if (stopped != Block.None && !Muted(quiet)) NoteStalled(selling: true, stopped);
             }
         }
 
