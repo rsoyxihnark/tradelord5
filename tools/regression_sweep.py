@@ -829,6 +829,34 @@ chk("1.3.14", "the selling pass stops when the merchant's till cannot cover the 
 chk("1.3.9", "per-hour cache serves both price modes",
     ordered(S['Ledger.cs'], "_marketCache.TryGetValue", "? TopLive"))
 chk("1.3.9", "entering a market drops cached rankings", "ForgetMarketRankings();" in S['Ledger.cs'])
+chk("1.3.9", "the best market to sell at is the dearest and the best to buy at is the cheapest",
+    "int p = selling ? y.price.CompareTo(x.price) : x.price.CompareTo(y.price);" in
+    method_body(S['Ledger.cs'], "private static int Rank(bool selling"))
+chk("1.3.9", "the scan keeps to the stock floor, the village ceiling and the shelf life it was given",
+    "if (!selling && minStock > 0 && StockOf(s, item) < minStock) continue;" in
+    method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive") and
+    "if (shelf > 0 && now - o.CapturedDay > shelf) continue;" in
+    method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopObserved") and
+    "if (s.IsVillage && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;" in
+    method_body(S['Ledger.cs'], "private static bool WithinTravelCeiling"))
+chk("1.3.26", "the unit-by-unit walk stops at the merchant's till and at the spending cap",
+    (lambda b: "if (merchantTill > 0 && q.SellTotal + sellPrice > merchantTill) break;" in b
+           and "if (spendCap > 0 && q.BuyTotal + buyPrice > spendCap) break;" in b)
+    (method_body(S['Market.cs'], "internal static RouteQuote Walk")))
+chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has moved",
+    "return (landDist / land + seaDist / sea) / 24f;" in
+    method_body(S['Travel.cs'], "internal static float Days") and
+    "if (hour != _partyHour || at.DistanceSquared(_partyAt) > 100f)" in
+    method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty"))
+chk("1.3.11", "the panel hands back the movie and the mouse, and honours the modifier keys",
+    "layer.ReleaseMovie(movie)" in method_body(S['Panel.cs'], "internal static void Cleanup") and
+    "SetInputRestrictions(false, InputUsageMask.All)" in
+    method_body(S['Panel.cs'], "private static void ApplyIdleInput") and
+    (lambda b: ordered(b, "if (wantMouse)", "SetInputRestrictions(true, InputUsageMask.Mouse)",
+                       "else", "SetInputRestrictions(false, InputUsageMask.All)"))
+    (method_body(S['Panel.cs'], "private static void UpdateIdleInput")) and
+    "if (!Input.IsKeyDown(_modifiers[i].left) && !Input.IsKeyDown(_modifiers[i].right)) return false;" in
+    method_body(S['Panel.cs'], "private static bool HotkeyReleased"))
 chk("1.3.9", "panel respects locks", "ISet<string> locked = TradePolicy.LockedKeys();" in S['Ledger.cs'])
 chk("1.3.9", "summary names the six biggest by gold",
     "byValue.Sort((x, y) => y.Value.gold.CompareTo(x.Value.gold));" in S['Trading.cs'])
