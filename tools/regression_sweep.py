@@ -2401,6 +2401,27 @@ def a_rule_that_names_missing_source_reports_itself_broken():
 chk("1.7.0", "a rule naming source that is no longer there reports itself broken, and every later rule is still read",
     a_rule_that_names_missing_source_reports_itself_broken())
 
+chk("1.14.1", "the panel hotkey is ignored while a text field on the map has the keyboard",
+    "layers[i].IsFocusedOnInput()" in method_body(S['Panel.cs'], "private static bool TypingOnScreen") and
+    S['Panel.cs'].count("!TypingOnScreen(map) && HotkeyReleased()") == 2 and
+    "!map.IsEscapeMenuOpened && !TypingOnScreen(map) && HotkeyReleased()" in S['Panel.cs'])
+chk("1.14.1", "a text field that cannot be read leaves the hotkey working rather than dead",
+    "return false;" in method_body(S['Panel.cs'], "private static bool TypingOnScreen") and
+    "catch (Exception e) { Log.Error(e," in method_body(S['Panel.cs'], "private static bool TypingOnScreen"))
+chk("1.14.1", "the escape menu still closes the panel whether or not anything is being typed",
+    "else if (map.IsEscapeMenuOpened || (!TypingOnScreen(map) && HotkeyReleased()))" in S['Panel.cs'])
+
+def the_tolerance_hint_names_goods_that_were_never_bought():
+    hint = spoken(ENGLISH).get('TL330', '')
+    said = [spoken(path).get('TL330', '') for path in TRANSLATIONS.values()]
+    return ("never bought" in hint and "loot" in hint
+            and not hint.startswith("With the above ON")
+            and hint in M
+            and all(t and t != hint for t in said))
+
+chk("1.14.1", "the best-market tolerance hint says the floor always binds goods that were never bought",
+    the_tolerance_hint_names_goods_that_were_never_bought())
+
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
