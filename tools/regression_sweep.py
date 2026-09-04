@@ -379,7 +379,8 @@ def working_shell():
 def empty_release_notes_are_rejected():
     import subprocess, tempfile
     line = next((l.strip() for l in WORKFLOW.split('\n')
-                 if l.strip().startswith('if ') and 'release-notes.md' in l), None)
+                 if l.strip().startswith('if ') and 'release-notes.md' in l
+                 and '[:space:]' in l), None)
     if line is None or not line.endswith('then'):
         return False
     cond = line[len('if '):-len('then')].rstrip().rstrip(';')
@@ -1404,8 +1405,7 @@ chk("1.5.7", "units with no cost basis are still sold when purchased units miss 
     "remaining -= paidLeft;" in method_body(S['Trading.cs'], "public static void ExecuteQuickSell") and
     method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
         .count("tally.Note(Block.BelowMargin)") == 1)
-chk("1.5.8", "release notes come from the commit body, and an empty body fails the publish",
-    'git log -1 --format=%b "$GITHUB_SHA" > release-notes.md' in WORKFLOW and
+chk("1.5.8", "empty release notes fail the publish, and nothing is appended to the notes",
     "--notes-file release-notes.md" in WORKFLOW and
     empty_release_notes_are_rejected() and
     "Compiled and packaged by CI" not in WORKFLOW and
@@ -2421,6 +2421,22 @@ def the_tolerance_hint_names_goods_that_were_never_bought():
 
 chk("1.14.1", "the best-market tolerance hint says the floor always binds goods that were never bought",
     the_tolerance_hint_names_goods_that_were_never_bought())
+
+def the_notes_are_the_changelog_section_for_the_version():
+    import subprocess
+    version = module_version()
+    made = subprocess.run([sys.executable, 'tools/nexus_changelog.py', '--notes', version],
+                          capture_output=True)
+    if made.returncode != 0:
+        return False
+    said = [line for line in made.stdout.decode('utf-8').splitlines() if line]
+    wanted = section_entries(version)
+    return (len(wanted) > 0 and said == ['- ' + line for line in wanted])
+
+chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
+    'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
+    'git log -1 --format=%b "$GITHUB_SHA" > release-notes.md' not in WORKFLOW and
+    the_notes_are_the_changelog_section_for_the_version())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
