@@ -459,6 +459,7 @@ namespace TradeLord
 
         private List<TradeRoute> ScanRoutes()
         {
+            Bulk.Forget();
             var routes = new List<TradeRoute>();
             ISet<string> locked = TradePolicy.LockedKeys();
             float cap = Options.Current.MaxTravelDays;

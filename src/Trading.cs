@@ -1013,6 +1013,7 @@ namespace TradeLord
                     ItemObject it = el.EquipmentElement.Item;
                     if (el.Amount <= 0) { tally.Note(Block.NoStock); continue; }
                     if (!TradePolicy.MayBuy(it, locked, out Block whyBuy)) { tally.Note(whyBuy); continue; }
+                    if (!TradePolicy.MayRoundTrip(it, locked)) { tally.Note(Block.CategoryPolicy); continue; }
                     if (_soldThisVisit.Contains(it.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
                     int held = mine.GetItemNumber(it);
                     if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }

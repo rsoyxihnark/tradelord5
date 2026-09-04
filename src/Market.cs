@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -71,8 +72,49 @@ namespace TradeLord
         }
     }
 
+    internal sealed class Ladder
+    {
+        private readonly Shelf _shelf;
+        private readonly bool _selling;
+        private readonly List<int> _priced = new List<int>();
+
+        internal Ladder(Settlement site, ItemObject item, bool selling, int quoted)
+        {
+            _selling = selling;
+            _shelf = new Shelf(site, item, selling, quoted, projecting: true);
+        }
+
+        internal bool Walkable => _shelf.Walkable;
+
+        internal int At(int taken)
+        {
+            while (_priced.Count <= taken)
+            {
+                _priced.Add(_shelf.Price());
+                if (_selling) _shelf.Restock(1); else _shelf.Restock(-1);
+            }
+            return _priced[taken];
+        }
+    }
+
     internal static class Bulk
     {
+        private static readonly Dictionary<(string site, string item, bool selling), Ladder> _rungs =
+            new Dictionary<(string, string, bool), Ladder>();
+
+        internal static void Forget() => _rungs.Clear();
+
+        private static Ladder Rung(Settlement site, ItemObject item, bool selling, int quoted)
+        {
+            var key = (site.StringId, item.StringId, selling);
+            if (!_rungs.TryGetValue(key, out Ladder rung))
+            {
+                rung = new Ladder(site, item, selling, quoted);
+                _rungs[key] = rung;
+            }
+            return rung;
+        }
+
         internal static RouteQuote Walk(Settlement from, Settlement to, ItemObject item,
                                         int maxUnits, int merchantTill, int spendCap,
                                         int quotedBuyPrice, int quotedSellPrice)
@@ -80,14 +122,14 @@ namespace TradeLord
             RouteQuote q = default(RouteQuote);
             if (item == null || from == null || to == null || maxUnits <= 0) return q;
 
-            Shelf buy = new Shelf(from, item, selling: false, quoted: quotedBuyPrice, projecting: true);
-            Shelf sell = new Shelf(to, item, selling: true, quoted: quotedSellPrice, projecting: true);
+            Ladder buy = Rung(from, item, selling: false, quoted: quotedBuyPrice);
+            Ladder sell = Rung(to, item, selling: true, quoted: quotedSellPrice);
             q.Simulated = buy.Walkable && sell.Walkable;
 
             for (int u = 0; u < maxUnits; u++)
             {
-                int buyPrice = buy.Price();
-                int sellPrice = sell.Price();
+                int buyPrice = buy.At(u);
+                int sellPrice = sell.At(u);
                 if (buyPrice <= 0 || sellPrice <= 0) break;
                 if (!TradePolicy.BuyAcceptable(buyPrice, TradePolicy.Realizable(sellPrice))) break;
                 if (merchantTill > 0 && q.SellTotal + sellPrice > merchantTill) break;
@@ -97,9 +139,6 @@ namespace TradeLord
                 q.BuyTotal += buyPrice;
                 q.SellTotal += sellPrice;
                 q.Units++;
-
-                buy.Restock(-1);
-                sell.Restock(1);
             }
             return q;
         }
