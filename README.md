@@ -4,6 +4,12 @@
 - And it can buy and sell for you automatically as you enter a settlement.
 - You can change how it does any of it, or turn any of it off.
 
+## What it needs
+
+- **Harmony** (`Bannerlord.Harmony`), required. TradeLord does not load without it. Put it above TradeLord in the launcher's load order.
+- **MCM** (`Bannerlord.MBOptionScreen`), optional, and what the settings screen is built on. Without it TradeLord trades on the defaults below and has no settings screen; nothing else changes.
+- Bannerlord **1.4.8.119303**. War Sails is optional: with it, TradeLord counts sea legs and appears in port menus.
+
 ## Everything it does
 
 - ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is three strings, a number, a settlement reference and a flag, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
@@ -22,7 +28,7 @@
 - ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get
 - ✅ A confidence score on each route: profit per day, discounted by how much of the good the market you are buying from has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
-- ✅ The buying market's gold counted in, so it never plans a sale nobody can pay for
+- ✅ The gold in the till of the town you would sell to, counted in, so it never plans a sale nobody can pay for
 - ✅ Click any town to jump the camera there and pin a marker on it
 - ✅ The best town for the cargo you are carrying, marked on the map for you
 - ✅ Details of most profitable workshops on Calradia
@@ -33,7 +39,7 @@
 - ✅ Sells and buys the moment you enter a market by default
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
-- ✅ Holds cargo back for the market that pays best rather than dumping it one town short, off by default
+- ✅ Holds cargo back for the market that pays best rather than dumping it one town short. Always on for goods you never bought, such as looted gear; off by default for goods you bought, whose profit margin already covers it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set
 - ✅ Trades in villages as well, under their own stricter travel limit
