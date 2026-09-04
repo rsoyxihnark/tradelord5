@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.14.2
+
+- TradeLord no longer buys a good that your own settings will never let it sell, so a category you set to buy only no longer fills your cargo with goods it will not move on.
+- The ledger panel opens faster, most noticeably in a long campaign with many markets in reach.
+
 ## 1.14.1
 
 - The ledger panel no longer opens on its hotkey while you are typing into a box on the campaign map.
