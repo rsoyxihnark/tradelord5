@@ -78,7 +78,8 @@ namespace TradeLord.Mcm
         }
 
         private Dropdown<string> _language =
-            new Dropdown<string>(new[] { "English", "T\u00FCrk\u00E7e", "\u0420\u0443\u0441\u0441\u043A\u0438\u0439" },
+            new Dropdown<string>(new[] { "English", "T\u00FCrk\u00E7e", "\u0420\u0443\u0441\u0441\u043A\u0438\u0439",
+                                         "\u7B80\u4F53\u4E2D\u6587" },
                                  Options.Current.Language);
 
         private static readonly string[] PolicyWords =
