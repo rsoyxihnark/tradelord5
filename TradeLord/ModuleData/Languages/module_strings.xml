@@ -74,7 +74,7 @@
 		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
 		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
 		<string id="TL92" text="Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings."/>
-		<string id="TL96" text="TradeLord buys and sells for you as you enter a market, starting at the next one. Turning that off needs its settings screen, which needs MCM, and MCM is not installed. Install MCM alongside TradeLord to change this."/>
+		<string id="TL96" text="TradeLord buys and sells for you as you enter a market, starting at the next one. Its settings need MCM, which is not installed, so install MCM to change this."/>
 		<string id="TL251" text="Stop buying at this many held (0 = off)"/>
 		<string id="TL252" text="Always buy (item ids or names, comma separated)"/>
 		<string id="TL253" text="Leave alone"/>
