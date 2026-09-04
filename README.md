@@ -73,7 +73,7 @@
 **And**
 
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM
-- ✅ English, Turkish and Russian, picked in TradeLord's own Language setting, which its trade messages, ledger panel, price tooltips, menu entries and settings screen all follow
+- ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting, which its trade messages, ledger panel, price tooltips, menu entries and settings screen all follow
 - ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303
 - ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it
 
