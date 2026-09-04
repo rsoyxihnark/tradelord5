@@ -74,7 +74,7 @@
 		<string id="TL90" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde rota yok. Daha çok pazar gezin ya da Bilgi ayarlarından sınırları yükseltin."/>
 		<string id="TL91" text="TradeLord mal listelerinizden birindeki bir girdi bu oyundaki hiçbir mala uymuyor ve hiçbir işe yaramıyor. Hangisi olduğunu TradeLord.log yazıyor."/>
 		<string id="TL92" text="Keseniz {GOLD} dinar, altın rezerviniz {RESERVE}, bu yüzden TradeLord burada bir şey almayacak. Biraz yük satın ya da ayarlardan rezervi düşürün."/>
-		<string id="TL96" text="TradeLord bir pazara girer girmez sizin için alıp satar, bir sonrakinden başlayarak. Bunu kapatmak için ayarlar ekranı gerekir, o da MCM gerektirir ve MCM kurulu değil. Bunu değiştirmek için TradeLord ile birlikte MCM kurun."/>
+		<string id="TL96" text="TradeLord bir pazara girer girmez sizin için alıp satar, bir sonrakinden başlayarak. Ayarları için MCM gerekir, o da kurulu değil; değiştirmek için MCM kurun."/>
 		<string id="TL251" text="Elinizde bu kadar varken almayı bırak (0 = kapalı)"/>
 		<string id="TL252" text="Her zaman al (mal kimlikleri ya da adları, virgülle ayrılmış)"/>
 		<string id="TL253" text="Dokunma"/>
