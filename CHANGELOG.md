@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.13.2
+
+- Without MCM installed there is no settings screen, so the notice that TradeLord trades as you arrive now says that plainly and names MCM, instead of sending you to settings you do not have.
+
 ## 1.13.1
 
 - The best-market marker no longer points at a town whose merchant has no gold left to pay for your cargo.
