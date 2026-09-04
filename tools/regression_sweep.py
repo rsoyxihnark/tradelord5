@@ -541,7 +541,7 @@ def a_market_that_traded_something_drops_the_empty_lines():
             and ordered(report, "bool moved = _runMovedGoods;", "_sellStalled = null;",
                         "_buyStalled = null;", "_runMovedGoods = false;", "if (moved ||")
             and "_runMovedGoods = true;" in sell and "_runMovedGoods = true;" in buy
-            and "if (!Muted(quiet)) NoteStalled(selling: true, tally.Dominant());" in sell
+            and "if (stopped != Block.None && !Muted(quiet)) NoteStalled(selling: true, stopped);" in sell
             and "if (!Muted(quiet)) NoteStalled(selling: false, tally.Dominant());" in buy
             and "{=TL32}" not in sell and "{=TL33}" not in buy
             and all(field in reset for field in
@@ -2468,6 +2468,16 @@ chk("1.14.3", "a market whose merchant has no gold is no destination in any list
         method_body(S['Trading.cs'], "public static void ExecuteQuickBuy") and
     "LedgerBehavior.Instance?.BestSell(item) ?? (null, 0)" in
         method_body(S['Trading.cs'], "public static void ExecuteQuickSell"))
+
+chk("1.14.4", "the sell pass names a stopping rule only when one fired, so a cargo it may not sell never reads as a market with nothing to trade",
+    (lambda sell: "Block stopped = tally.Dominant();" in sell
+              and "if (stopped != Block.None && !Muted(quiet)) NoteStalled(selling: true, stopped);" in sell
+              and ordered(sell, "Block stopped = tally.Dominant();",
+                          "if (stopped != Block.None && !Muted(quiet))"))
+    (method_body(S['Trading.cs'], "public static void ExecuteQuickSell")) and
+    "if (!Structural(kv.Key) &&" in method_body(S['Trading.cs'], "internal Block Dominant") and
+    "if (!Muted(quiet)) NoteStalled(selling: false, tally.Dominant());" in
+        method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
