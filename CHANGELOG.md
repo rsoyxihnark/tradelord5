@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.14.1
+
+- The ledger panel no longer opens on its hotkey while you are typing into a box on the campaign map.
+- The best-market tolerance hint now says the price floor it sets always holds back goods you never bought, such as looted gear, and not only when the setting above it is on.
+
 ## 1.14.0
 
 - TradeLord now speaks Simplified Chinese, chosen from the same Language setting that already offered English, Turkish and Russian.

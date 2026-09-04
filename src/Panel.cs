@@ -349,13 +349,25 @@ namespace TradeLord
                 if (_vm.IsMapButtonVisible != button)
                     _vm.IsMapButtonVisible = button;
                 UpdateIdleInput(button);
-                if (!map.IsEscapeMenuOpened && HotkeyReleased())
+                if (!map.IsEscapeMenuOpened && !TypingOnScreen(map) && HotkeyReleased())
                     Guard.Run("Panel.Show", Show);
             }
-            else if (map.IsEscapeMenuOpened || HotkeyReleased())
+            else if (map.IsEscapeMenuOpened || (!TypingOnScreen(map) && HotkeyReleased()))
             {
                 Hide();
             }
+        }
+
+        private static bool TypingOnScreen(ScreenBase screen)
+        {
+            try
+            {
+                MBReadOnlyList<ScreenLayer> layers = screen?.Layers;
+                for (int i = 0; layers != null && i < layers.Count; i++)
+                    if (layers[i] != null && layers[i].IsFocusedOnInput()) return true;
+            }
+            catch (Exception e) { Log.Error(e, "panel hotkey text-field check (hotkey left as it was)"); }
+            return false;
         }
 
         private static bool _idleMouseActive;
