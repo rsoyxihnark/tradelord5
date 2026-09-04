@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="string">
+	<tags><tag language="简体中文"/></tags>
+	<strings>
+		<string id="TL02" text="TradeLord 卖出 {ITEMS}，得到 {GOLD} 第纳尔（利润 {PROFIT}）。"/>
+		<string id="TL20" text="最佳卖出价"/>
+		<string id="TL21" text="最佳买入价"/>
+		<string id="TL22" text="* 这里是卖出此物的最佳市场！"/>
+		<string id="TL23" text="* 这里是买入此物最便宜的市场！"/>
+		<string id="TL24" text="{TOWN} 更便宜：{PRICE}{GOLD}"/>
+		<string id="TL06" text="TradeLord 买入 {ITEMS}，花费 {GOLD} 第纳尔。"/>
+		<string id="TL07" text="TradeLord 账簿"/>
+		<string id="TL08" text="行程上限之内没有可盈利的路线。请在“情报”设置中提高上限，或者靠近更多市场。"/>
+		<string id="TL09" text="关闭"/>
+		<string id="TL11" text="查看 TradeLord 账簿"/>
+		<string id="TL26" text="在此交易（TradeLord）"/>
+		<string id="TL29" text="另有 {COUNT} 项"/>
+		<string id="TL31" text="{COUNT} 件货物"/>
+		<string id="TL13" text="[模拟，最理想情况] TradeLord 本会卖出 {ITEMS}，得到 {GOLD} 第纳尔（利润 {PROFIT}）。"/>
+		<string id="TL14" text="[模拟，最理想情况] TradeLord 本会买入 {ITEMS}，花费 {GOLD} 第纳尔。"/>
+		<string id="TL15" text="改在那里卖出可多 {PCT}%"/>
+		<string id="TL18" text="市场仍在稳定中（还需 {DAYS} 天）。"/>
+		<string id="TL32" text="此处未卖出任何货物：{REASON}。"/>
+		<string id="TL33" text="此处未买入任何货物：{REASON}。"/>
+		<string id="TL40" text="你的保护设置拦下了它"/>
+		<string id="TL41" text="你的类别策略把它排除在外"/>
+		<string id="TL42" text="这里的价格达不到你的利润要求"/>
+		<string id="TL43" text="你的钱袋或消费上限已经用尽"/>
+		<string id="TL44" text="已经没有地方再装货了"/>
+		<string id="TL45" text="这个市场没有值得交易的货物"/>
+		<string id="TL46" text="商人的钱已经花光了"/>
+		<string id="TL47" text="行程之内没有地方可以转卖"/>
+		<string id="TL48" text="这次到访已经交易过这些货物"/>
+		<string id="TL49" text="利润已经计入转卖安全系数，所以比上面的价格看起来要低。"/>
+		<string id="TL50" text="货物"/>
+		<string id="TL51" text="买入地"/>
+		<string id="TL52" text="价格"/>
+		<string id="TL53" text="卖出地"/>
+		<string id="TL54" text="数量"/>
+		<string id="TL55" text="利润"/>
+		<string id="TL56" text="天数"/>
+		<string id="TL58" text="商队"/>
+		<string id="TL59" text="把握"/>
+		<string id="TL60" text="评分"/>
+		<string id="TL61" text="最赚钱的作坊（近期利润）"/>
+		<string id="TL80" text="你的作坊（近期利润）"/>
+		<string id="TL62" text="刷新"/>
+		<string id="TL63" text="金钱：{AMOUNT}"/>
+		<string id="TL64" text="载货：{CARRIED} / {CAPACITY}"/>
+		<string id="TL65" text="速度：{SPEED}"/>
+		<string id="TL66" text="TradeLord 利润：{AMOUNT}"/>
+		<string id="TL67" text="行程之内没有可盈利的路线"/>
+		<string id="TL68" text="{COUNT} 条可盈利路线，最好的排在前面"/>
+		<string id="TL69" text="没有路线落在你的行程上限之内。请在“情报”设置中提高上限，或者靠近更多市场。"/>
+		<string id="TL70" text="点击城镇名可跳到它那里，并挂上或取下标记 | 天数 = 你 -&gt; 买入城镇 -&gt; 卖出城镇 | 商队 = 这两座城镇的商队 | 价格是第一件的价格；利润逐件计价，所以低于价格乘数量 | 把握* = 整批一口价，未逐件计价"/>
+		<string id="TL71" text=" | 评分 = 每天利润，按把握折算"/>
+		<string id="TL72" text=" | 评分 = 每天利润"/>
+		<string id="TL73" text=" | 已计入转卖安全系数"/>
+		<string id="TL77" text="利润：+{PCT}%"/>
+		<string id="TL78" text="库存：{COUNT}"/>
+		<string id="TL79" text="约 {DAYS} 天"/>
+		<string id="TL81" text="TradeLord 把 {GOLD} 第纳尔的利润记进了你的交易技能。"/>
+		<string id="TL82" text="载货已满，在你腾出载重之前，TradeLord 无法在这里买入。"/>
+		<string id="TL93" text="你携带的这种货物已经到了你设的上限"/>
+		<string id="TL94" text="此处没有任何交易：{REASON}。"/>
+		<string id="TL95" text="此处未卖出任何货物：{REASON}，也未买入任何货物：{SECOND}。"/>
+		<string id="TL83" text="这座村庄每种货物都只剩最后一点"/>
+		<string id="TL84" text="{ITEM}：在 {FROM} 买入（{BUY} 第纳尔）-&gt; 在 {TO} 卖出（{SELL}）  x{QTY} = +{PROFIT} 第纳尔，从这里约 {DAYS} 天"/>
+		<string id="TL85" text="你正把这批货留给更好的市场"/>
+		<string id="TL86" text="你的队伍再也赶不动更多牲畜了"/>
+		<string id="TL87" text="从下一个市场起，TradeLord 会在你进入市场时替你买卖。想自己动手交易，就在它的设置里关掉自动卖出和自动买入。"/>
+		<string id="TL88" text="TradeLord 把 {GOLD} 第纳尔的利润记进了你的交易技能，现在是 {LEVEL} 级。"/>
+		<string id="TL89" text="以你目前记下的价格来看，行程上限之内没有可盈利的路线。多走几个市场，或者在“情报”设置中提高上限。"/>
+		<string id="TL90" text="以你目前记下的价格来看，没有路线落在你的行程上限之内。多走几个市场，或者在“情报”设置中提高上限。"/>
+		<string id="TL91" text="你的某份 TradeLord 货物名单上有一项，在这局游戏里找不到对应的货物，因此毫无作用。TradeLord.log 里写明了是哪一项。"/>
+		<string id="TL92" text="你的钱袋里有 {GOLD} 第纳尔，而金钱储备是 {RESERVE}，所以 TradeLord 不会在这里买任何东西。卖掉一些货物，或者在设置里调低储备。"/>
+		<string id="TL96" text="从下一个市场起，TradeLord 会在你进入市场时替你买卖。它的设置需要 MCM，而 MCM 没有装上，要改就先装 MCM。"/>
+		<string id="TL251" text="持有到这么多就不再买入（0 = 关闭）"/>
+		<string id="TL252" text="总是买入（货物 id 或名称，用逗号分隔）"/>
+		<string id="TL253" text="不要动"/>
+		<string id="TL254" text="只卖出"/>
+		<string id="TL255" text="只买入"/>
+		<string id="TL256" text="买入和卖出"/>
+		<string id="TL257" text="你付出价格的平均值"/>
+		<string id="TL258" text="你最后一次付出的价格"/>
+		<string id="TL259" text="你所知最便宜的市场"/>
+		<string id="TL260" text="城镇菜单里的账簿入口"/>
+		<string id="TL352" text="TradeLord 总是买入的货物，越过类别策略，也越过“从不买入谷物”这个开关。和上面一样，用货物 id 或游戏中显示的名称填写，以逗号分隔。上面的“从不”名单和物品栏锁定依然有效，而且它仍然只买下能在行程之内卖出更高价的货物。"/>
+		<string id="TL250" text="语言"/>
+		<string id="TL351" text="你的队伍已经带着这么多某种货物时，TradeLord 就不再买它，把钱花在别处。算上你现在带的，加上这次到访买下的。卖出不受影响。0 = 不限。"/>
+		<string id="TL350" text="TradeLord 在游戏里说的语言：它的交易提示、账簿面板、价格浮窗和城镇菜单入口。默认是英语。这个设置界面会在你下次打开时换成新语言。城镇菜单入口则在你下次载入战役时跟上。"/>
+		<string id="TL360" text="在城镇和村庄菜单里显示 TradeLord 账簿入口，点它就能打开路线面板。如果你更想用快捷键或地图按钮打开面板，就把它关掉。"/>
+		<string id="TL201" text="实时世界价格（默认）"/>
+		<string id="TL202" text="观察到的价格保鲜期（天，0 = 永不过期）"/>
+		<string id="TL203" text="排除敌对市场"/>
+		<string id="TL204" text="扫描半径（地图单位，0 = 整张地图）"/>
+		<string id="TL205" text="给出买入建议所需的最低库存"/>
+		<string id="TL206" text="行程上限（天，0 = 关闭）"/>
+		<string id="TL207" text="村庄行程上限（天，0 = 关闭）"/>
+		<string id="TL208" text="保守的路线估算"/>
+		<string id="TL209" text="整批价格模拟"/>
+		<string id="TL210" text="按把握给路线排序"/>
+		<string id="TL211" text="在浮窗中显示最佳买卖地"/>
+		<string id="TL212" text="隐藏原版的行情传闻"/>
+		<string id="TL213" text="按世界行情给价格上色"/>
+		<string id="TL214" text="账簿面板快捷键（地图界面）"/>
+		<string id="TL215" text="地图界面上的 TradeLord 按钮"/>
+		<string id="TL216" text="城镇菜单里的交易入口"/>
+		<string id="TL217" text="自动卖出"/>
+		<string id="TL218" text="自动买入"/>
+		<string id="TL220" text="最低利润率"/>
+		<string id="TL221" text="留下食物（可供天数）"/>
+		<string id="TL222" text="食物策略"/>
+		<string id="TL223" text="锻造材料策略"/>
+		<string id="TL224" text="牲畜策略"/>
+		<string id="TL225" text="保护独特物品和自制物品"/>
+		<string id="TL226" text="遵守物品栏锁定"/>
+		<string id="TL227" text="一件货物算作花了你多少钱"/>
+		<string id="TL228" text="卖出战利品的最高等级（0 = 关闭）"/>
+		<string id="TL229" text="为最好的市场留住货物"/>
+		<string id="TL230" text="最佳市场容差"/>
+		<string id="TL231" text="从不卖出（货物 id 或名称，用逗号分隔）"/>
+		<string id="TL232" text="总是卖出（货物 id 或名称，用逗号分隔）"/>
+		<string id="TL234" text="金钱储备"/>
+		<string id="TL235" text="每种货物的买入上限（件数，0 = 关闭）"/>
+		<string id="TL236" text="每种货物的买入上限（第纳尔，0 = 关闭）"/>
+		<string id="TL237" text="每次到访的最高花费（0 = 不限）"/>
+		<string id="TL238" text="转卖安全系数"/>
+		<string id="TL239" text="从不买入谷物"/>
+		<string id="TL240" text="从不买入（货物 id 或名称，用逗号分隔）"/>
+		<string id="TL241" text="与村庄交易"/>
+		<string id="TL242" text="模拟模式（空跑）"/>
+		<string id="TL243" text="经济稳定延迟（天，0 = 关闭）"/>
+		<string id="TL244" text="交易经验倍率"/>
+		<string id="TL245" text="在地图上自动标出最佳卖出城镇"/>
+		<string id="TL246" text="自动标记的行程上限（天，0 = 关闭）"/>
+		<string id="TL247" text="成交时的金币声"/>
+		<string id="TL248" text="详细的交易摘要"/>
+		<string id="TL249" text="安静的自动交易"/>
+		<string id="TL301" text="开（默认）：价格实时读自世界经济，连你没去过的市场也算在内。关：只用你亲眼见过的价格。"/>
+		<string id="TL302" text="比这更久以前观察到的价格会被忽略。0 = 永不过期。"/>
+		<string id="TL303" text="绝不扫描与你交战的定居点，不推荐它们，也不与它们自动交易。"/>
+		<string id="TL304" text="只扫描直线距离在此之内的市场。0 = 整张地图。"/>
+		<string id="TL305" text="最佳买入提示要求库存至少有这么多件。0 = 关闭。只在实时价格模式下有效，因为亲历模式记的是价格，不是库存。"/>
+		<string id="TL306" text="行程超过这么多天的市场不会出现在浮窗里，推荐路线的全程（你 -&gt; 买入城镇 -&gt; 卖出城镇）也不得超过它。默认 3。"/>
+		<string id="TL307" text="给村庄单独设的、更严格的行程上限。默认 1。"/>
+		<string id="TL308" text="给路线排序和汇总时，把转卖安全系数用在卖出这一边，这样列出的利润已经为你赶到之前的价格漂移留了余地。关掉则显示原始利润。无论开关如何，路线都要越过安全系数才会列出来，因为买入时用的就是这道检验。"/>
+		<string id="TL309" text="用游戏自己的价格模型逐件计价，这样数量和利润就把你的买入推动价格算了进去。关掉则每件都按第一件的价格计价，读起来会比这趟真正赚到的多。只对城镇和实时价格模式有效：村庄不给出供需数据，亲历模式也读不到市场内部的实时数字。"/>
+		<string id="TL310" text="按每天利润给面板排序，再按这份利润能不能撑到旅程结束打个折。折扣看的是逐件计价后剩下的利润、库存深浅、行程长短、商队往来，在亲历模式下还看价格的新旧。关掉则按原始的每天利润排序，评分那一列也改显示这个数。"/>
+		<string id="TL311" text="在货物浮窗里加上已知最好的买入市场和卖出市场，附上库存和行程时间。"/>
+		<string id="TL312" text="跳过原版的货物传闻，让浮窗只显示一套一致的价格提示。"/>
+		<string id="TL313" text="按本地价格与已知最好市场的差距，给物品栏里的贸易品和牲畜上色。"/>
+		<string id="TL314" text="在战役地图上打开账簿面板的按键。填一个键名，比如 T、Y 或 F5，前面可以加上 Ctrl、Alt 或 Shift，例如 &quot;Ctrl+T&quot;。本模组不会从游戏手里抢走按键，所以游戏也在用的裸键会同时触发两个动作。加一个修饰键就能避开这一点。"/>
+		<string id="TL315" text="战役地图右边一个可以点的 TradeLord 按钮，用来打开账簿面板。如果它妨碍了地图上的点击，就关掉。"/>
+		<string id="TL316" text="在城镇和村庄菜单里显示那一个 TradeLord 交易入口，它会一次先卖后买。关掉它，菜单就只留给你进入市场时的自动交易。"/>
+		<string id="TL317" text="你一走进市场，它就按你的规则卖出可以卖的货，不用你开口。会给交易经验。关掉之后，TradeLord 只在你点菜单里的交易入口时才卖。"/>
+		<string id="TL318" text="你一走进市场，卖完之后它就开始买。关掉之后，TradeLord 只在你点菜单里的交易入口时才买。"/>
+		<string id="TL320" text="每笔交易在买和卖两边都要越过的利润率。只有价格高出你的成本这么多才卖。只有远处市场在计入转卖安全系数后仍高出本地价格这么多，才会买入或列出路线。调高它，交易就会变少。"/>
+		<string id="TL321" text="卖出食物之前先留下这么多天的口粮。先留每天最便宜的那种，只有别的都不够时才留牲畜。填 0 就一点食物也不留。"/>
+		<string id="TL322" text="自动交易可以拿食物做什么。按天数算的食物储备是另一回事，依然有效。"/>
+		<string id="TL323" text="自动交易可以拿木炭、硬木、铁矿和锭材做什么。选“不要动”，锻造材料就完全不进自动交易。"/>
+		<string id="TL324" text="自动交易可以拿绵羊、牛和猪做什么。买入受游戏自己的驱赶计算约束，不会把队伍推进牲畜减速惩罚。坐骑和驮兽按策略从不买卖，这项设置管不到它们；只有写进总是卖出名单，才动得了一头。"/>
+		<string id="TL325" text="绝不自动交易独特物品或玩家自制的物品。不管这项怎么设，坐骑和驮兽都按策略受保护；只有写进总是卖出名单，才动得了它们。"/>
+		<string id="TL326" text="物品栏里锁住的东西绝不会被自动交易。锁定按游戏保存的样子匹配，认物品也认词缀。"/>
+		<string id="TL327" text="一笔卖出拿来对照的价格，它同时决定 TradeLord 报出的利润和这笔卖出赚到的交易经验。凡是你没买过的东西，战利品也算在内，不论你选哪一项，都按你所知最便宜的市场估价。"/>
+		<string id="TL328" text="连这一等级及以下的武器和护甲也一并卖出。从 1 级起，也就是劫掠者和匪徒掉的装备。锁定和保护依然有效。"/>
+		<string id="TL329" text="本地市场出价明显低于已知最好的市场时，就不在这里卖。你没买过的货物没有成本可算，所以这道下限对它们始终有效；这项设置决定它管不管你买过的货物，那些已经由利润率把着关。"/>
+		<string id="TL330" text="上面那项打开时：只要本地市场出到已知最高价的这个比例，就照样在这里卖。"/>
+		<string id="TL331" text="TradeLord 绝不能卖的货物。每一项可以写货物 id，也就是 TradeLord.log 为每件经手货物打印的内部简称，比如 grain、wine 或 iron_ore，也可以写游戏显示给你的名称，比如铁矿。各项之间用逗号分隔。某一项在这局游戏里找不到对应货物时，会写进日志并说在屏幕上，不会悄悄放过。买入时它也绕开这些货物，因为它没办法再把它们卖出去。"/>
+		<string id="TL332" text="TradeLord 总是卖出的货物，越过类别策略、独特物品与自制物品的保护，也越过食物储备。和上面一样，用货物 id 或游戏中显示的名称填写，以逗号分隔。上面的从不卖出名单和物品栏锁定依然有效。这是卖掉坐骑或驮兽的唯一办法。"/>
+		<string id="TL334" text="手里的钱降到这个数以下就不再花。默认 300，够你花钱躲开两次敌对遭遇，采购之后还付得起一次军饷。"/>
+		<string id="TL335" text="每次到访 TradeLord 最多买同一种货物多少件。0 = 不限件数。默认 32。"/>
+		<string id="TL336" text="同时按第纳尔限制每次到访花在每种货物上的钱。"/>
+		<string id="TL337" text="每到访一个定居点，TradeLord 最多可花的第纳尔总额。默认 1000。"/>
+		<string id="TL338" text="假定你赶到时，最高卖价只剩下这个比例。"/>
+		<string id="TL339" text="谷物又重利润又薄，买它只会把货舱塞满，换不回多少。卖出和食物储备不受影响。默认打开。"/>
+		<string id="TL340" text="TradeLord 绝不能买的货物。和上面一样，用货物 id 或游戏中显示的名称填写，以逗号分隔。卖出它们不受影响。"/>
+		<string id="TL341" text="TradeLord 在村庄菜单里也交易，不只是城镇菜单，村庄也会一起进入价格扫描。"/>
+		<string id="TL342" text="只报告 TradeLord 会卖什么、买什么，并不真的交易。把结果当成最理想的情况看：什么都没动，市场也就没有反应，每一件都按今天的开盘价计价。真跑一趟时，利润用尽的那一件就会停手，所以通常交易得更少，每件也卖得更低。商人的钱、你的载重、金钱储备，以及每种货物和每次到访的各项上限都精确模拟了；只有你自己对价格的影响没有算进去。"/>
+		<string id="TL343" text="在战役的这一天之前，TradeLord 不做任何交易，菜单里不做，进入市场时也不做。新战役的价格还没有稳下来。"/>
+		<string id="TL344" text="缩放自动交易的利润所给的交易经验。填 0 就不给经验。"/>
+		<string id="TL345" text="把地图标记移到附近为你现在这批货出价最高的城镇。每天以及你每次进出定居点时都会重算，所以它跟着你现在带的货走。受下面的行程上限约束。默认打开；在账簿面板里点城镇仍然可以自己挂标记。"/>
+		<string id="TL346" text="自动标记会忽略行程超过这么多天的城镇。默认 1.5。"/>
+		<string id="TL347" text="真的成交时播放金币声。什么都没交易的一趟保持安静。"/>
+		<string id="TL348" text="在一行交易摘要里点出货物的名字，比如“TradeLord 卖出 8 橄榄、3 葡萄酒，得到 240 第纳尔”，而不是只给一个件数。完整清单始终会写进 TradeLord.log。"/>
+		<string id="TL349" text="你进入市场时的自动交易只写进 TradeLord.log，屏幕上不留一行字。菜单里的交易入口始终会报告，因为那是你自己点的。首次自动交易的提示、钱袋见底的警告和载货已满的警告都不受影响。"/>
+		<string id="TL100" text="语言"/>
+		<string id="TL101" text="情报"/>
+		<string id="TL102" text="洞察"/>
+		<string id="TL103" text="卖出"/>
+		<string id="TL104" text="自动"/>
+		<string id="TL105" text="买入"/>
+		<string id="TL106" text="通用"/>
+	</strings>
+</base>

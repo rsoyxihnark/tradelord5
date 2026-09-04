@@ -1,7 +1,7 @@
 <Module>
 	<Name value="TradeLord - One Trade Mod"/>
 	<Id value="TradeLord"/>
-	<Version value="v1.13.3"/>
+	<Version value="v1.14.0"/>
 	<Official value="false"/>
 	<DefaultModule value="false"/>
 	<SingleplayerModule value="true"/>

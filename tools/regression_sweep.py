@@ -2009,6 +2009,7 @@ ENGLISH = 'TradeLord/ModuleData/Languages/module_strings.xml'
 TRANSLATIONS = {
     'T\u00fcrk\u00e7e': 'TradeLord/ModuleData/Languages/TR/module_strings_tr.xml',
     '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': 'TradeLord/ModuleData/Languages/RU/module_strings_ru.xml',
+    '\u7b80\u4f53\u4e2d\u6587': 'TradeLord/ModuleData/Languages/CNs/module_strings_cns.xml',
 }
 
 def spoken(path):
@@ -2039,7 +2040,7 @@ def every_language_the_screen_offers_has_a_file_the_mod_reads():
     choices = re.search(r'new Dropdown<string>\(new\[\] \{([^}]*)\}', M)
     return (choices is not None
             and len(choices.group(1).split(',')) == len(TRANSLATIONS) + 1
-            and 'internal const int English = 0, Turkish = 1, Russian = 2;' in S['Tongue.cs']
+            and 'internal const int English = 0, Turkish = 1, Russian = 2, Chinese = 3;' in S['Tongue.cs']
             and S['Tongue.cs'].count('module_strings_') == len(TRANSLATIONS)
             and 'if (_saidFor != language)' in method_body(S['Tongue.cs'], "private static string Translated")
             and '_saidFor = language;' in method_body(S['Tongue.cs'], "private static string Translated"))

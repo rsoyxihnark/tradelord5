@@ -8,7 +8,7 @@ namespace TradeLord
 {
     internal static class Tongue
     {
-        internal const int English = 0, Turkish = 1, Russian = 2;
+        internal const int English = 0, Turkish = 1, Russian = 2, Chinese = 3;
 
         private static Dictionary<string, string> _said;
         private static int _saidFor = English - 1;
@@ -55,13 +55,16 @@ namespace TradeLord
             return _said != null && _said.TryGetValue(id, out string text) ? text : null;
         }
 
-        private static string Named(int language) => language == Russian ? "Russian" : "Turkish";
+        private static string Named(int language) =>
+            language == Chinese ? "Simplified Chinese" : language == Russian ? "Russian" : "Turkish";
 
         private static string Where(int language)
         {
             string bin = Path.GetDirectoryName(typeof(Tongue).Assembly.Location);
             string module = Path.GetDirectoryName(Path.GetDirectoryName(bin));
-            return language == Russian
+            return language == Chinese
+                ? Path.Combine(module ?? "", "ModuleData", "Languages", "CNs", "module_strings_cns.xml")
+                : language == Russian
                 ? Path.Combine(module ?? "", "ModuleData", "Languages", "RU", "module_strings_ru.xml")
                 : Path.Combine(module ?? "", "ModuleData", "Languages", "TR", "module_strings_tr.xml");
         }
