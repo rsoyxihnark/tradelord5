@@ -1125,7 +1125,9 @@ chk("1.5.0", "an unwalkable shelf falls back to the quoted price and reports Sim
     "q.Simulated = buy.Walkable && sell.Walkable;" in S['Market.cs'] and
     "if (!_walkable) return;" in method_body(S['Market.cs'], "internal void Restock(int units)"))
 chk("1.5.0", "buying strips the shelf and selling stocks it",
-    "buy.Restock(-1);" in S['Market.cs'] and "sell.Restock(1);" in S['Market.cs'])
+    "if (_selling) _shelf.Restock(1); else _shelf.Restock(-1);" in
+        method_body(S['Market.cs'], "internal int At(int taken)") and
+    "Restock" not in method_body(S['Market.cs'], "internal static RouteQuote Walk"))
 chk("1.5.0", "route pruning uses the flat-quote upper bound, so it cannot discard a viable route",
     "float ceiling = (float)(sellPrice - buyPrice) * qtyCap;" in S['Ledger.cs'] and
     ordered(S['Ledger.cs'], "float ceiling =", "Bulk.Walk(from, to, item"))
@@ -1388,7 +1390,9 @@ chk("1.5.6", "a manual purchase is recorded at the price the shelf charged at th
 chk("1.5.6", "only the purchase-price rewind reads a shelf outside a projection",
     S['Market.cs'].count("projecting: false") == 1 and
     "projecting: false" in method_body(S['Market.cs'], "internal static int PricePaid") and
-    S['Market.cs'].count("projecting: true") == 2)
+    S['Market.cs'].count("projecting: true") == 1 and
+    "projecting: true" in method_body(
+        S['Market.cs'], "internal Ladder(Settlement site, ItemObject item, bool selling, int quoted)"))
 chk("1.5.6", "panel setup is retried before being disabled",
     "private const int SetupAttempts = 3;" in S['Panel.cs'] and
     "if (_setupFailures >= SetupAttempts) return false;" in
@@ -2432,6 +2436,28 @@ def the_notes_are_the_changelog_section_for_the_version():
     said = [line for line in made.stdout.decode('utf-8').splitlines() if line]
     wanted = section_entries(version)
     return (len(wanted) > 0 and said == ['- ' + line for line in wanted])
+
+chk("1.14.2", "quick-buy leaves a good its own sell policy would never let it sell again",
+    "if (!TradePolicy.MayRoundTrip(it, locked)) { tally.Note(Block.CategoryPolicy); continue; }" in
+        method_body(S['Trading.cs'], "public static void ExecuteQuickBuy") and
+    ordered(method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"),
+            "TradePolicy.MayBuy(it, locked, out Block whyBuy)", "TradePolicy.MayRoundTrip(it, locked)"))
+
+chk("1.14.2", "a route walk prices each town's ladder once and reads it back for every partner",
+    "internal int At(int taken)" in S['Market.cs'] and
+    "while (_priced.Count <= taken)" in method_body(S['Market.cs'], "internal int At(int taken)") and
+    "int buyPrice = buy.At(u);" in method_body(S['Market.cs'], "internal static RouteQuote Walk") and
+    "int sellPrice = sell.At(u);" in method_body(S['Market.cs'], "internal static RouteQuote Walk") and
+    "new Shelf(" not in method_body(S['Market.cs'], "internal static RouteQuote Walk") and
+    "_rungs.TryGetValue(key, out Ladder rung)" in
+        method_body(S['Market.cs'], "private static Ladder Rung"))
+
+chk("1.14.2", "the ladders are dropped when a scan starts and when the campaign ends, so no scan reads stale prices",
+    "Bulk.Forget();" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes") and
+    ordered(method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"),
+            "Bulk.Forget();", "foreach (ItemObject item in Items.All)") and
+    'Guard.Run("GameEnd.Bulk", Bulk.Forget);' in S['SubModule.cs'] and
+    "internal static void Forget() => _rungs.Clear();" in S['Market.cs'])
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
