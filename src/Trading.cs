@@ -214,7 +214,7 @@ namespace TradeLord
 
         private static int _clashGeneration = -1;
 
-        private static string AnimalGroup(ItemObject item)
+        internal static string AnimalGroup(ItemObject item)
         {
             if (!item.HasHorseComponent) return null;
             if (IsTruckAnimal(item)) return "an animal that carries for you";
@@ -703,12 +703,22 @@ namespace TradeLord
 
         private void OnDailyTick()
         {
+            Guard.Run("Action.DailyHerdCheck", () =>
+            {
+                if (DrivenAnimalsToShed(MobileParty.MainParty) > 0)
+                    LogHerdState("on the road, no market in reach");
+            });
             Guard.Run("Action.DailyTick", UpdateBestSellTownTracker);
         }
 
         private void OnSettlementLeft(MobileParty party, Settlement settlement)
         {
             if (party != MobileParty.MainParty) return;
+            Guard.Run("Action.HerdReliefOnLeaving", () =>
+            {
+                LogHerdState("leaving " + settlement.Name);
+                if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
+            });
             Guard.Run("Action.OnSettlementLeft", UpdateBestSellTownTracker);
         }
 
@@ -811,11 +821,14 @@ namespace TradeLord
                         },
                         args => Guard.Run("Action.QuickTradeMenu", () =>
                         {
+                            LogHerdState("trading by hand at " + Settlement.CurrentSettlement.Name);
                             ExecuteQuickSell(Settlement.CurrentSettlement);
                             ExecuteHerdRelief(Settlement.CurrentSettlement);
                             ExecuteResupply(Settlement.CurrentSettlement);
                             ExecuteHaulage(Settlement.CurrentSettlement);
                             ExecuteQuickBuy(Settlement.CurrentSettlement);
+                            ExecuteHerdRelief(Settlement.CurrentSettlement);
+                            LogHerdState("after trading by hand at " + Settlement.CurrentSettlement.Name);
                             ReportStalledPasses();
                         }),
                         false, 6);
@@ -913,6 +926,7 @@ namespace TradeLord
             {
                 ResetVisit();
                 WarnUnmatchedItemLists();
+                LogHerdState("entering " + settlement.Name);
 
                 if (!AnnounceAutomation(settlement))
                 {
@@ -921,6 +935,8 @@ namespace TradeLord
                     if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);
                     if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);
                     if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
+                    if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
+                    LogHerdState("after trading at " + settlement.Name);
                     ReportStalledPasses();
                 }
                 if (CanTradeHere(settlement) &&
@@ -1039,11 +1055,24 @@ namespace TradeLord
 
         private const float GetawayHours = 4f;
 
-        private static void LogDetail(bool selling, bool sim, Dictionary<ItemObject, (int count, int gold)> detail)
+        private static void LogDetail(bool selling, bool sim, Dictionary<ItemObject, (int count, int gold)> detail,
+                                      string why)
         {
             foreach (var kv in detail)
+            {
                 Log.Write((selling ? "  sold " : "  bought ") + kv.Value.count + " " +
                           kv.Key.StringId + " for " + kv.Value.gold + (sim ? " (simulated)" : ""));
+                LogAnimalMoved(selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);
+            }
+        }
+
+        private static void LogAnimalMoved(bool selling, bool sim, ItemObject item, int count, int gold, string why)
+        {
+            if (item == null || !item.HasHorseComponent) return;
+            Log.Write("  animal " + (selling ? "out: " : "in: ") + item.StringId +
+                      " (" + (item.Name == null ? item.StringId : item.Name.ToString()) + ") x" + count +
+                      (selling ? " for +" : " for -") + gold + " gold" + (sim ? " (simulated)" : "") +
+                      " - " + why + "; TradeLord counts it as " + TradePolicy.AnimalGroup(item));
         }
 
         private static string ItemSummary(Dictionary<ItemObject, (int count, int gold)> detail, int totalItems)
@@ -1210,6 +1239,44 @@ namespace TradeLord
                 }
                 return 0;
             }
+        }
+
+        private static void HerdSplit(MobileParty party, out int packs, out int stock)
+        {
+            packs = 0; stock = 0;
+            ItemRoster roster = party?.ItemRoster;
+            if (roster == null) return;
+            packs = roster.NumberOfPackAnimals;
+            stock = roster.NumberOfLivestockAnimals;
+            var attached = party.AttachedParties;
+            for (int i = 0; attached != null && i < attached.Count; i++)
+            {
+                ItemRoster other = attached[i]?.ItemRoster;
+                if (other == null) continue;
+                packs += other.NumberOfPackAnimals;
+                stock += other.NumberOfLivestockAnimals;
+            }
+        }
+
+        internal static void LogHerdState(string when)
+        {
+            try
+            {
+                MobileParty party = MobileParty.MainParty;
+                if (party == null) return;
+                if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return;
+                HerdSplit(party, out int packs, out int stock);
+                int spare = Math.Max(0, mounts - foot);
+                int shed = DrivenAnimalsToShed(party);
+                Log.Write("herd check (" + when + "): " + men + " men of whom " + foot + " on foot, " +
+                          mounts + " loose mount(s) with " + spare + " nobody rides, " +
+                          packs + " pack animal(s), " + stock + " livestock, " +
+                          (herd + spare) + " driven in all, " +
+                          (shed > 0
+                              ? "the herd is slowing you down and " + shed + " must go"
+                              : "no herd penalty"));
+            }
+            catch (Exception e) { Log.Error(e, "herd check log (nothing else is affected)"); }
         }
 
         internal static int SpareMountRoom(MobileParty party)
@@ -1436,7 +1503,7 @@ namespace TradeLord
                 }
                 Log.Write((sim ? "quick-sell (simulated, best case): " : "quick-sell: ") + soldItems +
                           " items, +" + goldGained + " gold, profit " + profit + " at " + settlement.Name);
-                LogDetail(selling: true, sim, detail);
+                LogDetail(selling: true, sim, detail, "the selling pass");
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
                 TextObject msg = Tongue.Text(sim
                     ? "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit)."
@@ -1556,7 +1623,7 @@ namespace TradeLord
             Log.Write((sim ? "resupply (simulated, best case): " : "resupply: ") + stocked +
                       " items, -" + spent + " gold at " + settlement.Name +
                       ", still short " + (shortfall > 0 ? shortfall : 0) + " unit(s) of food");
-            LogDetail(selling: false, sim, detail);
+            LogDetail(selling: false, sim, detail, "restocking the larder");
             if (!sim)
             {
                 CoinSound();
@@ -1698,7 +1765,7 @@ namespace TradeLord
                 Log.Write((sim ? "caravan sale (simulated, best case): " : "caravan sale: ") + sold +
                           " items, +" + (sim ? simGold : Hero.MainHero.Gold - goldBefore) +
                           " gold, profit " + profit + " from " + caravan.Name);
-                LogDetail(selling: true, sim, detail);
+                LogDetail(selling: true, sim, detail, "trading with a caravan on the road");
                 TextObject said = Tongue.Text(sim
                     ? "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit)."
                     : "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).");
@@ -1791,7 +1858,7 @@ namespace TradeLord
             _runMovedGoods = true;
             Log.Write((sim ? "caravan purchase (simulated, best case): " : "caravan purchase: ") + bought +
                       " items, -" + spent + " gold from " + caravan.Name);
-            LogDetail(selling: false, sim, detail);
+            LogDetail(selling: false, sim, detail, "trading with a caravan on the road");
             if (!sim) CoinSound();
             TextObject msg = Tongue.Text(sim
                 ? "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars."
@@ -1912,7 +1979,7 @@ namespace TradeLord
             _runMovedGoods = true;
             Log.Write((sim ? "herd relief (simulated, best case): " : "herd relief: ") + sold +
                       " sold, +" + gained + " gold at " + settlement.Name);
-            LogDetail(selling: true, sim, detail);
+            LogDetail(selling: true, sim, detail, "herd relief, getting the party back up to speed");
             if (!sim)
             {
                 CoinSound();
@@ -2023,7 +2090,7 @@ namespace TradeLord
             _runMovedGoods = true;
             Log.Write((sim ? "haul animals (simulated, best case): " : "haul animals: ") + hauled +
                       " bought, -" + spent + " gold at " + settlement.Name);
-            LogDetail(selling: false, sim, detail);
+            LogDetail(selling: false, sim, detail, "stocking the baggage train");
             if (!sim)
             {
                 CoinSound();
@@ -2182,7 +2249,7 @@ namespace TradeLord
                 _runMovedGoods = true;
                 Log.Write((sim ? "quick-buy (simulated, best case): " : "quick-buy: ") + bought +
                           " items, -" + spent + " gold at " + settlement.Name);
-                LogDetail(selling: false, sim, detail);
+                LogDetail(selling: false, sim, detail, "the buying pass");
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
                 if (!sim)
                 {
