@@ -2802,6 +2802,22 @@ chk("1.20.0", "a caravan trade obeys the same rules a market visit does and keep
 chk("1.20.0", "the caravan's own answer closes the conversation, with no farewell to click after it",
     the_caravan_line_closes_the_conversation_on_the_caravans_own_answer())
 
+def the_pack_animal_line_lands_after_the_trade_skill_line():
+    flush = method_body(S['Trading.cs'], "internal static void FlushToasts")
+    haul = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
+    forget = method_body(S['Trading.cs'], "internal static void ForgetVisit")
+    return (ordered(flush, "if (xp > 0) CreditTradeSkill(xp, muted);",
+                    "_pending.AddRange(_pendingAfterXp);", "_pendingAfterXp.Clear();",
+                    "if (_pending.Count > 0)")
+            and "{=TL110}" in haul
+            and "if (!Muted(quiet)) ToastAfterXp(msg, ToastSpend);" in haul
+            and "Toast(msg, ToastSpend);" not in haul
+            and S['Trading.cs'].count("ToastAfterXp(") == 2
+            and "_pendingAfterXp.Clear();" in forget)
+
+chk("1.20.1", "the pack animal line waits for the trade skill line and is dropped with the rest when a visit is forgotten",
+    the_pack_animal_line_lands_after_the_trade_skill_line())
+
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
     'git log -1 --format=%b "$GITHUB_SHA" > release-notes.md' not in WORKFLOW and
