@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.27.1
+
+- Picking a new language on the TradeLord settings screen now takes hold as you set it, so the choices under each setting are spoken in it straight away instead of waiting for you to restart the game.
+- The screen is asked to draw itself again at the same moment, so its own names, hints and headings follow the new language too.
+- The hint under the language setting no longer says the screen changes language the next time you open it, because that was not what happened.
+
 ## 1.27.0
 
 - TradeLord.log now opens every campaign with a roll call of every animal in your game, counted by what TradeLord does with each one: the haul animals it keeps for your baggage train, the mounts it may sell as spares once they slow you down, the livestock it trades, and anything that is none of the three.
