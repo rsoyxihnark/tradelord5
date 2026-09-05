@@ -131,9 +131,11 @@ namespace TradeLord
             catch (Exception e) { Log.Error(e, "smeltable check"); return false; }
         }
 
+        internal static bool IsTruckAnimal(ItemObject item) =>
+            item != null && item.HasHorseComponent && item.HorseComponent.IsPackAnimal;
+
         internal static bool IsHaulAnimal(ItemObject item) =>
-            item != null && item.HasHorseComponent &&
-            (item.HorseComponent.IsPackAnimal || item.HorseComponent.IsMount);
+            IsTruckAnimal(item) || IsSpareMount(item);
 
         internal static bool IsSpareMount(ItemObject item) =>
             item != null && item.HasHorseComponent &&
@@ -386,6 +388,53 @@ namespace TradeLord
         internal static bool IsTradableLivestock(ItemObject item) =>
             item != null && item.HasHorseComponent && item.HorseComponent.IsLiveStock &&
             !item.HorseComponent.IsMount && !item.HorseComponent.IsPackAnimal;
+
+        private const int RollCallShown = 60;
+
+        private static string Answered(bool flag) => flag ? "yes" : "no";
+
+        private static void RollCallGroup(string heading, List<string> lines)
+        {
+            Log.Write("  " + heading + ": " + lines.Count);
+            int shown = lines.Count < RollCallShown ? lines.Count : RollCallShown;
+            for (int i = 0; i < shown; i++) Log.Write(lines[i]);
+            if (lines.Count > shown)
+                Log.Write("    and " + (lines.Count - shown) + " more not listed");
+        }
+
+        internal static void LogAnimalRollCall()
+        {
+            var trucks = new List<string>();
+            var mounts = new List<string>();
+            var herd = new List<string>();
+            var neither = new List<string>();
+
+            foreach (ItemObject item in Items.All)
+            {
+                if (item == null || !item.HasHorseComponent) continue;
+                HorseComponent horse = item.HorseComponent;
+                string line = "    " + item.StringId +
+                              " (" + (item.Name == null ? item.StringId : item.Name.ToString()) + ")" +
+                              " rideable=" + Answered(horse.IsRideable) +
+                              " packanimal=" + Answered(horse.IsPackAnimal) +
+                              " mount=" + Answered(horse.IsMount) +
+                              " livestock=" + Answered(horse.IsLiveStock) +
+                              " meat=" + horse.MeatCount +
+                              " category=" + (item.ItemCategory == null ? "none" : item.ItemCategory.StringId);
+                if (IsTruckAnimal(item)) trucks.Add(line);
+                else if (IsSpareMount(item)) mounts.Add(line);
+                else if (IsTradableLivestock(item)) herd.Add(line);
+                else neither.Add(line);
+            }
+
+            Log.Write("animal roll call: " + trucks.Count + " haul animal(s) that carry for you, " +
+                      mounts.Count + " mount(s), " + herd.Count + " livestock, " +
+                      neither.Count + " that are none of the three");
+            RollCallGroup("haul animals that carry for you", trucks);
+            RollCallGroup("mounts", mounts);
+            RollCallGroup("livestock", herd);
+            RollCallGroup("none of the three", neither);
+        }
 
         public static bool MayBuy(ItemObject item, ISet<string> lockedKeys) =>
             MayBuy(item, lockedKeys, out _);
@@ -679,6 +728,7 @@ namespace TradeLord
                 Log.Write(Travel.NavalActive
                     ? "naval capability: party can sail - routes and travel times include sea legs"
                     : "naval capability: land-only - land routing in effect");
+                Guard.Run("Action.AnimalRollCall", TradePolicy.LogAnimalRollCall);
 
                 void AddOptions(string menu) => Guard.Run(
                     "menu " + menu + " (the other menus are unaffected)", () =>
