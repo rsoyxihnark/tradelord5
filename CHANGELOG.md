@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.15.0
+
+- TradeLord can now hold back a few of every kind of food you carry, so selling your stores no longer costs your party the morale bonus it gets from eating a variety of things.
+
 ## 1.14.5
 
 - The ledger panel's title, buttons and column headings now follow the language you pick, instead of staying in the one they were first drawn in.
