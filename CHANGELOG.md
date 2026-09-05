@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.26.1
+
+- A number in TradeLord.ini is now held to the same limits the settings screen holds it to, so a file that has been damaged or edited to something impossible can no longer put TradeLord into a state you could never have set on the screen.
+- A number that has been pulled back inside its limits says so in TradeLord.log, naming the setting, what the file asked for and what was used instead.
+
 ## 1.26.0
 
 - A Reset button now sits at the very top of the TradeLord settings screen, and it puts every setting back to the value TradeLord ships with in one click.

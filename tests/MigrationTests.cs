@@ -124,6 +124,57 @@ namespace TradeLord.Tests
             Assert.Equal("Y", written["PanelKey"]);
         }
 
+        [Theory]
+        [InlineData("MinProfitMargin", -1.0, 0.0)]
+        [InlineData("MinProfitMargin", 99.0, 2.0)]
+        [InlineData("MinProfitMargin", 0.25, 0.25)]
+        [InlineData("GoldReserve", -50000.0, 0.0)]
+        [InlineData("GoldReserve", 999999999.0, 100000.0)]
+        [InlineData("MaxLootTier", 99.0, 6.0)]
+        [InlineData("ResaleSafetyFactor", 0.0, 0.5)]
+        [InlineData("KeepPerFoodKind", 0.0, 1.0)]
+        [InlineData("Language", 7.0, 3.0)]
+        [InlineData("FoodPolicy", -3.0, 0.0)]
+        [InlineData("CostBasisMode", 9.0, 2.0)]
+        [InlineData("KeepSmeltableWeapons", 5.0, 2.0)]
+        public void ANumberOutsideItsLimitsIsBroughtBackInside(string name, double asked, double kept)
+        {
+            Assert.Equal(kept, Limits.Kept(name, asked));
+        }
+
+        [Fact]
+        public void ANumberThatIsNotANumberFallsToTheBottomOfItsRange()
+        {
+            Assert.Equal(0.0, Limits.Kept("MinProfitMargin", double.NaN));
+            Assert.Equal(0.5, Limits.Kept("ResaleSafetyFactor", double.NaN));
+            Assert.Equal(0.0, Limits.Kept("MaxHeldShare", double.PositiveInfinity * 0 * 0));
+        }
+
+        [Fact]
+        public void AnEndlessNumberIsPulledToTheEdgeOfItsRange()
+        {
+            Assert.Equal(2.0, Limits.Kept("MinProfitMargin", double.PositiveInfinity));
+            Assert.Equal(0.0, Limits.Kept("MinProfitMargin", double.NegativeInfinity));
+        }
+
+        [Fact]
+        public void ASettingWithNoLimitsIsLeftExactlyAsItIs()
+        {
+            Assert.False(Limits.Knows("PanelKey"));
+            Assert.False(Limits.Knows("NeverSellItems"));
+            Assert.False(Limits.Knows(null));
+            Assert.Equal(12345.0, Limits.Kept("PanelKey", 12345.0));
+            Assert.Equal(12345.0, Limits.Kept(null, 12345.0));
+        }
+
+        [Fact]
+        public void EveryRangeReadsBackAsPlainWords()
+        {
+            Assert.Equal("0 and 2", Limits.Range("MinProfitMargin"));
+            Assert.Equal("0.5 and 1", Limits.Range("ResaleSafetyFactor"));
+            Assert.Equal("", Limits.Range("PanelKey"));
+        }
+
         [Fact]
         public void AnEmptyFileAndANullFileAreBothSafe()
         {
