@@ -99,6 +99,32 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
+        {
+            Assert.Equal("SettingsVersion", Migration.ShapeKey);
+            Assert.Equal(2, Migration.Shape);
+            var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
+            written.Remove(Migration.ShapeKey);
+            Assert.False(Migration.Lift(1, written, new List<string>()));
+            Assert.Single(written);
+            Assert.Equal("700", written["GoldReserve"]);
+        }
+
+        [Fact]
+        public void AFileFromBeforeTheShapeStampIsStillLiftedWhole()
+        {
+            var written = File("KeepFoodVariety", "3", "KeepSmeltableWeapons", "true",
+                               "GoldReserve", "1200", "PanelKey", "Y");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(1, written, notes));
+            Assert.Equal("true", written["KeepEveryFoodKind"]);
+            Assert.Equal("3", written["KeepPerFoodKind"]);
+            Assert.Equal(Options.SmeltKeepAll.ToString(), written["KeepSmeltableWeapons"]);
+            Assert.Equal("1200", written["GoldReserve"]);
+            Assert.Equal("Y", written["PanelKey"]);
+        }
+
+        [Fact]
         public void AnEmptyFileAndANullFileAreBothSafe()
         {
             Assert.False(Migration.Lift(1, new Dictionary<string, string>(), new List<string>()));

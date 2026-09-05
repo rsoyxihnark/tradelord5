@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.25.0
+
+- TradeLord.ini and the MCM settings screen are twins now: both are kept up to date, so you can install or remove MCM whenever you like and every setting you have made comes with you.
+- Each of them records when it was last saved, and if the two ever disagree the one saved last wins and the other is written to match it.
+- Editing TradeLord.ini by hand while MCM is installed now works, because TradeLord sees the file is the newer one and sets the settings screen from it.
+- Changing anything on the settings screen writes it straight into TradeLord.ini, so removing MCM never costs you a setting.
+
 ## 1.24.0
 
 - TradeLord.ini now says which shape it is in, and TradeLord brings an older file forward by itself when it changes how a setting works, so a setting you set is never quietly lost.

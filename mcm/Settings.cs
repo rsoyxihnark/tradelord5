@@ -18,6 +18,7 @@ namespace TradeLord.Mcm
             Settings instance = Settings.Instance;
             instance?.FollowLanguage();
             Guard.Run("Mcm.ScreenTongue", ScreenTongue.Follow);
+            McmLoader.Reseat = Settings.Reseat;
         }
     }
 
@@ -154,6 +155,18 @@ namespace TradeLord.Mcm
                 if (value != null) value.PropertyChanged += (sender, args) => Retell();
                 Options.Bump();
             }
+        }
+
+        internal static void Reseat()
+        {
+            Guard.Run("Mcm.Reseat", () =>
+            {
+                Settings held = Instance;
+                if (held == null) return;
+                held.Bound(Options.Current);
+                held.FollowLanguage();
+                BaseSettingsProvider.Instance?.SaveSettings(held);
+            });
         }
 
         internal void FollowLanguage()
