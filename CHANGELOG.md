@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.21.0
+
+- Looted gear now sells to the first market that can pay for it, and Hold cargo for the best market, which is off out of the box, is now the only thing that makes any of your cargo wait for a better town.
+- Asking bandits for free passage is no longer labelled a cheat: the line in the encounter screen now reads [TRADELORD] and its setting is called Free passage from bandits.
+- The setting that buys mules and horses now calls them animals rather than beasts.
+- The feature list now says how much gold the town you would sell to has rather than what is in its till, names your gold reserve as 300 denars, and says what the settings you get out of the box are aimed at.
+
 ## 1.20.1
 
 - The line saying TradeLord bought pack animals now comes just after the line crediting your Trade skill, rather than before it.
