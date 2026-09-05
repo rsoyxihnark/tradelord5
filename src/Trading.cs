@@ -357,7 +357,7 @@ namespace TradeLord
             bool livestock = item.HasHorseComponent;
             if (livestock)
             {
-                if (!IsTradableLivestock(item)) { why = Block.MountOrPackAnimal; return false; }
+                if (IsHaulAnimal(item)) { why = Block.MountOrPackAnimal; return false; }
             }
             else if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))
             { why = Block.Protected; return false; }
