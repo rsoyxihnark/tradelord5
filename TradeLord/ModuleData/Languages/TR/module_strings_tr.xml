@@ -78,6 +78,10 @@
 		<string id="TL97" text="TradeLord {ITEMS} ikmal etti, {GOLD} dinar."/>
 		<string id="TL98" text="[Benzetim, en iyi durum] TradeLord {ITEMS} ikmal ederdi, {GOLD} dinar."/>
 		<string id="TL99" text="demirci ocağının parçalarına ayırabileceğini saklıyorsunuz"/>
+		<string id="TL110" text="TradeLord daha çok yük taşımak için {ITEMS} aldı, {GOLD} dinar."/>
+		<string id="TL111" text="[Benzetim, en iyi durum] TradeLord daha çok yük taşımak için {ITEMS} alırdı, {GOLD} dinar."/>
+		<string id="TL112" text="TradeLord'um var, beni bedavaya bırakır mısınız? [HİLE]"/>
+		<string id="TL113" text="Ah, kusura bakmayın, tabii ki. Ama NexusMods'ta beğeni vermeyi unutmayın!"/>
 		<string id="TL251" text="Elinizde bu kadar varken almayı bırak (0 = kapalı)"/>
 		<string id="TL252" text="Her zaman al (mal kimlikleri ya da adları, virgülle ayrılmış)"/>
 		<string id="TL253" text="Dokunma"/>
@@ -95,11 +99,17 @@
 		<string id="TL263" text="Yiyecek ikmali (kaç günlük)" />
 		<string id="TL363" text="Bölüğünüz bu kadar günlük yiyecekten azını taşıdığında, TradeLord kâr için ticaret yapmadan önce buradaki en ucuz yiyeceği pazar ne isterse isteyerek alır ve stoku doldurur. Altın rezerviniz, ziyaret başına harcama sınırınız, asla alma listeniz ve yiyecek politikanız yine de geçerlidir; köye her maldan sonuncusunu bırakır. 0 ikmali kapatır. Bir pazara varırken yalnızca otomatik alım açıkken çalışır." />
 		<string id="TL264" text="Eritilebilir silahları sakla" />
-		<string id="TL364" text="Demirci ocağının parçalarına ayırabileceği hiçbir silahı satma, böylece demircilik oynayışı ham maddesini korur. Yalnızca sizin yaptıklarınızı değil, her dövme tasarımı kapsar. Öntanımlı olarak KAPALI." />
+		<string id="TL364" text="Demirci ocağının parçalarına ayırabileceği hiçbir silahı satma, böylece demircilik oynayışı ham maddesini korur. Demircilik parçalarından kurulmuş her silahı elde tutar: kendi dövdüklerinizi de, bir haydutun üstünden yağmaladıklarınızı da, yani ucuz yağma da saklanır. Hangi parçaları öğrendiğinizi sormaz. Zırh, kalkan, yay ve tatar yayı demircilik tasarımı taşımaz, onlar yine satılır; her zaman sat listesindeki bir kayıt da yine üstün gelir. Öntanımlı olarak KAPALI." />
 		<string id="TL265" text="Gemileri dolduracak kadar al" />
 		<string id="TL365" text="Alımları arabalarınızın değil gemilerinizin alabileceğine göre ölçer, böylece karadayken filoyu yükleyebilirsiniz. Bölüğünüzün yelken açabilmesi gerekir; filo yoksa TradeLord arabaları sayar ve bunu kaydına yazar. Öntanımlı olarak KAPALI." />
 		<string id="TL266" text="Kaç günlük ücret için altın tut" />
 		<string id="TL366" text="Yukarıdaki altın rezervinin üstüne, askerlerinizin bu kadar günlük ücretini de ayırır, böylece bir alışveriş turu maaşları yemez. TradeLord her ticaret yaptığında gerçek ücret yükünüzden hesaplanır, yani orduyla birlikte büyür. 0 yalnızca sabit rezervi tutar." />
+		<string id="TL267" text="Yük hayvanı satın al" />
+		<string id="TL367" text="Bir pazar katır ya da yük atı için değerinden fazlasını istemiyorsa onu satın alır, böylece bölüğünüz daha çok yük taşır. Buradaki değer, o hayvan için bildiğiniz en ucuz fiyat, hiç bilmiyorsanız da hayvanın kendi değeridir. Kargonuz doluyken aşağıdaki fazladan ödeme kadar üstüne çıkar. Bölüğünüzün yavaşlamadan güdebileceğinden fazlasını asla almaz; altın rezerviniz, ziyaret başına harcama sınırınız ve asla alma listeniz yine geçerlidir. Öntanımlı olarak AÇIK." />
+		<string id="TL268" text="Kargo doluyken yük hayvanı için fazladan ödeme" />
+		<string id="TL368" text="Kargonuz doluyken ve fazladan yer para etmeye değerken, TradeLord bir katır ya da yük atı için geçerli fiyatın ne kadar üstüne çıkar. %150 bir buçuk katı demektir. %100 fazladan ödemeyi kapatır, yani yalnızca geçerli fiyattan alır." />
+		<string id="TL269" text="Hile: haydutlar sizi bedavaya bırakır" />
+		<string id="TL369" text="Çapulcularla, deniz akıncılarıyla, orman, dağ, bozkır ya da çöl haydutlarıyla karşılaştığınızda karşılaşma ekranına bir satır ekler. Onu seçmek karşılaşmayı dövüşsüz ve fidyesiz bitirir, sonrasında da birkaç saat sizi rahat bırakırlar. Bu bir hiledir ve öntanımlı olarak KAPALIDIR." />
 		<string id="TL352" text="TradeLord'un her zaman aldığı mallar: kategori kurallarını ve tahıl alma yasağını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla listeleri ve envanter kilidi yine geçerlidir, ve yine ancak erişimdeki bir yerde daha pahalıya satabileceğini alır."/>
 		<string id="TL250" text="Dil"/>
 		<string id="TL351" text="Kervanınız bir maldan bu kadarını taşıdığında TradeLord o malı bırakır ve parayı başka bir şeye harcar. Şu anda taşıdığınız miktarı ve bu ziyarette alınanları birlikte sayar. Satışı etkilemez. 0 = sınır yok."/>
