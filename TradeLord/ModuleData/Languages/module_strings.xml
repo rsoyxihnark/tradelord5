@@ -98,8 +98,8 @@
 		<string id="TL260" text="Ledger entry in town menu"/>
 		<string id="TL261" text="Keep some of every kind of food" />
 		<string id="TL361" text="Hold back a few of every kind of food you carry, so the party keeps its food variety morale bonus. What it holds back counts towards the days of supply above rather than adding to it. Livestock is left out, since a herd is slaughtered for meat rather than eaten as a kind of food in its own right. OFF by default." />
-		<string id="TL262" text="How many of each kind to keep" />
-		<string id="TL362" text="How many of every kind of food the switch above holds back. Three is enough that a day of eating does not wipe a kind out, and the bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher." />
+		<string id="TL262" text="How many of each kind of food to keep" />
+		<string id="TL362" text="How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Food reserve (days of supply) above is the one that works in days. Two is enough that a day of eating does not wipe a kind out, and the morale bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher." />
 		<string id="TL263" text="Restock food (days of supply)" />
 		<string id="TL363" text="When your party carries fewer than this many days of food, TradeLord buys the cheapest food here to top it back up, before it trades for profit, and only where that food costs no more than the cheapest price you know of for it. Your gold reserve, your spending limit for the visit, your never-buy list and your food policy all still hold, it stops before your gold reaches your reserve, and it leaves a village its last of each good. 0 turns restocking off. As you arrive at a market it runs only when auto buy is on." />
 		<string id="TL264" text="Smeltable weapons" />
@@ -124,10 +124,9 @@
 		<string id="TL352" text="Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach."/>
 		<string id="TL250" text="Language"/>
 		<string id="TL351" text="Once your party already carries this many of a good, TradeLord leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit."/>
-		<string id="TL350" text="The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. It takes hold as you pick it, and the town menu entries follow the next time you load a campaign." />
+		<string id="TL350" text="The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. It takes hold as you pick it, with no restart and no reload." />
 		<string id="TL360" text="Shows the TradeLord ledger entry in town and village menus, which opens the route panel. Turn it off if you would rather open the panel with its hotkey or its map button."/>
 		<string id="TL201" text="Live world prices (default)"/>
-		<string id="TL202" text="Observation shelf life (days, 0 = never expire)"/>
 		<string id="TL203" text="Exclude hostile markets"/>
 		<string id="TL204" text="Scan radius (map units, 0 = whole map)"/>
 		<string id="TL205" text="Minimum stock for buy suggestions"/>
@@ -172,9 +171,8 @@
 		<string id="TL246" text="Auto-marker travel ceiling (days, 0 = off)"/>
 		<string id="TL247" text="Coin sound on trade"/>
 		<string id="TL248" text="Detailed trade summary"/>
-		<string id="TL249" text="Quiet automation" />
+		<string id="TL249" text="Silence trade messages" />
 		<string id="TL301" text="ON (default): prices are read live from the world economy, including markets you have not visited. OFF: only prices you have seen in person are used."/>
-		<string id="TL302" text="Observed prices older than this are ignored. 0 = never expire."/>
 		<string id="TL303" text="Never scan, suggest or auto-trade with settlements at war with you."/>
 		<string id="TL304" text="Limit price scans to markets within this straight-line distance. 0 = whole map."/>
 		<string id="TL305" text="Best-buy hints require at least this many units in stock. 0 = off. Live-price mode only, because observed mode records prices, not stock levels."/>
@@ -186,7 +184,7 @@
 		<string id="TL311" text="Adds the best known buy and sell markets, with stock and travel time, to item tooltips."/>
 		<string id="TL312" text="Skips the vanilla merchandise rumor block so the tooltip shows one consistent set of price hints."/>
 		<string id="TL313" text="Colors trade-good and livestock rows in the inventory by how this market's price compares with the best known market."/>
-		<string id="TL314" text="Key that opens the ledger panel on the campaign map. A single key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, e.g. &quot;Ctrl+T&quot;. This mod does not take keys away from the game, so a bare key the game also uses will trigger both actions. Use a modifier to avoid that."/>
+		<string id="TL314" text="Key that opens the ledger panel on the campaign map. A single key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, e.g. &quot;Ctrl+T&quot;. This mod does not take keys away from the game, so a bare key the game also uses will trigger both actions. Use a modifier to avoid that. One key name and nothing else: a word, a phrase or a key this game does not know falls back to T, and TradeLord.log says which key it used." />
 		<string id="TL315" text="A clickable TradeLord button on the right edge of the campaign map that opens the ledger panel. Turn OFF if it interferes with map clicks."/>
 		<string id="TL316" text="Shows the single TradeLord trade entry in town and village menus, which sells and then buys in one go. Turn it off to leave the menu to trading done automatically as you arrive."/>
 		<string id="TL317" text="Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu."/>

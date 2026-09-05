@@ -80,14 +80,13 @@
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ Profit measured against what you paid: the average, the last, or the cheapest you know of
 - ✅ An honest-merchant mode you can switch on, using only the prices you have seen in person, recorded market by market as you walk them
-- ✅ How old a price you recorded yourself may be before honest-merchant mode stops trusting it
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
 
 **And**
 
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM, with a Reset button at the top of it that puts every setting back to the value TradeLord ships with and empties your four item lists
-- ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting. Its trade messages, ledger panel, price tooltips and the settings screen itself all take the new language as you pick it, and its town menu entries follow the next time you load a campaign
+- ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting. Its trade messages, ledger panel, price tooltips, town menu entries and the settings screen itself all take the new language the moment you pick it, with no restart and no reload
 - ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303, and it runs on the 1.5.2.121216 beta too
 - ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it
 

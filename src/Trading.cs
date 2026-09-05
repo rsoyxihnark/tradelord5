@@ -781,6 +781,7 @@ namespace TradeLord
                         args =>
                         {
                             args.optionLeaveType = GameMenuOption.LeaveType.Trade;
+                            args.Text = Tongue.Text("{=TL26}Trade here now (TradeLord)");
                             return Options.Current.QuickSellMenu && CanTradeHere(Settlement.CurrentSettlement);
                         },
                         args => Guard.Run("Action.QuickTradeMenu", () =>
@@ -802,6 +803,7 @@ namespace TradeLord
                         args =>
                         {
                             args.optionLeaveType = GameMenuOption.LeaveType.Submenu;
+                            args.Text = Tongue.Text("{=TL11}Consult the TradeLord ledger");
                             return Options.Current.LedgerMenuEntry;
                         },
                         args => Guard.Run("Action.LedgerReport", () => ShowLedgerReport()),
@@ -886,6 +888,7 @@ namespace TradeLord
                 args =>
                 {
                     args.optionLeaveType = GameMenuOption.LeaveType.Escape;
+                    args.Text = Tongue.Text("{=TL112}I have TradeLord, can you let me go for free? [TRADELORD]");
                     return Options.Current.BanditGetawayCheat && FacingBandits();
                 },
                 args => Guard.Run("Action.Getaway", LetPlayerGo),
