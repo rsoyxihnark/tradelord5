@@ -117,6 +117,20 @@ namespace TradeLord.Tests
             Assert.Equal("true", written["BuyHaulAnimals"]);
         }
 
+        [Theory]
+        [InlineData("45")]
+        [InlineData("0")]
+        [InlineData("200")]
+        public void TheObservationShelfLifeIsDroppedAndNamed(string held)
+        {
+            var written = File("ObservationShelfLifeDays", held, "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(4, written, notes));
+            Assert.False(written.ContainsKey("ObservationShelfLifeDays"));
+            Assert.Equal("800", written["GoldReserve"]);
+            Assert.NotEmpty(notes);
+        }
+
         [Fact]
         public void AFileWithoutTheOldHaulAnimalPremiumIsLeftAlone()
         {
@@ -150,7 +164,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(4, Migration.Shape);
+            Assert.Equal(5, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));

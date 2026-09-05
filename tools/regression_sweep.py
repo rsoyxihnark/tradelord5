@@ -530,7 +530,7 @@ def a_zero_cap_never_means_buy_nothing():
             and "private const int UncappedBuyProjection" in S['Ledger.cs'])
 
 def every_numeric_setting_that_switches_off_at_zero_says_so():
-    off = {'TL202': 'Observation shelf life', 'TL204': 'Scan radius', 'TL206': 'Travel ceiling',
+    off = {'TL204': 'Scan radius', 'TL206': 'Travel ceiling',
            'TL207': 'Village travel ceiling', 'TL228': 'Sell loot up to tier',
            'TL235': 'Buy cap per item (count', 'TL236': 'Buy cap per item (denars',
            'TL237': 'Max spend per visit', 'TL243': 'Economy settling delay', 'TL246': 'Auto-marker travel ceiling'}
@@ -757,9 +757,9 @@ def each_preset_gets_its_own_settings():
             and 'private Options _o;' in M
             and 'made.Bound(new Options());' in made
             and 'Options.Current' not in made
-            and M.count('Options.Current') == 3
+            and M.count('Options.Current') == 4
             and 'held.Bound(Options.Current);' in method_body(M, "internal static void Reseat")
-            and 'field.SetValue(Options.Current, field.GetValue(stock));' in
+            and 'field.SetValue(Options.Current, now);' in
                 method_body(M, "internal static void Reset")
             and '_o = to;' in method_body(M, "private void Bound")
             and all('Follows(value, () => _o.' + name in M
@@ -928,11 +928,10 @@ chk("1.3.9", "entering a market drops cached rankings", "ForgetMarketRankings();
 chk("1.3.9", "the best market to sell at is the dearest and the best to buy at is the cheapest",
     "int p = selling ? y.price.CompareTo(x.price) : x.price.CompareTo(y.price);" in
     method_body(S['Ledger.cs'], "private static int Rank(bool selling"))
-chk("1.3.9", "the scan keeps to the stock floor, the village ceiling and the shelf life it was given",
+chk("1.3.9", "the scan keeps to the stock floor and the village ceiling, and passes over no price for its age",
     "if (!selling && minStock > 0 && StockOf(s, item) < minStock) continue;" in
     method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive") and
-    "if (shelf > 0 && now - o.CapturedDay > shelf) continue;" in
-    method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopObserved") and
+    "CapturedDay" not in method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopObserved") and
     "if (s.IsVillage && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;" in
     method_body(S['Ledger.cs'], "private static bool WithinTravelCeiling"))
 chk("1.3.26", "the unit-by-unit walk stops at the merchant's till and at the spending cap",
@@ -1496,11 +1495,11 @@ chk("1.5.6", "log path resolution is attempted once, not per line",
     "if (_path == null) return;" in method_body(S['Support.cs'], "internal static void Write"))
 chk("1.5.6", "live-price mode records no price observations",
     capture_skipped_after_the_caches_are_dropped())
-chk("1.5.6", "expired observations are pruned on both save and load",
+chk("1.5.6", "unreadable observations are pruned on both save and load, and none is dropped for its age",
     method_body(S['Ledger.cs'], "public override void SyncData").count("PruneExpired();") == 2 and
     "if (!dataStore.IsLoading) PruneExpired();" in S['Ledger.cs'] and
     "if (dataStore.IsLoading) PruneExpired();" in S['Ledger.cs'] and
-    "(shelf > 0f && now - o.CapturedDay > shelf)" in method_body(S['Ledger.cs'], "private void PruneObservations"))
+    "CapturedDay" not in method_body(S['Ledger.cs'], "private void PruneObservations"))
 chk("1.5.6", "the message filter is armed only around a game call that talks back",
     the_filter_is_armed_only_around_a_game_call_that_talks())
 chk("1.5.6", "every place the filter comes down logs how many messages it suppressed",
@@ -1746,8 +1745,11 @@ chk("1.6.11", "every reader of a purchase record already requires units left, so
         method_body(S['TradeMath.cs'], "public static int UnitBasis")
     and "TradeMath.UnitBasis(rec, Options.Current.CostBasisMode);" in
         method_body(S['Ledger.cs'], "public int GetCostBasis"))
-chk("1.6.11", "shelf-life pruning stays independent of purchase pruning, so 'never expire' does not keep spent records",
-    "ObservationShelfLifeDays" in method_body(S['Ledger.cs'], "private void PruneObservations") and
+chk("1.6.11", "observation pruning stays independent of purchase pruning, so a spent record still goes",
+    "ObservationShelfLifeDays" not in S['Ledger.cs'] and
+    "ObservationShelfLifeDays" not in S['Options.cs'] and
+    "ObservationShelfLifeDays" not in M and
+    '"ObservationShelfLifeDays"' in S['Migrate.cs'] and
     re.search(r'private void Prune\(\)\s*\{\s*PruneObservations\(\);\s*PruneSettledPurchases\(\);\s*\}',
               S['Ledger.cs']) is not None)
 
@@ -1840,12 +1842,12 @@ chk("1.6.14", "a settings change reopens the hourly capture, so a market is not 
            and ordered(b, "Options.Generation == _capturedGen", "_capturedGen = Options.Generation;"))
     (method_body(S['Ledger.cs'], "public void CaptureSettlement")))
 
-chk("1.6.15", "an unreadable price observation is dropped whatever the shelf life is set to",
+chk("1.6.15", "an unreadable price observation is dropped, and a readable one is never dropped for its age",
     (lambda b: "if (_ledger == null) return;" in b
            and "o == null || o.TownId == null" in b
-           and ordered(b, "if (_ledger == null) return;", "ObservationShelfLifeDays"))
+           and "CapturedDay" not in b)
     (method_body(S['Ledger.cs'], "private void PruneObservations")))
-chk("1.6.15", "an item whose observations have all gone is dropped from the save whatever the shelf life is set to",
+chk("1.6.15", "an item whose observations have all gone is dropped from the save",
     (lambda b: "if (kv.Value == null || kv.Value.Count == 0) spent.Add(kv.Key);" in b
            and "_ledger.Remove(spent[i]);" in b and "shelf <= 0f" not in b)
     (method_body(S['Ledger.cs'], "private void PruneObservations")))
@@ -2233,15 +2235,18 @@ def every_line_the_mod_says_can_change_language():
             and said.count('Tongue.Text(') > 50
             and 'if (Options.Current.Language == English) return new TextObject(written);'
                 in method_body(S['Tongue.cs'], "internal static TextObject Text")
-            and (lambda b: b.count('Tongue.Text("{=TL') == b.count('starter.AddGameMenuOption(') > 0)
-                (method_body(S['Trading.cs'], "private void OnSessionLaunched")))
+            and (lambda b: b.count('Tongue.Text("{=TL') == 2 * b.count('starter.AddGameMenuOption(') > 0
+                       and b.count('args.Text = Tongue.Text("{=TL') == b.count('starter.AddGameMenuOption('))
+                (method_body(S['Trading.cs'], "private void OnSessionLaunched"))
+            and 'args.Text = Tongue.Text("{=TL112}' in method_body(S['Trading.cs'], "private static void AddGetaway"))
 
 def the_language_setting_leads_the_screen_and_starts_on_english():
-    return ('[SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]' in M
+    return ('[SettingPropertyGroup("{=TL104}Automation", GroupOrder = 0)]' in M
+            and '[SettingPropertyGroup("{=TL100}Language", GroupOrder = 1)]' in M
             and 'public int Language = 0;' in S['Options.cs']
             and 'Follows(Language, () => _o.Language, picked => _o.Language = picked);' in M
             and 'instance?.FollowLanguage();' in M
-            and all('GroupOrder = ' + str(n) + ')]' in M for n in range(1, 7)))
+            and all('GroupOrder = ' + str(n) + ')]' in M for n in range(0, 7)))
 
 def the_language_files_reach_the_download():
     return 'cp -r TradeLord/ModuleData dist/Modules/TradeLord/' in WORKFLOW
@@ -2452,7 +2457,7 @@ chk("1.7.0", "a translated line keeps every value the English one fills in",
     every_translated_line_keeps_its_placeholders())
 chk("1.7.0", "every line the mod says on screen is built where the language is chosen",
     every_line_the_mod_says_can_change_language())
-chk("1.7.0", "the language setting opens the screen and starts on English",
+chk("1.7.0", "auto sell and auto buy open the screen, the language setting follows, and the language starts on English",
     the_language_setting_leads_the_screen_and_starts_on_english())
 chk("1.7.0", "the language files are packed into the download",
     the_language_files_reach_the_download())
@@ -2785,9 +2790,9 @@ chk("1.14.5", "every line the panel speaks is raised again when it refreshes, so
 
 chk("1.15.0", "the food floor holds back every kind of food, counts inside the days of supply and leaves livestock out",
     the_food_floor_keeps_one_of_every_kind_without_stacking_on_the_days())
-chk("1.16.0", "the food floor is a switch that ships off, with its own amount that starts at three of each kind",
+chk("1.16.0", "the food floor is a switch that ships off, with its own amount that starts at two of each kind",
     option_default('KeepEveryFoodKind') == 'false' and
-    option_default('KeepPerFoodKind') == '3' and
+    option_default('KeepPerFoodKind') == '2' and
     "_o.KeepEveryFoodKind" in M and "_o.KeepPerFoodKind" in M and
     re.search(r'SettingPropertyInteger\("\{=TL262\}[^"]*", 1, 50,', M) is not None)
 chk("1.16.0", "a herd is left out of the food floor, because it is slaughtered for meat rather than eaten as its own kind",
@@ -3260,8 +3265,7 @@ chk("1.28.0", "a name that means two animals the mod treats differently is named
     "_clashGeneration = -1;" in method_body(S['Trading.cs'], "internal static void ForgetItemListAudit"))
 chk("1.33.0", "the language hint says the change takes hold as it is picked and names the one thing that waits",
     "It takes hold as you pick it" in spoken(ENGLISH).get('TL350', '') and
-    "town menu entries follow the next time you load a campaign" in spoken(ENGLISH).get('TL350', '') and
-    "restart" not in spoken(ENGLISH).get('TL350', '').lower() and
+    "with no restart and no reload" in spoken(ENGLISH).get('TL350', '') and
     all(spoken(path).get('TL350', '') for path in TRANSLATIONS.values()) and
     '[SettingPropertyDropdown("{=TL250}Language", Order = 1, RequireRestart = false,' in M and
     spoken(ENGLISH).get('TL350', '') in M)
@@ -3347,7 +3351,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 4;' in S['Migrate.cs']
+    return ('public const int Shape = 5;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and ordered(read, "written[line.Substring(0, mark).Trim()]",
                         "written.TryGetValue(Migration.ShapeKey, out string held)",
@@ -3451,14 +3455,15 @@ def one_button_puts_every_setting_back_and_sits_at_the_top():
                        r'\s*public Action (\w+) \{ get; set; \} = Reset;', M, re.S)
     en = spoken(ENGLISH)
     return (button is not None
-            and button.group(2) == "0" and button.group(5) == "0"
+            and button.group(2) == "0" and button.group(5) == "1"
             and all(en.get(tag) for tag in (button.group(1), button.group(3), button.group(4)))
             and 'foreach (FieldInfo field in typeof(Options).GetFields(BindingFlags.Public | BindingFlags.Instance))'
                 in reset
-            and "field.SetValue(Options.Current, field.GetValue(stock));" in reset
+            and "field.SetValue(Options.Current, now);" in reset
             and "var stock = new Options();" in reset
+            and "if (!Equals(field.GetValue(Options.Current), now)) moved.Add(field.Name);" in reset
             and ordered(reset, "var stock = new Options();", "field.SetValue(Options.Current",
-                        "Reseat();", "shown.OnPropertyChanged(told.Name);", "Options.Bump();")
+                        "Reseat();", "shown.OnPropertyChanged(moved[i]);", "Options.Bump();")
             and re.search(r'SettingPropertyDropdown\("\{=TL250\}Language", Order = 1,', M) is not None)
 
 def every_change_away_from_the_shipped_value_reaches_the_log():
@@ -3478,7 +3483,7 @@ def every_change_away_from_the_shipped_value_reaches_the_log():
                         "Guard.Run(\"Config.Flush\"")
             and "private static string Shown(FieldInfo field) => Shown(field, Options.Current);" in S['Config.cs'])
 
-chk("1.26.0", "one button at the top of the screen puts every setting back to what the module ships with",
+chk("1.26.0", "one button at the top of its group puts every setting back to what the module ships with, redrawing only what moved",
     one_button_puts_every_setting_back_and_sits_at_the_top())
 chk("1.26.0", "what a player sets away from the shipped value is named in the log, at startup and whenever it changes",
     every_change_away_from_the_shipped_value_reaches_the_log())
@@ -3522,7 +3527,7 @@ def the_file_holds_a_number_to_the_same_limits_the_screen_does():
     wanted.update(picked)
     taken = method_body(S['Config.cs'], "private static bool Taken")
     within = method_body(S['Config.cs'], "private static double Within")
-    return (len(ranged) >= 22 and len(picked) == 6 and table == wanted
+    return (len(ranged) >= 21 and len(picked) == 6 and table == wanted
             and "(int)Within(field, int.Parse(" in taken
             and "(float)Within(field, float.Parse(" in taken
             and "double kept = Limits.Kept(field.Name, asked);" in within

@@ -226,12 +226,12 @@ namespace TradeLord.Mcm
         [SettingPropertyButton("{=TL276}Put every setting back to how TradeLord ships", Order = 0, RequireRestart = false,
             Content = "{=TL277}Reset",
             HintText = "{=TL376}Puts every TradeLord setting back to the value it ships with, in one go. It takes hold at once and is written to TradeLord.ini as well, so nothing is left half changed. Your never sell, always sell, never buy and always buy lists are emptied too, and what changed is written to TradeLord.log.")]
-        [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
+        [SettingPropertyGroup("{=TL100}Language", GroupOrder = 1)]
         public Action ResetEverything { get; set; } = Reset;
 
         [SettingPropertyDropdown("{=TL250}Language", Order = 1, RequireRestart = false,
-            HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. It takes hold as you pick it, and the town menu entries follow the next time you load a campaign.")]
-        [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
+            HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. It takes hold as you pick it, with no restart and no reload.")]
+        [SettingPropertyGroup("{=TL100}Language", GroupOrder = 1)]
         public Dropdown<string> Language
         {
             get => _language;
@@ -250,14 +250,19 @@ namespace TradeLord.Mcm
             Guard.Run("Mcm.Reset", () =>
             {
                 var stock = new Options();
+                var moved = new List<string>();
                 foreach (FieldInfo field in typeof(Options).GetFields(BindingFlags.Public | BindingFlags.Instance))
-                    field.SetValue(Options.Current, field.GetValue(stock));
-                Log.Write("settings screen: every setting was put back to the value TradeLord ships with");
+                {
+                    object now = field.GetValue(stock);
+                    if (!Equals(field.GetValue(Options.Current), now)) moved.Add(field.Name);
+                    field.SetValue(Options.Current, now);
+                }
+                Log.Write("settings screen: every setting was put back to the value TradeLord ships with, " +
+                          moved.Count + " of them had been changed");
                 Reseat();
                 Settings shown = Instance;
                 if (shown == null) return;
-                foreach (PropertyInfo told in typeof(Settings).GetProperties(BindingFlags.Public | BindingFlags.Instance))
-                    shown.OnPropertyChanged(told.Name);
+                for (int i = 0; i < moved.Count; i++) shown.OnPropertyChanged(moved[i]);
                 Options.Bump();
             });
         }
@@ -352,87 +357,83 @@ namespace TradeLord.Mcm
 
         [SettingPropertyBool("{=TL201}Live world prices (default)", Order = 0, RequireRestart = false,
             HintText = "{=TL301}ON (default): prices are read live from the world economy, including markets you have not visited. OFF: only prices you have seen in person are used.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 1)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public bool Omniscient { get => _o.Omniscient; set { _o.Omniscient = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL202}Observation shelf life (days, 0 = never expire)", 0, 200, Order = 1, RequireRestart = false,
-            HintText = "{=TL302}Observed prices older than this are ignored. 0 = never expire.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 1)]
-        public int ObservationShelfLifeDays { get => _o.ObservationShelfLifeDays; set { _o.ObservationShelfLifeDays = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL203}Exclude hostile markets", Order = 2, RequireRestart = false,
+        [SettingPropertyBool("{=TL203}Exclude hostile markets", Order = 1, RequireRestart = false,
             HintText = "{=TL303}Never scan, suggest or auto-trade with settlements at war with you.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 1)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public bool ExcludeHostileTowns { get => _o.ExcludeHostileTowns; set { _o.ExcludeHostileTowns = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL204}Scan radius (map units, 0 = whole map)", 0f, 1000f, "0", Order = 3, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL204}Scan radius (map units, 0 = whole map)", 0f, 1000f, "0", Order = 2, RequireRestart = false,
             HintText = "{=TL304}Limit price scans to markets within this straight-line distance. 0 = whole map.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 1)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public float ScanRadius { get => _o.ScanRadius; set { _o.ScanRadius = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL205}Minimum stock for buy suggestions", 0, 100, Order = 4, RequireRestart = false,
+        [SettingPropertyInteger("{=TL205}Minimum stock for buy suggestions", 0, 100, Order = 3, RequireRestart = false,
             HintText = "{=TL305}Best-buy hints require at least this many units in stock. 0 = off. Live-price mode only, because observed mode records prices, not stock levels.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 1)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public int MinTownStock { get => _o.MinTownStock; set { _o.MinTownStock = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL206}Travel ceiling (days, 0 = off)", 0f, 20f, "0.0", Order = 5, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL206}Travel ceiling (days, 0 = off)", 0f, 20f, "0.0", Order = 4, RequireRestart = false,
             HintText = "{=TL306}Markets farther than this many travel days are hidden from tooltips, and no suggested route's total trip (you -> buy town -> sell town) may exceed it. Default 3.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 1)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public float MaxTravelDays { get => _o.MaxTravelDays; set { _o.MaxTravelDays = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL207}Village travel ceiling (days, 0 = off)", 0f, 10f, "0.0", Order = 6, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL207}Village travel ceiling (days, 0 = off)", 0f, 10f, "0.0", Order = 5, RequireRestart = false,
             HintText = "{=TL307}A separate, stricter travel ceiling for villages. Default 1.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 1)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public float MaxVillageTravelDays { get => _o.MaxVillageTravelDays; set { _o.MaxVillageTravelDays = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL208}Conservative route projection", Order = 7, RequireRestart = false,
+        [SettingPropertyBool("{=TL208}Conservative route projection", Order = 6, RequireRestart = false,
             HintText = "{=TL308}Apply the resale safety factor to the sell side when ranking and totalling routes, so listed profit allows for prices drifting before you arrive. OFF shows raw margins. Routes must clear the safety factor to be listed either way, since that is the same test a buying pass applies on arrival.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 1)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public bool ConservativeRouteProjection { get => _o.ConservativeRouteProjection; set { _o.ConservativeRouteProjection = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL209}Bulk price simulation", Order = 8, RequireRestart = false,
+        [SettingPropertyBool("{=TL209}Bulk price simulation", Order = 7, RequireRestart = false,
             HintText = "{=TL309}Price a lot unit by unit through the game's own price model, so quantity and profit account for your own buying moving the price. OFF prices every unit at the first unit's price, which reads higher than the trip will pay. Towns and live-price mode only: villages expose no supply or demand data, and observed mode does not read live market internals.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 1)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public bool BulkSimulation { get => _o.BulkSimulation; set { _o.BulkSimulation = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL210}Rank routes by confidence", Order = 9, RequireRestart = false,
             HintText = "{=TL310}Order the panel by profit per day, discounted by how likely that profit is to survive the trip. The discount accounts for margin left after the bulk walk, stock depth, trip length, caravan traffic, and in observed mode the age of the prices. OFF ranks on raw profit per day and the Score column shows that instead.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 1)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public bool ConfidenceRanking { get => _o.ConfidenceRanking; set { _o.ConfidenceRanking = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL211}Show best buy/sell in tooltips", Order = 0, RequireRestart = false,
             HintText = "{=TL311}Adds the best known buy and sell markets, with stock and travel time, to item tooltips.")]
-        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 2)]
+        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 3)]
         public bool TooltipHints { get => _o.TooltipHints; set { _o.TooltipHints = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL212}Suppress vanilla trade-rumor lines", Order = 1, RequireRestart = false,
             HintText = "{=TL312}Skips the vanilla merchandise rumor block so the tooltip shows one consistent set of price hints.")]
-        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 2)]
+        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 3)]
         public bool SuppressVanillaTradeLines { get => _o.SuppressVanillaTradeLines; set { _o.SuppressVanillaTradeLines = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL213}Color prices by world market", Order = 2, RequireRestart = false,
             HintText = "{=TL313}Colors trade-good and livestock rows in the inventory by how this market's price compares with the best known market.")]
-        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 2)]
+        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 3)]
         public bool ProfitColoring { get => _o.ProfitColoring; set { _o.ProfitColoring = value; Options.Bump(); } }
 
         [SettingPropertyText("{=TL214}Ledger panel hotkey (map screen)", Order = 3, RequireRestart = false,
-            HintText = "{=TL314}Key that opens the ledger panel on the campaign map. A single key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, e.g. \"Ctrl+T\". This mod does not take keys away from the game, so a bare key the game also uses will trigger both actions. Use a modifier to avoid that.")]
-        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 2)]
+            HintText = "{=TL314}Key that opens the ledger panel on the campaign map. A single key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, e.g. \"Ctrl+T\". This mod does not take keys away from the game, so a bare key the game also uses will trigger both actions. Use a modifier to avoid that. One key name and nothing else: a word, a phrase or a key this game does not know falls back to T, and TradeLord.log says which key it used.")]
+        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 3)]
         public string PanelKey { get => _o.PanelKey; set { _o.PanelKey = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL215}TradeLord button on the map screen", Order = 4, RequireRestart = false,
             HintText = "{=TL315}A clickable TradeLord button on the right edge of the campaign map that opens the ledger panel. Turn OFF if it interferes with map clicks.")]
-        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 2)]
+        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 3)]
         public bool ShowMapButton { get => _o.ShowMapButton; set { _o.ShowMapButton = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL217}Auto sell", Order = 0, RequireRestart = false,
             HintText = "{=TL317}Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu.")]
-        [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 3)]
+        [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 0)]
         public bool AutoSellOnEntry { get => _o.AutoSellOnEntry; set { _o.AutoSellOnEntry = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL218}Auto buy", Order = 1, RequireRestart = false,
             HintText = "{=TL318}Buys the moment you walk into a market, after any selling. With this off, TradeLord buys only when you pick its trade entry in the menu.")]
-        [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 3)]
+        [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 0)]
         public bool AutoBuyOnEntry { get => _o.AutoBuyOnEntry; set { _o.AutoBuyOnEntry = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL216}Trade entry in town menu", Order = 0, RequireRestart = false,
@@ -536,7 +537,7 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool DetailedTradeSummary { get => _o.DetailedTradeSummary; set { _o.DetailedTradeSummary = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL249}Quiet automation", Order = 17, RequireRestart = false,
+        [SettingPropertyBool("{=TL249}Silence trade messages", Order = 17, RequireRestart = false,
             HintText = "{=TL349}Trading done automatically as you enter a market reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports, since you asked for it. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool QuietAutomation { get => _o.QuietAutomation; set { _o.QuietAutomation = value; Options.Bump(); } }
@@ -556,8 +557,8 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public bool KeepEveryFoodKind { get => _o.KeepEveryFoodKind; set { _o.KeepEveryFoodKind = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL262}How many of each kind to keep", 1, 50, Order = 2, RequireRestart = false,
-            HintText = "{=TL362}How many of every kind of food the switch above holds back. Three is enough that a day of eating does not wipe a kind out, and the bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher.")]
+        [SettingPropertyInteger("{=TL262}How many of each kind of food to keep", 1, 50, Order = 2, RequireRestart = false,
+            HintText = "{=TL362}How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Food reserve (days of supply) above is the one that works in days. Two is enough that a day of eating does not wipe a kind out, and the morale bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public int KeepPerFoodKind { get => _o.KeepPerFoodKind; set { _o.KeepPerFoodKind = value; Options.Bump(); } }
 
