@@ -14,6 +14,8 @@ namespace TradeLord
 
         internal static bool SettingsReachable { get; private set; }
 
+        internal static bool SettingsInHand { get; private set; }
+
         internal static Action Reseat;
 
         private static string Named(int generation) => "MCMv" + generation;
@@ -87,9 +89,12 @@ namespace TradeLord
                 Log.Write("TradeLord.MCM.dll loaded but TradeLord.Mcm.McmSettingsBootstrap.Init is missing - defaults in effect. The companion DLL is from a different TradeLord version; reinstall the module.");
                 return;
             }
-            init.Invoke(null, null);
+            object answered = init.Invoke(null, null);
+            SettingsInHand = answered is bool taken && taken;
             SettingsReachable = true;
-            Log.Write("MCM detected - settings menu registered");
+            Log.Write(SettingsInHand
+                ? "MCM detected - settings menu registered"
+                : "MCM detected, but it has not handed over its settings yet - TradeLord.ini is read as it stands, and the settings screen takes over once MCM has loaded");
         }
     }
 
