@@ -3034,7 +3034,7 @@ def the_file_and_the_screen_are_twins_and_the_newer_one_wins():
             and "McmLoader.SettingsReachable ? \"the settings screen\" : \"this file\"" in write
             and "File.GetLastWriteTimeUtc(path) > stamped + HandTolerance" in hand
             and "if (stamped == default(DateTime)) return true;" in hand
-            and ordered(read, "bool screen = McmLoader.SettingsReachable;",
+            and ordered(read, "bool screen = McmLoader.SettingsInHand;",
                         "written.Remove(ChangedKey);",
                         "if (screen && !ChangedByHand(found, stamped))",
                         "Write(found, \"made to match the settings screen\");",
@@ -3053,6 +3053,24 @@ def the_file_and_the_screen_are_twins_and_the_newer_one_wins():
 
 chk("1.25.0", "the settings file and the settings screen are twins, the one saved last wins, and the other is written to match",
     the_file_and_the_screen_are_twins_and_the_newer_one_wins())
+
+def the_screen_only_wins_once_it_has_actually_handed_its_settings_over():
+    boot = method_body(M, "public static bool Init")
+    load = method_body(S['Support.cs'], "internal static void TryLoad")
+    read = method_body(S['Config.cs'], "private static void Read")
+    write = method_body(S['Config.cs'], "private static void Write")
+    return ("internal static bool SettingsInHand { get; private set; }" in S['Support.cs']
+            and ordered(boot, "Settings instance = Settings.Instance;", "return instance != null;")
+            and ordered(load, "object answered = init.Invoke(null, null);",
+                        "SettingsInHand = answered is bool taken && taken;",
+                        "SettingsReachable = true;")
+            and "bool screen = McmLoader.SettingsInHand;" in read
+            and "McmLoader.SettingsReachable" not in read
+            and "McmLoader.SettingsReachable" in write
+            and S['Config.cs'].count("McmLoader.SettingsInHand") == 1)
+
+chk("1.27.3", "the settings file is never written from a settings screen that has not handed its settings over",
+    the_screen_only_wins_once_it_has_actually_handed_its_settings_over())
 
 def the_lift_needs_nothing_from_the_game_and_is_covered_by_tests():
     return ('TaleWorlds' not in S['Migrate.cs']
