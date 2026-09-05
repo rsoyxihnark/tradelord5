@@ -63,6 +63,7 @@ namespace TradeLord
         public bool QuietAutomation = false;
         public float MinProfitMargin = 0.15f;
         public int KeepFoodDays = 5;
+        public int KeepFoodVariety = 0;
         public const int PolicyIgnore = 0, PolicySellOnly = 1, PolicyBuyOnly = 2, PolicyBuySell = 3;
 
         public int FoodPolicy = PolicyBuySell;

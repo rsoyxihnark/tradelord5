@@ -208,7 +208,8 @@ namespace TradeLord
         internal static Dictionary<ItemObject, int> FoodKeep(ItemRoster roster)
         {
             var keep = new Dictionary<ItemObject, int>();
-            if (Options.Current.KeepFoodDays <= 0 || roster == null) return keep;
+            int variety = Options.Current.KeepFoodVariety;
+            if ((Options.Current.KeepFoodDays <= 0 && variety <= 0) || roster == null) return keep;
             float perDay = -MobileParty.MainParty.FoodChange;
             if (perDay < 1f) perDay = 1f;
             int reserve = (int)Math.Ceiling(perDay * Options.Current.KeepFoodDays);
@@ -229,14 +230,27 @@ namespace TradeLord
                 return lx != ly ? lx.CompareTo(ly) : CostPerFood(x).CompareTo(CostPerFood(y));
             });
 
+            if (variety > 0)
+                foreach (ItemRosterElement el in food)
+                {
+                    ItemObject item = el.EquipmentElement.Item;
+                    if (IsTradableLivestock(item)) continue;
+                    int floor = Math.Min(el.Amount, variety);
+                    keep.TryGetValue(item, out int held);
+                    if (floor <= held) continue;
+                    reserve -= (floor - held) * FoodValue(item);
+                    keep[item] = floor;
+                }
+
             foreach (ItemRosterElement el in food)
             {
                 if (reserve <= 0) break;
                 ItemObject item = el.EquipmentElement.Item;
                 int perUnit = FoodValue(item);
-                int take = Math.Min(el.Amount, (reserve + perUnit - 1) / perUnit);
-                reserve -= take * perUnit;
                 keep.TryGetValue(item, out int had);
+                if (had >= el.Amount) continue;
+                int take = Math.Min(el.Amount - had, (reserve + perUnit - 1) / perUnit);
+                reserve -= take * perUnit;
                 keep[item] = had + take;
             }
             return keep;

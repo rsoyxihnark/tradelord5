@@ -85,6 +85,8 @@
 		<string id="TL258" text="Last price you paid"/>
 		<string id="TL259" text="Cheapest market you know"/>
 		<string id="TL260" text="Ledger entry in town menu"/>
+		<string id="TL261" text="Keep this many of every food (0 = off)" />
+		<string id="TL361" text="Hold back this many of every kind of food you carry, so the party keeps the morale bonus for eating a variety of things. What it holds back counts towards the days of supply above rather than adding to it, and livestock is left out. 0 = off." />
 		<string id="TL352" text="Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach."/>
 		<string id="TL250" text="Language"/>
 		<string id="TL351" text="Once your party already carries this many of a good, TradeLord leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit."/>

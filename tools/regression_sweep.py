@@ -502,7 +502,8 @@ def every_numeric_setting_that_switches_off_at_zero_says_so():
     off = {'TL202': 'Observation shelf life', 'TL204': 'Scan radius', 'TL206': 'Travel ceiling',
            'TL207': 'Village travel ceiling', 'TL228': 'Sell loot up to tier',
            'TL235': 'Buy cap per item (count', 'TL236': 'Buy cap per item (denars',
-           'TL237': 'Max spend per visit', 'TL243': 'Economy settling delay', 'TL246': 'Auto-marker travel ceiling'}
+           'TL237': 'Max spend per visit', 'TL243': 'Economy settling delay', 'TL246': 'Auto-marker travel ceiling',
+           'TL261': 'Keep this many of every food'}
     for marker in off:
         label = re.search(r'\{=' + marker + r'\}([^"]*)"', M)
         if label is None or '0 = ' not in label.group(1):
@@ -917,7 +918,7 @@ chk("1.3.22", "panel takes mouse only",
 
 chk("1.3.23", "food value mirrors ItemRoster.TotalFood (livestock by MeatCount)",
     "return item.IsFood ? 1 : 0;" in S['Trading.cs'] and
-    "int take = Math.Min(el.Amount, (reserve + perUnit - 1) / perUnit);" in S['Trading.cs'])
+    "Math.Min(el.Amount - had, (reserve + perUnit - 1) / perUnit)" in S['Trading.cs'])
 chk("1.3.23", "herd surplus counts mounts against unmounted men",
     "Math.Max(0, mounts - foot)" in S['Trading.cs'] and "NumberOfMenWithoutHorse" in S['Trading.cs'])
 chk("1.3.23", "herd guard includes attached parties", "party.AttachedParties" in S['Trading.cs'])
@@ -2438,6 +2439,20 @@ def the_panel_relabels_every_line_it_speaks():
             and raise_all in body
             and ordered(body, raise_all, "PlayerGold ="))
 
+def the_food_floor_keeps_one_of_every_kind_without_stacking_on_the_days():
+    body = method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> FoodKeep")
+    return ("int variety = Options.Current.KeepFoodVariety;" in body
+            and "if ((Options.Current.KeepFoodDays <= 0 && variety <= 0) || roster == null) return keep;" in body
+            and "if (IsTradableLivestock(item)) continue;" in body
+            and "int floor = Math.Min(el.Amount, variety);" in body
+            and "reserve -= (floor - held) * FoodValue(item);" in body
+            and "if (reserve <= 0) break;" in body
+            and ordered(body, "int variety = Options.Current.KeepFoodVariety;",
+                        "if (variety > 0)", "int floor = Math.Min(el.Amount, variety);",
+                        "reserve -= (floor - held) * FoodValue(item);",
+                        "if (reserve <= 0) break;",
+                        "Math.Min(el.Amount - had, (reserve + perUnit - 1) / perUnit)"))
+
 def the_notes_are_the_changelog_section_for_the_version():
     import subprocess
     version = module_version()
@@ -2493,6 +2508,13 @@ chk("1.14.4", "the sell pass names a stopping rule only when one fired, so a car
 
 chk("1.14.5", "every line the panel speaks is raised again when it refreshes, so a language change reaches its headings too",
     the_panel_relabels_every_line_it_speaks())
+
+chk("1.15.0", "the food floor holds back every kind of food, counts inside the days of supply and leaves livestock out",
+    the_food_floor_keeps_one_of_every_kind_without_stacking_on_the_days())
+chk("1.15.0", "the food floor is off out of the box, so a campaign that never sets it trades as it did",
+    option_default('KeepFoodVariety') == '0' and
+    "public int KeepFoodVariety" in S['Options.cs'] and
+    "Options.Current.KeepFoodVariety" in M)
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
