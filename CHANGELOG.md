@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.23.1
+
+- The last note about an animal that carries nothing for you should not have offered the Old Work Horse as an example, because a work horse carries for you whatever its age and TradeLord keeps it like any other haul animal.
+
 ## 1.23.0
 
 - An animal that carries nothing for you and is not livestock, such as an Old Work Horse, is no longer fenced in with your haul animals, so it is sold like any other cargo instead of sitting in your bags for good.
