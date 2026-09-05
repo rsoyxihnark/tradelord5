@@ -1222,6 +1222,24 @@ chk("1.23.0", "the selling fence is the haul animals themselves, so an animal th
     "if (IsTradableLivestock(item)) return true;" in
     method_body(S['Trading.cs'], "internal static bool MayBuy") and
     "why = Block.MountOrPackAnimal;" in method_body(S['Trading.cs'], "internal static bool MayBuy"))
+chk("1.27.0", "the animals that carry for you have one name of their own, and the haul animal fence is those plus the spare mounts",
+    "internal static bool IsTruckAnimal(ItemObject item) =>\n"
+    "            item != null && item.HasHorseComponent && item.HorseComponent.IsPackAnimal;" in S['Trading.cs'] and
+    "internal static bool IsHaulAnimal(ItemObject item) =>\n"
+    "            IsTruckAnimal(item) || IsSpareMount(item);" in S['Trading.cs'] and
+    S['Trading.cs'].count("&& item.HorseComponent.IsPackAnimal;") == 1 and
+    S['Trading.cs'].count("IsTruckAnimal(ItemObject item)") == 1)
+chk("1.27.0", "a campaign opens by naming every animal in the game, grouped by what the mod does with it and carrying the game's own answers",
+    'Guard.Run("Action.AnimalRollCall", TradePolicy.LogAnimalRollCall);' in
+        method_body(S['Trading.cs'], "private void OnSessionLaunched") and
+    all(needle in method_body(S['Trading.cs'], "internal static void LogAnimalRollCall") for needle in
+        ("foreach (ItemObject item in Items.All)", "horse.IsRideable", "horse.IsPackAnimal",
+         "horse.IsMount", "horse.IsLiveStock", "horse.MeatCount", "item.ItemCategory",
+         "if (IsTruckAnimal(item)) trucks.Add(line);",
+         "else if (IsSpareMount(item)) mounts.Add(line);",
+         "else if (IsTradableLivestock(item)) herd.Add(line);",
+         "else neither.Add(line);")) and
+    "more not listed" in method_body(S['Trading.cs'], "private static void RollCallGroup"))
 chk("1.5.0", "every category ships trading exactly as it did before the matrix",
     "FoodPolicy = PolicyBuySell" in S['Options.cs'] and
     "CraftingPolicy = PolicyBuySell" in S['Options.cs'] and
@@ -2684,12 +2702,15 @@ def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
     haul = method_body(S['Trading.cs'], "internal static bool MayHaul")
     body = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
     carries = between(S['Trading.cs'], "internal static bool IsHaulAnimal", ";")
+    truck = between(S['Trading.cs'], "internal static bool IsTruckAnimal", ";")
+    spare = between(S['Trading.cs'], "internal static bool IsSpareMount", ";")
     return ("if (!IsHaulAnimal(item) || item.NotMerchandise) return false;" in haul
             and "Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)" in haul
             and "IsLocked(lockedKeys, new EquipmentElement(item))" in haul
-            and "item.HorseComponent.IsPackAnimal" in carries
-            and "item.HorseComponent.IsMount" in carries
-            and "IsLiveStock" not in carries
+            and "IsTruckAnimal(item) || IsSpareMount(item)" in carries
+            and "item.HorseComponent.IsPackAnimal" in truck
+            and "item.HorseComponent.IsMount" in spare
+            and "IsLiveStock" not in carries + truck + spare
             and "int herdRoom = HerdRoomForLivestock(party);" in body
             and "int mountRoom = FreeMountRoom(party);" in body
             and "if (herdRoom <= 0 && mountRoom <= 0) return;" in body
