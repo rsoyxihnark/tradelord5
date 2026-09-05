@@ -23,6 +23,19 @@ else
   echo "could not work out who the owner is, so set user.name and user.email before committing"
 fi
 
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+
+if [ -n "${BRANCH:-}" ] && [ "$BRANCH" != "main" ] && [ "$BRANCH" != "HEAD" ]; then
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "the harness handed over branch $BRANCH and this checkout has uncommitted work, so it was left where it is; commit here and push with: git push -u origin HEAD:main"
+  elif git checkout main >/dev/null 2>&1 || git checkout -b main origin/main >/dev/null 2>&1; then
+    git merge --ff-only origin/main >/dev/null 2>&1 || true
+    echo "the harness handed over branch $BRANCH; this repository keeps one branch, so the checkout was moved to main and $BRANCH left exactly as it was"
+  else
+    echo "the harness handed over branch $BRANCH and the checkout could not be moved to main, so commit here and push with: git push -u origin HEAD:main"
+  fi
+fi
+
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
