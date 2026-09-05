@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.20.0
+
+- TradeLord now trades with a caravan you meet on the road: talk to it and the deal is already done, and the caravan pays out of its own purse.
+- A new setting caps how much of your hold one good may fill as a share rather than a flat count, so the ceiling grows with your carts instead of needing a new number every time your party does.
+- A horse one of your unmounted men can ride no longer counts against the herd, so a party driving a full herd still buys the cheap horses its footmen can climb onto.
+- The feature list covers trading with caravans and the new share of the hold.
+
 ## 1.19.0
 
 - Keeping smeltable weapons is now a choice of three, and the new one keeps a weapon only while a part of it is still locked in your smithy, so your bags stop filling with loot that can teach you nothing.
