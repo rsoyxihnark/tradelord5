@@ -493,8 +493,9 @@ def the_filter_is_armed_only_around_a_game_call_that_talks():
     armed = re.findall(r'OpenTransaction\(\);\s*try \{ ([\w\.]+)\([^)]*\); \}\s*'
                        r'finally \{ CloseTransaction\(\);( ReportSilenced\(\);)? \}', t)
     return (t.count('OpenTransaction();') == len(armed) == 8
-            and sorted(c for c, _ in armed) == ['SellItemsAction.Apply'] * 7 +
-                                               ['SkillLevelingManager.OnTradeProfitMade']
+            and sorted(c for c, _ in armed) == ['HandOver', 'SellItemsAction.Apply'] * 1 +
+                                               ['SellItemsAction.Apply'] * 4 +
+                                               ['SkillLevelingManager.OnTradeProfitMade', 'TakeDelivery']
             and 'InGameTransaction = true' not in t
             and 'if (!TradeActionBehavior.InGameTransaction) return true;' in t
             and 'AutomatedTradeInProgress' not in
@@ -1100,9 +1101,20 @@ chk("1.3.30", "a damaged purchase record does not throw during save load",
 chk("1.3.31", "the price gate and the transaction it guards share one granularity",
     S['Trading.cs'].count("SellItemsAction.Apply(me, shop, el, 1, settlement)") == 2 and
     S['Trading.cs'].count("SellItemsAction.Apply(shop, me, el, 1, settlement)") == 3 and
-    S['Trading.cs'].count("SellItemsAction.Apply(me, shop, el, 1, null)") == 1 and
-    S['Trading.cs'].count("SellItemsAction.Apply(shop, me, el, 1, null)") == 1 and
-    S['Trading.cs'].count("SellItemsAction.Apply(") == 7)
+    S['Trading.cs'].count("SellItemsAction.Apply(") == 5 and
+    "SellItemsAction.Apply(" not in method_body(S['Trading.cs'], "public static void ExecuteRoadTrade"))
+chk("1.36.0", "a trade on the road moves one unit and its price itself, because the game's own sale needs a market",
+    "SellItemsAction" not in method_body(S['Trading.cs'], "public static void ExecuteRoadTrade") and
+    (lambda b: "me.ItemRoster.AddToCounts(what, -1);" in b
+           and "shop.ItemRoster.AddToCounts(what, 1);" in b
+           and "GiveGoldAction.ApplyForPartyToCharacter(shop, Hero.MainHero, price, true);" in b)
+        (method_body(S['Trading.cs'], "private static void HandOver")) and
+    (lambda b: "shop.ItemRoster.AddToCounts(what, -1);" in b
+           and "me.ItemRoster.AddToCounts(what, 1);" in b
+           and "GiveGoldAction.ApplyForCharacterToParty(Hero.MainHero, shop, price, true);" in b)
+        (method_body(S['Trading.cs'], "private static void TakeDelivery")) and
+    "try { HandOver(me, shop, el.EquipmentElement, price); }" in S['Trading.cs'] and
+    "try { TakeDelivery(shop, me, el.EquipmentElement, price); }" in S['Trading.cs'])
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
     S['Trading.cs'].count("[Simulated, best case]") == 7 and
@@ -2243,7 +2255,7 @@ def every_line_the_mod_says_can_change_language():
             and (lambda b: b.count('Tongue.Text("{=TL') == 2 * b.count('starter.AddGameMenuOption(') > 0
                        and b.count('args.Text = Tongue.Text("{=TL') == b.count('starter.AddGameMenuOption('))
                 (method_body(S['Trading.cs'], "private void OnSessionLaunched"))
-            and 'args.Text = Tongue.Text("{=TL112}' in method_body(S['Trading.cs'], "private static void AddGetaway"))
+            and "AddGameMenuOption" not in between(S['Trading.cs'], "private static void OfferFreePassage", "RideAway"))
 
 def the_language_setting_leads_the_screen_and_starts_on_english():
     return ('[SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]' in M
@@ -2900,31 +2912,31 @@ def a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_down_to_the_res
             and '"PackAnimalFullCargoPremium"' in S['Migrate.cs'])
 
 def the_getaway_ships_on_names_no_cheat_and_only_answers_bandits():
-    add = between(S['Trading.cs'], "private static void AddGetaway", "false, 4));")
-    facing = method_body(S['Trading.cs'], "private static bool FacingBandits")
+    offer = method_body(S['Trading.cs'], "private static void OfferFreePassage")
     go = method_body(S['Trading.cs'], "private static void LetPlayerGo")
     ride = method_body(S['Trading.cs'], "private static void RideAway")
     return (option_default('BanditGetawayCheat') == 'true'
             and "_o.BanditGetawayCheat" in M
-            and '"menu encounter (the other menus are unaffected)"' in add
-            and 'starter.AddGameMenuOption("encounter", "tradelord_getaway",' in add
-            and "Options.Current.BanditGetawayCheat && FacingBandits()" in add
-            and 'Guard.Run("Action.Getaway", LetPlayerGo)' in add
-            and "PlayerEncounter.EncounteredMobileParty" in facing
-            and "foe != null && foe.IsBandit" in facing
+            and "AddGetaway" not in S['Trading.cs']
+            and "FacingBandits" not in S['Trading.cs']
+            and '"encounter"' not in S['Trading.cs']
+            and '("encounter", false)' not in COMPAT
+            and "Options.Current.BanditGetawayCheat" in offer
             and "{=TL113}" in go
             and "Guard.Run(\"Action.GetawayRide\", () => RideAway(foe))" in go
             and "foe?.IgnoreForHours(GetawayHours);" in ride
+            and "MobileParty.MainParty?.IgnoreByOtherPartiesTill(CampaignTime.HoursFromNow(GetawayHours));" in ride
+            and "PlayerEncounter.ProtectPlayerSide(GetawayHours);" in ride
             and "PlayerEncounter.LeaveEncounter = true;" in ride
             and "PlayerEncounter.Finish(true);" in ride
-            and '("encounter", false)' in COMPAT
             and no_shipped_line_calls_the_free_passage_a_cheat())
 
 def no_shipped_line_calls_the_free_passage_a_cheat():
     en = spoken(ENGLISH)
     code = (S['Trading.cs'] + "\n" + M).replace('BanditGetawayCheat', '')
-    return (en.get('TL112', '').endswith('[TRADELORD]')
+    return ('TradeLord' in en.get('TL378', '')
             and en.get('TL269') == 'Free passage from bandits'
+            and 'TL112' not in en
             and not any('cheat' in text.lower() for text in en.values())
             and 'cheat' not in code.lower()
             and 'public bool BanditGetawayCheat = true;' in S['Options.cs'])
@@ -2955,7 +2967,7 @@ chk("1.19.0", "only an animal that carries for you is bought that way, the herd 
     only_a_carrying_animal_is_hauled_and_the_herd_still_binds())
 chk("1.30.0", "a haul animal is bought only where it costs no more than the cheapest TradeLord has seen, and never with the last of the gold reserve",
     a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_down_to_the_reserve())
-chk("1.19.0", "the getaway line ships on, shows only against bandits and ends the encounter",
+chk("1.36.0", "the getaway is offered as you meet a band, and leaving holds both sides off each other",
     the_getaway_ships_on_names_no_cheat_and_only_answers_bandits())
 chk("1.19.0", "the smeltable hint names all three choices and says looted weapons are held too",
     the_smeltable_hint_says_which_weapons_it_holds_back())
@@ -2989,12 +3001,16 @@ def a_share_of_the_hold_caps_one_good_and_ships_off():
             and "MaxHeldShare" not in S['Ledger.cs'])
 
 def a_road_party_is_traded_with_the_moment_it_is_met():
-    return ('[HarmonyPatch(typeof(PlayerEncounter), "Start")]' in S['Trading.cs']
-            and 'Guard.Run("Encounter.Met", TradeActionBehavior.OnEncounterMet)' in S['Trading.cs']
-            and "Patcher.TryPatch(harmony, typeof(Patch_TradeOnMeeting));" in S['SubModule.cs']
-            and (lambda b: "if (IsRoadTrader(met)) { TradeOnce(met); return; }" in b
-                       and "if (met.IsBandit) OfferFreePassage(met);" in b)
-                (method_body(S['Trading.cs'], "internal static void OnEncounterMet"))
+    watch = method_body(S['Trading.cs'], "internal static void WatchEncounter")
+    return ('Guard.Run("Tick.Encounter", TradeActionBehavior.WatchEncounter);' in
+                method_body(S['SubModule.cs'], "protected override void OnApplicationTick")
+            and "Patch_TradeOnMeeting" not in ALL
+            and "object here = PlayerEncounter.Current;" in watch
+            and "if (here == null) { _handledEncounter = null; return; }" in watch
+            and "if (_handledEncounter == here) return;" in watch
+            and "if (met == null) return;" in watch
+            and "if (IsRoadTrader(met)) { TradeOnce(met); return; }" in watch
+            and "if (met.IsBandit) OfferFreePassage(met);" in watch
             and "party.IsCaravan || party.IsVillager" in
                 between(S['Trading.cs'], "internal static bool IsRoadTrader", ";"))
 
@@ -3002,10 +3018,12 @@ def bandits_are_offered_the_getaway_without_a_menu_of_their_own():
     offer = method_body(S['Trading.cs'], "private static void OfferFreePassage")
     return ("if (!Options.Current.BanditGetawayCheat || (here != null && _offeredPassageIn == here)) return;" in offer
             and "object here = PlayerEncounter.Current;" in offer
-            and "RideAway(foe)" in offer
+            and "LetPlayerGo(foe)" in offer
             and "TL378" in offer and "TL379" in offer and "TL380" in offer
             and all(s in strings_declared() for s in ("TL378", "TL379", "TL380"))
-            and "ForgetEncounter" in S['SubModule.cs'])
+            and "ForgetEncounter" in S['SubModule.cs']
+            and "_handledEncounter = null;" in
+                between(S['Trading.cs'], "internal static void ForgetEncounter", "}"))
 
 def a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod():
     body = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
@@ -3072,9 +3090,9 @@ chk("1.20.0", "a horse an unmounted man can ride costs the herd nothing, so a fu
     a_horse_a_footman_can_ride_costs_the_herd_nothing())
 chk("1.20.0", "a share of the hold caps one good against the real capacity, ships off and binds buying only",
     a_share_of_the_hold_caps_one_good_and_ships_off())
-chk("1.34.0", "a caravan or a party of villagers is traded with the moment it is met, before any dialog",
+chk("1.36.0", "a caravan or a party of villagers is traded with as soon as the encounter names it, before any dialog",
     a_road_party_is_traded_with_the_moment_it_is_met())
-chk("1.34.0", "bandits offer the getaway on meeting, so it never depends on a menu of the game's own",
+chk("1.36.0", "bandits offer the getaway on meeting, so it never depends on a menu of the game's own",
     bandits_are_offered_the_getaway_without_a_menu_of_their_own())
 chk("1.20.0", "a caravan on the road is priced by the game's own off-market pricing, and is skipped when that is gone",
     a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod())
