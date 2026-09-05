@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.22.0
+
+- TradeLord now sells a spare mount nobody in your party can ride, once those spares are dragging you into the herd speed penalty, so your footmen turning into cavalry no longer leaves the party crawling.
+- It sells the cheapest spare first, so your war horses stay in the baggage, it never sells a haul animal that way, and one switch on the settings screen turns the whole thing off.
+- A mule, a sumpter horse, a work horse and a pack camel are now called haul animals on the settings screen and in the feature list, and all four are named rather than described.
+- The feature list now says TradeLord pays up to the cheapest price it knows of for a haul animal, and up to 1.5 times that while your cargo is full.
+- The livestock policy, the unique and crafted protection and the always-sell list no longer say a mount can never be sold, because now one can.
+
 ## 1.21.1
 
 - The feature list now names the animals TradeLord buys for your baggage train, a mule, a sumpter horse, a work horse or a pack camel, and says it buys a horse or a camel your men can ride while you still have troops on foot.

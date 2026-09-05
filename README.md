@@ -35,7 +35,8 @@
 - ✅ Sells and buys the moment you enter a market by default
 - ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has at whatever it asks, before it trades for profit
 - ✅ Buys and sells livestock, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
-- ✅ Buys any animal that carries for you, a mule, a sumpter horse, a work horse or a pack camel, when a market is asking no more than one is worth, so the party carries more. It buys a horse or a camel your men can ride the same way, while you still have troops on foot. While your cargo is full it will pay half again as much for one, because that is when the room is worth having. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
+- ✅ Buys any haul animal, a mule, a sumpter horse, a work horse or a pack camel, paying up to the cheapest price it knows of for one, and up to 1.5 times that while your cargo is full. It buys a horse or a camel your men can ride the same way, while you still have troops on foot. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
+- ✅ Sells a spare mount nobody in your party can ride, once those spares are dragging you into the herd speed penalty, and only as many as it takes to get out of it. It sells the cheapest first, so your war horses stay in the baggage, and a haul animal is never sold this way. One switch turns it off
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, once you switch it on. Off out of the box, so looted gear goes to the first market that can pay for it
@@ -55,7 +56,7 @@
 **What it doesn't touch**
 
 - ✅ Anything you locked in the inventory screen
-- ✅ Unique and player-crafted gear, and quest items. Your mounts and pack animals are never sold either, though it will buy pack animals for you. Naming one on your always-sell list is the only way to move it
+- ✅ Unique and player-crafted gear, and quest items. Your haul animals are never sold either, though it will buy them for you, and naming one on your always-sell list is the only way to move one
 - ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it: sell them, which is what it does out of the box; keep every one, which holds anything built from smithing parts, forged or looted off a bandit alike; or **keep only the ones you have not learned**, which holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know. Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus
@@ -81,7 +82,7 @@
 - ✅ How old a price you recorded yourself may be before honest-merchant mode stops trusting it
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
-- ✅ How cheap a mule or a horse has to be before it buys one, and how much more it will pay while your cargo is full
+- ✅ How cheap a haul animal or a mount has to be before it buys one, and how much more it will pay while your cargo is full
 
 **And**
 
