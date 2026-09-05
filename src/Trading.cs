@@ -717,13 +717,22 @@ namespace TradeLord
             Guard.Run("Action.HerdReliefOnLeaving", () =>
             {
                 LogHerdState("leaving " + settlement.Name);
+                if (!_visitTradeAllowed)
+                {
+                    Log.Write("herd relief on the way out is skipped: the game would not let you trade at " +
+                              settlement.Name + " when you arrived");
+                    return;
+                }
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
             });
             Guard.Run("Action.OnSettlementLeft", UpdateBestSellTownTracker);
         }
 
+        private static bool _visitTradeAllowed;
+
         private static void ResetVisit()
         {
+            _visitTradeAllowed = false;
             _spentThisVisit = 0;
             _soldThisVisit.Clear();
             _boughtThisVisit.Clear();
@@ -925,6 +934,7 @@ namespace TradeLord
             Guard.Run("Action.OnSettlementEntered", () =>
             {
                 ResetVisit();
+                _visitTradeAllowed = CanTradeHere(settlement);
                 WarnUnmatchedItemLists();
                 LogHerdState("entering " + settlement.Name);
 
