@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.27.0
+
+- TradeLord.log now opens every campaign with a roll call of every animal in your game, counted by what TradeLord does with each one: the haul animals it keeps for your baggage train, the mounts it may sell as spares once they slow you down, the livestock it trades, and anything that is none of the three.
+- Each animal is listed with the game's own answers about it, whether it is rideable, a pack animal, a mount or livestock, how much meat it is worth and which trade category it sits in, so a mod that adds an animal or changes what an existing one does shows up plainly.
+
 ## 1.26.1
 
 - A number in TradeLord.ini is now held to the same limits the settings screen holds it to, so a file that has been damaged or edited to something impossible can no longer put TradeLord into a state you could never have set on the screen.
