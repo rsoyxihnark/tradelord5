@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.29.0
+
+- TradeLord now looks at your herd three times a visit instead of once: as you enter a settlement, again once it has finished trading there, and once more as you leave, so a penalty that arrives while you are in town is caught before you ride out.
+- A herd penalty no longer has to come from picking up an animal: losing men in a battle or to desertion shrinks how much your party can drive, and each of those three checks now notices that on its own.
+- While you are on the road with no market in reach, TradeLord.log names the herd once a day for as long as it is slowing you down, so you can see when the penalty arrived and what caused it.
+- Every herd check is written to TradeLord.log with the numbers behind it: how many men you have and how many are on foot, how many loose mounts nobody is riding, how many pack animals and how much livestock, how many animals are being driven in all, and how many must go.
+- Every animal that comes into your party or goes out of it is now named in TradeLord.log with what was paid, why it moved, and what TradeLord counts it as, whether it came from the selling pass, the buying pass, restocking, the baggage train, a caravan on the road, or getting your party back up to speed.
+
 ## 1.28.1
 
 - Getting your party back up to speed now works out how many haul animals your cargo needs the same way TradeLord works out what your party can carry, so a party that never puts to sea will part with a spare haul animal instead of holding on to every one of them.
