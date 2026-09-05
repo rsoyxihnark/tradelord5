@@ -11,6 +11,7 @@ They describe requirements, not the state of anything. Where a sentence here say
 - Never push a branch other than `main` to the remote, not to record work, not to satisfy a check, and not because a tool asked for it. A push that would put a second branch on the remote is refused by `.claude/hooks/no-new-branch.sh`, and the refusal is the rule working, not an obstacle to route around.
 - If the session harness assigns you a working branch, say so in chat, commit on the checkout you were given, and push that work to `main`. Leave the assigned branch unpushed.
 - A branch already sitting on the remote that is not `main` is not yours to push to or build on. Say in chat that it is there and leave it alone.
+- A tool that counts unpushed commits may measure the branch you were given against the remote copy of that same branch. That copy never moves, because the work goes to `main`, so it reports unpushed commits after every push and goes on reporting them. Read `HEAD` against the branch's own upstream instead. Where those match, nothing is unpushed: say so once and leave it. Pushing the assigned branch to quiet the warning breaks the rule above.
 
 ## Identity
 
@@ -50,6 +51,7 @@ The program belongs to the owner. A session ships it, repairs it and extends it 
 - Never change the architecture, never swap network or API calls for local logic or the reverse, never add, remove or replace a dependency, never rename or restructure working code, never reformat a file, and never change what the user sees or how the program behaves, unless that change is the thing you were asked for. When one of those looks necessary, describe it in chat and wait for an answer.
 - Never rewrite a file's line endings. A file stored with carriage returns keeps them, and anything that reads a value back out of it tolerates them. A one line change that comes back as a whole file diff means the line endings were clobbered: put them back before you commit.
 - Fix a bug only where it is small, local and obviously correct, and list every fix you made. Anything larger than that, describe it and ask before touching it.
+- Where the program keeps its settings in a file beside itself, changing what a setting is called or what kind of value it takes orphans the copy every user already has. Keep the name, and leave the program either reading the old value or saying in its log that it could not and what it used instead.
 - Bringing a repository to the publishing state is allowed to touch the source in two places and no others: adding the one place the version lives, and reading that value back for display. Say in chat that you did.
 
 ## Writing that lands on GitHub
@@ -101,6 +103,8 @@ The release workflow publishes the commit body as the release notes, so a commit
 
 - Prove a breach of these rules before you report it and before you fix it, with something that reads the file properly rather than a search that guesses: a tokenizer for comments, code points for dashes. Everything in the Never section licenses an edit the owner did not ask for, so a wrong finding costs him either an unwanted change or a decision made on a false premise.
 - A check that errored is not a check that passed. A search that failed to run returns nothing, which looks exactly like a clean repository. Make it run, then believe it.
+- A check that fails because the source moved is rewritten to describe where the source moved to, never loosened until it passes. Where a rule counts something and the count changed for a good reason, change the count and leave the rule saying what it said. Cutting out the part that failed is how a repository ends up with checks that prove nothing.
+- A run that looks stuck is usually a clock you misread. Before you call one hung, or cancel it and start it again, read the time off the machine you are on and work out how long it has really been. Wait for the thing that says the work is finished, the published release or the job's own conclusion, rather than a status view that lags behind it.
 - Say plainly what this session could not verify. Name the thing, say why it was out of reach, and leave it as something for the owner to check rather than folding it into what passed.
 
 ## Never
