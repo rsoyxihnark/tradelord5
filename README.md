@@ -32,7 +32,7 @@
 - ✅ Sells and buys the moment you enter a market by default
 - ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has at whatever it asks, before it trades for profit
 - ✅ Buys and sells livestock, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
-- ✅ Buys mules and sumpter horses when a market is asking no more than one is worth, so the party can carry more. While your cargo is full it will pay half again as much for one, because that is when the room is worth having. It never buys more animals than your party can drive without slowing down
+- ✅ Buys any beast that carries for you, mules and sumpter horses and riding horses alike, when a market is asking no more than one is worth, so the party carries more and your foot troops get something to ride. While your cargo is full it will pay half again as much for one, because that is when the room is worth having. It never buys more animals than your party can drive without slowing down
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short. Always on for goods you never bought, such as looted gear; off by default for goods you bought, whose profit margin already covers it
@@ -46,13 +46,13 @@
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen
 - ✅ A dry run that simulates every trade it would have made, and shows you the estimate (moves nothing)
-- ✅ A cheat, off until you turn it on: run into looters, sea raiders or any other bandits and you can ask them to let you go, and they will
+- ✅ A cheat, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and you can ask them to let you go, and they will, with no fight and no ransom
 
 **What it doesn't touch**
 
 - ✅ Anything you locked in the inventory screen
 - ✅ Unique and player-crafted gear, and quest items. Your mounts and pack animals are never sold either, though it will buy pack animals for you
-- ✅ Every weapon the smithy can break down for parts, if you ask it to, so a smithing playthrough keeps its raw material. This one is off until you switch it on. With it on, any weapon built from smithing parts stays in your bags, the ones you forged and the cheap ones you looted off a bandit alike. It does not look at which parts you have already learned, so it is a blanket hold, not a shopping list. Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
+- ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it: sell them, which is what it does out of the box; keep every one, which holds anything built from smithing parts, forged or looted off a bandit alike; or **keep only the ones you have not learned**, which holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know. Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus
 - ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
@@ -75,7 +75,7 @@
 - ✅ An honest-merchant mode you can switch on, using only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
-- ✅ How cheap a mule has to be before it buys one, and how much more it will pay while your cargo is full
+- ✅ How cheap a mule or a horse has to be before it buys one, and how much more it will pay while your cargo is full
 
 **And**
 
