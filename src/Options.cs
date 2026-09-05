@@ -103,7 +103,7 @@ namespace TradeLord
 
         public bool SellSpareMounts = true;
 
-        public bool BuyPackAnimals = true;
+        public bool BuyHaulAnimals = true;
 
         public float ResaleSafetyFactor = 0.85f;
 
