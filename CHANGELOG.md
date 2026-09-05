@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.27.2
+
+- Bannerlord no longer closes itself as it reaches the main menu when TradeLord and Mod Options are installed together, which it has done since 1.26.0.
+- The TradeLord settings screen comes back with it, Reset button and every setting on it.
+
 ## 1.27.1
 
 - Picking a new language on the TradeLord settings screen now takes hold as you set it, so the choices under each setting are spoken in it straight away instead of waiting for you to restart the game.
