@@ -151,7 +151,7 @@ namespace TradeLord.Mcm
         public Action ResetEverything => Reset;
 
         [SettingPropertyDropdown("{=TL250}Language", Order = 1, RequireRestart = false,
-            HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This settings screen takes the new language the next time you open it. Town menu entries take it when you next load a campaign.")]
+            HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. Town menu entries take it when you next load a campaign.")]
         [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
         public Dropdown<string> Language
         {
@@ -162,6 +162,7 @@ namespace TradeLord.Mcm
                 Follows(value, () => _o.Language, picked => _o.Language = picked);
                 if (value != null) value.PropertyChanged += (sender, args) => Retell();
                 Options.Bump();
+                Retell();
             }
         }
 
@@ -225,6 +226,22 @@ namespace TradeLord.Mcm
             Retold(LivestockPolicy, PolicyWords);
             Retold(CostBasisMode, BasisWords);
             Retold(KeepSmeltableWeapons, SmeltableWords);
+            Relabel();
+        }
+
+        private int _spokenFor = -1;
+
+        private void Relabel()
+        {
+            if (_spokenFor == _o.Language) return;
+            bool first = _spokenFor < 0;
+            _spokenFor = _o.Language;
+            if (first) return;
+            Guard.Run("Mcm.Relabel", () =>
+            {
+                OnPropertyChanged(LoadingComplete);
+                Log.Write("settings screen: the language changed, so the screen was asked to draw itself again");
+            });
         }
 
         private static void Retold(Dropdown<string> shown, string[] words)
