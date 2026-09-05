@@ -25,7 +25,7 @@ namespace TradeLord
     internal enum Block
     {
         None, NotMerchandise, NeverList, Locked, CategoryPolicy, Protected,
-        MountOrPackAnimal, NotTradable, FoodReserve, TradedHereAlready, NoStock,
+        MountOrHaulAnimal, NotTradable, FoodReserve, TradedHereAlready, NoStock,
         NoResaleMarket, BelowMargin, BelowBestMarket, MerchantTillEmpty, BudgetSpent,
         ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit, HeldEnough, Smeltable
     }
@@ -110,7 +110,7 @@ namespace TradeLord
                 case Block.NeverList:
                 case Block.Locked:
                 case Block.Protected:
-                case Block.MountOrPackAnimal:
+                case Block.MountOrHaulAnimal:
                 case Block.FoodReserve:
                     return Tongue.Text("{=TL40}your protections held it back");
                 default:
@@ -131,14 +131,14 @@ namespace TradeLord
             catch (Exception e) { Log.Error(e, "smeltable check"); return false; }
         }
 
-        internal static bool IsTruckAnimal(ItemObject item) =>
+        internal static bool IsHaulAnimal(ItemObject item) =>
             item != null && item.HasHorseComponent &&
             item.HorseComponent.IsRideable && item.HorseComponent.IsPackAnimal &&
             !item.HorseComponent.IsMount && !item.HorseComponent.IsLiveStock &&
             item.ItemCategory == DefaultItemCategories.PackAnimal;
 
-        internal static bool IsHaulAnimal(ItemObject item) =>
-            IsTruckAnimal(item) || IsSpareMount(item);
+        internal static bool IsHaulAnimalOrMount(ItemObject item) =>
+            IsHaulAnimal(item) || IsSpareMount(item);
 
         internal static bool IsSpareMount(ItemObject item) =>
             item != null && item.HasHorseComponent &&
@@ -217,7 +217,7 @@ namespace TradeLord
         internal static string AnimalGroup(ItemObject item)
         {
             if (!item.HasHorseComponent) return null;
-            if (IsTruckAnimal(item)) return "an animal that carries for you";
+            if (IsHaulAnimal(item)) return "a haul animal";
             if (IsSpareMount(item)) return "a mount";
             if (IsTradableLivestock(item)) return "livestock";
             return "an animal TradeLord treats as ordinary cargo";
@@ -425,7 +425,7 @@ namespace TradeLord
             bool livestock = item.HasHorseComponent;
             if (livestock)
             {
-                if (IsHaulAnimal(item)) { why = Block.MountOrPackAnimal; return false; }
+                if (IsHaulAnimalOrMount(item)) { why = Block.MountOrHaulAnimal; return false; }
             }
             else if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))
             { why = Block.Protected; return false; }
@@ -455,55 +455,6 @@ namespace TradeLord
             item != null && item.HasHorseComponent && item.HorseComponent.IsLiveStock &&
             !item.HorseComponent.IsMount && !item.HorseComponent.IsPackAnimal;
 
-        private const int RollCallShown = 60;
-
-        private static string Answered(bool flag) => flag ? "yes" : "no";
-
-        private static void RollCallGroup(string heading, List<string> lines)
-        {
-            Log.Write("  " + heading + ": " + lines.Count);
-            int shown = lines.Count < RollCallShown ? lines.Count : RollCallShown;
-            for (int i = 0; i < shown; i++) Log.Write(lines[i]);
-            if (lines.Count > shown)
-                Log.Write("    and " + (lines.Count - shown) + " more not listed");
-        }
-
-        internal static void LogAnimalRollCall()
-        {
-            var trucks = new List<string>();
-            var mounts = new List<string>();
-            var herd = new List<string>();
-            var neither = new List<string>();
-
-            foreach (ItemObject item in Items.All)
-            {
-                if (item == null || !item.HasHorseComponent) continue;
-                HorseComponent horse = item.HorseComponent;
-                string line = "    " + item.StringId +
-                              " (" + (item.Name == null ? item.StringId : item.Name.ToString()) + ")" +
-                              " rideable=" + Answered(horse.IsRideable) +
-                              " packanimal=" + Answered(horse.IsPackAnimal) +
-                              " mount=" + Answered(horse.IsMount) +
-                              " livestock=" + Answered(horse.IsLiveStock) +
-                              " meat=" + horse.MeatCount +
-                              " isfood=" + Answered(item.IsFood) +
-                              " notmerchandise=" + Answered(item.NotMerchandise) +
-                              " category=" + (item.ItemCategory == null ? "none" : item.ItemCategory.StringId);
-                if (IsTruckAnimal(item)) trucks.Add(line);
-                else if (IsSpareMount(item)) mounts.Add(line);
-                else if (IsTradableLivestock(item)) herd.Add(line);
-                else neither.Add(line);
-            }
-
-            Log.Write("animal roll call: " + trucks.Count + " haul animal(s) that carry for you, " +
-                      mounts.Count + " mount(s), " + herd.Count + " livestock, " +
-                      neither.Count + " that are none of the three");
-            RollCallGroup("haul animals that carry for you", trucks);
-            RollCallGroup("mounts", mounts);
-            RollCallGroup("livestock", herd);
-            RollCallGroup("none of the three", neither);
-        }
-
         public static bool MayBuy(ItemObject item, ISet<string> lockedKeys) =>
             MayBuy(item, lockedKeys, out _);
 
@@ -521,7 +472,7 @@ namespace TradeLord
             if (item.HasHorseComponent)
             {
                 if (IsTradableLivestock(item)) return true;
-                why = Block.MountOrPackAnimal;
+                why = Block.MountOrHaulAnimal;
                 return false;
             }
             if (item.IsTradeGood) return true;
@@ -532,7 +483,7 @@ namespace TradeLord
         internal static bool MayHaul(ItemObject item, ISet<string> lockedKeys)
         {
             Options s = Options.Current;
-            if (!IsTruckAnimal(item) || item.NotMerchandise) return false;
+            if (!IsHaulAnimal(item) || item.NotMerchandise) return false;
             if (Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)) return false;
             return !IsLocked(lockedKeys, new EquipmentElement(item));
         }
@@ -821,7 +772,6 @@ namespace TradeLord
                 Log.Write(Travel.NavalActive
                     ? "naval capability: party can sail - routes and travel times include sea legs"
                     : "naval capability: land-only - land routing in effect");
-                Guard.Run("Action.AnimalRollCall", TradePolicy.LogAnimalRollCall);
 
                 void AddOptions(string menu) => Guard.Run(
                     "menu " + menu + " (the other menus are unaffected)", () =>
@@ -1289,7 +1239,7 @@ namespace TradeLord
             }
         }
 
-        internal static int TrucksHeld(MobileParty party)
+        internal static int HaulAnimalsHeld(MobileParty party)
         {
             ItemRoster roster = party?.ItemRoster;
             if (roster == null) return 0;
@@ -1297,14 +1247,14 @@ namespace TradeLord
             for (int i = 0; i < roster.Count; i++)
             {
                 ItemRosterElement el = roster.GetElementCopyAtIndex(i);
-                if (el.Amount > 0 && TradePolicy.IsTruckAnimal(el.EquipmentElement.Item)) held += el.Amount;
+                if (el.Amount > 0 && TradePolicy.IsHaulAnimal(el.EquipmentElement.Item)) held += el.Amount;
             }
             return held;
         }
 
-        internal static int TrucksCargoCanSpare(MobileParty party)
+        internal static int HaulAnimalsCargoCanSpare(MobileParty party)
         {
-            int held = TrucksHeld(party);
+            int held = HaulAnimalsHeld(party);
             if (held <= 0) return 0;
             try
             {
@@ -1903,7 +1853,7 @@ namespace TradeLord
 
         private const int RankLivestock = 0;
         private const int RankPlainMount = 1;
-        private const int RankTruck = 2;
+        private const int RankHaulAnimal = 2;
         private const int RankPrizeMount = 3;
 
         private static int HerdShedRank(ItemObject item)
@@ -1911,7 +1861,7 @@ namespace TradeLord
             if (TradePolicy.IsTradableLivestock(item)) return RankLivestock;
             if (TradePolicy.IsSpareMount(item))
                 return TradePolicy.IsPrizeMount(item) ? RankPrizeMount : RankPlainMount;
-            if (TradePolicy.IsTruckAnimal(item)) return RankTruck;
+            if (TradePolicy.IsHaulAnimal(item)) return RankHaulAnimal;
             return -1;
         }
 
@@ -1932,7 +1882,7 @@ namespace TradeLord
             ISet<string> locked = TradePolicy.LockedKeys();
 
             int mountsLeft = SpareMountRoom(party);
-            int trucksLeft = -1;
+            int haulsLeft = -1;
 
             var stable = new List<(ItemRosterElement el, int rank, int price)>();
             ItemRoster mine = party.ItemRoster;
@@ -1966,9 +1916,9 @@ namespace TradeLord
 
                     while (remaining > 0 && shed > 0)
                     {
-                        if (rank != RankLivestock && rank != RankTruck && mountsLeft <= 0) break;
-                        if (rank == RankTruck && trucksLeft < 0) trucksLeft = TrucksCargoCanSpare(party);
-                        if (rank == RankTruck && trucksLeft <= 0) break;
+                        if (rank != RankLivestock && rank != RankHaulAnimal && mountsLeft <= 0) break;
+                        if (rank == RankHaulAnimal && haulsLeft < 0) haulsLeft = HaulAnimalsCargoCanSpare(party);
+                        if (rank == RankHaulAnimal && haulsLeft <= 0) break;
                         int price = market.GetItemPrice(el.EquipmentElement, party, true);
                         if (price <= 0) break;
                         if ((sim ? simTill : market.Gold) < price) break;
@@ -1998,7 +1948,7 @@ namespace TradeLord
                         sold++;
                         remaining--;
                         shed--;
-                        if (rank == RankTruck) trucksLeft--;
+                        if (rank == RankHaulAnimal) haulsLeft--;
                         else if (rank != RankLivestock) mountsLeft--;
                         Tally(detail, item, 1, price);
                     }
@@ -2028,7 +1978,7 @@ namespace TradeLord
 
         public static void ExecuteHaulage(Settlement settlement, bool quiet = false)
         {
-            if (!Options.Current.BuyPackAnimals) return;
+            if (!Options.Current.BuyHaulAnimals) return;
             if (!MarketOpen(settlement, quiet)) return;
 
             MobileParty party = MobileParty.MainParty;

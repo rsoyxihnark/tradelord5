@@ -37,14 +37,14 @@
 - ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has and never paying more than the cheapest price it knows of for it, before it trades for profit
 - ✅ Buys and sells livestock, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
 - ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying no more than the cheapest price it knows of for one. It buys no riding horses or camels at all, and it stops before your gold reaches your reserve. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
-- ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it. Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all, cheapest first at every step. It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, and it keeps enough haul animals to carry what you are already carrying. One switch turns it off
+- ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it. Your herd is looked at three times a visit, as you enter a settlement, again once it has finished trading, and once more as you leave, so a penalty that arrives while you are in town is caught before you ride out, and losing men in a battle or to desertion is noticed the same way as picking up an animal. Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all, cheapest first at every step. It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, and it keeps enough haul animals to carry what you are already carrying. One switch turns it off
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, once you switch it on. Off out of the box, so looted gear goes to the first market that can pay for it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
 - ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good
-- ✅ Trades with a caravan you meet on the road: talk to it and the deal is already done, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of the caravan's own purse
+- ✅ Trades with a caravan you meet on the road: talk to it and the deal is already done, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of the caravan's own purse. A caravan on the road is held to every rule a market visit is: it sells your looted gear when the goods you bought fall short of your margin, it holds your cargo back for the best market if you asked for that, it can never sell you enough livestock to drop you into the herd speed penalty, your caps on how many of a good you hold and what share of the hold it may fill both apply, and the settling delay keeps it away from a brand new campaign
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
 - ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
@@ -86,18 +86,20 @@
 
 **And**
 
-- ✅ A settings screen with every switch explained on hover, translatable, through MCM
-- ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting, which its trade messages, ledger panel, price tooltips, menu entries and settings screen all follow once you restart the game
+- ✅ A settings screen with every switch explained on hover, translatable, through MCM, with a Reset button at the top of it that puts every setting back to the value TradeLord ships with and empties your four item lists
+- ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting. Its trade messages, ledger panel, price tooltips and the settings screen itself all take the new language as you pick it, and its town menu entries follow the next time you load a campaign
 - ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303, and it runs on the 1.5.2.121216 beta too
 - ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it
 
 **All of it is yours to change.** Every feature above is a switch or a number on the settings screen,
 which TradeLord puts there through MCM. Install MCM alongside it and you can turn any one of them off,
-or set it to whatever you like. Without MCM the same switches and numbers are in `TradeLord.ini`, written
-beside `TradeLord.log` the first time TradeLord loads, and TradeLord reads it back the next time you start.
+or set it to whatever you like. The same switches and numbers are also in `TradeLord.ini`, written beside
+`TradeLord.log` the first time TradeLord loads. The file and the settings screen are twins: each records when it
+was last saved, whichever was saved last wins, and the other is written to match, so you can install or remove
+MCM whenever you like and edit the file by hand either way without losing what you set.
 
 ## What it needs
 
 - **Harmony** (`Bannerlord.Harmony`), required. TradeLord does not load without it. Put it above TradeLord in the launcher's load order.
-- **MCM** (`Bannerlord.MBOptionScreen`), optional, and what the settings screen is built on. Without it TradeLord writes a `TradeLord.ini` beside its log, and every setting above can be changed by editing that file instead.
+- **MCM** (`Bannerlord.MBOptionScreen`), optional, and what the settings screen is built on. TradeLord writes a `TradeLord.ini` beside its log whether MCM is there or not, and every setting above can be changed by editing that file instead.
 - Bannerlord **1.4.8.119303**, or the **1.5.2.121216** beta. War Sails is optional: with it, TradeLord counts sea legs and appears in port menus.
