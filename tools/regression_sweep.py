@@ -1145,7 +1145,7 @@ chk("1.4.3", "one rule for what the ledger will capture, and it tolerates no set
     method_body(S['Ledger.cs'], "public void CaptureSettlement") and
     "IsVillage" not in method_body(S['Ledger.cs'], "private void OnSettlementEntered"))
 chk("1.4.3", "one definition of the livestock the mod trades",
-    S['Trading.cs'].count("item.HorseComponent.IsLiveStock") == 1)
+    S['Trading.cs'].count("&& item.HorseComponent.IsLiveStock") == 1)
 chk("1.4.3", "cost basis uses recorded purchase prices, not current market quotes",
     "Options.Current.CostBasisMode == 2 ||" in
     method_body(S['Trading.cs'], "private static bool HasCostBasis") and
@@ -1222,19 +1222,29 @@ chk("1.23.0", "the selling fence is the haul animals themselves, so an animal th
     "if (IsTradableLivestock(item)) return true;" in
     method_body(S['Trading.cs'], "internal static bool MayBuy") and
     "why = Block.MountOrPackAnimal;" in method_body(S['Trading.cs'], "internal static bool MayBuy"))
-chk("1.27.0", "the animals that carry for you have one name of their own, and the haul animal fence is those plus the spare mounts",
+chk("1.28.0", "the animals that carry for you are named by all five answers the game gives about them, and the haul animal fence is those plus the spare mounts",
     "internal static bool IsTruckAnimal(ItemObject item) =>\n"
-    "            item != null && item.HasHorseComponent && item.HorseComponent.IsPackAnimal;" in S['Trading.cs'] and
+    "            item != null && item.HasHorseComponent &&\n"
+    "            item.HorseComponent.IsRideable && item.HorseComponent.IsPackAnimal &&\n"
+    "            !item.HorseComponent.IsMount && !item.HorseComponent.IsLiveStock &&\n"
+    "            item.ItemCategory == DefaultItemCategories.PackAnimal;" in S['Trading.cs'] and
     "internal static bool IsHaulAnimal(ItemObject item) =>\n"
     "            IsTruckAnimal(item) || IsSpareMount(item);" in S['Trading.cs'] and
-    S['Trading.cs'].count("&& item.HorseComponent.IsPackAnimal;") == 1 and
+    S['Trading.cs'].count("item.HorseComponent.IsRideable && item.HorseComponent.IsPackAnimal") == 1 and
     S['Trading.cs'].count("IsTruckAnimal(ItemObject item)") == 1)
+chk("1.28.0", "a war horse and a noble horse are the last mounts the herd gives up, told apart by the game's own trade category",
+    "internal static bool IsPrizeMount(ItemObject item) =>\n"
+    "            IsSpareMount(item) &&\n"
+    "            (item.ItemCategory == DefaultItemCategories.WarHorse ||\n"
+    "             item.ItemCategory == DefaultItemCategories.NobleHorse);" in S['Trading.cs'] and
+    S['Trading.cs'].count("IsPrizeMount(ItemObject item)") == 1)
 chk("1.27.0", "a campaign opens by naming every animal in the game, grouped by what the mod does with it and carrying the game's own answers",
     'Guard.Run("Action.AnimalRollCall", TradePolicy.LogAnimalRollCall);' in
         method_body(S['Trading.cs'], "private void OnSessionLaunched") and
     all(needle in method_body(S['Trading.cs'], "internal static void LogAnimalRollCall") for needle in
         ("foreach (ItemObject item in Items.All)", "horse.IsRideable", "horse.IsPackAnimal",
          "horse.IsMount", "horse.IsLiveStock", "horse.MeatCount", "item.ItemCategory",
+         "item.IsFood", "item.NotMerchandise",
          "if (IsTruckAnimal(item)) trucks.Add(line);",
          "else if (IsSpareMount(item)) mounts.Add(line);",
          "else if (IsTradableLivestock(item)) herd.Add(line);",
@@ -2437,12 +2447,10 @@ def the_screen_is_spoken_again_where_it_already_stands():
             and 'shown.RefreshValues();' in drawn)
 
 def the_language_hint_keeps_to_what_it_is_for():
-    en = spoken(ENGLISH).get('TL350', '')
-    return (en.endswith('Town menu entries take it when you next load a campaign.')
-            and 'screen' not in en.lower()
-            and 'restart' not in en.lower()
-            and len(en) < 240
-            and all(spoken(path).get('TL350', '') for path in TRANSLATIONS.values()))
+    said = [spoken(ENGLISH).get('TL350', '')] + [spoken(path).get('TL350', '') for path in TRANSLATIONS.values()]
+    return (all(t for t in said)
+            and all('screen' not in t.lower() for t in said)
+            and all(len(t) < 240 for t in said))
 
 chk("1.27.4", "a language picked on the screen is spoken again into the names, hints and headings the screen already holds",
     the_screen_is_spoken_again_where_it_already_stands())
@@ -2602,7 +2610,7 @@ def a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till():
             and not any(re.search(r'\bpremiums?\b', t, re.I) for t in shipped)
             and 'An animal that carries nothing for you and is not livestock is no haul animal' in README
             and all(named in en.get('TL367', '') and named in README for named in
-                    ('a mule, a sumpter horse, a work horse or a pack camel',))
+                    ('a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel',))
             and 'Buy any haul animal' in en.get('TL367', '')
             and 'Buys any haul animal' in README
             and 'How much gold the town you would sell to actually has' in README)
@@ -2774,9 +2782,11 @@ def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
             and "Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)" in haul
             and "IsLocked(lockedKeys, new EquipmentElement(item))" in haul
             and "IsTruckAnimal(item) || IsSpareMount(item)" in carries
-            and "item.HorseComponent.IsPackAnimal" in truck
+            and "item.HorseComponent.IsRideable && item.HorseComponent.IsPackAnimal" in truck
+            and "!item.HorseComponent.IsMount && !item.HorseComponent.IsLiveStock" in truck
+            and "item.ItemCategory == DefaultItemCategories.PackAnimal" in truck
             and "item.HorseComponent.IsMount" in spare
-            and "IsLiveStock" not in carries + truck + spare
+            and "IsLiveStock" not in carries + spare
             and "int herdRoom = HerdRoomForLivestock(party);" in body
             and "int mountRoom = FreeMountRoom(party);" in body
             and "if (herdRoom <= 0 && mountRoom <= 0) return;" in body
@@ -2957,25 +2967,24 @@ chk("1.20.1", "the pack animal line waits for the trade skill line and is droppe
     the_pack_animal_line_lands_after_the_trade_skill_line())
 
 def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
-    shed = method_body(S['Trading.cs'], "internal static int SpareMountsToShed")
+    shed = method_body(S['Trading.cs'], "internal static int DrivenAnimalsToShed")
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
-    spare = method_body(S['Trading.cs'], "internal static bool MaySpare")
+    spare = method_body(S['Trading.cs'], "internal static bool MayShedForHerd")
     entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
     return (option_default('SellSpareMounts') == 'true'
             and "_o.SellSpareMounts" in M
             and "int spare = Math.Max(0, mounts - foot);" in shed
-            and "if (spare <= 0) return 0;" in shed
             and "int driven = herd + spare;" in shed
+            and "if (driven <= 0) return 0;" in shed
             and 'float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });' in shed
-            and "while (shed < spare &&" in shed
-            and "!IsSpareMount(item) || item.NotMerchandise" in spare
+            and "while (shed < driven &&" in shed
+            and "!item.HasHorseComponent || item.NotMerchandise" in spare
             and "Listed(s.NeverSet, item)" in spare
             and "s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)" in spare
             and "IsLocked(lockedKeys, new EquipmentElement(item))" in spare
             and "if (!Options.Current.SellSpareMounts) return;" in relief
-            and "int shed = SpareMountsToShed(party);" in relief
+            and "int shed = DrivenAnimalsToShed(party);" in relief
             and "if (shed <= 0) return;" in relief
-            and "stable.Sort((x, y) => x.price.CompareTo(y.price));" in relief
             and "_soldThisVisit.Add(item.StringId);" in relief
             and "while (remaining > 0 && shed > 0)" in relief
             and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
@@ -2984,13 +2993,66 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
                         "ExecuteHaulage(settlement, quiet: true)")
             and "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);" in entered)
 
-chk("1.22.0", "a spare mount is sold only while it drags the party into the herd speed penalty, cheapest first, and never a haul animal",
+chk("1.22.0", "an animal is sold only while the herd is dragging the party below its speed, and only as many as that takes",
     a_spare_mount_goes_only_when_it_is_costing_the_party_speed())
+
+def the_herd_gives_up_its_animals_in_the_order_the_player_set():
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    rank = method_body(S['Trading.cs'], "private static int HerdShedRank")
+    spared = method_body(S['Trading.cs'], "internal static int TrucksCargoCanSpare")
+    held = method_body(S['Trading.cs'], "internal static int TrucksHeld")
+    room = method_body(S['Trading.cs'], "internal static int SpareMountRoom")
+    return (all(line in S['Trading.cs'] for line in
+                ("private const int RankLivestock = 0;", "private const int RankPlainMount = 1;",
+                 "private const int RankTruck = 2;", "private const int RankPrizeMount = 3;"))
+            and "if (TradePolicy.IsTradableLivestock(item)) return RankLivestock;" in rank
+            and "return TradePolicy.IsPrizeMount(item) ? RankPrizeMount : RankPlainMount;" in rank
+            and "if (TradePolicy.IsTruckAnimal(item)) return RankTruck;" in rank
+            and "return -1;" in rank
+            and "stable.Sort((x, y) => x.rank != y.rank ? x.rank.CompareTo(y.rank) : x.price.CompareTo(y.price));" in relief
+            and "int mountsLeft = SpareMountRoom(party);" in relief
+            and "int trucksLeft = -1;" in relief
+            and "if (rank == RankTruck && trucksLeft < 0) trucksLeft = TrucksCargoCanSpare(party);" in relief
+            and "if (rank != RankLivestock && rank != RankTruck && mountsLeft <= 0) break;" in relief
+            and "if (rank == RankTruck && trucksLeft <= 0) break;" in relief
+            and "if (rank == RankTruck) trucksLeft--;" in relief
+            and "else if (rank != RankLivestock) mountsLeft--;" in relief
+            and "Math.Max(0, mounts - foot)" in room
+            and "TradePolicy.IsTruckAnimal(el.EquipmentElement.Item)" in held
+            and "model.CalculateTotalWeightCarried(party, true).ResultNumber" in spared
+            and "model.CalculateInventoryCapacity(party, true, false, 0, 0, -fewer).ResultNumber < carried" in spared
+            and "return fewer - 1;" in spared)
+
+chk("1.28.0", "the herd gives up its livestock, then a plain spare mount, then a haul animal, and a war or noble horse last of all",
+    the_herd_gives_up_its_animals_in_the_order_the_player_set())
+chk("1.28.0", "a horse a man on foot is riding is never sold to relieve the herd, because it is not in the herd",
+    "int mountsLeft = SpareMountRoom(party);" in
+        method_body(S['Trading.cs'], "public static void ExecuteHerdRelief") and
+    "if (rank != RankLivestock && rank != RankTruck && mountsLeft <= 0) break;" in
+        method_body(S['Trading.cs'], "public static void ExecuteHerdRelief"))
+chk("1.28.0", "enough haul animals are kept to carry what the party already carries, asked of the game's own capacity model",
+    "model.CalculateInventoryCapacity(party, true, false, 0, 0, -fewer).ResultNumber < carried" in
+        method_body(S['Trading.cs'], "internal static int TrucksCargoCanSpare") and
+    'Log.Error(e, "haul animal cargo floor (every haul animal is kept)")' in
+        method_body(S['Trading.cs'], "internal static int TrucksCargoCanSpare"))
+chk("1.28.0", "a name that means two animals the mod treats differently is named in the log, with the item id for each",
+    "TradePolicy.ItemListsNameTwoAnimals();" in
+        method_body(S['Trading.cs'], "private static void WarnUnmatchedItemLists") and
+    all(needle in method_body(S['Trading.cs'], "internal static bool ItemListsNameTwoAnimals") for needle in
+        ("if (_clashGeneration == Options.Generation) return false;",
+         "foreach (ItemObject item in Items.All)",
+         "if (groups.Count < 2) continue;",
+         'said.Add(item.StringId + " is " + AnimalGroup(item));')) and
+    "_clashGeneration = -1;" in method_body(S['Trading.cs'], "internal static void ForgetItemListAudit"))
+chk("1.28.0", "the language hint says only that a language change needs the game restarted",
+    spoken(ENGLISH).get('TL350', '') == "Language changes require a game restart." and
+    all(len(spoken(path).get('TL350', '')) < 100 for path in TRANSLATIONS.values()) and
+    spoken(ENGLISH).get('TL350', '') in M)
 
 def no_hint_still_claims_a_mount_is_never_sold():
     en = spoken(ENGLISH)
     return ('haul animal' in en.get('TL375', '')
-            and 'only way to sell a haul animal' in en.get('TL332', '')
+            and 'only way to sell a haul animal for profit' in en.get('TL332', '')
             and 'Mounts and pack animals' not in en.get('TL324', '')
             and 'Mounts and pack animals' not in en.get('TL325', '')
             and all('haul animal' in t.lower() or 'never sold' not in t.lower()

@@ -132,7 +132,10 @@ namespace TradeLord
         }
 
         internal static bool IsTruckAnimal(ItemObject item) =>
-            item != null && item.HasHorseComponent && item.HorseComponent.IsPackAnimal;
+            item != null && item.HasHorseComponent &&
+            item.HorseComponent.IsRideable && item.HorseComponent.IsPackAnimal &&
+            !item.HorseComponent.IsMount && !item.HorseComponent.IsLiveStock &&
+            item.ItemCategory == DefaultItemCategories.PackAnimal;
 
         internal static bool IsHaulAnimal(ItemObject item) =>
             IsTruckAnimal(item) || IsSpareMount(item);
@@ -140,6 +143,11 @@ namespace TradeLord
         internal static bool IsSpareMount(ItemObject item) =>
             item != null && item.HasHorseComponent &&
             item.HorseComponent.IsMount && !item.HorseComponent.IsPackAnimal;
+
+        internal static bool IsPrizeMount(ItemObject item) =>
+            IsSpareMount(item) &&
+            (item.ItemCategory == DefaultItemCategories.WarHorse ||
+             item.ItemCategory == DefaultItemCategories.NobleHorse);
 
         private static bool _craftingLookupFailed;
 
@@ -202,7 +210,65 @@ namespace TradeLord
             return missed;
         }
 
-        internal static void ForgetItemListAudit() => _auditedGeneration = -1;
+        internal static void ForgetItemListAudit() { _auditedGeneration = -1; _clashGeneration = -1; }
+
+        private static int _clashGeneration = -1;
+
+        private static string AnimalGroup(ItemObject item)
+        {
+            if (!item.HasHorseComponent) return null;
+            if (IsTruckAnimal(item)) return "an animal that carries for you";
+            if (IsSpareMount(item)) return "a mount";
+            if (IsTradableLivestock(item)) return "livestock";
+            return "an animal TradeLord treats as ordinary cargo";
+        }
+
+        internal static bool ItemListsNameTwoAnimals()
+        {
+            if (_clashGeneration == Options.Generation) return false;
+            _clashGeneration = Options.Generation;
+            Options s = Options.Current;
+            var written = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string list in new[] { s.NeverSellItems, s.AlwaysSellItems, s.NeverBuyItems, s.AlwaysBuyItems })
+            {
+                if (string.IsNullOrEmpty(list)) continue;
+                foreach (string entry in list.Split(Options.EntryMarks, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string whole = entry.Trim();
+                    if (whole.Length > 0) written.Add(whole);
+                }
+            }
+            if (written.Count == 0) return false;
+
+            var byName = new Dictionary<string, List<ItemObject>>(StringComparer.OrdinalIgnoreCase);
+            foreach (ItemObject item in Items.All)
+            {
+                if (item == null || !item.HasHorseComponent || item.Name == null) continue;
+                string shown = item.Name.ToString();
+                if (!written.Contains(shown)) continue;
+                if (!byName.TryGetValue(shown, out List<ItemObject> found))
+                    byName[shown] = found = new List<ItemObject>();
+                found.Add(item);
+            }
+
+            bool clashed = false;
+            foreach (var pair in byName)
+            {
+                if (pair.Value.Count < 2) continue;
+                var groups = new HashSet<string>();
+                foreach (ItemObject item in pair.Value) groups.Add(AnimalGroup(item));
+                if (groups.Count < 2) continue;
+                clashed = true;
+                var said = new List<string>();
+                foreach (ItemObject item in pair.Value)
+                    said.Add(item.StringId + " is " + AnimalGroup(item));
+                Log.Write("your item lists name \"" + pair.Key + "\", and this game has " + pair.Value.Count +
+                          " animals by that name which TradeLord treats differently: " +
+                          string.Join(", ", said.ToArray()) +
+                          ". Write the item id instead of the shown name to reach only the one you mean.");
+            }
+            return clashed;
+        }
 
         private static bool Unmatched(string label, string written, HashSet<string> ids, HashSet<string> names)
         {
@@ -420,6 +486,8 @@ namespace TradeLord
                               " mount=" + Answered(horse.IsMount) +
                               " livestock=" + Answered(horse.IsLiveStock) +
                               " meat=" + horse.MeatCount +
+                              " isfood=" + Answered(item.IsFood) +
+                              " notmerchandise=" + Answered(item.NotMerchandise) +
                               " category=" + (item.ItemCategory == null ? "none" : item.ItemCategory.StringId);
                 if (IsTruckAnimal(item)) trucks.Add(line);
                 else if (IsSpareMount(item)) mounts.Add(line);
@@ -469,10 +537,10 @@ namespace TradeLord
             return !IsLocked(lockedKeys, new EquipmentElement(item));
         }
 
-        internal static bool MaySpare(ItemObject item, ISet<string> lockedKeys)
+        internal static bool MayShedForHerd(ItemObject item, ISet<string> lockedKeys)
         {
             Options s = Options.Current;
-            if (!IsSpareMount(item) || item.NotMerchandise) return false;
+            if (item == null || !item.HasHorseComponent || item.NotMerchandise) return false;
             if (Listed(s.NeverSet, item)) return false;
             if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)) return false;
             return !IsLocked(lockedKeys, new EquipmentElement(item));
@@ -669,6 +737,7 @@ namespace TradeLord
 
         private static void WarnUnmatchedItemLists()
         {
+            TradePolicy.ItemListsNameTwoAnimals();
             if (!TradePolicy.ItemListsNameNothing()) return;
             Toast(Tongue.Text("{=TL91}An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which."), ToastAlert);
         }
@@ -1114,7 +1183,7 @@ namespace TradeLord
             return _herdModifier == null ? null : model;
         }
 
-        internal static int SpareMountsToShed(MobileParty party)
+        internal static int DrivenAnimalsToShed(MobileParty party)
         {
             try
             {
@@ -1123,11 +1192,11 @@ namespace TradeLord
                 if (model == null) return 0;
                 if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return 0;
                 int spare = Math.Max(0, mounts - foot);
-                if (spare <= 0) return 0;
                 int driven = herd + spare;
+                if (driven <= 0) return 0;
                 float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });
                 int shed = 0;
-                while (shed < spare &&
+                while (shed < driven &&
                        (float)_herdModifier.Invoke(model, new object[] { men, driven - shed }) != neutral)
                     shed++;
                 return shed;
@@ -1137,8 +1206,56 @@ namespace TradeLord
                 if (!_herdLookupFailed)
                 {
                     _herdLookupFailed = true;
-                    Log.Error(e, "spare mount check (no mount is sold)");
+                    Log.Error(e, "herd relief check (no animal is sold)");
                 }
+                return 0;
+            }
+        }
+
+        internal static int SpareMountRoom(MobileParty party)
+        {
+            try
+            {
+                return HerdTally(party, out _, out _, out int mounts, out int foot)
+                    ? Math.Max(0, mounts - foot) : 0;
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "spare mount count (no mount is sold to relieve the herd)");
+                return 0;
+            }
+        }
+
+        internal static int TrucksHeld(MobileParty party)
+        {
+            ItemRoster roster = party?.ItemRoster;
+            if (roster == null) return 0;
+            int held = 0;
+            for (int i = 0; i < roster.Count; i++)
+            {
+                ItemRosterElement el = roster.GetElementCopyAtIndex(i);
+                if (el.Amount > 0 && TradePolicy.IsTruckAnimal(el.EquipmentElement.Item)) held += el.Amount;
+            }
+            return held;
+        }
+
+        internal static int TrucksCargoCanSpare(MobileParty party)
+        {
+            int held = TrucksHeld(party);
+            if (held <= 0) return 0;
+            try
+            {
+                InventoryCapacityModel model = Campaign.Current?.Models?.InventoryCapacityModel;
+                if (model == null) return 0;
+                float carried = model.CalculateTotalWeightCarried(party, true).ResultNumber;
+                for (int fewer = 1; fewer <= held; fewer++)
+                    if (model.CalculateInventoryCapacity(party, true, false, 0, 0, -fewer).ResultNumber < carried)
+                        return fewer - 1;
+                return held;
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "haul animal cargo floor (every haul animal is kept)");
                 return 0;
             }
         }
@@ -1683,6 +1800,20 @@ namespace TradeLord
             Toast(msg, ToastSpend);
         }
 
+        private const int RankLivestock = 0;
+        private const int RankPlainMount = 1;
+        private const int RankTruck = 2;
+        private const int RankPrizeMount = 3;
+
+        private static int HerdShedRank(ItemObject item)
+        {
+            if (TradePolicy.IsTradableLivestock(item)) return RankLivestock;
+            if (TradePolicy.IsSpareMount(item))
+                return TradePolicy.IsPrizeMount(item) ? RankPrizeMount : RankPlainMount;
+            if (TradePolicy.IsTruckAnimal(item)) return RankTruck;
+            return -1;
+        }
+
         public static void ExecuteHerdRelief(Settlement settlement, bool quiet = false)
         {
             if (!Options.Current.SellSpareMounts) return;
@@ -1690,7 +1821,7 @@ namespace TradeLord
 
             MobileParty party = MobileParty.MainParty;
             if (party == null) return;
-            int shed = SpareMountsToShed(party);
+            int shed = DrivenAnimalsToShed(party);
             if (shed <= 0) return;
 
             SettlementComponent market = settlement.SettlementComponent;
@@ -1699,19 +1830,24 @@ namespace TradeLord
             bool sim = Options.Current.SimulationMode;
             ISet<string> locked = TradePolicy.LockedKeys();
 
-            var stable = new List<(ItemRosterElement el, int price)>();
+            int mountsLeft = SpareMountRoom(party);
+            int trucksLeft = -1;
+
+            var stable = new List<(ItemRosterElement el, int rank, int price)>();
             ItemRoster mine = party.ItemRoster;
             for (int i = 0; i < mine.Count; i++)
             {
                 ItemRosterElement el = mine.GetElementCopyAtIndex(i);
                 ItemObject it = el.EquipmentElement.Item;
-                if (el.Amount <= 0 || !TradePolicy.MaySpare(it, locked)) continue;
+                if (el.Amount <= 0 || !TradePolicy.MayShedForHerd(it, locked)) continue;
+                int rank = HerdShedRank(it);
+                if (rank < 0) continue;
                 int price = market.GetItemPrice(el.EquipmentElement, party, true);
                 if (price <= 0) continue;
-                stable.Add((el, price));
+                stable.Add((el, rank, price));
             }
             if (stable.Count == 0) return;
-            stable.Sort((x, y) => x.price.CompareTo(y.price));
+            stable.Sort((x, y) => x.rank != y.rank ? x.rank.CompareTo(y.rank) : x.price.CompareTo(y.price));
 
             int sold = 0, simGold = 0, simTill = market.Gold;
             bool directionError = false;
@@ -1721,7 +1857,7 @@ namespace TradeLord
             AutomatedTradeInProgress = true;
             try
             {
-                foreach (var (el, _) in stable)
+                foreach (var (el, rank, _) in stable)
                 {
                     if (directionError || shed <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
@@ -1729,6 +1865,9 @@ namespace TradeLord
 
                     while (remaining > 0 && shed > 0)
                     {
+                        if (rank != RankLivestock && rank != RankTruck && mountsLeft <= 0) break;
+                        if (rank == RankTruck && trucksLeft < 0) trucksLeft = TrucksCargoCanSpare(party);
+                        if (rank == RankTruck && trucksLeft <= 0) break;
                         int price = market.GetItemPrice(el.EquipmentElement, party, true);
                         if (price <= 0) break;
                         if ((sim ? simTill : market.Gold) < price) break;
@@ -1747,7 +1886,7 @@ namespace TradeLord
                             price = Hero.MainHero.Gold - before;
                             if (price < 0)
                             {
-                                Log.Write("ERROR: selling a spare mount removed " + (-price) + " gold - transaction direction changed on this game version. Spare mount selling aborted.");
+                                Log.Write("ERROR: selling an animal to relieve the herd removed " + (-price) + " gold - transaction direction changed on this game version. Herd relief aborted.");
                                 directionError = true;
                                 break;
                             }
@@ -1758,6 +1897,8 @@ namespace TradeLord
                         sold++;
                         remaining--;
                         shed--;
+                        if (rank == RankTruck) trucksLeft--;
+                        else if (rank != RankLivestock) mountsLeft--;
                         Tally(detail, item, 1, price);
                     }
                 }
@@ -1768,7 +1909,7 @@ namespace TradeLord
 
             int gained = sim ? simGold : Hero.MainHero.Gold - goldBefore;
             _runMovedGoods = true;
-            Log.Write((sim ? "spare mounts (simulated, best case): " : "spare mounts: ") + sold +
+            Log.Write((sim ? "herd relief (simulated, best case): " : "herd relief: ") + sold +
                       " sold, +" + gained + " gold at " + settlement.Name);
             LogDetail(selling: true, sim, detail);
             if (!sim)

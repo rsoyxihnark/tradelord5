@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.28.0
+
+- Getting your party back up to speed now sells in a set order: livestock first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all.
+- It never sells a horse one of your men on foot is riding, because that horse is not in the herd and selling it would not speed you up at all.
+- Livestock and haul animals can go this way now, so a party that has picked up more mules than its men can drive is no longer stuck slow with nothing TradeLord can do about it.
+- It keeps enough haul animals to carry what your party is already carrying, so getting back up to speed can never leave your cargo on the ground.
+- The setting that governs all this is now called Sell animals that slow you down, because spare mounts are no longer the only thing it sells.
+- A Saddle Horse is now one of the animals TradeLord buys for your baggage train and keeps out of its ordinary selling, alongside the Mule, the Sumpter Horse, the Work Horse and the Pack Camel.
+- A Mule or a Pack Camel that cannot be ridden is no longer kept as a haul animal, so it is now sold like any other cargo.
+- The hint under the Language setting now says only that a language change needs the game restarted.
+- The animal roll call in TradeLord.log now also says whether the game counts each animal as food and whether it can be traded at all.
+- TradeLord.log now names both animals when an entry on one of your item lists means two different animals that TradeLord treats differently, such as Saddle Horse, and gives you the item id for each.
+
 ## 1.27.5
 
 - The hint under the language setting is back to plain English: it names what TradeLord speaks in and says the town menu entries change when you next load a campaign, without the paragraph about the settings screen that 1.27.4 added.
