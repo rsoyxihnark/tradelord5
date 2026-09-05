@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.18.0
+
+- TradeLord now buys mules and sumpter horses when a market is asking no more than one is worth, so your party can carry more, and it will pay half again as much for one while your cargo is full.
+- It never buys more pack animals than your party can drive without slowing down, and your gold reserve and your spending limit for the visit still hold.
+- Restocking now tops your food back up to three days of supply instead of five.
+- A new cheat, off until you switch it on, lets you ask looters, sea raiders and the rest of Calradia's bandits to let you go, and they will, with no fight and no ransom.
+- The setting that keeps smeltable weapons now says plainly what it holds back: every weapon built from smithing parts, looted ones included, whatever parts you have already learned.
+- The feature list now covers what TradeLord buys for your baggage train and what it leaves alone, and what it needs installed has moved to the foot of it.
+
 ## 1.17.0
 
 - TradeLord now tops your food back up to five days of supply as you trade, buying whatever food a market has going cheapest at whatever it asks, before it trades for profit.
