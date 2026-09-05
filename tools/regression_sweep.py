@@ -132,8 +132,8 @@ def compat_list(name):
         re.findall(r'\(\s*(?:Inventory \+ )?"([\w.]+)"\s*,\s*"(\w+)"\s*\)', m.group(1)))
 
 def compat_checks_every_game_hook():
-    reflected = sorted(t.split('.')[-1] + '.' + m for t, m in
-                       re.findall(r'typeof\((\w+)\)\.GetMethod\(\s*"(\w+)"', ALL))
+    reflected = sorted({t.split('.')[-1] + '.' + m for t, m in
+                        re.findall(r'typeof\((\w+)\)\.GetMethod\(\s*"(\w+)"', ALL)})
     fields = sorted({'_' + n for n in re.findall(r'____(\w+)', ALL)})
     compat_fields = sorted({p.split('.')[-1] for p in (compat_list('ReflectedFields') or [])})
     return (len(reflected) > 0 and len(fields) > 0
@@ -462,8 +462,8 @@ def the_filter_is_armed_only_around_a_game_call_that_talks():
     t = S['Trading.cs']
     armed = re.findall(r'OpenTransaction\(\);\s*try \{ ([\w\.]+)\([^)]*\); \}\s*'
                        r'finally \{ CloseTransaction\(\);( ReportSilenced\(\);)? \}', t)
-    return (t.count('OpenTransaction();') == len(armed) == 7
-            and sorted(c for c, _ in armed) == ['SellItemsAction.Apply'] * 6 +
+    return (t.count('OpenTransaction();') == len(armed) == 8
+            and sorted(c for c, _ in armed) == ['SellItemsAction.Apply'] * 7 +
                                                ['SkillLevelingManager.OnTradeProfitMade']
             and 'InGameTransaction = true' not in t
             and 'if (!TradeActionBehavior.InGameTransaction) return true;' in t
@@ -796,7 +796,7 @@ chk("1.3.18", "neither pass trades before the settling delay is served",
     (lambda b: ordered(b, "int wait = Options.Current.EconomySettlingDays;", "if (wait <= 0) return true;",
                        "CampaignStartTime.ElapsedDaysUntilNow", "if (elapsed >= wait) return true;"))
     (method_body(S['Trading.cs'], "private static bool MarketOpen")) and
-    S['Trading.cs'].count("if (!MarketOpen(settlement, quiet)) return;") == 4)
+    S['Trading.cs'].count("if (!MarketOpen(settlement, quiet)) return;") == 5)
 chk("1.3.2", "ScanRadius applied in observed mode",
     "if (!WithinRadius(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "!Eligible(town, out float lower)" in S['Ledger.cs'])
@@ -1043,22 +1043,22 @@ chk("1.3.30", "a damaged purchase record does not throw during save load",
     method_body(S['Ledger.cs'], "private void Reindex"))
 
 chk("1.3.31", "the price gate and the transaction it guards share one granularity",
-    S['Trading.cs'].count("SellItemsAction.Apply(me, shop, el, 1, settlement)") == 1 and
+    S['Trading.cs'].count("SellItemsAction.Apply(me, shop, el, 1, settlement)") == 2 and
     S['Trading.cs'].count("SellItemsAction.Apply(shop, me, el, 1, settlement)") == 3 and
     S['Trading.cs'].count("SellItemsAction.Apply(me, shop, el, 1, null)") == 1 and
     S['Trading.cs'].count("SellItemsAction.Apply(shop, me, el, 1, null)") == 1 and
-    S['Trading.cs'].count("SellItemsAction.Apply(") == 6)
+    S['Trading.cs'].count("SellItemsAction.Apply(") == 7)
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
-    S['Trading.cs'].count("[Simulated, best case]") == 6 and
-    S['Trading.cs'].count("(simulated, best case): ") == 6 and
+    S['Trading.cs'].count("[Simulated, best case]") == 7 and
+    S['Trading.cs'].count("(simulated, best case): ") == 7 and
     "best case" in M)
 
 chk("1.3.33", "a fully sold stack clears its cost basis",
     "if (rec.Count <= 0) { rec.Count = 0; rec.TotalPaid = 0; }" in
     method_body(S['TradeMath.cs'], "public static void DrainSale"))
 chk("1.3.33", "automated trading recaptures prices after it moves them",
-    S['Trading.cs'].count("LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);") == 4 and
+    S['Trading.cs'].count("LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);") == 5 and
     "internal void ForgetMarketRankings()" in S['Ledger.cs'] and
     "ForgetMarketRankings();" in method_body(S['Ledger.cs'], "public void CaptureSettlement"))
 _setters = [b for b in re.findall(r'\bset\b\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', M)
@@ -1422,7 +1422,7 @@ chk("1.5.6", "expired observations are pruned on both save and load",
 chk("1.5.6", "the message filter is armed only around a game call that talks back",
     the_filter_is_armed_only_around_a_game_call_that_talks())
 chk("1.5.6", "every place the filter comes down logs how many messages it suppressed",
-    S['Trading.cs'].count("ReportSilenced();") == 8 and
+    S['Trading.cs'].count("ReportSilenced();") == 9 and
     "NoteSilenced();" in method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines"))
 chk("1.5.12", "the message filter uses a depth counter, so nesting cannot disarm it early",
     "internal static bool InGameTransaction => _transactionDepth > 0;" in S['Trading.cs'] and
@@ -2505,8 +2505,10 @@ def a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till():
     shipped = list(en.values()) + [README]
     return (not any(re.search(r'\bbeasts?\b', t, re.I) for t in shipped)
             and not any(re.search(r'\btills?\b', t, re.I) for t in shipped)
-            and 'Buy any animal that carries for you' in en.get('TL367', '')
-            and 'Buys any animal that carries for you, a mule, a sumpter horse, a work horse or a pack camel' in README
+            and all(named in en.get('TL367', '') and named in README for named in
+                    ('a mule, a sumpter horse, a work horse or a pack camel',))
+            and 'Buy any haul animal' in en.get('TL367', '')
+            and 'Buys any haul animal' in README
             and 'How much gold the town you would sell to actually has' in README)
 
 chk("1.21.0", "nothing a player reads calls a pack animal a beast or a town's gold a till",
@@ -2854,6 +2856,50 @@ def the_pack_animal_line_lands_after_the_trade_skill_line():
 
 chk("1.20.1", "the pack animal line waits for the trade skill line and is dropped with the rest when a visit is forgotten",
     the_pack_animal_line_lands_after_the_trade_skill_line())
+
+def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
+    shed = method_body(S['Trading.cs'], "internal static int SpareMountsToShed")
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    spare = method_body(S['Trading.cs'], "internal static bool MaySpare")
+    entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
+    return (option_default('SellSpareMounts') == 'true'
+            and "_o.SellSpareMounts" in M
+            and "int spare = Math.Max(0, mounts - foot);" in shed
+            and "if (spare <= 0) return 0;" in shed
+            and "int driven = herd + spare;" in shed
+            and 'float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });' in shed
+            and "while (shed < spare &&" in shed
+            and "!IsSpareMount(item) || item.NotMerchandise" in spare
+            and "Listed(s.NeverSet, item)" in spare
+            and "s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)" in spare
+            and "IsLocked(lockedKeys, new EquipmentElement(item))" in spare
+            and "if (!Options.Current.SellSpareMounts) return;" in relief
+            and "int shed = SpareMountsToShed(party);" in relief
+            and "if (shed <= 0) return;" in relief
+            and "stable.Sort((x, y) => x.price.CompareTo(y.price));" in relief
+            and "_soldThisVisit.Add(item.StringId);" in relief
+            and "while (remaining > 0 && shed > 0)" in relief
+            and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
+                        "ExecuteHerdRelief(settlement, quiet: true)",
+                        "ExecuteResupply(settlement, quiet: true)",
+                        "ExecuteHaulage(settlement, quiet: true)")
+            and "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);" in entered)
+
+chk("1.22.0", "a spare mount is sold only while it drags the party into the herd speed penalty, cheapest first, and never a haul animal",
+    a_spare_mount_goes_only_when_it_is_costing_the_party_speed())
+
+def no_hint_still_claims_a_mount_is_never_sold():
+    en = spoken(ENGLISH)
+    return ('haul animal' in en.get('TL375', '')
+            and 'only way to sell a haul animal' in en.get('TL332', '')
+            and 'Mounts and pack animals' not in en.get('TL324', '')
+            and 'Mounts and pack animals' not in en.get('TL325', '')
+            and all('haul animal' in t.lower() or 'never sold' not in t.lower()
+                    for t in (en.get('TL324', ''), en.get('TL325', ''), en.get('TL332', '')))
+            and en.get('TL375', '') in M and en.get('TL275', '') in M)
+
+chk("1.22.0", "no hint still tells the player a mount can never be sold",
+    no_hint_still_claims_a_mount_is_never_sold())
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and

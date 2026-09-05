@@ -106,10 +106,10 @@
 		<string id="TL365" text="Alımları arabalarınızın değil gemilerinizin alabileceğine göre ölçer, böylece karadayken filoyu yükleyebilirsiniz. Bölüğünüzün yelken açabilmesi gerekir; filo yoksa TradeLord arabaları sayar ve bunu kaydına yazar. Öntanımlı olarak KAPALI." />
 		<string id="TL266" text="Kaç günlük ücret için altın tut" />
 		<string id="TL366" text="Yukarıdaki altın rezervinin üstüne, askerlerinizin bu kadar günlük ücretini de ayırır, böylece bir alışveriş turu maaşları yemez. TradeLord her ticaret yaptığında gerçek ücret yükünüzden hesaplanır, yani orduyla birlikte büyür. 0 yalnızca sabit rezervi tutar." />
-		<string id="TL267" text="Yük hayvanı ve at satın al" />
-		<string id="TL367" text="Sizin için yük taşıyan her hayvanı, katırı, yük atını ve binek atını, bir pazar değerinden fazlasını istemediği sürece satın alır; böylece bölüğünüz daha çok yük taşır ve yaya askerleriniz binecek bir şey bulur. Buradaki değer, o hayvan için bildiğiniz en ucuz fiyat, hiç bilmiyorsanız da hayvanın kendi değeridir. Kargonuz doluyken aşağıdaki fazladan ödeme kadar üstüne çıkar. Çiftlik hayvanları buna dahil değildir, onların kendi ilkesi vardır. Bölüğünüzün yavaşlamadan güdebileceğinden fazlasını asla almaz; altın rezerviniz, ziyaret başına harcama sınırınız ve asla alma listeniz yine geçerlidir. Öntanımlı olarak AÇIK." />
+		<string id="TL267" text="Yük hayvanı ve binek satın al" />
+		<string id="TL367" text="Her yük hayvanını, katırı, yük atını, iş atını ya da yük devesini, bir pazar değerinden fazlasını istemediği sürece satın alır, böylece bölüğünüz daha çok yük taşır; yaya askeriniz kaldığı sürece binilecek bir atı ya da deveyi de aynı şekilde alır. Buradaki değer, o hayvan için bildiğiniz en ucuz fiyat, hiç bilmiyorsanız da hayvanın kendi değeridir. Kargonuz doluyken aşağıdaki fazladan ödeme kadar üstüne çıkar. Çiftlik hayvanları buna dahil değildir, onların kendi ilkesi vardır. Bölüğünüzün yavaşlamadan güdebileceğinden fazlasını asla almaz; altın rezerviniz, ziyaret başına harcama sınırınız ve asla alma listeniz yine geçerlidir. Öntanımlı olarak AÇIK." />
 		<string id="TL268" text="Kargo doluyken yük hayvanı için fazladan ödeme" />
-		<string id="TL368" text="Kargonuz doluyken ve fazladan yer para etmeye değerken, TradeLord bir katır, yük atı ya da binek atı için geçerli fiyatın ne kadar üstüne çıkar. %150 bir buçuk katı demektir. %100 fazladan ödemeyi kapatır, yani yalnızca geçerli fiyattan alır." />
+		<string id="TL368" text="Kargonuz doluyken ve fazladan yer para etmeye değerken, TradeLord bir yük hayvanı ya da binek için geçerli fiyatın ne kadar üstüne çıkar. %150 bir buçuk katı demektir. %100 fazladan ödemeyi kapatır, yani yalnızca geçerli fiyattan alır." />
 		<string id="TL269" text="Haydutlardan serbest geçiş" />
 		<string id="TL369" text="Çapulcularla, deniz akıncılarıyla, orman, dağ, bozkır ya da çöl haydutlarıyla karşılaştığınızda karşılaşma ekranına bir satır ekler. Onu seçmek karşılaşmayı dövüşsüz ve fidyesiz bitirir, sonrasında da birkaç saat sizi rahat bırakırlar. Öntanımlı olarak AÇIKTIR; yolunuzu kendi kılıcınızla açmak istediğiniz bir oynayış için kapatın." />
 		<string id="TL270" text="Sat" />
@@ -193,15 +193,15 @@
 		<string id="TL321" text="Yiyecek satmadan önce bu kadar günlük yiyeceği ayırın. Önce günlük besleme başına en ucuz yiyecek ayrılır, hayvanlar ise ancak başka bir şey rezervi karşılamıyorsa. 0 her kırıntıyı satar."/>
 		<string id="TL322" text="Otomatik ticaretin yiyecekle ne yapabileceği. Günlük yiyecek rezervi ayrıdır ve yine geçerlidir."/>
 		<string id="TL323" text="Otomatik ticaretin kömür, sert odun, demir cevheri ve külçelerle ne yapabileceği. Demircilik stokunu otomatik ticaretin tümüyle dışında tutmak için Dokunma seçin."/>
-		<string id="TL324" text="Otomatik ticaretin koyun, sığır ve domuzla ne yapabileceği. Alış, oyunun kendi sürü hesabıyla sınırlanır, bu yüzden müfrezeyi sürü hız cezasına sokmaz. Binekler ve yük hayvanları kural gereği asla alınmaz ve satılmaz, bu ayar onlara işlemez; onları ancak açık bir her zaman sat girdisi kımıldatabilir."/>
-		<string id="TL325" text="Eşsiz ya da oyuncunun dövdüğü eşyaları asla otomatik satma. Binekler ve yük hayvanları bu ayardan bağımsız olarak kural gereği korunur; onları ancak açık bir her zaman sat girdisi kımıldatabilir."/>
+		<string id="TL324" text="Otomatik ticaretin koyun, sığır ve domuzla ne yapabileceği. Alış, oyunun kendi sürü hesabıyla sınırlanır, bu yüzden müfrezeyi sürü hız cezasına sokmaz. Yük hayvanlarının ve binek atlarının kendi ayarları vardır, bu ayar onlara işlemez."/>
+		<string id="TL325" text="Eşsiz ya da oyuncunun dövdüğü eşyaları asla otomatik satma. Bir yük hayvanı, burada ne ayarlarsanız ayarlayın, kural gereği asla satılmaz; onu ancak açık bir her zaman sat girdisi kımıldatabilir."/>
 		<string id="TL326" text="Envanter ekranında kilitli eşyalar asla otomatik satılmaz. Kilitler oyunun sakladığı gibi, eşya ve niteliğiyle eşleştirilir."/>
 		<string id="TL327" text="Bir satışın ölçüldüğü fiyat: hem TradeLord'un bildirdiği kârı hem de satışın kazandırdığı Ticaret tecrübesini belirler. Hiç almadıklarınız, ganimet dâhil, hangisini seçerseniz seçin bildiğiniz en ucuz pazara göre değerlenir."/>
 		<string id="TL328" text="Bu kademeye kadar olan silah ve zırhları da satar. 1. kademeden başlar, yani çapulcuların ve haydutların düşürdüğü teçhizattan. Kilitler ve korumalar yine geçerlidir."/>
 		<string id="TL329" text="Bu pazar bilinen en iyi pazardan açıkça az ödüyorsa burada satmayı atla, böylece kargonuz hakkını veren şehri bekler. Taşıdığınız her şey için geçerlidir, satın aldığınız da ganimet olarak topladığınız da. Öntanımlı olarak KAPALI; kapalıyken satın aldığınız bir mal yine kâr payınızı geçmek zorundadır, ganimet ise parası olan ilk pazara gider."/>
 		<string id="TL330" text="Bu pazar bilinen en iyi fiyatın en az bu oranını ödüyorsa yine de burada sat. Yukarıdaki ayar KAPALIYKEN hiçbir şey yapmaz."/>
 		<string id="TL331" text="TradeLord'un asla satmaması gereken mallar. Her birini ya eşya kimliğiyle, ya TradeLord.log'un taşıdığı her mal için yazdığı grain, wine veya iron_ore gibi kısa iç adla, ya da oyunun size gösterdiği Iron Ore gibi adla yazın. Aralarına virgül koyun. Bu oyunda hiçbir mala uymayan bir girdi sessizce geçmek yerine günlükte adlandırılır ve ekranda söylenir. Alırken de bunlara dokunmaz, çünkü sonra satmanın bir yolu olmaz."/>
-		<string id="TL332" text="TradeLord'un her zaman sattığı mallar: kategori kurallarını, benzersiz ve el yapımı korumasını ve yiyecek payını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla satma listesi ve envanter kilidi yine geçerlidir. Bir binek ya da yük hayvanını satmanın tek yolu budur."/>
+		<string id="TL332" text="TradeLord'un her zaman sattığı mallar: kategori kurallarını, benzersiz ve el yapımı korumasını ve yiyecek payını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla satma listesi ve envanter kilidi yine geçerlidir. Bir yük hayvanını satmanın tek yolu budur."/>
 		<string id="TL334" text="Bu altının altına asla harcama. Varsayılan 300; bu, iki düşman karşılaşmasından pazarlıkla çıkmaya ve alışveriş sonrası bir maaş ödemesini karşılamaya yeter."/>
 		<string id="TL335" text="TradeLord'un bir ziyarette bir maldan aldığı en fazla birim. 0 = sayıda sınır yok. Varsayılan 32."/>
 		<string id="TL336" text="Ziyaret başına mal başına harcamayı dinar olarak da sınırla."/>
@@ -225,5 +225,9 @@
 		<string id="TL104" text="Otomasyon"/>
 		<string id="TL105" text="Alış"/>
 		<string id="TL106" text="Genel"/>
+		<string id="TL116" text="TradeLord {ITEMS} sattı, {GOLD} denar aldı, böylece müfrezeniz yeniden hızlanır."/>
+		<string id="TL117" text="[Benzetim, en iyi ihtimal] TradeLord {ITEMS} satıp {GOLD} denar alırdı, böylece müfrezeniz yeniden hızlanırdı."/>
+		<string id="TL275" text="Sizi yavaşlatan fazla binekleri sat"/>
+		<string id="TL375" text="Müfrezenizde kimsenin binemeyeceği bir atı ya da deveyi satar, ama yalnızca o fazla binekler sizi sürü hız cezasına sokuyorsa, ve yalnızca o cezadan çıkacak kadarını. Önce en ucuzunu satar, böylece savaş atlarınız yükte kalır. Bir yük hayvanı bu yolla asla satılmaz; kilitlediğiniz, asla satma listenize koyduğunuz ya da benzersiz ve el yapımı korumasının kapsadığı hiçbir şey de satılmaz. Öntanımlı olarak AÇIK."/>
 	</strings>
 </base>
