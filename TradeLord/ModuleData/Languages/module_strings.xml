@@ -115,8 +115,8 @@
 		<string id="TL270" text="Sell them" />
 		<string id="TL271" text="Keep every one" />
 		<string id="TL272" text="Keep the ones you have not learned" />
-		<string id="TL273" text="Trade with caravans you meet" />
-		<string id="TL373" text="Talk to a caravan on the road and TradeLord trades with it there and then, selling what clears your margin and buying what it can sell on for more somewhere in reach. The caravan pays out of its own purse, so it stops when that purse runs dry. Every rule a market visit obeys still holds here. ON by default." />
+		<string id="TL273" text="Trade with caravans and villagers you meet" />
+		<string id="TL373" text="Meet a caravan or a party of villagers on the road and TradeLord trades with them the moment you meet, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach. They pay out of their own purse, so it stops when that purse runs dry. Every rule a market visit obeys still holds here. ON by default." />
 		<string id="TL274" text="Share of the hold one good may fill (0 = off)" />
 		<string id="TL374" text="Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and your haul animals instead of needing a new number every time the party grows. 0 turns it off. Selling is unaffected, and the flat per-item caps above still hold." />
 		<string id="TL275" text="Sell animals that slow you down" />
@@ -231,5 +231,8 @@
 		<string id="TL277" text="Reset" />
 		<string id="TL376" text="Puts every TradeLord setting back to the value it ships with, in one go. It takes hold at once and is written to TradeLord.ini as well, so nothing is left half changed. Your never sell, always sell, never buy and always buy lists are emptied too, and what changed is written to TradeLord.log." />
 		<string id="TL377" text="Your purse is at {GOLD} denars and your gold reserve holds {RESERVE} of it back, so there is nothing here you could buy. Sell some cargo, or lower the reserve in its settings." />
+		<string id="TL378" text="You have TradeLord, so these bandits will let you pass for nothing if you ask them to." />
+		<string id="TL379" text="Ask them to let you go" />
+		<string id="TL380" text="Fight them" />
 	</strings>
 </base>
