@@ -25,7 +25,7 @@ namespace TradeLord
         None, NotMerchandise, NeverList, Locked, CategoryPolicy, Protected,
         MountOrPackAnimal, NotTradable, FoodReserve, TradedHereAlready, NoStock,
         NoResaleMarket, BelowMargin, BelowBestMarket, MerchantTillEmpty, BudgetSpent,
-        ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit, HeldEnough
+        ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit, HeldEnough, Smeltable
     }
 
     internal sealed class BlockTally
@@ -102,6 +102,8 @@ namespace TradeLord
                     return Tongue.Text("{=TL83}the village is down to its last of each good");
                 case Block.HeldEnough:
                     return Tongue.Text("{=TL93}you are already carrying as many of these as you allow");
+                case Block.Smeltable:
+                    return Tongue.Text("{=TL99}you are keeping what the smithy can break down");
                 case Block.NotMerchandise:
                 case Block.NeverList:
                 case Block.Locked:
@@ -120,6 +122,12 @@ namespace TradeLord
             item == DefaultItems.Charcoal || item == DefaultItems.HardWood || item == DefaultItems.IronOre ||
             item == DefaultItems.IronIngot1 || item == DefaultItems.IronIngot2 || item == DefaultItems.IronIngot3 ||
             item == DefaultItems.IronIngot4 || item == DefaultItems.IronIngot5 || item == DefaultItems.IronIngot6;
+
+        internal static bool IsSmeltable(ItemObject item)
+        {
+            try { return item != null && item.WeaponDesign != null; }
+            catch (Exception e) { Log.Error(e, "smeltable check"); return false; }
+        }
 
         internal static bool Listed(ItemList list, ItemObject item) =>
             item != null && !list.Empty &&
@@ -262,6 +270,30 @@ namespace TradeLord
             return (float)item.Value / FoodValue(item);
         }
 
+        internal static bool IsStorableFood(ItemObject item) =>
+            item != null && item.IsFood && !item.HasHorseComponent;
+
+        internal static int FoodHeld(ItemRoster roster)
+        {
+            if (roster == null) return 0;
+            int held = 0;
+            for (int i = 0; i < roster.Count; i++)
+            {
+                ItemRosterElement el = roster.GetElementCopyAtIndex(i);
+                if (el.Amount > 0) held += FoodValue(el.EquipmentElement.Item) * el.Amount;
+            }
+            return held;
+        }
+
+        internal static int FoodWanted()
+        {
+            int days = Options.Current.ResupplyFoodDays;
+            if (days <= 0) return 0;
+            float perDay = -MobileParty.MainParty.FoodChange;
+            if (perDay < 1f) perDay = 1f;
+            return (int)Math.Ceiling(perDay * days);
+        }
+
         public static bool MaySell(ItemRosterElement el, ISet<string> lockedKeys,
                                    IDictionary<ItemObject, int> foodKeep, out int keepCount) =>
             MaySell(el, lockedKeys, foodKeep, out keepCount, out _);
@@ -288,6 +320,8 @@ namespace TradeLord
             }
             else if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))
             { why = Block.Protected; return false; }
+            else if (s.KeepSmeltableWeapons && IsSmeltable(item))
+            { why = Block.Smeltable; return false; }
 
             bool sellable = livestock || item.IsTradeGood ||
                 (s.MaxLootTier > 0 && !item.IsFood && !item.IsAnimal && !item.IsMountable &&
@@ -368,6 +402,47 @@ namespace TradeLord
             TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin);
     }
 
+    internal static class Carry
+    {
+        private static bool _warned;
+
+        internal static void Forget() => _warned = false;
+
+        private static bool Sailing()
+        {
+            if (!Options.Current.UseFleetCapacity) return false;
+            if (Travel.NavalActive) return true;
+            if (!_warned)
+            {
+                _warned = true;
+                Log.Write("buy to fill the ships is on but this party cannot sail - its carts are counted instead");
+            }
+            return false;
+        }
+
+        private static float Read(MobileParty party, bool capacity)
+        {
+            if (party == null) return 0f;
+            if (Sailing())
+                try
+                {
+                    InventoryCapacityModel model = Campaign.Current?.Models?.InventoryCapacityModel;
+                    if (model != null)
+                        return capacity
+                            ? model.CalculateInventoryCapacity(party, true).ResultNumber
+                            : model.CalculateTotalWeightCarried(party, true).ResultNumber;
+                }
+                catch (Exception e) { Log.Error(e, "fleet capacity (carts counted instead)"); }
+            return capacity ? party.InventoryCapacity : party.TotalWeightCarried;
+        }
+
+        internal static float Capacity(MobileParty party) => Read(party, capacity: true);
+
+        internal static float Carried(MobileParty party) => Read(party, capacity: false);
+
+        internal static float Room(MobileParty party) => Capacity(party) - Carried(party);
+    }
+
     public class TradeActionBehavior : CampaignBehaviorBase
     {
         private Settlement _trackedTown;
@@ -424,6 +499,7 @@ namespace TradeLord
             _pendingXpMuted = true;
             AutomatedTradeInProgress = false;
             _herdLookupFailed = false;
+            Carry.Forget();
             TradePolicy.ForgetItemListAudit();
         }
 
@@ -469,7 +545,7 @@ namespace TradeLord
         private static bool NoRoomToCarry()
         {
             MobileParty party = MobileParty.MainParty;
-            return party != null && party.InventoryCapacity - party.TotalWeightCarried < 1f;
+            return party != null && Carry.Room(party) < 1f;
         }
 
         private static bool TradedThisVisit() => _soldThisVisit.Count > 0 || _boughtThisVisit.Count > 0;
@@ -482,8 +558,16 @@ namespace TradeLord
             Toast(Tongue.Text("{=TL91}An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which."), ToastAlert);
         }
 
+        internal static int GoldHeldBack()
+        {
+            int wage = 0;
+            try { wage = MobileParty.MainParty?.TotalWage ?? 0; }
+            catch (Exception e) { Log.Error(e, "wage cover (the flat reserve still holds)"); }
+            return TradeMath.Reserve(Options.Current.GoldReserve, Options.Current.KeepWageDays, wage);
+        }
+
         private static int SpendableGold() =>
-            TradeMath.Budget(Hero.MainHero.Gold, Options.Current.GoldReserve,
+            TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
                              Options.Current.MaxSpendPerVisit, _spentThisVisit, 0);
 
         private static bool WarnPurseBelowReserve()
@@ -492,7 +576,7 @@ namespace TradeLord
             if (SpendableGold() > 0) return false;
             TextObject msg = Tongue.Text("{=TL92}Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings.");
             msg.SetTextVariable("GOLD", Hero.MainHero.Gold);
-            msg.SetTextVariable("RESERVE", Options.Current.GoldReserve);
+            msg.SetTextVariable("RESERVE", GoldHeldBack());
             Toast(msg, ToastAlert);
             return true;
         }
@@ -513,9 +597,9 @@ namespace TradeLord
             _announcedAutomation = true;
             Toast(McmLoader.SettingsReachable
                 ? Tongue.Text("{=TL87}TradeLord buys and sells for you as you enter a market, starting at the next one. Turn auto-sell and auto-buy on entry off in its settings to trade by hand.")
-                : Tongue.Text("{=TL96}TradeLord buys and sells for you as you enter a market, starting at the next one. Its settings need MCM, which is not installed, so install MCM to change this."), ToastAlert);
+                : Tongue.Text("{=TL96}TradeLord buys and sells for you as you enter a market, starting at the next one. MCM is not installed, so its settings live in TradeLord.ini, beside TradeLord.log in your Bannerlord folder in Documents."), ToastAlert);
             Log.Write("automation notice shown - this market is left alone so the campaign can turn it off first"
-                      + (McmLoader.SettingsReachable ? "" : "; MCM is absent, so the notice names it"));
+                      + (McmLoader.SettingsReachable ? "" : "; MCM is absent, so the notice names the settings file instead"));
             return true;
         }
 
@@ -543,6 +627,7 @@ namespace TradeLord
                         args => Guard.Run("Action.QuickTradeMenu", () =>
                         {
                             ExecuteQuickSell(Settlement.CurrentSettlement);
+                            ExecuteResupply(Settlement.CurrentSettlement);
                             ExecuteQuickBuy(Settlement.CurrentSettlement);
                             ReportStalledPasses();
                         }),
@@ -579,6 +664,7 @@ namespace TradeLord
                 if (!AnnounceAutomation(settlement))
                 {
                     if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
+                    if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);
                     if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
                     ReportStalledPasses();
                 }
@@ -993,6 +1079,120 @@ namespace TradeLord
             }
         }
 
+        public static void ExecuteResupply(Settlement settlement, bool quiet = false)
+        {
+            if (Options.Current.ResupplyFoodDays <= 0) return;
+            if (!MarketOpen(settlement, quiet)) return;
+
+            MobileParty party = MobileParty.MainParty;
+            if (party == null) return;
+            int shortfall = TradePolicy.FoodWanted() - TradePolicy.FoodHeld(party.ItemRoster);
+            if (shortfall <= 0) return;
+
+            SettlementComponent market = settlement.SettlementComponent;
+            PartyBase shop = settlement.Party;
+            PartyBase me = party.Party;
+            bool sim = Options.Current.SimulationMode;
+            ISet<string> locked = TradePolicy.LockedKeys();
+
+            int stocked = 0, simSpent = 0;
+            float simWeight = 0f;
+            bool directionError = false;
+            var detail = new Dictionary<ItemObject, (int count, int gold)>();
+
+            int Budget() =>
+                TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
+                                 Options.Current.MaxSpendPerVisit, _spentThisVisit, sim ? simSpent : 0);
+
+            var larder = new List<(ItemRosterElement el, int price)>();
+            ItemRoster shopRoster = settlement.ItemRoster;
+            for (int i = 0; i < shopRoster.Count; i++)
+            {
+                ItemRosterElement el = shopRoster.GetElementCopyAtIndex(i);
+                ItemObject it = el.EquipmentElement.Item;
+                if (el.Amount <= 0 || !TradePolicy.IsStorableFood(it)) continue;
+                if (!TradePolicy.MayBuy(it, locked)) continue;
+                if (_soldThisVisit.Contains(it.StringId)) continue;
+                int price = market.GetItemPrice(el.EquipmentElement, party, false);
+                if (price <= 0) continue;
+                larder.Add((el, price));
+            }
+            if (larder.Count == 0) return;
+            larder.Sort((x, y) => x.price.CompareTo(y.price));
+
+            int goldBefore = Hero.MainHero.Gold;
+            AutomatedTradeInProgress = true;
+            try
+            {
+                foreach (var (el, _) in larder)
+                {
+                    if (directionError || shortfall <= 0) break;
+                    ItemObject item = el.EquipmentElement.Item;
+                    int worth = TradePolicy.FoodValue(item);
+                    if (worth <= 0) continue;
+                    int remaining = el.Amount;
+
+                    while (shortfall > 0 && remaining > 0)
+                    {
+                        int price = market.GetItemPrice(el.EquipmentElement, party, false);
+                        if (price <= 0 || price > Budget()) break;
+                        if (settlement.IsVillage && remaining <= 1) break;
+                        if (item.Weight > 0.01f && item.Weight > Carry.Room(party) - simWeight) break;
+
+                        if (sim)
+                        {
+                            simSpent += price;
+                            simWeight += item.Weight;
+                        }
+                        else
+                        {
+                            int before = Hero.MainHero.Gold;
+                            OpenTransaction();
+                            try { SellItemsAction.Apply(shop, me, el, 1, settlement); }
+                            finally { CloseTransaction(); }
+                            price = before - Hero.MainHero.Gold;
+                            if (price < 0)
+                            {
+                                Log.Write("ERROR: restocking added " + (-price) + " gold - transaction direction changed on this game version. Restocking aborted.");
+                                directionError = true;
+                                break;
+                            }
+                            if (price == 0) break;
+                            LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, price);
+                            _spentThisVisit += price;
+                            _boughtThisVisit.TryGetValue(item.StringId, out var prior);
+                            _boughtThisVisit[item.StringId] = (prior.count + 1, prior.spent + price);
+                        }
+                        stocked++;
+                        remaining--;
+                        shortfall -= worth;
+                        Tally(detail, item, 1, price);
+                    }
+                }
+            }
+            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+
+            if (stocked <= 0) return;
+
+            int spent = sim ? simSpent : goldBefore - Hero.MainHero.Gold;
+            _runMovedGoods = true;
+            Log.Write((sim ? "resupply (simulated, best case): " : "resupply: ") + stocked +
+                      " items, -" + spent + " gold at " + settlement.Name +
+                      ", still short " + (shortfall > 0 ? shortfall : 0) + " unit(s) of food");
+            LogDetail(selling: false, sim, detail);
+            if (!sim)
+            {
+                CoinSound();
+                LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
+            }
+            TextObject msg = Tongue.Text(sim
+                ? "{=TL98}[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars."
+                : "{=TL97}TradeLord restocked {ITEMS} for {GOLD} denars.");
+            msg.SetTextVariable("ITEMS", ItemSummary(detail, stocked));
+            msg.SetTextVariable("GOLD", spent);
+            if (!Muted(quiet)) Toast(msg, ToastSpend);
+        }
+
         public static void ExecuteQuickBuy(Settlement settlement, bool quiet = false)
         {
             if (!MarketOpen(settlement, quiet)) return;
@@ -1012,7 +1212,7 @@ namespace TradeLord
             var detail = new Dictionary<ItemObject, (int count, int gold)>();
 
             int Budget() =>
-                TradeMath.Budget(Hero.MainHero.Gold, Options.Current.GoldReserve,
+                TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
                                  Options.Current.MaxSpendPerVisit, _spentThisVisit, sim ? simSpent : 0);
 
             var stock = new List<(ItemRosterElement el, float realizable, float margin, int held)>();
@@ -1079,8 +1279,8 @@ namespace TradeLord
                             held >= Options.Current.MaxHeldPerItem) { tally.Note(Block.HeldEnough); break; }
                         if (livestock && herdRoom <= 0) { tally.Note(Block.HerdFull); break; }
                         if (settlement.IsVillage && remaining <= 1) { tally.Note(Block.VillageLastUnit); break; }
-                        if (item.Weight > 0.01f && item.Weight > MobileParty.MainParty.InventoryCapacity
-                                - MobileParty.MainParty.TotalWeightCarried - simWeight) { tally.Note(Block.CarryWeight); break; }
+                        if (item.Weight > 0.01f && item.Weight >
+                                Carry.Room(MobileParty.MainParty) - simWeight) { tally.Note(Block.CarryWeight); break; }
 
                         if (sim)
                         {

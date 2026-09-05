@@ -74,7 +74,10 @@
 		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
 		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
 		<string id="TL92" text="Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings."/>
-		<string id="TL96" text="TradeLord buys and sells for you as you enter a market, starting at the next one. Its settings need MCM, which is not installed, so install MCM to change this."/>
+		<string id="TL96" text="TradeLord buys and sells for you as you enter a market, starting at the next one. MCM is not installed, so its settings live in TradeLord.ini, beside TradeLord.log in your Bannerlord folder in Documents."/>
+		<string id="TL97" text="TradeLord restocked {ITEMS} for {GOLD} denars."/>
+		<string id="TL98" text="[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars."/>
+		<string id="TL99" text="you are keeping what the smithy can break down"/>
 		<string id="TL251" text="Stop buying at this many held (0 = off)"/>
 		<string id="TL252" text="Always buy (item ids or names, comma separated)"/>
 		<string id="TL253" text="Leave alone"/>
@@ -89,6 +92,14 @@
 		<string id="TL361" text="Hold back a few of every kind of food you carry, so the party keeps its food variety morale bonus. What it holds back counts towards the days of supply above rather than adding to it. Livestock is left out, since a herd is slaughtered for meat rather than eaten as a kind of food in its own right. OFF by default." />
 		<string id="TL262" text="How many of each kind to keep" />
 		<string id="TL362" text="How many of every kind of food the switch above holds back. Three is enough that a day of eating does not wipe a kind out, and the bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher." />
+		<string id="TL263" text="Restock food (days of supply)" />
+		<string id="TL363" text="When your party carries fewer than this many days of food, TradeLord buys the cheapest food here to top it back up, at whatever the market asks, before it trades for profit. Your gold reserve, your spending limit for the visit, your never-buy list and your food policy all still hold, and it leaves a village its last of each good. 0 turns restocking off. As you arrive at a market it runs only when auto buy is on." />
+		<string id="TL264" text="Keep smeltable weapons" />
+		<string id="TL364" text="Never sell a weapon the smithy can break down for parts, so a smithing playthrough keeps its raw material. This covers every crafted design, not only the ones you made yourself. OFF by default." />
+		<string id="TL265" text="Buy to fill the ships" />
+		<string id="TL365" text="Size purchases to what your ships can hold rather than what your carts can, so you can load the fleet while you are ashore. Your party has to be able to sail; without a fleet TradeLord counts the carts instead and says so in its log. OFF by default." />
+		<string id="TL266" text="Keep gold for days of wages" />
+		<string id="TL366" text="Also hold back this many days of your troops' wages on top of the gold reserve above, so a shopping trip never eats the payroll. It is worked out from your real wage bill every time TradeLord trades, so it grows with the army. 0 holds back the flat reserve only." />
 		<string id="TL352" text="Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach."/>
 		<string id="TL250" text="Language"/>
 		<string id="TL351" text="Once your party already carries this many of a good, TradeLord leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit."/>

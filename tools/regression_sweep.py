@@ -2,7 +2,7 @@ import io, re, sys
 
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs', 'Travel.cs', 'Support.cs',
-      'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs']}
+      'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs', 'Config.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -91,7 +91,7 @@ def mcm_defaults_within_range():
 
 def every_option_has_a_control():
     declared = set(re.findall(r'public\s+(?:bool|int|float|string)\s+(\w+)\s*=(?!>)', S['Options.cs']))
-    exposed = set(re.findall(r'Options\.Current\.(\w+)', M))
+    exposed = set(re.findall(r'_o\.(\w+)', M))
     return not (declared - exposed)
 
 LITERAL = r'\{=(TL\d+)\}((?:[^"\\]|\\.)*)"'
@@ -267,7 +267,7 @@ def log_prefers_the_user_folder():
     body = method_body(S['Support.cs'], "private static List<string> Candidates")
     docs = body.find('"Mount and Blade II Bannerlord"')
     own = body.find("Assembly.Location")
-    cwd = body.rfind("paths.Add(FileName);")
+    cwd = body.rfind("paths.Add(fileName);")
     return (-1 < docs < own < cwd
             and body.count("catch { }") == 2
             and "yield" not in body)
@@ -461,8 +461,9 @@ def the_filter_is_armed_only_around_a_game_call_that_talks():
     t = S['Trading.cs']
     armed = re.findall(r'OpenTransaction\(\);\s*try \{ ([\w\.]+)\([^)]*\); \}\s*'
                        r'finally \{ CloseTransaction\(\);( ReportSilenced\(\);)? \}', t)
-    return (t.count('OpenTransaction();') == len(armed) == 3
+    return (t.count('OpenTransaction();') == len(armed) == 4
             and sorted(c for c, _ in armed) == ['SellItemsAction.Apply', 'SellItemsAction.Apply',
+                                                'SellItemsAction.Apply',
                                                 'SkillLevelingManager.OnTradeProfitMade']
             and 'InGameTransaction = true' not in t
             and 'if (!TradeActionBehavior.InGameTransaction) return true;' in t
@@ -641,7 +642,7 @@ def the_route_rules_need_nothing_from_the_game():
             and 'public static class Confidence' in S['Confidence.cs']
             and 'Confidence' not in S['Market.cs']
             and 'public static int Budget(' in S['TradeMath.cs']
-            and "TradeMath.Budget(Hero.MainHero.Gold, Options.Current.GoldReserve," in S['Trading.cs']
+            and "TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack()," in S['Trading.cs']
             and 'Options.Current.MaxSpendPerVisit > 0' not in
                 method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
 
@@ -720,6 +721,57 @@ def the_codec_is_covered_by_tests_the_build_runs():
             and TESTS.count('[Fact]') + TESTS.count('[Theory]') >= 12
             and 'InvariantCulture' not in TESTS)
 
+def each_preset_gets_its_own_settings():
+    made = method_body(M, "public override BaseSettings CreateNew")
+    return ('public Settings() { Bound(Options.Current); }' in M
+            and 'private Options _o;' in M
+            and 'made.Bound(new Options());' in made
+            and 'Options.Current' not in made
+            and M.count('Options.Current') == 1
+            and '_o = to;' in method_body(M, "private void Bound")
+            and all('Follows(value, () => _o.' + name in M
+                    for name in ('Language', 'FoodPolicy', 'CraftingPolicy',
+                                 'LivestockPolicy', 'CostBasisMode')))
+
+
+def restocking_runs_between_selling_and_buying():
+    menu = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    entry = method_body(S['Trading.cs'], "private void OnSettlementEntered")
+    body = method_body(S['Trading.cs'], "public static void ExecuteResupply")
+    return (ordered(menu, "ExecuteQuickSell(Settlement.CurrentSettlement);",
+                    "ExecuteResupply(Settlement.CurrentSettlement);",
+                    "ExecuteQuickBuy(Settlement.CurrentSettlement);")
+            and ordered(entry, "ExecuteQuickSell(settlement, quiet: true);",
+                        "ExecuteResupply(settlement, quiet: true);",
+                        "ExecuteQuickBuy(settlement, quiet: true);")
+            and "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);" in entry
+            and "if (Options.Current.ResupplyFoodDays <= 0) return;" in body
+            and "!TradePolicy.IsStorableFood(it)" in body
+            and "!TradePolicy.MayBuy(it, locked)" in body
+            and "price > Budget()" in body
+            and "settlement.IsVillage && remaining <= 1" in body
+            and "Carry.Room(party) - simWeight" in body
+            and "_soldThisVisit.Contains(it.StringId)" in body
+            and "BuyAcceptable" not in body
+            and "BestSell" not in body)
+
+
+def the_ships_capacity_is_asked_in_one_place():
+    t = S['Trading.cs']
+    read = method_body(t, "private static float Read")
+    return ("internal static class Carry" in t
+            and t.count("party.InventoryCapacity") == 1
+            and t.count("party.TotalWeightCarried") == 1
+            and "CalculateInventoryCapacity(party, true)" in t
+            and "CalculateTotalWeightCarried(party, true)" in t
+            and ordered(read, "if (Sailing())",
+                        "catch (Exception e) { Log.Error(e, \"fleet capacity (carts counted instead)\"); }",
+                        "return capacity ? party.InventoryCapacity : party.TotalWeightCarried;")
+            and "Carry.Carried(party)" in S['Panel.cs'] and "Carry.Capacity(party)" in S['Panel.cs']
+            and "party.InventoryCapacity" not in S['Panel.cs']
+            and "Carry.Room(party) < 1f" in method_body(t, "private static bool NoRoomToCarry"))
+
+
 results = []
 _read = 0
 def chk(ver, claim, ok):
@@ -744,7 +796,7 @@ chk("1.3.18", "neither pass trades before the settling delay is served",
     (lambda b: ordered(b, "int wait = Options.Current.EconomySettlingDays;", "if (wait <= 0) return true;",
                        "CampaignStartTime.ElapsedDaysUntilNow", "if (elapsed >= wait) return true;"))
     (method_body(S['Trading.cs'], "private static bool MarketOpen")) and
-    S['Trading.cs'].count("if (!MarketOpen(settlement, quiet)) return;") == 2)
+    S['Trading.cs'].count("if (!MarketOpen(settlement, quiet)) return;") == 3)
 chk("1.3.2", "ScanRadius applied in observed mode",
     "if (!WithinRadius(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "!Eligible(town, out float lower)" in S['Ledger.cs'])
@@ -821,7 +873,7 @@ chk("1.3.8", "the buying pass takes only what a market in reach pays more for, a
 chk("1.3.2", "the buying pass stops at the purse, the per-item denar cap, the carry weight and the herd",
     (lambda b: "if (price > Budget()) { tally.Note(Block.BudgetSpent); break; }" in b
            and "spentThis + price > Options.Current.BuyValueCapPerItem) { tally.Note(Block.ItemValueCap); break; }" in b
-           and "- MobileParty.MainParty.TotalWeightCarried - simWeight) { tally.Note(Block.CarryWeight); break; }" in b
+           and "Carry.Room(MobileParty.MainParty) - simWeight) { tally.Note(Block.CarryWeight); break; }" in b
            and "if (livestock && herdRoom <= 0) { tally.Note(Block.HerdFull); break; }" in b)
     (method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")))
 chk("1.3.14", "the selling pass stops when the merchant's till cannot cover the next unit, on a dry run too",
@@ -881,9 +933,9 @@ chk("1.3.12", "NotMerchandise on the buy side",
 chk("1.3.13", "buy shelf ordered by margin", "stock.Sort((x, y) => y.margin.CompareTo(x.margin));" in S['Trading.cs'])
 chk("1.3.13", "cost basis read once per stack", "ProfitAcceptable(int costBasis, int townSellPrice)" in S['Trading.cs'])
 chk("1.13.0", "the automation switches are plain switches like the rest, with nothing behind them",
-    "if (value == Options.Current.AutoBuyOnEntry) return;" not in M and
-    M.count("set { Options.Current.AutoBuyOnEntry = value; Options.Bump(); } }") == 1 and
-    M.count("set { Options.Current.AutoSellOnEntry = value; Options.Bump(); } }") == 1)
+    "if (value == _o.AutoBuyOnEntry) return;" not in M and
+    M.count("set { _o.AutoBuyOnEntry = value; Options.Bump(); } }") == 1 and
+    M.count("set { _o.AutoSellOnEntry = value; Options.Bump(); } }") == 1)
 chk("1.3.13", "caravan pressure is one pass",
     "internal static Dictionary<Settlement, int> CaravanPressure()" in S['Ledger.cs'])
 chk("1.3.13", "main-party check ahead of the guard",
@@ -992,19 +1044,19 @@ chk("1.3.30", "a damaged purchase record does not throw during save load",
 
 chk("1.3.31", "the price gate and the transaction it guards share one granularity",
     S['Trading.cs'].count("SellItemsAction.Apply(me, shop, el, 1, settlement)") == 1 and
-    S['Trading.cs'].count("SellItemsAction.Apply(shop, me, el, 1, settlement)") == 1 and
-    S['Trading.cs'].count("SellItemsAction.Apply(") == 2)
+    S['Trading.cs'].count("SellItemsAction.Apply(shop, me, el, 1, settlement)") == 2 and
+    S['Trading.cs'].count("SellItemsAction.Apply(") == 3)
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
-    S['Trading.cs'].count("[Simulated, best case]") == 2 and
-    S['Trading.cs'].count("(simulated, best case): ") == 2 and
+    S['Trading.cs'].count("[Simulated, best case]") == 3 and
+    S['Trading.cs'].count("(simulated, best case): ") == 3 and
     "best case" in M)
 
 chk("1.3.33", "a fully sold stack clears its cost basis",
     "if (rec.Count <= 0) { rec.Count = 0; rec.TotalPaid = 0; }" in
     method_body(S['TradeMath.cs'], "public static void DrainSale"))
 chk("1.3.33", "automated trading recaptures prices after it moves them",
-    S['Trading.cs'].count("LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);") == 2 and
+    S['Trading.cs'].count("LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);") == 3 and
     "internal void ForgetMarketRankings()" in S['Ledger.cs'] and
     "ForgetMarketRankings();" in method_body(S['Ledger.cs'], "public void CaptureSettlement"))
 _setters = [b for b in re.findall(r'\bset\b\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', M)
@@ -1367,7 +1419,7 @@ chk("1.5.6", "expired observations are pruned on both save and load",
 chk("1.5.6", "the message filter is armed only around a game call that talks back",
     the_filter_is_armed_only_around_a_game_call_that_talks())
 chk("1.5.6", "every place the filter comes down logs how many messages it suppressed",
-    S['Trading.cs'].count("ReportSilenced();") == 4 and
+    S['Trading.cs'].count("ReportSilenced();") == 5 and
     "NoteSilenced();" in method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines"))
 chk("1.5.12", "the message filter uses a depth counter, so nesting cannot disarm it early",
     "internal static bool InGameTransaction => _transactionDepth > 0;" in S['Trading.cs'] and
@@ -1841,10 +1893,13 @@ def an_empty_purse_is_reported_on_the_way_into_a_market():
 
 def what_is_left_to_spend_is_worked_out_in_one_place():
     return ("private static int SpendableGold() =>\n"
-            "            TradeMath.Budget(Hero.MainHero.Gold, Options.Current.GoldReserve,\n"
+            "            TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),\n"
             "                             Options.Current.MaxSpendPerVisit, _spentThisVisit, 0);"
                 in S['Trading.cs']
-            and S['Trading.cs'].count("TradeMath.Budget(") == 2)
+            and S['Trading.cs'].count("TradeMath.Budget(") == 3
+            and S['Trading.cs'].count("GoldHeldBack()") == 5
+            and "Options.Current.GoldReserve" not in
+                method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
 
 def no_tracked_file_carries_a_machine_written_dash():
     import subprocess
@@ -2041,7 +2096,7 @@ def every_translated_line_keeps_its_placeholders():
                for path in TRANSLATIONS.values() for k in en)
 
 def every_language_the_screen_offers_has_a_file_the_mod_reads():
-    choices = re.search(r'new Dropdown<string>\(new\[\] \{([^}]*)\}', M)
+    choices = re.search(r'LanguageWords =\s*\{([^}]*)\}', M)
     return (choices is not None
             and len(choices.group(1).split(',')) == len(TRANSLATIONS) + 1
             and 'internal const int English = 0, Turkish = 1, Russian = 2, Chinese = 3;' in S['Tongue.cs']
@@ -2061,7 +2116,7 @@ def every_line_the_mod_says_can_change_language():
 def the_language_setting_leads_the_screen_and_starts_on_english():
     return ('[SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]' in M
             and 'public int Language = 0;' in S['Options.cs']
-            and 'Follows(Language, () => Options.Current.Language, picked => Options.Current.Language = picked);' in M
+            and 'Follows(Language, () => _o.Language, picked => _o.Language = picked);' in M
             and 'instance?.FollowLanguage();' in M
             and all('GroupOrder = ' + str(n) + ')]' in M for n in range(1, 7)))
 
@@ -2313,7 +2368,7 @@ def a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists():
                     '!always && !PolicyAllows(PolicyFor(item), buying: true)')
             and 'AlwaysBuySet => Parsed(AlwaysBuyItems' in S['Options.cs']
             and 'Unmatched("always buy", s.AlwaysBuyItems, ids, names);' in S['Trading.cs']
-            and 'Options.Current.AlwaysBuyItems' in M)
+            and '_o.AlwaysBuyItems' in M)
 
 def looted_gear_is_cleared_from_the_first_tier_by_default():
     hint = re.search(r'\{=TL328\}([^"]*)"', M)
@@ -2513,12 +2568,49 @@ chk("1.15.0", "the food floor holds back every kind of food, counts inside the d
 chk("1.16.0", "the food floor is a switch that ships off, with its own amount that starts at three of each kind",
     option_default('KeepEveryFoodKind') == 'false' and
     option_default('KeepPerFoodKind') == '3' and
-    "Options.Current.KeepEveryFoodKind" in M and "Options.Current.KeepPerFoodKind" in M and
+    "_o.KeepEveryFoodKind" in M and "_o.KeepPerFoodKind" in M and
     re.search(r'SettingPropertyInteger\("\{=TL262\}[^"]*", 1, 50,', M) is not None)
 chk("1.16.0", "a herd is left out of the food floor, because it is slaughtered for meat rather than eaten as its own kind",
     "if (IsTradableLivestock(item)) continue;" in
         method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> FoodKeep") and
     "slaughtered for meat" in spoken(ENGLISH).get('TL361', ''))
+
+chk("1.17.0", "the settings screen hands every preset its own settings, so Default puts the built-in ones back",
+    each_preset_gets_its_own_settings())
+chk("1.17.0", "restocking runs between selling and buying, and asks nothing about profit",
+    restocking_runs_between_selling_and_buying())
+chk("1.17.0", "the food it restocks to is a days-of-supply figure read off the party's own appetite",
+    option_default('ResupplyFoodDays') == '5' and
+    "float perDay = -MobileParty.MainParty.FoodChange;" in
+        method_body(S['Trading.cs'], "internal static int FoodWanted") and
+    "item.IsFood && !item.HasHorseComponent" in
+        between(S['Trading.cs'], "internal static bool IsStorableFood", ";") and
+    "_o.ResupplyFoodDays" in M)
+chk("1.17.0", "the smeltable switch ships off, holds back only a crafted design, and an always-sell entry still wins",
+    option_default('KeepSmeltableWeapons') == 'false' and
+    "item.WeaponDesign != null" in method_body(S['Trading.cs'], "internal static bool IsSmeltable") and
+    ordered(method_body(S['Trading.cs'], "internal static bool MaySell"),
+            "if (Listed(s.AlwaysSet, item)) return true;",
+            "s.KeepSmeltableWeapons && IsSmeltable(item)") and
+    "_o.KeepSmeltableWeapons" in M)
+chk("1.17.0", "the purse holds the flat reserve and the days of wages together, worked out without the game",
+    option_default('KeepWageDays') == '3' and option_default('GoldReserve') == '300' and
+    'public static int Reserve(int goldReserve, int keepWageDays, int totalWage)' in S['TradeMath.cs'] and
+    'TaleWorlds' not in S['TradeMath.cs'] and
+    'TradeMath.Reserve(Options.Current.GoldReserve, Options.Current.KeepWageDays, wage)' in
+        method_body(S['Trading.cs'], "internal static int GoldHeldBack") and
+    'MobileParty.MainParty?.TotalWage' in S['Trading.cs'] and '_o.KeepWageDays' in M)
+chk("1.17.0", "the ships' capacity is asked for in one place, and the panel reads that same number",
+    option_default('UseFleetCapacity') == 'false' and the_ships_capacity_is_asked_in_one_place())
+chk("1.17.0", "with no MCM the settings file is read, with MCM it is not, and it carries every option",
+    "if (McmLoader.SettingsReachable) return;" in
+        method_body(S['Config.cs'], "internal static void Follow") and
+    ordered(S['SubModule.cs'], 'Guard.Run("McmLoader", McmLoader.TryLoad);', 'Config.Follow();') and
+    "typeof(Options).GetFields(BindingFlags.Public | BindingFlags.Instance)" in
+        between(S['Config.cs'], "private static FieldInfo[] Fields()", ";") and
+    S['Config.cs'].count("CultureInfo.InvariantCulture") >= 3 and
+    "Options.Bump();" in S['Config.cs'] and
+    'Log.Beside(FileName, mustExist: true)' in S['Config.cs'])
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and

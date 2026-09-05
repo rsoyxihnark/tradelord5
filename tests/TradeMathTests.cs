@@ -16,6 +16,45 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_purse_holds_back_the_flat_reserve_and_the_wages_together()
+        {
+            Assert.Equal(300, TradeMath.Reserve(300, 0, 250));
+            Assert.Equal(300, TradeMath.Reserve(300, 3, 0));
+            Assert.Equal(1050, TradeMath.Reserve(300, 3, 250));
+        }
+
+        [Fact]
+        public void The_wage_cover_grows_with_the_army_while_the_flat_reserve_stays_put()
+        {
+            Assert.Equal(360, TradeMath.Reserve(300, 3, 20));
+            Assert.Equal(3300, TradeMath.Reserve(300, 3, 1000));
+        }
+
+        [Fact]
+        public void A_figure_that_makes_no_sense_is_dropped_and_the_rest_of_the_hold_stands()
+        {
+            Assert.Equal(750, TradeMath.Reserve(-500, 3, 250));
+            Assert.Equal(300, TradeMath.Reserve(300, -3, 250));
+            Assert.Equal(300, TradeMath.Reserve(300, 3, -250));
+            Assert.Equal(0, TradeMath.Reserve(-500, 0, 250));
+        }
+
+        [Fact]
+        public void A_wage_bill_too_large_to_count_still_leaves_a_usable_reserve()
+        {
+            Assert.Equal(int.MaxValue, TradeMath.Reserve(300, 30, int.MaxValue));
+            Assert.True(TradeMath.Reserve(300, 30, int.MaxValue) > 0);
+        }
+
+        [Fact]
+        public void What_is_left_to_spend_is_the_purse_less_everything_held_back()
+        {
+            int held = TradeMath.Reserve(300, 3, 100);
+            Assert.Equal(400, TradeMath.Budget(1000, held, 0, 0, 0));
+            Assert.Equal(0, TradeMath.Budget(600, held, 0, 0, 0));
+        }
+
+        [Fact]
         public void What_a_lot_cost_per_unit_is_what_you_paid_for_it()
         {
             Assert.Equal(12, TradeMath.UnitBasis(Bought(10, 120), AveragePaid));
