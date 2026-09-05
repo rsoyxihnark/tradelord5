@@ -532,7 +532,7 @@ namespace TradeLord
         internal static bool MayHaul(ItemObject item, ISet<string> lockedKeys)
         {
             Options s = Options.Current;
-            if (!IsHaulAnimal(item) || item.NotMerchandise) return false;
+            if (!IsTruckAnimal(item) || item.NotMerchandise) return false;
             if (Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)) return false;
             return !IsLocked(lockedKeys, new EquipmentElement(item));
         }
@@ -747,8 +747,6 @@ namespace TradeLord
             MobileParty party = MobileParty.MainParty;
             return party != null && Carry.Room(party) < 1f;
         }
-
-        private static bool CargoIsFull() => _cargoWasFull || NoRoomToCarry();
 
         private static bool TradedThisVisit() => _soldThisVisit.Count > 0 || _boughtThisVisit.Count > 0;
 
@@ -1149,20 +1147,6 @@ namespace TradeLord
             return men > 0;
         }
 
-        internal static int FreeMountRoom(MobileParty party)
-        {
-            try
-            {
-                return HerdTally(party, out _, out _, out int mounts, out int foot)
-                    ? Math.Max(0, foot - mounts) : 0;
-            }
-            catch (Exception e)
-            {
-                Log.Error(e, "free mount room (the herd guard still holds)");
-                return 0;
-            }
-        }
-
         internal static int HerdRoomForLivestock(MobileParty party)
         {
             try
@@ -1558,7 +1542,7 @@ namespace TradeLord
                 TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
                                  Options.Current.MaxSpendPerVisit, _spentThisVisit, sim ? simSpent : 0);
 
-            var larder = new List<(ItemRosterElement el, int price)>();
+            var larder = new List<(ItemRosterElement el, int price, int worth)>();
             ItemRoster shopRoster = settlement.ItemRoster;
             for (int i = 0; i < shopRoster.Count; i++)
             {
@@ -1568,8 +1552,9 @@ namespace TradeLord
                 if (!TradePolicy.MayBuy(it, locked)) continue;
                 if (_soldThisVisit.Contains(it.StringId)) continue;
                 int price = market.GetItemPrice(el.EquipmentElement, party, false);
-                if (price <= 0) continue;
-                larder.Add((el, price));
+                int worth = TradePolicy.UnpaidWorth(it);
+                if (price <= 0 || price > worth) continue;
+                larder.Add((el, price, worth));
             }
             if (larder.Count == 0) return;
             larder.Sort((x, y) => x.price.CompareTo(y.price));
@@ -1578,18 +1563,19 @@ namespace TradeLord
             AutomatedTradeInProgress = true;
             try
             {
-                foreach (var (el, _) in larder)
+                foreach (var (el, _, worth) in larder)
                 {
                     if (directionError || shortfall <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
-                    int worth = TradePolicy.FoodValue(item);
-                    if (worth <= 0) continue;
+                    int fed = TradePolicy.FoodValue(item);
+                    if (fed <= 0) continue;
                     int remaining = el.Amount;
 
                     while (shortfall > 0 && remaining > 0)
                     {
                         int price = market.GetItemPrice(el.EquipmentElement, party, false);
-                        if (price <= 0 || price > Budget()) break;
+                        if (price <= 0 || price > worth) break;
+                        if (price >= Budget()) break;
                         if (settlement.IsVillage && remaining <= 1) break;
                         if (item.Weight > 0.01f && item.Weight > Carry.Room(party) - simWeight) break;
 
@@ -1619,7 +1605,7 @@ namespace TradeLord
                         }
                         stocked++;
                         remaining--;
-                        shortfall -= worth;
+                        shortfall -= fed;
                         Tally(detail, item, 1, price);
                     }
                 }
@@ -2011,8 +1997,7 @@ namespace TradeLord
             MobileParty party = MobileParty.MainParty;
             if (party == null) return;
             int herdRoom = HerdRoomForLivestock(party);
-            int mountRoom = FreeMountRoom(party);
-            if (herdRoom <= 0 && mountRoom <= 0) return;
+            if (herdRoom <= 0) return;
 
             SettlementComponent market = settlement.SettlementComponent;
             PartyBase shop = settlement.Party;
@@ -2028,9 +2013,6 @@ namespace TradeLord
                 TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
                                  Options.Current.MaxSpendPerVisit, _spentThisVisit, sim ? simSpent : 0);
 
-            int Ceiling(int worth) =>
-                (int)(worth * (CargoIsFull() ? Options.Current.PackAnimalFullCargoPremium : 1f));
-
             var stable = new List<(ItemRosterElement el, int price, int worth)>();
             ItemRoster shopRoster = settlement.ItemRoster;
             for (int i = 0; i < shopRoster.Count; i++)
@@ -2041,7 +2023,7 @@ namespace TradeLord
                 if (_soldThisVisit.Contains(it.StringId)) continue;
                 int price = market.GetItemPrice(el.EquipmentElement, party, false);
                 int worth = TradePolicy.UnpaidWorth(it);
-                if (price <= 0 || price > Ceiling(worth)) continue;
+                if (price <= 0 || price > worth) continue;
                 stable.Add((el, price, worth));
             }
             if (stable.Count == 0) return;
@@ -2055,14 +2037,13 @@ namespace TradeLord
                 {
                     if (directionError) break;
                     ItemObject item = el.EquipmentElement.Item;
-                    bool ridden = TradePolicy.IsSpareMount(item);
                     int remaining = el.Amount;
 
-                    while (remaining > 0 && (herdRoom > 0 || (ridden && mountRoom > 0)))
+                    while (remaining > 0 && herdRoom > 0)
                     {
                         int price = market.GetItemPrice(el.EquipmentElement, party, false);
-                        if (price <= 0 || price > Ceiling(worth)) break;
-                        if (price > Budget()) break;
+                        if (price <= 0 || price > worth) break;
+                        if (price >= Budget()) break;
                         if (settlement.IsVillage && remaining <= 1) break;
 
                         if (sim) simSpent += price;
@@ -2087,7 +2068,7 @@ namespace TradeLord
                         }
                         hauled++;
                         remaining--;
-                        if (ridden && mountRoom > 0) mountRoom--; else herdRoom--;
+                        herdRoom--;
                         Tally(detail, item, 1, price);
                     }
                 }
