@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.30.3
+
+- Installing Mod Options after playing without it no longer replaces every setting in TradeLord.ini with the ones TradeLord ships with.
+- TradeLord.log now says why your settings file was the one TradeLord read, whether it was saved more recently than the settings screen or was written when there was no settings screen at all.
+
 ## 1.30.2
 
 - Loading a saved game while you are inside a town or village no longer stops TradeLord from selling the animals that are slowing your party down as you ride back out.
