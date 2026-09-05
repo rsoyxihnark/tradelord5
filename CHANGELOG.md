@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.35.0
+
+- The language you pick now reaches the town menu entries as well, so Trade here now and Consult the TradeLord ledger change over the moment you pick it instead of waiting for you to load a campaign again.
+- Auto sell and auto buy now sit at the very top of the settings screen, above the language setting.
+- Observation shelf life is gone: a price you recorded yourself is kept for as long as you have it, rather than being thrown away once it reached a certain age. Whatever you had set is dropped the next time TradeLord reads your settings.
+- Quiet automation is called Silence trade messages now.
+- How many of each kind to keep is called How many of each kind of food to keep, and its hint says plainly that it counts the food itself rather than days, because Food reserve (days of supply) is the one that works in days.
+- It now starts at two of each kind rather than three.
+- The Reset button now puts your settings back at once instead of taking several seconds over it, because it only redraws the settings that had actually been changed.
+- The hint under Ledger panel hotkey (map screen) now says that one key name is all it takes, and that a word or an unknown key falls back to T.
+
 ## 1.34.0
 
 - TradeLord now trades with a caravan the moment you meet it on the road, before anyone says a word, instead of waiting for you to pick a line of dialogue first.

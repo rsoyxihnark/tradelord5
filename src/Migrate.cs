@@ -6,7 +6,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 4;
+        public const int Shape = 5;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -24,6 +24,7 @@ namespace TradeLord
             changed |= FoodVarietyBecameASwitchAndAnAmount(written, notes);
             changed |= SmeltableWeaponsBecameAChoiceOfThree(written, notes);
             changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);
+            changed |= TheObservationShelfLifeIsGone(written, notes);
             if (changed && notes != null)
                 notes.Add("your settings were written by an older TradeLord, so they have been brought forward from shape " +
                           from + " to shape " + Shape);
@@ -79,6 +80,17 @@ namespace TradeLord
             return true;
         }
 
+        private static bool TheObservationShelfLifeIsGone(IDictionary<string, string> written,
+                                                         ICollection<string> notes)
+        {
+            const string was = "ObservationShelfLifeDays";
+            if (!written.TryGetValue(was, out string held)) return false;
+            written.Remove(was);
+            notes?.Add("a price you recorded yourself is kept for as long as you have it now, so the observation " +
+                       "shelf life is gone and your setting of " + held + " is no longer read");
+            return true;
+        }
+
         private static bool PayingOverTheOddsForAHaulAnimalIsGone(IDictionary<string, string> written,
                                                                  ICollection<string> notes)
         {
@@ -97,7 +109,6 @@ namespace TradeLord
         private static readonly Dictionary<string, double[]> Bounds =
             new Dictionary<string, double[]>(StringComparer.OrdinalIgnoreCase)
             {
-                { "ObservationShelfLifeDays", new double[] { 0, 200 } },
                 { "ScanRadius", new double[] { 0, 1000 } },
                 { "MinTownStock", new double[] { 0, 100 } },
                 { "MaxTravelDays", new double[] { 0, 20 } },

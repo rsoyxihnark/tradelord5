@@ -28,7 +28,6 @@ namespace TradeLord
         public int Language = 0;
 
         public bool Omniscient = true;
-        public int ObservationShelfLifeDays = 45;
 
         public int CostBasisMode = 0;
 
@@ -67,7 +66,7 @@ namespace TradeLord
         public float MinProfitMargin = 0.15f;
         public int KeepFoodDays = 5;
         public bool KeepEveryFoodKind = false;
-        public int KeepPerFoodKind = 3;
+        public int KeepPerFoodKind = 2;
         public int ResupplyFoodDays = 3;
         public const int PolicyIgnore = 0, PolicySellOnly = 1, PolicyBuyOnly = 2, PolicyBuySell = 3;
 
