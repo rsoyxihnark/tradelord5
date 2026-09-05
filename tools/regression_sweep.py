@@ -3070,6 +3070,37 @@ chk("1.26.0", "one button at the top of the screen puts every setting back to wh
 chk("1.26.0", "what a player sets away from the shipped value is named in the log, at startup and whenever it changes",
     every_change_away_from_the_shipped_value_reaches_the_log())
 
+def the_file_holds_a_number_to_the_same_limits_the_screen_does():
+    def plain(text):
+        text = text.rstrip('f')
+        return str(int(float(text))) if float(text) == int(float(text)) else str(float(text))
+    ranged = {m.group(5): (plain(m.group(2)), plain(m.group(3))) for m in re.finditer(
+        r'\[SettingProperty(Integer|FloatingInteger)\("\{=TL\d+\}[^"]*",\s*([-\d.f]+),\s*([-\d.f]+),.*?'
+        r'public\s+(int|float)\s+(\w+)\s*\{', M, re.S)}
+    words = {m.group(1): len(re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(2))) for m in
+             re.finditer(r'string\[\]\s+(\w+Words)\s*=\s*\{(.*?)\n\s*\};', M, re.S)}
+    bound = method_body(M, "private void Bound")
+    picked = {}
+    for m in re.finditer(r'(?:Choice\((\w+Words), to\.(\w+)\)|new Dropdown<string>\((\w+Words), to\.(\w+)\))', bound):
+        name, field = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+        picked[field] = ("0", str(words[name] - 1))
+    table = {m.group(1): (plain(m.group(2)), plain(m.group(3))) for m in re.finditer(
+        r'\{ "(\w+)", new double\[\] \{ ([-\d.]+), ([-\d.]+) \} \}', S['Migrate.cs'])}
+    wanted = dict(ranged)
+    wanted.update(picked)
+    taken = method_body(S['Config.cs'], "private static bool Taken")
+    within = method_body(S['Config.cs'], "private static double Within")
+    return (len(ranged) >= 23 and len(picked) == 6 and table == wanted
+            and "(int)Within(field, int.Parse(" in taken
+            and "(float)Within(field, float.Parse(" in taken
+            and "double kept = Limits.Kept(field.Name, asked);" in within
+            and "if (double.IsNaN(asked)) return edge[0];" in
+                method_body(S['Migrate.cs'], "public static double Kept")
+            and 'Limits.Range(field.Name)' in within)
+
+chk("1.26.1", "a number in the settings file is held to the same limits the settings screen holds it to",
+    the_file_holds_a_number_to_the_same_limits_the_screen_does())
+
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
     'git log -1 --format=%b "$GITHUB_SHA" > release-notes.md' not in WORKFLOW and

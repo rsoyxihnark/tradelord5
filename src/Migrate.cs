@@ -77,4 +77,62 @@ namespace TradeLord
             return true;
         }
     }
+
+    public static class Limits
+    {
+        private static readonly Dictionary<string, double[]> Bounds =
+            new Dictionary<string, double[]>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "ObservationShelfLifeDays", new double[] { 0, 200 } },
+                { "ScanRadius", new double[] { 0, 1000 } },
+                { "MinTownStock", new double[] { 0, 100 } },
+                { "MaxTravelDays", new double[] { 0, 20 } },
+                { "MaxVillageTravelDays", new double[] { 0, 10 } },
+                { "MinProfitMargin", new double[] { 0, 2 } },
+                { "EconomySettlingDays", new double[] { 0, 100 } },
+                { "TradeXpMultiplier", new double[] { 0, 3 } },
+                { "MarkerMaxTravelDays", new double[] { 0, 10 } },
+                { "KeepFoodDays", new double[] { 0, 30 } },
+                { "KeepPerFoodKind", new double[] { 1, 50 } },
+                { "MaxLootTier", new double[] { 0, 6 } },
+                { "BestSellTownTolerance", new double[] { 0.5, 1 } },
+                { "GoldReserve", new double[] { 0, 100000 } },
+                { "KeepWageDays", new double[] { 0, 30 } },
+                { "BuyCapPerItem", new double[] { 0, 500 } },
+                { "BuyValueCapPerItem", new double[] { 0, 50000 } },
+                { "MaxHeldPerItem", new double[] { 0, 5000 } },
+                { "MaxSpendPerVisit", new double[] { 0, 100000 } },
+                { "ResaleSafetyFactor", new double[] { 0.5, 1 } },
+                { "ResupplyFoodDays", new double[] { 0, 30 } },
+                { "PackAnimalFullCargoPremium", new double[] { 1, 3 } },
+                { "MaxHeldShare", new double[] { 0, 1 } },
+                { "Language", new double[] { 0, 3 } },
+                { "FoodPolicy", new double[] { 0, 3 } },
+                { "CraftingPolicy", new double[] { 0, 3 } },
+                { "LivestockPolicy", new double[] { 0, 3 } },
+                { "CostBasisMode", new double[] { 0, 2 } },
+                { "KeepSmeltableWeapons", new double[] { 0, 2 } },
+            };
+
+        public static bool Knows(string name) => name != null && Bounds.ContainsKey(name);
+
+        public static double Kept(string name, double asked)
+        {
+            if (name == null || !Bounds.TryGetValue(name, out double[] edge)) return asked;
+            if (double.IsNaN(asked)) return edge[0];
+            if (asked < edge[0]) return edge[0];
+            if (asked > edge[1]) return edge[1];
+            return asked;
+        }
+
+        public static string Range(string name) =>
+            Bounds.TryGetValue(name, out double[] edge)
+                ? Said(edge[0]) + " and " + Said(edge[1])
+                : "";
+
+        private static string Said(double edge) =>
+            edge == Math.Floor(edge)
+                ? ((long)edge).ToString(CultureInfo.InvariantCulture)
+                : edge.ToString("0.####", CultureInfo.InvariantCulture);
+    }
 }
