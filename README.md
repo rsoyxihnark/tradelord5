@@ -2,7 +2,7 @@
 - It shows you the best ways to buy and sell, right in the item tooltip and in a ledger.
 - It can buy & sell for you automatically as you enter a settlement.
 - It ranks the trade routes worth travelling on a panel. Each route's profit is evaluated on 9+ factors and travel time on 5+. Then the two are scored together for the confidence value shown, respecting how the price moves because of the NPC caravans en route there. Profit per travel day is calculated by real pathfinding at your party's own speed, with the cargo you are carrying, from where you are, to the buy town, on to the sell town.
-- You can change how it does any of it, or turn any of it off.
+- You can change how it works. The default settings are thoroughly tested in game and work great to get you to "take off speed" as fast as possible.
 
 ## Everything it does
 
@@ -21,7 +21,7 @@
 - ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get
 - ✅ A confidence score on each route: profit per day, discounted by how much of the good the market you are buying from has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
-- ✅ The gold in the till of the town you would sell to, counted in, so it never plans a sale nobody can pay for
+- ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
 - ✅ Click any town to jump the camera there and pin a marker on it
 - ✅ The best town for the cargo you are carrying, marked on the map for you
 - ✅ The five workshops in Calradia earning the most right now, with their town and their owner, on that same panel. In honest-merchant mode it shows yours instead
@@ -35,10 +35,10 @@
 - ✅ Sells and buys the moment you enter a market by default
 - ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has at whatever it asks, before it trades for profit
 - ✅ Buys and sells livestock, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
-- ✅ Buys any beast that carries for you, mules and sumpter horses and riding horses alike, when a market is asking no more than one is worth, so the party carries more and your foot troops get something to ride. While your cargo is full it will pay half again as much for one, because that is when the room is worth having. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
+- ✅ Buys any animal that carries for you, mules and sumpter horses and riding horses alike, when a market is asking no more than one is worth, so the party carries more and your foot troops get something to ride. While your cargo is full it will pay half again as much for one, because that is when the room is worth having. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
-- ✅ Holds cargo back for the market that pays best rather than dumping it one town short. Always on for goods you never bought, such as looted gear; off by default for goods you bought, whose profit margin already covers it
+- ✅ Holds cargo back for the market that pays best rather than dumping it one town short, once you switch it on. Off out of the box, so looted gear goes to the first market that can pay for it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
 - ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good
@@ -50,7 +50,7 @@
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen
 - ✅ A dry run that simulates every trade it would have made, and shows you the estimate (moves nothing)
-- ✅ A cheat, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and you can ask them to let you go, and they will, with no fight and no ransom
+- ✅ Free passage past bandits, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and you can ask them to let you go, and they will, with no fight and no ransom
 
 **What it doesn't touch**
 
@@ -60,7 +60,7 @@
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus
 - ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
-- ✅ Your gold reserve, three days of your troops' wages on top of it, and anything past your spending cap for the visit
+- ✅ Your gold reserve of 300 denars, three days of your troops' wages on top of it, and anything past your spending cap for the visit
 - ✅ Smithing materials such as iron ore, ingots, charcoal and hardwood, once you switch their policy to leave them alone, off by default
 - ✅ Any good you put on the never-sell or never-buy list, named by its item id or by the name on screen
 - ✅ More livestock than your party can drive, so a purchase never slows you down
