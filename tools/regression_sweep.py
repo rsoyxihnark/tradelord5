@@ -2906,6 +2906,25 @@ def no_hint_still_claims_a_mount_is_never_sold():
 chk("1.22.0", "no hint still tells the player a mount can never be sold",
     no_hint_still_claims_a_mount_is_never_sold())
 
+def a_dropdown_only_ever_gains_choices_at_the_end():
+    lists = {}
+    for m in re.finditer(r'string\[\]\s+(\w+Words)\s*=\s*\{(.*?)\n\s*\};', M, re.S):
+        lists[m.group(1)] = [re.sub(r'\{=\w+\}', '', w)
+                             for w in re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(2))]
+    shipped = {
+        'LanguageWords': ['English', 'T\\u00FCrk\\u00E7e',
+                          '\\u0420\\u0443\\u0441\\u0441\\u043A\\u0438\\u0439', '\\u7B80\\u4F53\\u4E2D\\u6587'],
+        'PolicyWords': ['Leave alone', 'Sell only', 'Buy only', 'Buy and sell'],
+        'SmeltableWords': ['Sell them', 'Keep every one', 'Keep the ones you have not learned'],
+        'BasisWords': ['Average of what you paid', 'Last price you paid', 'Cheapest market you know'],
+    }
+    return (set(lists) == set(shipped)
+            and all(lists[k][:len(v)] == v for k, v in shipped.items())
+            and 'keep(from.SelectedIndex);' in method_body(M, "private static void Follows"))
+
+chk("1.23.1", "a dropdown's choices keep the order they shipped in, so a saved setting never comes back meaning something else",
+    a_dropdown_only_ever_gains_choices_at_the_end())
+
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
     'git log -1 --format=%b "$GITHUB_SHA" > release-notes.md' not in WORKFLOW and
