@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.27.4
+
+- The language you pick on the TradeLord settings screen now reaches the screen itself: the name and hint of every setting, the headings above them and the Reset button are all spoken in it as you pick it, instead of staying in the old language until you restart the game.
+- The words inside each list of choices follow the next time you open the settings screen, and the hint under the language setting now says as much.
+
 ## 1.27.3
 
 - Your settings in TradeLord.ini are no longer written over with the shipped ones as the game starts, which happened whenever Mod Options had not finished loading yet.
