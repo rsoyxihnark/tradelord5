@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.28.1
+
+- Getting your party back up to speed now works out how many haul animals your cargo needs the same way TradeLord works out what your party can carry, so a party that never puts to sea will part with a spare haul animal instead of holding on to every one of them.
+
 ## 1.28.0
 
 - Getting your party back up to speed now sells in a set order: livestock first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all.
