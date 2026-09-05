@@ -332,11 +332,13 @@ def every_setting_has_a_hint():
 
 def every_setting_line_is_translatable():
     lit = r'"((?:[^"\\]|\\.)*)"'
-    names = re.findall(r'\[SettingProperty(?:Bool|Integer|FloatingInteger|Text|Dropdown)\(' + lit, M)
+    names = re.findall(r'\[SettingProperty(?:Bool|Integer|FloatingInteger|Text|Dropdown|Button)\(' + lit, M)
     hints = re.findall(r'HintText = ' + lit, M)
     groups = re.findall(r'\[SettingPropertyGroup\(' + lit + r'[^\]]*\)\]', M)
+    content = re.findall(r'Content = ' + lit, M)
     return (len(names) > 40 and len(names) == len(hints) == len(groups)
-            and all(re.match(r'\{=TL\d+\}', text) for text in names + hints + groups))
+            and len(content) == len(re.findall(r'\[SettingPropertyButton\(', M)) >= 1
+            and all(re.match(r'\{=TL\d+\}', text) for text in names + hints + groups + content))
 
 def settings_declared_in_display_order():
     seen = {}
@@ -728,8 +730,10 @@ def each_preset_gets_its_own_settings():
             and 'private Options _o;' in M
             and 'made.Bound(new Options());' in made
             and 'Options.Current' not in made
-            and M.count('Options.Current') == 2
+            and M.count('Options.Current') == 3
             and 'held.Bound(Options.Current);' in method_body(M, "internal static void Reseat")
+            and 'field.SetValue(Options.Current, field.GetValue(stock));' in
+                method_body(M, "internal static void Reset")
             and '_o = to;' in method_body(M, "private void Bound")
             and all('Follows(value, () => _o.' + name in M
                     for name in ('Language', 'FoodPolicy', 'CraftingPolicy',
@@ -2336,9 +2340,10 @@ def the_settings_screen_follows_the_mods_own_language():
             and 'typeof(SettingsPropertyDefinition)' in follow
             and all(field in follow for field in ('"<DisplayName>k__BackingField"',
                                                   '"<HintText>k__BackingField"',
-                                                  '"<GroupName>k__BackingField"'))
+                                                  '"<GroupName>k__BackingField"',
+                                                  '"<Content>k__BackingField"'))
             and 'postfix: new HarmonyMethod(typeof(ScreenTongue), nameof(Spoken))' in follow
-            and spoken.count('Say(_') == 3)
+            and spoken.count('Say(_') == 4)
 
 def the_screen_reads_the_translation_the_mod_already_has():
     said = method_body(S['Tongue.cs'], "internal static string Said")
@@ -3024,6 +3029,46 @@ chk("1.24.0", "the settings file carries its own shape, is lifted before anythin
     a_settings_file_says_which_shape_it_is_in())
 chk("1.24.0", "the lift needs nothing from the game, says nothing itself, and is covered by tests the build runs",
     the_lift_needs_nothing_from_the_game_and_is_covered_by_tests())
+
+def one_button_puts_every_setting_back_and_sits_at_the_top():
+    reset = method_body(M, "internal static void Reset")
+    button = re.search(r'\[SettingPropertyButton\("\{=(TL\d+)\}[^"]*", Order = (\d+)[^\]]*?'
+                       r'Content = "\{=(TL\d+)\}[^"]*",\s*\n\s*HintText = "\{=(TL\d+)\}[^"]*"\)\]\s*\n'
+                       r'\s*\[SettingPropertyGroup\("\{=TL100\}Language", GroupOrder = (\d+)\)\]\s*\n'
+                       r'\s*public Action (\w+) => Reset;', M, re.S)
+    en = spoken(ENGLISH)
+    return (button is not None
+            and button.group(2) == "0" and button.group(5) == "0"
+            and all(en.get(tag) for tag in (button.group(1), button.group(3), button.group(4)))
+            and 'foreach (FieldInfo field in typeof(Options).GetFields(BindingFlags.Public | BindingFlags.Instance))'
+                in reset
+            and "field.SetValue(Options.Current, field.GetValue(stock));" in reset
+            and "var stock = new Options();" in reset
+            and ordered(reset, "var stock = new Options();", "field.SetValue(Options.Current",
+                        "Reseat();", "shown.OnPropertyChanged(told.Name);", "Options.Bump();")
+            and re.search(r'SettingPropertyDropdown\("\{=TL250\}Language", Order = 1,', M) is not None)
+
+def every_change_away_from_the_shipped_value_reaches_the_log():
+    follow = method_body(S['Config.cs'], "internal static void Follow")
+    away = method_body(S['Config.cs'], "private static void SayWhatIsAwayFromStock")
+    said = method_body(S['Config.cs'], "private static void SayWhatChanged")
+    flush = method_body(S['Config.cs'], "internal static void Flush")
+    return (ordered(follow, "Guard.Run(\"Config\", Read);", "Guard.Run(\"Config.Away\", SayWhatIsAwayFromStock);",
+                    "_lastSeen = Snapshot();", "Options.Changed = Noted;")
+            and "var stock = new Options();" in away and "var stock = new Options();" in said
+            and "TradeLord ships with" in away and "TradeLord ships with" in said
+            and "every setting is at the value TradeLord ships with" in away
+            and "away from what TradeLord ships with" in away
+            and "is back at what it ships with" in said
+            and "_lastSeen = now;" in said
+            and ordered(flush, "_dirty = false;", "Guard.Run(\"Config.Changed\", SayWhatChanged);",
+                        "Guard.Run(\"Config.Flush\"")
+            and "private static string Shown(FieldInfo field) => Shown(field, Options.Current);" in S['Config.cs'])
+
+chk("1.26.0", "one button at the top of the screen puts every setting back to what the module ships with",
+    one_button_puts_every_setting_back_and_sits_at_the_top())
+chk("1.26.0", "what a player sets away from the shipped value is named in the log, at startup and whenever it changes",
+    every_change_away_from_the_shipped_value_reaches_the_log())
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
