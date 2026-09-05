@@ -386,8 +386,8 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool QuietAutomation { get => _o.QuietAutomation; set { _o.QuietAutomation = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL269}Cheat: bandits let you go for free", Order = 18, RequireRestart = false,
-            HintText = "{=TL369}Adds a line to the encounter screen when you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is a cheat, and it is ON by default; switch it off for a campaign you want to fight your own way out of.")]
+        [SettingPropertyBool("{=TL269}Free passage from bandits", Order = 18, RequireRestart = false,
+            HintText = "{=TL369}Adds a line to the encounter screen when you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is ON by default; switch it off for a campaign you want to fight your own way out of.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool BanditGetawayCheat { get => _o.BanditGetawayCheat; set { _o.BanditGetawayCheat = value; Options.Bump(); } }
 
@@ -426,12 +426,12 @@ namespace TradeLord.Mcm
         public int MaxLootTier { get => _o.MaxLootTier; set { _o.MaxLootTier = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL229}Hold cargo for the best market", Order = 6, RequireRestart = false,
-            HintText = "{=TL329}Skip selling here when this market pays clearly less than the best known market. Goods you never bought have no cost basis, so the floor always applies to those; this setting controls whether it also applies to goods you bought, which the profit margin already covers.")]
+            HintText = "{=TL329}Skip selling here when this market pays clearly less than the best known market, so your cargo waits for the town that pays for it. It holds back everything you carry, what you bought and what you looted alike. OFF by default, in which case a good you bought still has to clear your profit margin, and looted gear goes to the first market that can pay for it.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public bool PreferBestSellTown { get => _o.PreferBestSellTown; set { _o.PreferBestSellTown = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL230}Best-market tolerance", 0.5f, 1f, "#0%", Order = 7, RequireRestart = false,
-            HintText = "{=TL330}Sell here anyway if this market pays at least this fraction of the best known price. This always applies to goods you never bought, such as loot; with the setting above ON it applies to goods you bought too.")]
+            HintText = "{=TL330}Sell here anyway if this market pays at least this fraction of the best known price. It does nothing while the setting above is OFF.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public float BestSellTownTolerance { get => _o.BestSellTownTolerance; set { _o.BestSellTownTolerance = value; Options.Bump(); } }
 
@@ -506,7 +506,7 @@ namespace TradeLord.Mcm
         public string AlwaysBuyItems { get => _o.AlwaysBuyItems; set { _o.AlwaysBuyItems = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL267}Buy pack animals and horses", Order = 12, RequireRestart = false,
-            HintText = "{=TL367}Buy any beast that carries for you, mules and sumpter horses and riding horses alike, whenever a market is asking no more than one is worth, so your party can carry more and your foot troops get something to ride. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that by the premium below. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default.")]
+            HintText = "{=TL367}Buy any animal that carries for you, mules and sumpter horses and riding horses alike, whenever a market is asking no more than one is worth, so your party can carry more and your foot troops get something to ride. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that by the premium below. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public bool BuyPackAnimals { get => _o.BuyPackAnimals; set { _o.BuyPackAnimals = value; Options.Bump(); } }
 
