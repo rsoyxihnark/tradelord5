@@ -1027,9 +1027,22 @@ chk("1.3.24", "livestock reserved only after ordinary food",
 
 chk("1.3.25", "routes pair every top buy market against every top sell market",
     "foreach (var (to, sellPrice) in sells)" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"))
-chk("1.3.25", "the per-visit spend cap reaches route quantities",
-    "spendCap = Options.Current.MaxSpendPerVisit;" in S['Ledger.cs'] and
-    "if (spendCap > 0) stocked = Math.Min(stocked, spendCap / buyPrice);" in S['Ledger.cs'])
+chk("1.3.25", "the purse, with the per-visit spend cap inside it, reaches route quantities",
+    "int purse = TradeActionBehavior.PurseForAVisit();" in S['Ledger.cs'] and
+    "if (spendCap <= 0 || purse < spendCap) spendCap = purse;" in S['Ledger.cs'] and
+    "if (spendCap > 0) stocked = Math.Min(stocked, spendCap / buyPrice);" in S['Ledger.cs'] and
+    "Options.Current.MaxSpendPerVisit, 0, 0);" in S['Trading.cs'])
+chk("1.32.0", "a purse with nothing spendable in it quotes no route at all",
+    "if (purse <= 0) return routes;" in
+    method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"))
+chk("1.32.0", "the route scan is redone once the purse moves, so a quote is never priced against stale gold",
+    "private int _routePurse = -1;" in S['Ledger.cs'] and
+    "|| _routePurse != purse" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes") and
+    "_routePurse = purse;" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes"))
+chk("1.32.0", "an empty ledger names the purse when the purse is the reason, not the travel ceilings",
+    "TL377" in strings_declared() and
+    (lambda b: "TradeActionBehavior.PurseForAVisit() <= 0" in b
+           and b.index("TL377") < b.index("TL69"))(method_body(S['Panel.cs'], "private void Refresh")))
 chk("1.3.25", "the herd probe runs only once livestock is actually on the shelf",
     "int herdRoom = -1;" in method_body(S['Trading.cs'], "public static void ExecuteQuickBuy") and
     "if (herdRoom < 0) herdRoom = HerdRoomForLivestock(MobileParty.MainParty);" in
@@ -1660,7 +1673,7 @@ chk("1.6.5", "an item list is parsed once per edit and never left unset",
 chk("1.6.5", "ending a campaign drops trade messages queued but not yet shown",
     "_pending.Clear();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.5", "the route scan is reused within the hour and dropped with the market rankings",
-    "_routes = ScanRoutes();" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes") and
+    "_routes = ScanRoutes(purse);" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes") and
     "_routes = null;" in method_body(S['Ledger.cs'], "internal void ForgetMarketRankings") and
     "_routeGen != Options.Generation" in S['Ledger.cs'])
 chk("1.6.5", "a village keeping its last unit of each good says so",
@@ -2000,8 +2013,14 @@ def what_is_left_to_spend_is_worked_out_in_one_place():
             "            TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),\n"
             "                             Options.Current.MaxSpendPerVisit, _spentThisVisit, 0);"
                 in S['Trading.cs']
-            and S['Trading.cs'].count("TradeMath.Budget(") == 5
-            and S['Trading.cs'].count("GoldHeldBack()") == 7
+            and "internal static int PurseForAVisit() =>\n"
+                "            TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),\n"
+                "                             Options.Current.MaxSpendPerVisit, 0, 0);"
+                in S['Trading.cs']
+            and S['Trading.cs'].count("TradeMath.Budget(") == 6
+            and S['Trading.cs'].count("GoldHeldBack()") == 8
+            and "Hero.MainHero.Gold" not in S['Ledger.cs']
+            and "GoldReserve" not in S['Ledger.cs']
             and "Options.Current.GoldReserve" not in
                 method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
 

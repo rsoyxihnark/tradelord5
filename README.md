@@ -22,6 +22,7 @@
 - ✅ A confidence score on each route: profit per day, discounted by how much of the good the market you are buying from has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
 - ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
+- ✅ The gold in your own purse counted in the same way, less your gold reserve and your spending cap for the visit, so a route never quotes you more of a good than you could pay for, and the panel says so when your purse is what is holding it back
 - ✅ Click any town to jump the camera there and pin a marker on it
 - ✅ The best town for the cargo you are carrying, marked on the map for you
 - ✅ The five workshops in Calradia earning the most right now, with their town and their owner, on that same panel. In honest-merchant mode it shows yours instead

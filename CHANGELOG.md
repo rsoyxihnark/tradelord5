@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.32.0
+
+- The ledger panel now counts the gold in your purse when it works out how many of a good a route is worth, so it no longer offers you 32 of something you can only pay for 3 of.
+- Your gold reserve is held back from that count too, the same way it is when TradeLord buys for you, and so is your spending cap for the visit.
+- When your purse is what is holding the ledger back, the panel now says so and names your gold and your reserve, instead of blaming your travel ceilings.
+- The feature list now says your own purse is counted into every route the ledger quotes.
+
 ## 1.31.1
 
 - The feature list now calls a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse and a Pack Camel haul animals where it describes getting your party back up to speed, the same name the settings screen and the rest of the list already use.
