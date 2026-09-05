@@ -420,6 +420,15 @@ namespace TradeLord
             return !IsLocked(lockedKeys, new EquipmentElement(item));
         }
 
+        internal static bool MaySpare(ItemObject item, ISet<string> lockedKeys)
+        {
+            Options s = Options.Current;
+            if (!IsSpareMount(item) || item.NotMerchandise) return false;
+            if (Listed(s.NeverSet, item)) return false;
+            if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)) return false;
+            return !IsLocked(lockedKeys, new EquipmentElement(item));
+        }
+
         internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys) =>
             MayBuy(item, lockedKeys) &&
             (Listed(Options.Current.AlwaysSet, item) ||
@@ -684,6 +693,7 @@ namespace TradeLord
                         args => Guard.Run("Action.QuickTradeMenu", () =>
                         {
                             ExecuteQuickSell(Settlement.CurrentSettlement);
+                            ExecuteHerdRelief(Settlement.CurrentSettlement);
                             ExecuteResupply(Settlement.CurrentSettlement);
                             ExecuteHaulage(Settlement.CurrentSettlement);
                             ExecuteQuickBuy(Settlement.CurrentSettlement);
@@ -788,6 +798,7 @@ namespace TradeLord
                 if (!AnnounceAutomation(settlement))
                 {
                     if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
+                    if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
                     if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);
                     if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);
                     if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
@@ -1038,6 +1049,46 @@ namespace TradeLord
             catch (Exception e)
             {
                 if (!_herdLookupFailed) { _herdLookupFailed = true; Log.Error(e, "herd guard (livestock buying disabled, selling unaffected)"); }
+                return 0;
+            }
+        }
+
+        private static DefaultPartySpeedCalculatingModel HerdModel()
+        {
+            var model = Campaign.Current?.Models?.PartySpeedCalculatingModel
+                as DefaultPartySpeedCalculatingModel;
+            if (model == null || _herdLookupFailed) return null;
+            if (_herdModifier == null)
+                _herdModifier = typeof(DefaultPartySpeedCalculatingModel).GetMethod(
+                    "GetHerdingModifier", BindingFlags.Instance | BindingFlags.NonPublic);
+            return _herdModifier == null ? null : model;
+        }
+
+        internal static int SpareMountsToShed(MobileParty party)
+        {
+            try
+            {
+                if (party == null) return 0;
+                DefaultPartySpeedCalculatingModel model = HerdModel();
+                if (model == null) return 0;
+                if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return 0;
+                int spare = Math.Max(0, mounts - foot);
+                if (spare <= 0) return 0;
+                int driven = herd + spare;
+                float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });
+                int shed = 0;
+                while (shed < spare &&
+                       (float)_herdModifier.Invoke(model, new object[] { men, driven - shed }) != neutral)
+                    shed++;
+                return shed;
+            }
+            catch (Exception e)
+            {
+                if (!_herdLookupFailed)
+                {
+                    _herdLookupFailed = true;
+                    Log.Error(e, "spare mount check (no mount is sold)");
+                }
                 return 0;
             }
         }
@@ -1582,6 +1633,107 @@ namespace TradeLord
             Toast(msg, ToastSpend);
         }
 
+        public static void ExecuteHerdRelief(Settlement settlement, bool quiet = false)
+        {
+            if (!Options.Current.SellSpareMounts) return;
+            if (!MarketOpen(settlement, quiet)) return;
+
+            MobileParty party = MobileParty.MainParty;
+            if (party == null) return;
+            int shed = SpareMountsToShed(party);
+            if (shed <= 0) return;
+
+            SettlementComponent market = settlement.SettlementComponent;
+            PartyBase shop = settlement.Party;
+            PartyBase me = party.Party;
+            bool sim = Options.Current.SimulationMode;
+            ISet<string> locked = TradePolicy.LockedKeys();
+
+            var stable = new List<(ItemRosterElement el, int price)>();
+            ItemRoster mine = party.ItemRoster;
+            for (int i = 0; i < mine.Count; i++)
+            {
+                ItemRosterElement el = mine.GetElementCopyAtIndex(i);
+                ItemObject it = el.EquipmentElement.Item;
+                if (el.Amount <= 0 || !TradePolicy.MaySpare(it, locked)) continue;
+                int price = market.GetItemPrice(el.EquipmentElement, party, true);
+                if (price <= 0) continue;
+                stable.Add((el, price));
+            }
+            if (stable.Count == 0) return;
+            stable.Sort((x, y) => x.price.CompareTo(y.price));
+
+            int sold = 0, simGold = 0, simTill = market.Gold;
+            bool directionError = false;
+            var detail = new Dictionary<ItemObject, (int count, int gold)>();
+
+            int goldBefore = Hero.MainHero.Gold;
+            AutomatedTradeInProgress = true;
+            try
+            {
+                foreach (var (el, _) in stable)
+                {
+                    if (directionError || shed <= 0) break;
+                    ItemObject item = el.EquipmentElement.Item;
+                    int remaining = el.Amount;
+
+                    while (remaining > 0 && shed > 0)
+                    {
+                        int price = market.GetItemPrice(el.EquipmentElement, party, true);
+                        if (price <= 0) break;
+                        if ((sim ? simTill : market.Gold) < price) break;
+
+                        if (sim)
+                        {
+                            simTill -= price;
+                            simGold += price;
+                        }
+                        else
+                        {
+                            int before = Hero.MainHero.Gold;
+                            OpenTransaction();
+                            try { SellItemsAction.Apply(me, shop, el, 1, settlement); }
+                            finally { CloseTransaction(); }
+                            price = Hero.MainHero.Gold - before;
+                            if (price < 0)
+                            {
+                                Log.Write("ERROR: selling a spare mount removed " + (-price) + " gold - transaction direction changed on this game version. Spare mount selling aborted.");
+                                directionError = true;
+                                break;
+                            }
+                            if (price == 0) break;
+                            LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
+                            _soldThisVisit.Add(item.StringId);
+                        }
+                        sold++;
+                        remaining--;
+                        shed--;
+                        Tally(detail, item, 1, price);
+                    }
+                }
+            }
+            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+
+            if (sold <= 0) return;
+
+            int gained = sim ? simGold : Hero.MainHero.Gold - goldBefore;
+            _runMovedGoods = true;
+            Log.Write((sim ? "spare mounts (simulated, best case): " : "spare mounts: ") + sold +
+                      " sold, +" + gained + " gold at " + settlement.Name);
+            LogDetail(selling: true, sim, detail);
+            if (!sim)
+            {
+                CoinSound();
+                LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
+            }
+            TextObject msg = Tongue.Text(sim
+                ? "{=TL117}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars to get your party back up to speed."
+                : "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.");
+            msg.SetTextVariable("ITEMS", ItemSummary(detail, sold));
+            msg.SetTextVariable("GOLD", gained);
+            if (!Muted(quiet)) Toast(msg, ToastGain);
+        }
+
         public static void ExecuteHaulage(Settlement settlement, bool quiet = false)
         {
             if (!Options.Current.BuyPackAnimals) return;
@@ -1654,7 +1806,7 @@ namespace TradeLord
                             price = before - Hero.MainHero.Gold;
                             if (price < 0)
                             {
-                                Log.Write("ERROR: buying a pack animal added " + (-price) + " gold - transaction direction changed on this game version. Pack animal buying aborted.");
+                                Log.Write("ERROR: buying a haul animal added " + (-price) + " gold - transaction direction changed on this game version. Haul animal buying aborted.");
                                 directionError = true;
                                 break;
                             }
@@ -1677,7 +1829,7 @@ namespace TradeLord
 
             int spent = sim ? simSpent : goldBefore - Hero.MainHero.Gold;
             _runMovedGoods = true;
-            Log.Write((sim ? "pack animals (simulated, best case): " : "pack animals: ") + hauled +
+            Log.Write((sim ? "haul animals (simulated, best case): " : "haul animals: ") + hauled +
                       " bought, -" + spent + " gold at " + settlement.Name);
             LogDetail(selling: false, sim, detail);
             if (!sim)
