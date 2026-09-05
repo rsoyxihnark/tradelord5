@@ -79,6 +79,30 @@ namespace TradeLord.Tests
             Assert.Empty(notes);
         }
 
+        [Theory]
+        [InlineData("1.5")]
+        [InlineData("1")]
+        [InlineData("3")]
+        public void PayingOverTheOddsForAHaulAnimalIsDroppedAndNamed(string held)
+        {
+            var written = File("PackAnimalFullCargoPremium", held, "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(2, written, notes));
+            Assert.False(written.ContainsKey("PackAnimalFullCargoPremium"));
+            Assert.Equal("800", written["GoldReserve"]);
+            Assert.NotEmpty(notes);
+        }
+
+        [Fact]
+        public void AFileWithoutTheOldHaulAnimalPremiumIsLeftAlone()
+        {
+            var written = File("GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.False(Migration.Lift(Migration.Shape, written, notes));
+            Assert.Single(written);
+            Assert.Empty(notes);
+        }
+
         [Fact]
         public void LiftingTwiceChangesNothingTheSecondTime()
         {
@@ -102,7 +126,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(2, Migration.Shape);
+            Assert.Equal(3, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));
