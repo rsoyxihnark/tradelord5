@@ -148,7 +148,7 @@ namespace TradeLord.Mcm
             Content = "{=TL277}Reset",
             HintText = "{=TL376}Puts every TradeLord setting back to the value it ships with, in one go. It takes hold at once and is written to TradeLord.ini as well, so nothing is left half changed. Your never sell, always sell, never buy and always buy lists are emptied too, and what changed is written to TradeLord.log.")]
         [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
-        public Action ResetEverything => Reset;
+        public Action ResetEverything { get; set; } = Reset;
 
         [SettingPropertyDropdown("{=TL250}Language", Order = 1, RequireRestart = false,
             HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. Town menu entries take it when you next load a campaign.")]
