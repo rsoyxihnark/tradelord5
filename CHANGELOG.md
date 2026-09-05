@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.27.3
+
+- Your settings in TradeLord.ini are no longer written over with the shipped ones as the game starts, which happened whenever Mod Options had not finished loading yet.
+- TradeLord reads the file as it stands in that case, so anything you set by hand survives, and the settings screen takes over as soon as Mod Options is ready.
+
 ## 1.27.2
 
 - Bannerlord no longer closes itself as it reaches the main menu when TradeLord and Mod Options are installed together, which it has done since 1.26.0.

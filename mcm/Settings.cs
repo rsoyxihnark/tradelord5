@@ -13,12 +13,13 @@ namespace TradeLord.Mcm
 {
     public static class McmSettingsBootstrap
     {
-        public static void Init()
+        public static bool Init()
         {
             Settings instance = Settings.Instance;
             instance?.FollowLanguage();
             Guard.Run("Mcm.ScreenTongue", ScreenTongue.Follow);
             McmLoader.Reseat = Settings.Reseat;
+            return instance != null;
         }
     }
 
