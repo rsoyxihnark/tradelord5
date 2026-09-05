@@ -813,11 +813,17 @@ chk("1.3.2", "ExcludeHostileTowns blocks trading, not just scans",
     (lambda gate: "IsMarket(s)" in gate
               and "Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)" in gate)
     (between(S['Trading.cs'], "private static bool CanTradeHere(Settlement s) =>", ";")) and
-    "if (!CanTradeHere(settlement)) return false;" in method_body(S['Trading.cs'], "private static bool MarketOpen"))
-chk("1.3.18", "neither pass trades before the settling delay is served",
-    (lambda b: ordered(b, "int wait = Options.Current.EconomySettlingDays;", "if (wait <= 0) return true;",
-                       "CampaignStartTime.ElapsedDaysUntilNow", "if (elapsed >= wait) return true;"))
-    (method_body(S['Trading.cs'], "private static bool MarketOpen")) and
+    "CanTradeHere(settlement)" in
+        between(S['Trading.cs'], "private static bool MarketOpen(Settlement settlement, bool quiet) =>", ";"))
+chk("1.3.18", "neither pass trades before the settling delay is served, in a market or on the road",
+    (lambda b: ordered(b, "int wait = Options.Current.EconomySettlingDays;", "if (wait <= 0) return false;",
+                       "CampaignStartTime.ElapsedDaysUntilNow", "if (elapsed >= wait) return false;",
+                       '{=TL18}', "return true;"))
+    (method_body(S['Trading.cs'], "private static bool StillSettling")) and
+    "CanTradeHere(settlement) && !StillSettling(quiet)" in
+        between(S['Trading.cs'], "private static bool MarketOpen(Settlement settlement, bool quiet) =>", ";") and
+    "if (StillSettling(quiet: false)) return;" in
+        method_body(S['Trading.cs'], "public static void ExecuteCaravanTrade") and
     S['Trading.cs'].count("if (!MarketOpen(settlement, quiet)) return;") == 5)
 chk("1.3.2", "ScanRadius applied in observed mode",
     "if (!WithinRadius(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
@@ -1746,10 +1752,13 @@ chk("1.6.12", "what quick-sell agrees to sell is unchanged, since the decision s
               r'townSellPrice >= costBasis \* \(1f \+ margin\)\s*:\s*'
               r'townSellPrice > 0;', S['TradeMath.cs']) is not None)
 chk("1.21.0", "loot with the hold switched off goes to the first market that can pay, since nothing but that switch raises the floor",
-    "if (Options.Current.PreferBestSellTown)" in S['Trading.cs'] and
+    S['Trading.cs'].count("if (Options.Current.PreferBestSellTown)") == 2 and
     "Options.Current.BestSellTownTolerance" in
         between(S['Trading.cs'], "if (Options.Current.PreferBestSellTown)", "int price = market.GetItemPrice") and
-    S['Trading.cs'].count("Options.Current.BestSellTownTolerance") == 1)
+    "Options.Current.BestSellTownTolerance" in
+        between(method_body(S['Trading.cs'], "public static void ExecuteCaravanTrade"),
+                "if (Options.Current.PreferBestSellTown)", "while (remaining > 0)") and
+    S['Trading.cs'].count("Options.Current.BestSellTownTolerance") == 2)
 chk("1.6.12", "that worth is looked up once per good, not once per unit sold",
     "if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);" in S['Trading.cs'] and
     method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
@@ -2966,6 +2975,20 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
             and "Carry.Room(party) - simWeight" in body
             and "Options.Current.BuyCapPerItem" in body
             and "Options.Current.BuyValueCapPerItem" in body
+            and "if (StillSettling(quiet: false)) return;" in body
+            and "Options.Current.PreferBestSellTown" in body
+            and "Options.Current.BestSellTownTolerance" in body
+            and "if (price <= 0 || price < holdFloor) break;" in body
+            and ordered(body, "if (!TradePolicy.ProfitAcceptable(worth, price))",
+                        "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) break;",
+                        "remaining -= paidLeft;", "paidLeft = 0;")
+            and "Options.Current.MaxHeldPerItem" in body
+            and "(held + 1) * item.Weight > shareCap" in body
+            and "Carry.Capacity(party) * Options.Current.MaxHeldShare" in body
+            and "herdRoom = HerdRoomForLivestock(party);" in body
+            and "if (livestock && herdRoom <= 0) break;" in body
+            and body.count("if (livestock) herdRoom--;") == 2
+            and body.count("held++;") == 2
             and "_spentThisVisit" not in body
             and "_boughtThisVisit" not in body
             and "_soldThisVisit" not in body)
