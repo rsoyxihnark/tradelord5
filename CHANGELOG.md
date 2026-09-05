@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.24.0
+
+- TradeLord.ini now says which shape it is in, and TradeLord brings an older file forward by itself when it changes how a setting works, so a setting you set is never quietly lost.
+- Anyone whose file still keeps some of every kind of food as a single number is carried over to the switch and the amount that replaced it, and the old number becomes how many of each kind to keep.
+- Anyone whose file still has keeping smeltable weapons as a switch is carried over to the choice of three that replaced it, on becoming keep every one and off becoming sell them.
+- Everything TradeLord carries over is written to TradeLord.log in plain words, so you can see what it did with a setting you had set.
+
 ## 1.23.1
 
 - The last note about an animal that carries nothing for you should not have offered the Old Work Horse as an example, because a work horse carries for you whatever its age and TradeLord keeps it like any other haul animal.
