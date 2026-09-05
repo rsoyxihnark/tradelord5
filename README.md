@@ -1,7 +1,7 @@
 - It reads what every market in Calradia is paying right now, live, straight from the game's own brain.
 - It shows you the best ways to buy and sell, right in the item tooltip and in a ledger.
-- It ranks the trade routes worth travelling, in a panel on the campaign map. A route's profit is priced unit by unit through the game's own model, then discounted for how deep the seller's stock is, how long the trip takes, how old the prices are, and how many NPC caravans are sitting at or heading for the two towns. Travel time comes from the game's own pathfinding, at your party's real speed with the cargo you are carrying, from where you are to the buy town and on to the sell town.
-- And it can buy and sell for you automatically as you enter a settlement.
+- It can buy & sell for you automatically as you enter a settlement.
+- It ranks the trade routes worth travelling on a panel. Each route's profit is evaluated on 9+ factors and travel time on 5+. Then the two are scored together for the confidence value shown, respecting how the price moves because of the NPC caravans en route there. Profit per travel day is calculated by real pathfinding at your party's own speed, with the cargo you are carrying, from where you are, to the buy town, on to the sell town.
 - You can change how it does any of it, or turn any of it off.
 
 ## What it needs
@@ -55,7 +55,7 @@
 - ✅ Anything you locked in the inventory screen
 - ✅ Unique and player-crafted gear, quest items, mounts and pack animals
 - ✅ Your food reserve (accounted for the men in your party)
-- ✅ A share of every kind of food you carry, if you ask for it, so your party keeps the morale bonus for eating a variety of things
+- ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus
 - ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
 - ✅ Your gold reserve, or anything past your spending cap for the visit
 - ✅ Smithing materials such as iron ore, ingots, charcoal and hardwood, once you switch their policy to leave them alone, off by default

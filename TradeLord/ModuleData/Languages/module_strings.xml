@@ -86,7 +86,7 @@
 		<string id="TL259" text="Cheapest market you know"/>
 		<string id="TL260" text="Ledger entry in town menu"/>
 		<string id="TL261" text="Keep some of every kind of food" />
-		<string id="TL361" text="Hold back a few of every kind of food you carry, so the party keeps the morale bonus for eating a variety of things. What it holds back counts towards the days of supply above rather than adding to it. Livestock is left out, since a herd is slaughtered for meat rather than eaten as a kind of food in its own right. OFF by default." />
+		<string id="TL361" text="Hold back a few of every kind of food you carry, so the party keeps its food variety morale bonus. What it holds back counts towards the days of supply above rather than adding to it. Livestock is left out, since a herd is slaughtered for meat rather than eaten as a kind of food in its own right. OFF by default." />
 		<string id="TL262" text="How many of each kind to keep" />
 		<string id="TL362" text="How many of every kind of food the switch above holds back. Three is enough that a day of eating does not wipe a kind out, and the bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher." />
 		<string id="TL352" text="Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach."/>
