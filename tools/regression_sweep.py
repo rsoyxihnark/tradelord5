@@ -754,7 +754,9 @@ def restocking_runs_between_selling_and_buying():
             and "if (Options.Current.ResupplyFoodDays <= 0) return;" in body
             and "!TradePolicy.IsStorableFood(it)" in body
             and "!TradePolicy.MayBuy(it, locked)" in body
-            and "price > Budget()" in body
+            and "price >= Budget()" in body
+            and "int worth = TradePolicy.UnpaidWorth(it);" in body
+            and body.count("price > worth") == 2
             and "settlement.IsVillage && remaining <= 1" in body
             and "Carry.Room(party) - simWeight" in body
             and "_soldThisVisit.Contains(it.StringId)" in body
@@ -2770,7 +2772,7 @@ def pack_animals_are_bought_between_restocking_and_the_profit_pass():
             and "if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);" in entry
             and "if (!Options.Current.BuyPackAnimals) return;" in body
             and "!TradePolicy.MayHaul(it, locked)" in body
-            and "price > Budget()" in body
+            and "price >= Budget()" in body
             and "settlement.IsVillage && remaining <= 1" in body
             and "BuyAcceptable" not in body
             and "BestSell" not in body)
@@ -2781,9 +2783,11 @@ def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
     carries = between(S['Trading.cs'], "internal static bool IsHaulAnimal", ";")
     truck = between(S['Trading.cs'], "internal static bool IsTruckAnimal", ";")
     spare = between(S['Trading.cs'], "internal static bool IsSpareMount", ";")
-    return ("if (!IsHaulAnimal(item) || item.NotMerchandise) return false;" in haul
+    return ("if (!IsTruckAnimal(item) || item.NotMerchandise) return false;" in haul
             and "Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)" in haul
             and "IsLocked(lockedKeys, new EquipmentElement(item))" in haul
+            and "IsHaulAnimal" not in haul
+            and "IsSpareMount" not in haul + body
             and "IsTruckAnimal(item) || IsSpareMount(item)" in carries
             and "item.HorseComponent.IsRideable && item.HorseComponent.IsPackAnimal" in truck
             and "!item.HorseComponent.IsMount && !item.HorseComponent.IsLiveStock" in truck
@@ -2791,20 +2795,24 @@ def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
             and "item.HorseComponent.IsMount" in spare
             and "IsLiveStock" not in carries + spare
             and "int herdRoom = HerdRoomForLivestock(party);" in body
-            and "int mountRoom = FreeMountRoom(party);" in body
-            and "if (herdRoom <= 0 && mountRoom <= 0) return;" in body
-            and "if (ridden && mountRoom > 0) mountRoom--; else herdRoom--;" in body
+            and "if (herdRoom <= 0) return;" in body
+            and "herdRoom--;" in body
+            and "FreeMountRoom" not in ALL
             and "Carry.Room" not in body)
 
-def a_full_cargo_is_what_pays_over_the_odds_for_a_pack_animal():
+def a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_down_to_the_reserve():
     body = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
-    return ("(int)(worth * (CargoIsFull() ? Options.Current.PackAnimalFullCargoPremium : 1f));" in body
-            and "int worth = TradePolicy.UnpaidWorth(it);" in body
-            and body.count("> Ceiling(worth)") == 2
-            and "private static bool CargoIsFull() => _cargoWasFull || NoRoomToCarry();" in S['Trading.cs']
+    return ("int worth = TradePolicy.UnpaidWorth(it);" in body
+            and body.count("price > worth") == 2
+            and "Ceiling" not in body
+            and "CargoIsFull" not in ALL
+            and "PackAnimalFullCargoPremium" not in S['Trading.cs']
+            and "price >= Budget()" in body
             and option_default('BuyPackAnimals') == 'true'
-            and option_default('PackAnimalFullCargoPremium') == '1.5f'
-            and "_o.BuyPackAnimals" in M and "_o.PackAnimalFullCargoPremium" in M)
+            and "_o.BuyPackAnimals" in M
+            and "PackAnimalFullCargoPremium" not in M
+            and "PackAnimalFullCargoPremium" not in S['Options.cs']
+            and '"PackAnimalFullCargoPremium"' in S['Migrate.cs'])
 
 def the_getaway_ships_on_names_no_cheat_and_only_answers_bandits():
     add = between(S['Trading.cs'], "private static void AddGetaway", "false, 4));")
@@ -2860,8 +2868,8 @@ chk("1.18.0", "pack animals are bought after the larder is filled and before the
     pack_animals_are_bought_between_restocking_and_the_profit_pass())
 chk("1.19.0", "only an animal that carries for you is bought that way, the herd guard still binds it and the carry weight never does",
     only_a_carrying_animal_is_hauled_and_the_herd_still_binds())
-chk("1.18.0", "a pack animal is bought at what it is worth, and over the odds only while the cargo is full",
-    a_full_cargo_is_what_pays_over_the_odds_for_a_pack_animal())
+chk("1.30.0", "a haul animal is bought only where it costs no more than the cheapest TradeLord has seen, and never with the last of the gold reserve",
+    a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_down_to_the_reserve())
 chk("1.19.0", "the getaway line ships on, shows only against bandits and ends the encounter",
     the_getaway_ships_on_names_no_cheat_and_only_answers_bandits())
 chk("1.19.0", "the smeltable hint names all three choices and says looted weapons are held too",
@@ -2871,18 +2879,17 @@ chk("1.19.0", "a weapon is kept whenever the game's crafting record cannot say i
 
 def a_horse_a_footman_can_ride_costs_the_herd_nothing():
     tally = method_body(S['Trading.cs'], "private static bool HerdTally")
-    free = method_body(S['Trading.cs'], "internal static int FreeMountRoom")
     room = method_body(S['Trading.cs'], "internal static int HerdRoomForLivestock")
+    spare = method_body(S['Trading.cs'], "internal static int SpareMountRoom")
     haul = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
-    spare = between(S['Trading.cs'], "internal static bool IsSpareMount", ";")
+    kind = between(S['Trading.cs'], "internal static bool IsSpareMount", ";")
     return ("party.AttachedParties" in tally
             and "NumberOfMenWithoutHorse" in tally
-            and "Math.Max(0, foot - mounts)" in free
             and "Math.Max(0, mounts - foot)" in room
+            and "Math.Max(0, mounts - foot)" in spare
             and "HerdTally(party, out int men, out int herd, out int mounts, out int foot)" in room
-            and "IsMount && !item.HorseComponent.IsPackAnimal" in spare
-            and "bool ridden = TradePolicy.IsSpareMount(item);" in haul
-            and "while (remaining > 0 && (herdRoom > 0 || (ridden && mountRoom > 0)))" in haul)
+            and "IsMount && !item.HorseComponent.IsPackAnimal" in kind
+            and "while (remaining > 0 && herdRoom > 0)" in haul)
 
 def a_share_of_the_hold_caps_one_good_and_ships_off():
     buy = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
@@ -3201,7 +3208,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 2;' in S['Migrate.cs']
+    return ('public const int Shape = 3;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and ordered(read, "written[line.Substring(0, mark).Trim()]",
                         "written.TryGetValue(Migration.ShapeKey, out string held)",
@@ -3358,7 +3365,7 @@ def the_file_holds_a_number_to_the_same_limits_the_screen_does():
     wanted.update(picked)
     taken = method_body(S['Config.cs'], "private static bool Taken")
     within = method_body(S['Config.cs'], "private static double Within")
-    return (len(ranged) >= 23 and len(picked) == 6 and table == wanted
+    return (len(ranged) >= 22 and len(picked) == 6 and table == wanted
             and "(int)Within(field, int.Parse(" in taken
             and "(float)Within(field, float.Parse(" in taken
             and "double kept = Limits.Kept(field.Name, asked);" in within

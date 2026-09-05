@@ -33,9 +33,9 @@
 
 - ✅ One trade entry in the town menu, selling then buying in one go, whenever you want it
 - ✅ Sells and buys the moment you enter a market by default
-- ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has at whatever it asks, before it trades for profit
+- ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has and never paying more than the cheapest price it knows of for it, before it trades for profit
 - ✅ Buys and sells livestock, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
-- ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to the cheapest price it knows of for one, and up to 1.5 times that while your cargo is full. It buys a horse or a camel your men can ride the same way, while you still have troops on foot. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
+- ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying no more than the cheapest price it knows of for one. It buys no riding horses or camels at all, and it stops before your gold reaches your reserve. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
 - ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it. Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your pack animals, and your war horses and noble horses last of all, cheapest first at every step. It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, and it keeps enough pack animals to carry what you are already carrying. One switch turns it off
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
@@ -82,7 +82,6 @@
 - ✅ How old a price you recorded yourself may be before honest-merchant mode stops trusting it
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
-- ✅ How cheap a haul animal or a mount has to be before it buys one, and how much more it will pay while your cargo is full
 
 **And**
 
