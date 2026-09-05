@@ -13,6 +13,7 @@ WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
 PROJ = [io.open(f, encoding='utf-8').read() for f in
         ['src/TradeLord.csproj', 'mcm/TradeLord.MCM.csproj']]
 PREFAB = io.open('TradeLord/GUI/Prefabs/TradeLordPanel.xml', encoding='utf-8').read()
+GAME_VERSION_BETA = '1.5.2.121216'
 COMPAT = io.open('tools/compat/Program.cs', encoding='utf-8').read()
 SWEEP = io.open('tools/regression_sweep.py', encoding='utf-8').read()
 NEXUS = io.open('tools/nexus_changelog.py', encoding='utf-8').read()
@@ -157,7 +158,7 @@ def the_readme_names_the_game_versions_the_mod_was_checked_against():
     if len(used) != 1:
         return False
     built = used.pop()
-    also = '1.5.2.121216'
+    also = GAME_VERSION_BETA
     return (README.count(built) >= 2
             and README.count(also) >= 2
             and 'Built on Bannerlord ' + built in README
@@ -1970,6 +1971,12 @@ chk("1.6.22", "a menu id the mod does not guard fails the run, and a guarded one
     a_menu_id_the_mod_does_not_guard_fails_the_run())
 chk("1.6.22", "with no game install named, the menu-id check is skipped rather than failed",
     the_menu_id_check_is_skipped_rather_than_failed_when_unset())
+chk("1.34.0", "the build runs the compatibility tool, on the built assemblies, against the beta the feature list claims",
+    "dotnet run --project tools/compat" in WORKFLOW and
+    GAME_VERSION_BETA + "-beta" in WORKFLOW and
+    WORKFLOW.index("dotnet build mcm/TradeLord.MCM.csproj") <
+    WORKFLOW.index("dotnet run --project tools/compat") <
+    WORKFLOW.index("Assemble the module folder"))
 chk("1.6.24", "the rules that decide what a trade is worth need nothing from the game",
     the_money_rules_need_nothing_from_the_game())
 chk("1.6.24", "the policy layer forwards to those rules instead of keeping a second copy",

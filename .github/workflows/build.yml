@@ -86,6 +86,10 @@ jobs:
           dotnet build src/TradeLord.csproj -c Release -p:Version="$NUMERIC"
           dotnet build mcm/TradeLord.MCM.csproj -c Release -p:Version="$NUMERIC"
 
+      - name: Game version fit
+        shell: bash
+        run: dotnet run --project tools/compat -c Release -- 1.5.2.121216-beta
+
       - name: Assemble the module folder
         shell: bash
         run: |
