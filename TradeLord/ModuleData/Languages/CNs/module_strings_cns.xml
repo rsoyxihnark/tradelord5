@@ -80,7 +80,6 @@
 		<string id="TL99" text="你正留着铁匠铺能拆解的东西"/>
 		<string id="TL110" text="TradeLord 为了多装货买下 {ITEMS}，花费 {GOLD} 第纳尔。"/>
 		<string id="TL111" text="[模拟，最理想情况] TradeLord 本会为了多装货买下 {ITEMS}，花费 {GOLD} 第纳尔。"/>
-		<string id="TL112" text="我有 TradeLord，能白放我走吗？[TRADELORD]"/>
 		<string id="TL113" text="哦，抱歉，当然可以。不过别忘了去 NexusMods 点个赞！"/>
 		<string id="TL114" text="这买卖做得不错。[TRADELORD]"/>
 		<string id="TL115" text="同感。可惜我用不上那个模组。希望你在 NexusMods 上点了赞！"/>

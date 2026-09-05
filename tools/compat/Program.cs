@@ -22,7 +22,6 @@ namespace TradeLord.Compat
             (Inventory + "ItemMenuVM", "SetMerchandiseComponentTooltip"),
             (Inventory + "SPItemVM", "UpdateProfitType"),
             ("TaleWorlds.Library.InformationManager", "DisplayMessage"),
-            ("TaleWorlds.CampaignSystem.Encounters.PlayerEncounter", "Start"),
         };
 
         private static readonly (string type, string member)[] ReflectedMethods =
@@ -53,7 +52,6 @@ namespace TradeLord.Compat
             ("village", false),
             ("port_menu", true),
             ("naval_storyline_virtualport", true),
-            ("encounter", false),
         };
 
         private const string GameBinVariable = "TRADELORD_GAME_BIN";

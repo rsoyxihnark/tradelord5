@@ -817,7 +817,6 @@ namespace TradeLord
                     foreach (string port in new[] { "port_menu", "naval_storyline_virtualport" })
                         AddOptions(port);
 
-                AddGetaway(starter);
                 AddCaravanLines(starter);
             });
         }
@@ -853,10 +852,16 @@ namespace TradeLord
         internal static bool IsRoadTrader(MobileParty party) =>
             party != null && (party.IsCaravan || party.IsVillager);
 
-        internal static void OnEncounterMet()
+        private static object _handledEncounter;
+
+        internal static void WatchEncounter()
         {
+            object here = PlayerEncounter.Current;
+            if (here == null) { _handledEncounter = null; return; }
+            if (_handledEncounter == here) return;
             MobileParty met = PlayerEncounter.EncounteredMobileParty;
             if (met == null) return;
+            _handledEncounter = here;
             if (IsRoadTrader(met)) { TradeOnce(met); return; }
             if (met.IsBandit) OfferFreePassage(met);
         }
@@ -875,35 +880,15 @@ namespace TradeLord
                 true, true,
                 Tongue.Text("{=TL379}Ask them to let you go").ToString(),
                 Tongue.Text("{=TL380}Fight them").ToString(),
-                () => Guard.Run("Action.Getaway", () => RideAway(foe)), null));
+                () => Guard.Run("Action.Getaway", () => LetPlayerGo(foe)), null));
         }
 
-        internal static void ForgetEncounter() { _tradedWith = null; _offeredPassageIn = null; }
+        internal static void ForgetEncounter() { _tradedWith = null; _offeredPassageIn = null; _handledEncounter = null; }
 
         private void OnConversationEnded(IEnumerable<CharacterObject> spoke) => _tradedWith = null;
 
-        private static void AddGetaway(CampaignGameStarter starter) => Guard.Run(
-            "menu encounter (the other menus are unaffected)", () =>
-            starter.AddGameMenuOption("encounter", "tradelord_getaway",
-                Tongue.Text("{=TL112}I have TradeLord, can you let me go for free? [TRADELORD]").ToString(),
-                args =>
-                {
-                    args.optionLeaveType = GameMenuOption.LeaveType.Escape;
-                    args.Text = Tongue.Text("{=TL112}I have TradeLord, can you let me go for free? [TRADELORD]");
-                    return Options.Current.BanditGetawayCheat && FacingBandits();
-                },
-                args => Guard.Run("Action.Getaway", LetPlayerGo),
-                false, 4));
-
-        private static bool FacingBandits()
+        private static void LetPlayerGo(MobileParty foe)
         {
-            MobileParty foe = PlayerEncounter.EncounteredMobileParty;
-            return foe != null && foe.IsBandit;
-        }
-
-        private static void LetPlayerGo()
-        {
-            MobileParty foe = PlayerEncounter.EncounteredMobileParty;
             Log.Write("free passage taken against " + (foe == null ? "an unnamed party" : foe.StringId));
             InformationManager.ShowInquiry(new InquiryData(
                 foe == null ? "" : foe.Name.ToString(),
@@ -915,6 +900,10 @@ namespace TradeLord
         private static void RideAway(MobileParty foe)
         {
             foe?.IgnoreForHours(GetawayHours);
+            MobileParty.MainParty?.IgnoreByOtherPartiesTill(CampaignTime.HoursFromNow(GetawayHours));
+            if (PlayerEncounter.Current != null) PlayerEncounter.ProtectPlayerSide(GetawayHours);
+            Log.Write("free passage held for " + GetawayHours + " hours: your party is passed over by other parties, " +
+                      "and " + (foe == null ? "that band" : foe.StringId) + " is passed over by yours");
             PlayerEncounter.LeaveEncounter = true;
             PlayerEncounter.Finish(true);
         }
@@ -1643,6 +1632,20 @@ namespace TradeLord
             return _roadMarket;
         }
 
+        private static void HandOver(PartyBase me, PartyBase shop, EquipmentElement what, int price)
+        {
+            me.ItemRoster.AddToCounts(what, -1);
+            shop.ItemRoster.AddToCounts(what, 1);
+            if (price > 0) GiveGoldAction.ApplyForPartyToCharacter(shop, Hero.MainHero, price, true);
+        }
+
+        private static void TakeDelivery(PartyBase shop, PartyBase me, EquipmentElement what, int price)
+        {
+            shop.ItemRoster.AddToCounts(what, -1);
+            me.ItemRoster.AddToCounts(what, 1);
+            if (price > 0) GiveGoldAction.ApplyForCharacterToParty(Hero.MainHero, shop, price, true);
+        }
+
         private static bool RoadPartyReachable(MobileParty met)
         {
             if (!IsRoadTrader(met)) return false;
@@ -1737,12 +1740,12 @@ namespace TradeLord
 
                         int before = Hero.MainHero.Gold;
                         OpenTransaction();
-                        try { SellItemsAction.Apply(me, shop, el, 1, null); }
+                        try { HandOver(me, shop, el.EquipmentElement, price); }
                         finally { CloseTransaction(); }
                         int proceeds = Hero.MainHero.Gold - before;
                         if (proceeds < 0)
                         {
-                            Log.Write("ERROR: selling to a caravan removed " + (-proceeds) + " gold - transaction direction changed on this game version. Caravan trading aborted.");
+                            Log.Write("ERROR: selling on the road removed " + (-proceeds) + " gold - transaction direction changed on this game version. Road trading aborted.");
                             directionError = true;
                             break;
                         }
@@ -1848,12 +1851,12 @@ namespace TradeLord
 
                         int before = Hero.MainHero.Gold;
                         OpenTransaction();
-                        try { SellItemsAction.Apply(shop, me, el, 1, null); }
+                        try { TakeDelivery(shop, me, el.EquipmentElement, price); }
                         finally { CloseTransaction(); }
                         int cost = before - Hero.MainHero.Gold;
                         if (cost < 0)
                         {
-                            Log.Write("ERROR: buying from a caravan added " + (-cost) + " gold - transaction direction changed on this game version. Caravan buying aborted.");
+                            Log.Write("ERROR: buying on the road added " + (-cost) + " gold - transaction direction changed on this game version. Road buying aborted.");
                             directionError = true;
                             break;
                         }
@@ -2394,12 +2397,6 @@ namespace TradeLord
             if (!muted) _pendingXpMuted = false;
             Log.Write("trade profit fed to the XP system: " + xp + " denars");
         }
-    }
-
-    [HarmonyPatch(typeof(PlayerEncounter), "Start")]
-    internal static class Patch_TradeOnMeeting
-    {
-        private static void Postfix() => Guard.Run("Encounter.Met", TradeActionBehavior.OnEncounterMet);
     }
 
     [HarmonyPatch(typeof(InformationManager), "DisplayMessage")]
