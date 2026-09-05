@@ -119,7 +119,7 @@ namespace TradeLord
 
         private static void Read()
         {
-            bool screen = McmLoader.SettingsReachable;
+            bool screen = McmLoader.SettingsInHand;
             string found = Log.Beside(FileName, mustExist: true);
             _path = found ?? Log.Beside(FileName, mustExist: false);
             if (found == null)
