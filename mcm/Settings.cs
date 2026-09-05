@@ -24,19 +24,20 @@ namespace TradeLord.Mcm
 
     internal static class ScreenTongue
     {
-        private static AccessTools.FieldRef<SettingsPropertyDefinition, string> _name, _hint, _group;
+        private static AccessTools.FieldRef<SettingsPropertyDefinition, string> _name, _hint, _group, _content;
 
         internal static void Follow()
         {
             _name = Reaches("<DisplayName>k__BackingField");
             _hint = Reaches("<HintText>k__BackingField");
             _group = Reaches("<GroupName>k__BackingField");
+            _content = Reaches("<Content>k__BackingField");
             ConstructorInfo built = AccessTools.Constructor(typeof(SettingsPropertyDefinition), new[]
             {
                 typeof(IEnumerable<IPropertyDefinitionBase>), typeof(IPropertyGroupDefinition),
                 typeof(IRef), typeof(char)
             });
-            if (_name == null || _hint == null || _group == null || built == null)
+            if (_name == null || _hint == null || _group == null || _content == null || built == null)
             {
                 Log.Write("the settings screen could not be wired to TradeLord's own language - it follows the game's language instead");
                 return;
@@ -56,6 +57,7 @@ namespace TradeLord.Mcm
             Say(_name, __instance);
             Say(_hint, __instance);
             Say(_group, __instance);
+            Say(_content, __instance);
         }
 
         private static void Say(AccessTools.FieldRef<SettingsPropertyDefinition, string> at, SettingsPropertyDefinition of)
@@ -142,7 +144,13 @@ namespace TradeLord.Mcm
             return said;
         }
 
-        [SettingPropertyDropdown("{=TL250}Language", Order = 0, RequireRestart = false,
+        [SettingPropertyButton("{=TL276}Put every setting back to how TradeLord ships", Order = 0, RequireRestart = false,
+            Content = "{=TL277}Reset",
+            HintText = "{=TL376}Puts every TradeLord setting back to the value it ships with, in one go. It takes hold at once and is written to TradeLord.ini as well, so nothing is left half changed. Your never sell, always sell, never buy and always buy lists are emptied too, and what changed is written to TradeLord.log.")]
+        [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
+        public Action ResetEverything => Reset;
+
+        [SettingPropertyDropdown("{=TL250}Language", Order = 1, RequireRestart = false,
             HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This settings screen takes the new language the next time you open it. Town menu entries take it when you next load a campaign.")]
         [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
         public Dropdown<string> Language
@@ -155,6 +163,23 @@ namespace TradeLord.Mcm
                 if (value != null) value.PropertyChanged += (sender, args) => Retell();
                 Options.Bump();
             }
+        }
+
+        internal static void Reset()
+        {
+            Guard.Run("Mcm.Reset", () =>
+            {
+                var stock = new Options();
+                foreach (FieldInfo field in typeof(Options).GetFields(BindingFlags.Public | BindingFlags.Instance))
+                    field.SetValue(Options.Current, field.GetValue(stock));
+                Log.Write("settings screen: every setting was put back to the value TradeLord ships with");
+                Reseat();
+                Settings shown = Instance;
+                if (shown == null) return;
+                foreach (PropertyInfo told in typeof(Settings).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                    shown.OnPropertyChanged(told.Name);
+                Options.Bump();
+            });
         }
 
         internal static void Reseat()

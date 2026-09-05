@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.26.0
+
+- A Reset button now sits at the very top of the TradeLord settings screen, and it puts every setting back to the value TradeLord ships with in one click.
+- Resetting empties your never sell, always sell, never buy and always buy lists too, and it is written into TradeLord.ini straight away so nothing is left half changed.
+- TradeLord.log now lists every setting you have moved away from the value TradeLord ships with, each time you start the game.
+- Changing a setting is written to TradeLord.log as it happens, naming what it was, what it is now, and what TradeLord ships with, so a log you send tells the whole story.
+- The button on the settings screen is spoken in the language TradeLord is set to, like the rest of that screen.
+
 ## 1.25.0
 
 - TradeLord.ini and the MCM settings screen are twins now: both are kept up to date, so you can install or remove MCM whenever you like and every setting you have made comes with you.
