@@ -20,7 +20,6 @@ namespace TradeLord
             Patcher.TryPatch(harmony, typeof(Patch_SuppressVanillaTradeLines));
             Patcher.TryPatch(harmony, typeof(Patch_SPItemVM_UpdateProfitType));
             Patcher.TryPatch(harmony, typeof(Patch_SilenceChunkedTradeLines));
-            Patcher.TryPatch(harmony, typeof(Patch_TradeOnMeeting));
 
             Guard.Run("McmLoader", McmLoader.TryLoad);
             Config.Follow();
@@ -54,6 +53,7 @@ namespace TradeLord
             Guard.Run("Tick.ReleaseMessageFilter", TradeActionBehavior.ReleaseMessageFilter);
             Guard.Run("Tick.FlushToasts", TradeActionBehavior.FlushToasts);
             Guard.Run("Tick.Settings", Config.Flush);
+            Guard.Run("Tick.Encounter", TradeActionBehavior.WatchEncounter);
             LedgerPanel.Tick();
         }
 
