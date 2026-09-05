@@ -2248,9 +2248,24 @@ def the_rules_keep_one_branch():
     return ('`main` is the only branch this repository keeps' in RULES
             and 'Never start another one' in RULES
             and 'no-new-branch.sh' in RULES
-            and 'Leave the assigned branch unpushed' in RULES
+            and 'move the checkout to `main` and commit there' in RULES
+            and 'Leave the assigned branch exactly as you found it, and never push it.' in RULES
             and "Read `HEAD` against the branch's own upstream instead." in RULES
-            and 'Pushing the assigned branch to quiet the warning breaks the rule above.' in RULES)
+            and 'Pushing a second branch to quiet the warning breaks the rule above.' in RULES)
+
+def the_hook_moves_an_assigned_branch_onto_the_one_branch():
+    return ('git rev-parse --abbrev-ref HEAD' in HOOK
+            and 'git checkout main' in HOOK
+            and 'git merge --ff-only origin/main' in HOOK
+            and 'left exactly as it was' in HOOK
+            and 'has uncommitted work' in HOOK
+            and '`.claude/hooks/session-start.sh` exists it has already moved the checkout' in RULES
+            and 'restores the owner\'s signature for the session and moves the checkout to `main`' in RULES)
+
+def the_rules_name_no_program_of_their_own():
+    return (not re.search(r'Bannerlord|garrison|caravan|morale', RULES)
+            and 'Use the words the program itself uses.' in RULES
+            and 'Where the program is a mod, the words belong to the thing it is a mod for' in RULES)
 
 def a_git_command_that_would_start_a_branch_is_refused():
     return ('no-new-branch.sh' in SETTINGS
@@ -2280,8 +2295,12 @@ chk("1.7.0", "the session signature comes from the one place in the working rule
     the_hook_falls_back_to_the_signature_the_rules_name())
 chk("1.7.0", "the commit signature is the noreply address, written in one place and nowhere else",
     the_signature_is_written_in_one_place_and_is_the_noreply_address())
-chk("1.7.0", "the rules keep one branch and say to leave an assigned branch unpushed",
+chk("1.7.0", "the rules keep one branch and move an assigned branch's work onto it, leaving that branch alone",
     the_rules_keep_one_branch())
+chk("1.7.0", "the session hook moves an assigned branch's checkout onto the one branch, and the rules say it does",
+    the_hook_moves_an_assigned_branch_onto_the_one_branch())
+chk("1.7.0", "the working rules name no program of their own, so they carry to another repository unchanged",
+    the_rules_name_no_program_of_their_own())
 chk("1.7.0", "a git command that would start a branch is refused before it runs",
     a_git_command_that_would_start_a_branch_is_refused())
 chk("1.7.0", "a push may name main and nothing else, and deleting a branch is still allowed",
