@@ -82,6 +82,8 @@
 		<string id="TL111" text="[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more."/>
 		<string id="TL112" text="I have TradeLord, can you let me go for free? [CHEAT]"/>
 		<string id="TL113" text="Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!"/>
+		<string id="TL114" text="That was a nice trade. [TRADELORD]"/>
+		<string id="TL115" text="Agreed. I wish I could use that mod too. Hope you gave a thumbs up endorsement on NexusMods!"/>
 		<string id="TL251" text="Stop buying at this many held (0 = off)"/>
 		<string id="TL252" text="Always buy (item ids or names, comma separated)"/>
 		<string id="TL253" text="Leave alone"/>
@@ -113,6 +115,10 @@
 		<string id="TL270" text="Sell them" />
 		<string id="TL271" text="Keep every one" />
 		<string id="TL272" text="Keep the ones you have not learned" />
+		<string id="TL273" text="Trade with caravans you meet" />
+		<string id="TL373" text="Talk to a caravan on the road and TradeLord trades with it there and then, selling what clears your margin and buying what it can sell on for more somewhere in reach. The caravan pays out of its own purse, so it stops when that purse runs dry. Every rule a market visit obeys still holds here. ON by default." />
+		<string id="TL274" text="Share of the hold one good may fill (0 = off)" />
+		<string id="TL374" text="Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and your pack animals instead of needing a new number every time the party grows. 0 turns it off. Selling is unaffected, and the flat per-item caps above still hold." />
 		<string id="TL352" text="Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach."/>
 		<string id="TL250" text="Language"/>
 		<string id="TL351" text="Once your party already carries this many of a good, TradeLord leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit."/>
