@@ -92,6 +92,8 @@ namespace TradeLord
 
         public int MaxHeldPerItem = 0;
 
+        public float MaxHeldShare = 0f;
+
         public int MaxSpendPerVisit = 1000;
 
         public bool UseFleetCapacity = false;
@@ -104,6 +106,7 @@ namespace TradeLord
         public string PanelKey = "T";
 
         public bool TradeWithVillages = true;
+        public bool TradeWithCaravans = true;
         public bool SimulationMode = false;
         public int EconomySettlingDays = 0;
         public float TradeXpMultiplier = 1f;

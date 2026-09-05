@@ -461,10 +461,9 @@ def the_filter_is_armed_only_around_a_game_call_that_talks():
     t = S['Trading.cs']
     armed = re.findall(r'OpenTransaction\(\);\s*try \{ ([\w\.]+)\([^)]*\); \}\s*'
                        r'finally \{ CloseTransaction\(\);( ReportSilenced\(\);)? \}', t)
-    return (t.count('OpenTransaction();') == len(armed) == 5
-            and sorted(c for c, _ in armed) == ['SellItemsAction.Apply', 'SellItemsAction.Apply',
-                                                'SellItemsAction.Apply', 'SellItemsAction.Apply',
-                                                'SkillLevelingManager.OnTradeProfitMade']
+    return (t.count('OpenTransaction();') == len(armed) == 7
+            and sorted(c for c, _ in armed) == ['SellItemsAction.Apply'] * 6 +
+                                               ['SkillLevelingManager.OnTradeProfitMade']
             and 'InGameTransaction = true' not in t
             and 'if (!TradeActionBehavior.InGameTransaction) return true;' in t
             and 'AutomatedTradeInProgress' not in
@@ -1045,11 +1044,13 @@ chk("1.3.30", "a damaged purchase record does not throw during save load",
 chk("1.3.31", "the price gate and the transaction it guards share one granularity",
     S['Trading.cs'].count("SellItemsAction.Apply(me, shop, el, 1, settlement)") == 1 and
     S['Trading.cs'].count("SellItemsAction.Apply(shop, me, el, 1, settlement)") == 3 and
-    S['Trading.cs'].count("SellItemsAction.Apply(") == 4)
+    S['Trading.cs'].count("SellItemsAction.Apply(me, shop, el, 1, null)") == 1 and
+    S['Trading.cs'].count("SellItemsAction.Apply(shop, me, el, 1, null)") == 1 and
+    S['Trading.cs'].count("SellItemsAction.Apply(") == 6)
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
-    S['Trading.cs'].count("[Simulated, best case]") == 4 and
-    S['Trading.cs'].count("(simulated, best case): ") == 4 and
+    S['Trading.cs'].count("[Simulated, best case]") == 6 and
+    S['Trading.cs'].count("(simulated, best case): ") == 6 and
     "best case" in M)
 
 chk("1.3.33", "a fully sold stack clears its cost basis",
@@ -1419,7 +1420,7 @@ chk("1.5.6", "expired observations are pruned on both save and load",
 chk("1.5.6", "the message filter is armed only around a game call that talks back",
     the_filter_is_armed_only_around_a_game_call_that_talks())
 chk("1.5.6", "every place the filter comes down logs how many messages it suppressed",
-    S['Trading.cs'].count("ReportSilenced();") == 6 and
+    S['Trading.cs'].count("ReportSilenced();") == 8 and
     "NoteSilenced();" in method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines"))
 chk("1.5.12", "the message filter uses a depth counter, so nesting cannot disarm it early",
     "internal static bool InGameTransaction => _transactionDepth > 0;" in S['Trading.cs'] and
@@ -1673,9 +1674,11 @@ chk("1.6.12", "an unpaid unit sold below that worth credits nothing rather than 
     "return gain > 0 ? gain : 0;" in
         method_body(S['TradeMath.cs'], "public static int Credit"))
 chk("1.6.12", "the simulated pass and the real one credit profit through the same rule",
-    S['Trading.cs'].count("TradePolicy.Credit(") == 2 and
+    S['Trading.cs'].count("TradePolicy.Credit(") == 4 and
     "TradePolicy.Credit(price, basis, unpaidWorth)" in S['Trading.cs'] and
-    "TradePolicy.Credit(proceeds, basis, unpaidWorth)" in S['Trading.cs'])
+    "TradePolicy.Credit(proceeds, basis, unpaidWorth)" in S['Trading.cs'] and
+    "TradePolicy.Credit(price, worth, unpaidWorth)" in S['Trading.cs'] and
+    "TradePolicy.Credit(proceeds, worth, unpaidWorth)" in S['Trading.cs'])
 chk("1.6.12", "what quick-sell agrees to sell is unchanged, since the decision still runs on the bare basis",
     "if (!TradePolicy.ProfitAcceptable(basis, price))" in S['Trading.cs'] and
     "TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);" in S['Trading.cs'] and
@@ -1897,8 +1900,8 @@ def what_is_left_to_spend_is_worked_out_in_one_place():
             "            TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),\n"
             "                             Options.Current.MaxSpendPerVisit, _spentThisVisit, 0);"
                 in S['Trading.cs']
-            and S['Trading.cs'].count("TradeMath.Budget(") == 4
-            and S['Trading.cs'].count("GoldHeldBack()") == 6
+            and S['Trading.cs'].count("TradeMath.Budget(") == 5
+            and S['Trading.cs'].count("GoldHeldBack()") == 7
             and "Options.Current.GoldReserve" not in
                 method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
 
@@ -2645,8 +2648,9 @@ def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
             and "item.HorseComponent.IsMount" in carries
             and "IsLiveStock" not in carries
             and "int herdRoom = HerdRoomForLivestock(party);" in body
-            and "if (herdRoom <= 0) return;" in body
-            and "herdRoom--;" in body
+            and "int mountRoom = FreeMountRoom(party);" in body
+            and "if (herdRoom <= 0 && mountRoom <= 0) return;" in body
+            and "if (ridden && mountRoom > 0) mountRoom--; else herdRoom--;" in body
             and "Carry.Room" not in body)
 
 def a_full_cargo_is_what_pays_over_the_odds_for_a_pack_animal():
@@ -2711,6 +2715,90 @@ chk("1.19.0", "the smeltable hint names all three choices and says looted weapon
     the_smeltable_hint_says_which_weapons_it_holds_back())
 chk("1.19.0", "a weapon is kept whenever the game's crafting record cannot say its parts are all learned",
     an_unreadable_crafting_record_keeps_the_weapon())
+
+def a_horse_a_footman_can_ride_costs_the_herd_nothing():
+    tally = method_body(S['Trading.cs'], "private static bool HerdTally")
+    free = method_body(S['Trading.cs'], "internal static int FreeMountRoom")
+    room = method_body(S['Trading.cs'], "internal static int HerdRoomForLivestock")
+    haul = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
+    spare = between(S['Trading.cs'], "internal static bool IsSpareMount", ";")
+    return ("party.AttachedParties" in tally
+            and "NumberOfMenWithoutHorse" in tally
+            and "Math.Max(0, foot - mounts)" in free
+            and "Math.Max(0, mounts - foot)" in room
+            and "HerdTally(party, out int men, out int herd, out int mounts, out int foot)" in room
+            and "IsMount && !item.HorseComponent.IsPackAnimal" in spare
+            and "bool ridden = TradePolicy.IsSpareMount(item);" in haul
+            and "while (remaining > 0 && (herdRoom > 0 || (ridden && mountRoom > 0)))" in haul)
+
+def a_share_of_the_hold_caps_one_good_and_ships_off():
+    buy = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
+    return (option_default('MaxHeldShare') == '0f'
+            and "_o.MaxHeldShare" in M
+            and "Carry.Capacity(MobileParty.MainParty) * Options.Current.MaxHeldShare" in buy
+            and buy.count("shareCap > 0f") == 2
+            and buy.count("(held + 1) * it.Weight > shareCap") == 1
+            and buy.count("(held + 1) * item.Weight > shareCap") == 1
+            and "MaxHeldShare" not in method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
+            and "MaxHeldShare" not in method_body(S['Trading.cs'], "internal static bool MaySell")
+            and "MaxHeldShare" not in S['Ledger.cs'])
+
+def a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod():
+    body = method_body(S['Trading.cs'], "public static void ExecuteCaravanTrade")
+    market = method_body(S['Trading.cs'], "private static IMarketData RoadMarket")
+    met = method_body(S['Trading.cs'], "private static bool CaravanMet")
+    return (option_default('TradeWithCaravans') == 'true' and "_o.TradeWithCaravans" in M
+            and '"TaleWorlds.CampaignSystem.Settlements.FakeMarketData"' in market
+            and "as IMarketData" in market
+            and "_roadMarketFailed = true;" in market
+            and "if (!Options.Current.TradeWithCaravans) return;" in body
+            and "if (!CaravanReachable(caravan)) return;" in body
+            and "IMarketData market = RoadMarket();" in body
+            and "if (market == null) return;" in body
+            and "market.GetPrice(el.EquipmentElement, party, true, shop)" in body
+            and "market.GetPrice(el.EquipmentElement, party, false, shop)" in body
+            and "int till = caravan.PartyTradeGold;" in body
+            and "if (till < price) break;" in body
+            and "if (_tradedWith != caravan)" in met
+            and "=> _tradedWith = null" in between(S['Trading.cs'], "private void OnConversationEnded", ";")
+            and "CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEnded);"
+                in S['Trading.cs']
+            and "ForgetRoadMarket();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
+
+def a_caravan_trade_obeys_every_rule_a_market_visit_does():
+    body = method_body(S['Trading.cs'], "public static void ExecuteCaravanTrade")
+    return ("TradePolicy.MaySell(el, locked, foodKeep, out int keep)" in body
+            and "TradePolicy.MayBuy(it, locked) || !TradePolicy.MayRoundTrip(it, locked)" in body
+            and "TradePolicy.ProfitAcceptable(worth, price)" in body
+            and "TradePolicy.BuyAcceptable(price, realizable)" in body
+            and "TradePolicy.Realizable(elsewhere.Item2)" in body
+            and "price > Budget()" in body
+            and "Carry.Room(party) - simWeight" in body
+            and "Options.Current.BuyCapPerItem" in body
+            and "Options.Current.BuyValueCapPerItem" in body
+            and "_spentThisVisit" not in body
+            and "_boughtThisVisit" not in body
+            and "_soldThisVisit" not in body)
+
+def the_caravan_line_closes_the_conversation_on_the_caravans_own_answer():
+    lines = between(S['Trading.cs'], "private void AddCaravanLines", "null, null, 200);")
+    return ('starter.AddPlayerLine("tradelord_caravan_done", "caravan_talk", "tradelord_caravan_reply",' in lines
+            and 'starter.AddDialogLine("tradelord_caravan_reply", "tradelord_caravan_reply", "close_window",'
+                in lines
+            and "{=TL114}" in lines and "{=TL115}" in lines
+            and "CaravanMet, null, 200" in lines
+            and "TL114" in strings_declared() and "TL115" in strings_declared())
+
+chk("1.20.0", "a horse an unmounted man can ride costs the herd nothing, so a full herd no longer blocks one",
+    a_horse_a_footman_can_ride_costs_the_herd_nothing())
+chk("1.20.0", "a share of the hold caps one good against the real capacity, ships off and binds buying only",
+    a_share_of_the_hold_caps_one_good_and_ships_off())
+chk("1.20.0", "a caravan on the road is priced by the game's own off-market pricing, and is skipped when that is gone",
+    a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod())
+chk("1.20.0", "a caravan trade obeys the same rules a market visit does and keeps out of the visit counters",
+    a_caravan_trade_obeys_every_rule_a_market_visit_does())
+chk("1.20.0", "the caravan's own answer closes the conversation, with no farewell to click after it",
+    the_caravan_line_closes_the_conversation_on_the_caravans_own_answer())
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and

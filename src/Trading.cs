@@ -135,6 +135,10 @@ namespace TradeLord
             item != null && item.HasHorseComponent &&
             (item.HorseComponent.IsPackAnimal || item.HorseComponent.IsMount);
 
+        internal static bool IsSpareMount(ItemObject item) =>
+            item != null && item.HasHorseComponent &&
+            item.HorseComponent.IsMount && !item.HorseComponent.IsPackAnimal;
+
         private static bool _craftingLookupFailed;
 
         internal static void ForgetCraftingLookup() => _craftingLookupFailed = false;
@@ -548,6 +552,8 @@ namespace TradeLord
             Carry.Forget();
             TradePolicy.ForgetItemListAudit();
             TradePolicy.ForgetCraftingLookup();
+            ForgetRoadMarket();
+            _tradedWith = null;
         }
 
         public override void SyncData(IDataStore dataStore)
@@ -565,6 +571,7 @@ namespace TradeLord
             CampaignEvents.SettlementEntered.AddNonSerializedListener(this, OnSettlementEntered);
             CampaignEvents.OnSettlementLeftEvent.AddNonSerializedListener(this, OnSettlementLeft);
             CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
+            CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEnded);
         }
 
         private void OnDailyTick()
@@ -702,8 +709,36 @@ namespace TradeLord
                         AddOptions(port);
 
                 AddGetaway(starter);
+                AddCaravanLines(starter);
             });
         }
+
+        private static MobileParty _tradedWith;
+
+        private void AddCaravanLines(CampaignGameStarter starter) => Guard.Run(
+            "caravan dialog (trading in a market is unaffected)", () =>
+            {
+                starter.AddPlayerLine("tradelord_caravan_done", "caravan_talk", "tradelord_caravan_reply",
+                    Tongue.Text("{=TL114}That was a nice trade. [TRADELORD]").ToString(),
+                    CaravanMet, null, 200);
+                starter.AddDialogLine("tradelord_caravan_reply", "tradelord_caravan_reply", "close_window",
+                    Tongue.Text("{=TL115}Agreed. I wish I could use that mod too. Hope you gave a thumbs up endorsement on NexusMods!").ToString(),
+                    null, null, 200);
+            });
+
+        private static bool CaravanMet()
+        {
+            MobileParty caravan = MobileParty.ConversationParty;
+            if (!Options.Current.TradeWithCaravans || caravan == null || !caravan.IsCaravan) return false;
+            if (_tradedWith != caravan)
+            {
+                _tradedWith = caravan;
+                Guard.Run("Action.CaravanTrade", () => ExecuteCaravanTrade(caravan));
+            }
+            return true;
+        }
+
+        private void OnConversationEnded(IEnumerable<CharacterObject> spoke) => _tradedWith = null;
 
         private static void AddGetaway(CampaignGameStarter starter) => Guard.Run(
             "menu encounter (the other menus are unaffected)", () =>
@@ -912,6 +947,43 @@ namespace TradeLord
         private static bool _herdLookupFailed;
         private const int HerdCushion = 2;
 
+        private static bool HerdTally(MobileParty party, out int men, out int herd,
+                                     out int mounts, out int foot)
+        {
+            men = 0; herd = 0; mounts = 0; foot = 0;
+            ItemRoster roster = party?.ItemRoster;
+            if (roster == null) return false;
+            men = party.MemberRoster?.TotalManCount ?? 0;
+            herd = roster.NumberOfPackAnimals + roster.NumberOfLivestockAnimals;
+            mounts = roster.NumberOfMounts;
+            foot = party.Party?.NumberOfMenWithoutHorse ?? 0;
+            var attached = party.AttachedParties;
+            for (int i = 0; attached != null && i < attached.Count; i++)
+            {
+                MobileParty a = attached[i];
+                if (a?.ItemRoster == null) continue;
+                herd += a.ItemRoster.NumberOfPackAnimals + a.ItemRoster.NumberOfLivestockAnimals;
+                mounts += a.ItemRoster.NumberOfMounts;
+                men += a.MemberRoster?.TotalManCount ?? 0;
+                foot += a.Party?.NumberOfMenWithoutHorse ?? 0;
+            }
+            return men > 0;
+        }
+
+        internal static int FreeMountRoom(MobileParty party)
+        {
+            try
+            {
+                return HerdTally(party, out _, out _, out int mounts, out int foot)
+                    ? Math.Max(0, foot - mounts) : 0;
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "free mount room (the herd guard still holds)");
+                return 0;
+            }
+        }
+
         internal static int HerdRoomForLivestock(MobileParty party)
         {
             try
@@ -940,22 +1012,7 @@ namespace TradeLord
                         return 0;
                     }
                 }
-                ItemRoster roster = party.ItemRoster;
-                int men = party.MemberRoster?.TotalManCount ?? 0;
-                if (men <= 0 || roster == null) return 0;
-                int herd = roster.NumberOfPackAnimals + roster.NumberOfLivestockAnimals;
-                int mounts = roster.NumberOfMounts;
-                int foot = party.Party?.NumberOfMenWithoutHorse ?? 0;
-                var attached = party.AttachedParties;
-                for (int i = 0; attached != null && i < attached.Count; i++)
-                {
-                    MobileParty a = attached[i];
-                    if (a?.ItemRoster == null) continue;
-                    herd += a.ItemRoster.NumberOfPackAnimals + a.ItemRoster.NumberOfLivestockAnimals;
-                    mounts += a.ItemRoster.NumberOfMounts;
-                    men += a.MemberRoster?.TotalManCount ?? 0;
-                    foot += a.Party?.NumberOfMenWithoutHorse ?? 0;
-                }
+                if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return 0;
                 herd += Math.Max(0, mounts - foot);
                 float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });
                 int room = 0;
@@ -1284,6 +1341,237 @@ namespace TradeLord
             if (!Muted(quiet)) Toast(msg, ToastSpend);
         }
 
+        private static IMarketData _roadMarket;
+        private static bool _roadMarketFailed;
+
+        internal static void ForgetRoadMarket() { _roadMarket = null; _roadMarketFailed = false; }
+
+        private static IMarketData RoadMarket()
+        {
+            if (_roadMarket != null || _roadMarketFailed) return _roadMarket;
+            try
+            {
+                Type made = typeof(Settlement).Assembly.GetType("TaleWorlds.CampaignSystem.Settlements.FakeMarketData");
+                _roadMarket = made == null ? null : Activator.CreateInstance(made, true) as IMarketData;
+            }
+            catch (Exception e) { Log.Error(e, "road pricing (trading with caravans is off)"); }
+            if (_roadMarket == null)
+            {
+                _roadMarketFailed = true;
+                Log.Write("caravan trading: this game version has no off-market pricing TradeLord can read - trading with caravans is disabled, markets are unaffected");
+            }
+            return _roadMarket;
+        }
+
+        private static bool CaravanReachable(MobileParty caravan)
+        {
+            if (caravan == null || !caravan.IsCaravan) return false;
+            if (!Options.Current.ExcludeHostileTowns) return true;
+            IFaction mine = Hero.MainHero?.MapFaction;
+            return mine == null || caravan.MapFaction == null ||
+                   !FactionManager.IsAtWarAgainstFaction(caravan.MapFaction, mine);
+        }
+
+        public static void ExecuteCaravanTrade(MobileParty caravan)
+        {
+            if (!Options.Current.TradeWithCaravans) return;
+            if (!CaravanReachable(caravan)) return;
+            IMarketData market = RoadMarket();
+            if (market == null) return;
+
+            MobileParty party = MobileParty.MainParty;
+            if (party == null) return;
+            PartyBase shop = caravan.Party;
+            PartyBase me = party.Party;
+            bool sim = Options.Current.SimulationMode;
+            ISet<string> locked = TradePolicy.LockedKeys();
+
+            int goldBefore = Hero.MainHero.Gold;
+            int sold = 0, bought = 0, profit = 0, simGold = 0, simSpent = 0;
+            float simWeight = 0f;
+            int till = caravan.PartyTradeGold;
+            bool directionError = false;
+            var soldHere = new HashSet<string>();
+            var detail = new Dictionary<ItemObject, (int count, int gold)>();
+
+            int Budget() =>
+                TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
+                                 Options.Current.MaxSpendPerVisit, 0, sim ? simSpent : 0);
+
+            AutomatedTradeInProgress = true;
+            try
+            {
+                ItemRoster mine = party.ItemRoster;
+                var plan = new List<ItemRosterElement>();
+                for (int i = 0; i < mine.Count; i++) plan.Add(mine.GetElementCopyAtIndex(i));
+                var foodKeep = TradePolicy.FoodKeep(mine);
+
+                foreach (ItemRosterElement el in plan)
+                {
+                    if (directionError) break;
+                    ItemObject item = el.EquipmentElement.Item;
+                    if (!TradePolicy.MaySell(el, locked, foodKeep, out int keep)) continue;
+                    int remaining = el.Amount - keep;
+                    if (remaining <= 0) continue;
+
+                    int basis = TradePolicy.CostBasis(item);
+                    bool basisIsMarket = Options.Current.CostBasisMode == 2;
+                    int paidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;
+                    int unpaidWorth = -1;
+
+                    while (remaining > 0)
+                    {
+                        int worth = basisIsMarket || paidLeft > 0 ? basis : 0;
+                        if (worth == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);
+                        int price = market.GetPrice(el.EquipmentElement, party, true, shop);
+                        if (price <= 0 || !TradePolicy.ProfitAcceptable(worth, price)) break;
+                        if (till < price) break;
+
+                        if (sim)
+                        {
+                            till -= price;
+                            simGold += price;
+                            profit += TradePolicy.Credit(price, worth, unpaidWorth);
+                            sold++;
+                            remaining--;
+                            if (paidLeft > 0) paidLeft--;
+                            Tally(detail, item, 1, price);
+                            continue;
+                        }
+
+                        int before = Hero.MainHero.Gold;
+                        OpenTransaction();
+                        try { SellItemsAction.Apply(me, shop, el, 1, null); }
+                        finally { CloseTransaction(); }
+                        int proceeds = Hero.MainHero.Gold - before;
+                        if (proceeds < 0)
+                        {
+                            Log.Write("ERROR: selling to a caravan removed " + (-proceeds) + " gold - transaction direction changed on this game version. Caravan trading aborted.");
+                            directionError = true;
+                            break;
+                        }
+                        if (proceeds == 0) break;
+                        till -= proceeds;
+                        profit += TradePolicy.Credit(proceeds, worth, unpaidWorth);
+                        if (paidLeft > 0) { paidLeft--; LedgerBehavior.Instance?.RecordSale(item.StringId, 1); }
+                        soldHere.Add(item.StringId);
+                        sold++;
+                        remaining--;
+                        Tally(detail, item, 1, proceeds);
+                    }
+                }
+            }
+            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+
+            if (sold > 0)
+            {
+                _runMovedGoods = true;
+                Log.Write((sim ? "caravan sale (simulated, best case): " : "caravan sale: ") + sold +
+                          " items, +" + (sim ? simGold : Hero.MainHero.Gold - goldBefore) +
+                          " gold, profit " + profit + " from " + caravan.Name);
+                LogDetail(selling: true, sim, detail);
+                TextObject said = Tongue.Text(sim
+                    ? "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit)."
+                    : "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).");
+                said.SetTextVariable("ITEMS", ItemSummary(detail, sold));
+                said.SetTextVariable("GOLD", sim ? simGold : Hero.MainHero.Gold - goldBefore);
+                said.SetTextVariable("PROFIT", profit);
+                Toast(said, profit > 0 ? ToastGain : ToastFlat);
+                if (!sim && profit > 0) { AwardTradeXp(profit, false); LedgerBehavior.Instance?.AddProfit(profit); }
+            }
+
+            int spentFrom = Hero.MainHero.Gold;
+            detail = new Dictionary<ItemObject, (int count, int gold)>();
+
+            AutomatedTradeInProgress = true;
+            try
+            {
+                ItemRoster wares = caravan.ItemRoster;
+                var shelf = new List<(ItemRosterElement el, float realizable, float margin)>();
+                if (Budget() > 0)
+                    for (int i = 0; i < wares.Count; i++)
+                    {
+                        ItemRosterElement el = wares.GetElementCopyAtIndex(i);
+                        ItemObject it = el.EquipmentElement.Item;
+                        if (el.Amount <= 0 || soldHere.Contains(it.StringId)) continue;
+                        if (!TradePolicy.MayBuy(it, locked) || !TradePolicy.MayRoundTrip(it, locked)) continue;
+                        var elsewhere = LedgerBehavior.Instance?.BestSell(it) ?? (null, 0);
+                        if (elsewhere.Item1 == null) continue;
+                        int here = market.GetPrice(el.EquipmentElement, party, false, shop);
+                        if (here <= 0) continue;
+                        float realizable = TradePolicy.Realizable(elsewhere.Item2);
+                        if (!TradePolicy.BuyAcceptable(here, realizable)) continue;
+                        shelf.Add((el, realizable, (realizable - here) / here));
+                    }
+                shelf.Sort((x, y) => y.margin.CompareTo(x.margin));
+
+                foreach (var (el, realizable, _) in shelf)
+                {
+                    if (directionError || Budget() <= 0) break;
+                    ItemObject item = el.EquipmentElement.Item;
+                    int remaining = el.Amount, countThis = 0, spentThis = 0;
+
+                    while (remaining > 0)
+                    {
+                        int price = market.GetPrice(el.EquipmentElement, party, false, shop);
+                        if (price <= 0 || !TradePolicy.BuyAcceptable(price, realizable)) break;
+                        if (price > Budget()) break;
+                        if (Options.Current.BuyCapPerItem > 0 && countThis >= Options.Current.BuyCapPerItem) break;
+                        if (Options.Current.BuyValueCapPerItem > 0 &&
+                            spentThis + price > Options.Current.BuyValueCapPerItem) break;
+                        if (item.Weight > 0.01f && item.Weight > Carry.Room(party) - simWeight) break;
+
+                        if (sim)
+                        {
+                            simSpent += price;
+                            simWeight += item.Weight;
+                            spentThis += price;
+                            countThis++;
+                            bought++;
+                            remaining--;
+                            Tally(detail, item, 1, price);
+                            continue;
+                        }
+
+                        int before = Hero.MainHero.Gold;
+                        OpenTransaction();
+                        try { SellItemsAction.Apply(shop, me, el, 1, null); }
+                        finally { CloseTransaction(); }
+                        int cost = before - Hero.MainHero.Gold;
+                        if (cost < 0)
+                        {
+                            Log.Write("ERROR: buying from a caravan added " + (-cost) + " gold - transaction direction changed on this game version. Caravan buying aborted.");
+                            directionError = true;
+                            break;
+                        }
+                        if (cost == 0) break;
+                        LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, cost);
+                        spentThis += cost;
+                        countThis++;
+                        bought++;
+                        remaining--;
+                        Tally(detail, item, 1, cost);
+                    }
+                }
+            }
+            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+
+            if (bought <= 0) return;
+
+            int spent = sim ? simSpent : spentFrom - Hero.MainHero.Gold;
+            _runMovedGoods = true;
+            Log.Write((sim ? "caravan purchase (simulated, best case): " : "caravan purchase: ") + bought +
+                      " items, -" + spent + " gold from " + caravan.Name);
+            LogDetail(selling: false, sim, detail);
+            if (!sim) CoinSound();
+            TextObject msg = Tongue.Text(sim
+                ? "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars."
+                : "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.");
+            msg.SetTextVariable("ITEMS", ItemSummary(detail, bought));
+            msg.SetTextVariable("GOLD", spent);
+            Toast(msg, ToastSpend);
+        }
+
         public static void ExecuteHaulage(Settlement settlement, bool quiet = false)
         {
             if (!Options.Current.BuyPackAnimals) return;
@@ -1292,7 +1580,8 @@ namespace TradeLord
             MobileParty party = MobileParty.MainParty;
             if (party == null) return;
             int herdRoom = HerdRoomForLivestock(party);
-            if (herdRoom <= 0) return;
+            int mountRoom = FreeMountRoom(party);
+            if (herdRoom <= 0 && mountRoom <= 0) return;
 
             SettlementComponent market = settlement.SettlementComponent;
             PartyBase shop = settlement.Party;
@@ -1333,11 +1622,12 @@ namespace TradeLord
             {
                 foreach (var (el, _, worth) in stable)
                 {
-                    if (directionError || herdRoom <= 0) break;
+                    if (directionError) break;
                     ItemObject item = el.EquipmentElement.Item;
+                    bool ridden = TradePolicy.IsSpareMount(item);
                     int remaining = el.Amount;
 
-                    while (herdRoom > 0 && remaining > 0)
+                    while (remaining > 0 && (herdRoom > 0 || (ridden && mountRoom > 0)))
                     {
                         int price = market.GetItemPrice(el.EquipmentElement, party, false);
                         if (price <= 0 || price > Ceiling(worth)) break;
@@ -1366,7 +1656,7 @@ namespace TradeLord
                         }
                         hauled++;
                         remaining--;
-                        herdRoom--;
+                        if (ridden && mountRoom > 0) mountRoom--; else herdRoom--;
                         Tally(detail, item, 1, price);
                     }
                 }
@@ -1415,6 +1705,9 @@ namespace TradeLord
                 TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
                                  Options.Current.MaxSpendPerVisit, _spentThisVisit, sim ? simSpent : 0);
 
+            float shareCap = Options.Current.MaxHeldShare > 0f
+                ? Carry.Capacity(MobileParty.MainParty) * Options.Current.MaxHeldShare : 0f;
+
             var stock = new List<(ItemRosterElement el, float realizable, float margin, int held)>();
             if (Budget() > 0)
             {
@@ -1432,6 +1725,7 @@ namespace TradeLord
                     if (_soldThisVisit.Contains(it.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
                     int held = mine.GetItemNumber(it);
                     if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }
+                    if (shareCap > 0f && (held + 1) * it.Weight > shareCap) { tally.Note(Block.HeldEnough); continue; }
 
                     var elsewhere = LedgerBehavior.Instance?.BestSell(it) ?? (null, 0);
                     if (elsewhere.Item1 == null || elsewhere.Item1 == settlement) { tally.Note(Block.NoResaleMarket); continue; }
@@ -1477,6 +1771,8 @@ namespace TradeLord
                             spentThis + price > Options.Current.BuyValueCapPerItem) { tally.Note(Block.ItemValueCap); break; }
                         if (Options.Current.MaxHeldPerItem > 0 &&
                             held >= Options.Current.MaxHeldPerItem) { tally.Note(Block.HeldEnough); break; }
+                        if (shareCap > 0f &&
+                            (held + 1) * item.Weight > shareCap) { tally.Note(Block.HeldEnough); break; }
                         if (livestock && herdRoom <= 0) { tally.Note(Block.HerdFull); break; }
                         if (settlement.IsVillage && remaining <= 1) { tally.Note(Block.VillageLastUnit); break; }
                         if (item.Weight > 0.01f && item.Weight >
