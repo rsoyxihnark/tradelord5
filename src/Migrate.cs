@@ -6,13 +6,14 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 3;
+        public const int Shape = 4;
 
         public const string ShapeKey = "SettingsVersion";
 
         private static readonly Dictionary<string, string> Renamed =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
+                { "BuyPackAnimals", "BuyHaulAnimals" },
             };
 
         public static bool Lift(int from, IDictionary<string, string> written, ICollection<string> notes)

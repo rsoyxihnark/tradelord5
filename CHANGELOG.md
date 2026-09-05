@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.33.0
+
+- Your setting for buying haul animals is called BuyHaulAnimals in TradeLord.ini now, and whatever you had saved under its old name is carried over the first time this version reads your file.
+- The hint under Share of the hold one good may fill now calls them haul animals, the same name the rest of the settings screen already uses.
+- TradeLord.log now calls a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse and a Pack Camel a haul animal, rather than an animal that carries for you.
+- TradeLord.log no longer opens every campaign with a roll call of every animal in your game, so the log starts on what you actually did.
+- The hint under the Language setting now says what really happens: the language takes hold as you pick it, and your town menu entries follow the next time you load a campaign.
+- The feature list now describes what TradeLord already does: a caravan on the road held to every rule a market visit is, your herd looked at three times a visit, the Reset button at the top of the settings screen, and TradeLord.ini written whether or not Mod Options is installed.
+
 ## 1.32.0
 
 - The ledger panel now counts the gold in your purse when it works out how many of a good a route is worth, so it no longer offers you 32 of something you can only pay for 3 of.
