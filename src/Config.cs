@@ -203,8 +203,10 @@ namespace TradeLord
             try
             {
                 if (field.FieldType == typeof(bool)) field.SetValue(at, bool.Parse(written));
-                else if (field.FieldType == typeof(int)) field.SetValue(at, int.Parse(written, CultureInfo.InvariantCulture));
-                else if (field.FieldType == typeof(float)) field.SetValue(at, float.Parse(written, NumberStyles.Float, CultureInfo.InvariantCulture));
+                else if (field.FieldType == typeof(int))
+                    field.SetValue(at, (int)Within(field, int.Parse(written, CultureInfo.InvariantCulture)));
+                else if (field.FieldType == typeof(float))
+                    field.SetValue(at, (float)Within(field, float.Parse(written, NumberStyles.Float, CultureInfo.InvariantCulture)));
                 else if (field.FieldType == typeof(string)) field.SetValue(at, written);
                 else
                 {
@@ -220,6 +222,18 @@ namespace TradeLord
                 return false;
             }
         }
+
+        private static double Within(FieldInfo field, double asked)
+        {
+            double kept = Limits.Kept(field.Name, asked);
+            if (kept != asked)
+                Log.Write("settings file: " + field.Name + " has to be between " + Limits.Range(field.Name) +
+                          ", so " + Said(asked) + " was taken as " + Said(kept));
+            return kept;
+        }
+
+        private static string Said(double number) =>
+            number.ToString("0.####", CultureInfo.InvariantCulture);
 
         private static string Shown(FieldInfo field) => Shown(field, Options.Current);
 
