@@ -984,21 +984,23 @@ namespace TradeLord
             IsMarket(s) && !LedgerBehavior.VillageShut(s) && GameAllowsTrade(s) &&
             !(Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s));
 
-        private static bool MarketOpen(Settlement settlement, bool quiet)
+        private static bool StillSettling(bool quiet)
         {
-            if (!CanTradeHere(settlement)) return false;
             int wait = Options.Current.EconomySettlingDays;
-            if (wait <= 0) return true;
+            if (wait <= 0) return false;
             float elapsed = Campaign.Current.Models.CampaignTimeModel.CampaignStartTime.ElapsedDaysUntilNow;
-            if (elapsed >= wait) return true;
+            if (elapsed >= wait) return false;
             if (!quiet)
             {
                 TextObject msg = Tongue.Text("{=TL18}The market is still settling ({DAYS} more days).");
                 msg.SetTextVariable("DAYS", (int)Math.Ceiling(wait - elapsed));
                 Toast(msg);
             }
-            return false;
+            return true;
         }
+
+        private static bool MarketOpen(Settlement settlement, bool quiet) =>
+            CanTradeHere(settlement) && !StillSettling(quiet);
 
         private static readonly Color ToastGain = new Color(0.40f, 0.90f, 0.40f);
         private static readonly Color ToastSpend = new Color(0.55f, 0.78f, 1f);
@@ -1664,6 +1666,7 @@ namespace TradeLord
         {
             if (!Options.Current.TradeWithCaravans) return;
             if (!CaravanReachable(caravan)) return;
+            if (StillSettling(quiet: false)) return;
             IMarketData market = RoadMarket();
             if (market == null) return;
 
@@ -1707,12 +1710,27 @@ namespace TradeLord
                     int paidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;
                     int unpaidWorth = -1;
 
+                    int holdFloor = 0;
+                    if (Options.Current.PreferBestSellTown)
+                    {
+                        var best = LedgerBehavior.Instance?.BestSell(item) ?? (null, 0);
+                        if (best.Item1 != null)
+                            holdFloor = (int)(best.Item2 * Options.Current.BestSellTownTolerance);
+                    }
+
                     while (remaining > 0)
                     {
                         int worth = basisIsMarket || paidLeft > 0 ? basis : 0;
                         if (worth == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);
                         int price = market.GetPrice(el.EquipmentElement, party, true, shop);
-                        if (price <= 0 || !TradePolicy.ProfitAcceptable(worth, price)) break;
+                        if (price <= 0 || price < holdFloor) break;
+                        if (!TradePolicy.ProfitAcceptable(worth, price))
+                        {
+                            if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) break;
+                            remaining -= paidLeft;
+                            paidLeft = 0;
+                            continue;
+                        }
                         if (till < price) break;
 
                         if (sim)
@@ -1775,6 +1793,10 @@ namespace TradeLord
             try
             {
                 ItemRoster wares = caravan.ItemRoster;
+                ItemRoster ours = party.ItemRoster;
+                float shareCap = Options.Current.MaxHeldShare > 0f
+                    ? Carry.Capacity(party) * Options.Current.MaxHeldShare : 0f;
+                int herdRoom = -1;
                 var shelf = new List<(ItemRosterElement el, float realizable, float margin)>();
                 if (Budget() > 0)
                     for (int i = 0; i < wares.Count; i++)
@@ -1797,6 +1819,13 @@ namespace TradeLord
                 {
                     if (directionError || Budget() <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
+                    bool livestock = TradePolicy.IsTradableLivestock(item);
+                    if (livestock)
+                    {
+                        if (herdRoom < 0) herdRoom = HerdRoomForLivestock(party);
+                        if (herdRoom <= 0) continue;
+                    }
+                    int held = ours.GetItemNumber(item);
                     int remaining = el.Amount, countThis = 0, spentThis = 0;
 
                     while (remaining > 0)
@@ -1807,6 +1836,10 @@ namespace TradeLord
                         if (Options.Current.BuyCapPerItem > 0 && countThis >= Options.Current.BuyCapPerItem) break;
                         if (Options.Current.BuyValueCapPerItem > 0 &&
                             spentThis + price > Options.Current.BuyValueCapPerItem) break;
+                        if (Options.Current.MaxHeldPerItem > 0 &&
+                            held >= Options.Current.MaxHeldPerItem) break;
+                        if (shareCap > 0f && (held + 1) * item.Weight > shareCap) break;
+                        if (livestock && herdRoom <= 0) break;
                         if (item.Weight > 0.01f && item.Weight > Carry.Room(party) - simWeight) break;
 
                         if (sim)
@@ -1815,8 +1848,10 @@ namespace TradeLord
                             simWeight += item.Weight;
                             spentThis += price;
                             countThis++;
+                            held++;
                             bought++;
                             remaining--;
+                            if (livestock) herdRoom--;
                             Tally(detail, item, 1, price);
                             continue;
                         }
@@ -1836,8 +1871,10 @@ namespace TradeLord
                         LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, cost);
                         spentThis += cost;
                         countThis++;
+                        held++;
                         bought++;
                         remaining--;
+                        if (livestock) herdRoom--;
                         Tally(detail, item, 1, cost);
                     }
                 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.31.0
+
+- Trading with a caravan on the road now sells the goods you looted when the ones you bought fall short of your profit margin, the way a market does, instead of selling nothing at all.
+- Hold cargo for the best market now holds your cargo back from a caravan on the road as well, instead of only from a town.
+- A caravan can no longer sell you enough livestock to drop your party into the herd speed penalty, because buying from one is now held to the same herding calculation a market is.
+- Stop buying at this many held and Share of the hold one good may fill now hold when you buy from a caravan, not only in a market.
+- Economy settling delay now holds on the road too, so a caravan will not trade with you before the day you set either.
+
 ## 1.30.3
 
 - Installing Mod Options after playing without it no longer replaces every setting in TradeLord.ini with the ones TradeLord ships with.
