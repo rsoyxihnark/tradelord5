@@ -1973,6 +1973,11 @@ chk("1.6.22", "a menu id the mod does not guard fails the run, and a guarded one
     a_menu_id_the_mod_does_not_guard_fails_the_run())
 chk("1.6.22", "with no game install named, the menu-id check is skipped rather than failed",
     the_menu_id_check_is_skipped_rather_than_failed_when_unset())
+chk("1.35.3", "a commit that changes the feature list is refused unless the changelog says what changed in it",
+    "grep -qx 'README.md'" in WORKFLOW and
+    "no changelog entry says so" in WORKFLOW and
+    r"grep -qi '^+.*feature list'" in WORKFLOW and
+    WORKFLOW.index("grep -qx 'README.md'") < WORKFLOW.index("grep -qx 'CHANGELOG.md'"))
 chk("1.34.0", "the build runs the compatibility tool, on the built assemblies, against the beta the feature list claims",
     "dotnet run --project tools/compat" in WORKFLOW and
     GAME_VERSION_BETA + "-beta" in WORKFLOW and
