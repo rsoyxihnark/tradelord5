@@ -113,8 +113,8 @@
 		<string id="TL270" text="Sat" />
 		<string id="TL271" text="Hepsini sakla" />
 		<string id="TL272" text="Öğrenmediklerini sakla" />
-		<string id="TL273" text="Yolda rastladığınız kervanlarla ticaret yap" />
-		<string id="TL373" text="Yoldaki bir kervanla konuşun, TradeLord orada ve o anda onunla ticaret yapar: kârınızı karşılayanı satar, erişebileceğiniz bir yerde daha pahalıya satabileceğini alır. Kervan kendi kesesinden öder, kese boşalınca durur. Bir pazar ziyaretinde geçerli olan her kural burada da geçerlidir. Öntanımlı olarak AÇIK." />
+		<string id="TL273" text="Yolda rastladığınız kervanlarla ve köylülerle ticaret yap" />
+		<string id="TL373" text="Yolda bir kervanla ya da bir köylü bölüğüyle karşılaşın, TradeLord daha kimse tek kelime etmeden, karşılaştığınız anda onlarla ticaret yapar: kârınızı karşılayanı satar, erişebileceğiniz bir yerde daha pahalıya satabileceğini alır. Kendi keselerinden öderler, kese boşalınca durur. Bir pazar ziyaretinde geçerli olan her kural burada da geçerlidir. Öntanımlı olarak AÇIK." />
 		<string id="TL274" text="Tek bir malın doldurabileceği yük payı (0 = kapalı)" />
 		<string id="TL374" text="Bir mal, bölüğünüzün taşıyabildiğinin bu paydan fazlasını dolduracaksa artık o maldan almaz. Gerçek taşıma kapasitenize göre ölçülür, yani tavan arabalarınız ve yük hayvanlarınızla birlikte büyür; bölük her büyüdüğünde yeni bir sayı girmeniz gerekmez. 0 bunu kapatır. Satış bundan etkilenmez ve yukarıdaki sabit mal başı sınırlar yine geçerlidir." />
 		<string id="TL352" text="TradeLord'un her zaman aldığı mallar: kategori kurallarını ve tahıl alma yasağını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla listeleri ve envanter kilidi yine geçerlidir, ve yine ancak erişimdeki bir yerde daha pahalıya satabileceğini alır."/>
@@ -231,5 +231,8 @@
 		<string id="TL277" text="Sıfırla" />
 		<string id="TL376" text="Her TradeLord ayarını tek seferde geldiği değere geri alır. Anında geçerli olur ve TradeLord.ini dosyasına da yazılır, böylece hiçbir şey yarım kalmaz. Asla satma, her zaman satma, asla alma ve her zaman alma listeleriniz de boşaltılır, ve neyin değiştiği TradeLord.log dosyasına yazılır." />
 		<string id="TL377" text="Keseniz {GOLD} dinar, altın rezerviniz bunun {RESERVE} kadarını tutuyor, bu yüzden burada alabileceğiniz bir şey yok. Biraz yük satın ya da ayarlardan rezervi düşürün." />
+		<string id="TL378" text="TradeLord sizde olduğu için, isterseniz bu haydutlar sizi bedavaya geçirir." />
+		<string id="TL379" text="Sizi bırakmalarını isteyin" />
+		<string id="TL380" text="Onlarla dövüşün" />
 	</strings>
 </base>

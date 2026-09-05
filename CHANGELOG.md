@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.34.0
+
+- TradeLord now trades with a caravan the moment you meet it on the road, before anyone says a word, instead of waiting for you to pick a line of dialogue first.
+- A party of villagers on the road now trades with you the same way a caravan does.
+- Trade with caravans you meet is called Trade with caravans and villagers you meet now, and it governs both.
+- Bandits now offer you free passage as soon as you meet them, asking whether to ride on or fight, so the offer no longer waits on a menu that never appeared for some of you.
+- TradeLord.log calls these a sale or a purchase on the road now, and names the party it traded with.
+
 ## 1.33.0
 
 - Your setting for buying haul animals is called BuyHaulAnimals in TradeLord.ini now, and whatever you had saved under its old name is carried over the first time this version reads your file.
