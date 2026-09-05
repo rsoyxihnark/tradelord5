@@ -65,12 +65,14 @@ namespace TradeLord
         public int KeepFoodDays = 5;
         public bool KeepEveryFoodKind = false;
         public int KeepPerFoodKind = 3;
+        public int ResupplyFoodDays = 5;
         public const int PolicyIgnore = 0, PolicySellOnly = 1, PolicyBuyOnly = 2, PolicyBuySell = 3;
 
         public int FoodPolicy = PolicyBuySell;
         public int CraftingPolicy = PolicyBuySell;
         public int LivestockPolicy = PolicyBuySell;
         public bool ProtectSpecial = true;
+        public bool KeepSmeltableWeapons = false;
         public bool RespectLocks = true;
 
         public int MaxLootTier = 1;
@@ -79,6 +81,7 @@ namespace TradeLord
         public float BestSellTownTolerance = 0.95f;
 
         public int GoldReserve = 300;
+        public int KeepWageDays = 3;
 
         public bool NeverBuyGrain = true;
         public int BuyCapPerItem = 32;
@@ -88,6 +91,8 @@ namespace TradeLord
         public int MaxHeldPerItem = 0;
 
         public int MaxSpendPerVisit = 1000;
+
+        public bool UseFleetCapacity = false;
 
         public float ResaleSafetyFactor = 0.85f;
 
