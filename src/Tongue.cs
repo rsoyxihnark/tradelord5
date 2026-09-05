@@ -31,6 +31,12 @@ namespace TradeLord
             return id == null ? written : written.Substring(id.Length + 3);
         }
 
+        internal static bool Mine(string written)
+        {
+            string id = Id(written);
+            return id != null && id.StartsWith("TL", StringComparison.Ordinal);
+        }
+
         private static string Id(string written)
         {
             if (written == null || !written.StartsWith("{=")) return null;
