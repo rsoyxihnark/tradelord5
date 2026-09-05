@@ -20,6 +20,7 @@ namespace TradeLord
         private static string _path;
         private static bool _dirty;
         private static bool _applying;
+        private static Dictionary<string, string> _lastSeen;
 
         private static readonly string[] Header =
         {
@@ -47,7 +48,49 @@ namespace TradeLord
         internal static void Follow()
         {
             Guard.Run("Config", Read);
+            Guard.Run("Config.Away", SayWhatIsAwayFromStock);
+            _lastSeen = Snapshot();
             Options.Changed = Noted;
+        }
+
+        private static Dictionary<string, string> Snapshot()
+        {
+            var held = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (FieldInfo field in Fields()) held[field.Name] = Shown(field);
+            return held;
+        }
+
+        private static void SayWhatIsAwayFromStock()
+        {
+            var stock = new Options();
+            int away = 0;
+            foreach (FieldInfo field in Fields())
+            {
+                string now = Shown(field), ships = Shown(field, stock);
+                if (now == ships) continue;
+                away++;
+                Log.Write("  " + field.Name + " = " + now + " (TradeLord ships with " + ships + ")");
+            }
+            Log.Write(away == 0
+                ? "every setting is at the value TradeLord ships with"
+                : away + " setting(s) are away from what TradeLord ships with, listed above");
+        }
+
+        private static void SayWhatChanged()
+        {
+            var now = Snapshot();
+            if (_lastSeen == null) { _lastSeen = now; return; }
+            var stock = new Options();
+            foreach (FieldInfo field in Fields())
+            {
+                if (!now.TryGetValue(field.Name, out string held)) continue;
+                if (_lastSeen.TryGetValue(field.Name, out string before) && before == held) continue;
+                string ships = Shown(field, stock);
+                Log.Write("setting changed: " + field.Name + " is now " + held +
+                          " (it was " + (before ?? "unset") + ", TradeLord ships with " + ships + ")" +
+                          (held == ships ? " and is back at what it ships with" : ""));
+            }
+            _lastSeen = now;
         }
 
         private static void Noted()
@@ -59,6 +102,7 @@ namespace TradeLord
         {
             if (!_dirty) return;
             _dirty = false;
+            Guard.Run("Config.Changed", SayWhatChanged);
             Guard.Run("Config.Flush", () => Write(_path, "a setting changed"));
         }
 
@@ -177,9 +221,11 @@ namespace TradeLord
             }
         }
 
-        private static string Shown(FieldInfo field)
+        private static string Shown(FieldInfo field) => Shown(field, Options.Current);
+
+        private static string Shown(FieldInfo field, Options of)
         {
-            object held = field.GetValue(Options.Current);
+            object held = field.GetValue(of);
             if (held is bool flag) return flag ? "true" : "false";
             if (held is float number) return number.ToString("0.####", CultureInfo.InvariantCulture);
             return Convert.ToString(held, CultureInfo.InvariantCulture) ?? "";
