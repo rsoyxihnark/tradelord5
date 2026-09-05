@@ -65,7 +65,7 @@ namespace TradeLord
         public int KeepFoodDays = 5;
         public bool KeepEveryFoodKind = false;
         public int KeepPerFoodKind = 3;
-        public int ResupplyFoodDays = 5;
+        public int ResupplyFoodDays = 3;
         public const int PolicyIgnore = 0, PolicySellOnly = 1, PolicyBuyOnly = 2, PolicyBuySell = 3;
 
         public int FoodPolicy = PolicyBuySell;
@@ -94,6 +94,9 @@ namespace TradeLord
 
         public bool UseFleetCapacity = false;
 
+        public bool BuyPackAnimals = true;
+        public float PackAnimalFullCargoPremium = 1.5f;
+
         public float ResaleSafetyFactor = 0.85f;
 
         public string PanelKey = "T";
@@ -107,6 +110,8 @@ namespace TradeLord
 
         public float MarkerMaxTravelDays = 1.5f;
         public bool CoinSound = true;
+
+        public bool BanditGetawayCheat = false;
 
         public string NeverSellItems = "";
         public string AlwaysSellItems = "";

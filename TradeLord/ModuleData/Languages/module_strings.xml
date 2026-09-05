@@ -78,6 +78,10 @@
 		<string id="TL97" text="TradeLord restocked {ITEMS} for {GOLD} denars."/>
 		<string id="TL98" text="[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars."/>
 		<string id="TL99" text="you are keeping what the smithy can break down"/>
+		<string id="TL110" text="TradeLord bought {ITEMS} for {GOLD} denars to carry more."/>
+		<string id="TL111" text="[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more."/>
+		<string id="TL112" text="I have TradeLord, can you let me go for free? [CHEAT]"/>
+		<string id="TL113" text="Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!"/>
 		<string id="TL251" text="Stop buying at this many held (0 = off)"/>
 		<string id="TL252" text="Always buy (item ids or names, comma separated)"/>
 		<string id="TL253" text="Leave alone"/>
@@ -95,11 +99,17 @@
 		<string id="TL263" text="Restock food (days of supply)" />
 		<string id="TL363" text="When your party carries fewer than this many days of food, TradeLord buys the cheapest food here to top it back up, at whatever the market asks, before it trades for profit. Your gold reserve, your spending limit for the visit, your never-buy list and your food policy all still hold, and it leaves a village its last of each good. 0 turns restocking off. As you arrive at a market it runs only when auto buy is on." />
 		<string id="TL264" text="Keep smeltable weapons" />
-		<string id="TL364" text="Never sell a weapon the smithy can break down for parts, so a smithing playthrough keeps its raw material. This covers every crafted design, not only the ones you made yourself. OFF by default." />
+		<string id="TL364" text="Never sell a weapon the smithy can break down for parts, so a smithing playthrough keeps its raw material. It holds back every weapon built from smithing parts, the ones you forged and the ones you looted off a bandit alike, so cheap loot is kept too. It does not ask which parts you have already learned. Armour, shields, bows and crossbows carry no smithing design, so those are still sold, and an always-sell entry still wins. OFF by default." />
 		<string id="TL265" text="Buy to fill the ships" />
 		<string id="TL365" text="Size purchases to what your ships can hold rather than what your carts can, so you can load the fleet while you are ashore. Your party has to be able to sail; without a fleet TradeLord counts the carts instead and says so in its log. OFF by default." />
 		<string id="TL266" text="Keep gold for days of wages" />
 		<string id="TL366" text="Also hold back this many days of your troops' wages on top of the gold reserve above, so a shopping trip never eats the payroll. It is worked out from your real wage bill every time TradeLord trades, so it grows with the army. 0 holds back the flat reserve only." />
+		<string id="TL267" text="Buy pack animals" />
+		<string id="TL367" text="Buy mules and sumpter horses whenever a market is asking no more than one is worth, so your party can carry more. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that by the premium below. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default." />
+		<string id="TL268" text="Pack animal premium while the cargo is full" />
+		<string id="TL368" text="How far over the going rate TradeLord will go for a mule or a sumpter horse while your cargo is full and the extra capacity is worth paying for. 150% is half again as much. 100% turns the premium off, so it only ever buys at the going rate." />
+		<string id="TL269" text="Cheat: bandits let you go for free" />
+		<string id="TL369" text="Adds a line to the encounter screen when you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is a cheat, and it is OFF by default." />
 		<string id="TL352" text="Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach."/>
 		<string id="TL250" text="Language"/>
 		<string id="TL351" text="Once your party already carries this many of a good, TradeLord leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit."/>

@@ -4,12 +4,6 @@
 - It ranks the trade routes worth travelling on a panel. Each route's profit is evaluated on 9+ factors and travel time on 5+. Then the two are scored together for the confidence value shown, respecting how the price moves because of the NPC caravans en route there. Profit per travel day is calculated by real pathfinding at your party's own speed, with the cargo you are carrying, from where you are, to the buy town, on to the sell town.
 - You can change how it does any of it, or turn any of it off.
 
-## What it needs
-
-- **Harmony** (`Bannerlord.Harmony`), required. TradeLord does not load without it. Put it above TradeLord in the launcher's load order.
-- **MCM** (`Bannerlord.MBOptionScreen`), optional, and what the settings screen is built on. Without it TradeLord writes a `TradeLord.ini` beside its log, and every setting below can be changed by editing that file instead.
-- Bannerlord **1.4.8.119303**. War Sails is optional: with it, TradeLord counts sea legs and appears in port menus.
-
 ## Everything it does
 
 - ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is three strings, a number, a settlement reference and a flag, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
@@ -20,7 +14,6 @@
 - ✅ The five best places to sell and the five cheapest to buy, in every item tooltip
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying
-- ✅ Buys and sells livestock, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
 - ✅ Stock counts, so you know the deal is actually there
 - ✅ Inventory rows tinted good to bad against the best price known
 - ✅ One clean set of price hints, bypassing the vanilla rumour system, which is usually out of date by the time you get there
@@ -31,13 +24,15 @@
 - ✅ The gold in the till of the town you would sell to, counted in, so it never plans a sale nobody can pay for
 - ✅ Click any town to jump the camera there and pin a marker on it
 - ✅ The best town for the cargo you are carrying, marked on the map for you
-- ✅ Details of most profitable workshops on Calradia
+- ✅ The five workshops in Calradia earning the most right now, with their town and their owner, on that same panel. In honest-merchant mode it shows yours instead
 
 **What it does for you**
 
 - ✅ One trade entry in the town menu, selling then buying in one go, whenever you want it
 - ✅ Sells and buys the moment you enter a market by default
-- ✅ Tops your food back up to five days of supply as it trades, buying the cheapest food the market has at whatever it asks, before it trades for profit
+- ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has at whatever it asks, before it trades for profit
+- ✅ Buys and sells livestock, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
+- ✅ Buys mules and sumpter horses when a market is asking no more than one is worth, so the party can carry more. While your cargo is full it will pay half again as much for one, because that is when the room is worth having. It never buys more animals than your party can drive without slowing down
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short. Always on for goods you never bought, such as looted gear; off by default for goods you bought, whose profit margin already covers it
@@ -51,12 +46,13 @@
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen
 - ✅ A dry run that simulates every trade it would have made, and shows you the estimate (moves nothing)
+- ✅ A cheat, off until you turn it on: run into looters, sea raiders or any other bandits and you can ask them to let you go, and they will
 
 **What it doesn't touch**
 
 - ✅ Anything you locked in the inventory screen
-- ✅ Unique and player-crafted gear, quest items, mounts and pack animals
-- ✅ Every weapon the smithy can break down for parts, if you ask it to, so a smithing playthrough keeps its raw material
+- ✅ Unique and player-crafted gear, and quest items. Your mounts and pack animals are never sold either, though it will buy pack animals for you
+- ✅ Every weapon the smithy can break down for parts, if you ask it to, so a smithing playthrough keeps its raw material. This one is off until you switch it on. With it on, any weapon built from smithing parts stays in your bags, the ones you forged and the cheap ones you looted off a bandit alike. It does not look at which parts you have already learned, so it is a blanket hold, not a shopping list. Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus
 - ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
@@ -79,6 +75,7 @@
 - ✅ An honest-merchant mode you can switch on, using only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
+- ✅ How cheap a mule has to be before it buys one, and how much more it will pay while your cargo is full
 
 **And**
 
@@ -91,3 +88,9 @@
 which TradeLord puts there through MCM. Install MCM alongside it and you can turn any one of them off,
 or set it to whatever you like. Without MCM the same switches and numbers are in `TradeLord.ini`, written
 beside `TradeLord.log` the first time TradeLord loads, and TradeLord reads it back the next time you start.
+
+## What it needs
+
+- **Harmony** (`Bannerlord.Harmony`), required. TradeLord does not load without it. Put it above TradeLord in the launcher's load order.
+- **MCM** (`Bannerlord.MBOptionScreen`), optional, and what the settings screen is built on. Without it TradeLord writes a `TradeLord.ini` beside its log, and every setting above can be changed by editing that file instead.
+- Bannerlord **1.4.8.119303**. War Sails is optional: with it, TradeLord counts sea legs and appears in port menus.

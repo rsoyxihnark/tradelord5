@@ -8,6 +8,7 @@ using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.GameComponents;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ComponentInterfaces;
+using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.Extensions;
 using TaleWorlds.CampaignSystem.GameMenus;
 using TaleWorlds.CampaignSystem.Party;
@@ -128,6 +129,9 @@ namespace TradeLord
             try { return item != null && item.WeaponDesign != null; }
             catch (Exception e) { Log.Error(e, "smeltable check"); return false; }
         }
+
+        internal static bool IsPackAnimal(ItemObject item) =>
+            item != null && item.HasHorseComponent && item.HorseComponent.IsPackAnimal;
 
         internal static bool Listed(ItemList list, ItemObject item) =>
             item != null && !list.Empty &&
@@ -370,6 +374,14 @@ namespace TradeLord
             return false;
         }
 
+        internal static bool MayHaul(ItemObject item, ISet<string> lockedKeys)
+        {
+            Options s = Options.Current;
+            if (!IsPackAnimal(item) || item.NotMerchandise) return false;
+            if (Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)) return false;
+            return !IsLocked(lockedKeys, new EquipmentElement(item));
+        }
+
         internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys) =>
             MayBuy(item, lockedKeys) &&
             (Listed(Options.Current.AlwaysSet, item) ||
@@ -548,6 +560,8 @@ namespace TradeLord
             return party != null && Carry.Room(party) < 1f;
         }
 
+        private static bool CargoIsFull() => _cargoWasFull || NoRoomToCarry();
+
         private static bool TradedThisVisit() => _soldThisVisit.Count > 0 || _boughtThisVisit.Count > 0;
 
         private static bool Muted(bool automated) => automated && Options.Current.QuietAutomation;
@@ -628,6 +642,7 @@ namespace TradeLord
                         {
                             ExecuteQuickSell(Settlement.CurrentSettlement);
                             ExecuteResupply(Settlement.CurrentSettlement);
+                            ExecuteHaulage(Settlement.CurrentSettlement);
                             ExecuteQuickBuy(Settlement.CurrentSettlement);
                             ReportStalledPasses();
                         }),
@@ -650,7 +665,45 @@ namespace TradeLord
                 if (NavalModulePresent())
                     foreach (string port in new[] { "port_menu", "naval_storyline_virtualport" })
                         AddOptions(port);
+
+                AddGetaway(starter);
             });
+        }
+
+        private static void AddGetaway(CampaignGameStarter starter) => Guard.Run(
+            "menu encounter (the other menus are unaffected)", () =>
+            starter.AddGameMenuOption("encounter", "tradelord_getaway",
+                Tongue.Text("{=TL112}I have TradeLord, can you let me go for free? [CHEAT]").ToString(),
+                args =>
+                {
+                    args.optionLeaveType = GameMenuOption.LeaveType.Escape;
+                    return Options.Current.BanditGetawayCheat && FacingBandits();
+                },
+                args => Guard.Run("Action.Getaway", LetPlayerGo),
+                false, 4));
+
+        private static bool FacingBandits()
+        {
+            MobileParty foe = PlayerEncounter.EncounteredMobileParty;
+            return foe != null && foe.IsBandit;
+        }
+
+        private static void LetPlayerGo()
+        {
+            MobileParty foe = PlayerEncounter.EncounteredMobileParty;
+            Log.Write("getaway cheat used against " + (foe == null ? "an unnamed party" : foe.StringId));
+            InformationManager.ShowInquiry(new InquiryData(
+                foe == null ? "" : foe.Name.ToString(),
+                Tongue.Text("{=TL113}Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!").ToString(),
+                true, false, Tongue.Text("{=TL09}Close").ToString(), "",
+                () => Guard.Run("Action.GetawayRide", () => RideAway(foe)), null));
+        }
+
+        private static void RideAway(MobileParty foe)
+        {
+            foe?.IgnoreForHours(GetawayHours);
+            PlayerEncounter.LeaveEncounter = true;
+            PlayerEncounter.Finish(true);
         }
 
         private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)
@@ -665,6 +718,7 @@ namespace TradeLord
                 {
                     if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
                     if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);
+                    if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);
                     if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
                     ReportStalledPasses();
                 }
@@ -772,6 +826,8 @@ namespace TradeLord
         }
 
         private const int NamedItemCap = 6;
+
+        private const float GetawayHours = 4f;
 
         private static void LogDetail(bool selling, bool sim, Dictionary<ItemObject, (int count, int gold)> detail)
         {
@@ -1189,6 +1245,115 @@ namespace TradeLord
                 ? "{=TL98}[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars."
                 : "{=TL97}TradeLord restocked {ITEMS} for {GOLD} denars.");
             msg.SetTextVariable("ITEMS", ItemSummary(detail, stocked));
+            msg.SetTextVariable("GOLD", spent);
+            if (!Muted(quiet)) Toast(msg, ToastSpend);
+        }
+
+        public static void ExecuteHaulage(Settlement settlement, bool quiet = false)
+        {
+            if (!Options.Current.BuyPackAnimals) return;
+            if (!MarketOpen(settlement, quiet)) return;
+
+            MobileParty party = MobileParty.MainParty;
+            if (party == null) return;
+            int herdRoom = HerdRoomForLivestock(party);
+            if (herdRoom <= 0) return;
+
+            SettlementComponent market = settlement.SettlementComponent;
+            PartyBase shop = settlement.Party;
+            PartyBase me = party.Party;
+            bool sim = Options.Current.SimulationMode;
+            ISet<string> locked = TradePolicy.LockedKeys();
+
+            int hauled = 0, simSpent = 0;
+            bool directionError = false;
+            var detail = new Dictionary<ItemObject, (int count, int gold)>();
+
+            int Budget() =>
+                TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
+                                 Options.Current.MaxSpendPerVisit, _spentThisVisit, sim ? simSpent : 0);
+
+            int Ceiling(int worth) =>
+                (int)(worth * (CargoIsFull() ? Options.Current.PackAnimalFullCargoPremium : 1f));
+
+            var stable = new List<(ItemRosterElement el, int price, int worth)>();
+            ItemRoster shopRoster = settlement.ItemRoster;
+            for (int i = 0; i < shopRoster.Count; i++)
+            {
+                ItemRosterElement el = shopRoster.GetElementCopyAtIndex(i);
+                ItemObject it = el.EquipmentElement.Item;
+                if (el.Amount <= 0 || !TradePolicy.MayHaul(it, locked)) continue;
+                if (_soldThisVisit.Contains(it.StringId)) continue;
+                int price = market.GetItemPrice(el.EquipmentElement, party, false);
+                int worth = TradePolicy.UnpaidWorth(it);
+                if (price <= 0 || price > Ceiling(worth)) continue;
+                stable.Add((el, price, worth));
+            }
+            if (stable.Count == 0) return;
+            stable.Sort((x, y) => x.price.CompareTo(y.price));
+
+            int goldBefore = Hero.MainHero.Gold;
+            AutomatedTradeInProgress = true;
+            try
+            {
+                foreach (var (el, _, worth) in stable)
+                {
+                    if (directionError || herdRoom <= 0) break;
+                    ItemObject item = el.EquipmentElement.Item;
+                    int remaining = el.Amount;
+
+                    while (herdRoom > 0 && remaining > 0)
+                    {
+                        int price = market.GetItemPrice(el.EquipmentElement, party, false);
+                        if (price <= 0 || price > Ceiling(worth)) break;
+                        if (price > Budget()) break;
+                        if (settlement.IsVillage && remaining <= 1) break;
+
+                        if (sim) simSpent += price;
+                        else
+                        {
+                            int before = Hero.MainHero.Gold;
+                            OpenTransaction();
+                            try { SellItemsAction.Apply(shop, me, el, 1, settlement); }
+                            finally { CloseTransaction(); }
+                            price = before - Hero.MainHero.Gold;
+                            if (price < 0)
+                            {
+                                Log.Write("ERROR: buying a pack animal added " + (-price) + " gold - transaction direction changed on this game version. Pack animal buying aborted.");
+                                directionError = true;
+                                break;
+                            }
+                            if (price == 0) break;
+                            LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, price);
+                            _spentThisVisit += price;
+                            _boughtThisVisit.TryGetValue(item.StringId, out var prior);
+                            _boughtThisVisit[item.StringId] = (prior.count + 1, prior.spent + price);
+                        }
+                        hauled++;
+                        remaining--;
+                        herdRoom--;
+                        Tally(detail, item, 1, price);
+                    }
+                }
+            }
+            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+
+            if (hauled <= 0) return;
+
+            int spent = sim ? simSpent : goldBefore - Hero.MainHero.Gold;
+            _runMovedGoods = true;
+            Log.Write((sim ? "pack animals (simulated, best case): " : "pack animals: ") + hauled +
+                      " bought, -" + spent + " gold at " + settlement.Name);
+            LogDetail(selling: false, sim, detail);
+            if (!sim)
+            {
+                CoinSound();
+                LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
+            }
+            TextObject msg = Tongue.Text(sim
+                ? "{=TL111}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more."
+                : "{=TL110}TradeLord bought {ITEMS} for {GOLD} denars to carry more.");
+            msg.SetTextVariable("ITEMS", ItemSummary(detail, hauled));
             msg.SetTextVariable("GOLD", spent);
             if (!Muted(quiet)) Toast(msg, ToastSpend);
         }
