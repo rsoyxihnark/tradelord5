@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.36.0
+
+- Trading with a caravan or a party of villagers on the road now actually happens. It had been failing every time, because the game refuses to sell goods without a market to sell them in, so TradeLord hands the goods and the coin over itself out on the road.
+- The free passage line no longer turns up among your battle orders before a fight. It is offered as you meet the band instead of sitting on a menu of the game's own that the game shows elsewhere.
+- Bandits who have let you go now leave you be for a few hours, instead of turning round and hitting you again the moment the game unpauses.
+- The language you pick now takes hold when you press Done on the settings screen, rather than waiting for you to restart the game, and the ledger panel changes over with it.
+- TradeLord.log says how long the free passage holds and which band it holds off you.
+- The feature list now says the free passage leaves the band off you afterwards.
+
 ## 1.35.2
 
 - The language setting is back at the top of the settings screen, with auto sell and auto buy just under it.

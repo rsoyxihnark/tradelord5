@@ -228,6 +228,8 @@ namespace TradeLord
             "HeadConfidence", "HeadScore"
         };
 
+        internal void Respeak() => Refresh();
+
         private void Refresh()
         {
             for (int i = 0; i < SpokenLabels.Length; i++) OnPropertyChanged(SpokenLabels[i]);
@@ -316,6 +318,7 @@ namespace TradeLord
         private const int SetupAttempts = 3;
         private const int SetupCooldownTicks = 120;
         private static bool _loggedArmed;
+        private static int _spokenFor = -1;
         private static bool _dead;
 
         private static readonly HashSet<Settlement> _panelPins = new HashSet<Settlement>();
@@ -354,6 +357,12 @@ namespace TradeLord
                 Cleanup();
 
             if (_layer == null || _vm == null || map == null) return;
+
+            if (_spokenFor != Options.Current.Language)
+            {
+                _spokenFor = Options.Current.Language;
+                Guard.Run("Panel.Respeak", _vm.Respeak);
+            }
 
             if (!_vm.IsVisible)
             {

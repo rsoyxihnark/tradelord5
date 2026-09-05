@@ -288,13 +288,40 @@ namespace TradeLord.Mcm
             Follows(CostBasisMode, () => _o.CostBasisMode, picked => _o.CostBasisMode = picked);
             Follows(KeepSmeltableWeapons, () => _o.KeepSmeltableWeapons, picked => _o.KeepSmeltableWeapons = picked);
             Language.PropertyChanged += (sender, args) => Retell();
+            if (!_watchingForSave)
+            {
+                _watchingForSave = true;
+                PropertyChanged += (sender, args) =>
+                {
+                    if (args?.PropertyName == SaveTriggered) Guard.Run("Mcm.Saved", TakeEveryChoice);
+                };
+            }
             Retell();
+        }
+
+        private bool _watchingForSave;
+
+        private void TakeEveryChoice()
+        {
+            Taken(Language, picked => _o.Language = picked);
+            Taken(FoodPolicy, picked => _o.FoodPolicy = picked);
+            Taken(CraftingPolicy, picked => _o.CraftingPolicy = picked);
+            Taken(LivestockPolicy, picked => _o.LivestockPolicy = picked);
+            Taken(CostBasisMode, picked => _o.CostBasisMode = picked);
+            Taken(KeepSmeltableWeapons, picked => _o.KeepSmeltableWeapons = picked);
+            Options.Bump();
+            Retell();
+        }
+
+        private static void Taken(Dropdown<string> from, Action<int> keep)
+        {
+            if (from != null) keep(from.SelectedIndex);
         }
 
         private static void Follows(Dropdown<string> from, Func<int> held, Action<int> keep)
         {
             if (from == null) return;
-            keep(from.SelectedIndex);
+            Taken(from, keep);
             from.PropertyChanged += (sender, args) =>
             {
                 if (held() == from.SelectedIndex) return;

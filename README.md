@@ -52,7 +52,7 @@
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen
 - ✅ A dry run that simulates every trade it would have made, and shows you the estimate (moves nothing)
-- ✅ Free passage past bandits, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and TradeLord asks you there and then whether to ride on, and they let you go with no fight and no ransom
+- ✅ Free passage past bandits, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and TradeLord asks you there and then whether to ride on, and they let you go with no fight and no ransom, then leave you be for the next few hours instead of turning round and hitting you again
 
 **What it doesn't touch**
 
