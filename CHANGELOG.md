@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.30.1
+
+- The feature list and what it needs now both say TradeLord runs on the Bannerlord 1.5.2.121216 beta as well as on 1.4.8.119303.
+
 ## 1.30.0
 
 - TradeLord now buys only the animals that carry for you, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, so it no longer spends your gold on a Rouncey or a Charger while a Mule is sitting in the same market.
