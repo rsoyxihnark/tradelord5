@@ -1,12 +1,16 @@
 # Changelog
 
+## 1.16.1
+
+- The switch that keeps every kind of food now names the food variety morale bonus the way the game does.
+
 ## 1.16.0
 
-- Keeping some of every kind of food is now a switch you turn on, with how many to keep set separately and starting at three of each.
+- Keeping some of every kind of food is now a switch, with its own setting for how many of each to keep, starting at three.
 
 ## 1.15.0
 
-- TradeLord can now hold back a few of every kind of food you carry, so selling your stores no longer costs your party the morale bonus it gets from eating a variety of things.
+- TradeLord can now hold back a few of every kind of food you carry, so auto-selling no longer costs your party its food variety morale bonus.
 
 ## 1.14.5
 
