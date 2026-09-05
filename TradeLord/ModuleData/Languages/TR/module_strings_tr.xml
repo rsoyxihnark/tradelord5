@@ -85,8 +85,10 @@
 		<string id="TL258" text="Son ödediğiniz fiyat"/>
 		<string id="TL259" text="Bildiğiniz en ucuz pazar"/>
 		<string id="TL260" text="Kasaba menüsünde defter girişi"/>
-		<string id="TL261" text="Her yiyecekten şu kadarını sakla (0 = kapalı)" />
-		<string id="TL361" text="Taşıdığınız her yiyecek türünden en az bu kadarını ayırın, böylece takımınız çeşitli beslenmenin verdiği moral artışını korur. Ayrılanlar yukarıdaki gün sayısına eklenmez, onun içinde sayılır ve hayvanlar buna dahil değildir. 0 = kapalı." />
+		<string id="TL261" text="Her yiyecek türünden biraz sakla" />
+		<string id="TL361" text="Taşıdığınız her yiyecek türünden birkaç tane ayırın, böylece takımınız çeşitli beslenmenin verdiği moral artışını korur. Ayrılanlar yukarıdaki gün sayısına eklenmez, onun içinde sayılır. Hayvanlar buna dahil değildir; bir sürü kendi başına bir yiyecek türü olarak yenmez, eti için kesilir. Öntanımlı olarak KAPALI." />
+		<string id="TL262" text="Her türden kaç tane saklansın" />
+		<string id="TL362" text="Yukarıdaki anahtarın her yiyecek türünden kaç tane ayıracağı. Üç tane, bir günlük yemenin bir türü tüketmemesine yeter; artış taşıdığınız tür sayısını sayar, miktarını değil, bu yüzden daha yükseğe çıkmanın pek faydası yoktur." />
 		<string id="TL352" text="TradeLord'un her zaman aldığı mallar: kategori kurallarını ve tahıl alma yasağını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla listeleri ve envanter kilidi yine geçerlidir, ve yine ancak erişimdeki bir yerde daha pahalıya satabileceğini alır."/>
 		<string id="TL250" text="Dil"/>
 		<string id="TL351" text="Kervanınız bir maldan bu kadarını taşıdığında TradeLord o malı bırakır ve parayı başka bir şeye harcar. Şu anda taşıdığınız miktarı ve bu ziyarette alınanları birlikte sayar. Satışı etkilemez. 0 = sınır yok."/>

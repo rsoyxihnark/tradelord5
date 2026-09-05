@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.16.0
+
+- Keeping some of every kind of food is now a switch you turn on, with how many to keep set separately and starting at three of each.
+
 ## 1.15.0
 
 - TradeLord can now hold back a few of every kind of food you carry, so selling your stores no longer costs your party the morale bonus it gets from eating a variety of things.
