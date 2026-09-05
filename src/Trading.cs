@@ -5,6 +5,7 @@ using System.Text;
 using HarmonyLib;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
+using TaleWorlds.CampaignSystem.CampaignBehaviors;
 using TaleWorlds.CampaignSystem.GameComponents;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ComponentInterfaces;
@@ -130,8 +131,40 @@ namespace TradeLord
             catch (Exception e) { Log.Error(e, "smeltable check"); return false; }
         }
 
-        internal static bool IsPackAnimal(ItemObject item) =>
-            item != null && item.HasHorseComponent && item.HorseComponent.IsPackAnimal;
+        internal static bool IsHaulAnimal(ItemObject item) =>
+            item != null && item.HasHorseComponent &&
+            (item.HorseComponent.IsPackAnimal || item.HorseComponent.IsMount);
+
+        private static bool _craftingLookupFailed;
+
+        internal static void ForgetCraftingLookup() => _craftingLookupFailed = false;
+
+        internal static bool PartsAllLearned(ItemObject item)
+        {
+            try
+            {
+                WeaponDesign design = item?.WeaponDesign;
+                if (design == null) return true;
+                var crafting = Campaign.Current?.GetCampaignBehavior<ICraftingCampaignBehavior>();
+                if (crafting == null)
+                {
+                    if (!_craftingLookupFailed)
+                    {
+                        _craftingLookupFailed = true;
+                        Log.Write("learned parts: the game's crafting record is not reachable - every smeltable weapon is kept instead");
+                    }
+                    return false;
+                }
+                WeaponDesignElement[] pieces = design.UsedPieces;
+                for (int i = 0; pieces != null && i < pieces.Length; i++)
+                {
+                    CraftingPiece piece = pieces[i].CraftingPiece;
+                    if (piece != null && !crafting.IsOpened(piece, design.Template)) return false;
+                }
+                return true;
+            }
+            catch (Exception e) { Log.Error(e, "learned parts check (the weapon is kept)"); return false; }
+        }
 
         internal static bool Listed(ItemList list, ItemObject item) =>
             item != null && !list.Empty &&
@@ -324,7 +357,8 @@ namespace TradeLord
             }
             else if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))
             { why = Block.Protected; return false; }
-            else if (s.KeepSmeltableWeapons && IsSmeltable(item))
+            else if (s.KeepSmeltableWeapons != Options.SmeltSellThem && IsSmeltable(item) &&
+                     (s.KeepSmeltableWeapons == Options.SmeltKeepAll || !PartsAllLearned(item)))
             { why = Block.Smeltable; return false; }
 
             bool sellable = livestock || item.IsTradeGood ||
@@ -377,7 +411,7 @@ namespace TradeLord
         internal static bool MayHaul(ItemObject item, ISet<string> lockedKeys)
         {
             Options s = Options.Current;
-            if (!IsPackAnimal(item) || item.NotMerchandise) return false;
+            if (!IsHaulAnimal(item) || item.NotMerchandise) return false;
             if (Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)) return false;
             return !IsLocked(lockedKeys, new EquipmentElement(item));
         }
@@ -513,6 +547,7 @@ namespace TradeLord
             _herdLookupFailed = false;
             Carry.Forget();
             TradePolicy.ForgetItemListAudit();
+            TradePolicy.ForgetCraftingLookup();
         }
 
         public override void SyncData(IDataStore dataStore)

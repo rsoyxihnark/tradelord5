@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.19.0
+
+- Keeping smeltable weapons is now a choice of three, and the new one keeps a weapon only while a part of it is still locked in your smithy, so your bags stop filling with loot that can teach you nothing.
+- Buying beasts now covers riding horses as well as mules and sumpter horses, so a cheap horse gets bought too and your foot troops have something to ride.
+- Asking bandits to let you go is now on out of the box, and one switch turns it off.
+- The feature list explains the three ways to play the smeltable weapon setting.
+
 ## 1.18.0
 
 - TradeLord now buys mules and sumpter horses when a market is asking no more than one is worth, so your party can carry more, and it will pay half again as much for one while your cargo is full.

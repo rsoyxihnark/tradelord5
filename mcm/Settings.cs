@@ -91,6 +91,11 @@ namespace TradeLord.Mcm
             "{=TL253}Leave alone", "{=TL254}Sell only", "{=TL255}Buy only", "{=TL256}Buy and sell"
         };
 
+        private static readonly string[] SmeltableWords =
+        {
+            "{=TL270}Sell them", "{=TL271}Keep every one", "{=TL272}Keep the ones you have not learned"
+        };
+
         private static readonly string[] BasisWords =
         {
             "{=TL257}Average of what you paid", "{=TL258}Last price you paid", "{=TL259}Cheapest market you know"
@@ -100,6 +105,7 @@ namespace TradeLord.Mcm
         private Dropdown<string> _craftingPolicy;
         private Dropdown<string> _livestockPolicy;
         private Dropdown<string> _costBasis;
+        private Dropdown<string> _smeltable;
 
         public Settings() { Bound(Options.Current); }
 
@@ -111,6 +117,7 @@ namespace TradeLord.Mcm
             _craftingPolicy = Choice(PolicyWords, to.CraftingPolicy);
             _livestockPolicy = Choice(PolicyWords, to.LivestockPolicy);
             _costBasis = Choice(BasisWords, to.CostBasisMode);
+            _smeltable = Choice(SmeltableWords, to.KeepSmeltableWeapons);
         }
 
         public override BaseSettings CreateNew()
@@ -156,6 +163,7 @@ namespace TradeLord.Mcm
             Follows(CraftingPolicy, () => _o.CraftingPolicy, picked => _o.CraftingPolicy = picked);
             Follows(LivestockPolicy, () => _o.LivestockPolicy, picked => _o.LivestockPolicy = picked);
             Follows(CostBasisMode, () => _o.CostBasisMode, picked => _o.CostBasisMode = picked);
+            Follows(KeepSmeltableWeapons, () => _o.KeepSmeltableWeapons, picked => _o.KeepSmeltableWeapons = picked);
             Language.PropertyChanged += (sender, args) => Retell();
             Retell();
         }
@@ -178,6 +186,7 @@ namespace TradeLord.Mcm
             Retold(CraftingPolicy, PolicyWords);
             Retold(LivestockPolicy, PolicyWords);
             Retold(CostBasisMode, BasisWords);
+            Retold(KeepSmeltableWeapons, SmeltableWords);
         }
 
         private static void Retold(Dropdown<string> shown, string[] words)
@@ -373,7 +382,7 @@ namespace TradeLord.Mcm
         public bool QuietAutomation { get => _o.QuietAutomation; set { _o.QuietAutomation = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL269}Cheat: bandits let you go for free", Order = 17, RequireRestart = false,
-            HintText = "{=TL369}Adds a line to the encounter screen when you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is a cheat, and it is OFF by default.")]
+            HintText = "{=TL369}Adds a line to the encounter screen when you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is a cheat, and it is ON by default; switch it off for a campaign you want to fight your own way out of.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool BanditGetawayCheat { get => _o.BanditGetawayCheat; set { _o.BanditGetawayCheat = value; Options.Bump(); } }
 
@@ -397,10 +406,14 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public bool ProtectSpecial { get => _o.ProtectSpecial; set { _o.ProtectSpecial = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL264}Keep smeltable weapons", Order = 4, RequireRestart = false,
-            HintText = "{=TL364}Never sell a weapon the smithy can break down for parts, so a smithing playthrough keeps its raw material. It holds back every weapon built from smithing parts, the ones you forged and the ones you looted off a bandit alike, so cheap loot is kept too. It does not ask which parts you have already learned. Armour, shields, bows and crossbows carry no smithing design, so those are still sold, and an always-sell entry still wins. OFF by default.")]
+        [SettingPropertyDropdown("{=TL264}Smeltable weapons", Order = 4, RequireRestart = false,
+            HintText = "{=TL364}What to do with a weapon the smithy can break down for parts, so a smithing playthrough keeps its raw material. Sell them is the default. Keep every one holds back anything built from smithing parts, forged or looted off a bandit alike, so cheap loot piles up with the rest. Keep the ones you have not learned holds a weapon only while one of its parts is still locked in your smithy, and sells the rest once it can teach you nothing. Armour, shields, bows and crossbows carry no smithing design, so those are always sold, and an always-sell entry still wins.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
-        public bool KeepSmeltableWeapons { get => _o.KeepSmeltableWeapons; set { _o.KeepSmeltableWeapons = value; Options.Bump(); } }
+        public Dropdown<string> KeepSmeltableWeapons
+        {
+            get => _smeltable;
+            set { _smeltable = value; Follows(value, () => _o.KeepSmeltableWeapons, picked => _o.KeepSmeltableWeapons = picked); Options.Bump(); }
+        }
 
         [SettingPropertyInteger("{=TL228}Sell loot up to tier (0 = off)", 0, 6, Order = 5, RequireRestart = false,
             HintText = "{=TL328}Also sells weapons and armor of this tier and below. Starts at tier 1, which is the gear looters and bandits drop. Locks and protections still apply.")]
@@ -487,13 +500,13 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public string AlwaysBuyItems { get => _o.AlwaysBuyItems; set { _o.AlwaysBuyItems = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL267}Buy pack animals", Order = 12, RequireRestart = false,
-            HintText = "{=TL367}Buy mules and sumpter horses whenever a market is asking no more than one is worth, so your party can carry more. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that by the premium below. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default.")]
+        [SettingPropertyBool("{=TL267}Buy pack animals and horses", Order = 12, RequireRestart = false,
+            HintText = "{=TL367}Buy any beast that carries for you, mules and sumpter horses and riding horses alike, whenever a market is asking no more than one is worth, so your party can carry more and your foot troops get something to ride. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that by the premium below. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public bool BuyPackAnimals { get => _o.BuyPackAnimals; set { _o.BuyPackAnimals = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL268}Pack animal premium while the cargo is full", 1f, 3f, "#0%", Order = 13, RequireRestart = false,
-            HintText = "{=TL368}How far over the going rate TradeLord will go for a mule or a sumpter horse while your cargo is full and the extra capacity is worth paying for. 150% is half again as much. 100% turns the premium off, so it only ever buys at the going rate.")]
+            HintText = "{=TL368}How far over the going rate TradeLord will go for a mule, a sumpter horse or a riding horse while your cargo is full and the extra capacity is worth paying for. 150% is half again as much. 100% turns the premium off, so it only ever buys at the going rate.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public float PackAnimalFullCargoPremium { get => _o.PackAnimalFullCargoPremium; set { _o.PackAnimalFullCargoPremium = value; Options.Bump(); } }
     }
