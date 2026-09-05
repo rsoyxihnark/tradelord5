@@ -439,8 +439,22 @@ def the_readme_counts_the_saved_values_right():
 def readme_defaults_match_the_shipped_ones():
     def on(name):
         return option_default(name) == 'true'
+    spelled = {'1': 'one', '3': 'three', '5': 'five'}
+    def said(name):
+        held = option_default(name)
+        return spelled.get(held, held)
+    def counted(src, pattern):
+        m = re.search(pattern, src)
+        return spelled.get(m.group(1), m.group(1)) if m else ''
+    tooltip = counted(S['TooltipPatches.cs'], r'private const int TopN = (\d+);')
+    shops = counted(S['Panel.cs'], r'i < best\.Count && i < (\d+);')
     claims = ['hotkey **' + option_default('PanelKey').strip('"') + '**',
-              'gold reserve of ' + option_default('GoldReserve') + ' denars']
+              'gold reserve of ' + option_default('GoldReserve') + ' denars',
+              'back up to ' + said('ResupplyFoodDays') + ' days of supply',
+              said('KeepWageDays') + " days of your troops' wages",
+              'from tier ' + option_default('MaxLootTier') + ' out of the box',
+              'The ' + tooltip + ' best places to sell and the ' + tooltip + ' cheapest to buy',
+              'The ' + shops + ' workshops in Calradia']
     return (all(c in README for c in claims)
             and on('Omniscient') and on('AutoSellOnEntry') and on('AutoBuyOnEntry')
             and on('NeverBuyGrain') and on('TradeWithVillages')
@@ -2657,6 +2671,9 @@ def a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till():
                     ('a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel',))
             and 'Buy any haul animal' in en.get('TL367', '')
             and 'Buys any haul animal' in README
+            and all(said in en.get('TL375', '') and said in README for said in
+                    ('then your haul animals, and your war horses and noble horses last of all',
+                     'it keeps enough haul animals to carry what you are already carrying'))
             and 'How much gold the town you would sell to actually has' in README)
 
 chk("1.23.0", "nothing a player reads calls a haul animal a beast, a town's gold a till, or an overpayment a premium",
