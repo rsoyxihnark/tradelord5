@@ -22,6 +22,10 @@ namespace TradeLord
         private static readonly TimeSpan HandTolerance = TimeSpan.FromSeconds(30);
 
         private static string _path;
+        private static readonly TimeSpan Settling = TimeSpan.FromMilliseconds(400);
+
+        private static DateTime _stillMoving;
+
         private static bool _dirty;
         private static bool _applying;
         private static Dictionary<string, string> _lastSeen;
@@ -99,10 +103,19 @@ namespace TradeLord
 
         private static void Noted()
         {
-            if (!_applying) _dirty = true;
+            if (_applying) return;
+            _dirty = true;
+            _stillMoving = DateTime.UtcNow;
         }
 
         internal static void Flush()
+        {
+            if (!_dirty) return;
+            if (DateTime.UtcNow - _stillMoving < Settling) return;
+            Settle();
+        }
+
+        internal static void Settle()
         {
             if (!_dirty) return;
             _dirty = false;

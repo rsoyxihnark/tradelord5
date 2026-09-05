@@ -2241,8 +2241,8 @@ def every_line_the_mod_says_can_change_language():
             and 'args.Text = Tongue.Text("{=TL112}' in method_body(S['Trading.cs'], "private static void AddGetaway"))
 
 def the_language_setting_leads_the_screen_and_starts_on_english():
-    return ('[SettingPropertyGroup("{=TL104}Automation", GroupOrder = 0)]' in M
-            and '[SettingPropertyGroup("{=TL100}Language", GroupOrder = 1)]' in M
+    return ('[SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]' in M
+            and '[SettingPropertyGroup("{=TL104}Automation", GroupOrder = 1)]' in M
             and 'public int Language = 0;' in S['Options.cs']
             and 'Follows(Language, () => _o.Language, picked => _o.Language = picked);' in M
             and 'instance?.FollowLanguage();' in M
@@ -2457,7 +2457,7 @@ chk("1.7.0", "a translated line keeps every value the English one fills in",
     every_translated_line_keeps_its_placeholders())
 chk("1.7.0", "every line the mod says on screen is built where the language is chosen",
     every_line_the_mod_says_can_change_language())
-chk("1.7.0", "auto sell and auto buy open the screen, the language setting follows, and the language starts on English",
+chk("1.7.0", "the language setting opens the screen, auto sell and auto buy come next, and the language starts on English",
     the_language_setting_leads_the_screen_and_starts_on_english())
 chk("1.7.0", "the language files are packed into the download",
     the_language_files_reach_the_download())
@@ -3384,7 +3384,9 @@ def the_file_and_the_screen_are_twins_and_the_newer_one_wins():
                         "Write(found, \"made to match the settings screen\");",
                         "McmLoader.Reseat?.Invoke();")
             and "Options.Changed = Noted;" in follow
-            and "if (!_applying) _dirty = true;" in method_body(S['Config.cs'], "private static void Noted")
+            and (lambda b: "if (_applying) return;" in b and "_dirty = true;" in b
+                       and "_stillMoving = DateTime.UtcNow;" in b)
+                (method_body(S['Config.cs'], "private static void Noted"))
             and "finally { _applying = false; }" in read
             and "public static Action Changed;" in S['Options.cs']
             and "Generation++; Changed?.Invoke();" in S['Options.cs']
@@ -3456,7 +3458,7 @@ def one_button_puts_every_setting_back_and_sits_at_the_top():
                        r'\s*public Action (\w+) \{ get; set; \} = Reset;', M, re.S)
     en = spoken(ENGLISH)
     return (button is not None
-            and button.group(2) == "0" and button.group(5) == "1"
+            and button.group(2) == "0" and button.group(5) == "0"
             and all(en.get(tag) for tag in (button.group(1), button.group(3), button.group(4)))
             and 'foreach (FieldInfo field in typeof(Options).GetFields(BindingFlags.Public | BindingFlags.Instance))'
                 in reset
@@ -3480,14 +3482,22 @@ def every_change_away_from_the_shipped_value_reaches_the_log():
             and "away from what TradeLord ships with" in away
             and "is back at what it ships with" in said
             and "_lastSeen = now;" in said
-            and ordered(flush, "_dirty = false;", "Guard.Run(\"Config.Changed\", SayWhatChanged);",
+            and ordered(method_body(S['Config.cs'], "internal static void Settle"),
+                        "_dirty = false;", "Guard.Run(\"Config.Changed\", SayWhatChanged);",
                         "Guard.Run(\"Config.Flush\"")
+            and ordered(flush, "if (!_dirty) return;",
+                        "if (DateTime.UtcNow - _stillMoving < Settling) return;", "Settle();")
             and "private static string Shown(FieldInfo field) => Shown(field, Options.Current);" in S['Config.cs'])
 
-chk("1.26.0", "one button at the top of its group puts every setting back to what the module ships with, redrawing only what moved",
+chk("1.26.0", "one button at the top of the screen puts every setting back to what the module ships with, redrawing only what moved",
     one_button_puts_every_setting_back_and_sits_at_the_top())
 chk("1.26.0", "what a player sets away from the shipped value is named in the log, at startup and whenever it changes",
     every_change_away_from_the_shipped_value_reaches_the_log())
+chk("1.35.2", "dragging a slider is written down once it comes to rest, not on every frame it passes through",
+    "private static readonly TimeSpan Settling = TimeSpan.FromMilliseconds(400);" in S['Config.cs'] and
+    'Guard.Run("GameEnd.Settings", Config.Settle);' in
+        method_body(S['SubModule.cs'], "public override void OnGameEnd") and
+    S['Config.cs'].count("_dirty = false;") == 1)
 
 def unwritable_settings_the_screen_would_refuse_to_build():
     shown = list(re.finditer(r'\[SettingProperty(Bool|Integer|FloatingInteger|Text|Dropdown|Button)\(', M))

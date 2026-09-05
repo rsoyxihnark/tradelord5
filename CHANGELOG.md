@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.35.2
+
+- The language setting is back at the top of the settings screen, with auto sell and auto buy just under it.
+- Dragging a slider on the settings screen no longer fills TradeLord.log with every value it passes through, and no longer rewrites TradeLord.ini for each one: your change is written down once, when the slider comes to rest.
+
 ## 1.35.1
 
 - Turning down the bandits' offer of free passage no longer stops them offering it again the next time you run into that same band.
