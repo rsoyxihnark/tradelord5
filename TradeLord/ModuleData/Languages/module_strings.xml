@@ -80,7 +80,7 @@
 		<string id="TL99" text="you are keeping what the smithy can break down"/>
 		<string id="TL110" text="TradeLord bought {ITEMS} for {GOLD} denars to carry more."/>
 		<string id="TL111" text="[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more."/>
-		<string id="TL112" text="I have TradeLord, can you let me go for free? [CHEAT]"/>
+		<string id="TL112" text="I have TradeLord, can you let me go for free? [TRADELORD]"/>
 		<string id="TL113" text="Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!"/>
 		<string id="TL114" text="That was a nice trade. [TRADELORD]"/>
 		<string id="TL115" text="Agreed. I wish I could use that mod too. Hope you gave a thumbs up endorsement on NexusMods!"/>
@@ -107,11 +107,11 @@
 		<string id="TL266" text="Keep gold for days of wages" />
 		<string id="TL366" text="Also hold back this many days of your troops' wages on top of the gold reserve above, so a shopping trip never eats the payroll. It is worked out from your real wage bill every time TradeLord trades, so it grows with the army. 0 holds back the flat reserve only." />
 		<string id="TL267" text="Buy pack animals and horses" />
-		<string id="TL367" text="Buy any beast that carries for you, mules and sumpter horses and riding horses alike, whenever a market is asking no more than one is worth, so your party can carry more and your foot troops get something to ride. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that by the premium below. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default." />
+		<string id="TL367" text="Buy any animal that carries for you, mules and sumpter horses and riding horses alike, whenever a market is asking no more than one is worth, so your party can carry more and your foot troops get something to ride. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that by the premium below. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default." />
 		<string id="TL268" text="Pack animal premium while the cargo is full" />
 		<string id="TL368" text="How far over the going rate TradeLord will go for a mule, a sumpter horse or a riding horse while your cargo is full and the extra capacity is worth paying for. 150% is half again as much. 100% turns the premium off, so it only ever buys at the going rate." />
-		<string id="TL269" text="Cheat: bandits let you go for free" />
-		<string id="TL369" text="Adds a line to the encounter screen when you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is a cheat, and it is ON by default; switch it off for a campaign you want to fight your own way out of." />
+		<string id="TL269" text="Free passage from bandits" />
+		<string id="TL369" text="Adds a line to the encounter screen when you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is ON by default; switch it off for a campaign you want to fight your own way out of." />
 		<string id="TL270" text="Sell them" />
 		<string id="TL271" text="Keep every one" />
 		<string id="TL272" text="Keep the ones you have not learned" />
@@ -198,8 +198,8 @@
 		<string id="TL326" text="Locked items in the inventory screen are never auto-traded. Locks are matched as the game stores them, by item and modifier."/>
 		<string id="TL327" text="The price a sale is measured against, so it sets both the profit TradeLord reports and the Trade XP the sale earns. Anything you never bought, loot included, is valued at the cheapest market you know of whichever one you pick."/>
 		<string id="TL328" text="Also sells weapons and armor of this tier and below. Starts at tier 1, which is the gear looters and bandits drop. Locks and protections still apply."/>
-		<string id="TL329" text="Skip selling here when this market pays clearly less than the best known market. Goods you never bought have no cost basis, so the floor always applies to those; this setting controls whether it also applies to goods you bought, which the profit margin already covers."/>
-		<string id="TL330" text="Sell here anyway if this market pays at least this fraction of the best known price. This always applies to goods you never bought, such as loot; with the setting above ON it applies to goods you bought too."/>
+		<string id="TL329" text="Skip selling here when this market pays clearly less than the best known market, so your cargo waits for the town that pays for it. It holds back everything you carry, what you bought and what you looted alike. OFF by default, in which case a good you bought still has to clear your profit margin, and looted gear goes to the first market that can pay for it."/>
+		<string id="TL330" text="Sell here anyway if this market pays at least this fraction of the best known price. It does nothing while the setting above is OFF."/>
 		<string id="TL331" text="Goods TradeLord must never sell. Name each one either by the item id, the short internal name such as grain, wine or iron_ore that TradeLord.log prints for every good it moves, or by the name the game shows you, such as Iron Ore. Separate them with commas. An entry matching no good in this game is named in the log and said on screen, rather than passing quietly. It leaves these alone when buying too, since it would have no way to sell them on."/>
 		<string id="TL332" text="Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named by item id or by the name the game shows, comma separated, as above. The never-sell list above and an inventory lock still hold. This is the only way to sell a mount or a pack animal."/>
 		<string id="TL334" text="Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip."/>

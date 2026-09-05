@@ -744,7 +744,7 @@ namespace TradeLord
         private static void AddGetaway(CampaignGameStarter starter) => Guard.Run(
             "menu encounter (the other menus are unaffected)", () =>
             starter.AddGameMenuOption("encounter", "tradelord_getaway",
-                Tongue.Text("{=TL112}I have TradeLord, can you let me go for free? [CHEAT]").ToString(),
+                Tongue.Text("{=TL112}I have TradeLord, can you let me go for free? [TRADELORD]").ToString(),
                 args =>
                 {
                     args.optionLeaveType = GameMenuOption.LeaveType.Escape;
@@ -762,7 +762,7 @@ namespace TradeLord
         private static void LetPlayerGo()
         {
             MobileParty foe = PlayerEncounter.EncounteredMobileParty;
-            Log.Write("getaway cheat used against " + (foe == null ? "an unnamed party" : foe.StringId));
+            Log.Write("free passage taken against " + (foe == null ? "an unnamed party" : foe.StringId));
             InformationManager.ShowInquiry(new InquiryData(
                 foe == null ? "" : foe.Name.ToString(),
                 Tongue.Text("{=TL113}Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!").ToString(),
@@ -1144,7 +1144,7 @@ namespace TradeLord
                         int basis = basisIsMarket || paidLeft > 0 ? paid : 0;
                         if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);
                         int holdFloor = 0;
-                        if (Options.Current.PreferBestSellTown || basis == 0)
+                        if (Options.Current.PreferBestSellTown)
                         {
                             if (!floorKnown)
                             {

@@ -424,7 +424,8 @@ def the_readme_counts_the_saved_values_right():
 def readme_defaults_match_the_shipped_ones():
     def on(name):
         return option_default(name) == 'true'
-    claims = ['hotkey **' + option_default('PanelKey').strip('"') + '**']
+    claims = ['hotkey **' + option_default('PanelKey').strip('"') + '**',
+              'gold reserve of ' + option_default('GoldReserve') + ' denars']
     return (all(c in README for c in claims)
             and on('Omniscient') and on('AutoSellOnEntry') and on('AutoBuyOnEntry')
             and on('NeverBuyGrain') and on('TradeWithVillages')
@@ -1145,9 +1146,10 @@ chk("1.4.3", "cost basis uses recorded purchase prices, not current market quote
     "HasPurchaseRecord(item) ?? false)" in
     method_body(S['Trading.cs'], "private static bool HasCostBasis") and
     "item.IsTradeGood ||" not in method_body(S['Trading.cs'], "private static bool HasCostBasis"))
-chk("1.4.3", "every unit with no cost basis is guarded by the sell-side floor instead - loot, and the unpaid half of a mixed stack",
-    "if (Options.Current.PreferBestSellTown || basis == 0)" in
+chk("1.21.0", "the sell-side floor is the hold-for-the-best-market switch and nothing else, so it binds every unit alike or none",
+    "if (Options.Current.PreferBestSellTown)" in
         method_body(S['Trading.cs'], "public static void ExecuteQuickSell") and
+    "basis == 0)" not in method_body(S['Trading.cs'], "public static void ExecuteQuickSell") and
     "holdFloor = unpaidFloor;" in S['Trading.cs'] and
     "TradePolicy.Priced(item)" not in method_body(S['Trading.cs'], "public static void ExecuteQuickSell"))
 chk("1.5.5", "a stack pays its purchased basis only for the units that were purchased, and only those units drain the record",
@@ -1685,8 +1687,11 @@ chk("1.6.12", "what quick-sell agrees to sell is unchanged, since the decision s
     re.search(r'ProfitAcceptable\(int costBasis, int townSellPrice, float margin\) =>\s*costBasis > 0\s*\?\s*'
               r'townSellPrice >= costBasis \* \(1f \+ margin\)\s*:\s*'
               r'townSellPrice > 0;', S['TradeMath.cs']) is not None)
-chk("1.6.12", "loot is still held back from a poor market by the same best-market floor",
-    "if (Options.Current.PreferBestSellTown || basis == 0)" in S['Trading.cs'])
+chk("1.21.0", "loot with the hold switched off goes to the first market that can pay, since nothing but that switch raises the floor",
+    "if (Options.Current.PreferBestSellTown)" in S['Trading.cs'] and
+    "Options.Current.BestSellTownTolerance" in
+        between(S['Trading.cs'], "if (Options.Current.PreferBestSellTown)", "int price = market.GetItemPrice") and
+    S['Trading.cs'].count("Options.Current.BestSellTownTolerance") == 1)
 chk("1.6.12", "that worth is looked up once per good, not once per unit sold",
     "if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);" in S['Trading.cs'] and
     method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
@@ -2477,16 +2482,33 @@ chk("1.14.1", "a text field that cannot be read leaves the hotkey working rather
 chk("1.14.1", "the escape menu still closes the panel whether or not anything is being typed",
     "else if (map.IsEscapeMenuOpened || (!TypingOnScreen(map) && HotkeyReleased()))" in S['Panel.cs'])
 
-def the_tolerance_hint_names_goods_that_were_never_bought():
-    hint = spoken(ENGLISH).get('TL330', '')
-    said = [spoken(path).get('TL330', '') for path in TRANSLATIONS.values()]
-    return ("never bought" in hint and "loot" in hint
-            and not hint.startswith("With the above ON")
-            and hint in M
-            and all(t and t != hint for t in said))
+def the_hold_hints_say_the_floor_binds_only_while_the_switch_is_on():
+    en = spoken(ENGLISH)
+    hold, tolerance = en.get('TL329', ''), en.get('TL330', '')
+    said = [(spoken(path).get('TL329', ''), spoken(path).get('TL330', ''))
+            for path in TRANSLATIONS.values()]
+    return ("what you bought and what you looted alike" in hold
+            and "OFF by default" in hold
+            and "looted gear goes to the first market that can pay for it" in hold
+            and "never bought" not in hold and "never bought" not in tolerance
+            and "It does nothing while the setting above is OFF." in tolerance
+            and hold in M and tolerance in M
+            and all(a and b and a != hold and b != tolerance for a, b in said))
 
-chk("1.14.1", "the best-market tolerance hint says the floor always binds goods that were never bought",
-    the_tolerance_hint_names_goods_that_were_never_bought())
+def a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till():
+    en = spoken(ENGLISH)
+    shipped = list(en.values()) + [README]
+    return (not any(re.search(r'\bbeasts?\b', t, re.I) for t in shipped)
+            and not any(re.search(r'\btills?\b', t, re.I) for t in shipped)
+            and 'Buy any animal that carries for you' in en.get('TL367', '')
+            and 'Buys any animal that carries for you' in README
+            and 'How much gold the town you would sell to actually has' in README)
+
+chk("1.21.0", "nothing a player reads calls a pack animal a beast or a town's gold a till",
+    a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till())
+
+chk("1.21.0", "the hold hints say the floor binds everything alike and does nothing while the switch is off",
+    the_hold_hints_say_the_floor_binds_only_while_the_switch_is_on())
 
 def the_panel_relabels_every_line_it_speaks():
     src = S['Panel.cs']
@@ -2665,7 +2687,7 @@ def a_full_cargo_is_what_pays_over_the_odds_for_a_pack_animal():
             and option_default('PackAnimalFullCargoPremium') == '1.5f'
             and "_o.BuyPackAnimals" in M and "_o.PackAnimalFullCargoPremium" in M)
 
-def the_getaway_is_a_cheat_that_ships_on_and_only_answers_bandits():
+def the_getaway_ships_on_names_no_cheat_and_only_answers_bandits():
     add = between(S['Trading.cs'], "private static void AddGetaway", "false, 4));")
     facing = method_body(S['Trading.cs'], "private static bool FacingBandits")
     go = method_body(S['Trading.cs'], "private static void LetPlayerGo")
@@ -2683,7 +2705,17 @@ def the_getaway_is_a_cheat_that_ships_on_and_only_answers_bandits():
             and "foe?.IgnoreForHours(GetawayHours);" in ride
             and "PlayerEncounter.LeaveEncounter = true;" in ride
             and "PlayerEncounter.Finish(true);" in ride
-            and '("encounter", false)' in COMPAT)
+            and '("encounter", false)' in COMPAT
+            and no_shipped_line_calls_the_free_passage_a_cheat())
+
+def no_shipped_line_calls_the_free_passage_a_cheat():
+    en = spoken(ENGLISH)
+    code = (S['Trading.cs'] + "\n" + M).replace('BanditGetawayCheat', '')
+    return (en.get('TL112', '').endswith('[TRADELORD]')
+            and en.get('TL269') == 'Free passage from bandits'
+            and not any('cheat' in text.lower() for text in en.values())
+            and 'cheat' not in code.lower()
+            and 'public bool BanditGetawayCheat = true;' in S['Options.cs'])
 
 def the_smeltable_hint_says_which_weapons_it_holds_back():
     hint = spoken(ENGLISH).get('TL364', '')
@@ -2712,7 +2744,7 @@ chk("1.19.0", "only an animal that carries for you is bought that way, the herd 
 chk("1.18.0", "a pack animal is bought at what it is worth, and over the odds only while the cargo is full",
     a_full_cargo_is_what_pays_over_the_odds_for_a_pack_animal())
 chk("1.19.0", "the getaway line ships on, shows only against bandits and ends the encounter",
-    the_getaway_is_a_cheat_that_ships_on_and_only_answers_bandits())
+    the_getaway_ships_on_names_no_cheat_and_only_answers_bandits())
 chk("1.19.0", "the smeltable hint names all three choices and says looted weapons are held too",
     the_smeltable_hint_says_which_weapons_it_holds_back())
 chk("1.19.0", "a weapon is kept whenever the game's crafting record cannot say its parts are all learned",
