@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.23.0
+
+- An animal that carries nothing for you and is not livestock, such as an Old Work Horse, is no longer fenced in with your haul animals, so it is sold like any other cargo instead of sitting in your bags for good.
+- The setting for how much more TradeLord will pay while your bags are full is now called Most it will pay for a haul animal when your bags are full, and it is explained in plain words.
+- The feature list now says where the line falls between a haul animal TradeLord keeps for you and an animal it sells.
+
 ## 1.22.0
 
 - TradeLord now sells a spare mount nobody in your party can ride, once those spares are dragging you into the herd speed penalty, so your footmen turning into cavalry no longer leaves the party crawling.

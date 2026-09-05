@@ -511,12 +511,12 @@ namespace TradeLord.Mcm
         public string AlwaysBuyItems { get => _o.AlwaysBuyItems; set { _o.AlwaysBuyItems = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL267}Buy haul animals and mounts", Order = 12, RequireRestart = false,
-            HintText = "{=TL367}Buy any haul animal, a mule, a sumpter horse, a work horse or a pack camel, whenever a market is asking no more than one is worth, so your party can carry more, and a horse or a camel your men can ride while you still have troops on foot. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that by the premium below. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default.")]
+            HintText = "{=TL367}Buy any haul animal, a mule, a sumpter horse, a work horse or a pack camel, whenever a market is asking no more than one is worth, so your party can carry more, and a horse or a camel your men can ride while you still have troops on foot. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that, up to the limit set below. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public bool BuyPackAnimals { get => _o.BuyPackAnimals; set { _o.BuyPackAnimals = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL268}Haul animal premium while the cargo is full", 1f, 3f, "#0%", Order = 13, RequireRestart = false,
-            HintText = "{=TL368}How far over the going rate TradeLord will go for a haul animal or a mount while your cargo is full and the extra capacity is worth paying for. 150% is half again as much. 100% turns the premium off, so it only ever buys at the going rate.")]
+        [SettingPropertyFloatingInteger("{=TL268}Most it will pay for a haul animal when your bags are full", 1f, 3f, "#0%", Order = 13, RequireRestart = false,
+            HintText = "{=TL368}When your bags are full, one more animal is worth paying over the odds for, so this is the most TradeLord will hand over for a haul animal or a mount while that lasts. 150% means it will go up to one and a half times the cheapest price it knows of. 100% means it never pays over the odds and buys only at the going rate.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public float PackAnimalFullCargoPremium { get => _o.PackAnimalFullCargoPremium; set { _o.PackAnimalFullCargoPremium = value; Options.Bump(); } }
 
