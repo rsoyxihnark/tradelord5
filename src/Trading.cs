@@ -208,7 +208,7 @@ namespace TradeLord
         internal static Dictionary<ItemObject, int> FoodKeep(ItemRoster roster)
         {
             var keep = new Dictionary<ItemObject, int>();
-            int variety = Options.Current.KeepFoodVariety;
+            int variety = Options.Current.KeepEveryFoodKind ? Options.Current.KeepPerFoodKind : 0;
             if ((Options.Current.KeepFoodDays <= 0 && variety <= 0) || roster == null) return keep;
             float perDay = -MobileParty.MainParty.FoodChange;
             if (perDay < 1f) perDay = 1f;
