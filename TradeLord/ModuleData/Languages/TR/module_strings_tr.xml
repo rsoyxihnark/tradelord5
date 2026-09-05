@@ -80,7 +80,7 @@
 		<string id="TL99" text="demirci ocağının parçalarına ayırabileceğini saklıyorsunuz"/>
 		<string id="TL110" text="TradeLord daha çok yük taşımak için {ITEMS} aldı, {GOLD} dinar."/>
 		<string id="TL111" text="[Benzetim, en iyi durum] TradeLord daha çok yük taşımak için {ITEMS} alırdı, {GOLD} dinar."/>
-		<string id="TL112" text="TradeLord'um var, beni bedavaya bırakır mısınız? [HİLE]"/>
+		<string id="TL112" text="TradeLord'um var, beni bedavaya bırakır mısınız? [TRADELORD]"/>
 		<string id="TL113" text="Ah, kusura bakmayın, tabii ki. Ama NexusMods'ta beğeni vermeyi unutmayın!"/>
 		<string id="TL114" text="İyi bir alışverişti. [TRADELORD]"/>
 		<string id="TL115" text="Katılıyorum. Keşke o modu ben de kullanabilseydim. Umarım NexusMods'ta beğeni vermişsinizdir!"/>
@@ -110,8 +110,8 @@
 		<string id="TL367" text="Sizin için yük taşıyan her hayvanı, katırı, yük atını ve binek atını, bir pazar değerinden fazlasını istemediği sürece satın alır; böylece bölüğünüz daha çok yük taşır ve yaya askerleriniz binecek bir şey bulur. Buradaki değer, o hayvan için bildiğiniz en ucuz fiyat, hiç bilmiyorsanız da hayvanın kendi değeridir. Kargonuz doluyken aşağıdaki fazladan ödeme kadar üstüne çıkar. Çiftlik hayvanları buna dahil değildir, onların kendi ilkesi vardır. Bölüğünüzün yavaşlamadan güdebileceğinden fazlasını asla almaz; altın rezerviniz, ziyaret başına harcama sınırınız ve asla alma listeniz yine geçerlidir. Öntanımlı olarak AÇIK." />
 		<string id="TL268" text="Kargo doluyken yük hayvanı için fazladan ödeme" />
 		<string id="TL368" text="Kargonuz doluyken ve fazladan yer para etmeye değerken, TradeLord bir katır, yük atı ya da binek atı için geçerli fiyatın ne kadar üstüne çıkar. %150 bir buçuk katı demektir. %100 fazladan ödemeyi kapatır, yani yalnızca geçerli fiyattan alır." />
-		<string id="TL269" text="Hile: haydutlar sizi bedavaya bırakır" />
-		<string id="TL369" text="Çapulcularla, deniz akıncılarıyla, orman, dağ, bozkır ya da çöl haydutlarıyla karşılaştığınızda karşılaşma ekranına bir satır ekler. Onu seçmek karşılaşmayı dövüşsüz ve fidyesiz bitirir, sonrasında da birkaç saat sizi rahat bırakırlar. Bu bir hiledir ve öntanımlı olarak AÇIKTIR; yolunuzu kendi kılıcınızla açmak istediğiniz bir oynayış için kapatın." />
+		<string id="TL269" text="Haydutlardan serbest geçiş" />
+		<string id="TL369" text="Çapulcularla, deniz akıncılarıyla, orman, dağ, bozkır ya da çöl haydutlarıyla karşılaştığınızda karşılaşma ekranına bir satır ekler. Onu seçmek karşılaşmayı dövüşsüz ve fidyesiz bitirir, sonrasında da birkaç saat sizi rahat bırakırlar. Öntanımlı olarak AÇIKTIR; yolunuzu kendi kılıcınızla açmak istediğiniz bir oynayış için kapatın." />
 		<string id="TL270" text="Sat" />
 		<string id="TL271" text="Hepsini sakla" />
 		<string id="TL272" text="Öğrenmediklerini sakla" />
@@ -198,8 +198,8 @@
 		<string id="TL326" text="Envanter ekranında kilitli eşyalar asla otomatik satılmaz. Kilitler oyunun sakladığı gibi, eşya ve niteliğiyle eşleştirilir."/>
 		<string id="TL327" text="Bir satışın ölçüldüğü fiyat: hem TradeLord'un bildirdiği kârı hem de satışın kazandırdığı Ticaret tecrübesini belirler. Hiç almadıklarınız, ganimet dâhil, hangisini seçerseniz seçin bildiğiniz en ucuz pazara göre değerlenir."/>
 		<string id="TL328" text="Bu kademeye kadar olan silah ve zırhları da satar. 1. kademeden başlar, yani çapulcuların ve haydutların düşürdüğü teçhizattan. Kilitler ve korumalar yine geçerlidir."/>
-		<string id="TL329" text="Bu pazar bilinen en iyi pazardan açıkça az ödüyorsa burada satmayı atla. Hiç almadığınız malların maliyeti yoktur, bu yüzden taban onlara her zaman uygulanır; bu ayar, kâr payının zaten kapsadığı, aldığınız mallara da uygulanıp uygulanmayacağını belirler."/>
-		<string id="TL330" text="Bu pazar bilinen en iyi fiyatın en az bu oranını ödüyorsa yine de burada sat. Bu, ganimet gibi hiç satın almadığınız mallar için her zaman geçerlidir; yukarıdaki ayar AÇIKKEN satın aldığınız mallar için de geçerli olur."/>
+		<string id="TL329" text="Bu pazar bilinen en iyi pazardan açıkça az ödüyorsa burada satmayı atla, böylece kargonuz hakkını veren şehri bekler. Taşıdığınız her şey için geçerlidir, satın aldığınız da ganimet olarak topladığınız da. Öntanımlı olarak KAPALI; kapalıyken satın aldığınız bir mal yine kâr payınızı geçmek zorundadır, ganimet ise parası olan ilk pazara gider."/>
+		<string id="TL330" text="Bu pazar bilinen en iyi fiyatın en az bu oranını ödüyorsa yine de burada sat. Yukarıdaki ayar KAPALIYKEN hiçbir şey yapmaz."/>
 		<string id="TL331" text="TradeLord'un asla satmaması gereken mallar. Her birini ya eşya kimliğiyle, ya TradeLord.log'un taşıdığı her mal için yazdığı grain, wine veya iron_ore gibi kısa iç adla, ya da oyunun size gösterdiği Iron Ore gibi adla yazın. Aralarına virgül koyun. Bu oyunda hiçbir mala uymayan bir girdi sessizce geçmek yerine günlükte adlandırılır ve ekranda söylenir. Alırken de bunlara dokunmaz, çünkü sonra satmanın bir yolu olmaz."/>
 		<string id="TL332" text="TradeLord'un her zaman sattığı mallar: kategori kurallarını, benzersiz ve el yapımı korumasını ve yiyecek payını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla satma listesi ve envanter kilidi yine geçerlidir. Bir binek ya da yük hayvanını satmanın tek yolu budur."/>
 		<string id="TL334" text="Bu altının altına asla harcama. Varsayılan 300; bu, iki düşman karşılaşmasından pazarlıkla çıkmaya ve alışveriş sonrası bir maaş ödemesini karşılamaya yeter."/>
