@@ -226,12 +226,12 @@ namespace TradeLord.Mcm
         [SettingPropertyButton("{=TL276}Put every setting back to how TradeLord ships", Order = 0, RequireRestart = false,
             Content = "{=TL277}Reset",
             HintText = "{=TL376}Puts every TradeLord setting back to the value it ships with, in one go. It takes hold at once and is written to TradeLord.ini as well, so nothing is left half changed. Your never sell, always sell, never buy and always buy lists are emptied too, and what changed is written to TradeLord.log.")]
-        [SettingPropertyGroup("{=TL100}Language", GroupOrder = 1)]
+        [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
         public Action ResetEverything { get; set; } = Reset;
 
         [SettingPropertyDropdown("{=TL250}Language", Order = 1, RequireRestart = false,
             HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. It takes hold as you pick it, with no restart and no reload.")]
-        [SettingPropertyGroup("{=TL100}Language", GroupOrder = 1)]
+        [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
         public Dropdown<string> Language
         {
             get => _language;
@@ -428,12 +428,12 @@ namespace TradeLord.Mcm
 
         [SettingPropertyBool("{=TL217}Auto sell", Order = 0, RequireRestart = false,
             HintText = "{=TL317}Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu.")]
-        [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 0)]
+        [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 1)]
         public bool AutoSellOnEntry { get => _o.AutoSellOnEntry; set { _o.AutoSellOnEntry = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL218}Auto buy", Order = 1, RequireRestart = false,
             HintText = "{=TL318}Buys the moment you walk into a market, after any selling. With this off, TradeLord buys only when you pick its trade entry in the menu.")]
-        [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 0)]
+        [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 1)]
         public bool AutoBuyOnEntry { get => _o.AutoBuyOnEntry; set { _o.AutoBuyOnEntry = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL216}Trade entry in town menu", Order = 0, RequireRestart = false,
