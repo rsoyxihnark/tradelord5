@@ -152,6 +152,18 @@ def projects_pin_one_reference_assembly():
     used = set(re.findall(r'"Bannerlord\.ReferenceAssemblies" Version="([0-9.]+)"', "\n".join(PROJ)))
     return len(PROJ) == 2 and len(used) == 1
 
+def the_readme_names_the_game_versions_the_mod_was_checked_against():
+    used = set(re.findall(r'"Bannerlord\.ReferenceAssemblies" Version="([0-9.]+)"', "\n".join(PROJ)))
+    if len(used) != 1:
+        return False
+    built = used.pop()
+    also = '1.5.2.121216'
+    return (README.count(built) >= 2
+            and README.count(also) >= 2
+            and 'Built on Bannerlord ' + built in README
+            and 'runs on the ' + also + ' beta too' in README
+            and 'or the **' + also + '** beta' in README)
+
 def one_hard_dependency():
     required = re.findall(r'<DependedModuleMetadata id="([^"]+)" order="[^"]+" optional="false"/>',
                           MANIFEST)
@@ -1337,6 +1349,8 @@ chk("1.5.3", "every declared Harmony patch is installed",
     every_declared_patch_is_installed())
 chk("1.5.3", "both projects pin the same reference-assembly version",
     projects_pin_one_reference_assembly())
+chk("1.30.1", "the feature list and what it needs both name the game version the mod is built on and the beta it also runs on",
+    the_readme_names_the_game_versions_the_mod_was_checked_against())
 chk("1.5.3", "the manifest declares exactly one required dependency, Harmony",
     one_hard_dependency())
 chk("1.5.3", "the release workflow reads its version from SubModule.xml",
