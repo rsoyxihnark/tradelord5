@@ -347,32 +347,37 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public int KeepFoodDays { get => Options.Current.KeepFoodDays; set { Options.Current.KeepFoodDays = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL225}Protect unique and crafted items", Order = 1, RequireRestart = false,
+        [SettingPropertyInteger("{=TL261}Keep this many of every food (0 = off)", 0, 50, Order = 1, RequireRestart = false,
+            HintText = "{=TL361}Hold back this many of every kind of food you carry, so the party keeps the morale bonus for eating a variety of things. What it holds back counts towards the days of supply above rather than adding to it, and livestock is left out. 0 = off.")]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+        public int KeepFoodVariety { get => Options.Current.KeepFoodVariety; set { Options.Current.KeepFoodVariety = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL225}Protect unique and crafted items", Order = 2, RequireRestart = false,
             HintText = "{=TL325}Never auto-trade unique or player-crafted items. Mounts and pack animals are protected by policy regardless of this setting; only an explicit always-sell entry can move those.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public bool ProtectSpecial { get => Options.Current.ProtectSpecial; set { Options.Current.ProtectSpecial = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL228}Sell loot up to tier (0 = off)", 0, 6, Order = 2, RequireRestart = false,
+        [SettingPropertyInteger("{=TL228}Sell loot up to tier (0 = off)", 0, 6, Order = 3, RequireRestart = false,
             HintText = "{=TL328}Also sells weapons and armor of this tier and below. Starts at tier 1, which is the gear looters and bandits drop. Locks and protections still apply.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public int MaxLootTier { get => Options.Current.MaxLootTier; set { Options.Current.MaxLootTier = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL229}Hold cargo for the best market", Order = 3, RequireRestart = false,
+        [SettingPropertyBool("{=TL229}Hold cargo for the best market", Order = 4, RequireRestart = false,
             HintText = "{=TL329}Skip selling here when this market pays clearly less than the best known market. Goods you never bought have no cost basis, so the floor always applies to those; this setting controls whether it also applies to goods you bought, which the profit margin already covers.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public bool PreferBestSellTown { get => Options.Current.PreferBestSellTown; set { Options.Current.PreferBestSellTown = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL230}Best-market tolerance", 0.5f, 1f, "#0%", Order = 4, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL230}Best-market tolerance", 0.5f, 1f, "#0%", Order = 5, RequireRestart = false,
             HintText = "{=TL330}Sell here anyway if this market pays at least this fraction of the best known price. This always applies to goods you never bought, such as loot; with the setting above ON it applies to goods you bought too.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public float BestSellTownTolerance { get => Options.Current.BestSellTownTolerance; set { Options.Current.BestSellTownTolerance = value; Options.Bump(); } }
 
-        [SettingPropertyText("{=TL231}Never sell (item ids or names, comma separated)", Order = 5, RequireRestart = false,
+        [SettingPropertyText("{=TL231}Never sell (item ids or names, comma separated)", Order = 6, RequireRestart = false,
             HintText = "{=TL331}Goods TradeLord must never sell. Name each one either by the item id, the short internal name such as grain, wine or iron_ore that TradeLord.log prints for every good it moves, or by the name the game shows you, such as Iron Ore. Separate them with commas. An entry matching no good in this game is named in the log and said on screen, rather than passing quietly. It leaves these alone when buying too, since it would have no way to sell them on.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public string NeverSellItems { get => Options.Current.NeverSellItems; set { Options.Current.NeverSellItems = value; Options.Bump(); } }
 
-        [SettingPropertyText("{=TL232}Always sell (item ids or names, comma separated)", Order = 6, RequireRestart = false,
+        [SettingPropertyText("{=TL232}Always sell (item ids or names, comma separated)", Order = 7, RequireRestart = false,
             HintText = "{=TL332}Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named by item id or by the name the game shows, comma separated, as above. The never-sell list above and an inventory lock still hold. This is the only way to sell a mount or a pack animal.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public string AlwaysSellItems { get => Options.Current.AlwaysSellItems; set { Options.Current.AlwaysSellItems = value; Options.Bump(); } }
