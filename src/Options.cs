@@ -72,7 +72,9 @@ namespace TradeLord
         public int CraftingPolicy = PolicyBuySell;
         public int LivestockPolicy = PolicyBuySell;
         public bool ProtectSpecial = true;
-        public bool KeepSmeltableWeapons = false;
+        public const int SmeltSellThem = 0, SmeltKeepAll = 1, SmeltKeepUnlearned = 2;
+
+        public int KeepSmeltableWeapons = SmeltSellThem;
         public bool RespectLocks = true;
 
         public int MaxLootTier = 1;
@@ -111,7 +113,7 @@ namespace TradeLord
         public float MarkerMaxTravelDays = 1.5f;
         public bool CoinSound = true;
 
-        public bool BanditGetawayCheat = false;
+        public bool BanditGetawayCheat = true;
 
         public string NeverSellItems = "";
         public string AlwaysSellItems = "";
