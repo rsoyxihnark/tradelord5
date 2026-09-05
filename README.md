@@ -25,6 +25,9 @@
 - ✅ Click any town to jump the camera there and pin a marker on it
 - ✅ The best town for the cargo you are carrying, marked on the map for you
 - ✅ The five workshops in Calradia earning the most right now, with their town and their owner, on that same panel. In honest-merchant mode it shows yours instead
+- ✅ Your gold, your cargo against what your party can carry, your party's speed and the running total of what TradeLord has made you, along the top of that same panel
+- ✅ A warning on screen when your purse is under your gold reserve, or your cargo is too full to buy anything, so a market that trades nothing is never a mystery
+- ✅ A name on one of your item lists that matches no good in this game said on screen and named in the log, instead of quietly doing nothing
 
 **What it does for you**
 
@@ -37,8 +40,8 @@
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short. Always on for goods you never bought, such as looted gear; off by default for goods you bought, whose profit margin already covers it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
-- ✅ Credits the profit to your Trade skill, at a rate you set
-- ✅ Trades in villages as well, under their own stricter travel limit
+- ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
+- ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good
 - ✅ Trades with a caravan you meet on the road: talk to it and the deal is already done, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of the caravan's own purse
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
 - ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore
@@ -52,7 +55,7 @@
 **What it doesn't touch**
 
 - ✅ Anything you locked in the inventory screen
-- ✅ Unique and player-crafted gear, and quest items. Your mounts and pack animals are never sold either, though it will buy pack animals for you
+- ✅ Unique and player-crafted gear, and quest items. Your mounts and pack animals are never sold either, though it will buy pack animals for you. Naming one on your always-sell list is the only way to move it
 - ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it: sell them, which is what it does out of the box; keep every one, which holds anything built from smithing parts, forged or looted off a bandit alike; or **keep only the ones you have not learned**, which holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know. Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus
@@ -69,11 +72,13 @@
 - ✅ Travel ceilings, so nothing it suggests is further than you care to ride
 - ✅ A scan radius, if you would rather it thought locally
 - ✅ A minimum stock before it calls something worth buying
+- ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ Caps on one good by count or by denars, on how many of it you will carry, on the share of the hold it may fill, and on the whole visit
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ Profit measured against what you paid: the average, the last, or the cheapest you know of
 - ✅ An honest-merchant mode you can switch on, using only the prices you have seen in person, recorded market by market as you walk them
+- ✅ How old a price you recorded yourself may be before honest-merchant mode stops trusting it
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
 - ✅ How cheap a mule or a horse has to be before it buys one, and how much more it will pay while your cargo is full
