@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.27.5
+
+- The hint under the language setting is back to plain English: it names what TradeLord speaks in and says the town menu entries change when you next load a campaign, without the paragraph about the settings screen that 1.27.4 added.
+
 ## 1.27.4
 
 - The language you pick on the TradeLord settings screen now reaches the screen itself: the name and hint of every setting, the headings above them and the Reset button are all spoken in it as you pick it, instead of staying in the old language until you restart the game.

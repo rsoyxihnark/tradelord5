@@ -2436,17 +2436,18 @@ def the_screen_is_spoken_again_where_it_already_stands():
             and 'AccessTools.Field(typeof(BaseSettings), "PropertyChanged")' in M
             and 'shown.RefreshValues();' in drawn)
 
-def the_hint_says_when_the_screen_changes_over():
+def the_language_hint_keeps_to_what_it_is_for():
     en = spoken(ENGLISH).get('TL350', '')
-    return ('This screen changes over as you pick it' in en
-            and 'the next time you open the screen' in en
-            and en in M
-            and all(len(spoken(path).get('TL350', '')) > 0 for path in TRANSLATIONS.values()))
+    return (en.endswith('Town menu entries take it when you next load a campaign.')
+            and 'screen' not in en.lower()
+            and 'restart' not in en.lower()
+            and len(en) < 240
+            and all(spoken(path).get('TL350', '') for path in TRANSLATIONS.values()))
 
 chk("1.27.4", "a language picked on the screen is spoken again into the names, hints and headings the screen already holds",
     the_screen_is_spoken_again_where_it_already_stands())
-chk("1.27.4", "the hint says what changes over as the language is picked and what waits for the screen to be opened again",
-    the_hint_says_when_the_screen_changes_over())
+chk("1.27.5", "the hint under the language setting names the language and nothing about the settings screen itself",
+    the_language_hint_keeps_to_what_it_is_for())
 
 def a_choice_between_named_things_is_picked_from_a_list():
     numbered = re.findall(r'\[SettingPropertyInteger\("\{=TL\d+\}[^"]*", 0, [0-3],', M)
