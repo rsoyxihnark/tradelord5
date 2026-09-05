@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.20.1
+
+- The line saying TradeLord bought pack animals now comes just after the line crediting your Trade skill, rather than before it.
+- The feature list now covers what the ledger panel shows along its top, the warnings TradeLord puts on screen, leaving a village its last of each good, and naming a mount on your always-sell list to sell it.
+
 ## 1.20.0
 
 - TradeLord now trades with a caravan you meet on the road: talk to it and the deal is already done, and the caravan pays out of its own purse.
