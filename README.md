@@ -55,6 +55,7 @@
 - ✅ Anything you locked in the inventory screen
 - ✅ Unique and player-crafted gear, quest items, mounts and pack animals
 - ✅ Your food reserve (accounted for the men in your party)
+- ✅ A share of every kind of food you carry, if you ask for it, so your party keeps the morale bonus for eating a variety of things
 - ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
 - ✅ Your gold reserve, or anything past your spending cap for the visit
 - ✅ Smithing materials such as iron ore, ingots, charcoal and hardwood, once you switch their policy to leave them alone, off by default
