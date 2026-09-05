@@ -96,8 +96,8 @@
 		<string id="TL260" text="Kasaba menüsünde defter girişi"/>
 		<string id="TL261" text="Her yiyecek türünden biraz sakla" />
 		<string id="TL361" text="Taşıdığınız her yiyecek türünden birkaç tane ayırın, böylece takımınız yiyecek çeşitliliği moral artışını korur. Ayrılanlar yukarıdaki gün sayısına eklenmez, onun içinde sayılır. Hayvanlar buna dahil değildir; bir sürü kendi başına bir yiyecek türü olarak yenmez, eti için kesilir. Öntanımlı olarak KAPALI." />
-		<string id="TL262" text="Her türden kaç tane saklansın" />
-		<string id="TL362" text="Yukarıdaki anahtarın her yiyecek türünden kaç tane ayıracağı. Üç tane, bir günlük yemenin bir türü tüketmemesine yeter; artış taşıdığınız tür sayısını sayar, miktarını değil, bu yüzden daha yükseğe çıkmanın pek faydası yoktur." />
+		<string id="TL262" text="Her yiyecek türünden kaç tane saklansın" />
+		<string id="TL362" text="Yukarıdaki anahtarın her yiyecek türünden kaç tane ayıracağı. Bu, yiyeceğin kendi sayısıdır, gün sayısı değil: gün üzerinden çalışan ayar yukarıdaki Yiyecek rezervi (gün olarak). İki tane, bir günlük yemenin bir türü tüketmemesine yeter; moral artışı taşıdığınız tür sayısını sayar, miktarını değil, bu yüzden daha yükseğe çıkmanın pek faydası yoktur." />
 		<string id="TL263" text="Yiyecek ikmali (kaç günlük)" />
 		<string id="TL363" text="Bölüğünüz bu kadar günlük yiyecekten azını taşıdığında, TradeLord kâr için ticaret yapmadan önce buradaki en ucuz yiyeceği alır ve stoku doldurur, ancak o yiyecek için bildiğiniz en ucuz fiyattan fazlasını vermez. Altın rezerviniz, ziyaret başına harcama sınırınız, asla alma listeniz ve yiyecek politikanız yine de geçerlidir; altınınız rezervinize inmeden durur ve köye her maldan sonuncusunu bırakır. 0 ikmali kapatır. Bir pazara varırken yalnızca otomatik alım açıkken çalışır." />
 		<string id="TL264" text="Eritilebilir silahlar" />
@@ -120,10 +120,9 @@
 		<string id="TL352" text="TradeLord'un her zaman aldığı mallar: kategori kurallarını ve tahıl alma yasağını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla listeleri ve envanter kilidi yine geçerlidir, ve yine ancak erişimdeki bir yerde daha pahalıya satabileceğini alır."/>
 		<string id="TL250" text="Dil"/>
 		<string id="TL351" text="Kervanınız bir maldan bu kadarını taşıdığında TradeLord o malı bırakır ve parayı başka bir şeye harcar. Şu anda taşıdığınız miktarı ve bu ziyarette alınanları birlikte sayar. Satışı etkilemez. 0 = sınır yok."/>
-		<string id="TL350" text="TradeLord'un oyun içinde konuştuğu dil: ticaret iletileri, defter paneli, fiyat ipuçları ve şehir menüsü girdileri. Varsayılan İngilizce. Seçtiğiniz anda geçerli olur, şehir menüsü girdileri ise bir sonraki oyun yüklemenizde geçer." />
+		<string id="TL350" text="TradeLord'un oyun içinde konuştuğu dil: ticaret iletileri, defter paneli, fiyat ipuçları ve şehir menüsü girdileri. Varsayılan İngilizce. Seçtiğiniz anda geçerli olur, yeniden başlatmaya da yeniden yüklemeye de gerek yok." />
 		<string id="TL360" text="TradeLord'un rota panelini açan defter girişini kasaba ve köy menülerinde gösterir. Paneli kısayol tuşuyla ya da harita düğmesiyle açmayı yeğliyorsanız kapatın."/>
 		<string id="TL201" text="Canlı dünya fiyatları (varsayılan)"/>
-		<string id="TL202" text="Gözlem raf ömrü (gün, 0 = hiç eskimez)"/>
 		<string id="TL203" text="Düşman pazarları dışarıda bırak"/>
 		<string id="TL204" text="Tarama yarıçapı (harita birimi, 0 = tüm harita)"/>
 		<string id="TL205" text="Alış önerisi için en az stok"/>
@@ -168,9 +167,8 @@
 		<string id="TL246" text="Otomatik işaret yol süresi sınırı (gün, 0 = kapalı)"/>
 		<string id="TL247" text="Ticarette para sesi"/>
 		<string id="TL248" text="Ayrıntılı ticaret özeti"/>
-		<string id="TL249" text="Sessiz otomasyon"/>
+		<string id="TL249" text="Ticaret iletilerini sustur" />
 		<string id="TL301" text="AÇIK (varsayılan): fiyatlar dünya ekonomisinden canlı okunur, gitmediğiniz pazarlar dâhil. KAPALI: yalnızca kendi gözünüzle gördüğünüz fiyatlar kullanılır."/>
-		<string id="TL302" text="Bundan eski gözlenen fiyatlar dikkate alınmaz. 0 = hiç eskimez."/>
 		<string id="TL303" text="Sizinle savaşta olan yerleşimleri asla tarama, önerme ve onlarla otomatik ticaret yapma."/>
 		<string id="TL304" text="Fiyat taramasını bu kuş uçuşu mesafedeki pazarlarla sınırla. 0 = tüm harita."/>
 		<string id="TL305" text="En iyi alış ipuçları için stokta en az bu kadar parça olmalı. 0 = kapalı. Yalnızca canlı fiyat kipinde: gözlem kipi fiyatları kaydeder, stok düzeylerini değil."/>
@@ -182,7 +180,7 @@
 		<string id="TL311" text="Eşya ipuçlarına bilinen en iyi alış ve satış pazarlarını, stok ve yol süresiyle birlikte ekler."/>
 		<string id="TL312" text="Oyunun kendi ticaret söylenti bölümünü atlar, böylece ipucunda tek ve tutarlı bir fiyat kümesi görünür."/>
 		<string id="TL313" text="Envanterdeki ticaret malı ve hayvan satırlarını, bu pazarın fiyatının bilinen en iyi pazarla karşılaştırmasına göre renklendirir."/>
-		<string id="TL314" text="Sefer haritasında defter panelini açan tuş. T, Y ya da F5 gibi tek bir tuş adı, istenirse önünde Ctrl, Alt ya da Shift ile, örneğin &quot;Ctrl+T&quot;. Bu mod oyundan tuş almaz, bu yüzden oyunun da kullandığı yalın bir tuş iki işi birden tetikler. Bunu önlemek için bir değiştirici tuş kullanın."/>
+		<string id="TL314" text="Sefer haritasında defter panelini açan tuş. T, Y ya da F5 gibi tek bir tuş adı, istenirse önünde Ctrl, Alt ya da Shift ile, örneğin &quot;Ctrl+T&quot;. Bu mod oyundan tuş almaz, bu yüzden oyunun da kullandığı yalın bir tuş iki işi birden tetikler. Bunu önlemek için bir değiştirici tuş kullanın. Yalnızca bir tuş adı, başka bir şey değil: bir kelime, bir cümle ya da bu oyunun bilmediği bir tuş T tuşuna döner ve TradeLord.log hangi tuşu kullandığını söyler." />
 		<string id="TL315" text="Sefer haritasının sağ kenarında, defter panelini açan tıklanabilir bir TradeLord düğmesi. Harita tıklamalarına karışıyorsa KAPATIN."/>
 		<string id="TL316" text="Şehir ve köy menülerinde, önce satıp sonra alan tek TradeLord ticaret girdisini gösterir. Menüyü vardığınızda kendiliğinden yapılan ticarete bırakmak için kapatın."/>
 		<string id="TL317" text="Bir pazara adım attığınız anda, sorulmadan, kurallarınızın izin verdiği her şeyi satar. Ticaret tecrübesi verilir. Kapalıyken TradeLord yalnızca menüdeki ticaret girdisini seçtiğinizde satar."/>
