@@ -3029,6 +3029,7 @@ def a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod():
     body = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
     market = method_body(S['Trading.cs'], "private static IMarketData RoadMarket")
     met = method_body(S['Trading.cs'], "private static bool CaravanMet")
+    once = method_body(S['Trading.cs'], "private static void TradeOnce")
     return (option_default('TradeWithCaravans') == 'true' and "_o.TradeWithCaravans" in M
             and '"TaleWorlds.CampaignSystem.Settlements.FakeMarketData"' in market
             and "as IMarketData" in market
@@ -3042,7 +3043,11 @@ def a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod():
             and "int till = met.PartyTradeGold;" in body
             and "if (till < price) break;" in body
             and "TradeOnce(caravan);" in met
-            and "if (_tradedWith == met) return;" in method_body(S['Trading.cs'], "private static void TradeOnce")
+            and "object here = PlayerEncounter.Current;" in once
+            and "if (_tradedWith == met || (here != null && _tradedIn == here)) return;" in once
+            and "_tradedIn = here;" in once
+            and "_tradedIn = null;" in method_body(S['Trading.cs'], "internal static void ForgetEncounter")
+            and "_tradedIn = null;" in method_body(S['Trading.cs'], "internal static void ForgetVisit")
             and "=> _tradedWith = null" in between(S['Trading.cs'], "private void OnConversationEnded", ";")
             and "CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEnded);"
                 in S['Trading.cs']
@@ -3100,6 +3105,21 @@ chk("1.20.0", "a caravan trade obeys the same rules a market visit does and keep
     a_caravan_trade_obeys_every_rule_a_market_visit_does())
 chk("1.20.0", "the caravan's own answer closes the conversation, with no farewell to click after it",
     the_caravan_line_closes_the_conversation_on_the_caravans_own_answer())
+
+def every_pass_that_really_moves_goods_rings_the_coin():
+    passes = ["public static void ExecuteQuickSell", "public static void ExecuteResupply",
+              "public static void ExecuteHerdRelief", "public static void ExecuteHaulage",
+              "public static void ExecuteQuickBuy"]
+    road = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
+    return (option_default('CoinSound') == 'true'
+            and all("CoinSound();" in method_body(S['Trading.cs'], one) for one in passes)
+            and road.count("if (!sim) CoinSound();") == 2
+            and S['Trading.cs'].count("CoinSound();") == 7
+            and "if (!Options.Current.CoinSound) return;" in
+                method_body(S['Trading.cs'], "private static void CoinSound"))
+
+chk("1.36.1", "a pass that really moves goods rings the coin, selling on the road along with the rest",
+    every_pass_that_really_moves_goods_rings_the_coin())
 
 def the_pack_animal_line_lands_after_the_trade_skill_line():
     flush = method_body(S['Trading.cs'], "internal static void FlushToasts")
@@ -3489,7 +3509,7 @@ def one_button_puts_every_setting_back_and_sits_at_the_top():
             and "var stock = new Options();" in reset
             and "if (!Equals(field.GetValue(Options.Current), now)) moved.Add(field.Name);" in reset
             and ordered(reset, "var stock = new Options();", "field.SetValue(Options.Current",
-                        "Reseat();", "shown.OnPropertyChanged(moved[i]);", "Options.Bump();")
+                        "Reseat();", "Options.Bump();", "shown.OnPropertyChanged(moved[i]);")
             and re.search(r'SettingPropertyDropdown\("\{=TL250\}Language", Order = 1,', M) is not None)
 
 def every_change_away_from_the_shipped_value_reaches_the_log():

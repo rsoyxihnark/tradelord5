@@ -260,10 +260,10 @@ namespace TradeLord.Mcm
                 Log.Write("settings screen: every setting was put back to the value TradeLord ships with, " +
                           moved.Count + " of them had been changed");
                 Reseat();
+                Options.Bump();
                 Settings shown = Instance;
                 if (shown == null) return;
                 for (int i = 0; i < moved.Count; i++) shown.OnPropertyChanged(moved[i]);
-                Options.Bump();
             });
         }
 
