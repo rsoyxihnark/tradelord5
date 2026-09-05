@@ -1207,8 +1207,11 @@ chk("1.5.0", "one place decides which category policy governs an item",
     S['Trading.cs'].count("Options.Current.LivestockPolicy") == 1)
 chk("1.5.0", "a head of cattle is asked as livestock, not as food",
     ordered(method_body(S['Trading.cs'], "internal static int PolicyFor"), "LivestockPolicy", "FoodPolicy"))
-chk("1.5.0", "the mounts and pack-animal fence outlived the matrix",
-    "if (!IsTradableLivestock(item)) { why = Block.MountOrPackAnimal; return false; }" in
+chk("1.23.0", "the selling fence is the haul animals themselves, so an animal that hauls nothing is not fenced in with them",
+    "if (IsHaulAnimal(item)) { why = Block.MountOrPackAnimal; return false; }" in
+    method_body(S['Trading.cs'], "internal static bool MaySell") and
+    "IsTradableLivestock" not in method_body(S['Trading.cs'], "internal static bool MaySell") and
+    "bool sellable = livestock || item.IsTradeGood ||" in
     method_body(S['Trading.cs'], "internal static bool MaySell") and
     "if (IsTradableLivestock(item)) return true;" in
     method_body(S['Trading.cs'], "internal static bool MayBuy") and
@@ -2505,13 +2508,15 @@ def a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till():
     shipped = list(en.values()) + [README]
     return (not any(re.search(r'\bbeasts?\b', t, re.I) for t in shipped)
             and not any(re.search(r'\btills?\b', t, re.I) for t in shipped)
+            and not any(re.search(r'\bpremiums?\b', t, re.I) for t in shipped)
+            and 'An animal that carries nothing for you and is not livestock is no haul animal' in README
             and all(named in en.get('TL367', '') and named in README for named in
                     ('a mule, a sumpter horse, a work horse or a pack camel',))
             and 'Buy any haul animal' in en.get('TL367', '')
             and 'Buys any haul animal' in README
             and 'How much gold the town you would sell to actually has' in README)
 
-chk("1.21.0", "nothing a player reads calls a pack animal a beast or a town's gold a till",
+chk("1.23.0", "nothing a player reads calls a haul animal a beast, a town's gold a till, or an overpayment a premium",
     a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till())
 
 chk("1.21.0", "the hold hints say the floor binds everything alike and does nothing while the switch is off",
