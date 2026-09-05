@@ -502,8 +502,7 @@ def every_numeric_setting_that_switches_off_at_zero_says_so():
     off = {'TL202': 'Observation shelf life', 'TL204': 'Scan radius', 'TL206': 'Travel ceiling',
            'TL207': 'Village travel ceiling', 'TL228': 'Sell loot up to tier',
            'TL235': 'Buy cap per item (count', 'TL236': 'Buy cap per item (denars',
-           'TL237': 'Max spend per visit', 'TL243': 'Economy settling delay', 'TL246': 'Auto-marker travel ceiling',
-           'TL261': 'Keep this many of every food'}
+           'TL237': 'Max spend per visit', 'TL243': 'Economy settling delay', 'TL246': 'Auto-marker travel ceiling'}
     for marker in off:
         label = re.search(r'\{=' + marker + r'\}([^"]*)"', M)
         if label is None or '0 = ' not in label.group(1):
@@ -2441,13 +2440,13 @@ def the_panel_relabels_every_line_it_speaks():
 
 def the_food_floor_keeps_one_of_every_kind_without_stacking_on_the_days():
     body = method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> FoodKeep")
-    return ("int variety = Options.Current.KeepFoodVariety;" in body
+    return ("int variety = Options.Current.KeepEveryFoodKind ? Options.Current.KeepPerFoodKind : 0;" in body
             and "if ((Options.Current.KeepFoodDays <= 0 && variety <= 0) || roster == null) return keep;" in body
             and "if (IsTradableLivestock(item)) continue;" in body
             and "int floor = Math.Min(el.Amount, variety);" in body
             and "reserve -= (floor - held) * FoodValue(item);" in body
             and "if (reserve <= 0) break;" in body
-            and ordered(body, "int variety = Options.Current.KeepFoodVariety;",
+            and ordered(body, "int variety = Options.Current.KeepEveryFoodKind ? Options.Current.KeepPerFoodKind : 0;",
                         "if (variety > 0)", "int floor = Math.Min(el.Amount, variety);",
                         "reserve -= (floor - held) * FoodValue(item);",
                         "if (reserve <= 0) break;",
@@ -2511,10 +2510,15 @@ chk("1.14.5", "every line the panel speaks is raised again when it refreshes, so
 
 chk("1.15.0", "the food floor holds back every kind of food, counts inside the days of supply and leaves livestock out",
     the_food_floor_keeps_one_of_every_kind_without_stacking_on_the_days())
-chk("1.15.0", "the food floor is off out of the box, so a campaign that never sets it trades as it did",
-    option_default('KeepFoodVariety') == '0' and
-    "public int KeepFoodVariety" in S['Options.cs'] and
-    "Options.Current.KeepFoodVariety" in M)
+chk("1.16.0", "the food floor is a switch that ships off, with its own amount that starts at three of each kind",
+    option_default('KeepEveryFoodKind') == 'false' and
+    option_default('KeepPerFoodKind') == '3' and
+    "Options.Current.KeepEveryFoodKind" in M and "Options.Current.KeepPerFoodKind" in M and
+    re.search(r'SettingPropertyInteger\("\{=TL262\}[^"]*", 1, 50,', M) is not None)
+chk("1.16.0", "a herd is left out of the food floor, because it is slaughtered for meat rather than eaten as its own kind",
+    "if (IsTradableLivestock(item)) continue;" in
+        method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> FoodKeep") and
+    "slaughtered for meat" in spoken(ENGLISH).get('TL361', ''))
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
