@@ -861,12 +861,13 @@ namespace TradeLord
             if (met.IsBandit) OfferFreePassage(met);
         }
 
-        private static MobileParty _offeredPassageTo;
+        private static object _offeredPassageIn;
 
         private static void OfferFreePassage(MobileParty foe)
         {
-            if (!Options.Current.BanditGetawayCheat || _offeredPassageTo == foe) return;
-            _offeredPassageTo = foe;
+            object here = PlayerEncounter.Current;
+            if (!Options.Current.BanditGetawayCheat || (here != null && _offeredPassageIn == here)) return;
+            _offeredPassageIn = here;
             Log.Write("free passage offered against " + foe.StringId);
             InformationManager.ShowInquiry(new InquiryData(
                 foe.Name.ToString(),
@@ -877,7 +878,7 @@ namespace TradeLord
                 () => Guard.Run("Action.Getaway", () => RideAway(foe)), null));
         }
 
-        internal static void ForgetEncounter() { _tradedWith = null; _offeredPassageTo = null; }
+        internal static void ForgetEncounter() { _tradedWith = null; _offeredPassageIn = null; }
 
         private void OnConversationEnded(IEnumerable<CharacterObject> spoke) => _tradedWith = null;
 
