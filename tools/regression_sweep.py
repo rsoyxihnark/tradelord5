@@ -838,7 +838,7 @@ chk("1.3.18", "neither pass trades before the settling delay is served, in a mar
     "CanTradeHere(settlement) && !StillSettling(quiet)" in
         between(S['Trading.cs'], "private static bool MarketOpen(Settlement settlement, bool quiet) =>", ";") and
     "if (StillSettling(quiet: false)) return;" in
-        method_body(S['Trading.cs'], "public static void ExecuteCaravanTrade") and
+        method_body(S['Trading.cs'], "public static void ExecuteRoadTrade") and
     S['Trading.cs'].count("if (!MarketOpen(settlement, quiet)) return;") == 5)
 chk("1.3.2", "ScanRadius applied in observed mode",
     "if (!WithinRadius(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
@@ -1777,7 +1777,7 @@ chk("1.21.0", "loot with the hold switched off goes to the first market that can
     "Options.Current.BestSellTownTolerance" in
         between(S['Trading.cs'], "if (Options.Current.PreferBestSellTown)", "int price = market.GetItemPrice") and
     "Options.Current.BestSellTownTolerance" in
-        between(method_body(S['Trading.cs'], "public static void ExecuteCaravanTrade"),
+        between(method_body(S['Trading.cs'], "public static void ExecuteRoadTrade"),
                 "if (Options.Current.PreferBestSellTown)", "while (remaining > 0)") and
     S['Trading.cs'].count("Options.Current.BestSellTownTolerance") == 2)
 chk("1.6.12", "that worth is looked up once per good, not once per unit sold",
@@ -2978,8 +2978,26 @@ def a_share_of_the_hold_caps_one_good_and_ships_off():
             and "MaxHeldShare" not in method_body(S['Trading.cs'], "internal static bool MaySell")
             and "MaxHeldShare" not in S['Ledger.cs'])
 
+def a_road_party_is_traded_with_the_moment_it_is_met():
+    return ('[HarmonyPatch(typeof(PlayerEncounter), "Start")]' in S['Trading.cs']
+            and 'Guard.Run("Encounter.Met", TradeActionBehavior.OnEncounterMet)' in S['Trading.cs']
+            and "Patcher.TryPatch(harmony, typeof(Patch_TradeOnMeeting));" in S['SubModule.cs']
+            and (lambda b: "if (IsRoadTrader(met)) { TradeOnce(met); return; }" in b
+                       and "if (met.IsBandit) OfferFreePassage(met);" in b)
+                (method_body(S['Trading.cs'], "internal static void OnEncounterMet"))
+            and "party.IsCaravan || party.IsVillager" in
+                between(S['Trading.cs'], "internal static bool IsRoadTrader", ";"))
+
+def bandits_are_offered_the_getaway_without_a_menu_of_their_own():
+    offer = method_body(S['Trading.cs'], "private static void OfferFreePassage")
+    return ("if (!Options.Current.BanditGetawayCheat || _offeredPassageTo == foe) return;" in offer
+            and "RideAway(foe)" in offer
+            and "TL378" in offer and "TL379" in offer and "TL380" in offer
+            and all(s in strings_declared() for s in ("TL378", "TL379", "TL380"))
+            and "ForgetEncounter" in S['SubModule.cs'])
+
 def a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod():
-    body = method_body(S['Trading.cs'], "public static void ExecuteCaravanTrade")
+    body = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
     market = method_body(S['Trading.cs'], "private static IMarketData RoadMarket")
     met = method_body(S['Trading.cs'], "private static bool CaravanMet")
     return (option_default('TradeWithCaravans') == 'true' and "_o.TradeWithCaravans" in M
@@ -2987,21 +3005,22 @@ def a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod():
             and "as IMarketData" in market
             and "_roadMarketFailed = true;" in market
             and "if (!Options.Current.TradeWithCaravans) return;" in body
-            and "if (!CaravanReachable(caravan)) return;" in body
+            and "if (!RoadPartyReachable(met)) return;" in body
             and "IMarketData market = RoadMarket();" in body
             and "if (market == null) return;" in body
             and "market.GetPrice(el.EquipmentElement, party, true, shop)" in body
             and "market.GetPrice(el.EquipmentElement, party, false, shop)" in body
-            and "int till = caravan.PartyTradeGold;" in body
+            and "int till = met.PartyTradeGold;" in body
             and "if (till < price) break;" in body
-            and "if (_tradedWith != caravan)" in met
+            and "TradeOnce(caravan);" in met
+            and "if (_tradedWith == met) return;" in method_body(S['Trading.cs'], "private static void TradeOnce")
             and "=> _tradedWith = null" in between(S['Trading.cs'], "private void OnConversationEnded", ";")
             and "CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEnded);"
                 in S['Trading.cs']
             and "ForgetRoadMarket();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 
 def a_caravan_trade_obeys_every_rule_a_market_visit_does():
-    body = method_body(S['Trading.cs'], "public static void ExecuteCaravanTrade")
+    body = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
     return ("TradePolicy.MaySell(el, locked, foodKeep, out int keep)" in body
             and "TradePolicy.MayBuy(it, locked) || !TradePolicy.MayRoundTrip(it, locked)" in body
             and "TradePolicy.ProfitAcceptable(worth, price)" in body
@@ -3042,6 +3061,10 @@ chk("1.20.0", "a horse an unmounted man can ride costs the herd nothing, so a fu
     a_horse_a_footman_can_ride_costs_the_herd_nothing())
 chk("1.20.0", "a share of the hold caps one good against the real capacity, ships off and binds buying only",
     a_share_of_the_hold_caps_one_good_and_ships_off())
+chk("1.34.0", "a caravan or a party of villagers is traded with the moment it is met, before any dialog",
+    a_road_party_is_traded_with_the_moment_it_is_met())
+chk("1.34.0", "bandits offer the getaway on meeting, so it never depends on a menu of the game's own",
+    bandits_are_offered_the_getaway_without_a_menu_of_their_own())
 chk("1.20.0", "a caravan on the road is priced by the game's own off-market pricing, and is skipped when that is gone",
     a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod())
 chk("1.20.0", "a caravan trade obeys the same rules a market visit does and keeps out of the visit counters",
@@ -3201,7 +3224,7 @@ def every_animal_that_moves_is_named_with_its_reason():
     moved = method_body(S['Trading.cs'], "private static void LogAnimalMoved")
     detail = method_body(S['Trading.cs'], "private static void LogDetail")
     src = S['Trading.cs']
-    reasons = ("the selling pass", "restocking the larder", "trading with a caravan on the road",
+    reasons = ("the selling pass", "restocking the larder", "trading with a party on the road",
                "herd relief, getting the party back up to speed", "stocking the baggage train",
                "the buying pass")
     return ("if (item == null || !item.HasHorseComponent) return;" in moved

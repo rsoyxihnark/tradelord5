@@ -44,7 +44,7 @@
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
 - ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good
-- ✅ Trades with a caravan you meet on the road: talk to it and the deal is already done, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of the caravan's own purse. A caravan on the road is held to every rule a market visit is: it sells your looted gear when the goods you bought fall short of your margin, it holds your cargo back for the best market if you asked for that, it can never sell you enough livestock to drop you into the herd speed penalty, your caps on how many of a good you hold and what share of the hold it may fill both apply, and the settling delay keeps it away from a brand new campaign
+- ✅ Trades with a caravan or a party of villagers the moment you meet them on the road, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of their own purse. A party on the road is held to every rule a market visit is: it sells your looted gear when the goods you bought fall short of your margin, it holds your cargo back for the best market if you asked for that, it can never sell you enough livestock to drop you into the herd speed penalty, your caps on how many of a good you hold and what share of the hold it may fill both apply, and the settling delay keeps it away from a brand new campaign
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
 - ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
@@ -52,7 +52,7 @@
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen
 - ✅ A dry run that simulates every trade it would have made, and shows you the estimate (moves nothing)
-- ✅ Free passage past bandits, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and you can ask them to let you go, and they will, with no fight and no ransom
+- ✅ Free passage past bandits, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and TradeLord asks you there and then whether to ride on, and they let you go with no fight and no ransom
 
 **What it doesn't touch**
 

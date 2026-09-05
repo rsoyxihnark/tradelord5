@@ -20,6 +20,7 @@ namespace TradeLord
             Patcher.TryPatch(harmony, typeof(Patch_SuppressVanillaTradeLines));
             Patcher.TryPatch(harmony, typeof(Patch_SPItemVM_UpdateProfitType));
             Patcher.TryPatch(harmony, typeof(Patch_SilenceChunkedTradeLines));
+            Patcher.TryPatch(harmony, typeof(Patch_TradeOnMeeting));
 
             Guard.Run("McmLoader", McmLoader.TryLoad);
             Config.Follow();
@@ -63,6 +64,7 @@ namespace TradeLord
             Guard.Run("GameEnd.Travel", Travel.Forget);
             Guard.Run("GameEnd.Bulk", Bulk.Forget);
             Guard.Run("GameEnd.Visit", TradeActionBehavior.ForgetVisit);
+            Guard.Run("GameEnd.Encounter", TradeActionBehavior.ForgetEncounter);
             LedgerBehavior.Instance = null;
             Guard.Run("GameEnd.Log", Log.Forget);
         }
