@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.31.1
+
+- The feature list now calls a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse and a Pack Camel haul animals where it describes getting your party back up to speed, the same name the settings screen and the rest of the list already use.
+
 ## 1.31.0
 
 - Trading with a caravan on the road now sells the goods you looted when the ones you bought fall short of your profit margin, the way a market does, instead of selling nothing at all.
