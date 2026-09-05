@@ -837,13 +837,45 @@ namespace TradeLord
         {
             MobileParty caravan = MobileParty.ConversationParty;
             if (!Options.Current.TradeWithCaravans || caravan == null || !caravan.IsCaravan) return false;
-            if (_tradedWith != caravan)
-            {
-                _tradedWith = caravan;
-                Guard.Run("Action.CaravanTrade", () => ExecuteCaravanTrade(caravan));
-            }
+            TradeOnce(caravan);
             return true;
         }
+
+        private static void TradeOnce(MobileParty met)
+        {
+            if (_tradedWith == met) return;
+            _tradedWith = met;
+            Guard.Run("Action.RoadTrade", () => ExecuteRoadTrade(met));
+        }
+
+        internal static bool IsRoadTrader(MobileParty party) =>
+            party != null && (party.IsCaravan || party.IsVillager);
+
+        internal static void OnEncounterMet()
+        {
+            MobileParty met = PlayerEncounter.EncounteredMobileParty;
+            if (met == null) return;
+            if (IsRoadTrader(met)) { TradeOnce(met); return; }
+            if (met.IsBandit) OfferFreePassage(met);
+        }
+
+        private static MobileParty _offeredPassageTo;
+
+        private static void OfferFreePassage(MobileParty foe)
+        {
+            if (!Options.Current.BanditGetawayCheat || _offeredPassageTo == foe) return;
+            _offeredPassageTo = foe;
+            Log.Write("free passage offered against " + foe.StringId);
+            InformationManager.ShowInquiry(new InquiryData(
+                foe.Name.ToString(),
+                Tongue.Text("{=TL378}You have TradeLord, so these bandits will let you pass for nothing if you ask them to.").ToString(),
+                true, true,
+                Tongue.Text("{=TL379}Ask them to let you go").ToString(),
+                Tongue.Text("{=TL380}Fight them").ToString(),
+                () => Guard.Run("Action.Getaway", () => RideAway(foe)), null));
+        }
+
+        internal static void ForgetEncounter() { _tradedWith = null; _offeredPassageTo = null; }
 
         private void OnConversationEnded(IEnumerable<CharacterObject> spoke) => _tradedWith = null;
 
@@ -1607,26 +1639,26 @@ namespace TradeLord
             return _roadMarket;
         }
 
-        private static bool CaravanReachable(MobileParty caravan)
+        private static bool RoadPartyReachable(MobileParty met)
         {
-            if (caravan == null || !caravan.IsCaravan) return false;
+            if (!IsRoadTrader(met)) return false;
             if (!Options.Current.ExcludeHostileTowns) return true;
             IFaction mine = Hero.MainHero?.MapFaction;
-            return mine == null || caravan.MapFaction == null ||
-                   !FactionManager.IsAtWarAgainstFaction(caravan.MapFaction, mine);
+            return mine == null || met.MapFaction == null ||
+                   !FactionManager.IsAtWarAgainstFaction(met.MapFaction, mine);
         }
 
-        public static void ExecuteCaravanTrade(MobileParty caravan)
+        public static void ExecuteRoadTrade(MobileParty met)
         {
             if (!Options.Current.TradeWithCaravans) return;
-            if (!CaravanReachable(caravan)) return;
+            if (!RoadPartyReachable(met)) return;
             if (StillSettling(quiet: false)) return;
             IMarketData market = RoadMarket();
             if (market == null) return;
 
             MobileParty party = MobileParty.MainParty;
             if (party == null) return;
-            PartyBase shop = caravan.Party;
+            PartyBase shop = met.Party;
             PartyBase me = party.Party;
             bool sim = Options.Current.SimulationMode;
             ISet<string> locked = TradePolicy.LockedKeys();
@@ -1634,7 +1666,7 @@ namespace TradeLord
             int goldBefore = Hero.MainHero.Gold;
             int sold = 0, bought = 0, profit = 0, simGold = 0, simSpent = 0;
             float simWeight = 0f;
-            int till = caravan.PartyTradeGold;
+            int till = met.PartyTradeGold;
             bool directionError = false;
             var soldHere = new HashSet<string>();
             var detail = new Dictionary<ItemObject, (int count, int gold)>();
@@ -1726,10 +1758,10 @@ namespace TradeLord
             if (sold > 0)
             {
                 _runMovedGoods = true;
-                Log.Write((sim ? "caravan sale (simulated, best case): " : "caravan sale: ") + sold +
+                Log.Write((sim ? "sale on the road (simulated, best case): " : "sale on the road: ") + sold +
                           " items, +" + (sim ? simGold : Hero.MainHero.Gold - goldBefore) +
-                          " gold, profit " + profit + " from " + caravan.Name);
-                LogDetail(selling: true, sim, detail, "trading with a caravan on the road");
+                          " gold, profit " + profit + " from " + met.Name);
+                LogDetail(selling: true, sim, detail, "trading with a party on the road");
                 TextObject said = Tongue.Text(sim
                     ? "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit)."
                     : "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).");
@@ -1746,7 +1778,7 @@ namespace TradeLord
             AutomatedTradeInProgress = true;
             try
             {
-                ItemRoster wares = caravan.ItemRoster;
+                ItemRoster wares = met.ItemRoster;
                 ItemRoster ours = party.ItemRoster;
                 float shareCap = Options.Current.MaxHeldShare > 0f
                     ? Carry.Capacity(party) * Options.Current.MaxHeldShare : 0f;
@@ -1839,9 +1871,9 @@ namespace TradeLord
 
             int spent = sim ? simSpent : spentFrom - Hero.MainHero.Gold;
             _runMovedGoods = true;
-            Log.Write((sim ? "caravan purchase (simulated, best case): " : "caravan purchase: ") + bought +
-                      " items, -" + spent + " gold from " + caravan.Name);
-            LogDetail(selling: false, sim, detail, "trading with a caravan on the road");
+            Log.Write((sim ? "purchase on the road (simulated, best case): " : "purchase on the road: ") + bought +
+                      " items, -" + spent + " gold from " + met.Name);
+            LogDetail(selling: false, sim, detail, "trading with a party on the road");
             if (!sim) CoinSound();
             TextObject msg = Tongue.Text(sim
                 ? "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars."
@@ -2358,6 +2390,12 @@ namespace TradeLord
             if (!muted) _pendingXpMuted = false;
             Log.Write("trade profit fed to the XP system: " + xp + " denars");
         }
+    }
+
+    [HarmonyPatch(typeof(PlayerEncounter), "Start")]
+    internal static class Patch_TradeOnMeeting
+    {
+        private static void Postfix() => Guard.Run("Encounter.Met", TradeActionBehavior.OnEncounterMet);
     }
 
     [HarmonyPatch(typeof(InformationManager), "DisplayMessage")]
