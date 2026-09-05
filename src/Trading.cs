@@ -772,6 +772,10 @@ namespace TradeLord
             TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
                              Options.Current.MaxSpendPerVisit, _spentThisVisit, 0);
 
+        internal static int PurseForAVisit() =>
+            TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
+                             Options.Current.MaxSpendPerVisit, 0, 0);
+
         private static bool WarnPurseBelowReserve()
         {
             if (TradedThisVisit()) return false;

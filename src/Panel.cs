@@ -255,9 +255,13 @@ namespace TradeLord
                 ? Tongue.Text("{=TL67}No profitable routes in reach").ToString()
                 : Line("{=TL68}{COUNT} profitable routes, best first", "COUNT", rows.Count.ToString());
             LegendText = empty
-                ? Tongue.Text(Options.Current.Omniscient
+                ? (TradeActionBehavior.PurseForAVisit() <= 0
+                    ? Line("{=TL377}Your purse is at {GOLD} denars and your gold reserve holds {RESERVE} of it back, so there is nothing here you could buy. Sell some cargo, or lower the reserve in its settings.",
+                           "GOLD", (hero?.Gold ?? 0).ToString("N0"),
+                           "RESERVE", TradeActionBehavior.GoldHeldBack().ToString("N0"))
+                    : Tongue.Text(Options.Current.Omniscient
                         ? "{=TL69}No routes are within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."
-                        : "{=TL90}No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings.").ToString()
+                        : "{=TL90}No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings.").ToString())
                 : Tongue.Text("{=TL70}Click a town name to jump to it and pin or unpin it | Days = you -> buy town -> sell town | Carv. = caravans at those towns | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit").ToString()
                   + (Options.Current.ConfidenceRanking
                         ? Tongue.Text("{=TL71} | Score = profit per day discounted by Conf").ToString()

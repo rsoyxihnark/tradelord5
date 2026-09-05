@@ -230,5 +230,6 @@
 		<string id="TL276" text="Her ayarı TradeLord'un geldiği haline geri al" />
 		<string id="TL277" text="Sıfırla" />
 		<string id="TL376" text="Her TradeLord ayarını tek seferde geldiği değere geri alır. Anında geçerli olur ve TradeLord.ini dosyasına da yazılır, böylece hiçbir şey yarım kalmaz. Asla satma, her zaman satma, asla alma ve her zaman alma listeleriniz de boşaltılır, ve neyin değiştiği TradeLord.log dosyasına yazılır." />
+		<string id="TL377" text="Keseniz {GOLD} dinar, altın rezerviniz bunun {RESERVE} kadarını tutuyor, bu yüzden burada alabileceğiniz bir şey yok. Biraz yük satın ya da ayarlardan rezervi düşürün." />
 	</strings>
 </base>
