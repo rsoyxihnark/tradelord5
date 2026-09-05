@@ -230,7 +230,7 @@ namespace TradeLord.Mcm
         public Action ResetEverything { get; set; } = Reset;
 
         [SettingPropertyDropdown("{=TL250}Language", Order = 1, RequireRestart = false,
-            HintText = "{=TL350}Language changes require a game restart.")]
+            HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. It takes hold as you pick it, and the town menu entries follow the next time you load a campaign.")]
         [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
         public Dropdown<string> Language
         {
@@ -668,10 +668,10 @@ namespace TradeLord.Mcm
         [SettingPropertyBool("{=TL267}Buy haul animals", Order = 12, RequireRestart = false,
             HintText = "{=TL367}Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, whenever a market is asking no more than one is worth, so your party can carry more. Worth here is the cheapest price you know of for that animal, or its own value where you know none, and it never pays a denar over it. Riding horses and camels are not bought at all. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, it stops before your gold reaches your reserve, and your spending limit for the visit and your never-buy list still hold. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
-        public bool BuyPackAnimals { get => _o.BuyPackAnimals; set { _o.BuyPackAnimals = value; Options.Bump(); } }
+        public bool BuyHaulAnimals { get => _o.BuyHaulAnimals; set { _o.BuyHaulAnimals = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL274}Share of the hold one good may fill (0 = off)", 0f, 1f, "#0%", Order = 14, RequireRestart = false,
-            HintText = "{=TL374}Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and your pack animals instead of needing a new number every time the party grows. 0 turns it off. Selling is unaffected, and the flat per-item caps above still hold.")]
+            HintText = "{=TL374}Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and your haul animals instead of needing a new number every time the party grows. 0 turns it off. Selling is unaffected, and the flat per-item caps above still hold.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public float MaxHeldShare { get => _o.MaxHeldShare; set { _o.MaxHeldShare = value; Options.Bump(); } }
     }
