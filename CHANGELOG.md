@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.35.1
+
+- Turning down the bandits' offer of free passage no longer stops them offering it again the next time you run into that same band.
+
 ## 1.35.0
 
 - The language you pick now reaches the town menu entries as well, so Trade here now and Consult the TradeLord ledger change over the moment you pick it instead of waiting for you to load a campaign again.
