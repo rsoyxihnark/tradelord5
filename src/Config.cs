@@ -18,6 +18,10 @@ namespace TradeLord
             "This file is read only when MCM is not installed. With MCM installed its",
             "settings screen is in charge and nothing here is read.",
             "",
+            "The " + Migration.ShapeKey + " line says which shape this file is in. TradeLord reads it",
+            "and brings an older file forward by itself, writing what it changed to TradeLord.log,",
+            "so a setting is never lost when TradeLord changes how one works.",
+            "",
             "One setting per line, written as name = value. Lines starting with # are",
             "ignored. A name TradeLord does not know, or a value it cannot read, is",
             "reported in TradeLord.log and left at the value shown here.",
@@ -44,31 +48,47 @@ namespace TradeLord
                 return;
             }
 
-            var known = new Dictionary<string, FieldInfo>(StringComparer.OrdinalIgnoreCase);
-            foreach (FieldInfo field in Fields()) known[field.Name] = field;
-
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            int taken = 0;
+            var written = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (string raw in File.ReadAllLines(found))
             {
                 string line = raw.Trim();
                 if (line.Length == 0 || line[0] == '#') continue;
                 int mark = line.IndexOf('=');
                 if (mark < 0) { Log.Write("settings file: '" + line + "' is not a name = value line, so it is ignored"); continue; }
-                string name = line.Substring(0, mark).Trim();
-                string written = line.Substring(mark + 1).Trim();
-                if (!known.TryGetValue(name, out FieldInfo field))
+                written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();
+            }
+
+            int shape = 1;
+            if (written.TryGetValue(Migration.ShapeKey, out string stamped) &&
+                int.TryParse(stamped, NumberStyles.Integer, CultureInfo.InvariantCulture, out int stored))
+                shape = stored;
+            written.Remove(Migration.ShapeKey);
+
+            var notes = new List<string>();
+            bool lifted = Migration.Lift(shape, written, notes);
+            foreach (string note in notes) Log.Write("settings file: " + note);
+
+            var known = new Dictionary<string, FieldInfo>(StringComparer.OrdinalIgnoreCase);
+            foreach (FieldInfo field in Fields()) known[field.Name] = field;
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int taken = 0;
+            foreach (var line in written)
+            {
+                if (!known.TryGetValue(line.Key, out FieldInfo field))
                 {
-                    Log.Write("settings file: TradeLord has no setting called '" + name + "', so that line does nothing");
+                    Log.Write("settings file: TradeLord has no setting called '" + line.Key + "', so that line does nothing");
                     continue;
                 }
                 seen.Add(field.Name);
-                if (Taken(field, written)) taken++;
+                if (Taken(field, line.Value)) taken++;
             }
 
             Options.Bump();
             Log.Write("settings file read from " + found + ": " + taken + " of " + known.Count + " settings set");
-            if (seen.Count < known.Count)
+            if (lifted || shape != Migration.Shape)
+                Write(found, "brought forward from shape " + shape + " to shape " + Migration.Shape);
+            else if (seen.Count < known.Count)
                 Write(found, "the file was missing " + (known.Count - seen.Count) + " setting(s) this version knows");
         }
 
@@ -115,6 +135,8 @@ namespace TradeLord
             foreach (string line in Header)
                 sb.AppendLine(line.Length == 0 ? "#" : "# " + line);
             sb.AppendLine();
+            sb.Append(Migration.ShapeKey).Append(" = ")
+              .AppendLine(Migration.Shape.ToString(CultureInfo.InvariantCulture));
             foreach (FieldInfo field in Fields())
                 sb.Append(field.Name).Append(" = ").AppendLine(Shown(field));
             try
