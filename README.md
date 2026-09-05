@@ -35,8 +35,8 @@
 - ✅ Sells and buys the moment you enter a market by default
 - ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has at whatever it asks, before it trades for profit
 - ✅ Buys and sells livestock, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
-- ✅ Buys any haul animal, a mule, a sumpter horse, a work horse or a pack camel, paying up to the cheapest price it knows of for one, and up to 1.5 times that while your cargo is full. It buys a horse or a camel your men can ride the same way, while you still have troops on foot. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
-- ✅ Sells a spare mount nobody in your party can ride, once those spares are dragging you into the herd speed penalty, and only as many as it takes to get out of it. It sells the cheapest first, so your war horses stay in the baggage, and a haul animal is never sold this way. One switch turns it off
+- ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to the cheapest price it knows of for one, and up to 1.5 times that while your cargo is full. It buys a horse or a camel your men can ride the same way, while you still have troops on foot. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
+- ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it. Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your pack animals, and your war horses and noble horses last of all, cheapest first at every step. It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, and it keeps enough pack animals to carry what you are already carrying. One switch turns it off
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, once you switch it on. Off out of the box, so looted gear goes to the first market that can pay for it
@@ -56,7 +56,7 @@
 **What it doesn't touch**
 
 - ✅ Anything you locked in the inventory screen
-- ✅ Unique and player-crafted gear, and quest items. Your haul animals are never sold either, though it will buy them for you, and naming one on your always-sell list is the only way to move one. An animal that carries nothing for you and is not livestock is no haul animal, so it is sold like any other cargo rather than sitting in your bags for good
+- ✅ Unique and player-crafted gear, and quest items. Your haul animals are never sold for profit either, though it will buy them for you, and naming one on your always-sell list is the only way to move one by hand. An animal that carries nothing for you and is not livestock is no haul animal, so it is sold like any other cargo rather than sitting in your bags for good
 - ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it: sell them, which is what it does out of the box; keep every one, which holds anything built from smithing parts, forged or looted off a bandit alike; or **keep only the ones you have not learned**, which holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know. Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus
@@ -87,7 +87,7 @@
 **And**
 
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM
-- ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting, which its trade messages, ledger panel, price tooltips, menu entries and settings screen all follow
+- ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting, which its trade messages, ledger panel, price tooltips, menu entries and settings screen all follow once you restart the game
 - ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303
 - ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it
 

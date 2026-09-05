@@ -230,7 +230,7 @@ namespace TradeLord.Mcm
         public Action ResetEverything { get; set; } = Reset;
 
         [SettingPropertyDropdown("{=TL250}Language", Order = 1, RequireRestart = false,
-            HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. Town menu entries take it when you next load a campaign.")]
+            HintText = "{=TL350}Language changes require a game restart.")]
         [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
         public Dropdown<string> Language
         {
@@ -590,8 +590,8 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public float BestSellTownTolerance { get => _o.BestSellTownTolerance; set { _o.BestSellTownTolerance = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL275}Sell spare mounts that slow you down", Order = 8, RequireRestart = false,
-            HintText = "{=TL375}Sell a riding horse or camel nobody in your party can ride, but only while those spare mounts are dragging you into the herd speed penalty, and only as many as it takes to get out of it. It sells the cheapest ones first, so your war horses stay in the baggage. A haul animal is never sold this way, and neither is anything you locked, put on your never-sell list, or that the unique and crafted protection covers. ON by default.")]
+        [SettingPropertyBool("{=TL275}Sell animals that slow you down", Order = 8, RequireRestart = false,
+            HintText = "{=TL375}Gets your party out of the herd speed penalty by selling animals, only while that penalty is on you, and only as many as it takes to get out of it. Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all. It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, and it keeps enough haul animals to carry what you are already carrying. Cheapest first at every step, and anything you locked, put on your never-sell list, or that the unique and crafted protection covers is left alone. ON by default.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public bool SellSpareMounts { get => _o.SellSpareMounts; set { _o.SellSpareMounts = value; Options.Bump(); } }
 
@@ -601,7 +601,7 @@ namespace TradeLord.Mcm
         public string NeverSellItems { get => _o.NeverSellItems; set { _o.NeverSellItems = value; Options.Bump(); } }
 
         [SettingPropertyText("{=TL232}Always sell (item ids or names, comma separated)", Order = 10, RequireRestart = false,
-            HintText = "{=TL332}Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named by item id or by the name the game shows, comma separated, as above. The never-sell list above and an inventory lock still hold. This is the only way to sell a haul animal.")]
+            HintText = "{=TL332}Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named by item id or by the name the game shows, comma separated, as above. The never-sell list above and an inventory lock still hold. This is the only way to sell a haul animal for profit, though getting your party back up to speed may still sell one as a last resort.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public string AlwaysSellItems { get => _o.AlwaysSellItems; set { _o.AlwaysSellItems = value; Options.Bump(); } }
 
@@ -666,7 +666,7 @@ namespace TradeLord.Mcm
         public string AlwaysBuyItems { get => _o.AlwaysBuyItems; set { _o.AlwaysBuyItems = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL267}Buy haul animals and mounts", Order = 12, RequireRestart = false,
-            HintText = "{=TL367}Buy any haul animal, a mule, a sumpter horse, a work horse or a pack camel, whenever a market is asking no more than one is worth, so your party can carry more, and a horse or a camel your men can ride while you still have troops on foot. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that, up to the limit set below. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default.")]
+            HintText = "{=TL367}Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, whenever a market is asking no more than one is worth, so your party can carry more, and a horse or a camel your men can ride while you still have troops on foot. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that, up to the limit set below. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public bool BuyPackAnimals { get => _o.BuyPackAnimals; set { _o.BuyPackAnimals = value; Options.Bump(); } }
 
