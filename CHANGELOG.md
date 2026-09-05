@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.21.1
+
+- The feature list now names the animals TradeLord buys for your baggage train, a mule, a sumpter horse, a work horse or a pack camel, and says it buys a horse or a camel your men can ride while you still have troops on foot.
+
 ## 1.21.0
 
 - Looted gear now sells to the first market that can pay for it, and Hold cargo for the best market, which is off out of the box, is now the only thing that makes any of your cargo wait for a better town.

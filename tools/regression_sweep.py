@@ -2384,8 +2384,13 @@ def a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists():
 
 def looted_gear_is_cleared_from_the_first_tier_by_default():
     hint = re.search(r'\{=TL328\}([^"]*)"', M)
+    gate = between(S['Trading.cs'], "bool sellable = livestock || item.IsTradeGood ||", ";")
     return (option_default('MaxLootTier') == '1'
             and '(int)item.Tier + 1 <= s.MaxLootTier' in S['Trading.cs']
+            and 's.MaxLootTier > 0' in gate
+            and '!item.IsFood' in gate and '!item.IsAnimal' in gate and '!item.IsMountable' in gate
+            and 'if (!sellable) { why = Block.NotTradable; return false; }' in
+                method_body(S['Trading.cs'], "internal static bool MaySell")
             and hint is not None and 'tier 1' in hint.group(1))
 
 chk("1.11.0", "a setting with named choices is picked from a list rather than typed as a number",
@@ -2501,7 +2506,7 @@ def a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till():
     return (not any(re.search(r'\bbeasts?\b', t, re.I) for t in shipped)
             and not any(re.search(r'\btills?\b', t, re.I) for t in shipped)
             and 'Buy any animal that carries for you' in en.get('TL367', '')
-            and 'Buys any animal that carries for you' in README
+            and 'Buys any animal that carries for you, a mule, a sumpter horse, a work horse or a pack camel' in README
             and 'How much gold the town you would sell to actually has' in README)
 
 chk("1.21.0", "nothing a player reads calls a pack animal a beast or a town's gold a till",
