@@ -728,7 +728,8 @@ def each_preset_gets_its_own_settings():
             and 'private Options _o;' in M
             and 'made.Bound(new Options());' in made
             and 'Options.Current' not in made
-            and M.count('Options.Current') == 1
+            and M.count('Options.Current') == 2
+            and 'held.Bound(Options.Current);' in method_body(M, "internal static void Reseat")
             and '_o = to;' in method_body(M, "private void Bound")
             and all('Follows(value, () => _o.' + name in M
                     for name in ('Language', 'FoodPolicy', 'CraftingPolicy',
@@ -1539,7 +1540,7 @@ chk("1.6.1", "the gold reserve default leaves room for two safe passages and a w
 
 chk("1.6.2", "every per-frame and shutdown call runs inside the crash guard",
     all(f'Guard.Run("{c}"' in S['SubModule.cs'] for c in
-        ("Tick.ReleaseMessageFilter", "Tick.FlushToasts",
+        ("Tick.ReleaseMessageFilter", "Tick.FlushToasts", "Tick.Settings",
          "GameEnd.Panel", "GameEnd.Travel", "GameEnd.Visit")) and
     all(re.search(r'^\s+(?!base\.|Guard\.Run|LedgerPanel\.Tick|LedgerBehavior\.Instance = null;)\S.*\(\);',
                   line) is None
@@ -2646,8 +2647,8 @@ chk("1.17.0", "the purse holds the flat reserve and the days of wages together, 
     'MobileParty.MainParty?.TotalWage' in S['Trading.cs'] and '_o.KeepWageDays' in M)
 chk("1.17.0", "the ships' capacity is asked for in one place, and the panel reads that same number",
     option_default('UseFleetCapacity') == 'false' and the_ships_capacity_is_asked_in_one_place())
-chk("1.17.0", "with no MCM the settings file is read, with MCM it is not, and it carries every option",
-    "if (McmLoader.SettingsReachable) return;" in
+chk("1.25.0", "the settings file is read whether or not MCM is there, and it carries every option",
+    "McmLoader.SettingsReachable" not in
         method_body(S['Config.cs'], "internal static void Follow") and
     ordered(S['SubModule.cs'], 'Guard.Run("McmLoader", McmLoader.TryLoad);', 'Config.Follow();') and
     "typeof(Options).GetFields(BindingFlags.Public | BindingFlags.Instance)" in
@@ -2967,7 +2968,7 @@ def a_settings_file_says_which_shape_it_is_in():
     return ('public const int Shape = 2;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and ordered(read, "written[line.Substring(0, mark).Trim()]",
-                        "written.TryGetValue(Migration.ShapeKey, out string stamped)",
+                        "written.TryGetValue(Migration.ShapeKey, out string held)",
                         "written.Remove(Migration.ShapeKey);",
                         "bool lifted = Migration.Lift(shape, written, notes);",
                         "foreach (string note in notes) Log.Write",
@@ -2975,6 +2976,38 @@ def a_settings_file_says_which_shape_it_is_in():
                         "if (lifted || shape != Migration.Shape)")
             and "int shape = 1;" in read
             and "sb.Append(Migration.ShapeKey).Append(\" = \")" in write)
+
+def the_file_and_the_screen_are_twins_and_the_newer_one_wins():
+    read = method_body(S['Config.cs'], "private static void Read")
+    write = method_body(S['Config.cs'], "private static void Write")
+    hand = method_body(S['Config.cs'], "private static bool ChangedByHand")
+    follow = method_body(S['Config.cs'], "internal static void Follow")
+    return ('internal const string ChangedKey = "SettingsChanged";' in S['Config.cs']
+            and 'internal const string WrittenByKey = "SettingsWrittenBy";' in S['Config.cs']
+            and "sb.Append(ChangedKey)" in write and "DateTime.UtcNow.ToString(\"o\"" in write
+            and "sb.Append(WrittenByKey)" in write
+            and "McmLoader.SettingsReachable ? \"the settings screen\" : \"this file\"" in write
+            and "File.GetLastWriteTimeUtc(path) > stamped + HandTolerance" in hand
+            and "if (stamped == default(DateTime)) return true;" in hand
+            and ordered(read, "bool screen = McmLoader.SettingsReachable;",
+                        "written.Remove(ChangedKey);",
+                        "if (screen && !ChangedByHand(found, stamped))",
+                        "Write(found, \"made to match the settings screen\");",
+                        "McmLoader.Reseat?.Invoke();")
+            and "Options.Changed = Noted;" in follow
+            and "if (!_applying) _dirty = true;" in method_body(S['Config.cs'], "private static void Noted")
+            and "finally { _applying = false; }" in read
+            and "public static Action Changed;" in S['Options.cs']
+            and "Generation++; Changed?.Invoke();" in S['Options.cs']
+            and "internal static Action Reseat;" in S['Support.cs']
+            and "McmLoader.Reseat = Settings.Reseat;" in M
+            and "BaseSettingsProvider.Instance?.SaveSettings(held);" in M
+            and "held.Bound(Options.Current);" in M and "held.FollowLanguage();" in M
+            and 'Guard.Run("Tick.Settings", Config.Flush);' in
+                method_body(S['SubModule.cs'], "protected override void OnApplicationTick"))
+
+chk("1.25.0", "the settings file and the settings screen are twins, the one saved last wins, and the other is written to match",
+    the_file_and_the_screen_are_twins_and_the_newer_one_wins())
 
 def the_lift_needs_nothing_from_the_game_and_is_covered_by_tests():
     return ('TaleWorlds' not in S['Migrate.cs']

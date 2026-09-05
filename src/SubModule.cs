@@ -52,6 +52,7 @@ namespace TradeLord
             base.OnApplicationTick(dt);
             Guard.Run("Tick.ReleaseMessageFilter", TradeActionBehavior.ReleaseMessageFilter);
             Guard.Run("Tick.FlushToasts", TradeActionBehavior.FlushToasts);
+            Guard.Run("Tick.Settings", Config.Flush);
             LedgerPanel.Tick();
         }
 
