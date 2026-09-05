@@ -3272,12 +3272,14 @@ def the_file_and_the_screen_are_twins_and_the_newer_one_wins():
             and 'internal const string WrittenByKey = "SettingsWrittenBy";' in S['Config.cs']
             and "sb.Append(ChangedKey)" in write and "DateTime.UtcNow.ToString(\"o\"" in write
             and "sb.Append(WrittenByKey)" in write
-            and "McmLoader.SettingsReachable ? \"the settings screen\" : \"this file\"" in write
+            and 'private const string ByScreen = "the settings screen";' in S['Config.cs']
+            and 'private const string ByFile = "this file";' in S['Config.cs']
+            and "McmLoader.SettingsInHand ? ByScreen : ByFile" in write
             and "File.GetLastWriteTimeUtc(path) > stamped + HandTolerance" in hand
             and "if (stamped == default(DateTime)) return true;" in hand
             and ordered(read, "bool screen = McmLoader.SettingsInHand;",
                         "written.Remove(ChangedKey);",
-                        "if (screen && !ChangedByHand(found, stamped))",
+                        "if (screen && screenWroteIt && !ChangedByHand(found, stamped))",
                         "Write(found, \"made to match the settings screen\");",
                         "McmLoader.Reseat?.Invoke();")
             and "Options.Changed = Noted;" in follow
@@ -3306,12 +3308,28 @@ def the_screen_only_wins_once_it_has_actually_handed_its_settings_over():
                         "SettingsInHand = answered is bool taken && taken;",
                         "SettingsReachable = true;")
             and "bool screen = McmLoader.SettingsInHand;" in read
-            and "McmLoader.SettingsReachable" not in read
-            and "McmLoader.SettingsReachable" in write
-            and S['Config.cs'].count("McmLoader.SettingsInHand") == 1)
+            and "McmLoader.SettingsReachable" not in S['Config.cs']
+            and "McmLoader.SettingsInHand ? ByScreen : ByFile" in write
+            and S['Config.cs'].count("McmLoader.SettingsInHand") == 2)
 
 chk("1.27.3", "the settings file is never written from a settings screen that has not handed its settings over",
     the_screen_only_wins_once_it_has_actually_handed_its_settings_over())
+
+def a_file_no_settings_screen_wrote_is_never_written_over_by_one():
+    read = method_body(S['Config.cs'], "private static void Read")
+    write = method_body(S['Config.cs'], "private static void Write")
+    return ('private const string ByScreen = "the settings screen";' in S['Config.cs']
+            and 'private const string ByFile = "this file";' in S['Config.cs']
+            and "McmLoader.SettingsInHand ? ByScreen : ByFile" in write
+            and ordered(read,
+                        "bool screenWroteIt = written.TryGetValue(WrittenByKey, out string wroteIt) &&",
+                        "string.Equals(wroteIt, ByScreen, StringComparison.Ordinal);",
+                        "if (screen && screenWroteIt && !ChangedByHand(found, stamped))",
+                        "Log.Write(screenWroteIt")
+            and read.count("screenWroteIt") == 3)
+
+chk("1.30.3", "a settings file no settings screen ever wrote is read rather than written over, however old its stamp looks",
+    a_file_no_settings_screen_wrote_is_never_written_over_by_one())
 
 def the_lift_needs_nothing_from_the_game_and_is_covered_by_tests():
     return ('TaleWorlds' not in S['Migrate.cs']
