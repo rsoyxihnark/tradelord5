@@ -545,6 +545,7 @@ namespace TradeLord
             _transactionDepth = 0;
             _silenced = 0;
             _pending.Clear();
+            _pendingAfterXp.Clear();
             _pendingXp = 0;
             _pendingXpMuted = true;
             AutomatedTradeInProgress = false;
@@ -850,6 +851,7 @@ namespace TradeLord
         private static readonly Color ToastAlert = new Color(0.90f, 0.28f, 0.28f);
 
         private static readonly List<InformationMessage> _pending = new List<InformationMessage>();
+        private static readonly List<InformationMessage> _pendingAfterXp = new List<InformationMessage>();
         private static int _pendingXp;
         private static bool _pendingXpMuted = true;
 
@@ -858,6 +860,9 @@ namespace TradeLord
         private static void Toast(TextObject msg, Color color) =>
             _pending.Add(new InformationMessage(msg.ToString(), color));
 
+        private static void ToastAfterXp(TextObject msg, Color color) =>
+            _pendingAfterXp.Add(new InformationMessage(msg.ToString(), color));
+
         internal static void FlushToasts()
         {
             int xp = _pendingXp;
@@ -865,6 +870,11 @@ namespace TradeLord
             _pendingXp = 0;
             _pendingXpMuted = true;
             if (xp > 0) CreditTradeSkill(xp, muted);
+            if (_pendingAfterXp.Count > 0)
+            {
+                _pending.AddRange(_pendingAfterXp);
+                _pendingAfterXp.Clear();
+            }
             if (_pending.Count > 0)
             {
                 try
@@ -1680,7 +1690,7 @@ namespace TradeLord
                 : "{=TL110}TradeLord bought {ITEMS} for {GOLD} denars to carry more.");
             msg.SetTextVariable("ITEMS", ItemSummary(detail, hauled));
             msg.SetTextVariable("GOLD", spent);
-            if (!Muted(quiet)) Toast(msg, ToastSpend);
+            if (!Muted(quiet)) ToastAfterXp(msg, ToastSpend);
         }
 
         public static void ExecuteQuickBuy(Settlement settlement, bool quiet = false)
