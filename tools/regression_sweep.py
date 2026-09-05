@@ -3075,7 +3075,7 @@ def one_button_puts_every_setting_back_and_sits_at_the_top():
     button = re.search(r'\[SettingPropertyButton\("\{=(TL\d+)\}[^"]*", Order = (\d+)[^\]]*?'
                        r'Content = "\{=(TL\d+)\}[^"]*",\s*\n\s*HintText = "\{=(TL\d+)\}[^"]*"\)\]\s*\n'
                        r'\s*\[SettingPropertyGroup\("\{=TL100\}Language", GroupOrder = (\d+)\)\]\s*\n'
-                       r'\s*public Action (\w+) => Reset;', M, re.S)
+                       r'\s*public Action (\w+) \{ get; set; \} = Reset;', M, re.S)
     en = spoken(ENGLISH)
     return (button is not None
             and button.group(2) == "0" and button.group(5) == "0"
@@ -3109,6 +3109,25 @@ chk("1.26.0", "one button at the top of the screen puts every setting back to wh
     one_button_puts_every_setting_back_and_sits_at_the_top())
 chk("1.26.0", "what a player sets away from the shipped value is named in the log, at startup and whenever it changes",
     every_change_away_from_the_shipped_value_reaches_the_log())
+
+def unwritable_settings_the_screen_would_refuse_to_build():
+    shown = list(re.finditer(r'\[SettingProperty(Bool|Integer|FloatingInteger|Text|Dropdown|Button)\(', M))
+    refused = []
+    for i, at in enumerate(shown):
+        block = M[at.start():shown[i + 1].start() if i + 1 < len(shown) else len(M)]
+        declared = re.search(r'\n\s*public\s+[\w<>\[\], .?]+\s+(\w+)\s*(=>|\{)', block)
+        if declared is None:
+            return [at.group(1) + ' (no property follows it)']
+        opener = declared.group(2)
+        body = block[declared.end() - len(opener):]
+        settable = opener == '{' and re.search(r'(^|[;{\s])set\s*[;{=]', body) is not None
+        if not settable and at.group(1) != 'Dropdown':
+            refused.append(declared.group(1))
+    return refused
+
+chk("1.27.2", "every setting the screen shows can be written back, so the screen can be built at all",
+    unwritable_settings_the_screen_would_refuse_to_build() == [] and len(
+        re.findall(r'\[SettingProperty(?:Bool|Integer|FloatingInteger|Text|Dropdown|Button)\(', M)) > 50)
 
 def the_file_holds_a_number_to_the_same_limits_the_screen_does():
     def plain(text):
