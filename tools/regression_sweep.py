@@ -2,10 +2,11 @@ import io, re, sys
 
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs', 'Travel.cs', 'Support.cs',
-      'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs', 'Config.cs']}
+      'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs', 'Config.cs', 'Migrate.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
+MIGRATIONTESTS = io.open('tests/MigrationTests.cs', encoding='utf-8').read()
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -2924,6 +2925,72 @@ def a_dropdown_only_ever_gains_choices_at_the_end():
 
 chk("1.23.1", "a dropdown's choices keep the order they shipped in, so a saved setting never comes back meaning something else",
     a_dropdown_only_ever_gains_choices_at_the_end())
+
+EVER_SHIPPED = {
+    "AlwaysBuyItems": "string", "AlwaysSellItems": "string", "AutoBuyOnEntry": "bool",
+    "AutoSellOnEntry": "bool", "BanditGetawayCheat": "bool", "BestSellTownTolerance": "float",
+    "BulkSimulation": "bool", "BuyCapPerItem": "int", "BuyPackAnimals": "bool",
+    "BuyValueCapPerItem": "int", "CoinSound": "bool", "ConfidenceRanking": "bool",
+    "ConservativeRouteProjection": "bool", "CostBasisMode": "int", "CraftingPolicy": "int",
+    "DetailedTradeSummary": "bool", "EconomySettlingDays": "int", "ExcludeHostileTowns": "bool",
+    "FoodPolicy": "int", "GoldReserve": "int", "KeepEveryFoodKind": "bool", "KeepFoodDays": "int",
+    "KeepFoodVariety": "int", "KeepPerFoodKind": "int", "KeepSmeltableWeapons": "bool",
+    "KeepWageDays": "int", "Language": "int", "LedgerMenuEntry": "bool", "LivestockPolicy": "int",
+    "MarkBestSellTownOnMap": "bool", "MarkerMaxTravelDays": "float", "MaxHeldPerItem": "int",
+    "MaxHeldShare": "float", "MaxLootTier": "int", "MaxSpendPerVisit": "int",
+    "MaxTravelDays": "float", "MaxVillageTravelDays": "float", "MinProfitMargin": "float",
+    "MinTownStock": "int", "NeverBuyGrain": "bool", "NeverBuyItems": "string",
+    "NeverSellItems": "string", "ObservationShelfLifeDays": "int", "Omniscient": "bool",
+    "PackAnimalFullCargoPremium": "float", "PanelKey": "string", "PreferBestSellTown": "bool",
+    "ProfitColoring": "bool", "ProtectSpecial": "bool", "QuickSellMenu": "bool",
+    "QuietAutomation": "bool", "ResaleSafetyFactor": "float", "RespectLocks": "bool",
+    "ResupplyFoodDays": "int", "ScanRadius": "float", "SellSpareMounts": "bool",
+    "ShowMapButton": "bool", "SimulationMode": "bool", "SuppressVanillaTradeLines": "bool",
+    "TooltipHints": "bool", "TradeWithCaravans": "bool", "TradeWithVillages": "bool",
+    "TradeXpMultiplier": "float", "UseFleetCapacity": "bool",
+}
+
+def settings_now():
+    return {m.group(2): m.group(1) for m in
+            re.finditer(r'public\s+(bool|int|float|string)\s+(\w+)\s*=(?!>)', S['Options.cs'])}
+
+def no_setting_a_player_ever_saved_is_left_stranded():
+    now = settings_now()
+    lift = S['Migrate.cs']
+    stranded = [name for name, kind in EVER_SHIPPED.items()
+                if now.get(name) != kind and '"' + name + '"' not in lift]
+    return not stranded and len(EVER_SHIPPED) >= 64
+
+def a_settings_file_says_which_shape_it_is_in():
+    read = method_body(S['Config.cs'], "private static void Read")
+    write = method_body(S['Config.cs'], "private static void Write")
+    return ('public const int Shape = 2;' in S['Migrate.cs']
+            and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
+            and ordered(read, "written[line.Substring(0, mark).Trim()]",
+                        "written.TryGetValue(Migration.ShapeKey, out string stamped)",
+                        "written.Remove(Migration.ShapeKey);",
+                        "bool lifted = Migration.Lift(shape, written, notes);",
+                        "foreach (string note in notes) Log.Write",
+                        "if (Taken(field, line.Value)) taken++;",
+                        "if (lifted || shape != Migration.Shape)")
+            and "int shape = 1;" in read
+            and "sb.Append(Migration.ShapeKey).Append(\" = \")" in write)
+
+def the_lift_needs_nothing_from_the_game_and_is_covered_by_tests():
+    return ('TaleWorlds' not in S['Migrate.cs']
+            and 'Log.' not in S['Migrate.cs']
+            and 'Migrate.cs' in TESTPROJ
+            and MIGRATIONTESTS.count('[Fact]') + MIGRATIONTESTS.count('[Theory]') >= 8
+            and 'Migration.Lift' in MIGRATIONTESTS
+            and 'KeepFoodVariety' in MIGRATIONTESTS
+            and 'KeepSmeltableWeapons' in MIGRATIONTESTS)
+
+chk("1.24.0", "every setting a player could have saved since the last public release is still read, or is named in the lift",
+    no_setting_a_player_ever_saved_is_left_stranded())
+chk("1.24.0", "the settings file carries its own shape, is lifted before anything is applied, and is written back once lifted",
+    a_settings_file_says_which_shape_it_is_in())
+chk("1.24.0", "the lift needs nothing from the game, says nothing itself, and is covered by tests the build runs",
+    the_lift_needs_nothing_from_the_game_and_is_covered_by_tests())
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and

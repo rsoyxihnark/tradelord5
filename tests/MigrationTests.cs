@@ -1,0 +1,109 @@
+using System.Collections.Generic;
+using TradeLord;
+using Xunit;
+
+namespace TradeLord.Tests
+{
+    public class MigrationTests
+    {
+        private static Dictionary<string, string> File(params string[] pairs)
+        {
+            var written = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < pairs.Length; i += 2) written[pairs[i]] = pairs[i + 1];
+            return written;
+        }
+
+        [Fact]
+        public void AFileFromTheVersionOnNexusIsCarriedForwardWholesale()
+        {
+            var written = File("KeepFoodDays", "5", "GoldReserve", "900", "PanelKey", "Ctrl+T",
+                               "MinProfitMargin", "0.25", "NeverBuyGrain", "false");
+            var notes = new List<string>();
+            Assert.False(Migration.Lift(1, written, notes));
+            Assert.Equal("900", written["GoldReserve"]);
+            Assert.Equal("Ctrl+T", written["PanelKey"]);
+            Assert.Equal("0.25", written["MinProfitMargin"]);
+            Assert.Equal("false", written["NeverBuyGrain"]);
+            Assert.Empty(notes);
+        }
+
+        [Theory]
+        [InlineData("3", "true", "3")]
+        [InlineData("1", "true", "1")]
+        [InlineData("0", "false", null)]
+        public void KeepingEveryKindOfFoodBecomesASwitchAndAnAmount(string held, string on, string each)
+        {
+            var written = File("KeepFoodVariety", held);
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(1, written, notes));
+            Assert.False(written.ContainsKey("KeepFoodVariety"));
+            Assert.Equal(on, written["KeepEveryFoodKind"]);
+            if (each == null) Assert.False(written.ContainsKey("KeepPerFoodKind"));
+            else Assert.Equal(each, written["KeepPerFoodKind"]);
+            Assert.NotEmpty(notes);
+        }
+
+        [Fact]
+        public void AnUnreadableFoodVarietyLeavesTheSwitchAloneAndSaysSo()
+        {
+            var written = File("KeepFoodVariety", "lots");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(1, written, notes));
+            Assert.False(written.ContainsKey("KeepFoodVariety"));
+            Assert.False(written.ContainsKey("KeepEveryFoodKind"));
+            Assert.NotEmpty(notes);
+        }
+
+        [Theory]
+        [InlineData("true", Options.SmeltKeepAll)]
+        [InlineData("false", Options.SmeltSellThem)]
+        public void KeepingSmeltableWeaponsBecomesAChoiceOfThree(string held, int picked)
+        {
+            var written = File("KeepSmeltableWeapons", held);
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(1, written, notes));
+            Assert.Equal(picked.ToString(), written["KeepSmeltableWeapons"]);
+            Assert.NotEmpty(notes);
+        }
+
+        [Theory]
+        [InlineData("0")]
+        [InlineData("1")]
+        [InlineData("2")]
+        public void AChoiceAlreadyMadeIsLeftExactlyAsItIs(string held)
+        {
+            var written = File("KeepSmeltableWeapons", held);
+            var notes = new List<string>();
+            Assert.False(Migration.Lift(Migration.Shape, written, notes));
+            Assert.Equal(held, written["KeepSmeltableWeapons"]);
+            Assert.Empty(notes);
+        }
+
+        [Fact]
+        public void LiftingTwiceChangesNothingTheSecondTime()
+        {
+            var written = File("KeepFoodVariety", "4", "KeepSmeltableWeapons", "true");
+            Assert.True(Migration.Lift(1, written, new List<string>()));
+            var after = new Dictionary<string, string>(written);
+            Assert.False(Migration.Lift(Migration.Shape, written, new List<string>()));
+            Assert.Equal(after, written);
+        }
+
+        [Fact]
+        public void AValueTheNewSettingAlreadyCarriesIsNeverOverwritten()
+        {
+            var written = File("KeepFoodVariety", "9", "KeepEveryFoodKind", "false", "KeepPerFoodKind", "2");
+            Assert.True(Migration.Lift(1, written, new List<string>()));
+            Assert.Equal("false", written["KeepEveryFoodKind"]);
+            Assert.Equal("2", written["KeepPerFoodKind"]);
+        }
+
+        [Fact]
+        public void AnEmptyFileAndANullFileAreBothSafe()
+        {
+            Assert.False(Migration.Lift(1, new Dictionary<string, string>(), new List<string>()));
+            Assert.False(Migration.Lift(1, null, new List<string>()));
+            Assert.True(Migration.Lift(1, File("KeepFoodVariety", "2"), null));
+        }
+    }
+}
