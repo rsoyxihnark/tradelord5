@@ -584,7 +584,7 @@ namespace TradeLord
 
         internal static void Forget() => _warned = false;
 
-        private static bool Sailing()
+        internal static bool Sailing()
         {
             if (!Options.Current.UseFleetCapacity) return false;
             if (Travel.NavalActive) return true;
@@ -719,8 +719,9 @@ namespace TradeLord
                 LogHerdState("leaving " + settlement.Name);
                 if (!_visitTradeAllowed)
                 {
-                    Log.Write("herd relief on the way out is skipped: the game would not let you trade at " +
-                              settlement.Name + " when you arrived");
+                    if (IsMarket(settlement))
+                        Log.Write("herd relief on the way out is skipped: the game would not let you trade at " +
+                                  settlement.Name + " when you arrived");
                     return;
                 }
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
@@ -809,6 +810,8 @@ namespace TradeLord
             Guard.Run("Action.OnSessionLaunched", () =>
             {
                 ResetVisit();
+                Settlement inside = MobileParty.MainParty?.CurrentSettlement;
+                if (inside != null) _visitTradeAllowed = CanTradeHere(inside);
                 Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));
                 Guard.Run("Action.RestoreMarker", UpdateBestSellTownTracker);
                 Log.Write(Travel.NavalActive
@@ -1152,29 +1155,8 @@ namespace TradeLord
             try
             {
                 if (party == null) return 0;
-                var model = Campaign.Current?.Models?.PartySpeedCalculatingModel
-                    as DefaultPartySpeedCalculatingModel;
-                if (model == null)
-                {
-                    if (!_herdLookupFailed)
-                    {
-                        _herdLookupFailed = true;
-                        Log.Write("herd guard: a mod replaced the party speed model - livestock buying disabled, selling unaffected");
-                    }
-                    return 0;
-                }
-                if (_herdModifier == null)
-                {
-                    if (_herdLookupFailed) return 0;
-                    _herdModifier = typeof(DefaultPartySpeedCalculatingModel).GetMethod(
-                        "GetHerdingModifier", BindingFlags.Instance | BindingFlags.NonPublic);
-                    if (_herdModifier == null)
-                    {
-                        _herdLookupFailed = true;
-                        Log.Write("herd guard: GetHerdingModifier not found on this game version - livestock buying disabled, selling unaffected");
-                        return 0;
-                    }
-                }
+                DefaultPartySpeedCalculatingModel model = HerdModel();
+                if (model == null) return 0;
                 if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return 0;
                 herd += Math.Max(0, mounts - foot);
                 float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });
@@ -1197,13 +1179,27 @@ namespace TradeLord
 
         private static DefaultPartySpeedCalculatingModel HerdModel()
         {
+            if (_herdLookupFailed) return null;
             var model = Campaign.Current?.Models?.PartySpeedCalculatingModel
                 as DefaultPartySpeedCalculatingModel;
-            if (model == null || _herdLookupFailed) return null;
+            if (model == null)
+            {
+                _herdLookupFailed = true;
+                Log.Write("herd guard: a mod replaced the party speed model - livestock buying disabled, selling unaffected");
+                return null;
+            }
             if (_herdModifier == null)
+            {
                 _herdModifier = typeof(DefaultPartySpeedCalculatingModel).GetMethod(
                     "GetHerdingModifier", BindingFlags.Instance | BindingFlags.NonPublic);
-            return _herdModifier == null ? null : model;
+                if (_herdModifier == null)
+                {
+                    _herdLookupFailed = true;
+                    Log.Write("herd guard: GetHerdingModifier not found on this game version - livestock buying disabled, selling unaffected");
+                    return null;
+                }
+            }
+            return model;
         }
 
         internal static int DrivenAnimalsToShed(MobileParty party)
@@ -1308,7 +1304,7 @@ namespace TradeLord
             {
                 InventoryCapacityModel model = Campaign.Current?.Models?.InventoryCapacityModel;
                 if (model == null) return 0;
-                bool atSea = Travel.NavalActive;
+                bool atSea = Carry.Sailing();
                 float carried = model.CalculateTotalWeightCarried(party, atSea).ResultNumber;
                 for (int fewer = 1; fewer <= held; fewer++)
                     if (model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber < carried)
