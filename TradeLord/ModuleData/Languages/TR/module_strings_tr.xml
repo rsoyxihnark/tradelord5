@@ -122,7 +122,7 @@
 		<string id="TL352" text="TradeLord'un her zaman aldığı mallar: kategori kurallarını ve tahıl alma yasağını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla listeleri ve envanter kilidi yine geçerlidir, ve yine ancak erişimdeki bir yerde daha pahalıya satabileceğini alır."/>
 		<string id="TL250" text="Dil"/>
 		<string id="TL351" text="Kervanınız bir maldan bu kadarını taşıdığında TradeLord o malı bırakır ve parayı başka bir şeye harcar. Şu anda taşıdığınız miktarı ve bu ziyarette alınanları birlikte sayar. Satışı etkilemez. 0 = sınır yok."/>
-		<string id="TL350" text="TradeLord'un oyun içinde konuştuğu dil: ticaret iletileri, defter paneli, fiyat ipuçları ve şehir menüsü girdileri. Varsayılan İngilizce. Şehir menüsü girdileri ise bir sonraki oyun yüklemenizde geçer."/>
+		<string id="TL350" text="TradeLord'un oyun içinde konuştuğu dil: ticaret iletileri, defter paneli, fiyat ipuçları ve şehir menüsü girdileri. Varsayılan İngilizce. Bu ekran siz seçer seçmez yeni dile geçer; yalnızca seçenek listelerinin içindeki sözcükler ekranı bir sonraki açışınızda geçer. Şehir menüsü girdileri ise bir sonraki oyun yüklemenizde geçer."/>
 		<string id="TL360" text="TradeLord'un rota panelini açan defter girişini kasaba ve köy menülerinde gösterir. Paneli kısayol tuşuyla ya da harita düğmesiyle açmayı yeğliyorsanız kapatın."/>
 		<string id="TL201" text="Canlı dünya fiyatları (varsayılan)"/>
 		<string id="TL202" text="Gözlem raf ömrü (gün, 0 = hiç eskimez)"/>

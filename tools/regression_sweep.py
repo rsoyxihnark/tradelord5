@@ -2380,11 +2380,12 @@ def the_settings_screen_follows_the_mods_own_language():
                                                   '"<GroupName>k__BackingField"',
                                                   '"<Content>k__BackingField"'))
             and 'postfix: new HarmonyMethod(typeof(ScreenTongue), nameof(Spoken))' in follow
-            and spoken.count('Say(_') == 4)
+            and 'Say(__instance, words);' in spoken
+            and method_body(M, "private static void Say").count('Said(words[') == 4)
 
 def the_screen_reads_the_translation_the_mod_already_has():
     said = method_body(S['Tongue.cs'], "internal static string Said")
-    return ('Tongue.Said(at(of))' in method_body(M, "private static void Say")
+    return ('private static string Said(string word) => Tongue.Said(word) ?? word;' in M
             and 'Translated(Id(written))' in said
             and 'Options.Current.Language == English ? null' in said
             and 'module_strings' not in M)
@@ -2411,15 +2412,41 @@ def a_new_language_reaches_the_screen_without_waiting_for_a_restart():
             and "Relabel();" in told
             and ordered(again, "if (_spokenFor == _o.Language) return;", "bool first = _spokenFor < 0;",
                         "_spokenFor = _o.Language;", "if (first) return;",
-                        'Guard.Run("Mcm.Relabel"', "OnPropertyChanged(LoadingComplete);")
+                        'Guard.Run("Mcm.Relabel"', "ScreenTongue.Respeak();", "Redrawn();")
             and "private int _spokenFor = -1;" in M)
 
 chk("1.27.1", "a language picked on the screen is spoken there and then, and the screen is asked to draw itself again",
     a_new_language_reaches_the_screen_without_waiting_for_a_restart())
-chk("1.27.1", "no hint still promises the screen changes language the next time it is opened",
-    all("next time you open" not in spoken(path).get('TL350', '')
-        for path in [ENGLISH] + list(TRANSLATIONS.values())) and
-    "next time you open it" not in M)
+
+def the_screen_is_spoken_again_where_it_already_stands():
+    follow = method_body(M, "internal static void Follow")
+    spoken = method_body(M, "private static void Spoken")
+    headline = method_body(M, "private static void Headline")
+    again = method_body(M, "internal static void Respeak")
+    drawn = method_body(M, "private void Redrawn")
+    return ('typeof(SettingsPropertyGroupDefinition)' in follow
+            and '"_groupNameRaw"' in follow
+            and 'postfix: new HarmonyMethod(typeof(ScreenTongue), nameof(Headline))' in follow
+            and spoken.count('Tongue.Mine(words[') == 4
+            and spoken.count('new WeakReference(__instance)') == 1
+            and headline.count('new WeakReference(__instance)') == 1
+            and '_rawFor[shown] = words[2];' in M
+            and ordered(again, 'Say(one, _held[i].Words);', '_heading(one) = Said(_headed[i].Word);')
+            and all('lock (_held)' in body for body in (spoken, headline, again))
+            and 'AccessTools.Field(typeof(BaseSettings), "PropertyChanged")' in M
+            and 'shown.RefreshValues();' in drawn)
+
+def the_hint_says_when_the_screen_changes_over():
+    en = spoken(ENGLISH).get('TL350', '')
+    return ('This screen changes over as you pick it' in en
+            and 'the next time you open the screen' in en
+            and en in M
+            and all(len(spoken(path).get('TL350', '')) > 0 for path in TRANSLATIONS.values()))
+
+chk("1.27.4", "a language picked on the screen is spoken again into the names, hints and headings the screen already holds",
+    the_screen_is_spoken_again_where_it_already_stands())
+chk("1.27.4", "the hint says what changes over as the language is picked and what waits for the screen to be opened again",
+    the_hint_says_when_the_screen_changes_over())
 
 def a_choice_between_named_things_is_picked_from_a_list():
     numbered = re.findall(r'\[SettingPropertyInteger\("\{=TL\d+\}[^"]*", 0, [0-3],', M)

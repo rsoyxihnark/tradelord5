@@ -8,6 +8,7 @@ using MCM.Abstractions.Attributes.v2;
 using MCM.Abstractions.Base;
 using MCM.Abstractions.Base.Global;
 using MCM.Common;
+using TaleWorlds.Library;
 
 namespace TradeLord.Mcm
 {
@@ -25,7 +26,26 @@ namespace TradeLord.Mcm
 
     internal static class ScreenTongue
     {
+        private const int Crowd = 256;
+
         private static AccessTools.FieldRef<SettingsPropertyDefinition, string> _name, _hint, _group, _content;
+        private static AccessTools.FieldRef<SettingsPropertyGroupDefinition, string> _heading;
+
+        private sealed class Held
+        {
+            internal WeakReference At;
+            internal string[] Words;
+        }
+
+        private sealed class Headed
+        {
+            internal WeakReference At;
+            internal string Word;
+        }
+
+        private static readonly List<Held> _held = new List<Held>();
+        private static readonly List<Headed> _headed = new List<Headed>();
+        private static readonly Dictionary<string, string> _rawFor = new Dictionary<string, string>(StringComparer.Ordinal);
 
         internal static void Follow()
         {
@@ -33,18 +53,23 @@ namespace TradeLord.Mcm
             _hint = Reaches("<HintText>k__BackingField");
             _group = Reaches("<GroupName>k__BackingField");
             _content = Reaches("<Content>k__BackingField");
+            _heading = Grouped("_groupNameRaw");
             ConstructorInfo built = AccessTools.Constructor(typeof(SettingsPropertyDefinition), new[]
             {
                 typeof(IEnumerable<IPropertyDefinitionBase>), typeof(IPropertyGroupDefinition),
                 typeof(IRef), typeof(char)
             });
-            if (_name == null || _hint == null || _group == null || _content == null || built == null)
+            ConstructorInfo gathered = AccessTools.Constructor(typeof(SettingsPropertyGroupDefinition),
+                new[] { typeof(string), typeof(int) });
+            if (_name == null || _hint == null || _group == null || _content == null || _heading == null ||
+                built == null || gathered == null)
             {
                 Log.Write("the settings screen could not be wired to TradeLord's own language - it follows the game's language instead");
                 return;
             }
-            new Harmony(SubModule.HarmonyId + ".mcm").Patch(built,
-                postfix: new HarmonyMethod(typeof(ScreenTongue), nameof(Spoken)));
+            var harmony = new Harmony(SubModule.HarmonyId + ".mcm");
+            harmony.Patch(built, postfix: new HarmonyMethod(typeof(ScreenTongue), nameof(Spoken)));
+            harmony.Patch(gathered, postfix: new HarmonyMethod(typeof(ScreenTongue), nameof(Headline)));
         }
 
         private static AccessTools.FieldRef<SettingsPropertyDefinition, string> Reaches(string field)
@@ -53,18 +78,71 @@ namespace TradeLord.Mcm
             return found == null ? null : AccessTools.FieldRefAccess<SettingsPropertyDefinition, string>(found);
         }
 
-        private static void Spoken(SettingsPropertyDefinition __instance)
+        private static AccessTools.FieldRef<SettingsPropertyGroupDefinition, string> Grouped(string field)
         {
-            Say(_name, __instance);
-            Say(_hint, __instance);
-            Say(_group, __instance);
-            Say(_content, __instance);
+            FieldInfo found = AccessTools.Field(typeof(SettingsPropertyGroupDefinition), field);
+            return found == null ? null : AccessTools.FieldRefAccess<SettingsPropertyGroupDefinition, string>(found);
         }
 
-        private static void Say(AccessTools.FieldRef<SettingsPropertyDefinition, string> at, SettingsPropertyDefinition of)
+        private static void Spoken(SettingsPropertyDefinition __instance)
         {
-            string said = Tongue.Said(at(of));
-            if (said != null) at(of) = said;
+            var words = new[] { _name(__instance), _hint(__instance), _group(__instance), _content(__instance) };
+            if (!Tongue.Mine(words[0]) && !Tongue.Mine(words[1]) &&
+                !Tongue.Mine(words[2]) && !Tongue.Mine(words[3])) return;
+            lock (_held)
+            {
+                Forget();
+                _held.Add(new Held { At = new WeakReference(__instance), Words = words });
+                Say(__instance, words);
+            }
+        }
+
+        private static void Headline(SettingsPropertyGroupDefinition __instance)
+        {
+            lock (_held)
+            {
+                string shown = _heading(__instance);
+                if (shown == null || !_rawFor.TryGetValue(shown, out string word)) return;
+                Forget();
+                _headed.Add(new Headed { At = new WeakReference(__instance), Word = word });
+            }
+        }
+
+        internal static void Respeak()
+        {
+            if (_name == null || _heading == null) return;
+            lock (_held)
+            {
+                for (int i = _held.Count - 1; i >= 0; i--)
+                {
+                    if (_held[i].At.Target is SettingsPropertyDefinition one) Say(one, _held[i].Words);
+                    else _held.RemoveAt(i);
+                }
+                for (int i = _headed.Count - 1; i >= 0; i--)
+                {
+                    if (_headed[i].At.Target is SettingsPropertyGroupDefinition one) _heading(one) = Said(_headed[i].Word);
+                    else _headed.RemoveAt(i);
+                }
+            }
+        }
+
+        private static void Say(SettingsPropertyDefinition of, string[] words)
+        {
+            _name(of) = Said(words[0]);
+            _hint(of) = Said(words[1]);
+            _content(of) = Said(words[3]);
+            string shown = Said(words[2]);
+            _group(of) = shown;
+            _rawFor[shown] = words[2];
+        }
+
+        private static string Said(string word) => Tongue.Said(word) ?? word;
+
+        private static void Forget()
+        {
+            if (_held.Count < Crowd && _headed.Count < Crowd) return;
+            _held.RemoveAll(one => !one.At.IsAlive);
+            _headed.RemoveAll(one => !one.At.IsAlive);
         }
     }
 
@@ -152,7 +230,7 @@ namespace TradeLord.Mcm
         public Action ResetEverything { get; set; } = Reset;
 
         [SettingPropertyDropdown("{=TL250}Language", Order = 1, RequireRestart = false,
-            HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. Town menu entries take it when you next load a campaign.")]
+            HintText = "{=TL350}The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. This screen changes over as you pick it, apart from the words inside each list of choices, which follow the next time you open the screen. Town menu entries take it when you next load a campaign.")]
         [SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]
         public Dropdown<string> Language
         {
@@ -240,9 +318,30 @@ namespace TradeLord.Mcm
             if (first) return;
             Guard.Run("Mcm.Relabel", () =>
             {
-                OnPropertyChanged(LoadingComplete);
-                Log.Write("settings screen: the language changed, so the screen was asked to draw itself again");
+                ScreenTongue.Respeak();
+                Redrawn();
+                Log.Write("settings screen: the language changed, so every name, hint and heading on it was spoken again");
             });
+        }
+
+        private static readonly FieldInfo Listening = AccessTools.Field(typeof(BaseSettings), "PropertyChanged");
+
+        private void Redrawn()
+        {
+            if (!(Listening?.GetValue(this) is MulticastDelegate told)) return;
+            var drawn = new List<ViewModel>();
+            foreach (Delegate one in told.GetInvocationList())
+            {
+                ViewModel shown = Shown(one.Target);
+                if (shown != null && !drawn.Exists(had => ReferenceEquals(had, shown))) drawn.Add(shown);
+            }
+            foreach (ViewModel shown in drawn) shown.RefreshValues();
+        }
+
+        private static ViewModel Shown(object listener)
+        {
+            if (!(listener is ViewModel shown)) return null;
+            return AccessTools.Property(shown.GetType(), "Group")?.GetValue(shown) as ViewModel ?? shown;
         }
 
         private static void Retold(Dropdown<string> shown, string[] words)
