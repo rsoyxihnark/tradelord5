@@ -3026,6 +3026,78 @@ def the_herd_gives_up_its_animals_in_the_order_the_player_set():
 
 chk("1.28.0", "the herd gives up its livestock, then a plain spare mount, then a haul animal, and a war or noble horse last of all",
     the_herd_gives_up_its_animals_in_the_order_the_player_set())
+
+def the_herd_is_looked_at_three_times_a_visit():
+    entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
+    left = method_body(S['Trading.cs'], "private void OnSettlementLeft")
+    launched = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    return ('LogHerdState("entering " + settlement.Name);' in entered
+            and 'LogHerdState("after trading at " + settlement.Name);' in entered
+            and entered.count("ExecuteHerdRelief(settlement, quiet: true)") == 2
+            and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
+                        "ExecuteHerdRelief(settlement, quiet: true)",
+                        "ExecuteResupply(settlement, quiet: true)",
+                        "ExecuteHaulage(settlement, quiet: true)",
+                        "ExecuteQuickBuy(settlement, quiet: true)")
+            and ordered_last(entered, "ExecuteQuickBuy(settlement, quiet: true)",
+                             "ExecuteHerdRelief(settlement, quiet: true)",
+                             'LogHerdState("after trading at " + settlement.Name);')
+            and 'LogHerdState("leaving " + settlement.Name);' in left
+            and "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);" in left
+            and 'Guard.Run("Action.HerdReliefOnLeaving"' in left
+            and 'LogHerdState("on the road, no market in reach");' in
+                method_body(S['Trading.cs'], "private void OnDailyTick")
+            and "if (DrivenAnimalsToShed(MobileParty.MainParty) > 0)" in
+                method_body(S['Trading.cs'], "private void OnDailyTick")
+            and launched.count("ExecuteHerdRelief(Settlement.CurrentSettlement);") == 2
+            and ordered(launched, "ExecuteQuickSell(Settlement.CurrentSettlement);",
+                        "ExecuteHerdRelief(Settlement.CurrentSettlement);",
+                        "ExecuteQuickBuy(Settlement.CurrentSettlement);")
+            and ordered_last(launched, "ExecuteQuickBuy(Settlement.CurrentSettlement);",
+                             "ExecuteHerdRelief(Settlement.CurrentSettlement);",
+                             'LogHerdState("after trading by hand at "'))
+
+chk("1.29.0", "the herd is looked at on the way in, after the trading and on the way out, so a penalty from losing men is caught too",
+    the_herd_is_looked_at_three_times_a_visit())
+
+def what_the_herd_check_writes_down():
+    body = method_body(S['Trading.cs'], "internal static void LogHerdState")
+    split = method_body(S['Trading.cs'], "private static void HerdSplit")
+    return (all(needle in body for needle in
+                ("HerdTally(party, out int men, out int herd, out int mounts, out int foot)",
+                 "HerdSplit(party, out int packs, out int stock)",
+                 "int spare = Math.Max(0, mounts - foot);",
+                 "int shed = DrivenAnimalsToShed(party);",
+                 '" men of whom "', '" on foot, "', '" loose mount(s) with "',
+                 '" pack animal(s), "', '" livestock, "', '" driven in all, "',
+                 '"no herd penalty"'))
+            and "roster.NumberOfPackAnimals" in split
+            and "roster.NumberOfLivestockAnimals" in split
+            and "attached[i]?.ItemRoster" in split
+            and 'Log.Error(e, "herd check log (nothing else is affected)")' in body)
+
+chk("1.29.0", "the herd check writes down the men, the mounts nobody rides, the pack animals, the livestock and what it decided",
+    what_the_herd_check_writes_down())
+
+def every_animal_that_moves_is_named_with_its_reason():
+    moved = method_body(S['Trading.cs'], "private static void LogAnimalMoved")
+    detail = method_body(S['Trading.cs'], "private static void LogDetail")
+    src = S['Trading.cs']
+    reasons = ("the selling pass", "restocking the larder", "trading with a caravan on the road",
+               "herd relief, getting the party back up to speed", "stocking the baggage train",
+               "the buying pass")
+    return ("if (item == null || !item.HasHorseComponent) return;" in moved
+            and '"  animal " + (selling ? "out: " : "in: ")' in moved
+            and '" - " + why + "; TradeLord counts it as " + TradePolicy.AnimalGroup(item)' in moved
+            and "LogAnimalMoved(selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);" in detail
+            and src.count("LogDetail(selling:") == 7
+            and all(src.count('LogDetail(selling: %s, sim, detail, "' % b) > 0 for b in ("true", "false"))
+            and all(r in src for r in reasons)
+            and src.count("LogDetail(selling: true, sim, detail);") == 0
+            and src.count("LogDetail(selling: false, sim, detail);") == 0)
+
+chk("1.29.0", "every animal that comes in or goes out is named in the log with the reason it moved and what TradeLord counts it as",
+    every_animal_that_moves_is_named_with_its_reason())
 chk("1.28.0", "a horse a man on foot is riding is never sold to relieve the herd, because it is not in the herd",
     "int mountsLeft = SpareMountRoom(party);" in
         method_body(S['Trading.cs'], "public static void ExecuteHerdRelief") and
