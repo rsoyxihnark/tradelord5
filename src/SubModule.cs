@@ -22,6 +22,7 @@ namespace TradeLord
             Patcher.TryPatch(harmony, typeof(Patch_SilenceChunkedTradeLines));
 
             Guard.Run("McmLoader", McmLoader.TryLoad);
+            Config.Follow();
         }
 
         internal static string OwnVersion()

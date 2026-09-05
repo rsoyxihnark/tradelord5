@@ -7,7 +7,7 @@
 ## What it needs
 
 - **Harmony** (`Bannerlord.Harmony`), required. TradeLord does not load without it. Put it above TradeLord in the launcher's load order.
-- **MCM** (`Bannerlord.MBOptionScreen`), optional, and what the settings screen is built on. Without it TradeLord trades on the defaults below and has no settings screen; nothing else changes.
+- **MCM** (`Bannerlord.MBOptionScreen`), optional, and what the settings screen is built on. Without it TradeLord writes a `TradeLord.ini` beside its log, and every setting below can be changed by editing that file instead.
 - Bannerlord **1.4.8.119303**. War Sails is optional: with it, TradeLord counts sea legs and appears in port menus.
 
 ## Everything it does
@@ -37,6 +37,7 @@
 
 - ✅ One trade entry in the town menu, selling then buying in one go, whenever you want it
 - ✅ Sells and buys the moment you enter a market by default
+- ✅ Tops your food back up to five days of supply as it trades, buying the cheapest food the market has at whatever it asks, before it trades for profit
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short. Always on for goods you never bought, such as looted gear; off by default for goods you bought, whose profit margin already covers it
@@ -44,6 +45,7 @@
 - ✅ Credits the profit to your Trade skill, at a rate you set
 - ✅ Trades in villages as well, under their own stricter travel limit
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
+- ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
 - ✅ A coin sound on a trade that lands, silence on one that does not
@@ -54,10 +56,11 @@
 
 - ✅ Anything you locked in the inventory screen
 - ✅ Unique and player-crafted gear, quest items, mounts and pack animals
+- ✅ Every weapon the smithy can break down for parts, if you ask it to, so a smithing playthrough keeps its raw material
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus
 - ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
-- ✅ Your gold reserve, or anything past your spending cap for the visit
+- ✅ Your gold reserve, three days of your troops' wages on top of it, and anything past your spending cap for the visit
 - ✅ Smithing materials such as iron ore, ingots, charcoal and hardwood, once you switch their policy to leave them alone, off by default
 - ✅ Any good you put on the never-sell or never-buy list, named by its item id or by the name on screen
 - ✅ More livestock than your party can drive, so a purchase never slows you down
@@ -86,4 +89,5 @@
 
 **All of it is yours to change.** Every feature above is a switch or a number on the settings screen,
 which TradeLord puts there through MCM. Install MCM alongside it and you can turn any one of them off,
-or set it to whatever you like.
+or set it to whatever you like. Without MCM the same switches and numbers are in `TradeLord.ini`, written
+beside `TradeLord.log` the first time TradeLord loads, and TradeLord reads it back the next time you start.

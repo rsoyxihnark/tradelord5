@@ -97,29 +97,48 @@ namespace TradeLord
         private static string _path;
         private static bool _resolved;
 
-        private static List<string> Candidates()
+        private static List<string> Candidates(string fileName)
         {
             var paths = new List<string>();
             try
             {
                 string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
                 if (!string.IsNullOrEmpty(docs))
-                    paths.Add(Path.Combine(Path.Combine(docs, "Mount and Blade II Bannerlord"), FileName));
+                    paths.Add(Path.Combine(Path.Combine(docs, "Mount and Blade II Bannerlord"), fileName));
             }
             catch { }
             try
             {
                 string own = Path.GetDirectoryName(typeof(Log).Assembly.Location);
-                if (!string.IsNullOrEmpty(own)) paths.Add(Path.Combine(own, FileName));
+                if (!string.IsNullOrEmpty(own)) paths.Add(Path.Combine(own, fileName));
             }
             catch { }
-            paths.Add(FileName);
+            paths.Add(fileName);
             return paths;
+        }
+
+        internal static string Beside(string fileName, bool mustExist)
+        {
+            foreach (string candidate in Candidates(fileName))
+            {
+                try
+                {
+                    if (mustExist)
+                    {
+                        if (File.Exists(candidate)) return candidate;
+                        continue;
+                    }
+                    string dir = Path.GetDirectoryName(candidate);
+                    if (string.IsNullOrEmpty(dir) || Directory.Exists(dir)) return candidate;
+                }
+                catch { }
+            }
+            return null;
         }
 
         private static string Resolve()
         {
-            foreach (string candidate in Candidates())
+            foreach (string candidate in Candidates(FileName))
             {
                 try
                 {

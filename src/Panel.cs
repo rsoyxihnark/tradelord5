@@ -236,8 +236,8 @@ namespace TradeLord
             PlayerGold = Line("{=TL63}Gold: {AMOUNT}", "AMOUNT", (hero?.Gold ?? 0).ToString("N0"));
             CapacityText = party == null ? ""
                 : Line("{=TL64}Cargo: {CARRIED} / {CAPACITY}", "CARRIED",
-                       ((int)party.TotalWeightCarried).ToString(), "CAPACITY",
-                       ((int)party.InventoryCapacity).ToString());
+                       ((int)Carry.Carried(party)).ToString(), "CAPACITY",
+                       ((int)Carry.Capacity(party)).ToString());
             SpeedText = party == null ? "" : Line("{=TL65}Speed: {SPEED}", "SPEED", party.Speed.ToString("0.0"));
             int lifetime = LedgerBehavior.Instance?.LifetimeProfit ?? 0;
             LifetimeText = Line("{=TL66}TradeLord profit: {AMOUNT}", "AMOUNT",
