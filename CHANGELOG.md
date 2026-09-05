@@ -19,6 +19,8 @@
 - It now starts at two of each kind rather than three.
 - The Reset button now puts your settings back at once instead of taking several seconds over it, because it only redraws the settings that had actually been changed.
 - The hint under Ledger panel hotkey (map screen) now says that one key name is all it takes, and that a word or an unknown key falls back to T.
+- TradeLord.log now says how many of your settings had been changed when you press Reset.
+- The feature list no longer offers a shelf life for the prices you recorded yourself, and now says the language reaches your town menu entries too.
 
 ## 1.34.0
 
@@ -27,6 +29,8 @@
 - Trade with caravans you meet is called Trade with caravans and villagers you meet now, and it governs both.
 - Bandits now offer you free passage as soon as you meet them, asking whether to ride on or fight, so the offer no longer waits on a menu that never appeared for some of you.
 - TradeLord.log calls these a sale or a purchase on the road now, and names the party it traded with.
+- TradeLord.log names the band each time free passage is offered.
+- The feature list now says a caravan or a party of villagers is traded with the moment you meet them, and that bandits offer you free passage as you meet them.
 
 ## 1.33.0
 
