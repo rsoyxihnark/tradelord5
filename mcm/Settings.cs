@@ -372,6 +372,11 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool QuietAutomation { get => _o.QuietAutomation; set { _o.QuietAutomation = value; Options.Bump(); } }
 
+        [SettingPropertyBool("{=TL269}Cheat: bandits let you go for free", Order = 17, RequireRestart = false,
+            HintText = "{=TL369}Adds a line to the encounter screen when you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is a cheat, and it is OFF by default.")]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        public bool BanditGetawayCheat { get => _o.BanditGetawayCheat; set { _o.BanditGetawayCheat = value; Options.Bump(); } }
+
         [SettingPropertyInteger("{=TL221}Keep food (days of supply)", 0, 30, Order = 0, RequireRestart = false,
             HintText = "{=TL321}Hold back this many days of food before selling any. The cheapest food per day fed is reserved first, and livestock only if nothing else covers the reserve. 0 sells every scrap of food.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
@@ -393,7 +398,7 @@ namespace TradeLord.Mcm
         public bool ProtectSpecial { get => _o.ProtectSpecial; set { _o.ProtectSpecial = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL264}Keep smeltable weapons", Order = 4, RequireRestart = false,
-            HintText = "{=TL364}Never sell a weapon the smithy can break down for parts, so a smithing playthrough keeps its raw material. This covers every crafted design, not only the ones you made yourself. OFF by default.")]
+            HintText = "{=TL364}Never sell a weapon the smithy can break down for parts, so a smithing playthrough keeps its raw material. It holds back every weapon built from smithing parts, the ones you forged and the ones you looted off a bandit alike, so cheap loot is kept too. It does not ask which parts you have already learned. Armour, shields, bows and crossbows carry no smithing design, so those are still sold, and an always-sell entry still wins. OFF by default.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public bool KeepSmeltableWeapons { get => _o.KeepSmeltableWeapons; set { _o.KeepSmeltableWeapons = value; Options.Bump(); } }
 
@@ -481,5 +486,15 @@ namespace TradeLord.Mcm
             HintText = "{=TL352}Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public string AlwaysBuyItems { get => _o.AlwaysBuyItems; set { _o.AlwaysBuyItems = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL267}Buy pack animals", Order = 12, RequireRestart = false,
+            HintText = "{=TL367}Buy mules and sumpter horses whenever a market is asking no more than one is worth, so your party can carry more. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that by the premium below. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        public bool BuyPackAnimals { get => _o.BuyPackAnimals; set { _o.BuyPackAnimals = value; Options.Bump(); } }
+
+        [SettingPropertyFloatingInteger("{=TL268}Pack animal premium while the cargo is full", 1f, 3f, "#0%", Order = 13, RequireRestart = false,
+            HintText = "{=TL368}How far over the going rate TradeLord will go for a mule or a sumpter horse while your cargo is full and the extra capacity is worth paying for. 150% is half again as much. 100% turns the premium off, so it only ever buys at the going rate.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        public float PackAnimalFullCargoPremium { get => _o.PackAnimalFullCargoPremium; set { _o.PackAnimalFullCargoPremium = value; Options.Bump(); } }
     }
 }

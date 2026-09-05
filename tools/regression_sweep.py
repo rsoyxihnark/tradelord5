@@ -461,9 +461,9 @@ def the_filter_is_armed_only_around_a_game_call_that_talks():
     t = S['Trading.cs']
     armed = re.findall(r'OpenTransaction\(\);\s*try \{ ([\w\.]+)\([^)]*\); \}\s*'
                        r'finally \{ CloseTransaction\(\);( ReportSilenced\(\);)? \}', t)
-    return (t.count('OpenTransaction();') == len(armed) == 4
+    return (t.count('OpenTransaction();') == len(armed) == 5
             and sorted(c for c, _ in armed) == ['SellItemsAction.Apply', 'SellItemsAction.Apply',
-                                                'SellItemsAction.Apply',
+                                                'SellItemsAction.Apply', 'SellItemsAction.Apply',
                                                 'SkillLevelingManager.OnTradeProfitMade']
             and 'InGameTransaction = true' not in t
             and 'if (!TradeActionBehavior.InGameTransaction) return true;' in t
@@ -796,7 +796,7 @@ chk("1.3.18", "neither pass trades before the settling delay is served",
     (lambda b: ordered(b, "int wait = Options.Current.EconomySettlingDays;", "if (wait <= 0) return true;",
                        "CampaignStartTime.ElapsedDaysUntilNow", "if (elapsed >= wait) return true;"))
     (method_body(S['Trading.cs'], "private static bool MarketOpen")) and
-    S['Trading.cs'].count("if (!MarketOpen(settlement, quiet)) return;") == 3)
+    S['Trading.cs'].count("if (!MarketOpen(settlement, quiet)) return;") == 4)
 chk("1.3.2", "ScanRadius applied in observed mode",
     "if (!WithinRadius(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "!Eligible(town, out float lower)" in S['Ledger.cs'])
@@ -1044,19 +1044,19 @@ chk("1.3.30", "a damaged purchase record does not throw during save load",
 
 chk("1.3.31", "the price gate and the transaction it guards share one granularity",
     S['Trading.cs'].count("SellItemsAction.Apply(me, shop, el, 1, settlement)") == 1 and
-    S['Trading.cs'].count("SellItemsAction.Apply(shop, me, el, 1, settlement)") == 2 and
-    S['Trading.cs'].count("SellItemsAction.Apply(") == 3)
+    S['Trading.cs'].count("SellItemsAction.Apply(shop, me, el, 1, settlement)") == 3 and
+    S['Trading.cs'].count("SellItemsAction.Apply(") == 4)
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
-    S['Trading.cs'].count("[Simulated, best case]") == 3 and
-    S['Trading.cs'].count("(simulated, best case): ") == 3 and
+    S['Trading.cs'].count("[Simulated, best case]") == 4 and
+    S['Trading.cs'].count("(simulated, best case): ") == 4 and
     "best case" in M)
 
 chk("1.3.33", "a fully sold stack clears its cost basis",
     "if (rec.Count <= 0) { rec.Count = 0; rec.TotalPaid = 0; }" in
     method_body(S['TradeMath.cs'], "public static void DrainSale"))
 chk("1.3.33", "automated trading recaptures prices after it moves them",
-    S['Trading.cs'].count("LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);") == 3 and
+    S['Trading.cs'].count("LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);") == 4 and
     "internal void ForgetMarketRankings()" in S['Ledger.cs'] and
     "ForgetMarketRankings();" in method_body(S['Ledger.cs'], "public void CaptureSettlement"))
 _setters = [b for b in re.findall(r'\bset\b\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', M)
@@ -1419,7 +1419,7 @@ chk("1.5.6", "expired observations are pruned on both save and load",
 chk("1.5.6", "the message filter is armed only around a game call that talks back",
     the_filter_is_armed_only_around_a_game_call_that_talks())
 chk("1.5.6", "every place the filter comes down logs how many messages it suppressed",
-    S['Trading.cs'].count("ReportSilenced();") == 5 and
+    S['Trading.cs'].count("ReportSilenced();") == 6 and
     "NoteSilenced();" in method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines"))
 chk("1.5.12", "the message filter uses a depth counter, so nesting cannot disarm it early",
     "internal static bool InGameTransaction => _transactionDepth > 0;" in S['Trading.cs'] and
@@ -1686,7 +1686,8 @@ chk("1.6.12", "loot is still held back from a poor market by the same best-marke
     "if (Options.Current.PreferBestSellTown || basis == 0)" in S['Trading.cs'])
 chk("1.6.12", "that worth is looked up once per good, not once per unit sold",
     "if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);" in S['Trading.cs'] and
-    S['Trading.cs'].count("TradePolicy.UnpaidWorth(") == 1)
+    method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
+        .count("TradePolicy.UnpaidWorth(") == 1)
 chk("1.6.12", "the tooltip and the sale summary now value an unbought good the same way",
     "var best = BestBuy(item);" in method_body(S['Ledger.cs'], "public int GetCostBasis") and
     "best.price > 0 ? best.price : item.Value" in method_body(S['Ledger.cs'], "public int GetCostBasis") and
@@ -1896,8 +1897,8 @@ def what_is_left_to_spend_is_worked_out_in_one_place():
             "            TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),\n"
             "                             Options.Current.MaxSpendPerVisit, _spentThisVisit, 0);"
                 in S['Trading.cs']
-            and S['Trading.cs'].count("TradeMath.Budget(") == 3
-            and S['Trading.cs'].count("GoldHeldBack()") == 5
+            and S['Trading.cs'].count("TradeMath.Budget(") == 4
+            and S['Trading.cs'].count("GoldHeldBack()") == 6
             and "Options.Current.GoldReserve" not in
                 method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
 
@@ -2580,7 +2581,7 @@ chk("1.17.0", "the settings screen hands every preset its own settings, so Defau
 chk("1.17.0", "restocking runs between selling and buying, and asks nothing about profit",
     restocking_runs_between_selling_and_buying())
 chk("1.17.0", "the food it restocks to is a days-of-supply figure read off the party's own appetite",
-    option_default('ResupplyFoodDays') == '5' and
+    option_default('ResupplyFoodDays') == '3' and
     "float perDay = -MobileParty.MainParty.FoodChange;" in
         method_body(S['Trading.cs'], "internal static int FoodWanted") and
     "item.IsFood && !item.HasHorseComponent" in
@@ -2611,6 +2612,85 @@ chk("1.17.0", "with no MCM the settings file is read, with MCM it is not, and it
     S['Config.cs'].count("CultureInfo.InvariantCulture") >= 3 and
     "Options.Bump();" in S['Config.cs'] and
     'Log.Beside(FileName, mustExist: true)' in S['Config.cs'])
+
+def pack_animals_are_bought_between_restocking_and_the_profit_pass():
+    menu = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    entry = method_body(S['Trading.cs'], "private void OnSettlementEntered")
+    body = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
+    return (ordered(menu, "ExecuteResupply(Settlement.CurrentSettlement);",
+                    "ExecuteHaulage(Settlement.CurrentSettlement);",
+                    "ExecuteQuickBuy(Settlement.CurrentSettlement);")
+            and ordered(entry, "ExecuteResupply(settlement, quiet: true);",
+                        "ExecuteHaulage(settlement, quiet: true);",
+                        "ExecuteQuickBuy(settlement, quiet: true);")
+            and "if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);" in entry
+            and "if (!Options.Current.BuyPackAnimals) return;" in body
+            and "!TradePolicy.MayHaul(it, locked)" in body
+            and "price > Budget()" in body
+            and "settlement.IsVillage && remaining <= 1" in body
+            and "BuyAcceptable" not in body
+            and "BestSell" not in body)
+
+def only_a_pack_animal_is_hauled_and_the_herd_still_binds():
+    haul = method_body(S['Trading.cs'], "internal static bool MayHaul")
+    body = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
+    return ("if (!IsPackAnimal(item) || item.NotMerchandise) return false;" in haul
+            and "Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)" in haul
+            and "IsLocked(lockedKeys, new EquipmentElement(item))" in haul
+            and "item.HorseComponent.IsPackAnimal" in
+                between(S['Trading.cs'], "internal static bool IsPackAnimal", ";")
+            and "int herdRoom = HerdRoomForLivestock(party);" in body
+            and "if (herdRoom <= 0) return;" in body
+            and "herdRoom--;" in body
+            and "Carry.Room" not in body)
+
+def a_full_cargo_is_what_pays_over_the_odds_for_a_pack_animal():
+    body = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
+    return ("(int)(worth * (CargoIsFull() ? Options.Current.PackAnimalFullCargoPremium : 1f));" in body
+            and "int worth = TradePolicy.UnpaidWorth(it);" in body
+            and body.count("> Ceiling(worth)") == 2
+            and "private static bool CargoIsFull() => _cargoWasFull || NoRoomToCarry();" in S['Trading.cs']
+            and option_default('BuyPackAnimals') == 'true'
+            and option_default('PackAnimalFullCargoPremium') == '1.5f'
+            and "_o.BuyPackAnimals" in M and "_o.PackAnimalFullCargoPremium" in M)
+
+def the_getaway_is_a_cheat_that_ships_off_and_only_answers_bandits():
+    add = between(S['Trading.cs'], "private static void AddGetaway", "false, 4));")
+    facing = method_body(S['Trading.cs'], "private static bool FacingBandits")
+    go = method_body(S['Trading.cs'], "private static void LetPlayerGo")
+    ride = method_body(S['Trading.cs'], "private static void RideAway")
+    return (option_default('BanditGetawayCheat') == 'false'
+            and "_o.BanditGetawayCheat" in M
+            and '"menu encounter (the other menus are unaffected)"' in add
+            and 'starter.AddGameMenuOption("encounter", "tradelord_getaway",' in add
+            and "Options.Current.BanditGetawayCheat && FacingBandits()" in add
+            and 'Guard.Run("Action.Getaway", LetPlayerGo)' in add
+            and "PlayerEncounter.EncounteredMobileParty" in facing
+            and "foe != null && foe.IsBandit" in facing
+            and "{=TL113}" in go
+            and "Guard.Run(\"Action.GetawayRide\", () => RideAway(foe))" in go
+            and "foe?.IgnoreForHours(GetawayHours);" in ride
+            and "PlayerEncounter.LeaveEncounter = true;" in ride
+            and "PlayerEncounter.Finish(true);" in ride
+            and '("encounter", false)' in COMPAT)
+
+def the_smeltable_hint_says_which_weapons_it_holds_back():
+    hint = spoken(ENGLISH).get('TL364', '')
+    said = [spoken(path).get('TL364', '') for path in TRANSLATIONS.values()]
+    return ("looted off a bandit" in hint
+            and "which parts you have already learned" in hint
+            and hint in M and all(t and t != hint for t in said))
+
+chk("1.18.0", "pack animals are bought after the larder is filled and before the goods are, and nothing about profit is asked",
+    pack_animals_are_bought_between_restocking_and_the_profit_pass())
+chk("1.18.0", "only a pack animal is bought that way, the herd guard still binds it and the carry weight never does",
+    only_a_pack_animal_is_hauled_and_the_herd_still_binds())
+chk("1.18.0", "a pack animal is bought at what it is worth, and over the odds only while the cargo is full",
+    a_full_cargo_is_what_pays_over_the_odds_for_a_pack_animal())
+chk("1.18.0", "the getaway line ships off, shows only against bandits and ends the encounter",
+    the_getaway_is_a_cheat_that_ships_off_and_only_answers_bandits())
+chk("1.18.0", "the smeltable hint says it holds looted weapons too and asks nothing about learned parts",
+    the_smeltable_hint_says_which_weapons_it_holds_back())
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
