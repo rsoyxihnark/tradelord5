@@ -2383,6 +2383,25 @@ chk("1.10.0", "the screen reads the translation the mod already carries, not a s
 chk("1.10.0", "a settings screen that cannot be relabelled says so and leaves the rest alone",
     a_screen_that_cannot_be_wired_leaves_the_rest_of_the_mod_alone())
 
+def a_new_language_reaches_the_screen_without_waiting_for_a_restart():
+    setter = between(M, "public Dropdown<string> Language", "internal static void Reset")
+    told = method_body(M, "private void Retell")
+    again = method_body(M, "private void Relabel")
+    return ("Follows(value, () => _o.Language, picked => _o.Language = picked);" in setter
+            and "Options.Bump();\n                Retell();" in setter
+            and "Relabel();" in told
+            and ordered(again, "if (_spokenFor == _o.Language) return;", "bool first = _spokenFor < 0;",
+                        "_spokenFor = _o.Language;", "if (first) return;",
+                        'Guard.Run("Mcm.Relabel"', "OnPropertyChanged(LoadingComplete);")
+            and "private int _spokenFor = -1;" in M)
+
+chk("1.27.1", "a language picked on the screen is spoken there and then, and the screen is asked to draw itself again",
+    a_new_language_reaches_the_screen_without_waiting_for_a_restart())
+chk("1.27.1", "no hint still promises the screen changes language the next time it is opened",
+    all("next time you open" not in spoken(path).get('TL350', '')
+        for path in [ENGLISH] + list(TRANSLATIONS.values())) and
+    "next time you open it" not in M)
+
 def a_choice_between_named_things_is_picked_from_a_list():
     numbered = re.findall(r'\[SettingPropertyInteger\("\{=TL\d+\}[^"]*", 0, [0-3],', M)
     picked = set(re.findall(r'\[SettingPropertyDropdown\("\{=(TL\d+)\}', M))
