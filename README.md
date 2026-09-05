@@ -87,7 +87,7 @@
 
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM
 - ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting, which its trade messages, ledger panel, price tooltips, menu entries and settings screen all follow once you restart the game
-- ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303
+- ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303, and it runs on the 1.5.2.121216 beta too
 - ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it
 
 **All of it is yours to change.** Every feature above is a switch or a number on the settings screen,
@@ -99,4 +99,4 @@ beside `TradeLord.log` the first time TradeLord loads, and TradeLord reads it ba
 
 - **Harmony** (`Bannerlord.Harmony`), required. TradeLord does not load without it. Put it above TradeLord in the launcher's load order.
 - **MCM** (`Bannerlord.MBOptionScreen`), optional, and what the settings screen is built on. Without it TradeLord writes a `TradeLord.ini` beside its log, and every setting above can be changed by editing that file instead.
-- Bannerlord **1.4.8.119303**. War Sails is optional: with it, TradeLord counts sea legs and appears in port menus.
+- Bannerlord **1.4.8.119303**, or the **1.5.2.121216** beta. War Sails is optional: with it, TradeLord counts sea legs and appears in port menus.
