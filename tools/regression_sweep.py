@@ -1607,7 +1607,10 @@ chk("1.6.4", "the full-cargo warning is red, translatable, and not silenced by a
     'TL82' in strings_declared() and
     "quiet" not in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry"))
 chk("1.6.4", "the buying warnings are held back where the mod cannot buy, and clear with the visit",
-    method_body(S['Trading.cs'], "private void OnSettlementEntered").count("CanTradeHere(settlement)") == 1 and
+    method_body(S['Trading.cs'], "private void OnSettlementEntered").count("CanTradeHere(settlement)") == 2 and
+    method_body(S['Trading.cs'], "private void OnSettlementEntered").count("if (CanTradeHere(settlement) &&") == 1 and
+    method_body(S['Trading.cs'], "private void OnSettlementEntered").count(
+        "_visitTradeAllowed = CanTradeHere(settlement);") == 1 and
     "(Options.Current.AutoBuyOnEntry || Options.Current.QuickSellMenu)" in
         method_body(S['Trading.cs'], "private void OnSettlementEntered") and
     "_cargoWasFull = false;" in method_body(S['Trading.cs'], "private static void ResetVisit"))
@@ -3044,6 +3047,12 @@ def the_herd_is_looked_at_three_times_a_visit():
                              'LogHerdState("after trading at " + settlement.Name);')
             and 'LogHerdState("leaving " + settlement.Name);' in left
             and "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);" in left
+            and "if (!_visitTradeAllowed)" in left
+            and ordered(left, 'LogHerdState("leaving " + settlement.Name);', "if (!_visitTradeAllowed)",
+                        "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);")
+            and "_visitTradeAllowed = CanTradeHere(settlement);" in
+                method_body(S['Trading.cs'], "private void OnSettlementEntered")
+            and "_visitTradeAllowed = false;" in method_body(S['Trading.cs'], "private static void ResetVisit")
             and 'Guard.Run("Action.HerdReliefOnLeaving"' in left
             and 'LogHerdState("on the road, no market in reach");' in
                 method_body(S['Trading.cs'], "private void OnDailyTick")
