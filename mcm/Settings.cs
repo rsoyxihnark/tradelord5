@@ -641,7 +641,7 @@ namespace TradeLord.Mcm
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL263}Restock food (days of supply)", 0, 30, Order = 7, RequireRestart = false,
-            HintText = "{=TL363}When your party carries fewer than this many days of food, TradeLord buys the cheapest food here to top it back up, at whatever the market asks, before it trades for profit. Your gold reserve, your spending limit for the visit, your never-buy list and your food policy all still hold, and it leaves a village its last of each good. 0 turns restocking off. As you arrive at a market it runs only when auto buy is on.")]
+            HintText = "{=TL363}When your party carries fewer than this many days of food, TradeLord buys the cheapest food here to top it back up, before it trades for profit, and only where that food costs no more than the cheapest price you know of for it. Your gold reserve, your spending limit for the visit, your never-buy list and your food policy all still hold, it stops before your gold reaches your reserve, and it leaves a village its last of each good. 0 turns restocking off. As you arrive at a market it runs only when auto buy is on.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public int ResupplyFoodDays { get => _o.ResupplyFoodDays; set { _o.ResupplyFoodDays = value; Options.Bump(); } }
 
@@ -665,15 +665,10 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public string AlwaysBuyItems { get => _o.AlwaysBuyItems; set { _o.AlwaysBuyItems = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL267}Buy haul animals and mounts", Order = 12, RequireRestart = false,
-            HintText = "{=TL367}Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, whenever a market is asking no more than one is worth, so your party can carry more, and a horse or a camel your men can ride while you still have troops on foot. Worth here is the cheapest price you know of for that animal, or its own value where you know none. While your cargo is full it will go over that, up to the limit set below. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, and your gold reserve, your spending limit for the visit and your never-buy list all still hold. ON by default.")]
+        [SettingPropertyBool("{=TL267}Buy haul animals", Order = 12, RequireRestart = false,
+            HintText = "{=TL367}Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, whenever a market is asking no more than one is worth, so your party can carry more. Worth here is the cheapest price you know of for that animal, or its own value where you know none, and it never pays a denar over it. Riding horses and camels are not bought at all. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, it stops before your gold reaches your reserve, and your spending limit for the visit and your never-buy list still hold. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public bool BuyPackAnimals { get => _o.BuyPackAnimals; set { _o.BuyPackAnimals = value; Options.Bump(); } }
-
-        [SettingPropertyFloatingInteger("{=TL268}Most it will pay for a haul animal when your bags are full", 1f, 3f, "#0%", Order = 13, RequireRestart = false,
-            HintText = "{=TL368}When your bags are full, one more animal is worth paying over the odds for, so this is the most TradeLord will hand over for a haul animal or a mount while that lasts. 150% means it will go up to one and a half times the cheapest price it knows of. 100% means it never pays over the odds and buys only at the going rate.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
-        public float PackAnimalFullCargoPremium { get => _o.PackAnimalFullCargoPremium; set { _o.PackAnimalFullCargoPremium = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL274}Share of the hold one good may fill (0 = off)", 0f, 1f, "#0%", Order = 14, RequireRestart = false,
             HintText = "{=TL374}Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and your pack animals instead of needing a new number every time the party grows. 0 turns it off. Selling is unaffected, and the flat per-item caps above still hold.")]

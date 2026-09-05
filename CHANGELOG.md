@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.30.0
+
+- TradeLord now buys only the animals that carry for you, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, so it no longer spends your gold on a Rouncey or a Charger while a Mule is sitting in the same market.
+- It never pays more than the cheapest price it knows of for a haul animal, so Most it will pay for a haul animal when your bags are full is gone from the settings screen and the value you had saved for it is dropped the next time TradeLord reads your settings.
+- Restocking food now buys only where the market is asking no more than the cheapest price you know of for it, instead of taking the cheapest thing on the shelf whatever it costs.
+- Buying a haul animal and restocking food both stop before your gold reaches your reserve, so there is always something left to trade with.
+- Buy haul animals and mounts is called Buy haul animals now, because riding horses and camels are no longer among the animals it buys.
+- The hints under Buy haul animals and Restock food (days of supply) say what those settings now do, and the feature list follows them.
+
 ## 1.29.1
 
 - Getting your party back up to speed as you leave a settlement now happens only where the game would have let you trade there in the first place, so TradeLord no longer sells on the way out of a place it refused to trade in on the way in.

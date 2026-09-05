@@ -6,7 +6,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 2;
+        public const int Shape = 3;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -22,6 +22,7 @@ namespace TradeLord
             changed |= Rename(written, notes);
             changed |= FoodVarietyBecameASwitchAndAnAmount(written, notes);
             changed |= SmeltableWeaponsBecameAChoiceOfThree(written, notes);
+            changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);
             if (changed && notes != null)
                 notes.Add("your settings were written by an older TradeLord, so they have been brought forward from shape " +
                           from + " to shape " + Shape);
@@ -76,6 +77,18 @@ namespace TradeLord
                        " became " + (kept ? "keep every one" : "sell them"));
             return true;
         }
+
+        private static bool PayingOverTheOddsForAHaulAnimalIsGone(IDictionary<string, string> written,
+                                                                 ICollection<string> notes)
+        {
+            const string was = "PackAnimalFullCargoPremium";
+            if (!written.TryGetValue(was, out string held)) return false;
+            written.Remove(was);
+            notes?.Add("a haul animal is only ever bought at the cheapest price TradeLord has seen for it now, " +
+                       "so paying over the odds for one while your bags are full is gone and your setting of " +
+                       held + " is no longer read");
+            return true;
+        }
     }
 
     public static class Limits
@@ -104,7 +117,6 @@ namespace TradeLord
                 { "MaxSpendPerVisit", new double[] { 0, 100000 } },
                 { "ResaleSafetyFactor", new double[] { 0.5, 1 } },
                 { "ResupplyFoodDays", new double[] { 0, 30 } },
-                { "PackAnimalFullCargoPremium", new double[] { 1, 3 } },
                 { "MaxHeldShare", new double[] { 0, 1 } },
                 { "Language", new double[] { 0, 3 } },
                 { "FoodPolicy", new double[] { 0, 3 } },
