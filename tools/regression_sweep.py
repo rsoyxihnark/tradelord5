@@ -731,7 +731,7 @@ def each_preset_gets_its_own_settings():
             and '_o = to;' in method_body(M, "private void Bound")
             and all('Follows(value, () => _o.' + name in M
                     for name in ('Language', 'FoodPolicy', 'CraftingPolicy',
-                                 'LivestockPolicy', 'CostBasisMode')))
+                                 'LivestockPolicy', 'CostBasisMode', 'KeepSmeltableWeapons')))
 
 
 def restocking_runs_between_selling_and_buying():
@@ -2348,17 +2348,18 @@ chk("1.10.0", "a settings screen that cannot be relabelled says so and leaves th
 def a_choice_between_named_things_is_picked_from_a_list():
     numbered = re.findall(r'\[SettingPropertyInteger\("\{=TL\d+\}[^"]*", 0, [0-3],', M)
     picked = set(re.findall(r'\[SettingPropertyDropdown\("\{=(TL\d+)\}', M))
-    return (numbered == [] and picked == {'TL250', 'TL222', 'TL223', 'TL224', 'TL227'}
+    return (numbered == [] and picked == {'TL250', 'TL222', 'TL223', 'TL224', 'TL227', 'TL264'}
             and all('public Dropdown<string> ' + named in M for named in
-                    ('Language', 'FoodPolicy', 'CraftingPolicy', 'LivestockPolicy', 'CostBasisMode')))
+                    ('Language', 'FoodPolicy', 'CraftingPolicy', 'LivestockPolicy', 'CostBasisMode',
+                     'KeepSmeltableWeapons')))
 
 def the_words_in_a_choice_follow_the_mods_language():
     follow = method_body(M, "internal void FollowLanguage")
     return ('Tongue.Text(words[i]).ToString()' in method_body(M, "private static string[] Spoken")
-            and method_body(M, "private void Retell").count('Retold(') == 4
+            and method_body(M, "private void Retell").count('Retold(') == 5
             and 'Language.PropertyChanged += (sender, args) => Retell();' in follow
             and follow.count('Retell();') == 2
-            and follow.count('Follows(') == 5)
+            and follow.count('Follows(') == 6)
 
 def a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists():
     body = method_body(S['Trading.cs'], "internal static bool MayBuy")
@@ -2587,12 +2588,14 @@ chk("1.17.0", "the food it restocks to is a days-of-supply figure read off the p
     "item.IsFood && !item.HasHorseComponent" in
         between(S['Trading.cs'], "internal static bool IsStorableFood", ";") and
     "_o.ResupplyFoodDays" in M)
-chk("1.17.0", "the smeltable switch ships off, holds back only a crafted design, and an always-sell entry still wins",
-    option_default('KeepSmeltableWeapons') == 'false' and
+chk("1.19.0", "smeltable weapons are a three-way choice that ships on selling them, and an always-sell entry still wins",
+    option_default('KeepSmeltableWeapons') == 'SmeltSellThem' and
+    "public const int SmeltSellThem = 0, SmeltKeepAll = 1, SmeltKeepUnlearned = 2;" in S['Options.cs'] and
     "item.WeaponDesign != null" in method_body(S['Trading.cs'], "internal static bool IsSmeltable") and
     ordered(method_body(S['Trading.cs'], "internal static bool MaySell"),
             "if (Listed(s.AlwaysSet, item)) return true;",
-            "s.KeepSmeltableWeapons && IsSmeltable(item)") and
+            "s.KeepSmeltableWeapons != Options.SmeltSellThem && IsSmeltable(item)",
+            "s.KeepSmeltableWeapons == Options.SmeltKeepAll || !PartsAllLearned(item)") and
     "_o.KeepSmeltableWeapons" in M)
 chk("1.17.0", "the purse holds the flat reserve and the days of wages together, worked out without the game",
     option_default('KeepWageDays') == '3' and option_default('GoldReserve') == '300' and
@@ -2631,14 +2634,16 @@ def pack_animals_are_bought_between_restocking_and_the_profit_pass():
             and "BuyAcceptable" not in body
             and "BestSell" not in body)
 
-def only_a_pack_animal_is_hauled_and_the_herd_still_binds():
+def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
     haul = method_body(S['Trading.cs'], "internal static bool MayHaul")
     body = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
-    return ("if (!IsPackAnimal(item) || item.NotMerchandise) return false;" in haul
+    carries = between(S['Trading.cs'], "internal static bool IsHaulAnimal", ";")
+    return ("if (!IsHaulAnimal(item) || item.NotMerchandise) return false;" in haul
             and "Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)" in haul
             and "IsLocked(lockedKeys, new EquipmentElement(item))" in haul
-            and "item.HorseComponent.IsPackAnimal" in
-                between(S['Trading.cs'], "internal static bool IsPackAnimal", ";")
+            and "item.HorseComponent.IsPackAnimal" in carries
+            and "item.HorseComponent.IsMount" in carries
+            and "IsLiveStock" not in carries
             and "int herdRoom = HerdRoomForLivestock(party);" in body
             and "if (herdRoom <= 0) return;" in body
             and "herdRoom--;" in body
@@ -2654,12 +2659,12 @@ def a_full_cargo_is_what_pays_over_the_odds_for_a_pack_animal():
             and option_default('PackAnimalFullCargoPremium') == '1.5f'
             and "_o.BuyPackAnimals" in M and "_o.PackAnimalFullCargoPremium" in M)
 
-def the_getaway_is_a_cheat_that_ships_off_and_only_answers_bandits():
+def the_getaway_is_a_cheat_that_ships_on_and_only_answers_bandits():
     add = between(S['Trading.cs'], "private static void AddGetaway", "false, 4));")
     facing = method_body(S['Trading.cs'], "private static bool FacingBandits")
     go = method_body(S['Trading.cs'], "private static void LetPlayerGo")
     ride = method_body(S['Trading.cs'], "private static void RideAway")
-    return (option_default('BanditGetawayCheat') == 'false'
+    return (option_default('BanditGetawayCheat') == 'true'
             and "_o.BanditGetawayCheat" in M
             and '"menu encounter (the other menus are unaffected)"' in add
             and 'starter.AddGameMenuOption("encounter", "tradelord_getaway",' in add
@@ -2677,20 +2682,35 @@ def the_getaway_is_a_cheat_that_ships_off_and_only_answers_bandits():
 def the_smeltable_hint_says_which_weapons_it_holds_back():
     hint = spoken(ENGLISH).get('TL364', '')
     said = [spoken(path).get('TL364', '') for path in TRANSLATIONS.values()]
+    words = [spoken(ENGLISH).get(i, '') for i in ('TL270', 'TL271', 'TL272')]
     return ("looted off a bandit" in hint
-            and "which parts you have already learned" in hint
-            and hint in M and all(t and t != hint for t in said))
+            and "still locked in your smithy" in hint
+            and hint in M and all(t and t != hint for t in said)
+            and all(w and w in M for w in words))
+
+def an_unreadable_crafting_record_keeps_the_weapon():
+    body = method_body(S['Trading.cs'], "internal static bool PartsAllLearned")
+    return ("if (design == null) return true;" in body
+            and "Campaign.Current?.GetCampaignBehavior<ICraftingCampaignBehavior>()" in body
+            and "crafting.IsOpened(piece, design.Template)" in body
+            and body.count("return false;") == 3
+            and "_craftingLookupFailed = true;" in body
+            and 'Log.Error(e, "learned parts check (the weapon is kept)")' in body
+            and "TradePolicy.ForgetCraftingLookup();" in
+                method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 
 chk("1.18.0", "pack animals are bought after the larder is filled and before the goods are, and nothing about profit is asked",
     pack_animals_are_bought_between_restocking_and_the_profit_pass())
-chk("1.18.0", "only a pack animal is bought that way, the herd guard still binds it and the carry weight never does",
-    only_a_pack_animal_is_hauled_and_the_herd_still_binds())
+chk("1.19.0", "only an animal that carries for you is bought that way, the herd guard still binds it and the carry weight never does",
+    only_a_carrying_animal_is_hauled_and_the_herd_still_binds())
 chk("1.18.0", "a pack animal is bought at what it is worth, and over the odds only while the cargo is full",
     a_full_cargo_is_what_pays_over_the_odds_for_a_pack_animal())
-chk("1.18.0", "the getaway line ships off, shows only against bandits and ends the encounter",
-    the_getaway_is_a_cheat_that_ships_off_and_only_answers_bandits())
-chk("1.18.0", "the smeltable hint says it holds looted weapons too and asks nothing about learned parts",
+chk("1.19.0", "the getaway line ships on, shows only against bandits and ends the encounter",
+    the_getaway_is_a_cheat_that_ships_on_and_only_answers_bandits())
+chk("1.19.0", "the smeltable hint names all three choices and says looted weapons are held too",
     the_smeltable_hint_says_which_weapons_it_holds_back())
+chk("1.19.0", "a weapon is kept whenever the game's crafting record cannot say its parts are all learned",
+    an_unreadable_crafting_record_keeps_the_weapon())
 
 chk("1.14.1", "the release notes are read out of the changelog section for the version being published",
     'python3 tools/nexus_changelog.py --notes "${VERSION#v}" > release-notes.md' in WORKFLOW and
