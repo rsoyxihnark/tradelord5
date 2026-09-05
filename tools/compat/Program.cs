@@ -52,6 +52,7 @@ namespace TradeLord.Compat
             ("village", false),
             ("port_menu", true),
             ("naval_storyline_virtualport", true),
+            ("encounter", false),
         };
 
         private const string GameBinVariable = "TRADELORD_GAME_BIN";
