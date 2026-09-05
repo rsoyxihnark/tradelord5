@@ -1247,9 +1247,10 @@ namespace TradeLord
             {
                 InventoryCapacityModel model = Campaign.Current?.Models?.InventoryCapacityModel;
                 if (model == null) return 0;
-                float carried = model.CalculateTotalWeightCarried(party, true).ResultNumber;
+                bool atSea = Travel.NavalActive;
+                float carried = model.CalculateTotalWeightCarried(party, atSea).ResultNumber;
                 for (int fewer = 1; fewer <= held; fewer++)
-                    if (model.CalculateInventoryCapacity(party, true, false, 0, 0, -fewer).ResultNumber < carried)
+                    if (model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber < carried)
                         return fewer - 1;
                 return held;
             }
