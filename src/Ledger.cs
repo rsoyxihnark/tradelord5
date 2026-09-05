@@ -338,6 +338,7 @@ namespace TradeLord
 
         private int _routeHour = -1;
         private int _routeGen = -1;
+        private int _routePurse = -1;
         private List<TradeRoute> _routes;
 
         internal void ForgetMarketRankings()
@@ -449,19 +450,23 @@ namespace TradeLord
         public List<TradeRoute> BestRoutes(int top)
         {
             int hour = (int)CampaignTime.Now.ToHours;
-            if (_routes == null || _routeHour != hour || _routeGen != Options.Generation)
+            int purse = TradeActionBehavior.PurseForAVisit();
+            if (_routes == null || _routeHour != hour || _routeGen != Options.Generation
+                || _routePurse != purse)
             {
-                _routes = ScanRoutes();
+                _routes = ScanRoutes(purse);
                 _routeHour = hour;
                 _routeGen = Options.Generation;
+                _routePurse = purse;
             }
             return _routes.Count <= top ? _routes : _routes.GetRange(0, top);
         }
 
-        private List<TradeRoute> ScanRoutes()
+        private List<TradeRoute> ScanRoutes(int purse)
         {
             Bulk.Forget();
             var routes = new List<TradeRoute>();
+            if (purse <= 0) return routes;
             ISet<string> locked = TradePolicy.LockedKeys();
             float cap = Options.Current.MaxTravelDays;
             bool rankByScore = Options.Current.ConfidenceRanking;
@@ -486,9 +491,7 @@ namespace TradeLord
                     int stocked = Options.Current.BuyCapPerItem > 0
                         ? Options.Current.BuyCapPerItem : UncappedBuyProjection;
                     int spendCap = Options.Current.BuyValueCapPerItem;
-                    if (Options.Current.MaxSpendPerVisit > 0 &&
-                        (spendCap <= 0 || Options.Current.MaxSpendPerVisit < spendCap))
-                        spendCap = Options.Current.MaxSpendPerVisit;
+                    if (spendCap <= 0 || purse < spendCap) spendCap = purse;
                     if (spendCap > 0) stocked = Math.Min(stocked, spendCap / buyPrice);
                     if (item.HasHorseComponent)
                     {
