@@ -14,6 +14,8 @@ namespace TradeLord
 
         internal static bool SettingsReachable { get; private set; }
 
+        internal static Action Reseat;
+
         private static string Named(int generation) => "MCMv" + generation;
 
         private static bool Loaded(string prefix)

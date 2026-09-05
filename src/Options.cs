@@ -20,7 +20,10 @@ namespace TradeLord
         public static Options Current { get; } = new Options();
 
         public static int Generation { get; private set; }
-        public static void Bump() { Generation++; }
+
+        public static Action Changed;
+
+        public static void Bump() { Generation++; Changed?.Invoke(); }
 
         public int Language = 0;
 

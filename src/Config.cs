@@ -11,12 +11,23 @@ namespace TradeLord
     {
         internal const string FileName = "TradeLord.ini";
 
+        internal const string ChangedKey = "SettingsChanged";
+
+        internal const string WrittenByKey = "SettingsWrittenBy";
+
+        private static readonly TimeSpan HandTolerance = TimeSpan.FromSeconds(30);
+
+        private static string _path;
+        private static bool _dirty;
+        private static bool _applying;
+
         private static readonly string[] Header =
         {
             "TradeLord settings.",
             "",
-            "This file is read only when MCM is not installed. With MCM installed its",
-            "settings screen is in charge and nothing here is read.",
+            "This file and the MCM settings screen are twins. Whichever was saved last wins,",
+            "and TradeLord writes the other to match it, so you can install or remove MCM",
+            "whenever you like and keep every setting you have made.",
             "",
             "The " + Migration.ShapeKey + " line says which shape this file is in. TradeLord reads it",
             "and brings an older file forward by itself, writing what it changed to TradeLord.log,",
@@ -35,16 +46,41 @@ namespace TradeLord
 
         internal static void Follow()
         {
-            if (McmLoader.SettingsReachable) return;
             Guard.Run("Config", Read);
+            Options.Changed = Noted;
+        }
+
+        private static void Noted()
+        {
+            if (!_applying) _dirty = true;
+        }
+
+        internal static void Flush()
+        {
+            if (!_dirty) return;
+            _dirty = false;
+            Guard.Run("Config.Flush", () => Write(_path, "a setting changed"));
+        }
+
+        private static bool ChangedByHand(string path, DateTime stamped)
+        {
+            if (stamped == default(DateTime)) return true;
+            try { return File.GetLastWriteTimeUtc(path) > stamped + HandTolerance; }
+            catch (Exception e)
+            {
+                Log.Error(e, "reading when the settings file was last changed (the file is taken as the newer one)");
+                return true;
+            }
         }
 
         private static void Read()
         {
+            bool screen = McmLoader.SettingsReachable;
             string found = Log.Beside(FileName, mustExist: true);
+            _path = found ?? Log.Beside(FileName, mustExist: false);
             if (found == null)
             {
-                Write(Log.Beside(FileName, mustExist: false), "no settings file yet");
+                Write(_path, screen ? "written to match the settings screen" : "no settings file yet");
                 return;
             }
 
@@ -59,34 +95,59 @@ namespace TradeLord
             }
 
             int shape = 1;
-            if (written.TryGetValue(Migration.ShapeKey, out string stamped) &&
-                int.TryParse(stamped, NumberStyles.Integer, CultureInfo.InvariantCulture, out int stored))
+            if (written.TryGetValue(Migration.ShapeKey, out string held) &&
+                int.TryParse(held, NumberStyles.Integer, CultureInfo.InvariantCulture, out int stored))
                 shape = stored;
+            DateTime stamped = default(DateTime);
+            if (written.TryGetValue(ChangedKey, out string marked))
+                DateTime.TryParse(marked, CultureInfo.InvariantCulture,
+                                  DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out stamped);
             written.Remove(Migration.ShapeKey);
+            written.Remove(ChangedKey);
+            written.Remove(WrittenByKey);
 
             var notes = new List<string>();
             bool lifted = Migration.Lift(shape, written, notes);
             foreach (string note in notes) Log.Write("settings file: " + note);
+
+            if (screen && !ChangedByHand(found, stamped))
+            {
+                Log.Write("settings file: the settings screen was saved more recently, so this file is written to match it");
+                Write(found, "made to match the settings screen");
+                return;
+            }
 
             var known = new Dictionary<string, FieldInfo>(StringComparer.OrdinalIgnoreCase);
             foreach (FieldInfo field in Fields()) known[field.Name] = field;
 
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             int taken = 0;
-            foreach (var line in written)
+            _applying = true;
+            try
             {
-                if (!known.TryGetValue(line.Key, out FieldInfo field))
+                foreach (var line in written)
                 {
-                    Log.Write("settings file: TradeLord has no setting called '" + line.Key + "', so that line does nothing");
-                    continue;
+                    if (!known.TryGetValue(line.Key, out FieldInfo field))
+                    {
+                        Log.Write("settings file: TradeLord has no setting called '" + line.Key + "', so that line does nothing");
+                        continue;
+                    }
+                    seen.Add(field.Name);
+                    if (Taken(field, line.Value)) taken++;
                 }
-                seen.Add(field.Name);
-                if (Taken(field, line.Value)) taken++;
             }
+            finally { _applying = false; }
 
             Options.Bump();
             Log.Write("settings file read from " + found + ": " + taken + " of " + known.Count + " settings set");
-            if (lifted || shape != Migration.Shape)
+            if (screen)
+            {
+                Log.Write("settings file: this file was saved more recently than the settings screen, so the screen is set from it");
+                McmLoader.Reseat?.Invoke();
+            }
+            if (screen)
+                Write(found, "made the settings screen match it");
+            else if (lifted || shape != Migration.Shape)
                 Write(found, "brought forward from shape " + shape + " to shape " + Migration.Shape);
             else if (seen.Count < known.Count)
                 Write(found, "the file was missing " + (known.Count - seen.Count) + " setting(s) this version knows");
@@ -137,6 +198,10 @@ namespace TradeLord
             sb.AppendLine();
             sb.Append(Migration.ShapeKey).Append(" = ")
               .AppendLine(Migration.Shape.ToString(CultureInfo.InvariantCulture));
+            sb.Append(ChangedKey).Append(" = ")
+              .AppendLine(DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
+            sb.Append(WrittenByKey).Append(" = ")
+              .AppendLine(McmLoader.SettingsReachable ? "the settings screen" : "this file");
             foreach (FieldInfo field in Fields())
                 sb.Append(field.Name).Append(" = ").AppendLine(Shown(field));
             try
