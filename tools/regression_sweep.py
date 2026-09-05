@@ -2216,7 +2216,9 @@ def the_rules_keep_one_branch():
     return ('`main` is the only branch this repository keeps' in RULES
             and 'Never start another one' in RULES
             and 'no-new-branch.sh' in RULES
-            and 'Leave the assigned branch unpushed' in RULES)
+            and 'Leave the assigned branch unpushed' in RULES
+            and "Read `HEAD` against the branch's own upstream instead." in RULES
+            and 'Pushing the assigned branch to quiet the warning breaks the rule above.' in RULES)
 
 def a_git_command_that_would_start_a_branch_is_refused():
     return ('no-new-branch.sh' in SETTINGS
