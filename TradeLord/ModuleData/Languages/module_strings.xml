@@ -229,5 +229,8 @@
 		<string id="TL104" text="Automation"/>
 		<string id="TL105" text="Buying"/>
 		<string id="TL106" text="General"/>
+		<string id="TL276" text="Put every setting back to how TradeLord ships" />
+		<string id="TL277" text="Reset" />
+		<string id="TL376" text="Puts every TradeLord setting back to the value it ships with, in one go. It takes hold at once and is written to TradeLord.ini as well, so nothing is left half changed. Your never sell, always sell, never buy and always buy lists are emptied too, and what changed is written to TradeLord.log." />
 	</strings>
 </base>

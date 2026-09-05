@@ -229,5 +229,8 @@
 		<string id="TL117" text="[模拟，最好情况] TradeLord 会卖掉 {ITEMS}，得到 {GOLD} 第纳尔，让队伍重新提起速度。"/>
 		<string id="TL275" text="卖掉拖慢你的多余坐骑"/>
 		<string id="TL375" text="把队里没人骑得上的马或骆驼卖掉，但只在这些多余坐骑把你拖进牲畜减速惩罚时才卖，而且只卖到刚好脱身为止。先卖最便宜的，好把战马留在辎重里。驮兽绝不会这样被卖掉，你锁住的、写进从不卖出名单的，以及独特物品与自制物品保护管着的东西也都不会。默认开启。"/>
+		<string id="TL276" text="把每一项设置都退回 TradeLord 出厂时的样子" />
+		<string id="TL277" text="重置" />
+		<string id="TL376" text="一次把每一项 TradeLord 设置都退回它出厂时的值。立刻生效，也会写进 TradeLord.ini，不会留下改了一半的状态。你的从不卖出、总是卖出、从不买入和总是买入名单也一并清空，改动了什么会写进 TradeLord.log。" />
 	</strings>
 </base>
