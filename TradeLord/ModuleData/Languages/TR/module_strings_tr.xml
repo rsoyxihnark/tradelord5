@@ -82,6 +82,8 @@
 		<string id="TL111" text="[Benzetim, en iyi durum] TradeLord daha çok yük taşımak için {ITEMS} alırdı, {GOLD} dinar."/>
 		<string id="TL112" text="TradeLord'um var, beni bedavaya bırakır mısınız? [HİLE]"/>
 		<string id="TL113" text="Ah, kusura bakmayın, tabii ki. Ama NexusMods'ta beğeni vermeyi unutmayın!"/>
+		<string id="TL114" text="İyi bir alışverişti. [TRADELORD]"/>
+		<string id="TL115" text="Katılıyorum. Keşke o modu ben de kullanabilseydim. Umarım NexusMods'ta beğeni vermişsinizdir!"/>
 		<string id="TL251" text="Elinizde bu kadar varken almayı bırak (0 = kapalı)"/>
 		<string id="TL252" text="Her zaman al (mal kimlikleri ya da adları, virgülle ayrılmış)"/>
 		<string id="TL253" text="Dokunma"/>
@@ -113,6 +115,10 @@
 		<string id="TL270" text="Sat" />
 		<string id="TL271" text="Hepsini sakla" />
 		<string id="TL272" text="Öğrenmediklerini sakla" />
+		<string id="TL273" text="Yolda rastladığınız kervanlarla ticaret yap" />
+		<string id="TL373" text="Yoldaki bir kervanla konuşun, TradeLord orada ve o anda onunla ticaret yapar: kârınızı karşılayanı satar, erişebileceğiniz bir yerde daha pahalıya satabileceğini alır. Kervan kendi kesesinden öder, kese boşalınca durur. Bir pazar ziyaretinde geçerli olan her kural burada da geçerlidir. Öntanımlı olarak AÇIK." />
+		<string id="TL274" text="Tek bir malın doldurabileceği yük payı (0 = kapalı)" />
+		<string id="TL374" text="Bir mal, bölüğünüzün taşıyabildiğinin bu paydan fazlasını dolduracaksa artık o maldan almaz. Gerçek taşıma kapasitenize göre ölçülür, yani tavan arabalarınız ve yük hayvanlarınızla birlikte büyür; bölük her büyüdüğünde yeni bir sayı girmeniz gerekmez. 0 bunu kapatır. Satış bundan etkilenmez ve yukarıdaki sabit mal başı sınırlar yine geçerlidir." />
 		<string id="TL352" text="TradeLord'un her zaman aldığı mallar: kategori kurallarını ve tahıl alma yasağını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla listeleri ve envanter kilidi yine geçerlidir, ve yine ancak erişimdeki bir yerde daha pahalıya satabileceğini alır."/>
 		<string id="TL250" text="Dil"/>
 		<string id="TL351" text="Kervanınız bir maldan bu kadarını taşıdığında TradeLord o malı bırakır ve parayı başka bir şeye harcar. Şu anda taşıdığınız miktarı ve bu ziyarette alınanları birlikte sayar. Satışı etkilemez. 0 = sınır yok."/>

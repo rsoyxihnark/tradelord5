@@ -32,13 +32,14 @@
 - ✅ Sells and buys the moment you enter a market by default
 - ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has at whatever it asks, before it trades for profit
 - ✅ Buys and sells livestock, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
-- ✅ Buys any beast that carries for you, mules and sumpter horses and riding horses alike, when a market is asking no more than one is worth, so the party carries more and your foot troops get something to ride. While your cargo is full it will pay half again as much for one, because that is when the room is worth having. It never buys more animals than your party can drive without slowing down
+- ✅ Buys any beast that carries for you, mules and sumpter horses and riding horses alike, when a market is asking no more than one is worth, so the party carries more and your foot troops get something to ride. While your cargo is full it will pay half again as much for one, because that is when the room is worth having. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short. Always on for goods you never bought, such as looted gear; off by default for goods you bought, whose profit margin already covers it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set
 - ✅ Trades in villages as well, under their own stricter travel limit
+- ✅ Trades with a caravan you meet on the road: talk to it and the deal is already done, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of the caravan's own purse
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
 - ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
@@ -69,7 +70,7 @@
 - ✅ A scan radius, if you would rather it thought locally
 - ✅ A minimum stock before it calls something worth buying
 - ✅ Separate rules for food, smithing materials and livestock
-- ✅ Caps on one good by count or by denars, on how many of it you will carry, and on the whole visit
+- ✅ Caps on one good by count or by denars, on how many of it you will carry, on the share of the hold it may fill, and on the whole visit
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ Profit measured against what you paid: the average, the last, or the cheapest you know of
 - ✅ An honest-merchant mode you can switch on, using only the prices you have seen in person, recorded market by market as you walk them
