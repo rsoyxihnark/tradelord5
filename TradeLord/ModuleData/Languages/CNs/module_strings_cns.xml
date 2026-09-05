@@ -230,5 +230,6 @@
 		<string id="TL276" text="把每一项设置都退回 TradeLord 出厂时的样子" />
 		<string id="TL277" text="重置" />
 		<string id="TL376" text="一次把每一项 TradeLord 设置都退回它出厂时的值。立刻生效，也会写进 TradeLord.ini，不会留下改了一半的状态。你的从不卖出、总是卖出、从不买入和总是买入名单也一并清空，改动了什么会写进 TradeLord.log。" />
+		<string id="TL377" text="你的钱袋里有 {GOLD} 第纳尔，而金钱储备扣住了其中 {RESERVE}，所以这里没有你买得起的东西。卖掉一些货物，或者在设置里调低储备。" />
 	</strings>
 </base>
