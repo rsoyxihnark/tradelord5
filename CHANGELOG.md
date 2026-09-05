@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.30.2
+
+- Loading a saved game while you are inside a town or village no longer stops TradeLord from selling the animals that are slowing your party down as you ride back out.
+- TradeLord.log no longer says a trade was turned down as you leave a castle, a hideout or anywhere else TradeLord never trades in the first place.
+- With Buy to fill the ships off, getting your party back up to speed now keeps enough haul animals for what your carts are carrying, instead of measuring against your ships.
+- TradeLord.log now says once why TradeLord cannot work out your herd, whichever part of it asked first.
+
 ## 1.30.1
 
 - The feature list and what it needs now both say TradeLord runs on the Bannerlord 1.5.2.121216 beta as well as on 1.4.8.119303.

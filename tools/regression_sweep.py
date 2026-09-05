@@ -789,6 +789,8 @@ def the_ships_capacity_is_asked_in_one_place():
                         "return capacity ? party.InventoryCapacity : party.TotalWeightCarried;")
             and "Carry.Carried(party)" in S['Panel.cs'] and "Carry.Capacity(party)" in S['Panel.cs']
             and "party.InventoryCapacity" not in S['Panel.cs']
+            and "bool atSea = Carry.Sailing();" in method_body(t, "internal static int TrucksCargoCanSpare")
+            and "Travel.NavalActive" not in method_body(t, "internal static int TrucksCargoCanSpare")
             and "Carry.Room(party) < 1f" in method_body(t, "private static bool NoRoomToCarry"))
 
 
@@ -1831,11 +1833,25 @@ chk("1.6.16", "holding cargo for a better market is named as its own reason, not
            and ordered(b, "case Block.BelowMargin:", '{=TL42}', "case Block.BelowBestMarket:"))
     (method_body(S['Trading.cs'], "internal static TextObject Phrase")) and
     "TL85" in strings_declared())
-chk("1.6.16", "a campaign starts with the herd guard re-armed, so an earlier one cannot leave livestock buying off",
-    "_herdLookupFailed = false;" in method_body(S['Trading.cs'], "internal static void ForgetVisit") and
-    "if (_herdLookupFailed) return 0;" in
-        method_body(S['Trading.cs'], "internal static int HerdRoomForLivestock") and
-    "_herdModifier = null" not in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
+def the_herd_guard_is_re_armed_and_says_once_why_it_is_off():
+    forget = method_body(S['Trading.cs'], "internal static void ForgetVisit")
+    model = method_body(S['Trading.cs'], "private static DefaultPartySpeedCalculatingModel HerdModel")
+    room = method_body(S['Trading.cs'], "internal static int HerdRoomForLivestock")
+    shed = method_body(S['Trading.cs'], "internal static int DrivenAnimalsToShed")
+    return ("_herdLookupFailed = false;" in forget
+            and "_herdModifier = null" not in forget
+            and "if (_herdLookupFailed) return null;" in model
+            and model.count("_herdLookupFailed = true;") == 2
+            and "a mod replaced the party speed model" in model
+            and "GetHerdingModifier not found on this game version" in model
+            and S['Trading.cs'].count(
+                'typeof(DefaultPartySpeedCalculatingModel).GetMethod(') == 1
+            and "DefaultPartySpeedCalculatingModel model = HerdModel();" in room
+            and "DefaultPartySpeedCalculatingModel model = HerdModel();" in shed
+            and "if (model == null) return 0;" in room and "if (model == null) return 0;" in shed)
+
+chk("1.6.16", "a campaign starts with the herd guard re-armed, and whichever part of the mod needs it first says once why it is off",
+    the_herd_guard_is_re_armed_and_says_once_why_it_is_off())
 chk("1.6.16", "a full herd is named as its own reason, not as a full cargo hold",
     (lambda b: b.count("case Block.HerdFull:") == 1
            and '{=TL86}' in b and '{=TL44}' in b
@@ -2761,7 +2777,7 @@ chk("1.17.0", "the purse holds the flat reserve and the days of wages together, 
     'TradeMath.Reserve(Options.Current.GoldReserve, Options.Current.KeepWageDays, wage)' in
         method_body(S['Trading.cs'], "internal static int GoldHeldBack") and
     'MobileParty.MainParty?.TotalWage' in S['Trading.cs'] and '_o.KeepWageDays' in M)
-chk("1.17.0", "the ships' capacity is asked for in one place, and the panel reads that same number",
+chk("1.17.0", "the ships' capacity is asked for in one place, and the panel and the haul animal floor read that same number",
     option_default('UseFleetCapacity') == 'false' and the_ships_capacity_is_asked_in_one_place())
 chk("1.25.0", "the settings file is read whether or not MCM is there, and it carries every option",
     "McmLoader.SettingsReachable" not in
@@ -3043,7 +3059,7 @@ def the_herd_gives_up_its_animals_in_the_order_the_player_set():
             and "else if (rank != RankLivestock) mountsLeft--;" in relief
             and "Math.Max(0, mounts - foot)" in room
             and "TradePolicy.IsTruckAnimal(el.EquipmentElement.Item)" in held
-            and "bool atSea = Travel.NavalActive;" in spared
+            and "bool atSea = Carry.Sailing();" in spared
             and "model.CalculateTotalWeightCarried(party, atSea).ResultNumber" in spared
             and "model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber < carried" in spared
             and "return fewer - 1;" in spared)
@@ -3089,6 +3105,19 @@ def the_herd_is_looked_at_three_times_a_visit():
 
 chk("1.29.0", "the herd is looked at on the way in, after the trading and on the way out, so a penalty from losing men is caught too",
     the_herd_is_looked_at_three_times_a_visit())
+
+def a_loaded_game_inside_a_market_still_gets_back_up_to_speed_on_the_way_out():
+    launched = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    left = method_body(S['Trading.cs'], "private void OnSettlementLeft")
+    return (ordered(launched, "ResetVisit();",
+                    "Settlement inside = MobileParty.MainParty?.CurrentSettlement;",
+                    "if (inside != null) _visitTradeAllowed = CanTradeHere(inside);")
+            and ordered(left, "if (!_visitTradeAllowed)", "if (IsMarket(settlement))",
+                        "herd relief on the way out is skipped")
+            and left.count("if (IsMarket(settlement))") == 1)
+
+chk("1.30.2", "a game loaded inside a market still gets the party back up to speed on the way out, and only a market that turned the trade down says so",
+    a_loaded_game_inside_a_market_still_gets_back_up_to_speed_on_the_way_out())
 
 def what_the_herd_check_writes_down():
     body = method_body(S['Trading.cs'], "internal static void LogHerdState")
