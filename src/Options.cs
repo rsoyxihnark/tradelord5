@@ -98,6 +98,8 @@ namespace TradeLord
 
         public bool UseFleetCapacity = false;
 
+        public bool SellSpareMounts = true;
+
         public bool BuyPackAnimals = true;
         public float PackAnimalFullCargoPremium = 1.5f;
 
