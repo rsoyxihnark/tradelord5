@@ -93,6 +93,30 @@ namespace TradeLord.Tests
             Assert.NotEmpty(notes);
         }
 
+        [Theory]
+        [InlineData("true")]
+        [InlineData("false")]
+        public void BuyingHaulAnimalsKeepsWhatWasSavedUnderItsOldName(string held)
+        {
+            var written = File("BuyPackAnimals", held, "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(3, written, notes));
+            Assert.False(written.ContainsKey("BuyPackAnimals"));
+            Assert.Equal(held, written["BuyHaulAnimals"]);
+            Assert.Equal("800", written["GoldReserve"]);
+            Assert.NotEmpty(notes);
+        }
+
+        [Fact]
+        public void AHaulAnimalSettingAlreadyUnderTheNewNameIsNotOverwritten()
+        {
+            var written = File("BuyPackAnimals", "false", "BuyHaulAnimals", "true");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(3, written, notes));
+            Assert.False(written.ContainsKey("BuyPackAnimals"));
+            Assert.Equal("true", written["BuyHaulAnimals"]);
+        }
+
         [Fact]
         public void AFileWithoutTheOldHaulAnimalPremiumIsLeftAlone()
         {
@@ -126,7 +150,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(3, Migration.Shape);
+            Assert.Equal(4, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));
