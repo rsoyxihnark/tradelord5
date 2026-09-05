@@ -15,6 +15,10 @@ namespace TradeLord
 
         internal const string WrittenByKey = "SettingsWrittenBy";
 
+        private const string ByScreen = "the settings screen";
+
+        private const string ByFile = "this file";
+
         private static readonly TimeSpan HandTolerance = TimeSpan.FromSeconds(30);
 
         private static string _path;
@@ -146,6 +150,8 @@ namespace TradeLord
             if (written.TryGetValue(ChangedKey, out string marked))
                 DateTime.TryParse(marked, CultureInfo.InvariantCulture,
                                   DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out stamped);
+            bool screenWroteIt = written.TryGetValue(WrittenByKey, out string wroteIt) &&
+                                 string.Equals(wroteIt, ByScreen, StringComparison.Ordinal);
             written.Remove(Migration.ShapeKey);
             written.Remove(ChangedKey);
             written.Remove(WrittenByKey);
@@ -154,7 +160,7 @@ namespace TradeLord
             bool lifted = Migration.Lift(shape, written, notes);
             foreach (string note in notes) Log.Write("settings file: " + note);
 
-            if (screen && !ChangedByHand(found, stamped))
+            if (screen && screenWroteIt && !ChangedByHand(found, stamped))
             {
                 Log.Write("settings file: the settings screen was saved more recently, so this file is written to match it");
                 Write(found, "made to match the settings screen");
@@ -186,7 +192,9 @@ namespace TradeLord
             Log.Write("settings file read from " + found + ": " + taken + " of " + known.Count + " settings set");
             if (screen)
             {
-                Log.Write("settings file: this file was saved more recently than the settings screen, so the screen is set from it");
+                Log.Write(screenWroteIt
+                    ? "settings file: this file was saved more recently than the settings screen, so the screen is set from it"
+                    : "settings file: this file was last written with no settings screen to write it, so the screen is set from it");
                 McmLoader.Reseat?.Invoke();
             }
             if (screen)
@@ -261,7 +269,7 @@ namespace TradeLord
             sb.Append(ChangedKey).Append(" = ")
               .AppendLine(DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
             sb.Append(WrittenByKey).Append(" = ")
-              .AppendLine(McmLoader.SettingsReachable ? "the settings screen" : "this file");
+              .AppendLine(McmLoader.SettingsInHand ? ByScreen : ByFile);
             foreach (FieldInfo field in Fields())
                 sb.Append(field.Name).Append(" = ").AppendLine(Shown(field));
             try
