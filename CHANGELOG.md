@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.17.0
+
+- TradeLord now tops your food back up to five days of supply as you trade, buying whatever food a market has going cheapest at whatever it asks, before it trades for profit.
+- It now holds back three days of your troops' wages on top of your gold reserve, so a shopping trip never eats the payroll.
+- A new switch keeps every weapon the smithy can break down for parts, so a smithing playthrough stops selling off its own raw material.
+- A new switch sizes what it buys to what your ships can hold rather than what your carts can, for a War Sails fleet.
+- The ledger panel's cargo line follows that same capacity, so it counts the ships whenever that switch is on.
+- Without MCM installed, TradeLord now writes a TradeLord.ini beside its log that you can edit to change any of its settings.
+- The notice about trading as you arrive now points you at that file when MCM is missing, instead of telling you to go and install MCM.
+- Default in the settings screen now puts every setting back to the one TradeLord ships with, instead of leaving them exactly as they were.
+
 ## 1.16.1
 
 - The switch that keeps every kind of food now names the food variety morale bonus the way the game does.

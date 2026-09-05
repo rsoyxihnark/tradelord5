@@ -54,6 +54,13 @@ namespace TradeLord
                 : (int)Math.Round((double)rec.TotalPaid / rec.Count);
         }
 
+        public static int Reserve(int goldReserve, int keepWageDays, int totalWage)
+        {
+            long hold = goldReserve < 0 ? 0 : goldReserve;
+            if (keepWageDays > 0 && totalWage > 0) hold += (long)keepWageDays * totalWage;
+            return hold > int.MaxValue ? int.MaxValue : (int)hold;
+        }
+
         public static int Budget(int gold, int goldReserve, int maxSpendPerVisit,
                                  int spentThisVisit, int spentThisPass)
         {
