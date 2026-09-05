@@ -3019,8 +3019,9 @@ def the_herd_gives_up_its_animals_in_the_order_the_player_set():
             and "else if (rank != RankLivestock) mountsLeft--;" in relief
             and "Math.Max(0, mounts - foot)" in room
             and "TradePolicy.IsTruckAnimal(el.EquipmentElement.Item)" in held
-            and "model.CalculateTotalWeightCarried(party, true).ResultNumber" in spared
-            and "model.CalculateInventoryCapacity(party, true, false, 0, 0, -fewer).ResultNumber < carried" in spared
+            and "bool atSea = Travel.NavalActive;" in spared
+            and "model.CalculateTotalWeightCarried(party, atSea).ResultNumber" in spared
+            and "model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber < carried" in spared
             and "return fewer - 1;" in spared)
 
 chk("1.28.0", "the herd gives up its livestock, then a plain spare mount, then a haul animal, and a war or noble horse last of all",
@@ -3031,7 +3032,7 @@ chk("1.28.0", "a horse a man on foot is riding is never sold to relieve the herd
     "if (rank != RankLivestock && rank != RankTruck && mountsLeft <= 0) break;" in
         method_body(S['Trading.cs'], "public static void ExecuteHerdRelief"))
 chk("1.28.0", "enough haul animals are kept to carry what the party already carries, asked of the game's own capacity model",
-    "model.CalculateInventoryCapacity(party, true, false, 0, 0, -fewer).ResultNumber < carried" in
+    "model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber < carried" in
         method_body(S['Trading.cs'], "internal static int TrucksCargoCanSpare") and
     'Log.Error(e, "haul animal cargo floor (every haul animal is kept)")' in
         method_body(S['Trading.cs'], "internal static int TrucksCargoCanSpare"))
