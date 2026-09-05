@@ -2995,7 +2995,8 @@ def a_road_party_is_traded_with_the_moment_it_is_met():
 
 def bandits_are_offered_the_getaway_without_a_menu_of_their_own():
     offer = method_body(S['Trading.cs'], "private static void OfferFreePassage")
-    return ("if (!Options.Current.BanditGetawayCheat || _offeredPassageTo == foe) return;" in offer
+    return ("if (!Options.Current.BanditGetawayCheat || (here != null && _offeredPassageIn == here)) return;" in offer
+            and "object here = PlayerEncounter.Current;" in offer
             and "RideAway(foe)" in offer
             and "TL378" in offer and "TL379" in offer and "TL380" in offer
             and all(s in strings_declared() for s in ("TL378", "TL379", "TL380"))
