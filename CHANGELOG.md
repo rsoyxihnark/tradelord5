@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.29.1
+
+- Getting your party back up to speed as you leave a settlement now happens only where the game would have let you trade there in the first place, so TradeLord no longer sells on the way out of a place it refused to trade in on the way in.
+- When it holds back for that reason it says so in TradeLord.log, naming the settlement.
+
 ## 1.29.0
 
 - TradeLord now looks at your herd three times a visit instead of once: as you enter a settlement, again once it has finished trading there, and once more as you leave, so a penalty that arrives while you are in town is caught before you ride out.
