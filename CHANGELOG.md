@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.36.1
+
+- A caravan or a party of villagers you have just traded with no longer trades with you all over again when you talk to them without riding away first, so your spending limit for that meeting is only spent once.
+- Selling to a caravan or villagers on the road now makes the coin sound, the way selling in a town does.
+- A Reset on the settings screen now always takes hold at once and is written to TradeLord.ini.
+
 ## 1.36.0
 
 - Trading with a caravan or a party of villagers on the road now actually happens. It had been failing every time, because the game refuses to sell goods without a market to sell them in, so TradeLord hands the goods and the coin over itself out on the road.

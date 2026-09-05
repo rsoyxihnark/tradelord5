@@ -632,6 +632,7 @@ namespace TradeLord
             TradePolicy.ForgetCraftingLookup();
             ForgetRoadMarket();
             _tradedWith = null;
+            _tradedIn = null;
         }
 
         public override void SyncData(IDataStore dataStore)
@@ -822,6 +823,7 @@ namespace TradeLord
         }
 
         private static MobileParty _tradedWith;
+        private static object _tradedIn;
 
         private void AddCaravanLines(CampaignGameStarter starter) => Guard.Run(
             "caravan dialog (trading in a market is unaffected)", () =>
@@ -844,8 +846,10 @@ namespace TradeLord
 
         private static void TradeOnce(MobileParty met)
         {
-            if (_tradedWith == met) return;
+            object here = PlayerEncounter.Current;
+            if (_tradedWith == met || (here != null && _tradedIn == here)) return;
             _tradedWith = met;
+            _tradedIn = here;
             Guard.Run("Action.RoadTrade", () => ExecuteRoadTrade(met));
         }
 
@@ -883,7 +887,13 @@ namespace TradeLord
                 () => Guard.Run("Action.Getaway", () => LetPlayerGo(foe)), null));
         }
 
-        internal static void ForgetEncounter() { _tradedWith = null; _offeredPassageIn = null; _handledEncounter = null; }
+        internal static void ForgetEncounter()
+        {
+            _tradedWith = null;
+            _tradedIn = null;
+            _offeredPassageIn = null;
+            _handledEncounter = null;
+        }
 
         private void OnConversationEnded(IEnumerable<CharacterObject> spoke) => _tradedWith = null;
 
@@ -1769,6 +1779,7 @@ namespace TradeLord
                           " items, +" + (sim ? simGold : Hero.MainHero.Gold - goldBefore) +
                           " gold, profit " + profit + " from " + met.Name);
                 LogDetail(selling: true, sim, detail, "trading with a party on the road");
+                if (!sim) CoinSound();
                 TextObject said = Tongue.Text(sim
                     ? "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit)."
                     : "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).");
