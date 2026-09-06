@@ -41,6 +41,8 @@ namespace TradeLord
         private string _purchaseText = "";
         private Dictionary<string, PurchaseRecord> _paid;
         private int _lifetimeProfit;
+        private ItemRoster _watched;
+        private bool _settle;
 
         public int LifetimeProfit => _lifetimeProfit;
         public void AddProfit(int amount) => _lifetimeProfit += amount;
@@ -49,7 +51,9 @@ namespace TradeLord
 
         public override void RegisterEvents()
         {
+            CampaignEvents.OnSessionLaunchedEvent.AddNonSerializedListener(this, OnSessionLaunched);
             CampaignEvents.SettlementEntered.AddNonSerializedListener(this, OnSettlementEntered);
+            CampaignEvents.TickEvent.AddNonSerializedListener(this, OnTick);
             CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
             CampaignEvents.PlayerInventoryExchangeEvent.AddNonSerializedListener(this, OnPlayerInventoryExchange);
         }
@@ -156,6 +160,30 @@ namespace TradeLord
         }
 
         private void OnDailyTick() => Guard.Run("Ledger.OnDailyTick", MatchPurchasesToWhatIsHeld);
+
+        private void OnSessionLaunched(CampaignGameStarter starter) =>
+            Guard.Run("Ledger.WatchTheParty", WatchTheParty);
+
+        private void WatchTheParty()
+        {
+            ItemRoster carried = MobileParty.MainParty?.ItemRoster;
+            if (carried == null || carried == _watched) return;
+            if (_watched != null) _watched.RosterUpdatedEvent -= WhatLeftTheParty;
+            _watched = carried;
+            carried.RosterUpdatedEvent += WhatLeftTheParty;
+        }
+
+        private void WhatLeftTheParty(ItemRosterElement element, int count)
+        {
+            if (count < 0) _settle = true;
+        }
+
+        private void OnTick(float dt)
+        {
+            if (!_settle) return;
+            _settle = false;
+            Guard.Run("Ledger.OnTick", MatchPurchasesToWhatIsHeld);
+        }
 
         private void OnPlayerInventoryExchange(
             List<(ItemRosterElement, int)> purchased,

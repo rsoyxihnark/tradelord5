@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.37.4
+
+- Goods leaving your party are now noticed as they go rather than once a day, so eating the last of a food and looting more of it before the day turns no longer leaves TradeLord counting the looted lot as something you paid for.
+
 ## 1.37.3
 
 - Food your troops eat, and anything else that leaves your party without being sold, no longer counts as still bought, so TradeLord stops holding back looted goods of a kind you once bought and stops selling the next lot you buy too cheaply.
