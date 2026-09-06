@@ -2382,7 +2382,7 @@ def every_line_the_mod_says_can_change_language():
             and (lambda b: b.count('Tongue.Text("{=TL') == 2 * b.count('starter.AddGameMenuOption(') > 0
                        and b.count('args.Text = Tongue.Text("{=TL') == b.count('starter.AddGameMenuOption('))
                 (method_body(S['Trading.cs'], "private void OnSessionLaunched"))
-            and "AddGameMenuOption" not in between(S['Trading.cs'], "private static void OfferFreePassage", "RideAway"))
+            and "AddGameMenuOption" not in method_body(S['Trading.cs'], "private void AddBanditLines"))
 
 def the_language_setting_leads_the_screen_and_starts_on_english():
     return ('[SettingPropertyGroup("{=TL100}Language", GroupOrder = 0)]' in M
@@ -3055,29 +3055,27 @@ def a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_down_to_the_res
             and '"PackAnimalFullCargoPremium"' in S['Migrate.cs'])
 
 def the_getaway_ships_on_names_no_cheat_and_only_answers_bandits():
-    offer = method_body(S['Trading.cs'], "private static void OfferFreePassage")
+    asked = method_body(S['Trading.cs'], "private void AddBanditLines")
+    met = method_body(S['Trading.cs'], "private static bool BanditMet")
     go = method_body(S['Trading.cs'], "private static void LetPlayerGo")
-    ride = method_body(S['Trading.cs'], "private static void RideAway")
     return (option_default('BanditGetawayCheat') == 'true'
             and "_o.BanditGetawayCheat" in M
             and "AddGetaway" not in S['Trading.cs']
             and "FacingBandits" not in S['Trading.cs']
             and '"encounter"' not in S['Trading.cs']
             and '("encounter", false)' not in COMPAT
-            and "Options.Current.BanditGetawayCheat" in offer
-            and "{=TL113}" in go
-            and "Guard.Run(\"Action.GetawayRide\", () => RideAway(foe))" in go
-            and "foe?.IgnoreForHours(GetawayHours);" in ride
-            and "MobileParty.MainParty?.IgnoreByOtherPartiesTill(CampaignTime.HoursFromNow(GetawayHours));" in ride
-            and "PlayerEncounter.ProtectPlayerSide(GetawayHours);" in ride
-            and "PlayerEncounter.LeaveEncounter = true;" in ride
-            and "PlayerEncounter.Finish(true);" in ride
+            and "Options.Current.BanditGetawayCheat && band != null && band.IsBandit;" in met
+            and "{=TL113}" in asked
+            and "band?.IgnoreForHours(GetawayHours);" in go
+            and "MobileParty.MainParty?.IgnoreByOtherPartiesTill(CampaignTime.HoursFromNow(GetawayHours));" in go
+            and "PlayerEncounter.ProtectPlayerSide(GetawayHours);" in go
+            and "PlayerEncounter.LeaveEncounter = true;" in go
             and no_shipped_line_calls_the_free_passage_a_cheat())
 
 def no_shipped_line_calls_the_free_passage_a_cheat():
     en = spoken(ENGLISH)
     code = (S['Trading.cs'] + "\n" + M).replace('BanditGetawayCheat', '')
-    return ('TradeLord' in en.get('TL378', '')
+    return ('[TRADELORD]' in en.get('TL387', '')
             and en.get('TL269') == 'Free passage from bandits'
             and 'TL112' not in en
             and not any('cheat' in text.lower() for text in en.values())
@@ -3152,18 +3150,18 @@ def a_road_party_is_traded_with_the_moment_it_is_met():
             and "if (here == null) { _handledEncounter = null; return; }" in watch
             and "if (_handledEncounter == here) return;" in watch
             and "if (met == null) return;" in watch
-            and "if (IsRoadTrader(met)) { TradeOnce(met); return; }" in watch
-            and "if (met.IsBandit) OfferFreePassage(met);" in watch
+            and "if (IsRoadTrader(met)) TradeOnce(met);" in watch
+            and "OfferFreePassage" not in ALL
             and "party.IsCaravan || party.IsVillager" in
                 between(S['Trading.cs'], "internal static bool IsRoadTrader", ";"))
 
 def bandits_are_offered_the_getaway_without_a_menu_of_their_own():
-    offer = method_body(S['Trading.cs'], "private static void OfferFreePassage")
-    return ("if (!Options.Current.BanditGetawayCheat || (here != null && _offeredPassageIn == here)) return;" in offer
-            and "object here = PlayerEncounter.Current;" in offer
-            and "LetPlayerGo(foe)" in offer
-            and "TL378" in offer and "TL379" in offer and "TL380" in offer
-            and all(s in strings_declared() for s in ("TL378", "TL379", "TL380"))
+    asked = method_body(S['Trading.cs'], "private void AddBanditLines")
+    return ('starter.AddPlayerLine(\n                    "tradelord_bandit_pass", Parley.OwnState,' in asked
+            and '"tradelord_bandit_pass_reply", "tradelord_bandit_pass_reply", "close_window"' in asked
+            and "Parley.HangWhereTheBandAnswers(asked);" in asked
+            and "InformationManager.ShowInquiry" not in asked
+            and not any(s in strings_declared() for s in ("TL378", "TL379", "TL380"))
             and "ForgetEncounter" in S['SubModule.cs']
             and "_handledEncounter = null;" in
                 between(S['Trading.cs'], "internal static void ForgetEncounter", "}"))
@@ -3999,6 +3997,36 @@ chk("1.37.10", "a pass that moves nothing names the first protection it met, not
     a_stalled_pass_names_the_first_guard_it_met())
 chk("1.37.10", "the full cargo warning names every way out of a full cargo",
     a_full_cargo_is_told_the_three_ways_out_of_it())
+
+
+def the_free_passage_never_ends_an_encounter_a_band_is_still_talking_through():
+    go = method_body(S['Trading.cs'], "private static void LetPlayerGo")
+    return ("PlayerEncounter.Finish" not in ALL
+            and "InformationManager.ShowInquiry" not in go
+            and ordered(go, "if (PlayerEncounter.Current != null)",
+                        "PlayerEncounter.ProtectPlayerSide(GetawayHours);",
+                        "PlayerEncounter.LeaveEncounter = true;")
+            and "_offeredPassageIn" not in ALL
+            and "TL09" in strings_used())
+
+def the_free_passage_is_a_line_in_the_bands_own_talk():
+    hang = method_body(S['Trading.cs'], "internal static void HangWhereTheBandAnswers")
+    parley = between(S['Trading.cs'], "internal static class Parley",
+                     "public class TradeActionBehavior")
+    return ('internal const string OwnState = "tradelord_bandit_pass_asked";' in parley
+            and 'private const string BandOpens = "bandit_start_defender";' in parley
+            and 'typeof(ConversationManager).GetField(' in hang
+            and 'typeof(ConversationSentence).GetMethod(' in hang
+            and ordered(hang, "talk.DisableSentenceSort();",
+                        "hang.Invoke(asked, new object[] { opener.OutputToken });",
+                        "talk.EnableSentenceSort();")
+            and hang.count("Unhung(") == 5
+            and "a band is met exactly as the game means it to be" in parley)
+
+chk("1.38.0", "asking a band for free passage never ends an encounter the band is still talking through",
+    the_free_passage_never_ends_an_encounter_a_band_is_still_talking_through())
+chk("1.38.0", "the free passage is asked for as a line in the band's own talk, hung where its own answers hang",
+    the_free_passage_is_a_line_in_the_bands_own_talk())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

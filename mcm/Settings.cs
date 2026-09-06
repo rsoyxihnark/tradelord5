@@ -570,7 +570,7 @@ namespace TradeLord.Mcm
         public bool QuietAutomation { get => _o.QuietAutomation; set { _o.QuietAutomation = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL269}Free passage from bandits", Order = 18, RequireRestart = false,
-            HintText = "{=TL369}When you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits, TradeLord asks you there and then whether to ride on. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is ON by default; switch it off for a campaign you want to fight your own way out of.")]
+            HintText = "{=TL369}When you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits, TradeLord adds a line to what you can say to them, asking to be let past. Saying it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is ON by default; switch it off for a campaign you want to fight your own way out of.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool BanditGetawayCheat { get => _o.BanditGetawayCheat; set { _o.BanditGetawayCheat = value; Options.Bump(); } }
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.38.0
+
+- Fixed the game closing itself when you met bandits: TradeLord's offer of free passage arrived as a pop-up over the talk you were already having, and answering the bandits after it had ended the encounter shut the game down.
+- Asking a band to let you pass is now a line you say to them, in among your other answers, instead of a pop-up.
+- The bandits answer, the talk closes, and your party rides on, so nothing is left half finished behind the conversation.
+- Free passage from bandits now says on the settings screen that it adds a line to what you can say to them.
+
 ## 1.37.10
 
 - A visit that trades nothing now names the protection that held your goods back, your never-sell or never-buy list, an inventory lock, the unique and crafted protection, an animal a quest may be waiting on, a haul animal or a mount, or your food reserve, instead of saying only that your protections held it back.
