@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.37.9
+
+- Animals a quest is waiting on are now held back from every sale, not only from thinning the herd, even when TradeLord cannot tell which animals the quest wants.
+- The buying pass counts what you already carry afresh for each good, so a good a market stocks twice can no longer slip past your limits on how much of one good to hold.
+
 ## 1.37.8
 
 - Trading with a party on the road now stops at your max spend per visit, instead of buying on until your purse is down to your gold reserve.

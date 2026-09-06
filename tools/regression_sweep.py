@@ -1018,8 +1018,8 @@ chk("1.3.11", "NotMerchandise never sold",
 chk("1.3.33", "a unique or player-crafted good is left alone while the protection is on, an animal along with the rest",
     ordered(method_body(S['Trading.cs'], "internal static bool MaySell"),
             "if (livestock && IsHaulAnimalOrMount(item)) { why = Block.MountOrHaulAnimal; return false; }",
-            "if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))",
-            "{ why = Block.Protected; return false; }") and
+            "if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))\n"
+            "            { why = Block.Protected; return false; }") and
     "if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)) return false;" in
         method_body(S['Trading.cs'], "internal static bool MayShedForHerd"))
 chk("1.3.11", "panel drops input restrictions on teardown",
@@ -3320,6 +3320,31 @@ def the_herd_guard_keeps_a_cushion_below_the_speed_penalty():
             and "float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });" in room
             and "if (mod != neutral) break;" in room)
 
+def an_animal_is_held_back_when_the_quests_cannot_be_read():
+    sell = method_body(S['Trading.cs'], "internal static bool MaySell")
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    return ("internal static bool Known => Readable();" in S['Trading.cs']
+            and "if (livestock && !Errands.Known) { why = Block.Protected; return false; }" in sell
+            and ordered(sell, "if (Listed(s.AlwaysSet, item)) return true;",
+                        "if (livestock && !Errands.Known) { why = Block.Protected; return false; }")
+            and "if (promised == null) return;" in relief
+            and "no animal is sold at all" in S['Trading.cs']
+            and "no animal is sold to relieve the herd" not in S['Trading.cs'])
+
+def the_buying_pass_counts_what_you_hold_afresh_for_each_good():
+    buy = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
+    return ("var stock = new List<(ItemRosterElement el, float realizable, float margin)>();" in buy
+            and "alreadyHeld" not in S['Trading.cs']
+            and "int held = MobileParty.MainParty.ItemRoster.GetItemNumber(item) +\n"
+                "                               SimVisit.Held(sim, item.StringId);" in buy
+            and ordered(buy, "var prior = PurchasesHere(sim, item.StringId);",
+                        "int held = MobileParty.MainParty.ItemRoster.GetItemNumber(item) +",
+                        "while (remaining > 0)"))
+
+chk("1.37.9", "an animal is held back from every sale, not just herd thinning, when the quests cannot be read",
+    an_animal_is_held_back_when_the_quests_cannot_be_read())
+chk("1.37.9", "the buying pass counts what you already carry afresh for each good it prices",
+    the_buying_pass_counts_what_you_hold_afresh_for_each_good())
 chk("1.22.0", "buying livestock stops a cushion short of the speed penalty, not right at its edge",
     the_herd_guard_keeps_a_cushion_below_the_speed_penalty())
 chk("1.22.0", "an animal is sold only while the herd is dragging the party below its speed, and only as many as that takes",
