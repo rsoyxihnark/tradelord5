@@ -1800,7 +1800,7 @@ namespace TradeLord
             ISet<string> locked = TradePolicy.LockedKeys();
 
             int goldBefore = Hero.MainHero.Gold;
-            int sold = 0, bought = 0, profit = 0, simGold = 0, simSpent = 0;
+            int sold = 0, bought = 0, profit = 0, simGold = 0, simSpent = 0, paidOut = 0;
             float simWeight = 0f;
             int till = met.PartyTradeGold;
             bool directionError = false;
@@ -1809,7 +1809,7 @@ namespace TradeLord
 
             int Budget() =>
                 TradeMath.Budget(Hero.MainHero.Gold + (sim ? simGold : 0), GoldHeldBack(),
-                                 Options.Current.MaxSpendPerVisit, 0, sim ? simSpent : 0);
+                                 Options.Current.MaxSpendPerVisit, sim ? 0 : paidOut, sim ? simSpent : 0);
 
             AutomatedTradeInProgress = true;
             try
@@ -1984,6 +1984,7 @@ namespace TradeLord
                         }
                         if (cost == 0) break;
                         LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, cost);
+                        paidOut += cost;
                         spentThis += cost;
                         countThis++;
                         held++;

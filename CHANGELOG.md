@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.37.8
+
+- Trading with a party on the road now stops at your max spend per visit, instead of buying on until your purse is down to your gold reserve.
+- The campaign map no longer works out every trade route the moment it opens, so a long campaign no longer hitches before you have even opened the ledger.
+
 ## 1.37.7
 
 - Protect unique and crafted items now covers animals as well as gear, so a unique animal is no longer sold in the trading pass while the setting is on, which is what the setting already did when TradeLord thins your herd.

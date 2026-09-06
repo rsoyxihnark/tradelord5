@@ -273,10 +273,16 @@ def ordered_last(text, *needles):
         at = found
     return True
 
-def every_switch_keeps_to_its_own_value():
-    for name in re.findall(r'public\s+bool\s+(\w+)\s*(?:\{|$)', M):
-        body = method_body(M, "public bool " + name)
-        if body.count("Options.Current.") != body.count("Options.Current." + name):
+def every_setting_keeps_to_its_own_value():
+    named = re.findall(r'public\s+(bool|int|float|string)\s+(\w+)\s*\{', M)
+    if len(named) < 40:
+        return False
+    for kind, name in named:
+        body = method_body(M, "public " + kind + " " + name)
+        held = re.findall(r'_o\.(\w+)', body)
+        if len(held) != 2 or any(one != name for one in held):
+            return False
+        if "Options.Bump();" not in body or "Options.Current" in body:
             return False
     return "Options.Bump();" in M
 
@@ -977,8 +983,8 @@ chk("1.3.9", "panel respects locks", "ISet<string> locked = TradePolicy.LockedKe
 chk("1.3.9", "summary names the six biggest by gold",
     "byValue.Sort((x, y) => y.Value.gold.CompareTo(x.Value.gold));" in S['Trading.cs'])
 chk("1.3.9", "null item lists tolerated", '(src ?? "")' in S['Options.cs'])
-chk("1.13.0", "every switch reads and writes its own value only, so load order cannot matter",
-    every_switch_keeps_to_its_own_value())
+chk("1.13.0", "every setting the screen shows reads and writes its own value only, so load order cannot matter",
+    every_setting_keeps_to_its_own_value())
 chk("1.3.10", "hotkey rejects non-key text", "Enum.IsDefined(typeof(InputKey), k)" in S['Panel.cs'])
 chk("1.3.11", "quest items never sold", "el.EquipmentElement.IsQuestItem" in S['Trading.cs'])
 chk("1.3.11", "NotMerchandise never sold",
@@ -1742,7 +1748,7 @@ chk("1.6.6", "the ledger popup builds its route lines from a translatable string
     "TL84" in strings_declared())
 chk("1.13.0", "a value the settings file carries is never overwritten as the screen loads",
     "internal static bool Loaded;" not in M and "Settings.Loaded" not in M
-    and every_switch_keeps_to_its_own_value())
+    and every_setting_keeps_to_its_own_value())
 
 chk("1.6.7", "the Trade XP line reports the denars of profit it hands the skill system, the number it actually passes",
     (lambda b: 'earned.SetTextVariable("GOLD", xp);' in b
@@ -3841,6 +3847,32 @@ def every_pass_hands_one_place_the_trade_and_the_visits_books():
 
 chk("1.37.7", "every pass hands one place the swap of goods for gold, the guard on which way the gold went, and what the visit has spent",
     every_pass_hands_one_place_the_trade_and_the_visits_books())
+
+
+def a_meeting_on_the_road_counts_what_it_spends_against_the_cap():
+    body = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
+    return ("Options.Current.MaxSpendPerVisit, sim ? 0 : paidOut, sim ? simSpent : 0);" in body
+            and "paidOut += cost;" in body
+            and body.count("paidOut") == 3
+            and ordered(body, "int Budget() =>", "paidOut += cost;")
+            and "The_spending_cap_counts_the_running_total_whichever_way_it_is_tallied" in MATHTESTS)
+
+def arming_the_panel_costs_no_route_scan():
+    src = S['Panel.cs']
+    setup = method_body(src, "private static void Setup(MapScreen map)")
+    tick = method_body(src, "private static void TickCore")
+    return ("private static int _spokenFor = -1;" in src
+            and ordered(setup, "_vm = new LedgerPanelVM(", "_spokenFor = Options.Current.Language;")
+            and ordered(tick, "if (_spokenFor != Options.Current.Language)",
+                        "_spokenFor = Options.Current.Language;",
+                        'Guard.Run("Panel.Respeak", _vm.Respeak);')
+            and "BestRoutes" not in setup
+            and "BestRoutes" in method_body(src, "private void Refresh()"))
+
+chk("1.37.8", "a meeting on the road stops at the spending cap whether it is a dry run or a real one",
+    a_meeting_on_the_road_counts_what_it_spends_against_the_cap())
+chk("1.37.8", "the panel takes the language it is armed with, so arming it works out no routes",
+    arming_the_panel_costs_no_route_scan())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
