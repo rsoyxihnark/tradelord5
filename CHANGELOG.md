@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.37.3
+
+- Food your troops eat, and anything else that leaves your party without being sold, no longer counts as still bought, so TradeLord stops holding back looted goods of a kind you once bought and stops selling the next lot you buy too cheaply.
+
 ## 1.37.2
 
 - Topping your food back up now buys grain again, so it works in a farming village where grain is the only cheap food there is. Never buy grain goes back to keeping grain out of trading for profit, which is what it is there for, and putting grain on your never-buy list still keeps it out of everything.
