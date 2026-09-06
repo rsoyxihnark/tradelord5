@@ -519,6 +519,7 @@ namespace TradeLord
         {
             _mapScreen = map;
             _vm = new LedgerPanelVM(Hide, ShowFromButton, CenterOn);
+            _spokenFor = Options.Current.Language;
             _layer = new GauntletLayer("TradeLordPanel", 250);
             _movie = _layer.LoadMovie("TradeLordPanel", _vm);
             _mapButton = FindMapButton(_layer.UIContext?.Root);
