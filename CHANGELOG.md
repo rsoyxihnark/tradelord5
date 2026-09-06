@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.38.1
+
+- Fixed an error TradeLord wrote to its log on every startup, and went on writing until a campaign was loaded, because it looked for an encounter before there was a game to have one in.
+
 ## 1.38.0
 
 - Fixed the game closing itself when you met bandits: TradeLord's offer of free passage arrived as a pop-up over the talk you were already having, and answering the bandits after it had ended the encounter shut the game down.
