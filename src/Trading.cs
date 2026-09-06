@@ -519,7 +519,7 @@ namespace TradeLord
         {
             Options s = Options.Current;
             ItemObject item = held.Item;
-            if (item == null || !item.HasHorseComponent || item.NotMerchandise) return false;
+            if (item == null || !item.HasHorseComponent || item.NotMerchandise || held.IsQuestItem) return false;
             if (Listed(s.NeverSet, item)) return false;
             if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)) return false;
             return !IsLocked(lockedKeys, held);
@@ -725,8 +725,8 @@ namespace TradeLord
                 "set_InputToken", BindingFlags.Instance | BindingFlags.NonPublic);
             if (hang == null) { Unhung("a line cannot be moved on this game version"); return; }
             talk.DisableSentenceSort();
-            hang.Invoke(_asked, new object[] { token });
-            talk.EnableSentenceSort();
+            try { hang.Invoke(_asked, new object[] { token }); }
+            finally { talk.EnableSentenceSort(); }
             _hung = true;
             Log.Write("free passage: the option now sits with the answers a band's own talk offers, "
                       + "found on try " + _tries);
