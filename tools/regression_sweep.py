@@ -3312,6 +3312,16 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
                         "ExecuteHaulage(settlement, quiet: true)")
             and "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);" in entered)
 
+def the_herd_guard_keeps_a_cushion_below_the_speed_penalty():
+    room = method_body(S['Trading.cs'], "internal static int HerdRoomForLivestock")
+    cushion = re.search(r'private const int HerdCushion = (\d+);', S['Trading.cs'])
+    return (cushion is not None and int(cushion.group(1)) > 0
+            and "new object[] { men, herd + room + 1 + HerdCushion });" in room
+            and "float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });" in room
+            and "if (mod != neutral) break;" in room)
+
+chk("1.22.0", "buying livestock stops a cushion short of the speed penalty, not right at its edge",
+    the_herd_guard_keeps_a_cushion_below_the_speed_penalty())
 chk("1.22.0", "an animal is sold only while the herd is dragging the party below its speed, and only as many as that takes",
     a_spare_mount_goes_only_when_it_is_costing_the_party_speed())
 
