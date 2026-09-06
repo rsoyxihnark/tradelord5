@@ -1065,6 +1065,7 @@ namespace TradeLord
 
         internal static void WatchEncounter()
         {
+            if (Campaign.Current == null) { _handledEncounter = null; return; }
             object here = PlayerEncounter.Current;
             if (here == null) { _handledEncounter = null; return; }
             if (_handledEncounter == here) return;
