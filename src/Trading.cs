@@ -28,16 +28,19 @@ namespace TradeLord
         None, NotMerchandise, NeverList, Locked, CategoryPolicy, Protected,
         MountOrHaulAnimal, NotTradable, FoodReserve, TradedHereAlready, NoStock,
         NoResaleMarket, BelowMargin, BelowBestMarket, MerchantTillEmpty, BudgetSpent,
-        ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit, HeldEnough, Smeltable
+        ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit, HeldEnough, Smeltable,
+        QuestAnimal
     }
 
     internal sealed class BlockTally
     {
         private readonly Dictionary<Block, int> _counts = new Dictionary<Block, int>();
+        private Block _firstGuard = Block.None;
 
         internal void Note(Block reason)
         {
             if (reason == Block.None) return;
+            if (_firstGuard == Block.None && Guarded(reason)) _firstGuard = reason;
             _counts.TryGetValue(reason, out int seen);
             _counts[reason] = seen + 1;
         }
@@ -49,6 +52,11 @@ namespace TradeLord
         private static bool Structural(Block reason) =>
             reason == Block.NotTradable || reason == Block.NotMerchandise;
 
+        private static bool Guarded(Block reason) =>
+            reason == Block.NeverList || reason == Block.Locked || reason == Block.Protected ||
+            reason == Block.QuestAnimal || reason == Block.MountOrHaulAnimal ||
+            reason == Block.FoodReserve;
+
         internal Block Dominant()
         {
             if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;
@@ -57,7 +65,7 @@ namespace TradeLord
             foreach (var kv in _counts)
                 if (!Structural(kv.Key) && (kv.Value > best || (kv.Value == best && kv.Key < top)))
                 { best = kv.Value; top = kv.Key; }
-            return top;
+            return Guarded(top) ? _firstGuard : top;
         }
 
         internal string Summary()
@@ -107,13 +115,18 @@ namespace TradeLord
                     return Tongue.Text("{=TL93}you are already carrying as many of these as you allow");
                 case Block.Smeltable:
                     return Tongue.Text("{=TL99}you are keeping what the smithy can break down");
-                case Block.NotMerchandise:
                 case Block.NeverList:
+                    return Tongue.Text("{=TL381}it is on your never-sell or never-buy list");
                 case Block.Locked:
+                    return Tongue.Text("{=TL382}it is locked in your inventory");
                 case Block.Protected:
+                    return Tongue.Text("{=TL383}your unique and crafted protection holds it");
+                case Block.QuestAnimal:
+                    return Tongue.Text("{=TL384}a quest may be waiting on your animals");
                 case Block.MountOrHaulAnimal:
+                    return Tongue.Text("{=TL385}haul animals and mounts are not traded as livestock");
                 case Block.FoodReserve:
-                    return Tongue.Text("{=TL40}your protections held it back");
+                    return Tongue.Text("{=TL386}your food reserve holds it back");
                 default:
                     return Tongue.Text("{=TL45}this market has nothing worth trading");
             }
@@ -438,7 +451,7 @@ namespace TradeLord
 
             bool livestock = item.HasHorseComponent;
             if (livestock && IsHaulAnimalOrMount(item)) { why = Block.MountOrHaulAnimal; return false; }
-            if (livestock && !Errands.Known) { why = Block.Protected; return false; }
+            if (livestock && !Errands.Known) { why = Block.QuestAnimal; return false; }
             if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))
             { why = Block.Protected; return false; }
             if (!livestock && s.KeepSmeltableWeapons != Options.SmeltSellThem && IsSmeltable(item) &&
@@ -882,7 +895,7 @@ namespace TradeLord
         {
             if (TradedThisVisit()) return;
             if (!NoRoomToCarry() && !_cargoWasFull) return;
-            Toast(Tongue.Text("{=TL82}Cargo is full - TradeLord cannot buy here until you free up carry weight."),
+            Toast(Tongue.Text("{=TL82}Cargo is full. Recruit more men, buy more horses, or sell goods manually."),
                   ToastAlert);
         }
 
