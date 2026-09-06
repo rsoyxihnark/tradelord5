@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.37.2
+
+- Topping your food back up now buys grain again, so it works in a farming village where grain is the only cheap food there is. Never buy grain goes back to keeping grain out of trading for profit, which is what it is there for, and putting grain on your never-buy list still keeps it out of everything.
+- The inventory lock setting now says how each side matches a lock: selling by item and quality, buying by item alone.
+
 ## 1.37.1
 
 - The free passage setting now describes what it really does, asking you as you meet the band rather than adding a line to the encounter screen.
