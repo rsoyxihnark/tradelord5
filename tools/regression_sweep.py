@@ -782,7 +782,7 @@ def restocking_runs_between_selling_and_buying():
             and "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);" in entry
             and "if (Options.Current.ResupplyFoodDays <= 0) return;" in body
             and "!TradePolicy.IsStorableFood(it)" in body
-            and "!TradePolicy.MayBuy(it, locked)" in body
+            and "!TradePolicy.MayBuy(it, locked, out _, toFeed: true)" in body
             and "price >= Budget()" in body
             and "int worth = TradePolicy.UnpaidWorth(it);" in body
             and body.count("price > worth") == 2
@@ -2592,7 +2592,7 @@ def a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists():
     return (ordered(body, 'Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)',
                     'IsLocked(lockedKeys',
                     'bool always = Listed(s.AlwaysBuySet, item);',
-                    '!always && s.NeverBuyGrain',
+                    '!always && !toFeed && s.NeverBuyGrain',
                     '!always && !PolicyAllows(PolicyFor(item), buying: true)')
             and 'AlwaysBuySet => Parsed(AlwaysBuyItems' in S['Options.cs']
             and 'Unmatched("always buy", s.AlwaysBuyItems, ids, names);' in S['Trading.cs']
@@ -2615,6 +2615,21 @@ chk("1.11.0", "the choices in those lists are written in the language TradeLord 
     the_words_in_a_choice_follow_the_mods_language())
 chk("1.11.0", "a good on the always-buy list clears the policies and the grain switch, never the never lists or a lock",
     a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists())
+
+def the_grain_switch_keeps_grain_out_of_trading_not_out_of_the_larder():
+    buy = method_body(S['Trading.cs'], "internal static bool MayBuy")
+    restock = method_body(S['Trading.cs'], "public static void ExecuteResupply")
+    profit = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
+    road = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
+    return ("bool toFeed = false)" in buy
+            and "!always && !toFeed && s.NeverBuyGrain && item == DefaultItems.Grain" in buy
+            and "toFeed: true" in restock
+            and "toFeed" not in profit and "toFeed" not in road
+            and S['Trading.cs'].count("toFeed: true") == 1
+            and "Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)" in buy)
+
+chk("1.37.2", "the never buy grain switch keeps grain out of trading for profit without starving the larder",
+    the_grain_switch_keeps_grain_out_of_trading_not_out_of_the_larder())
 chk("1.11.0", "looted gear is cleared from the first tier out of the box, and the hint says so",
     looted_gear_is_cleared_from_the_first_tier_by_default())
 
