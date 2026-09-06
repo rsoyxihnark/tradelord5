@@ -16,6 +16,8 @@ namespace TradeLord.Compat
     {
         private const string Inventory = "TaleWorlds.CampaignSystem.ViewModelCollection.Inventory.";
 
+        private const string Issues = "TaleWorlds.CampaignSystem.Issues.";
+
         private static readonly (string type, string member)[] HarmonyTargets =
         {
             (Inventory + "ItemMenuVM", "RefreshItemTooltips"),
@@ -32,6 +34,12 @@ namespace TradeLord.Compat
         private static readonly (string type, string member)[] ReflectedFields =
         {
             (Inventory + "ItemMenuVM", "_targetItem"),
+            (Issues + "HeadmanNeedsToDeliverAHerdIssueBehavior+HeadmanNeedsToDeliverAHerdIssueQuest", "_herdTypeToDeliver"),
+            (Issues + "HeadmanNeedsToDeliverAHerdIssueBehavior+HeadmanNeedsToDeliverAHerdIssueQuest", "_animalCountToDeliver"),
+            (Issues + "HeadmanVillageNeedsDraughtAnimalsIssueBehavior+HeadmanVillageNeedsDraughtAnimalsIssueQuest", "_requestedAnimal"),
+            (Issues + "HeadmanVillageNeedsDraughtAnimalsIssueBehavior+HeadmanVillageNeedsDraughtAnimalsIssueQuest", "_requestedAnimalAmount"),
+            (Issues + "LordNeedsHorsesIssueBehavior+LordNeedsHorsesIssueQuest", "_mountObjectToBeDelivered"),
+            (Issues + "LordNeedsHorsesIssueBehavior+LordNeedsHorsesIssueQuest", "_numMountsToBeDelivered"),
         };
 
         private static readonly string[] Enums =

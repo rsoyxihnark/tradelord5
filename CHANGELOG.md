@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.37.0
+
+- An animal a quest is waiting on is no longer sold to get your party back up to speed. TradeLord keeps back as many as the quest asks for and thins only the herd beyond them, so delivering a herd, draught animals or horses no longer costs you the animals you gathered for it.
+
 ## 1.36.2
 
 - An animal you have locked in your inventory is left alone again when TradeLord sells one to get your party back up to speed. A lock on a horse of a particular quality, such as a spirited or a lame one, was being read as a lock on the plain horse and so was passed over.
