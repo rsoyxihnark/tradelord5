@@ -438,6 +438,7 @@ namespace TradeLord
 
             bool livestock = item.HasHorseComponent;
             if (livestock && IsHaulAnimalOrMount(item)) { why = Block.MountOrHaulAnimal; return false; }
+            if (livestock && !Errands.Known) { why = Block.Protected; return false; }
             if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))
             { why = Block.Protected; return false; }
             if (!livestock && s.KeepSmeltableWeapons != Options.SmeltSellThem && IsSmeltable(item) &&
@@ -600,6 +601,8 @@ namespace TradeLord
 
         internal static void Forget() { _read = null; _unreadable = false; }
 
+        internal static bool Known => Readable();
+
         private static bool Readable()
         {
             if (_unreadable) return false;
@@ -615,7 +618,7 @@ namespace TradeLord
                 {
                     _unreadable = true;
                     Log.Write("quest animals: " + Named[i].quest.Name + " does not say which animal it wants " +
-                              "or how many on this game version - no animal is sold to relieve the herd, so a " +
+                              "or how many on this game version - no animal is sold at all, so a " +
                               "quest of yours cannot lose one");
                     return false;
                 }
@@ -2274,7 +2277,7 @@ namespace TradeLord
             float shareCap = Options.Current.MaxHeldShare > 0f
                 ? Carry.Capacity(MobileParty.MainParty) * Options.Current.MaxHeldShare : 0f;
 
-            var stock = new List<(ItemRosterElement el, float realizable, float margin, int held)>();
+            var stock = new List<(ItemRosterElement el, float realizable, float margin)>();
             if (Budget() > 0)
             {
                 ISet<string> locked = TradePolicy.LockedKeys();
@@ -2301,7 +2304,7 @@ namespace TradeLord
                     if (here <= 0) { tally.Note(Block.NoStock); continue; }
                     float realizable = TradePolicy.Realizable(elsewhere.Item2);
                     if (!TradePolicy.BuyAcceptable(here, realizable)) { tally.Note(Block.BelowMargin); continue; }
-                    stock.Add((el, realizable, (realizable - here) / here, held));
+                    stock.Add((el, realizable, (realizable - here) / here));
                 }
                 stock.Sort((x, y) => y.margin.CompareTo(x.margin));
             }
@@ -2310,7 +2313,7 @@ namespace TradeLord
 
             InAPass(() =>
             {
-                foreach (var (el, realizable, _, alreadyHeld) in stock)
+                foreach (var (el, realizable, _) in stock)
                 {
                     if (directionError || Budget() <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
@@ -2325,7 +2328,8 @@ namespace TradeLord
                     var prior = PurchasesHere(sim, item.StringId);
                     int remaining = el.Amount - SimVisit.Stocked(sim, item.StringId);
                     int countThis = prior.count, spentThis = prior.spent;
-                    int held = alreadyHeld;
+                    int held = MobileParty.MainParty.ItemRoster.GetItemNumber(item) +
+                               SimVisit.Held(sim, item.StringId);
 
                     while (remaining > 0)
                     {
