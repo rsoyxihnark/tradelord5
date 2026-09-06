@@ -1780,6 +1780,21 @@ chk("1.6.11", "observation pruning stays independent of purchase pruning, so a s
     re.search(r'private void Prune\(\)\s*\{\s*PruneObservations\(\);\s*PruneSettledPurchases\(\);\s*\}',
               S['Ledger.cs']) is not None)
 
+def what_left_without_a_sale_stops_counting_as_bought():
+    body = method_body(S['Ledger.cs'], "private void MatchPurchasesToWhatIsHeld")
+    return ("CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);" in
+                method_body(S['Ledger.cs'], "public override void RegisterEvents")
+            and 'private void OnDailyTick() => Guard.Run("Ledger.OnDailyTick", '
+                'MatchPurchasesToWhatIsHeld);' in S['Ledger.cs']
+            and "ItemRoster carried = MobileParty.MainParty?.ItemRoster;" in body
+            and "if (rec.Count <= have) continue;" in body
+            and "TradeMath.DrainSale(rec, gone);" in body
+            and "rec.TotalPaid" not in body
+            and "rec.Count =" not in body)
+
+chk("1.37.3", "a good that left the party without a sale stops counting as bought, so what you paid never outlives what you hold",
+    what_left_without_a_sale_stops_counting_as_bought())
+
 chk("1.6.12", "goods with no price paid are credited at what the cheapest market would have charged",
     (lambda b: "BestBuy(item)" in b and "item.Value" in b)
     (method_body(S['Trading.cs'], "internal static int UnpaidWorth")))
