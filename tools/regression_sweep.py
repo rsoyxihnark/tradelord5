@@ -897,7 +897,7 @@ chk("1.3.6", "the smithing-material rule still binds buying as well as selling",
     "if (IsSmithingMaterial(item)) return Options.Current.CraftingPolicy;" in S['Trading.cs'])
 chk("1.3.6", "vanilla suppression asks the ledger", "TooltipHelper.HasSection(____targetItem)" in S['TooltipPatches.cs'])
 chk("1.3.6", "marker respects the sell policy",
-    "TradePolicy.MaySell(el, locked, foodKeep" in method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo"))
+    "TradePolicy.MaySell(el, locked, keepBack" in method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo"))
 chk("1.3.6", "chunked trade lines silenced",
     "AutomatedTradeInProgress" in S['Trading.cs'] and "Patch_SilenceChunkedTradeLines" in S['Trading.cs'])
 chk("1.3.6", "smithing materials still ship tradable, as the old switch shipped off",
@@ -3118,7 +3118,7 @@ def a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod():
 
 def a_caravan_trade_obeys_every_rule_a_market_visit_does():
     body = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
-    return ("TradePolicy.MaySell(el, locked, foodKeep, out int keep)" in body
+    return ("TradePolicy.MaySell(el, locked, keepBack, out int keep)" in body
             and "TradePolicy.MayBuy(it, locked) || !TradePolicy.MayRoundTrip(it, locked)" in body
             and "TradePolicy.ProfitAcceptable(worth, price)" in body
             and "TradePolicy.BuyAcceptable(price, realizable)" in body
@@ -3301,6 +3301,21 @@ def an_animal_a_quest_is_waiting_on_is_counted_out_of_the_herd():
 
 chk("1.37.0", "as many animals as a quest is waiting on are kept back, and only the herd beyond them is thinned",
     an_animal_a_quest_is_waiting_on_is_counted_out_of_the_herd())
+
+def a_quest_animal_is_held_back_from_every_sale_not_just_the_herd():
+    kept = method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> KeptBack")
+    return ("Dictionary<ItemObject, int> promised = Errands.Promised();" in kept
+            and "if (promised == null) return keep;" in kept
+            and "if (owed.Value > held) keep[owed.Key] = owed.Value;" in kept
+            and "TradePolicy.FoodKeep(" not in S['Trading.cs']
+            and S['Trading.cs'].count("TradePolicy.KeptBack(") == 3
+            and all("TradePolicy.KeptBack(" in method_body(S['Trading.cs'], where)
+                    for where in ("public static void ExecuteQuickSell",
+                                  "public static void ExecuteRoadTrade",
+                                  "private Settlement FindBestSellTownForCargo")))
+
+chk("1.37.5", "an animal a quest is waiting on is held back from every sale, not only from thinning the herd",
+    a_quest_animal_is_held_back_from_every_sale_not_just_the_herd())
 
 def the_herd_is_looked_at_three_times_a_visit():
     entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
