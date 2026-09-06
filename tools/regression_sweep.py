@@ -1012,7 +1012,14 @@ chk("1.3.9", "null item lists tolerated", '(src ?? "")' in S['Options.cs'])
 chk("1.13.0", "every setting the screen shows reads and writes its own value only, so load order cannot matter",
     every_setting_keeps_to_its_own_value())
 chk("1.3.10", "hotkey rejects non-key text", "Enum.IsDefined(typeof(InputKey), k)" in S['Panel.cs'])
-chk("1.3.11", "quest items never sold", "el.EquipmentElement.IsQuestItem" in S['Trading.cs'])
+def a_quest_item_is_never_sold_by_any_pass():
+    sell = method_body(S['Trading.cs'], "internal static bool MaySell(ItemRosterElement el")
+    spare = method_body(S['Trading.cs'], "internal static bool MayShedForHerd")
+    return ("el.EquipmentElement.IsQuestItem" in sell
+            and "held.IsQuestItem" in spare)
+
+chk("1.3.11", "a quest item is never sold, by the selling pass or by thinning the herd",
+    a_quest_item_is_never_sold_by_any_pass())
 chk("1.3.11", "NotMerchandise never sold",
     "item.NotMerchandise" in method_body(S['Trading.cs'], "internal static bool MaySell"))
 chk("1.3.33", "a unique or player-crafted good is left alone while the protection is on, an animal along with the rest",
@@ -4020,9 +4027,7 @@ def the_free_passage_is_a_line_in_the_bands_own_talk():
             and 'private const string BandOpens = "bandit_start_defender";' in parley
             and 'typeof(ConversationManager).GetField(' in hang
             and 'typeof(ConversationSentence).GetMethod(' in hang
-            and ordered(hang, "talk.DisableSentenceSort();",
-                        "hang.Invoke(_asked, new object[] { token });",
-                        "talk.EnableSentenceSort();")
+            and "talk.DisableSentenceSort();\n            try { hang.Invoke(_asked, new object[] { token }); }\n            finally { talk.EnableSentenceSort(); }" in hang
             and hang.count("Unhung(") == 4
             and "a band is met exactly as the game means it to be" in parley)
 
