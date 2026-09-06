@@ -12,6 +12,7 @@ using TaleWorlds.CampaignSystem.ComponentInterfaces;
 using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.Extensions;
 using TaleWorlds.CampaignSystem.GameMenus;
+using TaleWorlds.CampaignSystem.Issues;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -571,6 +572,73 @@ namespace TradeLord
         internal static float Room(MobileParty party) => Capacity(party) - Carried(party);
     }
 
+    internal static class Errands
+    {
+        private static readonly (Type quest, string wanted, string many)[] Named =
+        {
+            (typeof(HeadmanNeedsToDeliverAHerdIssueBehavior.HeadmanNeedsToDeliverAHerdIssueQuest),
+                "_herdTypeToDeliver", "_animalCountToDeliver"),
+            (typeof(HeadmanVillageNeedsDraughtAnimalsIssueBehavior.HeadmanVillageNeedsDraughtAnimalsIssueQuest),
+                "_requestedAnimal", "_requestedAnimalAmount"),
+            (typeof(LordNeedsHorsesIssueBehavior.LordNeedsHorsesIssueQuest),
+                "_mountObjectToBeDelivered", "_numMountsToBeDelivered"),
+        };
+
+        private static (Type quest, FieldInfo wanted, FieldInfo many)[] _read;
+        private static bool _unreadable;
+
+        internal static void Forget() { _read = null; _unreadable = false; }
+
+        private static bool Readable()
+        {
+            if (_unreadable) return false;
+            if (_read != null) return true;
+            var found = new (Type, FieldInfo, FieldInfo)[Named.Length];
+            for (int i = 0; i < Named.Length; i++)
+            {
+                FieldInfo wanted = Named[i].quest.GetField(
+                    Named[i].wanted, BindingFlags.Instance | BindingFlags.NonPublic);
+                FieldInfo many = Named[i].quest.GetField(
+                    Named[i].many, BindingFlags.Instance | BindingFlags.NonPublic);
+                if (wanted == null || many == null)
+                {
+                    _unreadable = true;
+                    Log.Write("quest animals: " + Named[i].quest.Name + " does not say which animal it wants " +
+                              "or how many on this game version - no animal is sold to relieve the herd, so a " +
+                              "quest of yours cannot lose one");
+                    return false;
+                }
+                found[i] = (Named[i].quest, wanted, many);
+            }
+            _read = found;
+            return true;
+        }
+
+        internal static Dictionary<ItemObject, int> Promised()
+        {
+            if (!Readable()) return null;
+            var promised = new Dictionary<ItemObject, int>();
+            var running = Campaign.Current?.QuestManager?.Quests;
+            if (running == null) return promised;
+            foreach (QuestBase quest in running)
+            {
+                if (quest == null || quest.IsFinalized) continue;
+                for (int i = 0; i < _read.Length; i++)
+                {
+                    if (!_read[i].quest.IsInstanceOfType(quest)) continue;
+                    if (_read[i].wanted.GetValue(quest) is ItemObject wanted &&
+                        _read[i].many.GetValue(quest) is int many && many > 0)
+                    {
+                        promised.TryGetValue(wanted, out int had);
+                        promised[wanted] = had + many;
+                    }
+                    break;
+                }
+            }
+            return promised;
+        }
+    }
+
     public class TradeActionBehavior : CampaignBehaviorBase
     {
         private Settlement _trackedTown;
@@ -631,6 +699,7 @@ namespace TradeLord
             Carry.Forget();
             TradePolicy.ForgetItemListAudit();
             TradePolicy.ForgetCraftingLookup();
+            Errands.Forget();
             ForgetRoadMarket();
             _tradedWith = null;
             _tradedIn = null;
@@ -1926,6 +1995,9 @@ namespace TradeLord
             int shed = DrivenAnimalsToShed(party);
             if (shed <= 0) return;
 
+            Dictionary<ItemObject, int> promised = Errands.Promised();
+            if (promised == null) return;
+
             SettlementComponent market = settlement.SettlementComponent;
             PartyBase shop = settlement.Party;
             PartyBase me = party.Party;
@@ -1964,6 +2036,12 @@ namespace TradeLord
                     if (directionError || shed <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
                     int remaining = el.Amount;
+                    if (promised.TryGetValue(item, out int owed) && owed > 0)
+                    {
+                        int spare = Math.Min(remaining, owed);
+                        promised[item] = owed - spare;
+                        remaining -= spare;
+                    }
 
                     while (remaining > 0 && shed > 0)
                     {
