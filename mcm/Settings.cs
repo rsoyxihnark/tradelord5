@@ -570,7 +570,7 @@ namespace TradeLord.Mcm
         public bool QuietAutomation { get => _o.QuietAutomation; set { _o.QuietAutomation = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL269}Free passage from bandits", Order = 18, RequireRestart = false,
-            HintText = "{=TL369}Adds a line to the encounter screen when you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is ON by default; switch it off for a campaign you want to fight your own way out of.")]
+            HintText = "{=TL369}When you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits, TradeLord asks you there and then whether to ride on. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is ON by default; switch it off for a campaign you want to fight your own way out of.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool BanditGetawayCheat { get => _o.BanditGetawayCheat; set { _o.BanditGetawayCheat = value; Options.Bump(); } }
 
@@ -619,7 +619,7 @@ namespace TradeLord.Mcm
         public float BestSellTownTolerance { get => _o.BestSellTownTolerance; set { _o.BestSellTownTolerance = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL275}Sell animals that slow you down", Order = 8, RequireRestart = false,
-            HintText = "{=TL375}Gets your party out of the herd speed penalty by selling animals, only while that penalty is on you, and only as many as it takes to get out of it. Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all. It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, and it keeps enough haul animals to carry what you are already carrying. Cheapest first at every step, and anything you locked, put on your never-sell list, or that the unique and crafted protection covers is left alone. ON by default.")]
+            HintText = "{=TL375}Gets your party out of the herd speed penalty by selling animals, only while that penalty is on you, and only as many as it takes to get out of it. Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all. It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, and it keeps enough haul animals to carry what you are already carrying. Cheapest first at every step, and anything you locked, put on your never-sell list, that a quest is waiting on, or that the unique and crafted protection covers is left alone. ON by default.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public bool SellSpareMounts { get => _o.SellSpareMounts; set { _o.SellSpareMounts = value; Options.Bump(); } }
 
