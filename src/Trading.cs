@@ -437,14 +437,11 @@ namespace TradeLord
             if (!PolicyAllows(PolicyFor(item), buying: false)) { why = Block.CategoryPolicy; return false; }
 
             bool livestock = item.HasHorseComponent;
-            if (livestock)
-            {
-                if (IsHaulAnimalOrMount(item)) { why = Block.MountOrHaulAnimal; return false; }
-            }
-            else if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))
+            if (livestock && IsHaulAnimalOrMount(item)) { why = Block.MountOrHaulAnimal; return false; }
+            if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))
             { why = Block.Protected; return false; }
-            else if (s.KeepSmeltableWeapons != Options.SmeltSellThem && IsSmeltable(item) &&
-                     (s.KeepSmeltableWeapons == Options.SmeltKeepAll || !PartsAllLearned(item)))
+            if (!livestock && s.KeepSmeltableWeapons != Options.SmeltSellThem && IsSmeltable(item) &&
+                (s.KeepSmeltableWeapons == Options.SmeltKeepAll || !PartsAllLearned(item)))
             { why = Block.Smeltable; return false; }
 
             bool sellable = livestock || item.IsTradeGood ||
@@ -681,6 +678,19 @@ namespace TradeLord
             if (_transactionDepth > 0) _transactionDepth--;
         }
 
+        private static bool SwapOneUnit(bool selling, Action swap, string what, string pass, out int gold)
+        {
+            int before = Hero.MainHero.Gold;
+            OpenTransaction();
+            try { swap(); }
+            finally { CloseTransaction(); }
+            gold = selling ? Hero.MainHero.Gold - before : before - Hero.MainHero.Gold;
+            if (gold >= 0) return true;
+            Log.Write("ERROR: " + what + (selling ? " removed " : " added ") + (-gold) +
+                      " gold - transaction direction changed on this game version. " + pass + " aborted.");
+            return false;
+        }
+
         internal static void ReleaseMessageFilter()
         {
             if (_transactionDepth == 0) return;
@@ -802,6 +812,20 @@ namespace TradeLord
             _boughtThisVisit.TryGetValue(id, out var prior);
             var dry = SimVisit.Purchases(sim, id);
             return (prior.count + dry.count, prior.spent + dry.spent);
+        }
+
+        private static void NoteRealPurchase(ItemObject item, int price)
+        {
+            LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, price);
+            _spentThisVisit += price;
+            _boughtThisVisit.TryGetValue(item.StringId, out var prior);
+            _boughtThisVisit[item.StringId] = (prior.count + 1, prior.spent + price);
+        }
+
+        private static void NotePricesMoved(Settlement settlement)
+        {
+            CoinSound();
+            LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
         }
 
         private static bool Muted(bool automated) => automated && Options.Current.QuietAutomation;
@@ -1557,15 +1581,9 @@ namespace TradeLord
                             continue;
                         }
 
-                        int before = Hero.MainHero.Gold;
-
-                        OpenTransaction();
-                        try { SellItemsAction.Apply(me, shop, el, 1, settlement); }
-                        finally { CloseTransaction(); }
-                        int proceeds = Hero.MainHero.Gold - before;
-                        if (proceeds < 0)
+                        if (!SwapOneUnit(true, () => SellItemsAction.Apply(me, shop, el, 1, settlement),
+                                         "selling", "Selling", out int proceeds))
                         {
-                            Log.Write("ERROR: selling removed " + (-proceeds) + " gold - transaction direction changed on this game version. Selling aborted.");
                             directionError = true;
                             break;
                         }
@@ -1590,8 +1608,7 @@ namespace TradeLord
                 if (!sim)
                 {
                     LedgerBehavior.Instance?.AddProfit(profit);
-                    CoinSound();
-                    LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
+                    NotePricesMoved(settlement);
                 }
                 Log.Write((sim ? "quick-sell (simulated, best case): " : "quick-sell: ") + soldItems +
                           " items, +" + goldGained + " gold, profit " + profit + " at " + settlement.Name);
@@ -1687,22 +1704,14 @@ namespace TradeLord
                         }
                         else
                         {
-                            int before = Hero.MainHero.Gold;
-                            OpenTransaction();
-                            try { SellItemsAction.Apply(shop, me, el, 1, settlement); }
-                            finally { CloseTransaction(); }
-                            price = before - Hero.MainHero.Gold;
-                            if (price < 0)
+                            if (!SwapOneUnit(false, () => SellItemsAction.Apply(shop, me, el, 1, settlement),
+                                             "restocking", "Restocking", out price))
                             {
-                                Log.Write("ERROR: restocking added " + (-price) + " gold - transaction direction changed on this game version. Restocking aborted.");
                                 directionError = true;
                                 break;
                             }
                             if (price == 0) break;
-                            LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, price);
-                            _spentThisVisit += price;
-                            _boughtThisVisit.TryGetValue(item.StringId, out var prior);
-                            _boughtThisVisit[item.StringId] = (prior.count + 1, prior.spent + price);
+                            NoteRealPurchase(item, price);
                         }
                         stocked++;
                         remaining--;
@@ -1721,11 +1730,7 @@ namespace TradeLord
                       " items, -" + spent + " gold at " + settlement.Name +
                       ", still short " + (shortfall > 0 ? shortfall : 0) + " unit(s) of food");
             LogDetail(selling: false, sim, detail, "restocking the larder");
-            if (!sim)
-            {
-                CoinSound();
-                LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
-            }
+            if (!sim) NotePricesMoved(settlement);
             TextObject msg = Tongue.Text(sim
                 ? "{=TL98}[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars."
                 : "{=TL97}TradeLord restocked {ITEMS} for {GOLD} denars.");
@@ -1864,14 +1869,9 @@ namespace TradeLord
                             continue;
                         }
 
-                        int before = Hero.MainHero.Gold;
-                        OpenTransaction();
-                        try { HandOver(me, shop, el.EquipmentElement, price); }
-                        finally { CloseTransaction(); }
-                        int proceeds = Hero.MainHero.Gold - before;
-                        if (proceeds < 0)
+                        if (!SwapOneUnit(true, () => HandOver(me, shop, el.EquipmentElement, price),
+                                         "selling on the road", "Road trading", out int proceeds))
                         {
-                            Log.Write("ERROR: selling on the road removed " + (-proceeds) + " gold - transaction direction changed on this game version. Road trading aborted.");
                             directionError = true;
                             break;
                         }
@@ -1976,14 +1976,9 @@ namespace TradeLord
                             continue;
                         }
 
-                        int before = Hero.MainHero.Gold;
-                        OpenTransaction();
-                        try { TakeDelivery(shop, me, el.EquipmentElement, price); }
-                        finally { CloseTransaction(); }
-                        int cost = before - Hero.MainHero.Gold;
-                        if (cost < 0)
+                        if (!SwapOneUnit(false, () => TakeDelivery(shop, me, el.EquipmentElement, price),
+                                         "buying on the road", "Road buying", out int cost))
                         {
-                            Log.Write("ERROR: buying on the road added " + (-cost) + " gold - transaction direction changed on this game version. Road buying aborted.");
                             directionError = true;
                             break;
                         }
@@ -2113,14 +2108,9 @@ namespace TradeLord
                         }
                         else
                         {
-                            int before = Hero.MainHero.Gold;
-                            OpenTransaction();
-                            try { SellItemsAction.Apply(me, shop, el, 1, settlement); }
-                            finally { CloseTransaction(); }
-                            price = Hero.MainHero.Gold - before;
-                            if (price < 0)
+                            if (!SwapOneUnit(true, () => SellItemsAction.Apply(me, shop, el, 1, settlement),
+                                             "selling an animal to relieve the herd", "Herd relief", out price))
                             {
-                                Log.Write("ERROR: selling an animal to relieve the herd removed " + (-price) + " gold - transaction direction changed on this game version. Herd relief aborted.");
                                 directionError = true;
                                 break;
                             }
@@ -2146,11 +2136,7 @@ namespace TradeLord
             Log.Write((sim ? "herd relief (simulated, best case): " : "herd relief: ") + sold +
                       " sold, +" + gained + " gold at " + settlement.Name);
             LogDetail(selling: true, sim, detail, "herd relief, getting the party back up to speed");
-            if (!sim)
-            {
-                CoinSound();
-                LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
-            }
+            if (!sim) NotePricesMoved(settlement);
             TextObject msg = Tongue.Text(sim
                 ? "{=TL117}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars to get your party back up to speed."
                 : "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.");
@@ -2226,22 +2212,14 @@ namespace TradeLord
                         }
                         else
                         {
-                            int before = Hero.MainHero.Gold;
-                            OpenTransaction();
-                            try { SellItemsAction.Apply(shop, me, el, 1, settlement); }
-                            finally { CloseTransaction(); }
-                            price = before - Hero.MainHero.Gold;
-                            if (price < 0)
+                            if (!SwapOneUnit(false, () => SellItemsAction.Apply(shop, me, el, 1, settlement),
+                                             "buying a haul animal", "Haul animal buying", out price))
                             {
-                                Log.Write("ERROR: buying a haul animal added " + (-price) + " gold - transaction direction changed on this game version. Haul animal buying aborted.");
                                 directionError = true;
                                 break;
                             }
                             if (price == 0) break;
-                            LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, price);
-                            _spentThisVisit += price;
-                            _boughtThisVisit.TryGetValue(item.StringId, out var prior);
-                            _boughtThisVisit[item.StringId] = (prior.count + 1, prior.spent + price);
+                            NoteRealPurchase(item, price);
                         }
                         hauled++;
                         remaining--;
@@ -2259,11 +2237,7 @@ namespace TradeLord
             Log.Write((sim ? "haul animals (simulated, best case): " : "haul animals: ") + hauled +
                       " bought, -" + spent + " gold at " + settlement.Name);
             LogDetail(selling: false, sim, detail, "stocking the baggage train");
-            if (!sim)
-            {
-                CoinSound();
-                LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
-            }
+            if (!sim) NotePricesMoved(settlement);
             TextObject msg = Tongue.Text(sim
                 ? "{=TL111}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more."
                 : "{=TL110}TradeLord bought {ITEMS} for {GOLD} denars to carry more.");
@@ -2385,25 +2359,18 @@ namespace TradeLord
                             continue;
                         }
 
-                        int before = Hero.MainHero.Gold;
-                        OpenTransaction();
-                        try { SellItemsAction.Apply(shop, me, el, 1, settlement); }
-                        finally { CloseTransaction(); }
-                        int cost = before - Hero.MainHero.Gold;
-                        if (cost < 0)
+                        if (!SwapOneUnit(false, () => SellItemsAction.Apply(shop, me, el, 1, settlement),
+                                         "buying", "Buying", out int cost))
                         {
-                            Log.Write("ERROR: buying added " + (-cost) + " gold - transaction direction changed on this game version. Buying aborted.");
                             directionError = true;
                             break;
                         }
                         if (cost == 0) break;
 
-                        LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, cost);
-                        _spentThisVisit += cost;
+                        NoteRealPurchase(item, cost);
                         spentThis += cost;
                         countThis++;
                         held++;
-                        _boughtThisVisit[item.StringId] = (countThis, spentThis);
                         bought++;
                         remaining--;
                         if (livestock) herdRoom--;
@@ -2423,11 +2390,7 @@ namespace TradeLord
                           " items, -" + spent + " gold at " + settlement.Name);
                 LogDetail(selling: false, sim, detail, "the buying pass");
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
-                if (!sim)
-                {
-                    CoinSound();
-                    LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
-                }
+                if (!sim) NotePricesMoved(settlement);
                 TextObject msg = Tongue.Text(sim
                     ? "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars."
                     : "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.");
