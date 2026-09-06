@@ -55,6 +55,16 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_spending_cap_counts_the_running_total_whichever_way_it_is_tallied()
+        {
+            Assert.Equal(1000, TradeMath.Budget(9700, 300, 1000, 0, 0));
+            Assert.Equal(400, TradeMath.Budget(9100, 300, 1000, 600, 0));
+            Assert.Equal(400, TradeMath.Budget(9700, 300, 1000, 0, 600));
+            Assert.Equal(0, TradeMath.Budget(8700, 300, 1000, 1000, 0));
+            Assert.Equal(0, TradeMath.Budget(9700, 300, 1000, 0, 1000));
+        }
+
+        [Fact]
         public void What_a_lot_cost_per_unit_is_what_you_paid_for_it()
         {
             Assert.Equal(12, TradeMath.UnitBasis(Bought(10, 120), AveragePaid));
