@@ -516,7 +516,7 @@ namespace TradeLord.Mcm
         }
 
         [SettingPropertyBool("{=TL226}Respect inventory locks", Order = 8, RequireRestart = false,
-            HintText = "{=TL326}Locked items in the inventory screen are never auto-traded. Locks are matched as the game stores them, by item and modifier.")]
+            HintText = "{=TL326}Locked items in the inventory screen are never auto-traded. Selling matches a lock the way the game stores it, by item and quality. Buying matches by item alone, so a lock on a good stops TradeLord buying more of it whatever its quality.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool RespectLocks { get => _o.RespectLocks; set { _o.RespectLocks = value; Options.Bump(); } }
 

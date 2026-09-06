@@ -459,7 +459,8 @@ namespace TradeLord
         public static bool MayBuy(ItemObject item, ISet<string> lockedKeys) =>
             MayBuy(item, lockedKeys, out _);
 
-        internal static bool MayBuy(ItemObject item, ISet<string> lockedKeys, out Block why)
+        internal static bool MayBuy(ItemObject item, ISet<string> lockedKeys, out Block why,
+                                    bool toFeed = false)
         {
             why = Block.None;
             Options s = Options.Current;
@@ -468,7 +469,7 @@ namespace TradeLord
             if (IsLocked(lockedKeys, new EquipmentElement(item))) { why = Block.Locked; return false; }
 
             bool always = Listed(s.AlwaysBuySet, item);
-            if (!always && s.NeverBuyGrain && item == DefaultItems.Grain) { why = Block.NeverList; return false; }
+            if (!always && !toFeed && s.NeverBuyGrain && item == DefaultItems.Grain) { why = Block.NeverList; return false; }
             if (!always && !PolicyAllows(PolicyFor(item), buying: true)) { why = Block.CategoryPolicy; return false; }
             if (item.HasHorseComponent)
             {
@@ -1606,7 +1607,7 @@ namespace TradeLord
                 ItemRosterElement el = shopRoster.GetElementCopyAtIndex(i);
                 ItemObject it = el.EquipmentElement.Item;
                 if (el.Amount <= 0 || !TradePolicy.IsStorableFood(it)) continue;
-                if (!TradePolicy.MayBuy(it, locked)) continue;
+                if (!TradePolicy.MayBuy(it, locked, out _, toFeed: true)) continue;
                 if (_soldThisVisit.Contains(it.StringId)) continue;
                 int price = market.GetItemPrice(el.EquipmentElement, party, false);
                 int worth = TradePolicy.UnpaidWorth(it);
