@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.37.6
+
+- Simulation mode now models a visit as one visit rather than each pass on its own, so the merchant's gold, your purse, your carry weight, your larder and every per-item and per-visit cap carry from one pass to the next and a dry run no longer reports more trading than a real visit would do.
+- Fixed simulation mode selling the same animals again every time it checked whether your party was back up to speed, and offering to buy goods an earlier pass of the same visit had already taken off the shelf.
+- Simulation mode now spends what a meeting on the road just earned, and no longer buys back the goods it has just sold to that party.
+
 ## 1.37.5
 
 - Animals a quest is waiting on are now kept back whenever TradeLord sells, not just when it thins your herd, so the cattle or horses you are carrying to deliver are no longer sold as you walk into a market.
