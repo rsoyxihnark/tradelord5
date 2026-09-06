@@ -22,7 +22,12 @@
 		<string id="TL18" text="The market is still settling ({DAYS} more days)."/>
 		<string id="TL32" text="Nothing sold here - {REASON}."/>
 		<string id="TL33" text="Nothing bought here - {REASON}."/>
-		<string id="TL40" text="your protections held it back"/>
+		<string id="TL381" text="it is on your never-sell or never-buy list"/>
+		<string id="TL382" text="it is locked in your inventory"/>
+		<string id="TL383" text="your unique and crafted protection holds it"/>
+		<string id="TL384" text="a quest may be waiting on your animals"/>
+		<string id="TL385" text="haul animals and mounts are not traded as livestock"/>
+		<string id="TL386" text="your food reserve holds it back"/>
 		<string id="TL41" text="your category policy excludes it"/>
 		<string id="TL42" text="prices here miss your margin"/>
 		<string id="TL43" text="your purse or spending caps are spent"/>
@@ -60,7 +65,7 @@
 		<string id="TL78" text="Stock: {COUNT}"/>
 		<string id="TL79" text="~{DAYS} days"/>
 		<string id="TL81" text="TradeLord credited {GOLD} denars of profit to your Trade skill."/>
-		<string id="TL82" text="Cargo is full - TradeLord cannot buy here until you free up carry weight."/>
+		<string id="TL82" text="Cargo is full. Recruit more men, buy more horses, or sell goods manually."/>
 		<string id="TL93" text="you are already carrying as many of these as you allow"/>
 		<string id="TL94" text="Nothing traded here - {REASON}."/>
 		<string id="TL95" text="Nothing sold here - {REASON}, and nothing bought - {SECOND}."/>
