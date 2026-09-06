@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.37.10
+
+- A visit that trades nothing now names the protection that held your goods back, your never-sell or never-buy list, an inventory lock, the unique and crafted protection, an animal a quest may be waiting on, a haul animal or a mount, or your food reserve, instead of saying only that your protections held it back.
+- Where more than one protection was in the way, the message names the first one TradeLord met.
+- The warning that your cargo is full now tells you what to do about it: recruit more men, buy more horses, or sell goods manually.
+
 ## 1.37.9
 
 - Animals a quest is waiting on are now held back from every sale, not only from thinning the herd, even when TradeLord cannot tell which animals the quest wants.
