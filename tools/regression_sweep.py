@@ -3215,6 +3215,19 @@ def the_herd_gives_up_its_animals_in_the_order_the_player_set():
 chk("1.28.0", "the herd gives up its livestock, then a plain spare mount, then a haul animal, and a war or noble horse last of all",
     the_herd_gives_up_its_animals_in_the_order_the_player_set())
 
+def getting_back_up_to_speed_outranks_the_food_reserve():
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    spare = method_body(S['Trading.cs'], "internal static bool MayShedForHerd")
+    sell = method_body(S['Trading.cs'], "internal static bool MaySell")
+    return ("FoodKeep" not in relief and "foodKeep" not in relief
+            and "foodKeep" not in spare and "FoodValue" not in spare
+            and "foodKeep" in sell
+            and "if (TradePolicy.IsTradableLivestock(item)) return RankLivestock;" in
+                method_body(S['Trading.cs'], "private static int HerdShedRank"))
+
+chk("1.36.2", "a herd that is slowing the party down is thinned even when its livestock is the food you set aside",
+    getting_back_up_to_speed_outranks_the_food_reserve())
+
 def the_herd_is_looked_at_three_times_a_visit():
     entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
     left = method_body(S['Trading.cs'], "private void OnSettlementLeft")
