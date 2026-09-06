@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.38.4
+
+- Selling animals to get your party back up to speed now leaves a quest item alone, the way the rest of TradeLord's selling already did.
+- Fixed the lines you can say in a conversation coming out in the wrong order for the rest of your session, when TradeLord could not place its free passage line among a band's answers.
+
 ## 1.38.3
 
 - Fixed the line asking a band to let you pass never appearing when you met one: TradeLord went looking for the band's own talk before the game had finished writing it, so it never found where to put the line.
