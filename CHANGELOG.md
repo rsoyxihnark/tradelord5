@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.37.5
+
+- Animals a quest is waiting on are now kept back whenever TradeLord sells, not just when it thins your herd, so the cattle or horses you are carrying to deliver are no longer sold as you walk into a market.
+
 ## 1.37.4
 
 - Goods leaving your party are now noticed as they go rather than once a day, so eating the last of a food and looting more of it before the day turns no longer leaves TradeLord counting the looted lot as something you paid for.
