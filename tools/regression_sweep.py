@@ -495,10 +495,10 @@ def the_filter_is_armed_only_around_a_game_call_that_talks():
     t = S['Trading.cs']
     armed = re.findall(r'OpenTransaction\(\);\s*try \{ ([\w\.]+)\([^)]*\); \}\s*'
                        r'finally \{ CloseTransaction\(\);( ReportSilenced\(\);)? \}', t)
-    return (t.count('OpenTransaction();') == len(armed) == 8
-            and sorted(c for c, _ in armed) == ['HandOver', 'SellItemsAction.Apply'] * 1 +
-                                               ['SellItemsAction.Apply'] * 4 +
-                                               ['SkillLevelingManager.OnTradeProfitMade', 'TakeDelivery']
+    return (t.count('OpenTransaction();') == len(armed) == 2
+            and sorted(c for c, _ in armed) == ['SkillLevelingManager.OnTradeProfitMade', 'swap']
+            and sorted(re.findall(r'SwapOneUnit\((?:true|false), \(\) => ([\w\.]+)\(', t)) ==
+                ['HandOver'] + ['SellItemsAction.Apply'] * 5 + ['TakeDelivery']
             and 'InGameTransaction = true' not in t
             and 'if (!TradeActionBehavior.InGameTransaction) return true;' in t
             and 'AutomatedTradeInProgress' not in
@@ -856,7 +856,11 @@ chk("1.13.0", "no switch quietly writes another one, so what you set is what is 
         for name, other in (("AutoBuyOnEntry", "AutoSellOnEntry"), ("AutoSellOnEntry", "AutoBuyOnEntry"))
         for body in [method_body(M, "public bool " + name)]))
 chk("1.3.2", "zero-gold purchase not recorded",
-    re.search(r'if \(cost == 0\) break;[\s\S]{0,80}RecordPurchase', S['Trading.cs']) is not None)
+    re.search(r'if \(cost == 0\) break;[\s\S]{0,80}RecordPurchase', S['Trading.cs']) is not None and
+    all(re.search(r'if \((?:price|cost) == 0\) break;\s*NoteRealPurchase\(item, (?:price|cost)\);',
+                  method_body(S['Trading.cs'], one)) is not None
+        for one in ("public static void ExecuteResupply", "public static void ExecuteHaulage",
+                    "public static void ExecuteQuickBuy")))
 chk("1.3.2", "panel tracks a set of pins", "_panelPins = new HashSet<Settlement>" in S['Panel.cs'])
 chk("1.3.2", "marker never removes a panel pin", "LedgerPanel.IsPinned(_trackedTown)" in S['Trading.cs'])
 chk("1.3.2", "a good one half of the pass moved here is left alone by the other half",
@@ -864,16 +868,25 @@ chk("1.3.2", "a good one half of the pass moved here is left alone by the other 
            and "_soldThisVisit.Add(item.StringId);" in b)
     (method_body(S['Trading.cs'], "public static void ExecuteQuickSell")) and
     (lambda b: "if (SoldHereAlready(sim, it.StringId)) { tally.Note(Block.TradedHereAlready); continue; }" in b
-           and "_boughtThisVisit[item.StringId] = (countThis, spentThis);" in b)
+           and "NoteRealPurchase(item, cost);" in b)
     (method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")) and
+    "_boughtThisVisit[item.StringId] = (prior.count + 1, prior.spent + price);" in
+        method_body(S['Trading.cs'], "private static void NoteRealPurchase") and
     (lambda t: "_soldThisVisit.Contains(id) || SimVisit.Sold(sim, id);" in t
            and "_boughtThisVisit.ContainsKey(id) || SimVisit.Bought(sim, id);" in t)
     (S['Trading.cs']))
 chk("1.3.2", "a transaction that moves gold the wrong way stops the pass instead of draining the purse",
-    (lambda b: ordered(b, "int proceeds = Hero.MainHero.Gold - before;", "if (proceeds < 0)", "directionError = true;"))
-    (method_body(S['Trading.cs'], "public static void ExecuteQuickSell")) and
-    (lambda b: ordered(b, "int cost = before - Hero.MainHero.Gold;", "if (cost < 0)", "directionError = true;"))
-    (method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")))
+    (lambda b: ordered(b, "gold = selling ? Hero.MainHero.Gold - before : before - Hero.MainHero.Gold;",
+                       "if (gold >= 0) return true;",
+                       "transaction direction changed on this game version",
+                       "return false;"))
+    (method_body(S['Trading.cs'], "private static bool SwapOneUnit")) and
+    S['Trading.cs'].count("SwapOneUnit(") == 8 and
+    S['Trading.cs'].count("directionError = true;") == 7 and
+    all("directionError = true;" in method_body(S['Trading.cs'], one) for one in
+        ("public static void ExecuteQuickSell", "public static void ExecuteResupply",
+         "public static void ExecuteHerdRelief", "public static void ExecuteHaulage",
+         "public static void ExecuteQuickBuy", "public static void ExecuteRoadTrade")))
 chk("1.3.2", "sim honors carry weight", "simWeight" in S['Trading.cs'])
 chk("1.3.2", "observed mode uses Settlement.Find", "Settlement.Find(o.TownId)" in S['Ledger.cs'])
 chk("1.3.2", "Instance cleared on game end", "LedgerBehavior.Instance = null" in S['SubModule.cs'])
@@ -970,9 +983,13 @@ chk("1.3.10", "hotkey rejects non-key text", "Enum.IsDefined(typeof(InputKey), k
 chk("1.3.11", "quest items never sold", "el.EquipmentElement.IsQuestItem" in S['Trading.cs'])
 chk("1.3.11", "NotMerchandise never sold",
     "item.NotMerchandise" in method_body(S['Trading.cs'], "internal static bool MaySell"))
-chk("1.3.33", "unique and player-crafted gear is left alone while the protection is on",
-    "else if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))" in
-    method_body(S['Trading.cs'], "internal static bool MaySell"))
+chk("1.3.33", "a unique or player-crafted good is left alone while the protection is on, an animal along with the rest",
+    ordered(method_body(S['Trading.cs'], "internal static bool MaySell"),
+            "if (livestock && IsHaulAnimalOrMount(item)) { why = Block.MountOrHaulAnimal; return false; }",
+            "if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))",
+            "{ why = Block.Protected; return false; }") and
+    "if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)) return false;" in
+        method_body(S['Trading.cs'], "internal static bool MayShedForHerd"))
 chk("1.3.11", "panel drops input restrictions on teardown",
     "SetInputRestrictions(false, InputUsageMask.All)" in method_body(S['Panel.cs'], "internal static void Cleanup"))
 chk("1.3.12", "sieges/raids excluded from scans",
@@ -1121,8 +1138,8 @@ chk("1.36.0", "a trade on the road moves one unit and its price itself, because 
            and "me.ItemRoster.AddToCounts(what, 1);" in b
            and "GiveGoldAction.ApplyForCharacterToParty(Hero.MainHero, shop, price, true);" in b)
         (method_body(S['Trading.cs'], "private static void TakeDelivery")) and
-    "try { HandOver(me, shop, el.EquipmentElement, price); }" in S['Trading.cs'] and
-    "try { TakeDelivery(shop, me, el.EquipmentElement, price); }" in S['Trading.cs'])
+    "() => HandOver(me, shop, el.EquipmentElement, price)," in S['Trading.cs'] and
+    "() => TakeDelivery(shop, me, el.EquipmentElement, price)," in S['Trading.cs'])
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
     S['Trading.cs'].count("[Simulated, best case]") == 7 and
@@ -1133,7 +1150,13 @@ chk("1.3.33", "a fully sold stack clears its cost basis",
     "if (rec.Count <= 0) { rec.Count = 0; rec.TotalPaid = 0; }" in
     method_body(S['TradeMath.cs'], "public static void DrainSale"))
 chk("1.3.33", "automated trading recaptures prices after it moves them",
-    S['Trading.cs'].count("LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);") == 5 and
+    S['Trading.cs'].count("NotePricesMoved(") == 6 and
+    S['Trading.cs'].count("if (!sim) NotePricesMoved(settlement);") == 4 and
+    "NotePricesMoved(settlement);" in
+        method_body(S['Trading.cs'], "public static void ExecuteQuickSell") and
+    "LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);" in
+        method_body(S['Trading.cs'], "private static void NotePricesMoved") and
+    S['Trading.cs'].count("LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);") == 1 and
     "internal void ForgetMarketRankings()" in S['Ledger.cs'] and
     "ForgetMarketRankings();" in method_body(S['Ledger.cs'], "public void CaptureSettlement"))
 _setters = [b for b in re.findall(r'\bset\b\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', M)
@@ -1283,7 +1306,7 @@ chk("1.5.0", "one place decides which category policy governs an item",
 chk("1.5.0", "a head of cattle is asked as livestock, not as food",
     ordered(method_body(S['Trading.cs'], "internal static int PolicyFor"), "LivestockPolicy", "FoodPolicy"))
 chk("1.23.0", "the selling fence is the haul animals themselves, so an animal that hauls nothing is not fenced in with them",
-    "if (IsHaulAnimalOrMount(item)) { why = Block.MountOrHaulAnimal; return false; }" in
+    "if (livestock && IsHaulAnimalOrMount(item)) { why = Block.MountOrHaulAnimal; return false; }" in
     method_body(S['Trading.cs'], "internal static bool MaySell") and
     "IsTradableLivestock" not in method_body(S['Trading.cs'], "internal static bool MaySell") and
     "bool sellable = livestock || item.IsTradeGood ||" in
@@ -3182,9 +3205,10 @@ def every_pass_that_really_moves_goods_rings_the_coin():
               "public static void ExecuteQuickBuy"]
     road = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
     return (option_default('CoinSound') == 'true'
-            and all("CoinSound();" in method_body(S['Trading.cs'], one) for one in passes)
+            and all("NotePricesMoved(settlement);" in method_body(S['Trading.cs'], one) for one in passes)
+            and "CoinSound();" in method_body(S['Trading.cs'], "private static void NotePricesMoved")
             and road.count("if (!sim) CoinSound();") == 2
-            and S['Trading.cs'].count("CoinSound();") == 7
+            and S['Trading.cs'].count("CoinSound();") == 3
             and "if (!Options.Current.CoinSound) return;" in
                 method_body(S['Trading.cs'], "private static void CoinSound"))
 
@@ -3796,6 +3820,27 @@ chk("1.37.6", "a dry run keeps its running totals apart from the real ones, empt
     a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones())
 chk("1.37.6", "a dry run of a meeting on the road spends what the same meeting just earned and never buys back what it just sold",
     a_meeting_on_the_road_is_priced_as_one_meeting())
+
+
+def every_pass_hands_one_place_the_trade_and_the_visits_books():
+    t = S['Trading.cs']
+    swap = method_body(t, "private static bool SwapOneUnit")
+    books = method_body(t, "private static void NoteRealPurchase")
+    return ("int before = Hero.MainHero.Gold;" in swap
+            and t.count("int before = Hero.MainHero.Gold;") == 1
+            and t.count("transaction direction changed on this game version") == 1
+            and "LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, price);" in books
+            and t.count("LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1,") == 2
+            and "_spentThisVisit += price;" in books
+            and t.count("_spentThisVisit +=") == 1
+            and all(named in t for named in (
+                '"selling", "Selling"', '"restocking", "Restocking"',
+                '"selling on the road", "Road trading"', '"buying on the road", "Road buying"',
+                '"selling an animal to relieve the herd", "Herd relief"',
+                '"buying a haul animal", "Haul animal buying"', '"buying", "Buying"')))
+
+chk("1.37.7", "every pass hands one place the swap of goods for gold, the guard on which way the gold went, and what the visit has spent",
+    every_pass_hands_one_place_the_trade_and_the_visits_books())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

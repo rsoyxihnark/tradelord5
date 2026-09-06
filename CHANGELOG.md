@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.37.7
+
+- Protect unique and crafted items now covers animals as well as gear, so a unique animal is no longer sold in the trading pass while the setting is on, which is what the setting already did when TradeLord thins your herd.
+
 ## 1.37.6
 
 - Simulation mode now models a visit as one visit rather than each pass on its own, so the merchant's gold, your purse, your carry weight, your larder and every per-item and per-visit cap carry from one pass to the next and a dry run no longer reports more trading than a real visit would do.
