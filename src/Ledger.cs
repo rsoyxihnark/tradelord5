@@ -62,16 +62,17 @@ namespace TradeLord
         {
             if (!dataStore.IsLoading) PruneExpired();
             if (dataStore.IsSaving)
-            {
-                _ledgerText = LedgerCodec.WriteLedger(_ledger);
-                _purchaseText = LedgerCodec.WritePurchases(_purchases);
-            }
+                Guard.Run("Ledger.WriteForSave", () =>
+                {
+                    _ledgerText = LedgerCodec.WriteLedger(_ledger);
+                    _purchaseText = LedgerCodec.WritePurchases(_purchases);
+                });
             dataStore.SyncData("TradeLord_LedgerText", ref _ledgerText);
             dataStore.SyncData("TradeLord_PurchaseText", ref _purchaseText);
             dataStore.SyncData("TradeLord_LifetimeProfit", ref _lifetimeProfit);
             if (dataStore.IsLoading) ReadSavedText();
             if (dataStore.IsLoading) PruneExpired();
-            Reindex();
+            Guard.Run("Ledger.Reindex", Reindex);
             if (dataStore.IsLoading)
                 Log.Write("ledger restored: " + _ledger.Count + " observed items, " +
                           _purchases.Count + " purchase records, lifetime profit " + _lifetimeProfit);
