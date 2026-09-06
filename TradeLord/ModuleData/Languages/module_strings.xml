@@ -86,6 +86,7 @@
 		<string id="TL110" text="TradeLord bought {ITEMS} for {GOLD} denars to carry more."/>
 		<string id="TL111" text="[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more."/>
 		<string id="TL113" text="Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!"/>
+		<string id="TL387" text="Let us pass, and we will be on our way. [TRADELORD]"/>
 		<string id="TL114" text="That was a nice trade. [TRADELORD]"/>
 		<string id="TL115" text="Agreed. I wish I could use that mod too. Hope you gave a thumbs up endorsement on NexusMods!"/>
 		<string id="TL116" text="TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed."/>
@@ -115,7 +116,7 @@
 		<string id="TL267" text="Buy haul animals" />
 		<string id="TL367" text="Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, whenever a market is asking no more than one is worth, so your party can carry more. Worth here is the cheapest price you know of for that animal, or its own value where you know none, and it never pays a denar over it. Riding horses and camels are not bought at all. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, it stops before your gold reaches your reserve, and your spending limit for the visit and your never-buy list still hold. ON by default." />
 		<string id="TL269" text="Free passage from bandits" />
-		<string id="TL369" text="When you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits, TradeLord asks you there and then whether to ride on. Taking it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is ON by default; switch it off for a campaign you want to fight your own way out of." />
+		<string id="TL369" text="When you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits, TradeLord adds a line to what you can say to them, asking to be let past. Saying it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is ON by default; switch it off for a campaign you want to fight your own way out of." />
 		<string id="TL270" text="Sell them" />
 		<string id="TL271" text="Keep every one" />
 		<string id="TL272" text="Keep the ones you have not learned" />
@@ -233,8 +234,5 @@
 		<string id="TL277" text="Reset" />
 		<string id="TL376" text="Puts every TradeLord setting back to the value it ships with, in one go. It takes hold at once and is written to TradeLord.ini as well, so nothing is left half changed. Your never sell, always sell, never buy and always buy lists are emptied too, and what changed is written to TradeLord.log." />
 		<string id="TL377" text="Your purse is at {GOLD} denars and your gold reserve holds {RESERVE} of it back, so there is nothing here you could buy. Sell some cargo, or lower the reserve in its settings." />
-		<string id="TL378" text="You have TradeLord, so these bandits will let you pass for nothing if you ask them to." />
-		<string id="TL379" text="Ask them to let you go" />
-		<string id="TL380" text="Fight them" />
 	</strings>
 </base>

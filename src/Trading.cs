@@ -9,6 +9,7 @@ using TaleWorlds.CampaignSystem.CampaignBehaviors;
 using TaleWorlds.CampaignSystem.GameComponents;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ComponentInterfaces;
+using TaleWorlds.CampaignSystem.Conversation;
 using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.Extensions;
 using TaleWorlds.CampaignSystem.GameMenus;
@@ -666,6 +667,38 @@ namespace TradeLord
         }
     }
 
+    internal static class Parley
+    {
+        internal const string OwnState = "tradelord_bandit_pass_asked";
+        private const string BandOpens = "bandit_start_defender";
+
+        internal static void HangWhereTheBandAnswers(ConversationSentence asked)
+        {
+            if (asked == null) { Unhung("TradeLord's own line was not taken up"); return; }
+            ConversationManager talk = Campaign.Current?.ConversationManager;
+            if (talk == null) { Unhung("the campaign is not talking to anyone yet"); return; }
+            var said = typeof(ConversationManager).GetField(
+                "_sentences", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(talk)
+                as List<ConversationSentence>;
+            if (said == null) { Unhung("this game version keeps its lines out of reach"); return; }
+            ConversationSentence opener = null;
+            foreach (ConversationSentence line in said)
+                if (line != null && line.Id == BandOpens) { opener = line; break; }
+            if (opener == null) { Unhung("no band on this game version opens with " + BandOpens); return; }
+            MethodInfo hang = typeof(ConversationSentence).GetMethod(
+                "set_InputToken", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (hang == null) { Unhung("a line cannot be moved on this game version"); return; }
+            talk.DisableSentenceSort();
+            hang.Invoke(asked, new object[] { opener.OutputToken });
+            talk.EnableSentenceSort();
+            Log.Write("free passage: the option now sits with the answers a band's own talk offers");
+        }
+
+        private static void Unhung(string why) =>
+            Log.Write("free passage: no option is offered to a band, because " + why
+                      + " - a band is met exactly as the game means it to be");
+    }
+
     public class TradeActionBehavior : CampaignBehaviorBase
     {
         private Settlement _trackedTown;
@@ -971,6 +1004,7 @@ namespace TradeLord
                         AddOptions(port);
 
                 AddCaravanLines(starter);
+                AddBanditLines(starter);
             });
         }
 
@@ -996,6 +1030,25 @@ namespace TradeLord
             return true;
         }
 
+        private void AddBanditLines(CampaignGameStarter starter) => Guard.Run(
+            "bandit dialog (meeting a band is otherwise unaffected)", () =>
+            {
+                ConversationSentence asked = starter.AddPlayerLine(
+                    "tradelord_bandit_pass", Parley.OwnState, "tradelord_bandit_pass_reply",
+                    Tongue.Text("{=TL387}Let us pass, and we will be on our way. [TRADELORD]").ToString(),
+                    BanditMet, null, 200);
+                starter.AddDialogLine("tradelord_bandit_pass_reply", "tradelord_bandit_pass_reply", "close_window",
+                    Tongue.Text("{=TL113}Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!").ToString(),
+                    null, () => Guard.Run("Action.Getaway", LetPlayerGo), 200);
+                Parley.HangWhereTheBandAnswers(asked);
+            });
+
+        private static bool BanditMet()
+        {
+            MobileParty band = MobileParty.ConversationParty;
+            return Options.Current.BanditGetawayCheat && band != null && band.IsBandit;
+        }
+
         private static void TradeOnce(MobileParty met)
         {
             object here = PlayerEncounter.Current;
@@ -1018,56 +1071,31 @@ namespace TradeLord
             MobileParty met = PlayerEncounter.EncounteredMobileParty;
             if (met == null) return;
             _handledEncounter = here;
-            if (IsRoadTrader(met)) { TradeOnce(met); return; }
-            if (met.IsBandit) OfferFreePassage(met);
-        }
-
-        private static object _offeredPassageIn;
-
-        private static void OfferFreePassage(MobileParty foe)
-        {
-            object here = PlayerEncounter.Current;
-            if (!Options.Current.BanditGetawayCheat || (here != null && _offeredPassageIn == here)) return;
-            _offeredPassageIn = here;
-            Log.Write("free passage offered against " + foe.StringId);
-            InformationManager.ShowInquiry(new InquiryData(
-                foe.Name.ToString(),
-                Tongue.Text("{=TL378}You have TradeLord, so these bandits will let you pass for nothing if you ask them to.").ToString(),
-                true, true,
-                Tongue.Text("{=TL379}Ask them to let you go").ToString(),
-                Tongue.Text("{=TL380}Fight them").ToString(),
-                () => Guard.Run("Action.Getaway", () => LetPlayerGo(foe)), null));
+            if (IsRoadTrader(met)) TradeOnce(met);
         }
 
         internal static void ForgetEncounter()
         {
             _tradedWith = null;
             _tradedIn = null;
-            _offeredPassageIn = null;
             _handledEncounter = null;
         }
 
         private void OnConversationEnded(IEnumerable<CharacterObject> spoke) => _tradedWith = null;
 
-        private static void LetPlayerGo(MobileParty foe)
+        private static void LetPlayerGo()
         {
-            Log.Write("free passage taken against " + (foe == null ? "an unnamed party" : foe.StringId));
-            InformationManager.ShowInquiry(new InquiryData(
-                foe == null ? "" : foe.Name.ToString(),
-                Tongue.Text("{=TL113}Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!").ToString(),
-                true, false, Tongue.Text("{=TL09}Close").ToString(), "",
-                () => Guard.Run("Action.GetawayRide", () => RideAway(foe)), null));
-        }
-
-        private static void RideAway(MobileParty foe)
-        {
-            foe?.IgnoreForHours(GetawayHours);
+            MobileParty band = MobileParty.ConversationParty;
+            Log.Write("free passage taken against " + (band == null ? "an unnamed party" : band.StringId));
+            band?.IgnoreForHours(GetawayHours);
             MobileParty.MainParty?.IgnoreByOtherPartiesTill(CampaignTime.HoursFromNow(GetawayHours));
-            if (PlayerEncounter.Current != null) PlayerEncounter.ProtectPlayerSide(GetawayHours);
+            if (PlayerEncounter.Current != null)
+            {
+                PlayerEncounter.ProtectPlayerSide(GetawayHours);
+                PlayerEncounter.LeaveEncounter = true;
+            }
             Log.Write("free passage held for " + GetawayHours + " hours: your party is passed over by other parties, " +
-                      "and " + (foe == null ? "that band" : foe.StringId) + " is passed over by yours");
-            PlayerEncounter.LeaveEncounter = true;
-            PlayerEncounter.Finish(true);
+                      "and " + (band == null ? "that band" : band.StringId) + " is passed over by yours");
         }
 
         private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)
