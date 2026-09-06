@@ -1795,6 +1795,24 @@ def what_left_without_a_sale_stops_counting_as_bought():
 chk("1.37.3", "a good that left the party without a sale stops counting as bought, so what you paid never outlives what you hold",
     what_left_without_a_sale_stops_counting_as_bought())
 
+def a_good_leaving_the_party_is_noticed_as_it_goes():
+    regs = method_body(S['Ledger.cs'], "public override void RegisterEvents")
+    watch = method_body(S['Ledger.cs'], "private void WatchTheParty")
+    left = method_body(S['Ledger.cs'], "private void WhatLeftTheParty")
+    tick = method_body(S['Ledger.cs'], "private void OnTick")
+    return ("CampaignEvents.OnSessionLaunchedEvent.AddNonSerializedListener(this, OnSessionLaunched);" in regs
+            and "CampaignEvents.TickEvent.AddNonSerializedListener(this, OnTick);" in regs
+            and "carried.RosterUpdatedEvent += WhatLeftTheParty;" in watch
+            and "_watched.RosterUpdatedEvent -= WhatLeftTheParty;" in watch
+            and "if (count < 0) _settle = true;" in left
+            and "MatchPurchasesToWhatIsHeld" not in left
+            and "DrainSale" not in left
+            and ordered(tick, "if (!_settle) return;", "_settle = false;", "MatchPurchasesToWhatIsHeld")
+            and "OnTick" not in S['SubModule.cs'])
+
+chk("1.37.4", "a good leaving the party is noticed as it goes, and the books are settled a frame later so a sale is never counted twice",
+    a_good_leaving_the_party_is_noticed_as_it_goes())
+
 chk("1.6.12", "goods with no price paid are credited at what the cheapest market would have charged",
     (lambda b: "BestBuy(item)" in b and "item.Value" in b)
     (method_body(S['Trading.cs'], "internal static int UnpaidWorth")))
