@@ -374,6 +374,19 @@ namespace TradeLord
             return keep;
         }
 
+        internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster)
+        {
+            Dictionary<ItemObject, int> keep = FoodKeep(roster);
+            Dictionary<ItemObject, int> promised = Errands.Promised();
+            if (promised == null) return keep;
+            foreach (var owed in promised)
+            {
+                keep.TryGetValue(owed.Key, out int held);
+                if (owed.Value > held) keep[owed.Key] = owed.Value;
+            }
+            return keep;
+        }
+
         private static float CostPerFood(ItemRosterElement el)
         {
             ItemObject item = el.EquipmentElement.Item;
@@ -1448,7 +1461,7 @@ namespace TradeLord
             var plan = new List<ItemRosterElement>();
             for (int i = 0; i < roster.Count; i++)
                 plan.Add(roster.GetElementCopyAtIndex(i));
-            var foodKeep = TradePolicy.FoodKeep(roster);
+            var keepBack = TradePolicy.KeptBack(roster);
 
             int goldBefore = Hero.MainHero.Gold;
             int soldItems = 0, profit = 0, simGold = 0, simTill = market.Gold;
@@ -1464,7 +1477,7 @@ namespace TradeLord
                     if (directionError) break;
                     ItemObject item = el.EquipmentElement.Item;
                     if (item != null && _boughtThisVisit.ContainsKey(item.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
-                    if (!TradePolicy.MaySell(el, locked, foodKeep, out int keep, out Block why)) { tally.Note(why); continue; }
+                    if (!TradePolicy.MaySell(el, locked, keepBack, out int keep, out Block why)) { tally.Note(why); continue; }
 
                     int remaining = el.Amount - keep;
                     if (remaining <= 0) { tally.Note(Block.FoodReserve); continue; }
@@ -1769,13 +1782,13 @@ namespace TradeLord
                 ItemRoster mine = party.ItemRoster;
                 var plan = new List<ItemRosterElement>();
                 for (int i = 0; i < mine.Count; i++) plan.Add(mine.GetElementCopyAtIndex(i));
-                var foodKeep = TradePolicy.FoodKeep(mine);
+                var keepBack = TradePolicy.KeptBack(mine);
 
                 foreach (ItemRosterElement el in plan)
                 {
                     if (directionError) break;
                     ItemObject item = el.EquipmentElement.Item;
-                    if (!TradePolicy.MaySell(el, locked, foodKeep, out int keep)) continue;
+                    if (!TradePolicy.MaySell(el, locked, keepBack, out int keep)) continue;
                     int remaining = el.Amount - keep;
                     if (remaining <= 0) continue;
 
@@ -2446,12 +2459,12 @@ namespace TradeLord
             MobileParty party = MobileParty.MainParty;
             if (party == null) return null;
             ISet<string> locked = TradePolicy.LockedKeys();
-            var foodKeep = TradePolicy.FoodKeep(party.ItemRoster);
+            var keepBack = TradePolicy.KeptBack(party.ItemRoster);
             var cargo = new List<(EquipmentElement item, int amount)>();
             for (int i = 0; i < party.ItemRoster.Count; i++)
             {
                 ItemRosterElement el = party.ItemRoster.GetElementCopyAtIndex(i);
-                if (!TradePolicy.MaySell(el, locked, foodKeep, out int keep)) continue;
+                if (!TradePolicy.MaySell(el, locked, keepBack, out int keep)) continue;
                 if (el.Amount - keep > 0) cargo.Add((el.EquipmentElement, el.Amount - keep));
             }
             if (cargo.Count == 0) return null;
