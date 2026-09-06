@@ -691,6 +691,13 @@ namespace TradeLord
             return false;
         }
 
+        private static void InAPass(Action work)
+        {
+            AutomatedTradeInProgress = true;
+            try { work(); }
+            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+        }
+
         internal static void ReleaseMessageFilter()
         {
             if (_transactionDepth == 0) return;
@@ -1514,8 +1521,7 @@ namespace TradeLord
             var tally = new BlockTally();
             var detail = new Dictionary<ItemObject, (int count, int gold)>();
 
-            AutomatedTradeInProgress = true;
-            try
+            InAPass(() =>
             {
                 foreach (ItemRosterElement el in plan)
                 {
@@ -1537,8 +1543,7 @@ namespace TradeLord
 
                     while (remaining > 0)
                     {
-                        int basis = basisIsMarket || paidLeft > 0 ? paid : 0;
-                        if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);
+                        int basis = UnitWorth(item, paid, basisIsMarket, paidLeft, ref unpaidWorth);
                         int holdFloor = 0;
                         if (Options.Current.PreferBestSellTown)
                         {
@@ -1556,9 +1561,7 @@ namespace TradeLord
                         if (!TradePolicy.ProfitAcceptable(basis, price))
                         {
                             tally.Note(Block.BelowMargin);
-                            if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) break;
-                            remaining -= paidLeft;
-                            paidLeft = 0;
+                            if (!TradeMath.SkipTheUnitsYouPaidFor(basisIsMarket, ref remaining, ref paidLeft)) break;
                             continue;
                         }
                         if ((sim ? simTill : market.Gold) < price) { tally.Note(Block.MerchantTillEmpty); break; }
@@ -1597,8 +1600,7 @@ namespace TradeLord
                         Tally(detail, item, 1, proceeds);
                     }
                 }
-            }
-            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+            });
 
             int goldGained = sim ? simGold : Hero.MainHero.Gold - goldBefore;
 
@@ -1632,6 +1634,53 @@ namespace TradeLord
             }
         }
 
+        private static int UnitWorth(ItemObject item, int paid, bool basisIsMarket, int paidLeft,
+                                    ref int unpaidWorth)
+        {
+            int basis = basisIsMarket || paidLeft > 0 ? paid : 0;
+            if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);
+            return basis;
+        }
+
+        private static Block WhatStopsBuying(ItemObject item, int price, int budget,
+                                             (int count, int spent) taken, int held, float shareCap,
+                                             bool livestock, int herdRoom, bool lastInVillage, float simWeight)
+        {
+            Options s = Options.Current;
+            if (price > budget) return Block.BudgetSpent;
+            if (s.BuyCapPerItem > 0 && taken.count >= s.BuyCapPerItem) return Block.ItemCountCap;
+            if (s.BuyValueCapPerItem > 0 && taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;
+            if (s.MaxHeldPerItem > 0 && held >= s.MaxHeldPerItem) return Block.HeldEnough;
+            if (shareCap > 0f && (held + 1) * item.Weight > shareCap) return Block.HeldEnough;
+            if (livestock && herdRoom <= 0) return Block.HerdFull;
+            if (lastInVillage) return Block.VillageLastUnit;
+            if (item.Weight > 0.01f &&
+                item.Weight > Carry.Room(MobileParty.MainParty) - simWeight) return Block.CarryWeight;
+            return Block.None;
+        }
+
+        private static List<(ItemRosterElement el, int price, int worth)> CheapestFirst(
+            Settlement settlement, SettlementComponent market, MobileParty party, bool sim,
+            Func<ItemObject, bool> wanted)
+        {
+            var found = new List<(ItemRosterElement el, int price, int worth)>();
+            ItemRoster shopRoster = settlement.ItemRoster;
+            for (int i = 0; i < shopRoster.Count; i++)
+            {
+                ItemRosterElement el = shopRoster.GetElementCopyAtIndex(i);
+                ItemObject it = el.EquipmentElement.Item;
+                if (el.Amount <= 0 || !wanted(it)) continue;
+                if (SoldHereAlready(sim, it.StringId)) continue;
+                if (el.Amount - SimVisit.Stocked(sim, it.StringId) <= 0) continue;
+                int price = market.GetItemPrice(el.EquipmentElement, party, false);
+                int worth = TradePolicy.UnpaidWorth(it);
+                if (price <= 0 || price > worth) continue;
+                found.Add((el, price, worth));
+            }
+            found.Sort((x, y) => x.price.CompareTo(y.price));
+            return found;
+        }
+
         public static void ExecuteResupply(Settlement settlement, bool quiet = false)
         {
             if (Options.Current.ResupplyFoodDays <= 0) return;
@@ -1658,27 +1707,12 @@ namespace TradeLord
                 TradeMath.Budget(PurseNow(sim), GoldHeldBack(),
                                  Options.Current.MaxSpendPerVisit, SpentSoFar(sim), 0);
 
-            var larder = new List<(ItemRosterElement el, int price, int worth)>();
-            ItemRoster shopRoster = settlement.ItemRoster;
-            for (int i = 0; i < shopRoster.Count; i++)
-            {
-                ItemRosterElement el = shopRoster.GetElementCopyAtIndex(i);
-                ItemObject it = el.EquipmentElement.Item;
-                if (el.Amount <= 0 || !TradePolicy.IsStorableFood(it)) continue;
-                if (!TradePolicy.MayBuy(it, locked, out _, toFeed: true)) continue;
-                if (SoldHereAlready(sim, it.StringId)) continue;
-                if (el.Amount - SimVisit.Stocked(sim, it.StringId) <= 0) continue;
-                int price = market.GetItemPrice(el.EquipmentElement, party, false);
-                int worth = TradePolicy.UnpaidWorth(it);
-                if (price <= 0 || price > worth) continue;
-                larder.Add((el, price, worth));
-            }
+            var larder = CheapestFirst(settlement, market, party, sim,
+                it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, locked, out _, toFeed: true));
             if (larder.Count == 0) return;
-            larder.Sort((x, y) => x.price.CompareTo(y.price));
 
             int goldBefore = Hero.MainHero.Gold;
-            AutomatedTradeInProgress = true;
-            try
+            InAPass(() =>
             {
                 foreach (var (el, _, worth) in larder)
                 {
@@ -1719,8 +1753,7 @@ namespace TradeLord
                         Tally(detail, item, 1, price);
                     }
                 }
-            }
-            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+            });
 
             if (stocked <= 0) return;
 
@@ -1811,8 +1844,7 @@ namespace TradeLord
                 TradeMath.Budget(Hero.MainHero.Gold + (sim ? simGold : 0), GoldHeldBack(),
                                  Options.Current.MaxSpendPerVisit, sim ? 0 : paidOut, sim ? simSpent : 0);
 
-            AutomatedTradeInProgress = true;
-            try
+            InAPass(() =>
             {
                 ItemRoster mine = party.ItemRoster;
                 var plan = new List<ItemRosterElement>();
@@ -1842,15 +1874,12 @@ namespace TradeLord
 
                     while (remaining > 0)
                     {
-                        int worth = basisIsMarket || paidLeft > 0 ? basis : 0;
-                        if (worth == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);
+                        int worth = UnitWorth(item, basis, basisIsMarket, paidLeft, ref unpaidWorth);
                         int price = market.GetPrice(el.EquipmentElement, party, true, shop);
                         if (price <= 0 || price < holdFloor) break;
                         if (!TradePolicy.ProfitAcceptable(worth, price))
                         {
-                            if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) break;
-                            remaining -= paidLeft;
-                            paidLeft = 0;
+                            if (!TradeMath.SkipTheUnitsYouPaidFor(basisIsMarket, ref remaining, ref paidLeft)) break;
                             continue;
                         }
                         if (till < price) break;
@@ -1885,8 +1914,7 @@ namespace TradeLord
                         Tally(detail, item, 1, proceeds);
                     }
                 }
-            }
-            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+            });
 
             if (sold > 0)
             {
@@ -1909,8 +1937,7 @@ namespace TradeLord
             int spentFrom = Hero.MainHero.Gold;
             detail = new Dictionary<ItemObject, (int count, int gold)>();
 
-            AutomatedTradeInProgress = true;
-            try
+            InAPass(() =>
             {
                 ItemRoster wares = met.ItemRoster;
                 ItemRoster ours = party.ItemRoster;
@@ -1951,16 +1978,9 @@ namespace TradeLord
                     while (remaining > 0)
                     {
                         int price = market.GetPrice(el.EquipmentElement, party, false, shop);
-                        if (price <= 0 || !TradePolicy.BuyAcceptable(price, realizable)) break;
-                        if (price > Budget()) break;
-                        if (Options.Current.BuyCapPerItem > 0 && countThis >= Options.Current.BuyCapPerItem) break;
-                        if (Options.Current.BuyValueCapPerItem > 0 &&
-                            spentThis + price > Options.Current.BuyValueCapPerItem) break;
-                        if (Options.Current.MaxHeldPerItem > 0 &&
-                            held >= Options.Current.MaxHeldPerItem) break;
-                        if (shareCap > 0f && (held + 1) * item.Weight > shareCap) break;
-                        if (livestock && herdRoom <= 0) break;
-                        if (item.Weight > 0.01f && item.Weight > Carry.Room(party) - simWeight) break;
+                        if (!TradePolicy.BuyAcceptable(price, realizable)) break;
+                        if (WhatStopsBuying(item, price, Budget(), (countThis, spentThis), held, shareCap,
+                                            livestock, herdRoom, false, simWeight) != Block.None) break;
 
                         if (sim)
                         {
@@ -1994,8 +2014,7 @@ namespace TradeLord
                         Tally(detail, item, 1, cost);
                     }
                 }
-            }
-            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+            });
 
             if (bought <= 0) return;
 
@@ -2073,8 +2092,7 @@ namespace TradeLord
             var detail = new Dictionary<ItemObject, (int count, int gold)>();
 
             int goldBefore = Hero.MainHero.Gold;
-            AutomatedTradeInProgress = true;
-            try
+            InAPass(() =>
             {
                 foreach (var (el, rank, _) in stable)
                 {
@@ -2127,8 +2145,7 @@ namespace TradeLord
                         Tally(detail, item, 1, price);
                     }
                 }
-            }
-            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+            });
 
             if (sold <= 0) return;
 
@@ -2171,26 +2188,12 @@ namespace TradeLord
                 TradeMath.Budget(PurseNow(sim), GoldHeldBack(),
                                  Options.Current.MaxSpendPerVisit, SpentSoFar(sim), 0);
 
-            var stable = new List<(ItemRosterElement el, int price, int worth)>();
-            ItemRoster shopRoster = settlement.ItemRoster;
-            for (int i = 0; i < shopRoster.Count; i++)
-            {
-                ItemRosterElement el = shopRoster.GetElementCopyAtIndex(i);
-                ItemObject it = el.EquipmentElement.Item;
-                if (el.Amount <= 0 || !TradePolicy.MayHaul(it, locked)) continue;
-                if (SoldHereAlready(sim, it.StringId)) continue;
-                if (el.Amount - SimVisit.Stocked(sim, it.StringId) <= 0) continue;
-                int price = market.GetItemPrice(el.EquipmentElement, party, false);
-                int worth = TradePolicy.UnpaidWorth(it);
-                if (price <= 0 || price > worth) continue;
-                stable.Add((el, price, worth));
-            }
+            var stable = CheapestFirst(settlement, market, party, sim,
+                it => TradePolicy.MayHaul(it, locked));
             if (stable.Count == 0) return;
-            stable.Sort((x, y) => x.price.CompareTo(y.price));
 
             int goldBefore = Hero.MainHero.Gold;
-            AutomatedTradeInProgress = true;
-            try
+            InAPass(() =>
             {
                 foreach (var (el, _, worth) in stable)
                 {
@@ -2228,8 +2231,7 @@ namespace TradeLord
                         Tally(detail, item, 1, price);
                     }
                 }
-            }
-            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+            });
 
             if (hauled <= 0) return;
 
@@ -2306,8 +2308,7 @@ namespace TradeLord
             else tally.Note(Block.BudgetSpent);
             int herdRoom = -1;
 
-            AutomatedTradeInProgress = true;
-            try
+            InAPass(() =>
             {
                 foreach (var (el, realizable, _, alreadyHeld) in stock)
                 {
@@ -2330,19 +2331,10 @@ namespace TradeLord
                     {
                         int price = market.GetItemPrice(el.EquipmentElement, MobileParty.MainParty, false);
                         if (!TradePolicy.BuyAcceptable(price, realizable)) { tally.Note(Block.BelowMargin); break; }
-                        if (price > Budget()) { tally.Note(Block.BudgetSpent); break; }
-                        if (Options.Current.BuyCapPerItem > 0 &&
-                            countThis >= Options.Current.BuyCapPerItem) { tally.Note(Block.ItemCountCap); break; }
-                        if (Options.Current.BuyValueCapPerItem > 0 &&
-                            spentThis + price > Options.Current.BuyValueCapPerItem) { tally.Note(Block.ItemValueCap); break; }
-                        if (Options.Current.MaxHeldPerItem > 0 &&
-                            held >= Options.Current.MaxHeldPerItem) { tally.Note(Block.HeldEnough); break; }
-                        if (shareCap > 0f &&
-                            (held + 1) * item.Weight > shareCap) { tally.Note(Block.HeldEnough); break; }
-                        if (livestock && herdRoom <= 0) { tally.Note(Block.HerdFull); break; }
-                        if (settlement.IsVillage && remaining <= 1) { tally.Note(Block.VillageLastUnit); break; }
-                        if (item.Weight > 0.01f && item.Weight >
-                                Carry.Room(MobileParty.MainParty) - simWeight) { tally.Note(Block.CarryWeight); break; }
+                        Block capped = WhatStopsBuying(item, price, Budget(), (countThis, spentThis), held,
+                                                       shareCap, livestock, herdRoom,
+                                                       settlement.IsVillage && remaining <= 1, simWeight);
+                        if (capped != Block.None) { tally.Note(capped); break; }
 
                         if (sim)
                         {
@@ -2378,8 +2370,7 @@ namespace TradeLord
                         Tally(detail, item, 1, cost);
                     }
                 }
-            }
-            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+            });
 
             if (tally.Saw(Block.CarryWeight)) _cargoWasFull = true;
 
