@@ -65,6 +65,33 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Units_you_never_bought_are_still_offered_when_the_bought_ones_miss_the_margin()
+        {
+            int remaining = 10, paidLeft = 4;
+            Assert.True(TradeMath.SkipTheUnitsYouPaidFor(false, ref remaining, ref paidLeft));
+            Assert.Equal(6, remaining);
+            Assert.Equal(0, paidLeft);
+        }
+
+        [Fact]
+        public void A_lot_you_paid_for_outright_stops_at_the_margin_and_moves_nothing()
+        {
+            int remaining = 4, paidLeft = 10;
+            Assert.False(TradeMath.SkipTheUnitsYouPaidFor(false, ref remaining, ref paidLeft));
+            Assert.Equal(4, remaining);
+            Assert.Equal(10, paidLeft);
+
+            remaining = 10; paidLeft = 0;
+            Assert.False(TradeMath.SkipTheUnitsYouPaidFor(false, ref remaining, ref paidLeft));
+            Assert.Equal(10, remaining);
+
+            remaining = 10; paidLeft = 4;
+            Assert.False(TradeMath.SkipTheUnitsYouPaidFor(true, ref remaining, ref paidLeft));
+            Assert.Equal(10, remaining);
+            Assert.Equal(4, paidLeft);
+        }
+
+        [Fact]
         public void What_a_lot_cost_per_unit_is_what_you_paid_for_it()
         {
             Assert.Equal(12, TradeMath.UnitBasis(Bought(10, 120), AveragePaid));

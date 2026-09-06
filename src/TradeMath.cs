@@ -46,6 +46,14 @@ namespace TradeLord
             else if (rec.TotalPaid < 0) rec.TotalPaid = 0;
         }
 
+        public static bool SkipTheUnitsYouPaidFor(bool basisIsMarket, ref int remaining, ref int paidLeft)
+        {
+            if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;
+            remaining -= paidLeft;
+            paidLeft = 0;
+            return true;
+        }
+
         public static int UnitBasis(PurchaseRecord rec, int mode)
         {
             if (mode == 2 || rec == null || rec.Count <= 0) return NoRecordedBasis;
