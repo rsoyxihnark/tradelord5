@@ -22,7 +22,12 @@
 		<string id="TL18" text="Pazar hâlâ oturuyor ({DAYS} gün daha)."/>
 		<string id="TL32" text="Burada bir şey satılmadı: {REASON}."/>
 		<string id="TL33" text="Burada bir şey alınmadı: {REASON}."/>
-		<string id="TL40" text="korumalarınız buna izin vermedi"/>
+		<string id="TL381" text="asla satma ya da asla alma listenizde"/>
+		<string id="TL382" text="envanterinizde kilitli"/>
+		<string id="TL383" text="eşsiz ve dövülmüş eşya korumanız onu tutuyor"/>
+		<string id="TL384" text="bir görev hayvanlarınızı bekliyor olabilir"/>
+		<string id="TL385" text="yük hayvanları ve binekler hayvan kuralıyla alınıp satılmaz"/>
+		<string id="TL386" text="yiyecek rezerviniz onu tutuyor"/>
 		<string id="TL41" text="kategori kuralınız bunu dışarıda bırakıyor"/>
 		<string id="TL42" text="buradaki fiyatlar kâr payınızı tutturmuyor"/>
 		<string id="TL43" text="keseniz ya da harcama sınırlarınız tükendi"/>
@@ -60,7 +65,7 @@
 		<string id="TL78" text="Stok: {COUNT}"/>
 		<string id="TL79" text="~{DAYS} gün"/>
 		<string id="TL81" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi."/>
-		<string id="TL82" text="Yük dolu: siz yer açana kadar TradeLord burada bir şey alamaz."/>
+		<string id="TL82" text="Yük dolu. Daha fazla asker alın, daha fazla at satın alın ya da malları elle satın."/>
 		<string id="TL93" text="bu maldan izin verdiğiniz kadarını zaten taşıyorsunuz"/>
 		<string id="TL94" text="Burada ticaret yapılmadı: {REASON}."/>
 		<string id="TL95" text="Burada bir şey satılmadı: {REASON}, bir şey de alınmadı: {SECOND}."/>

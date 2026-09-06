@@ -3324,9 +3324,9 @@ def an_animal_is_held_back_when_the_quests_cannot_be_read():
     sell = method_body(S['Trading.cs'], "internal static bool MaySell")
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
     return ("internal static bool Known => Readable();" in S['Trading.cs']
-            and "if (livestock && !Errands.Known) { why = Block.Protected; return false; }" in sell
+            and "if (livestock && !Errands.Known) { why = Block.QuestAnimal; return false; }" in sell
             and ordered(sell, "if (Listed(s.AlwaysSet, item)) return true;",
-                        "if (livestock && !Errands.Known) { why = Block.Protected; return false; }")
+                        "if (livestock && !Errands.Known) { why = Block.QuestAnimal; return false; }")
             and "if (promised == null) return;" in relief
             and "no animal is sold at all" in S['Trading.cs']
             and "no animal is sold to relieve the herd" not in S['Trading.cs'])
@@ -3956,6 +3956,49 @@ chk("1.37.8", "a meeting on the road stops at the spending cap whether it is a d
     a_meeting_on_the_road_counts_what_it_spends_against_the_cap())
 chk("1.37.8", "the panel takes the language it is armed with, so arming it works out no routes",
     arming_the_panel_costs_no_route_scan())
+
+
+GUARDS = {'NeverList', 'Locked', 'Protected', 'QuestAnimal', 'MountOrHaulAnimal', 'FoodReserve'}
+
+def every_guard_that_holds_a_good_back_says_which_one_it_is():
+    phrase = method_body(S['Trading.cs'], "internal static TextObject Phrase")
+    said = []
+    for guard in sorted(GUARDS):
+        spoken = re.search(r'case Block\.' + guard +
+                           r':\s*\n\s*return Tongue\.Text\("\{=(TL\d+)\}([^"]+)"\);', phrase)
+        if spoken is None:
+            return False
+        said.append(spoken.group(2))
+    return (len(set(said)) == len(GUARDS)
+            and 'TL40' not in strings_declared()
+            and 'your protections held it back' not in ALL)
+
+def a_stalled_pass_names_the_first_guard_it_met():
+    note = method_body(S['Trading.cs'], "internal void Note")
+    dominant = method_body(S['Trading.cs'], "internal Block Dominant")
+    guarded = between(S['Trading.cs'], "private static bool Guarded(Block reason) =>",
+                      "internal Block Dominant")
+    return ("private Block _firstGuard = Block.None;" in S['Trading.cs']
+            and ordered(note, "if (reason == Block.None) return;",
+                        "if (_firstGuard == Block.None && Guarded(reason)) _firstGuard = reason;",
+                        "_counts[reason] = seen + 1;")
+            and "return Guarded(top) ? _firstGuard : top;" in dominant
+            and set(re.findall(r'Block\.(\w+)', guarded)) == GUARDS)
+
+def a_full_cargo_is_told_the_three_ways_out_of_it():
+    body = method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
+    warning = re.search(r'\{=TL82\}([^"]+)"', body)
+    return (warning is not None
+            and all(way in warning.group(1) for way in
+                    ('Recruit more men', 'buy more horses', 'sell goods manually'))
+            and 'free up carry weight' not in ALL)
+
+chk("1.37.10", "each protection that holds a good back has a line of its own to say so",
+    every_guard_that_holds_a_good_back_says_which_one_it_is())
+chk("1.37.10", "a pass that moves nothing names the first protection it met, not the one it met most",
+    a_stalled_pass_names_the_first_guard_it_met())
+chk("1.37.10", "the full cargo warning names every way out of a full cargo",
+    a_full_cargo_is_told_the_three_ways_out_of_it())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
