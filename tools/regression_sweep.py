@@ -131,12 +131,13 @@ def compat_list(name):
     m = re.search(re.escape(name) + r'\s*=\s*\{(.*?)\};', COMPAT, re.S)
     return None if m is None else sorted(
         t.split('.')[-1] + '.' + member for t, member in
-        re.findall(r'\(\s*(?:Inventory \+ )?"([\w.]+)"\s*,\s*"(\w+)"\s*\)', m.group(1)))
+        re.findall(r'\(\s*(?:(?:Inventory|Issues) \+ )?"([\w.+]+)"\s*,\s*"(\w+)"\s*\)', m.group(1)))
 
 def compat_checks_every_game_hook():
     reflected = sorted({t.split('.')[-1] + '.' + m for t, m in
                         re.findall(r'typeof\((\w+)\)\.GetMethod\(\s*"(\w+)"', ALL)})
-    fields = sorted({'_' + n for n in re.findall(r'____(\w+)', ALL)})
+    fields = sorted({'_' + n for n in re.findall(r'____(\w+)', ALL)}
+                   | set(re.findall(r'"(_\w+)"', S['Trading.cs'])))
     compat_fields = sorted({p.split('.')[-1] for p in (compat_list('ReflectedFields') or [])})
     return (len(reflected) > 0 and len(fields) > 0
             and compat_list('HarmonyTargets') == harmony_targets()
@@ -3227,6 +3228,31 @@ def getting_back_up_to_speed_outranks_the_food_reserve():
 
 chk("1.36.2", "a herd that is slowing the party down is thinned even when its livestock is the food you set aside",
     getting_back_up_to_speed_outranks_the_food_reserve())
+
+def an_animal_a_quest_is_waiting_on_is_counted_out_of_the_herd():
+    errands = S['Trading.cs'][S['Trading.cs'].find("internal static class Errands"):]
+    promised = method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> Promised")
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    quests = ("HeadmanNeedsToDeliverAHerdIssueBehavior.HeadmanNeedsToDeliverAHerdIssueQuest",
+              "HeadmanVillageNeedsDraughtAnimalsIssueBehavior.HeadmanVillageNeedsDraughtAnimalsIssueQuest",
+              "LordNeedsHorsesIssueBehavior.LordNeedsHorsesIssueQuest")
+    named = ("_herdTypeToDeliver", "_animalCountToDeliver", "_requestedAnimal",
+             "_requestedAnimalAmount", "_mountObjectToBeDelivered", "_numMountsToBeDelivered")
+    return (all("typeof(" + q + ")" in errands for q in quests)
+            and all('"' + f + '"' in errands for f in named)
+            and "Campaign.Current?.QuestManager?.Quests" in promised
+            and "if (quest == null || quest.IsFinalized) continue;" in promised
+            and "if (!Readable()) return null;" in promised
+            and "Dictionary<ItemObject, int> promised = Errands.Promised();" in relief
+            and "if (promised == null) return;" in relief
+            and "if (promised.TryGetValue(item, out int owed) && owed > 0)" in relief
+            and "int spare = Math.Min(remaining, owed);" in relief
+            and "promised[item] = owed - spare;" in relief
+            and "remaining -= spare;" in relief
+            and "Errands.Forget();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
+
+chk("1.37.0", "as many animals as a quest is waiting on are kept back, and only the herd beyond them is thinned",
+    an_animal_a_quest_is_waiting_on_is_counted_out_of_the_herd())
 
 def the_herd_is_looked_at_three_times_a_visit():
     entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
