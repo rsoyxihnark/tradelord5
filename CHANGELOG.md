@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.37.1
+
+- The free passage setting now describes what it really does, asking you as you meet the band rather than adding a line to the encounter screen.
+- The setting that sells animals to get your party back up to speed now says that an animal a quest is waiting on is left alone.
+- The feature list now says that getting your party back up to speed keeps back the animals a quest is waiting on.
+
 ## 1.37.0
 
 - An animal a quest is waiting on is no longer sold to get your party back up to speed. TradeLord keeps back as many as the quest asks for and thins only the herd beyond them, so delivering a herd, draught animals or horses no longer costs you the animals you gathered for it.
