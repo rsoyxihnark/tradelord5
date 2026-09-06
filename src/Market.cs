@@ -31,10 +31,11 @@ namespace TradeLord
 
         internal bool Walkable => _walkable;
 
-        internal Shelf(Settlement site, ItemObject item, bool selling, int quoted, bool projecting)
+        internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting)
         {
+            ItemObject item = stocked.Item;
             _item = item;
-            _element = new EquipmentElement(item);
+            _element = stocked;
             _party = site?.Party;
             _selling = selling;
             _quoted = quoted;
@@ -81,7 +82,7 @@ namespace TradeLord
         internal Ladder(Settlement site, ItemObject item, bool selling, int quoted)
         {
             _selling = selling;
-            _shelf = new Shelf(site, item, selling, quoted, projecting: true);
+            _shelf = new Shelf(site, new EquipmentElement(item), selling, quoted, projecting: true);
         }
 
         internal bool Walkable => _shelf.Walkable;
@@ -143,13 +144,13 @@ namespace TradeLord
             return q;
         }
 
-        internal static int PricePaid(Settlement site, ItemObject item, int units, int quotedUnitPrice)
+        internal static int PricePaid(Settlement site, EquipmentElement bought, int units, int quotedUnitPrice)
         {
             if (units <= 0) return 0;
             int flat = quotedUnitPrice * units;
-            if (site == null || item == null) return flat;
+            if (site == null || bought.Item == null) return flat;
 
-            Shelf shelf = new Shelf(site, item, selling: false, quoted: quotedUnitPrice, projecting: false);
+            Shelf shelf = new Shelf(site, bought, selling: false, quoted: quotedUnitPrice, projecting: false);
             if (!shelf.Walkable) return flat;
 
             shelf.Restock(units);

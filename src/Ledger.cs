@@ -141,7 +141,8 @@ namespace TradeLord
                     int unit = market != null
                         ? market.GetItemPrice(element.EquipmentElement, MobileParty.MainParty, false)
                         : item.Value;
-                    RecordPurchase(item.StringId, count, Bulk.PricePaid(here, item, count, unit));
+                    RecordPurchase(item.StringId, count,
+                                   Bulk.PricePaid(here, element.EquipmentElement, count, unit));
                 }
                 foreach (var (element, count) in sold)
                 {

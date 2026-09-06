@@ -488,13 +488,14 @@ namespace TradeLord
             return !IsLocked(lockedKeys, new EquipmentElement(item));
         }
 
-        internal static bool MayShedForHerd(ItemObject item, ISet<string> lockedKeys)
+        internal static bool MayShedForHerd(EquipmentElement held, ISet<string> lockedKeys)
         {
             Options s = Options.Current;
+            ItemObject item = held.Item;
             if (item == null || !item.HasHorseComponent || item.NotMerchandise) return false;
             if (Listed(s.NeverSet, item)) return false;
             if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)) return false;
-            return !IsLocked(lockedKeys, new EquipmentElement(item));
+            return !IsLocked(lockedKeys, held);
         }
 
         internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys) =>
@@ -1940,7 +1941,7 @@ namespace TradeLord
             {
                 ItemRosterElement el = mine.GetElementCopyAtIndex(i);
                 ItemObject it = el.EquipmentElement.Item;
-                if (el.Amount <= 0 || !TradePolicy.MayShedForHerd(it, locked)) continue;
+                if (el.Amount <= 0 || !TradePolicy.MayShedForHerd(el.EquipmentElement, locked)) continue;
                 int rank = HerdShedRank(it);
                 if (rank < 0) continue;
                 int price = market.GetItemPrice(el.EquipmentElement, party, true);
