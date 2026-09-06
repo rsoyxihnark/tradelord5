@@ -86,6 +86,7 @@
 		<string id="TL110" text="TradeLord 为了多装货买下 {ITEMS}，花费 {GOLD} 第纳尔。"/>
 		<string id="TL111" text="[模拟，最理想情况] TradeLord 本会为了多装货买下 {ITEMS}，花费 {GOLD} 第纳尔。"/>
 		<string id="TL113" text="哦，抱歉，当然可以。不过别忘了去 NexusMods 点个赞！"/>
+		<string id="TL387" text="放我们过去，我们这就上路。[TRADELORD]"/>
 		<string id="TL114" text="这买卖做得不错。[TRADELORD]"/>
 		<string id="TL115" text="同感。可惜我用不上那个模组。希望你在 NexusMods 上点了赞！"/>
 		<string id="TL251" text="持有到这么多就不再买入（0 = 关闭）"/>
@@ -113,7 +114,7 @@
 		<string id="TL267" text="购买驮兽" />
 		<string id="TL367" text="只要市场开价不高于身价，就把驮兽买下来，騾子、驮马、役马、鞍马和驮骆驼都算，这样队伍能装更多货。这里的身价，是你所知这种牲口最便宜的价格；若一个都不知道，就用它自身的价值，而且绝不多付一枚金币。坐骑马匹和骆驼一概不买。牲畜不在其中，它有自己的策略。它绝不会买到超出队伍能驱赶而不减速的数量，会在黄金降到储备线之前就停手，每次到访的花费上限和禁买清单也都照旧有效。默认开启。" />
 		<string id="TL269" text="强盗放你通行" />
-		<string id="TL369" text="当你撞上劫掠者、海上劫掠者，或森林、山地、草原、沙漠强盗时，TradeLord 会当场问你要不要就这么走开。选它就能不打不赎地结束这场遭遇，之后他们还会有几个小时不来找你。默认开启；想自己杀出一条路的存档就把它关掉。" />
+		<string id="TL369" text="当你撞上劫掠者、海上劫掠者，或森林、山地、草原、沙漠强盗时，TradeLord 会在你能说的话里加上一句，请他们放你过去。说了这句就能不打不赎地结束这场遭遇，之后他们还会有几个小时不来找你。默认开启；想自己杀出一条路的存档就把它关掉。" />
 		<string id="TL270" text="卖掉" />
 		<string id="TL271" text="全部留下" />
 		<string id="TL272" text="只留没学会的" />
@@ -233,8 +234,5 @@
 		<string id="TL277" text="重置" />
 		<string id="TL376" text="一次把每一项 TradeLord 设置都退回它出厂时的值。立刻生效，也会写进 TradeLord.ini，不会留下改了一半的状态。你的从不卖出、总是卖出、从不买入和总是买入名单也一并清空，改动了什么会写进 TradeLord.log。" />
 		<string id="TL377" text="你的钱袋里有 {GOLD} 第纳尔，而金钱储备扣住了其中 {RESERVE}，所以这里没有你买得起的东西。卖掉一些货物，或者在设置里调低储备。" />
-		<string id="TL378" text="你装了 TradeLord，所以只要你开口，这些强盗就会白放你过去。" />
-		<string id="TL379" text="请他们放你走" />
-		<string id="TL380" text="跟他们打" />
 	</strings>
 </base>
