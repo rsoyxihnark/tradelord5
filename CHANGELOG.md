@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.36.2
+
+- An animal you have locked in your inventory is left alone again when TradeLord sells one to get your party back up to speed. A lock on a horse of a particular quality, such as a spirited or a lame one, was being read as a lock on the plain horse and so was passed over.
+- A good you buy by hand is now written down at what its own quality cost you, rather than at the plain good's price, so TradeLord no longer sells a fine one on for less than you paid.
+
 ## 1.36.1
 
 - A caravan or a party of villagers you have just traded with no longer trades with you all over again when you talk to them without riding away first, so your spending limit for that meeting is only spent once.
