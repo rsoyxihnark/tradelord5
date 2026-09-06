@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.38.3
+
+- Fixed the line asking a band to let you pass never appearing when you met one: TradeLord went looking for the band's own talk before the game had finished writing it, so it never found where to put the line.
+
 ## 1.38.2
 
 - Saving a campaign can no longer be failed by TradeLord's own note-keeping: if its ledger cannot be written down as the game saves, the save goes through and what went wrong is written to TradeLord.log instead.
