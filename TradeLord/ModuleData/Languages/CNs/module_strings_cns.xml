@@ -22,7 +22,12 @@
 		<string id="TL18" text="市场仍在稳定中（还需 {DAYS} 天）。"/>
 		<string id="TL32" text="此处未卖出任何货物：{REASON}。"/>
 		<string id="TL33" text="此处未买入任何货物：{REASON}。"/>
-		<string id="TL40" text="你的保护设置拦下了它"/>
+		<string id="TL381" text="它在你的从不卖出或从不买入清单上"/>
+		<string id="TL382" text="它在你的物品栏中被锁定"/>
+		<string id="TL383" text="你的独特物品和自制物品保护拦下了它"/>
+		<string id="TL384" text="可能有任务正在等你的牲畜"/>
+		<string id="TL385" text="驮兽和坐骑不按牲畜策略交易"/>
+		<string id="TL386" text="你的食物储备拦下了它"/>
 		<string id="TL41" text="你的类别策略把它排除在外"/>
 		<string id="TL42" text="这里的价格达不到你的利润要求"/>
 		<string id="TL43" text="你的钱袋或消费上限已经用尽"/>
@@ -60,7 +65,7 @@
 		<string id="TL78" text="库存：{COUNT}"/>
 		<string id="TL79" text="约 {DAYS} 天"/>
 		<string id="TL81" text="TradeLord 把 {GOLD} 第纳尔的利润记进了你的交易技能。"/>
-		<string id="TL82" text="载货已满，在你腾出载重之前，TradeLord 无法在这里买入。"/>
+		<string id="TL82" text="载货已满。招募更多士兵、购买更多马匹，或手动卖出货物。"/>
 		<string id="TL93" text="你携带的这种货物已经到了你设的上限"/>
 		<string id="TL94" text="此处没有任何交易：{REASON}。"/>
 		<string id="TL95" text="此处未卖出任何货物：{REASON}，也未买入任何货物：{SECOND}。"/>
