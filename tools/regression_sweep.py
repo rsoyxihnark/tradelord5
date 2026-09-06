@@ -247,6 +247,22 @@ def method_body(src, signature):
     _lost.append(signature)
     return ''
 
+SHARED_PASS_RULES = {
+    "CheapestFirst(": ('Trading.cs',
+        "private static List<(ItemRosterElement el, int price, int worth)> CheapestFirst"),
+    "WhatStopsBuying(": ('Trading.cs', "private static Block WhatStopsBuying"),
+    "UnitWorth(": ('Trading.cs', "private static int UnitWorth"),
+    "TradeMath.SkipTheUnitsYouPaidFor(": ('TradeMath.cs',
+        "public static bool SkipTheUnitsYouPaidFor"),
+}
+
+def pass_body(signature):
+    body = method_body(S['Trading.cs'], signature)
+    for call, (where, declared) in SHARED_PASS_RULES.items():
+        if call in body:
+            body += "\n" + method_body(S[where], declared)
+    return body
+
 def between(body, opening, closing):
     i = body.find(opening)
     if i < 0:
@@ -533,9 +549,9 @@ def the_trade_skill_gain_is_reported_in_one_line():
                 method_body(S['Trading.cs'], "internal static void FlushToasts"))
 
 def a_zero_cap_never_means_buy_nothing():
-    body = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
-    return ("if (Options.Current.BuyCapPerItem > 0 &&" in body
-            and "countThis >= Options.Current.BuyCapPerItem" in body
+    return ("if (s.BuyCapPerItem > 0 && taken.count >= s.BuyCapPerItem) return Block.ItemCountCap;"
+                in method_body(S['Trading.cs'], "private static Block WhatStopsBuying")
+            and "WhatStopsBuying(" in method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
             and "Options.Current.BuyCapPerItem > 0\n                        ? Options.Current.BuyCapPerItem : UncappedBuyProjection;"
                 in S['Ledger.cs']
             and "private const int UncappedBuyProjection" in S['Ledger.cs'])
@@ -781,7 +797,7 @@ def each_preset_gets_its_own_settings():
 def restocking_runs_between_selling_and_buying():
     menu = method_body(S['Trading.cs'], "private void OnSessionLaunched")
     entry = method_body(S['Trading.cs'], "private void OnSettlementEntered")
-    body = method_body(S['Trading.cs'], "public static void ExecuteResupply")
+    body = pass_body("public static void ExecuteResupply")
     return (ordered(menu, "ExecuteQuickSell(Settlement.CurrentSettlement);",
                     "ExecuteResupply(Settlement.CurrentSettlement);",
                     "ExecuteQuickBuy(Settlement.CurrentSettlement);")
@@ -790,8 +806,10 @@ def restocking_runs_between_selling_and_buying():
                         "ExecuteQuickBuy(settlement, quiet: true);")
             and "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);" in entry
             and "if (Options.Current.ResupplyFoodDays <= 0) return;" in body
-            and "!TradePolicy.IsStorableFood(it)" in body
-            and "!TradePolicy.MayBuy(it, locked, out _, toFeed: true)" in body
+            and "TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, locked, out _, toFeed: true)"
+                in method_body(S['Trading.cs'], "public static void ExecuteResupply")
+            and "if (el.Amount <= 0 || !wanted(it)) continue;" in body
+            and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
             and "price >= Budget()" in body
             and "int worth = TradePolicy.UnpaidWorth(it);" in body
             and body.count("price > worth") == 2
@@ -901,7 +919,12 @@ chk("1.3.2", "item lists case-insensitive", "StringComparer.OrdinalIgnoreCase" i
 chk("1.3.4", "per-item buy caps persist across clicks",
     "_boughtThisVisit.TryGetValue(item.StringId, out var prior)" in S['Trading.cs'])
 chk("1.3.4", "village last-unit clamp leaves one unit on the shelf",
-    "if (settlement.IsVillage && remaining <= 1) { tally.Note(Block.VillageLastUnit); break; }" in S['Trading.cs'])
+    "if (lastInVillage) return Block.VillageLastUnit;" in
+        method_body(S['Trading.cs'], "private static Block WhatStopsBuying") and
+    "settlement.IsVillage && remaining <= 1, simWeight);" in
+        method_body(S['Trading.cs'], "public static void ExecuteQuickBuy") and
+    all("if (settlement.IsVillage && remaining <= 1) break;" in method_body(S['Trading.cs'], one)
+        for one in ("public static void ExecuteResupply", "public static void ExecuteHaulage")))
 chk("1.3.5", "ledger ignores loot and automated passes",
     "if (!isTrading || TradeActionBehavior.AutomatedTradeInProgress) return;" in S['Ledger.cs'])
 chk("1.3.5", "visit counters reset on entry", "ResetVisit();" in S['Trading.cs'])
@@ -941,10 +964,13 @@ chk("1.3.8", "the buying pass takes only what a market in reach pays more for, a
            and "if (!TradePolicy.BuyAcceptable(price, realizable)) { tally.Note(Block.BelowMargin); break; }" in b)
     (method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")))
 chk("1.3.2", "the buying pass stops at the purse, the per-item denar cap, the carry weight and the herd",
-    (lambda b: "if (price > Budget()) { tally.Note(Block.BudgetSpent); break; }" in b
-           and "spentThis + price > Options.Current.BuyValueCapPerItem) { tally.Note(Block.ItemValueCap); break; }" in b
-           and "Carry.Room(MobileParty.MainParty) - simWeight) { tally.Note(Block.CarryWeight); break; }" in b
-           and "if (livestock && herdRoom <= 0) { tally.Note(Block.HerdFull); break; }" in b)
+    (lambda b: "if (price > budget) return Block.BudgetSpent;" in b
+           and "taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;" in b
+           and "Carry.Room(MobileParty.MainParty) - simWeight) return Block.CarryWeight;" in b
+           and "if (livestock && herdRoom <= 0) return Block.HerdFull;" in b)
+    (method_body(S['Trading.cs'], "private static Block WhatStopsBuying")) and
+    (lambda b: "Block capped = WhatStopsBuying(" in b
+           and "if (capped != Block.None) { tally.Note(capped); break; }" in b)
     (method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")))
 chk("1.3.14", "the selling pass stops when the merchant's till cannot cover the next unit, on a dry run too",
     "if ((sim ? simTill : market.Gold) < price) { tally.Note(Block.MerchantTillEmpty); break; }" in
@@ -1212,8 +1238,9 @@ chk("1.4.0", "the hotkey honors its modifiers on both the open and the close edg
     "Input.IsKeyReleased(key)" not in S['Panel.cs'])
 
 chk("1.4.1", "quick-buy prices the shelf only when there is a budget to spend",
-    "if (Budget() > 0)" in method_body(S['Trading.cs'], "public static void ExecuteQuickBuy") and
-    ordered(S['Trading.cs'], "int Budget()", "ItemRoster shopRoster = settlement.ItemRoster;"))
+    (lambda b: "if (Budget() > 0)" in b
+           and ordered(b, "int Budget()", "ItemRoster shopRoster = settlement.ItemRoster;"))
+    (method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")))
 chk("1.4.1", "a pass the gold-direction guard stopped does not blame the trade policy",
     S['Trading.cs'].count("else if (!directionError)") == 2 and
     S['Trading.cs'].count("else if (!quiet && !directionError)") == 0 and
@@ -1223,7 +1250,9 @@ chk("1.4.1", "the automatic path asks the same market question the menu does",
     "IsMarket" not in method_body(S['Trading.cs'], "private void OnSettlementEntered"))
 chk("1.4.1", "planner and executor apply the same village last-unit clamp",
     "StockOf(from, item) - (from.IsVillage ? 1 : 0)" in S['Ledger.cs'] and
-    "if (settlement.IsVillage && remaining <= 1) { tally.Note(Block.VillageLastUnit); break; }" in S['Trading.cs'])
+    "if (lastInVillage) return Block.VillageLastUnit;" in S['Trading.cs'] and
+    "settlement.IsVillage && remaining <= 1, simWeight);" in
+        method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
 
 chk("1.4.2", "a village the game will not trade in is not a destination either",
     "v.VillageState != Village.VillageStates.Normal" in
@@ -1552,7 +1581,12 @@ chk("1.5.6", "unreadable observations are pruned on both save and load, and none
 chk("1.5.6", "the message filter is armed only around a game call that talks back",
     the_filter_is_armed_only_around_a_game_call_that_talks())
 chk("1.5.6", "every place the filter comes down logs how many messages it suppressed",
-    S['Trading.cs'].count("ReportSilenced();") == 9 and
+    S['Trading.cs'].count("ReportSilenced();") == 3 and
+    "finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }" in
+        method_body(S['Trading.cs'], "private static void InAPass") and
+    "ReportSilenced();" in method_body(S['Trading.cs'], "internal static void ReleaseMessageFilter") and
+    "finally { CloseTransaction(); ReportSilenced(); }" in
+        method_body(S['Trading.cs'], "private static void CreditTradeSkill") and
     "NoteSilenced();" in method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines"))
 chk("1.5.12", "the message filter uses a depth counter, so nesting cannot disarm it early",
     "internal static bool InGameTransaction => _transactionDepth > 0;" in S['Trading.cs'] and
@@ -1603,11 +1637,18 @@ chk("1.5.6", "an unrecognized hotkey name is logged before falling back to T",
 chk("1.5.6", "the cargo marker only targets a town where the cargo has a price",
     "long bestValue = 0;" in method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo"))
 chk("1.5.7", "units with no cost basis are still sold when purchased units miss the margin",
-    "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) break;" in
-        method_body(S['Trading.cs'], "public static void ExecuteQuickSell") and
-    "remaining -= paidLeft;" in method_body(S['Trading.cs'], "public static void ExecuteQuickSell") and
-    method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
-        .count("tally.Note(Block.BelowMargin)") == 1)
+    (lambda b: b.count("return false;") == 1 and b.count("return true;") == 1
+           and "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;" in b
+           and ordered(b, "remaining -= paidLeft;", "paidLeft = 0;", "return true;"))
+    (method_body(S['TradeMath.cs'], "public static bool SkipTheUnitsYouPaidFor")) and
+    "SkipTheUnitsYouPaidFor" not in S['Ledger.cs'] and
+    (lambda b: "if (!TradeMath.SkipTheUnitsYouPaidFor(basisIsMarket, ref remaining, ref paidLeft)) break;" in b
+           and b.count("tally.Note(Block.BelowMargin)") == 1)
+    (method_body(S['Trading.cs'], "public static void ExecuteQuickSell")) and
+    "if (!TradeMath.SkipTheUnitsYouPaidFor(basisIsMarket, ref remaining, ref paidLeft)) break;" in
+        method_body(S['Trading.cs'], "public static void ExecuteRoadTrade") and
+    "Units_you_never_bought_are_still_offered_when_the_bought_ones_miss_the_margin" in MATHTESTS and
+    "A_lot_you_paid_for_outright_stops_at_the_margin_and_moves_nothing" in MATHTESTS)
 chk("1.5.8", "empty release notes fail the publish, and nothing is appended to the notes",
     "--notes-file release-notes.md" in WORKFLOW and
     empty_release_notes_are_rejected() and
@@ -1879,9 +1920,11 @@ chk("1.21.0", "loot with the hold switched off goes to the first market that can
                 "if (Options.Current.PreferBestSellTown)", "while (remaining > 0)") and
     S['Trading.cs'].count("Options.Current.BestSellTownTolerance") == 2)
 chk("1.6.12", "that worth is looked up once per good, not once per unit sold",
-    "if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);" in S['Trading.cs'] and
-    method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
-        .count("TradePolicy.UnpaidWorth(") == 1)
+    "if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);" in
+        method_body(S['Trading.cs'], "private static int UnitWorth") and
+    pass_body("public static void ExecuteQuickSell").count("TradePolicy.UnpaidWorth(") == 1 and
+    "UnitWorth(item, paid, basisIsMarket, paidLeft, ref unpaidWorth)" in
+        method_body(S['Trading.cs'], "public static void ExecuteQuickSell"))
 chk("1.6.12", "the tooltip and the sale summary now value an unbought good the same way",
     "var best = BestBuy(item);" in method_body(S['Ledger.cs'], "public int GetCostBasis") and
     "best.price > 0 ? best.price : item.Value" in method_body(S['Ledger.cs'], "public int GetCostBasis") and
@@ -2372,10 +2415,10 @@ def the_gate_lets_a_behaviour_neutral_change_through_but_never_a_version():
                         "a [no release] commit may not ship a version"))
 
 def a_good_you_already_hold_enough_of_is_not_bought_again():
-    body = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
+    body = pass_body("public static void ExecuteQuickBuy")
     return ("int holdCap = Options.Current.MaxHeldPerItem;" in body
             and "if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }" in body
-            and "held >= Options.Current.MaxHeldPerItem) { tally.Note(Block.HeldEnough); break; }" in body
+            and "if (s.MaxHeldPerItem > 0 && held >= s.MaxHeldPerItem) return Block.HeldEnough;" in body
             and body.count("held++;") == 2
             and "Block.HeldEnough" in method_body(S['Trading.cs'], "internal static TextObject Phrase"))
 
@@ -2958,7 +3001,7 @@ chk("1.25.0", "the settings file is read whether or not MCM is there, and it car
 def pack_animals_are_bought_between_restocking_and_the_profit_pass():
     menu = method_body(S['Trading.cs'], "private void OnSessionLaunched")
     entry = method_body(S['Trading.cs'], "private void OnSettlementEntered")
-    body = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
+    body = pass_body("public static void ExecuteHaulage")
     return (ordered(menu, "ExecuteResupply(Settlement.CurrentSettlement);",
                     "ExecuteHaulage(Settlement.CurrentSettlement);",
                     "ExecuteQuickBuy(Settlement.CurrentSettlement);")
@@ -2967,7 +3010,8 @@ def pack_animals_are_bought_between_restocking_and_the_profit_pass():
                         "ExecuteQuickBuy(settlement, quiet: true);")
             and "if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);" in entry
             and "if (!Options.Current.BuyHaulAnimals) return;" in body
-            and "!TradePolicy.MayHaul(it, locked)" in body
+            and "it => TradePolicy.MayHaul(it, locked)" in body
+            and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
             and "price >= Budget()" in body
             and "settlement.IsVillage && remaining <= 1" in body
             and "BuyAcceptable" not in body
@@ -2975,7 +3019,7 @@ def pack_animals_are_bought_between_restocking_and_the_profit_pass():
 
 def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
     haul = method_body(S['Trading.cs'], "internal static bool MayHaul")
-    body = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
+    body = pass_body("public static void ExecuteHaulage")
     fence = between(S['Trading.cs'], "internal static bool IsHaulAnimalOrMount", ";")
     carrying = between(S['Trading.cs'], "internal static bool IsHaulAnimal", ";")
     spare = between(S['Trading.cs'], "internal static bool IsSpareMount", ";")
@@ -2997,7 +3041,7 @@ def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
             and "Carry.Room" not in body)
 
 def a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_down_to_the_reserve():
-    body = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
+    body = pass_body("public static void ExecuteHaulage")
     return ("int worth = TradePolicy.UnpaidWorth(it);" in body
             and body.count("price > worth") == 2
             and "Ceiling" not in body
@@ -3088,7 +3132,7 @@ def a_horse_a_footman_can_ride_costs_the_herd_nothing():
             and "while (remaining > 0 && herdRoom > 0)" in haul)
 
 def a_share_of_the_hold_caps_one_good_and_ships_off():
-    buy = method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")
+    buy = pass_body("public static void ExecuteQuickBuy")
     return (option_default('MaxHeldShare') == '0f'
             and "_o.MaxHeldShare" in M
             and "Carry.Capacity(MobileParty.MainParty) * Options.Current.MaxHeldShare" in buy
@@ -3153,28 +3197,29 @@ def a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod():
             and "ForgetRoadMarket();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 
 def a_caravan_trade_obeys_every_rule_a_market_visit_does():
-    body = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
+    body = pass_body("public static void ExecuteRoadTrade")
     return ("TradePolicy.MaySell(el, locked, keepBack, out int keep)" in body
             and "TradePolicy.MayBuy(it, locked) || !TradePolicy.MayRoundTrip(it, locked)" in body
             and "TradePolicy.ProfitAcceptable(worth, price)" in body
             and "TradePolicy.BuyAcceptable(price, realizable)" in body
             and "TradePolicy.Realizable(elsewhere.Item2)" in body
-            and "price > Budget()" in body
-            and "Carry.Room(party) - simWeight" in body
-            and "Options.Current.BuyCapPerItem" in body
-            and "Options.Current.BuyValueCapPerItem" in body
+            and "WhatStopsBuying(item, price, Budget(), (countThis, spentThis), held, shareCap," in body
+            and "Carry.Room(MobileParty.MainParty) - simWeight" in body
+            and "s.BuyCapPerItem" in body
+            and "s.BuyValueCapPerItem" in body
             and "if (StillSettling(quiet: false)) return;" in body
             and "Options.Current.PreferBestSellTown" in body
             and "Options.Current.BestSellTownTolerance" in body
             and "if (price <= 0 || price < holdFloor) break;" in body
             and ordered(body, "if (!TradePolicy.ProfitAcceptable(worth, price))",
-                        "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) break;",
+                        "if (!TradeMath.SkipTheUnitsYouPaidFor(basisIsMarket, ref remaining, ref paidLeft)) break;",
+                        "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;",
                         "remaining -= paidLeft;", "paidLeft = 0;")
-            and "Options.Current.MaxHeldPerItem" in body
+            and "s.MaxHeldPerItem" in body
             and "(held + 1) * item.Weight > shareCap" in body
             and "Carry.Capacity(party) * Options.Current.MaxHeldShare" in body
             and "herdRoom = HerdRoomForLivestock(party);" in body
-            and "if (livestock && herdRoom <= 0) break;" in body
+            and "if (livestock && herdRoom <= 0) return Block.HerdFull;" in body
             and body.count("if (livestock) herdRoom--;") == 2
             and body.count("held++;") == 2
             and "_spentThisVisit" not in body
@@ -3787,7 +3832,10 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and "SimVisit.NoteShed(rank == RankHaulAnimal, rank != RankLivestock);" in relief
             and "SimVisit.NoteShed(herdRank == RankHaulAnimal, herdRank != RankLivestock);" in sell
             and t.count("SimVisit.NoteHerdTaken();") == 2
-            and t.count("SoldHereAlready(sim,") == 3
+            and t.count("SoldHereAlready(sim,") == 2
+            and "SoldHereAlready(sim, it.StringId)" in method_body(t,
+                    "private static List<(ItemRosterElement el, int price, int worth)> CheapestFirst")
+            and "CheapestFirst(" in larder and "CheapestFirst(" in haul
             and t.count("BoughtHereAlready(sim,") == 1
             and t.count("PurchasesHere(sim,") == 1)
 
