@@ -670,33 +670,74 @@ namespace TradeLord
     internal static class Parley
     {
         internal const string OwnState = "tradelord_bandit_pass_asked";
+        private const string BandAsks = "bandit_start_defender_2";
         private const string BandOpens = "bandit_start_defender";
+        private const int Attempts = 20;
+        private const int TicksApart = 30;
 
-        internal static void HangWhereTheBandAnswers(ConversationSentence asked)
+        private static ConversationSentence _asked;
+        private static bool _hung;
+        private static int _tries;
+        private static int _ticks;
+
+        internal static void Remember(ConversationSentence asked)
         {
-            if (asked == null) { Unhung("TradeLord's own line was not taken up"); return; }
-            ConversationManager talk = Campaign.Current?.ConversationManager;
+            _asked = asked;
+            _hung = false;
+            _tries = 0;
+            _ticks = 0;
+        }
+
+        internal static void Forget() => Remember(null);
+
+        internal static void HangWhereTheBandAnswers()
+        {
+            if (_hung || _asked == null || _tries >= Attempts) return;
+            if (Campaign.Current == null) return;
+            if (_ticks++ % TicksApart != 0) return;
+            _tries++;
+            ConversationManager talk = Campaign.Current.ConversationManager;
             if (talk == null) { Unhung("the campaign is not talking to anyone yet"); return; }
             var said = typeof(ConversationManager).GetField(
                 "_sentences", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(talk)
                 as List<ConversationSentence>;
             if (said == null) { Unhung("this game version keeps its lines out of reach"); return; }
-            ConversationSentence opener = null;
+            ConversationSentence asks = null, opens = null;
+            var named = new List<string>();
             foreach (ConversationSentence line in said)
-                if (line != null && line.Id == BandOpens) { opener = line; break; }
-            if (opener == null) { Unhung("no band on this game version opens with " + BandOpens); return; }
+            {
+                string id = line?.Id;
+                if (id == null) continue;
+                if (id == BandAsks) asks = line;
+                else if (id == BandOpens) opens = line;
+                else if (named.Count < 8 && id.IndexOf("bandit", StringComparison.OrdinalIgnoreCase) >= 0)
+                    named.Add(id);
+            }
+            int token = asks != null ? asks.InputToken : opens != null ? opens.OutputToken : -1;
+            if (token < 0)
+            {
+                Unhung("none of the " + said.Count + " lines the game has written is the one a band "
+                       + "opens with" + (named.Count == 0 ? "" : ", and the bandit lines it does have are "
+                       + string.Join(", ", named.ToArray())));
+                return;
+            }
             MethodInfo hang = typeof(ConversationSentence).GetMethod(
                 "set_InputToken", BindingFlags.Instance | BindingFlags.NonPublic);
             if (hang == null) { Unhung("a line cannot be moved on this game version"); return; }
             talk.DisableSentenceSort();
-            hang.Invoke(asked, new object[] { opener.OutputToken });
+            hang.Invoke(_asked, new object[] { token });
             talk.EnableSentenceSort();
-            Log.Write("free passage: the option now sits with the answers a band's own talk offers");
+            _hung = true;
+            Log.Write("free passage: the option now sits with the answers a band's own talk offers, "
+                      + "found on try " + _tries);
         }
 
-        private static void Unhung(string why) =>
+        private static void Unhung(string why)
+        {
+            if (_tries < Attempts) return;
             Log.Write("free passage: no option is offered to a band, because " + why
                       + " - a band is met exactly as the game means it to be");
+        }
     }
 
     public class TradeActionBehavior : CampaignBehaviorBase
@@ -1041,7 +1082,7 @@ namespace TradeLord
                 starter.AddDialogLine("tradelord_bandit_pass_reply", "tradelord_bandit_pass_reply", "close_window",
                     Tongue.Text("{=TL113}Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!").ToString(),
                     null, () => Guard.Run("Action.Getaway", LetPlayerGo), 200);
-                Parley.HangWhereTheBandAnswers(asked);
+                Parley.Remember(asked);
             });
 
         private static bool BanditMet()
@@ -1066,7 +1107,7 @@ namespace TradeLord
 
         internal static void WatchEncounter()
         {
-            if (Campaign.Current == null) { _handledEncounter = null; return; }
+            if (Campaign.Current == null) { _handledEncounter = null; Parley.Forget(); return; }
             object here = PlayerEncounter.Current;
             if (here == null) { _handledEncounter = null; return; }
             if (_handledEncounter == here) return;

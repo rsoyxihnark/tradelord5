@@ -3147,7 +3147,7 @@ def a_road_party_is_traded_with_the_moment_it_is_met():
     return ('Guard.Run("Tick.Encounter", TradeActionBehavior.WatchEncounter);' in
                 method_body(S['SubModule.cs'], "protected override void OnApplicationTick")
             and "Patch_TradeOnMeeting" not in ALL
-            and ordered(watch, "if (Campaign.Current == null) { _handledEncounter = null; return; }",
+            and ordered(watch, "if (Campaign.Current == null) { _handledEncounter = null; Parley.Forget(); return; }",
                         "object here = PlayerEncounter.Current;")
             and "if (here == null) { _handledEncounter = null; return; }" in watch
             and "if (_handledEncounter == here) return;" in watch
@@ -3161,7 +3161,7 @@ def bandits_are_offered_the_getaway_without_a_menu_of_their_own():
     asked = method_body(S['Trading.cs'], "private void AddBanditLines")
     return ('starter.AddPlayerLine(\n                    "tradelord_bandit_pass", Parley.OwnState,' in asked
             and '"tradelord_bandit_pass_reply", "tradelord_bandit_pass_reply", "close_window"' in asked
-            and "Parley.HangWhereTheBandAnswers(asked);" in asked
+            and "Parley.Remember(asked);" in asked
             and "InformationManager.ShowInquiry" not in asked
             and not any(s in strings_declared() for s in ("TL378", "TL379", "TL380"))
             and "ForgetEncounter" in S['SubModule.cs']
@@ -4016,19 +4016,41 @@ def the_free_passage_is_a_line_in_the_bands_own_talk():
     parley = between(S['Trading.cs'], "internal static class Parley",
                      "public class TradeActionBehavior")
     return ('internal const string OwnState = "tradelord_bandit_pass_asked";' in parley
+            and 'private const string BandAsks = "bandit_start_defender_2";' in parley
             and 'private const string BandOpens = "bandit_start_defender";' in parley
             and 'typeof(ConversationManager).GetField(' in hang
             and 'typeof(ConversationSentence).GetMethod(' in hang
             and ordered(hang, "talk.DisableSentenceSort();",
-                        "hang.Invoke(asked, new object[] { opener.OutputToken });",
+                        "hang.Invoke(_asked, new object[] { token });",
                         "talk.EnableSentenceSort();")
-            and hang.count("Unhung(") == 5
+            and hang.count("Unhung(") == 4
             and "a band is met exactly as the game means it to be" in parley)
+
+def the_option_waits_for_the_game_to_finish_writing_its_lines():
+    hang = method_body(S['Trading.cs'], "internal static void HangWhereTheBandAnswers")
+    parley = between(S['Trading.cs'], "internal static class Parley",
+                     "public class TradeActionBehavior")
+    unhung = method_body(S['Trading.cs'], "private static void Unhung")
+    return ('Guard.Run("Tick.Parley", Parley.HangWhereTheBandAnswers);' in
+                method_body(S['SubModule.cs'], "protected override void OnApplicationTick")
+            and "Parley.HangWhereTheBandAnswers(" not in
+                method_body(S['Trading.cs'], "private void AddBanditLines")
+            and ordered(hang, "if (_hung || _asked == null || _tries >= Attempts) return;",
+                        "if (Campaign.Current == null) return;",
+                        "if (_ticks++ % TicksApart != 0) return;",
+                        "_tries++;")
+            and "_hung = true;" in hang
+            and "int token = asks != null ? asks.InputToken : opens != null ? opens.OutputToken : -1;" in hang
+            and "if (_tries < Attempts) return;" in unhung
+            and "private const int Attempts = 20;" in parley
+            and 'named.Add(id);' in hang)
 
 chk("1.38.0", "asking a band for free passage never ends an encounter the band is still talking through",
     the_free_passage_never_ends_an_encounter_a_band_is_still_talking_through())
 chk("1.38.0", "the free passage is asked for as a line in the band's own talk, hung where its own answers hang",
     the_free_passage_is_a_line_in_the_bands_own_talk())
+chk("1.38.3", "the option waits for the game to finish writing its own lines, and says what it found if it cannot",
+    the_option_waits_for_the_game_to_finish_writing_its_lines())
 
 
 def every_handler_the_game_calls_guards_its_own_work():
