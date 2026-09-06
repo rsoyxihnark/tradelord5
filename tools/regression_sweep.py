@@ -3146,7 +3146,8 @@ def a_road_party_is_traded_with_the_moment_it_is_met():
     return ('Guard.Run("Tick.Encounter", TradeActionBehavior.WatchEncounter);' in
                 method_body(S['SubModule.cs'], "protected override void OnApplicationTick")
             and "Patch_TradeOnMeeting" not in ALL
-            and "object here = PlayerEncounter.Current;" in watch
+            and ordered(watch, "if (Campaign.Current == null) { _handledEncounter = null; return; }",
+                        "object here = PlayerEncounter.Current;")
             and "if (here == null) { _handledEncounter = null; return; }" in watch
             and "if (_handledEncounter == here) return;" in watch
             and "if (met == null) return;" in watch
