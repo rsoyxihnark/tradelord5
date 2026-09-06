@@ -50,6 +50,7 @@ namespace TradeLord
         public override void RegisterEvents()
         {
             CampaignEvents.SettlementEntered.AddNonSerializedListener(this, OnSettlementEntered);
+            CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
             CampaignEvents.PlayerInventoryExchangeEvent.AddNonSerializedListener(this, OnPlayerInventoryExchange);
         }
 
@@ -103,6 +104,36 @@ namespace TradeLord
         private void PruneSettledPurchases() =>
             _purchases?.RemoveAll(rec => rec == null || rec.ItemId == null || rec.Count <= 0);
 
+        private void MatchPurchasesToWhatIsHeld()
+        {
+            ItemRoster carried = MobileParty.MainParty?.ItemRoster;
+            if (carried == null || _purchases.Count == 0) return;
+            var held = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < carried.Count; i++)
+            {
+                ItemRosterElement el = carried.GetElementCopyAtIndex(i);
+                ItemObject item = el.EquipmentElement.Item;
+                if (item == null || el.Amount <= 0) continue;
+                held.TryGetValue(item.StringId, out int had);
+                held[item.StringId] = had + el.Amount;
+            }
+            int goods = 0, units = 0;
+            for (int i = 0; i < _purchases.Count; i++)
+            {
+                PurchaseRecord rec = _purchases[i];
+                if (rec?.ItemId == null || rec.Count <= 0) continue;
+                held.TryGetValue(rec.ItemId, out int have);
+                if (rec.Count <= have) continue;
+                int gone = rec.Count - have;
+                goods++;
+                units += gone;
+                TradeMath.DrainSale(rec, gone);
+            }
+            if (goods > 0)
+                Log.Write("purchase record: " + units + " unit(s) of " + goods + " good(s) left the party " +
+                          "without being sold, so what was paid for them is no longer held against a resale");
+        }
+
         private Dictionary<string, PurchaseRecord> Paid
         {
             get { if (_paid == null) Reindex(); return _paid; }
@@ -123,6 +154,8 @@ namespace TradeLord
             if (party != MobileParty.MainParty) return;
             Guard.Run("Ledger.OnSettlementEntered", () => CaptureSettlement(settlement));
         }
+
+        private void OnDailyTick() => Guard.Run("Ledger.OnDailyTick", MatchPurchasesToWhatIsHeld);
 
         private void OnPlayerInventoryExchange(
             List<(ItemRosterElement, int)> purchased,
