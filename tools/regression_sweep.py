@@ -1150,7 +1150,8 @@ chk("1.3.29", "the ledger panel's header columns match its row template",
 chk("1.3.30", "the purchase index is rebuilt in one place",
     S['Ledger.cs'].count("private void Reindex()") == 1 and
     "ToDictionary" not in S['Ledger.cs'] and
-    "Reindex();" in method_body(S['Ledger.cs'], "public override void SyncData"))
+    'Guard.Run("Ledger.Reindex", Reindex);' in
+        method_body(S['Ledger.cs'], "public override void SyncData"))
 chk("1.3.30", "a damaged purchase record does not throw during save load",
     "if (rec?.ItemId != null) _paid[rec.ItemId] = rec;" in
     method_body(S['Ledger.cs'], "private void Reindex"))
@@ -1665,7 +1666,7 @@ chk("1.5.8", "each language-file entry matches the source fallback text",
     shipped_text_matches_the_fallback())
 chk("1.5.9", "panel-owned map pins survive a save/load cycle",
     'dataStore.SyncData("TradeLord_PanelPins", ref _pinnedTowns);' in S['Trading.cs'] and
-    "if (!dataStore.IsLoading) _pinnedTowns = LedgerPanel.PinnedIds();" in
+    'Guard.Run("Visit.PinsForSave", () => _pinnedTowns = LedgerPanel.PinnedIds());' in
         method_body(S['Trading.cs'], "public override void SyncData") and
     "LedgerPanel.RestorePins(_pinnedTowns)" in
         method_body(S['Trading.cs'], "private void OnSessionLaunched") and
@@ -1839,7 +1840,7 @@ chk("1.6.11", "a purchase record with nothing left in it is dropped rather than 
     re.search(r'PruneSettledPurchases\(\) =>\s*_purchases\?\.RemoveAll\(rec => rec == null \|\| '
               r'rec\.ItemId == null \|\| rec\.Count <= 0\);', S['Ledger.cs']) is not None)
 chk("1.6.11", "the purchase index is rebuilt after a prune, never left pointing at dropped records",
-    (lambda b: ordered_last(b, "PruneExpired();", "Reindex();"))
+    (lambda b: ordered_last(b, "PruneExpired();", 'Guard.Run("Ledger.Reindex", Reindex);'))
     (method_body(S['Ledger.cs'], "public override void SyncData")))
 chk("1.6.11", "every reader of a purchase record already requires units left, so dropping a spent one changes nothing",
     all("rec.Count > 0" in line for line in
@@ -4028,6 +4029,58 @@ chk("1.38.0", "asking a band for free passage never ends an encounter the band i
     the_free_passage_never_ends_an_encounter_a_band_is_still_talking_through())
 chk("1.38.0", "the free passage is asked for as a line in the band's own talk, hung where its own answers hang",
     the_free_passage_is_a_line_in_the_bands_own_talk())
+
+
+def every_handler_the_game_calls_guards_its_own_work():
+    settled = ("private void OnConversationEnded(IEnumerable<CharacterObject> spoke)"
+               " => _tradedWith = null;")
+    held = 0
+    for f in ('Trading.cs', 'Ledger.cs'):
+        for name in re.findall(r'AddNonSerializedListener\(this, (\w+)\)', S[f]):
+            if name == 'OnConversationEnded':
+                continue
+            body = method_body(S[f], "private void " + name)
+            if not body or "Guard.Run" not in body:
+                return False
+            held += 1
+    return held == 9 and settled in S['Trading.cs']
+
+def a_save_is_never_failed_by_the_mods_own_bookkeeping():
+    trade = method_body(S['Trading.cs'], "public override void SyncData")
+    ledger = method_body(S['Ledger.cs'], "public override void SyncData")
+    return ('Guard.Run("Visit.PinsForSave", () => _pinnedTowns = LedgerPanel.PinnedIds());' in trade
+            and trade.count("LedgerPanel.PinnedIds()") == 1
+            and 'Guard.Run("Ledger.WriteForSave", () =>' in ledger
+            and 'Guard.Run("Ledger.Reindex", Reindex);' in ledger
+            and ordered(ledger, "LedgerCodec.WriteLedger(_ledger);",
+                        "LedgerCodec.WritePurchases(_purchases);",
+                        'dataStore.SyncData("TradeLord_LedgerText"')
+            and trade.count("dataStore.SyncData(") == 3
+            and ledger.count("dataStore.SyncData(") == 3)
+
+def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
+    arrays = dict(re.findall(r'private static readonly string\[\] (\w+) =\s*\{(.*?)\};', M, re.S))
+    counted = dict((name, body.count('"') // 2) for name, body in arrays.items())
+    bounds = dict((n, (float(low), float(high))) for n, low, high in
+                  re.findall(r'\{ "(\w+)", new double\[\] \{ ([\d.]+), ([\d.]+) \} \}', S['Migrate.cs']))
+    shown = {'Language': 'LanguageWords', 'FoodPolicy': 'PolicyWords',
+             'CraftingPolicy': 'PolicyWords', 'LivestockPolicy': 'PolicyWords',
+             'CostBasisMode': 'BasisWords', 'KeepSmeltableWeapons': 'SmeltableWords'}
+    if len(bounds) < 20:
+        return False
+    for setting, array in shown.items():
+        if setting not in bounds or counted.get(array, 0) < 3:
+            return False
+        if bounds[setting] != (0.0, float(counted[array] - 1)):
+            return False
+    return True
+
+chk("1.38.2", "every handler the game calls into holds its own work behind the guard",
+    every_handler_the_game_calls_guards_its_own_work())
+chk("1.38.2", "saving a campaign is never failed by TradeLord's own bookkeeping",
+    a_save_is_never_failed_by_the_mods_own_bookkeeping())
+chk("1.38.2", "every setting shown as a list of choices is held to the number of choices it ships",
+    every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

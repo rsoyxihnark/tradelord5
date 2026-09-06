@@ -787,7 +787,8 @@ namespace TradeLord
 
         public override void SyncData(IDataStore dataStore)
         {
-            if (!dataStore.IsLoading) _pinnedTowns = LedgerPanel.PinnedIds();
+            if (!dataStore.IsLoading)
+                Guard.Run("Visit.PinsForSave", () => _pinnedTowns = LedgerPanel.PinnedIds());
             dataStore.SyncData("TradeLord_TrackedTown", ref _trackedTown);
             dataStore.SyncData("TradeLord_PanelPins", ref _pinnedTowns);
             dataStore.SyncData("TradeLord_AutomationNotice", ref _announcedAutomation);

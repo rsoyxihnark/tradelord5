@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.38.2
+
+- Saving a campaign can no longer be failed by TradeLord's own note-keeping: if its ledger cannot be written down as the game saves, the save goes through and what went wrong is written to TradeLord.log instead.
+
 ## 1.38.1
 
 - Fixed an error TradeLord wrote to its log on every startup, and went on writing until a campaign was loaded, because it looked for an encounter before there was a game to have one in.
