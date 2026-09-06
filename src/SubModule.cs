@@ -54,6 +54,7 @@ namespace TradeLord
             Guard.Run("Tick.FlushToasts", TradeActionBehavior.FlushToasts);
             Guard.Run("Tick.Settings", Config.Flush);
             Guard.Run("Tick.Encounter", TradeActionBehavior.WatchEncounter);
+            Guard.Run("Tick.Parley", Parley.HangWhereTheBandAnswers);
             LedgerPanel.Tick();
         }
 
