@@ -1238,7 +1238,7 @@ chk("1.5.0", "one definition of the resale haircut, walk and planner alike",
 chk("1.5.0", "observed mode does not read live market supply/demand for projections",
     "if (projecting && (!Options.Current.Omniscient || !Options.Current.BulkSimulation)) return;" in
     method_body(S['Market.cs'],
-                "internal Shelf(Settlement site, ItemObject item, bool selling, int quoted, bool projecting)"))
+                "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting)"))
 chk("1.5.0", "only a town shelf can be advanced, because only a town publishes the inputs",
     "Town town = site != null && site.IsTown ? site.Town : null;" in S['Market.cs'] and
     "if (town == null" in S['Market.cs'] and
@@ -1531,10 +1531,24 @@ chk("1.5.12", "ending a campaign clears the message filter and per-visit state",
     all(f in method_body(S['Trading.cs'], "internal static void ForgetVisit")
         for f in ("ResetVisit();", "_transactionDepth = 0;", "AutomatedTradeInProgress = false;")))
 chk("1.5.6", "a manual purchase is recorded at the price the shelf charged at the time",
-    "Bulk.PricePaid(here, item, count, unit)" in
+    "Bulk.PricePaid(here, element.EquipmentElement, count, unit)" in
         method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange") and
     "shelf.Restock(units);" in method_body(S['Market.cs'], "internal static int PricePaid") and
     "shelf.Restock(-1);" in method_body(S['Market.cs'], "internal static int PricePaid"))
+chk("1.36.2", "the rewind prices the very thing that was bought, quality and all, and a route walk still prices the plain good",
+    (lambda paid, shelf, ladder:
+        "internal static int PricePaid(Settlement site, EquipmentElement bought, int units, int quotedUnitPrice)"
+            in S['Market.cs']
+        and "if (site == null || bought.Item == null) return flat;" in paid
+        and "new Shelf(site, bought, selling: false, quoted: quotedUnitPrice, projecting: false)" in paid
+        and "_element = stocked;" in shelf
+        and "new EquipmentElement" not in shelf
+        and "new Shelf(site, new EquipmentElement(item), selling, quoted, projecting: true);" in ladder
+        and S['Market.cs'].count("new EquipmentElement(") == 1)
+    (method_body(S['Market.cs'], "internal static int PricePaid"),
+     method_body(S['Market.cs'],
+                 "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting)"),
+     method_body(S['Market.cs'], "internal Ladder(Settlement site, ItemObject item, bool selling, int quoted)")))
 chk("1.5.6", "only the purchase-price rewind reads a shelf outside a projection",
     S['Market.cs'].count("projecting: false") == 1 and
     "projecting: false" in method_body(S['Market.cs'], "internal static int PricePaid") and
@@ -3152,7 +3166,10 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
             and "!item.HasHorseComponent || item.NotMerchandise" in spare
             and "Listed(s.NeverSet, item)" in spare
             and "s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)" in spare
-            and "IsLocked(lockedKeys, new EquipmentElement(item))" in spare
+            and "IsLocked(lockedKeys, held)" in spare
+            and "internal static bool MayShedForHerd(EquipmentElement held, ISet<string> lockedKeys)"
+                in S['Trading.cs']
+            and "!TradePolicy.MayShedForHerd(el.EquipmentElement, locked)" in relief
             and "if (!Options.Current.SellSpareMounts) return;" in relief
             and "int shed = DrivenAnimalsToShed(party);" in relief
             and "if (shed <= 0) return;" in relief
