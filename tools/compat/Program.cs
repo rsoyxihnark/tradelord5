@@ -29,6 +29,7 @@ namespace TradeLord.Compat
         private static readonly (string type, string member)[] ReflectedMethods =
         {
             ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "GetHerdingModifier"),
+            ("TaleWorlds.CampaignSystem.Conversation.ConversationSentence", "set_InputToken"),
         };
 
         private static readonly (string type, string member)[] ReflectedFields =
@@ -40,6 +41,7 @@ namespace TradeLord.Compat
             (Issues + "HeadmanVillageNeedsDraughtAnimalsIssueBehavior+HeadmanVillageNeedsDraughtAnimalsIssueQuest", "_requestedAnimalAmount"),
             (Issues + "LordNeedsHorsesIssueBehavior+LordNeedsHorsesIssueQuest", "_mountObjectToBeDelivered"),
             (Issues + "LordNeedsHorsesIssueBehavior+LordNeedsHorsesIssueQuest", "_numMountsToBeDelivered"),
+            ("TaleWorlds.CampaignSystem.Conversation.ConversationManager", "_sentences"),
         };
 
         private static readonly string[] Enums =
