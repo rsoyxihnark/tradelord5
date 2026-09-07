@@ -4434,7 +4434,7 @@ def what_a_good_cost_you_is_carried_by_one_value():
             and t.count("PaidLeft--;") == 1
             and "UnitWorth" not in t)
 
-chk("1.40.0", "every market pass is opened the same way and carries the market, the party and its own books in one object",
+chk("1.40.1", "every market pass is opened the same way and carries the market, the party and its own books in one object",
     every_market_pass_is_opened_and_carried_by_one_object())
 def what_a_pass_moved_in_gold_is_worked_out_in_two_places():
     t = S['Trading.cs']
@@ -4464,9 +4464,9 @@ def what_a_pass_moved_in_gold_is_worked_out_in_two_places():
                      "public static void ExecuteHaulage",
                      "public static void ExecuteQuickBuy")))
 
-chk("1.40.0", "what a good cost you is one value that every sale reads, draws down and asks what a unit is worth",
+chk("1.40.1", "what a good cost you is one value that every sale reads, draws down and asks what a unit is worth",
     what_a_good_cost_you_is_carried_by_one_value())
-chk("1.40.0", "what a pass took in and what it paid out are each worked out in one place, on a dry run and a real one alike",
+chk("1.40.1", "what a pass took in and what it paid out are each worked out in one place, on a dry run and a real one alike",
     what_a_pass_moved_in_gold_is_worked_out_in_two_places())
 chk("1.40.0", "trading with a caravan or villagers on the road is silenced by the same setting a market visit is, and the setting says so",
     a_meeting_on_the_road_answers_to_the_silence_setting())
