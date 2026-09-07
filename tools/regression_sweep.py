@@ -810,7 +810,7 @@ def restocking_runs_between_selling_and_buying():
                 in method_body(S['Trading.cs'], "public static void ExecuteResupply")
             and "if (el.Amount <= 0 || !wanted(it)) continue;" in body
             and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
-            and "price >= Budget()" in body
+            and "price > Budget()" in body
             and "int worth = TradePolicy.UnpaidWorth(it);" in body
             and body.count("price > worth") == 2
             and "settlement.IsVillage && remaining <= 1" in body
@@ -3039,7 +3039,7 @@ def pack_animals_are_bought_between_restocking_and_the_profit_pass():
             and "if (!Options.Current.BuyHaulAnimals) return;" in body
             and "it => TradePolicy.MayHaul(it, locked)" in body
             and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
-            and "price >= Budget()" in body
+            and "price > Budget()" in body
             and "settlement.IsVillage && remaining <= 1" in body
             and "BuyAcceptable" not in body
             and "BestSell" not in body)
@@ -3067,14 +3067,14 @@ def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
             and "FreeMountRoom" not in ALL
             and "Carry.Room" not in body)
 
-def a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_down_to_the_reserve():
+def a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_below_the_reserve():
     body = pass_body("public static void ExecuteHaulage")
     return ("int worth = TradePolicy.UnpaidWorth(it);" in body
             and body.count("price > worth") == 2
             and "Ceiling" not in body
             and "CargoIsFull" not in ALL
             and "PackAnimalFullCargoPremium" not in S['Trading.cs']
-            and "price >= Budget()" in body
+            and "price > Budget()" in body
             and option_default('BuyHaulAnimals') == 'true'
             and "_o.BuyHaulAnimals" in M
             and "PackAnimalFullCargoPremium" not in M
@@ -3133,8 +3133,8 @@ chk("1.18.0", "pack animals are bought after the larder is filled and before the
     pack_animals_are_bought_between_restocking_and_the_profit_pass())
 chk("1.19.0", "only an animal that carries for you is bought that way, the herd guard still binds it and the carry weight never does",
     only_a_carrying_animal_is_hauled_and_the_herd_still_binds())
-chk("1.30.0", "a haul animal is bought only where it costs no more than the cheapest TradeLord has seen, and never with the last of the gold reserve",
-    a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_down_to_the_reserve())
+chk("1.30.0", "a haul animal is bought only where it costs no more than the cheapest TradeLord has seen, and never below the gold reserve",
+    a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_below_the_reserve())
 chk("1.36.0", "the getaway is offered as you meet a band, and leaving holds both sides off each other",
     the_getaway_ships_on_names_no_cheat_and_only_answers_bandits())
 chk("1.19.0", "the smeltable hint names all three choices and says looted weapons are held too",
@@ -4168,6 +4168,18 @@ chk("1.39.0", "selling an animal to get back up to speed counts towards your pro
     getting_back_up_to_speed_credits_what_it_makes())
 chk("1.39.0", "the markets on offer are worked out again as the party moves, not only when the hour turns",
     the_rankings_are_dropped_when_the_party_moves_not_only_when_the_hour_turns())
+
+def every_buying_pass_stops_at_the_same_edge_of_the_gold_reserve():
+    larder = pass_body("public static void ExecuteResupply")
+    stable = pass_body("public static void ExecuteHaulage")
+    capped = method_body(S['Trading.cs'], "private static Block WhatStopsBuying")
+    return ("if (price > Budget()) break;" in larder
+            and "if (price > Budget()) break;" in stable
+            and "price >= Budget()" not in S['Trading.cs']
+            and "if (price > budget) return Block.BudgetSpent;" in capped)
+
+chk("1.39.1", "restocking, buying a haul animal and buying for profit all stop at the gold reserve rather than a denar above it",
+    every_buying_pass_stops_at_the_same_edge_of_the_gold_reserve())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
