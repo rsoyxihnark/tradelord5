@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.39.1
+
+- Restocking food and buying a haul animal now spend down to your gold reserve, the way buying for profit already did, instead of always leaving a denar above it.
+
 ## 1.39.0
 
 - Selling an animal to get your party back up to speed now counts towards the profit TradeLord has made you and earns Trade skill, the way its other sales already did.
