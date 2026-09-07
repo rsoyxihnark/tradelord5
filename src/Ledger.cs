@@ -232,7 +232,7 @@ namespace TradeLord
             _capturedHour = hour;
             _capturedTown = settlement.StringId;
             _capturedGen = Options.Generation;
-            ForgetMarketRankings();
+            ForgetPricedRankings();
             if (Options.Current.Omniscient) return;
             float day = (float)CampaignTime.Now.ToDays;
             foreach (ItemObject item in Items.AllTradeGoods)
@@ -406,8 +406,13 @@ namespace TradeLord
 
         internal void ForgetMarketRankings()
         {
-            _marketCache.Clear();
+            ForgetPricedRankings();
             _candidates = null;
+        }
+
+        private void ForgetPricedRankings()
+        {
+            _marketCache.Clear();
             _routes = null;
         }
 
