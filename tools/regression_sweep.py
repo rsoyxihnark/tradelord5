@@ -1058,7 +1058,10 @@ chk("1.3.15", "recurring errors reported once", "is recurring - not reporting it
 chk("1.3.16", "hold-for-best-market re-tested per chunk",
     "if (price < holdFloor) { tally.Note(Block.BelowBestMarket); break; }" in S['Trading.cs'])
 chk("1.3.16", "food branch falls through to the sell rules",
-    "if (el.Amount <= keepCount) { why = Block.FoodReserve; return false; }" in S['Trading.cs'])
+    ordered(method_body(S['Trading.cs'], "internal static bool MaySell(ItemRosterElement el"),
+            "foodKeep[item] = reserved - keepCount;",
+            "if (el.Amount <= keepCount)",
+            "            return true;"))
 chk("1.3.17", "scan radius reaches the marker", "LedgerBehavior.WithinRadius(s)" in S['Trading.cs'])
 chk("1.3.17", "haircut always filters routes",
     "float realizable = TradePolicy.Realizable(sellPrice);" in S['Ledger.cs'] and
@@ -1191,9 +1194,12 @@ chk("1.3.33", "a fully sold stack clears its cost basis",
     method_body(S['TradeMath.cs'], "public static void DrainSale"))
 chk("1.3.33", "automated trading recaptures prices after it moves them",
     S['Trading.cs'].count("NotePricesMoved(") == 6 and
-    S['Trading.cs'].count("if (!sim) NotePricesMoved(settlement);") == 4 and
-    "NotePricesMoved(settlement);" in
-        method_body(S['Trading.cs'], "public static void ExecuteQuickSell") and
+    all("NotePricesMoved(settlement);" in method_body(S['Trading.cs'], where)
+        for where in ("public static void ExecuteQuickSell",
+                      "public static void ExecuteHerdRelief",
+                      "public static void ExecuteResupply",
+                      "public static void ExecuteHaulage",
+                      "public static void ExecuteQuickBuy")) and
     "LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);" in
         method_body(S['Trading.cs'], "private static void NotePricesMoved") and
     S['Trading.cs'].count("LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);") == 1 and
@@ -1395,7 +1401,7 @@ chk("1.5.0", "both gates report a reason whenever they refuse",
     method_body(S['Trading.cs'], "internal static bool MaySell").count("why = Block.") >= 6 and
     method_body(S['Trading.cs'], "internal static bool MayBuy").count("why = Block.") >= 5)
 chk("1.5.0", "the reason overloads carry the plain ones, so one rule set decides both",
-    "MaySell(el, lockedKeys, foodKeep, out keepCount, out _);" in S['Trading.cs'] and
+    "MaySell(el, lockedKeys, foodKeep, null, out keepCount, out _);" in S['Trading.cs'] and
     "MayBuy(item, lockedKeys, out _);" in S['Trading.cs'])
 chk("1.5.0", "every stop in the sell pass is counted",
     method_body(S['Trading.cs'], "public static void ExecuteQuickSell").count("tally.Note(") >= 5)
@@ -1908,7 +1914,9 @@ chk("1.6.12", "an unpaid unit sold below that worth credits nothing rather than 
     "return gain > 0 ? gain : 0;" in
         method_body(S['TradeMath.cs'], "public static int Credit"))
 chk("1.6.12", "the simulated pass and the real one credit profit through the same rule",
-    S['Trading.cs'].count("TradePolicy.Credit(") == 4 and
+    S['Trading.cs'].count("TradePolicy.Credit(") == 5 and
+    "TradePolicy.Credit(price, basis, unpaidWorth)" in
+        method_body(S['Trading.cs'], "public static void ExecuteHerdRelief") and
     "TradePolicy.Credit(price, basis, unpaidWorth)" in S['Trading.cs'] and
     "TradePolicy.Credit(proceeds, basis, unpaidWorth)" in S['Trading.cs'] and
     "TradePolicy.Credit(price, worth, unpaidWorth)" in S['Trading.cs'] and
@@ -3441,8 +3449,8 @@ chk("1.37.0", "as many animals as a quest is waiting on are kept back, and only 
 
 def a_quest_animal_is_held_back_from_every_sale_not_just_the_herd():
     kept = method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> KeptBack")
-    return ("Dictionary<ItemObject, int> promised = Errands.Promised();" in kept
-            and "if (promised == null) return keep;" in kept
+    return ("awaited = Errands.Promised();" in kept
+            and "if (awaited == null) return keep;" in kept
             and "if (owed.Value > held) keep[owed.Key] = owed.Value;" in kept
             and "TradePolicy.FoodKeep(" not in S['Trading.cs']
             and S['Trading.cs'].count("TradePolicy.KeptBack(") == 3
@@ -4122,6 +4130,44 @@ chk("1.38.2", "saving a campaign is never failed by TradeLord's own bookkeeping"
 chk("1.38.2", "every setting shown as a list of choices is held to the number of choices it ships",
     every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps())
 
+
+def a_quest_animal_held_back_is_named_as_the_quest_not_the_food_reserve():
+    sell = method_body(S['Trading.cs'], "internal static bool MaySell(ItemRosterElement el")
+    kept = method_body(S['Trading.cs'],
+                       "internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster,")
+    quick = method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
+    return ("IDictionary<ItemObject, int> awaited," in sell
+            and "awaited != null && awaited.TryGetValue(item, out int owed) && owed >= el.Amount" in sell
+            and "? Block.QuestAnimal : Block.FoodReserve;" in sell
+            and "out Dictionary<ItemObject, int> awaited" in kept
+            and "TradePolicy.KeptBack(roster, out var awaited);" in quick
+            and "TradePolicy.MaySell(el, locked, keepBack, awaited," in quick)
+
+def getting_back_up_to_speed_credits_what_it_makes():
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    return ("int paidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;" in relief
+            and "int basis = UnitWorth(item, paid, basisIsMarket, paidLeft, ref unpaidWorth);" in relief
+            and "profit += TradePolicy.Credit(price, basis, unpaidWorth);" in relief
+            and "LedgerBehavior.Instance?.AddProfit(profit);" in relief
+            and "if (!sim && profit > 0) AwardTradeXp(profit, Muted(quiet));" in relief
+            and relief.count("LedgerBehavior.Instance?.RecordSale(item.StringId, 1);") == 1)
+
+def the_rankings_are_dropped_when_the_party_moves_not_only_when_the_hour_turns():
+    moved = method_body(S['Ledger.cs'], "private void DropRankingsIfThePartyMoved")
+    return ("at.DistanceSquared(_rankedAt) <= MovedFar" in moved
+            and "ForgetMarketRankings();" in moved
+            and "DropRankingsIfThePartyMoved();" in
+                method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopMarkets")
+            and "DropRankingsIfThePartyMoved();" in
+                method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes")
+            and S['Ledger.cs'].count("DropRankingsIfThePartyMoved();") == 2)
+
+chk("1.39.0", "an animal a quest is waiting on says so, instead of naming the food reserve",
+    a_quest_animal_held_back_is_named_as_the_quest_not_the_food_reserve())
+chk("1.39.0", "selling an animal to get back up to speed counts towards your profit and your Trade skill",
+    getting_back_up_to_speed_credits_what_it_makes())
+chk("1.39.0", "the markets on offer are worked out again as the party moves, not only when the hour turns",
+    the_rankings_are_dropped_when_the_party_moves_not_only_when_the_hour_turns())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
