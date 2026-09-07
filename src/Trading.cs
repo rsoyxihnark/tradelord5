@@ -388,9 +388,6 @@ namespace TradeLord
             return keep;
         }
 
-        internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster) =>
-            KeptBack(roster, out _);
-
         internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster,
                                                             out Dictionary<ItemObject, int> awaited)
         {
@@ -436,8 +433,9 @@ namespace TradeLord
         }
 
         public static bool MaySell(ItemRosterElement el, ISet<string> lockedKeys,
-                                   IDictionary<ItemObject, int> foodKeep, out int keepCount) =>
-            MaySell(el, lockedKeys, foodKeep, null, out keepCount, out _);
+                                   IDictionary<ItemObject, int> foodKeep,
+                                   IDictionary<ItemObject, int> awaited, out int keepCount) =>
+            MaySell(el, lockedKeys, foodKeep, awaited, out keepCount, out _);
 
         internal static bool MaySell(ItemRosterElement el, ISet<string> lockedKeys,
                                      IDictionary<ItemObject, int> foodKeep,
@@ -453,6 +451,13 @@ namespace TradeLord
             if (Listed(s.NeverSet, item)) { why = Block.NeverList; return false; }
 
             if (IsLocked(lockedKeys, el.EquipmentElement)) { why = Block.Locked; return false; }
+            if (awaited != null && item.HasHorseComponent &&
+                awaited.TryGetValue(item, out int promised) && promised > 0)
+            {
+                keepCount = Math.Min(el.Amount, promised);
+                awaited[item] = promised - keepCount;
+                if (el.Amount <= keepCount) { why = Block.QuestAnimal; return false; }
+            }
             if (Listed(s.AlwaysSet, item)) return true;
             if (!PolicyAllows(PolicyFor(item), buying: false)) { why = Block.CategoryPolicy; return false; }
 
@@ -474,12 +479,7 @@ namespace TradeLord
             {
                 keepCount = Math.Min(el.Amount, reserved);
                 foodKeep[item] = reserved - keepCount;
-                if (el.Amount <= keepCount)
-                {
-                    why = awaited != null && awaited.TryGetValue(item, out int owed) && owed >= el.Amount
-                        ? Block.QuestAnimal : Block.FoodReserve;
-                    return false;
-                }
+                if (el.Amount <= keepCount) { why = Block.FoodReserve; return false; }
             }
 
             return true;
@@ -1801,10 +1801,6 @@ namespace TradeLord
             bool directionError = false;
             var detail = new Dictionary<ItemObject, (int count, int gold)>();
 
-            int Budget() =>
-                TradeMath.Budget(PurseNow(sim), GoldHeldBack(),
-                                 Options.Current.MaxSpendPerVisit, SpentSoFar(sim), 0);
-
             var larder = CheapestFirst(settlement, market, party, sim,
                 it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, locked, out _, toFeed: true));
             if (larder.Count == 0) return;
@@ -1824,7 +1820,7 @@ namespace TradeLord
                     {
                         int price = market.GetItemPrice(el.EquipmentElement, party, false);
                         if (price <= 0 || price > worth) break;
-                        if (price > Budget()) break;
+                        if (price > SpendableGold()) break;
                         if (settlement.IsVillage && remaining <= 1) break;
                         if (item.Weight > 0.01f && item.Weight > Carry.Room(party) - simWeight) break;
 
@@ -1947,13 +1943,13 @@ namespace TradeLord
                 ItemRoster mine = party.ItemRoster;
                 var plan = new List<ItemRosterElement>();
                 for (int i = 0; i < mine.Count; i++) plan.Add(mine.GetElementCopyAtIndex(i));
-                var keepBack = TradePolicy.KeptBack(mine);
+                var keepBack = TradePolicy.KeptBack(mine, out var awaited);
 
                 foreach (ItemRosterElement el in plan)
                 {
                     if (directionError) break;
                     ItemObject item = el.EquipmentElement.Item;
-                    if (!TradePolicy.MaySell(el, locked, keepBack, out int keep)) continue;
+                    if (!TradePolicy.MaySell(el, locked, keepBack, awaited, out int keep)) continue;
                     int remaining = el.Amount - keep;
                     if (remaining <= 0) continue;
 
@@ -2298,10 +2294,6 @@ namespace TradeLord
             bool directionError = false;
             var detail = new Dictionary<ItemObject, (int count, int gold)>();
 
-            int Budget() =>
-                TradeMath.Budget(PurseNow(sim), GoldHeldBack(),
-                                 Options.Current.MaxSpendPerVisit, SpentSoFar(sim), 0);
-
             var stable = CheapestFirst(settlement, market, party, sim,
                 it => TradePolicy.MayHaul(it, locked));
             if (stable.Count == 0) return;
@@ -2319,7 +2311,7 @@ namespace TradeLord
                     {
                         int price = market.GetItemPrice(el.EquipmentElement, party, false);
                         if (price <= 0 || price > worth) break;
-                        if (price > Budget()) break;
+                        if (price > SpendableGold()) break;
                         if (settlement.IsVillage && remaining <= 1) break;
 
                         if (sim)
@@ -2381,15 +2373,11 @@ namespace TradeLord
             var tally = new BlockTally();
             var detail = new Dictionary<ItemObject, (int count, int gold)>();
 
-            int Budget() =>
-                TradeMath.Budget(PurseNow(sim), GoldHeldBack(),
-                                 Options.Current.MaxSpendPerVisit, SpentSoFar(sim), 0);
-
             float shareCap = Options.Current.MaxHeldShare > 0f
                 ? Carry.Capacity(MobileParty.MainParty) * Options.Current.MaxHeldShare : 0f;
 
             var stock = new List<(ItemRosterElement el, float realizable, float margin)>();
-            if (Budget() > 0)
+            if (SpendableGold() > 0)
             {
                 ISet<string> locked = TradePolicy.LockedKeys();
                 ItemRoster shopRoster = settlement.ItemRoster;
@@ -2426,7 +2414,7 @@ namespace TradeLord
             {
                 foreach (var (el, realizable, _) in stock)
                 {
-                    if (directionError || Budget() <= 0) break;
+                    if (directionError || SpendableGold() <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
                     bool livestock = TradePolicy.IsTradableLivestock(item);
                     if (livestock)
@@ -2446,7 +2434,7 @@ namespace TradeLord
                     {
                         int price = market.GetItemPrice(el.EquipmentElement, MobileParty.MainParty, false);
                         if (!TradePolicy.BuyAcceptable(price, realizable)) { tally.Note(Block.BelowMargin); break; }
-                        Block capped = WhatStopsBuying(item, price, Budget(), (countThis, spentThis), held,
+                        Block capped = WhatStopsBuying(item, price, SpendableGold(), (countThis, spentThis), held,
                                                        shareCap, livestock, herdRoom,
                                                        settlement.IsVillage && remaining <= 1, simWeight);
                         if (capped != Block.None) { tally.Note(capped); break; }
@@ -2580,12 +2568,12 @@ namespace TradeLord
             MobileParty party = MobileParty.MainParty;
             if (party == null) return null;
             ISet<string> locked = TradePolicy.LockedKeys();
-            var keepBack = TradePolicy.KeptBack(party.ItemRoster);
+            var keepBack = TradePolicy.KeptBack(party.ItemRoster, out var awaited);
             var cargo = new List<(EquipmentElement item, int amount)>();
             for (int i = 0; i < party.ItemRoster.Count; i++)
             {
                 ItemRosterElement el = party.ItemRoster.GetElementCopyAtIndex(i);
-                if (!TradePolicy.MaySell(el, locked, keepBack, out int keep)) continue;
+                if (!TradePolicy.MaySell(el, locked, keepBack, awaited, out int keep)) continue;
                 if (el.Amount - keep > 0) cargo.Add((el.EquipmentElement, el.Amount - keep));
             }
             if (cargo.Count == 0) return null;
