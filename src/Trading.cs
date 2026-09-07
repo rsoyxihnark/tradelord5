@@ -1734,17 +1734,14 @@ namespace TradeLord
                     int remaining = el.Amount - keep + SimVisit.Held(pass.Sim, item.StringId);
                     if (remaining <= 0) { tally.Note(Block.FoodReserve); continue; }
 
-                    int paid = TradePolicy.CostBasis(item);
-                    bool basisIsMarket = Options.Current.CostBasisMode == 2;
-                    int paidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;
+                    Basis basis = Basis.For(item);
 
                     int bestMarketFloor = 0;
                     bool floorKnown = false;
-                    int unpaidWorth = -1;
 
                     while (remaining > 0)
                     {
-                        int basis = UnitWorth(item, paid, basisIsMarket, paidLeft, ref unpaidWorth);
+                        int worth = basis.Unit(item);
                         int holdFloor = 0;
                         if (Options.Current.PreferBestSellTown)
                         {
@@ -1759,10 +1756,10 @@ namespace TradeLord
                         }
                         int price = pass.Price(el.EquipmentElement, selling: true);
                         if (price < holdFloor) { tally.Note(Block.BelowBestMarket); break; }
-                        if (!TradePolicy.ProfitAcceptable(basis, price))
+                        if (!TradePolicy.ProfitAcceptable(worth, price))
                         {
                             tally.Note(Block.BelowMargin);
-                            if (!TradeMath.SkipTheUnitsYouPaidFor(basisIsMarket, ref remaining, ref paidLeft)) break;
+                            if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;
                             continue;
                         }
                         if ((pass.Sim ? simTill : pass.Market.Gold) < price) { tally.Note(Block.MerchantTillEmpty); break; }
@@ -1771,7 +1768,7 @@ namespace TradeLord
                         {
                             simTill -= price;
                             simGold += price;
-                            profit += TradePolicy.Credit(price, basis, unpaidWorth);
+                            profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);
                             int herdRank = HerdShedRank(item);
                             SimVisit.NoteSale(item.StringId, price,
                                               herdRank == RankHaulAnimal ? 0f : item.Weight,
@@ -1780,7 +1777,7 @@ namespace TradeLord
                                 SimVisit.NoteShed(herdRank == RankHaulAnimal, herdRank != RankLivestock);
                             soldItems++;
                             remaining--;
-                            if (paidLeft > 0) paidLeft--;
+                            basis.SoldOne();
                             pass.Tally(item, 1, price);
                             continue;
                         }
@@ -1788,10 +1785,10 @@ namespace TradeLord
                         if (!pass.SellOne(el, "selling", "Selling", out int proceeds)) break;
                         if (proceeds == 0) break;
 
-                        if (paidLeft > 0) { paidLeft--; LedgerBehavior.Instance?.RecordSale(item.StringId, 1); }
+                        if (basis.SoldOne()) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
                         _soldThisVisit.Add(item.StringId);
                         soldItems++;
-                        profit += TradePolicy.Credit(proceeds, basis, unpaidWorth);
+                        profit += TradePolicy.Credit(proceeds, worth, basis.UnpaidWorth);
                         remaining--;
                         pass.Tally(item, 1, proceeds);
                     }
@@ -1824,12 +1821,39 @@ namespace TradeLord
             }
         }
 
-        private static int UnitWorth(ItemObject item, int paid, bool basisIsMarket, int paidLeft,
-                                    ref int unpaidWorth)
+        private struct Basis
         {
-            int basis = basisIsMarket || paidLeft > 0 ? paid : 0;
-            if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);
-            return basis;
+            internal int Paid;
+            internal bool FromMarket;
+            internal int PaidLeft;
+            internal int UnpaidWorth;
+
+            internal static Basis For(ItemObject item)
+            {
+                Basis basis;
+                basis.Paid = TradePolicy.CostBasis(item);
+                basis.FromMarket = Options.Current.CostBasisMode == 2;
+                basis.PaidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;
+                basis.UnpaidWorth = -1;
+                return basis;
+            }
+
+            internal int Unit(ItemObject item)
+            {
+                int worth = FromMarket || PaidLeft > 0 ? Paid : 0;
+                if (worth == 0 && UnpaidWorth < 0) UnpaidWorth = TradePolicy.UnpaidWorth(item);
+                return worth;
+            }
+
+            internal bool SoldOne()
+            {
+                if (PaidLeft <= 0) return false;
+                PaidLeft--;
+                return true;
+            }
+
+            internal bool SkipTheUnitsYouPaidFor(ref int remaining) =>
+                TradeMath.SkipTheUnitsYouPaidFor(FromMarket, ref remaining, ref PaidLeft);
         }
 
         private static Block WhatStopsBuying(ItemObject item, int price, int budget,
@@ -2029,10 +2053,7 @@ namespace TradeLord
                     int remaining = el.Amount - keep;
                     if (remaining <= 0) continue;
 
-                    int basis = TradePolicy.CostBasis(item);
-                    bool basisIsMarket = Options.Current.CostBasisMode == 2;
-                    int paidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;
-                    int unpaidWorth = -1;
+                    Basis basis = Basis.For(item);
 
                     int holdFloor = 0;
                     if (Options.Current.PreferBestSellTown)
@@ -2044,12 +2065,12 @@ namespace TradeLord
 
                     while (remaining > 0)
                     {
-                        int worth = UnitWorth(item, basis, basisIsMarket, paidLeft, ref unpaidWorth);
+                        int worth = basis.Unit(item);
                         int price = market.GetPrice(el.EquipmentElement, party, true, shop);
                         if (price <= 0 || price < holdFloor) break;
                         if (!TradePolicy.ProfitAcceptable(worth, price))
                         {
-                            if (!TradeMath.SkipTheUnitsYouPaidFor(basisIsMarket, ref remaining, ref paidLeft)) break;
+                            if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;
                             continue;
                         }
                         if (till < price) break;
@@ -2058,12 +2079,12 @@ namespace TradeLord
                         {
                             till -= price;
                             simGold += price;
-                            profit += TradePolicy.Credit(price, worth, unpaidWorth);
+                            profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);
                             simWeight -= item.Weight;
                             soldHere.Add(item.StringId);
                             sold++;
                             remaining--;
-                            if (paidLeft > 0) paidLeft--;
+                            basis.SoldOne();
                             Tally(detail, item, 1, price);
                             continue;
                         }
@@ -2076,8 +2097,8 @@ namespace TradeLord
                         }
                         if (proceeds == 0) break;
                         till -= proceeds;
-                        profit += TradePolicy.Credit(proceeds, worth, unpaidWorth);
-                        if (paidLeft > 0) { paidLeft--; LedgerBehavior.Instance?.RecordSale(item.StringId, 1); }
+                        profit += TradePolicy.Credit(proceeds, worth, basis.UnpaidWorth);
+                        if (basis.SoldOne()) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
                         soldHere.Add(item.StringId);
                         sold++;
                         remaining--;
@@ -2265,10 +2286,7 @@ namespace TradeLord
                         remaining -= spare;
                     }
 
-                    int paid = TradePolicy.CostBasis(item);
-                    bool basisIsMarket = Options.Current.CostBasisMode == 2;
-                    int paidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;
-                    int unpaidWorth = -1;
+                    Basis basis = Basis.For(item);
 
                     while (remaining > 0 && shed > 0)
                     {
@@ -2279,7 +2297,7 @@ namespace TradeLord
                         int price = pass.Price(el.EquipmentElement, selling: true);
                         if (price <= 0) break;
                         if ((pass.Sim ? simTill : pass.Market.Gold) < price) break;
-                        int basis = UnitWorth(item, paid, basisIsMarket, paidLeft, ref unpaidWorth);
+                        int worth = basis.Unit(item);
 
                         if (pass.Sim)
                         {
@@ -2296,12 +2314,8 @@ namespace TradeLord
                             if (price == 0) break;
                             _soldThisVisit.Add(item.StringId);
                         }
-                        if (paidLeft > 0)
-                        {
-                            paidLeft--;
-                            if (!pass.Sim) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
-                        }
-                        profit += TradePolicy.Credit(price, basis, unpaidWorth);
+                        if (basis.SoldOne() && !pass.Sim) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
+                        profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);
                         sold++;
                         remaining--;
                         shed--;
