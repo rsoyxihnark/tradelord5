@@ -810,7 +810,7 @@ def restocking_runs_between_selling_and_buying():
                 in method_body(S['Trading.cs'], "public static void ExecuteResupply")
             and "if (el.Amount <= 0 || !wanted(it)) continue;" in body
             and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
-            and "price > Budget()" in body
+            and "price > SpendableGold()" in body
             and "int worth = TradePolicy.UnpaidWorth(it);" in body
             and body.count("price > worth") == 2
             and "settlement.IsVillage && remaining <= 1" in body
@@ -1060,7 +1060,7 @@ chk("1.3.16", "hold-for-best-market re-tested per chunk",
 chk("1.3.16", "food branch falls through to the sell rules",
     ordered(method_body(S['Trading.cs'], "internal static bool MaySell(ItemRosterElement el"),
             "foodKeep[item] = reserved - keepCount;",
-            "if (el.Amount <= keepCount)",
+            "if (el.Amount <= keepCount) { why = Block.FoodReserve; return false; }",
             "            return true;"))
 chk("1.3.17", "scan radius reaches the marker", "LedgerBehavior.WithinRadius(s)" in S['Trading.cs'])
 chk("1.3.17", "haircut always filters routes",
@@ -1252,8 +1252,8 @@ chk("1.4.0", "the hotkey honors its modifiers on both the open and the close edg
     "Input.IsKeyReleased(key)" not in S['Panel.cs'])
 
 chk("1.4.1", "quick-buy prices the shelf only when there is a budget to spend",
-    (lambda b: "if (Budget() > 0)" in b
-           and ordered(b, "int Budget()", "ItemRoster shopRoster = settlement.ItemRoster;"))
+    (lambda b: "if (SpendableGold() > 0)" in b
+           and ordered(b, "if (SpendableGold() > 0)", "ItemRoster shopRoster = settlement.ItemRoster;"))
     (method_body(S['Trading.cs'], "public static void ExecuteQuickBuy")))
 chk("1.4.1", "a pass the gold-direction guard stopped does not blame the trade policy",
     S['Trading.cs'].count("else if (!directionError)") == 2 and
@@ -1401,7 +1401,7 @@ chk("1.5.0", "both gates report a reason whenever they refuse",
     method_body(S['Trading.cs'], "internal static bool MaySell").count("why = Block.") >= 6 and
     method_body(S['Trading.cs'], "internal static bool MayBuy").count("why = Block.") >= 5)
 chk("1.5.0", "the reason overloads carry the plain ones, so one rule set decides both",
-    "MaySell(el, lockedKeys, foodKeep, null, out keepCount, out _);" in S['Trading.cs'] and
+    "MaySell(el, lockedKeys, foodKeep, awaited, out keepCount, out _);" in S['Trading.cs'] and
     "MayBuy(item, lockedKeys, out _);" in S['Trading.cs'])
 chk("1.5.0", "every stop in the sell pass is counted",
     method_body(S['Trading.cs'], "public static void ExecuteQuickSell").count("tally.Note(") >= 5)
@@ -2179,8 +2179,9 @@ def what_is_left_to_spend_is_worked_out_in_one_place():
                 "            TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),\n"
                 "                             Options.Current.MaxSpendPerVisit, 0, 0);"
                 in S['Trading.cs']
-            and S['Trading.cs'].count("TradeMath.Budget(") == 6
-            and S['Trading.cs'].count("GoldHeldBack()") == 8
+            and S['Trading.cs'].count("TradeMath.Budget(") == 3
+            and S['Trading.cs'].count("GoldHeldBack()") == 5
+            and S['Trading.cs'].count("int Budget() =>") == 1
             and "Hero.MainHero.Gold" not in S['Ledger.cs']
             and "GoldReserve" not in S['Ledger.cs']
             and "Options.Current.GoldReserve" not in
@@ -3039,7 +3040,7 @@ def pack_animals_are_bought_between_restocking_and_the_profit_pass():
             and "if (!Options.Current.BuyHaulAnimals) return;" in body
             and "it => TradePolicy.MayHaul(it, locked)" in body
             and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
-            and "price > Budget()" in body
+            and "price > SpendableGold()" in body
             and "settlement.IsVillage && remaining <= 1" in body
             and "BuyAcceptable" not in body
             and "BestSell" not in body)
@@ -3074,7 +3075,7 @@ def a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_below_the_reser
             and "Ceiling" not in body
             and "CargoIsFull" not in ALL
             and "PackAnimalFullCargoPremium" not in S['Trading.cs']
-            and "price > Budget()" in body
+            and "price > SpendableGold()" in body
             and option_default('BuyHaulAnimals') == 'true'
             and "_o.BuyHaulAnimals" in M
             and "PackAnimalFullCargoPremium" not in M
@@ -3224,12 +3225,13 @@ def a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod():
 
 def a_caravan_trade_obeys_every_rule_a_market_visit_does():
     body = pass_body("public static void ExecuteRoadTrade")
-    return ("TradePolicy.MaySell(el, locked, keepBack, out int keep)" in body
+    return ("TradePolicy.MaySell(el, locked, keepBack, awaited, out int keep)" in body
             and "TradePolicy.MayBuy(it, locked) || !TradePolicy.MayRoundTrip(it, locked)" in body
             and "TradePolicy.ProfitAcceptable(worth, price)" in body
             and "TradePolicy.BuyAcceptable(price, realizable)" in body
             and "TradePolicy.Realizable(elsewhere.Item2)" in body
             and "WhatStopsBuying(item, price, Budget(), (countThis, spentThis), held, shareCap," in body
+            and "int Budget() =>" in body
             and "Carry.Room(MobileParty.MainParty) - simWeight" in body
             and "s.BuyCapPerItem" in body
             and "s.BuyValueCapPerItem" in body
@@ -3874,9 +3876,11 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
     return ("SimVisit.Forget();" in method_body(t, "private static void ResetVisit")
             and "private static int PurseNow(bool sim) => Hero.MainHero.Gold + SimVisit.Purse(sim);" in t
             and "private static int SpentSoFar(bool sim) => _spentThisVisit + SimVisit.Spent(sim);" in t
-            and t.count("TradeMath.Budget(PurseNow(sim), GoldHeldBack(),\n"
-                        "                                 Options.Current.MaxSpendPerVisit, "
-                        "SpentSoFar(sim), 0);") == 3
+            and ("TradeMath.Budget(PurseNow(Simulating), GoldHeldBack(),\n"
+                 "                             Options.Current.MaxSpendPerVisit, "
+                 "SpentSoFar(Simulating), 0);") in t
+            and "private static bool Simulating => Options.Current.SimulationMode;" in t
+            and all("SpendableGold()" in b for b in (larder, haul, buy))
             and t.count("simTill = market.Gold - SimVisit.TillDrawn(sim);") == 2
             and t.count("float simWeight = SimVisit.Weight(sim);") == 2
             and "TradePolicy.FoodHeld(party.ItemRoster) - SimVisit.FoodHeld(sim);" in larder
@@ -4137,8 +4141,9 @@ def a_quest_animal_held_back_is_named_as_the_quest_not_the_food_reserve():
                        "internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster,")
     quick = method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
     return ("IDictionary<ItemObject, int> awaited," in sell
-            and "awaited != null && awaited.TryGetValue(item, out int owed) && owed >= el.Amount" in sell
-            and "? Block.QuestAnimal : Block.FoodReserve;" in sell
+            and "awaited.TryGetValue(item, out int promised) && promised > 0" in sell
+            and "if (el.Amount <= keepCount) { why = Block.QuestAnimal; return false; }" in sell
+            and "if (el.Amount <= keepCount) { why = Block.FoodReserve; return false; }" in sell
             and "out Dictionary<ItemObject, int> awaited" in kept
             and "TradePolicy.KeptBack(roster, out var awaited);" in quick
             and "TradePolicy.MaySell(el, locked, keepBack, awaited," in quick)
@@ -4173,13 +4178,31 @@ def every_buying_pass_stops_at_the_same_edge_of_the_gold_reserve():
     larder = pass_body("public static void ExecuteResupply")
     stable = pass_body("public static void ExecuteHaulage")
     capped = method_body(S['Trading.cs'], "private static Block WhatStopsBuying")
-    return ("if (price > Budget()) break;" in larder
-            and "if (price > Budget()) break;" in stable
-            and "price >= Budget()" not in S['Trading.cs']
+    return ("if (price > SpendableGold()) break;" in larder
+            and "if (price > SpendableGold()) break;" in stable
+            and "price >= SpendableGold()" not in S['Trading.cs']
             and "if (price > budget) return Block.BudgetSpent;" in capped)
 
 chk("1.39.1", "restocking, buying a haul animal and buying for profit all stop at the gold reserve rather than a denar above it",
     every_buying_pass_stops_at_the_same_edge_of_the_gold_reserve())
+
+def an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on():
+    t = S['Trading.cs']
+    sell = method_body(t, "internal static bool MaySell(ItemRosterElement el")
+    quick = method_body(t, "public static void ExecuteQuickSell")
+    road = method_body(t, "public static void ExecuteRoadTrade")
+    marker = method_body(t, "private Settlement FindBestSellTownForCargo")
+    return (ordered(sell, "awaited != null && item.HasHorseComponent &&",
+                    "keepCount = Math.Min(el.Amount, promised);",
+                    "awaited[item] = promised - keepCount;",
+                    "if (el.Amount <= keepCount) { why = Block.QuestAnimal; return false; }",
+                    "if (Listed(s.AlwaysSet, item)) return true;")
+            and "KeptBack(ItemRoster roster)" not in t
+            and "IDictionary<ItemObject, int> foodKeep, out int keepCount)" not in t
+            and all("keepBack, awaited" in b for b in (quick, road, marker)))
+
+chk("1.39.2", "an animal a quest is waiting on is held back even where your always-sell list names it, in every pass that sells",
+    an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
