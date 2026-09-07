@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.39.0
+
+- Selling an animal to get your party back up to speed now counts towards the profit TradeLord has made you and earns Trade skill, the way its other sales already did.
+- A visit that trades nothing now says a quest may be waiting on your animals when that is what held them back, instead of naming your food reserve.
+- The best markets and the routes on the panel are worked out again as you ride, instead of waiting for the hour to turn.
+
 ## 1.38.5
 
 - TradeLord now matches its own lines to their translations the same way whatever language your computer is set to.
