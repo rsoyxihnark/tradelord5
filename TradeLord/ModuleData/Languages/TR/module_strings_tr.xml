@@ -202,7 +202,7 @@
 		<string id="TL329" text="Bu pazar bilinen en iyi pazardan açıkça az ödüyorsa burada satmayı atla, böylece kargonuz hakkını veren şehri bekler. Taşıdığınız her şey için geçerlidir, satın aldığınız da ganimet olarak topladığınız da. Öntanımlı olarak KAPALI; kapalıyken satın aldığınız bir mal yine kâr payınızı geçmek zorundadır, ganimet ise parası olan ilk pazara gider."/>
 		<string id="TL330" text="Bu pazar bilinen en iyi fiyatın en az bu oranını ödüyorsa yine de burada sat. Yukarıdaki ayar KAPALIYKEN hiçbir şey yapmaz."/>
 		<string id="TL331" text="TradeLord'un asla satmaması gereken mallar. Her birini ya eşya kimliğiyle, ya TradeLord.log'un taşıdığı her mal için yazdığı grain, wine veya iron_ore gibi kısa iç adla, ya da oyunun size gösterdiği Iron Ore gibi adla yazın. Aralarına virgül koyun. Bu oyunda hiçbir mala uymayan bir girdi sessizce geçmek yerine günlükte adlandırılır ve ekranda söylenir. Alırken de bunlara dokunmaz, çünkü sonra satmanın bir yolu olmaz."/>
-		<string id="TL332" text="TradeLord'un her zaman sattığı mallar: kategori kurallarını, benzersiz ve el yapımı korumasını ve yiyecek payını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla satma listesi ve envanter kilidi yine geçerlidir. Bir yük hayvanını kâr için satmanın tek yolu budur, gerçi bölüğünüzü hıza kavuşturmak son çare olarak birini yine satabilir."/>
+		<string id="TL332" text="TradeLord'un her zaman sattığı mallar: kategori kurallarını, benzersiz ve el yapımı korumasını ve yiyecek payını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla satma listesi, envanter kilidi ve bir görevin beklediği hayvan yine geçerlidir. Bir yük hayvanını kâr için satmanın tek yolu budur, gerçi bölüğünüzü hıza kavuşturmak son çare olarak birini yine satabilir."/>
 		<string id="TL334" text="Bu altının altına asla harcama. Varsayılan 300; bu, iki düşman karşılaşmasından pazarlıkla çıkmaya ve alışveriş sonrası bir maaş ödemesini karşılamaya yeter."/>
 		<string id="TL335" text="TradeLord'un bir ziyarette bir maldan aldığı en fazla birim. 0 = sayıda sınır yok. Varsayılan 32."/>
 		<string id="TL336" text="Ziyaret başına mal başına harcamayı dinar olarak da sınırla."/>
@@ -218,7 +218,7 @@
 		<string id="TL346" text="Otomatik işaret, bu kadar yol gününden uzaktaki şehirleri yok sayar. Varsayılan 1.5."/>
 		<string id="TL347" text="Bir geçiş gerçekten bir şey taşıdığında bozuk para sesi çal. Hiçbir şey taşımayan geçiş sessiz kalır."/>
 		<string id="TL348" text="Tek satırlık ticaret özetinde malları adlandır, örneğin 'TradeLord 8 Zeytin, 3 Şarap sattı, 240 dinar', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
-		<string id="TL349" text="Bir pazara girdiğinizde kendiliğinden yapılan ticaret yalnızca TradeLord.log'a yazılır, ekranda satır çıkmaz. Menüdeki ticaret girdisi her zaman bildirir, çünkü onu siz istediniz. İlk çalıştırma otomasyon bildirimi, boş kese uyarısı ve dolu kargo uyarısı bundan etkilenmez."/>
+		<string id="TL349" text="Hem bir pazara girdiğinizde hem de yolda bir kervanla ya da bir köylü bölüğüyle karşılaştığınızda kendiliğinden yapılan ticaret yalnızca TradeLord.log'a yazılır, ekranda satır çıkmaz. Menüdeki ticaret girdisi her zaman bildirir, çünkü onu siz istediniz. İlk çalıştırma otomasyon bildirimi, boş kese uyarısı ve dolu kargo uyarısı bundan etkilenmez."/>
 		<string id="TL100" text="Dil"/>
 		<string id="TL101" text="Bilgi"/>
 		<string id="TL102" text="Kavrayış"/>
