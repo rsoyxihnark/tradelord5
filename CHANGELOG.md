@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.40.1
+
+- The download now carries every change made since 1.40.0.
+- Quick-sell and quick-buy stop quietly when your party cannot be read, the way restocking food, buying a haul animal and getting your party back up to speed already did, instead of writing an error to TradeLord.log.
+- Selling to a caravan or a party of villagers on the road works out what you took in once instead of twice.
+
 ## 1.40.0
 
 - Silence trade messages now covers trading with a caravan or a party of villagers you meet on the road, which reported on screen whatever the setting said, and the setting's hint says so.
