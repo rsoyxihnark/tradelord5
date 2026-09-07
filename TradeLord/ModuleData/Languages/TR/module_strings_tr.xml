@@ -87,6 +87,7 @@
 		<string id="TL111" text="[Benzetim, en iyi durum] TradeLord daha çok yük taşımak için {ITEMS} alırdı, {GOLD} dinar."/>
 		<string id="TL113" text="Ah, kusura bakmayın, tabii ki. Ama NexusMods'ta beğeni vermeyi unutmayın!"/>
 		<string id="TL387" text="Bırakın geçelim, yolumuza gidelim. [TRADELORD]"/>
+		<string id="TL388" text="Asla tahıl alma ayarınız onu tutuyor"/>
 		<string id="TL114" text="İyi bir alışverişti. [TRADELORD]"/>
 		<string id="TL115" text="Katılıyorum. Keşke o modu ben de kullanabilseydim. Umarım NexusMods'ta beğeni vermişsinizdir!"/>
 		<string id="TL251" text="Elinizde bu kadar varken almayı bırak (0 = kapalı)"/>

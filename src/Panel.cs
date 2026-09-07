@@ -575,13 +575,17 @@ namespace TradeLord
         {
             VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;
             if (tracker == null) return;
-            if (_panelPins.Remove(settlement))
-            {
-                if (tracker.CheckTracked(settlement)) tracker.RemoveTrackedObject(settlement);
-                return;
-            }
+            if (Unpin(settlement)) return;
             _panelPins.Add(settlement);
             if (!tracker.CheckTracked(settlement)) tracker.RegisterObject(settlement);
+        }
+
+        internal static bool Unpin(Settlement settlement)
+        {
+            if (settlement == null || !_panelPins.Remove(settlement)) return false;
+            VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;
+            if (tracker != null && tracker.CheckTracked(settlement)) tracker.RemoveTrackedObject(settlement);
+            return true;
         }
 
         internal static bool IsPinned(Settlement s) => _panelPins.Contains(s);
