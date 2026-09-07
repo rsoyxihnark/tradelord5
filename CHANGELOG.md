@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.40.3
+
+- Selling or buying a large stack to a caravan or a party of villagers on the road no longer makes the game a small extra piece of work for every single unit, which trading in a market stopped doing in 1.40.2.
+- A dry run now says you already traded a good on this visit when that is what stopped it selling more, instead of naming your food reserve.
+
 ## 1.40.2
 
 - Selling or buying a large stack at a market no longer makes the game a small extra piece of work for every single unit, which it started doing in 1.40.1.

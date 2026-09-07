@@ -523,7 +523,9 @@ def the_filter_is_armed_only_around_a_game_call_that_talks():
                        r'finally \{ CloseTransaction\(\);( ReportSilenced\(\);)? \}', t)
     return (t.count('OpenTransaction();') == len(armed) == 2
             and sorted(c for c, _ in armed) == ['SkillLevelingManager.OnTradeProfitMade', 'swap']
-            and sorted(re.findall(r'SwapOneUnit\((?:true|false), \(\) => ([\w\.]+)\(', t)) ==
+            and sorted(re.findall(r'SwapOneUnit\((?:true|false), (\w+),', t)) ==
+                ['handOver', 'takeDelivery']
+            and sorted(re.findall(r'Action \w+ = \(\) => ([\w\.]+)\(', t)) ==
                 ['HandOver', 'TakeDelivery']
             and sorted(re.findall(r'_(?:sell|buy)Unit = \(\) => ([\w\.]+)\(', t)) ==
                 ['SellItemsAction.Apply'] * 2
@@ -1210,8 +1212,8 @@ chk("1.36.0", "a trade on the road moves one unit and its price itself, because 
            and "me.ItemRoster.AddToCounts(what, 1);" in b
            and "GiveGoldAction.ApplyForCharacterToParty(Hero.MainHero, shop, price, true);" in b)
         (method_body(S['Trading.cs'], "private static void TakeDelivery")) and
-    "() => HandOver(me, shop, el.EquipmentElement, price)," in S['Trading.cs'] and
-    "() => TakeDelivery(shop, me, el.EquipmentElement, price)," in S['Trading.cs'])
+    "Action handOver = () => HandOver(me, shop, unit, unitPrice);" in S['Trading.cs'] and
+    "Action takeDelivery = () => TakeDelivery(shop, me, unit, unitPrice);" in S['Trading.cs'])
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
     S['Trading.cs'].count("[Simulated, best case]") == 7 and
@@ -4500,6 +4502,32 @@ chk("1.40.0", "the food reserve and the animals a quest is waiting on are drawn 
     the_keep_back_is_drawn_down_in_one_place())
 chk("1.40.0", "the always-sell setting says an animal a quest is waiting on is still held back",
     the_always_sell_hint_names_the_animal_a_quest_is_waiting_on())
+
+def a_road_swap_makes_nothing_new_per_unit():
+    road = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
+    return (all(f in road for f in ("EquipmentElement unit = default(EquipmentElement);",
+                                    "int unitPrice = 0;",
+                                    "Action handOver = () => HandOver(me, shop, unit, unitPrice);",
+                                    "Action takeDelivery = () => TakeDelivery(shop, me, unit, unitPrice);"))
+            and road.count("unit = el.EquipmentElement;\n                        unitPrice = price;") == 2
+            and ordered(road, "unitPrice = price;", "SwapOneUnit(true, handOver,")
+            and ordered(road, "unitPrice = price;", "SwapOneUnit(false, takeDelivery,")
+            and sorted(re.findall(r'(\w+) = \(\) =>', road)) == ['handOver', 'takeDelivery']
+            and ", () =>" not in road
+            and road.count("InAPass(() =>") == road.count("(() =>") == 2)
+
+def a_dry_run_names_the_goods_it_already_moved():
+    sell = method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
+    return ("int remaining = el.Amount - keep + SimVisit.Held(pass.Sim, item.StringId);\n"
+            "                    if (remaining <= 0) { tally.Note(Block.TradedHereAlready); continue; }" in sell
+            and "Block.FoodReserve" not in sell
+            and 'case Block.TradedHereAlready:' in method_body(S['Trading.cs'], "internal static TextObject Phrase")
+            and "{=TL48}you already traded these on this visit" in S['Trading.cs'])
+
+chk("1.40.3", "handing one unit over to a party on the road reuses the same two errands rather than making a new one each time",
+    a_road_swap_makes_nothing_new_per_unit())
+chk("1.40.3", "a dry run that has already sold a good says so, instead of naming the food reserve",
+    a_dry_run_names_the_goods_it_already_moved())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
