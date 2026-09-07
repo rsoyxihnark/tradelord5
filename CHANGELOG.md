@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.41.0
+
+- Share of the hold one good may fill now ships at 45% instead of off, so one cheap good can no longer take your whole cargo.
+- A town you pinned on the map loses its pin once TradeLord has traded there, instead of the pins piling up until you clear each one by hand.
+- A good the Never buy grain setting is holding back now says so, instead of saying it is on your never-sell or never-buy list when nothing is on those lists.
+- Buying a large stack no longer works out what your party can carry all over again for every single unit.
+
 ## 1.40.4
 
 - An entry on one of your item lists that names a good the way the game shows it, such as Iron Ore, no longer also covers a different good whose short name is one of the words in it.
