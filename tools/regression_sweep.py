@@ -313,9 +313,9 @@ def log_prefers_the_user_folder():
 
 def capture_skipped_after_the_caches_are_dropped():
     body = method_body(S['Ledger.cs'], "public void CaptureSettlement")
-    if "ForgetMarketRankings();" not in body or "if (Options.Current.Omniscient) return;" not in body:
+    if "ForgetPricedRankings();" not in body or "if (Options.Current.Omniscient) return;" not in body:
         return False
-    return (ordered(body, "ForgetMarketRankings();", "if (Options.Current.Omniscient) return;")
+    return (ordered(body, "ForgetPricedRankings();", "if (Options.Current.Omniscient) return;")
             and "Options.Current.Omniscient" in method_body(S['Ledger.cs'],
                     "private List<(Settlement, int)> TopMarkets"))
 
@@ -598,7 +598,10 @@ def a_market_that_traded_something_drops_the_empty_lines():
     return ("if (moved || (!sell.HasValue && !buy.HasValue)) return;" in report
             and ordered(report, "bool moved = _runMovedGoods;", "_sellStalled = null;",
                         "_buyStalled = null;", "_runMovedGoods = false;", "if (moved ||")
-            and "_runMovedGoods = true;" in sell and "_runMovedGoods = true;" in buy
+            and "NoteGoodsMoved(settlement, sim" in sell
+            and "NoteGoodsMoved(settlement, sim" in buy
+            and "_runMovedGoods = true;" in
+                method_body(S['Trading.cs'], "private static void NoteGoodsMoved")
             and "if (stopped != Block.None && !Muted(quiet)) NoteStalled(selling: true, stopped);" in sell
             and "if (!Muted(quiet)) NoteStalled(selling: false, tally.Dominant());" in buy
             and "{=TL32}" not in sell and "{=TL33}" not in buy
@@ -954,7 +957,7 @@ chk("1.3.8", "food reserve covers livestock",
     "IsTradableLivestock(item) ? item.HorseComponent.MeatCount : 0" in S['Trading.cs'] and
     ordered(S['Trading.cs'],
             "bool livestock = item.HasHorseComponent",
-            "if (foodKeep != null && foodKeep.TryGetValue"))
+            "if (DrawKeepBack(foodKeep, item, el.Amount, out int reserved))"))
 chk("1.3.8", "quick-buy respects inventory locks",
     "IsLocked(lockedKeys, new EquipmentElement(item))" in S['Trading.cs'])
 chk("1.3.8", "Harmony field injection uses four underscores", "____targetItem" in S['TooltipPatches.cs'])
@@ -1059,9 +1062,11 @@ chk("1.3.16", "hold-for-best-market re-tested per chunk",
     "if (price < holdFloor) { tally.Note(Block.BelowBestMarket); break; }" in S['Trading.cs'])
 chk("1.3.16", "food branch falls through to the sell rules",
     ordered(method_body(S['Trading.cs'], "internal static bool MaySell(ItemRosterElement el"),
-            "foodKeep[item] = reserved - keepCount;",
+            "if (DrawKeepBack(foodKeep, item, el.Amount, out int reserved))",
             "if (el.Amount <= keepCount) { why = Block.FoodReserve; return false; }",
-            "            return true;"))
+            "            return true;") and
+    "reserve[item] = held - taken;" in
+        method_body(S['Trading.cs'], "private static bool DrawKeepBack"))
 chk("1.3.17", "scan radius reaches the marker", "LedgerBehavior.WithinRadius(s)" in S['Trading.cs'])
 chk("1.3.17", "haircut always filters routes",
     "float realizable = TradePolicy.Realizable(sellPrice);" in S['Ledger.cs'] and
@@ -1193,8 +1198,10 @@ chk("1.3.33", "a fully sold stack clears its cost basis",
     "if (rec.Count <= 0) { rec.Count = 0; rec.TotalPaid = 0; }" in
     method_body(S['TradeMath.cs'], "public static void DrainSale"))
 chk("1.3.33", "automated trading recaptures prices after it moves them",
-    S['Trading.cs'].count("NotePricesMoved(") == 6 and
-    all("NotePricesMoved(settlement);" in method_body(S['Trading.cs'], where)
+    S['Trading.cs'].count("NotePricesMoved(") == 2 and
+    "NotePricesMoved(settlement);" in
+        method_body(S['Trading.cs'], "private static void NoteGoodsMoved") and
+    all("NoteGoodsMoved(settlement, sim" in method_body(S['Trading.cs'], where)
         for where in ("public static void ExecuteQuickSell",
                       "public static void ExecuteHerdRelief",
                       "public static void ExecuteResupply",
@@ -1204,7 +1211,7 @@ chk("1.3.33", "automated trading recaptures prices after it moves them",
         method_body(S['Trading.cs'], "private static void NotePricesMoved") and
     S['Trading.cs'].count("LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);") == 1 and
     "internal void ForgetMarketRankings()" in S['Ledger.cs'] and
-    "ForgetMarketRankings();" in method_body(S['Ledger.cs'], "public void CaptureSettlement"))
+    "ForgetPricedRankings();" in method_body(S['Ledger.cs'], "public void CaptureSettlement"))
 _setters = [b for b in re.findall(r'\bset\b\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', M)
             if "Options.Bump();" in b]
 chk("1.3.33", "every settings write bumps the generation every cache keys on",
@@ -1703,9 +1710,13 @@ chk("1.5.11", "the workshop board respects the knowledge mode",
     '{=TL80}' in S['Panel.cs'])
 chk("1.5.11", "the panel profit line counts only profit made by this module",
     '{=TL66}TradeLord profit' in S['Panel.cs'] and
-    "LedgerBehavior.Instance?.AddProfit(profit);" in
+    "NoteGoodsMoved(settlement, sim, profit);" in
         method_body(S['Trading.cs'], "public static void ExecuteQuickSell") and
-    "AddProfit" not in method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
+    "LedgerBehavior.Instance?.AddProfit(profit.Value);" in
+        method_body(S['Trading.cs'], "private static void NoteGoodsMoved") and
+    "AddProfit" not in method_body(S['Trading.cs'], "public static void ExecuteQuickBuy") and
+    "NoteGoodsMoved(settlement, sim);" in
+        method_body(S['Trading.cs'], "public static void ExecuteQuickBuy"))
 
 chk("1.6.1", "the trade XP the pass earns reaches the game only once the pass is over",
     "_pendingXp += xp;" in method_body(S['Trading.cs'], "private static void AwardTradeXp") and
@@ -1785,7 +1796,8 @@ chk("1.6.5", "ending a campaign drops trade messages queued but not yet shown",
     "_pending.Clear();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.5", "the route scan is reused within the hour and dropped with the market rankings",
     "_routes = ScanRoutes(purse);" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes") and
-    "_routes = null;" in method_body(S['Ledger.cs'], "internal void ForgetMarketRankings") and
+    "_routes = null;" in method_body(S['Ledger.cs'], "private void ForgetPricedRankings") and
+    "ForgetPricedRankings();" in method_body(S['Ledger.cs'], "internal void ForgetMarketRankings") and
     "_routeGen != Options.Generation" in S['Ledger.cs'])
 chk("1.6.5", "a village keeping its last unit of each good says so",
     "case Block.VillageLastUnit:" in
@@ -1827,8 +1839,9 @@ chk("1.6.8", "the map button reserves the mouse over the button, not over the ma
     (lambda b: "m.x >= 0.90f" in b and "m.y >= 0.46f && m.y <= 0.54f" in b)
     (method_body(S['Panel.cs'], "private static bool OverAssumedBounds")))
 chk("1.6.8", "the food reserve is spent only on goods the sell rules would actually move",
-    (lambda b: ordered(b, "why = Block.NotTradable; return false;", "foodKeep[item] = reserved - keepCount;"))
-    (method_body(S['Trading.cs'], "internal static bool MaySell")))
+    (lambda b: ordered(b, "why = Block.NotTradable; return false;",
+                       "if (DrawKeepBack(foodKeep, item, el.Amount, out int reserved))"))
+    (method_body(S['Trading.cs'], "internal static bool MaySell(ItemRosterElement el")))
 chk("1.6.8", "another mod handles its own notification before TradeLord may hold one back",
     "[HarmonyPriority(Priority.Last)]" in
         method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines"))
@@ -3284,7 +3297,9 @@ def every_pass_that_really_moves_goods_rings_the_coin():
               "public static void ExecuteQuickBuy"]
     road = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
     return (option_default('CoinSound') == 'true'
-            and all("NotePricesMoved(settlement);" in method_body(S['Trading.cs'], one) for one in passes)
+            and all("NoteGoodsMoved(settlement, sim" in method_body(S['Trading.cs'], one) for one in passes)
+            and "NotePricesMoved(settlement);" in
+                method_body(S['Trading.cs'], "private static void NoteGoodsMoved")
             and "CoinSound();" in method_body(S['Trading.cs'], "private static void NotePricesMoved")
             and road.count("if (!sim) CoinSound();") == 2
             and S['Trading.cs'].count("CoinSound();") == 3
@@ -4141,7 +4156,7 @@ def a_quest_animal_held_back_is_named_as_the_quest_not_the_food_reserve():
                        "internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster,")
     quick = method_body(S['Trading.cs'], "public static void ExecuteQuickSell")
     return ("IDictionary<ItemObject, int> awaited," in sell
-            and "awaited.TryGetValue(item, out int promised) && promised > 0" in sell
+            and "DrawKeepBack(awaited, item, el.Amount, out int promised)" in sell
             and "if (el.Amount <= keepCount) { why = Block.QuestAnimal; return false; }" in sell
             and "if (el.Amount <= keepCount) { why = Block.FoodReserve; return false; }" in sell
             and "out Dictionary<ItemObject, int> awaited" in kept
@@ -4153,7 +4168,9 @@ def getting_back_up_to_speed_credits_what_it_makes():
     return ("int paidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;" in relief
             and "int basis = UnitWorth(item, paid, basisIsMarket, paidLeft, ref unpaidWorth);" in relief
             and "profit += TradePolicy.Credit(price, basis, unpaidWorth);" in relief
-            and "LedgerBehavior.Instance?.AddProfit(profit);" in relief
+            and "NoteGoodsMoved(settlement, sim, profit);" in relief
+            and "LedgerBehavior.Instance?.AddProfit(profit.Value);" in
+                method_body(S['Trading.cs'], "private static void NoteGoodsMoved")
             and "if (!sim && profit > 0) AwardTradeXp(profit, Muted(quiet));" in relief
             and relief.count("LedgerBehavior.Instance?.RecordSale(item.StringId, 1);") == 1)
 
@@ -4197,17 +4214,122 @@ def an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on():
     quick = method_body(t, "public static void ExecuteQuickSell")
     road = method_body(t, "public static void ExecuteRoadTrade")
     marker = method_body(t, "private Settlement FindBestSellTownForCargo")
-    return (ordered(sell, "awaited != null && item.HasHorseComponent &&",
-                    "keepCount = Math.Min(el.Amount, promised);",
-                    "awaited[item] = promised - keepCount;",
+    return (ordered(sell,
+                    "if (item.HasHorseComponent && DrawKeepBack(awaited, item, el.Amount, out int promised))",
+                    "keepCount = promised;",
                     "if (el.Amount <= keepCount) { why = Block.QuestAnimal; return false; }",
                     "if (Listed(s.AlwaysSet, item)) return true;")
+            and ordered(method_body(t, "private static bool DrawKeepBack"),
+                        "taken = Math.Min(available, held);",
+                        "reserve[item] = held - taken;",
+                        "return true;")
             and "KeptBack(ItemRoster roster)" not in t
             and "IDictionary<ItemObject, int> foodKeep, out int keepCount)" not in t
             and all("keepBack, awaited" in b for b in (quick, road, marker)))
 
 chk("1.39.2", "an animal a quest is waiting on is held back even where your always-sell list names it, in every pass that sells",
     an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on())
+
+def every_pass_says_what_it_moved_from_one_place():
+    t = S['Trading.cs']
+    passes = ("public static void ExecuteQuickSell", "public static void ExecuteResupply",
+              "public static void ExecuteHerdRelief", "public static void ExecuteHaulage",
+              "public static void ExecuteQuickBuy")
+    moved = method_body(t, "private static void NoteGoodsMoved")
+    said = method_body(t, "private static TextObject PassMessage")
+    return (ordered(moved, "_runMovedGoods = true;", "if (sim) return;",
+                    "if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);",
+                    "NotePricesMoved(settlement);")
+            and ordered(said, "TextObject said = Tongue.Text(sim ? simSaid : realSaid);",
+                        'said.SetTextVariable("ITEMS", ItemSummary(detail, items));',
+                        'said.SetTextVariable("GOLD", gold);', "return said;")
+            and t.count('SetTextVariable("ITEMS"') == 1
+            and t.count('SetTextVariable("GOLD", gold);') == 1
+            and t.count("NoteGoodsMoved(") == 6
+            and t.count("PassMessage(sim,") == 7
+            and all("NoteGoodsMoved(settlement, sim" in method_body(t, one) for one in passes)
+            and all("PassMessage(sim," in method_body(t, one) for one in passes)
+            and method_body(t, "public static void ExecuteRoadTrade").count("PassMessage(sim,") == 2)
+
+def a_meeting_on_the_road_answers_to_the_silence_setting():
+    t = S['Trading.cs']
+    road = method_body(t, "public static void ExecuteRoadTrade")
+    named = "when you meet a caravan or a party of villagers on the road"
+    return ("bool muted = Muted(automated: true);" in road
+            and road.count("Toast(") == 2
+            and road.count("if (!muted) Toast(") == 2
+            and "AwardTradeXp(profit, muted);" in road
+            and "AwardTradeXp(profit, false)" not in t
+            and named in re.search(r'\{=TL349\}([^"]*)"', M).group(1)
+            and named in spoken(ENGLISH)['TL349'])
+
+def a_price_move_keeps_the_markets_in_reach_it_did_not_change():
+    ledger = S['Ledger.cs']
+    priced = method_body(ledger, "private void ForgetPricedRankings")
+    whole = method_body(ledger, "internal void ForgetMarketRankings")
+    capture = method_body(ledger, "public void CaptureSettlement")
+    return ("_marketCache.Clear();" in priced
+            and "_routes = null;" in priced
+            and "_candidates = null;" not in priced
+            and ordered(whole, "ForgetPricedRankings();", "_candidates = null;")
+            and ledger.count("_candidates = null;") == 1
+            and "ForgetPricedRankings();" in capture
+            and "ForgetMarketRankings();" not in capture
+            and "ForgetMarketRankings();" in
+                method_body(ledger, "private void DropRankingsIfThePartyMoved")
+            and "LedgerBehavior.Instance?.ForgetMarketRankings();" in
+                method_body(S['Panel.cs'], "public void ExecuteRefresh")
+            and "price" not in method_body(ledger, "private static bool Eligible"))
+
+def the_keep_back_is_drawn_down_in_one_place():
+    t = S['Trading.cs']
+    draw = method_body(t, "private static bool DrawKeepBack")
+    sell = method_body(t, "internal static bool MaySell(ItemRosterElement el")
+    return (ordered(draw, "taken = 0;",
+                    "if (reserve == null || !reserve.TryGetValue(item, out int held) || held <= 0) return false;",
+                    "taken = Math.Min(available, held);",
+                    "reserve[item] = held - taken;",
+                    "return true;")
+            and t.count("DrawKeepBack(") == 3
+            and "DrawKeepBack(awaited, item, el.Amount, out int promised)" in sell
+            and "DrawKeepBack(foodKeep, item, el.Amount, out int reserved)" in sell
+            and "awaited[item] =" not in t
+            and "foodKeep[item] =" not in t)
+
+def the_always_sell_hint_names_the_animal_a_quest_is_waiting_on():
+    named = "an animal a quest is waiting on still hold"
+    words = {
+        'TradeLord/ModuleData/Languages/TR/module_strings_tr.xml':
+            ('g\u00f6rev', 'hayvan'),
+        'TradeLord/ModuleData/Languages/RU/module_strings_ru.xml':
+            ('\u0437\u0430\u0434\u0430\u043d\u0438', '\u0436\u0438\u0432\u043e\u0442\u043d'),
+        'TradeLord/ModuleData/Languages/CNs/module_strings_cns.xml':
+            ('\u4efb\u52a1', '\u7272\u755c'),
+    }
+    if named not in re.search(r'\{=TL332\}([^"]*)"', M).group(1):
+        return False
+    if named not in spoken(ENGLISH)['TL332']:
+        return False
+    if set(words) != set(TRANSLATIONS.values()):
+        return False
+    for path, (quest, animal) in words.items():
+        said = spoken(path)
+        if quest not in said['TL384'] or animal not in said['TL384']:
+            return False
+        if quest not in said['TL332'] or animal not in said['TL332']:
+            return False
+    return True
+
+chk("1.40.0", "every pass says what it moved and what it did about it from one place, the meeting on the road with them",
+    every_pass_says_what_it_moved_from_one_place())
+chk("1.40.0", "trading with a caravan or villagers on the road is silenced by the same setting a market visit is, and the setting says so",
+    a_meeting_on_the_road_answers_to_the_silence_setting())
+chk("1.40.0", "a market whose prices moved drops the rankings prices decide and keeps the markets in reach they do not",
+    a_price_move_keeps_the_markets_in_reach_it_did_not_change())
+chk("1.40.0", "the food reserve and the animals a quest is waiting on are drawn down in one place, named for what it does",
+    the_keep_back_is_drawn_down_in_one_place())
+chk("1.40.0", "the always-sell setting says an animal a quest is waiting on is still held back",
+    the_always_sell_hint_names_the_animal_a_quest_is_waiting_on())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

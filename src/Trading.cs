@@ -437,6 +437,16 @@ namespace TradeLord
                                    IDictionary<ItemObject, int> awaited, out int keepCount) =>
             MaySell(el, lockedKeys, foodKeep, awaited, out keepCount, out _);
 
+        private static bool DrawKeepBack(IDictionary<ItemObject, int> reserve, ItemObject item,
+                                         int available, out int taken)
+        {
+            taken = 0;
+            if (reserve == null || !reserve.TryGetValue(item, out int held) || held <= 0) return false;
+            taken = Math.Min(available, held);
+            reserve[item] = held - taken;
+            return true;
+        }
+
         internal static bool MaySell(ItemRosterElement el, ISet<string> lockedKeys,
                                      IDictionary<ItemObject, int> foodKeep,
                                      IDictionary<ItemObject, int> awaited,
@@ -451,11 +461,9 @@ namespace TradeLord
             if (Listed(s.NeverSet, item)) { why = Block.NeverList; return false; }
 
             if (IsLocked(lockedKeys, el.EquipmentElement)) { why = Block.Locked; return false; }
-            if (awaited != null && item.HasHorseComponent &&
-                awaited.TryGetValue(item, out int promised) && promised > 0)
+            if (item.HasHorseComponent && DrawKeepBack(awaited, item, el.Amount, out int promised))
             {
-                keepCount = Math.Min(el.Amount, promised);
-                awaited[item] = promised - keepCount;
+                keepCount = promised;
                 if (el.Amount <= keepCount) { why = Block.QuestAnimal; return false; }
             }
             if (Listed(s.AlwaysSet, item)) return true;
@@ -475,10 +483,9 @@ namespace TradeLord
                  (int)item.Tier + 1 <= s.MaxLootTier);
             if (!sellable) { why = Block.NotTradable; return false; }
 
-            if (foodKeep != null && foodKeep.TryGetValue(item, out int reserved) && reserved > 0)
+            if (DrawKeepBack(foodKeep, item, el.Amount, out int reserved))
             {
-                keepCount = Math.Min(el.Amount, reserved);
-                foodKeep[item] = reserved - keepCount;
+                keepCount = reserved;
                 if (el.Amount <= keepCount) { why = Block.FoodReserve; return false; }
             }
 
@@ -935,6 +942,24 @@ namespace TradeLord
         {
             CoinSound();
             LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
+        }
+
+        private static void NoteGoodsMoved(Settlement settlement, bool sim, int? profit = null)
+        {
+            _runMovedGoods = true;
+            if (sim) return;
+            if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);
+            NotePricesMoved(settlement);
+        }
+
+        private static TextObject PassMessage(bool sim, string simSaid, string realSaid,
+                                              Dictionary<ItemObject, (int count, int gold)> detail,
+                                              int items, int gold)
+        {
+            TextObject said = Tongue.Text(sim ? simSaid : realSaid);
+            said.SetTextVariable("ITEMS", ItemSummary(detail, items));
+            said.SetTextVariable("GOLD", gold);
+            return said;
         }
 
         private static bool Muted(bool automated) => automated && Options.Current.QuietAutomation;
@@ -1704,21 +1729,15 @@ namespace TradeLord
 
             if (soldItems > 0)
             {
-                _runMovedGoods = true;
-                if (!sim)
-                {
-                    LedgerBehavior.Instance?.AddProfit(profit);
-                    NotePricesMoved(settlement);
-                }
+                NoteGoodsMoved(settlement, sim, profit);
                 Log.Write((sim ? "quick-sell (simulated, best case): " : "quick-sell: ") + soldItems +
                           " items, +" + goldGained + " gold, profit " + profit + " at " + settlement.Name);
                 LogDetail(selling: true, sim, detail, "the selling pass");
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
-                TextObject msg = Tongue.Text(sim
-                    ? "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit)."
-                    : "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).");
-                msg.SetTextVariable("ITEMS", ItemSummary(detail, soldItems));
-                msg.SetTextVariable("GOLD", goldGained);
+                TextObject msg = PassMessage(sim,
+                    "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
+                    "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).",
+                    detail, soldItems, goldGained);
                 msg.SetTextVariable("PROFIT", profit);
                 if (!Muted(quiet)) Toast(msg, profit > 0 ? ToastGain : ToastFlat);
                 if (!sim && profit > 0) AwardTradeXp(profit, Muted(quiet));
@@ -1852,17 +1871,15 @@ namespace TradeLord
             if (stocked <= 0) return;
 
             int spent = sim ? simSpent : goldBefore - Hero.MainHero.Gold;
-            _runMovedGoods = true;
+            NoteGoodsMoved(settlement, sim);
             Log.Write((sim ? "resupply (simulated, best case): " : "resupply: ") + stocked +
                       " items, -" + spent + " gold at " + settlement.Name +
                       ", still short " + (shortfall > 0 ? shortfall : 0) + " unit(s) of food");
             LogDetail(selling: false, sim, detail, "restocking the larder");
-            if (!sim) NotePricesMoved(settlement);
-            TextObject msg = Tongue.Text(sim
-                ? "{=TL98}[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars."
-                : "{=TL97}TradeLord restocked {ITEMS} for {GOLD} denars.");
-            msg.SetTextVariable("ITEMS", ItemSummary(detail, stocked));
-            msg.SetTextVariable("GOLD", spent);
+            TextObject msg = PassMessage(sim,
+                "{=TL98}[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars.",
+                "{=TL97}TradeLord restocked {ITEMS} for {GOLD} denars.",
+                detail, stocked, spent);
             if (!Muted(quiet)) Toast(msg, ToastSpend);
         }
 
@@ -1924,6 +1941,7 @@ namespace TradeLord
             PartyBase shop = met.Party;
             PartyBase me = party.Party;
             bool sim = Options.Current.SimulationMode;
+            bool muted = Muted(automated: true);
             ISet<string> locked = TradePolicy.LockedKeys();
 
             int goldBefore = Hero.MainHero.Gold;
@@ -2018,14 +2036,13 @@ namespace TradeLord
                           " gold, profit " + profit + " from " + met.Name);
                 LogDetail(selling: true, sim, detail, "trading with a party on the road");
                 if (!sim) CoinSound();
-                TextObject said = Tongue.Text(sim
-                    ? "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit)."
-                    : "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).");
-                said.SetTextVariable("ITEMS", ItemSummary(detail, sold));
-                said.SetTextVariable("GOLD", sim ? simGold : Hero.MainHero.Gold - goldBefore);
+                TextObject said = PassMessage(sim,
+                    "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
+                    "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).",
+                    detail, sold, sim ? simGold : Hero.MainHero.Gold - goldBefore);
                 said.SetTextVariable("PROFIT", profit);
-                Toast(said, profit > 0 ? ToastGain : ToastFlat);
-                if (!sim && profit > 0) { AwardTradeXp(profit, false); LedgerBehavior.Instance?.AddProfit(profit); }
+                if (!muted) Toast(said, profit > 0 ? ToastGain : ToastFlat);
+                if (!sim && profit > 0) { AwardTradeXp(profit, muted); LedgerBehavior.Instance?.AddProfit(profit); }
             }
 
             int spentFrom = Hero.MainHero.Gold;
@@ -2118,12 +2135,11 @@ namespace TradeLord
                       " items, -" + spent + " gold from " + met.Name);
             LogDetail(selling: false, sim, detail, "trading with a party on the road");
             if (!sim) CoinSound();
-            TextObject msg = Tongue.Text(sim
-                ? "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars."
-                : "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.");
-            msg.SetTextVariable("ITEMS", ItemSummary(detail, bought));
-            msg.SetTextVariable("GOLD", spent);
-            Toast(msg, ToastSpend);
+            TextObject msg = PassMessage(sim,
+                "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
+                "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.",
+                detail, bought, spent);
+            if (!muted) Toast(msg, ToastSpend);
         }
 
         private const int RankLivestock = 0;
@@ -2255,20 +2271,14 @@ namespace TradeLord
             if (sold <= 0) return;
 
             int gained = sim ? simGold : Hero.MainHero.Gold - goldBefore;
-            _runMovedGoods = true;
+            NoteGoodsMoved(settlement, sim, profit);
             Log.Write((sim ? "herd relief (simulated, best case): " : "herd relief: ") + sold +
                       " sold, +" + gained + " gold, profit " + profit + " at " + settlement.Name);
             LogDetail(selling: true, sim, detail, "herd relief, getting the party back up to speed");
-            if (!sim)
-            {
-                LedgerBehavior.Instance?.AddProfit(profit);
-                NotePricesMoved(settlement);
-            }
-            TextObject msg = Tongue.Text(sim
-                ? "{=TL117}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars to get your party back up to speed."
-                : "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.");
-            msg.SetTextVariable("ITEMS", ItemSummary(detail, sold));
-            msg.SetTextVariable("GOLD", gained);
+            TextObject msg = PassMessage(sim,
+                "{=TL117}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars to get your party back up to speed.",
+                "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.",
+                detail, sold, gained);
             if (!Muted(quiet)) Toast(msg, ToastGain);
             if (!sim && profit > 0) AwardTradeXp(profit, Muted(quiet));
         }
@@ -2342,16 +2352,14 @@ namespace TradeLord
             if (hauled <= 0) return;
 
             int spent = sim ? simSpent : goldBefore - Hero.MainHero.Gold;
-            _runMovedGoods = true;
+            NoteGoodsMoved(settlement, sim);
             Log.Write((sim ? "haul animals (simulated, best case): " : "haul animals: ") + hauled +
                       " bought, -" + spent + " gold at " + settlement.Name);
             LogDetail(selling: false, sim, detail, "stocking the baggage train");
-            if (!sim) NotePricesMoved(settlement);
-            TextObject msg = Tongue.Text(sim
-                ? "{=TL111}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more."
-                : "{=TL110}TradeLord bought {ITEMS} for {GOLD} denars to carry more.");
-            msg.SetTextVariable("ITEMS", ItemSummary(detail, hauled));
-            msg.SetTextVariable("GOLD", spent);
+            TextObject msg = PassMessage(sim,
+                "{=TL111}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more.",
+                "{=TL110}TradeLord bought {ITEMS} for {GOLD} denars to carry more.",
+                detail, hauled, spent);
             if (!Muted(quiet)) ToastAfterXp(msg, ToastSpend);
         }
 
@@ -2480,17 +2488,15 @@ namespace TradeLord
             int spent = sim ? simSpent : goldBefore - Hero.MainHero.Gold;
             if (bought > 0)
             {
-                _runMovedGoods = true;
+                NoteGoodsMoved(settlement, sim);
                 Log.Write((sim ? "quick-buy (simulated, best case): " : "quick-buy: ") + bought +
                           " items, -" + spent + " gold at " + settlement.Name);
                 LogDetail(selling: false, sim, detail, "the buying pass");
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
-                if (!sim) NotePricesMoved(settlement);
-                TextObject msg = Tongue.Text(sim
-                    ? "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars."
-                    : "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.");
-                msg.SetTextVariable("ITEMS", ItemSummary(detail, bought));
-                msg.SetTextVariable("GOLD", spent);
+                TextObject msg = PassMessage(sim,
+                    "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
+                    "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.",
+                    detail, bought, spent);
                 if (!Muted(quiet)) Toast(msg, ToastSpend);
             }
             else if (!directionError)
