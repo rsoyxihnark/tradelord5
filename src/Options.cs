@@ -111,7 +111,7 @@ namespace TradeLord
 
         public int MaxHeldPerItem = 0;
 
-        public float MaxHeldShare = 0f;
+        public float MaxHeldShare = 0.45f;
 
         public int MaxSpendPerVisit = 1000;
 

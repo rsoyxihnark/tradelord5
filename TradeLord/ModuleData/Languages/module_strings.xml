@@ -87,6 +87,7 @@
 		<string id="TL111" text="[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more."/>
 		<string id="TL113" text="Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!"/>
 		<string id="TL387" text="Let us pass, and we will be on our way. [TRADELORD]"/>
+		<string id="TL388" text="your Never buy grain setting is holding it back"/>
 		<string id="TL114" text="That was a nice trade. [TRADELORD]"/>
 		<string id="TL115" text="Agreed. I wish I could use that mod too. Hope you gave a thumbs up endorsement on NexusMods!"/>
 		<string id="TL116" text="TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed."/>

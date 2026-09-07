@@ -30,7 +30,7 @@ namespace TradeLord
         MountOrHaulAnimal, NotTradable, FoodReserve, TradedHereAlready, NoStock,
         NoResaleMarket, BelowMargin, BelowBestMarket, MerchantTillEmpty, BudgetSpent,
         ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit, HeldEnough, Smeltable,
-        QuestAnimal
+        QuestAnimal, GrainSwitch
     }
 
     internal sealed class BlockTally
@@ -118,6 +118,8 @@ namespace TradeLord
                     return Tongue.Text("{=TL99}you are keeping what the smithy can break down");
                 case Block.NeverList:
                     return Tongue.Text("{=TL381}it is on your never-sell or never-buy list");
+                case Block.GrainSwitch:
+                    return Tongue.Text("{=TL388}your Never buy grain setting is holding it back");
                 case Block.Locked:
                     return Tongue.Text("{=TL382}it is locked in your inventory");
                 case Block.Protected:
@@ -540,7 +542,7 @@ namespace TradeLord
             if (IsLocked(lockedKeys, new EquipmentElement(item))) { why = Block.Locked; return false; }
 
             bool always = Listed(s.AlwaysBuySet, item);
-            if (!always && !toFeed && s.NeverBuyGrain && item == DefaultItems.Grain) { why = Block.NeverList; return false; }
+            if (!always && !toFeed && s.NeverBuyGrain && item == DefaultItems.Grain) { why = Block.GrainSwitch; return false; }
             if (!always && !PolicyAllows(PolicyFor(item), buying: true)) { why = Block.CategoryPolicy; return false; }
             if (item.HasHorseComponent)
             {
@@ -969,6 +971,7 @@ namespace TradeLord
 
             private ISet<string> _locked;
             private bool _lockedRead;
+            private float _capacity = -1f;
             private int _goldBefore;
             private ItemRosterElement _unit;
             private int _unitPrice;
@@ -1027,6 +1030,10 @@ namespace TradeLord
 
             internal int Spendable() => TradeActionBehavior.Spendable(Books, Sim);
 
+            internal float Capacity => _capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity;
+
+            internal float Room() => Capacity - Carry.Carried(Party);
+
             internal void CountFrom() => _goldBefore = Hero.MainHero.Gold;
 
             internal int Gained(int simGold) => GoldGained(Sim, simGold, _goldBefore);
@@ -1075,7 +1082,9 @@ namespace TradeLord
                 if (Sim) return;
                 if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);
                 CoinSound();
-                if (Site != null) LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);
+                if (Site == null) return;
+                LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);
+                Guard.Run("Pass.PinCleared", () => LedgerPanel.Unpin(Site));
             }
 
             internal void Capture()
@@ -1903,7 +1912,7 @@ namespace TradeLord
 
         private static Block WhatStopsBuying(ItemObject item, int price, int budget,
                                              (int count, int spent) taken, int held, float shareCap,
-                                             bool livestock, int herdRoom, bool lastInVillage, float simWeight)
+                                             bool livestock, int herdRoom, bool lastInVillage, float roomLeft)
         {
             Options s = Options.Current;
             if (price > budget) return Block.BudgetSpent;
@@ -1913,8 +1922,7 @@ namespace TradeLord
             if (shareCap > 0f && (held + 1) * item.Weight > shareCap) return Block.HeldEnough;
             if (livestock && herdRoom <= 0) return Block.HerdFull;
             if (lastInVillage) return Block.VillageLastUnit;
-            if (item.Weight > 0.01f &&
-                item.Weight > Carry.Room(MobileParty.MainParty) - simWeight) return Block.CarryWeight;
+            if (item.Weight > 0.01f && item.Weight > roomLeft) return Block.CarryWeight;
             return Block.None;
         }
 
@@ -1973,7 +1981,7 @@ namespace TradeLord
                         if (price <= 0 || price > worth) break;
                         if (price >= pass.Spendable()) break;
                         if (settlement.IsVillage && remaining <= 1) break;
-                        if (item.Weight > 0.01f && item.Weight > Carry.Room(pass.Party) - simWeight) break;
+                        if (item.Weight > 0.01f && item.Weight > pass.Room() - simWeight) break;
 
                         if (pass.Sim)
                         {
@@ -2275,7 +2283,7 @@ namespace TradeLord
             var tally = new BlockTally();
 
             float shareCap = Options.Current.MaxHeldShare > 0f
-                ? Carry.Capacity(pass.Party) * Options.Current.MaxHeldShare : 0f;
+                ? pass.Capacity * Options.Current.MaxHeldShare : 0f;
 
             var stock = new List<(ItemRosterElement el, float realizable, float margin)>();
             if (pass.Spendable() > 0)
@@ -2337,7 +2345,7 @@ namespace TradeLord
                         Block capped = WhatStopsBuying(item, price, pass.Spendable(), (countThis, spentThis), held,
                                                        shareCap, livestock, herdRoom,
                                                        pass.Site != null && pass.Site.IsVillage && remaining <= 1,
-                                                       simWeight);
+                                                       pass.Room() - simWeight);
                         if (capped != Block.None) { tally.Note(capped); break; }
 
                         if (pass.Sim)
