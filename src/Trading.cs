@@ -1749,7 +1749,7 @@ namespace TradeLord
                     if (!TradePolicy.MaySell(el, pass.Locked, keepBack, awaited, out int keep, out Block why)) { tally.Note(why); continue; }
 
                     int remaining = el.Amount - keep + SimVisit.Held(pass.Sim, item.StringId);
-                    if (remaining <= 0) { tally.Note(Block.FoodReserve); continue; }
+                    if (remaining <= 0) { tally.Note(Block.TradedHereAlready); continue; }
 
                     Basis basis = Basis.For(item);
 
@@ -2051,6 +2051,11 @@ namespace TradeLord
             var soldHere = new HashSet<string>();
             var detail = new Dictionary<ItemObject, (int count, int gold)>();
 
+            EquipmentElement unit = default(EquipmentElement);
+            int unitPrice = 0;
+            Action handOver = () => HandOver(me, shop, unit, unitPrice);
+            Action takeDelivery = () => TakeDelivery(shop, me, unit, unitPrice);
+
             int Budget() =>
                 TradeMath.Budget(Hero.MainHero.Gold + (sim ? simGold : 0), GoldHeldBack(),
                                  Options.Current.MaxSpendPerVisit, sim ? 0 : paidOut, sim ? simSpent : 0);
@@ -2106,7 +2111,9 @@ namespace TradeLord
                             continue;
                         }
 
-                        if (!SwapOneUnit(true, () => HandOver(me, shop, el.EquipmentElement, price),
+                        unit = el.EquipmentElement;
+                        unitPrice = price;
+                        if (!SwapOneUnit(true, handOver,
                                          "selling on the road", "Road trading", out int proceeds))
                         {
                             directionError = true;
@@ -2204,7 +2211,9 @@ namespace TradeLord
                             continue;
                         }
 
-                        if (!SwapOneUnit(false, () => TakeDelivery(shop, me, el.EquipmentElement, price),
+                        unit = el.EquipmentElement;
+                        unitPrice = price;
+                        if (!SwapOneUnit(false, takeDelivery,
                                          "buying on the road", "Road buying", out int cost))
                         {
                             directionError = true;
