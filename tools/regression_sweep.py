@@ -810,7 +810,7 @@ def restocking_runs_between_selling_and_buying():
                 in method_body(S['Trading.cs'], "public static void ExecuteResupply")
             and "if (el.Amount <= 0 || !wanted(it)) continue;" in body
             and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
-            and "price > SpendableGold()" in body
+            and "price >= SpendableGold()" in body
             and "int worth = TradePolicy.UnpaidWorth(it);" in body
             and body.count("price > worth") == 2
             and "settlement.IsVillage && remaining <= 1" in body
@@ -3040,7 +3040,7 @@ def pack_animals_are_bought_between_restocking_and_the_profit_pass():
             and "if (!Options.Current.BuyHaulAnimals) return;" in body
             and "it => TradePolicy.MayHaul(it, locked)" in body
             and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
-            and "price > SpendableGold()" in body
+            and "price >= SpendableGold()" in body
             and "settlement.IsVillage && remaining <= 1" in body
             and "BuyAcceptable" not in body
             and "BestSell" not in body)
@@ -3075,7 +3075,7 @@ def a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_below_the_reser
             and "Ceiling" not in body
             and "CargoIsFull" not in ALL
             and "PackAnimalFullCargoPremium" not in S['Trading.cs']
-            and "price > SpendableGold()" in body
+            and "price >= SpendableGold()" in body
             and option_default('BuyHaulAnimals') == 'true'
             and "_o.BuyHaulAnimals" in M
             and "PackAnimalFullCargoPremium" not in M
@@ -4174,17 +4174,22 @@ chk("1.39.0", "selling an animal to get back up to speed counts towards your pro
 chk("1.39.0", "the markets on offer are worked out again as the party moves, not only when the hour turns",
     the_rankings_are_dropped_when_the_party_moves_not_only_when_the_hour_turns())
 
-def every_buying_pass_stops_at_the_same_edge_of_the_gold_reserve():
+def the_larder_and_the_stable_leave_the_gold_reserve_whole():
     larder = pass_body("public static void ExecuteResupply")
     stable = pass_body("public static void ExecuteHaulage")
     capped = method_body(S['Trading.cs'], "private static Block WhatStopsBuying")
-    return ("if (price > SpendableGold()) break;" in larder
-            and "if (price > SpendableGold()) break;" in stable
-            and "price >= SpendableGold()" not in S['Trading.cs']
-            and "if (price > budget) return Block.BudgetSpent;" in capped)
+    said = "it stops before your gold reaches your reserve"
+    return ("if (price >= SpendableGold()) break;" in larder
+            and "if (price >= SpendableGold()) break;" in stable
+            and "if (price > SpendableGold()) break;" not in S['Trading.cs']
+            and "if (price > budget) return Block.BudgetSpent;" in capped
+            and said in re.search(r'\{=TL363\}([^"]*)"', M).group(1)
+            and said in re.search(r'\{=TL367\}([^"]*)"', M).group(1)
+            and said in spoken(ENGLISH).get('TL363', '')
+            and said in spoken(ENGLISH).get('TL367', ''))
 
-chk("1.39.1", "restocking, buying a haul animal and buying for profit all stop at the gold reserve rather than a denar above it",
-    every_buying_pass_stops_at_the_same_edge_of_the_gold_reserve())
+chk("1.39.3", "restocking and buying a haul animal stop before your gold reaches your reserve, word for word as their own settings promise, and buying for profit is the one pass that may spend down to it",
+    the_larder_and_the_stable_leave_the_gold_reserve_whole())
 
 def an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on():
     t = S['Trading.cs']
