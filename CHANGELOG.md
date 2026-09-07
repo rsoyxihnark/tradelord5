@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.39.2
+
+- An animal a quest is waiting on is now kept back even where your always-sell list names it, instead of being sold with the rest of your cargo.
+
 ## 1.39.1
 
 - Restocking food and buying a haul animal now spend down to your gold reserve, the way buying for profit already did, instead of always leaving a denar above it.
