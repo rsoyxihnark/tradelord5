@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TradeLord;
 using Xunit;
@@ -146,6 +147,17 @@ namespace TradeLord.Tests
 
     public class ItemListTests
     {
+        private static readonly HashSet<string> Calradia =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "grain", "hardwood", "iron", "iron_ore", "fish", "wine" };
+
+        private static ItemList Read(string written)
+        {
+            ItemList list = new Options { NeverSellItems = written }.NeverSet;
+            list.ReadWordsAsIds(Calradia);
+            return list;
+        }
+
         [Theory]
         [InlineData("grain")]
         [InlineData("grain,hardwood")]
@@ -155,8 +167,7 @@ namespace TradeLord.Tests
         [InlineData("  grain ,, hardwood  ")]
         public void An_item_list_is_read_however_it_is_punctuated(string written)
         {
-            var options = new Options { NeverSellItems = written };
-            Assert.True(options.NeverSet.HasId("grain"));
+            Assert.True(Read(written).HasId("grain"));
         }
 
         [Fact]
@@ -214,12 +225,25 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_word_of_a_written_name_still_stands_for_an_id_of_its_own()
+        public void A_good_named_the_way_the_game_shows_it_never_catches_another_good()
         {
-            var options = new Options { NeverSellItems = "Iron Ore" };
-            Assert.True(options.NeverSet.HasName("Iron Ore"));
-            Assert.True(options.NeverSet.HasId("iron"));
-            Assert.True(options.NeverSet.HasId("ore"));
+            ItemList list = Read("Iron Ore");
+            Assert.True(list.HasName("Iron Ore"));
+            Assert.False(list.HasId("iron"));
+            Assert.False(list.HasId("ore"));
+        }
+
+        [Fact]
+        public void A_written_name_holds_nothing_until_the_goods_in_this_game_are_read()
+        {
+            ItemList list = new Options { NeverSellItems = "grain hardwood" }.NeverSet;
+            Assert.False(list.HasId("grain"));
+
+            list.ReadWordsAsIds(Calradia);
+            Assert.True(list.HasId("grain"));
+
+            list.ReadWordsAsIds(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "grain" });
+            Assert.False(list.HasId("grain"));
         }
 
         [Fact]
@@ -236,10 +260,10 @@ namespace TradeLord.Tests
         [Fact]
         public void Ids_written_the_old_way_with_spaces_between_them_still_read()
         {
-            var options = new Options { NeverSellItems = "grain hardwood iron_ore" };
-            Assert.True(options.NeverSet.HasId("grain"));
-            Assert.True(options.NeverSet.HasId("hardwood"));
-            Assert.True(options.NeverSet.HasId("iron_ore"));
+            ItemList list = Read("grain hardwood iron_ore");
+            Assert.True(list.HasId("grain"));
+            Assert.True(list.HasId("hardwood"));
+            Assert.True(list.HasId("iron_ore"));
         }
 
         [Fact]
@@ -261,7 +285,7 @@ namespace TradeLord.Tests
         [InlineData("Iron_Ore", "iron_ore")]
         public void A_name_is_matched_whatever_its_capitalisation(string written, string looked)
         {
-            var list = new Options { NeverSellItems = written }.NeverSet;
+            ItemList list = Read(written);
             Assert.True(list.HasId(looked) || list.HasName(looked));
         }
 

@@ -195,10 +195,38 @@ namespace TradeLord
             catch (Exception e) { Log.Error(e, "learned parts check (the weapon is kept)"); return false; }
         }
 
-        internal static bool Listed(ItemList list, ItemObject item) =>
-            item != null && !list.Empty &&
-            (list.HasId(item.StringId) ||
-             (item.Name != null && list.HasName(item.Name.ToString())));
+        internal static bool Listed(ItemList list, ItemObject item)
+        {
+            if (item == null || list.Empty) return false;
+            ReadTheGoodsInThisGame();
+            return list.HasId(item.StringId) ||
+                   (item.Name != null && list.HasName(item.Name.ToString()));
+        }
+
+        private static int _readGeneration = -1;
+        private static HashSet<string> _knownIds, _knownNames;
+
+        private static void ReadTheGoodsInThisGame()
+        {
+            if (_readGeneration == Options.Generation) return;
+            _readGeneration = Options.Generation;
+            if (_knownIds == null)
+            {
+                _knownIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                _knownNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (ItemObject item in Items.All)
+                {
+                    if (item == null) continue;
+                    _knownIds.Add(item.StringId);
+                    if (item.Name != null) _knownNames.Add(item.Name.ToString());
+                }
+            }
+            Options s = Options.Current;
+            s.NeverSet.ReadWordsAsIds(_knownIds);
+            s.AlwaysSet.ReadWordsAsIds(_knownIds);
+            s.NeverBuySet.ReadWordsAsIds(_knownIds);
+            s.AlwaysBuySet.ReadWordsAsIds(_knownIds);
+        }
 
         private static int _auditedGeneration = -1;
 
@@ -209,23 +237,23 @@ namespace TradeLord
             Options s = Options.Current;
             if (string.IsNullOrEmpty(s.NeverSellItems) && string.IsNullOrEmpty(s.AlwaysSellItems) &&
                 string.IsNullOrEmpty(s.NeverBuyItems) && string.IsNullOrEmpty(s.AlwaysBuyItems)) return false;
-            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (ItemObject item in Items.All)
-            {
-                if (item == null) continue;
-                ids.Add(item.StringId);
-                if (item.Name != null) names.Add(item.Name.ToString());
-            }
+            ReadTheGoodsInThisGame();
             bool missed = false;
-            missed |= Unmatched("never sell", s.NeverSellItems, ids, names);
-            missed |= Unmatched("always sell", s.AlwaysSellItems, ids, names);
-            missed |= Unmatched("never buy", s.NeverBuyItems, ids, names);
-            missed |= Unmatched("always buy", s.AlwaysBuyItems, ids, names);
+            missed |= Unmatched("never sell", s.NeverSellItems, _knownIds, _knownNames);
+            missed |= Unmatched("always sell", s.AlwaysSellItems, _knownIds, _knownNames);
+            missed |= Unmatched("never buy", s.NeverBuyItems, _knownIds, _knownNames);
+            missed |= Unmatched("always buy", s.AlwaysBuyItems, _knownIds, _knownNames);
             return missed;
         }
 
-        internal static void ForgetItemListAudit() { _auditedGeneration = -1; _clashGeneration = -1; }
+        internal static void ForgetItemListAudit()
+        {
+            _auditedGeneration = -1;
+            _clashGeneration = -1;
+            _readGeneration = -1;
+            _knownIds = null;
+            _knownNames = null;
+        }
 
         private static int _clashGeneration = -1;
 
@@ -763,10 +791,7 @@ namespace TradeLord
         private Settlement _trackedTown;
         private string _pinnedTowns = "";
         private bool _announcedAutomation;
-        private static int _spentThisVisit;
-        private static readonly HashSet<string> _soldThisVisit = new HashSet<string>();
-        private static readonly Dictionary<string, (int count, int spent)> _boughtThisVisit =
-            new Dictionary<string, (int, int)>();
+        private static readonly Books Visit = new Books();
         private static bool _cargoWasFull;
         private static bool _runMovedGoods;
         private static Block? _sellStalled;
@@ -896,10 +921,7 @@ namespace TradeLord
         private static void ResetVisit()
         {
             _visitTradeAllowed = false;
-            _spentThisVisit = 0;
-            _soldThisVisit.Clear();
-            _boughtThisVisit.Clear();
-            SimVisit.Forget();
+            Visit.Forget();
             _cargoWasFull = false;
             _runMovedGoods = false;
             _sellStalled = null;
@@ -914,43 +936,7 @@ namespace TradeLord
 
         private static bool Simulating => Options.Current.SimulationMode;
 
-        private static bool TradedThisVisit() =>
-            _soldThisVisit.Count > 0 || _boughtThisVisit.Count > 0 || SimVisit.Traded(Simulating);
-
-        private static bool SoldHereAlready(bool sim, string id) =>
-            _soldThisVisit.Contains(id) || SimVisit.Sold(sim, id);
-
-        private static bool BoughtHereAlready(bool sim, string id) =>
-            _boughtThisVisit.ContainsKey(id) || SimVisit.Bought(sim, id);
-
-        private static (int count, int spent) PurchasesHere(bool sim, string id)
-        {
-            _boughtThisVisit.TryGetValue(id, out var prior);
-            var dry = SimVisit.Purchases(sim, id);
-            return (prior.count + dry.count, prior.spent + dry.spent);
-        }
-
-        private static void NoteRealPurchase(ItemObject item, int price)
-        {
-            LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, price);
-            _spentThisVisit += price;
-            _boughtThisVisit.TryGetValue(item.StringId, out var prior);
-            _boughtThisVisit[item.StringId] = (prior.count + 1, prior.spent + price);
-        }
-
-        private static void NotePricesMoved(Settlement settlement)
-        {
-            CoinSound();
-            LedgerBehavior.Instance?.CaptureSettlement(settlement, force: true);
-        }
-
-        private static void NoteGoodsMoved(Settlement settlement, bool sim, int? profit = null)
-        {
-            _runMovedGoods = true;
-            if (sim) return;
-            if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);
-            NotePricesMoved(settlement);
-        }
+        private static bool TradedThisVisit() => Visit.Traded(Simulating);
 
         private static TextObject PassMessage(bool sim, string simSaid, string realSaid,
                                               Dictionary<ItemObject, (int count, int gold)> detail,
@@ -971,6 +957,9 @@ namespace TradeLord
             internal readonly PartyBase Shop;
             internal readonly PartyBase Me;
             internal readonly MobileParty Party;
+            internal readonly MobileParty Met;
+            internal readonly IMarketData Road;
+            internal readonly Books Books;
             internal readonly bool Sim;
             internal readonly bool Quiet;
             internal readonly Dictionary<ItemObject, (int count, int gold)> Detail =
@@ -982,14 +971,19 @@ namespace TradeLord
             private bool _lockedRead;
             private int _goldBefore;
             private ItemRosterElement _unit;
+            private int _unitPrice;
             private Action _sellUnit;
             private Action _buyUnit;
 
-            private Pass(Settlement site, MobileParty party, bool quiet)
+            private Pass(Settlement site, MobileParty met, IMarketData road, Books books,
+                         MobileParty party, bool quiet)
             {
                 Site = site;
-                Market = site.SettlementComponent;
-                Shop = site.Party;
+                Met = met;
+                Road = road;
+                Market = site?.SettlementComponent;
+                Shop = site != null ? site.Party : met.Party;
+                Books = books;
                 Party = party;
                 Me = party.Party;
                 Sim = Options.Current.SimulationMode;
@@ -1000,8 +994,11 @@ namespace TradeLord
             {
                 if (!MarketOpen(site, quiet)) return null;
                 MobileParty party = MobileParty.MainParty;
-                return party == null ? null : new Pass(site, party, quiet);
+                return party == null ? null : new Pass(site, null, null, Visit, party, quiet);
             }
+
+            internal static Pass Meet(MobileParty met, IMarketData road, Books books, MobileParty party) =>
+                new Pass(null, met, road, books, party, quiet: true);
 
             internal ISet<string> Locked
             {
@@ -1016,7 +1013,19 @@ namespace TradeLord
 
             internal bool Muted => TradeActionBehavior.Muted(Quiet);
 
-            internal int Till => Market.Gold - SimVisit.TillDrawn(Sim);
+            internal bool Reports => Site != null;
+
+            internal string Where => Site != null ? "at " + Site.Name : "from " + Met.Name;
+
+            internal string Headed(string label) => label + (Sim ? " (simulated, best case): " : ": ");
+
+            internal ItemRoster Stock => Site != null ? Site.ItemRoster : Met.ItemRoster;
+
+            internal int TillNow => Site != null ? Market.Gold : Met.PartyTradeGold;
+
+            internal int Till => TillNow - Books.TillDrawn(Sim);
+
+            internal int Spendable() => TradeActionBehavior.Spendable(Books, Sim);
 
             internal void CountFrom() => _goldBefore = Hero.MainHero.Gold;
 
@@ -1025,22 +1034,31 @@ namespace TradeLord
             internal int Spent(int simSpent) => GoldSpent(Sim, simSpent, _goldBefore);
 
             internal int Price(EquipmentElement what, bool selling) =>
-                Market.GetItemPrice(what, Party, selling);
+                Site != null ? Market.GetItemPrice(what, Party, selling)
+                             : Road.GetPrice(what, Party, selling, Shop);
 
             internal void Tally(ItemObject item, int count, int gold) =>
                 TradeActionBehavior.Tally(Detail, item, count, gold);
 
-            internal bool SellOne(ItemRosterElement el, string what, string named, out int gold)
+            internal bool SellOne(ItemRosterElement el, int price, string what, string named, out int gold)
             {
                 _unit = el;
-                if (_sellUnit == null) _sellUnit = () => SellItemsAction.Apply(Me, Shop, _unit, 1, Site);
+                _unitPrice = price;
+                if (_sellUnit == null)
+                    _sellUnit = Site != null
+                        ? (Action)(() => SellItemsAction.Apply(Me, Shop, _unit, 1, Site))
+                        : () => HandOver(Me, Shop, _unit.EquipmentElement, _unitPrice);
                 return Swap(true, _sellUnit, what, named, out gold);
             }
 
-            internal bool BuyOne(ItemRosterElement el, string what, string named, out int gold)
+            internal bool BuyOne(ItemRosterElement el, int price, string what, string named, out int gold)
             {
                 _unit = el;
-                if (_buyUnit == null) _buyUnit = () => SellItemsAction.Apply(Shop, Me, _unit, 1, Site);
+                _unitPrice = price;
+                if (_buyUnit == null)
+                    _buyUnit = Site != null
+                        ? (Action)(() => SellItemsAction.Apply(Shop, Me, _unit, 1, Site))
+                        : () => TakeDelivery(Shop, Me, _unit.EquipmentElement, _unitPrice);
                 return Swap(false, _buyUnit, what, named, out gold);
             }
 
@@ -1051,7 +1069,19 @@ namespace TradeLord
                 return false;
             }
 
-            internal void Moved(int? profit = null) => NoteGoodsMoved(Site, Sim, profit);
+            internal void Moved(int? profit = null)
+            {
+                _runMovedGoods = true;
+                if (Sim) return;
+                if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);
+                CoinSound();
+                if (Site != null) LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);
+            }
+
+            internal void Capture()
+            {
+                if (Site != null) LedgerBehavior.Instance?.CaptureSettlement(Site);
+            }
 
             internal TextObject Said(string simSaid, string realSaid, int items, int gold) =>
                 PassMessage(Sim, simSaid, realSaid, Detail, items, gold);
@@ -1074,13 +1104,9 @@ namespace TradeLord
             return TradeMath.Reserve(Options.Current.GoldReserve, Options.Current.KeepWageDays, wage);
         }
 
-        private static int PurseNow(bool sim) => Hero.MainHero.Gold + SimVisit.Purse(sim);
-
-        private static int SpentSoFar(bool sim) => _spentThisVisit + SimVisit.Spent(sim);
-
-        private static int SpendableGold() =>
-            TradeMath.Budget(PurseNow(Simulating), GoldHeldBack(),
-                             Options.Current.MaxSpendPerVisit, SpentSoFar(Simulating), 0);
+        internal static int Spendable(Books books, bool sim) =>
+            TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(),
+                             Options.Current.MaxSpendPerVisit, books.PaidOut(sim), 0);
 
         internal static int PurseForAVisit() =>
             TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
@@ -1095,7 +1121,7 @@ namespace TradeLord
         private static bool WarnPurseBelowReserve()
         {
             if (TradedThisVisit()) return false;
-            if (SpendableGold() > 0) return false;
+            if (Spendable(Visit, Simulating) > 0) return false;
             TextObject msg = Tongue.Text("{=TL92}Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings.");
             msg.SetTextVariable("GOLD", Hero.MainHero.Gold);
             msg.SetTextVariable("RESERVE", GoldHeldBack());
@@ -1721,14 +1747,16 @@ namespace TradeLord
             Toast(none);
         }
 
-        public static void ExecuteQuickSell(Settlement settlement, bool quiet = false)
+        public static void ExecuteQuickSell(Settlement settlement, bool quiet = false) =>
+            SellPass(Pass.Open(settlement, quiet), "quick-sell", "selling", "Selling", "the selling pass");
+
+        private static void SellPass(Pass pass, string label, string what, string named, string why)
         {
-            Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
 
             ItemRoster roster = pass.Party.ItemRoster;
 
-            LedgerBehavior.Instance?.CaptureSettlement(settlement);
+            pass.Capture();
 
             var plan = new List<ItemRosterElement>();
             for (int i = 0; i < roster.Count; i++)
@@ -1745,10 +1773,10 @@ namespace TradeLord
                 {
                     if (pass.DirectionError) break;
                     ItemObject item = el.EquipmentElement.Item;
-                    if (item != null && BoughtHereAlready(pass.Sim, item.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
-                    if (!TradePolicy.MaySell(el, pass.Locked, keepBack, awaited, out int keep, out Block why)) { tally.Note(why); continue; }
+                    if (item != null && pass.Books.Bought(pass.Sim, item.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
+                    if (!TradePolicy.MaySell(el, pass.Locked, keepBack, awaited, out int keep, out Block stopped)) { tally.Note(stopped); continue; }
 
-                    int remaining = el.Amount - keep + SimVisit.Held(pass.Sim, item.StringId);
+                    int remaining = el.Amount - keep + pass.Books.Held(pass.Sim, item.StringId);
                     if (remaining <= 0) { tally.Note(Block.TradedHereAlready); continue; }
 
                     Basis basis = Basis.For(item);
@@ -1766,7 +1794,7 @@ namespace TradeLord
                             {
                                 floorKnown = true;
                                 var best = LedgerBehavior.Instance?.BestSell(item) ?? (null, 0);
-                                if (best.Item1 != null && best.Item1 != settlement)
+                                if (best.Item1 != null && best.Item1 != pass.Site)
                                     bestMarketFloor = (int)(best.Item2 * Options.Current.BestSellTownTolerance);
                             }
                             holdFloor = bestMarketFloor;
@@ -1779,7 +1807,7 @@ namespace TradeLord
                             if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;
                             continue;
                         }
-                        if ((pass.Sim ? simTill : pass.Market.Gold) < price) { tally.Note(Block.MerchantTillEmpty); break; }
+                        if ((pass.Sim ? simTill : pass.TillNow) < price) { tally.Note(Block.MerchantTillEmpty); break; }
 
                         if (pass.Sim)
                         {
@@ -1787,11 +1815,11 @@ namespace TradeLord
                             simGold += price;
                             profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);
                             int herdRank = HerdShedRank(item);
-                            SimVisit.NoteSale(item.StringId, price,
-                                              herdRank == RankHaulAnimal ? 0f : item.Weight,
-                                              TradePolicy.FoodValue(item));
+                            pass.Books.NoteSale(item.StringId, price,
+                                                herdRank == RankHaulAnimal ? 0f : item.Weight,
+                                                TradePolicy.FoodValue(item));
                             if (herdRank >= 0)
-                                SimVisit.NoteShed(herdRank == RankHaulAnimal, herdRank != RankLivestock);
+                                pass.Books.NoteShed(herdRank == RankHaulAnimal, herdRank != RankLivestock);
                             soldItems++;
                             remaining--;
                             basis.SoldOne();
@@ -1799,11 +1827,11 @@ namespace TradeLord
                             continue;
                         }
 
-                        if (!pass.SellOne(el, "selling", "Selling", out int proceeds)) break;
+                        if (!pass.SellOne(el, price, what, named, out int proceeds)) break;
                         if (proceeds == 0) break;
 
                         if (basis.SoldOne()) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
-                        _soldThisVisit.Add(item.StringId);
+                        pass.Books.NoteSold(item.StringId);
                         soldItems++;
                         profit += TradePolicy.Credit(proceeds, worth, basis.UnpaidWorth);
                         remaining--;
@@ -1817,9 +1845,9 @@ namespace TradeLord
             if (soldItems > 0)
             {
                 pass.Moved(profit);
-                Log.Write((pass.Sim ? "quick-sell (simulated, best case): " : "quick-sell: ") + soldItems +
-                          " items, +" + goldGained + " gold, profit " + profit + " at " + settlement.Name);
-                pass.Logged(selling: true, "the selling pass");
+                Log.Write(pass.Headed(label) + soldItems +
+                          " items, +" + goldGained + " gold, profit " + profit + " " + pass.Where);
+                pass.Logged(selling: true, why);
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
                 TextObject msg = pass.Said(
                     "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
@@ -1829,10 +1857,10 @@ namespace TradeLord
                 if (!pass.Muted) Toast(msg, profit > 0 ? ToastGain : ToastFlat);
                 if (!pass.Sim && profit > 0) AwardTradeXp(profit, pass.Muted);
             }
-            else if (!pass.DirectionError)
+            else if (!pass.DirectionError && pass.Reports)
             {
-                if (tally.Any) Log.Repeatable("quick-sell-empty " + settlement.StringId, tally.Summary(),
-                    "quick-sell moved nothing at " + settlement.Name + ": " + tally.Summary());
+                if (tally.Any) Log.Repeatable(label + "-empty " + pass.Site.StringId, tally.Summary(),
+                    label + " moved nothing " + pass.Where + ": " + tally.Summary());
                 Block stopped = tally.Dominant();
                 if (stopped != Block.None && !pass.Muted) NoteStalled(selling: true, stopped);
             }
@@ -1894,14 +1922,14 @@ namespace TradeLord
             Pass pass, Func<ItemObject, bool> wanted)
         {
             var found = new List<(ItemRosterElement el, int price, int worth)>();
-            ItemRoster shopRoster = pass.Site.ItemRoster;
+            ItemRoster shopRoster = pass.Stock;
             for (int i = 0; i < shopRoster.Count; i++)
             {
                 ItemRosterElement el = shopRoster.GetElementCopyAtIndex(i);
                 ItemObject it = el.EquipmentElement.Item;
                 if (el.Amount <= 0 || !wanted(it)) continue;
-                if (SoldHereAlready(pass.Sim, it.StringId)) continue;
-                if (el.Amount - SimVisit.Stocked(pass.Sim, it.StringId) <= 0) continue;
+                if (pass.Books.Sold(pass.Sim, it.StringId)) continue;
+                if (el.Amount - pass.Books.Stocked(pass.Sim, it.StringId) <= 0) continue;
                 int price = pass.Price(el.EquipmentElement, selling: false);
                 int worth = TradePolicy.UnpaidWorth(it);
                 if (price <= 0 || price > worth) continue;
@@ -1918,11 +1946,11 @@ namespace TradeLord
             if (pass == null) return;
 
             int shortfall = TradePolicy.FoodWanted() -
-                            TradePolicy.FoodHeld(pass.Party.ItemRoster) - SimVisit.FoodHeld(pass.Sim);
+                            TradePolicy.FoodHeld(pass.Party.ItemRoster) - pass.Books.FoodHeld(pass.Sim);
             if (shortfall <= 0) return;
 
             int stocked = 0, simSpent = 0;
-            float simWeight = SimVisit.Weight(pass.Sim);
+            float simWeight = pass.Books.Weight(pass.Sim);
 
             var larder = CheapestFirst(pass,
                 it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true));
@@ -1937,13 +1965,13 @@ namespace TradeLord
                     ItemObject item = el.EquipmentElement.Item;
                     int fed = TradePolicy.FoodValue(item);
                     if (fed <= 0) continue;
-                    int remaining = el.Amount - SimVisit.Stocked(pass.Sim, item.StringId);
+                    int remaining = el.Amount - pass.Books.Stocked(pass.Sim, item.StringId);
 
                     while (shortfall > 0 && remaining > 0)
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (price <= 0 || price > worth) break;
-                        if (price >= SpendableGold()) break;
+                        if (price >= pass.Spendable()) break;
                         if (settlement.IsVillage && remaining <= 1) break;
                         if (item.Weight > 0.01f && item.Weight > Carry.Room(pass.Party) - simWeight) break;
 
@@ -1951,13 +1979,14 @@ namespace TradeLord
                         {
                             simSpent += price;
                             simWeight += item.Weight;
-                            SimVisit.NotePurchase(item.StringId, price, item.Weight, fed);
+                            pass.Books.NotePurchase(item.StringId, price, item.Weight, fed);
                         }
                         else
                         {
-                            if (!pass.BuyOne(el, "restocking", "Restocking", out price)) break;
+                            if (!pass.BuyOne(el, price, "restocking", "Restocking", out price)) break;
                             if (price == 0) break;
-                            NoteRealPurchase(item, price);
+                            LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, price);
+                            pass.Books.NoteBought(item.StringId, price);
                         }
                         stocked++;
                         remaining--;
@@ -2032,220 +2061,17 @@ namespace TradeLord
             if (!Options.Current.TradeWithCaravans) return;
             if (!RoadPartyReachable(met)) return;
             if (StillSettling(quiet: false)) return;
-            IMarketData market = RoadMarket();
-            if (market == null) return;
-
+            IMarketData road = RoadMarket();
+            if (road == null) return;
             MobileParty party = MobileParty.MainParty;
             if (party == null) return;
-            PartyBase shop = met.Party;
-            PartyBase me = party.Party;
-            bool sim = Options.Current.SimulationMode;
-            bool muted = Muted(automated: true);
-            ISet<string> locked = TradePolicy.LockedKeys();
 
-            int goldBefore = Hero.MainHero.Gold;
-            int sold = 0, bought = 0, profit = 0, simGold = 0, simSpent = 0, paidOut = 0;
-            float simWeight = 0f;
-            int till = met.PartyTradeGold;
-            bool directionError = false;
-            var soldHere = new HashSet<string>();
-            var detail = new Dictionary<ItemObject, (int count, int gold)>();
-
-            EquipmentElement unit = default(EquipmentElement);
-            int unitPrice = 0;
-            Action handOver = () => HandOver(me, shop, unit, unitPrice);
-            Action takeDelivery = () => TakeDelivery(shop, me, unit, unitPrice);
-
-            int Budget() =>
-                TradeMath.Budget(Hero.MainHero.Gold + (sim ? simGold : 0), GoldHeldBack(),
-                                 Options.Current.MaxSpendPerVisit, sim ? 0 : paidOut, sim ? simSpent : 0);
-
-            InAPass(() =>
-            {
-                ItemRoster mine = party.ItemRoster;
-                var plan = new List<ItemRosterElement>();
-                for (int i = 0; i < mine.Count; i++) plan.Add(mine.GetElementCopyAtIndex(i));
-                var keepBack = TradePolicy.KeptBack(mine, out var awaited);
-
-                foreach (ItemRosterElement el in plan)
-                {
-                    if (directionError) break;
-                    ItemObject item = el.EquipmentElement.Item;
-                    if (!TradePolicy.MaySell(el, locked, keepBack, awaited, out int keep)) continue;
-                    int remaining = el.Amount - keep;
-                    if (remaining <= 0) continue;
-
-                    Basis basis = Basis.For(item);
-
-                    int holdFloor = 0;
-                    if (Options.Current.PreferBestSellTown)
-                    {
-                        var best = LedgerBehavior.Instance?.BestSell(item) ?? (null, 0);
-                        if (best.Item1 != null)
-                            holdFloor = (int)(best.Item2 * Options.Current.BestSellTownTolerance);
-                    }
-
-                    while (remaining > 0)
-                    {
-                        int worth = basis.Unit(item);
-                        int price = market.GetPrice(el.EquipmentElement, party, true, shop);
-                        if (price <= 0 || price < holdFloor) break;
-                        if (!TradePolicy.ProfitAcceptable(worth, price))
-                        {
-                            if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;
-                            continue;
-                        }
-                        if (till < price) break;
-
-                        if (sim)
-                        {
-                            till -= price;
-                            simGold += price;
-                            profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);
-                            simWeight -= item.Weight;
-                            soldHere.Add(item.StringId);
-                            sold++;
-                            remaining--;
-                            basis.SoldOne();
-                            Tally(detail, item, 1, price);
-                            continue;
-                        }
-
-                        unit = el.EquipmentElement;
-                        unitPrice = price;
-                        if (!SwapOneUnit(true, handOver,
-                                         "selling on the road", "Road trading", out int proceeds))
-                        {
-                            directionError = true;
-                            break;
-                        }
-                        if (proceeds == 0) break;
-                        till -= proceeds;
-                        profit += TradePolicy.Credit(proceeds, worth, basis.UnpaidWorth);
-                        if (basis.SoldOne()) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
-                        soldHere.Add(item.StringId);
-                        sold++;
-                        remaining--;
-                        Tally(detail, item, 1, proceeds);
-                    }
-                }
-            });
-
-            if (sold > 0)
-            {
-                int gained = GoldGained(sim, simGold, goldBefore);
-                _runMovedGoods = true;
-                Log.Write((sim ? "sale on the road (simulated, best case): " : "sale on the road: ") + sold +
-                          " items, +" + gained +
-                          " gold, profit " + profit + " from " + met.Name);
-                LogDetail(selling: true, sim, detail, "trading with a party on the road");
-                if (!sim) CoinSound();
-                TextObject said = PassMessage(sim,
-                    "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
-                    "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).",
-                    detail, sold, gained);
-                said.SetTextVariable("PROFIT", profit);
-                if (!muted) Toast(said, profit > 0 ? ToastGain : ToastFlat);
-                if (!sim && profit > 0) { AwardTradeXp(profit, muted); LedgerBehavior.Instance?.AddProfit(profit); }
-            }
-
-            int spentFrom = Hero.MainHero.Gold;
-            detail = new Dictionary<ItemObject, (int count, int gold)>();
-
-            InAPass(() =>
-            {
-                ItemRoster wares = met.ItemRoster;
-                ItemRoster ours = party.ItemRoster;
-                float shareCap = Options.Current.MaxHeldShare > 0f
-                    ? Carry.Capacity(party) * Options.Current.MaxHeldShare : 0f;
-                int herdRoom = -1;
-                var shelf = new List<(ItemRosterElement el, float realizable, float margin)>();
-                if (Budget() > 0)
-                    for (int i = 0; i < wares.Count; i++)
-                    {
-                        ItemRosterElement el = wares.GetElementCopyAtIndex(i);
-                        ItemObject it = el.EquipmentElement.Item;
-                        if (el.Amount <= 0 || soldHere.Contains(it.StringId)) continue;
-                        if (!TradePolicy.MayBuy(it, locked) || !TradePolicy.MayRoundTrip(it, locked)) continue;
-                        var elsewhere = LedgerBehavior.Instance?.BestSell(it) ?? (null, 0);
-                        if (elsewhere.Item1 == null) continue;
-                        int here = market.GetPrice(el.EquipmentElement, party, false, shop);
-                        if (here <= 0) continue;
-                        float realizable = TradePolicy.Realizable(elsewhere.Item2);
-                        if (!TradePolicy.BuyAcceptable(here, realizable)) continue;
-                        shelf.Add((el, realizable, (realizable - here) / here));
-                    }
-                shelf.Sort((x, y) => y.margin.CompareTo(x.margin));
-
-                foreach (var (el, realizable, _) in shelf)
-                {
-                    if (directionError || Budget() <= 0) break;
-                    ItemObject item = el.EquipmentElement.Item;
-                    bool livestock = TradePolicy.IsTradableLivestock(item);
-                    if (livestock)
-                    {
-                        if (herdRoom < 0) herdRoom = HerdRoomForLivestock(party);
-                        if (herdRoom <= 0) continue;
-                    }
-                    int held = ours.GetItemNumber(item);
-                    int remaining = el.Amount, countThis = 0, spentThis = 0;
-
-                    while (remaining > 0)
-                    {
-                        int price = market.GetPrice(el.EquipmentElement, party, false, shop);
-                        if (!TradePolicy.BuyAcceptable(price, realizable)) break;
-                        if (WhatStopsBuying(item, price, Budget(), (countThis, spentThis), held, shareCap,
-                                            livestock, herdRoom, false, simWeight) != Block.None) break;
-
-                        if (sim)
-                        {
-                            simSpent += price;
-                            simWeight += item.Weight;
-                            spentThis += price;
-                            countThis++;
-                            held++;
-                            bought++;
-                            remaining--;
-                            if (livestock) herdRoom--;
-                            Tally(detail, item, 1, price);
-                            continue;
-                        }
-
-                        unit = el.EquipmentElement;
-                        unitPrice = price;
-                        if (!SwapOneUnit(false, takeDelivery,
-                                         "buying on the road", "Road buying", out int cost))
-                        {
-                            directionError = true;
-                            break;
-                        }
-                        if (cost == 0) break;
-                        LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, cost);
-                        paidOut += cost;
-                        spentThis += cost;
-                        countThis++;
-                        held++;
-                        bought++;
-                        remaining--;
-                        if (livestock) herdRoom--;
-                        Tally(detail, item, 1, cost);
-                    }
-                }
-            });
-
-            if (bought <= 0) return;
-
-            int spent = GoldSpent(sim, simSpent, spentFrom);
-            _runMovedGoods = true;
-            Log.Write((sim ? "purchase on the road (simulated, best case): " : "purchase on the road: ") + bought +
-                      " items, -" + spent + " gold from " + met.Name);
-            LogDetail(selling: false, sim, detail, "trading with a party on the road");
-            if (!sim) CoinSound();
-            TextObject msg = PassMessage(sim,
-                "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
-                "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.",
-                detail, bought, spent);
-            if (!muted) Toast(msg, ToastSpend);
+            var books = new Books();
+            string why = "trading with a party on the road";
+            SellPass(Pass.Meet(met, road, books, party),
+                     "sale on the road", "selling on the road", "Road trading", why);
+            BuyPass(Pass.Meet(met, road, books, party),
+                    "purchase on the road", "buying on the road", "Road buying", why);
         }
 
         private const int RankLivestock = 0;
@@ -2269,14 +2095,14 @@ namespace TradeLord
             if (pass == null) return;
 
             int shed = DrivenAnimalsToShed(pass.Party);
-            shed -= SimVisit.Shed(pass.Sim);
+            shed -= pass.Books.Shed(pass.Sim);
             if (shed <= 0) return;
 
             Dictionary<ItemObject, int> promised = Errands.Promised();
             if (promised == null) return;
 
             int mountsLeft = SpareMountRoom(pass.Party);
-            mountsLeft -= SimVisit.MountsShed(pass.Sim);
+            mountsLeft -= pass.Books.MountsShed(pass.Sim);
             int haulsLeft = -1;
 
             var stable = new List<(ItemRosterElement el, int rank, int price)>();
@@ -2288,7 +2114,7 @@ namespace TradeLord
                 if (el.Amount <= 0 || !TradePolicy.MayShedForHerd(el.EquipmentElement, pass.Locked)) continue;
                 int rank = HerdShedRank(it);
                 if (rank < 0) continue;
-                if (el.Amount + SimVisit.Held(pass.Sim, it.StringId) <= 0) continue;
+                if (el.Amount + pass.Books.Held(pass.Sim, it.StringId) <= 0) continue;
                 int price = pass.Price(el.EquipmentElement, selling: true);
                 if (price <= 0) continue;
                 stable.Add((el, rank, price));
@@ -2305,7 +2131,7 @@ namespace TradeLord
                 {
                     if (pass.DirectionError || shed <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
-                    int remaining = el.Amount + SimVisit.Held(pass.Sim, item.StringId);
+                    int remaining = el.Amount + pass.Books.Held(pass.Sim, item.StringId);
                     if (promised.TryGetValue(item, out int owed) && owed > 0)
                     {
                         int spare = Math.Min(remaining, owed);
@@ -2319,7 +2145,7 @@ namespace TradeLord
                     {
                         if (rank != RankLivestock && rank != RankHaulAnimal && mountsLeft <= 0) break;
                         if (rank == RankHaulAnimal && haulsLeft < 0)
-                            haulsLeft = Math.Max(0, HaulAnimalsCargoCanSpare(pass.Party) - SimVisit.HaulsShed(pass.Sim));
+                            haulsLeft = Math.Max(0, HaulAnimalsCargoCanSpare(pass.Party) - pass.Books.HaulsShed(pass.Sim));
                         if (rank == RankHaulAnimal && haulsLeft <= 0) break;
                         int price = pass.Price(el.EquipmentElement, selling: true);
                         if (price <= 0) break;
@@ -2330,16 +2156,16 @@ namespace TradeLord
                         {
                             simTill -= price;
                             simGold += price;
-                            SimVisit.NoteSale(item.StringId, price,
-                                              rank == RankHaulAnimal ? 0f : item.Weight,
-                                              TradePolicy.FoodValue(item));
-                            SimVisit.NoteShed(rank == RankHaulAnimal, rank != RankLivestock);
+                            pass.Books.NoteSale(item.StringId, price,
+                                                rank == RankHaulAnimal ? 0f : item.Weight,
+                                                TradePolicy.FoodValue(item));
+                            pass.Books.NoteShed(rank == RankHaulAnimal, rank != RankLivestock);
                         }
                         else
                         {
-                            if (!pass.SellOne(el, "selling an animal to relieve the herd", "Herd relief", out price)) break;
+                            if (!pass.SellOne(el, price, "selling an animal to relieve the herd", "Herd relief", out price)) break;
                             if (price == 0) break;
-                            _soldThisVisit.Add(item.StringId);
+                            pass.Books.NoteSold(item.StringId);
                         }
                         if (basis.SoldOne() && !pass.Sim) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
                         profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);
@@ -2375,7 +2201,7 @@ namespace TradeLord
             if (pass == null) return;
 
             int herdRoom = HerdRoomForLivestock(pass.Party);
-            herdRoom -= SimVisit.HerdTaken(pass.Sim);
+            herdRoom -= pass.Books.HerdTaken(pass.Sim);
             if (herdRoom <= 0) return;
 
             int hauled = 0, simSpent = 0;
@@ -2390,26 +2216,27 @@ namespace TradeLord
                 {
                     if (pass.DirectionError) break;
                     ItemObject item = el.EquipmentElement.Item;
-                    int remaining = el.Amount - SimVisit.Stocked(pass.Sim, item.StringId);
+                    int remaining = el.Amount - pass.Books.Stocked(pass.Sim, item.StringId);
 
                     while (remaining > 0 && herdRoom > 0)
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (price <= 0 || price > worth) break;
-                        if (price >= SpendableGold()) break;
+                        if (price >= pass.Spendable()) break;
                         if (settlement.IsVillage && remaining <= 1) break;
 
                         if (pass.Sim)
                         {
                             simSpent += price;
-                            SimVisit.NotePurchase(item.StringId, price, 0f, TradePolicy.FoodValue(item));
-                            SimVisit.NoteHerdTaken();
+                            pass.Books.NotePurchase(item.StringId, price, 0f, TradePolicy.FoodValue(item));
+                            pass.Books.NoteHerdTaken();
                         }
                         else
                         {
-                            if (!pass.BuyOne(el, "buying a haul animal", "Haul animal buying", out price)) break;
+                            if (!pass.BuyOne(el, price, "buying a haul animal", "Haul animal buying", out price)) break;
                             if (price == 0) break;
-                            NoteRealPurchase(item, price);
+                            LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, price);
+                            pass.Books.NoteBought(item.StringId, price);
                         }
                         hauled++;
                         remaining--;
@@ -2433,25 +2260,27 @@ namespace TradeLord
             if (!pass.Muted) ToastAfterXp(msg, ToastSpend);
         }
 
-        public static void ExecuteQuickBuy(Settlement settlement, bool quiet = false)
+        public static void ExecuteQuickBuy(Settlement settlement, bool quiet = false) =>
+            BuyPass(Pass.Open(settlement, quiet), "quick-buy", "buying", "Buying", "the buying pass");
+
+        private static void BuyPass(Pass pass, string label, string what, string named, string why)
         {
-            Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
 
-            LedgerBehavior.Instance?.CaptureSettlement(settlement);
+            pass.Capture();
 
             pass.CountFrom();
             int bought = 0, simSpent = 0;
-            float simWeight = SimVisit.Weight(pass.Sim);
+            float simWeight = pass.Books.Weight(pass.Sim);
             var tally = new BlockTally();
 
             float shareCap = Options.Current.MaxHeldShare > 0f
                 ? Carry.Capacity(pass.Party) * Options.Current.MaxHeldShare : 0f;
 
             var stock = new List<(ItemRosterElement el, float realizable, float margin)>();
-            if (SpendableGold() > 0)
+            if (pass.Spendable() > 0)
             {
-                ItemRoster shopRoster = settlement.ItemRoster;
+                ItemRoster shopRoster = pass.Stock;
                 ItemRoster mine = pass.Party.ItemRoster;
                 int holdCap = Options.Current.MaxHeldPerItem;
                 for (int i = 0; i < shopRoster.Count; i++)
@@ -2461,14 +2290,14 @@ namespace TradeLord
                     if (el.Amount <= 0) { tally.Note(Block.NoStock); continue; }
                     if (!TradePolicy.MayBuy(it, pass.Locked, out Block whyBuy)) { tally.Note(whyBuy); continue; }
                     if (!TradePolicy.MayRoundTrip(it, pass.Locked)) { tally.Note(Block.CategoryPolicy); continue; }
-                    if (SoldHereAlready(pass.Sim, it.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
-                    if (el.Amount - SimVisit.Stocked(pass.Sim, it.StringId) <= 0) { tally.Note(Block.NoStock); continue; }
-                    int held = mine.GetItemNumber(it) + SimVisit.Held(pass.Sim, it.StringId);
+                    if (pass.Books.Sold(pass.Sim, it.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
+                    if (el.Amount - pass.Books.Stocked(pass.Sim, it.StringId) <= 0) { tally.Note(Block.NoStock); continue; }
+                    int held = mine.GetItemNumber(it) + pass.Books.Held(pass.Sim, it.StringId);
                     if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }
                     if (shareCap > 0f && (held + 1) * it.Weight > shareCap) { tally.Note(Block.HeldEnough); continue; }
 
                     var elsewhere = LedgerBehavior.Instance?.BestSell(it) ?? (null, 0);
-                    if (elsewhere.Item1 == null || elsewhere.Item1 == settlement) { tally.Note(Block.NoResaleMarket); continue; }
+                    if (elsewhere.Item1 == null || elsewhere.Item1 == pass.Site) { tally.Note(Block.NoResaleMarket); continue; }
 
                     int here = pass.Price(el.EquipmentElement, selling: false);
                     if (here <= 0) { tally.Note(Block.NoStock); continue; }
@@ -2485,29 +2314,30 @@ namespace TradeLord
             {
                 foreach (var (el, realizable, _) in stock)
                 {
-                    if (pass.DirectionError || SpendableGold() <= 0) break;
+                    if (pass.DirectionError || pass.Spendable() <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
                     bool livestock = TradePolicy.IsTradableLivestock(item);
                     if (livestock)
                     {
                         if (herdRoom < 0)
-                            herdRoom = Math.Max(0, HerdRoomForLivestock(pass.Party) - SimVisit.HerdTaken(pass.Sim));
+                            herdRoom = Math.Max(0, HerdRoomForLivestock(pass.Party) - pass.Books.HerdTaken(pass.Sim));
                         if (herdRoom <= 0) { tally.Note(Block.HerdFull); continue; }
                     }
 
-                    var prior = PurchasesHere(pass.Sim, item.StringId);
-                    int remaining = el.Amount - SimVisit.Stocked(pass.Sim, item.StringId);
+                    var prior = pass.Books.Purchases(pass.Sim, item.StringId);
+                    int remaining = el.Amount - pass.Books.Stocked(pass.Sim, item.StringId);
                     int countThis = prior.count, spentThis = prior.spent;
                     int held = pass.Party.ItemRoster.GetItemNumber(item) +
-                               SimVisit.Held(pass.Sim, item.StringId);
+                               pass.Books.Held(pass.Sim, item.StringId);
 
                     while (remaining > 0)
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (!TradePolicy.BuyAcceptable(price, realizable)) { tally.Note(Block.BelowMargin); break; }
-                        Block capped = WhatStopsBuying(item, price, SpendableGold(), (countThis, spentThis), held,
+                        Block capped = WhatStopsBuying(item, price, pass.Spendable(), (countThis, spentThis), held,
                                                        shareCap, livestock, herdRoom,
-                                                       settlement.IsVillage && remaining <= 1, simWeight);
+                                                       pass.Site != null && pass.Site.IsVillage && remaining <= 1,
+                                                       simWeight);
                         if (capped != Block.None) { tally.Note(capped); break; }
 
                         if (pass.Sim)
@@ -2519,17 +2349,18 @@ namespace TradeLord
                             bought++;
                             remaining--;
                             simWeight += item.Weight;
-                            SimVisit.NotePurchase(item.StringId, price, item.Weight,
-                                                  TradePolicy.FoodValue(item));
-                            if (livestock) { herdRoom--; SimVisit.NoteHerdTaken(); }
+                            pass.Books.NotePurchase(item.StringId, price, item.Weight,
+                                                    TradePolicy.FoodValue(item));
+                            if (livestock) { herdRoom--; pass.Books.NoteHerdTaken(); }
                             pass.Tally(item, 1, price);
                             continue;
                         }
 
-                        if (!pass.BuyOne(el, "buying", "Buying", out int cost)) break;
+                        if (!pass.BuyOne(el, price, what, named, out int cost)) break;
                         if (cost == 0) break;
 
-                        NoteRealPurchase(item, cost);
+                        LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, cost);
+                        pass.Books.NoteBought(item.StringId, cost);
                         spentThis += cost;
                         countThis++;
                         held++;
@@ -2541,15 +2372,15 @@ namespace TradeLord
                 }
             });
 
-            if (tally.Saw(Block.CarryWeight)) _cargoWasFull = true;
+            if (pass.Reports && tally.Saw(Block.CarryWeight)) _cargoWasFull = true;
 
             int spent = pass.Spent(simSpent);
             if (bought > 0)
             {
                 pass.Moved();
-                Log.Write((pass.Sim ? "quick-buy (simulated, best case): " : "quick-buy: ") + bought +
-                          " items, -" + spent + " gold at " + settlement.Name);
-                pass.Logged(selling: false, "the buying pass");
+                Log.Write(pass.Headed(label) + bought +
+                          " items, -" + spent + " gold " + pass.Where);
+                pass.Logged(selling: false, why);
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
                 TextObject msg = pass.Said(
                     "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
@@ -2557,10 +2388,10 @@ namespace TradeLord
                     bought, spent);
                 if (!pass.Muted) Toast(msg, ToastSpend);
             }
-            else if (!pass.DirectionError)
+            else if (!pass.DirectionError && pass.Reports)
             {
-                if (tally.Any) Log.Repeatable("quick-buy-empty " + settlement.StringId, tally.Summary(),
-                    "quick-buy moved nothing at " + settlement.Name + ": " + tally.Summary());
+                if (tally.Any) Log.Repeatable(label + "-empty " + pass.Site.StringId, tally.Summary(),
+                    label + " moved nothing " + pass.Where + ": " + tally.Summary());
                 if (!pass.Muted) NoteStalled(selling: false, tally.Dominant());
             }
         }
