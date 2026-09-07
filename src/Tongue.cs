@@ -39,7 +39,7 @@ namespace TradeLord
 
         private static string Id(string written)
         {
-            if (written == null || !written.StartsWith("{=")) return null;
+            if (written == null || !written.StartsWith("{=", StringComparison.Ordinal)) return null;
             int close = written.IndexOf('}');
             return close > 2 ? written.Substring(2, close - 2) : null;
         }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.38.5
+
+- TradeLord now matches its own lines to their translations the same way whatever language your computer is set to.
+- The feature list now says that asking a band to let you pass is a line you say to them, rather than the pop-up it used to be.
+
 ## 1.38.4
 
 - Selling animals to get your party back up to speed now leaves a quest item alone, the way the rest of TradeLord's selling already did.
