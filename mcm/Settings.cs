@@ -565,7 +565,7 @@ namespace TradeLord.Mcm
         public bool DetailedTradeSummary { get => _o.DetailedTradeSummary; set { _o.DetailedTradeSummary = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL249}Silence trade messages", Order = 17, RequireRestart = false,
-            HintText = "{=TL349}Trading done automatically as you enter a market reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports, since you asked for it. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected.")]
+            HintText = "{=TL349}Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports, since you asked for it. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool QuietAutomation { get => _o.QuietAutomation; set { _o.QuietAutomation = value; Options.Bump(); } }
 
@@ -629,7 +629,7 @@ namespace TradeLord.Mcm
         public string NeverSellItems { get => _o.NeverSellItems; set { _o.NeverSellItems = value; Options.Bump(); } }
 
         [SettingPropertyText("{=TL232}Always sell (item ids or names, comma separated)", Order = 10, RequireRestart = false,
-            HintText = "{=TL332}Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named by item id or by the name the game shows, comma separated, as above. The never-sell list above and an inventory lock still hold. This is the only way to sell a haul animal for profit, though getting your party back up to speed may still sell one as a last resort.")]
+            HintText = "{=TL332}Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named by item id or by the name the game shows, comma separated, as above. The never-sell list above, an inventory lock and an animal a quest is waiting on still hold. This is the only way to sell a haul animal for profit, though getting your party back up to speed may still sell one as a last resort.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public string AlwaysSellItems { get => _o.AlwaysSellItems; set { _o.AlwaysSellItems = value; Options.Bump(); } }
 

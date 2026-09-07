@@ -206,7 +206,7 @@
 		<string id="TL329" text="Skip selling here when this market pays clearly less than the best known market, so your cargo waits for the town that pays for it. It holds back everything you carry, what you bought and what you looted alike. OFF by default, in which case a good you bought still has to clear your profit margin, and looted gear goes to the first market that can pay for it."/>
 		<string id="TL330" text="Sell here anyway if this market pays at least this fraction of the best known price. It does nothing while the setting above is OFF."/>
 		<string id="TL331" text="Goods TradeLord must never sell. Name each one either by the item id, the short internal name such as grain, wine or iron_ore that TradeLord.log prints for every good it moves, or by the name the game shows you, such as Iron Ore. Separate them with commas. An entry matching no good in this game is named in the log and said on screen, rather than passing quietly. It leaves these alone when buying too, since it would have no way to sell them on."/>
-		<string id="TL332" text="Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named by item id or by the name the game shows, comma separated, as above. The never-sell list above and an inventory lock still hold. This is the only way to sell a haul animal for profit, though getting your party back up to speed may still sell one as a last resort."/>
+		<string id="TL332" text="Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named by item id or by the name the game shows, comma separated, as above. The never-sell list above, an inventory lock and an animal a quest is waiting on still hold. This is the only way to sell a haul animal for profit, though getting your party back up to speed may still sell one as a last resort."/>
 		<string id="TL334" text="Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip."/>
 		<string id="TL335" text="Most units of one good TradeLord buys per visit. 0 = no limit on the count. Default 32."/>
 		<string id="TL336" text="Also cap spending per item per visit in denars."/>
@@ -222,7 +222,7 @@
 		<string id="TL346" text="The auto-marker ignores towns farther than this many travel days away. Default 1.5."/>
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
-		<string id="TL349" text="Trading done automatically as you enter a market reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports, since you asked for it. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected."/>
+		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports, since you asked for it. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected."/>
 		<string id="TL100" text="Language"/>
 		<string id="TL101" text="Knowledge"/>
 		<string id="TL102" text="Insight"/>

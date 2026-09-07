@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.40.0
+
+- Silence trade messages now covers trading with a caravan or a party of villagers you meet on the road, which reported on screen whatever the setting said, and the setting's hint says so.
+- The Always sell hint now says an animal a quest is waiting on is still held back, alongside your never-sell list and an inventory lock.
+- Trading in a market no longer works out which markets are in reach all over again after each pass that moves goods, so a busy town settles faster.
+
 ## 1.39.3
 
 - Restocking food and buying a haul animal stop before your gold reaches your gold reserve again, leaving the reserve whole, and buying for profit is the one pass that spends down to it.
