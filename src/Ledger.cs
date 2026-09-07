@@ -6,6 +6,7 @@ using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
+using TaleWorlds.Library;
 using TaleWorlds.SaveSystem;
 
 namespace TradeLord
@@ -320,6 +321,7 @@ namespace TradeLord
 
         private List<(Settlement, int)> TopMarkets(ItemObject item, bool selling)
         {
+            DropRankingsIfThePartyMoved();
             var key = (item.StringId, selling);
             int hour = (int)CampaignTime.Now.ToHours;
             if (_marketCache.TryGetValue(key, out var hit) && hit.hour == hour && hit.gen == Options.Generation)
@@ -389,6 +391,7 @@ namespace TradeLord
         }
 
         private const int TopCacheSize = 8;
+        private const float MovedFar = 100f;
         private readonly Dictionary<(string item, bool selling), (int hour, int gen, List<(Settlement, int)> markets)> _marketCache
             = new Dictionary<(string, bool), (int, int, List<(Settlement, int)>)>();
 
@@ -406,6 +409,18 @@ namespace TradeLord
             _marketCache.Clear();
             _candidates = null;
             _routes = null;
+        }
+
+        private Vec2 _rankedAt;
+
+        private void DropRankingsIfThePartyMoved()
+        {
+            MobileParty party = MobileParty.MainParty;
+            if (party == null) return;
+            Vec2 at = party.GetPosition2D;
+            if (at.DistanceSquared(_rankedAt) <= MovedFar) return;
+            _rankedAt = at;
+            ForgetMarketRankings();
         }
 
         private List<(Settlement s, float days)> LiveCandidates(int hour)
@@ -506,6 +521,7 @@ namespace TradeLord
 
         public List<TradeRoute> BestRoutes(int top)
         {
+            DropRankingsIfThePartyMoved();
             int hour = (int)CampaignTime.Now.ToHours;
             int purse = TradeActionBehavior.PurseForAVisit();
             if (_routes == null || _routeHour != hour || _routeGen != Options.Generation

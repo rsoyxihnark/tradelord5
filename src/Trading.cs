@@ -388,12 +388,16 @@ namespace TradeLord
             return keep;
         }
 
-        internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster)
+        internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster) =>
+            KeptBack(roster, out _);
+
+        internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster,
+                                                            out Dictionary<ItemObject, int> awaited)
         {
             Dictionary<ItemObject, int> keep = FoodKeep(roster);
-            Dictionary<ItemObject, int> promised = Errands.Promised();
-            if (promised == null) return keep;
-            foreach (var owed in promised)
+            awaited = Errands.Promised();
+            if (awaited == null) return keep;
+            foreach (var owed in awaited)
             {
                 keep.TryGetValue(owed.Key, out int held);
                 if (owed.Value > held) keep[owed.Key] = owed.Value;
@@ -433,10 +437,12 @@ namespace TradeLord
 
         public static bool MaySell(ItemRosterElement el, ISet<string> lockedKeys,
                                    IDictionary<ItemObject, int> foodKeep, out int keepCount) =>
-            MaySell(el, lockedKeys, foodKeep, out keepCount, out _);
+            MaySell(el, lockedKeys, foodKeep, null, out keepCount, out _);
 
         internal static bool MaySell(ItemRosterElement el, ISet<string> lockedKeys,
-                                     IDictionary<ItemObject, int> foodKeep, out int keepCount, out Block why)
+                                     IDictionary<ItemObject, int> foodKeep,
+                                     IDictionary<ItemObject, int> awaited,
+                                     out int keepCount, out Block why)
         {
             keepCount = 0;
             why = Block.None;
@@ -468,7 +474,12 @@ namespace TradeLord
             {
                 keepCount = Math.Min(el.Amount, reserved);
                 foodKeep[item] = reserved - keepCount;
-                if (el.Amount <= keepCount) { why = Block.FoodReserve; return false; }
+                if (el.Amount <= keepCount)
+                {
+                    why = awaited != null && awaited.TryGetValue(item, out int owed) && owed >= el.Amount
+                        ? Block.QuestAnimal : Block.FoodReserve;
+                    return false;
+                }
             }
 
             return true;
@@ -1600,7 +1611,7 @@ namespace TradeLord
             var plan = new List<ItemRosterElement>();
             for (int i = 0; i < roster.Count; i++)
                 plan.Add(roster.GetElementCopyAtIndex(i));
-            var keepBack = TradePolicy.KeptBack(roster);
+            var keepBack = TradePolicy.KeptBack(roster, out var awaited);
 
             int goldBefore = Hero.MainHero.Gold;
             int soldItems = 0, profit = 0, simGold = 0, simTill = market.Gold - SimVisit.TillDrawn(sim);
@@ -1615,7 +1626,7 @@ namespace TradeLord
                     if (directionError) break;
                     ItemObject item = el.EquipmentElement.Item;
                     if (item != null && BoughtHereAlready(sim, item.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
-                    if (!TradePolicy.MaySell(el, locked, keepBack, out int keep, out Block why)) { tally.Note(why); continue; }
+                    if (!TradePolicy.MaySell(el, locked, keepBack, awaited, out int keep, out Block why)) { tally.Note(why); continue; }
 
                     int remaining = el.Amount - keep + SimVisit.Held(sim, item.StringId);
                     if (remaining <= 0) { tally.Note(Block.FoodReserve); continue; }
@@ -2174,7 +2185,7 @@ namespace TradeLord
             if (stable.Count == 0) return;
             stable.Sort((x, y) => x.rank != y.rank ? x.rank.CompareTo(y.rank) : x.price.CompareTo(y.price));
 
-            int sold = 0, simGold = 0, simTill = market.Gold - SimVisit.TillDrawn(sim);
+            int sold = 0, profit = 0, simGold = 0, simTill = market.Gold - SimVisit.TillDrawn(sim);
             bool directionError = false;
             var detail = new Dictionary<ItemObject, (int count, int gold)>();
 
@@ -2193,6 +2204,11 @@ namespace TradeLord
                         remaining -= spare;
                     }
 
+                    int paid = TradePolicy.CostBasis(item);
+                    bool basisIsMarket = Options.Current.CostBasisMode == 2;
+                    int paidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;
+                    int unpaidWorth = -1;
+
                     while (remaining > 0 && shed > 0)
                     {
                         if (rank != RankLivestock && rank != RankHaulAnimal && mountsLeft <= 0) break;
@@ -2202,6 +2218,7 @@ namespace TradeLord
                         int price = market.GetItemPrice(el.EquipmentElement, party, true);
                         if (price <= 0) break;
                         if ((sim ? simTill : market.Gold) < price) break;
+                        int basis = UnitWorth(item, paid, basisIsMarket, paidLeft, ref unpaidWorth);
 
                         if (sim)
                         {
@@ -2221,9 +2238,14 @@ namespace TradeLord
                                 break;
                             }
                             if (price == 0) break;
-                            LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
                             _soldThisVisit.Add(item.StringId);
                         }
+                        if (paidLeft > 0)
+                        {
+                            paidLeft--;
+                            if (!sim) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
+                        }
+                        profit += TradePolicy.Credit(price, basis, unpaidWorth);
                         sold++;
                         remaining--;
                         shed--;
@@ -2239,15 +2261,20 @@ namespace TradeLord
             int gained = sim ? simGold : Hero.MainHero.Gold - goldBefore;
             _runMovedGoods = true;
             Log.Write((sim ? "herd relief (simulated, best case): " : "herd relief: ") + sold +
-                      " sold, +" + gained + " gold at " + settlement.Name);
+                      " sold, +" + gained + " gold, profit " + profit + " at " + settlement.Name);
             LogDetail(selling: true, sim, detail, "herd relief, getting the party back up to speed");
-            if (!sim) NotePricesMoved(settlement);
+            if (!sim)
+            {
+                LedgerBehavior.Instance?.AddProfit(profit);
+                NotePricesMoved(settlement);
+            }
             TextObject msg = Tongue.Text(sim
                 ? "{=TL117}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars to get your party back up to speed."
                 : "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.");
             msg.SetTextVariable("ITEMS", ItemSummary(detail, sold));
             msg.SetTextVariable("GOLD", gained);
             if (!Muted(quiet)) Toast(msg, ToastGain);
+            if (!sim && profit > 0) AwardTradeXp(profit, Muted(quiet));
         }
 
         public static void ExecuteHaulage(Settlement settlement, bool quiet = false)
