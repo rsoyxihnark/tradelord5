@@ -830,7 +830,7 @@ def restocking_runs_between_selling_and_buying():
             and "int worth = TradePolicy.UnpaidWorth(it);" in body
             and body.count("price > worth") == 2
             and "settlement.IsVillage && remaining <= 1" in body
-            and "Carry.Room(pass.Party) - simWeight" in body
+            and "pass.Room() - simWeight" in body
             and "pass.Books.Sold(pass.Sim, it.StringId)" in body
             and "BuyAcceptable" not in body
             and "BestSell" not in body)
@@ -1000,7 +1000,7 @@ chk("1.3.8", "the buying pass takes only what a market in reach pays more for, a
 chk("1.3.2", "the buying pass stops at the purse, the per-item denar cap, the carry weight and the herd",
     (lambda b: "if (price > budget) return Block.BudgetSpent;" in b
            and "taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;" in b
-           and "Carry.Room(MobileParty.MainParty) - simWeight) return Block.CarryWeight;" in b
+           and "if (item.Weight > 0.01f && item.Weight > roomLeft) return Block.CarryWeight;" in b
            and "if (livestock && herdRoom <= 0) return Block.HerdFull;" in b)
     (method_body(S['Trading.cs'], "private static Block WhatStopsBuying")) and
     (lambda b: "Block capped = WhatStopsBuying(" in b
@@ -1248,7 +1248,7 @@ chk("1.3.33", "automated trading recaptures prices after it moves them",
                       "public static void ExecuteResupply",
                       "public static void ExecuteHaulage",
                       "private static void BuyPass")) and
-    "if (Site != null) LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);" in
+    "LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);" in
         method_body(S['Trading.cs'], "internal void Moved") and
     S['Trading.cs'].count("CaptureSettlement(Site, force: true)") == 1 and
     "internal void ForgetMarketRankings()" in S['Ledger.cs'] and
@@ -1883,9 +1883,13 @@ chk("1.6.7", "a good already bought here is passed over before the food reserve 
     (lambda b: ordered(b, "pass.Books.Bought(pass.Sim,", "TradePolicy.MaySell("))
     (method_body(S['Trading.cs'], "private static void SellPass")))
 chk("1.6.7", "the panel's own pin list, not the map's marker state, decides what a click on a town pins and unpins",
-    (lambda b: ordered(b, "_panelPins.Remove(settlement)", "tracker.CheckTracked(")
-           and ordered(b, "_panelPins.Remove(settlement)", "_panelPins.Add(settlement)"))
+    (lambda b: ordered(b, "if (Unpin(settlement)) return;", "_panelPins.Add(settlement)"))
     (method_body(S['Panel.cs'], "private static void ToggleMarker")) and
+    (lambda b: ordered(b, "if (settlement == null || !_panelPins.Remove(settlement)) return false;",
+                       "tracker.CheckTracked(settlement)) tracker.RemoveTrackedObject(settlement);",
+                       "return true;"))
+    (method_body(S['Panel.cs'], "internal static bool Unpin")) and
+    S['Panel.cs'].count("_panelPins.Remove(") == 1 and
     "LedgerPanel.IsPinned(_trackedTown)" in S['Trading.cs'])
 
 chk("1.6.8", "the map button reserves the mouse over the button, not over the map around it",
@@ -3250,14 +3254,20 @@ def a_horse_a_footman_can_ride_costs_the_herd_nothing():
             and "while (remaining > 0 && herdRoom > 0)" in haul)
 
 def a_share_of_the_hold_caps_one_good_and_ships_off():
-    buy = pass_body("public static void ExecuteQuickBuy")
-    return (option_default('MaxHeldShare') == '0f'
+    buy = pass_body("private static void BuyPass")
+    return (option_default('MaxHeldShare') == '0.45f'
             and "_o.MaxHeldShare" in M
-            and "Carry.Capacity(pass.Party) * Options.Current.MaxHeldShare" in buy
+            and "pass.Capacity * Options.Current.MaxHeldShare" in buy
             and buy.count("shareCap > 0f") == 2
             and buy.count("(held + 1) * it.Weight > shareCap") == 1
             and buy.count("(held + 1) * item.Weight > shareCap") == 1
             and "MaxHeldShare" not in method_body(S['Trading.cs'], "private static void SellPass")
+            and (lambda src: "internal float Capacity => _capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity;" in src
+                         and "internal float Room() => Capacity - Carry.Carried(Party);" in src
+                         and src.count("Carry.Capacity(") == 1
+                         and src.count("Carry.Room(") == 1
+                         and "Carry.Room(party) < 1f;" in method_body(src, "private static bool NoRoomToCarry"))
+                (S['Trading.cs'])
             and "MaxHeldShare" not in method_body(S['Trading.cs'], "internal static bool MaySell")
             and "MaxHeldShare" not in S['Ledger.cs'])
 
@@ -3342,12 +3352,12 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
             and "TradePolicy.BuyAcceptable(price, realizable)" in buy
             and "TradePolicy.Realizable(elsewhere.Item2)" in buy
             and "WhatStopsBuying(item, price, pass.Spendable(), (countThis, spentThis), held," in buy
-            and "Carry.Room(MobileParty.MainParty) - simWeight" in buy
+            and "pass.Room() - simWeight);" in buy
             and "s.BuyCapPerItem" in buy
             and "s.BuyValueCapPerItem" in buy
             and "s.MaxHeldPerItem" in buy
             and "(held + 1) * item.Weight > shareCap" in buy
-            and "Carry.Capacity(pass.Party) * Options.Current.MaxHeldShare" in buy
+            and "pass.Capacity * Options.Current.MaxHeldShare" in buy
             and "herdRoom = Math.Max(0, HerdRoomForLivestock(pass.Party)" in buy
             and "if (livestock && herdRoom <= 0) return Block.HerdFull;" in buy
             and buy.count("if (livestock) herdRoom--;") == 1
@@ -4326,8 +4336,8 @@ def every_pass_says_what_it_moved_from_one_place():
     said = method_body(t, "private static TextObject PassMessage")
     return (ordered(moved, "_runMovedGoods = true;", "if (Sim) return;",
                     "if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);",
-                    "CoinSound();",
-                    "if (Site != null) LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);")
+                    "CoinSound();", "if (Site == null) return;",
+                    "LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);")
             and ordered(said, "TextObject said = Tongue.Text(sim ? simSaid : realSaid);",
                         'said.SetTextVariable("ITEMS", ItemSummary(detail, items));',
                         'said.SetTextVariable("GOLD", gold);', "return said;")
@@ -4527,8 +4537,9 @@ def a_market_swap_makes_nothing_new_per_unit():
                         "? (Action)(() => SellItemsAction.Apply(Shop, Me, _unit, 1, Site))",
                         "return Swap(false, _buyUnit, what, named, out gold);")
             and sorted(re.findall(r'(_\w+) =\s*\n?\s*Site != null', held)) == ['_buyUnit', '_sellUnit']
-            and ", () =>" not in held
-            and held.count("(() =>") == 2)
+            and held.count("(() =>") == 2
+            and all(", () =>" not in method_body(t, one)
+                    for one in ("internal bool SellOne(", "internal bool BuyOne(")))
 
 chk("1.40.1", "what a pass took in and what it paid out are each worked out in one place, on a dry run and a real one alike",
     what_a_pass_moved_in_gold_is_worked_out_in_two_places())
@@ -4607,6 +4618,39 @@ chk("1.40.4", "a market visit and a meeting on the road sell and buy through the
     a_market_and_a_meeting_on_the_road_run_the_same_two_passes())
 chk("1.40.4", "where a pass is standing is the only thing the shared selling and buying ask about it",
     the_venue_is_the_only_thing_a_pass_asks_where_it_is())
+
+def the_grain_switch_owns_the_reason_it_holds_a_good_back():
+    t = S['Trading.cs']
+    buy = method_body(t, "internal static bool MayBuy")
+    phrase = method_body(t, "internal static TextObject Phrase")
+    return ("if (!always && !toFeed && s.NeverBuyGrain && item == DefaultItems.Grain) "
+            "{ why = Block.GrainSwitch; return false; }" in buy
+            and t.count("Block.NeverList") == 4
+            and all("Listed(" in line for line in
+                    [l for l in buy.splitlines() if "Block.NeverList" in l])
+            and "case Block.GrainSwitch:" in phrase
+            and '{=TL388}your Never buy grain setting is holding it back' in phrase
+            and "TL388" in strings_declared()
+            and all("TL388" in spoken(f) for f in [ENGLISH] + list(TRANSLATIONS.values()))
+            and "GrainSwitch" not in method_body(t, "private static bool Guarded"))
+
+
+def a_pin_comes_off_the_map_once_tradelord_has_traded_there():
+    t = S['Trading.cs']
+    moved = method_body(t, "internal void Moved")
+    return (ordered(moved, "if (Site == null) return;",
+                    "LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);",
+                    'Guard.Run("Pass.PinCleared", () => LedgerPanel.Unpin(Site));')
+            and ordered(moved, "if (Sim) return;", 'Guard.Run("Pass.PinCleared"')
+            and t.count("LedgerPanel.Unpin(") == 1
+            and "internal static bool Unpin(Settlement settlement)" in S['Panel.cs']
+            and "_panelPins.Clear();" in method_body(S['Panel.cs'], "internal static void RestorePins"))
+
+
+chk("1.41.0", "a good the Never buy grain setting holds back says so, rather than blaming your item lists",
+    the_grain_switch_owns_the_reason_it_holds_a_good_back())
+chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
+    a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
