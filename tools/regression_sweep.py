@@ -4436,8 +4436,38 @@ def what_a_good_cost_you_is_carried_by_one_value():
 
 chk("1.40.0", "every market pass is opened the same way and carries the market, the party and its own books in one object",
     every_market_pass_is_opened_and_carried_by_one_object())
+def what_a_pass_moved_in_gold_is_worked_out_in_two_places():
+    t = S['Trading.cs']
+    road = method_body(t, "public static void ExecuteRoadTrade")
+    return ("sim ? simGold : Hero.MainHero.Gold - goldBefore" in
+                between(t, "private static int GoldGained(bool sim, int simGold, int goldBefore) =>", ";")
+            and "sim ? simSpent : goldBefore - Hero.MainHero.Gold" in
+                between(t, "private static int GoldSpent(bool sim, int simSpent, int goldBefore) =>", ";")
+            and "GoldGained(Sim, simGold, _goldBefore)" in
+                between(t, "internal int Gained(int simGold) =>", ";")
+            and "GoldSpent(Sim, simSpent, _goldBefore)" in
+                between(t, "internal int Spent(int simSpent) =>", ";")
+            and t.count("GoldGained(") == 3
+            and t.count("GoldSpent(") == 3
+            and t.count("Hero.MainHero.Gold - ") == 2
+            and t.count(" - Hero.MainHero.Gold") == 2
+            and "gold = selling ? Hero.MainHero.Gold - before : before - Hero.MainHero.Gold;" in
+                method_body(t, "private static bool SwapOneUnit")
+            and "int gained = GoldGained(sim, simGold, goldBefore);" in road
+            and "int spent = GoldSpent(sim, simSpent, spentFrom);" in road
+            and road.count("gained") == 3
+            and all("pass.Gained(simGold)" in method_body(t, one) for one in
+                    ("public static void ExecuteQuickSell",
+                     "public static void ExecuteHerdRelief"))
+            and all("pass.Spent(simSpent)" in method_body(t, one) for one in
+                    ("public static void ExecuteResupply",
+                     "public static void ExecuteHaulage",
+                     "public static void ExecuteQuickBuy")))
+
 chk("1.40.0", "what a good cost you is one value that every sale reads, draws down and asks what a unit is worth",
     what_a_good_cost_you_is_carried_by_one_value())
+chk("1.40.0", "what a pass took in and what it paid out are each worked out in one place, on a dry run and a real one alike",
+    what_a_pass_moved_in_gold_is_worked_out_in_two_places())
 chk("1.40.0", "trading with a caravan or villagers on the road is silenced by the same setting a market visit is, and the setting says so",
     a_meeting_on_the_road_answers_to_the_silence_setting())
 chk("1.40.0", "a market whose prices moved drops the rankings prices decide and keeps the markets in reach they do not",
