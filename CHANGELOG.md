@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.41.1
+
+- When grain is what TradeLord left alone, the line that says why nothing was bought now says grain fills the cargo for little return, instead of naming a setting.
+
 ## 1.41.0
 
 - Share of the hold one good may fill now ships at 45% instead of off, so one cheap good can no longer take your whole cargo.

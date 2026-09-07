@@ -87,7 +87,7 @@
 		<string id="TL111" text="[模拟，最理想情况] TradeLord 本会为了多装货买下 {ITEMS}，花费 {GOLD} 第纳尔。"/>
 		<string id="TL113" text="哦，抱歉，当然可以。不过别忘了去 NexusMods 点个赞！"/>
 		<string id="TL387" text="放我们过去，我们这就上路。[TRADELORD]"/>
-		<string id="TL388" text="你的“从不买入谷物”设置拦下了它"/>
+		<string id="TL388" text="谷物没有买入，因为它只会把货舱塞满，换不回多少"/>
 		<string id="TL114" text="这买卖做得不错。[TRADELORD]"/>
 		<string id="TL115" text="同感。可惜我用不上那个模组。希望你在 NexusMods 上点了赞！"/>
 		<string id="TL251" text="持有到这么多就不再买入（0 = 关闭）"/>

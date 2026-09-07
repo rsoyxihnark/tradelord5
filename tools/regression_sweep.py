@@ -4629,7 +4629,10 @@ def the_grain_switch_owns_the_reason_it_holds_a_good_back():
             and all("Listed(" in line for line in
                     [l for l in buy.splitlines() if "Block.NeverList" in l])
             and "case Block.GrainSwitch:" in phrase
-            and '{=TL388}your Never buy grain setting is holding it back' in phrase
+            and '{=TL388}grain is left alone, since it fills the cargo for little return' in phrase
+            and all(word not in spoken(f)['TL388'].lower()
+                    for f in [ENGLISH] + list(TRANSLATIONS.values())
+                    for word in ("setting", "ayar", "настройк", "\u8bbe\u7f6e"))
             and "TL388" in strings_declared()
             and all("TL388" in spoken(f) for f in [ENGLISH] + list(TRANSLATIONS.values()))
             and "GrainSwitch" not in method_body(t, "private static bool Guarded"))
