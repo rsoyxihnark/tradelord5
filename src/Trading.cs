@@ -1017,9 +1017,9 @@ namespace TradeLord
 
             internal void CountFrom() => _goldBefore = Hero.MainHero.Gold;
 
-            internal int Gained(int simGold) => Sim ? simGold : Hero.MainHero.Gold - _goldBefore;
+            internal int Gained(int simGold) => GoldGained(Sim, simGold, _goldBefore);
 
-            internal int Spent(int simSpent) => Sim ? simSpent : _goldBefore - Hero.MainHero.Gold;
+            internal int Spent(int simSpent) => GoldSpent(Sim, simSpent, _goldBefore);
 
             internal int Price(EquipmentElement what, bool selling) =>
                 Market.GetItemPrice(what, Party, selling);
@@ -1074,6 +1074,12 @@ namespace TradeLord
         internal static int PurseForAVisit() =>
             TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
                              Options.Current.MaxSpendPerVisit, 0, 0);
+
+        private static int GoldGained(bool sim, int simGold, int goldBefore) =>
+            sim ? simGold : Hero.MainHero.Gold - goldBefore;
+
+        private static int GoldSpent(bool sim, int simSpent, int goldBefore) =>
+            sim ? simSpent : goldBefore - Hero.MainHero.Gold;
 
         private static bool WarnPurseBelowReserve()
         {
@@ -2109,16 +2115,17 @@ namespace TradeLord
 
             if (sold > 0)
             {
+                int gained = GoldGained(sim, simGold, goldBefore);
                 _runMovedGoods = true;
                 Log.Write((sim ? "sale on the road (simulated, best case): " : "sale on the road: ") + sold +
-                          " items, +" + (sim ? simGold : Hero.MainHero.Gold - goldBefore) +
+                          " items, +" + gained +
                           " gold, profit " + profit + " from " + met.Name);
                 LogDetail(selling: true, sim, detail, "trading with a party on the road");
                 if (!sim) CoinSound();
                 TextObject said = PassMessage(sim,
                     "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
                     "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).",
-                    detail, sold, sim ? simGold : Hero.MainHero.Gold - goldBefore);
+                    detail, sold, gained);
                 said.SetTextVariable("PROFIT", profit);
                 if (!muted) Toast(said, profit > 0 ? ToastGain : ToastFlat);
                 if (!sim && profit > 0) { AwardTradeXp(profit, muted); LedgerBehavior.Instance?.AddProfit(profit); }
@@ -2208,7 +2215,7 @@ namespace TradeLord
 
             if (bought <= 0) return;
 
-            int spent = sim ? simSpent : spentFrom - Hero.MainHero.Gold;
+            int spent = GoldSpent(sim, simSpent, spentFrom);
             _runMovedGoods = true;
             Log.Write((sim ? "purchase on the road (simulated, best case): " : "purchase on the road: ") + bought +
                       " items, -" + spent + " gold from " + met.Name);
