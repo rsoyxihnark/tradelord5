@@ -525,8 +525,10 @@ def the_filter_is_armed_only_around_a_game_call_that_talks():
             and sorted(c for c, _ in armed) == ['SkillLevelingManager.OnTradeProfitMade', 'swap']
             and sorted(re.findall(r'SwapOneUnit\((?:true|false), \(\) => ([\w\.]+)\(', t)) ==
                 ['HandOver', 'TakeDelivery']
-            and sorted(re.findall(r'\bSwap\((?:true|false), \(\) => ([\w\.]+)\(', t)) ==
+            and sorted(re.findall(r'_(?:sell|buy)Unit = \(\) => ([\w\.]+)\(', t)) ==
                 ['SellItemsAction.Apply'] * 2
+            and sorted(re.findall(r'\bSwap\((?:true|false), (_\w+),', t)) ==
+                ['_buyUnit', '_sellUnit']
             and t.count("SwapOneUnit(selling, swap, what, named, out gold)") == 1
             and 'InGameTransaction = true' not in t
             and 'if (!TradeActionBehavior.InGameTransaction) return true;' in t
@@ -1190,13 +1192,13 @@ chk("1.3.30", "a damaged purchase record does not throw during save load",
     method_body(S['Ledger.cs'], "private void Reindex"))
 
 chk("1.3.31", "the price gate and the transaction it guards share one granularity",
-    S['Trading.cs'].count("SellItemsAction.Apply(Me, Shop, el, 1, Site)") == 1 and
-    S['Trading.cs'].count("SellItemsAction.Apply(Shop, Me, el, 1, Site)") == 1 and
+    S['Trading.cs'].count("SellItemsAction.Apply(Me, Shop, _unit, 1, Site)") == 1 and
+    S['Trading.cs'].count("SellItemsAction.Apply(Shop, Me, _unit, 1, Site)") == 1 and
     S['Trading.cs'].count("SellItemsAction.Apply(") == 2 and
-    "SellItemsAction.Apply(Me, Shop, el, 1, Site)" in
-        between(S['Trading.cs'], "internal bool SellOne(", ";") and
-    "SellItemsAction.Apply(Shop, Me, el, 1, Site)" in
-        between(S['Trading.cs'], "internal bool BuyOne(", ";") and
+    "SellItemsAction.Apply(Me, Shop, _unit, 1, Site)" in
+        method_body(S['Trading.cs'], "internal bool SellOne(") and
+    "SellItemsAction.Apply(Shop, Me, _unit, 1, Site)" in
+        method_body(S['Trading.cs'], "internal bool BuyOne(") and
     "SellItemsAction.Apply(" not in method_body(S['Trading.cs'], "public static void ExecuteRoadTrade"))
 chk("1.36.0", "a trade on the road moves one unit and its price itself, because the game's own sale needs a market",
     "SellItemsAction" not in method_body(S['Trading.cs'], "public static void ExecuteRoadTrade") and
@@ -4466,8 +4468,30 @@ def what_a_pass_moved_in_gold_is_worked_out_in_two_places():
 
 chk("1.40.1", "what a good cost you is one value that every sale reads, draws down and asks what a unit is worth",
     what_a_good_cost_you_is_carried_by_one_value())
+def a_market_swap_makes_nothing_new_per_unit():
+    t = S['Trading.cs']
+    held = method_body(t, "private sealed class Pass")
+    sell = method_body(t, "internal bool SellOne(")
+    buy = method_body(t, "internal bool BuyOne(")
+    return (all(f in held for f in ("private ItemRosterElement _unit;",
+                                    "private Action _sellUnit;",
+                                    "private Action _buyUnit;"))
+            and ordered(sell, "_unit = el;",
+                        "if (_sellUnit == null) _sellUnit = () => "
+                        "SellItemsAction.Apply(Me, Shop, _unit, 1, Site);",
+                        "return Swap(true, _sellUnit, what, named, out gold);")
+            and ordered(buy, "_unit = el;",
+                        "if (_buyUnit == null) _buyUnit = () => "
+                        "SellItemsAction.Apply(Shop, Me, _unit, 1, Site);",
+                        "return Swap(false, _buyUnit, what, named, out gold);")
+            and sorted(re.findall(r'(_\w+) = \(\) =>', held)) == ['_buyUnit', '_sellUnit']
+            and ", () =>" not in held
+            and "(() =>" not in held)
+
 chk("1.40.1", "what a pass took in and what it paid out are each worked out in one place, on a dry run and a real one alike",
     what_a_pass_moved_in_gold_is_worked_out_in_two_places())
+chk("1.40.2", "handing one unit over at a market reuses the same two errands rather than making a new one each time",
+    a_market_swap_makes_nothing_new_per_unit())
 chk("1.40.0", "trading with a caravan or villagers on the road is silenced by the same setting a market visit is, and the setting says so",
     a_meeting_on_the_road_answers_to_the_silence_setting())
 chk("1.40.0", "a market whose prices moved drops the rankings prices decide and keeps the markets in reach they do not",
