@@ -251,7 +251,7 @@ SHARED_PASS_RULES = {
     "CheapestFirst(": ('Trading.cs',
         "private static List<(ItemRosterElement el, int price, int worth)> CheapestFirst"),
     "WhatStopsBuying(": ('Trading.cs', "private static Block WhatStopsBuying"),
-    "UnitWorth(": ('Trading.cs', "private static int UnitWorth"),
+    "Basis.For(": ('Trading.cs', "private struct Basis"),
     "TradeMath.SkipTheUnitsYouPaidFor(": ('TradeMath.cs',
         "public static bool SkipTheUnitsYouPaidFor"),
     "Pass.Open(": ('Trading.cs', "private sealed class Pass"),
@@ -270,7 +270,10 @@ def between(body, opening, closing):
         _lost.append(opening)
         return ''
     j = body.find(closing, i + len(opening))
-    return body[i + len(opening):j if j >= 0 else len(body)]
+    if j < 0:
+        _lost.append(closing)
+        return ''
+    return body[i + len(opening):j]
 
 def ordered(text, *needles):
     at = -1
@@ -1328,9 +1331,14 @@ chk("1.21.0", "the sell-side floor is the hold-for-the-best-market switch and no
     "holdFloor = bestMarketFloor;" in S['Trading.cs'] and
     "TradePolicy.Priced(item)" not in method_body(S['Trading.cs'], "public static void ExecuteQuickSell"))
 chk("1.5.5", "a stack pays its purchased basis only for the units that were purchased, and only those units drain the record",
-    "int paidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;" in S['Trading.cs'] and
-    "int basis = basisIsMarket || paidLeft > 0 ? paid : 0;" in S['Trading.cs'] and
-    "if (paidLeft > 0) { paidLeft--; LedgerBehavior.Instance?.RecordSale(item.StringId, 1); }" in S['Trading.cs'] and
+    "basis.PaidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;" in
+        method_body(S['Trading.cs'], "internal static Basis For") and
+    "int worth = FromMarket || PaidLeft > 0 ? Paid : 0;" in
+        method_body(S['Trading.cs'], "internal int Unit(ItemObject item)") and
+    ordered(method_body(S['Trading.cs'], "internal bool SoldOne()"),
+            "if (PaidLeft <= 0) return false;", "PaidLeft--;", "return true;") and
+    S['Trading.cs'].count("if (basis.SoldOne()) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);") == 2 and
+    S['Trading.cs'].count("PaidLeft--;") == 1 and
     method_body(S['Trading.cs'], "public static void ExecuteQuickSell").count("RecordSale") == 1)
 chk("1.4.3", "the panel is rebuilt for a new map screen, not for every visit to another one",
     "if (_mapScreen != null && map != null && map != _mapScreen)" in S['Panel.cs'])
@@ -1684,11 +1692,13 @@ chk("1.5.7", "units with no cost basis are still sold when purchased units miss 
            and ordered(b, "remaining -= paidLeft;", "paidLeft = 0;", "return true;"))
     (method_body(S['TradeMath.cs'], "public static bool SkipTheUnitsYouPaidFor")) and
     "SkipTheUnitsYouPaidFor" not in S['Ledger.cs'] and
-    (lambda b: "if (!TradeMath.SkipTheUnitsYouPaidFor(basisIsMarket, ref remaining, ref paidLeft)) break;" in b
+    (lambda b: "if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;" in b
            and b.count("tally.Note(Block.BelowMargin)") == 1)
     (method_body(S['Trading.cs'], "public static void ExecuteQuickSell")) and
-    "if (!TradeMath.SkipTheUnitsYouPaidFor(basisIsMarket, ref remaining, ref paidLeft)) break;" in
+    "if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;" in
         method_body(S['Trading.cs'], "public static void ExecuteRoadTrade") and
+    "TradeMath.SkipTheUnitsYouPaidFor(FromMarket, ref remaining, ref PaidLeft)" in
+        between(S['Trading.cs'], "internal bool SkipTheUnitsYouPaidFor(ref int remaining) =>", ";") and
     "Units_you_never_bought_are_still_offered_when_the_bought_ones_miss_the_margin" in MATHTESTS and
     "A_lot_you_paid_for_outright_stops_at_the_margin_and_moves_nothing" in MATHTESTS)
 chk("1.5.8", "empty release notes fail the publish, and nothing is appended to the notes",
@@ -1949,14 +1959,17 @@ chk("1.6.12", "an unpaid unit sold below that worth credits nothing rather than 
         method_body(S['TradeMath.cs'], "public static int Credit"))
 chk("1.6.12", "the simulated pass and the real one credit profit through the same rule",
     S['Trading.cs'].count("TradePolicy.Credit(") == 5 and
-    "TradePolicy.Credit(price, basis, unpaidWorth)" in
+    S['Trading.cs'].count("TradePolicy.Credit(price, worth, basis.UnpaidWorth)") == 3 and
+    S['Trading.cs'].count("TradePolicy.Credit(proceeds, worth, basis.UnpaidWorth)") == 2 and
+    "TradePolicy.Credit(price, worth, basis.UnpaidWorth)" in
         method_body(S['Trading.cs'], "public static void ExecuteHerdRelief") and
-    "TradePolicy.Credit(price, basis, unpaidWorth)" in S['Trading.cs'] and
-    "TradePolicy.Credit(proceeds, basis, unpaidWorth)" in S['Trading.cs'] and
-    "TradePolicy.Credit(price, worth, unpaidWorth)" in S['Trading.cs'] and
-    "TradePolicy.Credit(proceeds, worth, unpaidWorth)" in S['Trading.cs'])
+    all("TradePolicy.Credit(" in method_body(S['Trading.cs'], one) for one in
+        ("public static void ExecuteQuickSell", "public static void ExecuteHerdRelief",
+         "public static void ExecuteRoadTrade")))
 chk("1.6.12", "what quick-sell agrees to sell is unchanged, since the decision still runs on the bare basis",
-    "if (!TradePolicy.ProfitAcceptable(basis, price))" in S['Trading.cs'] and
+    S['Trading.cs'].count("if (!TradePolicy.ProfitAcceptable(worth, price))") == 2 and
+    S['Trading.cs'].count("int worth = basis.Unit(item);") == 3 and
+    "ProfitAcceptable(basis.UnpaidWorth" not in S['Trading.cs'] and
     "TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);" in S['Trading.cs'] and
     re.search(r'ProfitAcceptable\(int costBasis, int townSellPrice, float margin\) =>\s*costBasis > 0\s*\?\s*'
               r'townSellPrice >= costBasis \* \(1f \+ margin\)\s*:\s*'
@@ -1964,16 +1977,18 @@ chk("1.6.12", "what quick-sell agrees to sell is unchanged, since the decision s
 chk("1.21.0", "loot with the hold switched off goes to the first market that can pay, since nothing but that switch raises the floor",
     S['Trading.cs'].count("if (Options.Current.PreferBestSellTown)") == 2 and
     "Options.Current.BestSellTownTolerance" in
-        between(S['Trading.cs'], "if (Options.Current.PreferBestSellTown)", "int price = market.GetItemPrice") and
+        between(S['Trading.cs'], "if (Options.Current.PreferBestSellTown)",
+                "int price = pass.Price(el.EquipmentElement, selling: true);") and
     "Options.Current.BestSellTownTolerance" in
         between(method_body(S['Trading.cs'], "public static void ExecuteRoadTrade"),
                 "if (Options.Current.PreferBestSellTown)", "while (remaining > 0)") and
     S['Trading.cs'].count("Options.Current.BestSellTownTolerance") == 2)
 chk("1.6.12", "that worth is looked up once per good, not once per unit sold",
-    "if (basis == 0 && unpaidWorth < 0) unpaidWorth = TradePolicy.UnpaidWorth(item);" in
-        method_body(S['Trading.cs'], "private static int UnitWorth") and
+    "if (worth == 0 && UnpaidWorth < 0) UnpaidWorth = TradePolicy.UnpaidWorth(item);" in
+        method_body(S['Trading.cs'], "internal int Unit(ItemObject item)") and
+    "basis.UnpaidWorth = -1;" in method_body(S['Trading.cs'], "internal static Basis For") and
     pass_body("public static void ExecuteQuickSell").count("TradePolicy.UnpaidWorth(") == 1 and
-    "UnitWorth(item, paid, basisIsMarket, paidLeft, ref unpaidWorth)" in
+    "int worth = basis.Unit(item);" in
         method_body(S['Trading.cs'], "public static void ExecuteQuickSell"))
 chk("1.6.12", "the tooltip and the sale summary now value an unbought good the same way",
     "var best = BestBuy(item);" in method_body(S['Ledger.cs'], "public int GetCostBasis") and
@@ -2875,9 +2890,10 @@ def a_rule_that_names_missing_source_reports_itself_broken():
     mark = len(_lost)
     lost_body = method_body("class Sample { }", "private static void Absent")
     lost_region = between("private static void Present() { }", "if (absent)", ";")
+    lost_end = between("private static void Present() { }", "void Present", "if (absent)")
     grew = len(_lost) - mark
     del _lost[mark:]
-    return (lost_body == '' and lost_region == '' and grew == 2
+    return (lost_body == '' and lost_region == '' and lost_end == '' and grew == 3
             and "if len(_lost) > _read:" in SWEEP
             and "which the source no longer has" in SWEEP)
 
@@ -3277,7 +3293,8 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
             and "Options.Current.BestSellTownTolerance" in body
             and "if (price <= 0 || price < holdFloor) break;" in body
             and ordered(body, "if (!TradePolicy.ProfitAcceptable(worth, price))",
-                        "if (!TradeMath.SkipTheUnitsYouPaidFor(basisIsMarket, ref remaining, ref paidLeft)) break;",
+                        "if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;",
+                        "TradeMath.SkipTheUnitsYouPaidFor(FromMarket, ref remaining, ref PaidLeft)",
                         "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;",
                         "remaining -= paidLeft;", "paidLeft = 0;")
             and "s.MaxHeldPerItem" in body
@@ -4192,9 +4209,9 @@ def a_quest_animal_held_back_is_named_as_the_quest_not_the_food_reserve():
 
 def getting_back_up_to_speed_credits_what_it_makes():
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
-    return ("int paidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;" in relief
-            and "int basis = UnitWorth(item, paid, basisIsMarket, paidLeft, ref unpaidWorth);" in relief
-            and "profit += TradePolicy.Credit(price, basis, unpaidWorth);" in relief
+    return ("Basis basis = Basis.For(item);" in relief
+            and "int worth = basis.Unit(item);" in relief
+            and "profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);" in relief
             and "pass.Moved(profit);" in relief
             and "LedgerBehavior.Instance?.AddProfit(profit.Value);" in
                 method_body(S['Trading.cs'], "private static void NoteGoodsMoved")
@@ -4394,8 +4411,33 @@ def every_market_pass_is_opened_and_carried_by_one_object():
 
 chk("1.40.0", "every pass says what it moved and what it did about it from one place, the meeting on the road with them",
     every_pass_says_what_it_moved_from_one_place())
+def what_a_good_cost_you_is_carried_by_one_value():
+    t = S['Trading.cs']
+    sites = ("public static void ExecuteQuickSell", "public static void ExecuteHerdRelief",
+             "public static void ExecuteRoadTrade")
+    held = method_body(t, "private struct Basis")
+    made = method_body(t, "internal static Basis For")
+    return (all(field in held for field in (
+                "internal int Paid;", "internal bool FromMarket;",
+                "internal int PaidLeft;", "internal int UnpaidWorth;"))
+            and ordered(made, "basis.Paid = TradePolicy.CostBasis(item);",
+                        "basis.FromMarket = Options.Current.CostBasisMode == 2;",
+                        "basis.PaidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;",
+                        "basis.UnpaidWorth = -1;")
+            and t.count("TradePolicy.CostBasis(item)") == 1
+            and t.count("LedgerBehavior.Instance?.PurchasedUnits(item)") == 1
+            and t.count("Basis basis = Basis.For(item);") == 3
+            and all("Basis basis = Basis.For(item);" in method_body(t, one) for one in sites)
+            and t.count("int worth = basis.Unit(item);") == 3
+            and t.count("basis.SoldOne()") == 5
+            and t.count("basis.SkipTheUnitsYouPaidFor(ref remaining)") == 2
+            and t.count("PaidLeft--;") == 1
+            and "UnitWorth" not in t)
+
 chk("1.40.0", "every market pass is opened the same way and carries the market, the party and its own books in one object",
     every_market_pass_is_opened_and_carried_by_one_object())
+chk("1.40.0", "what a good cost you is one value that every sale reads, draws down and asks what a unit is worth",
+    what_a_good_cost_you_is_carried_by_one_value())
 chk("1.40.0", "trading with a caravan or villagers on the road is silenced by the same setting a market visit is, and the setting says so",
     a_meeting_on_the_road_answers_to_the_silence_setting())
 chk("1.40.0", "a market whose prices moved drops the rankings prices decide and keeps the markets in reach they do not",
