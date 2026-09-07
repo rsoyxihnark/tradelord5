@@ -2381,6 +2381,17 @@ def every_language_the_screen_offers_has_a_file_the_mod_reads():
             and 'if (_saidFor != language)' in method_body(S['Tongue.cs'], "private static string Translated")
             and '_saidFor = language;' in method_body(S['Tongue.cs'], "private static string Translated"))
 
+def a_line_is_matched_to_its_translation_the_same_way_in_every_language():
+    tongue = S['Tongue.cs']
+    label = method_body(tongue, "private static string Id")
+    loose = re.findall(r'\.(?:StartsWith|EndsWith|IndexOf)\((?:@?"[^"]*")\s*\)', tongue)
+    return ('written.StartsWith("{=", StringComparison.Ordinal)' in label
+            and 'id.StartsWith("TL", StringComparison.Ordinal)' in tongue
+            and not loose)
+
+chk("1.38.5", "TradeLord matches a line to its translation the same way whatever language the computer is set to",
+    a_line_is_matched_to_its_translation_the_same_way_in_every_language())
+
 def every_line_the_mod_says_can_change_language():
     said = "\n".join(v for k, v in S.items() if k != 'Tongue.cs')
     return ('new TextObject(' not in said
@@ -3826,7 +3837,9 @@ def the_file_holds_a_number_to_the_same_limits_the_screen_does():
     wanted.update(picked)
     taken = method_body(S['Config.cs'], "private static bool Taken")
     within = method_body(S['Config.cs'], "private static double Within")
+    numeric = set(re.findall(r'^\s*public\s+(?:int|float)\s+(\w+)\s*=', S['Options.cs'], re.M))
     return (len(ranged) >= 21 and len(picked) == 6 and table == wanted
+            and numeric and not (numeric - set(table))
             and "(int)Within(field, int.Parse(" in taken
             and "(float)Within(field, float.Parse(" in taken
             and "double kept = Limits.Kept(field.Name, asked);" in within
