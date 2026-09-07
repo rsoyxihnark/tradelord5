@@ -981,6 +981,9 @@ namespace TradeLord
             private ISet<string> _locked;
             private bool _lockedRead;
             private int _goldBefore;
+            private ItemRosterElement _unit;
+            private Action _sellUnit;
+            private Action _buyUnit;
 
             private Pass(Settlement site, MobileParty party, bool quiet)
             {
@@ -1027,11 +1030,19 @@ namespace TradeLord
             internal void Tally(ItemObject item, int count, int gold) =>
                 TradeActionBehavior.Tally(Detail, item, count, gold);
 
-            internal bool SellOne(ItemRosterElement el, string what, string named, out int gold) =>
-                Swap(true, () => SellItemsAction.Apply(Me, Shop, el, 1, Site), what, named, out gold);
+            internal bool SellOne(ItemRosterElement el, string what, string named, out int gold)
+            {
+                _unit = el;
+                if (_sellUnit == null) _sellUnit = () => SellItemsAction.Apply(Me, Shop, _unit, 1, Site);
+                return Swap(true, _sellUnit, what, named, out gold);
+            }
 
-            internal bool BuyOne(ItemRosterElement el, string what, string named, out int gold) =>
-                Swap(false, () => SellItemsAction.Apply(Shop, Me, el, 1, Site), what, named, out gold);
+            internal bool BuyOne(ItemRosterElement el, string what, string named, out int gold)
+            {
+                _unit = el;
+                if (_buyUnit == null) _buyUnit = () => SellItemsAction.Apply(Shop, Me, _unit, 1, Site);
+                return Swap(false, _buyUnit, what, named, out gold);
+            }
 
             private bool Swap(bool selling, Action swap, string what, string named, out int gold)
             {
