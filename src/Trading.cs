@@ -119,7 +119,7 @@ namespace TradeLord
                 case Block.NeverList:
                     return Tongue.Text("{=TL381}it is on your never-sell or never-buy list");
                 case Block.GrainSwitch:
-                    return Tongue.Text("{=TL388}your Never buy grain setting is holding it back");
+                    return Tongue.Text("{=TL388}grain is left alone, since it fills the cargo for little return");
                 case Block.Locked:
                     return Tongue.Text("{=TL382}it is locked in your inventory");
                 case Block.Protected:
