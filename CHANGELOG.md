@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.39.3
+
+- Restocking food and buying a haul animal stop before your gold reaches your gold reserve again, leaving the reserve whole, and buying for profit is the one pass that spends down to it.
+
 ## 1.39.2
 
 - An animal a quest is waiting on is now kept back even where your always-sell list names it, instead of being sold with the rest of your cargo.

@@ -1820,7 +1820,7 @@ namespace TradeLord
                     {
                         int price = market.GetItemPrice(el.EquipmentElement, party, false);
                         if (price <= 0 || price > worth) break;
-                        if (price > SpendableGold()) break;
+                        if (price >= SpendableGold()) break;
                         if (settlement.IsVillage && remaining <= 1) break;
                         if (item.Weight > 0.01f && item.Weight > Carry.Room(party) - simWeight) break;
 
@@ -2311,7 +2311,7 @@ namespace TradeLord
                     {
                         int price = market.GetItemPrice(el.EquipmentElement, party, false);
                         if (price <= 0 || price > worth) break;
-                        if (price > SpendableGold()) break;
+                        if (price >= SpendableGold()) break;
                         if (settlement.IsVillage && remaining <= 1) break;
 
                         if (sim)
