@@ -6,13 +6,30 @@ namespace TradeLord
     public sealed class ItemList
     {
         public readonly HashSet<string> Entries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        public readonly HashSet<string> Words = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        internal readonly List<string[]> Spelled = new List<string[]>();
+
+        private readonly HashSet<string> _words = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public bool Empty => Entries.Count == 0;
 
-        public bool HasId(string id) => !Empty && (Entries.Contains(id) || Words.Contains(id));
+        public bool HasId(string id) => !Empty && (Entries.Contains(id) || _words.Contains(id));
 
         public bool HasName(string shown) => !Empty && Entries.Contains(shown);
+
+        public void ReadWordsAsIds(ICollection<string> knownIds)
+        {
+            _words.Clear();
+            if (knownIds == null) return;
+            foreach (string[] words in Spelled)
+            {
+                bool everyWordKnown = true;
+                foreach (string word in words)
+                    if (!knownIds.Contains(word)) { everyWordKnown = false; break; }
+                if (!everyWordKnown) continue;
+                foreach (string word in words) _words.Add(word);
+            }
+        }
     }
 
     public class Options
@@ -142,8 +159,8 @@ namespace TradeLord
                     string whole = entry.Trim();
                     if (whole.Length == 0) continue;
                     built.Entries.Add(whole);
-                    foreach (string word in whole.Split(WordMarks, StringSplitOptions.RemoveEmptyEntries))
-                        built.Words.Add(word);
+                    string[] words = whole.Split(WordMarks, StringSplitOptions.RemoveEmptyEntries);
+                    if (words.Length > 1) built.Spelled.Add(words);
                 }
                 set = built;
                 seen = src;

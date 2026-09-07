@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.40.4
+
+- An entry on one of your item lists that names a good the way the game shows it, such as Iron Ore, no longer also covers a different good whose short name is one of the words in it.
+- An entry that mixes a short name with a name the game shows, which TradeLord.log already said matches no good, now really covers nothing instead of quietly covering part of it.
+
 ## 1.40.3
 
 - Selling or buying a large stack to a caravan or a party of villagers on the road no longer makes the game a small extra piece of work for every single unit, which trading in a market stopped doing in 1.40.2.
