@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.40.2
+
+- Selling or buying a large stack at a market no longer makes the game a small extra piece of work for every single unit, which it started doing in 1.40.1.
+
 ## 1.40.1
 
 - The download now carries every change made since 1.40.0.
