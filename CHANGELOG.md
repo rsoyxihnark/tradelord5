@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.46.0
+
+- TradeLord.log is now emptied as the game starts if it has grown past 999 KB, so a long campaign can no longer leave one file growing without end in your Bannerlord folder.
+- It is only ever emptied as the game starts and never as the game closes, so the log you send on after a session still holds everything that session wrote.
+- TradeLord.log says when it has been emptied and how large it had grown, so a short log is never a mystery.
+- A single line TradeLord could not write to TradeLord.log no longer slows every line after it for the rest of the session, because TradeLord picks the file back up half a minute later instead of leaving it until you restart the game.
+
 ## 1.45.0
 
 - Town travel ceiling and Village travel ceiling are now the only two things deciding how far TradeLord looks, and everything obeys them: the tooltips, the routes, the town marked on your map, and how far Hold cargo for the best market will wait.
