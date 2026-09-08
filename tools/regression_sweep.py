@@ -315,6 +315,34 @@ def log_prefers_the_user_folder():
             and body.count("catch { }") == 2
             and "yield" not in body)
 
+def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
+    write = method_body(S['Support.cs'], "internal static void Write")
+    held = method_body(S['Support.cs'], "private static StreamWriter Held")
+    letgo = method_body(S['Support.cs'], "private static void LetGo")
+    resolve = method_body(S['Support.cs'], "private static string Resolve")
+    return ("FileMode.Append, FileAccess.Write, FileShare.ReadWrite" in held
+            and "{ AutoFlush = true };" in held
+            and "if (_open != null || _cannotHold) return _open;" in held
+            and "catch { _cannotHold = true; _open = null; }" in held
+            and "_cannotHold = true;" in letgo
+            and "_open = null;" in letgo
+            and ordered(write, "StreamWriter held = Held();",
+                        "try { held.WriteLine(line); return; }",
+                        "catch { LetGo(); }",
+                        "File.AppendAllText(_path, line + Environment.NewLine);")
+            and 'File.WriteAllText(candidate, "");' in resolve
+            and S['Support.cs'].count("File.AppendAllText(") == 1)
+
+def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
+    marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
+    return (ordered(marker, "long bestValue = 0;",
+                    "if (town.Gold <= bestValue) continue;",
+                    "foreach (var (item, amount) in cargo)",
+                    "if (total > town.Gold) total = town.Gold;",
+                    "if (total > bestValue) { bestValue = total; bestTown = s; }")
+            and "town.GetItemPrice(item, party, true)" in marker
+            and marker.count("town.GetItemPrice(") == 1)
+
 def capture_skipped_after_the_caches_are_dropped():
     body = method_body(S['Ledger.cs'], "public void CaptureSettlement")
     if "ForgetPricedRankings();" not in body or "if (Options.Current.Omniscient) return;" not in body:
@@ -3430,7 +3458,8 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
             and "int driven = herd + spare;" in shed
             and "if (driven <= 0) return 0;" in shed
             and 'float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });' in shed
-            and "while (shed < driven &&" in shed
+            and "return TradeMath.MostThatHolds(driven, shed => shed == 0 || !TradeMath.Unchanged(" in shed
+            and "new object[] { men, driven - shed + 1 }), neutral));" in shed
             and "!item.HasHorseComponent || item.NotMerchandise" in spare
             and "Listed(s.NeverSet, item)" in spare
             and "s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)" in spare
@@ -3453,9 +3482,9 @@ def the_herd_guard_keeps_a_cushion_below_the_speed_penalty():
     room = method_body(S['Trading.cs'], "internal static int HerdRoomForLivestock")
     cushion = re.search(r'private const int HerdCushion = (\d+);', S['Trading.cs'])
     return (cushion is not None and int(cushion.group(1)) > 0
-            and "new object[] { men, herd + room + 1 + HerdCushion });" in room
+            and "new object[] { men, herd + room + HerdCushion }), neutral));" in room
             and "float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });" in room
-            and "if (mod != neutral) break;" in room)
+            and "return TradeMath.MostThatHolds(256, room => room == 0 || TradeMath.Unchanged(" in room)
 
 def an_animal_is_held_back_when_the_quests_cannot_be_read():
     sell = method_body(S['Trading.cs'], "internal static bool MaySell")
@@ -3514,8 +3543,8 @@ def the_herd_gives_up_its_animals_in_the_order_the_player_set():
             and "TradePolicy.IsHaulAnimal(el.EquipmentElement.Item)" in held
             and "bool atSea = Carry.Sailing();" in spared
             and "model.CalculateTotalWeightCarried(party, atSea).ResultNumber" in spared
-            and "model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber < carried" in spared
-            and "return fewer - 1;" in spared)
+            and "model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber >= carried);" in spared
+            and "return TradeMath.MostThatHolds(held, fewer => fewer == 0 ||" in spared)
 
 chk("1.28.0", "the herd gives up its livestock, then a plain spare mount, then a haul animal, and a war or noble horse last of all",
     the_herd_gives_up_its_animals_in_the_order_the_player_set())
@@ -3596,10 +3625,12 @@ def the_herd_is_looked_at_three_times_a_visit():
                 method_body(S['Trading.cs'], "private void OnSettlementEntered")
             and "_visitTradeAllowed = false;" in method_body(S['Trading.cs'], "private static void ResetVisit")
             and 'Guard.Run("Action.HerdReliefOnLeaving"' in left
-            and 'LogHerdState("on the road, no market in reach");' in
+            and 'if (shed > 0) LogHerdState("on the road, no market in reach", shed);' in
                 method_body(S['Trading.cs'], "private void OnDailyTick")
-            and "if (DrivenAnimalsToShed(MobileParty.MainParty) > 0)" in
+            and "int shed = DrivenAnimalsToShed(MobileParty.MainParty);" in
                 method_body(S['Trading.cs'], "private void OnDailyTick")
+            and method_body(S['Trading.cs'], "private void OnDailyTick").count(
+                "DrivenAnimalsToShed(") == 1
             and launched.count("ExecuteHerdRelief(Settlement.CurrentSettlement);") == 2
             and ordered(launched, "ExecuteQuickSell(Settlement.CurrentSettlement);",
                         "ExecuteHerdRelief(Settlement.CurrentSettlement);",
@@ -3625,13 +3656,14 @@ chk("1.30.2", "a game loaded inside a market still gets the party back up to spe
     a_loaded_game_inside_a_market_still_gets_back_up_to_speed_on_the_way_out())
 
 def what_the_herd_check_writes_down():
-    body = method_body(S['Trading.cs'], "internal static void LogHerdState")
+    body = method_body(S['Trading.cs'], "internal static void LogHerdState(string when, int counted)")
     split = method_body(S['Trading.cs'], "private static void HerdSplit")
-    return (all(needle in body for needle in
+    return ("internal static void LogHerdState(string when) => LogHerdState(when, -1);" in S['Trading.cs']
+            and all(needle in body for needle in
                 ("HerdTally(party, out int men, out int herd, out int mounts, out int foot)",
                  "HerdSplit(party, out int packs, out int stock)",
                  "int spare = Math.Max(0, mounts - foot);",
-                 "int shed = DrivenAnimalsToShed(party);",
+                 "int shed = counted >= 0 ? counted : DrivenAnimalsToShed(party);",
                  '" men of whom "', '" on foot, "', '" loose mount(s) with "',
                  '" pack animal(s), "', '" livestock, "', '" driven in all, "',
                  '"no herd penalty"'))
@@ -3667,7 +3699,7 @@ chk("1.28.0", "a horse a man on foot is riding is never sold to relieve the herd
     "if (rank != RankLivestock && rank != RankHaulAnimal && mountsLeft <= 0) break;" in
         method_body(S['Trading.cs'], "public static void ExecuteHerdRelief"))
 chk("1.28.0", "enough haul animals are kept to carry what the party already carries, asked of the game's own capacity model",
-    "model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber < carried" in
+    "model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber >= carried);" in
         method_body(S['Trading.cs'], "internal static int HaulAnimalsCargoCanSpare") and
     'Log.Error(e, "haul animal cargo floor (every haul animal is kept)")' in
         method_body(S['Trading.cs'], "internal static int HaulAnimalsCargoCanSpare"))
@@ -4654,6 +4686,11 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
     the_grain_switch_owns_the_reason_it_holds_a_good_back())
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
+
+chk("1.41.2", "TradeLord.log is held open and each line is pushed out as it is written, with appending a line at a time left as the fallback",
+    the_log_is_held_open_and_pushed_out_a_line_at_a_time())
+chk("1.41.2", "the town marked on your map skips a town whose gold cannot beat the best found so far before it prices your cargo there",
+    the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

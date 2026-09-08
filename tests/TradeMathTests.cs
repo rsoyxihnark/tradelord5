@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TradeLord;
 using Xunit;
@@ -333,6 +334,52 @@ namespace TradeLord.Tests
         {
             for (int buy = 1; buy <= 1000; buy += 13)
                 Assert.False(TradeMath.BuyAcceptable(buy, buy * 10f, margin: 100f));
+        }
+
+        private static int WalkedOneByOne(int highest, Func<int, bool> holds)
+        {
+            int most = 0;
+            while (most < highest && holds(most + 1)) most++;
+            return most;
+        }
+
+        [Fact]
+        public void The_halving_search_finds_what_walking_one_at_a_time_finds()
+        {
+            for (int highest = 0; highest <= 300; highest++)
+                for (int threshold = 0; threshold <= highest + 1; threshold++)
+                {
+                    int stops = threshold;
+                    Func<int, bool> holds = step => step <= stops;
+                    Assert.Equal(WalkedOneByOne(highest, holds),
+                                 TradeMath.MostThatHolds(highest, holds));
+                }
+        }
+
+        [Fact]
+        public void The_halving_search_never_asks_more_than_a_handful_of_times()
+        {
+            int asked = 0;
+            int found = TradeMath.MostThatHolds(256, step => { asked++; return step <= 200; });
+            Assert.Equal(200, found);
+            Assert.True(asked <= 9, "asked " + asked + " times");
+        }
+
+        [Fact]
+        public void Nothing_holds_when_the_first_step_already_fails()
+        {
+            Assert.Equal(0, TradeMath.MostThatHolds(50, step => false));
+            Assert.Equal(50, TradeMath.MostThatHolds(50, step => true));
+            Assert.Equal(0, TradeMath.MostThatHolds(0, step => true));
+        }
+
+        [Fact]
+        public void A_modifier_counts_as_unchanged_only_within_a_hair_of_the_neutral_one()
+        {
+            Assert.True(TradeMath.Unchanged(1f, 1f));
+            Assert.True(TradeMath.Unchanged(1f, 1f + TradeMath.SameModifier / 2f));
+            Assert.False(TradeMath.Unchanged(1f, 0.99f));
+            Assert.False(TradeMath.Unchanged(1f, 1.01f));
         }
     }
 }
