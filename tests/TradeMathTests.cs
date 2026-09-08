@@ -381,5 +381,78 @@ namespace TradeLord.Tests
             Assert.False(TradeMath.Unchanged(1f, 0.99f));
             Assert.False(TradeMath.Unchanged(1f, 1.01f));
         }
+
+        [Fact]
+        public void A_party_that_has_stopped_still_counts_as_walking()
+        {
+            TradeMath.SpeedsInEffect(0f, 0f, out float land, out float sea);
+            Assert.Equal(TradeMath.WalkingPace, land);
+            Assert.Equal(TradeMath.WalkingPace, sea);
+        }
+
+        [Fact]
+        public void A_party_with_no_ships_sails_at_the_speed_it_walks()
+        {
+            TradeMath.SpeedsInEffect(6f, 0f, out float land, out float sea);
+            Assert.Equal(6f, land);
+            Assert.Equal(6f, sea);
+        }
+
+        [Fact]
+        public void A_fleet_that_can_sail_keeps_its_own_speed()
+        {
+            TradeMath.SpeedsInEffect(6f, 9f, out float land, out float sea);
+            Assert.Equal(6f, land);
+            Assert.Equal(9f, sea);
+        }
+
+        [Fact]
+        public void A_fleet_sails_between_its_average_and_its_slowest_ship()
+        {
+            Assert.Equal(5f, TradeMath.FleetSpeed(18f, 3, 4f));
+            Assert.Equal(7f, TradeMath.FleetSpeed(21f, 3, 7f));
+            Assert.Equal(0f, TradeMath.FleetSpeed(0f, 0, 0f));
+        }
+
+        [Fact]
+        public void One_slow_ship_holds_the_whole_fleet_back()
+        {
+            float even = TradeMath.FleetSpeed(21f, 3, 7f);
+            float dragging = TradeMath.FleetSpeed(21f, 3, 1f);
+            Assert.True(dragging < even);
+        }
+
+        [Fact]
+        public void A_journey_all_on_land_is_its_distance_at_the_land_speed()
+        {
+            Assert.Equal(2f, TradeMath.DaysAtSpeed(240f, 1f, 5f, 10f), 4);
+        }
+
+        [Fact]
+        public void A_journey_all_at_sea_is_its_distance_at_the_sea_speed()
+        {
+            Assert.Equal(1f, TradeMath.DaysAtSpeed(240f, 0f, 5f, 10f), 4);
+        }
+
+        [Fact]
+        public void A_journey_with_a_sea_leg_counts_each_leg_at_its_own_speed()
+        {
+            Assert.Equal(1.5f, TradeMath.DaysAtSpeed(240f, 0.5f, 5f, 10f), 4);
+        }
+
+        [Fact]
+        public void A_journey_of_no_distance_takes_no_days()
+        {
+            Assert.Equal(0f, TradeMath.DaysAtSpeed(0f, 1f, 5f, 10f));
+            Assert.Equal(0f, TradeMath.DaysAtBestSpeed(0f, 5f, 10f));
+        }
+
+        [Fact]
+        public void The_quick_estimate_never_says_a_journey_takes_longer_than_it_does()
+        {
+            foreach (float ratio in new[] { 0f, 0.25f, 0.5f, 0.75f, 1f })
+                Assert.True(TradeMath.DaysAtBestSpeed(240f, 5f, 10f)
+                            <= TradeMath.DaysAtSpeed(240f, ratio, 5f, 10f) + 1e-4f);
+        }
     }
 }

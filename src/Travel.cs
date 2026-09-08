@@ -36,7 +36,7 @@ namespace TradeLord
                 sum += sp;
                 if (sp < min) min = sp;
             }
-            return (sum / ships.Count + min) * 0.5f;
+            return TradeMath.FleetSpeed(sum, ships.Count, min);
         }
 
         private static float SeaSpeed()
@@ -86,10 +86,7 @@ namespace TradeLord
         {
             int hour = (int)CampaignTime.Now.ToHours;
             if (hour == _speedHour) { land = _landSpeed; sea = _seaSpeed; return; }
-            land = MobileParty.MainParty.Speed;
-            if (land <= 0.01f) land = 5f;
-            sea = SeaSpeed();
-            if (sea <= 0.01f) sea = land;
+            TradeMath.SpeedsInEffect(MobileParty.MainParty.Speed, SeaSpeed(), out land, out sea);
             _speedHour = hour;
             _landSpeed = land;
             _seaSpeed = sea;
@@ -99,9 +96,7 @@ namespace TradeLord
         {
             if (distance <= 0f) return 0f;
             Speeds(out float land, out float sea);
-            float landDist = distance * landRatio;
-            float seaDist = distance * (1f - landRatio);
-            return (landDist / land + seaDist / sea) / 24f;
+            return TradeMath.DaysAtSpeed(distance, landRatio, land, sea);
         }
 
         private static readonly Dictionary<string, (float dist, float landRatio)> _partyDist
@@ -145,7 +140,7 @@ namespace TradeLord
         {
             DropIfNavalChanged();
             Speeds(out float land, out float sea);
-            return distance / (Math.Max(land, sea) * 24f);
+            return TradeMath.DaysAtBestSpeed(distance, land, sea);
         }
 
         internal static float EstimateDaysFromParty(Settlement target)
