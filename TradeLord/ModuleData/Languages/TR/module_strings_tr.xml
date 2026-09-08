@@ -130,7 +130,6 @@
 		<string id="TL360" text="TradeLord'un rota panelini açan defter girişini kasaba ve köy menülerinde gösterir. Paneli kısayol tuşuyla ya da harita düğmesiyle açmayı yeğliyorsanız kapatın."/>
 		<string id="TL201" text="Canlı dünya fiyatları (varsayılan)"/>
 		<string id="TL203" text="Düşman pazarları dışarıda bırak"/>
-		<string id="TL204" text="Tarama yarıçapı (harita birimi, 0 = tüm harita)"/>
 		<string id="TL205" text="Alış önerisi için en az stok"/>
 		<string id="TL206" text="Şehir yol süresi sınırı (gün, 0 = kapalı)"/>
 		<string id="TL207" text="Köy yol süresi sınırı (gün, 0 = kapalı)"/>
@@ -175,10 +174,9 @@
 		<string id="TL249" text="Ticaret iletilerini sustur" />
 		<string id="TL301" text="AÇIK (varsayılan): fiyatlar dünya ekonomisinden canlı okunur, gitmediğiniz pazarlar dâhil. KAPALI: yalnızca kendi gözünüzle gördüğünüz fiyatlar kullanılır."/>
 		<string id="TL303" text="Sizinle savaşta olan yerleşimleri asla tarama, önerme ve onlarla otomatik ticaret yapma."/>
-		<string id="TL304" text="Fiyat taramasını bu kuş uçuşu mesafedeki pazarlarla sınırla. 0 = tüm harita."/>
 		<string id="TL305" text="En iyi alış ipuçları için stokta en az bu kadar parça olmalı. 0 = kapalı. Yalnızca canlı fiyat kipinde: gözlem kipi fiyatları kaydeder, stok düzeylerini değil."/>
-		<string id="TL306" text="Bu kadar yol gününden uzaktaki pazarlar ipuçlarında gösterilmez, haritada işaretlenen şehir de buna uyar ve önerilen hiçbir rotanın toplam yolu (siz -&gt; alış şehri -&gt; satış şehri) bunu aşamaz. Köylerin aşağıda kendi daha sıkı sınırı vardır. Varsayılan 3."/>
-		<string id="TL307" text="Köyler için ayrı ve daha sıkı bir yol süresi sınırı. Varsayılan 1."/>
+		<string id="TL306" text="TradeLord'un bir şehri ne kadar uzakta arayacağı, yol günü olarak, ve bu mesafeyi sınırlayan tek şey. Bundan uzaktaki şehirler ipuçlarında gösterilmez, rotalara girmez, harita işaretine çıkmaz ve Yükü en iyi pazar için tut onları hiç beklemez. Önerilen hiçbir rotanın toplam yolu (siz -&gt; alış şehri -&gt; satış şehri) da bunu aşamaz. Köylerin aşağıda kendi daha sıkı sınırı vardır. Varsayılan 3."/>
+		<string id="TL307" text="Köyler için aynı sınır, onları şehirlerden daha yakın tutabilmeniz için ayrı. Varsayılan 1."/>
 		<string id="TL308" text="Rotalar sıralanır ve toplanırken satış tarafına yeniden satış güvenlik payını uygular, böylece listelenen kâr siz varmadan fiyatların kaymasını hesaba katar. KAPALI ham marjları gösterir. Rota her hâlükârda güvenlik payını geçmek zorundadır, çünkü varışta bir alım geçişi de aynı testi uygular."/>
 		<string id="TL309" text="Bir partiyi oyunun kendi fiyat modelinden parça parça geçir, böylece adet ve kâr sizin alışınızın fiyatı yukarı itmesini hesaba katar. KAPALI her parçayı ilk parçanın fiyatından sayar, bu da yolculuğun ödeyeceğinden yüksek görünür. Yalnızca şehirlerde ve canlı fiyat kipinde: köyler arz ve talep verisi vermez, gözlem kipi ise canlı pazar içini okumaz."/>
 		<string id="TL310" text="Paneli günlük kâra göre, o kârın yolculuktan sağ çıkma olasılığıyla indirilerek sırala. İndirim toplu yürüyüşten sonra kalan kâr payını, stok derinliğini, yol uzunluğunu, kervan yoğunluğunu ve gözlem kipinde fiyatların yaşını hesaba katar. KAPALI ham günlük kâra göre sıralar ve Puan sütunu onu gösterir."/>
@@ -214,7 +212,7 @@
 		<string id="TL342" text="TradeLord'un ne satıp ne alacağını, ticaret yapmadan bildirir. Sonucu en iyi durum olarak görün: hiçbir şey el değiştirmez, bu yüzden pazar tepki vermez ve her birim bugünün açılış fiyatından hesaplanır. Gerçek bir geçiş marjın bittiği birimde durur, bu yüzden genelde daha az ticaret yapar ve birim başına daha az alır. Tüccarın altını, taşıma ağırlığınız, altın rezervi ve her mal ile ziyaret başına sınır tam olarak modellenir; yalnızca sizin fiyata etkiniz modellenmez."/>
 		<string id="TL343" text="Bu sefer gününden önce, menüden ya da girişte, TradeLord ticaret yapmaz. Yeni bir seferde fiyatlar henüz oturmamıştır."/>
 		<string id="TL344" text="Otomatik kâr için verilen Ticaret tecrübesini ölçekler. 0 tecrübeyi kapatır."/>
-		<string id="TL345" text="Harita işaretini, o anki yükünüze en çok ödeyen ulaşılabilir şehre taşır. Siz yol aldıkça sizi izler ve bir yerleşime her girip çıktığınızda yeniden bakar. Her şey gibi Şehir yol süresi sınırına ve Tarama yarıçapına uyar. Varsayılan AÇIK; defter panelinde bir şehre tıklamak yine elle işaret koyar."/>
+		<string id="TL345" text="Harita işaretini, o anki yükünüze en çok ödeyen ulaşılabilir şehre taşır. Siz yol aldıkça sizi izler ve bir yerleşime her girip çıktığınızda yeniden bakar. Her şey gibi Şehir yol süresi sınırına uyar. Varsayılan AÇIK; defter panelinde bir şehre tıklamak yine elle işaret koyar."/>
 		<string id="TL347" text="Bir geçiş gerçekten bir şey taşıdığında bozuk para sesi çal. Hiçbir şey taşımayan geçiş sessiz kalır."/>
 		<string id="TL348" text="Tek satırlık ticaret özetinde malları adlandır, örneğin 'TradeLord 8 Zeytin, 3 Şarap sattı, 240 dinar', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
 		<string id="TL349" text="Hem bir pazara girdiğinizde hem de yolda bir kervanla ya da bir köylü bölüğüyle karşılaştığınızda kendiliğinden yapılan ticaret yalnızca TradeLord.log'a yazılır, ekranda satır çıkmaz. Menüdeki ticaret girdisi her zaman bildirir, çünkü onu siz istediniz. İlk çalıştırma otomasyon bildirimi, boş kese uyarısı ve dolu kargo uyarısı bundan etkilenmez."/>
