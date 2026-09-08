@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.46.1
+
+- TradeLord now reads the SettingsVersion line in your TradeLord.ini to decide which of its older settings to carry forward, so a file already up to date is left exactly as you wrote it.
+- A value you type into an up to date TradeLord.ini by hand is now held to what that setting takes today, so a wrong one is named in TradeLord.log instead of being quietly turned into something else.
+
 ## 1.46.0
 
 - TradeLord.log is now emptied as the game starts if it has grown past 999 KB, so a long campaign can no longer leave one file growing without end in your Bannerlord folder.

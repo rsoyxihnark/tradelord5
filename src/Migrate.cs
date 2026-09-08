@@ -10,42 +10,45 @@ namespace TradeLord
 
         public const string ShapeKey = "SettingsVersion";
 
-        private static readonly Dictionary<string, string> Renamed =
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "BuyPackAnimals", "BuyHaulAnimals" },
-                { "MaxTravelDays", "MaxTravelDaysTown" },
-                { "MaxVillageTravelDays", "MaxTravelDaysVillage" },
-            };
+        private static readonly (int arrivedAt, string was, string now)[] Renamed =
+        {
+            (5, "BuyPackAnimals", "BuyHaulAnimals"),
+            (7, "MaxTravelDays", "MaxTravelDaysTown"),
+            (7, "MaxVillageTravelDays", "MaxTravelDaysVillage"),
+        };
 
         public static bool Lift(int from, IDictionary<string, string> written, ICollection<string> notes)
         {
             if (written == null) return false;
             bool changed = false;
-            changed |= Rename(written, notes);
-            changed |= FoodVarietyBecameASwitchAndAnAmount(written, notes);
-            changed |= SmeltableWeaponsBecameAChoiceOfThree(written, notes);
-            changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);
-            changed |= TheObservationShelfLifeIsGone(written, notes);
-            changed |= TheAutoMarkerCeilingIsGone(written, notes);
-            changed |= TheScanRadiusIsGone(written, notes);
+            changed |= Rename(from, written, notes);
+            if (from < 5)
+            {
+                changed |= FoodVarietyBecameASwitchAndAnAmount(written, notes);
+                changed |= SmeltableWeaponsBecameAChoiceOfThree(written, notes);
+                changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);
+                changed |= TheObservationShelfLifeIsGone(written, notes);
+            }
+            if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);
+            if (from < 7) changed |= TheScanRadiusIsGone(written, notes);
             if (changed && notes != null)
                 notes.Add("your settings were written by an older TradeLord, so they have been brought forward from shape " +
                           from + " to shape " + Shape);
             return changed;
         }
 
-        private static bool Rename(IDictionary<string, string> written, ICollection<string> notes)
+        private static bool Rename(int from, IDictionary<string, string> written, ICollection<string> notes)
         {
             bool changed = false;
-            foreach (var pair in new List<KeyValuePair<string, string>>(Renamed))
+            foreach (var (arrivedAt, was, now) in Renamed)
             {
-                if (!written.TryGetValue(pair.Key, out string held)) continue;
-                written.Remove(pair.Key);
+                if (from >= arrivedAt) continue;
+                if (!written.TryGetValue(was, out string held)) continue;
+                written.Remove(was);
                 changed = true;
-                if (written.ContainsKey(pair.Value)) continue;
-                written[pair.Value] = held;
-                notes?.Add("'" + pair.Key + "' is called '" + pair.Value + "' now, and your value was carried over");
+                if (written.ContainsKey(now)) continue;
+                written[now] = held;
+                notes?.Add("'" + was + "' is called '" + now + "' now, and your value was carried over");
             }
             return changed;
         }
