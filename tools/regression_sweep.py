@@ -1,9 +1,9 @@
 import io, re, sys
 
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
-     ['Trading.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs', 'Travel.cs', 'Support.cs',
-      'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs', 'Config.cs', 'Migrate.cs',
-      'Books.cs', 'Rules.cs']}
+     ['Trading.cs', 'Policy.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
+      'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
+      'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -353,7 +353,7 @@ def the_selling_rules_stand_clear_of_the_game():
     rules = S['Rules.cs']
     described = between(rules, "internal struct Good", "\n    }")
     fields = re.findall(r'internal (?:string|float|int|bool) (\w+);', described)
-    describe = method_body(S['Trading.cs'], "internal static Good Describe")
+    describe = method_body(S['Policy.cs'], "internal static Good Describe")
     return ("TaleWorlds" not in rules
             and rules.count("using ") == 2
             and "using System;" in rules
@@ -370,11 +370,11 @@ def the_selling_rules_stand_clear_of_the_game():
             and not any(costly in describe for costly in
                         ("IsSmeltable", "PartsAllLearned", "IsLocked"))
             and "if (AnyListNamesAGood(Options.Current))" in describe
-            and "public bool Locked() => IsLocked(Locks, What);" in S['Trading.cs'])
+            and "public bool Locked() => IsLocked(Locks, What);" in S['Policy.cs'])
 
 def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
     t = S['Trading.cs']
-    keep = method_body(t, "internal static Dictionary<ItemObject, int> FoodKeep")
+    keep = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> FoodKeep")
     return ("internal static Dictionary<string, int> FoodKeep(List<Ration> carried, float perDay, Options s)"
                 in S['Rules.cs']
             and "MobileParty" not in S['Rules.cs']
@@ -382,9 +382,9 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
             and "TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current)" in keep
             and "byId[item.StringId] = item;" in keep
             and "if (byId.TryGetValue(kept.Key, out ItemObject item)) keep[item] = kept.Value;" in keep
-            and t.count("AppetitePerDay()") == 3
-            and "internal static int FoodValue(ItemObject item) =>" in t
-            and "TradeRules.FoodValue(Describe(item));" in t
+            and S['Policy.cs'].count("AppetitePerDay()") == 3
+            and "internal static int FoodValue(ItemObject item) =>" in S['Policy.cs']
+            and "TradeRules.FoodValue(Describe(item));" in S['Policy.cs']
             and "CostPerFood" not in t
             and "int fed = TradeRules.FoodValue(good);" in
                 method_body(t, "public static void ExecuteResupply")
@@ -481,8 +481,8 @@ def the_sell_pass_describes_a_good_once_and_hands_it_on():
             and "int herdRank = HerdShedRank(good);" in sell
             and "HerdShedRank(item)" not in sell
             and "private static int HerdShedRank(in Good good) => TradeRules.HerdShedRank(good);" in t
-            and "internal static string AnimalGroup(ItemObject item) =>" in t
-            and "TradeRules.AnimalGroup(Describe(item));" in t)
+            and "internal static string AnimalGroup(ItemObject item) =>" in S['Policy.cs']
+            and "TradeRules.AnimalGroup(Describe(item));" in S['Policy.cs'])
 
 def the_buying_rules_stand_clear_of_the_game_too():
     t = S['Trading.cs']
@@ -493,10 +493,10 @@ def the_buying_rules_stand_clear_of_the_game_too():
             and "Good good = TradePolicy.Describe(it);" in buy
             and buy.count("Describe(") == 1
             and "good.IsGrain = item == DefaultItems.Grain;" in
-                method_body(t, "internal static Good Describe")
-            and "TradeRules.MayBuy(good, toFeed, Options.Current," in t
-            and "TradeRules.MayHaul(Describe(item), Options.Current," in t
-            and "TradeRules.MayShedForHerd(Describe(held.Item), held.IsQuestItem, Options.Current," in t
+                method_body(S['Policy.cs'], "internal static Good Describe")
+            and "TradeRules.MayBuy(good, toFeed, Options.Current," in S['Policy.cs']
+            and "TradeRules.MayHaul(Describe(item), Options.Current," in S['Policy.cs']
+            and "TradeRules.MayShedForHerd(Describe(held.Item), held.IsQuestItem, Options.Current," in S['Policy.cs']
             and "TradeRules.WhatStopsBuying(good, price, budget, taken, held, shareCap," in t
             and "TradeRules.NoRoomForOneMore(good, roomLeft);" in t)
 
@@ -525,7 +525,7 @@ def a_market_ranking_sorts_through_one_comparison_for_each_way():
 def a_good_on_the_shelf_is_asked_the_buying_questions_once():
     t = S['Trading.cs']
     buy = method_body(t, "private static void BuyPass")
-    round_trip = method_body(t, "internal static bool MayRoundTrip")
+    round_trip = method_body(S['Policy.cs'], "internal static bool MayRoundTrip")
     resale = between(S['Rules.cs'], "internal static bool ResaleAllowed", ";")
     return (buy.count("TradePolicy.MayBuy(") == 1
             and "MayRoundTrip" not in buy
@@ -979,15 +979,16 @@ def the_cost_basis_rules_are_covered_by_tests_the_build_runs():
             and 'LedgerCodec.cs' in TESTPROJ)
 
 def the_policy_layer_keeps_no_second_copy_of_the_money_rules():
-    body = S['Trading.cs']
+    body = S['Policy.cs']
+    anywhere = S['Policy.cs'] + S['Trading.cs']
     forwards = ('TradeMath.PolicyAllows(policy, buying);',
                 'TradeMath.Credit(proceeds, basis, unpaidWorth);',
                 'TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);',
                 'TradeMath.Realizable(farSellPrice, Options.Current.ResaleSafetyFactor);',
                 'TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin);')
     return (all(f in body for f in forwards)
-            and 'gain > 0 ? gain : 0' not in body
-            and 'ResaleSafetyFactor;' not in body.replace('Options.Current.ResaleSafetyFactor);', ''))
+            and 'gain > 0 ? gain : 0' not in anywhere
+            and 'ResaleSafetyFactor;' not in anywhere.replace('Options.Current.ResaleSafetyFactor);', ''))
 
 def the_money_rules_are_covered_by_tests_the_build_runs():
     return ('TradeMath.cs' in TESTPROJ and 'Options.cs' in TESTPROJ
@@ -1152,7 +1153,7 @@ def chk(ver, claim, ok):
     print(('  ok      ' if ok else '  BROKEN  ') + f"[{ver}] {claim}")
 
 chk("1.3.2", "smithing compares live DefaultItems, no cached static set",
-    "item == DefaultItems.Charcoal" in S['Trading.cs'] and not re.search(r'static.*HashSet<ItemObject>', ALL))
+    "item == DefaultItems.Charcoal" in S['Policy.cs'] and not re.search(r'static.*HashSet<ItemObject>', ALL))
 chk("1.3.2", "ExcludeHostileTowns blocks trading, not just scans",
     (lambda gate: "IsMarket(s)" in gate
               and "Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)" in gate)
@@ -1261,7 +1262,7 @@ chk("1.3.6", "the smithing-material rule still binds buying as well as selling",
     "if (good.IsSmithingMaterial) return s.CraftingPolicy;" in
         method_body(S['Rules.cs'], "internal static int PolicyFor") and
     "good.IsSmithingMaterial = IsSmithingMaterial(item);" in
-        method_body(S['Trading.cs'], "internal static Good Describe"))
+        method_body(S['Policy.cs'], "internal static Good Describe"))
 chk("1.3.6", "vanilla suppression asks the ledger", "TooltipHelper.HasSection(____targetItem)" in S['TooltipPatches.cs'])
 chk("1.3.6", "marker respects the sell policy",
     "TradePolicy.MaySell(el, locked, keepBack" in method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo"))
@@ -1271,7 +1272,7 @@ chk("1.3.6", "smithing materials still ship tradable, as the old switch shipped 
     "CraftingPolicy = PolicyBuySell" in S['Options.cs'])
 chk("1.3.8", "quick-buy respects inventory locks",
     "game.Locked()" in buy_rule() and
-    "new AskTheGame { Locks = lockedKeys, What = new EquipmentElement(item) }" in S['Trading.cs'])
+    "new AskTheGame { Locks = lockedKeys, What = new EquipmentElement(item) }" in S['Policy.cs'])
 chk("1.3.8", "Harmony field injection uses four underscores", "____targetItem" in S['TooltipPatches.cs'])
 chk("1.3.8", "quick-buy stops when the budget is spent",
     "if (pass.DirectionError || pass.Spendable() <= 0) break;" in
@@ -1336,19 +1337,19 @@ chk("1.13.0", "every setting the screen shows reads and writes its own value onl
     every_setting_keeps_to_its_own_value())
 chk("1.3.10", "hotkey rejects non-key text", "Enum.IsDefined(typeof(InputKey), k)" in S['Panel.cs'])
 def a_quest_item_is_never_sold_by_any_pass():
-    sell = method_body(S['Trading.cs'], "internal static bool MaySell(ItemRosterElement el")
+    sell = method_body(S['Policy.cs'], "internal static bool MaySell(ItemRosterElement el")
     spare = shed_rule()
     return ("el.EquipmentElement.IsQuestItem" in sell
             and "questItem" in spare
             and "held.IsQuestItem, Options.Current," in
-                method_body(S['Trading.cs'], "internal static bool MayShedForHerd"))
+                method_body(S['Policy.cs'], "internal static bool MayShedForHerd"))
 
 chk("1.3.11", "a quest item is never sold, by the selling pass or by thinning the herd",
     a_quest_item_is_never_sold_by_any_pass())
 chk("1.3.11", "NotMerchandise never sold",
     "good.NotMerchandise" in sell_rule() and
     "good.NotMerchandise = item.NotMerchandise;" in
-        method_body(S['Trading.cs'], "internal static Good Describe"))
+        method_body(S['Policy.cs'], "internal static Good Describe"))
 chk("1.3.33", "a unique or player-crafted good is left alone while the protection is on, an animal along with the rest",
     ordered(sell_rule(),
             "if (livestock && (good.IsHaulAnimal || good.IsSpareMount))\n"
@@ -1363,7 +1364,7 @@ chk("1.3.12", "sieges/raids excluded from scans",
     "if (UnderAttack(s) || VillageShut(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "LedgerBehavior.UnderAttack(s)" in S['Trading.cs'])
 chk("1.3.13", "buy shelf ordered by margin", "stock.Sort((x, y) => y.margin.CompareTo(x.margin));" in S['Trading.cs'])
-chk("1.3.13", "cost basis read once per stack", "ProfitAcceptable(int costBasis, int townSellPrice)" in S['Trading.cs'])
+chk("1.3.13", "cost basis read once per stack", "ProfitAcceptable(int costBasis, int townSellPrice)" in S['Policy.cs'])
 chk("1.13.0", "the automation switches are plain switches like the rest, with nothing behind them",
     "if (value == _o.AutoBuyOnEntry) return;" not in M and
     M.count("set { _o.AutoBuyOnEntry = value; Options.Bump(); } }") == 1 and
@@ -1374,7 +1375,7 @@ chk("1.3.13", "main-party check ahead of the guard",
     re.search(r'if \(party != MobileParty\.MainParty\) return;', S['Trading.cs']) is not None)
 chk("1.3.14", "sim honors the merchant till", "simTill" in S['Trading.cs'])
 chk("1.3.14", "one predicate for ledger-priced items",
-    S['Trading.cs'].count("bool Priced(") == 1 and "TradePolicy.Priced" in S['TooltipPatches.cs'] and
+    S['Policy.cs'].count("bool Priced(") == 1 and "TradePolicy.Priced" in S['TooltipPatches.cs'] and
     "TradePolicy.Priced" in S['Ledger.cs'])
 chk("1.42.0", "a livestock route is listed even when your herd is already full, deliberately, because the ledger says where the profit is and not what you could drive away today",
     "HerdRoomForLivestock" not in S['Ledger.cs'] and
@@ -1389,7 +1390,7 @@ chk("1.3.16", "food branch falls through to the sell rules",
             "if (amount <= said.KeepCount) { said.Why = Block.FoodReserve; return said; }",
             "            said.Allowed = true;\n            return said;") and
     "reserve[item] = held - drawn;" in
-        method_body(S['Trading.cs'], "private static void TakeBack"))
+        method_body(S['Policy.cs'], "private static void TakeBack"))
 chk("1.3.17", "scan radius reaches the marker", "LedgerBehavior.WithinRadius(s)" in S['Trading.cs'])
 chk("1.3.17", "haircut always filters routes",
     "float realizable = TradePolicy.Realizable(sellPrice);" in S['Ledger.cs'] and
@@ -1410,7 +1411,7 @@ chk("1.3.23", "food value mirrors ItemRoster.TotalFood (livestock by MeatCount)"
     "return good.IsLivestock ? good.MeatCount : 0;" in
         method_body(S['Rules.cs'], "internal static int FoodValue") and
     "good.MeatCount = item.HasHorseComponent ? item.HorseComponent.MeatCount : 0;" in
-        method_body(S['Trading.cs'], "internal static Good Describe") and
+        method_body(S['Policy.cs'], "internal static Good Describe") and
     "Math.Min(held.Amount - had, (reserve + perUnit - 1) / perUnit)" in food_rule())
 chk("1.3.23", "herd surplus counts mounts against unmounted men",
     "Math.Max(0, mounts - foot)" in S['Trading.cs'] and "NumberOfMenWithoutHorse" in S['Trading.cs'])
@@ -1471,8 +1472,8 @@ chk("1.3.28", "both travel estimates take their speeds from one definition",
     "Speeds(out float land, out float sea);" in method_body(S['Travel.cs'], "private static float StraightDays"))
 
 chk("1.3.29", "one buy-side margin rule, for the planner and the executor alike",
-    S['Trading.cs'].count("internal static bool BuyAcceptable(int buyPrice, float realizable)") == 1 and
-    S['Trading.cs'].count("Options.Current.ResaleSafetyFactor") == 1 and
+    S['Policy.cs'].count("internal static bool BuyAcceptable(int buyPrice, float realizable)") == 1 and
+    S['Policy.cs'].count("Options.Current.ResaleSafetyFactor") == 1 and
     S['Ledger.cs'].count("Options.Current.MinProfitMargin") == 0 and
     S['Ledger.cs'].count("Options.Current.ResaleSafetyFactor") == 0 and
     "TradePolicy.BuyAcceptable" in S['Ledger.cs'] and "TradePolicy.BuyAcceptable" in S['Trading.cs'])
@@ -1631,13 +1632,13 @@ chk("1.4.3", "one rule for what the ledger will capture, and it tolerates no set
     method_body(S['Ledger.cs'], "public void CaptureSettlement") and
     "IsVillage" not in method_body(S['Ledger.cs'], "private void OnSettlementEntered"))
 chk("1.4.3", "one definition of the livestock the mod trades",
-    S['Trading.cs'].count("&& item.HorseComponent.IsLiveStock") == 1)
+    S['Policy.cs'].count("&& item.HorseComponent.IsLiveStock") == 1)
 chk("1.4.3", "cost basis uses recorded purchase prices, not current market quotes",
     "Options.Current.CostBasisMode == 2 ||" in
-    method_body(S['Trading.cs'], "private static bool HasCostBasis") and
+    method_body(S['Policy.cs'], "private static bool HasCostBasis") and
     "HasPurchaseRecord(item) ?? false)" in
-    method_body(S['Trading.cs'], "private static bool HasCostBasis") and
-    "item.IsTradeGood ||" not in method_body(S['Trading.cs'], "private static bool HasCostBasis"))
+    method_body(S['Policy.cs'], "private static bool HasCostBasis") and
+    "item.IsTradeGood ||" not in method_body(S['Policy.cs'], "private static bool HasCostBasis"))
 chk("1.21.0", "the sell-side floor is the hold-for-the-best-market switch and nothing else, so it binds every unit alike or none",
     "if (Options.Current.PreferBestSellTown)" in
         method_body(S['Trading.cs'], "private static void SellPass") and
@@ -1665,7 +1666,7 @@ chk("1.5.0", "the walk gates every unit with the executor's own margin rule",
 chk("1.5.0", "one definition of the resale haircut, walk and planner alike",
     S['Market.cs'].count("Options.Current.ResaleSafetyFactor") == 0 and
     S['Ledger.cs'].count("Options.Current.ResaleSafetyFactor") == 0 and
-    S['Trading.cs'].count("Options.Current.ResaleSafetyFactor") == 1 and
+    S['Policy.cs'].count("Options.Current.ResaleSafetyFactor") == 1 and
     "(int)TradePolicy.Realizable(q.SellTotal)" in S['Ledger.cs'])
 chk("1.5.0", "observed mode does not read live market supply/demand for projections",
     "if (projecting && (!Options.Current.Omniscient || !Options.Current.BulkSimulation)) return;" in
@@ -1699,13 +1700,13 @@ chk("1.5.0", "every confidence factor is a fraction of one",
     method_body(S['Confidence.cs'], "public static float Of(bool simulated"))
 
 chk("1.5.0", "one place decides which category policy governs an item",
-    S['Trading.cs'].count("internal static int PolicyFor(ItemObject item)") == 1 and
-    S['Trading.cs'].count("internal static bool PolicyAllows(int policy, bool buying)") == 1 and
-    S['Trading.cs'].count("Options.Current.FoodPolicy") == 1 and
-    S['Trading.cs'].count("Options.Current.CraftingPolicy") == 1 and
-    S['Trading.cs'].count("Options.Current.LivestockPolicy") == 1)
+    S['Policy.cs'].count("internal static int PolicyFor(ItemObject item)") == 1 and
+    S['Policy.cs'].count("internal static bool PolicyAllows(int policy, bool buying)") == 1 and
+    S['Policy.cs'].count("Options.Current.FoodPolicy") == 1 and
+    S['Policy.cs'].count("Options.Current.CraftingPolicy") == 1 and
+    S['Policy.cs'].count("Options.Current.LivestockPolicy") == 1)
 chk("1.5.0", "a head of cattle is asked as livestock, not as food",
-    ordered(method_body(S['Trading.cs'], "internal static int PolicyFor"), "LivestockPolicy", "FoodPolicy"))
+    ordered(method_body(S['Policy.cs'], "internal static int PolicyFor"), "LivestockPolicy", "FoodPolicy"))
 chk("1.23.0", "the selling fence is the haul animals themselves, so an animal that hauls nothing is not fenced in with them",
     "if (livestock && (good.IsHaulAnimal || good.IsSpareMount))" in sell_rule() and
     "IsLivestock" not in sell_rule() and
@@ -1717,21 +1718,21 @@ chk("1.28.0", "a haul animal is named by all five answers the game gives about i
     "            item != null && item.HasHorseComponent &&\n"
     "            item.HorseComponent.IsRideable && item.HorseComponent.IsPackAnimal &&\n"
     "            !item.HorseComponent.IsMount && !item.HorseComponent.IsLiveStock &&\n"
-    "            item.ItemCategory == DefaultItemCategories.PackAnimal;" in S['Trading.cs'] and
+    "            item.ItemCategory == DefaultItemCategories.PackAnimal;" in S['Policy.cs'] and
     "if (livestock && (good.IsHaulAnimal || good.IsSpareMount))" in sell_rule() and
     "good.IsHaulAnimal = IsHaulAnimal(item);" in
-        method_body(S['Trading.cs'], "internal static Good Describe") and
+        method_body(S['Policy.cs'], "internal static Good Describe") and
     "good.IsSpareMount = IsSpareMount(item);" in
-        method_body(S['Trading.cs'], "internal static Good Describe") and
-    S['Trading.cs'].count("item.HorseComponent.IsRideable && item.HorseComponent.IsPackAnimal") == 1 and
-    S['Trading.cs'].count("IsHaulAnimal(ItemObject item)") == 1 and
+        method_body(S['Policy.cs'], "internal static Good Describe") and
+    S['Policy.cs'].count("item.HorseComponent.IsRideable && item.HorseComponent.IsPackAnimal") == 1 and
+    S['Policy.cs'].count("IsHaulAnimal(ItemObject item)") == 1 and
     "IsHaulAnimalOrMount" not in S['Trading.cs'])
 chk("1.28.0", "a war horse and a noble horse are the last mounts the herd gives up, told apart by the game's own trade category",
     "internal static bool IsPrizeMount(ItemObject item) =>\n"
     "            IsSpareMount(item) &&\n"
     "            (item.ItemCategory == DefaultItemCategories.WarHorse ||\n"
-    "             item.ItemCategory == DefaultItemCategories.NobleHorse);" in S['Trading.cs'] and
-    S['Trading.cs'].count("IsPrizeMount(ItemObject item)") == 1)
+    "             item.ItemCategory == DefaultItemCategories.NobleHorse);" in S['Policy.cs'] and
+    S['Policy.cs'].count("IsPrizeMount(ItemObject item)") == 1)
 chk("1.33.0", "the animal roll call is gone from the log and from the campaign opening, every part of it",
     "RollCall" not in ALL and "LogAnimalRollCall" not in ALL and
     "more not listed" not in ALL and
@@ -1741,7 +1742,7 @@ chk("1.5.0", "every category ships trading exactly as it did before the matrix",
     "CraftingPolicy = PolicyBuySell" in S['Options.cs'] and
     "LivestockPolicy = PolicyBuySell" in S['Options.cs'])
 chk("1.5.0", "the food reserve is not a trading policy and is not governed by one",
-    "FoodPolicy" not in method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> FoodKeep"))
+    "FoodPolicy" not in method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> FoodKeep"))
 
 chk("1.5.0", "a pass that moves nothing names the rule that stopped it",
     'Tongue.Text("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
@@ -1750,8 +1751,8 @@ chk("1.5.0", "a pass that moves nothing names the rule that stopped it",
     method_body(S['Trading.cs'],
                 "private static void ReportStalledPasses").count("BlockTally.Phrase(") == 4)
 chk("1.5.0", "the reason overloads carry the plain ones, so one rule set decides both",
-    "MaySell(el, lockedKeys, foodKeep, awaited, out keepCount, out _);" in S['Trading.cs'] and
-    "MayBuy(item, lockedKeys, out _);" in S['Trading.cs'])
+    "MaySell(el, lockedKeys, foodKeep, awaited, out keepCount, out _);" in S['Policy.cs'] and
+    "MayBuy(item, lockedKeys, out _);" in S['Policy.cs'])
 chk("1.5.0", "every stop in the sell pass is counted",
     method_body(S['Trading.cs'], "private static void SellPass").count("tally.Note(") >= 5)
 chk("1.5.0", "every stop in the buy pass is counted",
@@ -1785,9 +1786,9 @@ chk("1.5.1", "no two settings in one MCM group claim the same position",
     mcm_orders_unique())
 
 chk("1.5.2", "a listed route passes both the buy and the sell policy check",
-    "internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys)" in S['Trading.cs'] and
+    "internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys)" in S['Policy.cs'] and
     "MayBuy(good, item, lockedKeys, out _) &&" in
-    method_body(S['Trading.cs'], "internal static bool MayRoundTrip") and
+    method_body(S['Policy.cs'], "internal static bool MayRoundTrip") and
     "TradeMath.PolicyAllows(PolicyFor(good, s), buying: false)" in
     between(S['Rules.cs'], "internal static bool ResaleAllowed", ";") and
     "if (!TradePolicy.MayRoundTrip(item, locked)) continue;" in S['Ledger.cs'] and
@@ -2271,7 +2272,7 @@ chk("1.37.4", "a good leaving the party is noticed as it goes, and the books are
 
 chk("1.6.12", "goods with no price paid are credited at what the cheapest market would have charged",
     (lambda b: "BestBuy(item)" in b and "item.Value" in b)
-    (method_body(S['Trading.cs'], "internal static int UnpaidWorth")))
+    (method_body(S['Policy.cs'], "internal static int UnpaidWorth")))
 chk("1.6.12", "a paid unit is still credited exactly as before, against what was paid for it",
     "if (basis > 0) return proceeds - basis;" in
         method_body(S['TradeMath.cs'], "public static int Credit"))
@@ -2290,7 +2291,7 @@ chk("1.6.12", "what quick-sell agrees to sell is unchanged, since the decision s
     S['Trading.cs'].count("if (!TradePolicy.ProfitAcceptable(worth, price))") == 1 and
     S['Trading.cs'].count("int worth = basis.Unit(item);") == 2 and
     "ProfitAcceptable(basis.UnpaidWorth" not in S['Trading.cs'] and
-    "TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);" in S['Trading.cs'] and
+    "TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);" in S['Policy.cs'] and
     re.search(r'ProfitAcceptable\(int costBasis, int townSellPrice, float margin\) =>\s*costBasis > 0\s*\?\s*'
               r'townSellPrice >= costBasis \* \(1f \+ margin\)\s*:\s*'
               r'townSellPrice > 0;', S['TradeMath.cs']) is not None)
@@ -2313,7 +2314,7 @@ chk("1.6.12", "that worth is looked up once per good, not once per unit sold",
 chk("1.6.12", "the tooltip and the sale summary now value an unbought good the same way",
     "var best = BestBuy(item);" in method_body(S['Ledger.cs'], "public int GetCostBasis") and
     "best.price > 0 ? best.price : item.Value" in method_body(S['Ledger.cs'], "public int GetCostBasis") and
-    "best.Item2 > 0 ? best.Item2 : item.Value" in method_body(S['Trading.cs'], "internal static int UnpaidWorth"))
+    "best.Item2 > 0 ? best.Item2 : item.Value" in method_body(S['Policy.cs'], "internal static int UnpaidWorth"))
 
 def mcm_generation_matches_the_package():
     pkg = re.search(r'Bannerlord\.MCM"\s+Version="(\d+)\.', "\n".join(PROJ))
@@ -2585,7 +2586,7 @@ def a_list_entry_is_matched_whatever_its_capitalisation():
             "A_name_is_matched_whatever_its_capitalisation" in ROUTETESTS)
 
 def an_item_list_is_matched_by_name_as_well_as_by_id():
-    listed = method_body(S['Trading.cs'], "internal static bool Listed")
+    listed = method_body(S['Policy.cs'], "internal static bool Listed")
     return ("list.HasId(item.StringId)" in listed and
             "list.HasName(item.Name.ToString())" in listed and
             ordered(listed, "if (item == null || list.Empty) return false;",
@@ -2601,8 +2602,8 @@ def a_written_word_stands_for_an_id_and_never_for_another_goods_name():
                         "if (!knownIds.Contains(word)) { everyWordKnown = false; break; }",
                         "if (!everyWordKnown) continue;",
                         "foreach (string word in words) _words.Add(word);")
-            and "if (!ids.Contains(word))" in method_body(S['Trading.cs'], "private static bool Unmatched")
-            and S['Trading.cs'].count(".ReadWordsAsIds(_knownIds);") == 4
+            and "if (!ids.Contains(word))" in method_body(S['Policy.cs'], "private static bool Unmatched")
+            and S['Policy.cs'].count(".ReadWordsAsIds(_knownIds);") == 4
             and "Naming_one_good_never_catches_another_whose_name_is_a_word_of_it" in ROUTETESTS
             and "A_good_named_the_way_the_game_shows_it_never_catches_another_good" in ROUTETESTS
             and "A_written_name_holds_nothing_until_the_goods_in_this_game_are_read" in ROUTETESTS
@@ -2619,16 +2620,16 @@ def a_list_entry_survives_the_space_inside_a_name():
             "' '" not in parsed)
 
 def a_list_entry_that_names_nothing_is_reported_both_ways():
-    audit = method_body(S['Trading.cs'], "internal static bool ItemListsNameNothing")
+    audit = method_body(S['Policy.cs'], "internal static bool ItemListsNameNothing")
     warn = method_body(S['Trading.cs'], "private static void WarnUnmatchedItemLists")
     return ("ReadTheGoodsInThisGame();" in audit and audit.count("Unmatched(") == 4 and
-            "Items.All" in method_body(S['Trading.cs'], "private static void ReadTheGoodsInThisGame") and
-            "Log.Write" in method_body(S['Trading.cs'], "private static bool Unmatched") and
+            "Items.All" in method_body(S['Policy.cs'], "private static void ReadTheGoodsInThisGame") and
+            "Log.Write" in method_body(S['Policy.cs'], "private static bool Unmatched") and
             "TradePolicy.ItemListsNameNothing()" in warn and "Toast(" in warn and
             "WarnUnmatchedItemLists();" in method_body(S['Trading.cs'], "private void OnSettlementEntered"))
 
 def the_list_audit_is_redone_when_the_lists_are_edited():
-    audit = method_body(S['Trading.cs'], "internal static bool ItemListsNameNothing")
+    audit = method_body(S['Policy.cs'], "internal static bool ItemListsNameNothing")
     return ("_auditedGeneration == Options.Generation" in audit and
             "TradePolicy.ForgetItemListAudit();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 
@@ -2639,7 +2640,7 @@ def a_list_still_naming_nothing_after_an_edit_is_said_again():
             and "AuditShouldSpeak" not in S['Trading.cs'])
 
 def the_audit_reads_the_game_only_for_a_list_with_something_in_it():
-    audit = method_body(S['Trading.cs'], "internal static bool ItemListsNameNothing")
+    audit = method_body(S['Policy.cs'], "internal static bool ItemListsNameNothing")
     return ordered(audit, "string.IsNullOrEmpty(s.NeverSellItems)",
                    "string.IsNullOrEmpty(s.AlwaysBuyItems)) return false;",
                    "ReadTheGoodsInThisGame();")
@@ -3130,7 +3131,7 @@ def a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists():
                     '!always && !toFeed && s.NeverBuyGrain',
                     '!always && !TradeMath.PolicyAllows(PolicyFor(good, s), buying: true)')
             and 'AlwaysBuySet => Parsed(AlwaysBuyItems' in S['Options.cs']
-            and 'Unmatched("always buy", s.AlwaysBuyItems, _knownIds, _knownNames);' in S['Trading.cs']
+            and 'Unmatched("always buy", s.AlwaysBuyItems, _knownIds, _knownNames);' in S['Policy.cs']
             and '_o.AlwaysBuyItems' in M)
 
 def looted_gear_is_cleared_from_the_first_tier_by_default():
@@ -3393,16 +3394,16 @@ chk("1.17.0", "restocking runs between selling and buying, and asks nothing abou
 chk("1.17.0", "the food it restocks to is a days-of-supply figure read off the party's own appetite",
     option_default('ResupplyFoodDays') == '3' and
     "return (int)Math.Ceiling(AppetitePerDay() * days);" in
-        method_body(S['Trading.cs'], "internal static int FoodWanted") and
+        method_body(S['Policy.cs'], "internal static int FoodWanted") and
     "float perDay = party == null ? 0f : -party.FoodChange;" in
-        method_body(S['Trading.cs'], "private static float AppetitePerDay") and
+        method_body(S['Policy.cs'], "private static float AppetitePerDay") and
     "good.IsFood && !good.HasHorse" in
         between(S['Rules.cs'], "internal static bool IsStorableFood", ";") and
     "_o.ResupplyFoodDays" in M)
 chk("1.19.0", "smeltable weapons are a three-way choice that ships on selling them, and an always-sell entry still wins",
     option_default('KeepSmeltableWeapons') == 'SmeltSellThem' and
     "public const int SmeltSellThem = 0, SmeltKeepAll = 1, SmeltKeepUnlearned = 2;" in S['Options.cs'] and
-    "item.WeaponDesign != null" in method_body(S['Trading.cs'], "internal static bool IsSmeltable") and
+    "item.WeaponDesign != null" in method_body(S['Policy.cs'], "internal static bool IsSmeltable") and
     ordered(sell_rule(),
             "if (Listed(s.AlwaysSet, good)) { said.Allowed = true; return said; }",
             "s.KeepSmeltableWeapons != Options.SmeltSellThem && game.Smeltable()",
@@ -3450,8 +3451,8 @@ def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
     haul = haul_rule()
     body = pass_body("public static void ExecuteHaulage")
     fence = "if (livestock && (good.IsHaulAnimal || good.IsSpareMount))" in sell_rule()
-    carrying = between(S['Trading.cs'], "internal static bool IsHaulAnimal", ";")
-    spare = between(S['Trading.cs'], "internal static bool IsSpareMount", ";")
+    carrying = between(S['Policy.cs'], "internal static bool IsHaulAnimal", ";")
+    spare = between(S['Policy.cs'], "internal static bool IsSpareMount", ";")
     return ("if (good.Id == null || !good.IsHaulAnimal || good.NotMerchandise) return false;" in haul
             and "Listed(s.NeverSet, good) || Listed(s.NeverBuySet, good)" in haul
             and "return !game.Locked();" in haul
@@ -3521,12 +3522,12 @@ def the_smeltable_hint_says_which_weapons_it_holds_back():
             and all(w and w in M for w in words))
 
 def an_unreadable_crafting_record_keeps_the_weapon():
-    body = method_body(S['Trading.cs'], "internal static bool PartsAllLearned")
-    return ("if (design == null) return true;" in body
-            and "Campaign.Current?.GetCampaignBehavior<ICraftingCampaignBehavior>()" in body
-            and "crafting.IsOpened(piece, design.Template)" in body
+    body = method_body(S['Policy.cs'], "internal static bool PartsAllLearned")
+    return ("if (design == null) return true;" in S['Policy.cs']
+            and "Campaign.Current?.GetCampaignBehavior<ICraftingCampaignBehavior>()" in S['Policy.cs']
+            and "crafting.IsOpened(piece, design.Template)" in S['Policy.cs']
             and body.count("return false;") == 3
-            and "_craftingLookupFailed = true;" in body
+            and "_craftingLookupFailed = true;" in S['Policy.cs']
             and 'Log.Error(e, "learned parts check (the weapon is kept)")' in body
             and "TradePolicy.ForgetCraftingLookup();" in
                 method_body(S['Trading.cs'], "internal static void ForgetVisit"))
@@ -3549,7 +3550,7 @@ def a_horse_a_footman_can_ride_costs_the_herd_nothing():
     room = method_body(S['Trading.cs'], "internal static int HerdRoomForLivestock")
     spare = method_body(S['Trading.cs'], "internal static int SpareMountRoom")
     haul = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
-    kind = between(S['Trading.cs'], "internal static bool IsSpareMount", ";")
+    kind = between(S['Policy.cs'], "internal static bool IsSpareMount", ";")
     return ("party.AttachedParties" in tally
             and "NumberOfMenWithoutHorse" in tally
             and "Math.Max(0, mounts - foot)" in room
@@ -3740,9 +3741,9 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
             and "Listed(s.NeverSet, good)" in spare
             and "s.ProtectSpecial && (good.IsUnique || good.IsCraftedByPlayer)" in spare
             and "return !game.Locked();" in spare
-            and "new AskTheGame { Locks = lockedKeys, What = held }" in S['Trading.cs']
+            and "new AskTheGame { Locks = lockedKeys, What = held }" in S['Policy.cs']
             and "internal static bool MayShedForHerd(EquipmentElement held, ISet<string> lockedKeys)"
-                in S['Trading.cs']
+                in S['Policy.cs']
             and "!TradePolicy.MayShedForHerd(el.EquipmentElement, pass.Locked)" in relief
             and "if (!Options.Current.SellSpareMounts) return;" in relief
             and "int shed = DrivenAnimalsToShed(pass.Party);" in relief
@@ -3768,7 +3769,7 @@ def an_animal_is_held_back_when_the_quests_cannot_be_read():
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
     return ("internal static bool Known => Readable();" in S['Trading.cs']
             and "facts.QuestsReadable = Errands.Known;" in
-                method_body(S['Trading.cs'], "internal static bool MaySell(ItemRosterElement el")
+                method_body(S['Policy.cs'], "internal static bool MaySell(ItemRosterElement el")
             and "if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestAnimal; return said; }" in sell
             and ordered(sell, "if (Listed(s.AlwaysSet, good)) { said.Allowed = true; return said; }",
                         "if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestAnimal; return said; }")
@@ -3832,7 +3833,7 @@ chk("1.28.0", "the herd gives up its livestock, then a plain spare mount, then a
 def getting_back_up_to_speed_outranks_the_food_reserve():
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
     spare = shed_rule()
-    sell = method_body(S['Trading.cs'], "internal static bool MaySell(in Good good, ItemRosterElement el")
+    sell = method_body(S['Policy.cs'], "internal static bool MaySell(in Good good, ItemRosterElement el")
     return ("FoodKeep" not in relief and "foodKeep" not in relief
             and "foodKeep" not in spare and "FoodValue" not in spare
             and "foodKeep" in sell
@@ -3867,7 +3868,7 @@ chk("1.37.0", "as many animals as a quest is waiting on are kept back, and only 
     an_animal_a_quest_is_waiting_on_is_counted_out_of_the_herd())
 
 def a_quest_animal_is_held_back_from_every_sale_not_just_the_herd():
-    kept = method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> KeptBack")
+    kept = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack")
     return ("awaited = Errands.Promised();" in kept
             and "if (awaited == null) return keep;" in kept
             and "if (owed.Value > held) keep[owed.Key] = owed.Value;" in kept
@@ -3985,12 +3986,12 @@ chk("1.28.0", "enough haul animals are kept to carry what the party already carr
 chk("1.28.0", "a name that means two animals the mod treats differently is named in the log, with the item id for each",
     "TradePolicy.ItemListsNameTwoAnimals();" in
         method_body(S['Trading.cs'], "private static void WarnUnmatchedItemLists") and
-    all(needle in method_body(S['Trading.cs'], "internal static bool ItemListsNameTwoAnimals") for needle in
+    all(needle in method_body(S['Policy.cs'], "internal static bool ItemListsNameTwoAnimals") for needle in
         ("if (_clashGeneration == Options.Generation) return false;",
          "foreach (ItemObject item in Items.All)",
          "if (groups.Count < 2) continue;",
          'said.Add(item.StringId + " is " + AnimalGroup(item));')) and
-    "_clashGeneration = -1;" in method_body(S['Trading.cs'], "internal static void ForgetItemListAudit"))
+    "_clashGeneration = -1;" in method_body(S['Policy.cs'], "internal static void ForgetItemListAudit"))
 chk("1.33.0", "the language hint says the change takes hold as it is picked and names the one thing that waits",
     "It takes hold as you pick it" in spoken(ENGLISH).get('TL350', '') and
     "with no restart and no reload" in spoken(ENGLISH).get('TL350', '') and
@@ -4562,9 +4563,8 @@ chk("1.38.2", "every setting shown as a list of choices is held to the number of
 
 
 def a_quest_animal_held_back_is_named_as_the_quest_not_the_food_reserve():
-    sell = method_body(S['Trading.cs'], "internal static bool MaySell(in Good good, ItemRosterElement el")
-    kept = method_body(S['Trading.cs'],
-                       "internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster,")
+    sell = method_body(S['Policy.cs'], "internal static bool MaySell(in Good good, ItemRosterElement el")
+    kept = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster,")
     quick = method_body(S['Trading.cs'], "private static void SellPass")
     return ("IDictionary<ItemObject, int> awaited," in sell
             and "facts.AwaitedHeld = HeldBack(awaited, item);" in sell
@@ -4623,7 +4623,7 @@ chk("1.39.3", "restocking and buying a haul animal stop before your gold reaches
 
 def an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on():
     t = S['Trading.cs']
-    sell = method_body(t, "internal static bool MaySell(ItemRosterElement el")
+    sell = method_body(S['Policy.cs'], "internal static bool MaySell(ItemRosterElement el")
     quick = method_body(t, "private static void SellPass")
     marker = method_body(t, "private Settlement FindBestSellTownForCargo")
     return (ordered(sell_rule(),
@@ -4634,7 +4634,7 @@ def an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on():
             and ordered(method_body(S['Rules.cs'], "internal static int DrawKeepBack"),
                         "any = held > 0;",
                         "return any ? Math.Min(available, held) : 0;")
-            and ordered(method_body(t, "private static void TakeBack"),
+            and ordered(method_body(S['Policy.cs'], "private static void TakeBack"),
                         "if (drawn <= 0 || reserve == null) return;",
                         "reserve[item] = held - drawn;")
             and "KeptBack(ItemRoster roster)" not in t
@@ -4705,7 +4705,7 @@ def a_price_move_keeps_the_markets_in_reach_it_did_not_change():
 def the_keep_back_is_drawn_down_in_one_place():
     t = S['Trading.cs']
     draw = method_body(S['Rules.cs'], "internal static int DrawKeepBack")
-    sell = method_body(t, "internal static bool MaySell(ItemRosterElement el")
+    sell = method_body(S['Policy.cs'], "internal static bool MaySell(ItemRosterElement el")
     return (ordered(draw, "any = held > 0;",
                     "return any ? Math.Min(available, held) : 0;")
             and S['Rules.cs'].count("DrawKeepBack(") == 3
@@ -4714,7 +4714,7 @@ def the_keep_back_is_drawn_down_in_one_place():
             and "facts.FoodHeld = HeldBack(foodKeep, item);" in sell
             and "TakeBack(awaited, item, said.DrewAwaited);" in sell
             and "TakeBack(foodKeep, item, said.DrewFood);" in sell
-            and t.count("private static void TakeBack(") == 1
+            and S['Policy.cs'].count("private static void TakeBack(") == 1
             and "awaited[item] =" not in t
             and "foodKeep[item] =" not in t)
 
