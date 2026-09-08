@@ -250,7 +250,7 @@ def method_body(src, signature):
 SHARED_PASS_RULES = {
     "CheapestFirst(": ('Trading.cs',
         "private static List<(ItemRosterElement el, int price, int worth)> CheapestFirst"),
-    "WhatStopsBuying(": ('Trading.cs', "private static Block WhatStopsBuying"),
+    "WhatStopsBuying(": ('Rules.cs', "internal static Block WhatStopsBuying"),
     "Basis.For(": ('Trading.cs', "private struct Basis"),
     "TradeMath.SkipTheUnitsYouPaidFor(": ('TradeMath.cs',
         "public static bool SkipTheUnitsYouPaidFor"),
@@ -259,6 +259,18 @@ SHARED_PASS_RULES = {
 
 def sell_rule():
     return method_body(S['Rules.cs'], "internal static SellVerdict MaySell<TGame>")
+
+def buy_rule():
+    return method_body(S['Rules.cs'], "internal static bool MayBuy<TGame>")
+
+def haul_rule():
+    return method_body(S['Rules.cs'], "internal static bool MayHaul<TGame>")
+
+def shed_rule():
+    return method_body(S['Rules.cs'], "internal static bool MayShedForHerd<TGame>")
+
+def cap_rule():
+    return method_body(S['Rules.cs'], "internal static Block WhatStopsBuying")
 
 def pass_body(signature):
     body = method_body(S['Trading.cs'], signature)
@@ -353,6 +365,22 @@ def the_selling_rules_stand_clear_of_the_game():
             and "if (AnyListNamesAGood(Options.Current))" in describe
             and "public bool Locked() => IsLocked(Locks, What);" in S['Trading.cs'])
 
+def the_buying_rules_stand_clear_of_the_game_too():
+    t = S['Trading.cs']
+    buy = method_body(t, "private static void BuyPass")
+    return ("ItemObject" not in S['Rules.cs']
+            and all("in Good good" in body for body in
+                    (buy_rule(), haul_rule(), shed_rule(), cap_rule()))
+            and "Good good = TradePolicy.Describe(it);" in buy
+            and buy.count("Describe(") == 1
+            and "good.IsGrain = item == DefaultItems.Grain;" in
+                method_body(t, "internal static Good Describe")
+            and "TradeRules.MayBuy(good, toFeed, Options.Current," in t
+            and "TradeRules.MayHaul(Describe(item), Options.Current," in t
+            and "TradeRules.MayShedForHerd(Describe(held.Item), held.IsQuestItem, Options.Current," in t
+            and "TradeRules.WhatStopsBuying(good, price, budget, taken, held, shareCap," in t
+            and "TradeRules.NoRoomForOneMore(good, roomLeft);" in t)
+
 def the_tooltip_patches_hand_their_state_over_instead_of_capturing_it():
     g = S['Support.cs']
     t = S['TooltipPatches.cs']
@@ -380,11 +408,11 @@ def a_market_ranking_sorts_through_one_comparison_for_each_way():
 def a_good_on_the_shelf_is_asked_the_buying_questions_once():
     t = S['Trading.cs']
     buy = method_body(t, "private static void BuyPass")
-    round_trip = between(t, "internal static bool MayRoundTrip", ";")
-    resale = between(t, "internal static bool ResaleAllowed", ";")
+    round_trip = method_body(t, "internal static bool MayRoundTrip")
+    resale = between(S['Rules.cs'], "internal static bool ResaleAllowed", ";")
     return (buy.count("TradePolicy.MayBuy(") == 1
             and "MayRoundTrip" not in buy
-            and "MayBuy(item, lockedKeys) && ResaleAllowed(item)" in round_trip
+            and "MayBuy(good, item, lockedKeys, out _) &&" in round_trip
             and "MayBuy" not in resale
             and "if (!TradePolicy.MayRoundTrip(item, locked)) continue;" in S['Ledger.cs'])
 
@@ -701,7 +729,7 @@ def the_trade_skill_gain_is_reported_in_one_line():
 
 def a_zero_cap_never_means_buy_nothing():
     return ("if (s.BuyCapPerItem > 0 && taken.count >= s.BuyCapPerItem) return Block.ItemCountCap;"
-                in method_body(S['Trading.cs'], "private static Block WhatStopsBuying")
+                in cap_rule()
             and "WhatStopsBuying(" in method_body(S['Trading.cs'], "private static void BuyPass")
             and "Options.Current.BuyCapPerItem > 0\n                        ? Options.Current.BuyCapPerItem : UncappedBuyProjection;"
                 in S['Ledger.cs']
@@ -1092,7 +1120,7 @@ chk("1.3.4", "per-item buy caps persist across clicks",
     (method_body(S['Books.cs'], "internal (int count, int spent) Purchases")))
 chk("1.3.4", "village last-unit clamp leaves one unit on the shelf",
     "if (lastInVillage) return Block.VillageLastUnit;" in
-        method_body(S['Trading.cs'], "private static Block WhatStopsBuying") and
+        cap_rule() and
     "pass.Site != null && pass.Site.IsVillage && remaining <= 1);" in
         method_body(S['Trading.cs'], "private static void BuyPass") and
     all("if (settlement.IsVillage && remaining <= 1) break;" in method_body(S['Trading.cs'], one)
@@ -1112,7 +1140,7 @@ chk("1.3.5", "hotkey blocked while escape menu open", "!map.IsEscapeMenuOpened" 
 chk("1.3.5", "travel caches cleared on game end",
     'Guard.Run("GameEnd.Travel", Travel.Forget)' in S['SubModule.cs'])
 chk("1.3.6", "the smithing-material rule still binds buying as well as selling",
-    "PolicyAllows(PolicyFor(item), buying: true)" in method_body(S['Trading.cs'], "internal static bool MayBuy") and
+    "TradeMath.PolicyAllows(PolicyFor(good, s), buying: true)" in buy_rule() and
     "TradeMath.PolicyAllows(PolicyFor(good, s), buying: false)" in sell_rule() and
     "if (good.IsSmithingMaterial) return s.CraftingPolicy;" in
         method_body(S['Rules.cs'], "internal static int PolicyFor") and
@@ -1131,7 +1159,8 @@ chk("1.3.8", "food reserve covers livestock",
             "bool livestock = good.HasHorse;",
             "int reserved = DrawKeepBack(amount, facts.FoodHeld, out bool fed);"))
 chk("1.3.8", "quick-buy respects inventory locks",
-    "IsLocked(lockedKeys, new EquipmentElement(item))" in S['Trading.cs'])
+    "game.Locked()" in buy_rule() and
+    "new AskTheGame { Locks = lockedKeys, What = new EquipmentElement(item) }" in S['Trading.cs'])
 chk("1.3.8", "Harmony field injection uses four underscores", "____targetItem" in S['TooltipPatches.cs'])
 chk("1.3.8", "quick-buy stops when the budget is spent",
     "if (pass.DirectionError || pass.Spendable() <= 0) break;" in
@@ -1145,13 +1174,13 @@ chk("1.3.2", "the buying pass stops at the purse, the per-item denar cap, the ca
            and "taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;" in b
            and "if (livestock && herdRoom <= 0) return Block.HerdFull;" in b
            and "roomLeft" not in b)
-    (method_body(S['Trading.cs'], "private static Block WhatStopsBuying")) and
-    "item.Weight > 0.01f && item.Weight > roomLeft;" in
-        between(S['Trading.cs'], "private static bool NoRoomForOneMore", ";") + ";" and
+    (cap_rule()) and
+    "good.Weight > 0.01f && good.Weight > roomLeft;" in
+        between(S['Rules.cs'], "internal static bool NoRoomForOneMore", ";") + ";" and
     (lambda b: "Block capped = WhatStopsBuying(" in b
            and "if (capped != Block.None) { tally.Note(capped); break; }" in b
            and ordered(b, "if (capped != Block.None) { tally.Note(capped); break; }",
-                       "if (NoRoomForOneMore(item, pass.Room() - simWeight)) "
+                       "if (NoRoomForOneMore(good, pass.Room() - simWeight)) "
                        "{ tally.Note(Block.CarryWeight); break; }"))
     (method_body(S['Trading.cs'], "private static void BuyPass")))
 chk("1.3.14", "the selling pass stops when the merchant's till cannot cover the next unit, on a dry run too",
@@ -1197,9 +1226,11 @@ chk("1.13.0", "every setting the screen shows reads and writes its own value onl
 chk("1.3.10", "hotkey rejects non-key text", "Enum.IsDefined(typeof(InputKey), k)" in S['Panel.cs'])
 def a_quest_item_is_never_sold_by_any_pass():
     sell = method_body(S['Trading.cs'], "internal static bool MaySell(ItemRosterElement el")
-    spare = method_body(S['Trading.cs'], "internal static bool MayShedForHerd")
+    spare = shed_rule()
     return ("el.EquipmentElement.IsQuestItem" in sell
-            and "held.IsQuestItem" in spare)
+            and "questItem" in spare
+            and "held.IsQuestItem, Options.Current," in
+                method_body(S['Trading.cs'], "internal static bool MayShedForHerd"))
 
 chk("1.3.11", "a quest item is never sold, by the selling pass or by thinning the herd",
     a_quest_item_is_never_sold_by_any_pass())
@@ -1213,15 +1244,15 @@ chk("1.3.33", "a unique or player-crafted good is left alone while the protectio
             "            { said.Why = Block.MountOrHaulAnimal; return said; }",
             "if (s.ProtectSpecial && (good.IsUnique || good.IsCraftedByPlayer))\n"
             "            { said.Why = Block.Protected; return said; }") and
-    "if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)) return false;" in
-        method_body(S['Trading.cs'], "internal static bool MayShedForHerd"))
+    "if (s.ProtectSpecial && (good.IsUnique || good.IsCraftedByPlayer)) return false;" in
+        shed_rule())
 chk("1.3.11", "panel drops input restrictions on teardown",
     "SetInputRestrictions(false, InputUsageMask.All)" in method_body(S['Panel.cs'], "internal static void Cleanup"))
 chk("1.3.12", "sieges/raids excluded from scans",
     "if (UnderAttack(s) || VillageShut(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "LedgerBehavior.UnderAttack(s)" in S['Trading.cs'])
 chk("1.3.12", "NotMerchandise on the buy side",
-    "item.NotMerchandise" in method_body(S['Trading.cs'], "internal static bool MayBuy"))
+    "good.NotMerchandise" in buy_rule())
 chk("1.3.13", "buy shelf ordered by margin", "stock.Sort((x, y) => y.margin.CompareTo(x.margin));" in S['Trading.cs'])
 chk("1.3.13", "cost basis read once per stack", "ProfitAcceptable(int costBasis, int townSellPrice)" in S['Trading.cs'])
 chk("1.13.0", "the automation switches are plain switches like the rest, with nothing behind them",
@@ -1468,7 +1499,7 @@ chk("1.4.1", "the automatic path asks the same market question the menu does",
     "IsMarket" not in method_body(S['Trading.cs'], "private void OnSettlementEntered"))
 chk("1.4.1", "planner and executor apply the same village last-unit clamp",
     "StockOf(from, item) - (from.IsVillage ? 1 : 0)" in S['Ledger.cs'] and
-    "if (lastInVillage) return Block.VillageLastUnit;" in S['Trading.cs'] and
+    "if (lastInVillage) return Block.VillageLastUnit;" in S['Rules.cs'] and
     "pass.Site != null && pass.Site.IsVillage && remaining <= 1);" in
         method_body(S['Trading.cs'], "private static void BuyPass"))
 
@@ -1569,9 +1600,8 @@ chk("1.23.0", "the selling fence is the haul animals themselves, so an animal th
     "if (livestock && (good.IsHaulAnimal || good.IsSpareMount))" in sell_rule() and
     "IsLivestock" not in sell_rule() and
     "bool sellable = livestock || good.IsTradeGood ||" in sell_rule() and
-    "if (IsTradableLivestock(item)) return true;" in
-    method_body(S['Trading.cs'], "internal static bool MayBuy") and
-    "why = Block.MountOrHaulAnimal;" in method_body(S['Trading.cs'], "internal static bool MayBuy"))
+    "if (good.IsLivestock) return true;" in buy_rule() and
+    "why = Block.MountOrHaulAnimal;" in buy_rule())
 chk("1.28.0", "a haul animal is named by all five answers the game gives about it, and the selling fence is those plus the spare mounts",
     "internal static bool IsHaulAnimal(ItemObject item) =>\n"
     "            item != null && item.HasHorseComponent &&\n"
@@ -1611,7 +1641,7 @@ chk("1.5.0", "a pass that moves nothing names the rule that stopped it",
                 "private static void ReportStalledPasses").count("BlockTally.Phrase(") == 4)
 chk("1.5.0", "both gates report a reason whenever they refuse",
     sell_rule().count("said.Why = Block.") >= 6 and
-    method_body(S['Trading.cs'], "internal static bool MayBuy").count("why = Block.") >= 5)
+    buy_rule().count("why = Block.") >= 5)
 chk("1.5.0", "the reason overloads carry the plain ones, so one rule set decides both",
     "MaySell(el, lockedKeys, foodKeep, awaited, out keepCount, out _);" in S['Trading.cs'] and
     "MayBuy(item, lockedKeys, out _);" in S['Trading.cs'])
@@ -1649,10 +1679,10 @@ chk("1.5.1", "no two settings in one MCM group claim the same position",
 
 chk("1.5.2", "a listed route passes both the buy and the sell policy check",
     "internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys)" in S['Trading.cs'] and
-    "MayBuy(item, lockedKeys) && ResaleAllowed(item)" in
-    between(S['Trading.cs'], "internal static bool MayRoundTrip", ";") and
-    "PolicyAllows(PolicyFor(item), buying: false)" in
-    between(S['Trading.cs'], "internal static bool ResaleAllowed", ";") and
+    "MayBuy(good, item, lockedKeys, out _) &&" in
+    method_body(S['Trading.cs'], "internal static bool MayRoundTrip") and
+    "TradeMath.PolicyAllows(PolicyFor(good, s), buying: false)" in
+    between(S['Rules.cs'], "internal static bool ResaleAllowed", ";") and
     "if (!TradePolicy.MayRoundTrip(item, locked)) continue;" in S['Ledger.cs'] and
     "TradePolicy.MayBuy(item, locked)" not in S['Ledger.cs'])
 chk("1.5.2", "port menus are asked for only where the module that owns them is installed",
@@ -2016,10 +2046,10 @@ chk("1.6.5", "a village keeping its last unit of each good says so",
     "TL83" in strings_declared())
 
 chk("1.6.6", "the always-sell list governs selling only, never what quick-buy purchases",
-    "AlwaysSet" not in method_body(S['Trading.cs'], "internal static bool MayBuy") and
+    "AlwaysSet," not in buy_rule() and
     "Listed(s.AlwaysSet, good)" in sell_rule() and
-    "Listed(Options.Current.AlwaysSet, item) ||" in
-        between(S['Trading.cs'], "internal static bool ResaleAllowed", ";"))
+    "Listed(s.AlwaysSet, good) ||" in
+        between(S['Rules.cs'], "internal static bool ResaleAllowed", ";"))
 chk("1.6.6", "the ledger popup builds its route lines from a translatable string",
     '"{=TL84}{ITEM}: buy {FROM}' in S['Trading.cs'] and
     'r.Item.Name + ": buy "' not in S['Trading.cs'] and
@@ -2980,12 +3010,12 @@ def the_words_in_a_choice_follow_the_mods_language():
             and follow.count('Follows(') == 6)
 
 def a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists():
-    body = method_body(S['Trading.cs'], "internal static bool MayBuy")
-    return (ordered(body, 'Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)',
-                    'IsLocked(lockedKeys',
-                    'bool always = Listed(s.AlwaysBuySet, item);',
+    body = buy_rule()
+    return (ordered(body, 'Listed(s.NeverSet, good) || Listed(s.NeverBuySet, good)',
+                    'game.Locked()',
+                    'bool always = Listed(s.AlwaysBuySet, good);',
                     '!always && !toFeed && s.NeverBuyGrain',
-                    '!always && !PolicyAllows(PolicyFor(item), buying: true)')
+                    '!always && !TradeMath.PolicyAllows(PolicyFor(good, s), buying: true)')
             and 'AlwaysBuySet => Parsed(AlwaysBuyItems' in S['Options.cs']
             and 'Unmatched("always buy", s.AlwaysBuyItems, _knownIds, _knownNames);' in S['Trading.cs']
             and '_o.AlwaysBuyItems' in M)
@@ -3008,16 +3038,16 @@ chk("1.11.0", "a good on the always-buy list clears the policies and the grain s
     a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists())
 
 def the_grain_switch_keeps_grain_out_of_trading_not_out_of_the_larder():
-    buy = method_body(S['Trading.cs'], "internal static bool MayBuy")
+    buy = buy_rule()
     restock = method_body(S['Trading.cs'], "public static void ExecuteResupply")
     profit = method_body(S['Trading.cs'], "private static void BuyPass")
     road = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
-    return ("bool toFeed = false)" in buy
-            and "!always && !toFeed && s.NeverBuyGrain && item == DefaultItems.Grain" in buy
+    return ("bool toFeed, Options s, TGame game," in buy
+            and "!always && !toFeed && s.NeverBuyGrain && good.IsGrain" in buy
             and "toFeed: true" in restock
             and "toFeed" not in profit and "toFeed" not in road
             and S['Trading.cs'].count("toFeed: true") == 1
-            and "Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)" in buy)
+            and "Listed(s.NeverSet, good) || Listed(s.NeverBuySet, good)" in buy)
 
 chk("1.37.2", "the never buy grain switch keeps grain out of trading for profit without starving the larder",
     the_grain_switch_keeps_grain_out_of_trading_not_out_of_the_larder())
@@ -3184,12 +3214,12 @@ def the_notes_are_the_changelog_section_for_the_version():
     return (len(wanted) > 0 and said == ['- ' + line for line in wanted])
 
 chk("1.14.2", "quick-buy leaves a good its own sell policy would never let it sell again",
-    "if (!TradePolicy.ResaleAllowed(it)) { tally.Note(Block.CategoryPolicy); continue; }" in
+    "if (!TradeRules.ResaleAllowed(good, Options.Current)) { tally.Note(Block.CategoryPolicy); continue; }" in
         method_body(S['Trading.cs'], "private static void BuyPass") and
     "MayRoundTrip(it," not in S['Trading.cs'] and
     ordered(method_body(S['Trading.cs'], "private static void BuyPass"),
-            "TradePolicy.MayBuy(it, pass.Locked, out Block whyBuy)",
-            "TradePolicy.ResaleAllowed(it)"))
+            "TradePolicy.MayBuy(good, it, pass.Locked, out Block whyBuy)",
+            "TradeRules.ResaleAllowed(good, Options.Current)"))
 
 chk("1.14.2", "a route walk prices each town's ladder once and reads it back for every partner",
     "internal int At(int taken)" in S['Market.cs'] and
@@ -3301,14 +3331,14 @@ def pack_animals_are_bought_between_restocking_and_the_profit_pass():
             and "BestSell" not in body)
 
 def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
-    haul = method_body(S['Trading.cs'], "internal static bool MayHaul")
+    haul = haul_rule()
     body = pass_body("public static void ExecuteHaulage")
     fence = "if (livestock && (good.IsHaulAnimal || good.IsSpareMount))" in sell_rule()
     carrying = between(S['Trading.cs'], "internal static bool IsHaulAnimal", ";")
     spare = between(S['Trading.cs'], "internal static bool IsSpareMount", ";")
-    return ("if (!IsHaulAnimal(item) || item.NotMerchandise) return false;" in haul
-            and "Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)" in haul
-            and "IsLocked(lockedKeys, new EquipmentElement(item))" in haul
+    return ("if (good.Id == null || !good.IsHaulAnimal || good.NotMerchandise) return false;" in haul
+            and "Listed(s.NeverSet, good) || Listed(s.NeverBuySet, good)" in haul
+            and "return !game.Locked();" in haul
             and "IsHaulAnimalOrMount" not in haul
             and "IsSpareMount" not in haul + body
             and fence
@@ -3418,8 +3448,7 @@ def a_share_of_the_hold_caps_one_good_and_ships_off():
             and "_o.MaxHeldShare" in M
             and "pass.Capacity * Options.Current.MaxHeldShare" in buy
             and buy.count("shareCap > 0f") == 2
-            and buy.count("(held + 1) * it.Weight > shareCap") == 1
-            and buy.count("(held + 1) * item.Weight > shareCap") == 1
+            and buy.count("(held + 1) * good.Weight > shareCap") == 2
             and "MaxHeldShare" not in method_body(S['Trading.cs'], "private static void SellPass")
             and (lambda src: "internal float Capacity => _capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity;" in src
                          and "internal float Room() => Capacity - Carry.Carried(Party);" in src
@@ -3506,16 +3535,16 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
                         "TradeMath.SkipTheUnitsYouPaidFor(FromMarket, ref remaining, ref PaidLeft)",
                         "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;",
                         "remaining -= paidLeft;", "paidLeft = 0;")
-            and "TradePolicy.MayBuy(it, pass.Locked, out Block whyBuy)" in buy
-            and "TradePolicy.ResaleAllowed(it)" in buy
+            and "TradePolicy.MayBuy(good, it, pass.Locked, out Block whyBuy)" in buy
+            and "TradeRules.ResaleAllowed(good, Options.Current)" in buy
             and "TradePolicy.BuyAcceptable(price, realizable)" in buy
             and "TradePolicy.Realizable(elsewhere.Item2)" in buy
-            and "WhatStopsBuying(item, price, pass.Spendable(), (countThis, spentThis), held," in buy
-            and "NoRoomForOneMore(item, pass.Room() - simWeight)" in buy
+            and "WhatStopsBuying(good, price, pass.Spendable(), (countThis, spentThis), held," in buy
+            and "NoRoomForOneMore(good, pass.Room() - simWeight)" in buy
             and "s.BuyCapPerItem" in buy
             and "s.BuyValueCapPerItem" in buy
             and "s.MaxHeldPerItem" in buy
-            and "(held + 1) * item.Weight > shareCap" in buy
+            and "(held + 1) * good.Weight > shareCap" in buy
             and "pass.Capacity * Options.Current.MaxHeldShare" in buy
             and "herdRoom = Math.Max(0, HerdRoomForLivestock(pass.Party)" in buy
             and "if (livestock && herdRoom <= 0) return Block.HerdFull;" in buy
@@ -3581,7 +3610,7 @@ chk("1.20.1", "the pack animal line waits for the trade skill line and is droppe
 def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
     shed = method_body(S['Trading.cs'], "internal static int DrivenAnimalsToShed")
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
-    spare = method_body(S['Trading.cs'], "internal static bool MayShedForHerd")
+    spare = shed_rule()
     entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
     return (option_default('SellSpareMounts') == 'true'
             and "_o.SellSpareMounts" in M
@@ -3591,10 +3620,11 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
             and 'float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });' in shed
             and "return TradeMath.MostThatHolds(driven, shed => shed == 0 || !TradeMath.Unchanged(" in shed
             and "new object[] { men, driven - shed + 1 }), neutral));" in shed
-            and "!item.HasHorseComponent || item.NotMerchandise" in spare
-            and "Listed(s.NeverSet, item)" in spare
-            and "s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)" in spare
-            and "IsLocked(lockedKeys, held)" in spare
+            and "!good.HasHorse || good.NotMerchandise" in spare
+            and "Listed(s.NeverSet, good)" in spare
+            and "s.ProtectSpecial && (good.IsUnique || good.IsCraftedByPlayer)" in spare
+            and "return !game.Locked();" in spare
+            and "new AskTheGame { Locks = lockedKeys, What = held }" in S['Trading.cs']
             and "internal static bool MayShedForHerd(EquipmentElement held, ISet<string> lockedKeys)"
                 in S['Trading.cs']
             and "!TradePolicy.MayShedForHerd(el.EquipmentElement, pass.Locked)" in relief
@@ -3632,7 +3662,7 @@ def an_animal_is_held_back_when_the_quests_cannot_be_read():
 
 def the_buying_pass_counts_what_you_hold_afresh_for_each_good():
     buy = method_body(S['Trading.cs'], "private static void BuyPass")
-    return ("var stock = new List<(ItemRosterElement el, float realizable, float margin)>();" in buy
+    return ("var stock = new List<(ItemRosterElement el, Good good, float realizable, float margin)>();" in buy
             and "alreadyHeld" not in S['Trading.cs']
             and "int held = pass.Party.ItemRoster.GetItemNumber(item) +\n"
                 "                               pass.Books.Held(pass.Sim, item.StringId);" in buy
@@ -3684,7 +3714,7 @@ chk("1.28.0", "the herd gives up its livestock, then a plain spare mount, then a
 
 def getting_back_up_to_speed_outranks_the_food_reserve():
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
-    spare = method_body(S['Trading.cs'], "internal static bool MayShedForHerd")
+    spare = shed_rule()
     sell = method_body(S['Trading.cs'], "internal static bool MaySell(ItemRosterElement el")
     return ("FoodKeep" not in relief and "foodKeep" not in relief
             and "foodKeep" not in spare and "FoodValue" not in spare
@@ -4246,7 +4276,7 @@ def a_meeting_on_the_road_counts_what_it_spends_against_the_cap():
             and "internal int PaidOut(bool sim) => _paid + (sim ? _spent : 0);" in S['Books.cs']
             and buy.count("pass.Spendable()") == 3
             and ordered(buy, "if (pass.DirectionError || pass.Spendable() <= 0) break;",
-                        "WhatStopsBuying(item, price, pass.Spendable(),",
+                        "WhatStopsBuying(good, price, pass.Spendable(),",
                         "pass.Books.NoteBought(item.StringId, cost);")
             and "The_spending_cap_counts_the_running_total_whichever_way_it_is_tallied" in MATHTESTS)
 
@@ -4457,7 +4487,7 @@ chk("1.39.0", "the markets on offer are worked out again as the party moves, not
 def the_larder_and_the_stable_leave_the_gold_reserve_whole():
     larder = pass_body("public static void ExecuteResupply")
     stable = pass_body("public static void ExecuteHaulage")
-    capped = method_body(S['Trading.cs'], "private static Block WhatStopsBuying")
+    capped = cap_rule()
     said = "it stops before your gold reaches your reserve"
     return ("if (price >= pass.Spendable()) break;" in larder
             and "if (price >= pass.Spendable()) break;" in stable
@@ -4790,14 +4820,14 @@ chk("1.40.4", "where a pass is standing is the only thing the shared selling and
 
 def the_grain_switch_owns_the_reason_it_holds_a_good_back():
     t = S['Trading.cs']
-    buy = method_body(t, "internal static bool MayBuy")
+    buy = buy_rule()
     phrase = method_body(t, "internal static TextObject Phrase")
-    return ("if (!always && !toFeed && s.NeverBuyGrain && item == DefaultItems.Grain) "
-            "{ why = Block.GrainSwitch; return false; }" in buy
-            and t.count("Block.NeverList") == 3
-            and S['Rules.cs'].count("Block.NeverList") == 1
-            and all("Listed(" in line for line in
-                    [l for l in buy.splitlines() if "Block.NeverList" in l])
+    return ("if (!always && !toFeed && s.NeverBuyGrain && good.IsGrain)\n"
+            "            { why = Block.GrainSwitch; return false; }" in buy
+            and t.count("Block.NeverList") == 2
+            and S['Rules.cs'].count("Block.NeverList") == 2
+            and "if (Listed(s.NeverSet, good) || Listed(s.NeverBuySet, good))\n"
+                "            { why = Block.NeverList; return false; }" in buy
             and "case Block.GrainSwitch:" in phrase
             and '{=TL388}grain is left alone, since it fills the cargo for little return' in phrase
             and all(word not in spoken(f)['TL388'].lower()
@@ -4825,6 +4855,8 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
+chk("1.41.7", "the rules that decide a purchase stand clear of the game too, and a good on the shelf is described once",
+    the_buying_rules_stand_clear_of_the_game_too())
 chk("1.41.7", "the rules that decide a sale stand clear of the game, so a test can ask them, and the costly answers stay behind the seam",
     the_selling_rules_stand_clear_of_the_game())
 chk("1.41.5", "the feature list names the live-price setting the way the settings screen names it, and never calls it honest-merchant mode",
