@@ -1316,7 +1316,9 @@ chk("1.3.26", "the unit-by-unit walk stops at the merchant's till and at the spe
            and "if (spendCap > 0 && q.BuyTotal + buyPrice > spendCap) break;" in b)
     (method_body(S['Market.cs'], "internal static RouteQuote Walk")))
 chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has moved",
-    "return (landDist / land + seaDist / sea) / 24f;" in
+    "return (landLeg / landSpeed + seaLeg / seaSpeed) / 24f;" in
+    method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
+    "return TradeMath.DaysAtSpeed(distance, landRatio, land, sea);" in
     method_body(S['Travel.cs'], "internal static float Days") and
     "if (hour != _partyHour || at.DistanceSquared(_partyAt) > 100f)" in
     method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty"))
@@ -1466,8 +1468,10 @@ chk("1.3.27", "both shipped assemblies compile with warnings as errors",
     all("<TreatWarningsAsErrors>true</TreatWarningsAsErrors>" in p for p in PROJ))
 
 chk("1.3.28", "both travel estimates take their speeds from one definition",
-    S['Travel.cs'].count("land = MobileParty.MainParty.Speed;") == 1 and
-    S['Travel.cs'].count("if (land <= 0.01f) land = 5f;") == 1 and
+    S['Travel.cs'].count("MobileParty.MainParty.Speed") == 1 and
+    S['Travel.cs'].count("TradeMath.SpeedsInEffect(") == 1 and
+    S['TradeMath.cs'].count("land = partySpeed <= StandingStill ? WalkingPace : partySpeed;") == 1 and
+    S['TradeMath.cs'].count("sea = fleetSpeed <= StandingStill ? land : fleetSpeed;") == 1 and
     "Speeds(out float land, out float sea);" in method_body(S['Travel.cs'], "internal static float Days") and
     "Speeds(out float land, out float sea);" in method_body(S['Travel.cs'], "private static float StraightDays"))
 
@@ -4989,6 +4993,28 @@ def a_market_visit_prices_each_town_once_for_everything_on_the_shelf():
             and l.count("PrimeLiveRankings(") == 3)
 
 
+def each_layer_of_the_trading_code_has_a_file_of_its_own():
+    homes = (('Policy.cs', 'public static class TradePolicy'),
+             ('Reasons.cs', 'internal sealed class BlockTally'),
+             ('Encounters.cs', 'internal static class Errands'),
+             ('Encounters.cs', 'internal static class Parley'))
+    return (all(what in S[where] for where, what in homes)
+            and all(what not in S['Trading.cs'] for _, what in homes)
+            and "public class TradeActionBehavior" in S['Trading.cs'])
+
+
+def the_travel_arithmetic_is_covered_by_tests_the_build_runs():
+    return ('TradeMath.cs' in TESTPROJ
+            and all(one in MATHTESTS for one in
+                    ('TradeMath.SpeedsInEffect', 'TradeMath.FleetSpeed',
+                     'TradeMath.DaysAtSpeed', 'TradeMath.DaysAtBestSpeed'))
+            and 'TaleWorlds' not in S['TradeMath.cs']
+            and "return TradeMath.FleetSpeed(sum, ships.Count, min);" in
+                method_body(S['Travel.cs'], "private static float SeaSpeedCore")
+            and "return TradeMath.DaysAtBestSpeed(distance, land, sea);" in
+                method_body(S['Travel.cs'], "private static float StraightDays"))
+
+
 chk("1.41.0", "a good the Never buy grain setting holds back says so, rather than blaming your item lists",
     the_grain_switch_owns_the_reason_it_holds_a_good_back())
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
@@ -4996,6 +5022,10 @@ chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
 
 chk("1.42.1", "a market visit asks each town its prices once for everything on the shelf, through the same priming the route scan uses, and never asks again for a good it has already ranked this hour",
     a_market_visit_prices_each_town_once_for_everything_on_the_shelf())
+chk("1.42.1", "each layer of the trading code has a file of its own, so none of them is read out of Trading.cs any more",
+    each_layer_of_the_trading_code_has_a_file_of_its_own())
+chk("1.42.1", "the travel arithmetic stands clear of the game, so a test can ask it what a journey costs",
+    the_travel_arithmetic_is_covered_by_tests_the_build_runs())
 chk("1.42.0", "trading with a caravan or villagers on the road says why nothing moved, the same as a market visit does",
     a_road_trade_that_moved_nothing_says_why())
 chk("1.42.0", "the ledger works a route out from your settings alone and never from what you are carrying, holding or able to spend right now, deliberately, so nothing you happen to be doing can hide a route from you",
