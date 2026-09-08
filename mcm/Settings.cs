@@ -407,8 +407,8 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public int MinTownStock { get => _o.MinTownStock; set { _o.MinTownStock = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL206}Travel ceiling (days, 0 = off)", 0f, 20f, "0.0", Order = 4, RequireRestart = false,
-            HintText = "{=TL306}Markets farther than this many travel days are hidden from tooltips, and no suggested route's total trip (you -> buy town -> sell town) may exceed it. Default 3.")]
+        [SettingPropertyFloatingInteger("{=TL206}Town travel ceiling (days, 0 = off)", 0f, 20f, "0.0", Order = 4, RequireRestart = false,
+            HintText = "{=TL306}Markets farther than this many travel days are hidden from tooltips, the town marked on your map keeps to it, and no suggested route's total trip (you -> buy town -> sell town) may exceed it. Villages have their own stricter ceiling below. Default 3.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public float MaxTravelDays { get => _o.MaxTravelDays; set { _o.MaxTravelDays = value; Options.Bump(); } }
 
@@ -549,14 +549,9 @@ namespace TradeLord.Mcm
         public float TradeXpMultiplier { get => _o.TradeXpMultiplier; set { _o.TradeXpMultiplier = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL245}Auto-mark best sell town on map", Order = 13, RequireRestart = false,
-            HintText = "{=TL345}Moves a map tracker to whichever nearby town pays most for your current cargo. Re-evaluated daily and whenever you enter or leave a settlement, so it follows what you are carrying now. Limited by the travel ceiling below. ON by default; clicking a town in the ledger panel still pins a marker by hand.")]
+            HintText = "{=TL345}Moves a map tracker to whichever town in reach pays most for your current cargo. It follows you as you ride and re-checks as you enter or leave a settlement. It keeps to the Town travel ceiling and the Scan radius, the same as everything else. ON by default; clicking a town in the ledger panel still pins a marker by hand.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool MarkBestSellTownOnMap { get => _o.MarkBestSellTownOnMap; set { _o.MarkBestSellTownOnMap = value; Options.Bump(); } }
-
-        [SettingPropertyFloatingInteger("{=TL246}Auto-marker travel ceiling (days, 0 = off)", 0f, 10f, "0.0", Order = 14, RequireRestart = false,
-            HintText = "{=TL346}The auto-marker ignores towns farther than this many travel days away. Default 1.5.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
-        public float MarkerMaxTravelDays { get => _o.MarkerMaxTravelDays; set { _o.MarkerMaxTravelDays = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL247}Coin sound on trade", Order = 15, RequireRestart = false,
             HintText = "{=TL347}Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent.")]
