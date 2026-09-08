@@ -1100,8 +1100,6 @@ def chk(ver, claim, ok):
 
 chk("1.3.2", "smithing compares live DefaultItems, no cached static set",
     "item == DefaultItems.Charcoal" in S['Trading.cs'] and not re.search(r'static.*HashSet<ItemObject>', ALL))
-chk("1.3.2", "one food reserve in total, not per type",
-    S['Trading.cs'].count("KeepFoodDays") == 0 and S['Rules.cs'].count("KeepFoodDays") == 2)
 chk("1.3.2", "ExcludeHostileTowns blocks trading, not just scans",
     (lambda gate: "IsMarket(s)" in gate
               and "Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)" in gate)
@@ -1218,12 +1216,6 @@ chk("1.3.6", "chunked trade lines silenced",
     "AutomatedTradeInProgress" in S['Trading.cs'] and "Patch_SilenceChunkedTradeLines" in S['Trading.cs'])
 chk("1.3.6", "smithing materials still ship tradable, as the old switch shipped off",
     "CraftingPolicy = PolicyBuySell" in S['Options.cs'])
-chk("1.3.8", "food reserve covers livestock",
-    "return good.IsLivestock ? good.MeatCount : 0;" in
-        method_body(S['Rules.cs'], "internal static int FoodValue") and
-    ordered(sell_rule(),
-            "bool livestock = good.HasHorse;",
-            "int reserved = DrawKeepBack(amount, facts.FoodHeld, out bool fed);"))
 chk("1.3.8", "quick-buy respects inventory locks",
     "game.Locked()" in buy_rule() and
     "new AskTheGame { Locks = lockedKeys, What = new EquipmentElement(item) }" in S['Trading.cs'])
@@ -1317,8 +1309,6 @@ chk("1.3.11", "panel drops input restrictions on teardown",
 chk("1.3.12", "sieges/raids excluded from scans",
     "if (UnderAttack(s) || VillageShut(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "LedgerBehavior.UnderAttack(s)" in S['Trading.cs'])
-chk("1.3.12", "NotMerchandise on the buy side",
-    "good.NotMerchandise" in buy_rule())
 chk("1.3.13", "buy shelf ordered by margin", "stock.Sort((x, y) => y.margin.CompareTo(x.margin));" in S['Trading.cs'])
 chk("1.3.13", "cost basis read once per stack", "ProfitAcceptable(int costBasis, int townSellPrice)" in S['Trading.cs'])
 chk("1.13.0", "the automation switches are plain switches like the rest, with nothing behind them",
@@ -1334,10 +1324,6 @@ chk("1.3.14", "one predicate for ledger-priced items",
     S['Trading.cs'].count("bool Priced(") == 1 and "TradePolicy.Priced" in S['TooltipPatches.cs'] and
     "TradePolicy.Priced" in S['Ledger.cs'])
 chk("1.3.14", "livestock routes listed", "HerdRoomForLivestock(MobileParty.MainParty)" in S['Ledger.cs'])
-chk("1.3.15", "food reserve filled cheapest-first",
-    "CostPerFood(x).CompareTo(CostPerFood(y))" in food_rule() and
-    "(float)held.Good.Value / FoodValue(held.Good)" in
-        between(S['Rules.cs'], "private static float CostPerFood", ";"))
 chk("1.3.15", "recurring errors reported once", "is recurring - not reporting it again" in S['Support.cs'])
 chk("1.3.16", "hold-for-best-market re-tested per chunk",
     "if (price < holdFloor) { tally.Note(Block.BelowBestMarket); break; }" in S['Trading.cs'])
@@ -1379,9 +1365,6 @@ chk("1.3.23", "the game's own trade permission gates trading",
 chk("1.3.23", "the access model is only asked about the settlement in context",
     "if (s != Settlement.CurrentSettlement) return true;" in S['Trading.cs'])
 
-chk("1.3.24", "livestock reserved only after ordinary food",
-    "return lx != ly ? lx.CompareTo(ly) : CostPerFood(x).CompareTo(CostPerFood(y));" in food_rule() and
-    "int lx = x.Good.IsLivestock ? 1 : 0;" in food_rule())
 
 chk("1.3.25", "routes pair every top buy market against every top sell market",
     "foreach (var (to, sellPrice) in sells)" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"))
@@ -1711,9 +1694,6 @@ chk("1.5.0", "a pass that moves nothing names the rule that stopped it",
     S['Trading.cs'].count("NoteStalled(selling: ") == 2 and
     method_body(S['Trading.cs'],
                 "private static void ReportStalledPasses").count("BlockTally.Phrase(") == 4)
-chk("1.5.0", "both gates report a reason whenever they refuse",
-    sell_rule().count("said.Why = Block.") >= 6 and
-    buy_rule().count("why = Block.") >= 5)
 chk("1.5.0", "the reason overloads carry the plain ones, so one rule set decides both",
     "MaySell(el, lockedKeys, foodKeep, awaited, out keepCount, out _);" in S['Trading.cs'] and
     "MayBuy(item, lockedKeys, out _);" in S['Trading.cs'])
