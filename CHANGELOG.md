@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.41.3
+
+- Buying at a market no longer asks twice of every good on the shelf whether it is one you allow TradeLord to buy.
+- Buying no longer works out what your party can still carry when your purse or one of your spending caps has already stopped the purchase.
+- The campaign map no longer checks every panel on screen for a text box on every frame, only when you press the TradeLord hotkey.
+
 ## 1.41.2
 
 - Walking into a market, each new day on the road, and buying livestock no longer work out how many animals your party can drive one animal at a time.
