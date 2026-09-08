@@ -568,6 +568,11 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool BanditGetawayCheat { get => _o.BanditGetawayCheat; set { _o.BanditGetawayCheat = value; Options.Bump(); } }
 
+        [SettingPropertyBool("{=TL246}Write a price trace to the log", Order = 19, RequireRestart = false,
+            HintText = "{=TL389}For working out why a price TradeLord shows you does not match the one the trade screen offers. As you walk into a market, and again after you trade there by hand, TradeLord writes to TradeLord.log what that market pays and charges for every good you are carrying, read four ways: the way TradeLord reads it, and three ways through the market's own prices. It names the market, the price model the game is running, and any other mod that is changing either of them. OFF by default, since it makes the log much longer.")]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        public bool PriceTrace { get => _o.PriceTrace; set { _o.PriceTrace = value; Options.Bump(); } }
+
         [SettingPropertyInteger("{=TL221}Keep food (days of supply)", 0, 30, Order = 0, RequireRestart = false,
             HintText = "{=TL321}Hold back this many days of food before selling any. The cheapest food per day fed is reserved first, and livestock only if nothing else covers the reserve. 0 sells every scrap of food.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]

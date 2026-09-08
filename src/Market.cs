@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Reflection;
+using HarmonyLib;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Party;
+using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 
@@ -163,6 +167,114 @@ namespace TradeLord
                 shelf.Restock(-1);
             }
             return total;
+        }
+    }
+    internal static class PriceTrace
+    {
+        internal static void Say(Settlement site, string when)
+        {
+            if (!Options.Current.PriceTrace || site == null) return;
+            Guard.Run("PriceTrace", () => Written(site, when));
+        }
+
+        private static IMarketData Kept(Settlement site)
+        {
+            if (site.IsTown) return site.Town == null ? null : (IMarketData)site.Town.MarketData;
+            if (site.IsVillage) return site.Village == null ? null : (IMarketData)site.Village.MarketData;
+            return null;
+        }
+
+        private static void Written(Settlement site, string when)
+        {
+            SettlementComponent market = site.SettlementComponent;
+            ItemRoster carried = MobileParty.MainParty == null ? null : MobileParty.MainParty.ItemRoster;
+            if (market == null || carried == null) return;
+            IMarketData kept = Kept(site);
+
+            Log.Write("price trace (" + when + ") at " + site.Name + ", " + Named(site) +
+                      ", prices kept by " +
+                      (kept == null ? "nothing TradeLord can read" : kept.GetType().Name) + LeansOn(site));
+            Log.Write("  the price model in force is " + ModelName());
+            Log.Write("  " + PatchedBy("that model's GetPrice", ModelPrice()));
+            MethodBase asked = MarketPrice(market.GetType());
+            MethodBase inherited = MarketPrice(typeof(SettlementComponent));
+            Log.Write("  " + PatchedBy("this market's own GetItemPrice", asked));
+            if (inherited != null && inherited != asked)
+                Log.Write("  " + PatchedBy("the GetItemPrice every market inherits", inherited));
+            Log.Write("  live world prices are " + (Options.Current.Omniscient ? "on" : "off") +
+                      ", and the four readings below are for one unit, before anything is traded");
+
+            for (int i = 0; i < carried.Count; i++)
+            {
+                EquipmentElement el = carried.GetElementCopyAtIndex(i).EquipmentElement;
+                ItemObject item = el.Item;
+                if (!TradePolicy.Priced(item)) continue;
+                Log.Write("  " + item.StringId + " (" + (item.Name == null ? item.StringId : item.Name.ToString()) +
+                          ") worth " + el.ItemValue + ": TradeLord asks the market and gets " + Asked(market, el) +
+                          (kept == null ? "" :
+                           "; asked through its own prices, naming the merchant, " +
+                           Read(kept, el, MobileParty.MainParty, site.Party) +
+                           "; naming no merchant, " + Read(kept, el, MobileParty.MainParty, null) +
+                           "; naming nobody at all, " + Read(kept, el, null, null)) +
+                          Noted(item, site));
+            }
+        }
+
+        private static string Named(Settlement site) =>
+            (site.IsTown ? "a town" : site.IsVillage ? "a village" : "neither a town nor a village") +
+            " the game holds as " + site.SettlementComponent.GetType().Name;
+
+        private static string LeansOn(Settlement site)
+        {
+            Village village = site.IsVillage ? site.Village : null;
+            Settlement town = village == null ? null : village.TradeBound ?? village.Bound;
+            return town == null ? "" : ", which trades through " + town.Name;
+        }
+
+        private static string Asked(SettlementComponent market, EquipmentElement el) =>
+            "sell " + market.GetItemPrice(el, MobileParty.MainParty, true) +
+            ", buy " + market.GetItemPrice(el, MobileParty.MainParty, false);
+
+        private static string Read(IMarketData kept, EquipmentElement el, MobileParty who, PartyBase merchant) =>
+            "sell " + kept.GetPrice(el, who, true, merchant) +
+            ", buy " + kept.GetPrice(el, who, false, merchant);
+
+        private static string Noted(ItemObject item, Settlement site)
+        {
+            if (Options.Current.Omniscient) return "";
+            LedgerBehavior ledger = LedgerBehavior.Instance;
+            float age = ledger == null ? -1f : ledger.ObservationAgeDays(item, site);
+            return age < 0f
+                ? "; TradeLord has no note of its own here"
+                : "; TradeLord's own note here was taken " + age.ToString("0.0", CultureInfo.InvariantCulture) +
+                  " days ago";
+        }
+
+        private static string ModelName()
+        {
+            object model = Campaign.Current == null || Campaign.Current.Models == null
+                ? null : Campaign.Current.Models.TradeItemPriceFactorModel;
+            return model == null ? "not something TradeLord can read" : model.GetType().FullName;
+        }
+
+        private static MethodBase ModelPrice()
+        {
+            object model = Campaign.Current == null || Campaign.Current.Models == null
+                ? null : Campaign.Current.Models.TradeItemPriceFactorModel;
+            return model == null ? null : AccessTools.Method(model.GetType(), "GetPrice");
+        }
+
+        private static MethodBase MarketPrice(Type owner) =>
+            AccessTools.Method(owner, "GetItemPrice",
+                new[] { typeof(EquipmentElement), typeof(MobileParty), typeof(bool) });
+
+        private static string PatchedBy(string what, MethodBase method)
+        {
+            if (method == null) return what + " is not on this game version, so nothing could be read off it";
+            Patches found = Harmony.GetPatchInfo(method);
+            if (found == null || found.Owners == null || found.Owners.Count == 0)
+                return what + " is untouched, so no other mod is changing it";
+            return what + " is being changed by " + string.Join(", ", new List<string>(found.Owners).ToArray());
         }
     }
 }
