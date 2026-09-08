@@ -29,6 +29,7 @@ namespace TradeLord
         internal bool IsHaulAnimal;
         internal bool IsSpareMount;
         internal bool IsLivestock;
+        internal bool IsPrizeMount;
         internal bool IsSmithingMaterial;
         internal bool IsGrain;
     }
@@ -75,6 +76,29 @@ namespace TradeLord
         {
             any = held > 0;
             return any ? Math.Min(available, held) : 0;
+        }
+
+        internal const int RankLivestock = 0;
+        internal const int RankPlainMount = 1;
+        internal const int RankHaulAnimal = 2;
+        internal const int RankPrizeMount = 3;
+        internal const int RankNotAnAnimal = -1;
+
+        internal static int HerdShedRank(in Good good)
+        {
+            if (good.IsLivestock) return RankLivestock;
+            if (good.IsSpareMount) return good.IsPrizeMount ? RankPrizeMount : RankPlainMount;
+            if (good.IsHaulAnimal) return RankHaulAnimal;
+            return RankNotAnAnimal;
+        }
+
+        internal static string AnimalGroup(in Good good)
+        {
+            if (!good.HasHorse) return null;
+            if (good.IsHaulAnimal) return "a haul animal";
+            if (good.IsSpareMount) return "a mount";
+            if (good.IsLivestock) return "livestock";
+            return "an animal TradeLord treats as ordinary cargo";
         }
 
         internal static bool ResaleAllowed(in Good good, Options s) =>
