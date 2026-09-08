@@ -233,16 +233,19 @@ namespace TradeLord
                 if (!isTrading || TradeActionBehavior.AutomatedTradeInProgress) return;
                 Settlement here = Settlement.CurrentSettlement;
                 SettlementComponent market = here?.SettlementComponent;
+                ItemRoster carried = MobileParty.MainParty?.ItemRoster;
                 foreach (var (element, count) in purchased)
                 {
                     ItemObject item = element.EquipmentElement.Item;
                     if (item == null || count <= 0) continue;
+                    int took = Math.Min(count, carried?.GetItemNumber(item) ?? 0);
+                    if (took <= 0) continue;
 
                     int unit = market != null
                         ? market.GetItemPrice(element.EquipmentElement, MobileParty.MainParty, false)
                         : item.Value;
-                    RecordPurchase(item.StringId, count,
-                                   Bulk.PricePaid(here, element.EquipmentElement, count, unit));
+                    RecordPurchase(item.StringId, took,
+                                   Bulk.PricePaid(here, element.EquipmentElement, took, unit));
                 }
                 foreach (var (element, count) in sold)
                 {
