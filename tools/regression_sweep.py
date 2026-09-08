@@ -1018,7 +1018,8 @@ def the_route_rules_need_nothing_from_the_game():
     return ('TaleWorlds' not in S['Confidence.cs']
             and 'public static class Confidence' in S['Confidence.cs']
             and 'Confidence' not in S['Market.cs']
-            and 'public static int Budget(' in S['TradeMath.cs']
+            and ('public static int Budget(int gold, int goldReserve, int maxSpendPerVisit,\n'
+                 '                                 int spentThisVisit)') in S['TradeMath.cs']
             and "TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack()," in S['Trading.cs']
             and 'Options.Current.MaxSpendPerVisit > 0' not in
                 method_body(S['Trading.cs'], "private static void BuyPass"))
@@ -1455,7 +1456,7 @@ chk("1.3.25", "routes pair every top buy market against every top sell market",
 chk("1.42.0", "your purse never reaches route quantities, deliberately, so the ledger quotes a route the same whether you are rich or broke",
     "PurseForAVisit()" not in S['Ledger.cs'] and
     "purse" not in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes") and
-    "Options.Current.MaxSpendPerVisit, 0, 0);" in S['Trading.cs'] and
+    "Options.Current.MaxSpendPerVisit, 0);" in S['Trading.cs'] and
     "private static int MostWorthShowing(int buyPrice)" in S['Ledger.cs'])
 chk("1.42.0", "a purse with nothing spendable in it still quotes every route, deliberately, so being broke never hides where the profit is",
     "if (purse <= 0) return routes;" not in S['Ledger.cs'] and
@@ -2578,11 +2579,11 @@ def an_empty_purse_is_reported_on_the_way_into_a_market():
 def what_is_left_to_spend_is_worked_out_in_one_place():
     return ("internal static int Spendable(Books books, bool sim) =>\n"
             "            TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(),\n"
-            "                             Options.Current.MaxSpendPerVisit, books.PaidOut(sim), 0);"
+            "                             Options.Current.MaxSpendPerVisit, books.PaidOut(sim));"
                 in S['Trading.cs']
             and "internal static int PurseForAVisit() =>\n"
                 "            TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),\n"
-                "                             Options.Current.MaxSpendPerVisit, 0, 0);"
+                "                             Options.Current.MaxSpendPerVisit, 0);"
                 in S['Trading.cs']
             and "internal int Spendable() => TradeActionBehavior.Spendable(Books, Sim);"
                 in S['Trading.cs']
@@ -4334,7 +4335,7 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
     return ("Visit.Forget();" in method_body(t, "private static void ResetVisit")
             and ("TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(),\n"
                  "                             Options.Current.MaxSpendPerVisit, "
-                 "books.PaidOut(sim), 0);") in t
+                 "books.PaidOut(sim));") in t
             and "private static bool Simulating => Options.Current.SimulationMode;" in t
             and all("pass.Spendable()" in b for b in (larder, haul, buy))
             and t.count("simTill = pass.Till;") == 2
@@ -4433,13 +4434,13 @@ chk("1.37.7", "every pass hands one place the swap of goods for gold, the guard 
 def a_meeting_on_the_road_counts_what_it_spends_against_the_cap():
     t = S['Trading.cs']
     buy = method_body(t, "private static void BuyPass")
-    return ("Options.Current.MaxSpendPerVisit, books.PaidOut(sim), 0);" in t
+    return ("Options.Current.MaxSpendPerVisit, books.PaidOut(sim));" in t
             and "internal int PaidOut(bool sim) => _paid + (sim ? _spent : 0);" in S['Books.cs']
             and buy.count("pass.Spendable()") == 3
             and ordered(buy, "if (pass.DirectionError || pass.Spendable() <= 0) break;",
                         "WhatStopsBuying(good, price, pass.Spendable(),",
                         "pass.Books.NoteBought(item.StringId, cost);")
-            and "The_spending_cap_counts_the_running_total_whichever_way_it_is_tallied" in MATHTESTS)
+            and "The_spending_cap_counts_what_this_visit_has_already_spent" in MATHTESTS)
 
 def arming_the_panel_costs_no_route_scan():
     src = S['Panel.cs']
