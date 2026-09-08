@@ -244,5 +244,35 @@ namespace TradeLord.Tests
             Assert.Equal(3, said.DrewFood);
             Assert.Equal(3, said.KeepCount);
         }
+
+        [Fact]
+        public void A_good_you_paid_for_is_measured_against_what_you_paid()
+        {
+            Assert.Equal(40, TradeRules.WorthToBeat(Cargo(), 40, 90));
+            Assert.Equal(40, TradeRules.WorthToBeat(Loot(), 40, 90));
+            Assert.Equal(40, TradeRules.WorthToBeat(Livestock(), 40, 90));
+        }
+
+        [Fact]
+        public void Merchandise_you_never_paid_for_is_measured_against_what_it_is_worth()
+        {
+            Assert.Equal(90, TradeRules.WorthToBeat(Cargo(), 0, 90));
+            Assert.Equal(90, TradeRules.WorthToBeat(Livestock(), 0, 90));
+        }
+
+        [Fact]
+        public void Looted_gear_you_never_paid_for_still_goes_for_whatever_the_market_pays()
+        {
+            Assert.Equal(0, TradeRules.WorthToBeat(Loot(), 0, 90));
+        }
+
+        [Fact]
+        public void Free_merchandise_only_sells_where_the_price_clears_your_margin()
+        {
+            int worth = TradeRules.WorthToBeat(Cargo(), 0, 100);
+            Assert.False(TradeMath.ProfitAcceptable(worth, 100, 0.15f));
+            Assert.False(TradeMath.ProfitAcceptable(worth, 114, 0.15f));
+            Assert.True(TradeMath.ProfitAcceptable(worth, 115, 0.15f));
+        }
     }
 }

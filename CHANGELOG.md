@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.46.2
+
+- Trade goods and livestock you never bought, like the ones a town event hands you, are no longer sold off at the first market that will take them, and instead wait for a price that clears your Minimum profit margin over what the cheapest market you know would have charged for them.
+- Nothing sold here and Nothing bought here no longer answer with haul animals and mounts are not traded as livestock, since TradeLord buys and sells those under rules of their own, and they name a reason about your own cargo instead.
+- Wait here for some time no longer starts TradeLord trading all over again when the menu comes back: it trades once when you arrive and leaves that market alone until your party has taken to the road, and Trade here now (TradeLord) still trades whenever you ask.
+
 ## 1.46.1
 
 - TradeLord now reads the SettingsVersion line in your TradeLord.ini to decide which of its older settings to carry forward, so a file already up to date is left exactly as you wrote it.
