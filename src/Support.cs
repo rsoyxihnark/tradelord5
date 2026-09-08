@@ -18,6 +18,10 @@ namespace TradeLord
 
         internal static Action Reseat;
 
+        private static MethodInfo _handover;
+        private static DateTime _askedAt;
+        private static readonly TimeSpan BetweenAsks = TimeSpan.FromSeconds(1);
+
         private static string Named(int generation) => "MCMv" + generation;
 
         private static bool Loaded(string prefix)
@@ -89,12 +93,23 @@ namespace TradeLord
                 Log.Write("TradeLord.MCM.dll loaded but TradeLord.Mcm.McmSettingsBootstrap.Init is missing - defaults in effect. The companion DLL is from a different TradeLord version; reinstall the module.");
                 return;
             }
+            _handover = init;
             object answered = init.Invoke(null, null);
             SettingsInHand = answered is bool taken && taken;
             SettingsReachable = true;
             Log.Write(SettingsInHand
                 ? "MCM detected - settings menu registered"
                 : "MCM detected, but it has not handed over its settings yet - TradeLord.ini is read as it stands, and the settings screen takes over once MCM has loaded");
+        }
+
+        internal static void TryHandover()
+        {
+            if (SettingsInHand || _handover == null) return;
+            if (DateTime.UtcNow - _askedAt < BetweenAsks) return;
+            _askedAt = DateTime.UtcNow;
+            if (!(_handover.Invoke(null, null) is bool taken) || !taken) return;
+            SettingsInHand = true;
+            Log.Write("MCM has handed its settings over - the settings screen is in charge from here, and what you pick on it takes hold as you pick it");
         }
     }
 
