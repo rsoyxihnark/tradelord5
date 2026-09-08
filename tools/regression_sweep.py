@@ -1803,7 +1803,8 @@ chk("1.5.0", "a menu the game does not have costs the other menus nothing",
     (method_body(S['Trading.cs'], "private void OnSessionLaunched")))
 
 chk("1.5.1", "the walk asks no market for a price, so observed mode stays observed",
-    "GetItemPrice" not in S['Market.cs'] and
+    "GetItemPrice" not in between(S['Market.cs'], "internal sealed class Shelf",
+                                  "internal static class PriceTrace") and
     "if (!_walkable) return _quoted;" in method_body(S['Market.cs'], "internal int Price()") and
     "Bulk.Walk(from, to, item, qtyCap, till, spendCap, buyPrice, sellPrice)" in S['Ledger.cs'])
 chk("1.5.1", "an unwalkable shelf reads its quote once",
@@ -5323,12 +5324,43 @@ def trading_on_arrival_waits_for_the_party_to_take_to_the_road():
             and "party.GetPosition2D.DistanceSquared(_gateBehind) > SetOffFromTheGate" in road
             and "ForgetArrivals();" in method_body(t, "internal static void ForgetVisit"))
 
+def the_price_trace_reads_one_price_four_ways_and_names_what_changes_it():
+    trace = method_body(S['Market.cs'], "internal static class PriceTrace")
+    say = method_body(S['Market.cs'], "internal static void Say(Settlement site, string when)")
+    written = method_body(S['Market.cs'], "private static void Written(Settlement site, string when)")
+    ledger = S['Ledger.cs']
+    return ("if (!Options.Current.PriceTrace || site == null) return;" in say
+            and 'Guard.Run("PriceTrace", () => Written(site, when));' in say
+            and "market.GetItemPrice(el, MobileParty.MainParty, true)" in trace
+            and "market.GetItemPrice(el, MobileParty.MainParty, false)" in trace
+            and "kept.GetPrice(el, who, true, merchant)" in trace
+            and "kept.GetPrice(el, who, false, merchant)" in trace
+            and ordered(written,
+                        "Read(kept, el, MobileParty.MainParty, site.Party)",
+                        "Read(kept, el, MobileParty.MainParty, null)",
+                        "Read(kept, el, null, null)")
+            and "Campaign.Current.Models.TradeItemPriceFactorModel" in trace
+            and "Harmony.GetPatchInfo(method)" in trace
+            and "found.Owners" in trace
+            and ordered(written, "MarketPrice(market.GetType())",
+                        "MarketPrice(typeof(SettlementComponent))",
+                        "if (inherited != null && inherited != asked)")
+            and 'PriceTrace.Say(settlement, "walked in");' in ledger
+            and 'PriceTrace.Say(Settlement.CurrentSettlement, "traded by hand");' in ledger
+            and not any(w in trace for w in ("SellItemsAction", "ChangeGold", "AddToCounts")))
+
+
 chk("1.46.2", "a mount or a haul animal is never named as the reason a pass moved nothing, since another pass handles it",
     a_good_another_pass_handles_never_speaks_for_a_stalled_pass())
 chk("1.46.2", "trade goods and livestock you never paid for are held to your margin against what they are worth, and looted gear is not",
     goods_you_were_given_are_held_to_your_margin_like_the_ones_you_bought())
 chk("1.46.2", "trading on arrival runs once and waits for the party to take to the road before it runs again",
     trading_on_arrival_waits_for_the_party_to_take_to_the_road())
+
+chk("1.47.0", "the price trace reads one market's price four ways, names the price model and any mod changing it, and trades nothing",
+    the_price_trace_reads_one_price_four_ways_and_names_what_changes_it())
+chk("1.47.0", "the price trace is off until you ask for it",
+    "public bool PriceTrace = false;" in S['Options.cs'])
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

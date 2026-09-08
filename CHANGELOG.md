@@ -1,7 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.47.0
 
+- A new setting, Write a price trace to the log, off out of the box: turn it on and TradeLord writes to TradeLord.log what the market you are standing in pays and charges for every good you are carrying, so a price it shows you that the trade screen does not offer can be tracked down.
+- That trace names the market, the price model the game is running and any other mod changing either of them, so a mod moving prices behind TradeLord's back shows up by name.
+- The feature list now says TradeLord can write a price trace to its log.
 - The feature list now says that trading on arrival runs once for each arrival and that waiting in a town or village does not set it trading again, and that leaving a market and walking straight back in counts as the same visit.
 - The feature list now says that trade goods and livestock you never paid for wait for a price that clears your margin over what they are worth, and it names the What a good counts as having cost you setting the way the settings screen names it.
 - The feature list now says that the town marked on your map keeps up with you as you ride, and that TradeLord.log is kept from one session to the next and is only ever emptied at startup once it has grown past 999 KB.

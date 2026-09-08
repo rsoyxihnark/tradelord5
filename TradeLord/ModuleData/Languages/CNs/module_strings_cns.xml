@@ -168,6 +168,7 @@
 		<string id="TL243" text="经济稳定延迟（天，0 = 关闭）"/>
 		<string id="TL244" text="交易经验倍率"/>
 		<string id="TL245" text="在地图上自动标出最佳卖出城镇"/>
+		<string id="TL246" text="把价格追踪写入日志"/>
 		<string id="TL247" text="成交时的金币声"/>
 		<string id="TL248" text="详细的交易摘要"/>
 		<string id="TL249" text="静音交易消息" />
@@ -215,6 +216,7 @@
 		<string id="TL347" text="真的成交时播放金币声。什么都没交易的一趟保持安静。"/>
 		<string id="TL348" text="在一行交易摘要里点出货物的名字，比如“TradeLord 卖出 8 橄榄、3 葡萄酒，得到 240 第纳尔”，而不是只给一个件数。完整清单始终会写进 TradeLord.log。"/>
 		<string id="TL349" text="你进入市场时，以及在路上遇到商队或村民队伍时的自动交易，都只写进 TradeLord.log，屏幕上不留一行字。菜单里的交易入口始终会报告，因为那是你自己点的。首次自动交易的提示、钱袋见底的警告和载货已满的警告都不受影响。"/>
+		<string id="TL389" text="用来查清 TradeLord 显示的价格为什么和交易界面上的对不上。走进一个集市时，以及在那里手动交易之后，TradeLord 会把这个集市对你身上每一样货物的收价和要价写进 TradeLord.log，一共四种读法：TradeLord 自己的读法，以及通过集市自身价格的三种读法。它会写明这个集市、游戏正在跑的价格模型，以及任何正在改动它们的其他模组。默认关闭，因为它会让日志长很多。"/>
 		<string id="TL100" text="语言"/>
 		<string id="TL101" text="情报"/>
 		<string id="TL102" text="洞察"/>

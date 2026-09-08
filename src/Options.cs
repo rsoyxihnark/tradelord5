@@ -126,6 +126,7 @@ namespace TradeLord
         public bool TradeWithVillages = true;
         public bool TradeWithCaravans = true;
         public bool SimulationMode = false;
+        public bool PriceTrace = false;
         public int EconomySettlingDays = 0;
         public float TradeXpMultiplier = 1f;
 
