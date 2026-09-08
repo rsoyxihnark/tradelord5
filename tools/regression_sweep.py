@@ -2948,7 +2948,10 @@ def the_rules_keep_one_branch():
 def the_hook_moves_an_assigned_branch_onto_the_one_branch():
     return ('git rev-parse --abbrev-ref HEAD' in HOOK
             and 'git checkout main' in HOOK
-            and 'git merge --ff-only origin/main' in HOOK
+            and 'git fetch --quiet origin main' in HOOK
+            and 'git reset --hard' in HOOK
+            and 'is the source to work from' in HOOK
+            and 'still reachable through git reflog' in HOOK
             and 'left exactly as it was' in HOOK
             and 'has uncommitted work' in HOOK
             and '`.claude/hooks/session-start.sh` exists it has already moved the checkout' in RULES
