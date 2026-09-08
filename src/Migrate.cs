@@ -6,7 +6,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 6;
+        public const int Shape = 7;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -14,6 +14,8 @@ namespace TradeLord
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 { "BuyPackAnimals", "BuyHaulAnimals" },
+                { "MaxTravelDays", "MaxTravelDaysTown" },
+                { "MaxVillageTravelDays", "MaxTravelDaysVillage" },
             };
 
         public static bool Lift(int from, IDictionary<string, string> written, ICollection<string> notes)
@@ -26,6 +28,7 @@ namespace TradeLord
             changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);
             changed |= TheObservationShelfLifeIsGone(written, notes);
             changed |= TheAutoMarkerCeilingIsGone(written, notes);
+            changed |= TheScanRadiusIsGone(written, notes);
             if (changed && notes != null)
                 notes.Add("your settings were written by an older TradeLord, so they have been brought forward from shape " +
                           from + " to shape " + Shape);
@@ -92,6 +95,17 @@ namespace TradeLord
             return true;
         }
 
+        private static bool TheScanRadiusIsGone(IDictionary<string, string> written,
+                                                ICollection<string> notes)
+        {
+            const string was = "ScanRadius";
+            if (!written.TryGetValue(was, out string held)) return false;
+            written.Remove(was);
+            notes?.Add("how far TradeLord looks is now the town and village travel ceilings alone, " +
+                       "so the scan radius is gone and your setting of " + held + " is no longer read");
+            return true;
+        }
+
         private static bool TheAutoMarkerCeilingIsGone(IDictionary<string, string> written,
                                                        ICollection<string> notes)
         {
@@ -121,10 +135,9 @@ namespace TradeLord
         private static readonly Dictionary<string, double[]> Bounds =
             new Dictionary<string, double[]>(StringComparer.OrdinalIgnoreCase)
             {
-                { "ScanRadius", new double[] { 0, 1000 } },
                 { "MinTownStock", new double[] { 0, 100 } },
-                { "MaxTravelDays", new double[] { 0, 20 } },
-                { "MaxVillageTravelDays", new double[] { 0, 10 } },
+                { "MaxTravelDaysTown", new double[] { 0, 20 } },
+                { "MaxTravelDaysVillage", new double[] { 0, 10 } },
                 { "MinProfitMargin", new double[] { 0, 2 } },
                 { "EconomySettlingDays", new double[] { 0, 100 } },
                 { "TradeXpMultiplier", new double[] { 0, 3 } },
