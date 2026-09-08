@@ -1078,6 +1078,18 @@ namespace TradeLord
                 return false;
             }
 
+            private ISet<string> KindsMoved()
+            {
+                var moved = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var kv in Detail)
+                {
+                    string kind = LedgerBehavior.KindOf(kv.Key);
+                    if (kind == null) return null;
+                    moved.Add(kind);
+                }
+                return moved.Count > 0 ? moved : null;
+            }
+
             internal void Moved(int? profit = null)
             {
                 _runMovedGoods = true;
@@ -1085,7 +1097,7 @@ namespace TradeLord
                 if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);
                 CoinSound();
                 if (Site == null) return;
-                LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);
+                LedgerBehavior.Instance?.CaptureSettlement(Site, force: true, KindsMoved());
                 Guard.Run("Pass.PinCleared", () => LedgerPanel.Unpin(Site));
             }
 

@@ -221,7 +221,10 @@ namespace TradeLord
         private int _capturedHour = -1;
         private int _capturedGen = -1;
 
-        public void CaptureSettlement(Settlement settlement, bool force = false)
+        public void CaptureSettlement(Settlement settlement, bool force = false) =>
+            CaptureSettlement(settlement, force, null);
+
+        public void CaptureSettlement(Settlement settlement, bool force, ISet<string> moved)
         {
             if (settlement == null || (!settlement.IsTown && !settlement.IsVillage)) return;
             SettlementComponent market = settlement.SettlementComponent;
@@ -232,7 +235,8 @@ namespace TradeLord
             _capturedHour = hour;
             _capturedTown = settlement.StringId;
             _capturedGen = Options.Generation;
-            ForgetPricedRankings();
+            if (force || !Options.Current.Omniscient)
+                DropRankings(settlement, Options.Current.Omniscient ? moved : null);
             if (Options.Current.Omniscient) return;
             float day = (float)CampaignTime.Now.ToDays;
             foreach (ItemObject item in Items.AllTradeGoods)
@@ -330,7 +334,7 @@ namespace TradeLord
             var result = Options.Current.Omniscient
                 ? TopLive(item, selling, hour)
                 : TopObserved(item, selling);
-            _marketCache[key] = (hour, Options.Generation, result);
+            _marketCache[key] = (hour, Options.Generation, KindOf(item), result);
             return result;
         }
 
@@ -398,8 +402,8 @@ namespace TradeLord
 
         private const int TopCacheSize = 8;
         private const float MovedFar = 100f;
-        private readonly Dictionary<(string item, bool selling), (int hour, int gen, List<(Settlement, int)> markets)> _marketCache
-            = new Dictionary<(string, bool), (int, int, List<(Settlement, int)>)>();
+        private readonly Dictionary<(string item, bool selling), (int hour, int gen, string kind, List<(Settlement, int)> markets)> _marketCache
+            = new Dictionary<(string, bool), (int, int, string, List<(Settlement, int)>)>();
 
         private int _candHour = -1;
         private int _candGen = -1;
@@ -419,6 +423,25 @@ namespace TradeLord
         private void ForgetPricedRankings()
         {
             _marketCache.Clear();
+            _routes = null;
+        }
+
+        internal static string KindOf(ItemObject item) => item?.ItemCategory?.StringId;
+
+        private static bool TillStillOpen(Settlement s) =>
+            (s?.SettlementComponent?.Gold ?? 0) > 0;
+
+        private void DropRankings(Settlement settlement, ISet<string> moved)
+        {
+            if (moved == null || moved.Count == 0 || !TillStillOpen(settlement))
+            {
+                ForgetPricedRankings();
+                return;
+            }
+            var spent = new List<(string, bool)>();
+            foreach (var kv in _marketCache)
+                if (kv.Value.kind == null || moved.Contains(kv.Value.kind)) spent.Add(kv.Key);
+            for (int i = 0; i < spent.Count; i++) _marketCache.Remove(spent[i]);
             _routes = null;
         }
 

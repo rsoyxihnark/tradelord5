@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.41.6
+
+- Walking into a market no longer makes TradeLord work out the best markets for every good all over again, since walking in moves no prices.
+- After TradeLord trades in a market, it works the best markets out again only for the goods its own trading moved the price of, instead of for every good on the map.
+
 ## 1.41.5
 
 - The feature list now calls the setting that reads prices from the whole map by the name the settings screen gives it, Live world prices, instead of calling it honest-merchant mode.
