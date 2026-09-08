@@ -231,6 +231,18 @@ namespace TradeLord
             try { action(); }
             catch (Exception e) { Log.Error(e, context); }
         }
+
+        internal static void Run<T>(string context, T with, Action<T> action)
+        {
+            try { action(with); }
+            catch (Exception e) { Log.Error(e, context); }
+        }
+
+        internal static TAnswer Read<T, TAnswer>(string context, T with, Func<T, TAnswer> read, TAnswer ifItFails)
+        {
+            try { return read(with); }
+            catch (Exception e) { Log.Error(e, context); return ifItFails; }
+        }
     }
 
     internal static class Patcher
