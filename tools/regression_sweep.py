@@ -390,6 +390,16 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
                 method_body(t, "public static void ExecuteResupply")
             and "TradeRules.FoodValue(good)" in method_body(t, "public static void ExecuteHaulage"))
 
+def a_good_you_bought_by_hand_is_never_counted_beyond_what_you_carry():
+    body = method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange")
+    return ("ItemRoster carried = MobileParty.MainParty?.ItemRoster;" in body
+            and "int took = Math.Min(count, carried?.GetItemNumber(item) ?? 0);" in body
+            and "if (took <= 0) continue;" in body
+            and ordered(body, "int took = Math.Min(", "if (took <= 0) continue;",
+                        "Bulk.PricePaid(here, element.EquipmentElement, took, unit)")
+            and "RecordPurchase(item.StringId, count," not in body
+            and "element.EquipmentElement, count, unit" not in body)
+
 def a_road_trade_that_moved_nothing_says_why():
     road = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
     passes = [method_body(S['Trading.cs'], one)
@@ -1980,7 +1990,7 @@ chk("1.5.12", "ending a campaign clears the message filter and per-visit state",
     all(f in method_body(S['Trading.cs'], "internal static void ForgetVisit")
         for f in ("ResetVisit();", "_transactionDepth = 0;", "AutomatedTradeInProgress = false;")))
 chk("1.5.6", "a manual purchase is recorded at the price the shelf charged at the time",
-    "Bulk.PricePaid(here, element.EquipmentElement, count, unit)" in
+    "Bulk.PricePaid(here, element.EquipmentElement, took, unit)" in
         method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange") and
     "shelf.Restock(units);" in method_body(S['Market.cs'], "internal static int PricePaid") and
     "shelf.Restock(-1);" in method_body(S['Market.cs'], "internal static int PricePaid"))
@@ -5033,6 +5043,8 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
+chk("1.42.4", "a good you bought by hand is never written down as more of it than your party is carrying",
+    a_good_you_bought_by_hand_is_never_counted_beyond_what_you_carry())
 chk("1.42.2", "a market visit asks each town its prices once for everything on the shelf and everything in your bags, through the same priming the route scan uses, and never asks again for a good it has already ranked this hour",
     a_market_visit_prices_each_town_once_for_everything_on_the_shelf())
 chk("1.42.1", "each layer of the trading code has a file of its own, so none of them is read out of Trading.cs any more",
