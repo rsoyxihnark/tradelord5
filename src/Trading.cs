@@ -495,6 +495,7 @@ namespace TradeLord
             good.IsSpareMount = IsSpareMount(item);
             good.IsLivestock = IsTradableLivestock(item);
             good.IsSmithingMaterial = IsSmithingMaterial(item);
+            good.IsGrain = item == DefaultItems.Grain;
             return good;
         }
 
@@ -543,50 +544,39 @@ namespace TradeLord
         internal static bool MayBuy(ItemObject item, ISet<string> lockedKeys, out Block why,
                                     bool toFeed = false)
         {
-            why = Block.None;
-            Options s = Options.Current;
-            if (item == null || item.NotMerchandise) { why = Block.NotMerchandise; return false; }
-            if (Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)) { why = Block.NeverList; return false; }
-            if (IsLocked(lockedKeys, new EquipmentElement(item))) { why = Block.Locked; return false; }
-
-            bool always = Listed(s.AlwaysBuySet, item);
-            if (!always && !toFeed && s.NeverBuyGrain && item == DefaultItems.Grain) { why = Block.GrainSwitch; return false; }
-            if (!always && !PolicyAllows(PolicyFor(item), buying: true)) { why = Block.CategoryPolicy; return false; }
-            if (item.HasHorseComponent)
-            {
-                if (IsTradableLivestock(item)) return true;
-                why = Block.MountOrHaulAnimal;
-                return false;
-            }
-            if (item.IsTradeGood) return true;
-            why = Block.NotTradable;
-            return false;
+            if (item == null) { why = Block.NotMerchandise; return false; }
+            return MayBuy(Describe(item), item, lockedKeys, out why, toFeed);
         }
+
+        internal static bool MayBuy(in Good good, ItemObject item, ISet<string> lockedKeys,
+                                    out Block why, bool toFeed = false) =>
+            TradeRules.MayBuy(good, toFeed, Options.Current,
+                new AskTheGame { Locks = lockedKeys, What = new EquipmentElement(item) }, out why);
 
         internal static bool MayHaul(ItemObject item, ISet<string> lockedKeys)
         {
-            Options s = Options.Current;
-            if (!IsHaulAnimal(item) || item.NotMerchandise) return false;
-            if (Listed(s.NeverSet, item) || Listed(s.NeverBuySet, item)) return false;
-            return !IsLocked(lockedKeys, new EquipmentElement(item));
+            if (item == null) return false;
+            return TradeRules.MayHaul(Describe(item), Options.Current,
+                new AskTheGame { Locks = lockedKeys, What = new EquipmentElement(item) });
         }
 
         internal static bool MayShedForHerd(EquipmentElement held, ISet<string> lockedKeys)
         {
-            Options s = Options.Current;
-            ItemObject item = held.Item;
-            if (item == null || !item.HasHorseComponent || item.NotMerchandise || held.IsQuestItem) return false;
-            if (Listed(s.NeverSet, item)) return false;
-            if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer)) return false;
-            return !IsLocked(lockedKeys, held);
+            if (held.Item == null) return false;
+            return TradeRules.MayShedForHerd(Describe(held.Item), held.IsQuestItem, Options.Current,
+                new AskTheGame { Locks = lockedKeys, What = held });
         }
 
         internal static bool ResaleAllowed(ItemObject item) =>
-            Listed(Options.Current.AlwaysSet, item) ||
-            PolicyAllows(PolicyFor(item), buying: false);
+            item != null && TradeRules.ResaleAllowed(Describe(item), Options.Current);
 
-        internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys) =>
-            MayBuy(item, lockedKeys) && ResaleAllowed(item);
+        internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys)
+        {
+            if (item == null) return false;
+            Good good = Describe(item);
+            return MayBuy(good, item, lockedKeys, out _) &&
+                   TradeRules.ResaleAllowed(good, Options.Current);
+        }
 
         private static bool HasCostBasis(ItemObject item) =>
             Options.Current.CostBasisMode == 2 ||
@@ -1923,23 +1913,14 @@ namespace TradeLord
                 TradeMath.SkipTheUnitsYouPaidFor(FromMarket, ref remaining, ref PaidLeft);
         }
 
-        private static Block WhatStopsBuying(ItemObject item, int price, int budget,
+        private static Block WhatStopsBuying(in Good good, int price, int budget,
                                              (int count, int spent) taken, int held, float shareCap,
-                                             bool livestock, int herdRoom, bool lastInVillage)
-        {
-            Options s = Options.Current;
-            if (price > budget) return Block.BudgetSpent;
-            if (s.BuyCapPerItem > 0 && taken.count >= s.BuyCapPerItem) return Block.ItemCountCap;
-            if (s.BuyValueCapPerItem > 0 && taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;
-            if (s.MaxHeldPerItem > 0 && held >= s.MaxHeldPerItem) return Block.HeldEnough;
-            if (shareCap > 0f && (held + 1) * item.Weight > shareCap) return Block.HeldEnough;
-            if (livestock && herdRoom <= 0) return Block.HerdFull;
-            if (lastInVillage) return Block.VillageLastUnit;
-            return Block.None;
-        }
+                                             bool livestock, int herdRoom, bool lastInVillage) =>
+            TradeRules.WhatStopsBuying(good, price, budget, taken, held, shareCap,
+                                       livestock, herdRoom, lastInVillage, Options.Current);
 
-        private static bool NoRoomForOneMore(ItemObject item, float roomLeft) =>
-            item.Weight > 0.01f && item.Weight > roomLeft;
+        private static bool NoRoomForOneMore(in Good good, float roomLeft) =>
+            TradeRules.NoRoomForOneMore(good, roomLeft);
 
         private static List<(ItemRosterElement el, int price, int worth)> CheapestFirst(
             Pass pass, Func<ItemObject, bool> wanted)
@@ -2300,7 +2281,7 @@ namespace TradeLord
             float shareCap = Options.Current.MaxHeldShare > 0f
                 ? pass.Capacity * Options.Current.MaxHeldShare : 0f;
 
-            var stock = new List<(ItemRosterElement el, float realizable, float margin)>();
+            var stock = new List<(ItemRosterElement el, Good good, float realizable, float margin)>();
             if (pass.Spendable() > 0)
             {
                 ItemRoster shopRoster = pass.Stock;
@@ -2311,13 +2292,14 @@ namespace TradeLord
                     ItemRosterElement el = shopRoster.GetElementCopyAtIndex(i);
                     ItemObject it = el.EquipmentElement.Item;
                     if (el.Amount <= 0) { tally.Note(Block.NoStock); continue; }
-                    if (!TradePolicy.MayBuy(it, pass.Locked, out Block whyBuy)) { tally.Note(whyBuy); continue; }
-                    if (!TradePolicy.ResaleAllowed(it)) { tally.Note(Block.CategoryPolicy); continue; }
+                    Good good = TradePolicy.Describe(it);
+                    if (!TradePolicy.MayBuy(good, it, pass.Locked, out Block whyBuy)) { tally.Note(whyBuy); continue; }
+                    if (!TradeRules.ResaleAllowed(good, Options.Current)) { tally.Note(Block.CategoryPolicy); continue; }
                     if (pass.Books.Sold(pass.Sim, it.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
                     if (el.Amount - pass.Books.Stocked(pass.Sim, it.StringId) <= 0) { tally.Note(Block.NoStock); continue; }
                     int held = mine.GetItemNumber(it) + pass.Books.Held(pass.Sim, it.StringId);
                     if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }
-                    if (shareCap > 0f && (held + 1) * it.Weight > shareCap) { tally.Note(Block.HeldEnough); continue; }
+                    if (shareCap > 0f && (held + 1) * good.Weight > shareCap) { tally.Note(Block.HeldEnough); continue; }
 
                     var elsewhere = LedgerBehavior.Instance?.BestSell(it) ?? (null, 0);
                     if (elsewhere.Item1 == null || elsewhere.Item1 == pass.Site) { tally.Note(Block.NoResaleMarket); continue; }
@@ -2326,7 +2308,7 @@ namespace TradeLord
                     if (here <= 0) { tally.Note(Block.NoStock); continue; }
                     float realizable = TradePolicy.Realizable(elsewhere.Item2);
                     if (!TradePolicy.BuyAcceptable(here, realizable)) { tally.Note(Block.BelowMargin); continue; }
-                    stock.Add((el, realizable, (realizable - here) / here));
+                    stock.Add((el, good, realizable, (realizable - here) / here));
                 }
                 stock.Sort((x, y) => y.margin.CompareTo(x.margin));
             }
@@ -2335,11 +2317,11 @@ namespace TradeLord
 
             InAPass(() =>
             {
-                foreach (var (el, realizable, _) in stock)
+                foreach (var (el, good, realizable, _) in stock)
                 {
                     if (pass.DirectionError || pass.Spendable() <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
-                    bool livestock = TradePolicy.IsTradableLivestock(item);
+                    bool livestock = good.IsLivestock;
                     if (livestock)
                     {
                         if (herdRoom < 0)
@@ -2357,11 +2339,11 @@ namespace TradeLord
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (!TradePolicy.BuyAcceptable(price, realizable)) { tally.Note(Block.BelowMargin); break; }
-                        Block capped = WhatStopsBuying(item, price, pass.Spendable(), (countThis, spentThis), held,
+                        Block capped = WhatStopsBuying(good, price, pass.Spendable(), (countThis, spentThis), held,
                                                        shareCap, livestock, herdRoom,
                                                        pass.Site != null && pass.Site.IsVillage && remaining <= 1);
                         if (capped != Block.None) { tally.Note(capped); break; }
-                        if (NoRoomForOneMore(item, pass.Room() - simWeight)) { tally.Note(Block.CarryWeight); break; }
+                        if (NoRoomForOneMore(good, pass.Room() - simWeight)) { tally.Note(Block.CarryWeight); break; }
 
                         if (pass.Sim)
                         {
