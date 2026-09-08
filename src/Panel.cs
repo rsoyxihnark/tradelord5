@@ -370,10 +370,10 @@ namespace TradeLord
                 if (_vm.IsMapButtonVisible != button)
                     _vm.IsMapButtonVisible = button;
                 UpdateIdleInput(button);
-                if (!map.IsEscapeMenuOpened && !TypingOnScreen(map) && HotkeyReleased())
+                if (!map.IsEscapeMenuOpened && HotkeyReleased() && !TypingOnScreen(map))
                     Guard.Run("Panel.Show", Show);
             }
-            else if (map.IsEscapeMenuOpened || (!TypingOnScreen(map) && HotkeyReleased()))
+            else if (map.IsEscapeMenuOpened || (HotkeyReleased() && !TypingOnScreen(map)))
             {
                 Hide();
             }
