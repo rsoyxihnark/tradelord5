@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.42.0
+
+- Meeting a caravan or villagers on the road and trading nothing with them now tells you why, the same as walking into a market already did.
+- The TradeLord ledger now lists a route even when your purse is empty or your herd is full, so it always tells you where the profit is rather than only what you could do this second.
+- When your purse is empty the ledger says so under the routes, instead of showing that message in place of them.
+
 ## 1.41.9
 
 - Working out which markets pay best for a good is quicker, because TradeLord now keeps the best few as it goes instead of putting every town in order first.
