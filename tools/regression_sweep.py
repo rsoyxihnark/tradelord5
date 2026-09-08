@@ -872,7 +872,7 @@ def every_numeric_setting_that_switches_off_at_zero_says_so():
     off = {'TL204': 'Scan radius', 'TL206': 'Travel ceiling',
            'TL207': 'Village travel ceiling', 'TL228': 'Sell loot up to tier',
            'TL235': 'Buy cap per item (count', 'TL236': 'Buy cap per item (denars',
-           'TL237': 'Max spend per visit', 'TL243': 'Economy settling delay', 'TL246': 'Auto-marker travel ceiling'}
+           'TL237': 'Max spend per visit', 'TL243': 'Economy settling delay'}
     for marker in off:
         label = re.search(r'\{=' + marker + r'\}([^"]*)"', M)
         if label is None or '0 = ' not in label.group(1):
@@ -909,18 +909,20 @@ def a_market_that_traded_something_drops_the_empty_lines():
     sell = method_body(S['Trading.cs'], "private static void SellPass")
     buy = method_body(S['Trading.cs'], "private static void BuyPass")
     reset = method_body(S['Trading.cs'], "private static void ResetVisit")
-    return ("if (moved || (!sell.HasValue && !buy.HasValue)) return;" in report
-            and ordered(report, "bool moved = _runMovedGoods;", "_sellStalled = null;",
-                        "_buyStalled = null;", "_runMovedGoods = false;", "if (moved ||")
+    return ("if (!sell.HasValue && !buy.HasValue) return;" in report
+            and ordered(report, "Block? sell = _sellStalled;", "Block? buy = _buyStalled;",
+                        "_sellStalled = null;", "_buyStalled = null;",
+                        "if (!sell.HasValue && !buy.HasValue) return;")
+            and "_runMovedGoods" not in S['Trading.cs']
             and "pass.Moved(profit);" in sell
             and "pass.Moved();" in buy
-            and "_runMovedGoods = true;" in
-                method_body(S['Trading.cs'], "internal void Moved")
+            and sell.count("NoteStalled(") == 1 and buy.count("NoteStalled(") == 1
+            and all(one.index("NoteStalled(") > one.index("else if (!pass.DirectionError)")
+                    for one in (sell, buy))
             and "if (stopped != Block.None && !pass.Muted) NoteStalled(selling: true, stopped);" in sell
-            and "if (!pass.Muted) NoteStalled(selling: false, tally.Dominant());" in buy
+            and "if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);" in buy
             and "{=TL32}" not in sell and "{=TL33}" not in buy
-            and all(field in reset for field in
-                    ("_runMovedGoods = false;", "_sellStalled = null;", "_buyStalled = null;")))
+            and all(field in reset for field in ("_sellStalled = null;", "_buyStalled = null;")))
 
 def the_item_tooltip_does_not_announce_the_mod():
     body = method_body(S['TooltipPatches.cs'], "internal static void Append")
@@ -1327,7 +1329,7 @@ chk("1.3.9", "the scan keeps to the stock floor and the village ceiling, and pas
     method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive") and
     "CapturedDay" not in method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopObserved") and
     "if (s.IsVillage && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;" in
-    method_body(S['Ledger.cs'], "private static bool WithinTravelCeiling"))
+    method_body(S['Ledger.cs'], "internal static float TravelCeiling"))
 chk("1.3.26", "the unit-by-unit walk stops at the merchant's till and at the spending cap",
     (lambda b: "if (merchantTill > 0 && q.SellTotal + sellPrice > merchantTill) break;" in b
            and "if (spendCap > 0 && q.BuyTotal + buyPrice > spendCap) break;" in b)
@@ -3392,8 +3394,11 @@ chk("1.14.4", "the sell pass names a stopping rule only when one fired, so a car
                           "if (stopped != Block.None && !pass.Muted)"))
     (method_body(S['Trading.cs'], "private static void SellPass")) and
     "if (!Structural(kv.Key) &&" in method_body(S['Reasons.cs'], "internal Block Dominant") and
-    "if (!pass.Muted) NoteStalled(selling: false, tally.Dominant());" in
-        method_body(S['Trading.cs'], "private static void BuyPass"))
+    (lambda buy: "Block stopped = tally.Dominant();" in buy
+             and "if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);" in buy
+             and ordered(buy, "Block stopped = tally.Dominant();",
+                         "if (stopped != Block.None && !pass.Muted)"))
+    (method_body(S['Trading.cs'], "private static void BuyPass")))
 
 chk("1.14.5", "every line the panel speaks is raised again when it refreshes, so a language change reaches its headings too",
     the_panel_relabels_every_line_it_speaks())
@@ -4103,7 +4108,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 5;' in S['Migrate.cs']
+    return ('public const int Shape = 6;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and ordered(read, "written[line.Substring(0, mark).Trim()]",
                         "written.TryGetValue(Migration.ShapeKey, out string held)",
@@ -4294,7 +4299,7 @@ def the_file_holds_a_number_to_the_same_limits_the_screen_does():
     taken = method_body(S['Config.cs'], "private static bool Taken")
     within = method_body(S['Config.cs'], "private static double Within")
     numeric = set(re.findall(r'^\s*public\s+(?:int|float)\s+(\w+)\s*=', S['Options.cs'], re.M))
-    return (len(ranged) >= 21 and len(picked) == 6 and table == wanted
+    return (len(ranged) >= 20 and len(picked) == 6 and table == wanted
             and numeric and not (numeric - set(table))
             and "(int)Within(field, int.Parse(" in taken
             and "(float)Within(field, float.Parse(" in taken
@@ -4550,7 +4555,7 @@ def every_handler_the_game_calls_guards_its_own_work():
             if not body or "Guard.Run" not in body:
                 return False
             held += 1
-    return held == 9 and settled in S['Trading.cs']
+    return held == 10 and settled in S['Trading.cs']
 
 def a_save_is_never_failed_by_the_mods_own_bookkeeping():
     trade = method_body(S['Trading.cs'], "public override void SyncData")
@@ -4679,7 +4684,7 @@ def every_pass_says_what_it_moved_from_one_place():
               "private static void BuyPass")
     moved = method_body(t, "internal void Moved")
     said = method_body(t, "private static TextObject PassMessage")
-    return (ordered(moved, "_runMovedGoods = true;", "if (Sim) return;",
+    return (ordered(moved, "if (Sim) return;",
                     "if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);",
                     "CoinSound();", "if (Site == null) return;",
                     "LedgerBehavior.Instance?.CaptureSettlement(Site, force: true, KindsMoved());")

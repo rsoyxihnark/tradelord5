@@ -131,6 +131,30 @@ namespace TradeLord.Tests
             Assert.NotEmpty(notes);
         }
 
+        [Theory]
+        [InlineData("1.5")]
+        [InlineData("0")]
+        [InlineData("10")]
+        public void TheAutoMarkerCeilingIsDroppedAndNamed(string held)
+        {
+            var written = File("MarkerMaxTravelDays", held, "GoldReserve", "800",
+                               "MarkBestSellTownOnMap", "true");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(5, written, notes));
+            Assert.False(written.ContainsKey("MarkerMaxTravelDays"));
+            Assert.Equal("800", written["GoldReserve"]);
+            Assert.Equal("true", written["MarkBestSellTownOnMap"]);
+            Assert.NotEmpty(notes);
+        }
+
+        [Fact]
+        public void TheAutoMarkerCeilingHasNoRangeLeftToKeepItInside()
+        {
+            Assert.False(Limits.Knows("MarkerMaxTravelDays"));
+            Assert.True(Limits.Knows("MaxTravelDays"));
+            Assert.True(Limits.Knows("MaxVillageTravelDays"));
+        }
+
         [Fact]
         public void AFileWithoutTheOldHaulAnimalPremiumIsLeftAlone()
         {
@@ -164,7 +188,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(5, Migration.Shape);
+            Assert.Equal(6, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));
