@@ -62,7 +62,7 @@ namespace TradeLord
 
             int basis = vm.IsPlayerItem || market == null
                 ? (ledger.GetCostBasis(item))
-                : market.GetItemPrice(item, MobileParty.MainParty, false);
+                : Priced.At(market, item, MobileParty.MainParty, false);
 
             if (sells.Count > 0)
             {
@@ -109,7 +109,7 @@ namespace TradeLord
             {
                 if (vm.IsPlayerItem && sells.Count > 0)
                 {
-                    int local = market.GetItemPrice(item, MobileParty.MainParty, true);
+                    int local = Priced.At(market, item, MobileParty.MainParty, true);
                     if (sells[0].town == here || local >= sells[0].price)
                         AddLine(vm, "", Tongue.Text("{=TL22}* Best market to sell this!").ToString(), Good);
                     else if (local > 0 && sells[0].price > local)
@@ -121,7 +121,7 @@ namespace TradeLord
                 }
                 else if (!vm.IsPlayerItem && buys.Count > 0)
                 {
-                    int local = market.GetItemPrice(item, MobileParty.MainParty, false);
+                    int local = Priced.At(market, item, MobileParty.MainParty, false);
                     if (buys[0].town == here || (local > 0 && local <= buys[0].price))
                         AddLine(vm, "", Tongue.Text("{=TL23}* Cheapest market to buy this!").ToString(), Good);
                     else if (local > buys[0].price)

@@ -440,7 +440,7 @@ def a_route_scan_prices_each_town_once_for_every_good_it_wants():
     scan = method_body(l, "private List<TradeRoute> ScanRoutes()")
     return ("if (!Options.Current.Omniscient || wanted.Count == 0) return;" in prime
             and prime.find("if (!WithinTravelCeiling(town, days)) continue;") <
-                prime.find("market.GetItemPrice(item, me, true)")
+                prime.find("Priced.At(market, item, me, true)")
             and "_marketCache[(item.StringId, true)] = (hour, Options.Generation, kind, Settled(sells[i], true));" in prime
             and "_marketCache[(item.StringId, false)] = (hour, Options.Generation, kind, Settled(buys[i], false));" in prime
             and "PrimeLiveRankings(wanted, (int)CampaignTime.Now.ToHours);" in scan
@@ -583,8 +583,8 @@ def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
                     "foreach (var (item, amount) in cargo)",
                     "if (total > town.Gold) total = town.Gold;",
                     "if (total > bestValue) { bestValue = total; bestTown = s; }")
-            and "town.GetItemPrice(item, party, true)" in marker
-            and marker.count("town.GetItemPrice(") == 1)
+            and "Priced.At(town, item, party, true)" in marker
+            and marker.count("Priced.At(town,") == 1)
 
 def a_traded_market_drops_only_the_rankings_its_own_prices_decide():
     ledger = S['Ledger.cs']
@@ -1804,7 +1804,7 @@ chk("1.5.0", "a menu the game does not have costs the other menus nothing",
 
 chk("1.5.1", "the walk asks no market for a price, so observed mode stays observed",
     "GetItemPrice" not in between(S['Market.cs'], "internal sealed class Shelf",
-                                  "internal static class PriceTrace") and
+                                  "internal static class Priced") and
     "if (!_walkable) return _quoted;" in method_body(S['Market.cs'], "internal int Price()") and
     "Bulk.Walk(from, to, item, qtyCap, till, spendCap, buyPrice, sellPrice)" in S['Ledger.cs'])
 chk("1.5.1", "an unwalkable shelf reads its quote once",
@@ -2018,7 +2018,8 @@ chk("1.36.2", "the rewind prices the very thing that was bought, quality and all
         and "_element = stocked;" in shelf
         and "new EquipmentElement" not in shelf
         and "new Shelf(site, new EquipmentElement(item), selling, quoted, projecting: true);" in ladder
-        and S['Market.cs'].count("new EquipmentElement(") == 1)
+        and S['Market.cs'].count("new EquipmentElement(") == 2
+        and "item == null ? 0 : At(market, new EquipmentElement(item), who, selling);" in S['Market.cs'])
     (method_body(S['Market.cs'], "internal static int PricePaid"),
      method_body(S['Market.cs'],
                  "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting)"),
@@ -3422,7 +3423,7 @@ chk("1.14.2", "the ladders are dropped when a scan starts, given back when it fi
 chk("1.14.3", "a market whose merchant has no gold is no destination in any list the mod ranks, not just the route scan",
     (lambda body: "if (selling && s.SettlementComponent.Gold <= 0) continue;" in body
               and ordered(body, "if (selling && s.SettlementComponent.Gold <= 0) continue;",
-                          "int price = s.SettlementComponent.GetItemPrice("))
+                          "int price = Priced.At(s.SettlementComponent,"))
     (method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")) and
     "LedgerBehavior.Instance?.BestSell(it) ?? (null, 0)" in
         method_body(S['Trading.cs'], "private static void BuyPass") and
@@ -4883,8 +4884,8 @@ def every_market_pass_is_opened_and_carried_by_one_object():
             and "SettlementComponent market = settlement.SettlementComponent;" not in t
             and "PartyBase shop = settlement.Party;" not in t
             and "_locked = TradePolicy.LockedKeys();" in held
-            and t.count("Market.GetItemPrice(") == 1
-            and "Market.GetItemPrice(what, Party, selling)" in
+            and t.count("Priced.At(Market,") == 1
+            and "Priced.At(Market, what, Party, selling)" in
                 between(t, "internal int Price(", "Road.GetPrice")
             and t.count("pass.Price(el.EquipmentElement, selling: ") == 8
             and "TradeActionBehavior.Tally(Detail, item, count, gold)" in
@@ -5331,12 +5332,13 @@ def the_price_trace_reads_one_price_four_ways_and_names_what_changes_it():
     ledger = S['Ledger.cs']
     return ("if (!Options.Current.PriceTrace || site == null) return;" in say
             and 'Guard.Run("PriceTrace", () => Written(site, when));' in say
+            and "Priced.At(market, el, MobileParty.MainParty, true)" in trace
             and "market.GetItemPrice(el, MobileParty.MainParty, true)" in trace
-            and "market.GetItemPrice(el, MobileParty.MainParty, false)" in trace
             and "kept.GetPrice(el, who, true, merchant)" in trace
             and "kept.GetPrice(el, who, false, merchant)" in trace
             and ordered(written,
-                        "Read(kept, el, MobileParty.MainParty, site.Party)",
+                        "TradeLord uses \" + Uses(market, el)",
+                        "Asked(market, el)",
                         "Read(kept, el, MobileParty.MainParty, null)",
                         "Read(kept, el, null, null)")
             and "Campaign.Current.Models.TradeItemPriceFactorModel" in trace
@@ -5350,6 +5352,22 @@ def the_price_trace_reads_one_price_four_ways_and_names_what_changes_it():
             and not any(w in trace for w in ("SellItemsAction", "ChangeGold", "AddToCounts")))
 
 
+def every_price_is_asked_the_way_the_trade_screen_asks_it():
+    market = S['Market.cs']
+    at = method_body(market, "internal static int At(SettlementComponent market, "
+                             "EquipmentElement el, MobileParty who, bool selling)")
+    plain = sorted(name for name, text in S.items()
+                   if name != 'Market.cs' and "GetItemPrice(" in text)
+    compared = between(market, "private static string Asked(", "private static string Read(")
+    return (plain == []
+            and market.count("GetItemPrice(") == 3
+            and compared.count("market.GetItemPrice(") == 2
+            and ordered(at, "IMarketData held = Kept(site);",
+                        "return held.GetPrice(el, who, selling, site.Party);",
+                        "return market.GetItemPrice(el, who, selling);")
+            and all("Priced.At(" in S[f] for f in ('Ledger.cs', 'TooltipPatches.cs', 'Trading.cs')))
+
+
 chk("1.46.2", "a mount or a haul animal is never named as the reason a pass moved nothing, since another pass handles it",
     a_good_another_pass_handles_never_speaks_for_a_stalled_pass())
 chk("1.46.2", "trade goods and livestock you never paid for are held to your margin against what they are worth, and looted gear is not",
@@ -5361,6 +5379,9 @@ chk("1.47.0", "the price trace reads one market's price four ways, names the pri
     the_price_trace_reads_one_price_four_ways_and_names_what_changes_it())
 chk("1.47.0", "the price trace is off until you ask for it",
     "public bool PriceTrace = false;" in S['Options.cs'])
+
+chk("1.47.1", "every price TradeLord quotes is asked of the market the way the trade screen asks it, naming the merchant, and falls back to the plain question only if that cannot be asked",
+    every_price_is_asked_the_way_the_trade_screen_asks_it())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
