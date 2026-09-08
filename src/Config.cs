@@ -84,21 +84,24 @@ namespace TradeLord
                 : away + " setting(s) are away from what TradeLord ships with, listed above");
         }
 
-        private static void SayWhatChanged()
+        private static bool SayWhatChanged()
         {
             var now = Snapshot();
-            if (_lastSeen == null) { _lastSeen = now; return; }
+            if (_lastSeen == null) { _lastSeen = now; return false; }
             var stock = new Options();
+            bool moved = false;
             foreach (FieldInfo field in Fields())
             {
                 if (!now.TryGetValue(field.Name, out string held)) continue;
                 if (_lastSeen.TryGetValue(field.Name, out string before) && before == held) continue;
+                moved = true;
                 string ships = Shown(field, stock);
                 Log.Write("setting changed: " + field.Name + " is now " + held +
                           " (it was " + (before ?? "unset") + ", TradeLord ships with " + ships + ")" +
                           (held == ships ? " and is back at what it ships with" : ""));
             }
             _lastSeen = now;
+            return moved;
         }
 
         private static void Noted()
@@ -119,7 +122,8 @@ namespace TradeLord
         {
             if (!_dirty) return;
             _dirty = false;
-            Guard.Run("Config.Changed", SayWhatChanged);
+            bool moved = Guard.Read("Config.Changed", _path, _ => SayWhatChanged(), true);
+            if (!moved) return;
             Guard.Run("Config.Flush", () => Write(_path, "a setting changed"));
         }
 
