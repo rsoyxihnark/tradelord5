@@ -41,12 +41,12 @@ namespace TradeLord
             return sells.Count == 0 && buys.Count == 0 ? (null, null, null) : (item, sells, buys);
         }
 
-        internal static bool HasSection(ItemVM itemVm)
-        {
-            bool has = false;
-            Guard.Run("Tooltip.HasSection", () => has = Markets(itemVm).item != null);
-            return has;
-        }
+        private static bool Sectioned(ItemVM itemVm) => Markets(itemVm).item != null;
+
+        internal static bool HasSection(ItemVM itemVm) =>
+            Guard.Read("Tooltip.HasSection", itemVm, Sectioned, false);
+
+        internal static void Append((ItemMenuVM vm, ItemVM row) shown) => Append(shown.vm, shown.row);
 
         internal static void Append(ItemMenuVM vm, ItemVM itemVm)
         {
@@ -167,7 +167,7 @@ namespace TradeLord
     {
         private static void Postfix(ItemMenuVM __instance, ItemVM item)
         {
-            Guard.Run("Tooltip.RefreshItemTooltips", () => TooltipHelper.Append(__instance, item));
+            Guard.Run("Tooltip.RefreshItemTooltips", (__instance, item), TooltipHelper.Append);
         }
     }
 
@@ -181,33 +181,35 @@ namespace TradeLord
     [HarmonyPatch(typeof(SPItemVM), "UpdateProfitType")]
     internal static class Patch_SPItemVM_UpdateProfitType
     {
+        private static void Coloured(SPItemVM shown)
+        {
+            if (!Options.Current.ProfitColoring || shown == null) return;
+            var ledger = LedgerBehavior.Instance;
+            if (ledger == null) return;
+            ItemObject item = shown.ItemRosterElement.EquipmentElement.Item;
+            if (!TradePolicy.Priced(item)) return;
+            int cost = shown.ItemCost;
+            if (cost <= 0) return;
+
+            if (shown.InventorySide == InventoryLogic.InventorySide.OtherInventory)
+            {
+                var best = ledger.BestBuy(item);
+                if (best.town == null || best.price <= 0) return;
+                float r = (float)cost / best.price;
+                shown.ProfitType = r <= 1.02f ? 2 : r <= 1.15f ? 1 : r <= 1.4f ? 0 : r <= 1.7f ? -1 : -2;
+            }
+            else if (shown.InventorySide == InventoryLogic.InventorySide.PlayerInventory)
+            {
+                var best = ledger.BestSell(item);
+                if (best.town == null || best.price <= 0) return;
+                float r = (float)cost / best.price;
+                shown.ProfitType = r >= 0.98f ? 2 : r >= 0.9f ? 1 : r >= 0.75f ? 0 : r >= 0.6f ? -1 : -2;
+            }
+        }
+
         private static void Postfix(SPItemVM __instance)
         {
-            Guard.Run("Tooltip.ProfitColoring", () =>
-            {
-                if (!Options.Current.ProfitColoring || __instance == null) return;
-                var ledger = LedgerBehavior.Instance;
-                if (ledger == null) return;
-                ItemObject item = __instance.ItemRosterElement.EquipmentElement.Item;
-                if (!TradePolicy.Priced(item)) return;
-                int cost = __instance.ItemCost;
-                if (cost <= 0) return;
-
-                if (__instance.InventorySide == InventoryLogic.InventorySide.OtherInventory)
-                {
-                    var best = ledger.BestBuy(item);
-                    if (best.town == null || best.price <= 0) return;
-                    float r = (float)cost / best.price;
-                    __instance.ProfitType = r <= 1.02f ? 2 : r <= 1.15f ? 1 : r <= 1.4f ? 0 : r <= 1.7f ? -1 : -2;
-                }
-                else if (__instance.InventorySide == InventoryLogic.InventorySide.PlayerInventory)
-                {
-                    var best = ledger.BestSell(item);
-                    if (best.town == null || best.price <= 0) return;
-                    float r = (float)cost / best.price;
-                    __instance.ProfitType = r >= 0.98f ? 2 : r >= 0.9f ? 1 : r >= 0.75f ? 0 : r >= 0.6f ? -1 : -2;
-                }
-            });
+            Guard.Run("Tooltip.ProfitColoring", __instance, Coloured);
         }
     }
 }

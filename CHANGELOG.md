@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.41.4
+
+- The price lines and the profit colouring in your inventory no longer make a small extra piece of work for every row on the screen.
+- Working out which markets pay best for a good no longer makes a small extra piece of work every time TradeLord works it out.
+
 ## 1.41.3
 
 - Buying at a market no longer asks twice of every good on the shelf whether it is one you allow TradeLord to buy.

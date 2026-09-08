@@ -315,6 +315,30 @@ def log_prefers_the_user_folder():
             and body.count("catch { }") == 2
             and "yield" not in body)
 
+def the_tooltip_patches_hand_their_state_over_instead_of_capturing_it():
+    g = S['Support.cs']
+    t = S['TooltipPatches.cs']
+    return ("internal static void Run<T>(string context, T with, Action<T> action)" in g
+            and "internal static TAnswer Read<T, TAnswer>(string context, T with, "
+                "Func<T, TAnswer> read, TAnswer ifItFails)" in g
+            and 'Guard.Run("Tooltip.RefreshItemTooltips", (__instance, item), TooltipHelper.Append);' in t
+            and 'Guard.Run("Tooltip.ProfitColoring", __instance, Coloured);' in t
+            and 'Guard.Read("Tooltip.HasSection", itemVm, Sectioned, false)' in t
+            and "private static void Coloured(SPItemVM shown)" in t
+            and "private static bool Sectioned(ItemVM itemVm)" in t
+            and "() =>" not in t)
+
+def a_market_ranking_sorts_through_one_comparison_for_each_way():
+    l = S['Ledger.cs']
+    rerank = method_body(l, "private static List<(Settlement, int)> Rerank")
+    return ("private static readonly Comparison<(Settlement s, int price, float days)> DearestFirst" in l
+            and "private static readonly Comparison<(Settlement s, int price, float days)> CheapestFirst" in l
+            and "Comparison<(Settlement s, int price, float days)> order = "
+                "selling ? DearestFirst : CheapestFirst;" in rerank
+            and "all.Sort(order);" in rerank
+            and "top.Sort(order);" in rerank
+            and "Sort((x, y) => Rank(" not in l)
+
 def a_good_on_the_shelf_is_asked_the_buying_questions_once():
     t = S['Trading.cs']
     buy = method_body(t, "private static void BuyPass")
@@ -4714,6 +4738,10 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
+chk("1.41.4", "the price tooltip and the profit colouring hand their state to the guard rather than closing over it",
+    the_tooltip_patches_hand_their_state_over_instead_of_capturing_it())
+chk("1.41.4", "a market ranking sorts through one comparison for selling and one for buying, made once",
+    a_market_ranking_sorts_through_one_comparison_for_each_way())
 chk("1.41.3", "a good on the shelf is asked once whether it may be bought, and the resale half of the round-trip question stands on its own",
     a_good_on_the_shelf_is_asked_the_buying_questions_once())
 chk("1.41.3", "the panel reads the hotkey before it walks the map's layers looking for a text field",
