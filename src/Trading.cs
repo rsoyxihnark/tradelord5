@@ -341,62 +341,32 @@ namespace TradeLord
         private static bool IsLocked(ISet<string> lockedKeys, EquipmentElement element) =>
             lockedKeys != null && lockedKeys.Contains(CampaignUIHelper.GetItemLockStringID(element));
 
-        internal static int FoodValue(ItemObject item)
+        internal static int FoodValue(ItemObject item) =>
+            item == null ? 0 : TradeRules.FoodValue(Describe(item));
+
+        private static float AppetitePerDay()
         {
-            if (item == null) return 0;
-            if (item.HasHorseComponent)
-                return IsTradableLivestock(item) ? item.HorseComponent.MeatCount : 0;
-            return item.IsFood ? 1 : 0;
+            MobileParty party = MobileParty.MainParty;
+            float perDay = party == null ? 0f : -party.FoodChange;
+            return perDay < 1f ? 1f : perDay;
         }
 
         internal static Dictionary<ItemObject, int> FoodKeep(ItemRoster roster)
         {
             var keep = new Dictionary<ItemObject, int>();
-            int variety = Options.Current.KeepEveryFoodKind ? Options.Current.KeepPerFoodKind : 0;
-            if ((Options.Current.KeepFoodDays <= 0 && variety <= 0) || roster == null) return keep;
-            float perDay = -MobileParty.MainParty.FoodChange;
-            if (perDay < 1f) perDay = 1f;
-            int reserve = (int)Math.Ceiling(perDay * Options.Current.KeepFoodDays);
-
-            var food = new List<ItemRosterElement>();
+            if (roster == null) return keep;
+            var byId = new Dictionary<string, ItemObject>(StringComparer.Ordinal);
+            var carried = new List<TradeRules.Ration>();
             for (int i = 0; i < roster.Count; i++)
             {
                 ItemRosterElement el = roster.GetElementCopyAtIndex(i);
                 ItemObject item = el.EquipmentElement.Item;
-                if (el.Amount > 0 && FoodValue(item) > 0 &&
-                    !Listed(Options.Current.AlwaysSet, item))
-                    food.Add(el);
+                if (item == null || el.Amount <= 0) continue;
+                byId[item.StringId] = item;
+                carried.Add(new TradeRules.Ration { Good = Describe(item), Amount = el.Amount });
             }
-            food.Sort((x, y) =>
-            {
-                int lx = IsTradableLivestock(x.EquipmentElement.Item) ? 1 : 0;
-                int ly = IsTradableLivestock(y.EquipmentElement.Item) ? 1 : 0;
-                return lx != ly ? lx.CompareTo(ly) : CostPerFood(x).CompareTo(CostPerFood(y));
-            });
-
-            if (variety > 0)
-                foreach (ItemRosterElement el in food)
-                {
-                    ItemObject item = el.EquipmentElement.Item;
-                    if (IsTradableLivestock(item)) continue;
-                    int floor = Math.Min(el.Amount, variety);
-                    keep.TryGetValue(item, out int held);
-                    if (floor <= held) continue;
-                    reserve -= (floor - held) * FoodValue(item);
-                    keep[item] = floor;
-                }
-
-            foreach (ItemRosterElement el in food)
-            {
-                if (reserve <= 0) break;
-                ItemObject item = el.EquipmentElement.Item;
-                int perUnit = FoodValue(item);
-                keep.TryGetValue(item, out int had);
-                if (had >= el.Amount) continue;
-                int take = Math.Min(el.Amount - had, (reserve + perUnit - 1) / perUnit);
-                reserve -= take * perUnit;
-                keep[item] = had + take;
-            }
+            foreach (var kept in TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current))
+                if (byId.TryGetValue(kept.Key, out ItemObject item)) keep[item] = kept.Value;
             return keep;
         }
 
@@ -414,14 +384,8 @@ namespace TradeLord
             return keep;
         }
 
-        private static float CostPerFood(ItemRosterElement el)
-        {
-            ItemObject item = el.EquipmentElement.Item;
-            return (float)item.Value / FoodValue(item);
-        }
-
         internal static bool IsStorableFood(ItemObject item) =>
-            item != null && item.IsFood && !item.HasHorseComponent;
+            item != null && TradeRules.IsStorableFood(Describe(item));
 
         internal static int FoodHeld(ItemRoster roster)
         {
@@ -439,9 +403,7 @@ namespace TradeLord
         {
             int days = Options.Current.ResupplyFoodDays;
             if (days <= 0) return 0;
-            float perDay = -MobileParty.MainParty.FoodChange;
-            if (perDay < 1f) perDay = 1f;
-            return (int)Math.Ceiling(perDay * days);
+            return (int)Math.Ceiling(AppetitePerDay() * days);
         }
 
         public static bool MaySell(ItemRosterElement el, ISet<string> lockedKeys,
@@ -489,6 +451,7 @@ namespace TradeLord
             good.IsSpareMount = IsSpareMount(item);
             good.IsLivestock = IsTradableLivestock(item);
             good.IsPrizeMount = IsPrizeMount(item);
+            good.MeatCount = item.HasHorseComponent ? item.HorseComponent.MeatCount : 0;
             good.IsSmithingMaterial = IsSmithingMaterial(item);
             good.IsGrain = item == DefaultItems.Grain;
             return good;
@@ -1925,10 +1888,10 @@ namespace TradeLord
         private static bool NoRoomForOneMore(in Good good, float roomLeft) =>
             TradeRules.NoRoomForOneMore(good, roomLeft);
 
-        private static List<(ItemRosterElement el, int price, int worth)> CheapestFirst(
+        private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst(
             Pass pass, Func<ItemObject, bool> wanted)
         {
-            var found = new List<(ItemRosterElement el, int price, int worth)>();
+            var found = new List<(ItemRosterElement el, Good good, int price, int worth)>();
             ItemRoster shopRoster = pass.Stock;
             for (int i = 0; i < shopRoster.Count; i++)
             {
@@ -1940,7 +1903,7 @@ namespace TradeLord
                 int price = pass.Price(el.EquipmentElement, selling: false);
                 int worth = TradePolicy.UnpaidWorth(it);
                 if (price <= 0 || price > worth) continue;
-                found.Add((el, price, worth));
+                found.Add((el, TradePolicy.Describe(it), price, worth));
             }
             found.Sort((x, y) => x.price.CompareTo(y.price));
             return found;
@@ -1966,11 +1929,11 @@ namespace TradeLord
             pass.CountFrom();
             InAPass(() =>
             {
-                foreach (var (el, _, worth) in larder)
+                foreach (var (el, good, _, worth) in larder)
                 {
                     if (pass.DirectionError || shortfall <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
-                    int fed = TradePolicy.FoodValue(item);
+                    int fed = TradeRules.FoodValue(good);
                     if (fed <= 0) continue;
                     int remaining = el.Amount - pass.Books.Stocked(pass.Sim, item.StringId);
 
@@ -1986,7 +1949,7 @@ namespace TradeLord
                         {
                             simSpent += price;
                             simWeight += item.Weight;
-                            pass.Books.NotePurchase(item.StringId, price, item.Weight, fed);
+                            pass.Books.NotePurchase(item.StringId, price, good.Weight, fed);
                         }
                         else
                         {
@@ -2216,7 +2179,7 @@ namespace TradeLord
             pass.CountFrom();
             InAPass(() =>
             {
-                foreach (var (el, _, worth) in stable)
+                foreach (var (el, good, _, worth) in stable)
                 {
                     if (pass.DirectionError) break;
                     ItemObject item = el.EquipmentElement.Item;
@@ -2232,7 +2195,7 @@ namespace TradeLord
                         if (pass.Sim)
                         {
                             simSpent += price;
-                            pass.Books.NotePurchase(item.StringId, price, 0f, TradePolicy.FoodValue(item));
+                            pass.Books.NotePurchase(item.StringId, price, 0f, TradeRules.FoodValue(good));
                             pass.Books.NoteHerdTaken();
                         }
                         else
