@@ -166,7 +166,7 @@ namespace TradeLord
                 {
                     string dir = Path.GetDirectoryName(candidate);
                     if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) continue;
-                    File.WriteAllText(candidate, "");
+                    File.AppendAllText(candidate, "");
                     return candidate;
                 }
                 catch { }

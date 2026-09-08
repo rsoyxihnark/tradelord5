@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.43.0
+
+- Leaving a market and walking straight back in counts as the same visit, so TradeLord no longer buys back the goods it has just sold you there.
+- Your Max spend per visit now lasts the whole of that visit, instead of starting again each time you step back inside.
+- TradeLord.log is kept from one session to the next, instead of being emptied every time the game starts.
+- TradeLord.ini is no longer rewritten when you start the game and none of your settings have changed.
+- TradeLord.log now names the goods it stops holding against a resale when they leave your party unsold, rather than only counting them.
+
 ## 1.42.4
 
 - Buying at a market yourself no longer leaves TradeLord thinking you took thousands more of a good than you did, so it keeps what you really paid and stops selling that cargo under your Minimum profit margin.
