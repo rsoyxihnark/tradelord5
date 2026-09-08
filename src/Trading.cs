@@ -24,15 +24,6 @@ using TaleWorlds.Localization;
 
 namespace TradeLord
 {
-    internal enum Block
-    {
-        None, NotMerchandise, NeverList, Locked, CategoryPolicy, Protected,
-        MountOrHaulAnimal, NotTradable, FoodReserve, TradedHereAlready, NoStock,
-        NoResaleMarket, BelowMargin, BelowBestMarket, MerchantTillEmpty, BudgetSpent,
-        ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit, HeldEnough, Smeltable,
-        QuestAnimal, GrainSwitch
-    }
-
     internal sealed class BlockTally
     {
         private readonly Dictionary<Block, int> _counts = new Dictionary<Block, int>();
@@ -153,9 +144,6 @@ namespace TradeLord
             item.HorseComponent.IsRideable && item.HorseComponent.IsPackAnimal &&
             !item.HorseComponent.IsMount && !item.HorseComponent.IsLiveStock &&
             item.ItemCategory == DefaultItemCategories.PackAnimal;
-
-        internal static bool IsHaulAnimalOrMount(ItemObject item) =>
-            IsHaulAnimal(item) || IsSpareMount(item);
 
         internal static bool IsSpareMount(ItemObject item) =>
             item != null && item.HasHorseComponent &&
@@ -467,14 +455,57 @@ namespace TradeLord
                                    IDictionary<ItemObject, int> awaited, out int keepCount) =>
             MaySell(el, lockedKeys, foodKeep, awaited, out keepCount, out _);
 
-        private static bool DrawKeepBack(IDictionary<ItemObject, int> reserve, ItemObject item,
-                                         int available, out int taken)
+        private struct AskTheGame : IWhatTheGameSays
         {
-            taken = 0;
-            if (reserve == null || !reserve.TryGetValue(item, out int held) || held <= 0) return false;
-            taken = Math.Min(available, held);
-            reserve[item] = held - taken;
-            return true;
+            internal ISet<string> Locks;
+            internal EquipmentElement What;
+
+            public bool Locked() => IsLocked(Locks, What);
+
+            public bool Smeltable() => IsSmeltable(What.Item);
+
+            public bool PartsAllLearned() => TradePolicy.PartsAllLearned(What.Item);
+        }
+
+        private static bool AnyListNamesAGood(Options s) =>
+            !s.NeverSet.Empty || !s.AlwaysSet.Empty || !s.NeverBuySet.Empty || !s.AlwaysBuySet.Empty;
+
+        internal static Good Describe(ItemObject item)
+        {
+            Good good = default(Good);
+            if (item == null) return good;
+            good.Id = item.StringId;
+            if (AnyListNamesAGood(Options.Current))
+            {
+                ReadTheGoodsInThisGame();
+                good.Name = item.Name == null ? null : item.Name.ToString();
+            }
+            good.Weight = item.Weight;
+            good.Value = item.Value;
+            good.Tier = (int)item.Tier;
+            good.NotMerchandise = item.NotMerchandise;
+            good.HasHorse = item.HasHorseComponent;
+            good.IsUnique = item.IsUniqueItem;
+            good.IsCraftedByPlayer = item.IsCraftedByPlayer;
+            good.IsTradeGood = item.IsTradeGood;
+            good.IsFood = item.IsFood;
+            good.IsAnimal = item.IsAnimal;
+            good.IsMountable = item.IsMountable;
+            good.IsHaulAnimal = IsHaulAnimal(item);
+            good.IsSpareMount = IsSpareMount(item);
+            good.IsLivestock = IsTradableLivestock(item);
+            good.IsSmithingMaterial = IsSmithingMaterial(item);
+            return good;
+        }
+
+        private static int HeldBack(IDictionary<ItemObject, int> reserve, ItemObject item) =>
+            reserve != null && reserve.TryGetValue(item, out int held) && held > 0 ? held : 0;
+
+        private static void TakeBack(IDictionary<ItemObject, int> reserve, ItemObject item, int drawn)
+        {
+            if (drawn <= 0 || reserve == null) return;
+            reserve.TryGetValue(item, out int held);
+            reserve[item] = held - drawn;
         }
 
         internal static bool MaySell(ItemRosterElement el, ISet<string> lockedKeys,
@@ -482,44 +513,21 @@ namespace TradeLord
                                      IDictionary<ItemObject, int> awaited,
                                      out int keepCount, out Block why)
         {
-            keepCount = 0;
-            why = Block.None;
-            Options s = Options.Current;
             ItemObject item = el.EquipmentElement.Item;
+            SellFacts facts;
+            facts.QuestItem = el.EquipmentElement.IsQuestItem;
+            facts.AwaitedHeld = HeldBack(awaited, item);
+            facts.FoodHeld = HeldBack(foodKeep, item);
+            facts.QuestsReadable = Errands.Known;
 
-            if (item == null || item.NotMerchandise || el.EquipmentElement.IsQuestItem) { why = Block.NotMerchandise; return false; }
-            if (Listed(s.NeverSet, item)) { why = Block.NeverList; return false; }
+            SellVerdict said = TradeRules.MaySell(Describe(item), el.Amount, facts, Options.Current,
+                new AskTheGame { Locks = lockedKeys, What = el.EquipmentElement });
 
-            if (IsLocked(lockedKeys, el.EquipmentElement)) { why = Block.Locked; return false; }
-            if (item.HasHorseComponent && DrawKeepBack(awaited, item, el.Amount, out int promised))
-            {
-                keepCount = promised;
-                if (el.Amount <= keepCount) { why = Block.QuestAnimal; return false; }
-            }
-            if (Listed(s.AlwaysSet, item)) return true;
-            if (!PolicyAllows(PolicyFor(item), buying: false)) { why = Block.CategoryPolicy; return false; }
-
-            bool livestock = item.HasHorseComponent;
-            if (livestock && IsHaulAnimalOrMount(item)) { why = Block.MountOrHaulAnimal; return false; }
-            if (livestock && !Errands.Known) { why = Block.QuestAnimal; return false; }
-            if (s.ProtectSpecial && (item.IsUniqueItem || item.IsCraftedByPlayer))
-            { why = Block.Protected; return false; }
-            if (!livestock && s.KeepSmeltableWeapons != Options.SmeltSellThem && IsSmeltable(item) &&
-                (s.KeepSmeltableWeapons == Options.SmeltKeepAll || !PartsAllLearned(item)))
-            { why = Block.Smeltable; return false; }
-
-            bool sellable = livestock || item.IsTradeGood ||
-                (s.MaxLootTier > 0 && !item.IsFood && !item.IsAnimal && !item.IsMountable &&
-                 (int)item.Tier + 1 <= s.MaxLootTier);
-            if (!sellable) { why = Block.NotTradable; return false; }
-
-            if (DrawKeepBack(foodKeep, item, el.Amount, out int reserved))
-            {
-                keepCount = reserved;
-                if (el.Amount <= keepCount) { why = Block.FoodReserve; return false; }
-            }
-
-            return true;
+            TakeBack(awaited, item, said.DrewAwaited);
+            TakeBack(foodKeep, item, said.DrewFood);
+            keepCount = said.KeepCount;
+            why = said.Why;
+            return said.Allowed;
         }
 
         internal static bool Priced(ItemObject item) =>
