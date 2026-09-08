@@ -1,4 +1,13 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git fetch:*)",
+      "Bash(git checkout main)",
+      "Bash(git checkout --detach origin/main)",
+      "Bash(git reset --hard origin/main)",
+      "Bash(git push -u origin HEAD:main)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
