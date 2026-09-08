@@ -68,7 +68,6 @@ namespace TradeLord
         private bool _announcedAutomation;
         private static readonly Books Visit = new Books();
         private static bool _cargoWasFull;
-        private static bool _runMovedGoods;
         private static Block? _sellStalled;
         private static Block? _buyStalled;
 
@@ -136,6 +135,7 @@ namespace TradeLord
             AutomatedTradeInProgress = false;
             _sittingAt = null;
             _sittingHour = -1;
+            _markerHour = -1;
             _herdLookupFailed = false;
             Carry.Forget();
             TradePolicy.ForgetItemListAudit();
@@ -162,7 +162,24 @@ namespace TradeLord
             CampaignEvents.SettlementEntered.AddNonSerializedListener(this, OnSettlementEntered);
             CampaignEvents.OnSettlementLeftEvent.AddNonSerializedListener(this, OnSettlementLeft);
             CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
+            CampaignEvents.TickEvent.AddNonSerializedListener(this, OnTick);
             CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEnded);
+        }
+
+        private static int _markerHour = -1;
+        private static Vec2 _markerAt;
+        private const float MarkerMovedFar = 100f;
+
+        private void OnTick(float dt)
+        {
+            MobileParty party = MobileParty.MainParty;
+            if (party == null || party.CurrentSettlement != null) return;
+            int hour = (int)CampaignTime.Now.ToHours;
+            Vec2 at = party.GetPosition2D;
+            if (hour == _markerHour && at.DistanceSquared(_markerAt) <= MarkerMovedFar) return;
+            _markerHour = hour;
+            _markerAt = at;
+            Guard.Run("Action.MarkerAsYouMove", UpdateBestSellTownTracker);
         }
 
         private void OnDailyTick()
@@ -212,7 +229,6 @@ namespace TradeLord
             _visitTradeAllowed = false;
             if (sameSitting) Visit.ForgetTheDryRun(); else Visit.Forget();
             _cargoWasFull = false;
-            _runMovedGoods = false;
             _sellStalled = null;
             _buyStalled = null;
         }
@@ -379,7 +395,6 @@ namespace TradeLord
 
             internal void Moved(int? profit = null)
             {
-                _runMovedGoods = true;
                 if (Sim) return;
                 if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);
                 CoinSound();
@@ -1012,11 +1027,9 @@ namespace TradeLord
         {
             Block? sell = _sellStalled;
             Block? buy = _buyStalled;
-            bool moved = _runMovedGoods;
             _sellStalled = null;
             _buyStalled = null;
-            _runMovedGoods = false;
-            if (moved || (!sell.HasValue && !buy.HasValue)) return;
+            if (!sell.HasValue && !buy.HasValue) return;
 
             TextObject none;
             if (sell.HasValue && buy.HasValue)
@@ -1708,7 +1721,8 @@ namespace TradeLord
             {
                 if (tally.Any) Log.Repeatable(label + "-empty " + pass.Key, tally.Summary(),
                     label + " moved nothing " + pass.Where + ": " + tally.Summary());
-                if (!pass.Muted) NoteStalled(selling: false, tally.Dominant());
+                Block stopped = tally.Dominant();
+                if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);
             }
         }
 
@@ -1789,7 +1803,6 @@ namespace TradeLord
             }
             if (cargo.Count == 0) return null;
 
-            float cap = Options.Current.MarkerMaxTravelDays;
             Settlement bestTown = null;
             long bestValue = 0;
             foreach (Town town in Town.AllTowns)
@@ -1800,6 +1813,7 @@ namespace TradeLord
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;
                 if (!LedgerBehavior.WithinRadius(s)) continue;
                 if (town.Gold <= bestValue) continue;
+                float cap = LedgerBehavior.TravelCeiling(s);
                 if (cap > 0f)
                 {
                     if (Travel.StraightDaysFromParty(s) > cap) continue;

@@ -6,7 +6,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 5;
+        public const int Shape = 6;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -25,6 +25,7 @@ namespace TradeLord
             changed |= SmeltableWeaponsBecameAChoiceOfThree(written, notes);
             changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);
             changed |= TheObservationShelfLifeIsGone(written, notes);
+            changed |= TheAutoMarkerCeilingIsGone(written, notes);
             if (changed && notes != null)
                 notes.Add("your settings were written by an older TradeLord, so they have been brought forward from shape " +
                           from + " to shape " + Shape);
@@ -91,6 +92,17 @@ namespace TradeLord
             return true;
         }
 
+        private static bool TheAutoMarkerCeilingIsGone(IDictionary<string, string> written,
+                                                       ICollection<string> notes)
+        {
+            const string was = "MarkerMaxTravelDays";
+            if (!written.TryGetValue(was, out string held)) return false;
+            written.Remove(was);
+            notes?.Add("the town marked on your map now keeps to the same travel ceiling as everything else, " +
+                       "so the marker's own ceiling is gone and your setting of " + held + " is no longer read");
+            return true;
+        }
+
         private static bool PayingOverTheOddsForAHaulAnimalIsGone(IDictionary<string, string> written,
                                                                  ICollection<string> notes)
         {
@@ -116,7 +128,6 @@ namespace TradeLord
                 { "MinProfitMargin", new double[] { 0, 2 } },
                 { "EconomySettlingDays", new double[] { 0, 100 } },
                 { "TradeXpMultiplier", new double[] { 0, 3 } },
-                { "MarkerMaxTravelDays", new double[] { 0, 10 } },
                 { "KeepFoodDays", new double[] { 0, 30 } },
                 { "KeepPerFoodKind", new double[] { 1, 50 } },
                 { "MaxLootTier", new double[] { 0, 6 } },

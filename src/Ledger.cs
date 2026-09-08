@@ -421,11 +421,17 @@ namespace TradeLord
             return WithinTravelCeiling(s, lower);
         }
 
-        private static bool WithinTravelCeiling(Settlement s, float days)
+        internal static float TravelCeiling(Settlement s)
         {
             float cap = Options.Current.MaxTravelDays;
             float vcap = Options.Current.MaxVillageTravelDays;
             if (s.IsVillage && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;
+            return cap;
+        }
+
+        private static bool WithinTravelCeiling(Settlement s, float days)
+        {
+            float cap = TravelCeiling(s);
             return cap <= 0f || days <= cap;
         }
 
