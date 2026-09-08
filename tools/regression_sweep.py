@@ -390,6 +390,30 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
                 method_body(t, "public static void ExecuteResupply")
             and "TradeRules.FoodValue(good)" in method_body(t, "public static void ExecuteHaulage"))
 
+def the_best_markets_are_picked_without_sorting_every_town():
+    l = S['Ledger.cs']
+    rerank = method_body(l, "private static List<(Settlement, int)> Rerank")
+    keep = method_body(l, "private static void Keep(List<(Settlement s, int price, float straight, float days)> kept,")
+    return ("all.Sort(" not in l
+            and "Keep(kept, (all[i].s, all[i].price, all[i].days, days), selling);" in rerank
+            and "return Settled(kept, selling);" in rerank
+            and "if (kept.Count == TopCacheSize &&" in keep
+            and "ByStraightLine(kept[TopCacheSize - 1])) >= 0) return;" in keep
+            and "if (kept.Count > TopCacheSize) kept.RemoveAt(TopCacheSize);" in keep)
+
+def a_route_scan_prices_each_town_once_for_every_good_it_wants():
+    l = S['Ledger.cs']
+    prime = method_body(l, "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
+    scan = method_body(l, "private List<TradeRoute> ScanRoutes(int purse)")
+    return ("if (!Options.Current.Omniscient || wanted.Count == 0) return;" in prime
+            and prime.find("if (!WithinTravelCeiling(town, days)) continue;") <
+                prime.find("market.GetItemPrice(item, me, true)")
+            and "_marketCache[(item.StringId, true)] = (hour, Options.Generation, kind, Settled(sells[i], true));" in prime
+            and "_marketCache[(item.StringId, false)] = (hour, Options.Generation, kind, Settled(buys[i], false));" in prime
+            and "PrimeLiveRankings(wanted, (int)CampaignTime.Now.ToHours);" in scan
+            and scan.find("wanted.Add(item);") < scan.find("PrimeLiveRankings(wanted,")
+            and scan.find("PrimeLiveRankings(wanted,") < scan.find("var buys = TopBuy(item, TopCacheSize);"))
+
 def a_language_file_that_could_not_be_read_is_tried_again():
     said = method_body(S['Tongue.cs'], "private static string Translated")
     failed = said.find("if (read == null)")
@@ -475,14 +499,12 @@ def the_tooltip_patches_hand_their_state_over_instead_of_capturing_it():
 
 def a_market_ranking_sorts_through_one_comparison_for_each_way():
     l = S['Ledger.cs']
-    rerank = method_body(l, "private static List<(Settlement, int)> Rerank")
+    settled = method_body(l, "private static List<(Settlement, int)> Settled(")
     return ("private static readonly Comparison<(Settlement s, int price, float days)> DearestFirst" in l
             and "private static readonly Comparison<(Settlement s, int price, float days)> CheapestFirst" in l
-            and "Comparison<(Settlement s, int price, float days)> order = "
-                "selling ? DearestFirst : CheapestFirst;" in rerank
-            and "all.Sort(order);" in rerank
-            and "top.Sort(order);" in rerank
-            and "Sort((x, y) => Rank(" not in l)
+            and "top.Sort(selling ? DearestFirst : CheapestFirst);" in settled
+            and "Sort((x, y) => Rank(" not in l
+            and l.count("top.Sort(") == 1)
 
 def a_good_on_the_shelf_is_asked_the_buying_questions_once():
     t = S['Trading.cs']
@@ -4931,6 +4953,10 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
+chk("1.41.9", "the best markets for a good are picked by keeping the best few as they come, rather than putting every town in order first",
+    the_best_markets_are_picked_without_sorting_every_town())
+chk("1.41.9", "a route scan asks each town its prices once for every good it wants, and never prices a town it has already ruled out as too far",
+    a_route_scan_prices_each_town_once_for_every_good_it_wants())
 chk("1.41.8", "a language file that could not be read is tried again rather than settled for, without going back to disk for every line",
     a_language_file_that_could_not_be_read_is_tried_again())
 chk("1.41.7", "a price already written down is found by its town rather than by looking down every town on the list, and the save is still written the way it always was",
