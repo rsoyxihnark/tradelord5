@@ -390,6 +390,12 @@ namespace TradeLord
             return p != 0 ? p : x.days.CompareTo(y.days);
         }
 
+        private static readonly Comparison<(Settlement s, int price, float days)> DearestFirst =
+            (x, y) => Rank(true, x, y);
+
+        private static readonly Comparison<(Settlement s, int price, float days)> CheapestFirst =
+            (x, y) => Rank(false, x, y);
+
         private const int TopCacheSize = 8;
         private const float MovedFar = 100f;
         private readonly Dictionary<(string item, bool selling), (int hour, int gen, List<(Settlement, int)> markets)> _marketCache
@@ -447,7 +453,8 @@ namespace TradeLord
 
         private static List<(Settlement, int)> Rerank(List<(Settlement s, int price, float days)> all, bool selling)
         {
-            all.Sort((x, y) => Rank(selling, x, y));
+            Comparison<(Settlement s, int price, float days)> order = selling ? DearestFirst : CheapestFirst;
+            all.Sort(order);
             var top = new List<(Settlement s, int price, float days)>();
             for (int i = 0; i < all.Count && top.Count < TopCacheSize; i++)
             {
@@ -455,7 +462,7 @@ namespace TradeLord
                 if (!WithinTravelCeiling(all[i].s, days)) continue;
                 top.Add((all[i].s, all[i].price, days));
             }
-            top.Sort((x, y) => Rank(selling, x, y));
+            top.Sort(order);
             var result = new List<(Settlement, int)>();
             for (int i = 0; i < top.Count; i++)
                 result.Add((top[i].s, top[i].price));
