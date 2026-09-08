@@ -12,6 +12,9 @@ namespace TradeLord
 
         private static Dictionary<string, string> _said;
         private static int _saidFor = English - 1;
+        private static DateTime _tryingAgainAt;
+        private static int _toldItFailedFor = English - 1;
+        private static readonly TimeSpan BeforeTryingAgain = TimeSpan.FromSeconds(5);
 
         internal static TextObject Text(string written)
         {
@@ -50,16 +53,32 @@ namespace TradeLord
             int language = Options.Current.Language;
             if (_saidFor != language)
             {
+                if (_tryingAgainAt > DateTime.UtcNow) return null;
+                Dictionary<string, string> read = Guard.Read("Tongue.Read", language, Reading, null);
+                if (read == null)
+                {
+                    _tryingAgainAt = DateTime.UtcNow + BeforeTryingAgain;
+                    if (_toldItFailedFor != language)
+                    {
+                        _toldItFailedFor = language;
+                        Log.Write("the " + Named(language) + " strings could not be read from the module folder - " +
+                                  "TradeLord speaks English until it can be read");
+                    }
+                    return null;
+                }
                 _saidFor = language;
-                _said = null;
-                Guard.Run("Tongue.Read", () => _said = Read(Where(language)));
-                if (_said == null || _said.Count == 0)
+                _said = read;
+                _tryingAgainAt = default(DateTime);
+                _toldItFailedFor = English - 1;
+                if (read.Count == 0)
                     Log.Write("the " + Named(language) + " strings could not be read from the module folder - TradeLord speaks English");
                 else
-                    Log.Write(Named(language) + " selected - " + _said.Count + " strings read from the module folder");
+                    Log.Write(Named(language) + " selected - " + read.Count + " strings read from the module folder");
             }
             return _said != null && _said.TryGetValue(id, out string text) ? text : null;
         }
+
+        private static Dictionary<string, string> Reading(int language) => Read(Where(language));
 
         private static string Named(int language) =>
             language == Chinese ? "Simplified Chinese" : language == Russian ? "Russian" : "Turkish";
