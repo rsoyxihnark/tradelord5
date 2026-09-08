@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.41.9
+
+- Working out which markets pay best for a good is quicker, because TradeLord now keeps the best few as it goes instead of putting every town in order first.
+- TradeLord no longer asks a town what it pays for a good when that town is already beyond your Travel ceiling.
+
 ## 1.41.8
 
 - If TradeLord cannot read its language file for a moment, it now keeps trying and speaks your language as soon as it can, instead of falling back to English until you restart the game.
