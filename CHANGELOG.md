@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.42.1
+
+- Walking into a market now works out the best markets for everything on the shelf in one go, instead of once for each good, so a busy market costs your game less.
+- Restocking the larder and buying a haul animal do the same.
+- The ledger now gives back what it worked the routes out with as soon as it has finished, instead of holding on to it until the next time you open the panel.
+
 ## 1.42.0
 
 - Meeting a caravan or villagers on the road and trading nothing with them now tells you why, the same as walking into a market already did.

@@ -3343,10 +3343,12 @@ chk("1.14.2", "a route walk prices each town's ladder once and reads it back for
     "_rungs.TryGetValue(key, out Ladder rung)" in
         method_body(S['Market.cs'], "private static Ladder Rung"))
 
-chk("1.14.2", "the ladders are dropped when a scan starts and when the campaign ends, so no scan reads stale prices",
+chk("1.14.2", "the ladders are dropped when a scan starts, given back when it finishes, and dropped when the campaign ends, so no scan reads stale prices and none is held on to",
     "Bulk.Forget();" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes") and
     ordered(method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"),
-            "Bulk.Forget();", "foreach (ItemObject item in Items.All)") and
+            "Bulk.Forget();", "foreach (ItemObject item in Items.All)",
+            "Bulk.Forget();\n            return routes;") and
+    method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes").count("Bulk.Forget();") == 2 and
     'Guard.Run("GameEnd.Bulk", Bulk.Forget);' in S['SubModule.cs'] and
     "internal static void Forget() => _rungs.Clear();" in S['Market.cs'])
 
@@ -4591,7 +4593,9 @@ def the_rankings_are_dropped_when_the_party_moves_not_only_when_the_hour_turns()
                 method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopMarkets")
             and "DropRankingsIfThePartyMoved();" in
                 method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes")
-            and S['Ledger.cs'].count("DropRankingsIfThePartyMoved();") == 2)
+            and "DropRankingsIfThePartyMoved();" in
+                method_body(S['Ledger.cs'], "internal void PrimeMarketsFor")
+            and S['Ledger.cs'].count("DropRankingsIfThePartyMoved();") == 3)
 
 chk("1.39.0", "an animal a quest is waiting on says so, instead of naming the food reserve",
     a_quest_animal_held_back_is_named_as_the_quest_not_the_food_reserve())
@@ -4966,11 +4970,34 @@ def a_pin_comes_off_the_map_once_tradelord_has_traded_there():
             and "_panelPins.Clear();" in method_body(S['Panel.cs'], "internal static void RestorePins"))
 
 
+def a_market_visit_prices_each_town_once_for_everything_on_the_shelf():
+    l = S['Ledger.cs']
+    t = S['Trading.cs']
+    prime = method_body(l, "internal void PrimeMarketsFor")
+    buy = method_body(t, "private static void BuyPass")
+    cheapest = method_body(t,
+        "private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst")
+    return ("PrimeLiveRankings(cold, hour);" in prime
+            and "if (item == null || !asked.Add(item.StringId)) continue;" in prime
+            and "if (Ranked(item.StringId, true, hour) && Ranked(item.StringId, false, hour)) continue;"
+                in prime
+            and ordered(buy, "goods.Add(it);",
+                        "LedgerBehavior.Instance?.PrimeMarketsFor(goods);",
+                        "LedgerBehavior.Instance?.BestSell(it)")
+            and ordered(cheapest, "goods.Add(it);",
+                        "LedgerBehavior.Instance?.PrimeMarketsFor(goods);",
+                        "TradePolicy.UnpaidWorth(it);")
+            and t.count("PrimeMarketsFor(goods);") == 2
+            and l.count("PrimeLiveRankings(") == 3)
+
+
 chk("1.41.0", "a good the Never buy grain setting holds back says so, rather than blaming your item lists",
     the_grain_switch_owns_the_reason_it_holds_a_good_back())
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
+chk("1.42.1", "a market visit asks each town its prices once for everything on the shelf, through the same priming the route scan uses, and never asks again for a good it has already ranked this hour",
+    a_market_visit_prices_each_town_once_for_everything_on_the_shelf())
 chk("1.42.0", "trading with a caravan or villagers on the road says why nothing moved, the same as a market visit does",
     a_road_trade_that_moved_nothing_says_why())
 chk("1.42.0", "the ledger works a route out from your settings alone and never from what you are carrying, holding or able to spend right now, deliberately, so nothing you happen to be doing can hide a route from you",
