@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.41.5
+
+- The feature list now calls the setting that reads prices from the whole map by the name the settings screen gives it, Live world prices, instead of calling it honest-merchant mode.
+- The feature list now says a pin comes off a town by itself once TradeLord has traded there.
+- The feature list now says Share of the hold one good may fill ships at 45%.
+
 ## 1.41.4
 
 - The price lines and the profit colouring in your inventory no longer make a small extra piece of work for every row on the screen.

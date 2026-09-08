@@ -315,6 +315,19 @@ def log_prefers_the_user_folder():
             and body.count("catch { }") == 2
             and "yield" not in body)
 
+def the_feature_list_calls_a_setting_what_the_settings_screen_calls_it():
+    en = spoken(ENGLISH)
+    live = en.get('TL201', '').replace(' (default)', '')
+    return (live != ''
+            and 'With ' + live + ' turned off it shows yours instead' in README
+            and '- \u2705 ' + live + ', on out of the box; turn it off and TradeLord uses only the '
+                'prices you have seen in person' in README
+            and not re.search(r'honest[- ]merchant', README, re.I))
+
+def the_feature_list_says_a_pin_comes_off_a_town_it_traded_in():
+    return ('and a pin comes off by itself once TradeLord has traded in that town' in README
+            and 'LedgerPanel.Unpin(Site)' in S['Trading.cs'])
+
 def the_tooltip_patches_hand_their_state_over_instead_of_capturing_it():
     g = S['Support.cs']
     t = S['TooltipPatches.cs']
@@ -548,7 +561,9 @@ def readme_defaults_match_the_shipped_ones():
         return spelled.get(m.group(1), m.group(1)) if m else ''
     tooltip = counted(S['TooltipPatches.cs'], r'private const int TopN = (\d+);')
     shops = counted(S['Panel.cs'], r'i < best\.Count && i < (\d+);')
-    claims = ['hotkey **' + option_default('PanelKey').strip('"') + '**',
+    share = str(round(float(option_default('MaxHeldShare').rstrip('f')) * 100))
+    claims = ['which ships at ' + share + '% so one cheap good cannot take your whole cargo',
+              'hotkey **' + option_default('PanelKey').strip('"') + '**',
               'gold reserve of ' + option_default('GoldReserve') + ' denars',
               'back up to ' + said('ResupplyFoodDays') + ' days of supply',
               said('KeepWageDays') + " days of your troops' wages",
@@ -4738,6 +4753,10 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
+chk("1.41.5", "the feature list names the live-price setting the way the settings screen names it, and never calls it honest-merchant mode",
+    the_feature_list_calls_a_setting_what_the_settings_screen_calls_it())
+chk("1.41.5", "the feature list says a pin comes off a town once TradeLord has traded there",
+    the_feature_list_says_a_pin_comes_off_a_town_it_traded_in())
 chk("1.41.4", "the price tooltip and the profit colouring hand their state to the guard rather than closing over it",
     the_tooltip_patches_hand_their_state_over_instead_of_capturing_it())
 chk("1.41.4", "a market ranking sorts through one comparison for selling and one for buying, made once",
