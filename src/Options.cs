@@ -133,7 +133,6 @@ namespace TradeLord
 
         public bool MarkBestSellTownOnMap = true;
 
-        public float MarkerMaxTravelDays = 1.5f;
         public bool CoinSound = true;
 
         public bool BanditGetawayCheat = true;

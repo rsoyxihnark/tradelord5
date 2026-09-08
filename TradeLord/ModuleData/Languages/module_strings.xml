@@ -136,7 +136,7 @@
 		<string id="TL203" text="Exclude hostile markets"/>
 		<string id="TL204" text="Scan radius (map units, 0 = whole map)"/>
 		<string id="TL205" text="Minimum stock for buy suggestions"/>
-		<string id="TL206" text="Travel ceiling (days, 0 = off)"/>
+		<string id="TL206" text="Town travel ceiling (days, 0 = off)"/>
 		<string id="TL207" text="Village travel ceiling (days, 0 = off)"/>
 		<string id="TL208" text="Conservative route projection"/>
 		<string id="TL209" text="Bulk price simulation"/>
@@ -174,7 +174,6 @@
 		<string id="TL243" text="Economy settling delay (days, 0 = off)"/>
 		<string id="TL244" text="Trade XP multiplier"/>
 		<string id="TL245" text="Auto-mark best sell town on map"/>
-		<string id="TL246" text="Auto-marker travel ceiling (days, 0 = off)"/>
 		<string id="TL247" text="Coin sound on trade"/>
 		<string id="TL248" text="Detailed trade summary"/>
 		<string id="TL249" text="Silence trade messages" />
@@ -182,7 +181,7 @@
 		<string id="TL303" text="Never scan, suggest or auto-trade with settlements at war with you."/>
 		<string id="TL304" text="Limit price scans to markets within this straight-line distance. 0 = whole map."/>
 		<string id="TL305" text="Best-buy hints require at least this many units in stock. 0 = off. Live-price mode only, because observed mode records prices, not stock levels."/>
-		<string id="TL306" text="Markets farther than this many travel days are hidden from tooltips, and no suggested route's total trip (you -&gt; buy town -&gt; sell town) may exceed it. Default 3."/>
+		<string id="TL306" text="Markets farther than this many travel days are hidden from tooltips, the town marked on your map keeps to it, and no suggested route's total trip (you -&gt; buy town -&gt; sell town) may exceed it. Villages have their own stricter ceiling below. Default 3."/>
 		<string id="TL307" text="A separate, stricter travel ceiling for villages. Default 1."/>
 		<string id="TL308" text="Apply the resale safety factor to the sell side when ranking and totalling routes, so listed profit allows for prices drifting before you arrive. OFF shows raw margins. Routes must clear the safety factor to be listed either way, since that is the same test a buying pass applies on arrival."/>
 		<string id="TL309" text="Price a lot unit by unit through the game's own price model, so quantity and profit account for your own buying moving the price. OFF prices every unit at the first unit's price, which reads higher than the trip will pay. Towns and live-price mode only: villages expose no supply or demand data, and observed mode does not read live market internals."/>
@@ -219,8 +218,7 @@
 		<string id="TL342" text="Report what TradeLord would sell and buy, without trading. Treat the result as a best case: nothing moves, so the market does not react and every unit is priced at today's opening price. A real pass stops at the unit where the margin runs out, so it usually trades less and gets less per unit. The merchant's gold, your carry weight, the gold reserve and every per-item and per-visit cap are modelled exactly; only your own effect on the price is not."/>
 		<string id="TL343" text="No TradeLord trading before this campaign day, from the menu or on entry. Prices in a new campaign have not settled yet."/>
 		<string id="TL344" text="Scales the Trade XP awarded for automated profit. 0 disables XP."/>
-		<string id="TL345" text="Moves a map tracker to whichever nearby town pays most for your current cargo. Re-evaluated daily and whenever you enter or leave a settlement, so it follows what you are carrying now. Limited by the travel ceiling below. ON by default; clicking a town in the ledger panel still pins a marker by hand."/>
-		<string id="TL346" text="The auto-marker ignores towns farther than this many travel days away. Default 1.5."/>
+		<string id="TL345" text="Moves a map tracker to whichever town in reach pays most for your current cargo. It follows you as you ride and re-checks as you enter or leave a settlement. It keeps to the Town travel ceiling and the Scan radius, the same as everything else. ON by default; clicking a town in the ledger panel still pins a marker by hand."/>
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports, since you asked for it. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected."/>

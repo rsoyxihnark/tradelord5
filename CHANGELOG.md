@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.44.0
+
+- The town marked on your map now keeps to your Town travel ceiling and Scan radius like everything else, so it can no longer send you to a town TradeLord will not sell in.
+- The town marked on your map now follows you as you ride, instead of waiting until you enter or leave a settlement.
+- The Travel ceiling setting is now called Town travel ceiling, since that is what it governs.
+- The marker's own travel ceiling setting is gone, and TradeLord.log names the value it dropped from your TradeLord.ini.
+- A market that sold nothing now says why even when TradeLord bought something there, so Hold cargo for the best market can no longer hold your cargo in silence.
+- TradeLord no longer says a market had nothing worth trading when it had nothing to weigh up in the first place.
+
 ## 1.43.0
 
 - Leaving a market and walking straight back in counts as the same visit, so TradeLord no longer buys back the goods it has just sold you there.
