@@ -23,9 +23,9 @@
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
 - ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
 - ✅ The gold in your own purse counted in the same way, less your gold reserve and your spending cap for the visit, so a route never quotes you more of a good than you could pay for, and the panel says so when your purse is what is holding it back
-- ✅ Click any town to jump the camera there and pin a marker on it
+- ✅ Click any town to jump the camera there and pin a marker on it, and a pin comes off by itself once TradeLord has traded in that town
 - ✅ The best town for the cargo you are carrying, marked on the map for you
-- ✅ The five workshops in Calradia earning the most right now, with their town and their owner, on that same panel. In honest-merchant mode it shows yours instead
+- ✅ The five workshops in Calradia earning the most right now, with their town and their owner, on that same panel. With Live world prices turned off it shows yours instead
 - ✅ Your gold, your cargo against what your party can carry, your party's speed and the running total of what TradeLord has made you, along the top of that same panel
 - ✅ A warning on screen when your purse is under your gold reserve, or your cargo is too full to buy anything, so a market that trades nothing is never a mystery
 - ✅ A name on one of your item lists that matches no good in this game said on screen and named in the log, instead of quietly doing nothing
@@ -76,10 +76,10 @@
 - ✅ A minimum stock before it calls something worth buying
 - ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock
-- ✅ Caps on one good by count or by denars, on how many of it you will carry, on the share of the hold it may fill, and on the whole visit
+- ✅ Caps on one good by count or by denars, on how many of it you will carry, on the share of the hold it may fill, which ships at 45% so one cheap good cannot take your whole cargo, and on the whole visit
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ Profit measured against what you paid: the average, the last, or the cheapest you know of
-- ✅ An honest-merchant mode you can switch on, using only the prices you have seen in person, recorded market by market as you walk them
+- ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
 
