@@ -159,12 +159,41 @@ namespace TradeLord
             return null;
         }
 
+        private static StreamWriter _open;
+        private static bool _cannotHold;
+
+        private static StreamWriter Held()
+        {
+            if (_open != null || _cannotHold) return _open;
+            try
+            {
+                _open = new StreamWriter(new FileStream(
+                    _path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
+                { AutoFlush = true };
+            }
+            catch { _cannotHold = true; _open = null; }
+            return _open;
+        }
+
+        private static void LetGo()
+        {
+            _cannotHold = true;
+            try { _open?.Dispose(); } catch { }
+            _open = null;
+        }
+
         internal static void Write(string message)
         {
             if (!_resolved) { _resolved = true; _path = Resolve(); }
             if (_path == null) return;
-            string line = DateTime.Now.ToString("s") + "  " + message + Environment.NewLine;
-            try { File.AppendAllText(_path, line); }
+            string line = DateTime.Now.ToString("s") + "  " + message;
+            StreamWriter held = Held();
+            if (held != null)
+            {
+                try { held.WriteLine(line); return; }
+                catch { LetGo(); }
+            }
+            try { File.AppendAllText(_path, line + Environment.NewLine); }
             catch { }
         }
 

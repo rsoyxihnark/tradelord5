@@ -28,6 +28,22 @@ namespace TradeLord
 
         public const int NoRecordedBasis = -1;
 
+        public const float SameModifier = 0.0001f;
+
+        public static bool Unchanged(float mod, float neutral) =>
+            Math.Abs(mod - neutral) < SameModifier;
+
+        public static int MostThatHolds(int highest, Func<int, bool> holds)
+        {
+            int lowest = 0;
+            while (lowest < highest)
+            {
+                int mid = lowest + (highest - lowest + 1) / 2;
+                if (holds(mid)) lowest = mid; else highest = mid - 1;
+            }
+            return lowest;
+        }
+
         public static void AddPurchase(PurchaseRecord rec, int count, int totalPaid)
         {
             if (rec == null) return;
