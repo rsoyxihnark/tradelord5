@@ -291,6 +291,8 @@ namespace TradeLord
 
             internal bool Reports => Site != null;
 
+            internal string Key => Site != null ? Site.StringId : Met.StringId;
+
             internal string Where => Site != null ? "at " + Site.Name : "from " + Met.Name;
 
             internal string Headed(string label) => label + (Sim ? " (simulated, best case): " : ": ");
@@ -1149,9 +1151,9 @@ namespace TradeLord
                 if (!pass.Muted) Toast(msg, profit > 0 ? ToastGain : ToastFlat);
                 if (!pass.Sim && profit > 0) AwardTradeXp(profit, pass.Muted);
             }
-            else if (!pass.DirectionError && pass.Reports)
+            else if (!pass.DirectionError)
             {
-                if (tally.Any) Log.Repeatable(label + "-empty " + pass.Site.StringId, tally.Summary(),
+                if (tally.Any) Log.Repeatable(label + "-empty " + pass.Key, tally.Summary(),
                     label + " moved nothing " + pass.Where + ": " + tally.Summary());
                 Block stopped = tally.Dominant();
                 if (stopped != Block.None && !pass.Muted) NoteStalled(selling: true, stopped);
@@ -1371,9 +1373,7 @@ namespace TradeLord
         }
 
         private const int RankLivestock = TradeRules.RankLivestock;
-        private const int RankPlainMount = TradeRules.RankPlainMount;
         private const int RankHaulAnimal = TradeRules.RankHaulAnimal;
-        private const int RankPrizeMount = TradeRules.RankPrizeMount;
 
         private static int HerdShedRank(ItemObject item) =>
             item == null ? TradeRules.RankNotAnAnimal
@@ -1690,9 +1690,9 @@ namespace TradeLord
                     bought, spent);
                 if (!pass.Muted) Toast(msg, ToastSpend);
             }
-            else if (!pass.DirectionError && pass.Reports)
+            else if (!pass.DirectionError)
             {
-                if (tally.Any) Log.Repeatable(label + "-empty " + pass.Site.StringId, tally.Summary(),
+                if (tally.Any) Log.Repeatable(label + "-empty " + pass.Key, tally.Summary(),
                     label + " moved nothing " + pass.Where + ": " + tally.Summary());
                 if (!pass.Muted) NoteStalled(selling: false, tally.Dominant());
             }

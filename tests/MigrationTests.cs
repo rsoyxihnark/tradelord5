@@ -238,6 +238,18 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void EveryNumberASettingsFileCanCarryHasARangeToBeKeptInside()
+        {
+            var loose = new List<string>();
+            foreach (System.Reflection.FieldInfo field in typeof(Options).GetFields(
+                         System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                if ((field.FieldType == typeof(int) || field.FieldType == typeof(float)) &&
+                    !Limits.Knows(field.Name))
+                    loose.Add(field.Name);
+            Assert.Equal("", string.Join(", ", loose.ToArray()));
+        }
+
+        [Fact]
         public void AnEmptyFileAndANullFileAreBothSafe()
         {
             Assert.False(Migration.Lift(1, new Dictionary<string, string>(), new List<string>()));

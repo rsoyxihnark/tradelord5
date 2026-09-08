@@ -392,8 +392,14 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
 
 def a_road_trade_that_moved_nothing_says_why():
     road = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
+    passes = [method_body(S['Trading.cs'], one)
+              for one in ("private static void SellPass", "private static void BuyPass")]
+    stalled = [one.split("else if (!pass.DirectionError)", 1)[-1] for one in passes]
     return (ordered(road, "SellPass(Pass.Meet(", "BuyPass(Pass.Meet(", "ReportStalledPasses();")
-            and road.count("ReportStalledPasses();") == 1)
+            and road.count("ReportStalledPasses();") == 1
+            and all("else if (!pass.DirectionError)" in one for one in passes)
+            and all("NoteStalled(" in one and "pass.Site" not in one and "pass.Reports" not in one
+                    for one in stalled))
 
 def the_ledger_lists_a_route_you_could_not_take_this_second():
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes()")
@@ -1606,7 +1612,7 @@ chk("1.4.1", "quick-buy prices the shelf only when there is a budget to spend",
            and S['Trading.cs'].count("pass.Stock") == 2)
     (method_body(S['Trading.cs'], "private static void BuyPass")))
 chk("1.4.1", "a pass the gold-direction guard stopped does not blame the trade policy",
-    S['Trading.cs'].count("else if (!pass.DirectionError && pass.Reports)") == 2 and
+    S['Trading.cs'].count("else if (!pass.DirectionError)") == 2 and
     S['Trading.cs'].count("else if (!quiet && !directionError)") == 0 and
     'Tongue.Text("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
     'Tongue.Text("{=TL33}Nothing bought here - {REASON}.")' in S['Trading.cs'])
@@ -2382,10 +2388,11 @@ chk("1.6.15", "an item whose observations have all gone is dropped from the save
            and "_ledger.Remove(spent[i]);" in b and "shelf <= 0f" not in b)
     (method_body(S['Ledger.cs'], "private void PruneObservations")))
 chk("1.6.15", "each market that trades nothing is named in the log, not just the first with those reasons",
-    S['Trading.cs'].count('Log.Repeatable(label + "-empty " + pass.Site.StringId') == 2 and
-    all('Log.Repeatable(label + "-empty " + pass.Site.StringId' in
+    S['Trading.cs'].count('Log.Repeatable(label + "-empty " + pass.Key') == 2 and
+    all('Log.Repeatable(label + "-empty " + pass.Key' in
             method_body(S['Trading.cs'], one)
         for one in ("private static void SellPass", "private static void BuyPass")) and
+    "internal string Key => Site != null ? Site.StringId : Met.StringId;" in S['Trading.cs'] and
     S['Trading.cs'].count('SellPass(Pass.Open(settlement, quiet), "quick-sell"') == 1 and
     S['Trading.cs'].count('BuyPass(Pass.Open(settlement, quiet), "quick-buy"') == 1)
 chk("1.6.15", "ending a campaign clears what the log has already reported, so the next one reports it again",
@@ -4924,11 +4931,13 @@ def the_venue_is_the_only_thing_a_pass_asks_where_it_is():
     sell = method_body(t, "private static void SellPass")
     buy = method_body(t, "private static void BuyPass")
     held = method_body(t, "private sealed class Pass")
-    return (sell.count("pass.Site") == 2 and buy.count("pass.Site") == 4
-            and sell.count("pass.Reports") == 1 and buy.count("pass.Reports") == 2
+    return (sell.count("pass.Site") == 1 and buy.count("pass.Site") == 3
+            and sell.count("pass.Reports") == 0 and buy.count("pass.Reports") == 1
+            and sell.count("pass.Key") == 1 and buy.count("pass.Key") == 1
             and "Site" not in method_body(t, "public static void ExecuteRoadTrade")
             and all(one in held for one in (
                 "internal bool Reports => Site != null;",
+                "internal string Key => Site != null ? Site.StringId : Met.StringId;",
                 'internal string Where => Site != null ? "at " + Site.Name : "from " + Met.Name;',
                 "internal ItemRoster Stock => Site != null ? Site.ItemRoster : Met.ItemRoster;",
                 "internal int TillNow => Site != null ? Market.Gold : Met.PartyTradeGold;"))
