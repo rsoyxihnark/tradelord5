@@ -51,18 +51,16 @@ namespace TradeLord.Tests
         public void What_is_left_to_spend_is_the_purse_less_everything_held_back()
         {
             int held = TradeMath.Reserve(300, 3, 100);
-            Assert.Equal(400, TradeMath.Budget(1000, held, 0, 0, 0));
-            Assert.Equal(0, TradeMath.Budget(600, held, 0, 0, 0));
+            Assert.Equal(400, TradeMath.Budget(1000, held, 0, 0));
+            Assert.Equal(0, TradeMath.Budget(600, held, 0, 0));
         }
 
         [Fact]
-        public void The_spending_cap_counts_the_running_total_whichever_way_it_is_tallied()
+        public void The_spending_cap_counts_what_this_visit_has_already_spent()
         {
-            Assert.Equal(1000, TradeMath.Budget(9700, 300, 1000, 0, 0));
-            Assert.Equal(400, TradeMath.Budget(9100, 300, 1000, 600, 0));
-            Assert.Equal(400, TradeMath.Budget(9700, 300, 1000, 0, 600));
-            Assert.Equal(0, TradeMath.Budget(8700, 300, 1000, 1000, 0));
-            Assert.Equal(0, TradeMath.Budget(9700, 300, 1000, 0, 1000));
+            Assert.Equal(1000, TradeMath.Budget(9700, 300, 1000, 0));
+            Assert.Equal(400, TradeMath.Budget(9100, 300, 1000, 600));
+            Assert.Equal(0, TradeMath.Budget(8700, 300, 1000, 1000));
         }
 
         [Fact]
