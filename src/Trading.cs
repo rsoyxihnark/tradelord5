@@ -247,14 +247,8 @@ namespace TradeLord
 
         private static int _clashGeneration = -1;
 
-        internal static string AnimalGroup(ItemObject item)
-        {
-            if (!item.HasHorseComponent) return null;
-            if (IsHaulAnimal(item)) return "a haul animal";
-            if (IsSpareMount(item)) return "a mount";
-            if (IsTradableLivestock(item)) return "livestock";
-            return "an animal TradeLord treats as ordinary cargo";
-        }
+        internal static string AnimalGroup(ItemObject item) =>
+            item == null ? null : TradeRules.AnimalGroup(Describe(item));
 
         internal static bool ItemListsNameTwoAnimals()
         {
@@ -494,6 +488,7 @@ namespace TradeLord
             good.IsHaulAnimal = IsHaulAnimal(item);
             good.IsSpareMount = IsSpareMount(item);
             good.IsLivestock = IsTradableLivestock(item);
+            good.IsPrizeMount = IsPrizeMount(item);
             good.IsSmithingMaterial = IsSmithingMaterial(item);
             good.IsGrain = item == DefaultItems.Grain;
             return good;
@@ -512,6 +507,13 @@ namespace TradeLord
         internal static bool MaySell(ItemRosterElement el, ISet<string> lockedKeys,
                                      IDictionary<ItemObject, int> foodKeep,
                                      IDictionary<ItemObject, int> awaited,
+                                     out int keepCount, out Block why) =>
+            MaySell(Describe(el.EquipmentElement.Item), el, lockedKeys, foodKeep, awaited,
+                    out keepCount, out why);
+
+        internal static bool MaySell(in Good good, ItemRosterElement el, ISet<string> lockedKeys,
+                                     IDictionary<ItemObject, int> foodKeep,
+                                     IDictionary<ItemObject, int> awaited,
                                      out int keepCount, out Block why)
         {
             ItemObject item = el.EquipmentElement.Item;
@@ -521,7 +523,7 @@ namespace TradeLord
             facts.FoodHeld = HeldBack(foodKeep, item);
             facts.QuestsReadable = Errands.Known;
 
-            SellVerdict said = TradeRules.MaySell(Describe(item), el.Amount, facts, Options.Current,
+            SellVerdict said = TradeRules.MaySell(good, el.Amount, facts, Options.Current,
                 new AskTheGame { Locks = lockedKeys, What = el.EquipmentElement });
 
             TakeBack(awaited, item, said.DrewAwaited);
@@ -1786,7 +1788,8 @@ namespace TradeLord
                     if (pass.DirectionError) break;
                     ItemObject item = el.EquipmentElement.Item;
                     if (item != null && pass.Books.Bought(pass.Sim, item.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
-                    if (!TradePolicy.MaySell(el, pass.Locked, keepBack, awaited, out int keep, out Block stopped)) { tally.Note(stopped); continue; }
+                    Good good = TradePolicy.Describe(item);
+                    if (!TradePolicy.MaySell(good, el, pass.Locked, keepBack, awaited, out int keep, out Block stopped)) { tally.Note(stopped); continue; }
 
                     int remaining = el.Amount - keep + pass.Books.Held(pass.Sim, item.StringId);
                     if (remaining <= 0) { tally.Note(Block.TradedHereAlready); continue; }
@@ -1826,7 +1829,7 @@ namespace TradeLord
                             simTill -= price;
                             simGold += price;
                             profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);
-                            int herdRank = HerdShedRank(item);
+                            int herdRank = HerdShedRank(good);
                             pass.Books.NoteSale(item.StringId, price,
                                                 herdRank == RankHaulAnimal ? 0f : item.Weight,
                                                 TradePolicy.FoodValue(item));
@@ -2078,19 +2081,16 @@ namespace TradeLord
                     "purchase on the road", "buying on the road", "Road buying", why);
         }
 
-        private const int RankLivestock = 0;
-        private const int RankPlainMount = 1;
-        private const int RankHaulAnimal = 2;
-        private const int RankPrizeMount = 3;
+        private const int RankLivestock = TradeRules.RankLivestock;
+        private const int RankPlainMount = TradeRules.RankPlainMount;
+        private const int RankHaulAnimal = TradeRules.RankHaulAnimal;
+        private const int RankPrizeMount = TradeRules.RankPrizeMount;
 
-        private static int HerdShedRank(ItemObject item)
-        {
-            if (TradePolicy.IsTradableLivestock(item)) return RankLivestock;
-            if (TradePolicy.IsSpareMount(item))
-                return TradePolicy.IsPrizeMount(item) ? RankPrizeMount : RankPlainMount;
-            if (TradePolicy.IsHaulAnimal(item)) return RankHaulAnimal;
-            return -1;
-        }
+        private static int HerdShedRank(ItemObject item) =>
+            item == null ? TradeRules.RankNotAnAnimal
+                         : TradeRules.HerdShedRank(TradePolicy.Describe(item));
+
+        private static int HerdShedRank(in Good good) => TradeRules.HerdShedRank(good);
 
         public static void ExecuteHerdRelief(Settlement settlement, bool quiet = false)
         {
