@@ -85,6 +85,32 @@ namespace TradeLord
             return hold > int.MaxValue ? int.MaxValue : (int)hold;
         }
 
+        public const float StandingStill = 0.01f;
+
+        public const float WalkingPace = 5f;
+
+        public static void SpeedsInEffect(float partySpeed, float fleetSpeed,
+                                          out float land, out float sea)
+        {
+            land = partySpeed <= StandingStill ? WalkingPace : partySpeed;
+            sea = fleetSpeed <= StandingStill ? land : fleetSpeed;
+        }
+
+        public static float FleetSpeed(float total, int count, float slowest) =>
+            count <= 0 ? 0f : (total / count + slowest) * 0.5f;
+
+        public static float DaysAtSpeed(float distance, float landRatio,
+                                        float landSpeed, float seaSpeed)
+        {
+            if (distance <= 0f) return 0f;
+            float landLeg = distance * landRatio;
+            float seaLeg = distance * (1f - landRatio);
+            return (landLeg / landSpeed + seaLeg / seaSpeed) / 24f;
+        }
+
+        public static float DaysAtBestSpeed(float distance, float landSpeed, float seaSpeed) =>
+            distance <= 0f ? 0f : distance / (Math.Max(landSpeed, seaSpeed) * 24f);
+
         public static int Budget(int gold, int goldReserve, int maxSpendPerVisit,
                                  int spentThisVisit, int spentThisPass)
         {
