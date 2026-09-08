@@ -390,6 +390,21 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
                 method_body(t, "public static void ExecuteResupply")
             and "TradeRules.FoodValue(good)" in method_body(t, "public static void ExecuteHaulage"))
 
+def a_language_file_that_could_not_be_read_is_tried_again():
+    said = method_body(S['Tongue.cs'], "private static string Translated")
+    failed = said.find("if (read == null)")
+    settled = said.find("_saidFor = language;")
+    return (0 <= failed < settled
+            and "if (_tryingAgainAt > DateTime.UtcNow) return null;" in said
+            and "_tryingAgainAt = DateTime.UtcNow + BeforeTryingAgain;" in said
+            and "_tryingAgainAt = default(DateTime);" in said
+            and "if (_toldItFailedFor != language)" in said
+            and "_toldItFailedFor = English - 1;" in said
+            and "Guard.Read(\"Tongue.Read\", language, Reading, null)" in said
+            and "() =>" not in said
+            and "private static Dictionary<string, string> Reading(int language) => Read(Where(language));"
+                in S['Tongue.cs'])
+
 def a_price_is_found_by_its_town_rather_than_by_looking_down_the_list():
     led = S['Ledger.cs']
     record = method_body(led, "private void Record")
@@ -4916,6 +4931,8 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
+chk("1.41.8", "a language file that could not be read is tried again rather than settled for, without going back to disk for every line",
+    a_language_file_that_could_not_be_read_is_tried_again())
 chk("1.41.7", "a price already written down is found by its town rather than by looking down every town on the list, and the save is still written the way it always was",
     a_price_is_found_by_its_town_rather_than_by_looking_down_the_list())
 chk("1.41.7", "TradeLord keeps asking for the settings screen until MCM hands it over, so what you pick on it takes hold without a restart",

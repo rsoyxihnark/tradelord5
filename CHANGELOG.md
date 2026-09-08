@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.41.8
+
+- If TradeLord cannot read its language file for a moment, it now keeps trying and speaks your language as soon as it can, instead of falling back to English until you restart the game.
+
 ## 1.41.7
 
 - The language you pick, and every other setting you choose from a list, now take hold as you pick them instead of waiting for you to restart the game.
