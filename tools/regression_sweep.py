@@ -249,7 +249,7 @@ def method_body(src, signature):
 
 SHARED_PASS_RULES = {
     "CheapestFirst(": ('Trading.cs',
-        "private static List<(ItemRosterElement el, int price, int worth)> CheapestFirst"),
+        "private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst"),
     "WhatStopsBuying(": ('Rules.cs', "internal static Block WhatStopsBuying"),
     "Basis.For(": ('Trading.cs', "private struct Basis"),
     "TradeMath.SkipTheUnitsYouPaidFor(": ('TradeMath.cs',
@@ -259,6 +259,9 @@ SHARED_PASS_RULES = {
 
 def rank_rule():
     return method_body(S['Rules.cs'], "internal static int HerdShedRank")
+
+def food_rule():
+    return method_body(S['Rules.cs'], "internal static Dictionary<string, int> FoodKeep")
 
 def sell_rule():
     return method_body(S['Rules.cs'], "internal static SellVerdict MaySell<TGame>")
@@ -352,8 +355,9 @@ def the_selling_rules_stand_clear_of_the_game():
     fields = re.findall(r'internal (?:string|float|int|bool) (\w+);', described)
     describe = method_body(S['Trading.cs'], "internal static Good Describe")
     return ("TaleWorlds" not in rules
-            and rules.count("using ") == 1
+            and rules.count("using ") == 2
             and "using System;" in rules
+            and "using System.Collections.Generic;" in rules
             and "Options.Current" not in rules
             and '<Compile Include="..\\src\\Rules.cs" Link="Rules.cs"/>' in TESTPROJ
             and len(fields) >= 15
@@ -367,6 +371,24 @@ def the_selling_rules_stand_clear_of_the_game():
                         ("IsSmeltable", "PartsAllLearned", "IsLocked"))
             and "if (AnyListNamesAGood(Options.Current))" in describe
             and "public bool Locked() => IsLocked(Locks, What);" in S['Trading.cs'])
+
+def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
+    t = S['Trading.cs']
+    keep = method_body(t, "internal static Dictionary<ItemObject, int> FoodKeep")
+    return ("internal static Dictionary<string, int> FoodKeep(List<Ration> carried, float perDay, Options s)"
+                in S['Rules.cs']
+            and "MobileParty" not in S['Rules.cs']
+            and "ItemRoster" not in S['Rules.cs']
+            and "TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current)" in keep
+            and "byId[item.StringId] = item;" in keep
+            and "if (byId.TryGetValue(kept.Key, out ItemObject item)) keep[item] = kept.Value;" in keep
+            and t.count("AppetitePerDay()") == 3
+            and "internal static int FoodValue(ItemObject item) =>" in t
+            and "TradeRules.FoodValue(Describe(item));" in t
+            and "CostPerFood" not in t
+            and "int fed = TradeRules.FoodValue(good);" in
+                method_body(t, "public static void ExecuteResupply")
+            and "TradeRules.FoodValue(good)" in method_body(t, "public static void ExecuteHaulage"))
 
 def the_sell_pass_describes_a_good_once_and_hands_it_on():
     t = S['Trading.cs']
@@ -1051,7 +1073,8 @@ def chk(ver, claim, ok):
 
 chk("1.3.2", "smithing compares live DefaultItems, no cached static set",
     "item == DefaultItems.Charcoal" in S['Trading.cs'] and not re.search(r'static.*HashSet<ItemObject>', ALL))
-chk("1.3.2", "one food reserve in total, not per type", S['Trading.cs'].count("KeepFoodDays") == 2)
+chk("1.3.2", "one food reserve in total, not per type",
+    S['Trading.cs'].count("KeepFoodDays") == 0 and S['Rules.cs'].count("KeepFoodDays") == 2)
 chk("1.3.2", "ExcludeHostileTowns blocks trading, not just scans",
     (lambda gate: "IsMarket(s)" in gate
               and "Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)" in gate)
@@ -1169,7 +1192,8 @@ chk("1.3.6", "chunked trade lines silenced",
 chk("1.3.6", "smithing materials still ship tradable, as the old switch shipped off",
     "CraftingPolicy = PolicyBuySell" in S['Options.cs'])
 chk("1.3.8", "food reserve covers livestock",
-    "IsTradableLivestock(item) ? item.HorseComponent.MeatCount : 0" in S['Trading.cs'] and
+    "return good.IsLivestock ? good.MeatCount : 0;" in
+        method_body(S['Rules.cs'], "internal static int FoodValue") and
     ordered(sell_rule(),
             "bool livestock = good.HasHorse;",
             "int reserved = DrawKeepBack(amount, facts.FoodHeld, out bool fed);"))
@@ -1284,8 +1308,9 @@ chk("1.3.14", "one predicate for ledger-priced items",
     "TradePolicy.Priced" in S['Ledger.cs'])
 chk("1.3.14", "livestock routes listed", "HerdRoomForLivestock(MobileParty.MainParty)" in S['Ledger.cs'])
 chk("1.3.15", "food reserve filled cheapest-first",
-    "CostPerFood(x).CompareTo(CostPerFood(y))" in
-    method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> FoodKeep"))
+    "CostPerFood(x).CompareTo(CostPerFood(y))" in food_rule() and
+    "(float)held.Good.Value / FoodValue(held.Good)" in
+        between(S['Rules.cs'], "private static float CostPerFood", ";"))
 chk("1.3.15", "recurring errors reported once", "is recurring - not reporting it again" in S['Support.cs'])
 chk("1.3.16", "hold-for-best-market re-tested per chunk",
     "if (price < holdFloor) { tally.Note(Block.BelowBestMarket); break; }" in S['Trading.cs'])
@@ -1311,8 +1336,13 @@ chk("1.3.22", "panel takes mouse only",
     "IsFocusLayer = true" not in method_body(S['Panel.cs'], "private static void Show"))
 
 chk("1.3.23", "food value mirrors ItemRoster.TotalFood (livestock by MeatCount)",
-    "return item.IsFood ? 1 : 0;" in S['Trading.cs'] and
-    "Math.Min(el.Amount - had, (reserve + perUnit - 1) / perUnit)" in S['Trading.cs'])
+    "return good.IsFood ? 1 : 0;" in
+        method_body(S['Rules.cs'], "internal static int FoodValue") and
+    "return good.IsLivestock ? good.MeatCount : 0;" in
+        method_body(S['Rules.cs'], "internal static int FoodValue") and
+    "good.MeatCount = item.HasHorseComponent ? item.HorseComponent.MeatCount : 0;" in
+        method_body(S['Trading.cs'], "internal static Good Describe") and
+    "Math.Min(held.Amount - had, (reserve + perUnit - 1) / perUnit)" in food_rule())
 chk("1.3.23", "herd surplus counts mounts against unmounted men",
     "Math.Max(0, mounts - foot)" in S['Trading.cs'] and "NumberOfMenWithoutHorse" in S['Trading.cs'])
 chk("1.3.23", "herd guard includes attached parties", "party.AttachedParties" in S['Trading.cs'])
@@ -1323,8 +1353,8 @@ chk("1.3.23", "the access model is only asked about the settlement in context",
     "if (s != Settlement.CurrentSettlement) return true;" in S['Trading.cs'])
 
 chk("1.3.24", "livestock reserved only after ordinary food",
-    "return lx != ly ? lx.CompareTo(ly) : CostPerFood(x).CompareTo(CostPerFood(y));" in
-    method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> FoodKeep"))
+    "return lx != ly ? lx.CompareTo(ly) : CostPerFood(x).CompareTo(CostPerFood(y));" in food_rule() and
+    "int lx = x.Good.IsLivestock ? 1 : 0;" in food_rule())
 
 chk("1.3.25", "routes pair every top buy market against every top sell market",
     "foreach (var (to, sellPrice) in sells)" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"))
@@ -3204,18 +3234,18 @@ def the_panel_relabels_every_line_it_speaks():
             and ordered(body, raise_all, "PlayerGold ="))
 
 def the_food_floor_keeps_one_of_every_kind_without_stacking_on_the_days():
-    body = method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> FoodKeep")
-    return ("int variety = Options.Current.KeepEveryFoodKind ? Options.Current.KeepPerFoodKind : 0;" in body
-            and "if ((Options.Current.KeepFoodDays <= 0 && variety <= 0) || roster == null) return keep;" in body
-            and "if (IsTradableLivestock(item)) continue;" in body
-            and "int floor = Math.Min(el.Amount, variety);" in body
-            and "reserve -= (floor - held) * FoodValue(item);" in body
+    body = food_rule()
+    return ("int variety = s.KeepEveryFoodKind ? s.KeepPerFoodKind : 0;" in body
+            and "if ((s.KeepFoodDays <= 0 && variety <= 0) || carried == null) return keep;" in body
+            and "if (held.Good.IsLivestock) continue;" in body
+            and "int floor = Math.Min(held.Amount, variety);" in body
+            and "reserve -= (floor - had) * FoodValue(held.Good);" in body
             and "if (reserve <= 0) break;" in body
-            and ordered(body, "int variety = Options.Current.KeepEveryFoodKind ? Options.Current.KeepPerFoodKind : 0;",
-                        "if (variety > 0)", "int floor = Math.Min(el.Amount, variety);",
-                        "reserve -= (floor - held) * FoodValue(item);",
+            and ordered(body, "int variety = s.KeepEveryFoodKind ? s.KeepPerFoodKind : 0;",
+                        "if (variety > 0)", "int floor = Math.Min(held.Amount, variety);",
+                        "reserve -= (floor - had) * FoodValue(held.Good);",
                         "if (reserve <= 0) break;",
-                        "Math.Min(el.Amount - had, (reserve + perUnit - 1) / perUnit)"))
+                        "Math.Min(held.Amount - had, (reserve + perUnit - 1) / perUnit)"))
 
 def the_notes_are_the_changelog_section_for_the_version():
     import subprocess
@@ -3283,8 +3313,7 @@ chk("1.16.0", "the food floor is a switch that ships off, with its own amount th
     "_o.KeepEveryFoodKind" in M and "_o.KeepPerFoodKind" in M and
     re.search(r'SettingPropertyInteger\("\{=TL262\}[^"]*", 1, 50,', M) is not None)
 chk("1.16.0", "a herd is left out of the food floor, because it is slaughtered for meat rather than eaten as its own kind",
-    "if (IsTradableLivestock(item)) continue;" in
-        method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> FoodKeep") and
+    "if (held.Good.IsLivestock) continue;" in food_rule() and
     "slaughtered for meat" in spoken(ENGLISH).get('TL361', ''))
 
 chk("1.17.0", "the settings screen hands every preset its own settings, so Default puts the built-in ones back",
@@ -3293,10 +3322,12 @@ chk("1.17.0", "restocking runs between selling and buying, and asks nothing abou
     restocking_runs_between_selling_and_buying())
 chk("1.17.0", "the food it restocks to is a days-of-supply figure read off the party's own appetite",
     option_default('ResupplyFoodDays') == '3' and
-    "float perDay = -MobileParty.MainParty.FoodChange;" in
+    "return (int)Math.Ceiling(AppetitePerDay() * days);" in
         method_body(S['Trading.cs'], "internal static int FoodWanted") and
-    "item.IsFood && !item.HasHorseComponent" in
-        between(S['Trading.cs'], "internal static bool IsStorableFood", ";") and
+    "float perDay = party == null ? 0f : -party.FoodChange;" in
+        method_body(S['Trading.cs'], "private static float AppetitePerDay") and
+    "good.IsFood && !good.HasHorse" in
+        between(S['Rules.cs'], "internal static bool IsStorableFood", ";") and
     "_o.ResupplyFoodDays" in M)
 chk("1.19.0", "smeltable weapons are a three-way choice that ships on selling them, and an always-sell entry still wins",
     option_default('KeepSmeltableWeapons') == 'SmeltSellThem' and
@@ -4218,7 +4249,7 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and t.count("pass.Books.NoteHerdTaken();") == 2
             and t.count("pass.Books.Sold(pass.Sim,") == 2
             and "pass.Books.Sold(pass.Sim, it.StringId)" in method_body(t,
-                    "private static List<(ItemRosterElement el, int price, int worth)> CheapestFirst")
+                    "private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst")
             and "CheapestFirst(" in larder and "CheapestFirst(" in haul
             and t.count("pass.Books.Bought(pass.Sim,") == 1
             and t.count("pass.Books.Purchases(pass.Sim,") == 1)
@@ -4871,6 +4902,8 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
+chk("1.41.7", "the food reserve is worked out where a test can ask it, and the pass maps its answer back onto the goods you carry",
+    the_food_reserve_is_worked_out_where_a_test_can_ask_it())
 chk("1.41.7", "the selling pass describes a good once and hands the same description to every rule that asks",
     the_sell_pass_describes_a_good_once_and_hands_it_on())
 chk("1.41.7", "the rules that decide a purchase stand clear of the game too, and a good on the shelf is described once",
