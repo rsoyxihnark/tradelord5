@@ -174,33 +174,67 @@ namespace TradeLord
             return null;
         }
 
+        private const long MostItHolds = 999 * 1024;
+
         private static StreamWriter _open;
-        private static bool _cannotHold;
+        private static DateTime _holdAgainAt;
+        private static readonly TimeSpan BeforeHoldingAgain = TimeSpan.FromSeconds(30);
+        private static string _emptied;
 
         private static StreamWriter Held()
         {
-            if (_open != null || _cannotHold) return _open;
+            if (_open != null || DateTime.UtcNow < _holdAgainAt) return _open;
             try
             {
                 _open = new StreamWriter(new FileStream(
                     _path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
                 { AutoFlush = true };
             }
-            catch { _cannotHold = true; _open = null; }
+            catch { LetGo(); }
             return _open;
         }
 
         private static void LetGo()
         {
-            _cannotHold = true;
+            _holdAgainAt = DateTime.UtcNow + BeforeHoldingAgain;
             try { _open?.Dispose(); } catch { }
             _open = null;
         }
 
+        private static void EmptyIfItOutgrewItsLimit()
+        {
+            long held;
+            try { held = new FileInfo(_path).Length; }
+            catch { return; }
+            if (held <= MostItHolds) return;
+            try { File.WriteAllText(_path, ""); }
+            catch { return; }
+            _emptied = "TradeLord.log had grown to " + held / 1024 + " KB, past the " + MostItHolds / 1024 +
+                       " KB it is allowed, so it was emptied as the game started. It is only ever emptied " +
+                       "as the game starts, never as the game closes, so everything this session writes " +
+                       "stays in the file for you to send on.";
+        }
+
         internal static void Write(string message)
         {
-            if (!_resolved) { _resolved = true; _path = Resolve(); }
+            if (!_resolved)
+            {
+                _resolved = true;
+                _path = Resolve();
+                if (_path != null) EmptyIfItOutgrewItsLimit();
+            }
             if (_path == null) return;
+            if (_emptied != null)
+            {
+                string said = _emptied;
+                _emptied = null;
+                Put(said);
+            }
+            Put(message);
+        }
+
+        private static void Put(string message)
+        {
             string line = DateTime.Now.ToString("s") + "  " + message;
             StreamWriter held = Held();
             if (held != null)
