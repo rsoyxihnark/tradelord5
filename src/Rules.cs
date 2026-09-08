@@ -30,6 +30,7 @@ namespace TradeLord
         internal bool IsSpareMount;
         internal bool IsLivestock;
         internal bool IsSmithingMaterial;
+        internal bool IsGrain;
     }
 
     internal interface IWhatTheGameSays
@@ -75,6 +76,69 @@ namespace TradeLord
             any = held > 0;
             return any ? Math.Min(available, held) : 0;
         }
+
+        internal static bool ResaleAllowed(in Good good, Options s) =>
+            Listed(s.AlwaysSet, good) || TradeMath.PolicyAllows(PolicyFor(good, s), buying: false);
+
+        internal static bool MayBuy<TGame>(in Good good, bool toFeed, Options s, TGame game,
+                                           out Block why)
+            where TGame : struct, IWhatTheGameSays
+        {
+            why = Block.None;
+            if (good.Id == null || good.NotMerchandise) { why = Block.NotMerchandise; return false; }
+            if (Listed(s.NeverSet, good) || Listed(s.NeverBuySet, good))
+            { why = Block.NeverList; return false; }
+            if (game.Locked()) { why = Block.Locked; return false; }
+
+            bool always = Listed(s.AlwaysBuySet, good);
+            if (!always && !toFeed && s.NeverBuyGrain && good.IsGrain)
+            { why = Block.GrainSwitch; return false; }
+            if (!always && !TradeMath.PolicyAllows(PolicyFor(good, s), buying: true))
+            { why = Block.CategoryPolicy; return false; }
+            if (good.HasHorse)
+            {
+                if (good.IsLivestock) return true;
+                why = Block.MountOrHaulAnimal;
+                return false;
+            }
+            if (good.IsTradeGood) return true;
+            why = Block.NotTradable;
+            return false;
+        }
+
+        internal static bool MayHaul<TGame>(in Good good, Options s, TGame game)
+            where TGame : struct, IWhatTheGameSays
+        {
+            if (good.Id == null || !good.IsHaulAnimal || good.NotMerchandise) return false;
+            if (Listed(s.NeverSet, good) || Listed(s.NeverBuySet, good)) return false;
+            return !game.Locked();
+        }
+
+        internal static bool MayShedForHerd<TGame>(in Good good, bool questItem, Options s, TGame game)
+            where TGame : struct, IWhatTheGameSays
+        {
+            if (good.Id == null || !good.HasHorse || good.NotMerchandise || questItem) return false;
+            if (Listed(s.NeverSet, good)) return false;
+            if (s.ProtectSpecial && (good.IsUnique || good.IsCraftedByPlayer)) return false;
+            return !game.Locked();
+        }
+
+        internal static Block WhatStopsBuying(in Good good, int price, int budget,
+                                              (int count, int spent) taken, int held, float shareCap,
+                                              bool livestock, int herdRoom, bool lastInVillage, Options s)
+        {
+            if (price > budget) return Block.BudgetSpent;
+            if (s.BuyCapPerItem > 0 && taken.count >= s.BuyCapPerItem) return Block.ItemCountCap;
+            if (s.BuyValueCapPerItem > 0 && taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;
+            if (s.MaxHeldPerItem > 0 && held >= s.MaxHeldPerItem) return Block.HeldEnough;
+            if (shareCap > 0f && (held + 1) * good.Weight > shareCap) return Block.HeldEnough;
+            if (livestock && herdRoom <= 0) return Block.HerdFull;
+            if (lastInVillage) return Block.VillageLastUnit;
+            return Block.None;
+        }
+
+        internal static bool NoRoomForOneMore(in Good good, float roomLeft) =>
+            good.Weight > 0.01f && good.Weight > roomLeft;
 
         internal static SellVerdict MaySell<TGame>(in Good good, int amount, in SellFacts facts,
                                                    Options s, TGame game)
