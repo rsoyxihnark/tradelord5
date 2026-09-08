@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.41.2
+
+- Walking into a market, each new day on the road, and buying livestock no longer work out how many animals your party can drive one animal at a time.
+- Selling animals to relieve the herd no longer works out how many haul animals your cargo can spare one animal at a time.
+- The daily check on the road now works out how many animals must go once instead of twice.
+- Whether your animals are slowing you down is now decided on a real difference in your speed, not on the smallest one the game can report.
+- TradeLord no longer reopens TradeLord.log for every line it writes, so a busy market visit costs the game less.
+- Auto-mark best sell town on map no longer prices your cargo in a town whose gold could never beat the best town found so far.
+
 ## 1.41.1
 
 - When grain is what TradeLord left alone, the line that says why nothing was bought now says grain fills the cargo for little return, instead of naming a setting.

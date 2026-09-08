@@ -894,8 +894,8 @@ namespace TradeLord
         {
             Guard.Run("Action.DailyHerdCheck", () =>
             {
-                if (DrivenAnimalsToShed(MobileParty.MainParty) > 0)
-                    LogHerdState("on the road, no market in reach");
+                int shed = DrivenAnimalsToShed(MobileParty.MainParty);
+                if (shed > 0) LogHerdState("on the road, no market in reach", shed);
             });
             Guard.Run("Action.DailyTick", UpdateBestSellTownTracker);
         }
@@ -1546,15 +1546,9 @@ namespace TradeLord
                 if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return 0;
                 herd += Math.Max(0, mounts - foot);
                 float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });
-                int room = 0;
-                while (room < 256)
-                {
-                    float mod = (float)_herdModifier.Invoke(model,
-                        new object[] { men, herd + room + 1 + HerdCushion });
-                    if (mod != neutral) break;
-                    room++;
-                }
-                return room;
+                return TradeMath.MostThatHolds(256, room => room == 0 || TradeMath.Unchanged(
+                    (float)_herdModifier.Invoke(model,
+                        new object[] { men, herd + room + HerdCushion }), neutral));
             }
             catch (Exception e)
             {
@@ -1600,11 +1594,8 @@ namespace TradeLord
                 int driven = herd + spare;
                 if (driven <= 0) return 0;
                 float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });
-                int shed = 0;
-                while (shed < driven &&
-                       (float)_herdModifier.Invoke(model, new object[] { men, driven - shed }) != neutral)
-                    shed++;
-                return shed;
+                return TradeMath.MostThatHolds(driven, shed => shed == 0 || !TradeMath.Unchanged(
+                    (float)_herdModifier.Invoke(model, new object[] { men, driven - shed + 1 }), neutral));
             }
             catch (Exception e)
             {
@@ -1634,7 +1625,9 @@ namespace TradeLord
             }
         }
 
-        internal static void LogHerdState(string when)
+        internal static void LogHerdState(string when) => LogHerdState(when, -1);
+
+        internal static void LogHerdState(string when, int counted)
         {
             try
             {
@@ -1643,7 +1636,7 @@ namespace TradeLord
                 if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return;
                 HerdSplit(party, out int packs, out int stock);
                 int spare = Math.Max(0, mounts - foot);
-                int shed = DrivenAnimalsToShed(party);
+                int shed = counted >= 0 ? counted : DrivenAnimalsToShed(party);
                 Log.Write("herd check (" + when + "): " + men + " men of whom " + foot + " on foot, " +
                           mounts + " loose mount(s) with " + spare + " nobody rides, " +
                           packs + " pack animal(s), " + stock + " livestock, " +
@@ -1692,10 +1685,8 @@ namespace TradeLord
                 if (model == null) return 0;
                 bool atSea = Carry.Sailing();
                 float carried = model.CalculateTotalWeightCarried(party, atSea).ResultNumber;
-                for (int fewer = 1; fewer <= held; fewer++)
-                    if (model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber < carried)
-                        return fewer - 1;
-                return held;
+                return TradeMath.MostThatHolds(held, fewer => fewer == 0 ||
+                    model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber >= carried);
             }
             catch (Exception e)
             {
@@ -2491,6 +2482,7 @@ namespace TradeLord
                 if (LedgerBehavior.UnderAttack(s)) continue;
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;
                 if (!LedgerBehavior.WithinRadius(s)) continue;
+                if (town.Gold <= bestValue) continue;
                 if (cap > 0f)
                 {
                     if (Travel.StraightDaysFromParty(s) > cap) continue;
