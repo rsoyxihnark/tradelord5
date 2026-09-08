@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.42.3
+
+- Meeting a caravan or villagers on the road and trading nothing with them now tells you why, which it was meant to do from 1.42.0 and did not.
+- The feature list no longer says a route is quoted against what your purse holds, because since 1.42.0 the ledger lists a route whether or not you could pay for it today.
+
 ## 1.42.2
 
 - Selling at a market now works out the best markets for everything in your bags in one go, instead of once for each good, the same way buying already did.
