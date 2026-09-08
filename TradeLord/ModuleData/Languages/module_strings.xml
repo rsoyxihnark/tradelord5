@@ -172,6 +172,7 @@
 		<string id="TL243" text="Economy settling delay (days, 0 = off)"/>
 		<string id="TL244" text="Trade XP multiplier"/>
 		<string id="TL245" text="Auto-mark best sell town on map"/>
+		<string id="TL246" text="Write a price trace to the log"/>
 		<string id="TL247" text="Coin sound on trade"/>
 		<string id="TL248" text="Detailed trade summary"/>
 		<string id="TL249" text="Silence trade messages" />
@@ -219,6 +220,7 @@
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports, since you asked for it. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected."/>
+		<string id="TL389" text="For working out why a price TradeLord shows you does not match the one the trade screen offers. As you walk into a market, and again after you trade there by hand, TradeLord writes to TradeLord.log what that market pays and charges for every good you are carrying, read four ways: the way TradeLord reads it, and three ways through the market's own prices. It names the market, the price model the game is running, and any other mod that is changing either of them. OFF by default, since it makes the log much longer."/>
 		<string id="TL100" text="Language"/>
 		<string id="TL101" text="Knowledge"/>
 		<string id="TL102" text="Insight"/>
