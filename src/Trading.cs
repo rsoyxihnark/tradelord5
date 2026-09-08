@@ -1891,7 +1891,8 @@ namespace TradeLord
         private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst(
             Pass pass, Func<ItemObject, bool> wanted)
         {
-            var found = new List<(ItemRosterElement el, Good good, int price, int worth)>();
+            var shelf = new List<(ItemRosterElement el, int price)>();
+            var goods = new List<ItemObject>();
             ItemRoster shopRoster = pass.Stock;
             for (int i = 0; i < shopRoster.Count; i++)
             {
@@ -1901,8 +1902,18 @@ namespace TradeLord
                 if (pass.Books.Sold(pass.Sim, it.StringId)) continue;
                 if (el.Amount - pass.Books.Stocked(pass.Sim, it.StringId) <= 0) continue;
                 int price = pass.Price(el.EquipmentElement, selling: false);
+                if (price <= 0) continue;
+                shelf.Add((el, price));
+                goods.Add(it);
+            }
+            LedgerBehavior.Instance?.PrimeMarketsFor(goods);
+
+            var found = new List<(ItemRosterElement el, Good good, int price, int worth)>();
+            foreach (var (el, price) in shelf)
+            {
+                ItemObject it = el.EquipmentElement.Item;
                 int worth = TradePolicy.UnpaidWorth(it);
-                if (price <= 0 || price > worth) continue;
+                if (price > worth) continue;
                 found.Add((el, TradePolicy.Describe(it), price, worth));
             }
             found.Sort((x, y) => x.price.CompareTo(y.price));
@@ -2251,6 +2262,8 @@ namespace TradeLord
                 ItemRoster shopRoster = pass.Stock;
                 ItemRoster mine = pass.Party.ItemRoster;
                 int holdCap = Options.Current.MaxHeldPerItem;
+                var shelf = new List<(ItemRosterElement el, Good good)>();
+                var goods = new List<ItemObject>();
                 for (int i = 0; i < shopRoster.Count; i++)
                 {
                     ItemRosterElement el = shopRoster.GetElementCopyAtIndex(i);
@@ -2264,7 +2277,13 @@ namespace TradeLord
                     int held = mine.GetItemNumber(it) + pass.Books.Held(pass.Sim, it.StringId);
                     if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }
                     if (shareCap > 0f && (held + 1) * good.Weight > shareCap) { tally.Note(Block.HeldEnough); continue; }
-
+                    shelf.Add((el, good));
+                    goods.Add(it);
+                }
+                LedgerBehavior.Instance?.PrimeMarketsFor(goods);
+                foreach (var (el, good) in shelf)
+                {
+                    ItemObject it = el.EquipmentElement.Item;
                     var elsewhere = LedgerBehavior.Instance?.BestSell(it) ?? (null, 0);
                     if (elsewhere.Item1 == null || elsewhere.Item1 == pass.Site) { tally.Note(Block.NoResaleMarket); continue; }
 
