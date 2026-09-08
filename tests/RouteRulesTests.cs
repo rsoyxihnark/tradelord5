@@ -12,57 +12,57 @@ namespace TradeLord.Tests
         [Fact]
         public void The_gold_reserve_is_held_back_from_every_purse()
         {
-            Assert.Equal(700, TradeMath.Budget(1000, 300, NoVisitCap, 0, 0));
-            Assert.Equal(0, TradeMath.Budget(300, 300, NoVisitCap, 0, 0));
+            Assert.Equal(700, TradeMath.Budget(1000, 300, NoVisitCap, 0));
+            Assert.Equal(0, TradeMath.Budget(300, 300, NoVisitCap, 0));
         }
 
         [Fact]
         public void Below_the_reserve_the_budget_goes_negative_so_the_pass_stops()
         {
-            Assert.True(TradeMath.Budget(260, 300, NoVisitCap, 0, 0) < 0);
-            Assert.True(TradeMath.Budget(0, 300, NoVisitCap, 0, 0) < 0);
+            Assert.True(TradeMath.Budget(260, 300, NoVisitCap, 0) < 0);
+            Assert.True(TradeMath.Budget(0, 300, NoVisitCap, 0) < 0);
         }
 
         [Fact]
         public void A_visit_cap_binds_when_it_is_tighter_than_the_purse()
         {
-            Assert.Equal(400, TradeMath.Budget(5000, 300, 400, 0, 0));
-            Assert.Equal(150, TradeMath.Budget(5000, 300, 400, 250, 0));
-            Assert.Equal(0, TradeMath.Budget(5000, 300, 400, 400, 0));
+            Assert.Equal(400, TradeMath.Budget(5000, 300, 400, 0));
+            Assert.Equal(150, TradeMath.Budget(5000, 300, 400, 250));
+            Assert.Equal(0, TradeMath.Budget(5000, 300, 400, 400));
         }
 
         [Fact]
         public void The_purse_binds_when_it_is_tighter_than_the_visit_cap()
         {
-            Assert.Equal(200, TradeMath.Budget(500, 300, 10000, 0, 0));
+            Assert.Equal(200, TradeMath.Budget(500, 300, 10000, 0));
         }
 
         [Fact]
         public void A_visit_cap_of_zero_means_no_visit_cap_rather_than_no_spending()
         {
-            Assert.Equal(700, TradeMath.Budget(1000, 300, 0, 0, 0));
-            Assert.True(TradeMath.Budget(1000, 300, 0, 99999, 0) > 0);
+            Assert.Equal(700, TradeMath.Budget(1000, 300, 0, 0));
+            Assert.True(TradeMath.Budget(1000, 300, 0, 99999) > 0);
         }
 
         [Fact]
-        public void What_this_pass_has_already_spent_comes_off_both_limits()
+        public void What_this_visit_has_already_spent_comes_off_both_limits()
         {
-            Assert.Equal(500, TradeMath.Budget(1000, 300, NoVisitCap, 0, 200));
-            Assert.Equal(200, TradeMath.Budget(5000, 300, 400, 0, 200));
+            Assert.Equal(500, TradeMath.Budget(800, 300, NoVisitCap, 0));
+            Assert.Equal(200, TradeMath.Budget(4800, 300, 400, 200));
         }
 
         [Fact]
         public void Spending_never_takes_the_purse_below_the_reserve()
         {
-            int gold = 1000, reserve = 300, spentThisPass = 0;
+            int gold = 1000, reserve = 300, spent = 0;
             while (true)
             {
-                int budget = TradeMath.Budget(gold, reserve, NoVisitCap, 0, spentThisPass);
+                int budget = TradeMath.Budget(gold - spent, reserve, NoVisitCap, spent);
                 if (budget < 50) break;
-                spentThisPass += 50;
+                spent += 50;
             }
-            Assert.True(gold - spentThisPass >= reserve,
-                $"purse fell to {gold - spentThisPass}, under the {reserve} reserve");
+            Assert.True(gold - spent >= reserve,
+                $"purse fell to {gold - spent}, under the {reserve} reserve");
         }
     }
 
