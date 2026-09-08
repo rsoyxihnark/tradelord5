@@ -398,13 +398,43 @@ def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
             and "town.GetItemPrice(item, party, true)" in marker
             and marker.count("town.GetItemPrice(") == 1)
 
+def a_traded_market_drops_only_the_rankings_its_own_prices_decide():
+    ledger = S['Ledger.cs']
+    t = S['Trading.cs']
+    capture = method_body(ledger,
+        "public void CaptureSettlement(Settlement settlement, bool force, ISet<string> moved)")
+    drop = method_body(ledger, "private void DropRankings(Settlement settlement, ISet<string> moved)")
+    kinds = method_body(t, "private ISet<string> KindsMoved")
+    return ("public void CaptureSettlement(Settlement settlement, bool force = false) =>\n"
+            "            CaptureSettlement(settlement, force, null);" in ledger
+            and "DropRankings(settlement, Options.Current.Omniscient ? moved : null);" in capture
+            and "if (moved == null || moved.Count == 0 || !TillStillOpen(settlement))" in drop
+            and "ForgetPricedRankings();" in drop
+            and "if (kv.Value.kind == null || moved.Contains(kv.Value.kind)) spent.Add(kv.Key);" in drop
+            and "_routes = null;" in drop
+            and "(s?.SettlementComponent?.Gold ?? 0) > 0" in
+                between(ledger, "private static bool TillStillOpen", ";")
+            and "item?.ItemCategory?.StringId" in
+                between(ledger, "internal static string KindOf", ";")
+            and "_marketCache[key] = (hour, Options.Generation, KindOf(item), result);" in
+                method_body(ledger, "private List<(Settlement, int)> TopMarkets")
+            and "if (kind == null) return null;" in kinds
+            and "LedgerBehavior.KindOf(kv.Key)" in kinds)
+
 def capture_skipped_after_the_caches_are_dropped():
-    body = method_body(S['Ledger.cs'], "public void CaptureSettlement")
-    if "ForgetPricedRankings();" not in body or "if (Options.Current.Omniscient) return;" not in body:
+    ledger = S['Ledger.cs']
+    body = method_body(ledger,
+        "public void CaptureSettlement(Settlement settlement, bool force, ISet<string> moved)")
+    dropped = ("if (force || !Options.Current.Omniscient)\n"
+               "                DropRankings(settlement, Options.Current.Omniscient ? moved : null);")
+    if dropped not in body or "if (Options.Current.Omniscient) return;" not in body:
         return False
-    return (ordered(body, "ForgetPricedRankings();", "if (Options.Current.Omniscient) return;")
-            and "Options.Current.Omniscient" in method_body(S['Ledger.cs'],
-                    "private List<(Settlement, int)> TopMarkets"))
+    return (ordered(body, dropped, "if (Options.Current.Omniscient) return;")
+            and body.count("DropRankings(") == 1
+            and "Options.Current.Omniscient" in method_body(ledger,
+                    "private List<(Settlement, int)> TopMarkets")
+            and "CaptureSettlement(Site, force: true, KindsMoved());" in
+                method_body(S['Trading.cs'], "internal void Moved"))
 
 def hotkey_fallback_is_reported():
     body = method_body(S['Panel.cs'], "internal static InputKey PanelKey")
@@ -1338,11 +1368,13 @@ chk("1.3.33", "automated trading recaptures prices after it moves them",
                       "public static void ExecuteResupply",
                       "public static void ExecuteHaulage",
                       "private static void BuyPass")) and
-    "LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);" in
+    "LedgerBehavior.Instance?.CaptureSettlement(Site, force: true, KindsMoved());" in
         method_body(S['Trading.cs'], "internal void Moved") and
-    S['Trading.cs'].count("CaptureSettlement(Site, force: true)") == 1 and
+    S['Trading.cs'].count("CaptureSettlement(Site, force: true, KindsMoved());") == 1 and
     "internal void ForgetMarketRankings()" in S['Ledger.cs'] and
-    "ForgetPricedRankings();" in method_body(S['Ledger.cs'], "public void CaptureSettlement"))
+    "DropRankings(settlement, Options.Current.Omniscient ? moved : null);" in
+        method_body(S['Ledger.cs'],
+                    "public void CaptureSettlement(Settlement settlement, bool force, ISet<string> moved)"))
 _setters = [b for b in re.findall(r'\bset\b\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})', M)
             if "Options.Bump();" in b]
 chk("1.3.33", "every settings write bumps the generation every cache keys on",
@@ -1735,7 +1767,9 @@ chk("1.5.6", "the log prefers the game's user folder over the module folder",
     log_prefers_the_user_folder())
 chk("1.5.6", "log path resolution is attempted once, not per line",
     "if (_path == null) return;" in method_body(S['Support.cs'], "internal static void Write"))
-chk("1.5.6", "live-price mode records no price observations",
+chk("1.41.6", "a market TradeLord traded in drops only the rankings its own prices decide, and drops them all when its gold has run out",
+    a_traded_market_drops_only_the_rankings_its_own_prices_decide())
+chk("1.5.6", "live-price mode records no price observations, and a visit that records nothing leaves the market rankings standing",
     capture_skipped_after_the_caches_are_dropped())
 chk("1.5.6", "unreadable observations are pruned on both save and load, and none is dropped for its age",
     method_body(S['Ledger.cs'], "public override void SyncData").count("PruneExpired();") == 2 and
@@ -4435,7 +4469,7 @@ def every_pass_says_what_it_moved_from_one_place():
     return (ordered(moved, "_runMovedGoods = true;", "if (Sim) return;",
                     "if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);",
                     "CoinSound();", "if (Site == null) return;",
-                    "LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);")
+                    "LedgerBehavior.Instance?.CaptureSettlement(Site, force: true, KindsMoved());")
             and ordered(said, "TextObject said = Tongue.Text(sim ? simSaid : realSaid);",
                         'said.SetTextVariable("ITEMS", ItemSummary(detail, items));',
                         'said.SetTextVariable("GOLD", gold);', "return said;")
@@ -4474,8 +4508,9 @@ def a_price_move_keeps_the_markets_in_reach_it_did_not_change():
             and "_candidates = null;" not in priced
             and ordered(whole, "ForgetPricedRankings();", "_candidates = null;")
             and ledger.count("_candidates = null;") == 1
-            and "ForgetPricedRankings();" in capture
+            and "ForgetPricedRankings();" in method_body(ledger, "private void DropRankings(")
             and "ForgetMarketRankings();" not in capture
+            and "_candidates" not in method_body(ledger, "private void DropRankings(")
             and "ForgetMarketRankings();" in
                 method_body(ledger, "private void DropRankingsIfThePartyMoved")
             and "LedgerBehavior.Instance?.ForgetMarketRankings();" in
@@ -4740,7 +4775,7 @@ def a_pin_comes_off_the_map_once_tradelord_has_traded_there():
     t = S['Trading.cs']
     moved = method_body(t, "internal void Moved")
     return (ordered(moved, "if (Site == null) return;",
-                    "LedgerBehavior.Instance?.CaptureSettlement(Site, force: true);",
+                    "LedgerBehavior.Instance?.CaptureSettlement(Site, force: true, KindsMoved());",
                     'Guard.Run("Pass.PinCleared", () => LedgerPanel.Unpin(Site));')
             and ordered(moved, "if (Sim) return;", 'Guard.Run("Pass.PinCleared"')
             and t.count("LedgerPanel.Unpin(") == 1
