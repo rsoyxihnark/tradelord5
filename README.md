@@ -24,7 +24,7 @@
 - ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
 - ✅ A route listed whether or not your purse could pay for it today, so the panel always shows you where the profit is, and says under the routes when your gold reserve is what is stopping you buying
 - ✅ Click any town to jump the camera there and pin a marker on it, and a pin comes off by itself once TradeLord has traded in that town
-- ✅ The best town for the cargo you are carrying, marked on the map for you
+- ✅ The best town for the cargo you are carrying, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement
 - ✅ The five workshops in Calradia earning the most right now, with their town and their owner, on that same panel. With Live world prices turned off it shows yours instead
 - ✅ Your gold, your cargo against what your party can carry, your party's speed and the running total of what TradeLord has made you, along the top of that same panel
 - ✅ A warning on screen when your purse is under your gold reserve, or your cargo is too full to buy anything, so a market that trades nothing is never a mystery
@@ -33,13 +33,15 @@
 **What it does for you**
 
 - ✅ One trade entry in the town menu, selling then buying in one go, whenever you want it
-- ✅ Sells and buys the moment you enter a market by default
+- ✅ Sells and buys the moment you enter a market by default, once for each arrival: Wait here for some time, a walk through the lands, or anything else that drops you back at the town or village menu does not set it trading again, and it leaves that market alone until your party has taken to the road. Trade here now (TradeLord) still trades whenever you ask
+- ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
 - ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has and never paying more than the cheapest price it knows of for it, before it trades for profit
 - ✅ Buys and sells livestock, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
 - ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying no more than the cheapest price it knows of for one. It buys no riding horses or camels at all, and it stops before your gold reaches your reserve. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
 - ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it. Your herd is looked at three times a visit, as you enter a settlement, again once it has finished trading, and once more as you leave, so a penalty that arrives while you are in town is caught before you ride out, and losing men in a battle or to desertion is noticed the same way as picking up an animal. Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all, cheapest first at every step. It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, it keeps enough haul animals to carry what you are already carrying, and it keeps back as many animals as a quest of yours is waiting on. One switch turns it off
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
+- ✅ Holds trade goods and livestock you never paid for, the ones a town event hands you or a quest leaves in your bags, until a market beats what the cheapest market it knows would have charged for them by your margin, so they are never given away at the first stall that will take them
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, once you switch it on. Off out of the box, so looted gear goes to the first market that can pay for it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
@@ -77,7 +79,7 @@
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ Caps on one good by count or by denars, on how many of it you will carry, on the share of the hold it may fill, which ships at 45% so one cheap good cannot take your whole cargo, and on the whole visit
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
-- ✅ Profit measured against what you paid: the average, the last, or the cheapest you know of
+- ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know. It sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay that keeps it out of a brand new campaign until prices calm down
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
@@ -87,7 +89,7 @@
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM, with a Reset button at the top of it that puts every setting back to the value TradeLord ships with and empties your four item lists
 - ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting. Its trade messages, ledger panel, price tooltips, town menu entries and the settings screen itself all take the new language the moment you pick it, with no restart and no reload
 - ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303, and it runs on the 1.5.2.121216 beta too
-- ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it
+- ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it. It is kept from one session to the next, and the one thing that ever empties it is starting the game with it already past 999 KB, which it says in the log itself
 
 **All of it is yours to change.** Every feature above is a switch or a number on the settings screen,
 which TradeLord puts there through MCM. Install MCM alongside it and you can turn any one of them off,

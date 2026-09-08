@@ -2954,6 +2954,15 @@ def the_hook_moves_an_assigned_branch_onto_the_one_branch():
             and '`.claude/hooks/session-start.sh` exists it has already moved the checkout' in RULES
             and 'restores the owner\'s signature for the session and moves the checkout to `main`' in RULES)
 
+def the_rules_work_from_the_remote_rather_than_the_container():
+    return ('The source to work from is `origin/main` as it stands right now' in RULES
+            and 'git fetch origin main' in RULES
+            and 'it is never asked about' in RULES
+            and 'Where the two histories share no ancestor at all' in RULES
+            and 'Uncommitted changes are the one case that stops.' in RULES
+            and 'Never read the source, commit, or push on top of a checkout you have not read '
+                'against `origin/main` in this session.' in RULES)
+
 def the_rules_name_no_program_of_their_own():
     return (not re.search(r'Bannerlord|garrison|caravan|morale', RULES)
             and 'Use the words the program itself uses.' in RULES
@@ -2989,6 +2998,8 @@ chk("1.7.0", "the commit signature is the noreply address, written in one place 
     the_signature_is_written_in_one_place_and_is_the_noreply_address())
 chk("1.7.0", "the rules keep one branch and move an assigned branch's work onto it, leaving that branch alone",
     the_rules_keep_one_branch())
+chk("1.7.0", "the rules read the checkout against origin/main before anything else, and never make that a question",
+    the_rules_work_from_the_remote_rather_than_the_container())
 chk("1.7.0", "the session hook moves an assigned branch's checkout onto the one branch, and the rules say it does",
     the_hook_moves_an_assigned_branch_onto_the_one_branch())
 chk("1.7.0", "the working rules name no program of their own, so they carry to another repository unchanged",
@@ -3253,6 +3264,19 @@ def the_paste_text_is_the_changelog_without_its_markup():
             and [line for line in out[1:] if line] == said
             and "sections(text)" in NEXUS)
 
+def the_paste_tool_reads_past_an_unreleased_heading():
+    import subprocess
+    def run(*args):
+        return subprocess.run([sys.executable, 'tools/nexus_changelog.py'] + list(args),
+                              capture_output=True)
+    named = run('--notes', module_version())
+    asked = run('Unreleased')
+    return (named.returncode == 0 and named.stdout.startswith(b'- ')
+            and asked.returncode != 0
+            and b'no section for Unreleased' in asked.stderr
+            and "if wanted is None and found[0][0].lower() == 'unreleased':" in NEXUS
+            and "found = [(v, said) for v, said in found if v.lower() != 'unreleased']" in NEXUS)
+
 def a_version_that_has_not_shipped_is_refused_by_the_paste_tool():
     import subprocess
     made = subprocess.run([sys.executable, 'tools/nexus_changelog.py', '99.99.99'],
@@ -3265,6 +3289,8 @@ chk("1.11.0", "the paste text for the shipped version is its changelog entries w
     the_paste_text_is_the_changelog_without_its_markup())
 chk("1.11.0", "the paste tool refuses a version the changelog does not carry",
     a_version_that_has_not_shipped_is_refused_by_the_paste_tool())
+chk("1.11.0", "a shipped version's notes are still read while the changelog opens on Unreleased, and Unreleased is never handed out as one",
+    the_paste_tool_reads_past_an_unreleased_heading())
 
 def a_rule_that_names_missing_source_reports_itself_broken():
     mark = len(_lost)
