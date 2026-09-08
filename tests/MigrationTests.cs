@@ -202,6 +202,57 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void ASettingWrittenByHandIntoACurrentFileIsLeftForTheFileToReport()
+        {
+            var written = File("KeepSmeltableWeapons", "true", "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.False(Migration.Lift(Migration.Shape, written, notes));
+            Assert.Equal("true", written["KeepSmeltableWeapons"]);
+            Assert.Empty(notes);
+        }
+
+        [Fact]
+        public void AStepOnlyRunsOnAFileOlderThanTheShapeItArrivedIn()
+        {
+            var older = File("MarkerMaxTravelDays", "3");
+            Assert.True(Migration.Lift(5, older, new List<string>()));
+            Assert.False(older.ContainsKey("MarkerMaxTravelDays"));
+
+            var newer = File("MarkerMaxTravelDays", "3");
+            Assert.False(Migration.Lift(6, newer, new List<string>()));
+            Assert.Equal("3", newer["MarkerMaxTravelDays"]);
+        }
+
+        [Fact]
+        public void ARenameOnlyRunsOnAFileOlderThanTheShapeItArrivedIn()
+        {
+            var older = File("MaxTravelDays", "4");
+            Assert.True(Migration.Lift(6, older, new List<string>()));
+            Assert.Equal("4", older["MaxTravelDaysTown"]);
+
+            var newer = File("MaxTravelDays", "4");
+            Assert.False(Migration.Lift(7, newer, new List<string>()));
+            Assert.Equal("4", newer["MaxTravelDays"]);
+
+            var haulAnimals = File("BuyPackAnimals", "true");
+            Assert.False(Migration.Lift(5, haulAnimals, new List<string>()));
+            Assert.Equal("true", haulAnimals["BuyPackAnimals"]);
+        }
+
+        [Fact]
+        public void AFileAlreadyInTheCurrentShapeIsNeverLiftedAtAll()
+        {
+            var written = File("KeepFoodVariety", "3", "KeepSmeltableWeapons", "true",
+                               "PackAnimalFullCargoPremium", "1.5", "ObservationShelfLifeDays", "45",
+                               "MarkerMaxTravelDays", "3", "ScanRadius", "250", "MaxTravelDays", "4",
+                               "MaxVillageTravelDays", "2", "BuyPackAnimals", "true");
+            var notes = new List<string>();
+            Assert.False(Migration.Lift(Migration.Shape, written, notes));
+            Assert.Equal(9, written.Count);
+            Assert.Empty(notes);
+        }
+
+        [Fact]
         public void AFileWithoutTheOldHaulAnimalPremiumIsLeftAlone()
         {
             var written = File("GoldReserve", "800");
