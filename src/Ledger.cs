@@ -594,6 +594,27 @@ namespace TradeLord
             }
         }
 
+        internal void PrimeMarketsFor(List<ItemObject> goods)
+        {
+            if (goods == null || goods.Count == 0 || !Options.Current.Omniscient) return;
+            DropRankingsIfThePartyMoved();
+            int hour = (int)CampaignTime.Now.ToHours;
+            var cold = new List<ItemObject>();
+            var asked = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < goods.Count; i++)
+            {
+                ItemObject item = goods[i];
+                if (item == null || !asked.Add(item.StringId)) continue;
+                if (Ranked(item.StringId, true, hour) && Ranked(item.StringId, false, hour)) continue;
+                cold.Add(item);
+            }
+            PrimeLiveRankings(cold, hour);
+        }
+
+        private bool Ranked(string itemId, bool selling, int hour) =>
+            _marketCache.TryGetValue((itemId, selling), out var hit) &&
+            hit.hour == hour && hit.gen == Options.Generation;
+
         private List<(Settlement, int)> TopLive(ItemObject item, bool selling, int hour)
         {
             int minStock = Options.Current.MinTownStock;
@@ -782,6 +803,7 @@ namespace TradeLord
             routes.Sort((x, y) => rankByScore
                 ? y.Score.CompareTo(x.Score)
                 : y.ProfitPerDay.CompareTo(x.ProfitPerDay));
+            Bulk.Forget();
             return routes;
         }
 
