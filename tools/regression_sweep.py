@@ -557,20 +557,21 @@ def the_panel_reads_the_key_before_it_walks_the_screen():
                         "else if (map.IsEscapeMenuOpened || (HotkeyReleased() && !TypingOnScreen(map)))"))
 
 def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
-    write = method_body(S['Support.cs'], "internal static void Write")
+    put = method_body(S['Support.cs'], "private static void Put")
     held = method_body(S['Support.cs'], "private static StreamWriter Held")
     letgo = method_body(S['Support.cs'], "private static void LetGo")
     resolve = method_body(S['Support.cs'], "private static string Resolve")
     return ("FileMode.Append, FileAccess.Write, FileShare.ReadWrite" in held
             and "{ AutoFlush = true };" in held
-            and "if (_open != null || _cannotHold) return _open;" in held
-            and "catch { _cannotHold = true; _open = null; }" in held
-            and "_cannotHold = true;" in letgo
+            and "if (_open != null || DateTime.UtcNow < _holdAgainAt) return _open;" in held
+            and "catch { LetGo(); }" in held
+            and "_holdAgainAt = DateTime.UtcNow + BeforeHoldingAgain;" in letgo
             and "_open = null;" in letgo
-            and ordered(write, "StreamWriter held = Held();",
+            and ordered(put, "StreamWriter held = Held();",
                         "try { held.WriteLine(line); return; }",
                         "catch { LetGo(); }",
                         "File.AppendAllText(_path, line + Environment.NewLine);")
+            and "Put(message);" in method_body(S['Support.cs'], "internal static void Write")
             and 'File.AppendAllText(candidate, "");' in resolve
             and S['Support.cs'].count("File.AppendAllText(") == 2)
 
@@ -1275,7 +1276,9 @@ chk("1.3.5", "detailed-summary setting does not gate the log",
 chk("1.3.5", "log path worked out once per launch, at the first path that accepts the write",
     "foreach (string candidate in Candidates(FileName))" in
         method_body(S['Support.cs'], "private static string Resolve") and
-    "if (!_resolved) { _resolved = true; _path = Resolve(); }" in S['Support.cs'])
+    ordered(method_body(S['Support.cs'], "internal static void Write"),
+            "if (!_resolved)", "_resolved = true;", "_path = Resolve();") and
+    S['Support.cs'].count("_path = Resolve();") == 1)
 chk("1.3.5", "hotkey blocked while escape menu open", "!map.IsEscapeMenuOpened" in S['Panel.cs'])
 chk("1.3.5", "travel caches cleared on game end",
     'Guard.Run("GameEnd.Travel", Travel.Forget)' in S['SubModule.cs'])
@@ -5087,7 +5090,12 @@ def the_log_is_kept_from_one_launch_to_the_next():
     support = S['Support.cs']
     return ('File.AppendAllText(candidate, "");' in
                 method_body(support, "private static string Resolve")
-            and "File.WriteAllText(" not in support
+            and 'File.WriteAllText(_path, "");' in
+                method_body(support, "private static void EmptyIfItOutgrewItsLimit")
+            and support.count("File.WriteAllText(") == 1
+            and support.count("EmptyIfItOutgrewItsLimit();") == 1
+            and "EmptyIfItOutgrewItsLimit();" in
+                method_body(support, "internal static void Write")
             and "File.Delete(" not in support
             and "FileMode.Create" not in support
             and "FileMode.Truncate" not in support
@@ -5114,9 +5122,41 @@ def the_purchase_records_it_drops_are_named():
             and 'string.Join(", ", dropped.ToArray())' in body)
 
 
+def the_log_is_emptied_only_once_it_has_outgrown_its_limit():
+    support = S['Support.cs']
+    empty = method_body(support, "private static void EmptyIfItOutgrewItsLimit")
+    write = method_body(support, "internal static void Write")
+    return ("private const long MostItHolds = 999 * 1024;" in support
+            and ordered(empty, "try { held = new FileInfo(_path).Length; }",
+                        "if (held <= MostItHolds) return;",
+                        'try { File.WriteAllText(_path, ""); }',
+                        "_emptied =")
+            and ordered(write, "if (!_resolved)", "_path = Resolve();",
+                        "if (_path != null) EmptyIfItOutgrewItsLimit();",
+                        "if (_emptied != null)", "Put(said);", "Put(message);")
+            and support.count("MostItHolds") == 3)
+
+def one_line_the_log_would_not_take_never_slows_the_rest_of_the_session():
+    support = S['Support.cs']
+    held = method_body(support, "private static StreamWriter Held")
+    letgo = method_body(support, "private static void LetGo")
+    return ("_cannotHold" not in support
+            and "private static readonly TimeSpan BeforeHoldingAgain = TimeSpan.FromSeconds(30);" in support
+            and "if (_open != null || DateTime.UtcNow < _holdAgainAt) return _open;" in held
+            and "catch { LetGo(); }" in held
+            and ordered(letgo, "_holdAgainAt = DateTime.UtcNow + BeforeHoldingAgain;",
+                        "try { _open?.Dispose(); } catch { }", "_open = null;")
+            and support.count("LetGo();") == 2)
+
+
+chk("1.46.0", "TradeLord.log is emptied only once it has outgrown the size it is allowed, and only from the first line a launch writes",
+    the_log_is_emptied_only_once_it_has_outgrown_its_limit())
+chk("1.46.0", "a line the log would not take costs the file for half a minute rather than for the rest of the session",
+    one_line_the_log_would_not_take_never_slows_the_rest_of_the_session())
+
 chk("1.43.0", "stepping straight back into a market inside the same hour carries the same visit on, so neither what it has already spent nor what it has already traded starts again",
     a_market_you_step_back_into_inside_the_hour_is_the_same_visit())
-chk("1.43.0", "TradeLord.log is kept from one launch to the next rather than emptied",
+chk("1.43.0", "TradeLord.log is kept from one launch to the next, and the one thing that empties it is reached from the first line of a launch and nowhere else",
     the_log_is_kept_from_one_launch_to_the_next())
 chk("1.43.0", "TradeLord.ini is left alone when a settings handover sets every value to the one it already held",
     the_settings_file_is_left_alone_when_nothing_moved())
