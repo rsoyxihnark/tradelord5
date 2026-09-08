@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.42.2
+
+- Selling at a market now works out the best markets for everything in your bags in one go, instead of once for each good, the same way buying already did.
+
 ## 1.42.1
 
 - Walking into a market now works out the best markets for everything on the shelf in one go, instead of once for each good, so a busy market costs your game less.

@@ -1044,8 +1044,14 @@ namespace TradeLord
             pass.Capture();
 
             var plan = new List<ItemRosterElement>();
+            var goods = new List<ItemObject>();
             for (int i = 0; i < roster.Count; i++)
-                plan.Add(roster.GetElementCopyAtIndex(i));
+            {
+                ItemRosterElement held = roster.GetElementCopyAtIndex(i);
+                plan.Add(held);
+                goods.Add(held.EquipmentElement.Item);
+            }
+            LedgerBehavior.Instance?.PrimeMarketsFor(goods);
             var keepBack = TradePolicy.KeptBack(roster, out var awaited);
 
             pass.CountFrom();
