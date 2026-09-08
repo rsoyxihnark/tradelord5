@@ -22,12 +22,12 @@ namespace TradeLord
         internal bool Saw(Block reason) => _counts.ContainsKey(reason);
 
         private static bool Structural(Block reason) =>
-            reason == Block.NotTradable || reason == Block.NotMerchandise;
+            reason == Block.NotTradable || reason == Block.NotMerchandise ||
+            reason == Block.MountOrHaulAnimal;
 
         private static bool Guarded(Block reason) =>
             reason == Block.NeverList || reason == Block.Locked || reason == Block.Protected ||
-            reason == Block.QuestAnimal || reason == Block.MountOrHaulAnimal ||
-            reason == Block.FoodReserve;
+            reason == Block.QuestAnimal || reason == Block.FoodReserve;
 
         internal Block Dominant()
         {
@@ -97,8 +97,6 @@ namespace TradeLord
                     return Tongue.Text("{=TL383}your unique and crafted protection holds it");
                 case Block.QuestAnimal:
                     return Tongue.Text("{=TL384}a quest may be waiting on your animals");
-                case Block.MountOrHaulAnimal:
-                    return Tongue.Text("{=TL385}haul animals and mounts are not traded as livestock");
                 case Block.FoodReserve:
                     return Tongue.Text("{=TL386}your food reserve holds it back");
                 default:
