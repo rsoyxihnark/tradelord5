@@ -1811,7 +1811,6 @@ namespace TradeLord
                 if (s == party.CurrentSettlement) continue;
                 if (LedgerBehavior.UnderAttack(s)) continue;
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;
-                if (!LedgerBehavior.WithinRadius(s)) continue;
                 if (town.Gold <= bestValue) continue;
                 float cap = LedgerBehavior.TravelCeiling(s);
                 if (cap > 0f)
