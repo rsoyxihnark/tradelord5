@@ -168,6 +168,7 @@
 		<string id="TL243" text="Ekonomi oturma gecikmesi (gün, 0 = kapalı)"/>
 		<string id="TL244" text="Ticaret tecrübesi çarpanı"/>
 		<string id="TL245" text="En iyi satış şehrini haritada işaretle"/>
+		<string id="TL246" text="TradeLord.log'a fiyat izi yaz"/>
 		<string id="TL247" text="Ticarette para sesi"/>
 		<string id="TL248" text="Ayrıntılı ticaret özeti"/>
 		<string id="TL249" text="Ticaret iletilerini sustur" />
@@ -215,6 +216,7 @@
 		<string id="TL347" text="Bir geçiş gerçekten bir şey taşıdığında bozuk para sesi çal. Hiçbir şey taşımayan geçiş sessiz kalır."/>
 		<string id="TL348" text="Tek satırlık ticaret özetinde malları adlandır, örneğin 'TradeLord 8 Zeytin, 3 Şarap sattı, 240 dinar', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
 		<string id="TL349" text="Hem bir pazara girdiğinizde hem de yolda bir kervanla ya da bir köylü bölüğüyle karşılaştığınızda kendiliğinden yapılan ticaret yalnızca TradeLord.log'a yazılır, ekranda satır çıkmaz. Menüdeki ticaret girdisi her zaman bildirir, çünkü onu siz istediniz. İlk çalıştırma otomasyon bildirimi, boş kese uyarısı ve dolu kargo uyarısı bundan etkilenmez."/>
+		<string id="TL389" text="TradeLord'un size gösterdiği bir fiyatın ticaret ekranındakiyle neden tutmadığını bulmak içindir. Bir pazara girdiğinizde ve orada elle ticaret yaptıktan sonra TradeLord, o pazarın taşıdığınız her mal için ne ödediğini ve ne istediğini dört okuyuşla TradeLord.log'a yazar: TradeLord'un kendi okuyuşu ve pazarın kendi fiyatları üzerinden üç okuyuş. Pazarı, oyunun çalıştırdığı fiyat modelini ve bunlardan birini değiştiren başka bir modu adıyla yazar. Günlüğü çok uzattığı için varsayılan olarak KAPALI."/>
 		<string id="TL100" text="Dil"/>
 		<string id="TL101" text="Bilgi"/>
 		<string id="TL102" text="Kavrayış"/>

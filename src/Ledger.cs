@@ -199,6 +199,7 @@ namespace TradeLord
         {
             if (party != MobileParty.MainParty) return;
             Guard.Run("Ledger.OnSettlementEntered", () => CaptureSettlement(settlement));
+            PriceTrace.Say(settlement, "walked in");
         }
 
         private void OnDailyTick() => Guard.Run("Ledger.OnDailyTick", MatchPurchasesToWhatIsHeld);
@@ -257,6 +258,7 @@ namespace TradeLord
                     RecordSale(item.StringId, count);
                 }
                 CaptureSettlement(Settlement.CurrentSettlement, force: true);
+                PriceTrace.Say(Settlement.CurrentSettlement, "traded by hand");
             });
         }
 
