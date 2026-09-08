@@ -4979,6 +4979,7 @@ def a_market_visit_prices_each_town_once_for_everything_on_the_shelf():
     buy = method_body(t, "private static void BuyPass")
     cheapest = method_body(t,
         "private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst")
+    sell = method_body(t, "private static void SellPass")
     return ("PrimeLiveRankings(cold, hour);" in prime
             and "if (item == null || !asked.Add(item.StringId)) continue;" in prime
             and "if (Ranked(item.StringId, true, hour) && Ranked(item.StringId, false, hour)) continue;"
@@ -4989,7 +4990,10 @@ def a_market_visit_prices_each_town_once_for_everything_on_the_shelf():
             and ordered(cheapest, "goods.Add(it);",
                         "LedgerBehavior.Instance?.PrimeMarketsFor(goods);",
                         "TradePolicy.UnpaidWorth(it);")
-            and t.count("PrimeMarketsFor(goods);") == 2
+            and ordered(sell, "goods.Add(held.EquipmentElement.Item);",
+                        "LedgerBehavior.Instance?.PrimeMarketsFor(goods);",
+                        "Basis basis = Basis.For(item);")
+            and t.count("PrimeMarketsFor(goods);") == 3
             and l.count("PrimeLiveRankings(") == 3)
 
 
@@ -5020,7 +5024,7 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
-chk("1.42.1", "a market visit asks each town its prices once for everything on the shelf, through the same priming the route scan uses, and never asks again for a good it has already ranked this hour",
+chk("1.42.2", "a market visit asks each town its prices once for everything on the shelf and everything in your bags, through the same priming the route scan uses, and never asks again for a good it has already ranked this hour",
     a_market_visit_prices_each_town_once_for_everything_on_the_shelf())
 chk("1.42.1", "each layer of the trading code has a file of its own, so none of them is read out of Trading.cs any more",
     each_layer_of_the_trading_code_has_a_file_of_its_own())
