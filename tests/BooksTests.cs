@@ -246,6 +246,54 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void ForgettingOnlyTheDryRunKeepsWhatTheSittingReallyMoved()
+        {
+            Books books = Fresh();
+            books.NoteSold("wool");
+            books.NoteBought("grain", 40);
+            books.NotePurchase("iron", 200, 10f, 0);
+            books.NoteSale("cotton", 90, 2f, 3);
+            books.NoteShed(haulAnimal: true, spareMount: false);
+            books.NoteHerdTaken();
+
+            books.ForgetTheDryRun();
+
+            Assert.True(books.Sold(true, "wool"));
+            Assert.True(books.Bought(true, "grain"));
+            Assert.Equal((1, 40), books.Purchases(true, "grain"));
+            Assert.Equal(40, books.PaidOut(true));
+            Assert.True(books.Traded(true));
+
+            Assert.Equal(0, books.Purse(true));
+            Assert.Equal(0, books.TillDrawn(true));
+            Assert.Equal(0f, books.Weight(true));
+            Assert.Equal(0, books.FoodHeld(true));
+            Assert.Equal(0, books.Shed(true));
+            Assert.Equal(0, books.HaulsShed(true));
+            Assert.Equal(0, books.HerdTaken(true));
+            Assert.Equal(0, books.Held(true, "iron"));
+            Assert.Equal(0, books.Stocked(true, "iron"));
+            Assert.False(books.Sold(true, "cotton"));
+            Assert.False(books.Bought(true, "iron"));
+        }
+
+        [Fact]
+        public void ForgettingTheWholeVisitClearsWhatTheSittingReallyMovedAsWell()
+        {
+            Books books = Fresh();
+            books.NoteSold("wool");
+            books.NoteBought("grain", 40);
+
+            books.Forget();
+
+            Assert.False(books.Sold(false, "wool"));
+            Assert.False(books.Bought(false, "grain"));
+            Assert.False(books.Traded(false));
+            Assert.Equal(0, books.PaidOut(false));
+            Assert.Equal((0, 0), books.Purchases(false, "grain"));
+        }
+
+        [Fact]
         public void OnePassesBooksAreNotTheNextPassesBooks()
         {
             Books market = Fresh();

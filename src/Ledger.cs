@@ -161,6 +161,7 @@ namespace TradeLord
                 held[item.StringId] = had + el.Amount;
             }
             int goods = 0, units = 0;
+            var dropped = new List<string>();
             for (int i = 0; i < _purchases.Count; i++)
             {
                 PurchaseRecord rec = _purchases[i];
@@ -170,11 +171,13 @@ namespace TradeLord
                 int gone = rec.Count - have;
                 goods++;
                 units += gone;
+                dropped.Add(gone + " " + rec.ItemId);
                 TradeMath.DrainSale(rec, gone);
             }
             if (goods > 0)
                 Log.Write("purchase record: " + units + " unit(s) of " + goods + " good(s) left the party " +
-                          "without being sold, so what was paid for them is no longer held against a resale");
+                          "without being sold, so what was paid for them is no longer held against a resale: " +
+                          string.Join(", ", dropped.ToArray()));
         }
 
         private Dictionary<string, PurchaseRecord> Paid
