@@ -71,8 +71,7 @@
 
 **Settings, when you want to change anything**
 
-- ✅ Travel ceilings, so nothing it suggests is further than you care to ride
-- ✅ A scan radius, if you would rather it thought locally
+- ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, marks on your map or holds your cargo for is further than you care to ride
 - ✅ A minimum stock before it calls something worth buying
 - ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock

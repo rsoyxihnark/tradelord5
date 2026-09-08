@@ -869,7 +869,7 @@ def a_zero_cap_never_means_buy_nothing():
             and "private const int UncappedBuyProjection" in S['Ledger.cs'])
 
 def every_numeric_setting_that_switches_off_at_zero_says_so():
-    off = {'TL204': 'Scan radius', 'TL206': 'Travel ceiling',
+    off = {'TL206': 'Town travel ceiling',
            'TL207': 'Village travel ceiling', 'TL228': 'Sell loot up to tier',
            'TL235': 'Buy cap per item (count', 'TL236': 'Buy cap per item (denars',
            'TL237': 'Max spend per visit', 'TL243': 'Economy settling delay'}
@@ -1192,8 +1192,11 @@ chk("1.3.18", "neither pass trades before the settling delay is served, in a mar
     S['Trading.cs'].count("MarketOpen(") == 2 and
     S['Trading.cs'].count("Pass.Open(settlement, quiet)") == 5 and
     S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 2)
-chk("1.3.2", "ScanRadius applied in observed mode",
-    "if (!WithinRadius(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
+chk("1.3.2", "how far a scan reaches is the two travel ceilings alone, and the scan radius that used to narrow it is gone",
+    "WithinRadius" not in S['Ledger.cs'] and "ScanRadius" not in S['Ledger.cs'] and
+    "ScanRadius" not in S['Options.cs'] and "ScanRadius" not in M and
+    '"ScanRadius"' in S['Migrate.cs'] and
+    "return WithinTravelCeiling(s, lower);" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "!Eligible(town, out float lower)" in S['Ledger.cs'])
 chk("1.13.0", "no switch quietly writes another one, so what you set is what is kept",
     "EnableBuying" not in M and "EnableBuying" not in S['Options.cs'] and
@@ -1412,7 +1415,10 @@ chk("1.3.16", "food branch falls through to the sell rules",
             "            said.Allowed = true;\n            return said;") and
     "reserve[item] = held - drawn;" in
         method_body(S['Policy.cs'], "private static void TakeBack"))
-chk("1.3.17", "scan radius reaches the marker", "LedgerBehavior.WithinRadius(s)" in S['Trading.cs'])
+chk("1.3.17", "the marker picks its town through the same ceiling as everything else, with nothing of its own",
+    "WithinRadius" not in S['Trading.cs'] and
+    "float cap = LedgerBehavior.TravelCeiling(s);" in
+        method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo"))
 chk("1.3.17", "haircut always filters routes",
     "float realizable = TradePolicy.Realizable(sellPrice);" in S['Ledger.cs'] and
     "!TradePolicy.BuyAcceptable(buyPrice, realizable)) break;" in S['Ledger.cs'])
@@ -4082,7 +4088,8 @@ EVER_SHIPPED = {
     "KeepWageDays": "int", "Language": "int", "LedgerMenuEntry": "bool", "LivestockPolicy": "int",
     "MarkBestSellTownOnMap": "bool", "MarkerMaxTravelDays": "float", "MaxHeldPerItem": "int",
     "MaxHeldShare": "float", "MaxLootTier": "int", "MaxSpendPerVisit": "int",
-    "MaxTravelDays": "float", "MaxVillageTravelDays": "float", "MinProfitMargin": "float",
+    "MaxTravelDays": "float", "MaxTravelDaysTown": "float", "MaxTravelDaysVillage": "float",
+    "MaxVillageTravelDays": "float", "MinProfitMargin": "float",
     "MinTownStock": "int", "NeverBuyGrain": "bool", "NeverBuyItems": "string",
     "NeverSellItems": "string", "ObservationShelfLifeDays": "int", "Omniscient": "bool",
     "PackAnimalFullCargoPremium": "float", "PanelKey": "string", "PreferBestSellTown": "bool",
@@ -4108,7 +4115,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 6;' in S['Migrate.cs']
+    return ('public const int Shape = 7;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and ordered(read, "written[line.Substring(0, mark).Trim()]",
                         "written.TryGetValue(Migration.ShapeKey, out string held)",
@@ -4299,7 +4306,7 @@ def the_file_holds_a_number_to_the_same_limits_the_screen_does():
     taken = method_body(S['Config.cs'], "private static bool Taken")
     within = method_body(S['Config.cs'], "private static double Within")
     numeric = set(re.findall(r'^\s*public\s+(?:int|float)\s+(\w+)\s*=', S['Options.cs'], re.M))
-    return (len(ranged) >= 20 and len(picked) == 6 and table == wanted
+    return (len(ranged) >= 19 and len(picked) == 6 and table == wanted
             and numeric and not (numeric - set(table))
             and "(int)Within(field, int.Parse(" in taken
             and "(float)Within(field, float.Parse(" in taken

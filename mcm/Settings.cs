@@ -397,25 +397,20 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public bool ExcludeHostileTowns { get => _o.ExcludeHostileTowns; set { _o.ExcludeHostileTowns = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL204}Scan radius (map units, 0 = whole map)", 0f, 1000f, "0", Order = 2, RequireRestart = false,
-            HintText = "{=TL304}Limit price scans to markets within this straight-line distance. 0 = whole map.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
-        public float ScanRadius { get => _o.ScanRadius; set { _o.ScanRadius = value; Options.Bump(); } }
-
         [SettingPropertyInteger("{=TL205}Minimum stock for buy suggestions", 0, 100, Order = 3, RequireRestart = false,
             HintText = "{=TL305}Best-buy hints require at least this many units in stock. 0 = off. Live-price mode only, because observed mode records prices, not stock levels.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public int MinTownStock { get => _o.MinTownStock; set { _o.MinTownStock = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL206}Town travel ceiling (days, 0 = off)", 0f, 20f, "0.0", Order = 4, RequireRestart = false,
-            HintText = "{=TL306}Markets farther than this many travel days are hidden from tooltips, the town marked on your map keeps to it, and no suggested route's total trip (you -> buy town -> sell town) may exceed it. Villages have their own stricter ceiling below. Default 3.")]
+            HintText = "{=TL306}How far TradeLord looks for a town, in travel days, and the only thing that limits that distance. Towns farther than this are hidden from tooltips, held out of the routes, kept off the map marker, and never waited for by Hold cargo for the best market. No suggested route's total trip (you -> buy town -> sell town) may exceed it either. Villages have their own stricter ceiling below. Default 3.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
-        public float MaxTravelDays { get => _o.MaxTravelDays; set { _o.MaxTravelDays = value; Options.Bump(); } }
+        public float MaxTravelDaysTown { get => _o.MaxTravelDaysTown; set { _o.MaxTravelDaysTown = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL207}Village travel ceiling (days, 0 = off)", 0f, 10f, "0.0", Order = 5, RequireRestart = false,
-            HintText = "{=TL307}A separate, stricter travel ceiling for villages. Default 1.")]
+            HintText = "{=TL307}The same limit for villages, kept separate so you can hold them closer than towns. Default 1.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
-        public float MaxVillageTravelDays { get => _o.MaxVillageTravelDays; set { _o.MaxVillageTravelDays = value; Options.Bump(); } }
+        public float MaxTravelDaysVillage { get => _o.MaxTravelDaysVillage; set { _o.MaxTravelDaysVillage = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL208}Conservative route projection", Order = 6, RequireRestart = false,
             HintText = "{=TL308}Apply the resale safety factor to the sell side when ranking and totalling routes, so listed profit allows for prices drifting before you arrive. OFF shows raw margins. Routes must clear the safety factor to be listed either way, since that is the same test a buying pass applies on arrival.")]
@@ -549,7 +544,7 @@ namespace TradeLord.Mcm
         public float TradeXpMultiplier { get => _o.TradeXpMultiplier; set { _o.TradeXpMultiplier = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL245}Auto-mark best sell town on map", Order = 13, RequireRestart = false,
-            HintText = "{=TL345}Moves a map tracker to whichever town in reach pays most for your current cargo. It follows you as you ride and re-checks as you enter or leave a settlement. It keeps to the Town travel ceiling and the Scan radius, the same as everything else. ON by default; clicking a town in the ledger panel still pins a marker by hand.")]
+            HintText = "{=TL345}Moves a map tracker to whichever town in reach pays most for your current cargo. It follows you as you ride and re-checks as you enter or leave a settlement. It keeps to the Town travel ceiling, the same as everything else. ON by default; clicking a town in the ledger panel still pins a marker by hand.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool MarkBestSellTownOnMap { get => _o.MarkBestSellTownOnMap; set { _o.MarkBestSellTownOnMap = value; Options.Bump(); } }
 

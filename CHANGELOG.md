@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.45.0
+
+- Town travel ceiling and Village travel ceiling are now the only two things deciding how far TradeLord looks, and everything obeys them: the tooltips, the routes, the town marked on your map, and how far Hold cargo for the best market will wait.
+- Hold cargo for the best market now waits only for a town within your Town travel ceiling and a village within your Village travel ceiling, three days and one day out of the box, instead of for the best price anywhere in Calradia.
+- The scan radius setting is gone, since those two ceilings now cover what it did, and TradeLord.log names the value it dropped from your TradeLord.ini.
+- Your travel ceilings keep everything you had set: TradeLord.ini carries them forward under their new names by itself.
+- The feature list drops the scan radius and names the two travel ceilings instead.
+
 ## 1.44.0
 
 - The town marked on your map now keeps to your Town travel ceiling and Scan radius like everything else, so it can no longer send you to a town TradeLord will not sell in.

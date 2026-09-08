@@ -397,13 +397,6 @@ namespace TradeLord
 
         private const int UncappedBuyProjection = 500;
 
-        internal static bool WithinRadius(Settlement s)
-        {
-            float radius = Options.Current.ScanRadius;
-            if (radius <= 0f) return true;
-            return MobileParty.MainParty.GetPosition2D.Distance(s.GetPosition2D) <= radius;
-        }
-
         internal static int StockOf(Settlement s, ItemObject item)
         {
             try { return s.ItemRoster?.GetItemNumber(item) ?? 0; }
@@ -416,15 +409,14 @@ namespace TradeLord
             if (!TradeActionBehavior.IsMarket(s)) return false;
             if (UnderAttack(s) || VillageShut(s)) return false;
             if (Options.Current.ExcludeHostileTowns && IsHostile(s)) return false;
-            if (!WithinRadius(s)) return false;
             lower = Travel.StraightDaysFromParty(s);
             return WithinTravelCeiling(s, lower);
         }
 
         internal static float TravelCeiling(Settlement s)
         {
-            float cap = Options.Current.MaxTravelDays;
-            float vcap = Options.Current.MaxVillageTravelDays;
+            float cap = Options.Current.MaxTravelDaysTown;
+            float vcap = Options.Current.MaxTravelDaysVillage;
             if (s.IsVillage && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;
             return cap;
         }
@@ -714,7 +706,7 @@ namespace TradeLord
             Bulk.Forget();
             var routes = new List<TradeRoute>();
             ISet<string> locked = TradePolicy.LockedKeys();
-            float cap = Options.Current.MaxTravelDays;
+            float cap = Options.Current.MaxTravelDaysTown;
             bool rankByScore = Options.Current.ConfidenceRanking;
             var pressure = CaravanPressure();
             var wanted = new List<ItemObject>();

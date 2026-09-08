@@ -151,8 +151,54 @@ namespace TradeLord.Tests
         public void TheAutoMarkerCeilingHasNoRangeLeftToKeepItInside()
         {
             Assert.False(Limits.Knows("MarkerMaxTravelDays"));
-            Assert.True(Limits.Knows("MaxTravelDays"));
-            Assert.True(Limits.Knows("MaxVillageTravelDays"));
+            Assert.False(Limits.Knows("ScanRadius"));
+            Assert.False(Limits.Knows("MaxTravelDays"));
+            Assert.False(Limits.Knows("MaxVillageTravelDays"));
+            Assert.True(Limits.Knows("MaxTravelDaysTown"));
+            Assert.True(Limits.Knows("MaxTravelDaysVillage"));
+            Assert.Equal("0 and 20", Limits.Range("MaxTravelDaysTown"));
+            Assert.Equal("0 and 10", Limits.Range("MaxTravelDaysVillage"));
+        }
+
+        [Theory]
+        [InlineData("3", "1")]
+        [InlineData("0", "0")]
+        [InlineData("7.5", "2.5")]
+        public void TheTravelCeilingsKeepWhatWasSavedUnderTheirOldNames(string town, string village)
+        {
+            var written = File("MaxTravelDays", town, "MaxVillageTravelDays", village,
+                               "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(6, written, notes));
+            Assert.False(written.ContainsKey("MaxTravelDays"));
+            Assert.False(written.ContainsKey("MaxVillageTravelDays"));
+            Assert.Equal(town, written["MaxTravelDaysTown"]);
+            Assert.Equal(village, written["MaxTravelDaysVillage"]);
+            Assert.Equal("800", written["GoldReserve"]);
+            Assert.NotEmpty(notes);
+        }
+
+        [Fact]
+        public void ATravelCeilingAlreadyUnderItsNewNameIsNotOverwritten()
+        {
+            var written = File("MaxTravelDays", "9", "MaxTravelDaysTown", "4");
+            Assert.True(Migration.Lift(6, written, new List<string>()));
+            Assert.False(written.ContainsKey("MaxTravelDays"));
+            Assert.Equal("4", written["MaxTravelDaysTown"]);
+        }
+
+        [Theory]
+        [InlineData("0")]
+        [InlineData("250")]
+        [InlineData("1000")]
+        public void TheScanRadiusIsDroppedAndNamed(string held)
+        {
+            var written = File("ScanRadius", held, "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(6, written, notes));
+            Assert.False(written.ContainsKey("ScanRadius"));
+            Assert.Equal("800", written["GoldReserve"]);
+            Assert.NotEmpty(notes);
         }
 
         [Fact]
@@ -188,7 +234,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(6, Migration.Shape);
+            Assert.Equal(7, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));

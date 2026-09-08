@@ -50,12 +50,10 @@ namespace TradeLord
 
         public bool ExcludeHostileTowns = true;
 
-        public float ScanRadius = 0f;
-
         public int MinTownStock = 10;
 
-        public float MaxTravelDays = 3f;
-        public float MaxVillageTravelDays = 1f;
+        public float MaxTravelDaysTown = 3f;
+        public float MaxTravelDaysVillage = 1f;
 
         public bool ConservativeRouteProjection = true;
 
