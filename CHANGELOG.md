@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.47.1
+
+- Every price TradeLord quotes you is now read from a market the same way the trade screen reads it, naming the merchant you are trading with, which brings the tooltip, the ledger panel and the routes into line with the price you are actually offered.
+- Village prices moved the most, because a village's own shelves were being left out of what TradeLord read there.
+
 ## 1.47.0
 
 - A new setting, Write a price trace to the log, off out of the box: turn it on and TradeLord writes to TradeLord.log what the market you are standing in pays and charges for every good you are carrying, so a price it shows you that the trade screen does not offer can be tracked down.
