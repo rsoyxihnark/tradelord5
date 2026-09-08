@@ -1,7 +1,7 @@
 import io, re, sys
 
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
-     ['Trading.cs', 'Policy.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
+     ['Trading.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
       'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
       'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
@@ -139,7 +139,7 @@ def compat_checks_every_game_hook():
     reflected = sorted({t.split('.')[-1] + '.' + m for t, m in
                         re.findall(r'typeof\((\w+)\)\.GetMethod\(\s*"(\w+)"', ALL)})
     fields = sorted({'_' + n for n in re.findall(r'____(\w+)', ALL)}
-                   | set(re.findall(r'"(_\w+)"', S['Trading.cs'])))
+                   | set(re.findall(r'"(_\w+)"', ALL)))
     compat_fields = sorted({p.split('.')[-1] for p in (compat_list('ReflectedFields') or [])})
     return (len(reflected) > 0 and len(fields) > 0
             and compat_list('HarmonyTargets') == harmony_targets()
@@ -149,7 +149,7 @@ def compat_checks_every_game_hook():
 def refusal_reasons_are_named():
     promised = {'Locked', 'CategoryPolicy', 'FoodReserve', 'BelowMargin',
                 'MerchantTillEmpty', 'BudgetSpent', 'CarryWeight', 'HerdFull'}
-    phrase = method_body(S['Trading.cs'], 'internal static TextObject Phrase')
+    phrase = method_body(S['Reasons.cs'], 'internal static TextObject Phrase')
     return promised <= set(re.findall(r'case Block\.(\w+):', phrase))
 
 def projects_pin_one_reference_assembly():
@@ -1778,10 +1778,10 @@ chk("1.5.1", "confidence measures the walk, not two price APIs disagreeing",
     "int flatSell = q.OpeningSellPrice * q.Units;" in S['Ledger.cs'] and
     "- q.OpeningBuyPrice * q.Units;" in S['Ledger.cs'])
 chk("1.5.1", "the no-trade message reports a blocking rule, not a structural exclusion",
-    "private static bool Structural(Block reason)" in S['Trading.cs'] and
+    "private static bool Structural(Block reason)" in S['Reasons.cs'] and
     "if (!Structural(kv.Key) && (kv.Value > best" in
-    method_body(S['Trading.cs'], "internal Block Dominant") and
-    "Structural" not in method_body(S['Trading.cs'], "internal string Summary"))
+    method_body(S['Reasons.cs'], "internal Block Dominant") and
+    "Structural" not in method_body(S['Reasons.cs'], "internal string Summary"))
 chk("1.5.1", "no two settings in one MCM group claim the same position",
     mcm_orders_unique())
 
@@ -2150,7 +2150,7 @@ chk("1.6.5", "the route scan is reused within the hour and dropped with the mark
     "_routeGen != Options.Generation" in S['Ledger.cs'])
 chk("1.6.5", "a village keeping its last unit of each good says so",
     "case Block.VillageLastUnit:" in
-        method_body(S['Trading.cs'], "internal static TextObject Phrase") and
+        method_body(S['Reasons.cs'], "internal static TextObject Phrase") and
     "TL83" in strings_declared())
 
 chk("1.6.6", "the always-sell list governs selling only, never what quick-buy purchases",
@@ -2393,7 +2393,7 @@ chk("1.6.16", "holding cargo for a better market is named as its own reason, not
     (lambda b: b.count("case Block.BelowBestMarket:") == 1
            and '{=TL85}' in b and '{=TL42}' in b
            and ordered(b, "case Block.BelowMargin:", '{=TL42}', "case Block.BelowBestMarket:"))
-    (method_body(S['Trading.cs'], "internal static TextObject Phrase")) and
+    (method_body(S['Reasons.cs'], "internal static TextObject Phrase")) and
     "TL85" in strings_declared())
 def the_herd_guard_is_re_armed_and_says_once_why_it_is_off():
     forget = method_body(S['Trading.cs'], "internal static void ForgetVisit")
@@ -2418,7 +2418,7 @@ chk("1.6.16", "a full herd is named as its own reason, not as a full cargo hold"
     (lambda b: b.count("case Block.HerdFull:") == 1
            and '{=TL86}' in b and '{=TL44}' in b
            and ordered(b, "case Block.CarryWeight:", '{=TL44}', "case Block.HerdFull:"))
-    (method_body(S['Trading.cs'], "internal static TextObject Phrase")) and
+    (method_body(S['Reasons.cs'], "internal static TextObject Phrase")) and
     "TL86" in strings_declared() and
     "if (pass.Reports && tally.Saw(Block.CarryWeight)) _cargoWasFull = true;" in S['Trading.cs'])
 chk("1.6.16", "the auto-marker is put back on the map when a save loads, and cannot cost the menus if it fails",
@@ -2526,8 +2526,8 @@ chk("1.6.24", "the purse rule, route confidence and the item lists are proved by
     the_route_rules_are_covered_by_tests_the_build_runs())
 
 def the_purse_outranks_the_reasons_that_are_merely_counted():
-    body = method_body(S['Trading.cs'], "internal Block Dominant")
-    return ("if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;" in body
+    body = method_body(S['Reasons.cs'], "internal Block Dominant")
+    return ("if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;" in S['Reasons.cs']
             and ordered(body, "if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;",
                         "foreach (var kv in _counts)"))
 
@@ -2710,8 +2710,8 @@ chk("1.6.29", "what is left to spend is worked out in one place for both the war
     what_is_left_to_spend_is_worked_out_in_one_place())
 
 def a_tie_between_reasons_is_broken_the_same_way_every_time():
-    dominant = method_body(S['Trading.cs'], "internal Block Dominant")
-    summary = method_body(S['Trading.cs'], "internal string Summary")
+    dominant = method_body(S['Reasons.cs'], "internal Block Dominant")
+    summary = method_body(S['Reasons.cs'], "internal string Summary")
     return ("kv.Value == best && kv.Key < top" in dominant and
             "x.Key.CompareTo(y.Key)" in summary)
 
@@ -2840,7 +2840,7 @@ def a_good_you_already_hold_enough_of_is_not_bought_again():
             and "if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }" in body
             and "if (s.MaxHeldPerItem > 0 && held >= s.MaxHeldPerItem) return Block.HeldEnough;" in body
             and body.count("held++;") == 2
-            and "Block.HeldEnough" in method_body(S['Trading.cs'], "internal static TextObject Phrase"))
+            and "Block.HeldEnough" in method_body(S['Reasons.cs'], "internal static TextObject Phrase"))
 
 def the_holding_cap_leaves_selling_alone():
     return ("MaxHeldPerItem" not in method_body(S['Trading.cs'], "private static void SellPass")
@@ -3369,7 +3369,7 @@ chk("1.14.4", "the sell pass names a stopping rule only when one fired, so a car
               and ordered(sell, "Block stopped = tally.Dominant();",
                           "if (stopped != Block.None && !pass.Muted)"))
     (method_body(S['Trading.cs'], "private static void SellPass")) and
-    "if (!Structural(kv.Key) &&" in method_body(S['Trading.cs'], "internal Block Dominant") and
+    "if (!Structural(kv.Key) &&" in method_body(S['Reasons.cs'], "internal Block Dominant") and
     "if (!pass.Muted) NoteStalled(selling: false, tally.Dominant());" in
         method_body(S['Trading.cs'], "private static void BuyPass"))
 
@@ -3767,14 +3767,14 @@ def the_herd_guard_keeps_a_cushion_below_the_speed_penalty():
 def an_animal_is_held_back_when_the_quests_cannot_be_read():
     sell = sell_rule()
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
-    return ("internal static bool Known => Readable();" in S['Trading.cs']
+    return ("internal static bool Known => Readable();" in S['Encounters.cs']
             and "facts.QuestsReadable = Errands.Known;" in
                 method_body(S['Policy.cs'], "internal static bool MaySell(ItemRosterElement el")
             and "if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestAnimal; return said; }" in sell
             and ordered(sell, "if (Listed(s.AlwaysSet, good)) { said.Allowed = true; return said; }",
                         "if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestAnimal; return said; }")
             and "if (promised == null) return;" in relief
-            and "no animal is sold at all" in S['Trading.cs']
+            and "no animal is sold at all" in S['Encounters.cs']
             and "no animal is sold to relieve the herd" not in S['Trading.cs'])
 
 def the_buying_pass_counts_what_you_hold_afresh_for_each_good():
@@ -3843,8 +3843,8 @@ chk("1.36.2", "a herd that is slowing the party down is thinned even when its li
     getting_back_up_to_speed_outranks_the_food_reserve())
 
 def an_animal_a_quest_is_waiting_on_is_counted_out_of_the_herd():
-    errands = S['Trading.cs'][S['Trading.cs'].find("internal static class Errands"):]
-    promised = method_body(S['Trading.cs'], "internal static Dictionary<ItemObject, int> Promised")
+    errands = method_body(S['Encounters.cs'], "internal static class Errands")
+    promised = method_body(S['Encounters.cs'], "internal static Dictionary<ItemObject, int> Promised")
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
     quests = ("HeadmanNeedsToDeliverAHerdIssueBehavior.HeadmanNeedsToDeliverAHerdIssueQuest",
               "HeadmanVillageNeedsDraughtAnimalsIssueBehavior.HeadmanVillageNeedsDraughtAnimalsIssueQuest",
@@ -4420,7 +4420,7 @@ chk("1.37.8", "the panel takes the language it is armed with, so arming it works
 GUARDS = {'NeverList', 'Locked', 'Protected', 'QuestAnimal', 'MountOrHaulAnimal', 'FoodReserve'}
 
 def every_guard_that_holds_a_good_back_says_which_one_it_is():
-    phrase = method_body(S['Trading.cs'], "internal static TextObject Phrase")
+    phrase = method_body(S['Reasons.cs'], "internal static TextObject Phrase")
     said = []
     for guard in sorted(GUARDS):
         spoken = re.search(r'case Block\.' + guard +
@@ -4433,11 +4433,11 @@ def every_guard_that_holds_a_good_back_says_which_one_it_is():
             and 'your protections held it back' not in ALL)
 
 def a_stalled_pass_names_the_first_guard_it_met():
-    note = method_body(S['Trading.cs'], "internal void Note")
-    dominant = method_body(S['Trading.cs'], "internal Block Dominant")
-    guarded = between(S['Trading.cs'], "private static bool Guarded(Block reason) =>",
+    note = method_body(S['Reasons.cs'], "internal void Note")
+    dominant = method_body(S['Reasons.cs'], "internal Block Dominant")
+    guarded = between(S['Reasons.cs'], "private static bool Guarded(Block reason) =>",
                       "internal Block Dominant")
-    return ("private Block _firstGuard = Block.None;" in S['Trading.cs']
+    return ("private Block _firstGuard = Block.None;" in S['Reasons.cs']
             and ordered(note, "if (reason == Block.None) return;",
                         "if (_firstGuard == Block.None && Guarded(reason)) _firstGuard = reason;",
                         "_counts[reason] = seen + 1;")
@@ -4471,9 +4471,8 @@ def the_free_passage_never_ends_an_encounter_a_band_is_still_talking_through():
             and "TL09" in strings_used())
 
 def the_free_passage_is_a_line_in_the_bands_own_talk():
-    hang = method_body(S['Trading.cs'], "internal static void HangWhereTheBandAnswers")
-    parley = between(S['Trading.cs'], "internal static class Parley",
-                     "public class TradeActionBehavior")
+    hang = method_body(S['Encounters.cs'], "internal static void HangWhereTheBandAnswers")
+    parley = method_body(S['Encounters.cs'], "internal static class Parley")
     return ('internal const string OwnState = "tradelord_bandit_pass_asked";' in parley
             and 'private const string BandAsks = "bandit_start_defender_2";' in parley
             and 'private const string BandOpens = "bandit_start_defender";' in parley
@@ -4484,10 +4483,9 @@ def the_free_passage_is_a_line_in_the_bands_own_talk():
             and "a band is met exactly as the game means it to be" in parley)
 
 def the_option_waits_for_the_game_to_finish_writing_its_lines():
-    hang = method_body(S['Trading.cs'], "internal static void HangWhereTheBandAnswers")
-    parley = between(S['Trading.cs'], "internal static class Parley",
-                     "public class TradeActionBehavior")
-    unhung = method_body(S['Trading.cs'], "private static void Unhung")
+    hang = method_body(S['Encounters.cs'], "internal static void HangWhereTheBandAnswers")
+    parley = method_body(S['Encounters.cs'], "internal static class Parley")
+    unhung = method_body(S['Encounters.cs'], "private static void Unhung")
     return ('Guard.Run("Tick.Parley", Parley.HangWhereTheBandAnswers);' in
                 method_body(S['SubModule.cs'], "protected override void OnApplicationTick")
             and "Parley.HangWhereTheBandAnswers(" not in
@@ -4890,8 +4888,8 @@ def a_dry_run_names_the_goods_it_already_moved():
     return ("int remaining = el.Amount - keep + pass.Books.Held(pass.Sim, item.StringId);\n"
             "                    if (remaining <= 0) { tally.Note(Block.TradedHereAlready); continue; }" in sell
             and "Block.FoodReserve" not in sell
-            and 'case Block.TradedHereAlready:' in method_body(S['Trading.cs'], "internal static TextObject Phrase")
-            and "{=TL48}you already traded these on this visit" in S['Trading.cs'])
+            and 'case Block.TradedHereAlready:' in method_body(S['Reasons.cs'], "internal static TextObject Phrase")
+            and "{=TL48}you already traded these on this visit" in S['Reasons.cs'])
 
 chk("1.40.3", "handing one unit over to a party on the road reuses the same two errands rather than making a new one each time",
     a_road_swap_makes_nothing_new_per_unit())
@@ -4941,10 +4939,10 @@ chk("1.40.4", "where a pass is standing is the only thing the shared selling and
 def the_grain_switch_owns_the_reason_it_holds_a_good_back():
     t = S['Trading.cs']
     buy = buy_rule()
-    phrase = method_body(t, "internal static TextObject Phrase")
+    phrase = method_body(S['Reasons.cs'], "internal static TextObject Phrase")
     return ("if (!always && !toFeed && s.NeverBuyGrain && good.IsGrain)\n"
             "            { why = Block.GrainSwitch; return false; }" in buy
-            and t.count("Block.NeverList") == 2
+            and S['Reasons.cs'].count("Block.NeverList") == 2
             and S['Rules.cs'].count("Block.NeverList") == 2
             and "if (Listed(s.NeverSet, good) || Listed(s.NeverBuySet, good))\n"
                 "            { why = Block.NeverList; return false; }" in buy
@@ -4955,7 +4953,7 @@ def the_grain_switch_owns_the_reason_it_holds_a_good_back():
                     for word in ("setting", "ayar", "настройк", "\u8bbe\u7f6e"))
             and "TL388" in strings_declared()
             and all("TL388" in spoken(f) for f in [ENGLISH] + list(TRANSLATIONS.values()))
-            and "GrainSwitch" not in method_body(t, "private static bool Guarded"))
+            and "GrainSwitch" not in method_body(S['Reasons.cs'], "private static bool Guarded"))
 
 
 def a_pin_comes_off_the_map_once_tradelord_has_traded_there():
