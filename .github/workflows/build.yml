@@ -63,6 +63,28 @@ jobs:
           echo "this commit is marked [no release] and ships no version, so it writes no changelog entry:"
           printf '  %s\n' $OUTSIDE
 
+      - name: Shape gate
+        shell: bash
+        run: |
+          SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")
+          case "$SUBJECT" in
+            "[no release]"*)
+              echo "this commit ships no version, so it may move the source about freely"
+              exit 0 ;;
+          esac
+          GONE=$(git diff --name-only --diff-filter=D "$GITHUB_SHA^" "$GITHUB_SHA" -- src mcm 2>/dev/null || true)
+          GONE=$(printf '%s\n' "$GONE" | sed '/^$/d')
+          if [ -n "$GONE" ]; then
+            echo "this commit ships a version and takes a source file away:"
+            printf '  %s\n' $GONE
+            echo
+            echo "code that moves or retires gives a player nothing to read, so the release notes"
+            echo "cannot describe it. Ship the move on its own as [no release], then ship the"
+            echo "version on top of it."
+            exit 1
+          fi
+          echo "this commit ships a version and takes no source file away"
+
       - name: Resolve version from SubModule.xml
         id: ver
         shell: bash
