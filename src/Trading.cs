@@ -135,6 +135,7 @@ namespace TradeLord
             AutomatedTradeInProgress = false;
             _sittingAt = null;
             _sittingHour = -1;
+            ForgetArrivals();
             _markerHour = -1;
             _herdLookupFailed = false;
             Carry.Forget();
@@ -174,6 +175,7 @@ namespace TradeLord
         {
             MobileParty party = MobileParty.MainParty;
             if (party == null || party.CurrentSettlement != null) return;
+            NoteTheRoadTaken(party);
             int hour = (int)CampaignTime.Now.ToHours;
             Vec2 at = party.GetPosition2D;
             if (hour == _markerHour && at.DistanceSquared(_markerAt) <= MarkerMovedFar) return;
@@ -195,6 +197,7 @@ namespace TradeLord
         private void OnSettlementLeft(MobileParty party, Settlement settlement)
         {
             if (party != MobileParty.MainParty) return;
+            NoteTheGateBehind(party);
             Guard.Run("Action.HerdReliefOnLeaving", () =>
             {
                 LogHerdState("leaving " + settlement.Name);
@@ -214,6 +217,42 @@ namespace TradeLord
 
         private static string _sittingAt;
         private static int _sittingHour = -1;
+
+        private static string _lastArrivalAt;
+        private static Vec2 _gateBehind;
+        private static bool _gateBehindKnown;
+        private static bool _tookToTheRoad;
+        private const float SetOffFromTheGate = 1f;
+
+        private static bool StillTheSameArrival(Settlement settlement) =>
+            settlement != null && settlement.StringId == _lastArrivalAt && !_tookToTheRoad;
+
+        private static void NoteThisArrival(Settlement settlement)
+        {
+            _lastArrivalAt = settlement?.StringId;
+            _gateBehindKnown = false;
+            _tookToTheRoad = false;
+        }
+
+        private static void NoteTheGateBehind(MobileParty party)
+        {
+            _gateBehind = party.GetPosition2D;
+            _gateBehindKnown = true;
+        }
+
+        private static void NoteTheRoadTaken(MobileParty party)
+        {
+            if (_tookToTheRoad || !_gateBehindKnown) return;
+            if (party.GetPosition2D.DistanceSquared(_gateBehind) > SetOffFromTheGate)
+                _tookToTheRoad = true;
+        }
+
+        private static void ForgetArrivals()
+        {
+            _lastArrivalAt = null;
+            _gateBehindKnown = false;
+            _tookToTheRoad = false;
+        }
 
         private static bool StillTheSameSitting(Settlement settlement)
         {
@@ -638,6 +677,15 @@ namespace TradeLord
                 _visitTradeAllowed = CanTradeHere(settlement);
                 WarnUnmatchedItemLists();
                 LogHerdState("entering " + settlement.Name);
+
+                if (StillTheSameArrival(settlement))
+                {
+                    Log.Write("trading on arrival at " + settlement.Name + " is left alone: your party has " +
+                              "not taken to the road since it last traded here, so this is the same arrival");
+                    UpdateBestSellTownTracker();
+                    return;
+                }
+                NoteThisArrival(settlement);
 
                 if (!AnnounceAutomation(settlement))
                 {
@@ -1108,6 +1156,7 @@ namespace TradeLord
                     while (remaining > 0)
                     {
                         int worth = basis.Unit(item);
+                        int mustBeat = TradeRules.WorthToBeat(good, worth, basis.UnpaidWorth);
                         int holdFloor = 0;
                         if (Options.Current.PreferBestSellTown)
                         {
@@ -1122,7 +1171,7 @@ namespace TradeLord
                         }
                         int price = pass.Price(el.EquipmentElement, selling: true);
                         if (price < holdFloor) { tally.Note(Block.BelowBestMarket); break; }
-                        if (!TradePolicy.ProfitAcceptable(worth, price))
+                        if (!TradePolicy.ProfitAcceptable(mustBeat, price))
                         {
                             tally.Note(Block.BelowMargin);
                             if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;
