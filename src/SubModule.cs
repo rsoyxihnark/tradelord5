@@ -52,6 +52,7 @@ namespace TradeLord
             base.OnApplicationTick(dt);
             Guard.Run("Tick.ReleaseMessageFilter", TradeActionBehavior.ReleaseMessageFilter);
             Guard.Run("Tick.FlushToasts", TradeActionBehavior.FlushToasts);
+            Guard.Run("Tick.Mcm", McmLoader.TryHandover);
             Guard.Run("Tick.Settings", Config.Flush);
             Guard.Run("Tick.Encounter", TradeActionBehavior.WatchEncounter);
             Guard.Run("Tick.Parley", Parley.HangWhereTheBandAnswers);

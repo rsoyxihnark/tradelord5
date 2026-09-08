@@ -16,11 +16,11 @@ namespace TradeLord.Mcm
     {
         public static bool Init()
         {
-            Settings instance = Settings.Instance;
-            instance?.FollowLanguage();
             Guard.Run("Mcm.ScreenTongue", ScreenTongue.Follow);
             McmLoader.Reseat = Settings.Reseat;
-            return instance != null;
+            if (Settings.Instance == null) return false;
+            Settings.Reseat();
+            return true;
         }
     }
 
@@ -47,8 +47,12 @@ namespace TradeLord.Mcm
         private static readonly List<Headed> _headed = new List<Headed>();
         private static readonly Dictionary<string, string> _rawFor = new Dictionary<string, string>(StringComparer.Ordinal);
 
+        private static bool _following;
+
         internal static void Follow()
         {
+            if (_following) return;
+            _following = true;
             _name = Reaches("<DisplayName>k__BackingField");
             _hint = Reaches("<HintText>k__BackingField");
             _group = Reaches("<GroupName>k__BackingField");

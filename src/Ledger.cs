@@ -35,8 +35,8 @@ namespace TradeLord
     {
         public static LedgerBehavior Instance { get; internal set; }
 
-        private Dictionary<string, List<PriceObservation>> _ledger =
-            new Dictionary<string, List<PriceObservation>>();
+        private Dictionary<string, Dictionary<string, PriceObservation>> _ledger =
+            new Dictionary<string, Dictionary<string, PriceObservation>>();
         private List<PurchaseRecord> _purchases = new List<PurchaseRecord>();
         private string _ledgerText = "";
         private string _purchaseText = "";
@@ -65,7 +65,7 @@ namespace TradeLord
             if (dataStore.IsSaving)
                 Guard.Run("Ledger.WriteForSave", () =>
                 {
-                    _ledgerText = LedgerCodec.WriteLedger(_ledger);
+                    _ledgerText = LedgerCodec.WriteLedger(Listed(_ledger));
                     _purchaseText = LedgerCodec.WritePurchases(_purchases);
                 });
             dataStore.SyncData("TradeLord_LedgerText", ref _ledgerText);
@@ -83,8 +83,41 @@ namespace TradeLord
 
         private void RestoreSaved()
         {
-            _ledger = LedgerCodec.ReadLedger(_ledgerText);
+            _ledger = KeyedByTown(LedgerCodec.ReadLedger(_ledgerText));
             _purchases = LedgerCodec.ReadPurchases(_purchaseText);
+        }
+
+        private static Dictionary<string, Dictionary<string, PriceObservation>> KeyedByTown(
+            Dictionary<string, List<PriceObservation>> listed)
+        {
+            var book = new Dictionary<string, Dictionary<string, PriceObservation>>();
+            if (listed == null) return book;
+            foreach (var kv in listed)
+            {
+                var byTown = new Dictionary<string, PriceObservation>(StringComparer.Ordinal);
+                if (kv.Value != null)
+                    for (int i = 0; i < kv.Value.Count; i++)
+                    {
+                        PriceObservation o = kv.Value[i];
+                        if (o?.TownId != null) byTown[o.TownId] = o;
+                    }
+                book[kv.Key] = byTown;
+            }
+            return book;
+        }
+
+        private static Dictionary<string, List<PriceObservation>> Listed(
+            Dictionary<string, Dictionary<string, PriceObservation>> keyed)
+        {
+            var book = new Dictionary<string, List<PriceObservation>>();
+            if (keyed == null) return book;
+            foreach (var kv in keyed)
+            {
+                var list = new List<PriceObservation>();
+                if (kv.Value != null) list.AddRange(kv.Value.Values);
+                book[kv.Key] = list;
+            }
+            return book;
         }
 
         private void PruneExpired() => Guard.Run("Ledger.Prune", Prune);
@@ -101,8 +134,12 @@ namespace TradeLord
             var spent = new List<string>();
             foreach (var kv in _ledger)
             {
-                kv.Value?.RemoveAll(o => o == null || o.TownId == null);
-                if (kv.Value == null || kv.Value.Count == 0) spent.Add(kv.Key);
+                if (kv.Value == null) { spent.Add(kv.Key); continue; }
+                var dead = new List<string>();
+                foreach (var seen in kv.Value)
+                    if (seen.Value == null || seen.Value.TownId == null) dead.Add(seen.Key);
+                for (int i = 0; i < dead.Count; i++) kv.Value.Remove(dead[i]);
+                if (kv.Value.Count == 0) spent.Add(kv.Key);
             }
             for (int i = 0; i < spent.Count; i++) _ledger.Remove(spent[i]);
         }
@@ -260,23 +297,22 @@ namespace TradeLord
 
         private void Record(string itemId, string townId, int buy, int sell, float day)
         {
-            if (!_ledger.TryGetValue(itemId, out var list))
+            if (!_ledger.TryGetValue(itemId, out var byTown))
             {
-                list = new List<PriceObservation>();
-                _ledger[itemId] = list;
+                byTown = new Dictionary<string, PriceObservation>(StringComparer.Ordinal);
+                _ledger[itemId] = byTown;
             }
-            for (int i = 0; i < list.Count; i++)
+            if (byTown.TryGetValue(townId, out PriceObservation seen))
             {
-                if (list[i].TownId != townId) continue;
-                list[i].BuyPrice = buy;
-                list[i].SellPrice = sell;
-                list[i].CapturedDay = day;
+                seen.BuyPrice = buy;
+                seen.SellPrice = sell;
+                seen.CapturedDay = day;
                 return;
             }
-            list.Add(new PriceObservation
+            byTown[townId] = new PriceObservation
             {
                 ItemId = itemId, TownId = townId, BuyPrice = buy, SellPrice = sell, CapturedDay = day
-            });
+            };
         }
 
         public void RecordPurchase(string itemId, int count, int totalPaid)
@@ -510,10 +546,9 @@ namespace TradeLord
         public float ObservationAgeDays(ItemObject item, Settlement town)
         {
             if (item == null || town == null) return -1f;
-            if (!_ledger.TryGetValue(item.StringId, out var list)) return -1f;
-            for (int i = 0; i < list.Count; i++)
-                if (list[i].TownId == town.StringId)
-                    return (float)CampaignTime.Now.ToDays - list[i].CapturedDay;
+            if (!_ledger.TryGetValue(item.StringId, out var byTown)) return -1f;
+            if (byTown.TryGetValue(town.StringId, out PriceObservation seen))
+                return (float)CampaignTime.Now.ToDays - seen.CapturedDay;
             return -1f;
         }
 
@@ -540,10 +575,10 @@ namespace TradeLord
 
         private List<(Settlement, int)> TopObserved(ItemObject item, bool selling)
         {
-            if (!_ledger.TryGetValue(item.StringId, out var list) || list.Count == 0)
+            if (!_ledger.TryGetValue(item.StringId, out var byTown) || byTown.Count == 0)
                 return new List<(Settlement, int)>();
             var found = new List<(Settlement s, int price, float days)>();
-            foreach (var o in list)
+            foreach (var o in byTown.Values)
             {
                 Settlement town = Settlement.Find(o.TownId);
                 if (town == null || !Eligible(town, out float lower)) continue;

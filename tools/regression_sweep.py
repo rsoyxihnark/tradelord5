@@ -390,6 +390,33 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
                 method_body(t, "public static void ExecuteResupply")
             and "TradeRules.FoodValue(good)" in method_body(t, "public static void ExecuteHaulage"))
 
+def a_price_is_found_by_its_town_rather_than_by_looking_down_the_list():
+    led = S['Ledger.cs']
+    record = method_body(led, "private void Record")
+    aged = method_body(led, "public float ObservationAgeDays")
+    return ("private Dictionary<string, Dictionary<string, PriceObservation>> _ledger =" in led
+            and "byTown.TryGetValue(townId, out PriceObservation seen)" in record
+            and "for (int i = 0" not in record
+            and "byTown.TryGetValue(town.StringId, out PriceObservation seen)" in aged
+            and "for (int i = 0" not in aged
+            and "public static string WriteLedger(Dictionary<string, List<PriceObservation>> ledger)"
+                in S['LedgerCodec.cs']
+            and "public static Dictionary<string, List<PriceObservation>> ReadLedger(string text)"
+                in S['LedgerCodec.cs']
+            and "LedgerCodec.WriteLedger(Listed(_ledger))" in led
+            and "KeyedByTown(LedgerCodec.ReadLedger(_ledgerText))" in led)
+
+def the_screen_is_asked_for_again_until_mcm_hands_it_over():
+    ask = method_body(S['Support.cs'], "internal static void TryHandover")
+    tick = method_body(S['SubModule.cs'], "protected override void OnApplicationTick")
+    return ("if (SettingsInHand || _handover == null) return;" in ask
+            and "if (DateTime.UtcNow - _askedAt < BetweenAsks) return;" in ask
+            and "SettingsInHand = true;" in ask
+            and ordered(ask, "_handover.Invoke(null, null)", "SettingsInHand = true;", "Log.Write(")
+            and "_handover = init;" in method_body(S['Support.cs'], "internal static void TryLoad")
+            and 'Guard.Run("Tick.Mcm", McmLoader.TryHandover);' in tick
+            and S['Support.cs'].count("SettingsInHand = ") == 2)
+
 def the_sell_pass_describes_a_good_once_and_hands_it_on():
     t = S['Trading.cs']
     sell = method_body(t, "private static void SellPass")
@@ -2306,11 +2333,12 @@ chk("1.6.14", "a settings change reopens the hourly capture, so a market is not 
 
 chk("1.6.15", "an unreadable price observation is dropped, and a readable one is never dropped for its age",
     (lambda b: "if (_ledger == null) return;" in b
-           and "o == null || o.TownId == null" in b
+           and "seen.Value == null || seen.Value.TownId == null" in b
            and "CapturedDay" not in b)
     (method_body(S['Ledger.cs'], "private void PruneObservations")))
 chk("1.6.15", "an item whose observations have all gone is dropped from the save",
-    (lambda b: "if (kv.Value == null || kv.Value.Count == 0) spent.Add(kv.Key);" in b
+    (lambda b: "if (kv.Value == null) { spent.Add(kv.Key); continue; }" in b
+           and "if (kv.Value.Count == 0) spent.Add(kv.Key);" in b
            and "_ledger.Remove(spent[i]);" in b and "shelf <= 0f" not in b)
     (method_body(S['Ledger.cs'], "private void PruneObservations")))
 chk("1.6.15", "each market that trades nothing is named in the log, not just the first with those reasons",
@@ -2403,7 +2431,7 @@ chk("1.6.20", "the ledger a save carries is written and read without the game be
 chk("1.6.20", "the ledger text is rebuilt from pruned data every time the campaign is saved",
     (lambda b: ordered(b,
                        "if (!dataStore.IsLoading) PruneExpired();",
-                       "_ledgerText = LedgerCodec.WriteLedger(_ledger);",
+                       "_ledgerText = LedgerCodec.WriteLedger(Listed(_ledger));",
                        'dataStore.SyncData("TradeLord_LedgerText"'))
     (method_body(S['Ledger.cs'], "public override void SyncData")) and
     "if (dataStore.IsSaving)" in S['Ledger.cs'])
@@ -2744,7 +2772,8 @@ def the_language_setting_leads_the_screen_and_starts_on_english():
             and '[SettingPropertyGroup("{=TL104}Automation", GroupOrder = 1)]' in M
             and 'public int Language = 0;' in S['Options.cs']
             and 'Follows(Language, () => _o.Language, picked => _o.Language = picked);' in M
-            and 'instance?.FollowLanguage();' in M
+            and 'held.FollowLanguage();' in M
+            and 'Settings.Reseat();' in method_body(M, "public static bool Init")
             and all('GroupOrder = ' + str(n) + ')]' in M for n in range(0, 7)))
 
 def the_language_files_reach_the_download():
@@ -2983,9 +3012,13 @@ def the_screen_reads_the_translation_the_mod_already_has():
 
 def a_screen_that_cannot_be_wired_leaves_the_rest_of_the_mod_alone():
     follow = method_body(M, "internal static void Follow")
-    return (ordered(follow, 'if (_name == null', 'Log.Write(', 'return;')
-            and 'new Harmony(SubModule.HarmonyId + ".mcm")' in follow
-            and follow.find('return;') < follow.find('new Harmony('))
+    once = follow.find('if (_following) return;')
+    failed = follow.find('if (_name == null')
+    said = follow.find('Log.Write(')
+    left = follow.find('return;', said)
+    patched = follow.find('new Harmony(SubModule.HarmonyId + ".mcm")')
+    return (0 <= once < failed < said < left < patched
+            and follow.find('_following = true;') < failed)
 
 chk("1.10.0", "the settings screen is relabelled in the language TradeLord is set to",
     the_settings_screen_follows_the_mods_own_language())
@@ -4064,7 +4097,8 @@ def the_screen_only_wins_once_it_has_actually_handed_its_settings_over():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
     return ("internal static bool SettingsInHand { get; private set; }" in S['Support.cs']
-            and ordered(boot, "Settings instance = Settings.Instance;", "return instance != null;")
+            and ordered(boot, "if (Settings.Instance == null) return false;",
+                        "Settings.Reseat();", "return true;")
             and ordered(load, "object answered = init.Invoke(null, null);",
                         "SettingsInHand = answered is bool taken && taken;",
                         "SettingsReachable = true;")
@@ -4459,7 +4493,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
             and trade.count("LedgerPanel.PinnedIds()") == 1
             and 'Guard.Run("Ledger.WriteForSave", () =>' in ledger
             and 'Guard.Run("Ledger.Reindex", Reindex);' in ledger
-            and ordered(ledger, "LedgerCodec.WriteLedger(_ledger);",
+            and ordered(ledger, "LedgerCodec.WriteLedger(Listed(_ledger));",
                         "LedgerCodec.WritePurchases(_purchases);",
                         'dataStore.SyncData("TradeLord_LedgerText"')
             and trade.count("dataStore.SyncData(") == 3
@@ -4902,6 +4936,10 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
+chk("1.41.7", "a price already written down is found by its town rather than by looking down every town on the list, and the save is still written the way it always was",
+    a_price_is_found_by_its_town_rather_than_by_looking_down_the_list())
+chk("1.41.7", "TradeLord keeps asking for the settings screen until MCM hands it over, so what you pick on it takes hold without a restart",
+    the_screen_is_asked_for_again_until_mcm_hands_it_over())
 chk("1.41.7", "the food reserve is worked out where a test can ask it, and the pass maps its answer back onto the goods you carry",
     the_food_reserve_is_worked_out_where_a_test_can_ask_it())
 chk("1.41.7", "the selling pass describes a good once and hands the same description to every rule that asks",
