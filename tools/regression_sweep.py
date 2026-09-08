@@ -4044,7 +4044,7 @@ chk("1.33.0", "one name reaches the code, the settings screen and the log, and n
     "haul animals" in spoken(ENGLISH)['TL374'] and
     "pack animal" not in spoken(ENGLISH)['TL374'].lower())
 chk("1.33.0", "a haul animal setting a player already saved is carried over to its new name rather than stranded",
-    '{ "BuyPackAnimals", "BuyHaulAnimals" },' in S['Migrate.cs'] and
+    '(5, "BuyPackAnimals", "BuyHaulAnimals"),' in S['Migrate.cs'] and
     "BuyPackAnimals" in MIGRATIONTESTS and "BuyHaulAnimals" in MIGRATIONTESTS)
 
 def no_hint_still_claims_a_mount_is_never_sold():
@@ -4217,6 +4217,35 @@ chk("1.24.0", "the settings file carries its own shape, is lifted before anythin
     a_settings_file_says_which_shape_it_is_in())
 chk("1.24.0", "the lift needs nothing from the game, says nothing itself, and is covered by tests the build runs",
     the_lift_needs_nothing_from_the_game_and_is_covered_by_tests())
+
+def the_shape_a_settings_file_declares_gates_every_step_of_the_lift():
+    lift = method_body(S['Migrate.cs'], "public static bool Lift")
+    rename = method_body(S['Migrate.cs'], "private static bool Rename")
+    shape = re.search(r'public const int Shape = (\d+);', S['Migrate.cs'])
+    return (shape is not None
+            and ordered(lift, "changed |= Rename(from, written, notes);",
+                        "if (from < 5)",
+                        "changed |= FoodVarietyBecameASwitchAndAnAmount(written, notes);",
+                        "changed |= SmeltableWeaponsBecameAChoiceOfThree(written, notes);",
+                        "changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);",
+                        "changed |= TheObservationShelfLifeIsGone(written, notes);",
+                        "if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);",
+                        "if (from < 7) changed |= TheScanRadiusIsGone(written, notes);")
+            and lift.count("changed |=") == 7
+            and ("if (from < " + shape.group(1) + ")") in lift
+            and ordered(rename, "foreach (var (arrivedAt, was, now) in Renamed)",
+                        "if (from >= arrivedAt) continue;",
+                        "if (!written.TryGetValue(was, out string held)) continue;")
+            and '(5, "BuyPackAnimals", "BuyHaulAnimals"),' in S['Migrate.cs']
+            and '(7, "MaxTravelDays", "MaxTravelDaysTown"),' in S['Migrate.cs']
+            and '(7, "MaxVillageTravelDays", "MaxTravelDaysVillage"),' in S['Migrate.cs']
+            and "AStepOnlyRunsOnAFileOlderThanTheShapeItArrivedIn" in MIGRATIONTESTS
+            and "ARenameOnlyRunsOnAFileOlderThanTheShapeItArrivedIn" in MIGRATIONTESTS
+            and "AFileAlreadyInTheCurrentShapeIsNeverLiftedAtAll" in MIGRATIONTESTS
+            and "ASettingWrittenByHandIntoACurrentFileIsLeftForTheFileToReport" in MIGRATIONTESTS)
+
+chk("1.46.1", "the shape a settings file declares decides which steps of the lift run on it, and every step is gated at the shape it arrived in",
+    the_shape_a_settings_file_declares_gates_every_step_of_the_lift())
 
 def one_button_puts_every_setting_back_and_sits_at_the_top():
     reset = method_body(M, "internal static void Reset")
