@@ -9,6 +9,7 @@ MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
 MIGRATIONTESTS = io.open('tests/MigrationTests.cs', encoding='utf-8').read()
 BOOKTESTS = io.open('tests/BooksTests.cs', encoding='utf-8').read()
+SELLTESTS = io.open('tests/SellRulesTests.cs', encoding='utf-8').read()
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -2320,10 +2321,11 @@ chk("1.6.12", "the simulated pass and the real one credit profit through the sam
         method_body(S['Trading.cs'], "public static void ExecuteHerdRelief") and
     all("TradePolicy.Credit(" in method_body(S['Trading.cs'], one) for one in
         ("private static void SellPass", "public static void ExecuteHerdRelief")))
-chk("1.6.12", "what quick-sell agrees to sell is unchanged, since the decision still runs on the bare basis",
-    S['Trading.cs'].count("if (!TradePolicy.ProfitAcceptable(worth, price))") == 1 and
+chk("1.6.12", "what quick-sell agrees to sell runs through one margin rule, and the credit still reads the bare basis",
+    S['Trading.cs'].count("if (!TradePolicy.ProfitAcceptable(mustBeat, price))") == 1 and
     S['Trading.cs'].count("int worth = basis.Unit(item);") == 2 and
     "ProfitAcceptable(basis.UnpaidWorth" not in S['Trading.cs'] and
+    "TradePolicy.Credit(price, worth, basis.UnpaidWorth)" in S['Trading.cs'] and
     "TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);" in S['Policy.cs'] and
     re.search(r'ProfitAcceptable\(int costBasis, int townSellPrice, float margin\) =>\s*costBasis > 0\s*\?\s*'
               r'townSellPrice >= costBasis \* \(1f \+ margin\)\s*:\s*'
@@ -3681,10 +3683,10 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
             and t.count("private static void SellPass") == 1
             and t.count("private static void BuyPass") == 1
             and "TradePolicy.MaySell(good, el, pass.Locked, keepBack, awaited, out int keep, out Block stopped)" in sell
-            and "TradePolicy.ProfitAcceptable(worth, price)" in sell
+            and "TradePolicy.ProfitAcceptable(mustBeat, price)" in sell
             and "Options.Current.PreferBestSellTown" in sell
             and "Options.Current.BestSellTownTolerance" in sell
-            and ordered(sell, "if (!TradePolicy.ProfitAcceptable(worth, price))",
+            and ordered(sell, "if (!TradePolicy.ProfitAcceptable(mustBeat, price))",
                         "if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;",
                         "TradeMath.SkipTheUnitsYouPaidFor(FromMarket, ref remaining, ref PaidLeft)",
                         "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;",
@@ -4492,7 +4494,7 @@ chk("1.37.8", "the panel takes the language it is armed with, so arming it works
     arming_the_panel_costs_no_route_scan())
 
 
-GUARDS = {'NeverList', 'Locked', 'Protected', 'QuestAnimal', 'MountOrHaulAnimal', 'FoodReserve'}
+GUARDS = {'NeverList', 'Locked', 'Protected', 'QuestAnimal', 'FoodReserve'}
 
 def every_guard_that_holds_a_good_back_says_which_one_it_is():
     phrase = method_body(S['Reasons.cs'], "internal static TextObject Phrase")
@@ -5238,6 +5240,66 @@ chk("1.41.2", "TradeLord.log is held open and each line is pushed out as it is w
     the_log_is_held_open_and_pushed_out_a_line_at_a_time())
 chk("1.41.2", "the town marked on your map skips a town whose gold cannot beat the best found so far before it prices your cargo there",
     the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet())
+
+def a_good_another_pass_handles_never_speaks_for_a_stalled_pass():
+    reasons = S['Reasons.cs']
+    structural = between(reasons, "private static bool Structural(Block reason) =>",
+                         "private static bool Guarded(Block reason) =>")
+    guarded = between(reasons, "private static bool Guarded(Block reason) =>",
+                      "internal Block Dominant")
+    phrase = method_body(reasons, "internal static TextObject Phrase")
+    return (set(re.findall(r'Block\.(\w+)', structural))
+                == {'NotTradable', 'NotMerchandise', 'MountOrHaulAnimal'}
+            and 'MountOrHaulAnimal' not in guarded
+            and "case Block.MountOrHaulAnimal:" not in phrase
+            and 'TL385' not in strings_declared()
+            and 'not traded as livestock' not in ALL
+            and "why = Block.MountOrHaulAnimal;" in buy_rule()
+            and "said.Why = Block.MountOrHaulAnimal;" in sell_rule())
+
+def goods_you_were_given_are_held_to_your_margin_like_the_ones_you_bought():
+    rules = S['Rules.cs']
+    sell = pass_body("private static void SellPass")
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    return ("internal static bool TradedAsMerchandise(in Good good) =>" in rules
+            and "good.IsTradeGood || good.IsLivestock;" in rules
+            and "internal static int WorthToBeat(in Good good, int paid, int unpaidWorth) =>" in rules
+            and "paid > 0 || !TradedAsMerchandise(good) ? paid : unpaidWorth;" in rules
+            and ordered(sell, "int worth = basis.Unit(item);",
+                        "int mustBeat = TradeRules.WorthToBeat(good, worth, basis.UnpaidWorth);",
+                        "if (!TradePolicy.ProfitAcceptable(mustBeat, price))")
+            and "WorthToBeat" not in relief
+            and 'Rules.cs' in TESTPROJ
+            and "TradeRules.WorthToBeat" in SELLTESTS
+            and "TradeMath.ProfitAcceptable" in SELLTESTS)
+
+def trading_on_arrival_waits_for_the_party_to_take_to_the_road():
+    t = S['Trading.cs']
+    entered = method_body(t, "private void OnSettlementEntered")
+    tick = method_body(t, "private void OnTick")
+    left = method_body(t, "private void OnSettlementLeft")
+    road = method_body(t, "private static void NoteTheRoadTaken")
+    return (ordered(entered, 'LogHerdState("entering " + settlement.Name);',
+                    "if (StillTheSameArrival(settlement))",
+                    "NoteThisArrival(settlement);",
+                    "if (!AnnounceAutomation(settlement))",
+                    "ExecuteQuickSell(settlement, quiet: true);")
+            and "settlement.StringId == _lastArrivalAt && !_tookToTheRoad" in t
+            and ordered(tick, "if (party == null || party.CurrentSettlement != null) return;",
+                        "NoteTheRoadTaken(party);")
+            and "NoteTheGateBehind(party);" in left
+            and "_gateBehind = party.GetPosition2D;" in
+                method_body(t, "private static void NoteTheGateBehind")
+            and "if (_tookToTheRoad || !_gateBehindKnown) return;" in road
+            and "party.GetPosition2D.DistanceSquared(_gateBehind) > SetOffFromTheGate" in road
+            and "ForgetArrivals();" in method_body(t, "internal static void ForgetVisit"))
+
+chk("1.46.2", "a mount or a haul animal is never named as the reason a pass moved nothing, since another pass handles it",
+    a_good_another_pass_handles_never_speaks_for_a_stalled_pass())
+chk("1.46.2", "trade goods and livestock you never paid for are held to your margin against what they are worth, and looted gear is not",
+    goods_you_were_given_are_held_to_your_margin_like_the_ones_you_bought())
+chk("1.46.2", "trading on arrival runs once and waits for the party to take to the road before it runs again",
+    trading_on_arrival_waits_for_the_party_to_take_to_the_road())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

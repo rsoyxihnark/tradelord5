@@ -230,6 +230,12 @@ namespace TradeLord
         internal static bool NoRoomForOneMore(in Good good, float roomLeft) =>
             good.Weight > 0.01f && good.Weight > roomLeft;
 
+        internal static bool TradedAsMerchandise(in Good good) =>
+            good.IsTradeGood || good.IsLivestock;
+
+        internal static int WorthToBeat(in Good good, int paid, int unpaidWorth) =>
+            paid > 0 || !TradedAsMerchandise(good) ? paid : unpaidWorth;
+
         internal static SellVerdict MaySell<TGame>(in Good good, int amount, in SellFacts facts,
                                                    Options s, TGame game)
             where TGame : struct, IWhatTheGameSays
