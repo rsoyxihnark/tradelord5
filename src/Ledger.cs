@@ -246,7 +246,7 @@ namespace TradeLord
                     if (took <= 0) continue;
 
                     int unit = market != null
-                        ? market.GetItemPrice(element.EquipmentElement, MobileParty.MainParty, false)
+                        ? Priced.At(market, element.EquipmentElement, MobileParty.MainParty, false)
                         : item.Value;
                     RecordPurchase(item.StringId, took,
                                    Bulk.PricePaid(here, element.EquipmentElement, took, unit));
@@ -286,8 +286,8 @@ namespace TradeLord
             float day = (float)CampaignTime.Now.ToDays;
             foreach (ItemObject item in Items.AllTradeGoods)
             {
-                int buy = market.GetItemPrice(item, MobileParty.MainParty, false);
-                int sell = market.GetItemPrice(item, MobileParty.MainParty, true);
+                int buy = Priced.At(market, item, MobileParty.MainParty, false);
+                int sell = Priced.At(market, item, MobileParty.MainParty, true);
                 Record(item.StringId, settlement.StringId, buy, sell, day);
             }
 
@@ -297,8 +297,8 @@ namespace TradeLord
             {
                 ItemObject item = shelf.GetElementCopyAtIndex(i).EquipmentElement.Item;
                 if (item == null || item.IsTradeGood || !TradePolicy.Priced(item)) continue;
-                int buy = market.GetItemPrice(item, MobileParty.MainParty, false);
-                int sell = market.GetItemPrice(item, MobileParty.MainParty, true);
+                int buy = Priced.At(market, item, MobileParty.MainParty, false);
+                int sell = Priced.At(market, item, MobileParty.MainParty, true);
                 Record(item.StringId, settlement.StringId, buy, sell, day);
             }
         }
@@ -581,12 +581,12 @@ namespace TradeLord
                     ItemObject item = wanted[i];
                     if (tillOpen)
                     {
-                        int price = market.GetItemPrice(item, me, true);
+                        int price = Priced.At(market, item, me, true);
                         if (price > 0) Keep(sells[i], (town, price, straight, days), true);
                     }
                     if (minStock <= 0 || StockOf(town, item) >= minStock)
                     {
-                        int price = market.GetItemPrice(item, me, false);
+                        int price = Priced.At(market, item, me, false);
                         if (price > 0) Keep(buys[i], (town, price, straight, days), false);
                     }
                 }
@@ -629,7 +629,7 @@ namespace TradeLord
             {
                 if (selling && s.SettlementComponent.Gold <= 0) continue;
                 if (!selling && minStock > 0 && StockOf(s, item) < minStock) continue;
-                int price = s.SettlementComponent.GetItemPrice(item, MobileParty.MainParty, selling);
+                int price = Priced.At(s.SettlementComponent, item, MobileParty.MainParty, selling);
                 if (price <= 0) continue;
                 all.Add((s, price, lower));
             }

@@ -385,7 +385,7 @@ namespace TradeLord
             internal int Spent(int simSpent) => GoldSpent(Sim, simSpent, _goldBefore);
 
             internal int Price(EquipmentElement what, bool selling) =>
-                Site != null ? Market.GetItemPrice(what, Party, selling)
+                Site != null ? Priced.At(Market, what, Party, selling)
                              : Road.GetPrice(what, Party, selling, Shop);
 
             internal void Tally(ItemObject item, int count, int gold) =>
@@ -1869,7 +1869,7 @@ namespace TradeLord
                 }
                 long total = 0;
                 foreach (var (item, amount) in cargo)
-                    total += (long)town.GetItemPrice(item, party, true) * amount;
+                    total += (long)Priced.At(town, item, party, true) * amount;
                 if (total > town.Gold) total = town.Gold;
                 if (total > bestValue) { bestValue = total; bestTown = s; }
             }
