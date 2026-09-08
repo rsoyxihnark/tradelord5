@@ -512,20 +512,87 @@ namespace TradeLord
 
         private static List<(Settlement, int)> Rerank(List<(Settlement s, int price, float days)> all, bool selling)
         {
-            Comparison<(Settlement s, int price, float days)> order = selling ? DearestFirst : CheapestFirst;
-            all.Sort(order);
-            var top = new List<(Settlement s, int price, float days)>();
-            for (int i = 0; i < all.Count && top.Count < TopCacheSize; i++)
+            var kept = new List<(Settlement s, int price, float straight, float days)>(TopCacheSize + 1);
+            for (int i = 0; i < all.Count; i++)
             {
                 float days = Travel.EstimateDaysFromParty(all[i].s);
                 if (!WithinTravelCeiling(all[i].s, days)) continue;
-                top.Add((all[i].s, all[i].price, days));
+                Keep(kept, (all[i].s, all[i].price, all[i].days, days), selling);
             }
-            top.Sort(order);
-            var result = new List<(Settlement, int)>();
+            return Settled(kept, selling);
+        }
+
+        private static List<(Settlement, int)> Settled(
+            List<(Settlement s, int price, float straight, float days)> kept, bool selling)
+        {
+            var top = new List<(Settlement s, int price, float days)>(kept.Count);
+            for (int i = 0; i < kept.Count; i++) top.Add((kept[i].s, kept[i].price, kept[i].days));
+            top.Sort(selling ? DearestFirst : CheapestFirst);
+            var result = new List<(Settlement, int)>(top.Count);
             for (int i = 0; i < top.Count; i++)
                 result.Add((top[i].s, top[i].price));
             return result;
+        }
+
+        private static (Settlement s, int price, float days) ByStraightLine(
+            (Settlement s, int price, float straight, float days) one) => (one.s, one.price, one.straight);
+
+        private static void Keep(List<(Settlement s, int price, float straight, float days)> kept,
+                                 (Settlement s, int price, float straight, float days) one, bool selling)
+        {
+            if (kept.Count == TopCacheSize &&
+                Rank(selling, ByStraightLine(one), ByStraightLine(kept[TopCacheSize - 1])) >= 0) return;
+            int at = kept.Count;
+            while (at > 0 && Rank(selling, ByStraightLine(one), ByStraightLine(kept[at - 1])) < 0) at--;
+            kept.Insert(at, one);
+            if (kept.Count > TopCacheSize) kept.RemoveAt(TopCacheSize);
+        }
+
+        private void PrimeLiveRankings(List<ItemObject> wanted, int hour)
+        {
+            if (!Options.Current.Omniscient || wanted.Count == 0) return;
+            List<(Settlement s, float days)> candidates = LiveCandidates(hour);
+            if (candidates.Count == 0) return;
+            int minStock = Options.Current.MinTownStock;
+            MobileParty me = MobileParty.MainParty;
+            int n = wanted.Count;
+            var sells = new List<(Settlement s, int price, float straight, float days)>[n];
+            var buys = new List<(Settlement s, int price, float straight, float days)>[n];
+            for (int i = 0; i < n; i++)
+            {
+                sells[i] = new List<(Settlement, int, float, float)>(TopCacheSize + 1);
+                buys[i] = new List<(Settlement, int, float, float)>(TopCacheSize + 1);
+            }
+            for (int t = 0; t < candidates.Count; t++)
+            {
+                Settlement town = candidates[t].s;
+                float straight = candidates[t].days;
+                float days = Travel.EstimateDaysFromParty(town);
+                if (!WithinTravelCeiling(town, days)) continue;
+                SettlementComponent market = town.SettlementComponent;
+                bool tillOpen = market.Gold > 0;
+                for (int i = 0; i < n; i++)
+                {
+                    ItemObject item = wanted[i];
+                    if (tillOpen)
+                    {
+                        int price = market.GetItemPrice(item, me, true);
+                        if (price > 0) Keep(sells[i], (town, price, straight, days), true);
+                    }
+                    if (minStock <= 0 || StockOf(town, item) >= minStock)
+                    {
+                        int price = market.GetItemPrice(item, me, false);
+                        if (price > 0) Keep(buys[i], (town, price, straight, days), false);
+                    }
+                }
+            }
+            for (int i = 0; i < n; i++)
+            {
+                ItemObject item = wanted[i];
+                string kind = KindOf(item);
+                _marketCache[(item.StringId, true)] = (hour, Options.Generation, kind, Settled(sells[i], true));
+                _marketCache[(item.StringId, false)] = (hour, Options.Generation, kind, Settled(buys[i], false));
+            }
         }
 
         private List<(Settlement, int)> TopLive(ItemObject item, bool selling, int hour)
@@ -615,10 +682,17 @@ namespace TradeLord
             bool rankByScore = Options.Current.ConfidenceRanking;
             var pressure = CaravanPressure();
             int herdRoom = -1;
+            var wanted = new List<ItemObject>();
             foreach (ItemObject item in Items.All)
             {
                 if (!TradePolicy.Priced(item)) continue;
                 if (!TradePolicy.MayRoundTrip(item, locked)) continue;
+                wanted.Add(item);
+            }
+            PrimeLiveRankings(wanted, (int)CampaignTime.Now.ToHours);
+            for (int at = 0; at < wanted.Count; at++)
+            {
+                ItemObject item = wanted[at];
 
                 var buys = TopBuy(item, TopCacheSize);
                 var sells = TopSell(item, TopCacheSize);
