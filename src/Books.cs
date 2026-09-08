@@ -25,12 +25,17 @@ namespace TradeLord
 
         internal void Forget()
         {
-            _held.Clear();
-            _dryBought.Clear();
-            _drySold.Clear();
+            ForgetTheDryRun();
             _bought.Clear();
             _sold.Clear();
             _paid = 0;
+        }
+
+        internal void ForgetTheDryRun()
+        {
+            _held.Clear();
+            _dryBought.Clear();
+            _drySold.Clear();
             _spent = 0;
             _gained = 0;
             _drawn = 0;

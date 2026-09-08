@@ -134,6 +134,8 @@ namespace TradeLord
             _pendingXp = 0;
             _pendingXpMuted = true;
             AutomatedTradeInProgress = false;
+            _sittingAt = null;
+            _sittingHour = -1;
             _herdLookupFailed = false;
             Carry.Forget();
             TradePolicy.ForgetItemListAudit();
@@ -193,10 +195,22 @@ namespace TradeLord
 
         private static bool _visitTradeAllowed;
 
-        private static void ResetVisit()
+        private static string _sittingAt;
+        private static int _sittingHour = -1;
+
+        private static bool StillTheSameSitting(Settlement settlement)
+        {
+            int hour = (int)CampaignTime.Now.ToHours;
+            bool same = settlement != null && settlement.StringId == _sittingAt && hour == _sittingHour;
+            _sittingAt = settlement?.StringId;
+            _sittingHour = hour;
+            return same;
+        }
+
+        private static void ResetVisit(bool sameSitting = false)
         {
             _visitTradeAllowed = false;
-            Visit.Forget();
+            if (sameSitting) Visit.ForgetTheDryRun(); else Visit.Forget();
             _cargoWasFull = false;
             _runMovedGoods = false;
             _sellStalled = null;
@@ -605,7 +619,7 @@ namespace TradeLord
             if (party != MobileParty.MainParty) return;
             Guard.Run("Action.OnSettlementEntered", () =>
             {
-                ResetVisit();
+                ResetVisit(StillTheSameSitting(settlement));
                 _visitTradeAllowed = CanTradeHere(settlement);
                 WarnUnmatchedItemLists();
                 LogHerdState("entering " + settlement.Name);

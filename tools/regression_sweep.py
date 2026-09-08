@@ -571,8 +571,8 @@ def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
                         "try { held.WriteLine(line); return; }",
                         "catch { LetGo(); }",
                         "File.AppendAllText(_path, line + Environment.NewLine);")
-            and 'File.WriteAllText(candidate, "");' in resolve
-            and S['Support.cs'].count("File.AppendAllText(") == 1)
+            and 'File.AppendAllText(candidate, "");' in resolve
+            and S['Support.cs'].count("File.AppendAllText(") == 2)
 
 def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
     marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
@@ -1266,8 +1266,9 @@ chk("1.3.5", "capture at most once per hour per town",
 chk("1.3.5", "sale that moved no gold does not count", "if (proceeds == 0) break;" in S['Trading.cs'])
 chk("1.3.5", "detailed-summary setting does not gate the log",
     "DetailedTradeSummary" not in method_body(S['Trading.cs'], "private static void LogDetail"))
-chk("1.3.5", "log truncated per launch, at the first path that accepts the write",
-    'File.WriteAllText(candidate, "");' in method_body(S['Support.cs'], "private static string Resolve") and
+chk("1.3.5", "log path worked out once per launch, at the first path that accepts the write",
+    "foreach (string candidate in Candidates(FileName))" in
+        method_body(S['Support.cs'], "private static string Resolve") and
     "if (!_resolved) { _resolved = true; _path = Resolve(); }" in S['Support.cs'])
 chk("1.3.5", "hotkey blocked while escape menu open", "!map.IsEscapeMenuOpened" in S['Panel.cs'])
 chk("1.3.5", "travel caches cleared on game end",
@@ -4223,7 +4224,7 @@ def one_button_puts_every_setting_back_and_sits_at_the_top():
 def every_change_away_from_the_shipped_value_reaches_the_log():
     follow = method_body(S['Config.cs'], "internal static void Follow")
     away = method_body(S['Config.cs'], "private static void SayWhatIsAwayFromStock")
-    said = method_body(S['Config.cs'], "private static void SayWhatChanged")
+    said = method_body(S['Config.cs'], "private static bool SayWhatChanged")
     flush = method_body(S['Config.cs'], "internal static void Flush")
     return (ordered(follow, "Guard.Run(\"Config\", Read);", "Guard.Run(\"Config.Away\", SayWhatIsAwayFromStock);",
                     "_lastSeen = Snapshot();", "Options.Changed = Noted;")
@@ -4233,9 +4234,12 @@ def every_change_away_from_the_shipped_value_reaches_the_log():
             and "away from what TradeLord ships with" in away
             and "is back at what it ships with" in said
             and "_lastSeen = now;" in said
+            and "bool moved = false;" in said and "moved = true;" in said and "return moved;" in said
             and ordered(method_body(S['Config.cs'], "internal static void Settle"),
-                        "_dirty = false;", "Guard.Run(\"Config.Changed\", SayWhatChanged);",
-                        "Guard.Run(\"Config.Flush\"")
+                        "_dirty = false;",
+                        'bool moved = Guard.Read("Config.Changed", _path, _ => SayWhatChanged(), true);',
+                        "if (!moved) return;",
+                        'Guard.Run("Config.Flush"')
             and ordered(flush, "if (!_dirty) return;",
                         "if (DateTime.UtcNow - _stillMoving < Settling) return;", "Settle();")
             and "private static string Shown(FieldInfo field) => Shown(field, Options.Current);" in S['Config.cs'])
@@ -4350,7 +4354,10 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
 def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
     ledger = S['Books.cs']
     forget = method_body(ledger, "internal void Forget")
+    dry = method_body(ledger, "internal void ForgetTheDryRun")
     fields = set(re.findall(r'^\s*private (?:readonly )?.*?(_\w+)(?: =|;)', ledger, re.M))
+    live = {"_bought", "_sold", "_paid"}
+    cleared = lambda body: set(re.findall(r'(_\w+)(?:\.Clear\(\)| = 0f?);', body))
     return ("static" not in ledger
             and all(reader in ledger for reader in (
                 "internal int PaidOut(bool sim) => _paid + (sim ? _spent : 0);",
@@ -4364,7 +4371,9 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
                 "internal int HerdTaken(bool sim) => sim ? _herd : 0;"))
             and all(dry in ledger for dry in ("_drySold", "_dryBought"))
             and len(fields) == 15
-            and all(name + ".Clear();" in forget or name + " = 0" in forget for name in fields)
+            and "ForgetTheDryRun();" in forget
+            and cleared(forget) == live
+            and cleared(dry) == fields - live
             and 'Books.cs' in TESTPROJ
             and BOOKTESTS.count("[Fact]") >= 12)
 
@@ -5042,6 +5051,64 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
     the_grain_switch_owns_the_reason_it_holds_a_good_back())
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
+
+def a_market_you_step_back_into_inside_the_hour_is_the_same_visit():
+    t = S['Trading.cs']
+    sitting = method_body(t, "private static bool StillTheSameSitting")
+    reset = method_body(t, "private static void ResetVisit")
+    entered = method_body(t, "private void OnSettlementEntered")
+    forget = method_body(t, "internal static void ForgetVisit")
+    return ("int hour = (int)CampaignTime.Now.ToHours;" in sitting
+            and "bool same = settlement != null && settlement.StringId == _sittingAt "
+                "&& hour == _sittingHour;" in sitting
+            and ordered(sitting, "bool same =", "_sittingAt = settlement?.StringId;",
+                        "_sittingHour = hour;", "return same;")
+            and "private static void ResetVisit(bool sameSitting = false)" in t
+            and "if (sameSitting) Visit.ForgetTheDryRun(); else Visit.Forget();" in reset
+            and "ResetVisit(StillTheSameSitting(settlement));" in entered
+            and t.count("StillTheSameSitting(") == 2
+            and "_sittingAt = null;" in forget
+            and "_sittingHour = -1;" in forget)
+
+def the_log_is_kept_from_one_launch_to_the_next():
+    support = S['Support.cs']
+    return ('File.AppendAllText(candidate, "");' in
+                method_body(support, "private static string Resolve")
+            and "File.WriteAllText(" not in support
+            and "File.Delete(" not in support
+            and "FileMode.Create" not in support
+            and "FileMode.Truncate" not in support
+            and "FileMode.Append, FileAccess.Write, FileShare.ReadWrite" in
+                method_body(support, "private static StreamWriter Held"))
+
+def the_settings_file_is_left_alone_when_nothing_moved():
+    settle = method_body(S['Config.cs'], "internal static void Settle")
+    said = method_body(S['Config.cs'], "private static bool SayWhatChanged")
+    return (ordered(settle, "_dirty = false;",
+                    'bool moved = Guard.Read("Config.Changed", _path, _ => SayWhatChanged(), true);',
+                    "if (!moved) return;", 'Guard.Run("Config.Flush"')
+            and "if (_lastSeen == null) { _lastSeen = now; return false; }" in said
+            and ordered(said, "bool moved = false;", "moved = true;", "return moved;")
+            and ordered_last(said, "_lastSeen = now;", "return moved;")
+            and S['Config.cs'].count('Write(_path, "a setting changed")') == 1)
+
+def the_purchase_records_it_drops_are_named():
+    body = method_body(S['Ledger.cs'], "private void MatchPurchasesToWhatIsHeld")
+    return ("var dropped = new List<string>();" in body
+            and ordered(body, "int gone = rec.Count - have;",
+                        'dropped.Add(gone + " " + rec.ItemId);',
+                        "TradeMath.DrainSale(rec, gone);")
+            and 'string.Join(", ", dropped.ToArray())' in body)
+
+
+chk("1.43.0", "stepping straight back into a market inside the same hour carries the same visit on, so neither what it has already spent nor what it has already traded starts again",
+    a_market_you_step_back_into_inside_the_hour_is_the_same_visit())
+chk("1.43.0", "TradeLord.log is kept from one launch to the next rather than emptied",
+    the_log_is_kept_from_one_launch_to_the_next())
+chk("1.43.0", "TradeLord.ini is left alone when a settings handover sets every value to the one it already held",
+    the_settings_file_is_left_alone_when_nothing_moved())
+chk("1.43.0", "a purchase record dropped because the goods left the party unsold names those goods",
+    the_purchase_records_it_drops_are_named())
 
 chk("1.42.4", "a good you bought by hand is never written down as more of it than your party is carrying",
     a_good_you_bought_by_hand_is_never_counted_beyond_what_you_carry())
