@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace TradeLord
 {
@@ -30,6 +31,7 @@ namespace TradeLord
         internal bool IsSpareMount;
         internal bool IsLivestock;
         internal bool IsPrizeMount;
+        internal int MeatCount;
         internal bool IsSmithingMaterial;
         internal bool IsGrain;
     }
@@ -83,6 +85,70 @@ namespace TradeLord
         internal const int RankHaulAnimal = 2;
         internal const int RankPrizeMount = 3;
         internal const int RankNotAnAnimal = -1;
+
+        internal struct Ration
+        {
+            internal Good Good;
+            internal int Amount;
+        }
+
+        internal static int FoodValue(in Good good)
+        {
+            if (good.Id == null) return 0;
+            if (good.HasHorse) return good.IsLivestock ? good.MeatCount : 0;
+            return good.IsFood ? 1 : 0;
+        }
+
+        internal static bool IsStorableFood(in Good good) =>
+            good.Id != null && good.IsFood && !good.HasHorse;
+
+        private static float CostPerFood(in Ration held) =>
+            (float)held.Good.Value / FoodValue(held.Good);
+
+        internal static Dictionary<string, int> FoodKeep(List<Ration> carried, float perDay, Options s)
+        {
+            var keep = new Dictionary<string, int>(StringComparer.Ordinal);
+            int variety = s.KeepEveryFoodKind ? s.KeepPerFoodKind : 0;
+            if ((s.KeepFoodDays <= 0 && variety <= 0) || carried == null) return keep;
+            if (perDay < 1f) perDay = 1f;
+            int reserve = (int)Math.Ceiling(perDay * s.KeepFoodDays);
+
+            var food = new List<Ration>();
+            for (int i = 0; i < carried.Count; i++)
+                if (carried[i].Amount > 0 && FoodValue(carried[i].Good) > 0 &&
+                    !Listed(s.AlwaysSet, carried[i].Good))
+                    food.Add(carried[i]);
+
+            food.Sort((x, y) =>
+            {
+                int lx = x.Good.IsLivestock ? 1 : 0;
+                int ly = y.Good.IsLivestock ? 1 : 0;
+                return lx != ly ? lx.CompareTo(ly) : CostPerFood(x).CompareTo(CostPerFood(y));
+            });
+
+            if (variety > 0)
+                foreach (Ration held in food)
+                {
+                    if (held.Good.IsLivestock) continue;
+                    int floor = Math.Min(held.Amount, variety);
+                    keep.TryGetValue(held.Good.Id, out int had);
+                    if (floor <= had) continue;
+                    reserve -= (floor - had) * FoodValue(held.Good);
+                    keep[held.Good.Id] = floor;
+                }
+
+            foreach (Ration held in food)
+            {
+                if (reserve <= 0) break;
+                int perUnit = FoodValue(held.Good);
+                keep.TryGetValue(held.Good.Id, out int had);
+                if (had >= held.Amount) continue;
+                int take = Math.Min(held.Amount - had, (reserve + perUnit - 1) / perUnit);
+                reserve -= take * perUnit;
+                keep[held.Good.Id] = had + take;
+            }
+            return keep;
+        }
 
         internal static int HerdShedRank(in Good good)
         {
