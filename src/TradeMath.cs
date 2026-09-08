@@ -112,11 +112,11 @@ namespace TradeLord
             distance <= 0f ? 0f : distance / (Math.Max(landSpeed, seaSpeed) * 24f);
 
         public static int Budget(int gold, int goldReserve, int maxSpendPerVisit,
-                                 int spentThisVisit, int spentThisPass)
+                                 int spentThisVisit)
         {
-            int left = gold - spentThisPass - goldReserve;
+            int left = gold - goldReserve;
             return maxSpendPerVisit > 0
-                ? Math.Min(left, maxSpendPerVisit - spentThisVisit - spentThisPass)
+                ? Math.Min(left, maxSpendPerVisit - spentThisVisit)
                 : left;
         }
     }

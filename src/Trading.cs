@@ -431,11 +431,11 @@ namespace TradeLord
 
         internal static int Spendable(Books books, bool sim) =>
             TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(),
-                             Options.Current.MaxSpendPerVisit, books.PaidOut(sim), 0);
+                             Options.Current.MaxSpendPerVisit, books.PaidOut(sim));
 
         internal static int PurseForAVisit() =>
             TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
-                             Options.Current.MaxSpendPerVisit, 0, 0);
+                             Options.Current.MaxSpendPerVisit, 0);
 
         private static int GoldGained(bool sim, int simGold, int goldBefore) =>
             sim ? simGold : Hero.MainHero.Gold - goldBefore;
