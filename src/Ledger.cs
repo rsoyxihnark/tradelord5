@@ -447,7 +447,6 @@ namespace TradeLord
 
         private int _routeHour = -1;
         private int _routeGen = -1;
-        private int _routePurse = -1;
         private List<TradeRoute> _routes;
 
         internal void ForgetMarketRankings()
@@ -660,28 +659,31 @@ namespace TradeLord
         {
             DropRankingsIfThePartyMoved();
             int hour = (int)CampaignTime.Now.ToHours;
-            int purse = TradeActionBehavior.PurseForAVisit();
-            if (_routes == null || _routeHour != hour || _routeGen != Options.Generation
-                || _routePurse != purse)
+            if (_routes == null || _routeHour != hour || _routeGen != Options.Generation)
             {
-                _routes = ScanRoutes(purse);
+                _routes = ScanRoutes();
                 _routeHour = hour;
                 _routeGen = Options.Generation;
-                _routePurse = purse;
             }
             return _routes.Count <= top ? _routes : _routes.GetRange(0, top);
         }
 
-        private List<TradeRoute> ScanRoutes(int purse)
+        private static int MostWorthShowing(int buyPrice)
+        {
+            int stocked = Options.Current.BuyCapPerItem > 0
+                ? Options.Current.BuyCapPerItem : UncappedBuyProjection;
+            int spendCap = Options.Current.BuyValueCapPerItem;
+            return spendCap > 0 ? Math.Min(stocked, spendCap / buyPrice) : stocked;
+        }
+
+        private List<TradeRoute> ScanRoutes()
         {
             Bulk.Forget();
             var routes = new List<TradeRoute>();
-            if (purse <= 0) return routes;
             ISet<string> locked = TradePolicy.LockedKeys();
             float cap = Options.Current.MaxTravelDays;
             bool rankByScore = Options.Current.ConfidenceRanking;
             var pressure = CaravanPressure();
-            int herdRoom = -1;
             var wanted = new List<ItemObject>();
             foreach (ItemObject item in Items.All)
             {
@@ -705,16 +707,8 @@ namespace TradeLord
                     if (buyPrice <= 0) continue;
                     if (!TradePolicy.BuyAcceptable(buyPrice, TradePolicy.Realizable(sells[0].price))) break;
 
-                    int stocked = Options.Current.BuyCapPerItem > 0
-                        ? Options.Current.BuyCapPerItem : UncappedBuyProjection;
                     int spendCap = Options.Current.BuyValueCapPerItem;
-                    if (spendCap <= 0 || purse < spendCap) spendCap = purse;
-                    if (spendCap > 0) stocked = Math.Min(stocked, spendCap / buyPrice);
-                    if (item.HasHorseComponent)
-                    {
-                        if (herdRoom < 0) herdRoom = TradeActionBehavior.HerdRoomForLivestock(MobileParty.MainParty);
-                        stocked = Math.Min(stocked, herdRoom);
-                    }
+                    int stocked = MostWorthShowing(buyPrice);
                     int shelf = 0;
                     if (Options.Current.Omniscient)
                     {
