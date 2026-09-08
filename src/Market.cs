@@ -169,6 +169,43 @@ namespace TradeLord
             return total;
         }
     }
+    internal static class Priced
+    {
+        private static bool _saidItCouldNotAsk;
+
+        internal static IMarketData Kept(Settlement site)
+        {
+            if (site == null) return null;
+            if (site.IsTown) return site.Town == null ? null : (IMarketData)site.Town.MarketData;
+            if (site.IsVillage) return site.Village == null ? null : (IMarketData)site.Village.MarketData;
+            return null;
+        }
+
+        internal static int At(SettlementComponent market, ItemObject item, MobileParty who, bool selling) =>
+            item == null ? 0 : At(market, new EquipmentElement(item), who, selling);
+
+        internal static int At(SettlementComponent market, EquipmentElement el, MobileParty who, bool selling)
+        {
+            if (market == null) return 0;
+            Settlement site = market.Settlement;
+            IMarketData held = Kept(site);
+            if (held != null)
+            {
+                try { return held.GetPrice(el, who, selling, site.Party); }
+                catch (Exception e)
+                {
+                    if (!_saidItCouldNotAsk)
+                    {
+                        _saidItCouldNotAsk = true;
+                        Log.Error(e, "asking a market its price the way the trade screen asks it, naming " +
+                                     "the merchant - TradeLord falls back to asking without one");
+                    }
+                }
+            }
+            return market.GetItemPrice(el, who, selling);
+        }
+    }
+
     internal static class PriceTrace
     {
         internal static void Say(Settlement site, string when)
@@ -177,19 +214,12 @@ namespace TradeLord
             Guard.Run("PriceTrace", () => Written(site, when));
         }
 
-        private static IMarketData Kept(Settlement site)
-        {
-            if (site.IsTown) return site.Town == null ? null : (IMarketData)site.Town.MarketData;
-            if (site.IsVillage) return site.Village == null ? null : (IMarketData)site.Village.MarketData;
-            return null;
-        }
-
         private static void Written(Settlement site, string when)
         {
             SettlementComponent market = site.SettlementComponent;
             ItemRoster carried = MobileParty.MainParty == null ? null : MobileParty.MainParty.ItemRoster;
             if (market == null || carried == null) return;
-            IMarketData kept = Kept(site);
+            IMarketData kept = Priced.Kept(site);
 
             Log.Write("price trace (" + when + ") at " + site.Name + ", " + Named(site) +
                       ", prices kept by " +
@@ -210,11 +240,11 @@ namespace TradeLord
                 ItemObject item = el.Item;
                 if (!TradePolicy.Priced(item)) continue;
                 Log.Write("  " + item.StringId + " (" + (item.Name == null ? item.StringId : item.Name.ToString()) +
-                          ") worth " + el.ItemValue + ": TradeLord asks the market and gets " + Asked(market, el) +
+                          ") worth " + el.ItemValue + ": TradeLord uses " + Uses(market, el) +
                           (kept == null ? "" :
-                           "; asked through its own prices, naming the merchant, " +
-                           Read(kept, el, MobileParty.MainParty, site.Party) +
-                           "; naming no merchant, " + Read(kept, el, MobileParty.MainParty, null) +
+                           "; asked the plain way, which names no merchant, " + Asked(market, el) +
+                           "; through the market's own prices with no merchant, " +
+                           Read(kept, el, MobileParty.MainParty, null) +
                            "; naming nobody at all, " + Read(kept, el, null, null)) +
                           Noted(item, site));
             }
@@ -230,6 +260,10 @@ namespace TradeLord
             Settlement town = village == null ? null : village.TradeBound ?? village.Bound;
             return town == null ? "" : ", which trades through " + town.Name;
         }
+
+        private static string Uses(SettlementComponent market, EquipmentElement el) =>
+            "sell " + Priced.At(market, el, MobileParty.MainParty, true) +
+            ", buy " + Priced.At(market, el, MobileParty.MainParty, false);
 
         private static string Asked(SettlementComponent market, EquipmentElement el) =>
             "sell " + market.GetItemPrice(el, MobileParty.MainParty, true) +
