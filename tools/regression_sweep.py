@@ -315,6 +315,24 @@ def log_prefers_the_user_folder():
             and body.count("catch { }") == 2
             and "yield" not in body)
 
+def a_good_on_the_shelf_is_asked_the_buying_questions_once():
+    t = S['Trading.cs']
+    buy = method_body(t, "private static void BuyPass")
+    round_trip = between(t, "internal static bool MayRoundTrip", ";")
+    resale = between(t, "internal static bool ResaleAllowed", ";")
+    return (buy.count("TradePolicy.MayBuy(") == 1
+            and "MayRoundTrip" not in buy
+            and "MayBuy(item, lockedKeys) && ResaleAllowed(item)" in round_trip
+            and "MayBuy" not in resale
+            and "if (!TradePolicy.MayRoundTrip(item, locked)) continue;" in S['Ledger.cs'])
+
+def the_panel_reads_the_key_before_it_walks_the_screen():
+    tick = method_body(S['Panel.cs'], "private static void TickCore")
+    return (tick.count("HotkeyReleased() && !TypingOnScreen(map)") == 2
+            and "TypingOnScreen(map) && HotkeyReleased()" not in tick
+            and ordered(tick, "if (!map.IsEscapeMenuOpened && HotkeyReleased() && !TypingOnScreen(map))",
+                        "else if (map.IsEscapeMenuOpened || (HotkeyReleased() && !TypingOnScreen(map)))"))
+
 def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
     write = method_body(S['Support.cs'], "internal static void Write")
     held = method_body(S['Support.cs'], "private static StreamWriter Held")
@@ -981,7 +999,7 @@ chk("1.3.4", "per-item buy caps persist across clicks",
 chk("1.3.4", "village last-unit clamp leaves one unit on the shelf",
     "if (lastInVillage) return Block.VillageLastUnit;" in
         method_body(S['Trading.cs'], "private static Block WhatStopsBuying") and
-    "pass.Site != null && pass.Site.IsVillage && remaining <= 1," in
+    "pass.Site != null && pass.Site.IsVillage && remaining <= 1);" in
         method_body(S['Trading.cs'], "private static void BuyPass") and
     all("if (settlement.IsVillage && remaining <= 1) break;" in method_body(S['Trading.cs'], one)
         for one in ("public static void ExecuteResupply", "public static void ExecuteHaulage")))
@@ -1028,11 +1046,16 @@ chk("1.3.8", "the buying pass takes only what a market in reach pays more for, a
 chk("1.3.2", "the buying pass stops at the purse, the per-item denar cap, the carry weight and the herd",
     (lambda b: "if (price > budget) return Block.BudgetSpent;" in b
            and "taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;" in b
-           and "if (item.Weight > 0.01f && item.Weight > roomLeft) return Block.CarryWeight;" in b
-           and "if (livestock && herdRoom <= 0) return Block.HerdFull;" in b)
+           and "if (livestock && herdRoom <= 0) return Block.HerdFull;" in b
+           and "roomLeft" not in b)
     (method_body(S['Trading.cs'], "private static Block WhatStopsBuying")) and
+    "item.Weight > 0.01f && item.Weight > roomLeft;" in
+        between(S['Trading.cs'], "private static bool NoRoomForOneMore", ";") + ";" and
     (lambda b: "Block capped = WhatStopsBuying(" in b
-           and "if (capped != Block.None) { tally.Note(capped); break; }" in b)
+           and "if (capped != Block.None) { tally.Note(capped); break; }" in b
+           and ordered(b, "if (capped != Block.None) { tally.Note(capped); break; }",
+                       "if (NoRoomForOneMore(item, pass.Room() - simWeight)) "
+                       "{ tally.Note(Block.CarryWeight); break; }"))
     (method_body(S['Trading.cs'], "private static void BuyPass")))
 chk("1.3.14", "the selling pass stops when the merchant's till cannot cover the next unit, on a dry run too",
     "if ((pass.Sim ? simTill : pass.TillNow) < price) { tally.Note(Block.MerchantTillEmpty); break; }" in
@@ -1344,7 +1367,7 @@ chk("1.4.1", "the automatic path asks the same market question the menu does",
 chk("1.4.1", "planner and executor apply the same village last-unit clamp",
     "StockOf(from, item) - (from.IsVillage ? 1 : 0)" in S['Ledger.cs'] and
     "if (lastInVillage) return Block.VillageLastUnit;" in S['Trading.cs'] and
-    "pass.Site != null && pass.Site.IsVillage && remaining <= 1," in
+    "pass.Site != null && pass.Site.IsVillage && remaining <= 1);" in
         method_body(S['Trading.cs'], "private static void BuyPass"))
 
 chk("1.4.2", "a village the game will not trade in is not a destination either",
@@ -1523,8 +1546,10 @@ chk("1.5.1", "no two settings in one MCM group claim the same position",
 
 chk("1.5.2", "a listed route passes both the buy and the sell policy check",
     "internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys)" in S['Trading.cs'] and
+    "MayBuy(item, lockedKeys) && ResaleAllowed(item)" in
+    between(S['Trading.cs'], "internal static bool MayRoundTrip", ";") and
     "PolicyAllows(PolicyFor(item), buying: false)" in
-    method_body(S['Trading.cs'], "internal static bool MayRoundTrip") and
+    between(S['Trading.cs'], "internal static bool ResaleAllowed", ";") and
     "if (!TradePolicy.MayRoundTrip(item, locked)) continue;" in S['Ledger.cs'] and
     "TradePolicy.MayBuy(item, locked)" not in S['Ledger.cs'])
 chk("1.5.2", "port menus are asked for only where the module that owns them is installed",
@@ -1889,7 +1914,7 @@ chk("1.6.6", "the always-sell list governs selling only, never what quick-buy pu
     "AlwaysSet" not in method_body(S['Trading.cs'], "internal static bool MayBuy") and
     "Listed(s.AlwaysSet, item)" in method_body(S['Trading.cs'], "internal static bool MaySell") and
     "Listed(Options.Current.AlwaysSet, item) ||" in
-        method_body(S['Trading.cs'], "internal static bool MayRoundTrip"))
+        between(S['Trading.cs'], "internal static bool ResaleAllowed", ";"))
 chk("1.6.6", "the ledger popup builds its route lines from a translatable string",
     '"{=TL84}{ITEM}: buy {FROM}' in S['Trading.cs'] and
     'r.Item.Name + ": buy "' not in S['Trading.cs'] and
@@ -2973,13 +2998,14 @@ chk("1.7.0", "a rule naming source that is no longer there reports itself broken
 
 chk("1.14.1", "the panel hotkey is ignored while a text field on the map has the keyboard",
     "layers[i].IsFocusedOnInput()" in method_body(S['Panel.cs'], "private static bool TypingOnScreen") and
-    S['Panel.cs'].count("!TypingOnScreen(map) && HotkeyReleased()") == 2 and
-    "!map.IsEscapeMenuOpened && !TypingOnScreen(map) && HotkeyReleased()" in S['Panel.cs'])
+    S['Panel.cs'].count("HotkeyReleased() && !TypingOnScreen(map)") == 2 and
+    S['Panel.cs'].count("!TypingOnScreen(map) && HotkeyReleased()") == 0 and
+    "!map.IsEscapeMenuOpened && HotkeyReleased() && !TypingOnScreen(map)" in S['Panel.cs'])
 chk("1.14.1", "a text field that cannot be read leaves the hotkey working rather than dead",
     "return false;" in method_body(S['Panel.cs'], "private static bool TypingOnScreen") and
     "catch (Exception e) { Log.Error(e," in method_body(S['Panel.cs'], "private static bool TypingOnScreen"))
 chk("1.14.1", "the escape menu still closes the panel whether or not anything is being typed",
-    "else if (map.IsEscapeMenuOpened || (!TypingOnScreen(map) && HotkeyReleased()))" in S['Panel.cs'])
+    "else if (map.IsEscapeMenuOpened || (HotkeyReleased() && !TypingOnScreen(map)))" in S['Panel.cs'])
 
 def the_hold_hints_say_the_floor_binds_only_while_the_switch_is_on():
     en = spoken(ENGLISH)
@@ -3054,11 +3080,12 @@ def the_notes_are_the_changelog_section_for_the_version():
     return (len(wanted) > 0 and said == ['- ' + line for line in wanted])
 
 chk("1.14.2", "quick-buy leaves a good its own sell policy would never let it sell again",
-    "if (!TradePolicy.MayRoundTrip(it, pass.Locked)) { tally.Note(Block.CategoryPolicy); continue; }" in
+    "if (!TradePolicy.ResaleAllowed(it)) { tally.Note(Block.CategoryPolicy); continue; }" in
         method_body(S['Trading.cs'], "private static void BuyPass") and
+    "MayRoundTrip(it," not in S['Trading.cs'] and
     ordered(method_body(S['Trading.cs'], "private static void BuyPass"),
             "TradePolicy.MayBuy(it, pass.Locked, out Block whyBuy)",
-            "TradePolicy.MayRoundTrip(it, pass.Locked)"))
+            "TradePolicy.ResaleAllowed(it)"))
 
 chk("1.14.2", "a route walk prices each town's ladder once and reads it back for every partner",
     "internal int At(int taken)" in S['Market.cs'] and
@@ -3376,11 +3403,11 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
                         "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;",
                         "remaining -= paidLeft;", "paidLeft = 0;")
             and "TradePolicy.MayBuy(it, pass.Locked, out Block whyBuy)" in buy
-            and "TradePolicy.MayRoundTrip(it, pass.Locked)" in buy
+            and "TradePolicy.ResaleAllowed(it)" in buy
             and "TradePolicy.BuyAcceptable(price, realizable)" in buy
             and "TradePolicy.Realizable(elsewhere.Item2)" in buy
             and "WhatStopsBuying(item, price, pass.Spendable(), (countThis, spentThis), held," in buy
-            and "pass.Room() - simWeight);" in buy
+            and "NoRoomForOneMore(item, pass.Room() - simWeight)" in buy
             and "s.BuyCapPerItem" in buy
             and "s.BuyValueCapPerItem" in buy
             and "s.MaxHeldPerItem" in buy
@@ -4687,6 +4714,10 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
+chk("1.41.3", "a good on the shelf is asked once whether it may be bought, and the resale half of the round-trip question stands on its own",
+    a_good_on_the_shelf_is_asked_the_buying_questions_once())
+chk("1.41.3", "the panel reads the hotkey before it walks the map's layers looking for a text field",
+    the_panel_reads_the_key_before_it_walks_the_screen())
 chk("1.41.2", "TradeLord.log is held open and each line is pushed out as it is written, with appending a line at a time left as the fallback",
     the_log_is_held_open_and_pushed_out_a_line_at_a_time())
 chk("1.41.2", "the town marked on your map skips a town whose gold cannot beat the best found so far before it prices your cargo there",

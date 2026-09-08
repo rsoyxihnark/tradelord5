@@ -573,10 +573,12 @@ namespace TradeLord
             return !IsLocked(lockedKeys, held);
         }
 
+        internal static bool ResaleAllowed(ItemObject item) =>
+            Listed(Options.Current.AlwaysSet, item) ||
+            PolicyAllows(PolicyFor(item), buying: false);
+
         internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys) =>
-            MayBuy(item, lockedKeys) &&
-            (Listed(Options.Current.AlwaysSet, item) ||
-             PolicyAllows(PolicyFor(item), buying: false));
+            MayBuy(item, lockedKeys) && ResaleAllowed(item);
 
         private static bool HasCostBasis(ItemObject item) =>
             Options.Current.CostBasisMode == 2 ||
@@ -1903,7 +1905,7 @@ namespace TradeLord
 
         private static Block WhatStopsBuying(ItemObject item, int price, int budget,
                                              (int count, int spent) taken, int held, float shareCap,
-                                             bool livestock, int herdRoom, bool lastInVillage, float roomLeft)
+                                             bool livestock, int herdRoom, bool lastInVillage)
         {
             Options s = Options.Current;
             if (price > budget) return Block.BudgetSpent;
@@ -1913,9 +1915,11 @@ namespace TradeLord
             if (shareCap > 0f && (held + 1) * item.Weight > shareCap) return Block.HeldEnough;
             if (livestock && herdRoom <= 0) return Block.HerdFull;
             if (lastInVillage) return Block.VillageLastUnit;
-            if (item.Weight > 0.01f && item.Weight > roomLeft) return Block.CarryWeight;
             return Block.None;
         }
+
+        private static bool NoRoomForOneMore(ItemObject item, float roomLeft) =>
+            item.Weight > 0.01f && item.Weight > roomLeft;
 
         private static List<(ItemRosterElement el, int price, int worth)> CheapestFirst(
             Pass pass, Func<ItemObject, bool> wanted)
@@ -2288,7 +2292,7 @@ namespace TradeLord
                     ItemObject it = el.EquipmentElement.Item;
                     if (el.Amount <= 0) { tally.Note(Block.NoStock); continue; }
                     if (!TradePolicy.MayBuy(it, pass.Locked, out Block whyBuy)) { tally.Note(whyBuy); continue; }
-                    if (!TradePolicy.MayRoundTrip(it, pass.Locked)) { tally.Note(Block.CategoryPolicy); continue; }
+                    if (!TradePolicy.ResaleAllowed(it)) { tally.Note(Block.CategoryPolicy); continue; }
                     if (pass.Books.Sold(pass.Sim, it.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
                     if (el.Amount - pass.Books.Stocked(pass.Sim, it.StringId) <= 0) { tally.Note(Block.NoStock); continue; }
                     int held = mine.GetItemNumber(it) + pass.Books.Held(pass.Sim, it.StringId);
@@ -2335,9 +2339,9 @@ namespace TradeLord
                         if (!TradePolicy.BuyAcceptable(price, realizable)) { tally.Note(Block.BelowMargin); break; }
                         Block capped = WhatStopsBuying(item, price, pass.Spendable(), (countThis, spentThis), held,
                                                        shareCap, livestock, herdRoom,
-                                                       pass.Site != null && pass.Site.IsVillage && remaining <= 1,
-                                                       pass.Room() - simWeight);
+                                                       pass.Site != null && pass.Site.IsVillage && remaining <= 1);
                         if (capped != Block.None) { tally.Note(capped); break; }
+                        if (NoRoomForOneMore(item, pass.Room() - simWeight)) { tally.Note(Block.CarryWeight); break; }
 
                         if (pass.Sim)
                         {
