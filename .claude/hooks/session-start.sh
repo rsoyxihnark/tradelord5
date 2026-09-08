@@ -23,17 +23,25 @@ else
   echo "could not work out who the owner is, so set user.name and user.email before committing"
 fi
 
-BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+git fetch --quiet origin main >/dev/null 2>&1 || true
 
-if [ -n "${BRANCH:-}" ] && [ "$BRANCH" != "main" ] && [ "$BRANCH" != "HEAD" ]; then
-  if ! git diff --quiet || ! git diff --cached --quiet; then
-    echo "the harness handed over branch $BRANCH and this checkout has uncommitted work, so it was left where it is; commit here and push with: git push -u origin HEAD:main"
-  elif git checkout main >/dev/null 2>&1 || git checkout -b main origin/main >/dev/null 2>&1; then
-    git merge --ff-only origin/main >/dev/null 2>&1 || true
-    echo "the harness handed over branch $BRANCH; this repository keeps one branch, so the checkout was moved to main and $BRANCH left exactly as it was"
-  else
-    echo "the harness handed over branch $BRANCH and the checkout could not be moved to main, so commit here and push with: git push -u origin HEAD:main"
-  fi
+LATEST=$(git rev-parse --verify --quiet FETCH_HEAD 2>/dev/null || true)
+[ -n "${LATEST:-}" ] || LATEST=$(git rev-parse --verify --quiet refs/remotes/origin/main 2>/dev/null || true)
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+WAS=$(git rev-parse --short HEAD 2>/dev/null || true)
+HERE=$(git rev-parse --verify --quiet HEAD 2>/dev/null || true)
+
+if [ -z "${LATEST:-}" ]; then
+  echo "origin/main could not be read, so this checkout was left on ${BRANCH:-HEAD} at ${WAS:-an unknown commit}; fetch it and read HEAD against origin/main before changing anything"
+elif ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "this checkout has uncommitted work, so it was left exactly as it was, on ${BRANCH:-HEAD} at ${WAS:-an unknown commit}; origin/main is $(git rev-parse --short "$LATEST") and is the source to work from, so say what the uncommitted work is before anything discards it"
+elif [ "${HERE:-}" = "$LATEST" ] && [ "$BRANCH" = "main" ]; then
+  echo "the checkout is on main at origin/main, $WAS, which is the source to work from"
+elif { git checkout main >/dev/null 2>&1 || git checkout -B main "$LATEST" >/dev/null 2>&1; } && git reset --hard "$LATEST" >/dev/null 2>&1; then
+  echo "the checkout was on ${BRANCH:-HEAD} at $WAS and has been put on main at origin/main, $(git rev-parse --short HEAD), which is the source to work from; $WAS is still reachable through git reflog, and ${BRANCH:-HEAD} was left exactly as it was"
+else
+  echo "the checkout could not be put on origin/main, so it is still on ${BRANCH:-HEAD} at ${WAS:-an unknown commit}; bring it up to date yourself before changing anything"
 fi
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
