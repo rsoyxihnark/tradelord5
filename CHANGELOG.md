@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.42.4
+
+- Buying at a market yourself no longer leaves TradeLord thinking you took thousands more of a good than you did, so it keeps what you really paid and stops selling that cargo under your Minimum profit margin.
+- That miscount also made the game work out the price of thousands of units you never bought, which is gone.
+
 ## 1.42.3
 
 - Meeting a caravan or villagers on the road and trading nothing with them now tells you why, which it was meant to do from 1.42.0 and did not.
