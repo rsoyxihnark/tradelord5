@@ -390,6 +390,22 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
                 method_body(t, "public static void ExecuteResupply")
             and "TradeRules.FoodValue(good)" in method_body(t, "public static void ExecuteHaulage"))
 
+def a_road_trade_that_moved_nothing_says_why():
+    road = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
+    return (ordered(road, "SellPass(Pass.Meet(", "BuyPass(Pass.Meet(", "ReportStalledPasses();")
+            and road.count("ReportStalledPasses();") == 1)
+
+def the_ledger_lists_a_route_you_could_not_take_this_second():
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes()")
+    size = method_body(S['Ledger.cs'], "private static int MostWorthShowing")
+    return ("purse" not in scan
+            and "herdRoom" not in scan
+            and "Carry." not in S['Ledger.cs']
+            and "Capacity" not in S['Ledger.cs']
+            and "HerdRoomForLivestock" not in S['Ledger.cs']
+            and "Options.Current.BuyValueCapPerItem" in size
+            and "Options.Current.BuyCapPerItem" in size)
+
 def the_best_markets_are_picked_without_sorting_every_town():
     l = S['Ledger.cs']
     rerank = method_body(l, "private static List<(Settlement, int)> Rerank")
@@ -404,7 +420,7 @@ def the_best_markets_are_picked_without_sorting_every_town():
 def a_route_scan_prices_each_town_once_for_every_good_it_wants():
     l = S['Ledger.cs']
     prime = method_body(l, "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
-    scan = method_body(l, "private List<TradeRoute> ScanRoutes(int purse)")
+    scan = method_body(l, "private List<TradeRoute> ScanRoutes()")
     return ("if (!Options.Current.Omniscient || wanted.Count == 0) return;" in prime
             and prime.find("if (!WithinTravelCeiling(town, days)) continue;") <
                 prime.find("market.GetItemPrice(item, me, true)")
@@ -832,8 +848,8 @@ def a_zero_cap_never_means_buy_nothing():
     return ("if (s.BuyCapPerItem > 0 && taken.count >= s.BuyCapPerItem) return Block.ItemCountCap;"
                 in cap_rule()
             and "WhatStopsBuying(" in method_body(S['Trading.cs'], "private static void BuyPass")
-            and "Options.Current.BuyCapPerItem > 0\n                        ? Options.Current.BuyCapPerItem : UncappedBuyProjection;"
-                in S['Ledger.cs']
+            and "Options.Current.BuyCapPerItem > 0\n                ? Options.Current.BuyCapPerItem : UncappedBuyProjection;"
+                in method_body(S['Ledger.cs'], "private static int MostWorthShowing")
             and "private const int UncappedBuyProjection" in S['Ledger.cs'])
 
 def every_numeric_setting_that_switches_off_at_zero_says_so():
@@ -866,7 +882,7 @@ def a_market_that_traded_nothing_is_reported_once():
                         'and nothing bought - {SECOND}.")',
                         'Tongue.Text("{=TL32}', 'Tongue.Text("{=TL33}', 'Toast(none);')
             and 'TL94' in strings_declared() and 'TL95' in strings_declared()
-            and S['Trading.cs'].count("ReportStalledPasses();") == 2
+            and S['Trading.cs'].count("ReportStalledPasses();") == 3
             and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
                         "ExecuteQuickBuy(settlement, quiet: true)", "ReportStalledPasses();")
             and ordered(launched, "ExecuteQuickSell(Settlement.CurrentSettlement);",
@@ -1360,7 +1376,10 @@ chk("1.3.14", "sim honors the merchant till", "simTill" in S['Trading.cs'])
 chk("1.3.14", "one predicate for ledger-priced items",
     S['Trading.cs'].count("bool Priced(") == 1 and "TradePolicy.Priced" in S['TooltipPatches.cs'] and
     "TradePolicy.Priced" in S['Ledger.cs'])
-chk("1.3.14", "livestock routes listed", "HerdRoomForLivestock(MobileParty.MainParty)" in S['Ledger.cs'])
+chk("1.42.0", "a livestock route is listed even when your herd is already full, deliberately, because the ledger says where the profit is and not what you could drive away today",
+    "HerdRoomForLivestock" not in S['Ledger.cs'] and
+    "herdRoom" not in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes") and
+    "HerdRoomForLivestock(pass.Party)" in S['Trading.cs'])
 chk("1.3.15", "recurring errors reported once", "is recurring - not reporting it again" in S['Support.cs'])
 chk("1.3.16", "hold-for-best-market re-tested per chunk",
     "if (price < holdFloor) { tally.Note(Block.BelowBestMarket); break; }" in S['Trading.cs'])
@@ -1405,22 +1424,21 @@ chk("1.3.23", "the access model is only asked about the settlement in context",
 
 chk("1.3.25", "routes pair every top buy market against every top sell market",
     "foreach (var (to, sellPrice) in sells)" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"))
-chk("1.3.25", "the purse, with the per-visit spend cap inside it, reaches route quantities",
-    "int purse = TradeActionBehavior.PurseForAVisit();" in S['Ledger.cs'] and
-    "if (spendCap <= 0 || purse < spendCap) spendCap = purse;" in S['Ledger.cs'] and
-    "if (spendCap > 0) stocked = Math.Min(stocked, spendCap / buyPrice);" in S['Ledger.cs'] and
-    "Options.Current.MaxSpendPerVisit, 0, 0);" in S['Trading.cs'])
-chk("1.32.0", "a purse with nothing spendable in it quotes no route at all",
-    "if (purse <= 0) return routes;" in
-    method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"))
-chk("1.32.0", "the route scan is redone once the purse moves, so a quote is never priced against stale gold",
-    "private int _routePurse = -1;" in S['Ledger.cs'] and
-    "|| _routePurse != purse" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes") and
-    "_routePurse = purse;" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes"))
-chk("1.32.0", "an empty ledger names the purse when the purse is the reason, not the travel ceilings",
+chk("1.42.0", "your purse never reaches route quantities, deliberately, so the ledger quotes a route the same whether you are rich or broke",
+    "PurseForAVisit()" not in S['Ledger.cs'] and
+    "purse" not in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes") and
+    "Options.Current.MaxSpendPerVisit, 0, 0);" in S['Trading.cs'] and
+    "private static int MostWorthShowing(int buyPrice)" in S['Ledger.cs'])
+chk("1.42.0", "a purse with nothing spendable in it still quotes every route, deliberately, so being broke never hides where the profit is",
+    "if (purse <= 0) return routes;" not in S['Ledger.cs'] and
+    "private List<TradeRoute> ScanRoutes()" in S['Ledger.cs'])
+chk("1.42.0", "the route scan is not redone when your gold moves, deliberately, because your gold no longer changes a single thing it quotes",
+    "_routePurse" not in S['Ledger.cs'] and
+    "_routes = ScanRoutes();" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes"))
+chk("1.42.0", "an empty ledger names the travel ceilings, and an empty purse is said alongside the routes rather than instead of them",
     "TL377" in strings_declared() and
-    (lambda b: "TradeActionBehavior.PurseForAVisit() <= 0" in b
-           and b.index("TL377") < b.index("TL69"))(method_body(S['Panel.cs'], "private void Refresh")))
+    (lambda b: b.index("TL69") < b.index("TL377")
+           and 'TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " +' in b)(method_body(S['Panel.cs'], "private void Refresh")))
 chk("1.3.25", "the herd probe runs only once livestock is actually on the shelf",
     "int herdRoom = -1;" in method_body(S['Trading.cs'], "private static void BuyPass") and
     "if (herdRoom < 0)\n                            herdRoom = Math.Max(0, "
@@ -2125,7 +2143,7 @@ chk("1.6.5", "an item list is parsed once per edit and never left unset",
 chk("1.6.5", "ending a campaign drops trade messages queued but not yet shown",
     "_pending.Clear();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.5", "the route scan is reused within the hour and dropped with the market rankings",
-    "_routes = ScanRoutes(purse);" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes") and
+    "_routes = ScanRoutes();" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes") and
     "_routes = null;" in method_body(S['Ledger.cs'], "private void ForgetPricedRankings") and
     "ForgetPricedRankings();" in method_body(S['Ledger.cs'], "internal void ForgetMarketRankings") and
     "_routeGen != Options.Generation" in S['Ledger.cs'])
@@ -4953,6 +4971,10 @@ chk("1.41.0", "a good the Never buy grain setting holds back says so, rather tha
 chk("1.41.0", "a town you pinned loses its pin once TradeLord has traded there",
     a_pin_comes_off_the_map_once_tradelord_has_traded_there())
 
+chk("1.42.0", "trading with a caravan or villagers on the road says why nothing moved, the same as a market visit does",
+    a_road_trade_that_moved_nothing_says_why())
+chk("1.42.0", "the ledger works a route out from your settings alone and never from what you are carrying, holding or able to spend right now, deliberately, so nothing you happen to be doing can hide a route from you",
+    the_ledger_lists_a_route_you_could_not_take_this_second())
 chk("1.41.9", "the best markets for a good are picked by keeping the best few as they come, rather than putting every town in order first",
     the_best_markets_are_picked_without_sorting_every_town())
 chk("1.41.9", "a route scan asks each town its prices once for every good it wants, and never prices a town it has already ruled out as too far",

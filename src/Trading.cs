@@ -2042,6 +2042,7 @@ namespace TradeLord
                      "sale on the road", "selling on the road", "Road trading", why);
             BuyPass(Pass.Meet(met, road, books, party),
                     "purchase on the road", "buying on the road", "Road buying", why);
+            ReportStalledPasses();
         }
 
         private const int RankLivestock = TradeRules.RankLivestock;
