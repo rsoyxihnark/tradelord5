@@ -32,6 +32,30 @@ namespace TradeLord.Compat
             ("TaleWorlds.CampaignSystem.Conversation.ConversationSentence", "set_InputToken"),
         };
 
+        private static readonly (string type, string contract)[] ReflectedTypes =
+        {
+            ("TaleWorlds.CampaignSystem.Settlements.FakeMarketData",
+             "TaleWorlds.CampaignSystem.Settlements.IMarketData"),
+        };
+
+        private static readonly (string type, string member)[] McmMembers =
+        {
+            ("MCM.Abstractions.SettingsPropertyDefinition", "<DisplayName>k__BackingField"),
+            ("MCM.Abstractions.SettingsPropertyDefinition", "<HintText>k__BackingField"),
+            ("MCM.Abstractions.SettingsPropertyDefinition", "<GroupName>k__BackingField"),
+            ("MCM.Abstractions.SettingsPropertyDefinition", "<Content>k__BackingField"),
+            ("MCM.Abstractions.SettingsPropertyGroupDefinition", "_groupNameRaw"),
+            ("MCM.Abstractions.Base.BaseSettings", "PropertyChanged"),
+            ("MCM.Abstractions.Base.BaseSettings", "SaveTriggered"),
+        };
+
+        private static readonly (string type, string[] parameters)[] McmConstructors =
+        {
+            ("MCM.Abstractions.SettingsPropertyDefinition",
+             new[] { "IEnumerable`1", "IPropertyGroupDefinition", "IRef", "Char" }),
+            ("MCM.Abstractions.SettingsPropertyGroupDefinition", new[] { "String", "Int32" }),
+        };
+
         private static readonly (string type, string member)[] ReflectedFields =
         {
             (Inventory + "ItemMenuVM", "_targetItem"),
@@ -121,6 +145,8 @@ namespace TradeLord.Compat
             CheckAssemblyIdentity(versions);
             CheckHarmonyTargets(versions);
             CheckReflectedMembers(versions);
+            CheckReflectedTypes(versions);
+            CheckMcmSurface();
             CheckEnums(versions);
             CheckBoundSurface(versions);
             CheckMenuIds();
@@ -405,6 +431,111 @@ namespace TradeLord.Compat
                     else if (shape != first) { Failures.Add(label + " changed shape in " + v + ": " + first + " -> " + shape); ok = false; }
                 }
                 Line(ok, label + (first == null ? "" : "  " + first));
+            }
+            Console.WriteLine();
+        }
+
+        private static void CheckReflectedTypes(List<string> versions)
+        {
+            Console.WriteLine("== types fetched by name at runtime - the compiled assembly names none of them ==");
+            foreach (var (type, contract) in ReflectedTypes)
+            {
+                string label = type.Split('.').Last();
+                bool ok = true;
+                foreach (string v in versions)
+                {
+                    Type found = Find(v, type);
+                    if (found == null)
+                    {
+                        Failures.Add(label + " is gone in " + v);
+                        ok = false;
+                        continue;
+                    }
+                    if (Find(v, contract) is Type wanted && !wanted.IsAssignableFrom(found))
+                    {
+                        Failures.Add(label + " no longer implements " + contract.Split('.').Last() + " in " + v);
+                        ok = false;
+                    }
+                    if (!found.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                              .Any(c => c.GetParameters().Length == 0))
+                    {
+                        Failures.Add(label + " has no parameterless constructor to create in " + v);
+                        ok = false;
+                    }
+                }
+                Line(ok, label + "  " + contract.Split('.').Last() + ", created with no arguments");
+            }
+            Console.WriteLine();
+        }
+
+        private static string McmVersion()
+        {
+            string proj = File.ReadAllText(Path.Combine(_repo, "mcm", "TradeLord.MCM.csproj"));
+            Match m = Regex.Match(proj, @"Bannerlord\.MCM""\s+Version=""([^""]+)""");
+            return m.Success ? m.Groups[1].Value : "";
+        }
+
+        private static MetadataLoadContext OpenMcm(string version)
+        {
+            string package = Path.Combine(_nuget, "bannerlord.mcm", version, "lib", "netstandard2.0");
+            if (!Directory.Exists(package)) return null;
+            var files = new List<string>(Directory.GetFiles(package, "*.dll"));
+            string framework = Path.Combine(_nuget, "microsoft.netframework.referenceassemblies.net472",
+                                            "1.0.3", "build", ".NETFramework", "v4.7.2");
+            files.AddRange(Directory.GetFiles(framework, "*.dll"));
+            files.AddRange(Directory.GetFiles(Path.Combine(framework, "Facades"), "*.dll"));
+            var unique = new Dictionary<string, string>();
+            foreach (string f in files)
+                if (!unique.ContainsKey(Path.GetFileName(f))) unique[Path.GetFileName(f)] = f;
+            var context = new MetadataLoadContext(new PathAssemblyResolver(unique.Values), "mscorlib");
+            foreach (string f in unique.Values) { try { context.LoadFromAssemblyPath(f); } catch { } }
+            return context;
+        }
+
+        private static void CheckMcmSurface()
+        {
+            string version = McmVersion();
+            Console.WriteLine("== MCM internals the settings screen reaches by name - MCM " + version + " ==");
+            MetadataLoadContext mcm = version.Length == 0 ? null : OpenMcm(version);
+            if (mcm == null)
+            {
+                Line(false, "MCM " + version + " is not restored, so nothing here was read");
+                Failures.Add("MCM " + version + " could not be opened - build mcm/TradeLord.MCM.csproj first");
+                Console.WriteLine();
+                return;
+            }
+
+            Type Named(string full)
+            {
+                foreach (Assembly asm in mcm.GetAssemblies())
+                {
+                    Type t = null;
+                    try { t = asm.GetType(full, false); } catch { }
+                    if (t != null) return t;
+                }
+                return null;
+            }
+
+            const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic |
+                                     BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+            foreach (var (type, member) in McmMembers)
+            {
+                string label = type.Split('.').Last() + "." + member;
+                Type owner = Named(type);
+                FieldInfo field = null;
+                for (Type t = owner; t != null && field == null; t = t.BaseType)
+                    field = t.GetFields(All).FirstOrDefault(f => f.Name == member);
+                Line(field != null, label + (field == null ? "" : "  " + field.FieldType.Name));
+                if (field == null) Failures.Add(label + " is gone in MCM " + version);
+            }
+            foreach (var (type, parameters) in McmConstructors)
+            {
+                string label = type.Split('.').Last() + "(" + string.Join(", ", parameters) + ")";
+                Type owner = Named(type);
+                bool ok = owner != null && owner.GetConstructors(All).Any(c =>
+                    c.GetParameters().Select(p => p.ParameterType.Name).SequenceEqual(parameters));
+                Line(ok, label);
+                if (!ok) Failures.Add(label + " is gone in MCM " + version);
             }
             Console.WriteLine();
         }
