@@ -2531,7 +2531,7 @@ chk("1.6.24", "the purse rule, route confidence and the item lists are proved by
 
 def the_purse_outranks_the_reasons_that_are_merely_counted():
     body = method_body(S['Reasons.cs'], "internal Block Dominant")
-    return ("if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;" in S['Reasons.cs']
+    return ("if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;" in body
             and ordered(body, "if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;",
                         "foreach (var kv in _counts)"))
 
@@ -3527,11 +3527,11 @@ def the_smeltable_hint_says_which_weapons_it_holds_back():
 
 def an_unreadable_crafting_record_keeps_the_weapon():
     body = method_body(S['Policy.cs'], "internal static bool PartsAllLearned")
-    return ("if (design == null) return true;" in S['Policy.cs']
-            and "Campaign.Current?.GetCampaignBehavior<ICraftingCampaignBehavior>()" in S['Policy.cs']
-            and "crafting.IsOpened(piece, design.Template)" in S['Policy.cs']
+    return ("if (design == null) return true;" in body
+            and "Campaign.Current?.GetCampaignBehavior<ICraftingCampaignBehavior>()" in body
+            and "crafting.IsOpened(piece, design.Template)" in body
             and body.count("return false;") == 3
-            and "_craftingLookupFailed = true;" in S['Policy.cs']
+            and "_craftingLookupFailed = true;" in body
             and 'Log.Error(e, "learned parts check (the weapon is kept)")' in body
             and "TradePolicy.ForgetCraftingLookup();" in
                 method_body(S['Trading.cs'], "internal static void ForgetVisit"))
