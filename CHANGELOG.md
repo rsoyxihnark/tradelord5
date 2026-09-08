@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.41.7
+
+- The language you pick, and every other setting you choose from a list, now take hold as you pick them instead of waiting for you to restart the game.
+- TradeLord.log now says when the settings screen has taken charge, instead of only saying it was still waiting for it.
+- With Live world prices off, writing down what a market charges no longer takes longer the more towns you have visited.
+
 ## 1.41.6
 
 - Walking into a market no longer makes TradeLord work out the best markets for every good all over again, since walking in moves no prices.
