@@ -5759,5 +5759,20 @@ chk("1.51.0", "no hint runs past what the settings screen can hold",
     no_hint_runs_past_what_the_screen_can_hold())
 
 
+def the_map_marker_keeps_to_the_same_trade_pool_as_the_scans():
+    marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
+    return (ordered(marker, "foreach (Town town in Town.AllTowns)",
+                    "if (!IsMarket(s)) continue;",
+                    "if (LedgerBehavior.UnderAttack(s)) continue;",
+                    "if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;")
+            and marker.count("if (!IsMarket(s)) continue;") == 1
+            and "if (!TradeActionBehavior.IsMarket(s)) return false;" in
+                method_body(S['Ledger.cs'], "private static bool Eligible"))
+
+
+chk("1.51.1", "the town marked on your map is one TradeLord would trade in, so a market kept out of the Trade Pool is kept off the marker too",
+    the_map_marker_keeps_to_the_same_trade_pool_as_the_scans())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
