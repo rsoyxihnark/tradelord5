@@ -175,13 +175,13 @@ namespace TradeLord
 
             var notes = new List<string>();
             bool lifted = Migration.Lift(shape, written, notes);
-            foreach (string note in notes) Log.Write("settings file: " + note);
-
             bool whipped = Whip.CracksOn(shape);
+            if (!whipped)
+                foreach (string note in notes) Log.Write("settings file: " + note);
             if (whipped)
             {
                 SayWhatYouHadSet(written);
-                written.Clear();
+                Whip.Crack(shape, written);
                 BackToWhatItShipsWith();
                 Log.Write("settings file: this version puts every setting back to the value TradeLord ships with, " +
                           "once, because the settings it ships with trade better than they used to. Anything you had " +

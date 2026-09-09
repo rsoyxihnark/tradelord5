@@ -150,11 +150,24 @@ namespace TradeLord
 
     public static class Whip
     {
+        public const bool Armed = false;
+
         public const int CracksAt = 9;
 
-        public static bool Armed => CracksAt > 0 && CracksAt == Migration.Shape;
+        public static bool Cracks(bool armed, int cracksAt, int shipped, int shape) =>
+            armed && cracksAt > 0 && cracksAt == shipped && shape < cracksAt;
 
-        public static bool CracksOn(int shape) => Armed && shape < CracksAt;
+        public static bool CracksOn(int shape) => Cracks(Armed, CracksAt, Migration.Shape, shape);
+
+        public static bool Crack(int shape, IDictionary<string, string> written) =>
+            Crack(CracksOn(shape), written);
+
+        public static bool Crack(bool cracks, IDictionary<string, string> written)
+        {
+            if (!cracks || written == null) return false;
+            written.Clear();
+            return true;
+        }
     }
 
     public static class Limits
