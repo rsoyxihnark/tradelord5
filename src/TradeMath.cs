@@ -56,10 +56,11 @@ namespace TradeLord
         {
             if (rec == null || rec.Count <= 0) return;
             int drain = Math.Min(count, rec.Count);
-            rec.TotalPaid -= (int)Math.Round((double)rec.TotalPaid / rec.Count * drain);
-            rec.Count -= drain;
-            if (rec.Count <= 0) { rec.Count = 0; rec.TotalPaid = 0; }
-            else if (rec.TotalPaid < 0) rec.TotalPaid = 0;
+            int left = rec.Count - drain;
+            if (left <= 0) { rec.Count = 0; rec.TotalPaid = 0; return; }
+            int unit = (int)Math.Round((double)rec.TotalPaid / rec.Count);
+            rec.Count = left;
+            rec.TotalPaid = unit > 0 ? unit * left : 0;
         }
 
         public static bool SkipTheUnitsYouPaidFor(bool basisIsMarket, ref int remaining, ref int paidLeft)
