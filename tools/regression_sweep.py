@@ -5457,19 +5457,26 @@ def the_log_names_everything_that_stops_when_the_herd_cannot_be_read():
                         '"no herd penalty"'))
 
 
-def the_reset_whip_fires_once_and_cannot_ride_into_a_later_shape():
+def the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off():
     whip = method_body(S['Migrate.cs'], "public static class Whip")
+    crack = method_body(S['Migrate.cs'], "public static bool Crack(bool cracks, IDictionary<string, string> written)")
     read = method_body(S['Config.cs'], "private static void Read")
     back = method_body(S['Config.cs'], "private static void BackToWhatItShipsWith")
     said = method_body(S['Config.cs'], "private static void SayWhatYouHadSet")
-    return ("public static bool Armed => CracksAt > 0 && CracksAt == Migration.Shape;" in whip
-            and "public static bool CracksOn(int shape) => Armed && shape < CracksAt;" in whip
+    return ("public const bool Armed = false;" in whip
             and "public const int CracksAt = " in whip
+            and ("public static bool Cracks(bool armed, int cracksAt, int shipped, int shape) =>\n"
+                 "            armed && cracksAt > 0 && cracksAt == shipped && shape < cracksAt;") in whip
+            and "public static bool CracksOn(int shape) => Cracks(Armed, CracksAt, Migration.Shape, shape);" in whip
+            and "if (!cracks || written == null) return false;" in crack
+            and "written.Clear();" in crack
             and "Whip" not in method_body(S['Migrate.cs'], "public static bool Lift")
             and ordered(read, "bool lifted = Migration.Lift(shape, written, notes);",
                         "bool whipped = Whip.CracksOn(shape);",
+                        "if (!whipped)",
+                        "foreach (string note in notes) Log.Write",
                         "SayWhatYouHadSet(written);",
-                        "written.Clear();",
+                        "Whip.Crack(shape, written);",
                         "BackToWhatItShipsWith();",
                         "if (screen && screenWroteIt && !ChangedByHand(found, stamped))",
                         "if (Taken(field, line.Value)) taken++;",
@@ -5479,9 +5486,15 @@ def the_reset_whip_fires_once_and_cannot_ride_into_a_later_shape():
                 in back
             and '"  you had " + field.Name + " = " + line.Value' in said
             and all(t in MIGRATIONTESTS for t in
-                    ("TheWhipCracksOnAFileOlderThanTheShapeItIsArmedAt",
-                     "TheWhipNeverCracksOnAFileAtOrPastTheShapeItIsArmedAt",
-                     "TheWhipIsArmedOnlyAtTheShapeThisVersionShips",
+                    ("AnArmedWhipCracksOnAFileOlderThanTheShapeItIsArmedAt",
+                     "AnArmedWhipNeverCracksOnAFileAtOrPastTheShapeItIsArmedAt",
+                     "ADisarmedWhipNeverCracksOnAnything",
+                     "AWhipArmedAtAShapeThisVersionDoesNotShipNeverCracks",
+                     "AWhipArmedAtNoShapeAtAllNeverCracks",
+                     "NothingTheLiftCarriedForwardSurvivesAWhipThatCracks",
+                     "AWhipThatDoesNotCrackLeavesTheLiftsWorkExactlyAsItFoundIt",
+                     "ThisVersionShipsTheWhipDisarmedSoNoFileIsResetByIt",
+                     "TheWhipIsStillWiredToTheShapeThisVersionShips",
                      "TheWhipLeavesTheLiftItselfAlone")))
 
 
@@ -5624,8 +5637,8 @@ chk("1.48.0", "with the price trace on, every good a pass moves is logged with w
 chk("1.48.0", "the log names everything that stops when the herd cannot be read, and the herd check says it could not read the penalty rather than reporting none",
     the_log_names_everything_that_stops_when_the_herd_cannot_be_read())
 
-chk("1.49.0", "the one-time settings reset is armed only at the shape this version ships, never fires on a file already at it, and leaves the lift itself alone",
-    the_reset_whip_fires_once_and_cannot_ride_into_a_later_shape())
+chk("1.49.1", "the one-time settings reset is one switch, is shipped off, cannot be set off by the lift and wipes everything the lift carried when it is on",
+    the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

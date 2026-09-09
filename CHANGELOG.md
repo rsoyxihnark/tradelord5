@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.49.1
+
+- The one-time reset of every setting is switched off from this version on, so nothing of yours is put back to what TradeLord ships with again.
+- That reset ran on 1.49.0 alone: if you came to this version straight from an older one you were never reset, and your settings stand exactly as you left them.
+
 ## 1.49.0
 
 - Every setting goes back to the value TradeLord ships with, once, the first time you run this version, because the settings it ships with now trade better out of the box than they used to.
