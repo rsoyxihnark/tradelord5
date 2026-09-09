@@ -122,6 +122,7 @@ namespace TradeLord
 
         public string PanelKey = "T";
 
+        public bool TradeWithTowns = true;
         public bool TradeWithVillages = true;
         public bool TradeWithCaravans = true;
         public bool SimulationMode = false;
