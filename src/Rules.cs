@@ -225,15 +225,24 @@ namespace TradeLord
             return !game.Locked();
         }
 
+        internal static Block WhatCapsAGood(in Good good, int price,
+                                            (int count, int spent) taken, int held, float shareCap,
+                                            Options s)
+        {
+            if (s.BuyCapPerItem > 0 && taken.count >= s.BuyCapPerItem) return Block.ItemCountCap;
+            if (s.BuyValueCapPerItem > 0 && taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;
+            if (s.MaxHeldPerItem > 0 && held >= s.MaxHeldPerItem) return Block.HeldEnough;
+            if (shareCap > 0f && (held + 1) * good.Weight > shareCap) return Block.HeldEnough;
+            return Block.None;
+        }
+
         internal static Block WhatStopsBuying(in Good good, int price, int budget,
                                               (int count, int spent) taken, int held, float shareCap,
                                               bool livestock, int herdRoom, bool lastInVillage, Options s)
         {
             if (price > budget) return Block.BudgetSpent;
-            if (s.BuyCapPerItem > 0 && taken.count >= s.BuyCapPerItem) return Block.ItemCountCap;
-            if (s.BuyValueCapPerItem > 0 && taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;
-            if (s.MaxHeldPerItem > 0 && held >= s.MaxHeldPerItem) return Block.HeldEnough;
-            if (shareCap > 0f && (held + 1) * good.Weight > shareCap) return Block.HeldEnough;
+            Block capped = WhatCapsAGood(good, price, taken, held, shareCap, s);
+            if (capped != Block.None) return capped;
             if (livestock && herdRoom <= 0) return Block.HerdFull;
             if (lastInVillage) return Block.VillageLastUnit;
             return Block.None;
