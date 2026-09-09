@@ -6,7 +6,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 9;
+        public const int Shape = 10;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -150,9 +150,9 @@ namespace TradeLord
 
     public static class Whip
     {
-        public const bool Armed = false;
+        public const bool Armed = true;
 
-        public const int CracksAt = 9;
+        public const int CracksAt = 10;
 
         public static bool Cracks(bool armed, int cracksAt, int shipped, int shape) =>
             armed && cracksAt > 0 && cracksAt == shipped && shape < cracksAt;

@@ -1504,7 +1504,9 @@ namespace TradeLord
             shed -= pass.Books.Shed(pass.Sim);
             if (shed <= 0) return;
 
-            Dictionary<ItemObject, int> promised = Errands.Promised();
+            ItemRoster mine = pass.Party.ItemRoster;
+            Dictionary<ItemObject, int> heldBack =
+                TradePolicy.KeptBack(mine, out Dictionary<ItemObject, int> promised);
             if (promised == null) return;
 
             int mountsLeft = SpareMountRoom(pass.Party);
@@ -1512,7 +1514,6 @@ namespace TradeLord
             int haulsLeft = -1;
 
             var stable = new List<(ItemRosterElement el, int rank, int price)>();
-            ItemRoster mine = pass.Party.ItemRoster;
             for (int i = 0; i < mine.Count; i++)
             {
                 ItemRosterElement el = mine.GetElementCopyAtIndex(i);
@@ -1538,10 +1539,10 @@ namespace TradeLord
                     if (pass.DirectionError || shed <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
                     int remaining = pass.YoursToSell(el);
-                    if (promised.TryGetValue(item, out int owed) && owed > 0)
+                    if (heldBack.TryGetValue(item, out int owed) && owed > 0)
                     {
                         int spare = Math.Min(remaining, owed);
-                        promised[item] = owed - spare;
+                        heldBack[item] = owed - spare;
                         remaining -= spare;
                     }
 

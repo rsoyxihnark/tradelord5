@@ -292,7 +292,7 @@ namespace TradeLord
             if (fed)
             {
                 said.DrewFood = reserved;
-                said.KeepCount = reserved;
+                if (reserved > said.KeepCount) said.KeepCount = reserved;
                 if (amount <= said.KeepCount) { said.Why = Block.FoodReserve; return said; }
             }
 

@@ -289,11 +289,19 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void ThisVersionShipsTheWhipDisarmedSoNoFileIsResetByIt()
+        public void ThisVersionShipsTheWhipArmedSoAFileOlderThanItIsResetOnce()
         {
-            Assert.False(Whip.Armed);
+            Assert.True(Whip.Armed);
             var written = File("GoldReserve", "800");
-            Assert.False(Whip.Crack(1, written));
+            Assert.True(Whip.Crack(1, written));
+            Assert.Empty(written);
+        }
+
+        [Fact]
+        public void AFileAlreadyAtTheShapeThisVersionShipsIsNeverResetBySecondTime()
+        {
+            var written = File("GoldReserve", "800");
+            Assert.False(Whip.Crack(Migration.Shape, written));
             Assert.Equal("800", written["GoldReserve"]);
         }
 
@@ -301,7 +309,9 @@ namespace TradeLord.Tests
         public void TheWhipIsStillWiredToTheShapeThisVersionShips()
         {
             Assert.Equal(Migration.Shape, Whip.CracksAt);
-            Assert.False(Whip.CracksOn(1));
+            Assert.True(Whip.CracksOn(Migration.Shape - 1));
+            Assert.False(Whip.CracksOn(Migration.Shape));
+            Assert.False(Whip.CracksOn(Migration.Shape + 1));
         }
 
         [Fact]
@@ -398,7 +408,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(9, Migration.Shape);
+            Assert.Equal(10, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));
