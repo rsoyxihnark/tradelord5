@@ -69,14 +69,6 @@ namespace TradeLord
             catch (Exception e) { Log.Error(e, "learned parts check (the weapon is kept)"); return false; }
         }
 
-        internal static bool Listed(ItemList list, ItemObject item)
-        {
-            if (item == null || list.Empty) return false;
-            ReadTheGoodsInThisGame();
-            return list.HasId(item.StringId) ||
-                   (item.Name != null && list.HasName(item.Name.ToString()));
-        }
-
         private static int _readGeneration = -1;
         private static HashSet<string> _knownIds, _knownNames;
 
@@ -201,18 +193,6 @@ namespace TradeLord
                       ". Write either the item id TradeLord.log prints, or the name the game shows.");
             return true;
         }
-
-        internal static int PolicyFor(ItemObject item)
-        {
-            if (item == null) return Options.PolicyBuySell;
-            if (IsSmithingMaterial(item)) return Options.Current.CraftingPolicy;
-            if (item.HasHorseComponent) return Options.Current.LivestockPolicy;
-            if (item.IsFood) return Options.Current.FoodPolicy;
-            return Options.PolicyBuySell;
-        }
-
-        internal static bool PolicyAllows(int policy, bool buying) =>
-            TradeMath.PolicyAllows(policy, buying);
 
         internal static ISet<string> LockedKeys()
         {
@@ -386,9 +366,6 @@ namespace TradeLord
         internal static bool IsTradableLivestock(ItemObject item) =>
             item != null && item.HasHorseComponent && item.HorseComponent.IsLiveStock &&
             !item.HorseComponent.IsMount && !item.HorseComponent.IsPackAnimal;
-
-        public static bool MayBuy(ItemObject item, ISet<string> lockedKeys) =>
-            MayBuy(item, lockedKeys, out _);
 
         internal static bool MayBuy(ItemObject item, ISet<string> lockedKeys, out Block why,
                                     bool toFeed = false)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.47.3
+
+- The running total of what TradeLord has made you, along the top of the ledger panel, no longer turns negative once it passes about 2.1 billion denars, and a campaign saved before this still reads its total back.
+- The feature list now says a save carries two of TradeLord's numbers rather than one.
+
 ## 1.47.2
 
 - Simulation mode (dry run) now counts every stack of a good you carry and every stack a market has, so a dry run over looted gear or horses, which your inventory keeps in a separate stack for each quality, no longer stops short of what TradeLord would really sell and buy.
