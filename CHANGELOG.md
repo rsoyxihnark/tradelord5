@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.52.0
+
+- Buy cap per item, in count and in denars, and Stop buying at this many held now hold while TradeLord restocks your food and buys haul animals, not only while it buys for profit.
+- Share of the hold one good may fill now holds while TradeLord restocks your food, and is left off haul animals, since one of those adds to the hold rather than filling it.
+- The lines TradeLord adds when you meet a caravan or a band of bandits now come out in the language you picked, even when you change it after loading your game.
+- The feature list now says which passes the per-item caps hold in, and that a conversation line takes the new language too.
+
 ## 1.51.1
 
 - Turning Trade with towns off now takes the map marker off the best sell town as well, instead of leaving it pointing at a town TradeLord will not trade in.

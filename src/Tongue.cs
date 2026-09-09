@@ -23,6 +23,16 @@ namespace TradeLord
             return new TextObject(said ?? written);
         }
 
+        internal static string Slot(string written) => "{=!}{" + Marker(written) + "}";
+
+        internal static bool Spoken(string written)
+        {
+            MBTextManager.SetTextVariable(Marker(written), Text(written), false);
+            return true;
+        }
+
+        private static string Marker(string written) => "TradeLord_" + Id(written);
+
         internal static string Said(string written)
         {
             return Options.Current.Language == English ? null : Translated(Id(written));
