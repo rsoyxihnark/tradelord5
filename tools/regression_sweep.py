@@ -5455,5 +5455,25 @@ def the_running_total_outgrows_an_int_and_a_save_written_before_it_still_reads()
 chk("1.47.3", "the running total of what TradeLord made you outgrows what an int holds, and a campaign saved before it still reads its total back",
     the_running_total_outgrows_an_int_and_a_save_written_before_it_still_reads())
 
+
+def the_lot_shape_the_counting_rests_on_is_held_against_the_game():
+    named = re.search(r'LotShape\s*=\s*\{(.*?)\};', COMPAT, re.S)
+    if named is None:
+        return False
+    held = set(kind.split('.')[-1] + '.' + member for kind, member in
+               re.findall(r'\(\s*"([\w.]+)"\s*,\s*"(\w+)"\s*,', named.group(1)))
+    return ("private static void CheckLotShape" in COMPAT
+            and "CheckLotShape(versions);" in COMPAT
+            and {"EquipmentElement.Item", "EquipmentElement.ItemModifier",
+                 "EquipmentElement.IsQuestItem", "ItemRoster.FindIndexOfItem",
+                 "ItemRoster.FindIndexOfElement", "ItemRoster.GetItemNumber",
+                 "ItemRoster.GetElementCopyAtIndex"} <= held
+            and "at.TryGetValue(held.Good.Id, out int seen)" in S['Rules.cs']
+            and S['Trading.cs'].count("Math.Min(el.Amount,") == 2)
+
+
+chk("1.47.4", "the game is asked, every version, whether one good still sits in more than one lot of the bags, since the food reserve and the per-lot caps are counted on it",
+    the_lot_shape_the_counting_rests_on_is_held_against_the_game())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
