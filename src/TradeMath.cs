@@ -46,10 +46,10 @@ namespace TradeLord
 
         public static void AddPurchase(PurchaseRecord rec, int count, int totalPaid)
         {
-            if (rec == null) return;
+            if (rec == null || count <= 0) return;
             rec.TotalPaid += totalPaid;
             rec.Count += count;
-            if (count > 0) rec.LastUnitPaid = (int)Math.Round((double)totalPaid / count);
+            rec.LastUnitPaid = (int)Math.Round((double)totalPaid / count);
         }
 
         public static void DrainSale(PurchaseRecord rec, int count)

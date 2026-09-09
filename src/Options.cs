@@ -52,7 +52,7 @@ namespace TradeLord
 
         public int MinTownStock = 10;
 
-        public float MaxTravelDaysTown = 3f;
+        public float MaxTravelDaysTown = 2.4f;
         public float MaxTravelDaysVillage = 1f;
 
         public bool ConservativeRouteProjection = true;
@@ -79,10 +79,9 @@ namespace TradeLord
         public bool DetailedTradeSummary = true;
         public bool QuietAutomation = false;
         public float MinProfitMargin = 0.15f;
-        public int KeepFoodDays = 5;
+        public int KeepFoodDays = 3;
         public bool KeepEveryFoodKind = false;
         public int KeepPerFoodKind = 2;
-        public int ResupplyFoodDays = 3;
         public const int PolicyIgnore = 0, PolicySellOnly = 1, PolicyBuyOnly = 2, PolicyBuySell = 3;
 
         public int FoodPolicy = PolicyBuySell;

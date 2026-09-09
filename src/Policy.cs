@@ -265,7 +265,7 @@ namespace TradeLord
 
         internal static int FoodWanted()
         {
-            int days = Options.Current.ResupplyFoodDays;
+            int days = Options.Current.KeepFoodDays;
             if (days <= 0) return 0;
             return (int)Math.Ceiling(AppetitePerDay() * days);
         }
