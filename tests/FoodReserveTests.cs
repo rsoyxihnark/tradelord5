@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TradeLord;
 using Xunit;
@@ -247,6 +248,60 @@ namespace TradeLord.Tests
                 Food("grain", 1, 10),
             };
             Assert.Equal(2, Keep(carried, s, perDay: 1f)["grain"]);
+        }
+
+        [Fact]
+        public void The_reserve_holds_no_more_than_you_carry_and_no_less_than_it_asked_for()
+        {
+            var rng = new Random(1447);
+            string[] ids = { "grain", "meat", "cheese", "cow", "sheep" };
+            for (int round = 0; round < 20000; round++)
+            {
+                var s = new Options
+                {
+                    KeepFoodDays = rng.Next(0, 31),
+                    KeepEveryFoodKind = rng.Next(2) == 0,
+                    KeepPerFoodKind = rng.Next(1, 51),
+                };
+                var shelf = new Dictionary<string, TradeRules.Ration>();
+                foreach (string id in ids)
+                    shelf[id] = id == "cow" || id == "sheep"
+                        ? Herd(id, 0, rng.Next(1, 400), rng.Next(1, 9))
+                        : Food(id, 0, rng.Next(1, 400));
+
+                var carried = new List<TradeRules.Ration>();
+                var have = new Dictionary<string, int>();
+                for (int lot = rng.Next(0, 7); lot > 0; lot--)
+                {
+                    string id = ids[rng.Next(ids.Length)];
+                    TradeRules.Ration one = shelf[id];
+                    one.Amount = rng.Next(0, 40);
+                    carried.Add(one);
+                    if (one.Amount <= 0) continue;
+                    have.TryGetValue(id, out int had);
+                    have[id] = had + one.Amount;
+                }
+
+                float perDay = (float)(rng.NextDouble() * 12.0);
+                Dictionary<string, int> keep = Keep(carried, s, perDay);
+
+                int fedByKeep = 0, fedByAll = 0;
+                foreach (var kept in keep)
+                {
+                    have.TryGetValue(kept.Key, out int held);
+                    Assert.InRange(kept.Value, 0, held);
+                    fedByKeep += kept.Value * TradeRules.FoodValue(shelf[kept.Key].Good);
+                }
+                foreach (var held in have)
+                    fedByAll += held.Value * TradeRules.FoodValue(shelf[held.Key].Good);
+
+                if (s.KeepFoodDays <= 0 || s.KeepEveryFoodKind) continue;
+                int wanted = (int)Math.Ceiling(Math.Max(perDay, 1f) * s.KeepFoodDays);
+                Assert.True(fedByKeep >= Math.Min(wanted, fedByAll),
+                            "round " + round + ": what is kept feeds " + fedByKeep +
+                            ", the reserve asked for " + wanted +
+                            ", everything carried feeds " + fedByAll);
+            }
         }
 
         [Fact]
