@@ -241,7 +241,7 @@ namespace TradeLord
                        ((int)Carry.Carried(party)).ToString(), "CAPACITY",
                        ((int)Carry.Capacity(party)).ToString());
             SpeedText = party == null ? "" : Line("{=TL65}Speed: {SPEED}", "SPEED", party.Speed.ToString("0.0"));
-            int lifetime = LedgerBehavior.Instance?.LifetimeProfit ?? 0;
+            long lifetime = LedgerBehavior.Instance?.LifetimeProfit ?? 0L;
             LifetimeText = Line("{=TL66}TradeLord profit: {AMOUNT}", "AMOUNT",
                                 (lifetime >= 0 ? "+" : "") + lifetime.ToString("N0"));
 
