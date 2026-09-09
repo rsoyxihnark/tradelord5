@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.51.0
+
+- A new switch, Trade with towns, turns trading in town menus off the same way Trade with villages does, and it ships on.
+- The settings screen has a new Trade Pool group, holding Trade with towns, Trade with villages and Trade with caravans and villagers, with the town and village travel ceilings and Exclude hostile markets under them.
+- The longest hints on the settings screen are shorter, so a hint no longer spills over the settings beneath it.
+- The feature list now says trading in towns and trading in villages can be switched off one at a time.
+
 ## 1.50.2
 
 - Trade with caravans and villagers you meet is now called Trade with caravans and villagers, a shorter name that makes it clear this setting, rather than Trade with villages, is the one that covers a party of villagers you meet on the road.

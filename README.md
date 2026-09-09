@@ -46,6 +46,7 @@
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
 - ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good
+- ✅ Trade with towns and Trade with villages each switch their own kind of market off, so TradeLord can work villages alone, towns alone, or leave both markets to you
 - ✅ Trades with a caravan or a party of villagers the moment you meet them on the road, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of their own purse. A party on the road is held to every rule a market visit is: it sells your looted gear when the goods you bought fall short of your margin, it holds your cargo back for the best market if you asked for that, it can never sell you enough livestock to drop you into the herd speed penalty, your caps on how many of a good you hold and what share of the hold it may fill both apply, and the settling delay keeps it away from a brand new campaign
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
 - ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore

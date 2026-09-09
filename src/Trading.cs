@@ -736,7 +736,8 @@ namespace TradeLord
         }
 
         internal static bool IsMarket(Settlement s) =>
-            s != null && (s.IsTown || (s.IsVillage && Options.Current.TradeWithVillages));
+            s != null && ((s.IsTown && Options.Current.TradeWithTowns) ||
+                          (s.IsVillage && Options.Current.TradeWithVillages));
 
         private static bool GameAllowsTrade(Settlement s)
         {

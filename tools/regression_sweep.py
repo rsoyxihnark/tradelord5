@@ -3070,7 +3070,7 @@ def selling_and_buying_close_the_screen():
         if pair not in seen:
             seen.append(pair)
     seen.sort()
-    return (len(seen) == 8
+    return (len(seen) == 9
             and [name for _, name in seen][-3:] == ['Selling', 'Buying', 'Debug']
             and seen[-2][0] - seen[-3][0] == 1
             and seen[-1][0] - seen[-2][0] == 1
@@ -4164,7 +4164,8 @@ EVER_SHIPPED = {
     "QuietAutomation": "bool", "ResaleSafetyFactor": "float", "RespectLocks": "bool",
     "ResupplyFoodDays": "int", "ScanRadius": "float", "SellSpareMounts": "bool",
     "ShowMapButton": "bool", "SimulationMode": "bool", "SuppressVanillaTradeLines": "bool",
-    "TooltipHints": "bool", "TradeWithCaravans": "bool", "TradeWithVillages": "bool",
+    "TooltipHints": "bool", "TradeWithCaravans": "bool", "TradeWithTowns": "bool",
+    "TradeWithVillages": "bool",
     "TradeXpMultiplier": "float", "UseFleetCapacity": "bool",
 }
 
@@ -5714,6 +5715,49 @@ chk("1.50.1", "a reset reaches the copy the settings screen keeps, so a screen t
 
 chk("1.50.1", "the one-time settings reset is one switch, is armed at the shape this version ships, cannot be set off by the lift and wipes everything the lift carried",
     the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off())
+
+
+def towns_answer_to_their_own_switch_the_same_as_villages():
+    gate = between(S['Trading.cs'], "internal static bool IsMarket(Settlement s) =>", ";")
+    return ("s.IsTown && Options.Current.TradeWithTowns" in gate
+            and "s.IsVillage && Options.Current.TradeWithVillages" in gate
+            and option_default('TradeWithTowns') == 'true'
+            and "_o.TradeWithTowns" in M
+            and EVER_SHIPPED.get('TradeWithTowns') == 'bool')
+
+
+def the_trade_pool_leads_with_the_three_switches():
+    rows = []
+    for b in setting_blocks():
+        if '[SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]' not in b:
+            continue
+        order = re.search(r'Order = (\d+)', b)
+        named = re.search(r'\n\s*public\s+[\w<>]+\s+(\w+)', b)
+        if order is None or named is None:
+            return False
+        rows.append((int(order.group(1)), named.group(1)))
+    rows.sort()
+    return ([name for _, name in rows] ==
+            ['TradeWithTowns', 'TradeWithVillages', 'TradeWithCaravans',
+             'MaxTravelDaysTown', 'MaxTravelDaysVillage', 'ExcludeHostileTowns']
+            and 'Trade Pool' == spoken(ENGLISH)['TL108'])
+
+
+def no_hint_runs_past_what_the_screen_can_hold():
+    en = spoken(ENGLISH)
+    long = [h for h in re.findall(r'HintText = "\{=(TL\d+)\}', M) if len(en.get(h, '')) > 350]
+    return not long and len(re.findall(r'HintText = "\{=TL\d+\}', M)) > 40
+
+
+chk("1.51.0", "trading in towns answers to its own switch, the same as villages",
+    towns_answer_to_their_own_switch_the_same_as_villages())
+
+chk("1.51.0", "the Trade Pool group leads with the three switches, then the limits that shape it",
+    the_trade_pool_leads_with_the_three_switches())
+
+chk("1.51.0", "no hint runs past what the settings screen can hold",
+    no_hint_runs_past_what_the_screen_can_hold())
+
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

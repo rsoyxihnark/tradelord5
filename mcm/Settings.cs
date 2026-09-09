@@ -389,68 +389,53 @@ namespace TradeLord.Mcm
 
         [SettingPropertyBool("{=TL201}Live world prices (default)", Order = 0, RequireRestart = false,
             HintText = "{=TL301}ON (default): prices are read live from the world economy, including markets you have not visited. OFF: only prices you have seen in person are used.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool Omniscient { get => _o.Omniscient; set { _o.Omniscient = value; Options.Bump(); } }
 
 
-        [SettingPropertyBool("{=TL203}Exclude hostile markets", Order = 1, RequireRestart = false,
-            HintText = "{=TL303}Never scan, suggest or auto-trade with settlements at war with you.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
-        public bool ExcludeHostileTowns { get => _o.ExcludeHostileTowns; set { _o.ExcludeHostileTowns = value; Options.Bump(); } }
-
         [SettingPropertyInteger("{=TL205}Minimum stock for buy suggestions", 0, 100, Order = 3, RequireRestart = false,
             HintText = "{=TL305}Best-buy hints require at least this many units in stock. 0 = off. Live-price mode only, because observed mode records prices, not stock levels.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public int MinTownStock { get => _o.MinTownStock; set { _o.MinTownStock = value; Options.Bump(); } }
-
-        [SettingPropertyFloatingInteger("{=TL206}Town travel ceiling (days, 0 = off)", 0f, 20f, "0.0", Order = 4, RequireRestart = false,
-            HintText = "{=TL306}How far TradeLord looks for a town, in travel days, and the only thing that limits that distance. Towns farther than this are hidden from tooltips, held out of the routes, kept off the map marker, and never waited for by Hold cargo for the best market. No suggested route's total trip (you -> buy town -> sell town) may exceed it either. Villages have their own stricter ceiling below. Default 2.4.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
-        public float MaxTravelDaysTown { get => _o.MaxTravelDaysTown; set { _o.MaxTravelDaysTown = value; Options.Bump(); } }
-
-        [SettingPropertyFloatingInteger("{=TL207}Village travel ceiling (days, 0 = off)", 0f, 10f, "0.0", Order = 5, RequireRestart = false,
-            HintText = "{=TL307}The same limit for villages, kept separate so you can hold them closer than towns. Default 1.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
-        public float MaxTravelDaysVillage { get => _o.MaxTravelDaysVillage; set { _o.MaxTravelDaysVillage = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL208}Conservative route projection", Order = 6, RequireRestart = false,
             HintText = "{=TL308}Apply the resale safety factor to the sell side when ranking and totalling routes, so listed profit allows for prices drifting before you arrive. OFF shows raw margins. Routes must clear the safety factor to be listed either way, since that is the same test a buying pass applies on arrival.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool ConservativeRouteProjection { get => _o.ConservativeRouteProjection; set { _o.ConservativeRouteProjection = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL209}Bulk price simulation", Order = 7, RequireRestart = false,
-            HintText = "{=TL309}Price a lot unit by unit through the game's own price model, so quantity and profit account for your own buying moving the price. OFF prices every unit at the first unit's price, which reads higher than the trip will pay. Towns and live-price mode only: villages expose no supply or demand data, and observed mode does not read live market internals.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
+            HintText = "{=TL309}Price a lot unit by unit through the game's own price model, so quantity and profit account for your own buying moving the price. OFF prices every unit at the first unit's price. Towns and live-price mode only.")]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool BulkSimulation { get => _o.BulkSimulation; set { _o.BulkSimulation = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL210}Rank routes by confidence", Order = 9, RequireRestart = false,
-            HintText = "{=TL310}Order the panel by profit per day, discounted by how likely that profit is to survive the trip. The discount accounts for margin left after the bulk walk, stock depth, trip length, caravan traffic, and in observed mode the age of the prices. OFF ranks on raw profit per day and the Score column shows that instead.")]
-        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
+            HintText = "{=TL310}Order the panel by profit per day, discounted by how likely that profit is to survive the trip: margin, stock depth, trip length, caravan traffic and price age. OFF ranks on raw profit per day.")]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool ConfidenceRanking { get => _o.ConfidenceRanking; set { _o.ConfidenceRanking = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL211}Show best buy/sell in tooltips", Order = 0, RequireRestart = false,
             HintText = "{=TL311}Adds the best known buy and sell markets, with stock and travel time, to item tooltips.")]
-        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 3)]
+        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 4)]
         public bool TooltipHints { get => _o.TooltipHints; set { _o.TooltipHints = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL212}Suppress vanilla trade-rumor lines", Order = 1, RequireRestart = false,
             HintText = "{=TL312}Skips the vanilla merchandise rumor block so the tooltip shows one consistent set of price hints.")]
-        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 3)]
+        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 4)]
         public bool SuppressVanillaTradeLines { get => _o.SuppressVanillaTradeLines; set { _o.SuppressVanillaTradeLines = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL213}Color prices by world market", Order = 2, RequireRestart = false,
             HintText = "{=TL313}Colors trade-good and livestock rows in the inventory by how this market's price compares with the best known market.")]
-        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 3)]
+        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 4)]
         public bool ProfitColoring { get => _o.ProfitColoring; set { _o.ProfitColoring = value; Options.Bump(); } }
 
         [SettingPropertyText("{=TL214}Ledger panel hotkey (map screen)", Order = 3, RequireRestart = false,
-            HintText = "{=TL314}Key that opens the ledger panel on the campaign map. A single key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, e.g. \"Ctrl+T\". This mod does not take keys away from the game, so a bare key the game also uses will trigger both actions. Use a modifier to avoid that. One key name and nothing else: a word, a phrase or a key this game does not know falls back to T, and TradeLord.log says which key it used.")]
-        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 3)]
+            HintText = "{=TL314}Key that opens the ledger panel on the campaign map. One key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, such as Ctrl+T. A bare key the game also uses triggers both actions. Anything unknown falls back to T.")]
+        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 4)]
         public string PanelKey { get => _o.PanelKey; set { _o.PanelKey = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL215}TradeLord button on the map screen", Order = 4, RequireRestart = false,
             HintText = "{=TL315}A clickable TradeLord button on the right edge of the campaign map that opens the ledger panel. Turn OFF if it interferes with map clicks.")]
-        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 3)]
+        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 4)]
         public bool ShowMapButton { get => _o.ShowMapButton; set { _o.ShowMapButton = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL217}Auto sell", Order = 0, RequireRestart = false,
@@ -465,32 +450,52 @@ namespace TradeLord.Mcm
 
         [SettingPropertyBool("{=TL216}Trade entry in town menu", Order = 0, RequireRestart = false,
             HintText = "{=TL316}Shows the single TradeLord trade entry in town and village menus, which sells and then buys in one go. Turn it off to leave the menu to trading done automatically as you arrive.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool QuickSellMenu { get => _o.QuickSellMenu; set { _o.QuickSellMenu = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL260}Ledger entry in town menu", Order = 1, RequireRestart = false,
             HintText = "{=TL360}Shows the TradeLord ledger entry in town and village menus, which opens the route panel. Turn it off if you would rather open the panel with its hotkey or its map button.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool LedgerMenuEntry { get => _o.LedgerMenuEntry; set { _o.LedgerMenuEntry = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL241}Trade with villages", Order = 2, RequireRestart = false,
-            HintText = "{=TL341}TradeLord trades in village menus as well as town menus, and villages join the price scans.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyBool("{=TL278}Trade with towns", Order = 0, RequireRestart = false,
+            HintText = "{=TL390}TradeLord trades in town menus and towns join the price scans. ON by default.")]
+        [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
+        public bool TradeWithTowns { get => _o.TradeWithTowns; set { _o.TradeWithTowns = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL241}Trade with villages", Order = 1, RequireRestart = false,
+            HintText = "{=TL341}TradeLord trades in village menus and villages join the price scans.")]
+        [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
         public bool TradeWithVillages { get => _o.TradeWithVillages; set { _o.TradeWithVillages = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL273}Trade with caravans and villagers", Order = 3, RequireRestart = false,
-            HintText = "{=TL373}Meet a caravan or a party of villagers on the road and TradeLord trades with them the moment you meet, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach. They pay out of their own purse, so it stops when that purse runs dry. Every rule a market visit obeys still holds here. ON by default.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyBool("{=TL273}Trade with caravans and villagers", Order = 2, RequireRestart = false,
+            HintText = "{=TL373}Meet a caravan or a party of villagers on the road and TradeLord trades with them the moment you meet, selling what clears your margin and buying what it can sell on for more. They pay from their own purse. ON by default.")]
+        [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
         public bool TradeWithCaravans { get => _o.TradeWithCaravans; set { _o.TradeWithCaravans = value; Options.Bump(); } }
+
+        [SettingPropertyFloatingInteger("{=TL206}Town travel ceiling (days, 0 = off)", 0f, 20f, "0.0", Order = 3, RequireRestart = false,
+            HintText = "{=TL306}How far TradeLord looks for a town, in travel days. Towns farther than this are hidden from tooltips, held out of the routes and kept off the map marker, and no suggested route may exceed it. Default 2.4.")]
+        [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
+        public float MaxTravelDaysTown { get => _o.MaxTravelDaysTown; set { _o.MaxTravelDaysTown = value; Options.Bump(); } }
+
+        [SettingPropertyFloatingInteger("{=TL207}Village travel ceiling (days, 0 = off)", 0f, 10f, "0.0", Order = 4, RequireRestart = false,
+            HintText = "{=TL307}The same limit for villages, kept separate so you can hold them closer than towns. Default 1.")]
+        [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
+        public float MaxTravelDaysVillage { get => _o.MaxTravelDaysVillage; set { _o.MaxTravelDaysVillage = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL203}Exclude hostile markets", Order = 5, RequireRestart = false,
+            HintText = "{=TL303}Never scan, suggest or auto-trade with settlements at war with you.")]
+        [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
+        public bool ExcludeHostileTowns { get => _o.ExcludeHostileTowns; set { _o.ExcludeHostileTowns = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL220}Minimum profit margin", 0f, 2f, "#0%", Order = 4, RequireRestart = false,
             HintText = "{=TL320}The margin every trade must clear, in both directions. Sell only if the price exceeds your cost basis by at least this much. Buy, or list a route, only if the far market exceeds the local price by this much after the resale safety factor. Raising it trades less.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public float MinProfitMargin { get => _o.MinProfitMargin; set { _o.MinProfitMargin = value; Options.Bump(); } }
 
         [SettingPropertyDropdown("{=TL222}Food policy", Order = 5, RequireRestart = false,
             HintText = "{=TL322}What automated trading may do with food. The days-of-supply food reserve is separate and still applies.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public Dropdown<string> FoodPolicy
         {
             get => _foodPolicy;
@@ -499,7 +504,7 @@ namespace TradeLord.Mcm
 
         [SettingPropertyDropdown("{=TL223}Smithing material policy", Order = 6, RequireRestart = false,
             HintText = "{=TL323}What automated trading may do with charcoal, hardwood, iron ore and ingots. Pick Leave alone to keep smithing stock out of automated trading entirely.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public Dropdown<string> CraftingPolicy
         {
             get => _craftingPolicy;
@@ -508,7 +513,7 @@ namespace TradeLord.Mcm
 
         [SettingPropertyDropdown("{=TL224}Livestock policy", Order = 7, RequireRestart = false,
             HintText = "{=TL324}What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Haul animals and riding mounts have their own settings and this one does not affect them.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public Dropdown<string> LivestockPolicy
         {
             get => _livestockPolicy;
@@ -517,12 +522,12 @@ namespace TradeLord.Mcm
 
         [SettingPropertyBool("{=TL226}Respect inventory locks", Order = 8, RequireRestart = false,
             HintText = "{=TL326}Locked items in the inventory screen are never auto-traded. Selling matches a lock the way the game stores it, by item and quality. Buying matches by item alone, so a lock on a good stops TradeLord buying more of it whatever its quality.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool RespectLocks { get => _o.RespectLocks; set { _o.RespectLocks = value; Options.Bump(); } }
 
         [SettingPropertyDropdown("{=TL227}What a good counts as having cost you", Order = 9, RequireRestart = false,
             HintText = "{=TL327}The price a sale is measured against, so it sets both the profit TradeLord reports and the Trade XP the sale earns. Anything you never bought, loot included, is valued at the cheapest market you know of whichever one you pick.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public Dropdown<string> CostBasisMode
         {
             get => _costBasis;
@@ -530,69 +535,69 @@ namespace TradeLord.Mcm
         }
 
         [SettingPropertyBool("{=TL242}Simulation mode (dry run)", Order = 10, RequireRestart = false,
-            HintText = "{=TL342}Report what TradeLord would sell and buy, without trading. Treat the result as a best case: nothing moves, so the market does not react and every unit is priced at today's opening price. A real pass stops at the unit where the margin runs out, so it usually trades less and gets less per unit. The merchant's gold, your carry weight, the gold reserve and every per-item and per-visit cap are modelled exactly; only your own effect on the price is not.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+            HintText = "{=TL342}Reports what TradeLord would sell and buy, without trading. Treat it as a best case: nothing moves, so every unit is priced at today's opening price and a real pass usually trades less. Every cap and the merchant's gold are modelled exactly.")]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool SimulationMode { get => _o.SimulationMode; set { _o.SimulationMode = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL243}Economy settling delay (days, 0 = off)", 0, 100, Order = 11, RequireRestart = false,
             HintText = "{=TL343}No TradeLord trading before this campaign day, from the menu or on entry. Prices in a new campaign have not settled yet.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public int EconomySettlingDays { get => _o.EconomySettlingDays; set { _o.EconomySettlingDays = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL244}Trade XP multiplier", 0f, 3f, "#0%", Order = 12, RequireRestart = false,
             HintText = "{=TL344}Scales the Trade XP awarded for automated profit. 0 disables XP.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public float TradeXpMultiplier { get => _o.TradeXpMultiplier; set { _o.TradeXpMultiplier = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL245}Auto-mark best sell town on map", Order = 13, RequireRestart = false,
-            HintText = "{=TL345}Moves a map tracker to whichever town in reach pays most for your current cargo. It follows you as you ride and re-checks as you enter or leave a settlement. It keeps to the Town travel ceiling, the same as everything else. ON by default; clicking a town in the ledger panel still pins a marker by hand.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+            HintText = "{=TL345}Moves a map tracker to whichever town in reach pays most for your current cargo, following you as you ride. It keeps to the Town travel ceiling. ON by default; clicking a town in the ledger panel still pins a marker by hand.")]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool MarkBestSellTownOnMap { get => _o.MarkBestSellTownOnMap; set { _o.MarkBestSellTownOnMap = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL247}Coin sound on trade", Order = 15, RequireRestart = false,
             HintText = "{=TL347}Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool CoinSound { get => _o.CoinSound; set { _o.CoinSound = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL248}Detailed trade summary", Order = 16, RequireRestart = false,
             HintText = "{=TL348}Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool DetailedTradeSummary { get => _o.DetailedTradeSummary; set { _o.DetailedTradeSummary = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL249}Silence trade messages", Order = 17, RequireRestart = false,
-            HintText = "{=TL349}Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports, since you asked for it. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+            HintText = "{=TL349}Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports.")]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool QuietAutomation { get => _o.QuietAutomation; set { _o.QuietAutomation = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL269}Free passage from bandits", Order = 18, RequireRestart = false,
-            HintText = "{=TL369}When you run into looters, sea raiders, forest bandits, mountain bandits, steppe bandits or desert bandits, TradeLord adds a line to what you can say to them, asking to be let past. Saying it ends the encounter with no fight and no ransom, and they leave you alone for a few hours afterwards. It is ON by default; switch it off for a campaign you want to fight your own way out of.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
+            HintText = "{=TL369}When you run into looters or bandits, TradeLord adds a line asking to be let past. Saying it ends the encounter with no fight and no ransom, and they leave you alone for a few hours. It is ON by default.")]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool BanditGetawayCheat { get => _o.BanditGetawayCheat; set { _o.BanditGetawayCheat = value; Options.Bump(); } }
 
 
         [SettingPropertyInteger("{=TL221}Restock and keep food (days of supply)", 0, 30, Order = 0, RequireRestart = false,
-            HintText = "{=TL321}The days of food TradeLord keeps your party stocked to. It holds this much back before selling any food, reserving the cheapest food per day fed first and livestock only if nothing else covers it, and it tops you back up to the same amount as it trades, buying the cheapest food a market has and never paying more than the cheapest price it knows of for it. Your gold reserve, your spending limit for the visit, your never-buy list and your food policy all still hold, it stops before your gold reaches your reserve, and it leaves a village its last of each good. 0 turns both off and sells every scrap of food. Default 3.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+            HintText = "{=TL321}The days of food TradeLord keeps you stocked to. It holds this much back before selling food and tops you back up as it trades, buying the cheapest a market has. Your never-buy list still holds, and it stops before your gold reaches your reserve. 0 turns both off. Default 3.")]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public int KeepFoodDays { get => _o.KeepFoodDays; set { _o.KeepFoodDays = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL261}Keep some of every kind of food", Order = 1, RequireRestart = false,
-            HintText = "{=TL361}Hold back a few of every kind of food you carry, so the party keeps its food variety morale bonus. What it holds back counts towards the days of supply above rather than adding to it. Livestock is left out, since a herd is slaughtered for meat rather than eaten as a kind of food in its own right. OFF by default.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+            HintText = "{=TL361}Hold back a few of every kind of food you carry, so the party keeps its food variety morale bonus. What it holds back counts towards the days of supply above. Livestock is left out, since a herd is slaughtered for meat. OFF by default.")]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public bool KeepEveryFoodKind { get => _o.KeepEveryFoodKind; set { _o.KeepEveryFoodKind = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL262}How many of each kind of food to keep", 1, 50, Order = 2, RequireRestart = false,
-            HintText = "{=TL362}How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Restock and keep food (days of supply) above is the one that works in days. Two is enough that a day of eating does not wipe a kind out, and the morale bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+            HintText = "{=TL362}How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Restock and keep food (days of supply) above is the one that works in days. Two is usually enough.")]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public int KeepPerFoodKind { get => _o.KeepPerFoodKind; set { _o.KeepPerFoodKind = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL225}Protect unique and crafted items", Order = 3, RequireRestart = false,
             HintText = "{=TL325}Never auto-trade unique or player-crafted items. A haul animal is never sold by policy whatever you set here, and only an explicit always-sell entry can move one.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public bool ProtectSpecial { get => _o.ProtectSpecial; set { _o.ProtectSpecial = value; Options.Bump(); } }
 
         [SettingPropertyDropdown("{=TL264}Smeltable weapons", Order = 4, RequireRestart = false,
-            HintText = "{=TL364}What to do with a weapon the smithy can break down for parts, so a smithing playthrough keeps its raw material. Sell them is the default. Keep every one holds back anything built from smithing parts, forged or looted off a bandit alike, so cheap loot piles up with the rest. Keep the ones you have not learned holds a weapon only while one of its parts is still locked in your smithy, and sells the rest once it can teach you nothing. Armour, shields, bows and crossbows carry no smithing design, so those are always sold, and an always-sell entry still wins.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+            HintText = "{=TL364}What to do with a weapon the smithy can break down for parts. Sell them is the default. Keep every one holds anything built from smithing parts, forged or looted off a bandit alike. Keep the ones you have not learned holds a weapon only while one of its parts is still locked in your smithy.")]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public Dropdown<string> KeepSmeltableWeapons
         {
             get => _smeltable;
@@ -601,103 +606,103 @@ namespace TradeLord.Mcm
 
         [SettingPropertyInteger("{=TL228}Sell loot up to tier (0 = off)", 0, 6, Order = 5, RequireRestart = false,
             HintText = "{=TL328}Also sells weapons and armor of this tier and below. Starts at tier 1, which is the gear looters and bandits drop. Locks and protections still apply.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public int MaxLootTier { get => _o.MaxLootTier; set { _o.MaxLootTier = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL229}Hold cargo for the best market", Order = 6, RequireRestart = false,
-            HintText = "{=TL329}Skip selling here when this market pays clearly less than the best known market, so your cargo waits for the town that pays for it. It holds back everything you carry, what you bought and what you looted alike. OFF by default, in which case a good you bought still has to clear your profit margin, and looted gear goes to the first market that can pay for it.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+            HintText = "{=TL329}Skip selling here when this market pays clearly less than the best known market, so your cargo waits for the town that pays for it. It holds back what you bought and what you looted alike. OFF by default, in which case looted gear goes to the first market that can pay for it.")]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public bool PreferBestSellTown { get => _o.PreferBestSellTown; set { _o.PreferBestSellTown = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL230}Best-market tolerance", 0.5f, 1f, "#0%", Order = 7, RequireRestart = false,
             HintText = "{=TL330}Sell here anyway if this market pays at least this fraction of the best known price. It does nothing while the setting above is OFF.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public float BestSellTownTolerance { get => _o.BestSellTownTolerance; set { _o.BestSellTownTolerance = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL275}Sell animals that slow you down", Order = 8, RequireRestart = false,
-            HintText = "{=TL375}Gets your party out of the herd speed penalty by selling animals, only while that penalty is on you, and only as many as it takes to get out of it. Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all. It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, and it keeps enough haul animals to carry what you are already carrying. Cheapest first at every step, and anything you locked, put on your never-sell list, that a quest is waiting on, or that the unique and crafted protection covers is left alone. ON by default.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+            HintText = "{=TL375}Sells animals to lift the herd speed penalty, only while it is on you and only as many as it takes. Livestock goes first, then a spare mount, then your haul animals, and your war horses and noble horses last of all, and it keeps enough haul animals to carry what you are already carrying. Anything you protected is left alone. ON by default.")]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public bool SellSpareMounts { get => _o.SellSpareMounts; set { _o.SellSpareMounts = value; Options.Bump(); } }
 
         [SettingPropertyText("{=TL231}Never sell (item ids or names, comma separated)", Order = 9, RequireRestart = false,
-            HintText = "{=TL331}Goods TradeLord must never sell. Name each one either by the item id, the short internal name such as grain, wine or iron_ore that TradeLord.log prints for every good it moves, or by the name the game shows you, such as Iron Ore. Separate them with commas. An entry matching no good in this game is named in the log and said on screen, rather than passing quietly. It leaves these alone when buying too, since it would have no way to sell them on.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+            HintText = "{=TL331}Goods TradeLord must never sell. Name each by item id, by the short name TradeLord.log prints such as grain or iron_ore, or by the name the game shows, comma separated. It leaves these alone when buying too.")]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public string NeverSellItems { get => _o.NeverSellItems; set { _o.NeverSellItems = value; Options.Bump(); } }
 
         [SettingPropertyText("{=TL232}Always sell (item ids or names, comma separated)", Order = 10, RequireRestart = false,
-            HintText = "{=TL332}Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named by item id or by the name the game shows, comma separated, as above. The never-sell list above, an inventory lock and an animal a quest is waiting on still hold. This is the only way to sell a haul animal for profit, though getting your party back up to speed may still sell one as a last resort.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
+            HintText = "{=TL332}Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named as above. The never-sell list, an inventory lock and an animal a quest is waiting on still hold. This is the only way to sell a haul animal for profit.")]
+        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public string AlwaysSellItems { get => _o.AlwaysSellItems; set { _o.AlwaysSellItems = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL234}Gold reserve", 0, 100000, Order = 0, RequireRestart = false,
             HintText = "{=TL334}Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int GoldReserve { get => _o.GoldReserve; set { _o.GoldReserve = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL266}Keep gold for days of wages", 0, 30, Order = 1, RequireRestart = false,
             HintText = "{=TL366}Also hold back this many days of your troops' wages on top of the gold reserve above, so a shopping trip never eats the payroll. It is worked out from your real wage bill every time TradeLord trades, so it grows with the army. 0 holds back the flat reserve only.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int KeepWageDays { get => _o.KeepWageDays; set { _o.KeepWageDays = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL235}Buy cap per item (count, 0 = off)", 0, 500, Order = 2, RequireRestart = false,
             HintText = "{=TL335}Most units of one good TradeLord buys per visit. 0 = no limit on the count. Default 32.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int BuyCapPerItem { get => _o.BuyCapPerItem; set { _o.BuyCapPerItem = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL236}Buy cap per item (denars, 0 = off)", 0, 50000, Order = 3, RequireRestart = false,
             HintText = "{=TL336}Also cap spending per item per visit in denars.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int BuyValueCapPerItem { get => _o.BuyValueCapPerItem; set { _o.BuyValueCapPerItem = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL251}Stop buying at this many held (0 = off)", 0, 5000, Order = 4, RequireRestart = false,
             HintText = "{=TL351}Once your party already carries this many of a good, TradeLord leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int MaxHeldPerItem { get => _o.MaxHeldPerItem; set { _o.MaxHeldPerItem = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL237}Max spend per visit (0 = unlimited)", 0, 100000, Order = 5, RequireRestart = false,
             HintText = "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int MaxSpendPerVisit { get => _o.MaxSpendPerVisit; set { _o.MaxSpendPerVisit = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL238}Resale safety factor", 0.5f, 1f, "#0%", Order = 6, RequireRestart = false,
             HintText = "{=TL338}Assume only this fraction of the best sell price is still available by the time you arrive.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }
 
 
         [SettingPropertyBool("{=TL265}Buy to fill the ships", Order = 8, RequireRestart = false,
             HintText = "{=TL365}Size purchases to what your ships can hold rather than what your carts can, so you can load the fleet while you are ashore. Your party has to be able to sail; without a fleet TradeLord counts the carts instead and says so in its log. OFF by default.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool UseFleetCapacity { get => _o.UseFleetCapacity; set { _o.UseFleetCapacity = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL239}Never buy grain", Order = 9, RequireRestart = false,
             HintText = "{=TL339}Grain is heavy and low margin, so buying it fills the cargo for little return. Selling and the food reserve are unaffected. ON by default.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool NeverBuyGrain { get => _o.NeverBuyGrain; set { _o.NeverBuyGrain = value; Options.Bump(); } }
 
         [SettingPropertyText("{=TL240}Never buy (item ids or names, comma separated)", Order = 10, RequireRestart = false,
             HintText = "{=TL340}Goods TradeLord must never buy. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public string NeverBuyItems { get => _o.NeverBuyItems; set { _o.NeverBuyItems = value; Options.Bump(); } }
 
         [SettingPropertyText("{=TL252}Always buy (item ids or names, comma separated)", Order = 11, RequireRestart = false,
             HintText = "{=TL352}Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public string AlwaysBuyItems { get => _o.AlwaysBuyItems; set { _o.AlwaysBuyItems = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL267}Buy haul animals", Order = 12, RequireRestart = false,
-            HintText = "{=TL367}Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, whenever a market is asking no more than one is worth, so your party can carry more. Worth here is the cheapest price you know of for that animal, or its own value where you know none, and it never pays a denar over it. Riding horses and camels are not bought at all. Livestock is not included, it has its own policy. It never buys more than your party can drive without slowing down, it stops before your gold reaches your reserve, and your spending limit for the visit and your never-buy list still hold. ON by default.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+            HintText = "{=TL367}Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, whenever a market asks no more than one is worth, so your party carries more. It never buys more than you can drive without slowing down, and it stops before your gold reaches your reserve. ON by default.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool BuyHaulAnimals { get => _o.BuyHaulAnimals; set { _o.BuyHaulAnimals = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL274}Share of the hold one good may fill (0 = off)", 0f, 1f, "#0%", Order = 14, RequireRestart = false,
-            HintText = "{=TL374}Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and your haul animals instead of needing a new number every time the party grows. 0 turns it off. Selling is unaffected, and the flat per-item caps above still hold.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
+            HintText = "{=TL374}Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and haul animals. 0 turns it off. Selling is unaffected.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float MaxHeldShare { get => _o.MaxHeldShare; set { _o.MaxHeldShare = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL246}Write a price trace to the log", Order = 0, RequireRestart = false,
-            HintText = "{=TL389}For working out why a price TradeLord shows you does not match the one the trade screen offers. As you walk into a market, before anything is traded, and again after you trade there by hand, TradeLord writes to TradeLord.log what that market pays and charges for every good you are carrying, read four ways: the way TradeLord reads it, and three ways through the market's own prices. It names the market, the price model the game is running and any other mod that is changing either of them, and for every good it trades it notes what it quoted next to what the market actually paid. OFF by default, since it makes the log much longer.")]
-        [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 7)]
+            HintText = "{=TL389}Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. OFF by default, since it makes the log much longer.")]
+        [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
         public bool PriceTrace { get => _o.PriceTrace; set { _o.PriceTrace = value; Options.Bump(); } }
     }
 }
