@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.50.0
+
+- Every setting goes back to the value TradeLord ships with, once, the first time you run this version, because the settings it ships with now trade better out of the box than they used to.
+- Anything you had set yourself is written into TradeLord.log as it happens, named setting by setting, so you can put back the ones you want.
+- Your never sell, always sell, never buy and always buy lists are emptied by that reset along with everything else.
+- This happens on this version only and never again on a later one.
+- Getting your party back up to speed no longer sells the animals Restock and keep food (days of supply) is holding back for your men.
+- Where your herd is also your food, that can now leave the herd speed penalty in place rather than eat into the reserve, and TradeLord.log says the penalty is still there.
+- An animal on your always-sell list is still sold to get you back up to speed, because the food reserve never holds one of those back.
+- What TradeLord reckons a good cost you no longer drifts by a denar as it sells a stack down, so a sale no longer stops early with goods left that were worth selling.
+- When a quest is waiting on more of an animal than your food reserve holds back, TradeLord now keeps the larger of the two rather than the smaller.
+
 ## 1.49.1
 
 - The one-time reset of every setting is switched off from this version on, so nothing of yours is put back to what TradeLord ships with again.

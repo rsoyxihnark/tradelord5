@@ -116,6 +116,37 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Selling_a_lot_down_one_at_a_time_never_moves_what_the_rest_cost()
+        {
+            foreach (var lot in new[]
+                     {
+                         (count: 9, paid: 50), (count: 13, paid: 200), (count: 7, paid: 100),
+                         (count: 3, paid: 10), (count: 6, paid: 25)
+                     })
+            {
+                var rec = Bought(lot.count, lot.paid);
+                int held = TradeMath.UnitBasis(rec, AveragePaid);
+                while (rec.Count > 1)
+                {
+                    TradeMath.DrainSale(rec, 1);
+                    Assert.Equal(held, TradeMath.UnitBasis(rec, AveragePaid));
+                }
+            }
+        }
+
+        [Fact]
+        public void Selling_a_lot_in_chunks_leaves_the_rest_costing_the_same_as_selling_it_singly()
+        {
+            var singly = Bought(13, 200);
+            for (int i = 0; i < 6; i++) TradeMath.DrainSale(singly, 1);
+            var chunked = Bought(13, 200);
+            TradeMath.DrainSale(chunked, 6);
+            Assert.Equal(singly.Count, chunked.Count);
+            Assert.Equal(TradeMath.UnitBasis(singly, AveragePaid),
+                         TradeMath.UnitBasis(chunked, AveragePaid));
+        }
+
+        [Fact]
         public void Selling_the_whole_lot_clears_what_it_cost()
         {
             var rec = Bought(10, 120);
