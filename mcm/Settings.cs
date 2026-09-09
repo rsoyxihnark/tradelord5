@@ -18,6 +18,7 @@ namespace TradeLord.Mcm
         {
             Guard.Run("Mcm.ScreenTongue", ScreenTongue.Follow);
             McmLoader.Reseat = Settings.Reseat;
+            McmLoader.PutBackWhatItShipsWith = Settings.Reset;
             if (Settings.Instance == null) return false;
             Settings.Reseat();
             return true;

@@ -18,6 +18,27 @@ namespace TradeLord
 
         internal static Action Reseat;
 
+        internal static Action PutBackWhatItShipsWith;
+
+        private static bool _owedAPutBack;
+
+        internal static void PutBackWhatItShipsWithOnceTheScreenArrives()
+        {
+            if (PutBackWhatItShipsWith == null) return;
+            if (SettingsInHand) { PutBack(); return; }
+            _owedAPutBack = true;
+            Log.Write("settings file: MCM has not handed its settings over yet, and it keeps a copy of its own, " +
+                      "so putting every setting back waits until it does");
+        }
+
+        private static void PutBack()
+        {
+            _owedAPutBack = false;
+            Log.Write("settings file: the settings screen was holding the settings you had, so they are put back " +
+                      "to what TradeLord ships with there too, and the list above still stands");
+            Guard.Run("Mcm.PutBack", PutBackWhatItShipsWith);
+        }
+
         private static MethodInfo _handover;
         private static DateTime _askedAt;
         private static readonly TimeSpan BetweenAsks = TimeSpan.FromSeconds(1);
@@ -110,6 +131,7 @@ namespace TradeLord
             if (!(_handover.Invoke(null, null) is bool taken) || !taken) return;
             SettingsInHand = true;
             Log.Write("MCM has handed its settings over - the settings screen is in charge from here, and what you pick on it takes hold as you pick it");
+            if (_owedAPutBack) PutBack();
         }
     }
 
