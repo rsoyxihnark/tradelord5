@@ -306,5 +306,22 @@ namespace TradeLord.Tests
             Assert.False(road.Traded(true));
             Assert.Equal(0, road.PaidOut(true));
         }
+
+        [Fact]
+        public void WhatADryRunMovedIsCountedForTheWholeGoodAndNotForOneStackOfIt()
+        {
+            Books books = Fresh();
+            books.NoteSale("sword", 100, 3f, 0);
+            books.NoteSale("sword", 90, 3f, 0);
+            books.NotePurchase("mule", 120, 0f, 0);
+
+            Assert.Equal(-2, books.Held(true, "sword"));
+            Assert.Equal(1, books.Stocked(true, "mule"));
+
+            const int inThisStack = 2;
+            const int allYouHold = 5;
+            Assert.Equal(2, System.Math.Min(inThisStack, allYouHold + books.Held(true, "sword")));
+            Assert.Equal(0, inThisStack + books.Held(true, "sword"));
+        }
     }
 }
