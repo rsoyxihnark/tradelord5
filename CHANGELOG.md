@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.47.5
+
+- The hint under How many of each kind of food to keep now points you at Keep food (days of supply) by the name the settings screen shows, in every language, instead of a name no setting has.
+
 ## 1.47.4
 
 - Keep food (days of supply) and Keep some of every kind of food now count every stack of a good together, so when your bags hold the same food in two stacks, as they do when a quest hands you some alongside your own, TradeLord no longer sells off part of the reserve it was told to keep.

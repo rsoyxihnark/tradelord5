@@ -5477,5 +5477,51 @@ def the_lot_shape_the_counting_rests_on_is_held_against_the_game():
 chk("1.47.4", "the game is asked, every version, whether one good still sits in more than one lot of the bags, since the food reserve and the per-lot caps are counted on it",
     the_lot_shape_the_counting_rests_on_is_held_against_the_game())
 
+
+def a_hint_that_sends_you_to_a_setting_names_it_the_way_the_screen_does():
+    for path in [ENGLISH] + list(TRANSLATIONS.values()):
+        said = spoken(path)
+        for cites, named in (('TL362', 'TL221'),):
+            if cites not in said or named not in said:
+                return False
+            if said[named] not in said[cites]:
+                return False
+    return "Keep food (days of supply) above is the one that works in days." in M
+
+
+chk("1.47.5", "a hint that sends you to another setting calls it what the settings screen calls it, in every language",
+    a_hint_that_sends_you_to_a_setting_names_it_the_way_the_screen_does())
+
+
+def the_hints_publish_the_defaults_the_source_ships():
+    defaults = dict(re.findall(r'public\s+(?:bool|int|float|string)\s+(\w+)\s*=\s*([^;]+);',
+                               S['Options.cs']))
+    blocks = re.findall(
+        r'\[SettingProperty\w+\("\{=TL\d+\}([^"]+)".*?HintText = "\{=TL\d+\}((?:[^"\\]|\\.)*)"\)\]\s*'
+        r'\[SettingPropertyGroup[^\]]*\]\s*public\s+[\w<>]+\s+(\w+)', M, re.S)
+    tested = 0
+    for label, hint, name in blocks:
+        shipped = defaults.get(name, '').strip().rstrip('f').strip('"')
+        for said in re.findall(r'[Dd]efault\s+([0-9]+(?:\.[0-9]+)?)', hint):
+            tested += 1
+            try:
+                if abs(float(said) - float(shipped)) > 1e-6:
+                    return False
+            except ValueError:
+                return False
+        for state in re.findall(r'\b(ON|OFF) by default\b', hint):
+            tested += 1
+            if ('true' if state == 'ON' else 'false') != shipped:
+                return False
+        if '(default)' in label:
+            tested += 1
+            if shipped != 'true':
+                return False
+    return len(blocks) > 40 and tested >= 16
+
+
+chk("1.47.5", "every default the settings screen advertises is the one the source ships",
+    the_hints_publish_the_defaults_the_source_ships())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

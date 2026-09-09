@@ -584,7 +584,7 @@ namespace TradeLord.Mcm
         public bool KeepEveryFoodKind { get => _o.KeepEveryFoodKind; set { _o.KeepEveryFoodKind = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL262}How many of each kind of food to keep", 1, 50, Order = 2, RequireRestart = false,
-            HintText = "{=TL362}How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Food reserve (days of supply) above is the one that works in days. Two is enough that a day of eating does not wipe a kind out, and the morale bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher.")]
+            HintText = "{=TL362}How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Keep food (days of supply) above is the one that works in days. Two is enough that a day of eating does not wipe a kind out, and the morale bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public int KeepPerFoodKind { get => _o.KeepPerFoodKind; set { _o.KeepPerFoodKind = value; Options.Bump(); } }
 
