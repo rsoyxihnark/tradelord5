@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.50.1
+
+- The reset in 1.50.0 did not stick if you have MCM installed, because the settings screen keeps a copy of its own and handed your old settings straight back a few seconds after the game started.
+- TradeLord now puts the settings screen's own copy back to what it ships with as well, so the reset holds.
+- Because 1.50.0's reset never took, every setting goes back to the value TradeLord ships with once more, the first time you run this version.
+- Anything you had set is written into TradeLord.log as it happens, named setting by setting, so you can put back the ones you want.
+- Your never sell, always sell, never buy and always buy lists are emptied by that reset along with everything else.
+- This happens on this version only and never again on a later one.
+
 ## 1.50.0
 
 - Every setting goes back to the value TradeLord ships with, once, the first time you run this version, because the settings it ships with now trade better out of the box than they used to.

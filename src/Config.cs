@@ -186,6 +186,7 @@ namespace TradeLord
                 Log.Write("settings file: this version puts every setting back to the value TradeLord ships with, " +
                           "once, because the settings it ships with trade better than they used to. Anything you had " +
                           "set is listed above so you can put it back, and this happens only this once.");
+                McmLoader.PutBackWhatItShipsWithOnceTheScreenArrives();
             }
 
             if (screen && screenWroteIt && !ChangedByHand(found, stamped))

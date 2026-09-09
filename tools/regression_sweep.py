@@ -566,7 +566,7 @@ def the_panel_reads_the_key_before_it_walks_the_screen():
                         "else if (map.IsEscapeMenuOpened || (HotkeyReleased() && !TypingOnScreen(map)))"))
 
 def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
-    put = method_body(S['Support.cs'], "private static void Put")
+    put = method_body(S['Support.cs'], "private static void Put(string message)")
     held = method_body(S['Support.cs'], "private static StreamWriter Held")
     letgo = method_body(S['Support.cs'], "private static void LetGo")
     resolve = method_body(S['Support.cs'], "private static string Resolve")
@@ -4182,7 +4182,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 10;' in S['Migrate.cs']
+    return ('public const int Shape = 11;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and ordered(read, "written[line.Substring(0, mark).Trim()]",
                         "written.TryGetValue(Migration.ShapeKey, out string held)",
@@ -5687,7 +5687,32 @@ chk("1.50.0", "a good a quest and the food reserve both hold keeps the larger of
 chk("1.50.0", "what a lot cost a unit holds still as the lot drains, so the price a unit must clear never moves under it",
     what_a_lot_cost_holds_still_while_the_lot_drains())
 
-chk("1.50.0", "the one-time settings reset is one switch, is armed at the shape this version ships, cannot be set off by the lift and wipes everything the lift carried",
+def a_reset_reaches_the_copy_the_settings_screen_keeps():
+    read = method_body(S['Config.cs'], "private static void Read")
+    loader = method_body(S['Support.cs'], "internal static class McmLoader")
+    arrives = method_body(S['Support.cs'],
+                          "internal static void PutBackWhatItShipsWithOnceTheScreenArrives")
+    back = method_body(S['Support.cs'], "private static void PutBack()")
+    handover = method_body(S['Support.cs'], "internal static void TryHandover")
+    reset = method_body(M, "internal static void Reset")
+    reseat = method_body(M, "internal static void Reseat")
+    return (ordered(read, "Whip.Crack(shape, written);", "BackToWhatItShipsWith();",
+                    "McmLoader.PutBackWhatItShipsWithOnceTheScreenArrives();")
+            and "internal static Action PutBackWhatItShipsWith;" in loader
+            and ordered(arrives, "if (PutBackWhatItShipsWith == null) return;",
+                        "if (SettingsInHand) { PutBack(); return; }",
+                        "_owedAPutBack = true;")
+            and ordered(back, "_owedAPutBack = false;", 'Guard.Run("Mcm.PutBack", PutBackWhatItShipsWith);')
+            and ordered(handover, "SettingsInHand = true;", "if (_owedAPutBack) PutBack();")
+            and "McmLoader.PutBackWhatItShipsWith = Settings.Reset;" in M
+            and ordered(reset, "field.SetValue(Options.Current, now);", "Reseat();", "Options.Bump();")
+            and "BaseSettingsProvider.Instance?.SaveSettings(held);" in reseat)
+
+
+chk("1.50.1", "a reset reaches the copy the settings screen keeps, so a screen that loads late cannot hand the old settings back",
+    a_reset_reaches_the_copy_the_settings_screen_keeps())
+
+chk("1.50.1", "the one-time settings reset is one switch, is armed at the shape this version ships, cannot be set off by the lift and wipes everything the lift carried",
     the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
