@@ -2958,8 +2958,11 @@ def the_hook_falls_back_to_the_signature_the_rules_name():
 
 def the_signature_is_written_in_one_place_and_is_the_noreply_address():
     written = re.findall(r'commit as `([^`]*)`', RULES)
-    return (written == ['rsoyxihnark <rsoyxihnark@users.noreply.github.com>']
-            and 'ozzeytinh' not in RULES
+    shaped = re.match(r'^([A-Za-z0-9-]+) <\1@users\.noreply\.github\.com>$', written[0]) if written else None
+    carried = set(re.findall(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', RULES))
+    return (len(written) == 1
+            and shaped is not None
+            and carried == {written[0].split('<')[1].rstrip('>')}
             and 'never by Claude' in RULES)
 
 def the_rules_keep_one_branch():
