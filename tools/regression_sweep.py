@@ -253,6 +253,7 @@ SHARED_PASS_RULES = {
     "CheapestFirst(": ('Trading.cs',
         "private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst"),
     "WhatStopsBuying(": ('Rules.cs', "internal static Block WhatStopsBuying"),
+    "WhatCapsAGood(": ('Rules.cs', "internal static Block WhatCapsAGood"),
     "Basis.For(": ('Trading.cs', "private struct Basis"),
     "TradeMath.SkipTheUnitsYouPaidFor(": ('TradeMath.cs',
         "public static bool SkipTheUnitsYouPaidFor"),
@@ -278,7 +279,8 @@ def shed_rule():
     return method_body(S['Rules.cs'], "internal static bool MayShedForHerd<TGame>")
 
 def cap_rule():
-    return method_body(S['Rules.cs'], "internal static Block WhatStopsBuying")
+    return (method_body(S['Rules.cs'], "internal static Block WhatStopsBuying")
+            + "\n" + method_body(S['Rules.cs'], "internal static Block WhatCapsAGood"))
 
 def pass_body(signature):
     body = method_body(S['Trading.cs'], signature)
@@ -3662,12 +3664,14 @@ def a_share_of_the_hold_caps_one_good_and_ships_off():
     buy = pass_body("private static void BuyPass")
     return (option_default('MaxHeldShare') == '0.45f'
             and "_o.MaxHeldShare" in M
-            and "pass.Capacity * Options.Current.MaxHeldShare" in buy
+            and "float shareCap = pass.ShareCap;" in buy
             and buy.count("shareCap > 0f") == 2
             and buy.count("(held + 1) * good.Weight > shareCap") == 2
             and "MaxHeldShare" not in method_body(S['Trading.cs'], "private static void SellPass")
             and (lambda src: "internal float Capacity => _capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity;" in src
                          and "internal float Room() => Capacity - Carry.Carried(Party);" in src
+                         and "Options.Current.MaxHeldShare > 0f ? Capacity * Options.Current.MaxHeldShare : 0f;" in src
+                         and src.count("Options.Current.MaxHeldShare") == 2
                          and src.count("Carry.Capacity(") == 1
                          and src.count("Carry.Room(") == 1
                          and "Carry.Room(party) < 1f;" in method_body(src, "private static bool NoRoomToCarry"))
@@ -3761,7 +3765,7 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
             and "s.BuyValueCapPerItem" in buy
             and "s.MaxHeldPerItem" in buy
             and "(held + 1) * good.Weight > shareCap" in buy
-            and "pass.Capacity * Options.Current.MaxHeldShare" in buy
+            and "float shareCap = pass.ShareCap;" in buy
             and "herdRoom = Math.Max(0, HerdRoomForLivestock(pass.Party)" in buy
             and "if (livestock && herdRoom <= 0) return Block.HerdFull;" in buy
             and buy.count("if (livestock) herdRoom--;") == 1
@@ -3770,12 +3774,13 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
             and "Visit" not in road)
 
 def the_caravan_line_closes_the_conversation_on_the_caravans_own_answer():
-    lines = between(S['Trading.cs'], "private void AddCaravanLines", "null, null, 200);")
+    lines = method_body(S['Trading.cs'], "private void AddCaravanLines")
     return ('starter.AddPlayerLine("tradelord_caravan_done", "caravan_talk", "tradelord_caravan_reply",' in lines
             and 'starter.AddDialogLine("tradelord_caravan_reply", "tradelord_caravan_reply", "close_window",'
                 in lines
             and "{=TL114}" in lines and "{=TL115}" in lines
-            and "CaravanMet, null, 200" in lines
+            and "&& CaravanMet(), null, 200);" in lines
+            and "() => Tongue.Spoken(answered), null, 200);" in lines
             and "TL114" in strings_declared() and "TL115" in strings_declared())
 
 chk("1.20.0", "a horse an unmounted man can ride costs the herd nothing, so a full herd no longer blocks one",
@@ -4460,7 +4465,7 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
                     "private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst")
             and "CheapestFirst(" in larder and "CheapestFirst(" in haul
             and t.count("pass.Books.Bought(pass.Sim,") == 1
-            and t.count("pass.Books.Purchases(pass.Sim,") == 1)
+            and t.count("pass.Books.Purchases(pass.Sim,") == 3)
 
 def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
     ledger = S['Books.cs']
@@ -5534,7 +5539,7 @@ def one_stack_of_a_good_never_spends_what_another_stack_holds():
                  " - Books.Stocked(Sim, item.StringId));") in held
             and t.count("pass.YoursToSell(el)") == 3
             and t.count("pass.TheirsToSell(el)") == 5
-            and len(counted) == 2
+            and len(counted) == 4
             and all("GetItemNumber(" in one and "el.Amount" not in one for one in counted))
 
 
@@ -5772,6 +5777,53 @@ def the_map_marker_keeps_to_the_same_trade_pool_as_the_scans():
 
 chk("1.51.1", "the town marked on your map is one TradeLord would trade in, so a market kept out of the Trade Pool is kept off the marker too",
     the_map_marker_keeps_to_the_same_trade_pool_as_the_scans())
+
+
+def the_per_item_caps_bind_every_pass_that_buys():
+    t = S['Trading.cs']
+    larder = method_body(t, "public static void ExecuteResupply")
+    haul = method_body(t, "public static void ExecuteHaulage")
+    buy = method_body(t, "private static void BuyPass")
+    caps = method_body(S['Rules.cs'], "internal static Block WhatCapsAGood")
+    return ("if (s.BuyCapPerItem > 0 && taken.count >= s.BuyCapPerItem) return Block.ItemCountCap;" in caps
+            and "if (s.BuyValueCapPerItem > 0 && taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;" in caps
+            and "if (s.MaxHeldPerItem > 0 && held >= s.MaxHeldPerItem) return Block.HeldEnough;" in caps
+            and "Block capped = WhatCapsAGood(good, price, taken, held, shareCap, s);" in
+                method_body(S['Rules.cs'], "internal static Block WhatStopsBuying")
+            and "WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap)" in larder
+            and "WhatCapsAGood(good, price, (countThis, spentThis), held, HoldShareOff)" in haul
+            and "private const float HoldShareOff = 0f;" in t
+            and "float shareCap = pass.ShareCap;" in larder
+            and all("var prior = pass.Books.Purchases(pass.Sim, item.StringId);" in b
+                    and "int countThis = prior.count, spentThis = prior.spent;" in b
+                    and b.count("countThis++;") == 1 and b.count("spentThis += price;") == 1
+                    and b.count("held++;") == 1
+                    for b in (larder, haul))
+            and "WhatStopsBuying(good, price, pass.Spendable(), (countThis, spentThis), held," in buy)
+
+
+def a_dialogue_line_is_spoken_in_the_language_in_force_when_it_is_offered():
+    t = S['Trading.cs']
+    tongue = S['Tongue.cs']
+    caravan = method_body(t, "private void AddCaravanLines")
+    bandit = method_body(t, "private void AddBanditLines")
+    return ('internal static string Slot(string written) => "{=!}{" + Marker(written) + "}";' in tongue
+            and "MBTextManager.SetTextVariable(Marker(written), Text(written), false);" in
+                method_body(tongue, "internal static bool Spoken")
+            and 'private static string Marker(string written) => "TradeLord_" + Id(written);' in tongue
+            and caravan.count("Tongue.Slot(") == 2 and caravan.count("Tongue.Spoken(") == 2
+            and bandit.count("Tongue.Slot(") == 2 and bandit.count("Tongue.Spoken(") == 2
+            and "Tongue.Text(" not in caravan and "Tongue.Text(" not in bandit
+            and t.count("Tongue.Slot(") == 4 and t.count("Tongue.Spoken(") == 4
+            and all(("{=" + said + "}") in caravan + bandit
+                    for said in ("TL114", "TL115", "TL387", "TL113")))
+
+
+chk("1.52.0", "the per-item buy caps bind restocking the larder and buying a haul animal, not just buying for profit",
+    the_per_item_caps_bind_every_pass_that_buys())
+
+chk("1.52.0", "a caravan and a bandit line are spoken in the language in force when they are offered, not the one the campaign loaded in",
+    a_dialogue_line_is_spoken_in_the_language_in_force_when_it_is_offered())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
