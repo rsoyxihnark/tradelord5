@@ -1898,6 +1898,7 @@ namespace TradeLord
             {
                 Settlement s = town.Settlement;
                 if (s == party.CurrentSettlement) continue;
+                if (!IsMarket(s)) continue;
                 if (LedgerBehavior.UnderAttack(s)) continue;
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;
                 if (town.Gold <= bestValue) continue;
