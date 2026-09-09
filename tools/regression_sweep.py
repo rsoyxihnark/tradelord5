@@ -1579,7 +1579,7 @@ chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log an
     "best case" in M)
 
 chk("1.3.33", "a fully sold stack clears its cost basis",
-    "if (rec.Count <= 0) { rec.Count = 0; rec.TotalPaid = 0; }" in
+    "if (left <= 0) { rec.Count = 0; rec.TotalPaid = 0; return; }" in
     method_body(S['TradeMath.cs'], "public static void DrainSale"))
 chk("1.3.33", "automated trading recaptures prices after it moves them",
     all("pass.Moved(" in method_body(S['Trading.cs'], where)
@@ -3955,11 +3955,11 @@ def an_animal_a_quest_is_waiting_on_is_counted_out_of_the_herd():
             and "Campaign.Current?.QuestManager?.Quests" in promised
             and "if (quest == null || quest.IsFinalized) continue;" in promised
             and "if (!Readable()) return null;" in promised
-            and "Dictionary<ItemObject, int> promised = Errands.Promised();" in relief
+            and "TradePolicy.KeptBack(mine, out Dictionary<ItemObject, int> promised);" in relief
             and "if (promised == null) return;" in relief
-            and "if (promised.TryGetValue(item, out int owed) && owed > 0)" in relief
+            and "if (heldBack.TryGetValue(item, out int owed) && owed > 0)" in relief
             and "int spare = Math.Min(remaining, owed);" in relief
-            and "promised[item] = owed - spare;" in relief
+            and "heldBack[item] = owed - spare;" in relief
             and "remaining -= spare;" in relief
             and "Errands.Forget();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 
@@ -3972,9 +3972,10 @@ def a_quest_animal_is_held_back_from_every_sale_not_just_the_herd():
             and "if (awaited == null) return keep;" in kept
             and "if (owed.Value > held) keep[owed.Key] = owed.Value;" in kept
             and "TradePolicy.FoodKeep(" not in S['Trading.cs']
-            and S['Trading.cs'].count("TradePolicy.KeptBack(") == 2
+            and S['Trading.cs'].count("TradePolicy.KeptBack(") == 3
             and all("TradePolicy.KeptBack(" in method_body(S['Trading.cs'], where)
                     for where in ("private static void SellPass",
+                                  "public static void ExecuteHerdRelief",
                                   "private Settlement FindBestSellTownForCargo")))
 
 chk("1.37.5", "an animal a quest is waiting on is held back from every sale, not only from thinning the herd",
@@ -4181,7 +4182,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 9;' in S['Migrate.cs']
+    return ('public const int Shape = 10;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and ordered(read, "written[line.Substring(0, mark).Trim()]",
                         "written.TryGetValue(Migration.ShapeKey, out string held)",
@@ -5466,7 +5467,7 @@ def the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off():
     read = method_body(S['Config.cs'], "private static void Read")
     back = method_body(S['Config.cs'], "private static void BackToWhatItShipsWith")
     said = method_body(S['Config.cs'], "private static void SayWhatYouHadSet")
-    return ("public const bool Armed = false;" in whip
+    return ("public const bool Armed = true;" in whip
             and "public const int CracksAt = " in whip
             and ("public static bool Cracks(bool armed, int cracksAt, int shipped, int shape) =>\n"
                  "            armed && cracksAt > 0 && cracksAt == shipped && shape < cracksAt;") in whip
@@ -5496,7 +5497,8 @@ def the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off():
                      "AWhipArmedAtNoShapeAtAllNeverCracks",
                      "NothingTheLiftCarriedForwardSurvivesAWhipThatCracks",
                      "AWhipThatDoesNotCrackLeavesTheLiftsWorkExactlyAsItFoundIt",
-                     "ThisVersionShipsTheWhipDisarmedSoNoFileIsResetByIt",
+                     "ThisVersionShipsTheWhipArmedSoAFileOlderThanItIsResetOnce",
+                     "AFileAlreadyAtTheShapeThisVersionShipsIsNeverResetBySecondTime",
                      "TheWhipIsStillWiredToTheShapeThisVersionShips",
                      "TheWhipLeavesTheLiftItselfAlone")))
 
@@ -5640,7 +5642,52 @@ chk("1.48.0", "with the price trace on, every good a pass moves is logged with w
 chk("1.48.0", "the log names everything that stops when the herd cannot be read, and the herd check says it could not read the penalty rather than reporting none",
     the_log_names_everything_that_stops_when_the_herd_cannot_be_read())
 
-chk("1.49.1", "the one-time settings reset is one switch, is shipped off, cannot be set off by the lift and wipes everything the lift carried when it is on",
+def the_food_reserve_holds_against_thinning_the_herd_too():
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    kept = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster,")
+    return ("Errands.Promised();" not in relief
+            and "TradePolicy.KeptBack(mine, out Dictionary<ItemObject, int> promised);" in relief
+            and ordered(relief,
+                        "ItemRoster mine = pass.Party.ItemRoster;",
+                        "TradePolicy.KeptBack(mine, out Dictionary<ItemObject, int> promised);",
+                        "if (promised == null) return;",
+                        "if (heldBack.TryGetValue(item, out int owed) && owed > 0)")
+            and "Dictionary<ItemObject, int> keep = FoodKeep(roster);" in kept
+            and "if (owed.Value > held) keep[owed.Key] = owed.Value;" in kept)
+
+
+def the_larger_of_the_two_reserves_is_what_is_kept_back():
+    return ("if (reserved > said.KeepCount) said.KeepCount = reserved;" in sell_rule()
+            and "said.KeepCount = reserved;" not in sell_rule().replace(
+                "if (reserved > said.KeepCount) said.KeepCount = reserved;", "")
+            and ordered(sell_rule(),
+                        "said.KeepCount = promised;",
+                        "if (reserved > said.KeepCount) said.KeepCount = reserved;")
+            and "An_animal_held_by_both_a_quest_and_the_food_reserve_keeps_the_larger_of_the_two" in SELLTESTS)
+
+
+def what_a_lot_cost_holds_still_while_the_lot_drains():
+    drain = method_body(S['TradeMath.cs'], "public static void DrainSale")
+    return (ordered(drain,
+                    "int drain = Math.Min(count, rec.Count);",
+                    "int left = rec.Count - drain;",
+                    "if (left <= 0) { rec.Count = 0; rec.TotalPaid = 0; return; }",
+                    "int unit = (int)Math.Round((double)rec.TotalPaid / rec.Count);",
+                    "rec.Count = left;",
+                    "rec.TotalPaid = unit > 0 ? unit * left : 0;")
+            and "rec.TotalPaid -=" not in drain
+            and "Selling_a_lot_down_one_at_a_time_never_moves_what_the_rest_cost" in MATHTESTS
+            and "Selling_a_lot_in_chunks_leaves_the_rest_costing_the_same_as_selling_it_singly" in MATHTESTS)
+
+
+chk("1.50.0", "the food reserve holds an animal back from thinning the herd, the same as it does from a sale",
+    the_food_reserve_holds_against_thinning_the_herd_too())
+chk("1.50.0", "a good a quest and the food reserve both hold keeps the larger of the two, never the last one asked",
+    the_larger_of_the_two_reserves_is_what_is_kept_back())
+chk("1.50.0", "what a lot cost a unit holds still as the lot drains, so the price a unit must clear never moves under it",
+    what_a_lot_cost_holds_still_while_the_lot_drains())
+
+chk("1.50.0", "the one-time settings reset is one switch, is armed at the shape this version ships, cannot be set off by the lift and wipes everything the lift carried",
     the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

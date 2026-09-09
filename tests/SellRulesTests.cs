@@ -235,14 +235,26 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void An_animal_held_by_both_a_quest_and_the_food_reserve_reports_the_food_draw_last()
+        public void An_animal_held_by_both_a_quest_and_the_food_reserve_keeps_the_larger_of_the_two()
         {
-            SellVerdict said = Ask(Livestock(), amount: 10,
+            SellVerdict fed = Ask(Livestock(), amount: 10,
                 facts: new SellFacts { AwaitedHeld = 2, FoodHeld = 3 });
-            Assert.True(said.Allowed);
-            Assert.Equal(2, said.DrewAwaited);
-            Assert.Equal(3, said.DrewFood);
-            Assert.Equal(3, said.KeepCount);
+            Assert.True(fed.Allowed);
+            Assert.Equal(2, fed.DrewAwaited);
+            Assert.Equal(3, fed.DrewFood);
+            Assert.Equal(3, fed.KeepCount);
+
+            SellVerdict owed = Ask(Livestock(), amount: 10,
+                facts: new SellFacts { AwaitedHeld = 8, FoodHeld = 2 });
+            Assert.True(owed.Allowed);
+            Assert.Equal(8, owed.DrewAwaited);
+            Assert.Equal(2, owed.DrewFood);
+            Assert.Equal(8, owed.KeepCount);
+
+            SellVerdict whole = Ask(Livestock(), amount: 8,
+                facts: new SellFacts { AwaitedHeld = 8, FoodHeld = 2 });
+            Assert.False(whole.Allowed);
+            Assert.Equal(Block.QuestAnimal, whole.Why);
         }
 
         [Fact]
