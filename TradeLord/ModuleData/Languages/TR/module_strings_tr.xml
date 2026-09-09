@@ -102,9 +102,7 @@
 		<string id="TL261" text="Her yiyecek türünden biraz sakla" />
 		<string id="TL361" text="Taşıdığınız her yiyecek türünden birkaç tane ayırın, böylece takımınız yiyecek çeşitliliği moral artışını korur. Ayrılanlar yukarıdaki gün sayısına eklenmez, onun içinde sayılır. Hayvanlar buna dahil değildir; bir sürü kendi başına bir yiyecek türü olarak yenmez, eti için kesilir. Öntanımlı olarak KAPALI." />
 		<string id="TL262" text="Her yiyecek türünden kaç tane saklansın" />
-		<string id="TL362" text="Yukarıdaki anahtarın her yiyecek türünden kaç tane ayıracağı. Bu, yiyeceğin kendi sayısıdır, gün sayısı değil: gün üzerinden çalışan ayar yukarıdaki Yiyecek sakla (kaç günlük). İki tane, bir günlük yemenin bir türü tüketmemesine yeter; moral artışı taşıdığınız tür sayısını sayar, miktarını değil, bu yüzden daha yükseğe çıkmanın pek faydası yoktur." />
-		<string id="TL263" text="Yiyecek ikmali (kaç günlük)" />
-		<string id="TL363" text="Bölüğünüz bu kadar günlük yiyecekten azını taşıdığında, TradeLord kâr için ticaret yapmadan önce buradaki en ucuz yiyeceği alır ve stoku doldurur, ancak o yiyecek için bildiğiniz en ucuz fiyattan fazlasını vermez. Altın rezerviniz, ziyaret başına harcama sınırınız, asla alma listeniz ve yiyecek politikanız yine de geçerlidir; altınınız rezervinize inmeden durur ve köye her maldan sonuncusunu bırakır. 0 ikmali kapatır. Bir pazara varırken yalnızca otomatik alım açıkken çalışır." />
+		<string id="TL362" text="Yukarıdaki anahtarın her yiyecek türünden kaç tane ayıracağı. Bu, yiyeceğin kendi sayısıdır, gün sayısı değil: gün üzerinden çalışan ayar yukarıdaki Yiyecek tamamla ve sakla (kaç günlük). İki tane, bir günlük yemenin bir türü tüketmemesine yeter; moral artışı taşıdığınız tür sayısını sayar, miktarını değil, bu yüzden daha yükseğe çıkmanın pek faydası yoktur." />
 		<string id="TL264" text="Eritilebilir silahlar" />
 		<string id="TL364" text="Demirci ocağının parçalarına ayırabileceği bir silaha ne yapılacağı, demircilik oynayışının ham maddesini koruması için. Öntanımlı seçenek Sat. Hepsini sakla, demircilik parçalarından kurulmuş her şeyi elde tutar, kendi dövdüğünüzü de bir haydutun üstünden yağmaladığınızı da, yani ucuz yağma da birikir. Öğrenmediklerini sakla, bir silahı yalnızca parçalarından biri demirci ocağınızda hâlâ kilitliyken tutar, size öğretecek bir şeyi kalmayınca satar. Zırh, kalkan, yay ve tatar yayı demircilik tasarımı taşımaz, onlar her zaman satılır; her zaman sat listesindeki bir kayıt da yine üstün gelir." />
 		<string id="TL265" text="Gemileri dolduracak kadar al" />
@@ -144,7 +142,7 @@
 		<string id="TL217" text="Otomatik satış"/>
 		<string id="TL218" text="Otomatik alış"/>
 		<string id="TL220" text="En az kâr payı"/>
-		<string id="TL221" text="Yiyecek sakla (kaç günlük)"/>
+		<string id="TL221" text="Yiyecek tamamla ve sakla (kaç günlük)"/>
 		<string id="TL222" text="Yiyecek kuralı"/>
 		<string id="TL223" text="Demircilik malzemesi kuralı"/>
 		<string id="TL224" text="Hayvan kuralı"/>
@@ -175,7 +173,7 @@
 		<string id="TL301" text="AÇIK (varsayılan): fiyatlar dünya ekonomisinden canlı okunur, gitmediğiniz pazarlar dâhil. KAPALI: yalnızca kendi gözünüzle gördüğünüz fiyatlar kullanılır."/>
 		<string id="TL303" text="Sizinle savaşta olan yerleşimleri asla tarama, önerme ve onlarla otomatik ticaret yapma."/>
 		<string id="TL305" text="En iyi alış ipuçları için stokta en az bu kadar parça olmalı. 0 = kapalı. Yalnızca canlı fiyat kipinde: gözlem kipi fiyatları kaydeder, stok düzeylerini değil."/>
-		<string id="TL306" text="TradeLord'un bir şehri ne kadar uzakta arayacağı, yol günü olarak, ve bu mesafeyi sınırlayan tek şey. Bundan uzaktaki şehirler ipuçlarında gösterilmez, rotalara girmez, harita işaretine çıkmaz ve Yükü en iyi pazar için tut onları hiç beklemez. Önerilen hiçbir rotanın toplam yolu (siz -&gt; alış şehri -&gt; satış şehri) da bunu aşamaz. Köylerin aşağıda kendi daha sıkı sınırı vardır. Varsayılan 3."/>
+		<string id="TL306" text="TradeLord'un bir şehri ne kadar uzakta arayacağı, yol günü olarak, ve bu mesafeyi sınırlayan tek şey. Bundan uzaktaki şehirler ipuçlarında gösterilmez, rotalara girmez, harita işaretine çıkmaz ve Yükü en iyi pazar için tut onları hiç beklemez. Önerilen hiçbir rotanın toplam yolu (siz -&gt; alış şehri -&gt; satış şehri) da bunu aşamaz. Köylerin aşağıda kendi daha sıkı sınırı vardır. Varsayılan 2.4."/>
 		<string id="TL307" text="Köyler için aynı sınır, onları şehirlerden daha yakın tutabilmeniz için ayrı. Varsayılan 1."/>
 		<string id="TL308" text="Rotalar sıralanır ve toplanırken satış tarafına yeniden satış güvenlik payını uygular, böylece listelenen kâr siz varmadan fiyatların kaymasını hesaba katar. KAPALI ham marjları gösterir. Rota her hâlükârda güvenlik payını geçmek zorundadır, çünkü varışta bir alım geçişi de aynı testi uygular."/>
 		<string id="TL309" text="Bir partiyi oyunun kendi fiyat modelinden parça parça geçir, böylece adet ve kâr sizin alışınızın fiyatı yukarı itmesini hesaba katar. KAPALI her parçayı ilk parçanın fiyatından sayar, bu da yolculuğun ödeyeceğinden yüksek görünür. Yalnızca şehirlerde ve canlı fiyat kipinde: köyler arz ve talep verisi vermez, gözlem kipi ise canlı pazar içini okumaz."/>
@@ -189,7 +187,7 @@
 		<string id="TL317" text="Bir pazara adım attığınız anda, sorulmadan, kurallarınızın izin verdiği her şeyi satar. Ticaret tecrübesi verilir. Kapalıyken TradeLord yalnızca menüdeki ticaret girdisini seçtiğinizde satar."/>
 		<string id="TL318" text="Bir pazara adım attığınız anda, varsa satıştan sonra alır. Bu kapalıyken TradeLord yalnızca menüdeki ticaret girdisini seçtiğinizde alır."/>
 		<string id="TL320" text="Her ticaretin iki yönde de geçmesi gereken kâr payı. Yalnızca fiyat maliyetinizi en az bu kadar aşıyorsa satın. Yalnızca uzak pazar, yeniden satış güvenlik payından sonra yerel fiyatı bu kadar aşıyorsa alın ya da rotayı listeleyin. Yükseltmek daha az ticaret yapar."/>
-		<string id="TL321" text="Yiyecek satmadan önce bu kadar günlük yiyeceği ayırın. Önce günlük besleme başına en ucuz yiyecek ayrılır, hayvanlar ise ancak başka bir şey rezervi karşılamıyorsa. 0 her kırıntıyı satar."/>
+		<string id="TL321" text="TradeLord'un bölüğünüzü kaç günlük yiyecekle dolu tuttuğu. Herhangi bir yiyecek satmadan önce bu kadarını ayırır, önce beslenen gün başına en ucuz yiyeceği, hayvanları ise ancak başka hiçbir şey yetmiyorsa ayırır; ticaret yaparken de sizi aynı miktara geri tamamlar, pazardaki en ucuz yiyeceği alır ve onun için bildiği en ucuz fiyattan fazlasını asla ödemez. Altın rezerviniz, ziyaret başına harcama sınırınız, asla-alma listeniz ve yiyecek siyasetiniz yine geçerlidir ve bir köye her maldan sonuncusunu bırakır. 0 ikisini de kapatır ve yiyeceğin son kırıntısını da satar. Varsayılan 3."/>
 		<string id="TL322" text="Otomatik ticaretin yiyecekle ne yapabileceği. Günlük yiyecek rezervi ayrıdır ve yine geçerlidir."/>
 		<string id="TL323" text="Otomatik ticaretin kömür, sert odun, demir cevheri ve külçelerle ne yapabileceği. Demircilik stokunu otomatik ticaretin tümüyle dışında tutmak için Dokunma seçin."/>
 		<string id="TL324" text="Otomatik ticaretin koyun, sığır ve domuzla ne yapabileceği. Alış, oyunun kendi sürü hesabıyla sınırlanır, bu yüzden müfrezeyi sürü hız cezasına sokmaz. Yük hayvanlarının ve binek atlarının kendi ayarları vardır, bu ayar onlara işlemez."/>
@@ -224,6 +222,7 @@
 		<string id="TL104" text="Otomasyon"/>
 		<string id="TL105" text="Alış"/>
 		<string id="TL106" text="Genel"/>
+		<string id="TL107" text="Hata ayıklama"/>
 		<string id="TL116" text="TradeLord {ITEMS} sattı, {GOLD} denar aldı, böylece müfrezeniz yeniden hızlanır."/>
 		<string id="TL117" text="[Benzetim, en iyi ihtimal] TradeLord {ITEMS} satıp {GOLD} denar alırdı, böylece müfrezeniz yeniden hızlanırdı."/>
 		<string id="TL275" text="Sizi yavaşlatan hayvanları sat"/>

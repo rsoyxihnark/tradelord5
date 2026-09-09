@@ -403,7 +403,7 @@ namespace TradeLord.Mcm
         public int MinTownStock { get => _o.MinTownStock; set { _o.MinTownStock = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL206}Town travel ceiling (days, 0 = off)", 0f, 20f, "0.0", Order = 4, RequireRestart = false,
-            HintText = "{=TL306}How far TradeLord looks for a town, in travel days, and the only thing that limits that distance. Towns farther than this are hidden from tooltips, held out of the routes, kept off the map marker, and never waited for by Hold cargo for the best market. No suggested route's total trip (you -> buy town -> sell town) may exceed it either. Villages have their own stricter ceiling below. Default 3.")]
+            HintText = "{=TL306}How far TradeLord looks for a town, in travel days, and the only thing that limits that distance. Towns farther than this are hidden from tooltips, held out of the routes, kept off the map marker, and never waited for by Hold cargo for the best market. No suggested route's total trip (you -> buy town -> sell town) may exceed it either. Villages have their own stricter ceiling below. Default 2.4.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 2)]
         public float MaxTravelDaysTown { get => _o.MaxTravelDaysTown; set { _o.MaxTravelDaysTown = value; Options.Bump(); } }
 
@@ -568,13 +568,9 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool BanditGetawayCheat { get => _o.BanditGetawayCheat; set { _o.BanditGetawayCheat = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL246}Write a price trace to the log", Order = 19, RequireRestart = false,
-            HintText = "{=TL389}For working out why a price TradeLord shows you does not match the one the trade screen offers. As you walk into a market, and again after you trade there by hand, TradeLord writes to TradeLord.log what that market pays and charges for every good you are carrying, read four ways: the way TradeLord reads it, and three ways through the market's own prices. It names the market, the price model the game is running, and any other mod that is changing either of them. OFF by default, since it makes the log much longer.")]
-        [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
-        public bool PriceTrace { get => _o.PriceTrace; set { _o.PriceTrace = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL221}Keep food (days of supply)", 0, 30, Order = 0, RequireRestart = false,
-            HintText = "{=TL321}Hold back this many days of food before selling any. The cheapest food per day fed is reserved first, and livestock only if nothing else covers the reserve. 0 sells every scrap of food.")]
+        [SettingPropertyInteger("{=TL221}Restock and keep food (days of supply)", 0, 30, Order = 0, RequireRestart = false,
+            HintText = "{=TL321}The days of food TradeLord keeps your party stocked to. It holds this much back before selling any food, reserving the cheapest food per day fed first and livestock only if nothing else covers it, and it tops you back up to the same amount as it trades, buying the cheapest food a market has and never paying more than the cheapest price it knows of for it. Your gold reserve, your spending limit for the visit, your never-buy list and your food policy all still hold, it stops before your gold reaches your reserve, and it leaves a village its last of each good. 0 turns both off and sells every scrap of food. Default 3.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public int KeepFoodDays { get => _o.KeepFoodDays; set { _o.KeepFoodDays = value; Options.Bump(); } }
 
@@ -584,7 +580,7 @@ namespace TradeLord.Mcm
         public bool KeepEveryFoodKind { get => _o.KeepEveryFoodKind; set { _o.KeepEveryFoodKind = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL262}How many of each kind of food to keep", 1, 50, Order = 2, RequireRestart = false,
-            HintText = "{=TL362}How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Keep food (days of supply) above is the one that works in days. Two is enough that a day of eating does not wipe a kind out, and the morale bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher.")]
+            HintText = "{=TL362}How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Restock and keep food (days of supply) above is the one that works in days. Two is enough that a day of eating does not wipe a kind out, and the morale bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 5)]
         public int KeepPerFoodKind { get => _o.KeepPerFoodKind; set { _o.KeepPerFoodKind = value; Options.Bump(); } }
 
@@ -667,10 +663,6 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL263}Restock food (days of supply)", 0, 30, Order = 7, RequireRestart = false,
-            HintText = "{=TL363}When your party carries fewer than this many days of food, TradeLord buys the cheapest food here to top it back up, before it trades for profit, and only where that food costs no more than the cheapest price you know of for it. Your gold reserve, your spending limit for the visit, your never-buy list and your food policy all still hold, it stops before your gold reaches your reserve, and it leaves a village its last of each good. 0 turns restocking off. As you arrive at a market it runs only when auto buy is on.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
-        public int ResupplyFoodDays { get => _o.ResupplyFoodDays; set { _o.ResupplyFoodDays = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL265}Buy to fill the ships", Order = 8, RequireRestart = false,
             HintText = "{=TL365}Size purchases to what your ships can hold rather than what your carts can, so you can load the fleet while you are ashore. Your party has to be able to sail; without a fleet TradeLord counts the carts instead and says so in its log. OFF by default.")]
@@ -701,5 +693,10 @@ namespace TradeLord.Mcm
             HintText = "{=TL374}Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and your haul animals instead of needing a new number every time the party grows. 0 turns it off. Selling is unaffected, and the flat per-item caps above still hold.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 6)]
         public float MaxHeldShare { get => _o.MaxHeldShare; set { _o.MaxHeldShare = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL246}Write a price trace to the log", Order = 0, RequireRestart = false,
+            HintText = "{=TL389}For working out why a price TradeLord shows you does not match the one the trade screen offers. As you walk into a market, before anything is traded, and again after you trade there by hand, TradeLord writes to TradeLord.log what that market pays and charges for every good you are carrying, read four ways: the way TradeLord reads it, and three ways through the market's own prices. It names the market, the price model the game is running and any other mod that is changing either of them, and for every good it trades it notes what it quoted next to what the market actually paid. OFF by default, since it makes the log much longer.")]
+        [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 7)]
+        public bool PriceTrace { get => _o.PriceTrace; set { _o.PriceTrace = value; Options.Bump(); } }
     }
 }
