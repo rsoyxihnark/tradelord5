@@ -226,6 +226,41 @@ namespace TradeLord.Tests
             Assert.Empty(notes);
         }
 
+        [Theory]
+        [InlineData(1)]
+        [InlineData(7)]
+        [InlineData(8)]
+        public void TheWhipCracksOnAFileOlderThanTheShapeItIsArmedAt(int shape)
+        {
+            Assert.True(Whip.Armed);
+            Assert.True(Whip.CracksOn(shape));
+        }
+
+        [Theory]
+        [InlineData(9)]
+        [InlineData(10)]
+        public void TheWhipNeverCracksOnAFileAtOrPastTheShapeItIsArmedAt(int shape)
+        {
+            Assert.False(Whip.CracksOn(shape));
+        }
+
+        [Fact]
+        public void TheWhipIsArmedOnlyAtTheShapeThisVersionShips()
+        {
+            Assert.Equal(Migration.Shape, Whip.CracksAt);
+            Assert.False(Whip.CracksOn(Migration.Shape));
+        }
+
+        [Fact]
+        public void TheWhipLeavesTheLiftItselfAlone()
+        {
+            var written = File("KeepFoodDays", "9", "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.False(Migration.Lift(Migration.Shape, written, notes));
+            Assert.Equal("9", written["KeepFoodDays"]);
+            Assert.Equal("800", written["GoldReserve"]);
+        }
+
         [Fact]
         public void ASettingWrittenByHandIntoACurrentFileIsLeftForTheFileToReport()
         {
@@ -310,7 +345,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(8, Migration.Shape);
+            Assert.Equal(9, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));
