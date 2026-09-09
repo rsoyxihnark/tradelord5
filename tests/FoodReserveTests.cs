@@ -226,6 +226,30 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_reserve_reaches_past_the_biggest_helping_to_every_other_one()
+        {
+            var s = new Options { KeepFoodDays = 15, KeepEveryFoodKind = false };
+            var carried = new List<TradeRules.Ration>
+            {
+                Food("grain", 10, 10),
+                Food("grain", 10, 10),
+            };
+            Assert.Equal(15, Keep(carried, s, perDay: 1f)["grain"]);
+        }
+
+        [Fact]
+        public void The_variety_floor_counts_every_helping_of_a_kind_together()
+        {
+            var s = new Options { KeepFoodDays = 0, KeepEveryFoodKind = true, KeepPerFoodKind = 5 };
+            var carried = new List<TradeRules.Ration>
+            {
+                Food("grain", 1, 10),
+                Food("grain", 1, 10),
+            };
+            Assert.Equal(2, Keep(carried, s, perDay: 1f)["grain"]);
+        }
+
+        [Fact]
         public void Nothing_you_are_not_carrying_is_reserved()
         {
             var s = new Options { KeepFoodDays = 5, KeepEveryFoodKind = false };
