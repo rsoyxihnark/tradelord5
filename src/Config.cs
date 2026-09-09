@@ -177,6 +177,17 @@ namespace TradeLord
             bool lifted = Migration.Lift(shape, written, notes);
             foreach (string note in notes) Log.Write("settings file: " + note);
 
+            bool whipped = Whip.CracksOn(shape);
+            if (whipped)
+            {
+                SayWhatYouHadSet(written);
+                written.Clear();
+                BackToWhatItShipsWith();
+                Log.Write("settings file: this version puts every setting back to the value TradeLord ships with, " +
+                          "once, because the settings it ships with trade better than they used to. Anything you had " +
+                          "set is listed above so you can put it back, and this happens only this once.");
+            }
+
             if (screen && screenWroteIt && !ChangedByHand(found, stamped))
             {
                 Log.Write("settings file: the settings screen was saved more recently, so this file is written to match it");
@@ -216,10 +227,38 @@ namespace TradeLord
             }
             if (screen)
                 Write(found, "made the settings screen match it");
+            else if (whipped)
+                Write(found, "every setting put back to what TradeLord ships with");
             else if (lifted || shape != Migration.Shape)
                 Write(found, "brought forward from shape " + shape + " to shape " + Migration.Shape);
             else if (seen.Count < known.Count)
                 Write(found, "the file was missing " + (known.Count - seen.Count) + " setting(s) this version knows");
+        }
+
+        private static void SayWhatYouHadSet(IDictionary<string, string> written)
+        {
+            var stock = new Options();
+            var known = new Dictionary<string, FieldInfo>(StringComparer.OrdinalIgnoreCase);
+            foreach (FieldInfo field in Fields()) known[field.Name] = field;
+            int away = 0;
+            foreach (var line in written)
+            {
+                if (!known.TryGetValue(line.Key, out FieldInfo field)) continue;
+                string ships = Shown(field, stock);
+                if (line.Value == ships) continue;
+                away++;
+                Log.Write("  you had " + field.Name + " = " + line.Value +
+                          " (TradeLord ships with " + ships + ")");
+            }
+            Log.Write(away == 0
+                ? "  every setting in your file was already at the value TradeLord ships with"
+                : "  " + away + " setting(s) of yours are listed above");
+        }
+
+        private static void BackToWhatItShipsWith()
+        {
+            var stock = new Options();
+            foreach (FieldInfo field in Fields()) field.SetValue(Options.Current, field.GetValue(stock));
         }
 
         private static bool Taken(FieldInfo field, string written)
