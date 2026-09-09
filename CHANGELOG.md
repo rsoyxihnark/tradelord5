@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.49.0
+
+- Every setting goes back to the value TradeLord ships with, once, the first time you run this version, because the settings it ships with now trade better out of the box than they used to.
+- Anything you had set yourself is written into TradeLord.log as it happens, named setting by setting, so you can put back the ones you want.
+- Your four item lists are emptied by that reset along with everything else, so a never-sell or always-buy list you had built up is in the log too.
+- This happens on this version only and never again on a later one.
+
 ## 1.48.0
 
 - Keeping food back and restocking it are one setting now, Restock and keep food (days of supply), which ships at 3 days: TradeLord holds that much back before it sells any food and tops you back up to the same amount as it trades.

@@ -4178,7 +4178,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 8;' in S['Migrate.cs']
+    return ('public const int Shape = 9;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and ordered(read, "written[line.Substring(0, mark).Trim()]",
                         "written.TryGetValue(Migration.ShapeKey, out string held)",
@@ -4291,7 +4291,9 @@ def the_shape_a_settings_file_declares_gates_every_step_of_the_lift():
                         "if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);",
                         "if (from < 7) changed |= TheScanRadiusIsGone(written, notes);")
             and lift.count("changed |=") == 8
-            and ("if (from < " + shape.group(1) + ")") in lift
+            and (("if (from < " + shape.group(1) + ")") in lift
+                 or ("public const int CracksAt = " + shape.group(1) + ";"
+                     in method_body(S['Migrate.cs'], "public static class Whip")))
             and ordered(rename, "foreach (var (arrivedAt, was, now) in Renamed)",
                         "if (from >= arrivedAt) continue;",
                         "if (!written.TryGetValue(was, out string held)) continue;")
@@ -5455,6 +5457,34 @@ def the_log_names_everything_that_stops_when_the_herd_cannot_be_read():
                         '"no herd penalty"'))
 
 
+def the_reset_whip_fires_once_and_cannot_ride_into_a_later_shape():
+    whip = method_body(S['Migrate.cs'], "public static class Whip")
+    read = method_body(S['Config.cs'], "private static void Read")
+    back = method_body(S['Config.cs'], "private static void BackToWhatItShipsWith")
+    said = method_body(S['Config.cs'], "private static void SayWhatYouHadSet")
+    return ("public static bool Armed => CracksAt > 0 && CracksAt == Migration.Shape;" in whip
+            and "public static bool CracksOn(int shape) => Armed && shape < CracksAt;" in whip
+            and "public const int CracksAt = " in whip
+            and "Whip" not in method_body(S['Migrate.cs'], "public static bool Lift")
+            and ordered(read, "bool lifted = Migration.Lift(shape, written, notes);",
+                        "bool whipped = Whip.CracksOn(shape);",
+                        "SayWhatYouHadSet(written);",
+                        "written.Clear();",
+                        "BackToWhatItShipsWith();",
+                        "if (screen && screenWroteIt && !ChangedByHand(found, stamped))",
+                        "if (Taken(field, line.Value)) taken++;",
+                        "else if (whipped)")
+            and "var stock = new Options();" in back
+            and "foreach (FieldInfo field in Fields()) field.SetValue(Options.Current, field.GetValue(stock));"
+                in back
+            and '"  you had " + field.Name + " = " + line.Value' in said
+            and all(t in MIGRATIONTESTS for t in
+                    ("TheWhipCracksOnAFileOlderThanTheShapeItIsArmedAt",
+                     "TheWhipNeverCracksOnAFileAtOrPastTheShapeItIsArmedAt",
+                     "TheWhipIsArmedOnlyAtTheShapeThisVersionShips",
+                     "TheWhipLeavesTheLiftItselfAlone")))
+
+
 chk("1.46.2", "a mount or a haul animal is never named as the reason a pass moved nothing, since another pass handles it",
     a_good_another_pass_handles_never_speaks_for_a_stalled_pass())
 chk("1.46.2", "trade goods and livestock you never paid for are held to your margin against what they are worth, and looted gear is not",
@@ -5593,6 +5623,9 @@ chk("1.48.0", "with the price trace on, every good a pass moves is logged with w
     the_log_says_what_the_market_charged_against_what_it_was_quoted())
 chk("1.48.0", "the log names everything that stops when the herd cannot be read, and the herd check says it could not read the penalty rather than reporting none",
     the_log_names_everything_that_stops_when_the_herd_cannot_be_read())
+
+chk("1.49.0", "the one-time settings reset is armed only at the shape this version ships, never fires on a file already at it, and leaves the lift itself alone",
+    the_reset_whip_fires_once_and_cannot_ride_into_a_later_shape())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

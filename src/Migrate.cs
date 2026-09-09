@@ -6,7 +6,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 8;
+        public const int Shape = 9;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -146,6 +146,15 @@ namespace TradeLord
                        held + " is no longer read");
             return true;
         }
+    }
+
+    public static class Whip
+    {
+        public const int CracksAt = 9;
+
+        public static bool Armed => CracksAt > 0 && CracksAt == Migration.Shape;
+
+        public static bool CracksOn(int shape) => Armed && shape < CracksAt;
     }
 
     public static class Limits
