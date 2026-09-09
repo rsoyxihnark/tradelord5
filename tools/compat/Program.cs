@@ -32,6 +32,23 @@ namespace TradeLord.Compat
             ("TaleWorlds.CampaignSystem.Conversation.ConversationSentence", "set_InputToken"),
         };
 
+        private static readonly (string type, string member, string why)[] LotShape =
+        {
+            ("TaleWorlds.Core.EquipmentElement", "Item", "the good a lot holds"),
+            ("TaleWorlds.Core.EquipmentElement", "ItemModifier",
+             "the quality that keeps one good in lots of its own"),
+            ("TaleWorlds.Core.EquipmentElement", "IsQuestItem",
+             "the quest hold that keeps one good in lots of its own"),
+            ("TaleWorlds.CampaignSystem.Roster.ItemRoster", "FindIndexOfItem",
+             "looking a good up by itself"),
+            ("TaleWorlds.CampaignSystem.Roster.ItemRoster", "FindIndexOfElement",
+             "looking it up by the lot it sits in"),
+            ("TaleWorlds.CampaignSystem.Roster.ItemRoster", "GetItemNumber",
+             "how many of a good the party holds in all"),
+            ("TaleWorlds.CampaignSystem.Roster.ItemRoster", "GetElementCopyAtIndex",
+             "how many of it sit in the one lot"),
+        };
+
         private static readonly (string type, string contract)[] ReflectedTypes =
         {
             ("TaleWorlds.CampaignSystem.Settlements.FakeMarketData",
@@ -146,6 +163,7 @@ namespace TradeLord.Compat
             CheckHarmonyTargets(versions);
             CheckReflectedMembers(versions);
             CheckReflectedTypes(versions);
+            CheckLotShape(versions);
             CheckMcmSurface();
             CheckEnums(versions);
             CheckBoundSurface(versions);
@@ -464,6 +482,51 @@ namespace TradeLord.Compat
                     }
                 }
                 Line(ok, label + "  " + contract.Split('.').Last() + ", created with no arguments");
+            }
+            Console.WriteLine();
+        }
+
+        private static string LotMember(string version, string type, string member)
+        {
+            var found = Methods(version, type, member);
+            if (found.Count > 1) return "overloaded";
+            if (found.Count == 1) return Signature(found[0]);
+            for (Type t = Find(version, type); t != null; t = t.BaseType)
+            {
+                PropertyInfo held = t.GetProperty(member, BindingFlags.Public | BindingFlags.NonPublic |
+                                                          BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                if (held == null) continue;
+                try { return held.PropertyType.Name; } catch { return "property"; }
+            }
+            return null;
+        }
+
+        private static void CheckLotShape(List<string> versions)
+        {
+            Console.WriteLine("== one good sits in more than one lot of the bags - the food reserve "
+                              + "and the per-lot caps are counted on that ==");
+            foreach (var (type, member, why) in LotShape)
+            {
+                string label = type.Split('.').Last() + "." + member;
+                string first = null;
+                bool ok = true;
+                foreach (string v in versions)
+                {
+                    string shape = LotMember(v, type, member);
+                    if (shape == null)
+                    {
+                        Failures.Add(label + " is gone in " + v + ", so " + why + " can no longer be read");
+                        ok = false;
+                        continue;
+                    }
+                    if (first == null) first = shape;
+                    else if (shape != first)
+                    {
+                        Failures.Add(label + " changed shape in " + v + ": " + first + " -> " + shape);
+                        ok = false;
+                    }
+                }
+                Line(ok, label + "  " + why);
             }
             Console.WriteLine();
         }
