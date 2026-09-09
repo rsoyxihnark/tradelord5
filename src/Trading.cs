@@ -368,6 +368,20 @@ namespace TradeLord
 
             internal ItemRoster Stock => Site != null ? Site.ItemRoster : Met.ItemRoster;
 
+            internal int YoursToSell(ItemRosterElement el)
+            {
+                ItemObject item = el.EquipmentElement.Item;
+                return Math.Min(el.Amount,
+                                Party.ItemRoster.GetItemNumber(item) + Books.Held(Sim, item.StringId));
+            }
+
+            internal int TheirsToSell(ItemRosterElement el)
+            {
+                ItemObject item = el.EquipmentElement.Item;
+                return Math.Min(el.Amount,
+                                Stock.GetItemNumber(item) - Books.Stocked(Sim, item.StringId));
+            }
+
             internal int TillNow => Site != null ? Market.Gold : Met.PartyTradeGold;
 
             internal int Till => TillNow - Books.TillDrawn(Sim);
@@ -1145,7 +1159,7 @@ namespace TradeLord
                     Good good = TradePolicy.Describe(item);
                     if (!TradePolicy.MaySell(good, el, pass.Locked, keepBack, awaited, out int keep, out Block stopped)) { tally.Note(stopped); continue; }
 
-                    int remaining = el.Amount - keep + pass.Books.Held(pass.Sim, item.StringId);
+                    int remaining = pass.YoursToSell(el) - keep;
                     if (remaining <= 0) { tally.Note(Block.TradedHereAlready); continue; }
 
                     Basis basis = Basis.For(item);
@@ -1292,7 +1306,7 @@ namespace TradeLord
                 ItemObject it = el.EquipmentElement.Item;
                 if (el.Amount <= 0 || !wanted(it)) continue;
                 if (pass.Books.Sold(pass.Sim, it.StringId)) continue;
-                if (el.Amount - pass.Books.Stocked(pass.Sim, it.StringId) <= 0) continue;
+                if (pass.TheirsToSell(el) <= 0) continue;
                 int price = pass.Price(el.EquipmentElement, selling: false);
                 if (price <= 0) continue;
                 shelf.Add((el, price));
@@ -1338,7 +1352,7 @@ namespace TradeLord
                     ItemObject item = el.EquipmentElement.Item;
                     int fed = TradeRules.FoodValue(good);
                     if (fed <= 0) continue;
-                    int remaining = el.Amount - pass.Books.Stocked(pass.Sim, item.StringId);
+                    int remaining = pass.TheirsToSell(el);
 
                     while (shortfall > 0 && remaining > 0)
                     {
@@ -1483,7 +1497,7 @@ namespace TradeLord
                 if (el.Amount <= 0 || !TradePolicy.MayShedForHerd(el.EquipmentElement, pass.Locked)) continue;
                 int rank = HerdShedRank(it);
                 if (rank < 0) continue;
-                if (el.Amount + pass.Books.Held(pass.Sim, it.StringId) <= 0) continue;
+                if (pass.YoursToSell(el) <= 0) continue;
                 int price = pass.Price(el.EquipmentElement, selling: true);
                 if (price <= 0) continue;
                 stable.Add((el, rank, price));
@@ -1500,7 +1514,7 @@ namespace TradeLord
                 {
                     if (pass.DirectionError || shed <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
-                    int remaining = el.Amount + pass.Books.Held(pass.Sim, item.StringId);
+                    int remaining = pass.YoursToSell(el);
                     if (promised.TryGetValue(item, out int owed) && owed > 0)
                     {
                         int spare = Math.Min(remaining, owed);
@@ -1518,7 +1532,7 @@ namespace TradeLord
                         if (rank == RankHaulAnimal && haulsLeft <= 0) break;
                         int price = pass.Price(el.EquipmentElement, selling: true);
                         if (price <= 0) break;
-                        if ((pass.Sim ? simTill : pass.Market.Gold) < price) break;
+                        if ((pass.Sim ? simTill : pass.TillNow) < price) break;
                         int worth = basis.Unit(item);
 
                         if (pass.Sim)
@@ -1585,7 +1599,7 @@ namespace TradeLord
                 {
                     if (pass.DirectionError) break;
                     ItemObject item = el.EquipmentElement.Item;
-                    int remaining = el.Amount - pass.Books.Stocked(pass.Sim, item.StringId);
+                    int remaining = pass.TheirsToSell(el);
 
                     while (remaining > 0 && herdRoom > 0)
                     {
@@ -1663,7 +1677,7 @@ namespace TradeLord
                     if (!TradePolicy.MayBuy(good, it, pass.Locked, out Block whyBuy)) { tally.Note(whyBuy); continue; }
                     if (!TradeRules.ResaleAllowed(good, Options.Current)) { tally.Note(Block.CategoryPolicy); continue; }
                     if (pass.Books.Sold(pass.Sim, it.StringId)) { tally.Note(Block.TradedHereAlready); continue; }
-                    if (el.Amount - pass.Books.Stocked(pass.Sim, it.StringId) <= 0) { tally.Note(Block.NoStock); continue; }
+                    if (pass.TheirsToSell(el) <= 0) { tally.Note(Block.NoStock); continue; }
                     int held = mine.GetItemNumber(it) + pass.Books.Held(pass.Sim, it.StringId);
                     if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }
                     if (shareCap > 0f && (held + 1) * good.Weight > shareCap) { tally.Note(Block.HeldEnough); continue; }
@@ -1703,7 +1717,7 @@ namespace TradeLord
                     }
 
                     var prior = pass.Books.Purchases(pass.Sim, item.StringId);
-                    int remaining = el.Amount - pass.Books.Stocked(pass.Sim, item.StringId);
+                    int remaining = pass.TheirsToSell(el);
                     int countThis = prior.count, spentThis = prior.spent;
                     int held = pass.Party.ItemRoster.GetItemNumber(item) +
                                pass.Books.Held(pass.Sim, item.StringId);

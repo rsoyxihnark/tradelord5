@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.47.2
+
+- Simulation mode (dry run) now counts every stack of a good you carry and every stack a market has, so a dry run over looted gear or horses, which your inventory keeps in a separate stack for each quality, no longer stops short of what TradeLord would really sell and buy.
+
 ## 1.47.1
 
 - Every price TradeLord quotes you is now read from a market the same way the trade screen reads it, naming the merchant you are trading with, which brings the tooltip, the ledger panel and the routes into line with the price you are actually offered.
