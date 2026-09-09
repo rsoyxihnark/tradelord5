@@ -639,7 +639,8 @@ def hotkey_fallback_is_reported():
     return ("_key = InputKey.T;" in body and "named = true;" in body
             and ordered(body, "if (!named)", 'Log.Write("panel hotkey')
             and "if (stray != null)" in body
-            and ordered(body, "else if (stray == null) stray =", "if (stray != null)"))
+            and ordered(body, "else if (stray == null && parts[i].Trim().Length > 0) stray =",
+                        "if (stray != null)"))
 
 def prefab_text_is_all_bound():
     xml = io.open('TradeLord/GUI/Prefabs/TradeLordPanel.xml', encoding='utf-8').read()
@@ -793,7 +794,7 @@ def readme_defaults_match_the_shipped_ones():
     claims = ['which ships at ' + share + '% so one cheap good cannot take your whole cargo',
               'hotkey **' + option_default('PanelKey').strip('"') + '**',
               'gold reserve of ' + option_default('GoldReserve') + ' denars',
-              'back up to ' + said('ResupplyFoodDays') + ' days of supply',
+              'back up to ' + said('KeepFoodDays') + ' days of supply',
               said('KeepWageDays') + " days of your troops' wages",
               'from tier ' + option_default('MaxLootTier') + ' out of the box',
               'The ' + tooltip + ' best places to sell and the ' + tooltip + ' cheapest to buy',
@@ -1140,7 +1141,7 @@ def restocking_runs_between_selling_and_buying():
                         "ExecuteResupply(settlement, quiet: true);",
                         "ExecuteQuickBuy(settlement, quiet: true);")
             and "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);" in entry
-            and "if (Options.Current.ResupplyFoodDays <= 0) return;" in body
+            and "if (Options.Current.KeepFoodDays <= 0) return;" in body
             and "TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true)"
                 in method_body(S['Trading.cs'], "public static void ExecuteResupply")
             and "if (el.Amount <= 0 || !wanted(it)) continue;" in body
@@ -3066,9 +3067,11 @@ def selling_and_buying_close_the_screen():
         if pair not in seen:
             seen.append(pair)
     seen.sort()
-    return (len(seen) == 7
-            and [name for _, name in seen][-2:] == ['Selling', 'Buying']
+    return (len(seen) == 8
+            and [name for _, name in seen][-3:] == ['Selling', 'Buying', 'Debug']
+            and seen[-2][0] - seen[-3][0] == 1
             and seen[-1][0] - seen[-2][0] == 1
+            and 'Debug' == spoken(ENGLISH)['TL107']
             and '{=TL103}Selling' in M and '{=TL103}Action' not in M
             and 'Selling' == spoken(ENGLISH)['TL103'])
 
@@ -3081,7 +3084,7 @@ def the_switches_say_what_they_do():
 
 chk("1.9.0", "the switches name selling and buying plainly, and none names an entry the menu no longer has",
     the_switches_say_what_they_do())
-chk("1.13.0", "selling and buying are the last two groups on the screen, side by side",
+chk("1.13.0", "selling and buying are the last two trading groups on the screen, side by side, with Debug alone below them",
     selling_and_buying_close_the_screen())
 chk("1.6.32", "a good named on an item list never drags in a second good whose whole name is one of its words",
     a_written_word_stands_for_an_id_and_never_for_another_goods_name())
@@ -3485,14 +3488,14 @@ chk("1.17.0", "the settings screen hands every preset its own settings, so Defau
 chk("1.17.0", "restocking runs between selling and buying, and asks nothing about profit",
     restocking_runs_between_selling_and_buying())
 chk("1.17.0", "the food it restocks to is a days-of-supply figure read off the party's own appetite",
-    option_default('ResupplyFoodDays') == '3' and
+    option_default('KeepFoodDays') == '3' and
     "return (int)Math.Ceiling(AppetitePerDay() * days);" in
         method_body(S['Policy.cs'], "internal static int FoodWanted") and
     "float perDay = party == null ? 0f : -party.FoodChange;" in
         method_body(S['Policy.cs'], "private static float AppetitePerDay") and
     "good.IsFood && !good.HasHorse" in
         between(S['Rules.cs'], "internal static bool IsStorableFood", ";") and
-    "_o.ResupplyFoodDays" in M)
+    "_o.KeepFoodDays" in M)
 chk("1.19.0", "smeltable weapons are a three-way choice that ships on selling them, and an always-sell entry still wins",
     option_default('KeepSmeltableWeapons') == 'SmeltSellThem' and
     "public const int SmeltSellThem = 0, SmeltKeepAll = 1, SmeltKeepUnlearned = 2;" in S['Options.cs'] and
@@ -4059,7 +4062,7 @@ def every_animal_that_moves_is_named_with_its_reason():
             and '"  animal " + (selling ? "out: " : "in: ")' in moved
             and '" - " + why + "; TradeLord counts it as " + TradePolicy.AnimalGroup(item)' in moved
             and "LogAnimalMoved(selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);" in detail
-            and "LogDetail(selling, Sim, Detail, why)" in between(src, "internal void Logged(", ";")
+            and "LogDetail(selling, Sim, Detail, Quoted, why)" in between(src, "internal void Logged(", ";")
             and src.count("pass.Logged(selling:") == 5
             and src.count("LogDetail(selling:") == 0
             and all(r in src for r in reasons))
@@ -4175,7 +4178,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 7;' in S['Migrate.cs']
+    return ('public const int Shape = 8;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and ordered(read, "written[line.Substring(0, mark).Trim()]",
                         "written.TryGetValue(Migration.ShapeKey, out string held)",
@@ -4287,7 +4290,7 @@ def the_shape_a_settings_file_declares_gates_every_step_of_the_lift():
                         "changed |= TheObservationShelfLifeIsGone(written, notes);",
                         "if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);",
                         "if (from < 7) changed |= TheScanRadiusIsGone(written, notes);")
-            and lift.count("changed |=") == 7
+            and lift.count("changed |=") == 8
             and ("if (from < " + shape.group(1) + ")") in lift
             and ordered(rename, "foreach (var (arrivedAt, was, now) in Renamed)",
                         "if (from >= arrivedAt) continue;",
@@ -4395,7 +4398,7 @@ def the_file_holds_a_number_to_the_same_limits_the_screen_does():
     taken = method_body(S['Config.cs'], "private static bool Taken")
     within = method_body(S['Config.cs'], "private static double Within")
     numeric = set(re.findall(r'^\s*public\s+(?:int|float)\s+(\w+)\s*=', S['Options.cs'], re.M))
-    return (len(ranged) >= 19 and len(picked) == 6 and table == wanted
+    return (len(ranged) >= 18 and len(picked) == 6 and table == wanted
             and numeric and not (numeric - set(table))
             and "(int)Within(field, int.Parse(" in taken
             and "(float)Within(field, float.Parse(" in taken
@@ -4742,9 +4745,9 @@ def the_larder_and_the_stable_leave_the_gold_reserve_whole():
             and "if (price >= pass.Spendable()) break;" in stable
             and "if (price > pass.Spendable()) break;" not in S['Trading.cs']
             and "if (price > budget) return Block.BudgetSpent;" in capped
-            and said in re.search(r'\{=TL363\}([^"]*)"', M).group(1)
+            and said in re.search(r'\{=TL321\}([^"]*)"', M).group(1)
             and said in re.search(r'\{=TL367\}([^"]*)"', M).group(1)
-            and said in spoken(ENGLISH).get('TL363', '')
+            and said in spoken(ENGLISH).get('TL321', '')
             and said in spoken(ENGLISH).get('TL367', ''))
 
 chk("1.39.3", "restocking and buying a haul animal stop before your gold reaches your reserve, word for word as their own settings promise, and buying for profit is the one pass that may spend down to it",
@@ -5370,7 +5373,11 @@ def the_price_trace_reads_one_price_four_ways_and_names_what_changes_it():
             and ordered(written, "MarketPrice(market.GetType())",
                         "MarketPrice(typeof(SettlementComponent))",
                         "if (inherited != null && inherited != asked)")
-            and 'PriceTrace.Say(settlement, "walked in");' in ledger
+            and 'PriceTrace.Say(settlement, "walked in, before anything was traded");' in S['Trading.cs']
+            and ordered(method_body(S['Trading.cs'], "private void OnSettlementEntered"),
+                        'PriceTrace.Say(settlement, "walked in, before anything was traded");',
+                        "ExecuteQuickSell(settlement, quiet: true);")
+            and "PriceTrace" not in method_body(ledger, "private void OnSettlementEntered")
             and 'PriceTrace.Say(Settlement.CurrentSettlement, "traded by hand");' in ledger
             and not any(w in trace for w in ("SellItemsAction", "ChangeGold", "AddToCounts")))
 
@@ -5389,6 +5396,63 @@ def every_price_is_asked_the_way_the_trade_screen_asks_it():
                         "return held.GetPrice(el, who, selling, site.Party);",
                         "return market.GetItemPrice(el, who, selling);")
             and all("Priced.At(" in S[f] for f in ('Ledger.cs', 'TooltipPatches.cs', 'Trading.cs')))
+
+
+def keeping_food_and_restocking_it_are_one_setting():
+    lift = method_body(S['Migrate.cs'], "private static bool KeepingAndRestockingFoodBecameOneSetting")
+    return ("ResupplyFoodDays" not in S['Options.cs']
+            and "ResupplyFoodDays" not in M
+            and "ResupplyFoodDays" not in S['Policy.cs']
+            and "ResupplyFoodDays" not in S['Trading.cs']
+            and "public int KeepFoodDays = 3;" in S['Options.cs']
+            and "int days = Options.Current.KeepFoodDays;" in
+                method_body(S['Policy.cs'], "internal static int FoodWanted")
+            and "if (Options.Current.KeepFoodDays <= 0) return;" in
+                method_body(S['Trading.cs'], "public static void ExecuteResupply")
+            and 'const string was = "ResupplyFoodDays";' in lift
+            and "written.Remove(was);" in lift
+            and "if (from < 8) changed |= KeepingAndRestockingFoodBecameOneSetting(written, notes);"
+                in S['Migrate.cs']
+            and "TheRestockDaysAreDroppedAndTheKeepDaysStand" in MIGRATIONTESTS)
+
+def the_log_says_what_the_market_charged_against_what_it_was_quoted():
+    t = S['Trading.cs']
+    quoted = method_body(t, "private static string Quotation")
+    detail = method_body(t, "private static void LogDetail")
+    return ('"which TradeLord had quoted at "' not in t
+            and '", which TradeLord had quoted at " + said.gold' in quoted
+            and '" and the market charged the same"' in quoted
+            and '" and the market moved " + gold + " instead"' in quoted
+            and "if (quoted == null || !quoted.TryGetValue(item, out var said) || said.count <= 0) return \"\";"
+                in quoted
+            and "Quotation(quoted, kv.Key, kv.Value.gold));" in detail
+            and "if (Options.Current.PriceTrace) TradeActionBehavior.Tally(Quoted, item, count, gold);"
+                in method_body(t, "internal void Quote(ItemObject item, int count, int gold)")
+            and t.count("pass.Quote(item, 1, price);") == 2
+            and ordered(t, "pass.Quote(item, 1, price);", "pass.SellOne(el, price, what, named, out int proceeds)")
+            and ordered(t, "pass.Quote(item, 1, price);", "pass.BuyOne(el, price, what, named, out int cost)"))
+
+
+def the_log_names_everything_that_stops_when_the_herd_cannot_be_read():
+    t = S['Trading.cs']
+    room = method_body(t, "internal static int HerdRoomForLivestock")
+    shed = method_body(t, "internal static int DrivenAnimalsToShed")
+    check = method_body(t, "internal static void LogHerdState(string when, int counted)")
+    stops = ("the herd cannot be counted, so no livestock and no haul animals are bought "
+             "and no animal is sold to get you back up to speed; every other trade is unaffected")
+    return (t.count(stops) == 3
+            and "livestock buying disabled" not in t
+            and "selling unaffected" not in t
+            and "if (model == null) return 0;" in room
+            and "if (model == null) return 0;" in shed
+            and "HerdRoomForLivestock(pass.Party)" in pass_body("public static void ExecuteHaulage")
+            and "HerdRoomForLivestock(pass.Party)" in pass_body("private static void BuyPass")
+            and "DrivenAnimalsToShed(pass.Party)" in pass_body("public static void ExecuteHerdRelief")
+            and '"the herd penalty cannot be read on this game version"' in check
+            and '"no herd penalty"' in check
+            and ordered(check, "_herdLookupFailed",
+                        '"the herd penalty cannot be read on this game version"',
+                        '"no herd penalty"'))
 
 
 chk("1.46.2", "a mount or a haul animal is never named as the reason a pass moved nothing, since another pass handles it",
@@ -5486,7 +5550,7 @@ def a_hint_that_sends_you_to_a_setting_names_it_the_way_the_screen_does():
                 return False
             if said[named] not in said[cites]:
                 return False
-    return "Keep food (days of supply) above is the one that works in days." in M
+    return "Restock and keep food (days of supply) above is the one that works in days." in M
 
 
 chk("1.47.5", "a hint that sends you to another setting calls it what the settings screen calls it, in every language",
@@ -5522,6 +5586,13 @@ def the_hints_publish_the_defaults_the_source_ships():
 
 chk("1.47.5", "every default the settings screen advertises is the one the source ships",
     the_hints_publish_the_defaults_the_source_ships())
+
+chk("1.48.0", "keeping food back and restocking it are one setting, and a file that carried the old pair is lifted onto it",
+    keeping_food_and_restocking_it_are_one_setting())
+chk("1.48.0", "with the price trace on, every good a pass moves is logged with what TradeLord quoted next to what the market charged",
+    the_log_says_what_the_market_charged_against_what_it_was_quoted())
+chk("1.48.0", "the log names everything that stops when the herd cannot be read, and the herd check says it could not read the penalty rather than reporting none",
+    the_log_names_everything_that_stops_when_the_herd_cannot_be_read())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
