@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.51.1
+
+- Turning Trade with towns off now takes the map marker off the best sell town as well, instead of leaving it pointing at a town TradeLord will not trade in.
+
 ## 1.51.0
 
 - A new switch, Trade with towns, turns trading in town menus off the same way Trade with villages does, and it ships on.
