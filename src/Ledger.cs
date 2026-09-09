@@ -41,12 +41,16 @@ namespace TradeLord
         private string _ledgerText = "";
         private string _purchaseText = "";
         private Dictionary<string, PurchaseRecord> _paid;
-        private int _lifetimeProfit;
+        private long _lifetimeProfit;
+        private int _lifetimeProfitCapped;
         private ItemRoster _watched;
         private bool _settle;
 
-        public int LifetimeProfit => _lifetimeProfit;
+        public long LifetimeProfit => _lifetimeProfit;
         public void AddProfit(int amount) => _lifetimeProfit += amount;
+
+        private static int Capped(long total) =>
+            total > int.MaxValue ? int.MaxValue : total < int.MinValue ? int.MinValue : (int)total;
 
         public LedgerBehavior() { Instance = this; }
 
@@ -68,9 +72,12 @@ namespace TradeLord
                     _ledgerText = LedgerCodec.WriteLedger(Listed(_ledger));
                     _purchaseText = LedgerCodec.WritePurchases(_purchases);
                 });
+            _lifetimeProfitCapped = Capped(_lifetimeProfit);
             dataStore.SyncData("TradeLord_LedgerText", ref _ledgerText);
             dataStore.SyncData("TradeLord_PurchaseText", ref _purchaseText);
-            dataStore.SyncData("TradeLord_LifetimeProfit", ref _lifetimeProfit);
+            dataStore.SyncData("TradeLord_LifetimeProfit", ref _lifetimeProfitCapped);
+            dataStore.SyncData("TradeLord_LifetimeProfitWide", ref _lifetimeProfit);
+            if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;
             if (dataStore.IsLoading) ReadSavedText();
             if (dataStore.IsLoading) PruneExpired();
             Guard.Run("Ledger.Reindex", Reindex);

@@ -762,9 +762,11 @@ def the_readme_counts_the_saved_values_right():
         for field in re.findall(r'dataStore\.SyncData\("[^"]+",\s*ref\s+(_\w+)\)', body):
             tally[types.get(field)] = tally.get(types.get(field), 0) + 1
     words = {1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six'}
+    numbers = tally.get('int', 0) + tally.get('long', 0) + tally.get('float', 0)
+    counted = 'a number' if numbers == 1 else words.get(numbers, 'no') + ' numbers'
     said = ('All it puts in a save is ' + words.get(tally.get('string'), 'no') +
-            ' strings, a number, a settlement reference and a flag')
-    return (said in README and tally.get('int') == 1
+            ' strings, ' + counted + ', a settlement reference and a flag')
+    return (said in README and numbers == 2
             and tally.get('Settlement') == 1 and tally.get('bool') == 1)
 
 def readme_defaults_match_the_shipped_ones():
@@ -818,7 +820,7 @@ def changelog_opens_on_the_shipped_version():
         return False
     return section_has_entries(heads[0])
 
-PLAIN_SAVED_TYPES = {'string', 'int', 'bool', 'float', 'Settlement'}
+PLAIN_SAVED_TYPES = {'string', 'int', 'long', 'bool', 'float', 'Settlement'}
 
 def the_filter_is_armed_only_around_a_game_call_that_talks():
     t = S['Trading.cs']
@@ -1001,12 +1003,14 @@ def the_cost_basis_rules_are_covered_by_tests_the_build_runs():
 def the_policy_layer_keeps_no_second_copy_of_the_money_rules():
     body = S['Policy.cs']
     anywhere = S['Policy.cs'] + S['Trading.cs']
-    forwards = ('TradeMath.PolicyAllows(policy, buying);',
-                'TradeMath.Credit(proceeds, basis, unpaidWorth);',
+    forwards = ('TradeMath.Credit(proceeds, basis, unpaidWorth);',
                 'TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);',
                 'TradeMath.Realizable(farSellPrice, Options.Current.ResaleSafetyFactor);',
                 'TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin);')
     return (all(f in body for f in forwards)
+            and 'TradeMath.PolicyAllows(PolicyFor(good, s), buying: true)' in S['Rules.cs']
+            and 'TradeMath.PolicyAllows(PolicyFor(good, s), buying: false)' in S['Rules.cs']
+            and 'PolicyAllows' not in anywhere
             and 'gain > 0 ? gain : 0' not in anywhere
             and 'ResaleSafetyFactor;' not in anywhere.replace('Options.Current.ResaleSafetyFactor);', ''))
 
@@ -1048,7 +1052,7 @@ def every_saved_value_is_a_plain_one():
             seen += 1
             if types.get(field) not in PLAIN_SAVED_TYPES:
                 return False
-    return seen >= 6
+    return seen >= 7
 
 def nothing_this_module_defines_is_saveable():
     return all('SaveableTypeDefiner' not in text and 'SaveableField' not in text
@@ -1621,7 +1625,8 @@ chk("1.4.0", "trade toasts are queued and flushed a frame later, after the game'
     'Guard.Run("Tick.FlushToasts", TradeActionBehavior.FlushToasts)' in
     method_body(S['SubModule.cs'], "protected override void OnApplicationTick"))
 chk("1.4.0", "realized profit is banked for the campaign and shown in the panel",
-    'dataStore.SyncData("TradeLord_LifetimeProfit", ref _lifetimeProfit);' in S['Ledger.cs'] and
+    'dataStore.SyncData("TradeLord_LifetimeProfit", ref _lifetimeProfitCapped);' in S['Ledger.cs'] and
+    'dataStore.SyncData("TradeLord_LifetimeProfitWide", ref _lifetimeProfit);' in S['Ledger.cs'] and
     "LedgerBehavior.Instance?.AddProfit(profit.Value);" in S['Trading.cs'] and
     "LedgerBehavior.Instance?.LifetimeProfit" in S['Panel.cs'])
 chk("1.4.0", "the hotkey honors its modifiers on both the open and the close edge",
@@ -1734,13 +1739,14 @@ chk("1.5.0", "every confidence factor is a fraction of one",
     method_body(S['Confidence.cs'], "public static float Of(bool simulated"))
 
 chk("1.5.0", "one place decides which category policy governs an item",
-    S['Policy.cs'].count("internal static int PolicyFor(ItemObject item)") == 1 and
-    S['Policy.cs'].count("internal static bool PolicyAllows(int policy, bool buying)") == 1 and
-    S['Policy.cs'].count("Options.Current.FoodPolicy") == 1 and
-    S['Policy.cs'].count("Options.Current.CraftingPolicy") == 1 and
-    S['Policy.cs'].count("Options.Current.LivestockPolicy") == 1)
+    S['Rules.cs'].count("internal static int PolicyFor(in Good good, Options s)") == 1 and
+    S['Rules.cs'].count("s.FoodPolicy") == 1 and
+    S['Rules.cs'].count("s.CraftingPolicy") == 1 and
+    S['Rules.cs'].count("s.LivestockPolicy") == 1 and
+    not any(named in S['Policy.cs'] for named in
+            ("FoodPolicy", "CraftingPolicy", "LivestockPolicy", "PolicyAllows")))
 chk("1.5.0", "a head of cattle is asked as livestock, not as food",
-    ordered(method_body(S['Policy.cs'], "internal static int PolicyFor"), "LivestockPolicy", "FoodPolicy"))
+    ordered(method_body(S['Rules.cs'], "internal static int PolicyFor"), "LivestockPolicy", "FoodPolicy"))
 chk("1.23.0", "the selling fence is the haul animals themselves, so an animal that hauls nothing is not fenced in with them",
     "if (livestock && (good.IsHaulAnimal || good.IsSpareMount))" in sell_rule() and
     "IsLivestock" not in sell_rule() and
@@ -1786,7 +1792,11 @@ chk("1.5.0", "a pass that moves nothing names the rule that stopped it",
                 "private static void ReportStalledPasses").count("BlockTally.Phrase(") == 4)
 chk("1.5.0", "the reason overloads carry the plain ones, so one rule set decides both",
     "MaySell(el, lockedKeys, foodKeep, awaited, out keepCount, out _);" in S['Policy.cs'] and
-    "MayBuy(item, lockedKeys, out _);" in S['Policy.cs'])
+    S['Policy.cs'].count("bool MayBuy(ItemObject item, ISet<string> lockedKeys") == 1 and
+    "out Block why," in method_body(S['Policy.cs'], "internal static bool MayBuy(ItemObject item") and
+    "TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true)" in S['Trading.cs'] and
+    "TradeRules.MaySell(good, el.Amount, facts, Options.Current," in S['Policy.cs'] and
+    "TradeRules.MayBuy(good, toFeed, Options.Current," in S['Policy.cs'])
 chk("1.5.0", "every stop in the sell pass is counted",
     method_body(S['Trading.cs'], "private static void SellPass").count("tally.Note(") >= 5)
 chk("1.5.0", "every stop in the buy pass is counted",
@@ -2624,11 +2634,16 @@ def a_list_entry_is_matched_whatever_its_capitalisation():
             "A_name_is_matched_whatever_its_capitalisation" in ROUTETESTS)
 
 def an_item_list_is_matched_by_name_as_well_as_by_id():
-    listed = method_body(S['Policy.cs'], "internal static bool Listed")
-    return ("list.HasId(item.StringId)" in listed and
-            "list.HasName(item.Name.ToString())" in listed and
-            ordered(listed, "if (item == null || list.Empty) return false;",
-                    "ReadTheGoodsInThisGame();", "list.HasName(item.Name.ToString())"))
+    listed = between(S['Rules.cs'], "internal static bool Listed(ItemList list, in Good good) =>", ";")
+    describe = method_body(S['Policy.cs'], "internal static Good Describe")
+    return ("list.HasId(good.Id)" in listed and
+            "list.HasName(good.Name)" in listed and
+            "good.Name != null" in listed and
+            "list.HasId(" not in S['Policy.cs'] and
+            "list.HasName(" not in S['Policy.cs'] and
+            ordered(describe, "if (AnyListNamesAGood(Options.Current))",
+                    "ReadTheGoodsInThisGame();",
+                    "good.Name = item.Name == null ? null : item.Name.ToString();"))
 
 def a_written_word_stands_for_an_id_and_never_for_another_goods_name():
     read = method_body(S['Options.cs'], "public void ReadWordsAsIds")
@@ -4641,7 +4656,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
                         "LedgerCodec.WritePurchases(_purchases);",
                         'dataStore.SyncData("TradeLord_LedgerText"')
             and trade.count("dataStore.SyncData(") == 3
-            and ledger.count("dataStore.SyncData(") == 3)
+            and ledger.count("dataStore.SyncData(") == 4)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
     arrays = dict(re.findall(r'private static readonly string\[\] (\w+) =\s*\{(.*?)\};', M, re.S))
@@ -5413,6 +5428,26 @@ def every_till_is_read_the_one_way_a_pass_reads_it():
 
 chk("1.47.2", "every pass asks what the merchant has left to pay with in the one place that knows where the pass is standing",
     every_till_is_read_the_one_way_a_pass_reads_it())
+
+
+def the_running_total_outgrows_an_int_and_a_save_written_before_it_still_reads():
+    ledger = method_body(S['Ledger.cs'], "public override void SyncData")
+    capped = between(S['Ledger.cs'], "private static int Capped(long total) =>", ";")
+    return ("private long _lifetimeProfit;" in S['Ledger.cs']
+            and "public long LifetimeProfit => _lifetimeProfit;" in S['Ledger.cs']
+            and "public void AddProfit(int amount) => _lifetimeProfit += amount;" in S['Ledger.cs']
+            and "int.MaxValue" in capped and "int.MinValue" in capped
+            and ordered(ledger,
+                        "_lifetimeProfitCapped = Capped(_lifetimeProfit);",
+                        'dataStore.SyncData("TradeLord_LifetimeProfit", ref _lifetimeProfitCapped);',
+                        'dataStore.SyncData("TradeLord_LifetimeProfitWide", ref _lifetimeProfit);',
+                        "if (dataStore.IsLoading && _lifetimeProfit == 0L)"
+                        " _lifetimeProfit = _lifetimeProfitCapped;")
+            and "long lifetime = LedgerBehavior.Instance?.LifetimeProfit ?? 0L;" in S['Panel.cs'])
+
+
+chk("1.47.3", "the running total of what TradeLord made you outgrows what an int holds, and a campaign saved before it still reads its total back",
+    the_running_total_outgrows_an_int_and_a_save_written_before_it_still_reads())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
