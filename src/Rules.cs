@@ -114,10 +114,22 @@ namespace TradeLord
             int reserve = (int)Math.Ceiling(perDay * s.KeepFoodDays);
 
             var food = new List<Ration>();
+            var at = new Dictionary<string, int>(StringComparer.Ordinal);
             for (int i = 0; i < carried.Count; i++)
-                if (carried[i].Amount > 0 && FoodValue(carried[i].Good) > 0 &&
-                    !Listed(s.AlwaysSet, carried[i].Good))
-                    food.Add(carried[i]);
+            {
+                Ration held = carried[i];
+                if (held.Amount <= 0 || FoodValue(held.Good) <= 0 ||
+                    Listed(s.AlwaysSet, held.Good)) continue;
+                if (at.TryGetValue(held.Good.Id, out int seen))
+                {
+                    Ration had = food[seen];
+                    had.Amount += held.Amount;
+                    food[seen] = had;
+                    continue;
+                }
+                at[held.Good.Id] = food.Count;
+                food.Add(held);
+            }
 
             food.Sort((x, y) =>
             {
