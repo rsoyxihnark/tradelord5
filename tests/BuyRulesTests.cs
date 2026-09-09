@@ -198,6 +198,45 @@ namespace TradeLord.Tests
             Assert.Equal(Block.None, Capped(good, held: 9999, shareCap: 0f, s: off));
         }
 
+        private static Block PerItem(Good good, int price = 10, int count = 0, int spent = 0,
+                                     int held = 0, float shareCap = 0f, Options s = null) =>
+            TradeRules.WhatCapsAGood(good, price, (count, spent), held, shareCap, s ?? new Options());
+
+        [Fact]
+        public void The_per_item_caps_are_one_rule_every_pass_that_buys_can_ask()
+        {
+            Good good = Cargo();
+            var s = new Options { BuyCapPerItem = 32, BuyValueCapPerItem = 100, MaxHeldPerItem = 5 };
+
+            Assert.Equal(Block.None, PerItem(good));
+            Assert.Equal(Block.ItemCountCap, PerItem(good, count: 32, s: s));
+            Assert.Equal(Block.ItemValueCap, PerItem(good, price: 10, spent: 95, s: s));
+            Assert.Equal(Block.HeldEnough,
+                PerItem(good, held: 5, s: new Options { MaxHeldPerItem = 5, BuyCapPerItem = 0 }));
+            Assert.Equal(Block.HeldEnough, PerItem(good, held: 4, shareCap: 9f));
+
+            foreach (int count in new[] { 0, 31, 32 })
+                foreach (int spent in new[] { 0, 95, 100 })
+                    foreach (int held in new[] { 0, 4, 5 })
+                        foreach (float shareCap in new[] { 0f, 9f, 40f })
+                            Assert.Equal(
+                                Capped(good, count: count, spent: spent, held: held,
+                                       shareCap: shareCap, s: s),
+                                PerItem(good, count: count, spent: spent, held: held,
+                                        shareCap: shareCap, s: s));
+        }
+
+        [Fact]
+        public void The_per_item_caps_leave_the_purse_the_herd_and_the_village_to_the_buying_pass()
+        {
+            Good good = Cargo();
+            Assert.Equal(Block.None, PerItem(good, price: 5000));
+            Assert.Equal(Block.BudgetSpent, Capped(good, price: 5000, budget: 10));
+            Assert.Equal(Block.HerdFull, Capped(Livestock(), livestock: true, herdRoom: 0));
+            Assert.Equal(Block.None, PerItem(Livestock()));
+            Assert.Equal(Block.VillageLastUnit, Capped(good, lastInVillage: true));
+        }
+
         [Fact]
         public void A_good_with_no_room_left_for_it_is_the_last_thing_asked()
         {
