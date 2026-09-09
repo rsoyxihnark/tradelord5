@@ -201,6 +201,31 @@ namespace TradeLord.Tests
             Assert.NotEmpty(notes);
         }
 
+        [Theory]
+        [InlineData("3", "5")]
+        [InlineData("0", "0")]
+        [InlineData("10", "2")]
+        public void TheRestockDaysAreDroppedAndTheKeepDaysStand(string restock, string keep)
+        {
+            var written = File("ResupplyFoodDays", restock, "KeepFoodDays", keep, "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(7, written, notes));
+            Assert.False(written.ContainsKey("ResupplyFoodDays"));
+            Assert.Equal(keep, written["KeepFoodDays"]);
+            Assert.Equal("800", written["GoldReserve"]);
+            Assert.NotEmpty(notes);
+        }
+
+        [Fact]
+        public void AFileAlreadyInTheMergedFoodShapeKeepsItsRestockLineUntouched()
+        {
+            var written = File("KeepFoodDays", "4", "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.False(Migration.Lift(8, written, notes));
+            Assert.Equal("4", written["KeepFoodDays"]);
+            Assert.Empty(notes);
+        }
+
         [Fact]
         public void ASettingWrittenByHandIntoACurrentFileIsLeftForTheFileToReport()
         {
@@ -285,7 +310,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(7, Migration.Shape);
+            Assert.Equal(8, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));

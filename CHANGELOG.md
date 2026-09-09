@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.48.0
+
+- Keeping food back and restocking it are one setting now, Restock and keep food (days of supply), which ships at 3 days: TradeLord holds that much back before it sells any food and tops you back up to the same amount as it trades.
+- If you had set Restock food (days of supply) to something of your own, TradeLord now goes by your Keep food number for both and says so in TradeLord.log.
+- Town travel ceiling now ships at 2.4 days instead of 3.
+- Write a price trace to the log now sits in a Debug group of its own at the foot of the settings screen.
+- The price trace is now written as you walk into a market before anything is traded, so the prices in it are the ones TradeLord went on rather than what was left after it traded.
+- With the price trace on, every good a pass moves is now written down with the price TradeLord quoted next to what the market actually paid.
+- When TradeLord cannot read the game's herd penalty, TradeLord.log now names everything that stops, which is buying livestock, buying haul animals and selling an animal to get you back up to speed, where it used to say only that livestock buying had stopped.
+- The herd check in TradeLord.log now says when it could not read the herd penalty at all, instead of reporting that there is none.
+- A panel hotkey written with a leading plus, such as +T, no longer reports an empty modifier in TradeLord.log.
+- Buying none of a good can no longer leave TradeLord holding a cost against goods you have none of.
+- The feature list now says the price trace is written before anything is traded and records what TradeLord quoted against what the market paid.
+
 ## 1.47.5
 
 - The hint under How many of each kind of food to keep now points you at Keep food (days of supply) by the name the settings screen shows, in every language, instead of a name no setting has.

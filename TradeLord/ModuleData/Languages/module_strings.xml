@@ -104,9 +104,7 @@
 		<string id="TL261" text="Keep some of every kind of food" />
 		<string id="TL361" text="Hold back a few of every kind of food you carry, so the party keeps its food variety morale bonus. What it holds back counts towards the days of supply above rather than adding to it. Livestock is left out, since a herd is slaughtered for meat rather than eaten as a kind of food in its own right. OFF by default." />
 		<string id="TL262" text="How many of each kind of food to keep" />
-		<string id="TL362" text="How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Keep food (days of supply) above is the one that works in days. Two is enough that a day of eating does not wipe a kind out, and the morale bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher." />
-		<string id="TL263" text="Restock food (days of supply)" />
-		<string id="TL363" text="When your party carries fewer than this many days of food, TradeLord buys the cheapest food here to top it back up, before it trades for profit, and only where that food costs no more than the cheapest price you know of for it. Your gold reserve, your spending limit for the visit, your never-buy list and your food policy all still hold, it stops before your gold reaches your reserve, and it leaves a village its last of each good. 0 turns restocking off. As you arrive at a market it runs only when auto buy is on." />
+		<string id="TL362" text="How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Restock and keep food (days of supply) above is the one that works in days. Two is enough that a day of eating does not wipe a kind out, and the morale bonus counts the kinds you carry rather than how much of them, so there is little gained by going higher." />
 		<string id="TL264" text="Smeltable weapons" />
 		<string id="TL364" text="What to do with a weapon the smithy can break down for parts, so a smithing playthrough keeps its raw material. Sell them is the default. Keep every one holds back anything built from smithing parts, forged or looted off a bandit alike, so cheap loot piles up with the rest. Keep the ones you have not learned holds a weapon only while one of its parts is still locked in your smithy, and sells the rest once it can teach you nothing. Armour, shields, bows and crossbows carry no smithing design, so those are always sold, and an always-sell entry still wins." />
 		<string id="TL265" text="Buy to fill the ships" />
@@ -148,7 +146,7 @@
 		<string id="TL217" text="Auto sell"/>
 		<string id="TL218" text="Auto buy"/>
 		<string id="TL220" text="Minimum profit margin"/>
-		<string id="TL221" text="Keep food (days of supply)"/>
+		<string id="TL221" text="Restock and keep food (days of supply)"/>
 		<string id="TL222" text="Food policy"/>
 		<string id="TL223" text="Smithing material policy"/>
 		<string id="TL224" text="Livestock policy"/>
@@ -179,7 +177,7 @@
 		<string id="TL301" text="ON (default): prices are read live from the world economy, including markets you have not visited. OFF: only prices you have seen in person are used."/>
 		<string id="TL303" text="Never scan, suggest or auto-trade with settlements at war with you."/>
 		<string id="TL305" text="Best-buy hints require at least this many units in stock. 0 = off. Live-price mode only, because observed mode records prices, not stock levels."/>
-		<string id="TL306" text="How far TradeLord looks for a town, in travel days, and the only thing that limits that distance. Towns farther than this are hidden from tooltips, held out of the routes, kept off the map marker, and never waited for by Hold cargo for the best market. No suggested route's total trip (you -&gt; buy town -&gt; sell town) may exceed it either. Villages have their own stricter ceiling below. Default 3."/>
+		<string id="TL306" text="How far TradeLord looks for a town, in travel days, and the only thing that limits that distance. Towns farther than this are hidden from tooltips, held out of the routes, kept off the map marker, and never waited for by Hold cargo for the best market. No suggested route's total trip (you -&gt; buy town -&gt; sell town) may exceed it either. Villages have their own stricter ceiling below. Default 2.4."/>
 		<string id="TL307" text="The same limit for villages, kept separate so you can hold them closer than towns. Default 1."/>
 		<string id="TL308" text="Apply the resale safety factor to the sell side when ranking and totalling routes, so listed profit allows for prices drifting before you arrive. OFF shows raw margins. Routes must clear the safety factor to be listed either way, since that is the same test a buying pass applies on arrival."/>
 		<string id="TL309" text="Price a lot unit by unit through the game's own price model, so quantity and profit account for your own buying moving the price. OFF prices every unit at the first unit's price, which reads higher than the trip will pay. Towns and live-price mode only: villages expose no supply or demand data, and observed mode does not read live market internals."/>
@@ -193,7 +191,7 @@
 		<string id="TL317" text="Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu."/>
 		<string id="TL318" text="Buys the moment you walk into a market, after any selling. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
 		<string id="TL320" text="The margin every trade must clear, in both directions. Sell only if the price exceeds your cost basis by at least this much. Buy, or list a route, only if the far market exceeds the local price by this much after the resale safety factor. Raising it trades less."/>
-		<string id="TL321" text="Hold back this many days of food before selling any. The cheapest food per day fed is reserved first, and livestock only if nothing else covers the reserve. 0 sells every scrap of food."/>
+		<string id="TL321" text="The days of food TradeLord keeps your party stocked to. It holds this much back before selling any food, reserving the cheapest food per day fed first and livestock only if nothing else covers it, and it tops you back up to the same amount as it trades, buying the cheapest food a market has and never paying more than the cheapest price it knows of for it. Your gold reserve, your spending limit for the visit, your never-buy list and your food policy all still hold, it stops before your gold reaches your reserve, and it leaves a village its last of each good. 0 turns both off and sells every scrap of food. Default 3."/>
 		<string id="TL322" text="What automated trading may do with food. The days-of-supply food reserve is separate and still applies."/>
 		<string id="TL323" text="What automated trading may do with charcoal, hardwood, iron ore and ingots. Pick Leave alone to keep smithing stock out of automated trading entirely."/>
 		<string id="TL324" text="What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Haul animals and riding mounts have their own settings and this one does not affect them."/>
@@ -220,7 +218,7 @@
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports, since you asked for it. The first-run automation notice, the empty-purse warning and the cargo-full warning are unaffected."/>
-		<string id="TL389" text="For working out why a price TradeLord shows you does not match the one the trade screen offers. As you walk into a market, and again after you trade there by hand, TradeLord writes to TradeLord.log what that market pays and charges for every good you are carrying, read four ways: the way TradeLord reads it, and three ways through the market's own prices. It names the market, the price model the game is running, and any other mod that is changing either of them. OFF by default, since it makes the log much longer."/>
+		<string id="TL389" text="For working out why a price TradeLord shows you does not match the one the trade screen offers. As you walk into a market, before anything is traded, and again after you trade there by hand, TradeLord writes to TradeLord.log what that market pays and charges for every good you are carrying, read four ways: the way TradeLord reads it, and three ways through the market's own prices. It names the market, the price model the game is running and any other mod that is changing either of them, and for every good it trades it notes what it quoted next to what the market actually paid. OFF by default, since it makes the log much longer."/>
 		<string id="TL100" text="Language"/>
 		<string id="TL101" text="Knowledge"/>
 		<string id="TL102" text="Insight"/>
@@ -228,6 +226,7 @@
 		<string id="TL104" text="Automation"/>
 		<string id="TL105" text="Buying"/>
 		<string id="TL106" text="General"/>
+		<string id="TL107" text="Debug"/>
 		<string id="TL276" text="Put every setting back to how TradeLord ships" />
 		<string id="TL277" text="Reset" />
 		<string id="TL376" text="Puts every TradeLord setting back to the value it ships with, in one go. It takes hold at once and is written to TradeLord.ini as well, so nothing is left half changed. Your never sell, always sell, never buy and always buy lists are emptied too, and what changed is written to TradeLord.log." />
