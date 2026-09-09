@@ -394,6 +394,9 @@ namespace TradeLord
 
             internal float Room() => Capacity - Carry.Carried(Party);
 
+            internal float ShareCap =>
+                Options.Current.MaxHeldShare > 0f ? Capacity * Options.Current.MaxHeldShare : 0f;
+
             internal void CountFrom() => _goldBefore = Hero.MainHero.Gold;
 
             internal int Gained(int simGold) => GoldGained(Sim, simGold, _goldBefore);
@@ -604,12 +607,14 @@ namespace TradeLord
         private void AddCaravanLines(CampaignGameStarter starter) => Guard.Run(
             "caravan dialog (trading in a market is unaffected)", () =>
             {
+                const string said = "{=TL114}That was a nice trade. [TRADELORD]";
+                const string answered = "{=TL115}Agreed. I wish I could use that mod too. Hope you gave a thumbs up endorsement on NexusMods!";
                 starter.AddPlayerLine("tradelord_caravan_done", "caravan_talk", "tradelord_caravan_reply",
-                    Tongue.Text("{=TL114}That was a nice trade. [TRADELORD]").ToString(),
-                    CaravanMet, null, 200);
+                    Tongue.Slot(said),
+                    () => Tongue.Spoken(said) && CaravanMet(), null, 200);
                 starter.AddDialogLine("tradelord_caravan_reply", "tradelord_caravan_reply", "close_window",
-                    Tongue.Text("{=TL115}Agreed. I wish I could use that mod too. Hope you gave a thumbs up endorsement on NexusMods!").ToString(),
-                    null, null, 200);
+                    Tongue.Slot(answered),
+                    () => Tongue.Spoken(answered), null, 200);
             });
 
         private static bool CaravanMet()
@@ -623,13 +628,16 @@ namespace TradeLord
         private void AddBanditLines(CampaignGameStarter starter) => Guard.Run(
             "bandit dialog (meeting a band is otherwise unaffected)", () =>
             {
+                const string said = "{=TL387}Let us pass, and we will be on our way. [TRADELORD]";
+                const string answered = "{=TL113}Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!";
                 ConversationSentence asked = starter.AddPlayerLine(
                     "tradelord_bandit_pass", Parley.OwnState, "tradelord_bandit_pass_reply",
-                    Tongue.Text("{=TL387}Let us pass, and we will be on our way. [TRADELORD]").ToString(),
-                    BanditMet, null, 200);
+                    Tongue.Slot(said),
+                    () => Tongue.Spoken(said) && BanditMet(), null, 200);
                 starter.AddDialogLine("tradelord_bandit_pass_reply", "tradelord_bandit_pass_reply", "close_window",
-                    Tongue.Text("{=TL113}Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!").ToString(),
-                    null, () => Guard.Run("Action.Getaway", LetPlayerGo), 200);
+                    Tongue.Slot(answered),
+                    () => Tongue.Spoken(answered),
+                    () => Guard.Run("Action.Getaway", LetPlayerGo), 200);
                 Parley.Remember(asked);
             });
 
@@ -1315,6 +1323,12 @@ namespace TradeLord
             TradeRules.WhatStopsBuying(good, price, budget, taken, held, shareCap,
                                        livestock, herdRoom, lastInVillage, Options.Current);
 
+        private const float HoldShareOff = 0f;
+
+        private static Block WhatCapsAGood(in Good good, int price,
+                                           (int count, int spent) taken, int held, float shareCap) =>
+            TradeRules.WhatCapsAGood(good, price, taken, held, shareCap, Options.Current);
+
         private static bool NoRoomForOneMore(in Good good, float roomLeft) =>
             TradeRules.NoRoomForOneMore(good, roomLeft);
 
@@ -1362,6 +1376,7 @@ namespace TradeLord
 
             int stocked = 0, simSpent = 0;
             float simWeight = pass.Books.Weight(pass.Sim);
+            float shareCap = pass.ShareCap;
 
             var larder = CheapestFirst(pass,
                 it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true));
@@ -1377,12 +1392,17 @@ namespace TradeLord
                     int fed = TradeRules.FoodValue(good);
                     if (fed <= 0) continue;
                     int remaining = pass.TheirsToSell(el);
+                    var prior = pass.Books.Purchases(pass.Sim, item.StringId);
+                    int countThis = prior.count, spentThis = prior.spent;
+                    int held = pass.Party.ItemRoster.GetItemNumber(item) +
+                               pass.Books.Held(pass.Sim, item.StringId);
 
                     while (shortfall > 0 && remaining > 0)
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (price <= 0 || price > worth) break;
                         if (price >= pass.Spendable()) break;
+                        if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
                         if (item.Weight > 0.01f && item.Weight > pass.Room() - simWeight) break;
 
@@ -1402,6 +1422,9 @@ namespace TradeLord
                         stocked++;
                         remaining--;
                         shortfall -= fed;
+                        countThis++;
+                        spentThis += price;
+                        held++;
                         pass.Tally(item, 1, price);
                     }
                 }
@@ -1625,12 +1648,17 @@ namespace TradeLord
                     if (pass.DirectionError) break;
                     ItemObject item = el.EquipmentElement.Item;
                     int remaining = pass.TheirsToSell(el);
+                    var prior = pass.Books.Purchases(pass.Sim, item.StringId);
+                    int countThis = prior.count, spentThis = prior.spent;
+                    int held = pass.Party.ItemRoster.GetItemNumber(item) +
+                               pass.Books.Held(pass.Sim, item.StringId);
 
                     while (remaining > 0 && herdRoom > 0)
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (price <= 0 || price > worth) break;
                         if (price >= pass.Spendable()) break;
+                        if (WhatCapsAGood(good, price, (countThis, spentThis), held, HoldShareOff) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
 
                         if (pass.Sim)
@@ -1649,6 +1677,9 @@ namespace TradeLord
                         hauled++;
                         remaining--;
                         herdRoom--;
+                        countThis++;
+                        spentThis += price;
+                        held++;
                         pass.Tally(item, 1, price);
                     }
                 }
@@ -1682,8 +1713,7 @@ namespace TradeLord
             float simWeight = pass.Books.Weight(pass.Sim);
             var tally = new BlockTally();
 
-            float shareCap = Options.Current.MaxHeldShare > 0f
-                ? pass.Capacity * Options.Current.MaxHeldShare : 0f;
+            float shareCap = pass.ShareCap;
 
             var stock = new List<(ItemRosterElement el, Good good, float realizable, float margin)>();
             if (pass.Spendable() > 0)

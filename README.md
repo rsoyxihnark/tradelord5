@@ -78,7 +78,7 @@
 - ✅ A minimum stock before it calls something worth buying
 - ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock
-- ✅ Caps on one good by count or by denars, on how many of it you will carry, on the share of the hold it may fill, which ships at 45% so one cheap good cannot take your whole cargo, and on the whole visit
+- ✅ Caps on one good by count or by denars, on how many of it you will carry, on the share of the hold it may fill, which ships at 45% so one cheap good cannot take your whole cargo, and on the whole visit. They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off a haul animal, since one of those adds to the hold rather than filling it
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know. It sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
@@ -88,7 +88,7 @@
 **And**
 
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM, with a Reset button at the top of it that puts every setting back to the value TradeLord ships with and empties your four item lists
-- ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting. Its trade messages, ledger panel, price tooltips, town menu entries and the settings screen itself all take the new language the moment you pick it, with no restart and no reload
+- ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting. Its trade messages, ledger panel, price tooltips, town menu entries, the lines it adds when you meet a caravan or a band of bandits, and the settings screen itself all take the new language the moment you pick it, with no restart and no reload
 - ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303, and it runs on the 1.5.2.121216 beta too
 - ✅ A price trace you can switch on when a price looks wrong: it writes to `TradeLord.log` what the market you are standing in pays and charges for every good you are carrying, read four ways, before anything is traded, and names that market, the price model the game is running and any other mod changing either of them, then records what it quoted for every good it trades next to what the market actually paid
 - ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it. It is kept from one session to the next, and the one thing that ever empties it is starting the game with it already past 999 KB, which it says in the log itself
