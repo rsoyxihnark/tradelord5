@@ -230,25 +230,78 @@ namespace TradeLord.Tests
         [InlineData(1)]
         [InlineData(7)]
         [InlineData(8)]
-        public void TheWhipCracksOnAFileOlderThanTheShapeItIsArmedAt(int shape)
+        public void AnArmedWhipCracksOnAFileOlderThanTheShapeItIsArmedAt(int shape)
         {
-            Assert.True(Whip.Armed);
-            Assert.True(Whip.CracksOn(shape));
+            Assert.True(Whip.Cracks(armed: true, cracksAt: 9, shipped: 9, shape: shape));
         }
 
         [Theory]
         [InlineData(9)]
         [InlineData(10)]
-        public void TheWhipNeverCracksOnAFileAtOrPastTheShapeItIsArmedAt(int shape)
+        public void AnArmedWhipNeverCracksOnAFileAtOrPastTheShapeItIsArmedAt(int shape)
         {
-            Assert.False(Whip.CracksOn(shape));
+            Assert.False(Whip.Cracks(armed: true, cracksAt: 9, shipped: 9, shape: shape));
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(8)]
+        public void ADisarmedWhipNeverCracksOnAnything(int shape)
+        {
+            Assert.False(Whip.Cracks(armed: false, cracksAt: 9, shipped: 9, shape: shape));
+        }
+
+        [Theory]
+        [InlineData(10)]
+        [InlineData(8)]
+        public void AWhipArmedAtAShapeThisVersionDoesNotShipNeverCracks(int shipped)
+        {
+            Assert.False(Whip.Cracks(armed: true, cracksAt: 9, shipped: shipped, shape: 1));
         }
 
         [Fact]
-        public void TheWhipIsArmedOnlyAtTheShapeThisVersionShips()
+        public void AWhipArmedAtNoShapeAtAllNeverCracks()
+        {
+            Assert.False(Whip.Cracks(armed: true, cracksAt: 0, shipped: 0, shape: 1));
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(7)]
+        [InlineData(8)]
+        public void NothingTheLiftCarriedForwardSurvivesAWhipThatCracks(int from)
+        {
+            var written = File("MaxTravelDays", "7", "ResupplyFoodDays", "9", "GoldReserve", "800");
+            Migration.Lift(from, written, new List<string>());
+            Assert.NotEmpty(written);
+            Assert.True(Whip.Crack(true, written));
+            Assert.Empty(written);
+        }
+
+        [Fact]
+        public void AWhipThatDoesNotCrackLeavesTheLiftsWorkExactlyAsItFoundIt()
+        {
+            var written = File("MaxTravelDays", "7", "GoldReserve", "800");
+            Migration.Lift(1, written, new List<string>());
+            var after = new Dictionary<string, string>(written);
+            Assert.False(Whip.Crack(false, written));
+            Assert.Equal(after, written);
+        }
+
+        [Fact]
+        public void ThisVersionShipsTheWhipDisarmedSoNoFileIsResetByIt()
+        {
+            Assert.False(Whip.Armed);
+            var written = File("GoldReserve", "800");
+            Assert.False(Whip.Crack(1, written));
+            Assert.Equal("800", written["GoldReserve"]);
+        }
+
+        [Fact]
+        public void TheWhipIsStillWiredToTheShapeThisVersionShips()
         {
             Assert.Equal(Migration.Shape, Whip.CracksAt);
-            Assert.False(Whip.CracksOn(Migration.Shape));
+            Assert.False(Whip.CracksOn(1));
         }
 
         [Fact]
