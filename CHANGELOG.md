@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.47.4
+
+- Keep food (days of supply) and Keep some of every kind of food now count every stack of a good together, so when your bags hold the same food in two stacks, as they do when a quest hands you some alongside your own, TradeLord no longer sells off part of the reserve it was told to keep.
+
 ## 1.47.3
 
 - The running total of what TradeLord has made you, along the top of the ledger panel, no longer turns negative once it passes about 2.1 billion denars, and a campaign saved before this still reads its total back.

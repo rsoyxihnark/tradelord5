@@ -10,6 +10,7 @@ ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
 MIGRATIONTESTS = io.open('tests/MigrationTests.cs', encoding='utf-8').read()
 BOOKTESTS = io.open('tests/BooksTests.cs', encoding='utf-8').read()
 SELLTESTS = io.open('tests/SellRulesTests.cs', encoding='utf-8').read()
+FOODTESTS = io.open('tests/FoodReserveTests.cs', encoding='utf-8').read()
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -389,7 +390,12 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
             and "CostPerFood" not in t
             and "int fed = TradeRules.FoodValue(good);" in
                 method_body(t, "public static void ExecuteResupply")
-            and "TradeRules.FoodValue(good)" in method_body(t, "public static void ExecuteHaulage"))
+            and "TradeRules.FoodValue(good)" in method_body(t, "public static void ExecuteHaulage")
+            and "The_reserve_reaches_past_the_biggest_helping_to_every_other_one" in FOODTESTS
+            and "The_variety_floor_counts_every_helping_of_a_kind_together" in FOODTESTS
+            and ("if (at.TryGetValue(held.Good.Id, out int seen))"
+                 in method_body(S['Rules.cs'],
+                                "internal static Dictionary<string, int> FoodKeep")))
 
 def a_good_you_bought_by_hand_is_never_counted_beyond_what_you_carry():
     body = method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange")
