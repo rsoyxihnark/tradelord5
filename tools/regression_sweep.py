@@ -393,6 +393,8 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
             and "TradeRules.FoodValue(good)" in method_body(t, "public static void ExecuteHaulage")
             and "The_reserve_reaches_past_the_biggest_helping_to_every_other_one" in FOODTESTS
             and "The_variety_floor_counts_every_helping_of_a_kind_together" in FOODTESTS
+            and "The_reserve_holds_no_more_than_you_carry_and_no_less_than_it_asked_for" in FOODTESTS
+            and "new Random(1447)" in FOODTESTS
             and ("if (at.TryGetValue(held.Good.Id, out int seen))"
                  in method_body(S['Rules.cs'],
                                 "internal static Dictionary<string, int> FoodKeep")))
