@@ -308,6 +308,8 @@ namespace TradeLord
             internal readonly bool Quiet;
             internal readonly Dictionary<ItemObject, (int count, int gold)> Detail =
                 new Dictionary<ItemObject, (int count, int gold)>();
+            internal readonly Dictionary<ItemObject, (int count, int gold)> Quoted =
+                new Dictionary<ItemObject, (int count, int gold)>();
 
             internal bool DirectionError;
 
@@ -405,6 +407,11 @@ namespace TradeLord
             internal void Tally(ItemObject item, int count, int gold) =>
                 TradeActionBehavior.Tally(Detail, item, count, gold);
 
+            internal void Quote(ItemObject item, int count, int gold)
+            {
+                if (Options.Current.PriceTrace) TradeActionBehavior.Tally(Quoted, item, count, gold);
+            }
+
             internal bool SellOne(ItemRosterElement el, int price, string what, string named, out int gold)
             {
                 _unit = el;
@@ -464,7 +471,7 @@ namespace TradeLord
             internal TextObject Said(string simSaid, string realSaid, int items, int gold) =>
                 PassMessage(Sim, simSaid, realSaid, Detail, items, gold);
 
-            internal void Logged(bool selling, string why) => LogDetail(selling, Sim, Detail, why);
+            internal void Logged(bool selling, string why) => LogDetail(selling, Sim, Detail, Quoted, why);
         }
 
         private static void WarnUnmatchedItemLists()
@@ -687,6 +694,7 @@ namespace TradeLord
             if (party != MobileParty.MainParty) return;
             Guard.Run("Action.OnSettlementEntered", () =>
             {
+                PriceTrace.Say(settlement, "walked in, before anything was traded");
                 ResetVisit(StillTheSameSitting(settlement));
                 _visitTradeAllowed = CanTradeHere(settlement);
                 WarnUnmatchedItemLists();
@@ -831,14 +839,24 @@ namespace TradeLord
         private const float GetawayHours = 4f;
 
         private static void LogDetail(bool selling, bool sim, Dictionary<ItemObject, (int count, int gold)> detail,
-                                      string why)
+                                      Dictionary<ItemObject, (int count, int gold)> quoted, string why)
         {
             foreach (var kv in detail)
             {
                 Log.Write((selling ? "  sold " : "  bought ") + kv.Value.count + " " +
-                          kv.Key.StringId + " for " + kv.Value.gold + (sim ? " (simulated)" : ""));
+                          kv.Key.StringId + " for " + kv.Value.gold + (sim ? " (simulated)" : "") +
+                          Quotation(quoted, kv.Key, kv.Value.gold));
                 LogAnimalMoved(selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);
             }
+        }
+
+        private static string Quotation(Dictionary<ItemObject, (int count, int gold)> quoted,
+                                        ItemObject item, int gold)
+        {
+            if (quoted == null || !quoted.TryGetValue(item, out var said) || said.count <= 0) return "";
+            return ", which TradeLord had quoted at " + said.gold +
+                   (said.gold == gold ? " and the market charged the same"
+                                      : " and the market moved " + gold + " instead");
         }
 
         private static void LogAnimalMoved(bool selling, bool sim, ItemObject item, int count, int gold, string why)
@@ -930,7 +948,7 @@ namespace TradeLord
             }
             catch (Exception e)
             {
-                if (!_herdLookupFailed) { _herdLookupFailed = true; Log.Error(e, "herd guard (livestock buying disabled, selling unaffected)"); }
+                if (!_herdLookupFailed) { _herdLookupFailed = true; Log.Error(e, "herd guard (the herd cannot be counted, so no livestock and no haul animals are bought and no animal is sold to get you back up to speed; every other trade is unaffected)"); }
                 return 0;
             }
         }
@@ -943,7 +961,8 @@ namespace TradeLord
             if (model == null)
             {
                 _herdLookupFailed = true;
-                Log.Write("herd guard: a mod replaced the party speed model - livestock buying disabled, selling unaffected");
+                Log.Write("herd guard: a mod replaced the party speed model - " +
+                          "the herd cannot be counted, so no livestock and no haul animals are bought and no animal is sold to get you back up to speed; every other trade is unaffected");
                 return null;
             }
             if (_herdModifier == null)
@@ -953,7 +972,8 @@ namespace TradeLord
                 if (_herdModifier == null)
                 {
                     _herdLookupFailed = true;
-                    Log.Write("herd guard: GetHerdingModifier not found on this game version - livestock buying disabled, selling unaffected");
+                    Log.Write("herd guard: GetHerdingModifier not found on this game version - " +
+                              "the herd cannot be counted, so no livestock and no haul animals are bought and no animal is sold to get you back up to speed; every other trade is unaffected");
                     return null;
                 }
             }
@@ -1021,7 +1041,9 @@ namespace TradeLord
                           (herd + spare) + " driven in all, " +
                           (shed > 0
                               ? "the herd is slowing you down and " + shed + " must go"
-                              : "no herd penalty"));
+                              : _herdLookupFailed
+                                  ? "the herd penalty cannot be read on this game version"
+                                  : "no herd penalty"));
             }
             catch (Exception e) { Log.Error(e, "herd check log (nothing else is affected)"); }
         }
@@ -1211,6 +1233,7 @@ namespace TradeLord
                             continue;
                         }
 
+                        pass.Quote(item, 1, price);
                         if (!pass.SellOne(el, price, what, named, out int proceeds)) break;
                         if (proceeds == 0) break;
 
@@ -1328,7 +1351,7 @@ namespace TradeLord
 
         public static void ExecuteResupply(Settlement settlement, bool quiet = false)
         {
-            if (Options.Current.ResupplyFoodDays <= 0) return;
+            if (Options.Current.KeepFoodDays <= 0) return;
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
 
@@ -1748,6 +1771,7 @@ namespace TradeLord
                             continue;
                         }
 
+                        pass.Quote(item, 1, price);
                         if (!pass.BuyOne(el, price, what, named, out int cost)) break;
                         if (cost == 0) break;
 

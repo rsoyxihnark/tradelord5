@@ -89,7 +89,7 @@
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM, with a Reset button at the top of it that puts every setting back to the value TradeLord ships with and empties your four item lists
 - ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting. Its trade messages, ledger panel, price tooltips, town menu entries and the settings screen itself all take the new language the moment you pick it, with no restart and no reload
 - ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303, and it runs on the 1.5.2.121216 beta too
-- ✅ A price trace you can switch on when a price looks wrong: it writes to `TradeLord.log` what the market you are standing in pays and charges for every good you are carrying, read four ways, and names that market, the price model the game is running and any other mod changing either of them
+- ✅ A price trace you can switch on when a price looks wrong: it writes to `TradeLord.log` what the market you are standing in pays and charges for every good you are carrying, read four ways, before anything is traded, and names that market, the price model the game is running and any other mod changing either of them, then records what it quoted for every good it trades next to what the market actually paid
 - ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it. It is kept from one session to the next, and the one thing that ever empties it is starting the game with it already past 999 KB, which it says in the log itself
 
 **All of it is yours to change.** Every feature above is a switch or a number on the settings screen,

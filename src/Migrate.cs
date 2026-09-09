@@ -6,7 +6,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 7;
+        public const int Shape = 8;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -31,6 +31,7 @@ namespace TradeLord
             }
             if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);
             if (from < 7) changed |= TheScanRadiusIsGone(written, notes);
+            if (from < 8) changed |= KeepingAndRestockingFoodBecameOneSetting(written, notes);
             if (changed && notes != null)
                 notes.Add("your settings were written by an older TradeLord, so they have been brought forward from shape " +
                           from + " to shape " + Shape);
@@ -98,6 +99,20 @@ namespace TradeLord
             return true;
         }
 
+        private static bool KeepingAndRestockingFoodBecameOneSetting(IDictionary<string, string> written,
+                                                                     ICollection<string> notes)
+        {
+            const string was = "ResupplyFoodDays";
+            if (!written.TryGetValue(was, out string held)) return false;
+            written.Remove(was);
+            written.TryGetValue("KeepFoodDays", out string keeps);
+            notes?.Add("keeping food back and restocking it are one setting now, so the days of food " +
+                       "TradeLord restocks to is the same number it keeps back" +
+                       (keeps == null ? "" : ", which is " + keeps) +
+                       ", and your restock setting of " + held + " is no longer read");
+            return true;
+        }
+
         private static bool TheScanRadiusIsGone(IDictionary<string, string> written,
                                                 ICollection<string> notes)
         {
@@ -155,7 +170,6 @@ namespace TradeLord
                 { "MaxHeldPerItem", new double[] { 0, 5000 } },
                 { "MaxSpendPerVisit", new double[] { 0, 100000 } },
                 { "ResaleSafetyFactor", new double[] { 0.5, 1 } },
-                { "ResupplyFoodDays", new double[] { 0, 30 } },
                 { "MaxHeldShare", new double[] { 0, 1 } },
                 { "Language", new double[] { 0, 3 } },
                 { "FoodPolicy", new double[] { 0, 3 } },

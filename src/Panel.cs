@@ -474,7 +474,7 @@ namespace TradeLord
             string stray = null;
             for (int i = 0; i < parts.Length - 1; i++)
                 if (ParseModifier(parts[i].Trim(), out var pair)) _modifiers.Add(pair);
-                else if (stray == null) stray = parts[i].Trim();
+                else if (stray == null && parts[i].Trim().Length > 0) stray = parts[i].Trim();
             string raw = parts[parts.Length - 1].Trim();
             bool numeric = raw.Length > 0;
             for (int i = 0; i < raw.Length; i++)
