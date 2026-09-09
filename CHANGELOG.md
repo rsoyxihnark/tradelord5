@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.50.2
+
+- Trade with caravans and villagers you meet is now called Trade with caravans and villagers, a shorter name that makes it clear this setting, rather than Trade with villages, is the one that covers a party of villagers you meet on the road.
+
 ## 1.50.1
 
 - One-time settings override for this version only; due to so many improvements made into whole Trade Engine and couple defaults tweaked better

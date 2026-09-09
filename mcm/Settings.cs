@@ -478,7 +478,7 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool TradeWithVillages { get => _o.TradeWithVillages; set { _o.TradeWithVillages = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL273}Trade with caravans and villagers you meet", Order = 3, RequireRestart = false,
+        [SettingPropertyBool("{=TL273}Trade with caravans and villagers", Order = 3, RequireRestart = false,
             HintText = "{=TL373}Meet a caravan or a party of villagers on the road and TradeLord trades with them the moment you meet, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach. They pay out of their own purse, so it stops when that purse runs dry. Every rule a market visit obeys still holds here. ON by default.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 4)]
         public bool TradeWithCaravans { get => _o.TradeWithCaravans; set { _o.TradeWithCaravans = value; Options.Bump(); } }
