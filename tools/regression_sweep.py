@@ -4413,9 +4413,9 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and "herdRoom -= pass.Books.HerdTaken(pass.Sim);" in haul
             and "Math.Max(0, HerdRoomForLivestock(pass.Party)"
                 " - pass.Books.HerdTaken(pass.Sim));" in buy
-            and "int remaining = el.Amount - keep + pass.Books.Held(pass.Sim, item.StringId);" in sell
-            and "int remaining = el.Amount + pass.Books.Held(pass.Sim, item.StringId);" in relief
-            and t.count("int remaining = el.Amount - pass.Books.Stocked(pass.Sim, item.StringId);") == 3
+            and "int remaining = pass.YoursToSell(el) - keep;" in sell
+            and "int remaining = pass.YoursToSell(el);" in relief
+            and t.count("int remaining = pass.TheirsToSell(el);") == 3
             and "mine.GetItemNumber(it) + pass.Books.Held(pass.Sim, it.StringId);" in buy
             and t.count("pass.Books.NoteSale(") == 2
             and t.count("pass.Books.NotePurchase(") == 3
@@ -4993,7 +4993,7 @@ def a_road_swap_makes_nothing_new_per_unit():
 
 def a_dry_run_names_the_goods_it_already_moved():
     sell = method_body(S['Trading.cs'], "private static void SellPass")
-    return ("int remaining = el.Amount - keep + pass.Books.Held(pass.Sim, item.StringId);\n"
+    return ("int remaining = pass.YoursToSell(el) - keep;\n"
             "                    if (remaining <= 0) { tally.Note(Block.TradedHereAlready); continue; }" in sell
             and "Block.FoodReserve" not in sell
             and 'case Block.TradedHereAlready:' in method_body(S['Reasons.cs'], "internal static TextObject Phrase")
@@ -5382,6 +5382,37 @@ chk("1.47.0", "the price trace is off until you ask for it",
 
 chk("1.47.1", "every price TradeLord quotes is asked of the market the way the trade screen asks it, naming the merchant, and falls back to the plain question only if that cannot be asked",
     every_price_is_asked_the_way_the_trade_screen_asks_it())
+
+
+def one_stack_of_a_good_never_spends_what_another_stack_holds():
+    t = S['Trading.cs']
+    held = method_body(t, "private sealed class Pass")
+    counted = re.findall(r'[^;{}]*pass\.Books\.(?:Held|Stocked)\(pass\.Sim,[^;]*;', t, re.S)
+    return ("internal int YoursToSell(ItemRosterElement el)" in held
+            and "internal int TheirsToSell(ItemRosterElement el)" in held
+            and ("return Math.Min(el.Amount,\n"
+                 "                                Party.ItemRoster.GetItemNumber(item)"
+                 " + Books.Held(Sim, item.StringId));") in held
+            and ("return Math.Min(el.Amount,\n"
+                 "                                Stock.GetItemNumber(item)"
+                 " - Books.Stocked(Sim, item.StringId));") in held
+            and t.count("pass.YoursToSell(el)") == 3
+            and t.count("pass.TheirsToSell(el)") == 5
+            and len(counted) == 2
+            and all("GetItemNumber(" in one and "el.Amount" not in one for one in counted))
+
+
+chk("1.47.2", "a stack of a good counts only its own units against what a dry run has already moved, so another stack of the same good is still offered",
+    one_stack_of_a_good_never_spends_what_another_stack_holds())
+
+def every_till_is_read_the_one_way_a_pass_reads_it():
+    t = S['Trading.cs']
+    return (t.count("pass.TillNow") == 2 and "pass.Market" not in t
+            and "internal int TillNow => Site != null ? Market.Gold : Met.PartyTradeGold;" in t)
+
+
+chk("1.47.2", "every pass asks what the merchant has left to pay with in the one place that knows where the pass is standing",
+    every_till_is_read_the_one_way_a_pass_reads_it())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
