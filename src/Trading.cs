@@ -506,6 +506,20 @@ namespace TradeLord
         private static int GoldSpent(bool sim, int simSpent, int goldBefore) =>
             sim ? simSpent : goldBefore - Hero.MainHero.Gold;
 
+        private static void SayWhatHoldsYourPurse(Pass pass)
+        {
+            int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);
+            int held = GoldHeldBack(), flat = Options.Current.GoldReserve;
+            int cap = Options.Current.MaxSpendPerVisit;
+            Log.Repeatable("purse " + pass.Key, purse + "/" + held + "/" + pass.Spendable(),
+                           "nothing is bought " + pass.Where + ": your purse is " + purse +
+                           " and TradeLord holds " + held + " of it back, " + flat +
+                           " as your gold reserve and " + (held - flat) + " as " +
+                           Options.Current.KeepWageDays + " day(s) of your wage bill" +
+                           (cap > 0 ? ", with " + (cap - pass.Books.PaidOut(pass.Sim)) +
+                                      " left of the " + cap + " you allow per visit" : ""));
+        }
+
         private static bool WarnPurseBelowReserve()
         {
             if (TradedThisVisit()) return false;
@@ -1495,7 +1509,7 @@ namespace TradeLord
         {
             if (!Options.Current.TradeWithCaravans) return;
             if (!RoadPartyReachable(met)) return;
-            if (StillSettling(quiet: false)) return;
+            if (StillSettling(Muted(automated: true))) return;
             IMarketData road = RoadMarket();
             if (road == null) return;
             MobileParty party = MobileParty.MainParty;
@@ -1759,7 +1773,7 @@ namespace TradeLord
                 }
                 stock.Sort((x, y) => y.margin.CompareTo(x.margin));
             }
-            else tally.Note(Block.BudgetSpent);
+            else { tally.Note(Block.BudgetSpent); SayWhatHoldsYourPurse(pass); }
             int herdRoom = -1;
 
             InAPass(() =>

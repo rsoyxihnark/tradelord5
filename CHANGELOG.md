@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.53.0
+
+- When TradeLord buys nothing because your purse is under what it holds back, TradeLord.log now says what your purse is, how much is held back, and how much of that is your gold reserve against days of your wage bill.
+- With Silence trade messages on, meeting a caravan or a party of villagers on the road during the Economy settling delay no longer puts a line on your screen.
+
 ## 1.52.4
 
 - TradeLord now reads a language file as it stands, so one that points somewhere else can no longer leave the game waiting while TradeLord fetches it.
