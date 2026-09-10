@@ -323,5 +323,59 @@ namespace TradeLord.Tests
             Assert.Equal(2, System.Math.Min(inThisStack, allYouHold + books.Held(true, "sword")));
             Assert.Equal(0, inThisStack + books.Held(true, "sword"));
         }
+
+        [Fact]
+        public void WhatADryRunHasAlreadySoldOffThePriceYouPaidIsCountedForTheWholeGood()
+        {
+            Books books = Fresh();
+            Assert.Equal(0, books.PaidDrawn(true, "mule"));
+
+            books.NotePaidDrawn("mule");
+            books.NotePaidDrawn("mule");
+            books.NotePaidDrawn("horse");
+
+            Assert.Equal(2, books.PaidDrawn(true, "mule"));
+            Assert.Equal(1, books.PaidDrawn(true, "horse"));
+            Assert.Equal(0, books.PaidDrawn(true, "sword"));
+            Assert.Equal(0, books.PaidDrawn(true, null));
+        }
+
+        [Fact]
+        public void ARealRunReadsNoPriceYouPaidBackFromTheDryRunBooks()
+        {
+            Books books = Fresh();
+            books.NotePaidDrawn("mule");
+            Assert.Equal(0, books.PaidDrawn(false, "mule"));
+        }
+
+        [Fact]
+        public void OneStackAfterAnotherNeverSpendsThePriceYouPaidTwice()
+        {
+            Books books = Fresh();
+            const int bought = 4;
+
+            int firstStack = bought - books.PaidDrawn(true, "mule");
+            Assert.Equal(4, firstStack);
+            for (int sold = 0; sold < 3; sold++) books.NotePaidDrawn("mule");
+
+            int secondStack = bought - books.PaidDrawn(true, "mule");
+            Assert.Equal(1, secondStack);
+            books.NotePaidDrawn("mule");
+
+            Assert.Equal(0, bought - books.PaidDrawn(true, "mule"));
+        }
+
+        [Fact]
+        public void TheDryRunForgetsWhatItDrewOffThePriceYouPaidWhenTheVisitEnds()
+        {
+            Books books = Fresh();
+            books.NotePaidDrawn("mule");
+            books.ForgetTheDryRun();
+            Assert.Equal(0, books.PaidDrawn(true, "mule"));
+
+            books.NotePaidDrawn("mule");
+            books.Forget();
+            Assert.Equal(0, books.PaidDrawn(true, "mule"));
+        }
     }
 }
