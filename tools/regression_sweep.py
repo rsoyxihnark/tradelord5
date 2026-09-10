@@ -3962,7 +3962,7 @@ def an_animal_a_quest_is_waiting_on_is_counted_out_of_the_herd():
             and "Campaign.Current?.QuestManager?.Quests" in promised
             and "if (quest == null || quest.IsFinalized) continue;" in promised
             and "if (!Readable()) return null;" in promised
-            and "TradePolicy.KeptBack(mine, out Dictionary<ItemObject, int> promised);" in relief
+            and "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);" in relief
             and "if (promised == null) return;" in relief
             and "if (heldBack.TryGetValue(item, out int owed) && owed > 0)" in relief
             and "int spare = Math.Min(remaining, owed);" in relief
@@ -4717,7 +4717,7 @@ def a_quest_animal_held_back_is_named_as_the_quest_not_the_food_reserve():
             and "if (amount <= said.KeepCount) { said.Why = Block.QuestAnimal; return said; }" in sell_rule()
             and "if (amount <= said.KeepCount) { said.Why = Block.FoodReserve; return said; }" in sell_rule()
             and "out Dictionary<ItemObject, int> awaited" in kept
-            and "TradePolicy.KeptBack(roster, out var awaited);" in quick
+            and "TradePolicy.KeptBack(roster, pass.Books, pass.Sim, out var awaited);" in quick
             and "TradePolicy.MaySell(good, el, pass.Locked, keepBack, awaited," in quick)
 
 def getting_back_up_to_speed_credits_what_it_makes():
@@ -5656,13 +5656,13 @@ def the_food_reserve_holds_against_thinning_the_herd_too():
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
     kept = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster,")
     return ("Errands.Promised();" not in relief
-            and "TradePolicy.KeptBack(mine, out Dictionary<ItemObject, int> promised);" in relief
+            and "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);" in relief
             and ordered(relief,
                         "ItemRoster mine = pass.Party.ItemRoster;",
-                        "TradePolicy.KeptBack(mine, out Dictionary<ItemObject, int> promised);",
+                        "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);",
                         "if (promised == null) return;",
                         "if (heldBack.TryGetValue(item, out int owed) && owed > 0)")
-            and "Dictionary<ItemObject, int> keep = FoodKeep(roster);" in kept
+            and "Dictionary<ItemObject, int> keep = FoodKeep(roster, books, sim);" in kept
             and "if (owed.Value > held) keep[owed.Key] = owed.Value;" in kept)
 
 
@@ -5825,6 +5825,38 @@ def a_dry_run_draws_the_price_you_paid_down_the_way_a_real_pass_does():
 
 chk("1.52.2", "a dry run draws what you paid for a good down across every stack of it, the way a real pass does",
     a_dry_run_draws_the_price_you_paid_down_the_way_a_real_pass_does())
+
+
+def the_food_reserve_carries_a_dry_run_from_one_pass_to_the_next():
+    t = S['Trading.cs']
+    keep = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> FoodKeep")
+    still = method_body(S['Rules.cs'], "internal static int StillCarried")
+    return ("internal static Dictionary<ItemObject, int> FoodKeep(ItemRoster roster, Books books, bool sim)"
+                in S['Policy.cs']
+            and "internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster, Books books, bool sim,"
+                in S['Policy.cs']
+            and ordered(keep,
+                        "soldAlready[item.StringId] = Math.Max(0, -books.Held(sim, item.StringId));",
+                        "int amount = TradeRules.StillCarried(soldAlready, item.StringId, el.Amount);",
+                        "if (amount <= 0) continue;",
+                        "Amount = amount })")
+            and ordered(still, "soldAlready[id] = gone - taken;", "return amount - taken;")
+            and "int taken = Math.Min(gone, amount);" in still
+            and "MobileParty" not in S['Rules.cs'] and "ItemRoster" not in S['Rules.cs']
+            and t.count("TradePolicy.KeptBack(") == 3
+            and "TradePolicy.KeptBack(roster, pass.Books, pass.Sim, out var awaited);" in
+                method_body(t, "private static void SellPass")
+            and "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);"
+                in method_body(t, "public static void ExecuteHerdRelief")
+            and "TradePolicy.KeptBack(party.ItemRoster, Visit, sim: false, out var awaited);" in
+                method_body(t, "private Settlement FindBestSellTownForCargo")
+            and "What_a_dry_run_sold_is_taken_off_one_stack_after_another_and_never_twice" in FOODTESTS
+            and "A_real_pass_leaves_every_stack_exactly_as_the_party_holds_it" in FOODTESTS
+            and "A_reserve_worked_out_after_a_dry_run_reaches_past_what_it_already_sold" in FOODTESTS)
+
+
+chk("1.52.3", "the food a dry run has already sold is off the reserve for the passes that follow, and the town on your map still reads the party as it stands",
+    the_food_reserve_carries_a_dry_run_from_one_pass_to_the_next())
 
 
 def the_per_item_caps_bind_every_pass_that_buys():
