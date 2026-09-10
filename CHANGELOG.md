@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.55.0
+
+- TradeLord now holds back any good an active quest of yours is waiting on, a trade good or a raw material as well as an animal, so a shopping trip can no longer sell the supplies a quest needs.
+- Four more quests are read for what they are waiting on: the two artisan deliveries, the gang leader's stolen goods and the landlord who asks you to sell his produce.
+- Nothing bought here now says it was your Buy cap per item that stopped a good, instead of naming your purse.
+- The warning that your purse is under your gold reserve is no longer swallowed by a visit that sold something.
+- The town marked on your map is never one TradeLord would walk into and leave alone as the same arrival.
+- When TradeLord cannot thin your herd, TradeLord.log now names the animals it is holding back rather than falling silent.
+- Always sell now says a good a quest is waiting on still holds, rather than only an animal.
+- The feature list now says anything a quest is waiting on is held back from every pass that sells.
+
 ## 1.54.0
 
 - Keep gold for days of wages now ships at 0, so out of the box TradeLord holds back only your gold reserve and a large army no longer stops it buying.

@@ -60,6 +60,7 @@
 **What it doesn't touch**
 
 - ✅ Anything you locked in the inventory screen
+- ✅ Anything an active quest of yours is waiting on, whether it is an animal, a trade good or a raw material, held back from every pass that sells until the quest is done with it
 - ✅ Unique and player-crafted gear, and quest items. Your haul animals are never sold for profit either, though it will buy them for you, and naming one on your always-sell list is the only way to move one by hand. An animal that carries nothing for you and is not livestock is no haul animal, so it is sold like any other cargo rather than sitting in your bags for good
 - ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it: sell them, which is what it does out of the box; keep every one, which holds anything built from smithing parts, forged or looted off a bandit alike; or **keep only the ones you have not learned**, which holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know. Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
 - ✅ Your food reserve (accounted for the men in your party)

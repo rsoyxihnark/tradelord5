@@ -2598,9 +2598,10 @@ def the_purse_is_the_last_reason_named():
 def an_empty_purse_is_reported_on_the_way_into_a_market():
     body = method_body(S['Trading.cs'], "private static bool WarnPurseBelowReserve")
     entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
-    return ("if (TradedThisVisit()) return false;" in body
-            and ordered(body, "if (TradedThisVisit()) return false;",
-                        "if (Spendable(Visit, Simulating) > 0) return false;")
+    return ("TradedThisVisit()" not in body
+            and "if (Spendable(Visit, Simulating) > 0) return false;" in body
+            and "if (TradedThisVisit()) return;" in
+                method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
             and 'Tongue.Text("{=TL92}' in body
             and 'Toast(msg, ToastAlert);' in body
             and 'TL92' in strings_declared()
@@ -3879,9 +3880,9 @@ def an_animal_is_held_back_when_the_quests_cannot_be_read():
     return ("internal static bool Known => Readable();" in S['Encounters.cs']
             and "facts.QuestsReadable = Errands.Known;" in
                 method_body(S['Policy.cs'], "internal static bool MaySell(ItemRosterElement el")
-            and "if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestAnimal; return said; }" in sell
+            and "if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestGoods; return said; }" in sell
             and ordered(sell, "if (Listed(s.AlwaysSet, good)) { said.Allowed = true; return said; }",
-                        "if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestAnimal; return said; }")
+                        "if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestGoods; return said; }")
             and "if (promised == null) return;" in relief
             and "no animal is sold at all" in S['Encounters.cs']
             and "no animal is sold to relieve the herd" not in S['Trading.cs'])
@@ -4568,7 +4569,7 @@ chk("1.37.8", "the panel takes the language it is armed with, so arming it works
     arming_the_panel_costs_no_route_scan())
 
 
-GUARDS = {'NeverList', 'Locked', 'Protected', 'QuestAnimal', 'FoodReserve'}
+GUARDS = {'NeverList', 'Locked', 'Protected', 'QuestGoods', 'FoodReserve'}
 
 def every_guard_that_holds_a_good_back_says_which_one_it_is():
     phrase = method_body(S['Reasons.cs'], "internal static TextObject Phrase")
@@ -4717,7 +4718,7 @@ def a_quest_animal_held_back_is_named_as_the_quest_not_the_food_reserve():
     quick = method_body(S['Trading.cs'], "private static void SellPass")
     return ("IDictionary<ItemObject, int> awaited," in sell
             and "facts.AwaitedHeld = HeldBack(awaited, item);" in sell
-            and "if (amount <= said.KeepCount) { said.Why = Block.QuestAnimal; return said; }" in sell_rule()
+            and "if (amount <= said.KeepCount) { said.Why = Block.QuestGoods; return said; }" in sell_rule()
             and "if (amount <= said.KeepCount) { said.Why = Block.FoodReserve; return said; }" in sell_rule()
             and "out Dictionary<ItemObject, int> awaited" in kept
             and "TradePolicy.KeptBack(roster, pass.Books, pass.Sim, out var awaited);" in quick
@@ -4778,7 +4779,7 @@ def an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on():
     return (ordered(sell_rule(),
                     "int promised = DrawKeepBack(amount, facts.AwaitedHeld, out bool owed);",
                     "said.KeepCount = promised;",
-                    "if (amount <= said.KeepCount) { said.Why = Block.QuestAnimal; return said; }",
+                    "if (amount <= said.KeepCount) { said.Why = Block.QuestGoods; return said; }",
                     "if (Listed(s.AlwaysSet, good)) { said.Allowed = true; return said; }")
             and ordered(method_body(S['Rules.cs'], "internal static int DrawKeepBack"),
                         "any = held > 0;",
@@ -4870,15 +4871,15 @@ def the_keep_back_is_drawn_down_in_one_place():
             and "awaited[item] =" not in t
             and "foodKeep[item] =" not in t)
 
-def the_always_sell_hint_names_the_animal_a_quest_is_waiting_on():
-    named = "an animal a quest is waiting on still hold"
+def the_always_sell_hint_names_the_good_a_quest_is_waiting_on():
+    named = "a good a quest is waiting on still hold"
     words = {
         'TradeLord/ModuleData/Languages/TR/module_strings_tr.xml':
-            ('g\u00f6rev', 'hayvan'),
+            ('g\u00f6rev', 'mal'),
         'TradeLord/ModuleData/Languages/RU/module_strings_ru.xml':
-            ('\u0437\u0430\u0434\u0430\u043d\u0438', '\u0436\u0438\u0432\u043e\u0442\u043d'),
+            ('\u0437\u0430\u0434\u0430\u043d\u0438', '\u0442\u043e\u0432\u0430\u0440'),
         'TradeLord/ModuleData/Languages/CNs/module_strings_cns.xml':
-            ('\u4efb\u52a1', '\u7272\u755c'),
+            ('\u4efb\u52a1', '\u8d27\u7269'),
     }
     if named not in re.search(r'\{=TL332\}([^"]*)"', M).group(1):
         return False
@@ -4886,11 +4887,11 @@ def the_always_sell_hint_names_the_animal_a_quest_is_waiting_on():
         return False
     if set(words) != set(TRANSLATIONS.values()):
         return False
-    for path, (quest, animal) in words.items():
+    for path, (quest, goods) in words.items():
         said = spoken(path)
-        if quest not in said['TL384'] or animal not in said['TL384']:
+        if quest not in said['TL384']:
             return False
-        if quest not in said['TL332'] or animal not in said['TL332']:
+        if quest not in said['TL332'] or goods not in said['TL332']:
             return False
     return True
 
@@ -5024,8 +5025,8 @@ chk("1.40.0", "a market whose prices moved drops the rankings prices decide and 
     a_price_move_keeps_the_markets_in_reach_it_did_not_change())
 chk("1.40.0", "the food reserve and the animals a quest is waiting on are drawn down in one place, named for what it does",
     the_keep_back_is_drawn_down_in_one_place())
-chk("1.40.0", "the always-sell setting says an animal a quest is waiting on is still held back",
-    the_always_sell_hint_names_the_animal_a_quest_is_waiting_on())
+chk("1.40.0", "the always-sell setting says a good a quest is waiting on is still held back",
+    the_always_sell_hint_names_the_good_a_quest_is_waiting_on())
 
 def a_road_swap_makes_nothing_new_per_unit():
     t = S['Trading.cs']
@@ -5940,6 +5941,76 @@ def a_pass_that_can_spend_nothing_says_what_is_holding_your_purse():
 
 chk("1.53.0", "a buying pass with nothing left to spend writes your purse, what is held back and what holds it to the log, rather than only that the budget was spent",
     a_pass_that_can_spend_nothing_says_what_is_holding_your_purse())
+
+
+def every_quest_that_waits_on_a_good_you_carry_is_read():
+    named = between(S['Encounters.cs'], "private static readonly (Type quest, string wanted, string many)[] Named",
+                    "private static (Type quest, FieldInfo wanted, FieldInfo many)[] _read;")
+    wanted = (("HeadmanNeedsToDeliverAHerdIssueQuest", "_herdTypeToDeliver", "_animalCountToDeliver"),
+              ("HeadmanVillageNeedsDraughtAnimalsIssueQuest", "_requestedAnimal", "_requestedAnimalAmount"),
+              ("LordNeedsHorsesIssueQuest", "_mountObjectToBeDelivered", "_numMountsToBeDelivered"),
+              ("ArtisanOverpricedGoodsIssueQuest", "_requestedTradeGood", "_requestedTradeGoodAmount"),
+              ("ArtisanCantSellProductsAtAFairPriceIssueQuest", "_rawMaterialsToBeDelivered",
+               "_amountOfRawGoodsToBeDelivered"),
+              ("GangLeaderNeedsToOffloadStolenGoodsIssueQuest", "_stolenTradeGood", "_stolenTradeGoodAmount"),
+              ("LandLordTheArtOfTheTradeIssueQuest", "_selectedItemObject", "_selectedItemObjectCount"))
+    return (all(quest in named and item in named and count in named for quest, item, count in wanted)
+            and named.count("typeof(") == len(wanted)
+            and all(COMPAT.count('"' + field + '"') == 1 for _, item, count in wanted for field in (item, count)))
+
+
+def a_quest_holds_back_any_good_it_waits_on_not_only_an_animal():
+    sell = sell_rule()
+    return ("if (good.HasHorse)\n            {\n                int promised" not in S['Rules.cs']
+            and ordered(sell,
+                        "if (game.Locked()) { said.Why = Block.Locked; return said; }",
+                        "int promised = DrawKeepBack(amount, facts.AwaitedHeld, out bool owed);",
+                        "if (amount <= said.KeepCount) { said.Why = Block.QuestGoods; return said; }",
+                        "if (Listed(s.AlwaysSet, good)) { said.Allowed = true; return said; }")
+            and "A_trade_good_a_quest_is_waiting_on_is_kept_back_the_same_as_an_animal" in SELLTESTS
+            and "An_always_sell_entry_cannot_release_a_trade_good_a_quest_is_waiting_on" in SELLTESTS)
+
+
+def the_per_item_caps_say_which_cap_rather_than_the_purse():
+    phrase = method_body(S['Reasons.cs'], "internal static TextObject Phrase")
+    return (ordered(phrase,
+                    "case Block.BudgetSpent:",
+                    'return Tongue.Text("{=TL43}your purse or spending caps are spent");',
+                    "case Block.ItemCountCap:",
+                    "case Block.ItemValueCap:",
+                    'return Tongue.Text("{=TL391}')
+            and 'TL391' in strings_declared())
+
+
+def the_map_marker_leaves_out_a_market_it_would_not_trade_in():
+    marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
+    return (ordered(marker, "if (s == party.CurrentSettlement) continue;",
+                    "if (StillTheSameArrival(s)) continue;",
+                    "if (!IsMarket(s)) continue;")
+            and "settlement.StringId == _lastArrivalAt && !_tookToTheRoad" in
+                between(S['Trading.cs'], "private static bool StillTheSameArrival", ";"))
+
+
+def a_herd_it_cannot_thin_says_what_it_will_not_give_up():
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    said = method_body(S['Trading.cs'], "private static void SayWhatTheHerdWillNotGiveUp")
+    return ("if (stable.Count == 0) { SayWhatTheHerdWillNotGiveUp(mine, shed, settlement); return; }" in relief
+            and S['Trading.cs'].count("SayWhatTheHerdWillNotGiveUp(") == 2
+            and "if (HerdShedRank(it) >= 0) continue;" in said
+            and "ordinary cargo" in said
+            and "Log.Repeatable(" in said)
+
+
+chk("1.55.0", "every quest that waits on a good you carry is read, not only the three that want animals, and the game version fit tool holds every field they are read from",
+    every_quest_that_waits_on_a_good_you_carry_is_read())
+chk("1.55.0", "a good a quest is waiting on is held back whatever it is, past the always-sell list, not only where it is an animal",
+    a_quest_holds_back_any_good_it_waits_on_not_only_an_animal())
+chk("1.55.0", "the per-item buy caps say it is those caps that stopped a good, rather than sharing the purse's words",
+    the_per_item_caps_say_which_cap_rather_than_the_purse())
+chk("1.55.0", "the town marked on your map is never one TradeLord would leave alone as the same arrival",
+    the_map_marker_leaves_out_a_market_it_would_not_trade_in())
+chk("1.55.0", "a herd it cannot thin says what it is holding back rather than falling silent",
+    a_herd_it_cannot_thin_says_what_it_will_not_give_up())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
