@@ -1203,7 +1203,7 @@ chk("1.3.18", "neither pass trades before the settling delay is served, in a mar
     (method_body(S['Trading.cs'], "private static bool StillSettling")) and
     "CanTradeHere(settlement) && !StillSettling(quiet)" in
         between(S['Trading.cs'], "private static bool MarketOpen(Settlement settlement, bool quiet) =>", ";") and
-    "if (StillSettling(quiet: false)) return;" in
+    "if (StillSettling(Muted(automated: true))) return;" in
         method_body(S['Trading.cs'], "public static void ExecuteRoadTrade") and
     "if (!MarketOpen(site, quiet)) return null;" in
         method_body(S['Trading.cs'], "internal static Pass Open") and
@@ -2618,7 +2618,7 @@ def what_is_left_to_spend_is_worked_out_in_one_place():
             and "internal int Spendable() => TradeActionBehavior.Spendable(Books, Sim);"
                 in S['Trading.cs']
             and S['Trading.cs'].count("TradeMath.Budget(") == 2
-            and S['Trading.cs'].count("GoldHeldBack()") == 4
+            and S['Trading.cs'].count("GoldHeldBack()") == 5
             and S['Trading.cs'].count("int Budget() =>") == 0
             and "Hero.MainHero.Gold" not in S['Ledger.cs']
             and "GoldReserve" not in S['Ledger.cs']
@@ -3741,7 +3741,7 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
     road = method_body(t, "public static void ExecuteRoadTrade")
     sell = pass_body("private static void SellPass")
     buy = pass_body("private static void BuyPass")
-    return ("if (StillSettling(quiet: false)) return;" in road
+    return ("if (StillSettling(Muted(automated: true))) return;" in road
             and 'SellPass(Pass.Meet(met, road, books, party),' in road
             and 'BuyPass(Pass.Meet(met, road, books, party),' in road
             and 'SellPass(Pass.Open(settlement, quiet), "quick-sell"' in t
@@ -4824,6 +4824,9 @@ def a_meeting_on_the_road_answers_to_the_silence_setting():
                 in t
             and sell.count("if (!pass.Muted) Toast(") == 1
             and buy.count("if (!pass.Muted) Toast(") == 1
+            and "if (StillSettling(Muted(automated: true))) return;" in
+                method_body(t, "public static void ExecuteRoadTrade")
+            and "if (!quiet)" in method_body(t, "private static bool StillSettling")
             and "AwardTradeXp(profit, pass.Muted);" in sell
             and "AwardTradeXp(profit, false)" not in t
             and named in re.search(r'\{=TL349\}([^"]*)"', M).group(1)
@@ -5080,7 +5083,7 @@ def the_venue_is_the_only_thing_a_pass_asks_where_it_is():
                 'internal string Where => Site != null ? "at " + Site.Name : "from " + Met.Name;',
                 "internal ItemRoster Stock => Site != null ? Site.ItemRoster : Met.ItemRoster;",
                 "internal int TillNow => Site != null ? Market.Gold : Met.PartyTradeGold;"))
-            and t.count("pass.Where") == 4)
+            and t.count("pass.Where") == 5)
 
 
 chk("1.40.4", "a market visit and a meeting on the road sell and buy through the same two passes",
@@ -5916,6 +5919,24 @@ def a_translation_file_is_read_exactly_as_it_stands():
 
 chk("1.52.4", "a translation file is read exactly as it stands, so one naming something outside itself never sends TradeLord fetching it while the game waits",
     a_translation_file_is_read_exactly_as_it_stands())
+
+
+def a_pass_that_can_spend_nothing_says_what_is_holding_your_purse():
+    t = S['Trading.cs']
+    buy = method_body(t, "private static void BuyPass")
+    said = method_body(t, "private static void SayWhatHoldsYourPurse")
+    return ("else { tally.Note(Block.BudgetSpent); SayWhatHoldsYourPurse(pass); }" in buy
+            and t.count("SayWhatHoldsYourPurse(") == 2
+            and ordered(said, "int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);",
+                        "int held = GoldHeldBack(), flat = Options.Current.GoldReserve;",
+                        "Log.Repeatable(")
+            and "Options.Current.KeepWageDays" in said
+            and "Options.Current.MaxSpendPerVisit" in said
+            and "pass.Books.PaidOut(pass.Sim)" in said)
+
+
+chk("1.53.0", "a buying pass with nothing left to spend writes your purse, what is held back and what holds it to the log, rather than only that the budget was spent",
+    a_pass_that_can_spend_nothing_says_what_is_holding_your_purse())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
