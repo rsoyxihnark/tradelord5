@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Conversation;
+using TaleWorlds.CampaignSystem.Extensions;
 using TaleWorlds.CampaignSystem.Issues;
 using TaleWorlds.Core;
 
@@ -28,10 +29,33 @@ namespace TradeLord
                 "_selectedItemObject", "_selectedItemObjectCount"),
         };
 
+        private static readonly (Type quest, string goodId, string many)[] NamedGoods =
+        {
+            (typeof(ArmyNeedsSuppliesIssueBehavior.ArmyNeedsSuppliesIssueQuest),
+                "grain", "_requestedGrainAmount"),
+            (typeof(ArmyNeedsSuppliesIssueBehavior.ArmyNeedsSuppliesIssueQuest),
+                "wine", "_requestedWineAmount"),
+            (typeof(HeadmanNeedsGrainIssueBehavior.HeadmanNeedsGrainIssueQuest),
+                "grain", "_neededGrainAmount"),
+        };
+
         private static (Type quest, FieldInfo wanted, FieldInfo many)[] _read;
+        private static (Type quest, string goodId, FieldInfo many)[] _readGoods;
+        private static Dictionary<string, ItemObject> _goods;
         private static bool _unreadable;
 
-        internal static void Forget() { _read = null; _unreadable = false; }
+        internal static void Forget() { _read = null; _readGoods = null; _goods = null; _unreadable = false; }
+
+        private static ItemObject Good(string id)
+        {
+            if (_goods == null)
+            {
+                _goods = new Dictionary<string, ItemObject>(StringComparer.Ordinal);
+                foreach (ItemObject item in Items.All)
+                    if (item?.StringId != null) _goods[item.StringId] = item;
+            }
+            return _goods.TryGetValue(id, out ItemObject found) ? found : null;
+        }
 
         internal static bool Known => Readable();
 
@@ -56,7 +80,23 @@ namespace TradeLord
                 }
                 found[i] = (Named[i].quest, wanted, many);
             }
+            var byGood = new (Type, string, FieldInfo)[NamedGoods.Length];
+            for (int i = 0; i < NamedGoods.Length; i++)
+            {
+                FieldInfo many = NamedGoods[i].quest.GetField(
+                    NamedGoods[i].many, BindingFlags.Instance | BindingFlags.NonPublic);
+                if (many == null)
+                {
+                    _unreadable = true;
+                    Log.Write("quest goods: " + NamedGoods[i].quest.Name + " does not say how much " +
+                              NamedGoods[i].goodId + " it wants on this game version - no animal is sold " +
+                              "at all, so a quest of yours cannot lose one");
+                    return false;
+                }
+                byGood[i] = (NamedGoods[i].quest, NamedGoods[i].goodId, many);
+            }
             _read = found;
+            _readGoods = byGood;
             return true;
         }
 
@@ -79,6 +119,15 @@ namespace TradeLord
                         promised[wanted] = had + many;
                     }
                     break;
+                }
+                for (int i = 0; i < _readGoods.Length; i++)
+                {
+                    if (!_readGoods[i].quest.IsInstanceOfType(quest)) continue;
+                    if (!(_readGoods[i].many.GetValue(quest) is int many) || many <= 0) continue;
+                    ItemObject wanted = Good(_readGoods[i].goodId);
+                    if (wanted == null) continue;
+                    promised.TryGetValue(wanted, out int had);
+                    promised[wanted] = had + many;
                 }
             }
             return promised;

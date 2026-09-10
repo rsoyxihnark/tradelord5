@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.56.0
+
+- Two more quests are read for what they are waiting on, the army that needs supplies and the headman who needs grain, so the grain and the wine they are owed is held back from every pass that sells.
+
 ## 1.55.0
 
 - TradeLord now holds back any good an active quest of yours is waiting on, a trade good or a raw material as well as an animal, so a shopping trip can no longer sell the supplies a quest needs.
