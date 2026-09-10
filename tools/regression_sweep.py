@@ -5906,5 +5906,17 @@ chk("1.52.0", "a caravan and a bandit line are spoken in the language in force w
     a_dialogue_line_is_spoken_in_the_language_in_force_when_it_is_offered())
 
 
+def a_translation_file_is_read_exactly_as_it_stands():
+    tongue = S['Tongue.cs']
+    read = method_body(tongue, "private static Dictionary<string, string> Read(string path)")
+    return ("var doc = new XmlDocument { XmlResolver = null };" in read
+            and "new XmlDocument()" not in ALL
+            and ALL.count("new XmlDocument") == 1)
+
+
+chk("1.52.4", "a translation file is read exactly as it stands, so one naming something outside itself never sends TradeLord fetching it while the game waits",
+    a_translation_file_is_read_exactly_as_it_stands())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

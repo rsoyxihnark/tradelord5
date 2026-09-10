@@ -108,7 +108,7 @@ namespace TradeLord
         {
             var said = new Dictionary<string, string>(StringComparer.Ordinal);
             if (!File.Exists(path)) return said;
-            var doc = new XmlDocument();
+            var doc = new XmlDocument { XmlResolver = null };
             doc.Load(path);
             XmlNodeList lines = doc.SelectNodes("/base/strings/string");
             for (int i = 0; lines != null && i < lines.Count; i++)

@@ -1405,7 +1405,7 @@ namespace TradeLord
                         if (price >= pass.Spendable()) break;
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
-                        if (item.Weight > 0.01f && item.Weight > pass.Room() - simWeight) break;
+                        if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;
 
                         if (pass.Sim)
                         {
