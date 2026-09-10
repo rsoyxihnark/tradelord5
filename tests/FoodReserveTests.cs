@@ -65,6 +65,21 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Nothing_is_held_back_at_no_days_of_supply_however_the_variety_floor_is_set()
+        {
+            var carried = new List<TradeRules.Ration>
+            {
+                Food("grain", 50, 10),
+                Food("fish", 50, 20),
+                Herd("cow", 10, 100, 5),
+            };
+            for (int each = 1; each <= 50; each++)
+                Assert.Empty(Keep(carried,
+                    new Options { KeepFoodDays = 0, KeepEveryFoodKind = true, KeepPerFoodKind = each },
+                    perDay: 9f));
+        }
+
+        [Fact]
         public void The_reserve_is_days_of_supply_times_what_the_party_eats()
         {
             var s = new Options { KeepFoodDays = 5, KeepEveryFoodKind = false };
@@ -144,7 +159,7 @@ namespace TradeLord.Tests
         [Fact]
         public void Keeping_some_of_every_kind_holds_a_floor_of_each_before_the_reserve_is_spent()
         {
-            var s = new Options { KeepFoodDays = 0, KeepEveryFoodKind = true, KeepPerFoodKind = 2 };
+            var s = new Options { KeepFoodDays = 1, KeepEveryFoodKind = true, KeepPerFoodKind = 2 };
             var carried = new List<TradeRules.Ration>
             {
                 Food("grain", 50, 10),
@@ -160,7 +175,7 @@ namespace TradeLord.Tests
         [Fact]
         public void The_variety_floor_is_never_put_on_livestock()
         {
-            var s = new Options { KeepFoodDays = 0, KeepEveryFoodKind = true, KeepPerFoodKind = 3 };
+            var s = new Options { KeepFoodDays = 1, KeepEveryFoodKind = true, KeepPerFoodKind = 3 };
             var carried = new List<TradeRules.Ration>
             {
                 Food("grain", 50, 10),
@@ -241,7 +256,7 @@ namespace TradeLord.Tests
         [Fact]
         public void The_variety_floor_counts_every_helping_of_a_kind_together()
         {
-            var s = new Options { KeepFoodDays = 0, KeepEveryFoodKind = true, KeepPerFoodKind = 5 };
+            var s = new Options { KeepFoodDays = 1, KeepEveryFoodKind = true, KeepPerFoodKind = 5 };
             var carried = new List<TradeRules.Ration>
             {
                 Food("grain", 1, 10),
@@ -295,7 +310,14 @@ namespace TradeLord.Tests
                 foreach (var held in have)
                     fedByAll += held.Value * TradeRules.FoodValue(shelf[held.Key].Good);
 
-                if (s.KeepFoodDays <= 0 || s.KeepEveryFoodKind) continue;
+                if (s.KeepFoodDays <= 0)
+                {
+                    Assert.True(keep.Count == 0,
+                                "round " + round + ": no days of supply, yet " + keep.Count +
+                                " kind(s) were held back");
+                    continue;
+                }
+                if (s.KeepEveryFoodKind) continue;
                 int wanted = (int)Math.Ceiling(Math.Max(perDay, 1f) * s.KeepFoodDays);
                 Assert.True(fedByKeep >= Math.Min(wanted, fedByAll),
                             "round " + round + ": what is kept feeds " + fedByKeep +

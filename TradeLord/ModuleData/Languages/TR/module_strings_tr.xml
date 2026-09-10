@@ -100,7 +100,7 @@
 		<string id="TL259" text="Bildiğiniz en ucuz pazar"/>
 		<string id="TL260" text="Kasaba menüsünde defter girişi"/>
 		<string id="TL261" text="Her yiyecek türünden biraz sakla" />
-		<string id="TL361" text="Taşıdığınız her yiyecek türünden birkaçını elde tutar, böylece bölüğünüz yiyecek çeşitliliği moral bonusunu korur. Elde tuttuğu, yukarıdaki gün sayısına sayılır. Çiftlik hayvanları hariçtir, çünkü bir sürü et için kesilir. Öntanımlı olarak KAPALI." />
+		<string id="TL361" text="Taşıdığınız her yiyecek türünden birkaçını elde tutar, böylece bölüğünüz yiyecek çeşitliliği moral bonusunu korur. Çalışması için yukarıdaki Yiyecek tamamla ve sakla (kaç günlük) ayarının açık olması gerekir ve elde tuttuğu o gün sayısına sayılır. Çiftlik hayvanları hariçtir, çünkü bir sürü et için kesilir. Öntanımlı olarak KAPALI." />
 		<string id="TL262" text="Her yiyecek türünden kaç tane saklansın" />
 		<string id="TL362" text="Yukarıdaki anahtarın her yiyecek türünden kaç tane elde tuttuğu. Bu, gün sayısı değil yiyeceğin kendi sayısıdır: günle çalışan, yukarıdaki Yiyecek tamamla ve sakla (kaç günlük) ayarıdır. İki genelde yeterlidir." />
 		<string id="TL264" text="Eritilebilir silahlar" />

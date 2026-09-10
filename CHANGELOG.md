@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.52.1
+
+- Restock and keep food (days of supply) set to 0 now keeps no food back at all, including the few of each kind Keep some of every kind of food was still holding.
+- The hint under Keep some of every kind of food now says it needs Restock and keep food (days of supply) above turned on to do anything.
+- The feature list now says keeping some of every kind of food follows the days of supply you set.
+
 ## 1.52.0
 
 - Buy cap per item, in count and in denars, and Stop buying at this many held now hold while TradeLord restocks your food and buys haul animals, not only while it buys for profit.
