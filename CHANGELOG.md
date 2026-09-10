@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.52.2
+
+- With Simulation mode (dry run) on, the profit reported for a good that sits in more than one stack in your bags no longer counts what you paid against more units than you actually bought.
+
 ## 1.52.1
 
 - Restock and keep food (days of supply) set to 0 now keeps no food back at all, including the few of each kind Keep some of every kind of food was still holding.
