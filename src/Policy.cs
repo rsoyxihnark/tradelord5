@@ -215,29 +215,34 @@ namespace TradeLord
             return perDay < 1f ? 1f : perDay;
         }
 
-        internal static Dictionary<ItemObject, int> FoodKeep(ItemRoster roster)
+        internal static Dictionary<ItemObject, int> FoodKeep(ItemRoster roster, Books books, bool sim)
         {
             var keep = new Dictionary<ItemObject, int>();
             if (roster == null) return keep;
             var byId = new Dictionary<string, ItemObject>(StringComparer.Ordinal);
+            var soldAlready = new Dictionary<string, int>(StringComparer.Ordinal);
             var carried = new List<TradeRules.Ration>();
             for (int i = 0; i < roster.Count; i++)
             {
                 ItemRosterElement el = roster.GetElementCopyAtIndex(i);
                 ItemObject item = el.EquipmentElement.Item;
                 if (item == null || el.Amount <= 0) continue;
+                if (!soldAlready.ContainsKey(item.StringId))
+                    soldAlready[item.StringId] = Math.Max(0, -books.Held(sim, item.StringId));
+                int amount = TradeRules.StillCarried(soldAlready, item.StringId, el.Amount);
+                if (amount <= 0) continue;
                 byId[item.StringId] = item;
-                carried.Add(new TradeRules.Ration { Good = Describe(item), Amount = el.Amount });
+                carried.Add(new TradeRules.Ration { Good = Describe(item), Amount = amount });
             }
             foreach (var kept in TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current))
                 if (byId.TryGetValue(kept.Key, out ItemObject item)) keep[item] = kept.Value;
             return keep;
         }
 
-        internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster,
+        internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster, Books books, bool sim,
                                                             out Dictionary<ItemObject, int> awaited)
         {
-            Dictionary<ItemObject, int> keep = FoodKeep(roster);
+            Dictionary<ItemObject, int> keep = FoodKeep(roster, books, sim);
             awaited = Errands.Promised();
             if (awaited == null) return keep;
             foreach (var owed in awaited)

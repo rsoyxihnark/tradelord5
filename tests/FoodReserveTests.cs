@@ -80,6 +80,63 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void What_a_dry_run_already_sold_comes_off_the_stack_it_came_out_of()
+        {
+            var sold = new Dictionary<string, int> { { "grain", 3 } };
+            Assert.Equal(7, TradeRules.StillCarried(sold, "grain", 10));
+            Assert.Equal(0, sold["grain"]);
+            Assert.Equal(10, TradeRules.StillCarried(sold, "grain", 10));
+        }
+
+        [Fact]
+        public void What_a_dry_run_sold_is_taken_off_one_stack_after_another_and_never_twice()
+        {
+            var sold = new Dictionary<string, int> { { "sheep", 7 } };
+            Assert.Equal(0, TradeRules.StillCarried(sold, "sheep", 5));
+            Assert.Equal(3, TradeRules.StillCarried(sold, "sheep", 5));
+            Assert.Equal(5, TradeRules.StillCarried(sold, "sheep", 5));
+        }
+
+        [Fact]
+        public void A_stack_a_dry_run_emptied_is_left_out_of_the_reserve_altogether()
+        {
+            var sold = new Dictionary<string, int> { { "fish", 40 } };
+            Assert.Equal(0, TradeRules.StillCarried(sold, "fish", 12));
+            Assert.Equal(28, sold["fish"]);
+        }
+
+        [Fact]
+        public void A_real_pass_leaves_every_stack_exactly_as_the_party_holds_it()
+        {
+            var sold = new Dictionary<string, int>();
+            Assert.Equal(9, TradeRules.StillCarried(sold, "grain", 9));
+            Assert.Equal(9, TradeRules.StillCarried(null, "grain", 9));
+            Assert.Equal(9, TradeRules.StillCarried(new Dictionary<string, int> { { "grain", 0 } }, "grain", 9));
+            Assert.Equal(9, TradeRules.StillCarried(new Dictionary<string, int> { { "fish", 5 } }, "grain", 9));
+        }
+
+        [Fact]
+        public void A_reserve_worked_out_after_a_dry_run_reaches_past_what_it_already_sold()
+        {
+            var s = new Options { KeepFoodDays = 6, KeepEveryFoodKind = false };
+            var whole = new List<TradeRules.Ration> { Food("grain", 4, 10), Food("fish", 50, 20) };
+            Assert.Equal(4, Keep(whole, s, perDay: 1f)["grain"]);
+            Assert.Equal(2, Keep(whole, s, perDay: 1f)["fish"]);
+
+            var sold = new Dictionary<string, int> { { "grain", 4 } };
+            var left = new List<TradeRules.Ration>();
+            foreach (TradeRules.Ration one in whole)
+            {
+                TradeRules.Ration held = one;
+                held.Amount = TradeRules.StillCarried(sold, held.Good.Id, held.Amount);
+                if (held.Amount > 0) left.Add(held);
+            }
+            Dictionary<string, int> kept = Keep(left, s, perDay: 1f);
+            Assert.False(kept.ContainsKey("grain"));
+            Assert.Equal(6, kept["fish"]);
+        }
+
+        [Fact]
         public void The_reserve_is_days_of_supply_times_what_the_party_eats()
         {
             var s = new Options { KeepFoodDays = 5, KeepEveryFoodKind = false };
