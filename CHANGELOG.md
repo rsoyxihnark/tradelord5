@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.52.4
+
+- TradeLord now reads a language file as it stands, so one that points somewhere else can no longer leave the game waiting while TradeLord fetches it.
+
 ## 1.52.3
 
 - With Simulation mode (dry run) on, food the dry run has already sold no longer counts towards your food reserve for the rest of the visit, so it now sells the same animals to get you back up to speed that a real pass would.
