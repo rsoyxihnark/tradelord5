@@ -65,7 +65,23 @@ namespace TradeLord.Tests
 
             Assert.Equal(120, books.Purse(true));
             Assert.Equal(180, books.PaidOut(true));
+            Assert.Equal(120, books.TillDrawn(true));
+        }
+
+        [Fact]
+        public void WhatADryRunSpendsAtAMarketGoesBackIntoTheMerchantsTill()
+        {
+            Books books = Fresh();
+            books.NoteSale("wool", 300, 2f, 0);
             Assert.Equal(300, books.TillDrawn(true));
+
+            books.NotePurchase("iron", 180, 10f, 0);
+            Assert.Equal(120, books.TillDrawn(true));
+
+            books.NotePurchase("iron", 200, 10f, 0);
+            Assert.Equal(-80, books.TillDrawn(true));
+
+            Assert.Equal(0, books.TillDrawn(false));
         }
 
         [Fact]

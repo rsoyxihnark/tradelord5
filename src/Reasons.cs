@@ -31,12 +31,13 @@ namespace TradeLord
 
         internal Block Dominant()
         {
-            if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;
             Block top = Block.None;
             int best = 0;
             foreach (var kv in _counts)
-                if (!Structural(kv.Key) && (kv.Value > best || (kv.Value == best && kv.Key < top)))
+                if (!Structural(kv.Key) && kv.Key != Block.BudgetSpent &&
+                    (kv.Value > best || (kv.Value == best && kv.Key < top)))
                 { best = kv.Value; top = kv.Key; }
+            if (top == Block.None && Saw(Block.BudgetSpent)) return Block.BudgetSpent;
             return Guarded(top) ? _firstGuard : top;
         }
 
