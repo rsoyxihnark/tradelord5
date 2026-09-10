@@ -27,7 +27,7 @@ namespace TradeLord
 
         private static bool Guarded(Block reason) =>
             reason == Block.NeverList || reason == Block.Locked || reason == Block.Protected ||
-            reason == Block.QuestAnimal || reason == Block.FoodReserve;
+            reason == Block.QuestGoods || reason == Block.FoodReserve;
 
         internal Block Dominant()
         {
@@ -69,9 +69,10 @@ namespace TradeLord
                 case Block.BelowBestMarket:
                     return Tongue.Text("{=TL85}you are holding this cargo for a better market");
                 case Block.BudgetSpent:
+                    return Tongue.Text("{=TL43}your purse or spending caps are spent");
                 case Block.ItemCountCap:
                 case Block.ItemValueCap:
-                    return Tongue.Text("{=TL43}your purse or spending caps are spent");
+                    return Tongue.Text("{=TL391}you have bought as many of these as your buy cap per item allows");
                 case Block.CarryWeight:
                     return Tongue.Text("{=TL44}there is no room to carry more");
                 case Block.HerdFull:
@@ -96,8 +97,8 @@ namespace TradeLord
                     return Tongue.Text("{=TL382}it is locked in your inventory");
                 case Block.Protected:
                     return Tongue.Text("{=TL383}your unique and crafted protection holds it");
-                case Block.QuestAnimal:
-                    return Tongue.Text("{=TL384}a quest may be waiting on your animals");
+                case Block.QuestGoods:
+                    return Tongue.Text("{=TL384}a quest of yours may be waiting on it");
                 case Block.FoodReserve:
                     return Tongue.Text("{=TL386}your food reserve holds it back");
                 default:

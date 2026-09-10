@@ -9,7 +9,7 @@ namespace TradeLord
         MountOrHaulAnimal, NotTradable, FoodReserve, TradedHereAlready, NoStock,
         NoResaleMarket, BelowMargin, BelowBestMarket, MerchantTillEmpty, BudgetSpent,
         ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit, HeldEnough, Smeltable,
-        QuestAnimal, GrainSwitch
+        QuestGoods, GrainSwitch
     }
 
     internal struct Good
@@ -277,15 +277,12 @@ namespace TradeLord
             if (Listed(s.NeverSet, good)) { said.Why = Block.NeverList; return said; }
 
             if (game.Locked()) { said.Why = Block.Locked; return said; }
-            if (good.HasHorse)
+            int promised = DrawKeepBack(amount, facts.AwaitedHeld, out bool owed);
+            if (owed)
             {
-                int promised = DrawKeepBack(amount, facts.AwaitedHeld, out bool owed);
-                if (owed)
-                {
-                    said.DrewAwaited = promised;
-                    said.KeepCount = promised;
-                    if (amount <= said.KeepCount) { said.Why = Block.QuestAnimal; return said; }
-                }
+                said.DrewAwaited = promised;
+                said.KeepCount = promised;
+                if (amount <= said.KeepCount) { said.Why = Block.QuestGoods; return said; }
             }
             if (Listed(s.AlwaysSet, good)) { said.Allowed = true; return said; }
             if (!TradeMath.PolicyAllows(PolicyFor(good, s), buying: false))
@@ -294,7 +291,7 @@ namespace TradeLord
             bool livestock = good.HasHorse;
             if (livestock && (good.IsHaulAnimal || good.IsSpareMount))
             { said.Why = Block.MountOrHaulAnimal; return said; }
-            if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestAnimal; return said; }
+            if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestGoods; return said; }
             if (s.ProtectSpecial && (good.IsUnique || good.IsCraftedByPlayer))
             { said.Why = Block.Protected; return said; }
             if (!livestock && s.KeepSmeltableWeapons != Options.SmeltSellThem && game.Smeltable() &&
