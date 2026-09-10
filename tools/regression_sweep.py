@@ -797,7 +797,9 @@ def readme_defaults_match_the_shipped_ones():
               'hotkey **' + option_default('PanelKey').strip('"') + '**',
               'gold reserve of ' + option_default('GoldReserve') + ' denars',
               'back up to ' + said('KeepFoodDays') + ' days of supply',
-              said('KeepWageDays') + " days of your troops' wages",
+              ("the days of your troops' wages you ask it to keep"
+               if option_default('KeepWageDays') == '0'
+               else said('KeepWageDays') + " days of your troops' wages"),
               'from tier ' + option_default('MaxLootTier') + ' out of the box',
               'The ' + tooltip + ' best places to sell and the ' + tooltip + ' cheapest to buy',
               'The ' + shops + ' workshops in Calradia']
@@ -1837,7 +1839,7 @@ chk("1.5.1", "confidence measures the walk, not two price APIs disagreeing",
     "- q.OpeningBuyPrice * q.Units;" in S['Ledger.cs'])
 chk("1.5.1", "the no-trade message reports a blocking rule, not a structural exclusion",
     "private static bool Structural(Block reason)" in S['Reasons.cs'] and
-    "if (!Structural(kv.Key) && (kv.Value > best" in
+    "if (!Structural(kv.Key) && kv.Key != Block.BudgetSpent &&" in
     method_body(S['Reasons.cs'], "internal Block Dominant") and
     "Structural" not in method_body(S['Reasons.cs'], "internal string Summary"))
 chk("1.5.1", "no two settings in one MCM group claim the same position",
@@ -2586,11 +2588,12 @@ chk("1.6.24", "the purse rule and the route confidence need nothing from the gam
 chk("1.6.24", "the purse rule, route confidence and the item lists are proved by tests the build runs",
     the_route_rules_are_covered_by_tests_the_build_runs())
 
-def the_purse_outranks_the_reasons_that_are_merely_counted():
+def the_purse_is_the_last_reason_named():
     body = method_body(S['Reasons.cs'], "internal Block Dominant")
-    return ("if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;" in body
-            and ordered(body, "if (Saw(Block.BudgetSpent)) return Block.BudgetSpent;",
-                        "foreach (var kv in _counts)"))
+    return ("kv.Key != Block.BudgetSpent" in body
+            and "if (top == Block.None && Saw(Block.BudgetSpent)) return Block.BudgetSpent;" in body
+            and ordered(body, "foreach (var kv in _counts)",
+                        "if (top == Block.None && Saw(Block.BudgetSpent)) return Block.BudgetSpent;"))
 
 def an_empty_purse_is_reported_on_the_way_into_a_market():
     body = method_body(S['Trading.cs'], "private static bool WarnPurseBelowReserve")
@@ -2768,8 +2771,8 @@ chk("1.6.27", "a list edited into a state that still names nothing is said on sc
 chk("1.6.27", "the audit reads the game's goods only when a list has something to check",
     the_audit_reads_the_game_only_for_a_list_with_something_in_it())
 
-chk("1.6.29", "an empty purse outranks the reasons that are merely counted, so it is named rather than the shop",
-    the_purse_outranks_the_reasons_that_are_merely_counted())
+chk("1.6.29", "an empty purse is the last reason a stalled pass names, so any other rule that held a good back is named ahead of it",
+    the_purse_is_the_last_reason_named())
 chk("1.6.29", "a purse at or under the reserve is reported on the way into a market, past a quiet pass",
     an_empty_purse_is_reported_on_the_way_into_a_market())
 chk("1.6.29", "what is left to spend is worked out in one place for both the warning and the buying",
@@ -3513,7 +3516,7 @@ chk("1.19.0", "smeltable weapons are a three-way choice that ships on selling th
             "s.KeepSmeltableWeapons == Options.SmeltKeepAll || !game.PartsAllLearned()") and
     "_o.KeepSmeltableWeapons" in M)
 chk("1.17.0", "the purse holds the flat reserve and the days of wages together, worked out without the game",
-    option_default('KeepWageDays') == '3' and option_default('GoldReserve') == '300' and
+    option_default('KeepWageDays') == '0' and option_default('GoldReserve') == '300' and
     'public static int Reserve(int goldReserve, int keepWageDays, int totalWage)' in S['TradeMath.cs'] and
     'TaleWorlds' not in S['TradeMath.cs'] and
     'TradeMath.Reserve(Options.Current.GoldReserve, Options.Current.KeepWageDays, wage)' in

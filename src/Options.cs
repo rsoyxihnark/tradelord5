@@ -99,7 +99,7 @@ namespace TradeLord
         public float BestSellTownTolerance = 0.95f;
 
         public int GoldReserve = 300;
-        public int KeepWageDays = 3;
+        public int KeepWageDays = 0;
 
         public bool NeverBuyGrain = true;
         public int BuyCapPerItem = 32;
