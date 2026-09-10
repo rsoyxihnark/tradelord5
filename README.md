@@ -63,7 +63,7 @@
 - ✅ Unique and player-crafted gear, and quest items. Your haul animals are never sold for profit either, though it will buy them for you, and naming one on your always-sell list is the only way to move one by hand. An animal that carries nothing for you and is not livestock is no haul animal, so it is sold like any other cargo rather than sitting in your bags for good
 - ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it: sell them, which is what it does out of the box; keep every one, which holds anything built from smithing parts, forged or looted off a bandit alike; or **keep only the ones you have not learned**, which holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know. Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
 - ✅ Your food reserve (accounted for the men in your party)
-- ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus
+- ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus. It follows Restock and keep food (days of supply): set that to 0 and TradeLord keeps no food back at all
 - ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
 - ✅ Your gold reserve of 300 denars, three days of your troops' wages on top of it, and anything past your spending cap for the visit
 - ✅ Smithing materials such as iron ore, ingots, charcoal and hardwood, once you switch their policy to leave them alone, off by default
