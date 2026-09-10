@@ -25,7 +25,8 @@
 		<string id="TL381" text="it is on your never-sell or never-buy list"/>
 		<string id="TL382" text="it is locked in your inventory"/>
 		<string id="TL383" text="your unique and crafted protection holds it"/>
-		<string id="TL384" text="a quest may be waiting on your animals"/>
+		<string id="TL384" text="a quest of yours may be waiting on it"/>
+		<string id="TL391" text="you have bought as many of these as your buy cap per item allows"/>
 		<string id="TL386" text="your food reserve holds it back"/>
 		<string id="TL41" text="your category policy excludes it"/>
 		<string id="TL42" text="prices here miss your margin"/>
@@ -202,7 +203,7 @@
 		<string id="TL329" text="Skip selling here when this market pays clearly less than the best known market, so your cargo waits for the town that pays for it. It holds back what you bought and what you looted alike. OFF by default, in which case looted gear goes to the first market that can pay for it."/>
 		<string id="TL330" text="Sell here anyway if this market pays at least this fraction of the best known price. It does nothing while the setting above is OFF."/>
 		<string id="TL331" text="Goods TradeLord must never sell. Name each by item id, by the short name TradeLord.log prints such as grain or iron_ore, or by the name the game shows, comma separated. It leaves these alone when buying too."/>
-		<string id="TL332" text="Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named as above. The never-sell list, an inventory lock and an animal a quest is waiting on still hold. This is the only way to sell a haul animal for profit."/>
+		<string id="TL332" text="Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named as above. The never-sell list, an inventory lock and a good a quest is waiting on still hold. This is the only way to sell a haul animal for profit."/>
 		<string id="TL334" text="Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip."/>
 		<string id="TL335" text="Most units of one good TradeLord buys per visit. 0 = no limit on the count. Default 32."/>
 		<string id="TL336" text="Also cap spending per item per visit in denars."/>

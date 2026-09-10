@@ -79,7 +79,7 @@ namespace TradeLord.Tests
             SellVerdict all = Ask(Livestock(), amount: 3,
                 facts: new SellFacts { AwaitedHeld = 3 });
             Assert.False(all.Allowed);
-            Assert.Equal(Block.QuestAnimal, all.Why);
+            Assert.Equal(Block.QuestGoods, all.Why);
             Assert.Equal(3, all.KeepCount);
             Assert.Equal(3, all.DrewAwaited);
 
@@ -91,6 +91,31 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_trade_good_a_quest_is_waiting_on_is_kept_back_the_same_as_an_animal()
+        {
+            SellVerdict all = Ask(Cargo(), amount: 4,
+                facts: new SellFacts { AwaitedHeld = 4 });
+            Assert.False(all.Allowed);
+            Assert.Equal(Block.QuestGoods, all.Why);
+
+            SellVerdict some = Ask(Cargo(), amount: 6,
+                facts: new SellFacts { AwaitedHeld = 4 });
+            Assert.True(some.Allowed);
+            Assert.Equal(4, some.KeepCount);
+            Assert.Equal(4, some.DrewAwaited);
+        }
+
+        [Fact]
+        public void An_always_sell_entry_cannot_release_a_trade_good_a_quest_is_waiting_on()
+        {
+            var always = new Options { AlwaysSellItems = "grain" };
+            SellVerdict said = Ask(Cargo(), amount: 2, s: always,
+                facts: new SellFacts { AwaitedHeld = 2 });
+            Assert.False(said.Allowed);
+            Assert.Equal(Block.QuestGoods, said.Why);
+        }
+
+        [Fact]
         public void The_quest_hold_is_asked_before_the_always_sell_list_and_the_food_reserve_after_it()
         {
             var always = new Options { AlwaysSellItems = "cow" };
@@ -98,7 +123,7 @@ namespace TradeLord.Tests
             SellVerdict quest = Ask(Livestock(), amount: 2, s: always,
                 facts: new SellFacts { AwaitedHeld = 2 });
             Assert.False(quest.Allowed);
-            Assert.Equal(Block.QuestAnimal, quest.Why);
+            Assert.Equal(Block.QuestGoods, quest.Why);
 
             SellVerdict food = Ask(Livestock(), amount: 2, s: always,
                 facts: new SellFacts { FoodHeld = 2 });
@@ -111,7 +136,7 @@ namespace TradeLord.Tests
         {
             SellVerdict said = Ask(Livestock(), questsReadable: false);
             Assert.False(said.Allowed);
-            Assert.Equal(Block.QuestAnimal, said.Why);
+            Assert.Equal(Block.QuestGoods, said.Why);
         }
 
         [Fact]
@@ -254,7 +279,7 @@ namespace TradeLord.Tests
             SellVerdict whole = Ask(Livestock(), amount: 8,
                 facts: new SellFacts { AwaitedHeld = 8, FoodHeld = 2 });
             Assert.False(whole.Allowed);
-            Assert.Equal(Block.QuestAnimal, whole.Why);
+            Assert.Equal(Block.QuestGoods, whole.Why);
         }
 
         [Fact]

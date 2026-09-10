@@ -522,7 +522,6 @@ namespace TradeLord
 
         private static bool WarnPurseBelowReserve()
         {
-            if (TradedThisVisit()) return false;
             if (Spendable(Visit, Simulating) > 0) return false;
             TextObject msg = Tongue.Text("{=TL92}Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings.");
             msg.SetTextVariable("GOLD", Hero.MainHero.Gold);
@@ -1533,6 +1532,26 @@ namespace TradeLord
 
         private static int HerdShedRank(in Good good) => TradeRules.HerdShedRank(good);
 
+        private static void SayWhatTheHerdWillNotGiveUp(ItemRoster mine, int shed, Settlement settlement)
+        {
+            var kinds = new List<string>();
+            for (int i = 0; i < mine.Count; i++)
+            {
+                ItemRosterElement el = mine.GetElementCopyAtIndex(i);
+                ItemObject it = el.EquipmentElement.Item;
+                if (el.Amount <= 0 || it == null || !it.HasHorseComponent) continue;
+                if (HerdShedRank(it) >= 0) continue;
+                kinds.Add(it.StringId + " x" + el.Amount);
+            }
+            Log.Repeatable("herd-stuck " + settlement.StringId, shed + "/" + kinds.Count,
+                           "herd relief at " + settlement.Name + " has " + shed +
+                           " animal(s) to shed and nothing it may sell" +
+                           (kinds.Count == 0
+                               ? ", because every animal you drive is held back by your own rules"
+                               : "; these are driven but TradeLord counts them as ordinary cargo, so it never sells them: " +
+                                 string.Join(", ", kinds.ToArray())));
+        }
+
         public static void ExecuteHerdRelief(Settlement settlement, bool quiet = false)
         {
             if (!Options.Current.SellSpareMounts) return;
@@ -1565,7 +1584,7 @@ namespace TradeLord
                 if (price <= 0) continue;
                 stable.Add((el, rank, price));
             }
-            if (stable.Count == 0) return;
+            if (stable.Count == 0) { SayWhatTheHerdWillNotGiveUp(mine, shed, settlement); return; }
             stable.Sort((x, y) => x.rank != y.rank ? x.rank.CompareTo(y.rank) : x.price.CompareTo(y.price));
 
             int sold = 0, profit = 0, simGold = 0, simTill = pass.Till;
@@ -1947,6 +1966,7 @@ namespace TradeLord
             {
                 Settlement s = town.Settlement;
                 if (s == party.CurrentSettlement) continue;
+                if (StillTheSameArrival(s)) continue;
                 if (!IsMarket(s)) continue;
                 if (LedgerBehavior.UnderAttack(s)) continue;
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;

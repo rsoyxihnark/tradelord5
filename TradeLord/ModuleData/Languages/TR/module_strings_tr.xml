@@ -25,7 +25,8 @@
 		<string id="TL381" text="asla satma ya da asla alma listenizde"/>
 		<string id="TL382" text="envanterinizde kilitli"/>
 		<string id="TL383" text="eşsiz ve dövülmüş eşya korumanız onu tutuyor"/>
-		<string id="TL384" text="bir görev hayvanlarınızı bekliyor olabilir"/>
+		<string id="TL384" text="bir göreviniz bunu bekliyor olabilir"/>
+		<string id="TL391" text="bu maldan eşya başına alım sınırınızın izin verdiği kadar aldınız"/>
 		<string id="TL386" text="yiyecek rezerviniz onu tutuyor"/>
 		<string id="TL41" text="kategori kuralınız bunu dışarıda bırakıyor"/>
 		<string id="TL42" text="buradaki fiyatlar kâr payınızı tutturmuyor"/>
@@ -198,7 +199,7 @@
 		<string id="TL329" text="Bu pazar bilinen en iyi pazardan belirgin biçimde az ödüyorsa burada satmayı atlar, böylece kargonuz karşılığını veren şehri bekler. Aldığınızı da yağmaladığınızı da aynı şekilde elde tutar. Öntanımlı olarak KAPALI; o durumda yağmalanmış teçhizat karşılığını ödeyebilen ilk pazara gider."/>
 		<string id="TL330" text="Bu pazar bilinen en iyi fiyatın en az bu oranını ödüyorsa yine de burada sat. Yukarıdaki ayar KAPALIYKEN hiçbir şey yapmaz."/>
 		<string id="TL331" text="TradeLord'un asla satmaması gereken mallar. Her birini eşya kimliğiyle, TradeLord.log'un yazdığı grain ya da iron_ore gibi kısa adla, ya da oyunun gösterdiği adla, virgülle ayırarak yazın. Alırken de bunlara dokunmaz."/>
-		<string id="TL332" text="TradeLord'un kategori kurallarını, benzersiz ve el yapımı korumasını ve yiyecek rezervini aşarak her zaman sattığı mallar. Yukarıdaki gibi adlandırılır. Asla satma listesi, envanter kilidi ve bir görevin beklediği bir hayvan yine de geçerlidir. Bir yük hayvanını kârla satmanın tek yolu budur."/>
+		<string id="TL332" text="TradeLord'un kategori kurallarını, benzersiz ve el yapımı korumasını ve yiyecek rezervini aşarak her zaman sattığı mallar. Yukarıdaki gibi adlandırılır. Asla satma listesi, envanter kilidi ve bir görevin beklediği bir mal yine de geçerlidir. Bir yük hayvanını kârla satmanın tek yolu budur."/>
 		<string id="TL334" text="Bu altının altına asla harcama. Varsayılan 300; bu, iki düşman karşılaşmasından pazarlıkla çıkmaya ve alışveriş sonrası bir maaş ödemesini karşılamaya yeter."/>
 		<string id="TL335" text="TradeLord'un bir ziyarette bir maldan aldığı en fazla birim. 0 = sayıda sınır yok. Varsayılan 32."/>
 		<string id="TL336" text="Ziyaret başına mal başına harcamayı dinar olarak da sınırla."/>

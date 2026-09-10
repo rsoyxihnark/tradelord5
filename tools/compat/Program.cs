@@ -82,6 +82,14 @@ namespace TradeLord.Compat
             (Issues + "HeadmanVillageNeedsDraughtAnimalsIssueBehavior+HeadmanVillageNeedsDraughtAnimalsIssueQuest", "_requestedAnimalAmount"),
             (Issues + "LordNeedsHorsesIssueBehavior+LordNeedsHorsesIssueQuest", "_mountObjectToBeDelivered"),
             (Issues + "LordNeedsHorsesIssueBehavior+LordNeedsHorsesIssueQuest", "_numMountsToBeDelivered"),
+            (Issues + "ArtisanOverpricedGoodsIssueBehavior+ArtisanOverpricedGoodsIssueQuest", "_requestedTradeGood"),
+            (Issues + "ArtisanOverpricedGoodsIssueBehavior+ArtisanOverpricedGoodsIssueQuest", "_requestedTradeGoodAmount"),
+            (Issues + "ArtisanCantSellProductsAtAFairPriceIssueBehavior+ArtisanCantSellProductsAtAFairPriceIssueQuest", "_rawMaterialsToBeDelivered"),
+            (Issues + "ArtisanCantSellProductsAtAFairPriceIssueBehavior+ArtisanCantSellProductsAtAFairPriceIssueQuest", "_amountOfRawGoodsToBeDelivered"),
+            (Issues + "GangLeaderNeedsToOffloadStolenGoodsIssueBehavior+GangLeaderNeedsToOffloadStolenGoodsIssueQuest", "_stolenTradeGood"),
+            (Issues + "GangLeaderNeedsToOffloadStolenGoodsIssueBehavior+GangLeaderNeedsToOffloadStolenGoodsIssueQuest", "_stolenTradeGoodAmount"),
+            (Issues + "LandLordTheArtOfTheTradeIssueBehavior+LandLordTheArtOfTheTradeIssueQuest", "_selectedItemObject"),
+            (Issues + "LandLordTheArtOfTheTradeIssueBehavior+LandLordTheArtOfTheTradeIssueQuest", "_selectedItemObjectCount"),
             ("TaleWorlds.CampaignSystem.Conversation.ConversationManager", "_sentences"),
         };
 

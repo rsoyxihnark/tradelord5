@@ -18,6 +18,14 @@ namespace TradeLord
                 "_requestedAnimal", "_requestedAnimalAmount"),
             (typeof(LordNeedsHorsesIssueBehavior.LordNeedsHorsesIssueQuest),
                 "_mountObjectToBeDelivered", "_numMountsToBeDelivered"),
+            (typeof(ArtisanOverpricedGoodsIssueBehavior.ArtisanOverpricedGoodsIssueQuest),
+                "_requestedTradeGood", "_requestedTradeGoodAmount"),
+            (typeof(ArtisanCantSellProductsAtAFairPriceIssueBehavior.ArtisanCantSellProductsAtAFairPriceIssueQuest),
+                "_rawMaterialsToBeDelivered", "_amountOfRawGoodsToBeDelivered"),
+            (typeof(GangLeaderNeedsToOffloadStolenGoodsIssueBehavior.GangLeaderNeedsToOffloadStolenGoodsIssueQuest),
+                "_stolenTradeGood", "_stolenTradeGoodAmount"),
+            (typeof(LandLordTheArtOfTheTradeIssueBehavior.LandLordTheArtOfTheTradeIssueQuest),
+                "_selectedItemObject", "_selectedItemObjectCount"),
         };
 
         private static (Type quest, FieldInfo wanted, FieldInfo many)[] _read;
@@ -41,7 +49,7 @@ namespace TradeLord
                 if (wanted == null || many == null)
                 {
                     _unreadable = true;
-                    Log.Write("quest animals: " + Named[i].quest.Name + " does not say which animal it wants " +
+                    Log.Write("quest goods: " + Named[i].quest.Name + " does not say which good it wants " +
                               "or how many on this game version - no animal is sold at all, so a " +
                               "quest of yours cannot lose one");
                     return false;
