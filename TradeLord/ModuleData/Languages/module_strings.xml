@@ -102,7 +102,7 @@
 		<string id="TL259" text="Cheapest market you know"/>
 		<string id="TL260" text="Ledger entry in town menu"/>
 		<string id="TL261" text="Keep some of every kind of food" />
-		<string id="TL361" text="Hold back a few of every kind of food you carry, so the party keeps its food variety morale bonus. What it holds back counts towards the days of supply above. Livestock is left out, since a herd is slaughtered for meat. OFF by default." />
+		<string id="TL361" text="Hold back a few of every kind of food you carry, so the party keeps its food variety morale bonus. It needs Restock and keep food (days of supply) above turned on to do anything, and what it holds back counts towards those days. Livestock is left out, since a herd is slaughtered for meat. OFF by default." />
 		<string id="TL262" text="How many of each kind of food to keep" />
 		<string id="TL362" text="How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Restock and keep food (days of supply) above is the one that works in days. Two is usually enough." />
 		<string id="TL264" text="Smeltable weapons" />
