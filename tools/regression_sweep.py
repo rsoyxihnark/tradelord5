@@ -5945,7 +5945,7 @@ chk("1.53.0", "a buying pass with nothing left to spend writes your purse, what 
 
 def every_quest_that_waits_on_a_good_you_carry_is_read():
     named = between(S['Encounters.cs'], "private static readonly (Type quest, string wanted, string many)[] Named",
-                    "private static (Type quest, FieldInfo wanted, FieldInfo many)[] _read;")
+                    "private static readonly (Type quest, string goodId, string many)[] NamedGoods")
     wanted = (("HeadmanNeedsToDeliverAHerdIssueQuest", "_herdTypeToDeliver", "_animalCountToDeliver"),
               ("HeadmanVillageNeedsDraughtAnimalsIssueQuest", "_requestedAnimal", "_requestedAnimalAmount"),
               ("LordNeedsHorsesIssueQuest", "_mountObjectToBeDelivered", "_numMountsToBeDelivered"),
@@ -5954,9 +5954,17 @@ def every_quest_that_waits_on_a_good_you_carry_is_read():
                "_amountOfRawGoodsToBeDelivered"),
               ("GangLeaderNeedsToOffloadStolenGoodsIssueQuest", "_stolenTradeGood", "_stolenTradeGoodAmount"),
               ("LandLordTheArtOfTheTradeIssueQuest", "_selectedItemObject", "_selectedItemObjectCount"))
+    goods = between(S['Encounters.cs'], "private static readonly (Type quest, string goodId, string many)[] NamedGoods",
+                    "private static (Type quest, FieldInfo wanted, FieldInfo many)[] _read;")
+    byGood = (("ArmyNeedsSuppliesIssueQuest", '"grain"', "_requestedGrainAmount"),
+              ("ArmyNeedsSuppliesIssueQuest", '"wine"', "_requestedWineAmount"),
+              ("HeadmanNeedsGrainIssueQuest", '"grain"', "_neededGrainAmount"))
     return (all(quest in named and item in named and count in named for quest, item, count in wanted)
             and named.count("typeof(") == len(wanted)
-            and all(COMPAT.count('"' + field + '"') == 1 for _, item, count in wanted for field in (item, count)))
+            and all(quest in goods and item in goods and count in goods for quest, item, count in byGood)
+            and goods.count("typeof(") == len(byGood)
+            and all(COMPAT.count('"' + field + '"') == 1 for _, item, count in wanted for field in (item, count))
+            and all(COMPAT.count('"' + count + '"') == 1 for _, _item, count in byGood))
 
 
 def a_quest_holds_back_any_good_it_waits_on_not_only_an_animal():
@@ -6001,7 +6009,7 @@ def a_herd_it_cannot_thin_says_what_it_will_not_give_up():
             and "Log.Repeatable(" in said)
 
 
-chk("1.55.0", "every quest that waits on a good you carry is read, not only the three that want animals, and the game version fit tool holds every field they are read from",
+chk("1.55.0", "every quest that waits on a good you carry is read, the ones that name the good and the ones that only say how much of it, and the game version fit tool holds every field they are read from",
     every_quest_that_waits_on_a_good_you_carry_is_read())
 chk("1.55.0", "a good a quest is waiting on is held back whatever it is, past the always-sell list, not only where it is an animal",
     a_quest_holds_back_any_good_it_waits_on_not_only_an_animal())
