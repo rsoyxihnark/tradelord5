@@ -630,7 +630,7 @@ namespace TradeLord.Mcm
         public string NeverSellItems { get => _o.NeverSellItems; set { _o.NeverSellItems = value; Options.Bump(); } }
 
         [SettingPropertyText("{=TL232}Always sell (item ids or names, comma separated)", Order = 10, RequireRestart = false,
-            HintText = "{=TL332}Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named as above. The never-sell list, an inventory lock and an animal a quest is waiting on still hold. This is the only way to sell a haul animal for profit.")]
+            HintText = "{=TL332}Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named as above. The never-sell list, an inventory lock and a good a quest is waiting on still hold. This is the only way to sell a haul animal for profit.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public string AlwaysSellItems { get => _o.AlwaysSellItems; set { _o.AlwaysSellItems = value; Options.Bump(); } }
 
