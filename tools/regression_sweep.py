@@ -1696,14 +1696,16 @@ chk("1.21.0", "the sell-side floor is the hold-for-the-best-market switch and no
     "holdFloor = bestMarketFloor;" in S['Trading.cs'] and
     "TradePolicy.Priced(item)" not in method_body(S['Trading.cs'], "private static void SellPass"))
 chk("1.5.5", "a stack pays its purchased basis only for the units that were purchased, and only those units drain the record",
-    "basis.PaidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;" in
+    "int paid = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;" in
+        method_body(S['Trading.cs'], "internal static Basis For") and
+    "basis.PaidLeft = Math.Max(0, paid - books.PaidDrawn(sim, item.StringId));" in
         method_body(S['Trading.cs'], "internal static Basis For") and
     "int worth = FromMarket || PaidLeft > 0 ? Paid : 0;" in
         method_body(S['Trading.cs'], "internal int Unit(ItemObject item)") and
     ordered(method_body(S['Trading.cs'], "internal bool SoldOne()"),
             "if (PaidLeft <= 0) return false;", "PaidLeft--;", "return true;") and
     S['Trading.cs'].count("if (basis.SoldOne()) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);") == 1 and
-    "if (basis.SoldOne() && !pass.Sim) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);" in
+    "else LedgerBehavior.Instance?.RecordSale(item.StringId, 1);" in
         method_body(S['Trading.cs'], "public static void ExecuteHerdRelief") and
     S['Trading.cs'].count("PaidLeft--;") == 1 and
     method_body(S['Trading.cs'], "private static void SellPass").count("RecordSale") == 1)
@@ -4486,7 +4488,7 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
                 "internal int HaulsShed(bool sim) => sim ? _hauls : 0;",
                 "internal int HerdTaken(bool sim) => sim ? _herd : 0;"))
             and all(dry in ledger for dry in ("_drySold", "_dryBought"))
-            and len(fields) == 15
+            and len(fields) == 16
             and "ForgetTheDryRun();" in forget
             and cleared(forget) == live
             and cleared(dry) == fields - live
@@ -4720,7 +4722,7 @@ def a_quest_animal_held_back_is_named_as_the_quest_not_the_food_reserve():
 
 def getting_back_up_to_speed_credits_what_it_makes():
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
-    return ("Basis basis = Basis.For(item);" in relief
+    return ("Basis basis = Basis.For(item, pass.Books, pass.Sim);" in relief
             and "int worth = basis.Unit(item);" in relief
             and "profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);" in relief
             and "pass.Moved(profit);" in relief
@@ -4943,12 +4945,14 @@ def what_a_good_cost_you_is_carried_by_one_value():
                 "internal int PaidLeft;", "internal int UnpaidWorth;"))
             and ordered(made, "basis.Paid = TradePolicy.CostBasis(item);",
                         "basis.FromMarket = Options.Current.CostBasisMode == 2;",
-                        "basis.PaidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;",
+                        "int paid = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;",
+                        "basis.PaidLeft = Math.Max(0, paid - books.PaidDrawn(sim, item.StringId));",
                         "basis.UnpaidWorth = -1;")
             and t.count("TradePolicy.CostBasis(item)") == 1
             and t.count("LedgerBehavior.Instance?.PurchasedUnits(item)") == 1
-            and t.count("Basis basis = Basis.For(item);") == 2
-            and all("Basis basis = Basis.For(item);" in method_body(t, one) for one in sites)
+            and t.count("Basis basis = Basis.For(item, pass.Books, pass.Sim);") == 2
+            and all("Basis basis = Basis.For(item, pass.Books, pass.Sim);" in method_body(t, one)
+                    for one in sites)
             and t.count("int worth = basis.Unit(item);") == 2
             and t.count("basis.SoldOne()") == 3
             and t.count("basis.SkipTheUnitsYouPaidFor(ref remaining)") == 1
@@ -5136,7 +5140,7 @@ def a_market_visit_prices_each_town_once_for_everything_on_the_shelf():
                         "TradePolicy.UnpaidWorth(it);")
             and ordered(sell, "goods.Add(held.EquipmentElement.Item);",
                         "LedgerBehavior.Instance?.PrimeMarketsFor(goods);",
-                        "Basis basis = Basis.For(item);")
+                        "Basis basis = Basis.For(item, pass.Books, pass.Sim);")
             and t.count("PrimeMarketsFor(goods);") == 3
             and l.count("PrimeLiveRankings(") == 3)
 
@@ -5795,6 +5799,32 @@ def the_variety_floor_answers_to_the_days_of_supply():
 
 chk("1.52.1", "no days of supply keeps no food back at all, and the hint under the variety floor says it answers to that setting",
     the_variety_floor_answers_to_the_days_of_supply())
+
+
+def a_dry_run_draws_the_price_you_paid_down_the_way_a_real_pass_does():
+    t = S['Trading.cs']
+    basis = between(t, "private struct Basis", "private static Block WhatStopsBuying")
+    sell = pass_body("private static void SellPass")
+    herd = method_body(t, "public static void ExecuteHerdRelief")
+    return ("internal static Basis For(ItemObject item, Books books, bool sim)" in basis
+            and "int paid = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;" in basis
+            and "basis.PaidLeft = Math.Max(0, paid - books.PaidDrawn(sim, item.StringId));" in basis
+            and t.count("Basis.For(item, pass.Books, pass.Sim);") == 2
+            and t.count("Basis.For(item)") == 0
+            and "if (basis.SoldOne()) pass.Books.NotePaidDrawn(item.StringId);" in sell
+            and "if (basis.SoldOne()) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);" in sell
+            and ordered(herd, "if (basis.SoldOne())",
+                        "if (pass.Sim) pass.Books.NotePaidDrawn(item.StringId);",
+                        "else LedgerBehavior.Instance?.RecordSale(item.StringId, 1);")
+            and t.count("NotePaidDrawn(") == 2
+            and "internal int PaidDrawn(bool sim, string id) =>" in S['Books.cs']
+            and "_dryDrawn.Clear();" in method_body(S['Books.cs'], "internal void ForgetTheDryRun")
+            and "OneStackAfterAnotherNeverSpendsThePriceYouPaidTwice" in BOOKTESTS
+            and "ARealRunReadsNoPriceYouPaidBackFromTheDryRunBooks" in BOOKTESTS)
+
+
+chk("1.52.2", "a dry run draws what you paid for a good down across every stack of it, the way a real pass does",
+    a_dry_run_draws_the_price_you_paid_down_the_way_a_real_pass_does())
 
 
 def the_per_item_caps_bind_every_pass_that_buys():

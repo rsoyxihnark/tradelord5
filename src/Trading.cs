@@ -1193,7 +1193,7 @@ namespace TradeLord
                     int remaining = pass.YoursToSell(el) - keep;
                     if (remaining <= 0) { tally.Note(Block.TradedHereAlready); continue; }
 
-                    Basis basis = Basis.For(item);
+                    Basis basis = Basis.For(item, pass.Books, pass.Sim);
 
                     int bestMarketFloor = 0;
                     bool floorKnown = false;
@@ -1237,7 +1237,7 @@ namespace TradeLord
                                 pass.Books.NoteShed(herdRank == RankHaulAnimal, herdRank != RankLivestock);
                             soldItems++;
                             remaining--;
-                            basis.SoldOne();
+                            if (basis.SoldOne()) pass.Books.NotePaidDrawn(item.StringId);
                             pass.Tally(item, 1, price);
                             continue;
                         }
@@ -1289,12 +1289,13 @@ namespace TradeLord
             internal int PaidLeft;
             internal int UnpaidWorth;
 
-            internal static Basis For(ItemObject item)
+            internal static Basis For(ItemObject item, Books books, bool sim)
             {
                 Basis basis;
                 basis.Paid = TradePolicy.CostBasis(item);
                 basis.FromMarket = Options.Current.CostBasisMode == 2;
-                basis.PaidLeft = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;
+                int paid = LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0;
+                basis.PaidLeft = Math.Max(0, paid - books.PaidDrawn(sim, item.StringId));
                 basis.UnpaidWorth = -1;
                 return basis;
             }
@@ -1570,7 +1571,7 @@ namespace TradeLord
                         remaining -= spare;
                     }
 
-                    Basis basis = Basis.For(item);
+                    Basis basis = Basis.For(item, pass.Books, pass.Sim);
 
                     while (remaining > 0 && shed > 0)
                     {
@@ -1598,7 +1599,11 @@ namespace TradeLord
                             if (price == 0) break;
                             pass.Books.NoteSold(item.StringId);
                         }
-                        if (basis.SoldOne() && !pass.Sim) LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
+                        if (basis.SoldOne())
+                        {
+                            if (pass.Sim) pass.Books.NotePaidDrawn(item.StringId);
+                            else LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
+                        }
                         profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);
                         sold++;
                         remaining--;
