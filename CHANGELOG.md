@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.52.3
+
+- With Simulation mode (dry run) on, food the dry run has already sold no longer counts towards your food reserve for the rest of the visit, so it now sells the same animals to get you back up to speed that a real pass would.
+
 ## 1.52.2
 
 - With Simulation mode (dry run) on, the profit reported for a good that sits in more than one stack in your bags no longer counts what you paid against more units than you actually bought.

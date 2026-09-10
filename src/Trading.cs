@@ -1174,7 +1174,7 @@ namespace TradeLord
                 goods.Add(held.EquipmentElement.Item);
             }
             LedgerBehavior.Instance?.PrimeMarketsFor(goods);
-            var keepBack = TradePolicy.KeptBack(roster, out var awaited);
+            var keepBack = TradePolicy.KeptBack(roster, pass.Books, pass.Sim, out var awaited);
 
             pass.CountFrom();
             int soldItems = 0, profit = 0, simGold = 0, simTill = pass.Till;
@@ -1531,7 +1531,7 @@ namespace TradeLord
 
             ItemRoster mine = pass.Party.ItemRoster;
             Dictionary<ItemObject, int> heldBack =
-                TradePolicy.KeptBack(mine, out Dictionary<ItemObject, int> promised);
+                TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);
             if (promised == null) return;
 
             int mountsLeft = SpareMountRoom(pass.Party);
@@ -1917,7 +1917,7 @@ namespace TradeLord
             MobileParty party = MobileParty.MainParty;
             if (party == null) return null;
             ISet<string> locked = TradePolicy.LockedKeys();
-            var keepBack = TradePolicy.KeptBack(party.ItemRoster, out var awaited);
+            var keepBack = TradePolicy.KeptBack(party.ItemRoster, Visit, sim: false, out var awaited);
             var cargo = new List<(EquipmentElement item, int amount)>();
             for (int i = 0; i < party.ItemRoster.Count; i++)
             {
