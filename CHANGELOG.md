@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.54.0
+
+- Keep gold for days of wages now ships at 0, so out of the box TradeLord holds back only your gold reserve and a large army no longer stops it buying.
+- Nothing bought here now names your purse only when nothing else held a good back, so the reason you are shown is the one you can act on.
+- With Simulation mode (dry run) on, what a dry run spends at a market goes back into that market's gold, so a sale later in the visit is measured against the till the market would really have.
+- The feature list now says TradeLord holds back only the days of your troops' wages you ask it to keep.
+
 ## 1.53.0
 
 - When TradeLord buys nothing because your purse is under what it holds back, TradeLord.log now says what your purse is, how much is held back, and how much of that is your gold reserve against days of your wage bill.
