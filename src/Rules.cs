@@ -102,6 +102,15 @@ namespace TradeLord
         internal static bool IsStorableFood(in Good good) =>
             good.Id != null && good.IsFood && !good.HasHorse;
 
+        internal static int StillCarried(IDictionary<string, int> soldAlready, string id, int amount)
+        {
+            if (soldAlready == null || !soldAlready.TryGetValue(id, out int gone) || gone <= 0)
+                return amount;
+            int taken = Math.Min(gone, amount);
+            soldAlready[id] = gone - taken;
+            return amount - taken;
+        }
+
         private static float CostPerFood(in Ration held) =>
             (float)held.Good.Value / FoodValue(held.Good);
 
