@@ -130,6 +130,7 @@ namespace TradeLord
         {
             if (id == null) return;
             _spent += price;
+            _drawn -= price;
             _weight += weight;
             _food += foodValue;
             _held.TryGetValue(id, out int units);

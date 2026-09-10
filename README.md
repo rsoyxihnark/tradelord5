@@ -65,7 +65,7 @@
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus. It follows Restock and keep food (days of supply): set that to 0 and TradeLord keeps no food back at all
 - ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
-- ✅ Your gold reserve of 300 denars, three days of your troops' wages on top of it, and anything past your spending cap for the visit
+- ✅ Your gold reserve of 300 denars, the days of your troops' wages you ask it to keep on top of that, and anything past your spending cap for the visit
 - ✅ Smithing materials such as iron ore, ingots, charcoal and hardwood, once you switch their policy to leave them alone, off by default
 - ✅ Any good you put on the never-sell or never-buy list, named by its item id or by the name on screen
 - ✅ More livestock than your party can drive, so a purchase never slows you down
