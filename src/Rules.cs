@@ -109,7 +109,7 @@ namespace TradeLord
         {
             var keep = new Dictionary<string, int>(StringComparer.Ordinal);
             int variety = s.KeepEveryFoodKind ? s.KeepPerFoodKind : 0;
-            if ((s.KeepFoodDays <= 0 && variety <= 0) || carried == null) return keep;
+            if (s.KeepFoodDays <= 0 || carried == null) return keep;
             if (perDay < 1f) perDay = 1f;
             int reserve = (int)Math.Ceiling(perDay * s.KeepFoodDays);
 

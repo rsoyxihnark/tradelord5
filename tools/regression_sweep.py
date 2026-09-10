@@ -3403,7 +3403,7 @@ def the_panel_relabels_every_line_it_speaks():
 def the_food_floor_keeps_one_of_every_kind_without_stacking_on_the_days():
     body = food_rule()
     return ("int variety = s.KeepEveryFoodKind ? s.KeepPerFoodKind : 0;" in body
-            and "if ((s.KeepFoodDays <= 0 && variety <= 0) || carried == null) return keep;" in body
+            and "if (s.KeepFoodDays <= 0 || carried == null) return keep;" in body
             and "if (held.Good.IsLivestock) continue;" in body
             and "int floor = Math.Min(held.Amount, variety);" in body
             and "reserve -= (floor - had) * FoodValue(held.Good);" in body
@@ -5599,7 +5599,7 @@ chk("1.47.4", "the game is asked, every version, whether one good still sits in 
 def a_hint_that_sends_you_to_a_setting_names_it_the_way_the_screen_does():
     for path in [ENGLISH] + list(TRANSLATIONS.values()):
         said = spoken(path)
-        for cites, named in (('TL362', 'TL221'),):
+        for cites, named in (('TL362', 'TL221'), ('TL361', 'TL221')):
             if cites not in said or named not in said:
                 return False
             if said[named] not in said[cites]:
@@ -5777,6 +5777,24 @@ def the_map_marker_keeps_to_the_same_trade_pool_as_the_scans():
 
 chk("1.51.1", "the town marked on your map is one TradeLord would trade in, so a market kept out of the Trade Pool is kept off the marker too",
     the_map_marker_keeps_to_the_same_trade_pool_as_the_scans())
+
+
+def the_variety_floor_answers_to_the_days_of_supply():
+    body = food_rule()
+    en = spoken(ENGLISH)
+    return ("if (s.KeepFoodDays <= 0 || carried == null) return keep;" in body
+            and "variety <= 0" not in body
+            and ordered(body, "if (s.KeepFoodDays <= 0 || carried == null) return keep;",
+                        "if (variety > 0)")
+            and "Nothing_is_held_back_at_no_days_of_supply_however_the_variety_floor_is_set" in FOODTESTS
+            and 'no days of supply, yet " + keep.Count +' in FOODTESTS
+            and "It needs Restock and keep food (days of supply) above turned on to do anything"
+                in en.get('TL361', '')
+            and "0 turns both off." in en.get('TL321', ''))
+
+
+chk("1.52.1", "no days of supply keeps no food back at all, and the hint under the variety floor says it answers to that setting",
+    the_variety_floor_answers_to_the_days_of_supply())
 
 
 def the_per_item_caps_bind_every_pass_that_buys():
