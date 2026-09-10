@@ -90,6 +90,9 @@ namespace TradeLord.Compat
             (Issues + "GangLeaderNeedsToOffloadStolenGoodsIssueBehavior+GangLeaderNeedsToOffloadStolenGoodsIssueQuest", "_stolenTradeGoodAmount"),
             (Issues + "LandLordTheArtOfTheTradeIssueBehavior+LandLordTheArtOfTheTradeIssueQuest", "_selectedItemObject"),
             (Issues + "LandLordTheArtOfTheTradeIssueBehavior+LandLordTheArtOfTheTradeIssueQuest", "_selectedItemObjectCount"),
+            (Issues + "ArmyNeedsSuppliesIssueBehavior+ArmyNeedsSuppliesIssueQuest", "_requestedGrainAmount"),
+            (Issues + "ArmyNeedsSuppliesIssueBehavior+ArmyNeedsSuppliesIssueQuest", "_requestedWineAmount"),
+            (Issues + "HeadmanNeedsGrainIssueBehavior+HeadmanNeedsGrainIssueQuest", "_neededGrainAmount"),
             ("TaleWorlds.CampaignSystem.Conversation.ConversationManager", "_sentences"),
         };
 
