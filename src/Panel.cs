@@ -266,12 +266,22 @@ namespace TradeLord
                         : Tongue.Text("{=TL72} | Score = profit per day").ToString())
                   + (Options.Current.ConservativeRouteProjection
                         ? Tongue.Text("{=TL73} | resale safety factor applied").ToString() : ""))
-                + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " +
-                   Line("{=TL377}Your purse is at {GOLD} denars and your gold reserve holds {RESERVE} of it back, so there is nothing here you could buy. Sell some cargo, or lower the reserve in its settings.",
-                        "GOLD", (hero?.Gold ?? 0).ToString("N0"),
-                        "RESERVE", TradeActionBehavior.GoldHeldBack().ToString("N0")));
+                + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero));
 
             RefreshWorkshops();
+        }
+
+        private static string NothingHereYouCouldBuy(Hero hero)
+        {
+            int held = TradeActionBehavior.GoldHeldBack(), flat = Options.Current.GoldReserve;
+            TextObject line = Tongue.Text(held > flat
+                ? "{=TL393}Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages, so there is nothing here you could buy. Sell some cargo, or lower either of those in its settings."
+                : "{=TL377}Your purse is at {GOLD} denars and your gold reserve holds {RESERVE} of it back, so there is nothing here you could buy. Sell some cargo, or lower Gold reserve in its settings.");
+            line.SetTextVariable("GOLD", (hero?.Gold ?? 0).ToString("N0"));
+            line.SetTextVariable("RESERVE", held.ToString("N0"));
+            line.SetTextVariable("FLAT", flat.ToString("N0"));
+            line.SetTextVariable("WAGES", (held - flat).ToString("N0"));
+            return line.ToString();
         }
 
         private void RefreshWorkshops()

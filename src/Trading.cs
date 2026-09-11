@@ -522,10 +522,15 @@ namespace TradeLord
 
         private static bool WarnPurseBelowReserve()
         {
-            if (Spendable(Visit, Simulating) > 0) return false;
-            TextObject msg = Tongue.Text("{=TL92}Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower the reserve in its settings.");
+            int held = GoldHeldBack(), flat = Options.Current.GoldReserve;
+            if (Hero.MainHero.Gold + Visit.Purse(Simulating) - held > 0) return false;
+            TextObject msg = Tongue.Text(held > flat
+                ? "{=TL392}Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages, so it will not buy anything here. Sell some cargo, or lower either of those in its settings."
+                : "{=TL92}Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower Gold reserve in its settings.");
             msg.SetTextVariable("GOLD", Hero.MainHero.Gold);
-            msg.SetTextVariable("RESERVE", GoldHeldBack());
+            msg.SetTextVariable("RESERVE", held);
+            msg.SetTextVariable("FLAT", flat);
+            msg.SetTextVariable("WAGES", held - flat);
             Toast(msg, ToastAlert);
             return true;
         }
