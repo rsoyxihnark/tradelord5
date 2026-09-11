@@ -5,6 +5,7 @@
 - The map marker can now land on a village as well as a town, so a village that pays best for what you are carrying gets the pin, as long as Trade with villages is on.
 - A village being raided or rebuilding is never marked, since you could not trade there anyway.
 - Auto-mark best sell town on map is now called Auto-mark best sell market on map, and it keeps to the Village travel ceiling when the market it is weighing is a village.
+- The feature list now says the map marker can land on a village as well as a town.
 
 ## 1.58.2
 
