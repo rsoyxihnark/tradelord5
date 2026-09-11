@@ -78,7 +78,7 @@
 		<string id="TL89" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde kârlı rota yok. Daha çok pazar gezin ya da Bilgi ayarlarından sınırları yükseltin."/>
 		<string id="TL90" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde rota yok. Daha çok pazar gezin ya da Bilgi ayarlarından sınırları yükseltin."/>
 		<string id="TL91" text="TradeLord mal listelerinizden birindeki bir girdi bu oyundaki hiçbir mala uymuyor ve hiçbir işe yaramıyor. Hangisi olduğunu TradeLord.log yazıyor."/>
-		<string id="TL92" text="Keseniz {GOLD} dinar, altın rezerviniz {RESERVE}, bu yüzden TradeLord burada bir şey almayacak. Biraz yük satın ya da ayarlardan rezervi düşürün."/>
+		<string id="TL92" text="Keseniz {GOLD} dinar, altın rezerviniz {RESERVE}, bu yüzden TradeLord burada bir şey almayacak. Biraz yük satın ya da ayarlardan Altın rezervi değerini düşürün."/>
 		<string id="TL96" text="TradeLord bir pazara girer girmez sizin için alıp satar, bir sonrakinden başlayarak. MCM kurulu değil; ayarları Belgeler klasörünüzdeki Bannerlord klasöründe, TradeLord.log dosyasının yanındaki TradeLord.ini dosyasındadır."/>
 		<string id="TL97" text="TradeLord {ITEMS} ikmal etti, {GOLD} dinar."/>
 		<string id="TL98" text="[Benzetim, en iyi durum] TradeLord {ITEMS} ikmal ederdi, {GOLD} dinar."/>
@@ -233,7 +233,9 @@
 		<string id="TL277" text="Sıfırla" />
 		<string id="TL278" text="Şehirlerle ticaret yap" />
 		<string id="TL376" text="Her TradeLord ayarını tek seferde geldiği değere geri alır. Anında geçerli olur ve TradeLord.ini dosyasına da yazılır, böylece hiçbir şey yarım kalmaz. Asla satma, her zaman satma, asla alma ve her zaman alma listeleriniz de boşaltılır, ve neyin değiştiği TradeLord.log dosyasına yazılır." />
-		<string id="TL377" text="Keseniz {GOLD} dinar, altın rezerviniz bunun {RESERVE} kadarını tutuyor, bu yüzden burada alabileceğiniz bir şey yok. Biraz yük satın ya da ayarlardan rezervi düşürün." />
+		<string id="TL377" text="Keseniz {GOLD} dinar, altın rezerviniz bunun {RESERVE} kadarını tutuyor, bu yüzden burada alabileceğiniz bir şey yok. Biraz yük satın ya da ayarlardan Altın rezervi değerini düşürün." />
+		<string id="TL392" text="Keseniz {GOLD} dinar, TradeLord bunun {RESERVE} kadarını tutuyor: Altın rezervi {FLAT}, Kaç günlük ücret için altın tut ayarı {WAGES}. Bu yüzden burada bir şey almayacak. Biraz yük satın ya da ayarlardan bu ikisinden birini düşürün."/>
+		<string id="TL393" text="Keseniz {GOLD} dinar, TradeLord bunun {RESERVE} kadarını tutuyor: Altın rezervi {FLAT}, Kaç günlük ücret için altın tut ayarı {WAGES}. Bu yüzden burada alabileceğiniz bir şey yok. Biraz yük satın ya da ayarlardan bu ikisinden birini düşürün."/>
 		<string id="TL390" text="TradeLord şehir menülerinde ticaret yapar ve şehirler fiyat taramalarına katılır. Öntanımlı olarak AÇIK." />
 	</strings>
 </base>
