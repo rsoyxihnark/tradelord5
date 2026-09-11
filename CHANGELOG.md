@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.59.0
+
+- The map marker can now land on a village as well as a town, so a village that pays best for what you are carrying gets the pin, as long as Trade with villages is on.
+- A village being raided or rebuilding is never marked, since you could not trade there anyway.
+- Auto-mark best sell town on map is now called Auto-mark best sell market on map, and it keeps to the Village travel ceiling when the market it is weighing is a village.
+
 ## 1.58.2
 
 - When TradeLord will not buy because your gold is held back, the message and the ledger panel now split the figure between Gold reserve and Keep gold for days of wages and name both, instead of calling the whole amount your gold reserve.

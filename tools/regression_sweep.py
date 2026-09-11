@@ -591,12 +591,12 @@ def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
 def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
     marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
     return (ordered(marker, "long bestValue = 0;",
-                    "if (town.Gold <= bestValue) continue;",
+                    "if (market.Gold <= bestValue) continue;",
                     "foreach (var (item, amount) in cargo)",
-                    "if (total > town.Gold) total = town.Gold;",
+                    "if (total > market.Gold) total = market.Gold;",
                     "if (total > bestValue) { bestValue = total; bestTown = s; }")
-            and "Priced.At(town, item, party, true)" in marker
-            and marker.count("Priced.At(town,") == 1)
+            and "Priced.At(market, item, party, true)" in marker
+            and marker.count("Priced.At(market,") == 1)
 
 def a_traded_market_drops_only_the_rankings_its_own_prices_decide():
     ledger = S['Ledger.cs']
@@ -2804,10 +2804,10 @@ chk("1.6.30", "the party speed behind every travel estimate is read once an hour
     the_party_speeds_are_read_once_an_hour())
 
 def the_cargo_marker_counts_the_town_till():
-    return ("if (total > town.Gold) total = town.Gold;" in
+    return ("if (total > market.Gold) total = market.Gold;" in
             method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo"))
 
-chk("1.6.31", "the cargo marker never points at a town that cannot pay for the cargo",
+chk("1.6.31", "the cargo marker never points at a market that cannot pay for the cargo",
     the_cargo_marker_counts_the_town_till())
 
 def the_spend_cap_is_walked_not_divided():
@@ -5326,7 +5326,7 @@ chk("1.41.3", "the panel reads the hotkey before it walks the map's layers looki
     the_panel_reads_the_key_before_it_walks_the_screen())
 chk("1.41.2", "TradeLord.log is held open and each line is pushed out as it is written, with appending a line at a time left as the fallback",
     the_log_is_held_open_and_pushed_out_a_line_at_a_time())
-chk("1.41.2", "the town marked on your map skips a town whose gold cannot beat the best found so far before it prices your cargo there",
+chk("1.41.2", "the market marked on your map skips one whose gold cannot beat the best found so far before it prices your cargo there",
     the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet())
 
 def a_good_another_pass_handles_never_speaks_for_a_stalled_pass():
@@ -5618,7 +5618,7 @@ chk("1.47.4", "the game is asked, every version, whether one good still sits in 
 def a_hint_that_sends_you_to_a_setting_names_it_the_way_the_screen_does():
     for path in [ENGLISH] + list(TRANSLATIONS.values()):
         said = spoken(path)
-        for cites, named in (('TL362', 'TL221'), ('TL361', 'TL221')):
+        for cites, named in (('TL362', 'TL221'), ('TL361', 'TL221'), ('TL345', 'TL241')):
             if cites not in said or named not in said:
                 return False
             if said[named] not in said[cites]:
@@ -5785,16 +5785,17 @@ chk("1.51.0", "no hint runs past what the settings screen can hold",
 
 def the_map_marker_keeps_to_the_same_trade_pool_as_the_scans():
     marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
-    return (ordered(marker, "foreach (Town town in Town.AllTowns)",
+    return (ordered(marker, "foreach (Settlement s in Settlement.All)",
                     "if (!IsMarket(s)) continue;",
-                    "if (LedgerBehavior.UnderAttack(s)) continue;",
+                    "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;",
                     "if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;")
             and marker.count("if (!IsMarket(s)) continue;") == 1
+            and "Town.AllTowns" not in marker
             and "if (!TradeActionBehavior.IsMarket(s)) return false;" in
                 method_body(S['Ledger.cs'], "private static bool Eligible"))
 
 
-chk("1.51.1", "the town marked on your map is one TradeLord would trade in, so a market kept out of the Trade Pool is kept off the marker too",
+chk("1.51.1", "the market marked on your map is one TradeLord would trade in, so a market kept out of the Trade Pool is kept off the marker too",
     the_map_marker_keeps_to_the_same_trade_pool_as_the_scans())
 
 
@@ -6029,7 +6030,7 @@ chk("1.55.0", "a good a quest is waiting on is held back whatever it is, past th
     a_quest_holds_back_any_good_it_waits_on_not_only_an_animal())
 chk("1.55.0", "the per-item buy caps say it is those caps that stopped a good, rather than sharing the purse's words",
     the_per_item_caps_say_which_cap_rather_than_the_purse())
-chk("1.55.0", "the town marked on your map is never one TradeLord would leave alone as the same arrival",
+chk("1.55.0", "the market marked on your map is never one TradeLord would leave alone as the same arrival",
     the_map_marker_leaves_out_a_market_it_would_not_trade_in())
 chk("1.55.0", "a herd it cannot thin says what it is holding back rather than falling silent",
     a_herd_it_cannot_thin_says_what_it_will_not_give_up())
@@ -6124,6 +6125,34 @@ def a_held_back_purse_names_the_settings_that_hold_it_and_not_the_spending_cap()
 
 chk("1.58.2", "a purse held below what TradeLord keeps back names Gold reserve on its own, or splits the figure between Gold reserve and Keep gold for days of wages when both hold some, and the buy cap per visit never sets it off",
     a_held_back_purse_names_the_settings_that_hold_it_and_not_the_spending_cap())
+
+
+
+def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
+    marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
+    pool = between(S['Trading.cs'], "internal static bool IsMarket(Settlement s) =>", ";")
+    en = spoken(ENGLISH)
+    walks = (ordered(marker, "foreach (Settlement s in Settlement.All)",
+                     "SettlementComponent market = s.SettlementComponent;",
+                     "if (market == null) continue;",
+                     "if (!IsMarket(s)) continue;",
+                     "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;",
+                     "if (market.Gold <= bestValue) continue;",
+                     "float cap = LedgerBehavior.TravelCeiling(s);",
+                     "Priced.At(market, item, party, true)")
+             and "Town.AllTowns" not in marker
+             and "town.Gold" not in marker)
+    gated = ("s.IsVillage && Options.Current.TradeWithVillages" in pool
+             and "s.IsTown && Options.Current.TradeWithTowns" in pool)
+    ceiling = ("if (s.IsVillage && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;" in
+               method_body(S['Ledger.cs'], "internal static float TravelCeiling"))
+    said = "A village is only ever marked while Trade with villages is on." in en['TL345']
+    swept = "Town.AllTowns" not in S['Trading.cs']
+    return walks and gated and ceiling and said and swept
+
+
+chk("1.59.0", "a village carries the map marker like any other market, held to the Trade with villages switch, shut out while it is raided or rebuilding, and kept to the tighter of the two travel ceilings",
+    a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages())
 
 
 
