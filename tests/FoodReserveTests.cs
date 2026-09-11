@@ -395,5 +395,41 @@ namespace TradeLord.Tests
             Assert.Empty(Keep(carried, s, perDay: 1f));
             Assert.Empty(Keep(null, s, perDay: 1f));
         }
+
+        [Fact]
+        public void An_army_waiting_on_livestock_reserves_it_across_whatever_herd_you_carry()
+        {
+            var bags = new List<TradeRules.Ration>
+                { Cargo("wool", 20), Herd("sheep", 3, 40, 2), Herd("cow", 5, 90, 4) };
+
+            Dictionary<string, int> keep = TradeRules.LivestockKeep(bags, 6);
+            Assert.Equal(3, keep["sheep"]);
+            Assert.Equal(3, keep["cow"]);
+            Assert.False(keep.ContainsKey("wool"));
+        }
+
+        [Fact]
+        public void A_livestock_reserve_never_claims_more_than_the_herd_you_are_carrying()
+        {
+            var bags = new List<TradeRules.Ration> { Herd("sheep", 2, 40, 2) };
+            Dictionary<string, int> keep = TradeRules.LivestockKeep(bags, 9);
+            Assert.Equal(2, keep["sheep"]);
+        }
+
+        [Fact]
+        public void An_army_waiting_on_no_livestock_reserves_none()
+        {
+            var bags = new List<TradeRules.Ration> { Herd("cow", 5, 90, 4) };
+            Assert.Empty(TradeRules.LivestockKeep(bags, 0));
+            Assert.Empty(TradeRules.LivestockKeep(null, 4));
+        }
+
+        [Fact]
+        public void One_good_in_two_lots_gives_the_livestock_reserve_both_lots()
+        {
+            var bags = new List<TradeRules.Ration> { Herd("cow", 2, 90, 4), Herd("cow", 3, 90, 4) };
+            Dictionary<string, int> keep = TradeRules.LivestockKeep(bags, 4);
+            Assert.Equal(4, keep["cow"]);
+        }
     }
 }
