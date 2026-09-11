@@ -341,7 +341,6 @@ namespace TradeLord
             good.IsSpareMount = IsSpareMount(item);
             good.IsLivestock = IsTradableLivestock(item);
             good.IsPrizeMount = IsPrizeMount(item);
-            good.MeatCount = item.HasHorseComponent ? item.HorseComponent.MeatCount : 0;
             good.IsSmithingMaterial = IsSmithingMaterial(item);
             good.IsGrain = item == DefaultItems.Grain;
             return good;
