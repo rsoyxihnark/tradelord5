@@ -378,17 +378,19 @@ def the_selling_rules_stand_clear_of_the_game():
 
 def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
     t = S['Trading.cs']
-    keep = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> FoodKeep")
+    keep = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack")
     return ("internal static Dictionary<string, int> FoodKeep(List<Ration> carried, float perDay, Options s)"
                 in S['Rules.cs']
             and "MobileParty" not in S['Rules.cs']
             and "ItemRoster" not in S['Rules.cs']
-            and "TradeRules.FoodKeep(Carried(roster, books, sim, byId),\n" in keep
+            and ordered(keep,
+                        "List<TradeRules.Ration> carried = Carried(roster, books, sim, byId);",
+                        "Named(TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current), byId);")
             and "byId[item.StringId] = item;" in
                 method_body(S['Policy.cs'], "private static List<TradeRules.Ration> Carried")
             and "if (byId.TryGetValue(one.Key, out ItemObject item)) keep[item] = one.Value;" in
                 method_body(S['Policy.cs'], "private static Dictionary<ItemObject, int> Named")
-            and S['Policy.cs'].count("AppetitePerDay()") == 4
+            and S['Policy.cs'].count("AppetitePerDay()") == 3
             and "internal static int FoodValue(ItemObject item) =>" in S['Policy.cs']
             and "TradeRules.FoodValue(Describe(item));" in S['Policy.cs']
             and "CostPerFood" not in t
@@ -1802,7 +1804,8 @@ chk("1.5.0", "every category ships trading exactly as it did before the matrix",
     "CraftingPolicy = PolicyBuySell" in S['Options.cs'] and
     "LivestockPolicy = PolicyBuySell" in S['Options.cs'])
 chk("1.5.0", "the food reserve is not a trading policy and is not governed by one",
-    "FoodPolicy" not in method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> FoodKeep"))
+    "FoodPolicy" not in method_body(S['Rules.cs'], "internal static Dictionary<string, int> FoodKeep") and
+    "FoodPolicy" not in method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack"))
 
 chk("1.5.0", "a pass that moves nothing names the rule that stopped it",
     'Tongue.Text("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
@@ -5847,9 +5850,7 @@ def the_food_reserve_carries_a_dry_run_from_one_pass_to_the_next():
     t = S['Trading.cs']
     keep = method_body(S['Policy.cs'], "private static List<TradeRules.Ration> Carried")
     still = method_body(S['Rules.cs'], "internal static int StillCarried")
-    return ("internal static Dictionary<ItemObject, int> FoodKeep(ItemRoster roster, Books books, bool sim)"
-                in S['Policy.cs']
-            and "internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster, Books books, bool sim,"
+    return ("internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster, Books books, bool sim,"
                 in S['Policy.cs']
             and ordered(keep,
                         "soldAlready[item.StringId] = Math.Max(0, -books.Held(sim, item.StringId));",
