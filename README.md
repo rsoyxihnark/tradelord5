@@ -24,7 +24,7 @@
 - ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
 - ✅ A route listed whether or not your purse could pay for it today, so the panel always shows you where the profit is, and says under the routes when your gold reserve is what is stopping you buying
 - ✅ Click any town to jump the camera there and pin a marker on it, and a pin comes off by itself once TradeLord has traded in that town
-- ✅ The best town for the cargo you are carrying, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement
+- ✅ The best market for the cargo you are carrying, a town or a village, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement
 - ✅ The five workshops in Calradia earning the most right now, with their town and their owner, on that same panel. With Live world prices turned off it shows yours instead
 - ✅ Your gold, your cargo against what your party can carry, your party's speed and the running total of what TradeLord has made you, along the top of that same panel
 - ✅ A warning on screen when your purse is under your gold reserve, or your cargo is too full to buy anything, so a market that trades nothing is never a mystery

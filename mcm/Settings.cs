@@ -549,8 +549,8 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public float TradeXpMultiplier { get => _o.TradeXpMultiplier; set { _o.TradeXpMultiplier = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL245}Auto-mark best sell town on map", Order = 13, RequireRestart = false,
-            HintText = "{=TL345}Moves a map tracker to whichever town in reach pays most for your current cargo, following you as you ride. It keeps to the Town travel ceiling. ON by default; clicking a town in the ledger panel still pins a marker by hand.")]
+        [SettingPropertyBool("{=TL245}Auto-mark best sell market on map", Order = 13, RequireRestart = false,
+            HintText = "{=TL345}Moves a map tracker to whichever market in reach pays most for your current cargo, following you as you ride. A village is only ever marked while Trade with villages is on. It keeps to the travel ceilings. ON by default; clicking a town in the ledger panel still pins a marker by hand.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool MarkBestSellTownOnMap { get => _o.MarkBestSellTownOnMap; set { _o.MarkBestSellTownOnMap = value; Options.Bump(); } }
 
