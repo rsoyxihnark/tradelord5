@@ -170,7 +170,7 @@
 		<string id="TL242" text="Simulation mode (dry run)"/>
 		<string id="TL243" text="Economy settling delay (days, 0 = off)"/>
 		<string id="TL244" text="Trade XP multiplier"/>
-		<string id="TL245" text="Auto-mark best sell town on map"/>
+		<string id="TL245" text="Auto-mark best sell market on map"/>
 		<string id="TL246" text="Write a price trace to the log"/>
 		<string id="TL247" text="Coin sound on trade"/>
 		<string id="TL248" text="Detailed trade summary"/>
@@ -215,7 +215,7 @@
 		<string id="TL342" text="Reports what TradeLord would sell and buy, without trading. Treat it as a best case: nothing moves, so every unit is priced at today's opening price and a real pass usually trades less. Every cap and the merchant's gold are modelled exactly."/>
 		<string id="TL343" text="No TradeLord trading before this campaign day, from the menu or on entry. Prices in a new campaign have not settled yet."/>
 		<string id="TL344" text="Scales the Trade XP awarded for automated profit. 0 disables XP."/>
-		<string id="TL345" text="Moves a map tracker to whichever town in reach pays most for your current cargo, following you as you ride. It keeps to the Town travel ceiling. ON by default; clicking a town in the ledger panel still pins a marker by hand."/>
+		<string id="TL345" text="Moves a map tracker to whichever market in reach pays most for your current cargo, following you as you ride. A village is only ever marked while Trade with villages is on. It keeps to the travel ceilings. ON by default; clicking a town in the ledger panel still pins a marker by hand."/>
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports."/>
