@@ -383,10 +383,12 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
                 in S['Rules.cs']
             and "MobileParty" not in S['Rules.cs']
             and "ItemRoster" not in S['Rules.cs']
-            and "TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current)" in keep
-            and "byId[item.StringId] = item;" in keep
-            and "if (byId.TryGetValue(kept.Key, out ItemObject item)) keep[item] = kept.Value;" in keep
-            and S['Policy.cs'].count("AppetitePerDay()") == 3
+            and "TradeRules.FoodKeep(Carried(roster, books, sim, byId),\n" in keep
+            and "byId[item.StringId] = item;" in
+                method_body(S['Policy.cs'], "private static List<TradeRules.Ration> Carried")
+            and "if (byId.TryGetValue(one.Key, out ItemObject item)) keep[item] = one.Value;" in
+                method_body(S['Policy.cs'], "private static Dictionary<ItemObject, int> Named")
+            and S['Policy.cs'].count("AppetitePerDay()") == 4
             and "internal static int FoodValue(ItemObject item) =>" in S['Policy.cs']
             and "TradeRules.FoodValue(Describe(item));" in S['Policy.cs']
             and "CostPerFood" not in t
@@ -3979,7 +3981,8 @@ chk("1.37.0", "as many animals as a quest is waiting on are kept back, and only 
 
 def a_quest_animal_is_held_back_from_every_sale_not_just_the_herd():
     kept = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack")
-    return ("awaited = Errands.Promised();" in kept
+    return ("awaited = Errands.Promised(out int anyLivestock);" in kept
+            and "TradeRules.LivestockKeep(carried, anyLivestock)" in kept
             and "if (awaited == null) return keep;" in kept
             and "if (owed.Value > held) keep[owed.Key] = owed.Value;" in kept
             and "TradePolicy.FoodKeep(" not in S['Trading.cs']
@@ -5669,7 +5672,7 @@ def the_food_reserve_holds_against_thinning_the_herd_too():
                         "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);",
                         "if (promised == null) return;",
                         "if (heldBack.TryGetValue(item, out int owed) && owed > 0)")
-            and "Dictionary<ItemObject, int> keep = FoodKeep(roster, books, sim);" in kept
+            and "Named(TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current), byId);" in kept
             and "if (owed.Value > held) keep[owed.Key] = owed.Value;" in kept)
 
 
@@ -5836,7 +5839,7 @@ chk("1.52.2", "a dry run draws what you paid for a good down across every stack 
 
 def the_food_reserve_carries_a_dry_run_from_one_pass_to_the_next():
     t = S['Trading.cs']
-    keep = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> FoodKeep")
+    keep = method_body(S['Policy.cs'], "private static List<TradeRules.Ration> Carried")
     still = method_body(S['Rules.cs'], "internal static int StillCarried")
     return ("internal static Dictionary<ItemObject, int> FoodKeep(ItemRoster roster, Books books, bool sim)"
                 in S['Policy.cs']
@@ -5955,6 +5958,8 @@ def every_quest_that_waits_on_a_good_you_carry_is_read():
               ("GangLeaderNeedsToOffloadStolenGoodsIssueQuest", "_stolenTradeGood", "_stolenTradeGoodAmount"),
               ("LandLordTheArtOfTheTradeIssueQuest", "_selectedItemObject", "_selectedItemObjectCount"))
     goods = between(S['Encounters.cs'], "private static readonly (Type quest, string goodId, string many)[] NamedGoods",
+                    "private static readonly (Type quest, string many)[] NamedHerds")
+    herds = between(S['Encounters.cs'], "private static readonly (Type quest, string many)[] NamedHerds",
                     "private static (Type quest, FieldInfo wanted, FieldInfo many)[] _read;")
     byGood = (("ArmyNeedsSuppliesIssueQuest", '"grain"', "_requestedGrainAmount"),
               ("ArmyNeedsSuppliesIssueQuest", '"wine"', "_requestedWineAmount"),
@@ -5964,7 +5969,11 @@ def every_quest_that_waits_on_a_good_you_carry_is_read():
             and all(quest in goods and item in goods and count in goods for quest, item, count in byGood)
             and goods.count("typeof(") == len(byGood)
             and all(COMPAT.count('"' + field + '"') == 1 for _, item, count in wanted for field in (item, count))
-            and all(COMPAT.count('"' + count + '"') == 1 for _, _item, count in byGood))
+            and all(COMPAT.count('"' + count + '"') == 1 for _, _item, count in byGood)
+            and "ArmyNeedsSuppliesIssueQuest" in herds
+            and "_requestedLiveStockAmount" in herds
+            and herds.count("typeof(") == 1
+            and COMPAT.count('"_requestedLiveStockAmount"') == 1)
 
 
 def a_quest_holds_back_any_good_it_waits_on_not_only_an_animal():
@@ -6019,6 +6028,28 @@ chk("1.55.0", "the town marked on your map is never one TradeLord would leave al
     the_map_marker_leaves_out_a_market_it_would_not_trade_in())
 chk("1.55.0", "a herd it cannot thin says what it is holding back rather than falling silent",
     a_herd_it_cannot_thin_says_what_it_will_not_give_up())
+
+
+def an_army_waiting_on_livestock_holds_back_whatever_herd_you_carry():
+    rule = method_body(S['Rules.cs'], "internal static Dictionary<string, int> LivestockKeep")
+    kept = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack")
+    promised = method_body(S['Encounters.cs'], "internal static Dictionary<ItemObject, int> Promised")
+    return (ordered(rule, "if (held.Amount <= 0 || !held.Good.IsLivestock) continue;",
+                    "int take = Math.Min(held.Amount, wanted);",
+                    "keep[held.Good.Id] = had + take;", "wanted -= take;")
+            and "MobileParty" not in S['Rules.cs'] and "ItemRoster" not in S['Rules.cs']
+            and ordered(kept, "awaited = Errands.Promised(out int anyLivestock);",
+                        "if (awaited == null) return keep;",
+                        "Named(TradeRules.LivestockKeep(carried, anyLivestock), byId)",
+                        "awaited[owed.Key] = had + owed.Value;")
+            and "if (_readHerds[i].many.GetValue(quest) is int owed && owed > 0) anyLivestock += owed;" in promised
+            and "An_army_waiting_on_livestock_reserves_it_across_whatever_herd_you_carry" in FOODTESTS
+            and "A_livestock_reserve_never_claims_more_than_the_herd_you_are_carrying" in FOODTESTS
+            and "One_good_in_two_lots_gives_the_livestock_reserve_both_lots" in FOODTESTS)
+
+
+chk("1.57.0", "an army waiting on livestock holds back that many head of whatever herd you carry, since the quest counts any livestock rather than naming one",
+    an_army_waiting_on_livestock_holds_back_whatever_herd_you_carry())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

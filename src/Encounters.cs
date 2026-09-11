@@ -39,12 +39,19 @@ namespace TradeLord
                 "grain", "_neededGrainAmount"),
         };
 
+        private static readonly (Type quest, string many)[] NamedHerds =
+        {
+            (typeof(ArmyNeedsSuppliesIssueBehavior.ArmyNeedsSuppliesIssueQuest),
+                "_requestedLiveStockAmount"),
+        };
+
         private static (Type quest, FieldInfo wanted, FieldInfo many)[] _read;
         private static (Type quest, string goodId, FieldInfo many)[] _readGoods;
+        private static (Type quest, FieldInfo many)[] _readHerds;
         private static Dictionary<string, ItemObject> _goods;
         private static bool _unreadable;
 
-        internal static void Forget() { _read = null; _readGoods = null; _goods = null; _unreadable = false; }
+        internal static void Forget() { _read = null; _readGoods = null; _readHerds = null; _goods = null; _unreadable = false; }
 
         private static ItemObject Good(string id)
         {
@@ -95,13 +102,30 @@ namespace TradeLord
                 }
                 byGood[i] = (NamedGoods[i].quest, NamedGoods[i].goodId, many);
             }
+            var byHerd = new (Type, FieldInfo)[NamedHerds.Length];
+            for (int i = 0; i < NamedHerds.Length; i++)
+            {
+                FieldInfo many = NamedHerds[i].quest.GetField(
+                    NamedHerds[i].many, BindingFlags.Instance | BindingFlags.NonPublic);
+                if (many == null)
+                {
+                    _unreadable = true;
+                    Log.Write("quest goods: " + NamedHerds[i].quest.Name + " does not say how much livestock " +
+                              "it wants on this game version - no animal is sold at all, so a quest of yours " +
+                              "cannot lose one");
+                    return false;
+                }
+                byHerd[i] = (NamedHerds[i].quest, many);
+            }
             _read = found;
             _readGoods = byGood;
+            _readHerds = byHerd;
             return true;
         }
 
-        internal static Dictionary<ItemObject, int> Promised()
+        internal static Dictionary<ItemObject, int> Promised(out int anyLivestock)
         {
+            anyLivestock = 0;
             if (!Readable()) return null;
             var promised = new Dictionary<ItemObject, int>();
             var running = Campaign.Current?.QuestManager?.Quests;
@@ -128,6 +152,11 @@ namespace TradeLord
                     if (wanted == null) continue;
                     promised.TryGetValue(wanted, out int had);
                     promised[wanted] = had + many;
+                }
+                for (int i = 0; i < _readHerds.Length; i++)
+                {
+                    if (!_readHerds[i].quest.IsInstanceOfType(quest)) continue;
+                    if (_readHerds[i].many.GetValue(quest) is int owed && owed > 0) anyLivestock += owed;
                 }
             }
             return promised;
