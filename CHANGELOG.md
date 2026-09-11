@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.58.1
+
+- TradeLord now tells you on screen that the market is still settling as you walk into one, unless Silence trade messages is on.
+
 ## 1.58.0
 
 - Livestock is no longer counted as food. A herd is not held back towards your days of supply, it is never bought to restock them, and it is bought and sold as ordinary goods with only the herd speed penalty holding it back.
