@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.58.2
+
+- When TradeLord will not buy because your gold is held back, the message and the ledger panel now split the figure between Gold reserve and Keep gold for days of wages and name both, instead of calling the whole amount your gold reserve.
+- Where only Gold reserve is holding your money back, that message now names Gold reserve by its own name, so you know which setting to lower.
+- That message no longer appears when it was Max spend per visit that stopped the buying, since your gold reserve was not what held you back.
+
 ## 1.58.1
 
 - TradeLord now tells you on screen that the market is still settling as you walk into one, unless Silence trade messages is on.

@@ -1488,9 +1488,12 @@ chk("1.42.0", "the route scan is not redone when your gold moves, deliberately, 
     "_routePurse" not in S['Ledger.cs'] and
     "_routes = ScanRoutes();" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes"))
 chk("1.42.0", "an empty ledger names the travel ceilings, and an empty purse is said alongside the routes rather than instead of them",
-    "TL377" in strings_declared() and
-    (lambda b: b.index("TL69") < b.index("TL377")
-           and 'TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " +' in b)(method_body(S['Panel.cs'], "private void Refresh")))
+    "TL377" in strings_declared() and "TL393" in strings_declared() and
+    (lambda b, said: b.index("TL69") < b.index("NothingHereYouCouldBuy(hero)")
+           and 'TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero)' in b
+           and "TL377" not in b and "{=TL377}" in said and "{=TL393}" in said)
+    (method_body(S['Panel.cs'], "private void Refresh"),
+     method_body(S['Panel.cs'], "private static string NothingHereYouCouldBuy")))
 chk("1.3.25", "the herd probe runs only once livestock is actually on the shelf",
     "int herdRoom = -1;" in method_body(S['Trading.cs'], "private static void BuyPass") and
     "if (herdRoom < 0)\n                            herdRoom = Math.Max(0, "
@@ -2601,10 +2604,12 @@ def an_empty_purse_is_reported_on_the_way_into_a_market():
     body = method_body(S['Trading.cs'], "private static bool WarnPurseBelowReserve")
     entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
     return ("TradedThisVisit()" not in body
-            and "if (Spendable(Visit, Simulating) > 0) return false;" in body
+            and "int held = GoldHeldBack(), flat = Options.Current.GoldReserve;" in body
+            and "if (Hero.MainHero.Gold + Visit.Purse(Simulating) - held > 0) return false;" in body
             and "if (TradedThisVisit()) return;" in
                 method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
-            and 'Tongue.Text("{=TL92}' in body
+            and "Tongue.Text(held > flat" in body
+            and '{=TL92}' in body
             and 'Toast(msg, ToastAlert);' in body
             and 'TL92' in strings_declared()
             and "quiet" not in body and "Muted(" not in body
@@ -6093,6 +6098,34 @@ def the_settling_notice_obeys_the_silence_switch_on_both_routes():
 
 chk("1.58.1", "the market is still settling notice is silenced by Silence trade messages and by nothing else, on entering a market as well as on the road",
     the_settling_notice_obeys_the_silence_switch_on_both_routes())
+
+def a_held_back_purse_names_the_settings_that_hold_it_and_not_the_spending_cap():
+    warn = method_body(S['Trading.cs'], "private static bool WarnPurseBelowReserve")
+    legend = method_body(S['Panel.cs'], "private static string NothingHereYouCouldBuy")
+    en = spoken(ENGLISH)
+    flat, wages = en['TL234'], en['TL266']
+    split = ("int held = TradeActionBehavior.GoldHeldBack(), flat = Options.Current.GoldReserve;" in legend
+             and "int held = GoldHeldBack(), flat = Options.Current.GoldReserve;" in warn
+             and warn.count("held > flat") == 1 and legend.count("held > flat") == 1
+             and "Spendable(" not in warn and "MaxSpendPerVisit" not in warn
+             and "TradeActionBehavior.PurseForAVisit() > 0" in
+                 method_body(S['Panel.cs'], "private void Refresh"))
+    fed = ('msg.SetTextVariable("RESERVE", held);' in warn
+           and 'msg.SetTextVariable("FLAT", flat);' in warn
+           and 'msg.SetTextVariable("WAGES", held - flat);' in warn
+           and 'line.SetTextVariable("RESERVE", held.ToString("N0"));' in legend
+           and 'line.SetTextVariable("FLAT", flat.ToString("N0"));' in legend
+           and 'line.SetTextVariable("WAGES", (held - flat).ToString("N0"));' in legend)
+    named = all(flat in en[one] and wages in en[one] for one in ('TL392', 'TL393'))
+    plain = all(wages not in en[one] and flat in en[one] for one in ('TL92', 'TL377'))
+    spelled = all(one in strings_declared() for one in ('TL92', 'TL377', 'TL392', 'TL393'))
+    return split and fed and named and plain and spelled
+
+
+chk("1.58.2", "a purse held below what TradeLord keeps back names Gold reserve on its own, or splits the figure between Gold reserve and Keep gold for days of wages when both hold some, and the buy cap per visit never sets it off",
+    a_held_back_purse_names_the_settings_that_hold_it_and_not_the_spending_cap())
+
+
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

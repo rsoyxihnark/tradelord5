@@ -78,7 +78,7 @@
 		<string id="TL89" text="以你目前记下的价格来看，行程上限之内没有可盈利的路线。多走几个市场，或者在“情报”设置中提高上限。"/>
 		<string id="TL90" text="以你目前记下的价格来看，没有路线落在你的行程上限之内。多走几个市场，或者在“情报”设置中提高上限。"/>
 		<string id="TL91" text="你的某份 TradeLord 货物名单上有一项，在这局游戏里找不到对应的货物，因此毫无作用。TradeLord.log 里写明了是哪一项。"/>
-		<string id="TL92" text="你的钱袋里有 {GOLD} 第纳尔，而金钱储备是 {RESERVE}，所以 TradeLord 不会在这里买任何东西。卖掉一些货物，或者在设置里调低储备。"/>
+		<string id="TL92" text="你的钱袋里有 {GOLD} 第纳尔，而金钱储备是 {RESERVE}，所以 TradeLord 不会在这里买任何东西。卖掉一些货物，或者在设置里调低“金钱储备”。"/>
 		<string id="TL96" text="从下一个市场起，TradeLord 会在你进入市场时替你买卖。MCM 没有装上，所以它的设置放在 TradeLord.ini 里，就在你文档里 Bannerlord 文件夹中 TradeLord.log 的旁边。"/>
 		<string id="TL97" text="TradeLord 补给了 {ITEMS}，花费 {GOLD} 第纳尔。"/>
 		<string id="TL98" text="[模拟，最理想情况] TradeLord 本会补给 {ITEMS}，花费 {GOLD} 第纳尔。"/>
@@ -233,7 +233,9 @@
 		<string id="TL277" text="重置" />
 		<string id="TL278" text="与城镇交易" />
 		<string id="TL376" text="一次把每一项 TradeLord 设置都退回它出厂时的值。立刻生效，也会写进 TradeLord.ini，不会留下改了一半的状态。你的从不卖出、总是卖出、从不买入和总是买入名单也一并清空，改动了什么会写进 TradeLord.log。" />
-		<string id="TL377" text="你的钱袋里有 {GOLD} 第纳尔，而金钱储备扣住了其中 {RESERVE}，所以这里没有你买得起的东西。卖掉一些货物，或者在设置里调低储备。" />
+		<string id="TL377" text="你的钱袋里有 {GOLD} 第纳尔，而金钱储备扣住了其中 {RESERVE}，所以这里没有你买得起的东西。卖掉一些货物，或者在设置里调低“金钱储备”。" />
+		<string id="TL392" text="你的钱袋里有 {GOLD} 第纳尔，而 TradeLord 扣住了其中 {RESERVE}：“金钱储备”占 {FLAT}，“留下几天军饷的钱”占 {WAGES}。所以它不会在这里买任何东西。卖掉一些货物，或者在设置里调低这两项中的任意一项。"/>
+		<string id="TL393" text="你的钱袋里有 {GOLD} 第纳尔，而 TradeLord 扣住了其中 {RESERVE}：“金钱储备”占 {FLAT}，“留下几天军饷的钱”占 {WAGES}。所以这里没有你买得起的东西。卖掉一些货物，或者在设置里调低这两项中的任意一项。"/>
 		<string id="TL390" text="TradeLord 在城镇菜单里交易，城镇也会进入价格扫描。默认开启。" />
 	</strings>
 </base>
