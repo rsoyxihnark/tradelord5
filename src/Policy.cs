@@ -245,13 +245,6 @@ namespace TradeLord
             return keep;
         }
 
-        internal static Dictionary<ItemObject, int> FoodKeep(ItemRoster roster, Books books, bool sim)
-        {
-            var byId = new Dictionary<string, ItemObject>(StringComparer.Ordinal);
-            return Named(TradeRules.FoodKeep(Carried(roster, books, sim, byId),
-                                             AppetitePerDay(), Options.Current), byId);
-        }
-
         internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster, Books books, bool sim,
                                                             out Dictionary<ItemObject, int> awaited)
         {
