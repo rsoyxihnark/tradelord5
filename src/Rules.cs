@@ -31,7 +31,6 @@ namespace TradeLord
         internal bool IsSpareMount;
         internal bool IsLivestock;
         internal bool IsPrizeMount;
-        internal int MeatCount;
         internal bool IsSmithingMaterial;
         internal bool IsGrain;
     }
@@ -94,8 +93,7 @@ namespace TradeLord
 
         internal static int FoodValue(in Good good)
         {
-            if (good.Id == null) return 0;
-            if (good.HasHorse) return good.IsLivestock ? good.MeatCount : 0;
+            if (good.Id == null || good.HasHorse) return 0;
             return good.IsFood ? 1 : 0;
         }
 
@@ -140,17 +138,11 @@ namespace TradeLord
                 food.Add(held);
             }
 
-            food.Sort((x, y) =>
-            {
-                int lx = x.Good.IsLivestock ? 1 : 0;
-                int ly = y.Good.IsLivestock ? 1 : 0;
-                return lx != ly ? lx.CompareTo(ly) : CostPerFood(x).CompareTo(CostPerFood(y));
-            });
+            food.Sort((x, y) => CostPerFood(x).CompareTo(CostPerFood(y)));
 
             if (variety > 0)
                 foreach (Ration held in food)
                 {
-                    if (held.Good.IsLivestock) continue;
                     int floor = Math.Min(held.Amount, variety);
                     keep.TryGetValue(held.Good.Id, out int had);
                     if (floor <= had) continue;

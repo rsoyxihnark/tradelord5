@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.58.0
+
+- Livestock is no longer counted as food. A herd is not held back towards your days of supply, it is never bought to restock them, and it is bought and sold as ordinary goods with only the herd speed penalty holding it back.
+- Keep some of every kind of food now says livestock is left out because TradeLord trades a herd as goods and never as food.
+- The feature list now says a herd is never counted as food.
+
 ## 1.57.0
 
 - An army waiting on livestock now holds back that many head of whatever herd you are carrying, so the last quest that could still lose its supplies to a shopping trip is covered.
