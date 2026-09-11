@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.57.0
+
+- An army waiting on livestock now holds back that many head of whatever herd you are carrying, so the last quest that could still lose its supplies to a shopping trip is covered.
+
 ## 1.56.0
 
 - Two more quests are read for what they are waiting on, the army that needs supplies and the headman who needs grain, so the grain and the wine they are owed is held back from every pass that sells.

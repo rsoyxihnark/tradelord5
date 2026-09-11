@@ -171,6 +171,22 @@ namespace TradeLord
             return keep;
         }
 
+        internal static Dictionary<string, int> LivestockKeep(List<Ration> carried, int wanted)
+        {
+            var keep = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (carried == null) return keep;
+            for (int i = 0; i < carried.Count && wanted > 0; i++)
+            {
+                Ration held = carried[i];
+                if (held.Amount <= 0 || !held.Good.IsLivestock) continue;
+                int take = Math.Min(held.Amount, wanted);
+                keep.TryGetValue(held.Good.Id, out int had);
+                keep[held.Good.Id] = had + take;
+                wanted -= take;
+            }
+            return keep;
+        }
+
         internal static int HerdShedRank(in Good good)
         {
             if (good.IsLivestock) return RankLivestock;
