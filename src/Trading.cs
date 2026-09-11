@@ -1967,15 +1967,16 @@ namespace TradeLord
 
             Settlement bestTown = null;
             long bestValue = 0;
-            foreach (Town town in Town.AllTowns)
+            foreach (Settlement s in Settlement.All)
             {
-                Settlement s = town.Settlement;
+                SettlementComponent market = s.SettlementComponent;
+                if (market == null) continue;
                 if (s == party.CurrentSettlement) continue;
                 if (StillTheSameArrival(s)) continue;
                 if (!IsMarket(s)) continue;
-                if (LedgerBehavior.UnderAttack(s)) continue;
+                if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;
-                if (town.Gold <= bestValue) continue;
+                if (market.Gold <= bestValue) continue;
                 float cap = LedgerBehavior.TravelCeiling(s);
                 if (cap > 0f)
                 {
@@ -1984,8 +1985,8 @@ namespace TradeLord
                 }
                 long total = 0;
                 foreach (var (item, amount) in cargo)
-                    total += (long)Priced.At(town, item, party, true) * amount;
-                if (total > town.Gold) total = town.Gold;
+                    total += (long)Priced.At(market, item, party, true) * amount;
+                if (total > market.Gold) total = market.Gold;
                 if (total > bestValue) { bestValue = total; bestTown = s; }
             }
             return bestTown;
