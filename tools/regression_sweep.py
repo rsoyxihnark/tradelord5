@@ -6156,5 +6156,27 @@ chk("1.59.0", "a village carries the map marker like any other market, held to t
 
 
 
+def the_release_refuses_a_commit_subject_that_names_another_version():
+    step = between(WORKFLOW, "- name: Resolve version from SubModule.xml", "- name: Source checks")
+    return (ordered(step,
+                    'MODVER=$(sed -n \'s/.*<Version value="\\(v[0-9][^"]*\\)".*/\\1/p\' TradeLord/SubModule.xml)',
+                    'SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")',
+                    '"[no release]"*)',
+                    "SAID=$(printf '%s' \"$SUBJECT\" | sed -n 's/^\\[\\([0-9][0-9.]*\\)\\].*/\\1/p')",
+                    'if [ -z "$SAID" ]; then',
+                    'the commit subject carries no version in square brackets and is not marked [no release]:',
+                    'if [ "$SAID" != "${MODVER#v}" ]; then',
+                    'they have to agree',
+                    'echo "version=$MODVER" >> "$GITHUB_OUTPUT"')
+            and step.count("exit 1") == 4
+            and "Start every commit subject with the version it ships in in square brackets" in RULES
+            and "the release workflow refuses to publish while any of them disagree" in RULES)
+
+
+chk("1.59.0", "the release refuses a commit whose subject names a version other than the one the source declares, and refuses one that names none at all without being marked no release",
+    the_release_refuses_a_commit_subject_that_names_another_version())
+
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

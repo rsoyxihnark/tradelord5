@@ -99,6 +99,23 @@ jobs:
             echo "requested $INPUT but SubModule.xml declares $MODVER - bump SubModule.xml first"
             exit 1
           fi
+          SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")
+          case "$SUBJECT" in
+            "[no release]"*)
+              echo "this commit is marked [no release] and carries no version of its own" ;;
+            *)
+              SAID=$(printf '%s' "$SUBJECT" | sed -n 's/^\[\([0-9][0-9.]*\)\].*/\1/p')
+              if [ -z "$SAID" ]; then
+                echo "the commit subject carries no version in square brackets and is not marked [no release]:"
+                echo "  $SUBJECT"
+                exit 1
+              fi
+              if [ "$SAID" != "${MODVER#v}" ]; then
+                echo "the commit subject says $SAID and TradeLord/SubModule.xml declares ${MODVER#v} - they have to agree"
+                exit 1
+              fi
+              echo "the commit subject and TradeLord/SubModule.xml both say $SAID" ;;
+          esac
           echo "version=$MODVER" >> "$GITHUB_OUTPUT"
 
       - name: Source checks
