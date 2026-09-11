@@ -1456,13 +1456,12 @@ chk("1.3.22", "panel takes mouse only",
     "SetInputRestrictions(true, InputUsageMask.Mouse)" in method_body(S['Panel.cs'], "private static void Show") and
     "IsFocusLayer = true" not in method_body(S['Panel.cs'], "private static void Show"))
 
-chk("1.3.23", "food value mirrors ItemRoster.TotalFood (livestock by MeatCount)",
+chk("1.58.0", "a good you can store feeds one, and anything with a horse component feeds nothing at all",
     "return good.IsFood ? 1 : 0;" in
         method_body(S['Rules.cs'], "internal static int FoodValue") and
-    "return good.IsLivestock ? good.MeatCount : 0;" in
+    "if (good.Id == null || good.HasHorse) return 0;" in
         method_body(S['Rules.cs'], "internal static int FoodValue") and
-    "good.MeatCount = item.HasHorseComponent ? item.HorseComponent.MeatCount : 0;" in
-        method_body(S['Policy.cs'], "internal static Good Describe") and
+    "MeatCount" not in method_body(S['Policy.cs'], "internal static Good Describe") and
     "Math.Min(held.Amount - had, (reserve + perUnit - 1) / perUnit)" in food_rule())
 chk("1.3.23", "herd surplus counts mounts against unmounted men",
     "Math.Max(0, mounts - foot)" in S['Trading.cs'] and "NumberOfMenWithoutHorse" in S['Trading.cs'])
@@ -3412,7 +3411,7 @@ def the_food_floor_keeps_one_of_every_kind_without_stacking_on_the_days():
     body = food_rule()
     return ("int variety = s.KeepEveryFoodKind ? s.KeepPerFoodKind : 0;" in body
             and "if (s.KeepFoodDays <= 0 || carried == null) return keep;" in body
-            and "if (held.Good.IsLivestock) continue;" in body
+            and "IsLivestock" not in body
             and "int floor = Math.Min(held.Amount, variety);" in body
             and "reserve -= (floor - had) * FoodValue(held.Good);" in body
             and "if (reserve <= 0) break;" in body
@@ -3492,9 +3491,9 @@ chk("1.16.0", "the food floor is a switch that ships off, with its own amount th
     option_default('KeepPerFoodKind') == '2' and
     "_o.KeepEveryFoodKind" in M and "_o.KeepPerFoodKind" in M and
     re.search(r'SettingPropertyInteger\("\{=TL262\}[^"]*", 1, 50,', M) is not None)
-chk("1.16.0", "a herd is left out of the food floor, because it is slaughtered for meat rather than eaten as its own kind",
-    "if (held.Good.IsLivestock) continue;" in food_rule() and
-    "slaughtered for meat" in spoken(ENGLISH).get('TL361', ''))
+chk("1.58.0", "a herd is left out of the food floor because TradeLord trades it as goods and never as food, and the hint says so",
+    "IsLivestock" not in food_rule() and
+    "trades a herd as goods and never as food" in spoken(ENGLISH).get('TL361', ''))
 
 chk("1.17.0", "the settings screen hands every preset its own settings, so Default puts the built-in ones back",
     each_preset_gets_its_own_settings())
@@ -6050,6 +6049,29 @@ def an_army_waiting_on_livestock_holds_back_whatever_herd_you_carry():
 
 chk("1.57.0", "an army waiting on livestock holds back that many head of whatever herd you carry, since the quest counts any livestock rather than naming one",
     an_army_waiting_on_livestock_holds_back_whatever_herd_you_carry())
+
+
+def a_herd_is_never_food_anywhere_in_the_source():
+    value = method_body(S['Rules.cs'], "internal static int FoodValue")
+    stored = between(S['Rules.cs'], "internal static bool IsStorableFood", ";")
+    larder = pass_body("public static void ExecuteResupply")
+    return ("MeatCount" not in ALL
+            and "MeatCount" not in M
+            and "MeatCount" not in FOODTESTS
+            and "IsLivestock" not in value
+            and "if (good.Id == null || good.HasHorse) return 0;" in value
+            and "IsLivestock" not in food_rule()
+            and "good.IsFood && !good.HasHorse" in stored
+            and "TradePolicy.IsStorableFood(it)" in larder
+            and "A_herd_the_game_calls_food_still_feeds_nobody" in FOODTESTS
+            and "A_bag_of_nothing_but_livestock_keeps_no_food_back_at_all" in FOODTESTS
+            and "The_days_of_supply_are_met_from_food_alone_and_never_topped_up_with_a_herd" in FOODTESTS
+            and "A_herd_never_reaches_the_food_reserve_whatever_else_is_in_the_bags" in FOODTESTS
+            and "Livestock_is_never_eaten_at_all_however_cheap_it_is" in FOODTESTS)
+
+
+chk("1.58.0", "a herd is food to nothing in this repository: the meat count is gone from the source, the food value and the food floor name no livestock, the larder takes nothing with a horse component, and five tests hold it there",
+    a_herd_is_never_food_anywhere_in_the_source())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

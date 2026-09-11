@@ -14,13 +14,13 @@ namespace TradeLord.Tests
                 Amount = amount
             };
 
-        private static TradeRules.Ration Herd(string id, int amount, int value, int meat) =>
+        private static TradeRules.Ration Herd(string id, int amount, int value) =>
             new TradeRules.Ration
             {
                 Good = new Good
                 {
                     Id = id, Name = id, HasHorse = true, IsLivestock = true, IsAnimal = true,
-                    Value = value, MeatCount = meat
+                    Value = value
                 },
                 Amount = amount
             };
@@ -37,22 +37,68 @@ namespace TradeLord.Tests
             TradeRules.FoodKeep(carried, perDay, s);
 
         [Fact]
-        public void What_a_good_feeds_is_one_for_food_and_its_meat_for_livestock()
+        public void What_a_good_feeds_is_one_for_food_and_nothing_at_all_for_an_animal()
         {
             Assert.Equal(1, TradeRules.FoodValue(Food("grain", 1, 10).Good));
             Assert.Equal(0, TradeRules.FoodValue(Cargo("iron", 1).Good));
-            Assert.Equal(6, TradeRules.FoodValue(Herd("cow", 1, 100, 6).Good));
             Assert.Equal(0, TradeRules.FoodValue(default(Good)));
 
-            var mount = new Good { Id = "horse", Name = "horse", HasHorse = true, IsSpareMount = true, MeatCount = 9 };
+            Assert.Equal(0, TradeRules.FoodValue(Herd("cow", 1, 100).Good));
+            var mount = new Good { Id = "horse", Name = "horse", HasHorse = true, IsSpareMount = true };
             Assert.Equal(0, TradeRules.FoodValue(mount));
+            var packed = new Good { Id = "mule", Name = "mule", HasHorse = true, IsHaulAnimal = true };
+            Assert.Equal(0, TradeRules.FoodValue(packed));
+        }
+
+        [Fact]
+        public void A_herd_the_game_calls_food_still_feeds_nobody()
+        {
+            var edible = new Good
+            {
+                Id = "cow", Name = "cow", HasHorse = true, IsLivestock = true,
+                IsAnimal = true, IsFood = true, Value = 100
+            };
+            Assert.Equal(0, TradeRules.FoodValue(edible));
+            Assert.False(TradeRules.IsStorableFood(edible));
+        }
+
+        [Fact]
+        public void A_bag_of_nothing_but_livestock_keeps_no_food_back_at_all()
+        {
+            var bags = new List<TradeRules.Ration> { Herd("cow", 9, 100), Herd("sheep", 12, 40) };
+            var s = new Options { KeepFoodDays = 10, KeepEveryFoodKind = true, KeepPerFoodKind = 3 };
+            Assert.Empty(Keep(bags, s, perDay: 20f));
+        }
+
+        [Fact]
+        public void A_herd_never_reaches_the_food_reserve_whatever_else_is_in_the_bags()
+        {
+            var rng = new Random(8831);
+            for (int run = 0; run < 20000; run++)
+            {
+                var bags = new List<TradeRules.Ration>();
+                int herds = rng.Next(0, 4), foods = rng.Next(0, 4);
+                for (int i = 0; i < herds; i++)
+                    bags.Add(Herd("herd" + i, rng.Next(1, 12), rng.Next(20, 200)));
+                for (int i = 0; i < foods; i++)
+                    bags.Add(Food("food" + i, rng.Next(1, 12), rng.Next(5, 60)));
+                if (rng.Next(2) == 0) bags.Add(Cargo("iron", rng.Next(1, 9)));
+                var s = new Options
+                {
+                    KeepFoodDays = rng.Next(0, 8),
+                    KeepEveryFoodKind = rng.Next(2) == 0,
+                    KeepPerFoodKind = rng.Next(1, 5)
+                };
+                foreach (var kept in Keep(bags, s, perDay: rng.Next(1, 30)))
+                    Assert.StartsWith("food", kept.Key);
+            }
         }
 
         [Fact]
         public void Only_food_you_can_store_counts_as_the_larder()
         {
             Assert.True(TradeRules.IsStorableFood(Food("grain", 1, 10).Good));
-            Assert.False(TradeRules.IsStorableFood(Herd("cow", 1, 100, 6).Good));
+            Assert.False(TradeRules.IsStorableFood(Herd("cow", 1, 100).Good));
             Assert.False(TradeRules.IsStorableFood(Cargo("iron", 1).Good));
             Assert.False(TradeRules.IsStorableFood(default(Good)));
         }
@@ -71,7 +117,7 @@ namespace TradeLord.Tests
             {
                 Food("grain", 50, 10),
                 Food("fish", 50, 20),
-                Herd("cow", 10, 100, 5),
+                Herd("cow", 10, 100),
             };
             for (int each = 1; each <= 50; each++)
                 Assert.Empty(Keep(carried,
@@ -170,12 +216,12 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Livestock_is_eaten_last_however_cheap_it_is()
+        public void Livestock_is_never_eaten_at_all_however_cheap_it_is()
         {
             var s = new Options { KeepFoodDays = 4, KeepEveryFoodKind = false };
             var carried = new List<TradeRules.Ration>
             {
-                Herd("cow", 10, 1, 1),
+                Herd("cow", 10, 1),
                 Food("grain", 50, 500),
             };
             Dictionary<string, int> kept = Keep(carried, s, perDay: 1f);
@@ -184,11 +230,13 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_head_of_livestock_counts_for_all_the_meat_it_carries()
+        public void The_days_of_supply_are_met_from_food_alone_and_never_topped_up_with_a_herd()
         {
             var s = new Options { KeepFoodDays = 10, KeepEveryFoodKind = false };
-            var carried = new List<TradeRules.Ration> { Herd("cow", 10, 100, 5) };
-            Assert.Equal(2, Keep(carried, s, perDay: 1f)["cow"]);
+            var carried = new List<TradeRules.Ration> { Food("grain", 4, 10), Herd("cow", 10, 100) };
+            Dictionary<string, int> kept = Keep(carried, s, perDay: 1f);
+            Assert.Equal(4, kept["grain"]);
+            Assert.False(kept.ContainsKey("cow"));
         }
 
         [Fact]
@@ -236,7 +284,7 @@ namespace TradeLord.Tests
             var carried = new List<TradeRules.Ration>
             {
                 Food("grain", 50, 10),
-                Herd("cow", 50, 100, 5),
+                Herd("cow", 50, 100),
             };
             Dictionary<string, int> kept = Keep(carried, s, perDay: 1f);
             Assert.Equal(3, kept["grain"]);
@@ -338,7 +386,7 @@ namespace TradeLord.Tests
                 var shelf = new Dictionary<string, TradeRules.Ration>();
                 foreach (string id in ids)
                     shelf[id] = id == "cow" || id == "sheep"
-                        ? Herd(id, 0, rng.Next(1, 400), rng.Next(1, 9))
+                        ? Herd(id, 0, rng.Next(1, 400))
                         : Food(id, 0, rng.Next(1, 400));
 
                 var carried = new List<TradeRules.Ration>();
@@ -400,7 +448,7 @@ namespace TradeLord.Tests
         public void An_army_waiting_on_livestock_reserves_it_across_whatever_herd_you_carry()
         {
             var bags = new List<TradeRules.Ration>
-                { Cargo("wool", 20), Herd("sheep", 3, 40, 2), Herd("cow", 5, 90, 4) };
+                { Cargo("wool", 20), Herd("sheep", 3, 40), Herd("cow", 5, 90) };
 
             Dictionary<string, int> keep = TradeRules.LivestockKeep(bags, 6);
             Assert.Equal(3, keep["sheep"]);
@@ -411,7 +459,7 @@ namespace TradeLord.Tests
         [Fact]
         public void A_livestock_reserve_never_claims_more_than_the_herd_you_are_carrying()
         {
-            var bags = new List<TradeRules.Ration> { Herd("sheep", 2, 40, 2) };
+            var bags = new List<TradeRules.Ration> { Herd("sheep", 2, 40) };
             Dictionary<string, int> keep = TradeRules.LivestockKeep(bags, 9);
             Assert.Equal(2, keep["sheep"]);
         }
@@ -419,7 +467,7 @@ namespace TradeLord.Tests
         [Fact]
         public void An_army_waiting_on_no_livestock_reserves_none()
         {
-            var bags = new List<TradeRules.Ration> { Herd("cow", 5, 90, 4) };
+            var bags = new List<TradeRules.Ration> { Herd("cow", 5, 90) };
             Assert.Empty(TradeRules.LivestockKeep(bags, 0));
             Assert.Empty(TradeRules.LivestockKeep(null, 4));
         }
@@ -427,7 +475,7 @@ namespace TradeLord.Tests
         [Fact]
         public void One_good_in_two_lots_gives_the_livestock_reserve_both_lots()
         {
-            var bags = new List<TradeRules.Ration> { Herd("cow", 2, 90, 4), Herd("cow", 3, 90, 4) };
+            var bags = new List<TradeRules.Ration> { Herd("cow", 2, 90), Herd("cow", 3, 90) };
             Dictionary<string, int> keep = TradeRules.LivestockKeep(bags, 4);
             Assert.Equal(4, keep["cow"]);
         }

@@ -581,7 +581,7 @@ namespace TradeLord.Mcm
         public int KeepFoodDays { get => _o.KeepFoodDays; set { _o.KeepFoodDays = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL261}Keep some of every kind of food", Order = 1, RequireRestart = false,
-            HintText = "{=TL361}Hold back a few of every kind of food you carry, so the party keeps its food variety morale bonus. It needs Restock and keep food (days of supply) above turned on to do anything, and what it holds back counts towards those days. Livestock is left out, since a herd is slaughtered for meat. OFF by default.")]
+            HintText = "{=TL361}Hold back a few of every kind of food you carry, so the party keeps its food variety morale bonus. It needs Restock and keep food (days of supply) above turned on to do anything, and what it holds back counts towards those days. Livestock is left out, since TradeLord trades a herd as goods and never as food. OFF by default.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public bool KeepEveryFoodKind { get => _o.KeepEveryFoodKind; set { _o.KeepEveryFoodKind = value; Options.Bump(); } }
 
