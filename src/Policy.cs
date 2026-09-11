@@ -215,13 +215,12 @@ namespace TradeLord
             return perDay < 1f ? 1f : perDay;
         }
 
-        internal static Dictionary<ItemObject, int> FoodKeep(ItemRoster roster, Books books, bool sim)
+        private static List<TradeRules.Ration> Carried(ItemRoster roster, Books books, bool sim,
+                                                       IDictionary<string, ItemObject> byId)
         {
-            var keep = new Dictionary<ItemObject, int>();
-            if (roster == null) return keep;
-            var byId = new Dictionary<string, ItemObject>(StringComparer.Ordinal);
-            var soldAlready = new Dictionary<string, int>(StringComparer.Ordinal);
             var carried = new List<TradeRules.Ration>();
+            if (roster == null) return carried;
+            var soldAlready = new Dictionary<string, int>(StringComparer.Ordinal);
             for (int i = 0; i < roster.Count; i++)
             {
                 ItemRosterElement el = roster.GetElementCopyAtIndex(i);
@@ -234,17 +233,39 @@ namespace TradeLord
                 byId[item.StringId] = item;
                 carried.Add(new TradeRules.Ration { Good = Describe(item), Amount = amount });
             }
-            foreach (var kept in TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current))
-                if (byId.TryGetValue(kept.Key, out ItemObject item)) keep[item] = kept.Value;
+            return carried;
+        }
+
+        private static Dictionary<ItemObject, int> Named(Dictionary<string, int> kept,
+                                                         IDictionary<string, ItemObject> byId)
+        {
+            var keep = new Dictionary<ItemObject, int>();
+            foreach (var one in kept)
+                if (byId.TryGetValue(one.Key, out ItemObject item)) keep[item] = one.Value;
             return keep;
+        }
+
+        internal static Dictionary<ItemObject, int> FoodKeep(ItemRoster roster, Books books, bool sim)
+        {
+            var byId = new Dictionary<string, ItemObject>(StringComparer.Ordinal);
+            return Named(TradeRules.FoodKeep(Carried(roster, books, sim, byId),
+                                             AppetitePerDay(), Options.Current), byId);
         }
 
         internal static Dictionary<ItemObject, int> KeptBack(ItemRoster roster, Books books, bool sim,
                                                             out Dictionary<ItemObject, int> awaited)
         {
-            Dictionary<ItemObject, int> keep = FoodKeep(roster, books, sim);
-            awaited = Errands.Promised();
+            var byId = new Dictionary<string, ItemObject>(StringComparer.Ordinal);
+            List<TradeRules.Ration> carried = Carried(roster, books, sim, byId);
+            Dictionary<ItemObject, int> keep =
+                Named(TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current), byId);
+            awaited = Errands.Promised(out int anyLivestock);
             if (awaited == null) return keep;
+            foreach (var owed in Named(TradeRules.LivestockKeep(carried, anyLivestock), byId))
+            {
+                awaited.TryGetValue(owed.Key, out int had);
+                awaited[owed.Key] = had + owed.Value;
+            }
             foreach (var owed in awaited)
             {
                 keep.TryGetValue(owed.Key, out int held);

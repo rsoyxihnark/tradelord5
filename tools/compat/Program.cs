@@ -93,6 +93,7 @@ namespace TradeLord.Compat
             (Issues + "ArmyNeedsSuppliesIssueBehavior+ArmyNeedsSuppliesIssueQuest", "_requestedGrainAmount"),
             (Issues + "ArmyNeedsSuppliesIssueBehavior+ArmyNeedsSuppliesIssueQuest", "_requestedWineAmount"),
             (Issues + "HeadmanNeedsGrainIssueBehavior+HeadmanNeedsGrainIssueQuest", "_neededGrainAmount"),
+            (Issues + "ArmyNeedsSuppliesIssueBehavior+ArmyNeedsSuppliesIssueQuest", "_requestedLiveStockAmount"),
             ("TaleWorlds.CampaignSystem.Conversation.ConversationManager", "_sentences"),
         };
 
