@@ -1209,8 +1209,9 @@ chk("1.3.18", "neither pass trades before the settling delay is served, in a mar
         between(S['Trading.cs'], "private static bool MarketOpen(Settlement settlement, bool quiet) =>", ";") and
     "if (StillSettling(Muted(automated: true))) return;" in
         method_body(S['Trading.cs'], "public static void ExecuteRoadTrade") and
-    "if (!MarketOpen(site, quiet)) return null;" in
+    "if (!MarketOpen(site, TradeActionBehavior.Muted(quiet))) return null;" in
         method_body(S['Trading.cs'], "internal static Pass Open") and
+    "MarketOpen(site, quiet)" not in S['Trading.cs'] and
     S['Trading.cs'].count("MarketOpen(") == 2 and
     S['Trading.cs'].count("Pass.Open(settlement, quiet)") == 5 and
     S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 2)
@@ -4923,7 +4924,7 @@ def every_market_pass_is_opened_and_carried_by_one_object():
                 "internal readonly bool Sim;",
                 "internal readonly bool Quiet;",
                 "internal bool DirectionError;"))
-            and ordered(opened, "if (!MarketOpen(site, quiet)) return null;",
+            and ordered(opened, "if (!MarketOpen(site, TradeActionBehavior.Muted(quiet))) return null;",
                         "MobileParty party = MobileParty.MainParty;",
                         "return party == null ? null : new Pass(site, null, null, Visit, party, quiet);")
             and t.count("Pass.Open(settlement, quiet)") == 5
@@ -6073,6 +6074,25 @@ def a_herd_is_never_food_anywhere_in_the_source():
 chk("1.58.0", "a herd is food to nothing in this repository: the meat count is gone from the source, the food value and the food floor name no livestock, the larder takes nothing with a horse component, and five tests hold it there",
     a_herd_is_never_food_anywhere_in_the_source())
 
+
+def the_settling_notice_obeys_the_silence_switch_on_both_routes():
+    opened = method_body(S['Trading.cs'], "internal static Pass Open")
+    road = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
+    settling = method_body(S['Trading.cs'], "private static bool StillSettling")
+    said = "both as you enter a market and when you meet a caravan or a party of villagers on the road"
+    return ("if (!MarketOpen(site, TradeActionBehavior.Muted(quiet))) return null;" in opened
+            and "if (StillSettling(Muted(automated: true))) return;" in road
+            and "MarketOpen(site, quiet)" not in S['Trading.cs']
+            and "StillSettling(quiet: false)" not in S['Trading.cs']
+            and "private static bool Muted(bool automated) => automated && Options.Current.QuietAutomation;"
+                in S['Trading.cs']
+            and ordered(settling, "if (!quiet)", '{=TL18}', "Toast(msg);")
+            and said in re.search(r'\{=TL349\}([^"]*)"', M).group(1)
+            and said in spoken(ENGLISH).get('TL349', ''))
+
+
+chk("1.58.1", "the market is still settling notice is silenced by Silence trade messages and by nothing else, on entering a market as well as on the road",
+    the_settling_notice_obeys_the_silence_switch_on_both_routes())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

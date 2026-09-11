@@ -339,7 +339,7 @@ namespace TradeLord
 
             internal static Pass Open(Settlement site, bool quiet)
             {
-                if (!MarketOpen(site, quiet)) return null;
+                if (!MarketOpen(site, TradeActionBehavior.Muted(quiet))) return null;
                 MobileParty party = MobileParty.MainParty;
                 return party == null ? null : new Pass(site, null, null, Visit, party, quiet);
             }
