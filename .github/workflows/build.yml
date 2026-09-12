@@ -169,16 +169,26 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
+          SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")
+          case "$SUBJECT" in
+            "[no release]"*)
+              echo "this commit is marked [no release], so it publishes nothing"
+              exit 0 ;;
+          esac
           if gh release view "$VERSION" --json tagName -q .tagName >/dev/null 2>&1; then
             draft=$(gh release view "$VERSION" --json isDraft -q .isDraft 2>/dev/null || echo false)
             if [ "$draft" = "true" ]; then
               echo "$VERSION exists only as a draft left by a timed-out attempt - discarding it and publishing cleanly"
               gh release delete "$VERSION" --yes
-            elif [ "${{ github.event_name }}" = "push" ]; then
-              echo "release $VERSION is already published - nothing to publish for this push"
-              exit 0
             else
-              echo "release $VERSION is already published - bump the version in SubModule.xml instead of replacing history"
+              AT=$(gh release view "$VERSION" --json targetCommitish -q .targetCommitish 2>/dev/null || echo "")
+              if [ "$AT" = "$GITHUB_SHA" ]; then
+                echo "release $VERSION was published by this very commit, so there is nothing left to do"
+                exit 0
+              fi
+              echo "release $VERSION is already published, from commit $AT, and this commit claims it again:"
+              echo "  $SUBJECT"
+              echo "raise the version in TradeLord/SubModule.xml, or mark this commit [no release] if it ships nothing"
               exit 1
             fi
           fi
