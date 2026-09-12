@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- The feature list now says that TradeLord tells you once, at the first market of a campaign, that it will trade for you as you arrive, and leaves that market untraded so you can switch it off first.
+- The feature list now says that you can tell a caravan it was a good trade once the goods have changed hands, and that the trader answers.
+- The feature list now says that the town menu entry falls back to the six best routes written out as text when the ledger panel cannot open.
+- The feature list now counts how much of the margin survives unit-by-unit pricing among the things a route's confidence is discounted by, which it had left out.
+- The feature list now says the settling delay ships switched off, and says that a trade on the road moves the goods and the gold itself at the price the game quotes off-market, since there is no market there to sell to.
+
 ## 1.61.0
 
 - A route's price now also counts the gold the caravans on the road are bringing to spend at its two markets, so a market that is about to be picked over prices accordingly instead of looking cheap.
