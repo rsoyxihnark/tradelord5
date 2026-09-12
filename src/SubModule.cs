@@ -65,6 +65,7 @@ namespace TradeLord
             Guard.Run("GameEnd.Panel", LedgerPanel.Reset);
             Guard.Run("GameEnd.Travel", Travel.Forget);
             Guard.Run("GameEnd.Bulk", Bulk.Forget);
+            Guard.Run("GameEnd.Forecast", Forecast.Forget);
             Guard.Run("GameEnd.Visit", TradeActionBehavior.ForgetVisit);
             Guard.Run("GameEnd.Encounter", TradeActionBehavior.ForgetEncounter);
             LedgerBehavior.Instance = null;
