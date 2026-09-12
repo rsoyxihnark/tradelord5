@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.62.2
+
+- In Russian and Simplified Chinese, the note under Keep gold for days of wages now calls Gold reserve by the name the settings screen gives it.
+- In Turkish, Simplified Chinese and Russian, the note under Auto-mark best sell market on map now names the travel ceilings and the ledger panel the way the rest of the mod names them.
+- In Russian, the note under Count what is on its way to a market now calls Live world prices by the name the settings screen gives it.
+
 ## 1.62.1
 
 - Where a route's amount counts goods still on the road, the ledger panel now marks it Qty!, so an amount larger than what the market holds while you read it is never a surprise.
