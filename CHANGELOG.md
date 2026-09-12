@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.63.0
+
+- Score the forecast in the log, a new switch under Debug, writes down what TradeLord expects a market to hold by the time you get there, and then, as you walk in, what it really holds, good by good, with how far off it was.
+- It needs Count what is on its way to a market, and it stays off until you turn it on, since it makes the log longer.
+- The feature list says so too.
+
 ## 1.62.2
 
 - In Russian and Simplified Chinese, the note under Keep gold for days of wages now calls Gold reserve by the name the settings screen gives it.

@@ -159,6 +159,31 @@ namespace TradeLord
         public static bool LandsInTime(float etaDays, float horizonDays) =>
             etaDays <= horizonDays;
 
+        public static int MissedBy(int said, int happened)
+        {
+            long missed = (long)happened - said;
+            if (missed > int.MaxValue) return int.MaxValue;
+            return missed < int.MinValue ? int.MinValue : (int)missed;
+        }
+
+        public const float NoShareToGive = -1f;
+
+        public static float OffByShare(int said, int happened)
+        {
+            if (said == 0) return NoShareToGive;
+            double off = Math.Abs((double)happened - said) / Math.Abs((double)said);
+            return off > float.MaxValue ? float.MaxValue : (float)off;
+        }
+
+        public static float MeanOf(float total, int counted) =>
+            counted <= 0 ? 0f : total / counted;
+
+        public static float DaysSince(float thenHours, float nowHours)
+        {
+            float days = (nowHours - thenHours) / 24f;
+            return days < 0f ? 0f : days;
+        }
+
         public static float EtaDays(float distance, float speed)
         {
             if (distance <= 0f) return 0f;
