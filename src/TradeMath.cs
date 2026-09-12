@@ -159,6 +159,26 @@ namespace TradeLord
         public static bool LandsInTime(float etaDays, float horizonDays) =>
             etaDays <= horizonDays;
 
+        public const float HorizonStep = 0.25f;
+
+        public static float ToTheQuarterDay(float days)
+        {
+            if (days <= 0f) return 0f;
+            double steps = Math.Floor(days / HorizonStep + 0.5d);
+            return steps <= 0d ? 0f : (float)(steps * HorizonStep);
+        }
+
+        public static float RunLandsIn(float progress, float runDays)
+        {
+            float left = 1f - (progress < 0f ? 0f : (progress > 1f ? 1f : progress));
+            float days = left * (runDays < 0f ? 0f : runDays);
+            return days < 0f ? 0f : days;
+        }
+
+        public static bool StandsBetter(int count, int value, int bestCount, int bestValue) =>
+            count > 0 && (bestCount <= 0 || count > bestCount ||
+                          (count == bestCount && value < bestValue));
+
         public static int MissedBy(int said, int happened)
         {
             long missed = (long)happened - said;
