@@ -169,6 +169,7 @@
 		<string id="TL245" text="在地图上自动标出最佳卖出市场"/>
 		<string id="TL246" text="把价格追踪写入日志"/>
 		<string id="TL280" text="把预测的准头写入日志"/>
+		<string id="TL281" text="先把这笔交易摆出来给你看"/>
 		<string id="TL247" text="成交时的金币声"/>
 		<string id="TL248" text="详细的交易摘要"/>
 		<string id="TL249" text="静音交易消息" />
@@ -245,5 +246,9 @@
 		<string id="TL395" text="，以及各自接下来要做的东西"/>
 		<string id="TL397" text=" | Qty! = 这个数量里有一部分还在路上，会比你先到"/>
 		<string id="TL399" text=" | 卖价兑现了本面板所承诺的 {HELD}，至今共 {COUNT} 次抵达"/>
+		<string id="TL400" text="TradeLord 不再替你成交，而是打开交易界面，把整笔买卖摆在上面：要卖的都在一边，要买的都在另一边。你随意改动，然后按“完成”成交，或按“取消”全部作罢。开启时抵达市场不会自动成交，路上遇到的队伍仍按原样交易。默认关闭。"/>
+		<string id="TL401" text="TradeLord 摆出了 {SOLD} 件要卖，值 {GAINED} 第纳尔，以及 {BOUGHT} 件要买，值 {SPENT}。你随意改动，然后按“完成”成交，或按“取消”作罢。"/>
+		<string id="TL402" text="TradeLord 在这里没找到值得买卖的东西，因此什么也没摆出来。按“取消”让市场保持原样。"/>
+		<string id="TL403" text="TradeLord 先把交易按住，等你过目。从本菜单选“{ENTRY}”，它就把交易摆到交易界面上。"/>
 	</strings>
 </base>

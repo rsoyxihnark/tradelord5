@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.65.0
+
+- Lay the trade out for you first, a new switch under Automation that ships off: TradeLord opens the trade screen and lays its whole deal on it, everything it would sell on one side and everything it would buy on the other, so you can change what you like and press Done to trade or Cancel to leave it.
+- Each unit is laid out at the price that unit really fetches, the same walk the ledger panel quotes, so the total on the screen is the total TradeLord worked out.
+- While it is on, nothing is traded as you arrive at a market: a line tells you Trade here now (TradeLord) is what lays the deal out, and a party met on the road still trades as before.
+- A deal with nothing in it says so rather than leaving you looking at an empty screen.
+- Simulation mode (dry run) still wins where both are on, so a dry run never puts anything on the screen.
+- The feature list says so too.
+
 ## 1.64.1
 
 - What a workshop will make next now lands when the game says that run is due, rather than always a day away, so a market is priced on it at the right time.
