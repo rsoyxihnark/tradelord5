@@ -534,5 +534,58 @@ namespace TradeLord.Tests
             Assert.Equal(TradeMath.EtaDays(120f, TradeMath.WalkingPace),
                          TradeMath.EtaDays(120f, 0f), 4);
         }
+
+        [Fact]
+        public void A_good_that_is_cheap_at_a_market_pulls_a_traders_gold_and_a_dear_one_does_not()
+        {
+            Assert.Equal(0.4f, TradeMath.PullOfAPrice(0.6f), 4);
+            Assert.Equal(0f, TradeMath.PullOfAPrice(1f));
+            Assert.Equal(0f, TradeMath.PullOfAPrice(1.8f));
+            Assert.Equal(1f, TradeMath.PullOfAPrice(0f));
+            Assert.Equal(1f, TradeMath.PullOfAPrice(-3f));
+        }
+
+        [Fact]
+        public void A_purse_is_split_across_a_market_by_how_cheap_each_good_is()
+        {
+            Assert.Equal(750, TradeMath.ShareOfAPurse(1000, 0.6f, 0.8f));
+            Assert.Equal(250, TradeMath.ShareOfAPurse(1000, 0.2f, 0.8f));
+            Assert.Equal(1000, TradeMath.ShareOfAPurse(1000, 0.5f, 0.5f));
+        }
+
+        [Fact]
+        public void The_shares_of_one_purse_never_add_up_to_more_than_the_purse()
+        {
+            float[] pulls = { 0.5f, 0.3f, 0.2f };
+            float across = 1f;
+            int spread = 0;
+            foreach (float pull in pulls) spread += TradeMath.ShareOfAPurse(900, pull, across);
+            Assert.True(spread <= 900);
+        }
+
+        [Fact]
+        public void A_purse_nobody_would_spend_here_moves_nothing()
+        {
+            Assert.Equal(0, TradeMath.ShareOfAPurse(0, 0.5f, 1f));
+            Assert.Equal(0, TradeMath.ShareOfAPurse(1000, 0f, 1f));
+            Assert.Equal(0, TradeMath.ShareOfAPurse(1000, 0.5f, 0f));
+            Assert.Equal(0, TradeMath.ShareOfAPurse(-50, 0.5f, 1f));
+        }
+
+        [Fact]
+        public void What_a_market_will_hold_is_what_lands_less_what_is_bought_off_it()
+        {
+            Assert.Equal(400, TradeMath.WorthShift(1000, 600));
+            Assert.Equal(-600, TradeMath.WorthShift(0, 600));
+            Assert.Equal(1000, TradeMath.WorthShift(1000, 0));
+            Assert.Equal(1000, TradeMath.WorthShift(1000, -50));
+        }
+
+        [Fact]
+        public void A_shelf_cannot_be_bought_down_past_empty()
+        {
+            Assert.Equal(0, TradeMath.ShelfAfterLanding(500, TradeMath.WorthShift(0, 900)));
+            Assert.Equal(100, TradeMath.ShelfAfterLanding(500, TradeMath.WorthShift(0, 400)));
+        }
     }
 }

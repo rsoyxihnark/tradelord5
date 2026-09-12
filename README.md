@@ -20,7 +20,7 @@
 - ✅ A ledger panel on the campaign map ranking every profitable route, on hotkey **T**, on the map button, or from its own entry in the town menu
 - ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get
 - ✅ A confidence score on each route: profit per day, discounted by how much of the good the market you are buying from has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
-- ✅ Prices and stock that count what is still on its way: the cargo the caravans on the road will unload at a market, and what that town's workshops will make next, counted at each end of a route only when it lands before you would get there, so a route is priced on the market you will actually walk into
+- ✅ Prices and stock that count what is still on its way: the cargo the caravans on the road will unload at a market, what that town's workshops will make next, and the purses those caravans are bringing to spend, spread over the goods that are cheap there as an estimate of what they will buy off the shelf. Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
 - ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
 - ✅ A route listed whether or not your purse could pay for it today, so the panel always shows you where the profit is, and says under the routes when your gold reserve is what is stopping you buying
@@ -78,7 +78,7 @@
 
 - ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, marks on your map or holds your cargo for is further than you care to ride
 - ✅ A minimum stock before it calls something worth buying
-- ✅ Count goods on their way to a market, on out of the box, which is what puts the caravans on the road and the workshops into a route's price; it follows Live world prices, so turning those off turns this off too
+- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses and the workshops into a route's price; it follows Live world prices, so turning those off turns this off too
 - ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ Caps on one good by count or by denars, on how many of it you will carry, on the share of the hold it may fill, which ships at 45% so one cheap good cannot take your whole cargo, and on the whole visit. They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off a haul animal, since one of those adds to the hold rather than filling it

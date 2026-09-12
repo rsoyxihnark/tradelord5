@@ -237,9 +237,9 @@
 		<string id="TL392" text="Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages, so it will not buy anything here. Sell some cargo, or lower either of those in its settings."/>
 		<string id="TL393" text="Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages, so there is nothing here you could buy. Sell some cargo, or lower either of those in its settings."/>
 		<string id="TL390" text="TradeLord trades in town menus and towns join the price scans. ON by default." />
-		<string id="TL279" text="Count goods on their way to a market"/>
-		<string id="TL396" text="Before a route is priced, add the cargo the caravans on the road will unload at its two markets, and what the workshops there will make next, so the price you are quoted allows for goods that land before you do. Needs Live world prices. OFF prices every market as it stands today."/>
-		<string id="TL394" text=" | prices and stock count what the caravans on the road will unload and what the workshops will make before you arrive"/>
+		<string id="TL279" text="Count what is on its way to a market"/>
+		<string id="TL396" text="Before a route is priced, count what reaches its two markets before you do: the cargo the caravans will unload, what the workshops will make next, and the purses those caravans bring, spread over the goods that are cheap there as an estimate of what they will buy. Needs Live world prices. OFF prices each market as it stands."/>
+		<string id="TL394" text=" | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there"/>
 		<string id="TL395" text=" and what each will make next"/>
 	</strings>
 </base>

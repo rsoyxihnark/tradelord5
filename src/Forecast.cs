@@ -11,6 +11,12 @@ using TaleWorlds.Library;
 
 namespace TradeLord
 {
+    internal struct Spending
+    {
+        internal int Gold;
+        internal float Days;
+    }
+
     internal struct Landing
     {
         internal string Item;
@@ -30,6 +36,12 @@ namespace TradeLord
         private static readonly Dictionary<string, List<Landing>> _landing =
             new Dictionary<string, List<Landing>>(StringComparer.Ordinal);
 
+        private static readonly Dictionary<string, List<Spending>> _spending =
+            new Dictionary<string, List<Spending>>(StringComparer.Ordinal);
+
+        private static readonly Dictionary<string, Dictionary<string, float>> _pull =
+            new Dictionary<string, Dictionary<string, float>>(StringComparer.Ordinal);
+
         private static readonly Dictionary<string, ItemObject> _standsFor =
             new Dictionary<string, ItemObject>(StringComparer.Ordinal);
 
@@ -42,6 +54,8 @@ namespace TradeLord
             _readAtHour = -1;
             _readForGeneration = -1;
             _landing.Clear();
+            _spending.Clear();
+            _pull.Clear();
             _standsFor.Clear();
             _saidItCouldNotRead = false;
         }
@@ -62,6 +76,10 @@ namespace TradeLord
             return units;
         }
 
+        internal static int WorthShift(Settlement site, ItemObject item, float withinDays) =>
+            TradeMath.WorthShift(WorthLanding(site, item, withinDays),
+                                 WorthLeaving(site, item, withinDays));
+
         internal static int WorthLanding(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
@@ -77,6 +95,54 @@ namespace TradeLord
                 worth = TradeMath.ShelfAfterLanding(worth, landing.Worth);
             }
             return worth;
+        }
+
+        internal static int WorthLeaving(Settlement site, ItemObject item, float withinDays)
+        {
+            if (!On || site == null || item == null || item.ItemCategory == null) return 0;
+            Build();
+            if (!_spending.TryGetValue(site.StringId, out List<Spending> coming)) return 0;
+            int purse = 0;
+            for (int i = 0; i < coming.Count; i++)
+            {
+                Spending spending = coming[i];
+                if (!TradeMath.LandsInTime(spending.Days, withinDays)) continue;
+                purse += spending.Gold;
+            }
+            if (purse <= 0) return 0;
+            Dictionary<string, float> pull = PullAt(site);
+            if (pull == null) return 0;
+            if (!pull.TryGetValue(item.ItemCategory.StringId, out float mine)) return 0;
+            float across = 0f;
+            foreach (float one in pull.Values) across += one;
+            return TradeMath.ShareOfAPurse(purse, mine, across);
+        }
+
+        private static Dictionary<string, float> PullAt(Settlement site)
+        {
+            if (_pull.TryGetValue(site.StringId, out Dictionary<string, float> kept)) return kept;
+            Dictionary<string, float> pull = null;
+            Guard.Run("Forecast.Pull", () => pull = WhatATraderWouldPickAt(site));
+            _pull[site.StringId] = pull;
+            return pull;
+        }
+
+        private static Dictionary<string, float> WhatATraderWouldPickAt(Settlement site)
+        {
+            Town town = site.IsTown ? site.Town : null;
+            ItemRoster stock = site.ItemRoster;
+            if (town == null || stock == null) return null;
+            var pull = new Dictionary<string, float>(StringComparer.Ordinal);
+            for (int i = 0; i < stock.Count; i++)
+            {
+                ItemObject item = stock.GetItemAtIndex(i);
+                ItemCategory category = item?.ItemCategory;
+                if (category == null || stock.GetElementNumber(i) <= 0) continue;
+                if (!TradePolicy.Priced(item) || pull.ContainsKey(category.StringId)) continue;
+                float appeal = TradeMath.PullOfAPrice(town.MarketData.GetPriceFactor(category));
+                if (appeal > 0f) pull[category.StringId] = appeal;
+            }
+            return pull;
         }
 
         internal static string WillMake(Workshop shop)
@@ -100,6 +166,8 @@ namespace TradeLord
             _readAtHour = hour;
             _readForGeneration = Options.Generation;
             _landing.Clear();
+            _spending.Clear();
+            _pull.Clear();
             Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);
             Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
         }
@@ -116,9 +184,10 @@ namespace TradeLord
                 Settlement bound = party.TargetSettlement;
                 if (bound == null || !(bound.IsTown || bound.IsVillage)) continue;
                 ItemRoster carried = party.ItemRoster;
-                if (carried == null || carried.Count == 0) continue;
+                if (carried == null) continue;
                 float days = TradeMath.EtaDays(
                     party.GetPosition2D.Distance(bound.GetPosition2D), party.Speed);
+                NoteAPurse(bound, party.PartyTradeGold, days);
                 for (int k = 0; k < carried.Count; k++)
                 {
                     ItemObject item = carried.GetItemAtIndex(k);
@@ -247,6 +316,17 @@ namespace TradeLord
             if (!string.IsNullOrEmpty(name)) return name;
             ItemObject stands = StandsFor(category);
             return stands?.Name == null ? category.StringId : stands.Name.ToString();
+        }
+
+        private static void NoteAPurse(Settlement site, int gold, float days)
+        {
+            if (site == null || gold <= 0) return;
+            if (!_spending.TryGetValue(site.StringId, out List<Spending> coming))
+            {
+                coming = new List<Spending>();
+                _spending[site.StringId] = coming;
+            }
+            coming.Add(new Spending { Gold = gold, Days = days });
         }
 
         private static void Note(Settlement site, string item, ItemCategory category,
