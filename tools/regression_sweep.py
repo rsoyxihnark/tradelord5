@@ -6208,9 +6208,11 @@ def what_lands_after_you_arrive_is_not_counted():
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
     return ("if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;" in units
             and "if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;" in worth
-            and "int landedAtBuyTown = Forecast.WorthLanding(from, item, toBuy);" in scan
-            and "Forecast.WorthLanding(to, item, days));" in scan
-            and "Forecast.UnitsLanding(from, item, toBuy)" in scan)
+            and "int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);" in scan
+            and "Forecast.WorthShift(to, item, days));" in scan
+            and "Forecast.UnitsLanding(from, item, toBuy)" in scan
+            and "if (!TradeMath.LandsInTime(spending.Days, withinDays)) continue;" in
+                method_body(S['Forecast.cs'], "internal static int WorthLeaving"))
 
 def a_workshop_run_moves_the_price_of_its_kind_and_never_the_stock_of_one_good():
     shops = method_body(S['Forecast.cs'], "private static void ReadWhatTheShopsWillMake")
@@ -6262,6 +6264,47 @@ chk("1.60.0", "what is on the road is read once an hour, again when a setting mo
     the_forecast_is_read_once_an_hour_and_again_when_a_setting_moves())
 chk("1.60.0", "the workshop list says what each one will make next, and the panel legend says the forecast is counted",
     the_panel_says_what_each_workshop_will_make_next())
+
+
+
+def a_purse_on_its_way_is_spent_on_what_is_cheap_at_that_market():
+    leaving = method_body(S['Forecast.cs'], "internal static int WorthLeaving")
+    picked = method_body(S['Forecast.cs'], "private static Dictionary<string, float> WhatATraderWouldPickAt")
+    road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
+    return (ordered(leaving,
+                    "purse += spending.Gold;",
+                    "Dictionary<string, float> pull = PullAt(site);",
+                    "if (!pull.TryGetValue(item.ItemCategory.StringId, out float mine)) return 0;",
+                    "foreach (float one in pull.Values) across += one;",
+                    "return TradeMath.ShareOfAPurse(purse, mine, across);")
+            and "NoteAPurse(bound, party.PartyTradeGold, days);" in road
+            and "TradeMath.PullOfAPrice(town.MarketData.GetPriceFactor(category))" in picked
+            and "Town town = site.IsTown ? site.Town : null;" in picked)
+
+def a_purse_is_never_counted_twice_and_never_beyond_what_it_holds():
+    shift = method_body(S['Forecast.cs'], "internal static int WorthShift")
+    share = method_body(S['TradeMath.cs'], "public static int ShareOfAPurse")
+    pull = method_body(S['TradeMath.cs'], "public static float PullOfAPrice")
+    return ("TradeMath.WorthShift(WorthLanding(site, item, withinDays)," in shift
+            and "WorthLeaving(site, item, withinDays));" in shift
+            and "if (purse <= 0 || pull <= 0f || pullAcrossTheMarket <= 0f) return 0;" in share
+            and "(double)purse * pull / pullAcrossTheMarket" in share
+            and "float pull = 1f - priceFactor;" in pull
+            and "return pull < 0f ? 0f : (pull > 1f ? 1f : pull);" in pull)
+
+def what_a_market_will_hold_nets_the_buying_off_against_the_landing():
+    return ("public static int WorthShift(int landing, int leaving)" in S['TradeMath.cs']
+            and "long shift = (long)landing - (leaving < 0 ? 0 : leaving);" in
+                method_body(S['TradeMath.cs'], "public static int WorthShift")
+            and "_inStoreValue = TradeMath.ShelfAfterLanding(data.InStoreValue, landed);" in S['Market.cs'])
+
+
+chk("1.61.0", "the gold a caravan brings is aimed at the goods that are cheap at that market, weighted by how cheap each one is",
+    a_purse_on_its_way_is_spent_on_what_is_cheap_at_that_market())
+chk("1.61.0", "a purse is split across a market rather than counted whole against every good, and never read as more than it holds",
+    a_purse_is_never_counted_twice_and_never_beyond_what_it_holds())
+chk("1.61.0", "what a market will hold when you get there is what lands there less what the purses take off the shelf",
+    what_a_market_will_hold_nets_the_buying_off_against_the_landing())
 
 
 

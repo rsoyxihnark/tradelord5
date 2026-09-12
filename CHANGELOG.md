@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.61.0
+
+- A route's price now also counts the gold the caravans on the road are bringing to spend at its two markets, so a market that is about to be picked over prices accordingly instead of looking cheap.
+- That purse is spread over the goods that are cheap at the market it is heading for, which is what a trader buys, so the estimate lands on the goods a caravan would actually take off the shelf.
+- A purse counts only against the market the caravan is going to, only when it arrives before you would, and never for more gold than the caravan is carrying.
+- Count goods on their way to a market is now called Count what is on its way to a market, since it counts the gold coming to spend as well as the goods, and its explanation on the settings screen says so.
+- The panel legend now says that prices count what will be bought off a market as well as what will be added to it.
+- The feature list now says that a route's price counts the purses the caravans are bringing.
+
 ## 1.60.0
 
 - A route's price now counts what is still on its way to its two markets: the cargo the caravans on the road will unload, and what that town's workshops will make next, so the panel prices the market you will walk into rather than the one standing there now.

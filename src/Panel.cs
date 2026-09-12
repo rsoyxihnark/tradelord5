@@ -268,7 +268,7 @@ namespace TradeLord
                   + (Options.Current.ConservativeRouteProjection
                         ? Tongue.Text("{=TL73} | resale safety factor applied").ToString() : "")
                   + (Forecast.On
-                        ? Tongue.Text("{=TL394} | prices and stock count what the caravans on the road will unload and what the workshops will make before you arrive").ToString()
+                        ? Tongue.Text("{=TL394} | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there").ToString()
                         : ""))
                 + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero));
 
