@@ -263,6 +263,8 @@ namespace TradeLord
             return same;
         }
 
+        internal static void StartAFreshDryRun() => Visit.ForgetTheDryRun();
+
         private static void ResetVisit(bool sameSitting = false)
         {
             _visitTradeAllowed = false;
@@ -333,7 +335,7 @@ namespace TradeLord
                 Books = books;
                 Party = party;
                 Me = party.Party;
-                Sim = Options.Current.SimulationMode;
+                Sim = Options.Current.SimulationMode || Counter.Staging;
                 Quiet = quiet;
             }
 
@@ -358,7 +360,7 @@ namespace TradeLord
                 }
             }
 
-            internal bool Muted => TradeActionBehavior.Muted(Quiet);
+            internal bool Muted => Counter.Staging || TradeActionBehavior.Muted(Quiet);
 
             internal bool Reports => Site != null;
 
@@ -366,7 +368,7 @@ namespace TradeLord
 
             internal string Where => Site != null ? "at " + Site.Name : "from " + Met.Name;
 
-            internal string Headed(string label) => label + (Sim ? " (simulated, best case): " : ": ");
+            internal string Headed(string label) => label + (Sim ? Counter.Heading : ": ");
 
             internal ItemRoster Stock => Site != null ? Site.ItemRoster : Met.ItemRoster;
 
@@ -583,15 +585,24 @@ namespace TradeLord
                         },
                         args => Guard.Run("Action.QuickTradeMenu", () =>
                         {
-                            LogHerdState("trading by hand at " + Settlement.CurrentSettlement.Name);
-                            ExecuteQuickSell(Settlement.CurrentSettlement);
-                            ExecuteHerdRelief(Settlement.CurrentSettlement);
-                            ExecuteResupply(Settlement.CurrentSettlement);
-                            ExecuteHaulage(Settlement.CurrentSettlement);
-                            ExecuteQuickBuy(Settlement.CurrentSettlement);
-                            ExecuteHerdRelief(Settlement.CurrentSettlement);
-                            LogHerdState("after trading by hand at " + Settlement.CurrentSettlement.Name);
-                            ReportStalledPasses();
+                            if (!Counter.Ready(Settlement.CurrentSettlement)) return;
+                            try
+                            {
+                                LogHerdState("trading by hand at " + Settlement.CurrentSettlement.Name);
+                                ExecuteQuickSell(Settlement.CurrentSettlement);
+                                ExecuteHerdRelief(Settlement.CurrentSettlement);
+                                ExecuteResupply(Settlement.CurrentSettlement);
+                                ExecuteHaulage(Settlement.CurrentSettlement);
+                                ExecuteQuickBuy(Settlement.CurrentSettlement);
+                                ExecuteHerdRelief(Settlement.CurrentSettlement);
+                                LogHerdState("after trading by hand at " + Settlement.CurrentSettlement.Name);
+                                ReportStalledPasses();
+                            }
+                            finally
+                            {
+                                TextObject laid = Counter.Settle();
+                                if (laid != null) Toast(laid, ToastNote);
+                            }
                         }),
                         false, 6);
 
@@ -720,6 +731,7 @@ namespace TradeLord
             if (party != MobileParty.MainParty) return;
             Guard.Run("Action.OnSettlementEntered", () =>
             {
+                Counter.Forget();
                 PriceTrace.Say(settlement, "walked in, before anything was traded");
                 Hindsight.Score(settlement);
                 ResetVisit(StillTheSameSitting(settlement));
@@ -735,6 +747,15 @@ namespace TradeLord
                     return;
                 }
                 NoteThisArrival(settlement);
+
+                if (Counter.HoldsBack())
+                {
+                    Toast(TheDealWaitsForYou(), ToastNote);
+                    Log.Write("trading on arrival at " + settlement.Name + " is held back: the deal is laid out " +
+                              "on the trade screen from the menu entry instead, so nothing moved");
+                    UpdateBestSellTownTracker();
+                    return;
+                }
 
                 if (!AnnounceAutomation(settlement))
                 {
@@ -781,6 +802,13 @@ namespace TradeLord
         private static bool CanTradeHere(Settlement s) =>
             IsMarket(s) && !LedgerBehavior.VillageShut(s) && GameAllowsTrade(s) &&
             !(Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s));
+
+        private static TextObject TheDealWaitsForYou()
+        {
+            TextObject line = Tongue.Text("{=TL403}TradeLord is holding its trade back until you have seen it. Choose {ENTRY} in this menu to have it laid out on the trade screen.");
+            line.SetTextVariable("ENTRY", Tongue.Text("{=TL26}Trade here now (TradeLord)"));
+            return line;
+        }
 
         private static bool StillSettling(bool quiet)
         {
@@ -872,7 +900,7 @@ namespace TradeLord
             foreach (var kv in detail)
             {
                 Log.Write((selling ? "  sold " : "  bought ") + kv.Value.count + " " +
-                          kv.Key.StringId + " for " + kv.Value.gold + (sim ? " (simulated)" : "") +
+                          kv.Key.StringId + " for " + kv.Value.gold + (sim ? Counter.Aside : "") +
                           Quotation(quoted, kv.Key, kv.Value.gold));
                 LogAnimalMoved(selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);
             }
@@ -892,7 +920,7 @@ namespace TradeLord
             if (item == null || !item.HasHorseComponent) return;
             Log.Write("  animal " + (selling ? "out: " : "in: ") + item.StringId +
                       " (" + (item.Name == null ? item.StringId : item.Name.ToString()) + ") x" + count +
-                      (selling ? " for +" : " for -") + gold + " gold" + (sim ? " (simulated)" : "") +
+                      (selling ? " for +" : " for -") + gold + " gold" + (sim ? Counter.Aside : "") +
                       " - " + why + "; TradeLord counts it as " + TradePolicy.AnimalGroup(item));
         }
 
@@ -1257,6 +1285,7 @@ namespace TradeLord
                             soldItems++;
                             remaining--;
                             if (basis.SoldOne()) pass.Books.NotePaidDrawn(item.StringId);
+                            Counter.Stage(el, selling: true, price);
                             pass.Tally(item, 1, price);
                             continue;
                         }
@@ -1431,6 +1460,7 @@ namespace TradeLord
                             simSpent += price;
                             simWeight += item.Weight;
                             pass.Books.NotePurchase(item.StringId, price, good.Weight, fed);
+                            Counter.Stage(el, selling: false, price);
                         }
                         else
                         {
@@ -1631,6 +1661,7 @@ namespace TradeLord
                                                 rank == RankHaulAnimal ? 0f : item.Weight,
                                                 TradePolicy.FoodValue(item));
                             pass.Books.NoteShed(rank == RankHaulAnimal, rank != RankLivestock);
+                            Counter.Stage(el, selling: true, price);
                         }
                         else
                         {
@@ -1710,6 +1741,7 @@ namespace TradeLord
                             simSpent += price;
                             pass.Books.NotePurchase(item.StringId, price, 0f, TradeRules.FoodValue(good));
                             pass.Books.NoteHerdTaken();
+                            Counter.Stage(el, selling: false, price);
                         }
                         else
                         {
@@ -1843,6 +1875,7 @@ namespace TradeLord
                             pass.Books.NotePurchase(item.StringId, price, item.Weight,
                                                     TradePolicy.FoodValue(item));
                             if (livestock) { herdRoom--; pass.Books.NoteHerdTaken(); }
+                            Counter.Stage(el, selling: false, price);
                             pass.Tally(item, 1, price);
                             continue;
                         }

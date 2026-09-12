@@ -225,6 +225,9 @@ namespace TradeLord
             return pick;
         }
 
+        internal static bool StagesTheDeal(Options s) =>
+            s != null && s.StagedTrading && !s.SimulationMode;
+
         internal static bool ResaleAllowed(in Good good, Options s) =>
             Listed(s.AlwaysSet, good) || TradeMath.PolicyAllows(PolicyFor(good, s), buying: false);
 

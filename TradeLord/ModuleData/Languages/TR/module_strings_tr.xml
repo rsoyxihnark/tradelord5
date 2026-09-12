@@ -169,6 +169,7 @@
 		<string id="TL245" text="En iyi satış pazarını haritada işaretle"/>
 		<string id="TL246" text="TradeLord.log'a fiyat izi yaz"/>
 		<string id="TL280" text="Tahminin ne kadar tuttuğunu günlüğe yaz"/>
+		<string id="TL281" text="Ticareti önce önüne koy"/>
 		<string id="TL247" text="Ticarette para sesi"/>
 		<string id="TL248" text="Ayrıntılı ticaret özeti"/>
 		<string id="TL249" text="Ticaret iletilerini sustur" />
@@ -245,5 +246,9 @@
 		<string id="TL395" text=" ve her birinin sırada ne üreteceği"/>
 		<string id="TL397" text=" | Qty! = o miktarın bir kısmı hâlâ yolda ve senden önce varıyor"/>
 		<string id="TL399" text=" | Satış fiyatı, bu panelin söz verdiğinin {HELD} kadarını tuttu, şimdiye dek {COUNT} varışta"/>
+		<string id="TL400" text="Senin yerine ticaret yapmak yerine TradeLord ticaret ekranını açar ve bütün teklifini oraya koyar: satacağı her şey bir yanda, alacağı her şey öbür yanda. İstediğini değiştir, sonra ticaret için Tamam'a bas ya da bırakmak için İptal'e. Bu açıkken varışta hiçbir şey alınıp satılmaz, yolda karşılaşılan bir bölük ise eskisi gibi ticaret yapar. Öntanımlı olarak KAPALI."/>
+		<string id="TL401" text="TradeLord satmak için {SOLD} adet ({GAINED} dinar) ve almak için {BOUGHT} adet ({SPENT} dinar) önüne koydu. İstediğini değiştir, sonra ticaret için Tamam'a bas, bırakmak için İptal'e."/>
+		<string id="TL402" text="TradeLord burada ticarete değer bir şey bulamadı, bu yüzden hiçbir şey koymadı. Pazarı olduğu gibi bırakmak için İptal'e bas."/>
+		<string id="TL403" text="TradeLord, sen görene kadar ticaretini bekletiyor. Ticaret ekranına koyması için bu menüden {ENTRY} seç."/>
 	</strings>
 </base>
