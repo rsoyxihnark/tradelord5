@@ -1,4 +1,4 @@
-# What TradeLord does differently: all 9 trade mods examined
+# What TradeLord does differently: nine trade mods examined
 
 All nine were decompiled and read, not taken from their pages: what each patches, how it prices, how
 it moves a good, what it saves.
@@ -8,7 +8,7 @@ BestTradePrice patches the tooltip and row colour TradeLord uses, so run one or 
 
 **135 AutoTrader, Eskalior.** The one everyone has and the closest rival: it stages the vanilla
 trade screen and you press Done. Its decision is an average of prices inside a radius, so nothing it
-does knows how long the ride is. 34 settings in its own XML file, no MCM, no tooltip, no panel.
+does knows how long the ride is. 33 settings in its own XML file, no MCM, no tooltip, no panel.
 TradeLord trades instantly, one unit at a time, with travel days in every decision.
 
 **1490 Latest Trade Rumors, StormLightningSL.** Does not trade: it fills the vanilla rumour list by
@@ -56,12 +56,13 @@ and a flag, types vanilla already reads.
 Trade on a forecast: price a route on what the caravans and workshops will add to its markets before
 you arrive, less what their purses will buy off them. Put travel time inside every decision, through
 the game's own pathfinder, at your real speed with the cargo you carry. Check the margin on every
-single unit and stop the moment it fails. Hold back what a quest is waiting on, read from eleven
-vanilla quest types by name. Read the game's own herding model, so a purchase never slows you down
-and no more animals are sold than it takes to get your speed back. Trade with caravans and villagers
-met on the road. Keep your own prices per market, with their age discounting a route. Keep a
-settings file and the settings screen as twins, with a migration ladder so nothing is quietly reset.
-Four languages switched with no restart. A price trace naming any other mod changing your prices.
+single unit and stop the moment it fails. Hold back what a quest is waiting on, read from the nine
+vanilla quest types that ask for one. Read the game's own herding model, so a purchase never slows
+you down and no more animals are sold than it takes to get your speed back. Trade with caravans and
+villagers met on the road. Keep your own prices per market, with their age discounting a route. Keep
+a settings file and the settings screen as twins, with a migration ladder so nothing is quietly
+reset. Four languages switched with no restart. A price trace naming any other mod changing your
+prices.
 
 ## Where they are ahead
 
