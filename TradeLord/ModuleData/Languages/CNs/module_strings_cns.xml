@@ -244,5 +244,6 @@
 		<string id="TL394" text=" | 价格与库存已计入你到达前商队与工坊会给市场添上的东西，并扣除商队钱袋预计会在那里买走的部分"/>
 		<string id="TL395" text="，以及各自接下来要做的东西"/>
 		<string id="TL397" text=" | Qty! = 这个数量里有一部分还在路上，会比你先到"/>
+		<string id="TL399" text=" | 卖价兑现了本面板所承诺的 {HELD}，至今共 {COUNT} 次抵达"/>
 	</strings>
 </base>

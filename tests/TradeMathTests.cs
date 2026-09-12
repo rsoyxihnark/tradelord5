@@ -648,6 +648,55 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_promise_is_scored_on_the_share_of_it_the_market_still_pays()
+        {
+            Assert.Equal(1f, TradeMath.HeldShare(140, 140), 4);
+            Assert.Equal(0.5f, TradeMath.HeldShare(140, 70), 4);
+            Assert.Equal(1.25f, TradeMath.HeldShare(140, 175), 4);
+            Assert.Equal(0f, TradeMath.HeldShare(140, 0), 4);
+            Assert.Equal(0f, TradeMath.HeldShare(140, -9), 4);
+        }
+
+        [Fact]
+        public void A_promise_with_no_price_behind_it_is_given_no_share_to_be_scored_on()
+        {
+            Assert.Equal(TradeMath.NoShareToGive, TradeMath.HeldShare(0, 140));
+            Assert.Equal(TradeMath.NoShareToGive, TradeMath.HeldShare(-5, 140));
+        }
+
+        [Fact]
+        public void A_promise_is_only_worth_scoring_while_you_arrived_near_when_it_said_you_would()
+        {
+            Assert.True(TradeMath.WorthScoring(2f, 2f));
+            Assert.True(TradeMath.WorthScoring(2f, 5f));
+            Assert.False(TradeMath.WorthScoring(2f, 5.01f));
+            Assert.True(TradeMath.WorthScoring(0f, 1f));
+            Assert.False(TradeMath.WorthScoring(0f, 1.5f));
+            Assert.True(TradeMath.WorthScoring(-3f, 0.5f));
+        }
+
+        [Fact]
+        public void Every_confidence_falls_in_one_band_and_a_dearer_one_never_falls_lower()
+        {
+            var seen = new System.Collections.Generic.HashSet<int>();
+            int last = 0;
+            for (int step = 0; step <= 100; step++)
+            {
+                int band = TradeMath.BandOf(step / 100f);
+                Assert.InRange(band, 0, TradeMath.Bands - 1);
+                Assert.True(band >= last);
+                last = band;
+                seen.Add(band);
+            }
+            Assert.Equal(TradeMath.Bands, seen.Count);
+            Assert.Equal(0, TradeMath.BandOf(0.24f));
+            Assert.Equal(1, TradeMath.BandOf(0.25f));
+            Assert.Equal(2, TradeMath.BandOf(0.5f));
+            Assert.Equal(3, TradeMath.BandOf(0.75f));
+            Assert.Equal(3, TradeMath.BandOf(1f));
+        }
+
+        [Fact]
         public void Time_since_a_figure_was_written_down_is_counted_in_days_and_never_backwards()
         {
             Assert.Equal(1f, TradeMath.DaysSince(24f, 48f), 4);
