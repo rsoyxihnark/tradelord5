@@ -168,6 +168,7 @@
 		<string id="TL244" text="Ticaret tecrübesi çarpanı"/>
 		<string id="TL245" text="En iyi satış pazarını haritada işaretle"/>
 		<string id="TL246" text="TradeLord.log'a fiyat izi yaz"/>
+		<string id="TL280" text="Tahminin ne kadar tuttuğunu günlüğe yaz"/>
 		<string id="TL247" text="Ticarette para sesi"/>
 		<string id="TL248" text="Ayrıntılı ticaret özeti"/>
 		<string id="TL249" text="Ticaret iletilerini sustur" />
@@ -216,6 +217,7 @@
 		<string id="TL348" text="Tek satırlık ticaret özetinde malları adlandır, örneğin 'TradeLord 8 Zeytin, 3 Şarap sattı, 240 dinar', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
 		<string id="TL349" text="Kendiliğinden yapılan ticaret, hem bir pazara girdiğinizde hem de yolda bir kervanla ya da bir köylü bölüğüyle karşılaştığınızda, ekranda satır olmadan yalnızca TradeLord.log dosyasına bildirir. Menüdeki ticaret girdisi her zaman bildirir."/>
 		<string id="TL389" text="Bir pazarın taşıdığınız her mal için ne ödediğini ve ne istediğini TradeLord.log dosyasına yazar, böylece bir fiyatın neden ticaret ekranıyla uyuşmadığını görebilirsiniz. Pazarı ve fiyatları oynatan modu adlandırır. Günlüğü çok uzattığı için öntanımlı olarak KAPALI."/>
+		<string id="TL398" text="Tahminin bir pazar için söylediğini ve içeri girdiğinizde pazarın gerçekte ne tuttuğunu, mal mal, ne kadar şaştığıyla birlikte TradeLord.log dosyasına yazar. Bir pazara doğru yolda olanları say gerekir. Günlüğü uzattığı için öntanımlı olarak KAPALI."/>
 		<string id="TL100" text="Dil"/>
 		<string id="TL101" text="Bilgi"/>
 		<string id="TL102" text="Kavrayış"/>

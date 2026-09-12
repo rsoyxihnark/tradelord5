@@ -818,6 +818,7 @@ namespace TradeLord
                 }
                 if (best == null) continue;
                 routes.Add(best);
+                Hindsight.Note(best);
             }
             routes.Sort((x, y) => rankByScore
                 ? y.Score.CompareTo(x.Score)
