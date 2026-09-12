@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.60.0
+
+- A route's price now counts what is still on its way to its two markets: the cargo the caravans on the road will unload, and what that town's workshops will make next, so the panel prices the market you will walk into rather than the one standing there now.
+- Goods that would land after you arrive are left out, each end of a route counted against its own travel time.
+- The stock shown behind a buy town's confidence now includes the cargo heading there, so a deal that only exists once a caravan unloads is no longer hidden.
+- The workshop list on the ledger panel now says what each workshop will make next, beside what it has earned.
+- New setting, Count goods on their way to a market, on out of the box, under Knowledge. It follows Live world prices, so turning those off turns this off with them.
+- The panel legend now says when prices and stock are counting what is on the way.
+- The feature list now says that prices and stock count the caravans on the road and the workshops, and that the workshop list says what each will make next.
+
 ## 1.59.0
 
 - The map marker can now land on a village as well as a town, so a village that pays best for what you are carrying gets the pin, as long as Trade with villages is on.
