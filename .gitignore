@@ -9,3 +9,4 @@ TradeLord.log
 *.zip
 release-notes.md
 *.dll
+__pycache__/
