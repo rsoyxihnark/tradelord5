@@ -58,13 +58,14 @@ namespace TradeLord
 
     public class WorkshopRowVM : ViewModel
     {
-        public WorkshopRowVM(string name, string profit, string owner)
+        public WorkshopRowVM(string name, string profit, string makes, string owner)
         {
-            Name = name; Profit = profit; Owner = owner;
+            Name = name; Profit = profit; Makes = makes; Owner = owner;
         }
 
         [DataSourceProperty] public string Name { get; }
         [DataSourceProperty] public string Profit { get; }
+        [DataSourceProperty] public string Makes { get; }
         [DataSourceProperty] public string Owner { get; }
     }
 
@@ -265,7 +266,10 @@ namespace TradeLord
                         ? Tongue.Text("{=TL71} | Score = profit per day discounted by Conf").ToString()
                         : Tongue.Text("{=TL72} | Score = profit per day").ToString())
                   + (Options.Current.ConservativeRouteProjection
-                        ? Tongue.Text("{=TL73} | resale safety factor applied").ToString() : ""))
+                        ? Tongue.Text("{=TL73} | resale safety factor applied").ToString() : "")
+                  + (Forecast.On
+                        ? Tongue.Text("{=TL394} | prices and stock count what the caravans on the road will unload and what the workshops will make before you arrive").ToString()
+                        : ""))
                 + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero));
 
             RefreshWorkshops();
@@ -290,6 +294,8 @@ namespace TradeLord
             WorkshopsHeader = ownedOnly
                 ? Tongue.Text("{=TL80}Your workshops (recent profit)").ToString()
                 : Tongue.Text("{=TL61}Most profitable workshops (recent profit)").ToString();
+            if (Forecast.On)
+                WorkshopsHeader += Tongue.Text("{=TL395} and what each will make next").ToString();
             var best = new List<Workshop>();
             foreach (Town town in Town.AllTowns)
             {
@@ -311,6 +317,7 @@ namespace TradeLord
                 rows.Add(new WorkshopRowVM(
                     w.WorkshopType.Name + " - " + (w.Settlement?.Name.ToString() ?? "?"),
                     (w.ProfitMade >= 0 ? "+" : "") + w.ProfitMade,
+                    Forecast.WillMake(w),
                     w.Owner?.Name.ToString() ?? ""));
             }
             Workshops = rows;

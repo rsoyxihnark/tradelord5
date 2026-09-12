@@ -3,7 +3,7 @@ import io, re, sys
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
       'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
-      'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs']}
+      'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -1668,7 +1668,8 @@ chk("1.4.1", "a pass the gold-direction guard stopped does not blame the trade p
 chk("1.4.1", "the automatic path asks the same market question the menu does",
     "IsMarket" not in method_body(S['Trading.cs'], "private void OnSettlementEntered"))
 chk("1.4.1", "planner and executor apply the same village last-unit clamp",
-    "StockOf(from, item) - (from.IsVillage ? 1 : 0)" in S['Ledger.cs'] and
+    "StockAfterLanding(StockOf(from, item)," in S['Ledger.cs'] and
+    "- (from.IsVillage ? 1 : 0);" in S['Ledger.cs'] and
     "if (lastInVillage) return Block.VillageLastUnit;" in S['Rules.cs'] and
     "pass.Site != null && pass.Site.IsVillage && remaining <= 1);" in
         method_body(S['Trading.cs'], "private static void BuyPass"))
@@ -1732,7 +1733,7 @@ chk("1.5.0", "one definition of the resale haircut, walk and planner alike",
 chk("1.5.0", "observed mode does not read live market supply/demand for projections",
     "if (projecting && (!Options.Current.Omniscient || !Options.Current.BulkSimulation)) return;" in
     method_body(S['Market.cs'],
-                "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting)"))
+                "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting, int landed = 0)"))
 chk("1.5.0", "only a town shelf can be advanced, because only a town publishes the inputs",
     "Town town = site != null && site.IsTown ? site.Town : null;" in S['Market.cs'] and
     "if (town == null" in S['Market.cs'] and
@@ -1839,7 +1840,7 @@ chk("1.5.1", "the walk asks no market for a price, so observed mode stays observ
     "GetItemPrice" not in between(S['Market.cs'], "internal sealed class Shelf",
                                   "internal static class Priced") and
     "if (!_walkable) return _quoted;" in method_body(S['Market.cs'], "internal int Price()") and
-    "Bulk.Walk(from, to, item, qtyCap, till, spendCap, buyPrice, sellPrice)" in S['Ledger.cs'])
+    "Bulk.Walk(from, to, item, qtyCap, till, spendCap," in S['Ledger.cs'])
 chk("1.5.1", "an unwalkable shelf reads its quote once",
     method_body(S['Market.cs'], "internal int Price()").count("_quoted") == 2)
 chk("1.5.1", "confidence measures the walk, not two price APIs disagreeing",
@@ -2050,19 +2051,19 @@ chk("1.36.2", "the rewind prices the very thing that was bought, quality and all
         and "new Shelf(site, bought, selling: false, quoted: quotedUnitPrice, projecting: false)" in paid
         and "_element = stocked;" in shelf
         and "new EquipmentElement" not in shelf
-        and "new Shelf(site, new EquipmentElement(item), selling, quoted, projecting: true);" in ladder
+        and "new Shelf(site, new EquipmentElement(item), selling, quoted, projecting: true, landed: landed);" in ladder
         and S['Market.cs'].count("new EquipmentElement(") == 2
         and "item == null ? 0 : At(market, new EquipmentElement(item), who, selling);" in S['Market.cs'])
     (method_body(S['Market.cs'], "internal static int PricePaid"),
      method_body(S['Market.cs'],
-                 "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting)"),
-     method_body(S['Market.cs'], "internal Ladder(Settlement site, ItemObject item, bool selling, int quoted)")))
+                 "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting, int landed = 0)"),
+     method_body(S['Market.cs'], "internal Ladder(Settlement site, ItemObject item, bool selling, int quoted, int landed)")))
 chk("1.5.6", "only the purchase-price rewind reads a shelf outside a projection",
     S['Market.cs'].count("projecting: false") == 1 and
     "projecting: false" in method_body(S['Market.cs'], "internal static int PricePaid") and
     S['Market.cs'].count("projecting: true") == 1 and
     "projecting: true" in method_body(
-        S['Market.cs'], "internal Ladder(Settlement site, ItemObject item, bool selling, int quoted)"))
+        S['Market.cs'], "internal Ladder(Settlement site, ItemObject item, bool selling, int quoted, int landed)"))
 chk("1.5.6", "panel setup is retried before being disabled",
     "private const int SetupAttempts = 3;" in S['Panel.cs'] and
     "if (_setupFailures >= SetupAttempts) return false;" in
@@ -4175,7 +4176,7 @@ EVER_SHIPPED = {
     "FoodPolicy": "int", "GoldReserve": "int", "KeepEveryFoodKind": "bool", "KeepFoodDays": "int",
     "KeepFoodVariety": "int", "KeepPerFoodKind": "int", "KeepSmeltableWeapons": "bool",
     "KeepWageDays": "int", "Language": "int", "LedgerMenuEntry": "bool", "LivestockPolicy": "int",
-    "MarkBestSellTownOnMap": "bool", "MarkerMaxTravelDays": "float", "MaxHeldPerItem": "int",
+    "MarkBestSellTownOnMap": "bool", "MarketForecast": "bool", "MarkerMaxTravelDays": "float", "MaxHeldPerItem": "int",
     "MaxHeldShare": "float", "MaxLootTier": "int", "MaxSpendPerVisit": "int",
     "MaxTravelDays": "float", "MaxTravelDaysTown": "float", "MaxTravelDaysVillage": "float",
     "MaxVillageTravelDays": "float", "MinProfitMargin": "float",
@@ -6176,6 +6177,91 @@ def the_release_refuses_a_commit_subject_that_names_another_version():
 
 chk("1.59.0", "the release refuses a commit whose subject names a version other than the one the source declares, and refuses one that names none at all without being marked no release",
     the_release_refuses_a_commit_subject_that_names_another_version())
+
+
+
+def the_forecast_reads_the_world_only_while_live_world_prices_are_on():
+    return ("internal static bool On => Options.Current.MarketForecast && Options.Current.Omniscient;"
+                in S['Forecast.cs']
+            and option_default('MarketForecast') == 'true'
+            and "_o.MarketForecast" in M
+            and EVER_SHIPPED.get('MarketForecast') == 'bool'
+            and all("if (!On" in method_body(S['Forecast.cs'], sig)
+                    for sig in ("internal static int UnitsLanding",
+                                "internal static int WorthLanding",
+                                "internal static string WillMake")))
+
+def a_caravan_already_in_the_market_is_not_counted_twice():
+    road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
+    return (ordered(road,
+                    "if (party == null || !party.IsCaravan) continue;",
+                    "if (party.CurrentSettlement != null) continue;",
+                    "Settlement bound = party.TargetSettlement;",
+                    "TradeMath.EtaDays(",
+                    "if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;")
+            and "CurrentSettlement" not in method_body(
+                    S['Forecast.cs'], "private static void ReadWhatTheShopsWillMake"))
+
+def what_lands_after_you_arrive_is_not_counted():
+    units = method_body(S['Forecast.cs'], "internal static int UnitsLanding")
+    worth = method_body(S['Forecast.cs'], "internal static int WorthLanding")
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    return ("if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;" in units
+            and "if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;" in worth
+            and "int landedAtBuyTown = Forecast.WorthLanding(from, item, toBuy);" in scan
+            and "Forecast.WorthLanding(to, item, days));" in scan
+            and "Forecast.UnitsLanding(from, item, toBuy)" in scan)
+
+def a_workshop_run_moves_the_price_of_its_kind_and_never_the_stock_of_one_good():
+    shops = method_body(S['Forecast.cs'], "private static void ReadWhatTheShopsWillMake")
+    return ("Note(site, null, category, count," in shops
+            and "if (landing.Item != item.StringId) continue;" in
+                method_body(S['Forecast.cs'], "internal static int UnitsLanding")
+            and "TradeRules.InputsHeld(needs, held)" in S['Forecast.cs']
+            and "int pick = TradeRules.RunsSoonest(ready);" in S['Forecast.cs'])
+
+def the_walk_starts_from_what_the_market_will_hold_when_you_get_there():
+    shelf = method_body(S['Market.cs'],
+        "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting, int landed = 0)")
+    rung = method_body(S['Market.cs'], "private static Ladder Rung")
+    return ("_inStoreValue = TradeMath.ShelfAfterLanding(data.InStoreValue, landed);" in shelf
+            and "var key = (site.StringId, item.StringId, selling, landed);" in rung
+            and "Dictionary<(string site, string item, bool selling, int landed), Ladder>" in S['Market.cs']
+            and "int landedAtBuyTown, int landedAtSellTown" in
+                method_body(S['Market.cs'], "internal static RouteQuote Walk"))
+
+def the_forecast_is_read_once_an_hour_and_again_when_a_setting_moves():
+    build = method_body(S['Forecast.cs'], "private static void Build")
+    return (ordered(build,
+                    "if (hour == _readAtHour && Options.Generation == _readForGeneration) return;",
+                    "_landing.Clear();",
+                    'Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);',
+                    'Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);')
+            and 'Guard.Run("GameEnd.Forecast", Forecast.Forget);' in S['SubModule.cs'])
+
+def the_panel_says_what_each_workshop_will_make_next():
+    return ("Forecast.WillMake(w)," in method_body(S['Panel.cs'], "private void RefreshWorkshops")
+            and 'Tongue.Text("{=TL395} and what each will make next")' in S['Panel.cs']
+            and "{=TL394}" in S['Panel.cs']
+            and '[DataSourceProperty] public string Makes { get; }' in S['Panel.cs']
+            and 'Text="@Makes"' in PREFAB
+            and all(i in strings_declared() for i in ("TL394", "TL395", "TL279", "TL396")))
+
+
+chk("1.60.0", "goods on the road and in the workshops are read only while live world prices are on, and the switch ships on",
+    the_forecast_reads_the_world_only_while_live_world_prices_are_on())
+chk("1.60.0", "a caravan standing in a market has already unloaded, so only the ones still on the road are counted",
+    a_caravan_already_in_the_market_is_not_counted_twice())
+chk("1.60.0", "cargo counts against a market only when it lands before you do, each end to its own travel time",
+    what_lands_after_you_arrive_is_not_counted())
+chk("1.60.0", "a workshop run moves the price of the kind of good it makes and never the stock of one good",
+    a_workshop_run_moves_the_price_of_its_kind_and_never_the_stock_of_one_good())
+chk("1.60.0", "the unit-by-unit walk starts from what the market will hold when you arrive, and a ladder is kept per landing",
+    the_walk_starts_from_what_the_market_will_hold_when_you_get_there())
+chk("1.60.0", "what is on the road is read once an hour, again when a setting moves, and forgotten with the campaign",
+    the_forecast_is_read_once_an_hour_and_again_when_a_setting_moves())
+chk("1.60.0", "the workshop list says what each one will make next, and the panel legend says the forecast is counted",
+    the_panel_says_what_each_workshop_will_make_next())
 
 
 

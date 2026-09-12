@@ -112,6 +112,36 @@ namespace TradeLord
         public static float DaysAtBestSpeed(float distance, float landSpeed, float seaSpeed) =>
             distance <= 0f ? 0f : distance / (Math.Max(landSpeed, seaSpeed) * 24f);
 
+        public static int WorthOf(int units, int unitValue)
+        {
+            if (units <= 0 || unitValue <= 0) return 0;
+            long worth = (long)units * unitValue;
+            return worth > int.MaxValue ? int.MaxValue : (int)worth;
+        }
+
+        public static int ShelfAfterLanding(int inStoreValue, int landingWorth)
+        {
+            long after = (long)inStoreValue + landingWorth;
+            if (after < 0L) return 0;
+            return after > int.MaxValue ? int.MaxValue : (int)after;
+        }
+
+        public static int StockAfterLanding(int stock, int landingUnits)
+        {
+            long after = (long)stock + (landingUnits < 0 ? 0 : landingUnits);
+            return after > int.MaxValue ? int.MaxValue : (int)after;
+        }
+
+        public static bool LandsInTime(float etaDays, float horizonDays) =>
+            etaDays <= horizonDays;
+
+        public static float EtaDays(float distance, float speed)
+        {
+            if (distance <= 0f) return 0f;
+            float pace = speed <= StandingStill ? WalkingPace : speed;
+            return distance / (pace * 24f);
+        }
+
         public static int Budget(int gold, int goldReserve, int maxSpendPerVisit,
                                  int spentThisVisit)
         {

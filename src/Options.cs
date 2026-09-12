@@ -60,6 +60,7 @@ namespace TradeLord
         public bool BulkSimulation = true;
 
         public bool ConfidenceRanking = true;
+        public bool MarketForecast = true;
 
         public bool TooltipHints = true;
         public bool SuppressVanillaTradeLines = true;

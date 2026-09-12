@@ -413,6 +413,11 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool ConfidenceRanking { get => _o.ConfidenceRanking; set { _o.ConfidenceRanking = value; Options.Bump(); } }
 
+        [SettingPropertyBool("{=TL279}Count goods on their way to a market", Order = 10, RequireRestart = false,
+            HintText = "{=TL396}Before a route is priced, add the cargo the caravans on the road will unload at its two markets, and what the workshops there will make next, so the price you are quoted allows for goods that land before you do. Needs Live world prices. OFF prices every market as it stands today.")]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
+        public bool MarketForecast { get => _o.MarketForecast; set { _o.MarketForecast = value; Options.Bump(); } }
+
         [SettingPropertyBool("{=TL211}Show best buy/sell in tooltips", Order = 0, RequireRestart = false,
             HintText = "{=TL311}Adds the best known buy and sell markets, with stock and travel time, to item tooltips.")]
         [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 4)]
