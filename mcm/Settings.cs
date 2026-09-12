@@ -453,6 +453,11 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 1)]
         public bool AutoBuyOnEntry { get => _o.AutoBuyOnEntry; set { _o.AutoBuyOnEntry = value; Options.Bump(); } }
 
+        [SettingPropertyBool("{=TL281}Lay the trade out for you first", Order = 2, RequireRestart = false,
+            HintText = "{=TL400}Rather than trading for you, TradeLord opens the trade screen and lays its whole deal on it: all it would sell on one side, all it would buy on the other. Change what you like, then press Done to trade or Cancel to leave it. Nothing is traded as you arrive while this is on, and a party met on the road still trades as before. OFF by default.")]
+        [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 1)]
+        public bool StagedTrading { get => _o.StagedTrading; set { _o.StagedTrading = value; Options.Bump(); } }
+
         [SettingPropertyBool("{=TL216}Trade entry in town menu", Order = 0, RequireRestart = false,
             HintText = "{=TL316}Shows the single TradeLord trade entry in town and village menus, which sells and then buys in one go. Turn it off to leave the menu to trading done automatically as you arrive.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
