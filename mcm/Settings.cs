@@ -413,8 +413,8 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool ConfidenceRanking { get => _o.ConfidenceRanking; set { _o.ConfidenceRanking = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL279}Count goods on their way to a market", Order = 10, RequireRestart = false,
-            HintText = "{=TL396}Before a route is priced, add the cargo the caravans on the road will unload at its two markets, and what the workshops there will make next, so the price you are quoted allows for goods that land before you do. Needs Live world prices. OFF prices every market as it stands today.")]
+        [SettingPropertyBool("{=TL279}Count what is on its way to a market", Order = 10, RequireRestart = false,
+            HintText = "{=TL396}Before a route is priced, count what reaches its two markets before you do: the cargo the caravans will unload, what the workshops will make next, and the purses those caravans bring, spread over the goods that are cheap there as an estimate of what they will buy. Needs Live world prices. OFF prices each market as it stands.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool MarketForecast { get => _o.MarketForecast; set { _o.MarketForecast = value; Options.Bump(); } }
 

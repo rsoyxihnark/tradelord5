@@ -132,6 +132,27 @@ namespace TradeLord
             return after > int.MaxValue ? int.MaxValue : (int)after;
         }
 
+        public static float PullOfAPrice(float priceFactor)
+        {
+            float pull = 1f - priceFactor;
+            return pull < 0f ? 0f : (pull > 1f ? 1f : pull);
+        }
+
+        public static int ShareOfAPurse(int purse, float pull, float pullAcrossTheMarket)
+        {
+            if (purse <= 0 || pull <= 0f || pullAcrossTheMarket <= 0f) return 0;
+            double share = (double)purse * pull / pullAcrossTheMarket;
+            if (share > int.MaxValue) return int.MaxValue;
+            return share < 0d ? 0 : (int)share;
+        }
+
+        public static int WorthShift(int landing, int leaving)
+        {
+            long shift = (long)landing - (leaving < 0 ? 0 : leaving);
+            if (shift > int.MaxValue) return int.MaxValue;
+            return shift < int.MinValue ? int.MinValue : (int)shift;
+        }
+
         public static bool LandsInTime(float etaDays, float horizonDays) =>
             etaDays <= horizonDays;
 
