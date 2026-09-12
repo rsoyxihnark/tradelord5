@@ -241,5 +241,6 @@
 		<string id="TL396" text="Bir rota ya da ipuçlarındaki bir fiyat hesaplanmadan önce, o pazara senden önce ulaşanları sayar: kervanların boşaltacağı yük, atölyelerin sırada üreteceği mal ve kervanların getirdiği kese, ki kese orada ucuz olan mallara dağıtılıp ne alacaklarının tahmini çıkar. Canlı dünya fiyatları gerekir. KAPALI her pazarı bugünkü hâliyle fiyatlandırır."/>
 		<string id="TL394" text=" | fiyatlar ve stok, sen varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek"/>
 		<string id="TL395" text=" ve her birinin sırada ne üreteceği"/>
+		<string id="TL397" text=" | Qty! = o miktarın bir kısmı hâlâ yolda ve senden önce varıyor"/>
 	</strings>
 </base>

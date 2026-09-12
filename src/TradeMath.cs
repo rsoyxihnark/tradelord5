@@ -153,6 +153,9 @@ namespace TradeLord
             return shift < int.MinValue ? int.MinValue : (int)shift;
         }
 
+        public static bool StillComing(int units, int onTheShelfNow) =>
+            units > (onTheShelfNow < 0 ? 0 : onTheShelfNow);
+
         public static bool LandsInTime(float etaDays, float horizonDays) =>
             etaDays <= horizonDays;
 

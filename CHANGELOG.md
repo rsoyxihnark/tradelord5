@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.62.1
+
+- Where a route's amount counts goods still on the road, the ledger panel now marks it Qty!, so an amount larger than what the market holds while you read it is never a surprise.
+- The line under the routes says what that mark means, beside the other marks it explains.
+- The feature list says so too.
+
 ## 1.62.0
 
 - The five markets in an item tooltip are now priced as each will be when you get there, counting what the caravans and the workshops will do to it first, so a tooltip and the ledger panel never quote the same market differently.
