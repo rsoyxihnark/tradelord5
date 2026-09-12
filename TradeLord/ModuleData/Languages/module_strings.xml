@@ -172,6 +172,7 @@
 		<string id="TL244" text="Trade XP multiplier"/>
 		<string id="TL245" text="Auto-mark best sell market on map"/>
 		<string id="TL246" text="Write a price trace to the log"/>
+		<string id="TL280" text="Score the forecast in the log"/>
 		<string id="TL247" text="Coin sound on trade"/>
 		<string id="TL248" text="Detailed trade summary"/>
 		<string id="TL249" text="Silence trade messages" />
@@ -220,6 +221,7 @@
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports."/>
 		<string id="TL389" text="Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. OFF by default, since it makes the log much longer."/>
+		<string id="TL398" text="Writes to TradeLord.log what the forecast said a market would hold and what it held when you walked in, good by good, with how far off it was. Needs Count what is on its way to a market. OFF by default, since it makes the log longer."/>
 		<string id="TL100" text="Language"/>
 		<string id="TL101" text="Knowledge"/>
 		<string id="TL102" text="Insight"/>
