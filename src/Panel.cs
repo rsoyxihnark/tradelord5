@@ -272,9 +272,20 @@ namespace TradeLord
                         ? Tongue.Text("{=TL394} | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there").ToString()
                           + Tongue.Text("{=TL397} | Qty! = part of that amount is still on the road and lands before you would").ToString()
                         : ""))
+                + HowThePromiseHasHeld()
                 + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero));
 
             RefreshWorkshops();
+        }
+
+        private static string HowThePromiseHasHeld()
+        {
+            LedgerBehavior ledger = LedgerBehavior.Instance;
+            if (ledger == null || !ledger.PromiseScore(out int arrivals, out float held)) return "";
+            TextObject line = Tongue.Text("{=TL399} | the Sell price has held at {HELD} of what this panel promised, over {COUNT} arrival(s) so far");
+            line.SetTextVariable("HELD", ((int)Math.Round(held * 100f)).ToString() + "%");
+            line.SetTextVariable("COUNT", arrivals.ToString());
+            return line.ToString();
         }
 
         private static string NothingHereYouCouldBuy(Hero hero)

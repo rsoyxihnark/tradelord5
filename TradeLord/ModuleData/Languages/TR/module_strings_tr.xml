@@ -244,5 +244,6 @@
 		<string id="TL394" text=" | fiyatlar ve stok, sen varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek"/>
 		<string id="TL395" text=" ve her birinin sırada ne üreteceği"/>
 		<string id="TL397" text=" | Qty! = o miktarın bir kısmı hâlâ yolda ve senden önce varıyor"/>
+		<string id="TL399" text=" | Satış fiyatı, bu panelin söz verdiğinin {HELD} kadarını tuttu, şimdiye dek {COUNT} varışta"/>
 	</strings>
 </base>

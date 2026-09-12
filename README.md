@@ -6,7 +6,7 @@
 
 ## Everything it does
 
-- ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is three strings, two numbers, a settlement reference and a flag, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
+- ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is three strings, four numbers, a settlement reference and a flag, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
 
 **What it tells you**
 
@@ -20,6 +20,7 @@
 - ✅ A ledger panel on the campaign map ranking the best route it can find for each good, thirty rows of them, on hotkey **T**, on the map button, or from its own entry in the town menu, which falls back to the six best routes written out as text if the panel cannot open
 - ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get, and a route whose prices could not be walked that way is marked on its confidence figure
 - ✅ A confidence score on each route: profit per day, discounted by how much of the margin survives once every unit is priced in turn, how much of the good the market you are buying from has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
+- ✅ The panel keeps its own score: every route it shows writes down the Sell price it promised you, and when you walk into that market near the time it said, it checks that promise against what the market really pays. The line under the routes then says how much of the promised Sell price has actually been there, over how many arrivals, and that tally carries on across your campaign
 - ✅ Prices and stock that count what is still on its way: the cargo the caravans on the road will unload at a market, what that town's workshops will make next, and the purses those caravans are bringing to spend, spread over the goods that are cheap there as an estimate of what they will buy off the shelf. Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into. Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
 - ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for

@@ -244,5 +244,6 @@
 		<string id="TL394" text=" | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there"/>
 		<string id="TL395" text=" and what each will make next"/>
 		<string id="TL397" text=" | Qty! = part of that amount is still on the road and lands before you would"/>
+		<string id="TL399" text=" | the Sell price has held at {HELD} of what this panel promised, over {COUNT} arrival(s) so far"/>
 	</strings>
 </base>

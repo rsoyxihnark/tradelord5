@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 
@@ -24,22 +25,52 @@ namespace TradeLord
             internal int WorthSaid;
         }
 
+        private struct Promised
+        {
+            internal ItemObject Item;
+            internal float AtHours;
+            internal float WithinDays;
+            internal int SellPrice;
+            internal int Units;
+            internal float Confidence;
+        }
+
         private static readonly Dictionary<string, Dictionary<string, Said>> _said =
             new Dictionary<string, Dictionary<string, Said>>(StringComparer.Ordinal);
 
+        private static readonly Dictionary<string, Dictionary<string, Promised>> _promised =
+            new Dictionary<string, Dictionary<string, Promised>>(StringComparer.Ordinal);
+
+        private static readonly float[] _bandHeld = new float[TradeMath.Bands];
+
+        private static readonly int[] _bandScored = new int[TradeMath.Bands];
+
         private static int _held;
 
-        internal static bool On => Options.Current.ForecastScore && Forecast.On;
+        private static int _promises;
+
+        internal static bool Writing => Options.Current.ForecastScore;
+
+        internal static bool On => Writing && Forecast.On;
 
         internal static void Forget()
         {
             _said.Clear();
+            _promised.Clear();
             _held = 0;
+            _promises = 0;
+            for (int i = 0; i < TradeMath.Bands; i++)
+            {
+                _bandHeld[i] = 0f;
+                _bandScored[i] = 0;
+            }
         }
 
         internal static void Note(TradeRoute route)
         {
-            if (!On || route == null || route.Item == null) return;
+            if (route == null || route.Item == null) return;
+            Guard.Run("Hindsight.Promise", () => Promise(route));
+            if (!On) return;
             Guard.Run("Hindsight.Note", () =>
             {
                 Noted(route.From, route.Item, Travel.EstimateDaysFromParty(route.From));
@@ -49,8 +80,131 @@ namespace TradeLord
 
         internal static void Score(Settlement site)
         {
-            if (!On || site == null) return;
+            if (site == null) return;
+            Guard.Run("Hindsight.Kept", () => Kept(site));
+            if (!On) return;
             Guard.Run("Hindsight.Score", () => Written(site));
+        }
+
+        private static void Promise(TradeRoute route)
+        {
+            Settlement site = route.To;
+            if (site == null || route.SellPrice <= 0) return;
+            if (!_promised.TryGetValue(site.StringId, out Dictionary<string, Promised> here))
+            {
+                here = new Dictionary<string, Promised>(StringComparer.Ordinal);
+                _promised[site.StringId] = here;
+            }
+            if (!here.ContainsKey(route.Item.StringId))
+            {
+                if (_promises >= Most && !RoomForOneMore())
+                {
+                    Log.Repeatable("promise check", "full",
+                                   "promise check is holding the " + Most + " promises it keeps at once, so newer " +
+                                   "ones are passed over until a market it holds a promise for is walked into");
+                    return;
+                }
+                _promises++;
+            }
+            here[route.Item.StringId] = new Promised
+            {
+                Item = route.Item,
+                AtHours = (float)CampaignTime.Now.ToHours,
+                WithinDays = route.TravelDays,
+                SellPrice = route.SellPrice,
+                Units = route.Quantity,
+                Confidence = route.Confidence
+            };
+        }
+
+        private static bool RoomForOneMore()
+        {
+            float now = (float)CampaignTime.Now.ToHours;
+            var emptied = new List<string>();
+            foreach (var site in _promised)
+            {
+                var past = new List<string>();
+                foreach (var one in site.Value)
+                    if (!TradeMath.WorthScoring(one.Value.WithinDays,
+                                                TradeMath.DaysSince(one.Value.AtHours, now)))
+                        past.Add(one.Key);
+                for (int i = 0; i < past.Count; i++)
+                {
+                    site.Value.Remove(past[i]);
+                    _promises--;
+                }
+                if (site.Value.Count == 0) emptied.Add(site.Key);
+            }
+            for (int i = 0; i < emptied.Count; i++) _promised.Remove(emptied[i]);
+            if (_promises < 0) _promises = 0;
+            return _promises < Most;
+        }
+
+        private static void Kept(Settlement site)
+        {
+            if (!_promised.TryGetValue(site.StringId, out Dictionary<string, Promised> here)) return;
+            _promised.Remove(site.StringId);
+            _promises -= here.Count;
+            if (_promises < 0) _promises = 0;
+            SettlementComponent market = site.SettlementComponent;
+            if (market == null) return;
+            float now = (float)CampaignTime.Now.ToHours;
+            var lines = new List<string>();
+            int scored = 0, stale = 0, unpriced = 0;
+            float heldTotal = 0f;
+            foreach (Promised said in here.Values)
+            {
+                if (said.Item == null) continue;
+                float since = TradeMath.DaysSince(said.AtHours, now);
+                if (!TradeMath.WorthScoring(said.WithinDays, since))
+                {
+                    stale++;
+                    continue;
+                }
+                int found = Priced.At(market, said.Item, MobileParty.MainParty, true);
+                if (found <= 0)
+                {
+                    unpriced++;
+                    continue;
+                }
+                float held = TradeMath.HeldShare(said.SellPrice, found);
+                if (held == TradeMath.NoShareToGive) continue;
+                scored++;
+                heldTotal += held;
+                int band = TradeMath.BandOf(said.Confidence);
+                _bandHeld[band] += held;
+                _bandScored[band]++;
+                LedgerBehavior.Instance?.KeepPromiseScore(held);
+                lines.Add("  " + Named(said.Item) + ": the panel promised " + said.SellPrice +
+                          " a unit for " + said.Units + " unit(s) within " + Figure(said.WithinDays) +
+                          " day(s) at Conf " + Share(said.Confidence) + "; you walked in " + Figure(since) +
+                          " day(s) later and it pays " + found + ", " + Share(held) + " of what it promised");
+            }
+            if (!Writing || scored == 0) return;
+            Log.Write("promise check at " + site.Name + ", " + scored + " promise(s) scored" +
+                      (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") +
+                      (unpriced == 0 ? "" : ", " + unpriced + " the market would put no price on"));
+            for (int i = 0; i < lines.Count; i++) Log.Write(lines[i]);
+            Log.Write("  here: the price held at " + Share(TradeMath.MeanOf(heldTotal, scored)) +
+                      " of what the panel promised");
+            for (int band = TradeMath.Bands - 1; band >= 0; band--)
+            {
+                if (_bandScored[band] == 0) continue;
+                Log.Write("  " + Banded(band) + ": held at " +
+                          Share(TradeMath.MeanOf(_bandHeld[band], _bandScored[band])) + " of promise over " +
+                          _bandScored[band] + " arrival(s) this session");
+            }
+            if (LedgerBehavior.Instance != null &&
+                LedgerBehavior.Instance.PromiseScore(out int kept, out float overall))
+                Log.Write("  over this campaign: the price has held at " + Share(overall) +
+                          " of promise over " + kept + " arrival(s)");
+        }
+
+        private static string Banded(int band)
+        {
+            if (band == 0) return "Conf under 25%";
+            if (band == 1) return "Conf 25% to 49%";
+            return band == 2 ? "Conf 50% to 74%" : "Conf 75% and over";
         }
 
         private static void Noted(Settlement site, ItemObject item, float withinDays)
