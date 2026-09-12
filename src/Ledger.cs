@@ -744,7 +744,7 @@ namespace TradeLord
                     int stocked = MostWorthShowing(buyPrice);
                     int shelf = 0;
                     float toBuy = Travel.EstimateDaysFromParty(from);
-                    int landedAtBuyTown = Forecast.WorthLanding(from, item, toBuy);
+                    int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);
                     if (Options.Current.Omniscient)
                     {
                         shelf = TradeMath.StockAfterLanding(StockOf(from, item),
@@ -780,7 +780,7 @@ namespace TradeLord
 
                         RouteQuote q = Bulk.Walk(from, to, item, qtyCap, till, spendCap,
                                                  buyPrice, sellPrice, landedAtBuyTown,
-                                                 Forecast.WorthLanding(to, item, days));
+                                                 Forecast.WorthShift(to, item, days));
                         if (q.Units <= 0) continue;
 
                         int proceeds = Options.Current.ConservativeRouteProjection
