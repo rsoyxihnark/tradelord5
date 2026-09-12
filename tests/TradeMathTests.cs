@@ -648,6 +648,64 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_days_to_a_market_are_read_to_the_nearest_quarter_day()
+        {
+            Assert.Equal(0f, TradeMath.ToTheQuarterDay(0f), 4);
+            Assert.Equal(0f, TradeMath.ToTheQuarterDay(0.1f), 4);
+            Assert.Equal(0.25f, TradeMath.ToTheQuarterDay(0.125f), 4);
+            Assert.Equal(0.25f, TradeMath.ToTheQuarterDay(0.3f), 4);
+            Assert.Equal(0.5f, TradeMath.ToTheQuarterDay(0.4f), 4);
+            Assert.Equal(2.5f, TradeMath.ToTheQuarterDay(2.4f), 4);
+            Assert.Equal(2.5f, TradeMath.ToTheQuarterDay(2.6f), 4);
+            Assert.Equal(2.75f, TradeMath.ToTheQuarterDay(2.63f), 4);
+            Assert.Equal(0f, TradeMath.ToTheQuarterDay(-3f), 4);
+        }
+
+        [Fact]
+        public void Two_trips_that_land_within_the_same_quarter_day_are_read_as_one_horizon()
+        {
+            Assert.Equal(TradeMath.ToTheQuarterDay(2.38f), TradeMath.ToTheQuarterDay(2.45f), 4);
+            Assert.NotEqual(TradeMath.ToTheQuarterDay(2.3f), TradeMath.ToTheQuarterDay(2.45f));
+        }
+
+        [Fact]
+        public void A_workshop_run_lands_sooner_the_further_along_it_already_is()
+        {
+            Assert.Equal(1f, TradeMath.RunLandsIn(0f, 1f), 4);
+            Assert.Equal(0.25f, TradeMath.RunLandsIn(0.75f, 1f), 4);
+            Assert.Equal(0f, TradeMath.RunLandsIn(1f, 1f), 4);
+        }
+
+        [Fact]
+        public void A_run_never_lands_outside_the_length_of_one_run_whatever_the_progress_reads()
+        {
+            Assert.Equal(0f, TradeMath.RunLandsIn(4f, 1f), 4);
+            Assert.Equal(1f, TradeMath.RunLandsIn(-2f, 1f), 4);
+            Assert.Equal(0f, TradeMath.RunLandsIn(0.5f, 0f), 4);
+            Assert.Equal(0f, TradeMath.RunLandsIn(0.5f, -1f), 4);
+            for (int step = 0; step <= 100; step++)
+                Assert.InRange(TradeMath.RunLandsIn(step / 100f, 1f), 0f, 1f);
+        }
+
+        [Fact]
+        public void The_good_a_town_stocks_most_of_stands_for_what_a_workshop_of_that_kind_makes()
+        {
+            Assert.True(TradeMath.StandsBetter(5, 100, 0, 0));
+            Assert.True(TradeMath.StandsBetter(5, 100, 3, 50));
+            Assert.False(TradeMath.StandsBetter(2, 10, 3, 50));
+            Assert.True(TradeMath.StandsBetter(3, 40, 3, 50));
+            Assert.False(TradeMath.StandsBetter(3, 60, 3, 50));
+        }
+
+        [Fact]
+        public void A_good_the_town_holds_none_of_never_stands_for_anything()
+        {
+            Assert.False(TradeMath.StandsBetter(0, 10, 0, 0));
+            Assert.False(TradeMath.StandsBetter(-2, 10, 0, 0));
+            Assert.False(TradeMath.StandsBetter(0, 10, 4, 90));
+        }
+
+        [Fact]
         public void A_promise_is_scored_on_the_share_of_it_the_market_still_pays()
         {
             Assert.Equal(1f, TradeMath.HeldShare(140, 140), 4);
