@@ -88,6 +88,7 @@
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know. It sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay, off out of the box, that keeps it out of a brand new campaign until prices calm down
+- ✅ Lay the trade out for you first, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other, one unit to a transfer at the price each unit really fetches. Change what you like, then press Done to trade or Cancel to leave it. While it is on, nothing is traded as you arrive: Trade here now (TradeLord) in the town menu is what lays the deal out. A party met on the road still trades as before
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
 
 **And**

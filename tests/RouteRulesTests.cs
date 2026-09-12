@@ -187,6 +187,25 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_deal_is_only_laid_out_when_that_is_switched_on_and_no_dry_run_is()
+        {
+            Assert.True(TradeRules.StagesTheDeal(
+                new Options { StagedTrading = true, SimulationMode = false }));
+            Assert.False(TradeRules.StagesTheDeal(
+                new Options { StagedTrading = false, SimulationMode = false }));
+            Assert.False(TradeRules.StagesTheDeal(
+                new Options { StagedTrading = false, SimulationMode = true }));
+        }
+
+        [Fact]
+        public void A_dry_run_wins_over_laying_the_deal_out_so_nothing_is_ever_put_on_the_screen_twice()
+        {
+            Assert.False(TradeRules.StagesTheDeal(
+                new Options { StagedTrading = true, SimulationMode = true }));
+            Assert.False(TradeRules.StagesTheDeal(null));
+        }
+
+        [Fact]
         public void Editing_the_list_is_seen_at_once_rather_than_served_from_the_last_read()
         {
             var options = new Options { NeverSellItems = "grain" };
