@@ -3,7 +3,7 @@ import io, re, sys
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
       'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
-      'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs', 'Hindsight.cs']}
+      'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs', 'Hindsight.cs', 'Counter.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -1584,9 +1584,14 @@ chk("1.36.0", "a trade on the road moves one unit and its price itself, because 
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
     S['Trading.cs'].count("[Simulated, best case]") == 5 and
-    S['Trading.cs'].count("(simulated, best case): ") == 4 and
-    'internal string Headed(string label) => label + (Sim ? " (simulated, best case): " : ": ");'
+    S['Trading.cs'].count("(simulated, best case): ") == 3 and
+    'internal string Headed(string label) => label + (Sim ? Counter.Heading : ": ");'
         in S['Trading.cs'] and
+    'internal static string Heading => Staging ? " (laid out): " : " (simulated, best case): ";'
+        in S['Counter.cs'] and
+    'internal static string Aside => Staging ? " (laid out)" : " (simulated)";'
+        in S['Counter.cs'] and
+    S['Trading.cs'].count("(sim ? Counter.Aside : \"\")") == 2 and
     S['Trading.cs'].count("Log.Write(pass.Headed(label)") == 2 and
     "best case" in M)
 
@@ -3104,7 +3109,7 @@ def the_switches_say_what_they_do():
             and "as well as sell" not in M
             and "quick-buy" not in M and "quick-sell" not in M
             and "Auto-trade" not in M
-            and M.count("SettingPropertyGroup(\"{=TL104}Automation\"") == 2)
+            and M.count("SettingPropertyGroup(\"{=TL104}Automation\"") == 3)
 
 chk("1.9.0", "the switches name selling and buying plainly, and none names an entry the menu no longer has",
     the_switches_say_what_they_do())
@@ -4191,7 +4196,7 @@ EVER_SHIPPED = {
     "ShowMapButton": "bool", "SimulationMode": "bool", "SuppressVanillaTradeLines": "bool",
     "TooltipHints": "bool", "TradeWithCaravans": "bool", "TradeWithTowns": "bool",
     "TradeWithVillages": "bool",
-    "ForecastScore": "bool",
+    "ForecastScore": "bool", "StagedTrading": "bool",
     "TradeXpMultiplier": "float", "UseFleetCapacity": "bool",
 }
 
@@ -4838,7 +4843,7 @@ def a_meeting_on_the_road_answers_to_the_silence_setting():
     buy = method_body(t, "private static void BuyPass")
     named = "when you meet a caravan or a party of villagers on the road"
     return ("quiet: true)" in between(t, "internal static Pass Meet(", ";")
-            and "internal bool Muted => TradeActionBehavior.Muted(Quiet);" in t
+            and "internal bool Muted => Counter.Staging || TradeActionBehavior.Muted(Quiet);" in t
             and "private static bool Muted(bool automated) => automated && Options.Current.QuietAutomation;"
                 in t
             and sell.count("if (!pass.Muted) Toast(") == 1
@@ -6644,14 +6649,107 @@ def what_a_workshop_makes_is_valued_at_the_good_that_town_stocks():
             and "TradeMath.StandsBetter" in MATHTESTS)
 
 
-chk("1.65.0", "how much a market pulls in all is added up once an hour rather than once for every good priced",
+chk("1.64.1", "how much a market pulls in all is added up once an hour rather than once for every good priced",
     the_pull_across_a_market_is_added_up_once_an_hour())
-chk("1.65.0", "the days to a market are read to the nearest quarter day, so two routes that land together share one price ladder",
+chk("1.64.1", "the days to a market are read to the nearest quarter day, so two routes that land together share one price ladder",
     two_routes_that_land_within_a_few_hours_share_one_price_ladder())
-chk("1.65.0", "a workshop run lands by how far along the game says it already is, within the length of one run",
+chk("1.64.1", "a workshop run lands by how far along the game says it already is, within the length of one run",
     a_workshop_run_lands_by_how_far_along_it_already_is())
-chk("1.65.0", "what a workshop will make is valued at the good that town actually stocks, and the cheapest of its kind only when it stocks none",
+chk("1.64.1", "what a workshop will make is valued at the good that town actually stocks, and the cheapest of its kind only when it stocks none",
     what_a_workshop_makes_is_valued_at_the_good_that_town_stocks())
+
+
+def the_deal_is_laid_out_rather_than_traded_only_while_that_is_switched_on():
+    c = S['Counter.cs']
+    rules = method_body(S['Rules.cs'], "internal static bool StagesTheDeal")
+    menu = between(S['Trading.cs'], 'args => Guard.Run("Action.QuickTradeMenu"', 'false, 6);')
+    return ("s != null && s.StagedTrading && !s.SimulationMode;" in rules
+            and option_default('StagedTrading') == 'false'
+            and EVER_SHIPPED.get('StagedTrading') == 'bool'
+            and "_o.StagedTrading" in M
+            and all(i in strings_declared() for i in ('TL281', 'TL400', 'TL401', 'TL402', 'TL403'))
+            and "TradeRules.StagesTheDeal(Options.Current)" in method_body(c, "internal static bool Ready")
+            and ordered(menu, "if (!Counter.Ready(Settlement.CurrentSettlement)) return;",
+                        "ExecuteQuickSell(Settlement.CurrentSettlement);",
+                        "TextObject laid = Counter.Settle();")
+            and 'Guard.Run("GameEnd.Counter", Counter.Forget);' in S['SubModule.cs']
+            and "The_deal_is_only_laid_out_when_that_is_switched_on_and_no_dry_run_is" in ROUTETESTS
+            and "A_dry_run_wins_over_laying_the_deal_out_so_nothing_is_ever_put_on_the_screen_twice"
+                in ROUTETESTS)
+
+def nothing_moves_while_the_deal_is_laid_out():
+    t = S['Trading.cs']
+    return ("Sim = Options.Current.SimulationMode || Counter.Staging;" in t
+            and "internal static bool Staging => _logic != null;" in S['Counter.cs']
+            and t.count("Counter.Stage(el, selling: true, price);") == 2
+            and t.count("Counter.Stage(el, selling: false, price);") == 3
+            and all("Counter.Stage(el, selling: " in method_body(t, where)
+                    for where in ("private static void SellPass",
+                                  "public static void ExecuteResupply",
+                                  "public static void ExecuteHerdRelief",
+                                  "public static void ExecuteHaulage",
+                                  "private static void BuyPass"))
+            and "internal bool Muted => Counter.Staging || TradeActionBehavior.Muted(Quiet);" in t)
+
+def the_deal_is_laid_out_through_the_games_own_trade_screen():
+    opened = method_body(S['Counter.cs'], "private static bool Opened")
+    staged = method_body(S['Counter.cs'], "internal static void Stage")
+    return (ordered(opened, "InventoryScreenHelper.OpenScreenAsTrade(stock, market);",
+                    "InventoryScreenHelper.GetActiveInventoryState();",
+                    "if (logic == null) return false;",
+                    "if (logic.TotalAmountChange == null)",
+                    "if (logic.DonationXpChange == null)")
+            and "_logic.AddTransferCommand(TransferCommand.Transfer(" in staged
+            and "1, selling ? mine : theirs, selling ? theirs : mine, el," in staged
+            and "InventoryLogic.InventorySide.PlayerInventory" in staged
+            and "InventoryLogic.InventorySide.OtherInventory" in staged
+            and "if (_logic == null || price < 0) return;" in staged)
+
+def arriving_at_a_market_holds_its_trade_back_while_the_deal_is_laid_out():
+    entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
+    line = method_body(S['Trading.cs'], "private static TextObject TheDealWaitsForYou")
+    holds = method_body(S['Counter.cs'], "internal static bool HoldsBack")
+    return (ordered(entered, "NoteThisArrival(settlement);", "if (Counter.HoldsBack())",
+                    "Toast(TheDealWaitsForYou(), ToastNote);", "if (!AnnounceAutomation(settlement))")
+            and "TradeRules.StagesTheDeal(Options.Current)" in holds
+            and "Options.Current.AutoSellOnEntry || Options.Current.AutoBuyOnEntry" in holds
+            and '{=TL26}' in line and '{=TL403}' in line
+            and 'line.SetTextVariable("ENTRY", Tongue.Text("{=TL26}' in line
+            and "{ENTRY}" in spoken(ENGLISH)['TL403'])
+
+def a_deal_left_half_laid_out_never_leaves_trading_switched_off():
+    menu = between(S['Trading.cs'], 'args => Guard.Run("Action.QuickTradeMenu"', 'false, 6);')
+    return (ordered(menu, "if (!Counter.Ready(Settlement.CurrentSettlement)) return;", "try", "finally",
+                    "TextObject laid = Counter.Settle();")
+            and "Counter.Forget();" in method_body(S['Trading.cs'], "private void OnSettlementEntered")
+            and "Drop();" in method_body(S['Counter.cs'], "internal static bool Ready")
+            and "TradeActionBehavior.StartAFreshDryRun();" in
+                method_body(S['Counter.cs'], "private static bool Opened")
+            and "internal static void StartAFreshDryRun() => Visit.ForgetTheDryRun();" in S['Trading.cs'])
+
+def an_empty_counter_says_so_rather_than_leaving_you_guessing():
+    settle = method_body(S['Counter.cs'], "internal static TextObject Settle")
+    said = spoken(ENGLISH)
+    return (ordered(settle, 'Log.Write("laid out on the trade screen: "',
+                    "if (toSell == 0 && toBuy == 0)", "{=TL402}", "{=TL401}")
+            and all(slot in said['TL401'] for slot in ('{SOLD}', '{GAINED}', '{BOUGHT}', '{SPENT}'))
+            and all(('line.SetTextVariable("' + slot + '"') in settle
+                    for slot in ('SOLD', 'GAINED', 'BOUGHT', 'SPENT'))
+            and "Cancel" in said['TL402'] and "Done" in said['TL401'])
+
+
+chk("1.65.0", "the deal is laid out on the trade screen rather than traded, and only while that switch is on and no dry run is",
+    the_deal_is_laid_out_rather_than_traded_only_while_that_is_switched_on())
+chk("1.65.0", "nothing moves while a deal is laid out: every pass books it as it would a dry run and lays each unit on the screen",
+    nothing_moves_while_the_deal_is_laid_out())
+chk("1.65.0", "the screen is the game's own trade screen, opened through the game's own helper, one unit to a transfer",
+    the_deal_is_laid_out_through_the_games_own_trade_screen())
+chk("1.65.0", "arriving at a market holds its own trading back while the deal is laid out, and names the menu entry that lays it out",
+    arriving_at_a_market_holds_its_trade_back_while_the_deal_is_laid_out())
+chk("1.65.0", "a deal with nothing in it says so, and a deal with something in it counts both sides and their gold",
+    an_empty_counter_says_so_rather_than_leaving_you_guessing())
+chk("1.65.0", "a deal that breaks off half laid out never leaves trading switched off, and each deal starts from a clean slate",
+    a_deal_left_half_laid_out_never_leaves_trading_switched_off())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

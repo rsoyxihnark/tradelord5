@@ -173,6 +173,7 @@
 		<string id="TL245" text="Auto-mark best sell market on map"/>
 		<string id="TL246" text="Write a price trace to the log"/>
 		<string id="TL280" text="Score the forecast in the log"/>
+		<string id="TL281" text="Lay the trade out for you first"/>
 		<string id="TL247" text="Coin sound on trade"/>
 		<string id="TL248" text="Detailed trade summary"/>
 		<string id="TL249" text="Silence trade messages" />
@@ -245,5 +246,9 @@
 		<string id="TL395" text=" and what each will make next"/>
 		<string id="TL397" text=" | Qty! = part of that amount is still on the road and lands before you would"/>
 		<string id="TL399" text=" | the Sell price has held at {HELD} of what this panel promised, over {COUNT} arrival(s) so far"/>
+		<string id="TL400" text="Rather than trading for you, TradeLord opens the trade screen and lays its whole deal on it: all it would sell on one side, all it would buy on the other. Change what you like, then press Done to trade or Cancel to leave it. Nothing is traded as you arrive while this is on, and a party met on the road still trades as before. OFF by default."/>
+		<string id="TL401" text="TradeLord has laid out {SOLD} unit(s) to sell for {GAINED} denars and {BOUGHT} to buy for {SPENT}. Change anything you like, then press Done to trade, or Cancel to leave it."/>
+		<string id="TL402" text="TradeLord found nothing here worth trading, so it has laid out nothing. Press Cancel to leave the market as it is."/>
+		<string id="TL403" text="TradeLord is holding its trade back until you have seen it. Choose {ENTRY} in this menu to have it laid out on the trade screen."/>
 	</strings>
 </base>
