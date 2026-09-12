@@ -11,7 +11,7 @@
 **What it tells you**
 
 - ✅ Live prices from every market on the map, read directly from the game's own economy brain
-- ✅ The five best places to sell and the five cheapest to buy, in every item tooltip
+- ✅ The five best places to sell and the five cheapest to buy, in every item tooltip, each priced as that market will be when you arrive rather than as it stands while you read, so the tooltip and the ledger panel never disagree about the same market
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying
 - ✅ Stock counts, so you know the deal is actually there
