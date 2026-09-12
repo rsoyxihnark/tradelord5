@@ -6402,5 +6402,53 @@ chk("1.62.2", "a disagreement that predates the check is named one by one, and a
 
 
 
+GLOSSARY = {
+    'Gold reserve': {'T\u00fcrk\u00e7e': r'alt[\u0131i]n rezerv',
+                     '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': r'\u0437\u0430\u043f\u0430\u0441\w* \u0437\u043e\u043b\u043e\u0442\u0430',
+                     '\u7b80\u4f53\u4e2d\u6587': r'\u91d1\u94b1\u50a8\u5907'},
+    'Live world prices': {'T\u00fcrk\u00e7e': r'canl[\u0131i] d\u00fcnya fiyat',
+                          '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': r'\u0436\u0438\u0432\u044b\w* \u0446\u0435\u043d\w* \u043c\u0438\u0440\u0430',
+                          '\u7b80\u4f53\u4e2d\u6587': r'\u5b9e\u65f6\u4e16\u754c\u4ef7\u683c'},
+    'travel ceiling': {'T\u00fcrk\u00e7e': r'yol s\u00fcresi s[\u0131i]n[\u0131i]r',
+                       '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': r'\u043f\u0440\u0435\u0434\u0435\u043b\w* \u043f\u0443\u0442\u0438',
+                       '\u7b80\u4f53\u4e2d\u6587': r'\u884c\u7a0b\u4e0a\u9650'},
+    'Trade with towns': {'T\u00fcrk\u00e7e': r'\u015fehirlerle ticaret',
+                         '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': r'\u0442\u043e\u0440\u0433\u043e\u0432\u0430\u0442\u044c \u0441 \u0433\u043e\u0440\u043e\u0434\u0430\u043c\u0438',
+                         '\u7b80\u4f53\u4e2d\u6587': r'\u4e0e\u57ce\u9547\u4ea4\u6613'},
+    'Trade with villages': {'T\u00fcrk\u00e7e': r'k\u00f6ylerle ticaret',
+                            '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': r'\u0442\u043e\u0440\u0433\u043e\u0432\u0430\u0442\u044c \u0441 \u0434\u0435\u0440\u0435\u0432\u043d\u044f\u043c\u0438',
+                            '\u7b80\u4f53\u4e2d\u6587': r'\u4e0e\u6751\u5e84\u4ea4\u6613'},
+    'haul animal': {'T\u00fcrk\u00e7e': r'y\u00fck hayvan',
+                    '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': r'\u0432\u044c\u044e\u0447\u043d',
+                    '\u7b80\u4f53\u4e2d\u6587': r'\u9a6e\u517d'},
+    'ledger': {'T\u00fcrk\u00e7e': r'defter',
+               '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': r'\u043a\u043d\u0438\u0433',
+               '\u7b80\u4f53\u4e2d\u6587': r'\u8d26\u7c3f'},
+}
+
+def one_word_for_one_thing_in_every_language():
+    en = spoken(ENGLISH)
+    astray = []
+    for term, byLanguage in GLOSSARY.items():
+        lines = [k for k, said in en.items() if term.lower() in said.lower()]
+        if not lines:
+            astray.append('no English line says ' + term)
+        for tag, path in TRANSLATIONS.items():
+            said = spoken(path)
+            wanted = byLanguage.get(tag)
+            if not wanted:
+                astray.append(term + ' has no agreed word in ' + tag)
+                continue
+            for k in lines:
+                if not re.search(wanted, said.get(k, ''), re.I):
+                    astray.append(tag + ' ' + k + ' says ' + term + ' some other way')
+    return astray == []
+
+
+chk("1.62.2", "a term the settings screen names is translated the same way in every line that names it",
+    one_word_for_one_thing_in_every_language())
+
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
