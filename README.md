@@ -1,7 +1,7 @@
 - It reads what every market in Calradia is paying right now, live, straight from the game's own brain.
 - It shows you the best ways to buy and sell, right in the item tooltip and in a ledger.
 - It can buy & sell for you automatically as you enter a settlement.
-- It ranks the trade routes worth travelling on a panel. Each route's profit is evaluated on 9+ factors and travel time on 5+. Then the two are scored together for the confidence value shown, respecting how the price moves because of the NPC caravans en route there. Profit per travel day is calculated by real pathfinding at your party's own speed, with the cargo you are carrying, from where you are, to the buy town, on to the sell town.
+- It ranks the trade routes worth travelling on a panel. Every unit of a route is priced in turn at both ends through the game's own price model, against the stock the market holds, the gold the merchant has, your own caps and what the caravans and workshops will do to that market before you get there. Profit per travel day is worked out by the game's own pathfinding at your party's own speed, with the cargo you are carrying, from where you are, to the buy town, on to the sell town. The two are then scored together into the confidence figure the panel shows.
 - You can change how it works. The default settings are thoroughly tested in game and work great to get you to "take off speed" as fast as possible.
 
 ## Everything it does
@@ -17,13 +17,13 @@
 - ✅ Stock counts, so you know the deal is actually there
 - ✅ Inventory rows tinted good to bad against the best price known
 - ✅ One clean set of price hints, bypassing the vanilla rumour system, which is usually out of date by the time you get there
-- ✅ A ledger panel on the campaign map ranking every profitable route, on hotkey **T**, on the map button, or from its own entry in the town menu, which falls back to the six best routes written out as text if the panel cannot open
-- ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get
+- ✅ A ledger panel on the campaign map ranking the best route it can find for each good, thirty rows of them, on hotkey **T**, on the map button, or from its own entry in the town menu, which falls back to the six best routes written out as text if the panel cannot open
+- ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get, and a route whose prices could not be walked that way is marked on its confidence figure
 - ✅ A confidence score on each route: profit per day, discounted by how much of the margin survives once every unit is priced in turn, how much of the good the market you are buying from has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
 - ✅ Prices and stock that count what is still on its way: the cargo the caravans on the road will unload at a market, what that town's workshops will make next, and the purses those caravans are bringing to spend, spread over the goods that are cheap there as an estimate of what they will buy off the shelf. Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
 - ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
-- ✅ A route listed whether or not your purse could pay for it today, so the panel always shows you where the profit is, and says under the routes when your gold reserve is what is stopping you buying
+- ✅ A route listed whether or not your purse could pay for it today, or your herd is already as large as your men can drive, so the panel always shows you where the profit is, and says under the routes when your gold reserve is what is stopping you buying
 - ✅ Click any town to jump the camera there and pin a marker on it, and a pin comes off by itself once TradeLord has traded in that town
 - ✅ The best market for the cargo you are carrying, a town or a village, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement
 - ✅ The five workshops in Calradia earning the most right now, with their town, what each will make next and their owner, on that same panel. With Live world prices turned off it shows yours instead
@@ -55,8 +55,8 @@
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
 - ✅ A coin sound on a trade that lands, silence on one that does not
-- ✅ A quiet mode that keeps automated trading to the log and off your screen
-- ✅ A dry run that simulates every trade it would have made, and shows you the estimate (moves nothing)
+- ✅ A quiet mode that keeps automated trading to the log and off your screen, apart from the notice on your first market and the warning that your cargo is full
+- ✅ A dry run that simulates every trade it would have made and shows you the estimate, marked a best case in the message and in the log, moving nothing
 - ✅ Free passage past bandits, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and TradeLord adds a line to what you can say to them, asking to be let past, and they let you go with no fight and no ransom, then leave you be for the next few hours instead of turning round and hitting you again
 
 **What it doesn't touch**
@@ -64,7 +64,7 @@
 - ✅ Anything you locked in the inventory screen
 - ✅ Anything an active quest of yours is waiting on, whether it is an animal, a trade good or a raw material, held back from every pass that sells until the quest is done with it
 - ✅ Unique and player-crafted gear, and quest items. Your haul animals are never sold for profit either, though it will buy them for you, and naming one on your always-sell list is the only way to move one by hand. An animal that carries nothing for you and is not livestock is no haul animal, so it is sold like any other cargo rather than sitting in your bags for good
-- ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it: sell them, which is what it does out of the box; keep every one, which holds anything built from smithing parts, forged or looted off a bandit alike; or **keep only the ones you have not learned**, which holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know. Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
+- ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it: sell them, which is what it does out of the box; keep every one, which holds anything built from smithing parts, forged or looted off a bandit alike; or **keep the ones you have not learned**, which holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know. Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus. It follows Restock and keep food (days of supply): set that to 0 and TradeLord keeps no food back at all
 - ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
