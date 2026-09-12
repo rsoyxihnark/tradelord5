@@ -26,6 +26,7 @@ namespace TradeLord
         public float Confidence = 1f;
         public float Score;
         public bool Simulated;
+        public bool StillComing;
         public int Caravans;
 
         public float DataAgeDays = -1f;
@@ -742,14 +743,14 @@ namespace TradeLord
 
                     int spendCap = Options.Current.BuyValueCapPerItem;
                     int stocked = MostWorthShowing(buyPrice);
-                    int shelf = 0;
+                    int shelf = 0, onTheShelfNow = int.MaxValue;
                     float toBuy = Travel.EstimateDaysFromParty(from);
                     int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);
                     if (Options.Current.Omniscient)
                     {
-                        shelf = TradeMath.StockAfterLanding(StockOf(from, item),
-                                    Forecast.UnitsLanding(from, item, toBuy))
-                                - (from.IsVillage ? 1 : 0);
+                        onTheShelfNow = StockOf(from, item) - (from.IsVillage ? 1 : 0);
+                        shelf = TradeMath.StockAfterLanding(onTheShelfNow,
+                                    Forecast.UnitsLanding(from, item, toBuy));
                         stocked = Math.Min(stocked, shelf);
                     }
                     if (stocked <= 0) continue;
@@ -810,7 +811,8 @@ namespace TradeLord
                             Quantity = q.Units,
                             TravelDays = days, TotalProfit = profit, ProfitPerDay = perDay,
                             Confidence = confidence, Score = perDay * confidence,
-                            Simulated = q.Simulated, Caravans = caravans, DataAgeDays = age
+                            Simulated = q.Simulated, Caravans = caravans, DataAgeDays = age,
+                            StillComing = TradeMath.StillComing(q.Units, onTheShelfNow)
                         };
                     }
                 }
