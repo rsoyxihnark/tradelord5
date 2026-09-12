@@ -152,6 +152,14 @@ namespace TradeLord
             return q;
         }
 
+        internal static int FirstUnit(Settlement site, ItemObject item, bool selling, int quoted,
+                                     int landed)
+        {
+            if (landed == 0 || site == null || item == null) return quoted;
+            Ladder rung = new Ladder(site, item, selling, quoted, landed);
+            return rung.Walkable ? rung.At(0) : quoted;
+        }
+
         internal static int PricePaid(Settlement site, EquipmentElement bought, int units, int quotedUnitPrice)
         {
             if (units <= 0) return 0;
