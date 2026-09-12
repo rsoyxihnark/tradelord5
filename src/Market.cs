@@ -35,7 +35,7 @@ namespace TradeLord
 
         internal bool Walkable => _walkable;
 
-        internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting)
+        internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting, int landed = 0)
         {
             ItemObject item = stocked.Item;
             _item = item;
@@ -51,7 +51,7 @@ namespace TradeLord
                 ItemData data = town.MarketData.GetCategoryData(item.ItemCategory);
                 _supply = data.Supply;
                 _demand = data.Demand;
-                _inStoreValue = data.InStoreValue;
+                _inStoreValue = TradeMath.ShelfAfterLanding(data.InStoreValue, landed);
                 _walkable = true;
             }
             catch (Exception e) { Log.Error(e, "bulk price walk setup"); }
@@ -83,10 +83,10 @@ namespace TradeLord
         private readonly bool _selling;
         private readonly List<int> _priced = new List<int>();
 
-        internal Ladder(Settlement site, ItemObject item, bool selling, int quoted)
+        internal Ladder(Settlement site, ItemObject item, bool selling, int quoted, int landed)
         {
             _selling = selling;
-            _shelf = new Shelf(site, new EquipmentElement(item), selling, quoted, projecting: true);
+            _shelf = new Shelf(site, new EquipmentElement(item), selling, quoted, projecting: true, landed: landed);
         }
 
         internal bool Walkable => _shelf.Walkable;
@@ -104,17 +104,18 @@ namespace TradeLord
 
     internal static class Bulk
     {
-        private static readonly Dictionary<(string site, string item, bool selling), Ladder> _rungs =
-            new Dictionary<(string, string, bool), Ladder>();
+        private static readonly Dictionary<(string site, string item, bool selling, int landed), Ladder> _rungs =
+            new Dictionary<(string, string, bool, int), Ladder>();
 
         internal static void Forget() => _rungs.Clear();
 
-        private static Ladder Rung(Settlement site, ItemObject item, bool selling, int quoted)
+        private static Ladder Rung(Settlement site, ItemObject item, bool selling, int quoted,
+                                   int landed)
         {
-            var key = (site.StringId, item.StringId, selling);
+            var key = (site.StringId, item.StringId, selling, landed);
             if (!_rungs.TryGetValue(key, out Ladder rung))
             {
-                rung = new Ladder(site, item, selling, quoted);
+                rung = new Ladder(site, item, selling, quoted, landed);
                 _rungs[key] = rung;
             }
             return rung;
@@ -122,13 +123,16 @@ namespace TradeLord
 
         internal static RouteQuote Walk(Settlement from, Settlement to, ItemObject item,
                                         int maxUnits, int merchantTill, int spendCap,
-                                        int quotedBuyPrice, int quotedSellPrice)
+                                        int quotedBuyPrice, int quotedSellPrice,
+                                        int landedAtBuyTown, int landedAtSellTown)
         {
             RouteQuote q = default(RouteQuote);
             if (item == null || from == null || to == null || maxUnits <= 0) return q;
 
-            Ladder buy = Rung(from, item, selling: false, quoted: quotedBuyPrice);
-            Ladder sell = Rung(to, item, selling: true, quoted: quotedSellPrice);
+            Ladder buy = Rung(from, item, selling: false, quoted: quotedBuyPrice,
+                              landed: landedAtBuyTown);
+            Ladder sell = Rung(to, item, selling: true, quoted: quotedSellPrice,
+                               landed: landedAtSellTown);
             q.Simulated = buy.Walkable && sell.Walkable;
 
             for (int u = 0; u < maxUnits; u++)

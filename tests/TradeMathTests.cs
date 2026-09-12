@@ -483,5 +483,56 @@ namespace TradeLord.Tests
                 Assert.True(TradeMath.DaysAtBestSpeed(240f, 5f, 10f)
                             <= TradeMath.DaysAtSpeed(240f, ratio, 5f, 10f) + 1e-4f);
         }
+
+        [Fact]
+        public void A_landing_is_worth_its_units_at_the_price_of_one()
+        {
+            Assert.Equal(0, TradeMath.WorthOf(0, 50));
+            Assert.Equal(0, TradeMath.WorthOf(10, 0));
+            Assert.Equal(0, TradeMath.WorthOf(-3, 50));
+            Assert.Equal(500, TradeMath.WorthOf(10, 50));
+        }
+
+        [Fact]
+        public void A_landing_worth_more_than_a_number_can_hold_stops_at_the_top()
+        {
+            Assert.Equal(int.MaxValue, TradeMath.WorthOf(int.MaxValue, 2));
+            Assert.Equal(int.MaxValue, TradeMath.ShelfAfterLanding(int.MaxValue, int.MaxValue));
+            Assert.Equal(int.MaxValue, TradeMath.StockAfterLanding(int.MaxValue, 5));
+        }
+
+        [Fact]
+        public void What_lands_is_added_to_what_the_market_already_holds()
+        {
+            Assert.Equal(1200, TradeMath.ShelfAfterLanding(1000, 200));
+            Assert.Equal(1000, TradeMath.ShelfAfterLanding(1000, 0));
+            Assert.Equal(0, TradeMath.ShelfAfterLanding(100, -400));
+            Assert.Equal(36, TradeMath.StockAfterLanding(12, 24));
+        }
+
+        [Fact]
+        public void A_landing_of_nothing_leaves_the_stock_where_it_was()
+        {
+            Assert.Equal(12, TradeMath.StockAfterLanding(12, 0));
+            Assert.Equal(12, TradeMath.StockAfterLanding(12, -9));
+        }
+
+        [Fact]
+        public void Cargo_counts_only_when_it_arrives_before_you_do()
+        {
+            Assert.True(TradeMath.LandsInTime(1.5f, 2.4f));
+            Assert.True(TradeMath.LandsInTime(2.4f, 2.4f));
+            Assert.False(TradeMath.LandsInTime(3f, 2.4f));
+            Assert.True(TradeMath.LandsInTime(0f, 0f));
+        }
+
+        [Fact]
+        public void A_party_crawling_along_is_still_credited_with_a_walking_pace()
+        {
+            Assert.Equal(0f, TradeMath.EtaDays(0f, 4f));
+            Assert.Equal(1f, TradeMath.EtaDays(120f, 5f), 4);
+            Assert.Equal(TradeMath.EtaDays(120f, TradeMath.WalkingPace),
+                         TradeMath.EtaDays(120f, 0f), 4);
+        }
     }
 }

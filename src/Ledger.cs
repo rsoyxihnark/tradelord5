@@ -743,14 +743,17 @@ namespace TradeLord
                     int spendCap = Options.Current.BuyValueCapPerItem;
                     int stocked = MostWorthShowing(buyPrice);
                     int shelf = 0;
+                    float toBuy = Travel.EstimateDaysFromParty(from);
+                    int landedAtBuyTown = Forecast.WorthLanding(from, item, toBuy);
                     if (Options.Current.Omniscient)
                     {
-                        shelf = StockOf(from, item) - (from.IsVillage ? 1 : 0);
+                        shelf = TradeMath.StockAfterLanding(StockOf(from, item),
+                                    Forecast.UnitsLanding(from, item, toBuy))
+                                - (from.IsVillage ? 1 : 0);
                         stocked = Math.Min(stocked, shelf);
                     }
                     if (stocked <= 0) continue;
 
-                    float toBuy = Travel.EstimateDaysFromParty(from);
                     foreach (var (to, sellPrice) in sells)
                     {
                         float realizable = TradePolicy.Realizable(sellPrice);
@@ -775,7 +778,9 @@ namespace TradeLord
                         if (cap > 0f && days > cap) continue;
                         if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey) continue;
 
-                        RouteQuote q = Bulk.Walk(from, to, item, qtyCap, till, spendCap, buyPrice, sellPrice);
+                        RouteQuote q = Bulk.Walk(from, to, item, qtyCap, till, spendCap,
+                                                 buyPrice, sellPrice, landedAtBuyTown,
+                                                 Forecast.WorthLanding(to, item, days));
                         if (q.Units <= 0) continue;
 
                         int proceeds = Options.Current.ConservativeRouteProjection

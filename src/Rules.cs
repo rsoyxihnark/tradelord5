@@ -196,6 +196,35 @@ namespace TradeLord
             return "an animal TradeLord treats as ordinary cargo";
         }
 
+        internal static bool InputsHeld(IList<(string category, int needed)> inputs,
+                                       IDictionary<string, int> held)
+        {
+            if (inputs == null || inputs.Count == 0) return false;
+            for (int i = 0; i < inputs.Count; i++)
+            {
+                var (category, needed) = inputs[i];
+                if (category == null) return false;
+                held.TryGetValue(category, out int have);
+                if (have < needed) return false;
+            }
+            return true;
+        }
+
+        internal static int RunsSoonest(IList<(bool ready, float progress)> productions)
+        {
+            int pick = -1;
+            float furthest = -1f;
+            if (productions == null) return -1;
+            for (int i = 0; i < productions.Count; i++)
+            {
+                var (ready, progress) = productions[i];
+                if (!ready || progress <= furthest) continue;
+                furthest = progress;
+                pick = i;
+            }
+            return pick;
+        }
+
         internal static bool ResaleAllowed(in Good good, Options s) =>
             Listed(s.AlwaysSet, good) || TradeMath.PolicyAllows(PolicyFor(good, s), buying: false);
 

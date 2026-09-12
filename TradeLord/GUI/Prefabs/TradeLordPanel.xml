@@ -279,6 +279,11 @@
                                         Brush="Popup.Button.Text" Brush.FontSize="15"
                                         Brush.FontColor="#7FD633FF"
                                         Text="@Profit" />
+                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="240"
+                                        HeightSizePolicy="StretchToParent"
+                                        Brush="Popup.Button.Text" Brush.FontSize="15"
+                                        Brush.FontColor="#CFCFCFDD"
+                                        Text="@Makes" />
                             <TextWidget WidthSizePolicy="StretchToParent"
                                         HeightSizePolicy="StretchToParent"
                                         Brush="Popup.Button.Text" Brush.FontSize="15"

@@ -296,4 +296,66 @@ namespace TradeLord.Tests
             Assert.True(new Options { NeverSellItems = "\t" }.NeverSet.Empty);
         }
     }
+
+    public class WorkshopForecastTests
+    {
+        private static List<(string, int)> Needs(params (string, int)[] needed) =>
+            new List<(string, int)>(needed);
+
+        private static Dictionary<string, int> Holds(params (string, int)[] held)
+        {
+            var shelf = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var (category, count) in held) shelf[category] = count;
+            return shelf;
+        }
+
+        [Fact]
+        public void A_workshop_runs_only_when_the_market_holds_everything_it_needs()
+        {
+            Assert.True(TradeRules.InputsHeld(Needs(("iron", 2)), Holds(("iron", 5))));
+            Assert.True(TradeRules.InputsHeld(Needs(("iron", 5)), Holds(("iron", 5))));
+            Assert.False(TradeRules.InputsHeld(Needs(("iron", 6)), Holds(("iron", 5))));
+            Assert.False(TradeRules.InputsHeld(Needs(("iron", 1)), Holds(("wool", 9))));
+        }
+
+        [Fact]
+        public void A_workshop_needing_two_things_waits_for_the_one_the_market_lacks()
+        {
+            Assert.True(TradeRules.InputsHeld(Needs(("iron", 1), ("hardwood", 1)),
+                                              Holds(("iron", 3), ("hardwood", 2))));
+            Assert.False(TradeRules.InputsHeld(Needs(("iron", 1), ("hardwood", 1)),
+                                               Holds(("iron", 3))));
+        }
+
+        [Fact]
+        public void A_workshop_that_needs_nothing_named_makes_nothing()
+        {
+            Assert.False(TradeRules.InputsHeld(null, Holds(("iron", 3))));
+            Assert.False(TradeRules.InputsHeld(Needs(), Holds(("iron", 3))));
+            Assert.False(TradeRules.InputsHeld(Needs((null, 1)), Holds(("iron", 3))));
+        }
+
+        [Fact]
+        public void The_run_that_comes_next_is_the_one_furthest_along_that_can_run()
+        {
+            Assert.Equal(1, TradeRules.RunsSoonest(
+                new List<(bool, float)> { (true, 0.2f), (true, 0.8f), (true, 0.5f) }));
+            Assert.Equal(2, TradeRules.RunsSoonest(
+                new List<(bool, float)> { (false, 0.9f), (true, 0.1f), (true, 0.4f) }));
+        }
+
+        [Fact]
+        public void Nothing_runs_when_the_market_holds_none_of_the_inputs()
+        {
+            Assert.Equal(-1, TradeRules.RunsSoonest(new List<(bool, float)> { (false, 0.9f) }));
+            Assert.Equal(-1, TradeRules.RunsSoonest(new List<(bool, float)>()));
+            Assert.Equal(-1, TradeRules.RunsSoonest(null));
+        }
+
+        [Fact]
+        public void A_run_that_has_not_started_is_still_a_run_that_can_come_next()
+        {
+            Assert.Equal(0, TradeRules.RunsSoonest(new List<(bool, float)> { (true, 0f) }));
+        }
+    }
 }
