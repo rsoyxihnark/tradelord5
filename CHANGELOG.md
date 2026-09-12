@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.62.0
 
+- The five markets in an item tooltip are now priced as each will be when you get there, counting what the caravans and the workshops will do to it first, so a tooltip and the ledger panel never quote the same market differently.
+- Those five are ordered on the prices you will actually be offered, so a market that is about to be picked over no longer sits at the top of the list.
+- The explanation under Count what is on its way to a market now says it reaches a tooltip price as well as a route.
+- The feature list now says the tooltip prices a market as it will be when you arrive.
 - The changelog was missing 1.49.0 and 1.49.1 entirely; both versions are back in it, word for word as they went out.
 - The feature list no longer says the ledger panel ranks every profitable route: it ranks the best route it can find for each good, thirty rows of them.
 - The feature list now calls the smithing choice Keep the ones you have not learned, the name the settings screen gives it.

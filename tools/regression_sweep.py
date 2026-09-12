@@ -6308,5 +6308,27 @@ chk("1.61.0", "what a market will hold when you get there is what lands there le
 
 
 
+def a_tooltip_prices_a_market_as_it_will_be_when_you_get_there():
+    shift = method_body(S['TooltipPatches.cs'], "private static void AsTheyWillBe")
+    append = method_body(S['TooltipPatches.cs'], "internal static void Append(ItemMenuVM vm, ItemVM itemVm)")
+    first = method_body(S['Market.cs'], "internal static int FirstUnit")
+    return (ordered(shift,
+                    "if (!Forecast.On || markets == null || markets.Count == 0) return;",
+                    "float days = Travel.EstimateDaysFromParty(town);",
+                    "Bulk.FirstUnit(town, item, selling, price,",
+                    "Forecast.WorthShift(town, item, days)));",
+                    "markets.Sort(")
+            and "AsTheyWillBe(item, sells, selling: true);" in append
+            and "AsTheyWillBe(item, buys, selling: false);" in append
+            and "if (landed == 0 || site == null || item == null) return quoted;" in first
+            and "return rung.Walkable ? rung.At(0) : quoted;" in first
+            and "a price in a tooltip" in spoken(ENGLISH)['TL396'])
+
+
+chk("1.62.0", "a market in a tooltip is priced as it will be when you get there, through the same forecast the ledger panel reads, and the five are ordered on those prices",
+    a_tooltip_prices_a_market_as_it_will_be_when_you_get_there())
+
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

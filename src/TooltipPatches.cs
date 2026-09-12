@@ -54,6 +54,8 @@ namespace TradeLord
             var (item, sells, buys) = Markets(itemVm);
             if (item == null) return;
             var ledger = LedgerBehavior.Instance;
+            AsTheyWillBe(item, sells, selling: true);
+            AsTheyWillBe(item, buys, selling: false);
 
             AddSeparator(vm);
 
@@ -134,6 +136,20 @@ namespace TradeLord
                     }
                 }
             }
+        }
+
+        private static void AsTheyWillBe(ItemObject item, List<(Settlement town, int price)> markets,
+                                         bool selling)
+        {
+            if (!Forecast.On || markets == null || markets.Count == 0) return;
+            for (int i = 0; i < markets.Count; i++)
+            {
+                var (town, price) = markets[i];
+                float days = Travel.EstimateDaysFromParty(town);
+                markets[i] = (town, Bulk.FirstUnit(town, item, selling, price,
+                                                   Forecast.WorthShift(town, item, days)));
+            }
+            markets.Sort((a, b) => selling ? b.price.CompareTo(a.price) : a.price.CompareTo(b.price));
         }
 
         private static string RowText(Settlement town, int price)

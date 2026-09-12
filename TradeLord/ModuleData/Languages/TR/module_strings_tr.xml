@@ -238,7 +238,7 @@
 		<string id="TL393" text="Keseniz {GOLD} dinar, TradeLord bunun {RESERVE} kadarını tutuyor: Altın rezervi {FLAT}, Kaç günlük ücret için altın tut ayarı {WAGES}. Bu yüzden burada alabileceğiniz bir şey yok. Biraz yük satın ya da ayarlardan bu ikisinden birini düşürün."/>
 		<string id="TL390" text="TradeLord şehir menülerinde ticaret yapar ve şehirler fiyat taramalarına katılır. Öntanımlı olarak AÇIK." />
 		<string id="TL279" text="Bir pazara doğru yolda olanları say"/>
-		<string id="TL396" text="Bir rota fiyatlandırılmadan önce, iki pazarına senden önce ulaşanları sayar: kervanların boşaltacağı yük, atölyelerin sırada üreteceği mal ve kervanların getirdiği kese, ki kese orada ucuz olan mallara dağıtılıp ne alacaklarının tahmini çıkar. Canlı dünya fiyatları gerekir. KAPALI her pazarı bugünkü hâliyle fiyatlandırır."/>
+		<string id="TL396" text="Bir rota ya da ipuçlarındaki bir fiyat hesaplanmadan önce, o pazara senden önce ulaşanları sayar: kervanların boşaltacağı yük, atölyelerin sırada üreteceği mal ve kervanların getirdiği kese, ki kese orada ucuz olan mallara dağıtılıp ne alacaklarının tahmini çıkar. Canlı dünya fiyatları gerekir. KAPALI her pazarı bugünkü hâliyle fiyatlandırır."/>
 		<string id="TL394" text=" | fiyatlar ve stok, sen varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek"/>
 		<string id="TL395" text=" ve her birinin sırada ne üreteceği"/>
 	</strings>
