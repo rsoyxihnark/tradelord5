@@ -1668,8 +1668,8 @@ chk("1.4.1", "a pass the gold-direction guard stopped does not blame the trade p
 chk("1.4.1", "the automatic path asks the same market question the menu does",
     "IsMarket" not in method_body(S['Trading.cs'], "private void OnSettlementEntered"))
 chk("1.4.1", "planner and executor apply the same village last-unit clamp",
-    "StockAfterLanding(StockOf(from, item)," in S['Ledger.cs'] and
-    "- (from.IsVillage ? 1 : 0);" in S['Ledger.cs'] and
+    "onTheShelfNow = StockOf(from, item) - (from.IsVillage ? 1 : 0);" in S['Ledger.cs'] and
+    "TradeMath.StockAfterLanding(onTheShelfNow," in S['Ledger.cs'] and
     "if (lastInVillage) return Block.VillageLastUnit;" in S['Rules.cs'] and
     "pass.Site != null && pass.Site.IsVillage && remaining <= 1);" in
         method_body(S['Trading.cs'], "private static void BuyPass"))
@@ -6327,6 +6327,24 @@ def a_tooltip_prices_a_market_as_it_will_be_when_you_get_there():
 
 chk("1.62.0", "a market in a tooltip is priced as it will be when you get there, through the same forecast the ledger panel reads, and the five are ordered on those prices",
     a_tooltip_prices_a_market_as_it_will_be_when_you_get_there())
+
+
+
+def a_quantity_that_leans_on_goods_still_on_the_road_says_so():
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    rule = method_body(S['TradeMath.cs'], "public static bool StillComing")
+    return ("int shelf = 0, onTheShelfNow = int.MaxValue;" in scan
+            and "StillComing = TradeMath.StillComing(q.Units, onTheShelfNow)" in scan
+            and "public bool StillComing;" in S['Ledger.cs']
+            and "units > (onTheShelfNow < 0 ? 0 : onTheShelfNow);" in rule
+            and '"x" + _route.Quantity + (_route.StillComing ? "!" : "");' in S['Panel.cs']
+            and "{=TL397}" in S['Panel.cs']
+            and "Qty! = part of that amount is still on the road" in spoken(ENGLISH)['TL397']
+            and "Qty!" in README)
+
+
+chk("1.62.1", "a route whose quantity leans on goods still on the road is marked on the panel, and the mark is explained where the other marks are",
+    a_quantity_that_leans_on_goods_still_on_the_road_says_so())
 
 
 

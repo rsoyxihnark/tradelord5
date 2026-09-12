@@ -40,7 +40,8 @@ namespace TradeLord
         [DataSourceProperty] public string BuyPrice => _route.BuyPrice.ToString();
         [DataSourceProperty] public string SellTownName => _route.To.Name.ToString();
         [DataSourceProperty] public string SellPrice => _route.SellPrice.ToString();
-        [DataSourceProperty] public string Quantity => "x" + _route.Quantity;
+        [DataSourceProperty] public string Quantity =>
+            "x" + _route.Quantity + (_route.StillComing ? "!" : "");
         [DataSourceProperty] public string Profit => "+" + _route.TotalProfit;
         [DataSourceProperty] public string Days => "~" + _route.TravelDays.ToString("0.#");
 
@@ -269,6 +270,7 @@ namespace TradeLord
                         ? Tongue.Text("{=TL73} | resale safety factor applied").ToString() : "")
                   + (Forecast.On
                         ? Tongue.Text("{=TL394} | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there").ToString()
+                          + Tongue.Text("{=TL397} | Qty! = part of that amount is still on the road and lands before you would").ToString()
                         : ""))
                 + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero));
 
