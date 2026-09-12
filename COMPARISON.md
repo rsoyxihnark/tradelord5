@@ -41,7 +41,7 @@ dependency.
 **11648 ArmouredRay Quick Trade, ArmouredRay.** One Quick Trade entry, 24 settings, a good pack
 animal ratio. It does not use the game's trade actions: it moves goods and gold by hand, which is
 why its page admits a 2 percent price error and that it sells the item you locked. Every TradeLord
-unit goes through the game's own sell action, so the price, the tax and the XP are vanilla's.
+unit goes through the game's own sell action, so the price and the XP are the game's own.
 
 **11708 Auto Trader, DarkStyleee.** The leanest honest auto trader: no Harmony patches, a cost
 ledger so it never sells below what you paid, a map marker. It trades in chunks of ten and re-prices
