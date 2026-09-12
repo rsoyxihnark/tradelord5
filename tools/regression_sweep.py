@@ -6274,12 +6274,13 @@ def a_purse_on_its_way_is_spent_on_what_is_cheap_at_that_market():
     leaving = method_body(S['Forecast.cs'], "internal static int WorthLeaving")
     picked = method_body(S['Forecast.cs'], "private static Dictionary<string, float> WhatATraderWouldPickAt")
     road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
+    at = method_body(S['Forecast.cs'], "private static bool PullAt")
     return (ordered(leaving,
                     "purse += spending.Gold;",
-                    "Dictionary<string, float> pull = PullAt(site);",
+                    "if (!PullAt(site, out Dictionary<string, float> pull, out float across)) return 0;",
                     "if (!pull.TryGetValue(item.ItemCategory.StringId, out float mine)) return 0;",
-                    "foreach (float one in pull.Values) across += one;",
                     "return TradeMath.ShareOfAPurse(purse, mine, across);")
+            and "foreach (float one in read.Values) total += one;" in at
             and "NoteAPurse(bound, party.PartyTradeGold, days);" in road
             and "TradeMath.PullOfAPrice(town.MarketData.GetPriceFactor(category))" in picked
             and "Town town = site.IsTown ? site.Town : null;" in picked)
@@ -6591,6 +6592,66 @@ chk("1.64.0", "a promise too old to say anything about the panel is dropped rath
     a_promise_too_old_to_say_anything_is_dropped_rather_than_scored())
 chk("1.64.0", "every Conf figure falls in one of the four bands the log splits them into",
     every_confidence_sits_in_one_band_and_the_bands_are_counted_in_one_place())
+
+
+def the_pull_across_a_market_is_added_up_once_an_hour():
+    f = S['Forecast.cs']
+    at = method_body(f, "private static bool PullAt")
+    leaving = method_body(f, "internal static int WorthLeaving")
+    return ("private static readonly Dictionary<string, float> _across =" in f
+            and ordered(at, "if (!_pull.TryGetValue(site.StringId, out pull))",
+                        "foreach (float one in read.Values) total += one;",
+                        "_across[site.StringId] = total;")
+            and "_across.Clear();" in method_body(f, "private static void Build")
+            and "_across.Clear();" in method_body(f, "internal static void Forget")
+            and "foreach" not in leaving
+            and f.count("total += one;") == 1)
+
+def two_routes_that_land_within_a_few_hours_share_one_price_ladder():
+    f = S['Forecast.cs']
+    quartered = "withinDays = TradeMath.ToTheQuarterDay(withinDays);"
+    return (f.count(quartered) == 3
+            and all(quartered in method_body(f, sig)
+                    for sig in ("internal static int UnitsLanding",
+                                "internal static int WorthLanding",
+                                "internal static int WorthLeaving"))
+            and "public const float HorizonStep = 0.25f;" in S['TradeMath.cs']
+            and "days / HorizonStep + 0.5d" in method_body(S['TradeMath.cs'], "public static float ToTheQuarterDay")
+            and "TradeMath.ToTheQuarterDay" in MATHTESTS)
+
+def a_workshop_run_lands_by_how_far_along_it_already_is():
+    f = S['Forecast.cs']
+    shops = method_body(f, "private static void ReadWhatTheShopsWillMake")
+    made = method_body(f, "private static List<(ItemCategory category, int count)> Output")
+    return ("private const float WorkshopRunDays = 1f;" in f
+            and "float lands = TradeMath.RunLandsIn(progress, WorkshopRunDays);" in shops
+            and f.count("WorkshopRunDays") == 2
+            and ordered(made, "shop.GetProductionProgress(i)",
+                        "int pick = TradeRules.RunsSoonest(ready);",
+                        "progress = ready[pick].progress;")
+            and "TradeMath.RunLandsIn" in MATHTESTS)
+
+def what_a_workshop_makes_is_valued_at_the_good_that_town_stocks():
+    f = S['Forecast.cs']
+    stands = method_body(f, "private static ItemObject StandsForAt")
+    shops = method_body(f, "private static void ReadWhatTheShopsWillMake")
+    return ("ItemObject stands = StandsForAt(site, category);" in shops
+            and "if (item == null || item.ItemCategory != category || !TradePolicy.Priced(item)) continue;"
+                in stands
+            and "TradeMath.StandsBetter(count, item.Value, most," in stands
+            and "ItemObject stands = stocked ?? StandsFor(category);" in stands
+            and "_standsForAt.Clear();" in method_body(f, "private static void Build")
+            and "TradeMath.StandsBetter" in MATHTESTS)
+
+
+chk("1.65.0", "how much a market pulls in all is added up once an hour rather than once for every good priced",
+    the_pull_across_a_market_is_added_up_once_an_hour())
+chk("1.65.0", "the days to a market are read to the nearest quarter day, so two routes that land together share one price ladder",
+    two_routes_that_land_within_a_few_hours_share_one_price_ladder())
+chk("1.65.0", "a workshop run lands by how far along the game says it already is, within the length of one run",
+    a_workshop_run_lands_by_how_far_along_it_already_is())
+chk("1.65.0", "what a workshop will make is valued at the good that town actually stocks, and the cheapest of its kind only when it stocks none",
+    what_a_workshop_makes_is_valued_at_the_good_that_town_stocks())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

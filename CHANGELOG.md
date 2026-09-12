@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.64.1
+
+- What a workshop will make next now lands when the game says that run is due, rather than always a day away, so a market is priced on it at the right time.
+- What a workshop will make next is now valued at the good that town actually stocks, rather than the cheapest good of that kind anywhere in Calradia.
+- Two routes that reach the same market within the same quarter day are now priced off one walk of that market's prices, so they cannot quote it differently.
+- Pricing a route does less work for the same answer: what a market pulls in altogether is added up once an hour rather than once for every good priced against it.
+
 ## 1.64.0
 
 - The panel now scores its own promise: every route it shows writes down the Sell price it promised you, and walking into that market near the time it said holds that promise against what the market really pays.
