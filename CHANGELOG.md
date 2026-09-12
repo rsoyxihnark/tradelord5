@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.64.0
+
+- The panel now scores its own promise: every route it shows writes down the Sell price it promised you, and walking into that market near the time it said holds that promise against what the market really pays.
+- The line under the routes says how much of the promised Sell price has actually been there and over how many arrivals, and that tally carries on across your campaign.
+- With Score the forecast in the log switched on, the log breaks the same thing down by the Conf each route carried, so you can see whether a higher Conf really means a promise that holds.
+- A promise you arrive far too late for is dropped rather than scored, so the figure only counts arrivals it can say something about.
+- The feature list says so too.
+
 ## 1.63.0
 
 - Score the forecast in the log, a new switch under Debug, writes down what TradeLord expects a market to hold by the time you get there, and then, as you walk in, what it really holds, good by good, with how far off it was.
