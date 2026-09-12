@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- The changelog was missing 1.49.0 and 1.49.1 entirely; both versions are back in it, word for word as they went out.
+- The feature list no longer says the ledger panel ranks every profitable route: it ranks the best route it can find for each good, thirty rows of them.
+- The feature list now calls the smithing choice Keep the ones you have not learned, the name the settings screen gives it.
+- The feature list now says that quiet mode still speaks the notice on your first market and the warning that your cargo is full.
+- The feature list now says a route is listed even when your herd is already as large as your men can drive, that a route whose prices could not be walked unit by unit is marked on its confidence figure, and that a dry run is marked a best case.
+- The opening summary no longer counts the factors behind a route and now names what is actually weighed.
 - The feature list now says that TradeLord tells you once, at the first market of a campaign, that it will trade for you as you arrive, and leaves that market untraded so you can switch it off first.
 - The feature list now says that you can tell a caravan it was a good trade once the goods have changed hands, and that the trader answers.
 - The feature list now says that the town menu entry falls back to the six best routes written out as text when the ledger panel cannot open.
@@ -132,6 +138,18 @@
 - An animal on your always-sell list is still sold to get you back up to speed, because the food reserve never holds one of those back.
 - What TradeLord reckons a good cost you no longer drifts by a denar as it sells a stack down, so a sale no longer stops early with goods left that were worth selling.
 - When a quest is waiting on more of an animal than your food reserve holds back, TradeLord now keeps the larger of the two rather than the smaller.
+
+## 1.49.1
+
+- The one-time reset of every setting is switched off from this version on, so nothing of yours is put back to what TradeLord ships with again.
+- That reset ran on 1.49.0 alone: if you came to this version straight from an older one you were never reset, and your settings stand exactly as you left them.
+
+## 1.49.0
+
+- Every setting goes back to the value TradeLord ships with, once, the first time you run this version, because the settings it ships with now trade better out of the box than they used to.
+- Anything you had set yourself is written into TradeLord.log as it happens, named setting by setting, so you can put back the ones you want.
+- Your four item lists are emptied by that reset along with everything else, so a never-sell or always-buy list you had built up is in the log too.
+- This happens on this version only and never again on a later one.
 
 ## 1.48.0
 
