@@ -587,5 +587,21 @@ namespace TradeLord.Tests
             Assert.Equal(0, TradeMath.ShelfAfterLanding(500, TradeMath.WorthShift(0, 900)));
             Assert.Equal(100, TradeMath.ShelfAfterLanding(500, TradeMath.WorthShift(0, 400)));
         }
+
+        [Fact]
+        public void A_quantity_larger_than_the_shelf_leans_on_what_is_still_coming()
+        {
+            Assert.True(TradeMath.StillComing(60, 20));
+            Assert.False(TradeMath.StillComing(20, 20));
+            Assert.False(TradeMath.StillComing(5, 20));
+            Assert.True(TradeMath.StillComing(1, 0));
+            Assert.True(TradeMath.StillComing(1, -4));
+        }
+
+        [Fact]
+        public void A_market_nobody_counted_the_stock_of_leans_on_nothing()
+        {
+            Assert.False(TradeMath.StillComing(999, int.MaxValue));
+        }
     }
 }

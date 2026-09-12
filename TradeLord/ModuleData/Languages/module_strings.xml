@@ -241,5 +241,6 @@
 		<string id="TL396" text="Before a route or a price in a tooltip is worked out, count what reaches that market before you do: the cargo the caravans will unload, what the workshops will make next, and the purses those caravans bring, spread over the goods that are cheap there as an estimate of what they will buy. Needs Live world prices. OFF prices each market as it stands."/>
 		<string id="TL394" text=" | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there"/>
 		<string id="TL395" text=" and what each will make next"/>
+		<string id="TL397" text=" | Qty! = part of that amount is still on the road and lands before you would"/>
 	</strings>
 </base>
