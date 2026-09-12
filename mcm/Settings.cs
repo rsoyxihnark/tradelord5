@@ -709,5 +709,10 @@ namespace TradeLord.Mcm
             HintText = "{=TL389}Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. OFF by default, since it makes the log much longer.")]
         [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
         public bool PriceTrace { get => _o.PriceTrace; set { _o.PriceTrace = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL280}Score the forecast in the log", Order = 1, RequireRestart = false,
+            HintText = "{=TL398}Writes to TradeLord.log what the forecast said a market would hold and what it held when you walked in, good by good, with how far off it was. Needs Count what is on its way to a market. OFF by default, since it makes the log longer.")]
+        [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
+        public bool ForecastScore { get => _o.ForecastScore; set { _o.ForecastScore = value; Options.Bump(); } }
     }
 }

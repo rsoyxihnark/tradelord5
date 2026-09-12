@@ -721,6 +721,7 @@ namespace TradeLord
             Guard.Run("Action.OnSettlementEntered", () =>
             {
                 PriceTrace.Say(settlement, "walked in, before anything was traded");
+                Hindsight.Score(settlement);
                 ResetVisit(StillTheSameSitting(settlement));
                 _visitTradeAllowed = CanTradeHere(settlement);
                 WarnUnmatchedItemLists();

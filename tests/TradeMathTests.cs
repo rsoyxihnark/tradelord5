@@ -603,5 +603,57 @@ namespace TradeLord.Tests
         {
             Assert.False(TradeMath.StillComing(999, int.MaxValue));
         }
+
+        [Fact]
+        public void What_happened_against_what_was_said_reads_over_as_positive_and_short_as_negative()
+        {
+            Assert.Equal(0, TradeMath.MissedBy(300, 300));
+            Assert.Equal(60, TradeMath.MissedBy(300, 360));
+            Assert.Equal(-60, TradeMath.MissedBy(300, 240));
+            Assert.Equal(-300, TradeMath.MissedBy(300, 0));
+            Assert.Equal(540, TradeMath.MissedBy(-300, 240));
+        }
+
+        [Fact]
+        public void A_miss_never_runs_off_the_end_of_what_a_number_holds()
+        {
+            Assert.Equal(int.MaxValue, TradeMath.MissedBy(int.MinValue, int.MaxValue));
+            Assert.Equal(int.MinValue, TradeMath.MissedBy(int.MaxValue, int.MinValue));
+        }
+
+        [Fact]
+        public void How_far_off_a_figure_was_is_measured_against_the_size_of_what_it_said()
+        {
+            Assert.Equal(0.2f, TradeMath.OffByShare(300, 240), 4);
+            Assert.Equal(0.2f, TradeMath.OffByShare(300, 360), 4);
+            Assert.Equal(0f, TradeMath.OffByShare(300, 300), 4);
+            Assert.Equal(1f, TradeMath.OffByShare(-300, 0), 4);
+            Assert.Equal(2f, TradeMath.OffByShare(300, -300), 4);
+        }
+
+        [Fact]
+        public void A_figure_that_said_nothing_would_move_gets_no_share_to_be_off_by()
+        {
+            Assert.Equal(TradeMath.NoShareToGive, TradeMath.OffByShare(0, 400));
+            Assert.Equal(TradeMath.NoShareToGive, TradeMath.OffByShare(0, 0));
+        }
+
+        [Fact]
+        public void An_average_over_nothing_is_nothing_rather_than_a_break()
+        {
+            Assert.Equal(0f, TradeMath.MeanOf(0f, 0), 4);
+            Assert.Equal(0f, TradeMath.MeanOf(12f, 0), 4);
+            Assert.Equal(4f, TradeMath.MeanOf(12f, 3), 4);
+            Assert.Equal(0.25f, TradeMath.MeanOf(1f, 4), 4);
+        }
+
+        [Fact]
+        public void Time_since_a_figure_was_written_down_is_counted_in_days_and_never_backwards()
+        {
+            Assert.Equal(1f, TradeMath.DaysSince(24f, 48f), 4);
+            Assert.Equal(0.5f, TradeMath.DaysSince(0f, 12f), 4);
+            Assert.Equal(0f, TradeMath.DaysSince(48f, 24f), 4);
+            Assert.Equal(0f, TradeMath.DaysSince(48f, 48f), 4);
+        }
     }
 }
