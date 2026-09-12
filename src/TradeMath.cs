@@ -178,6 +178,23 @@ namespace TradeLord
         public static float MeanOf(float total, int counted) =>
             counted <= 0 ? 0f : total / counted;
 
+        public static float HeldShare(int promised, int found) =>
+            promised <= 0 ? NoShareToGive : (found < 0 ? 0f : (float)found / promised);
+
+        public const float GraceDays = 1f;
+
+        public static bool WorthScoring(float saidWithinDays, float daysSince) =>
+            daysSince <= (saidWithinDays < 0f ? 0f : saidWithinDays) * 2f + GraceDays;
+
+        public const int Bands = 4;
+
+        public static int BandOf(float confidence)
+        {
+            if (confidence < 0.25f) return 0;
+            if (confidence < 0.5f) return 1;
+            return confidence < 0.75f ? 2 : 3;
+        }
+
         public static float DaysSince(float thenHours, float nowHours)
         {
             float days = (nowHours - thenHours) / 24f;

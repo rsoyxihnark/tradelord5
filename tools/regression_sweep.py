@@ -782,7 +782,7 @@ def the_readme_counts_the_saved_values_right():
     counted = 'a number' if numbers == 1 else words.get(numbers, 'no') + ' numbers'
     said = ('All it puts in a save is ' + words.get(tally.get('string'), 'no') +
             ' strings, ' + counted + ', a settlement reference and a flag')
-    return (said in README and numbers == 2
+    return (said in README and numbers == 4
             and tally.get('Settlement') == 1 and tally.get('bool') == 1)
 
 def readme_defaults_match_the_shipped_ones():
@@ -4700,7 +4700,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
                         "LedgerCodec.WritePurchases(_purchases);",
                         'dataStore.SyncData("TradeLord_LedgerText"')
             and trade.count("dataStore.SyncData(") == 3
-            and ledger.count("dataStore.SyncData(") == 4)
+            and ledger.count("dataStore.SyncData(") == 6)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
     arrays = dict(re.findall(r'private static readonly string\[\] (\w+) =\s*\{(.*?)\};', M, re.S))
@@ -6454,7 +6454,8 @@ chk("1.62.2", "a term the settings screen names is translated the same way in ev
 def the_forecast_is_scored_against_the_market_it_predicted():
     h = S['Hindsight.cs']
     noted = method_body(h, "private static void Noted")
-    return ("internal static bool On => Options.Current.ForecastScore && Forecast.On;" in h
+    return ("internal static bool Writing => Options.Current.ForecastScore;" in h
+            and "internal static bool On => Writing && Forecast.On;" in h
             and option_default('ForecastScore') == 'false'
             and EVER_SHIPPED.get('ForecastScore') == 'bool'
             and "_o.ForecastScore" in M
@@ -6510,6 +6511,86 @@ chk("1.63.0", "the switch that writes the score names the setting it needs by th
     the_switch_names_the_setting_it_leans_on())
 chk("1.63.0", "every source file the mod ships is read by these checks, so a new one cannot slip past them",
     every_source_file_is_read_by_these_checks())
+
+
+def the_panel_promise_is_written_down_whatever_the_debug_switch_says():
+    h = S['Hindsight.cs']
+    note = method_body(h, "internal static void Note")
+    score = method_body(h, "internal static void Score")
+    promise = method_body(h, "private static void Promise")
+    return (ordered(note, 'Guard.Run("Hindsight.Promise", () => Promise(route));', 'if (!On) return;')
+            and ordered(score, 'Guard.Run("Hindsight.Kept", () => Kept(site));', 'if (!On) return;')
+            and "SellPrice = route.SellPrice," in promise
+            and "Units = route.Quantity," in promise
+            and "Confidence = route.Confidence" in promise)
+
+def a_promise_is_scored_against_the_price_the_market_actually_pays():
+    kept = method_body(S['Hindsight.cs'], "private static void Kept")
+    return ("Priced.At(market, said.Item, MobileParty.MainParty, true)" in kept
+            and ordered(kept, "Priced.At(market, said.Item, MobileParty.MainParty, true)",
+                        "if (found <= 0)", "unpriced++;")
+            and "TradeMath.HeldShare(said.SellPrice, found)" in kept
+            and "if (!TradeMath.WorthScoring(said.WithinDays, since))" in kept
+            and "LedgerBehavior.Instance?.KeepPromiseScore(held);" in kept
+            and "TradeMath.BandOf(said.Confidence)" in kept
+            and ordered(kept, "LedgerBehavior.Instance?.KeepPromiseScore(held);",
+                        "if (!Writing || scored == 0) return;"))
+
+def how_the_promise_has_held_is_kept_in_the_save_and_shown_on_the_panel():
+    ledger = S['Ledger.cs']
+    sync = method_body(ledger, "public override void SyncData")
+    panel = method_body(S['Panel.cs'], "private static string HowThePromiseHasHeld")
+    return ('dataStore.SyncData("TradeLord_PromisesScored", ref _promisesScored);' in sync
+            and 'dataStore.SyncData("TradeLord_PromiseHeld", ref _promiseHeld);' in sync
+            and "if (held < 0f) return;" in method_body(ledger, "internal void KeepPromiseScore")
+            and "held = TradeMath.MeanOf(_promiseHeld, _promisesScored);" in
+                method_body(ledger, "internal bool PromiseScore")
+            and 'if (ledger == null || !ledger.PromiseScore(out int arrivals, out float held)) return "";' in panel
+            and '{=TL399}' in panel
+            and 'TL399' in strings_declared()
+            and 'HowThePromiseHasHeld()' in method_body(S['Panel.cs'], "private void Refresh"))
+
+def a_promise_too_old_to_say_anything_is_dropped_rather_than_scored():
+    h = S['Hindsight.cs']
+    room = method_body(h, "private static bool RoomForOneMore")
+    return ("TradeMath.WorthScoring(one.Value.WithinDays," in room
+            and "_promises--;" in room
+            and "return _promises < Most;" in room
+            and 'Log.Repeatable("promise check", "full",' in method_body(h, "private static void Promise")
+            and all(one in MATHTESTS for one in
+                    ('TradeMath.WorthScoring', 'TradeMath.HeldShare', 'TradeMath.BandOf')))
+
+def every_confidence_sits_in_one_band_and_the_bands_are_counted_in_one_place():
+    t = S['TradeMath.cs']
+    h = S['Hindsight.cs']
+    band = method_body(t, "public static int BandOf")
+    cuts = [float(c) for c in re.findall(r'confidence < ([\d.]+)f', band)]
+    said = re.search(r'public const int Bands = (\d+);', t)
+    returned = [int(n) for n in re.findall(r'return (\d+);', band)]
+    for one, other in re.findall(r'\? (\d+) : (\d+)', band):
+        returned += [int(one), int(other)]
+    returned = sorted(set(returned))
+    return (said is not None and cuts == sorted(set(cuts))
+            and len(cuts) == int(said.group(1)) - 1
+            and cuts[0] > 0.0 and cuts[-1] < 1.0
+            and returned == list(range(int(said.group(1))))
+            and "new float[TradeMath.Bands]" in h
+            and "new int[TradeMath.Bands]" in h
+            and "for (int band = TradeMath.Bands - 1; band >= 0; band--)"
+                in method_body(h, "private static void Kept")
+            and "Every_confidence_falls_in_one_band_and_a_dearer_one_never_falls_lower" in MATHTESTS)
+
+
+chk("1.64.0", "the promise a route makes is written down whatever the debug switch says, and scored when you walk in",
+    the_panel_promise_is_written_down_whatever_the_debug_switch_says())
+chk("1.64.0", "a promise is held against the price the market actually pays, and counted before anything is written",
+    a_promise_is_scored_against_the_price_the_market_actually_pays())
+chk("1.64.0", "how the promise has held is kept in the save and said on the panel, and says nothing until it has an arrival",
+    how_the_promise_has_held_is_kept_in_the_save_and_shown_on_the_panel())
+chk("1.64.0", "a promise too old to say anything about the panel is dropped rather than scored",
+    a_promise_too_old_to_say_anything_is_dropped_rather_than_scored())
+chk("1.64.0", "every Conf figure falls in one of the four bands the log splits them into",
+    every_confidence_sits_in_one_band_and_the_bands_are_counted_in_one_place())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

@@ -44,11 +44,27 @@ namespace TradeLord
         private Dictionary<string, PurchaseRecord> _paid;
         private long _lifetimeProfit;
         private int _lifetimeProfitCapped;
+        private int _promisesScored;
+        private float _promiseHeld;
         private ItemRoster _watched;
         private bool _settle;
 
         public long LifetimeProfit => _lifetimeProfit;
         public void AddProfit(int amount) => _lifetimeProfit += amount;
+
+        internal void KeepPromiseScore(float held)
+        {
+            if (held < 0f) return;
+            _promisesScored++;
+            _promiseHeld += held;
+        }
+
+        internal bool PromiseScore(out int scored, out float held)
+        {
+            scored = _promisesScored;
+            held = TradeMath.MeanOf(_promiseHeld, _promisesScored);
+            return scored > 0;
+        }
 
         private static int Capped(long total) =>
             total > int.MaxValue ? int.MaxValue : total < int.MinValue ? int.MinValue : (int)total;
@@ -78,6 +94,8 @@ namespace TradeLord
             dataStore.SyncData("TradeLord_PurchaseText", ref _purchaseText);
             dataStore.SyncData("TradeLord_LifetimeProfit", ref _lifetimeProfitCapped);
             dataStore.SyncData("TradeLord_LifetimeProfitWide", ref _lifetimeProfit);
+            dataStore.SyncData("TradeLord_PromisesScored", ref _promisesScored);
+            dataStore.SyncData("TradeLord_PromiseHeld", ref _promiseHeld);
             if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;
             if (dataStore.IsLoading) ReadSavedText();
             if (dataStore.IsLoading) PruneExpired();
