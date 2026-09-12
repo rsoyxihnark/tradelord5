@@ -42,7 +42,13 @@ namespace TradeLord
         private static readonly Dictionary<string, Dictionary<string, float>> _pull =
             new Dictionary<string, Dictionary<string, float>>(StringComparer.Ordinal);
 
+        private static readonly Dictionary<string, float> _across =
+            new Dictionary<string, float>(StringComparer.Ordinal);
+
         private static readonly Dictionary<string, ItemObject> _standsFor =
+            new Dictionary<string, ItemObject>(StringComparer.Ordinal);
+
+        private static readonly Dictionary<string, ItemObject> _standsForAt =
             new Dictionary<string, ItemObject>(StringComparer.Ordinal);
 
         private static bool _saidItCouldNotRead;
@@ -56,13 +62,16 @@ namespace TradeLord
             _landing.Clear();
             _spending.Clear();
             _pull.Clear();
+            _across.Clear();
             _standsFor.Clear();
+            _standsForAt.Clear();
             _saidItCouldNotRead = false;
         }
 
         internal static int UnitsLanding(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null) return 0;
+            withinDays = TradeMath.ToTheQuarterDay(withinDays);
             List<Landing> listed = Read(site);
             if (listed == null) return 0;
             int units = 0;
@@ -83,6 +92,7 @@ namespace TradeLord
         internal static int WorthLanding(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
+            withinDays = TradeMath.ToTheQuarterDay(withinDays);
             List<Landing> listed = Read(site);
             if (listed == null) return 0;
             string category = item.ItemCategory.StringId;
@@ -100,6 +110,7 @@ namespace TradeLord
         internal static int WorthLeaving(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
+            withinDays = TradeMath.ToTheQuarterDay(withinDays);
             Build();
             if (!_spending.TryGetValue(site.StringId, out List<Spending> coming)) return 0;
             int purse = 0;
@@ -110,21 +121,25 @@ namespace TradeLord
                 purse += spending.Gold;
             }
             if (purse <= 0) return 0;
-            Dictionary<string, float> pull = PullAt(site);
-            if (pull == null) return 0;
+            if (!PullAt(site, out Dictionary<string, float> pull, out float across)) return 0;
             if (!pull.TryGetValue(item.ItemCategory.StringId, out float mine)) return 0;
-            float across = 0f;
-            foreach (float one in pull.Values) across += one;
             return TradeMath.ShareOfAPurse(purse, mine, across);
         }
 
-        private static Dictionary<string, float> PullAt(Settlement site)
+        private static bool PullAt(Settlement site, out Dictionary<string, float> pull, out float across)
         {
-            if (_pull.TryGetValue(site.StringId, out Dictionary<string, float> kept)) return kept;
-            Dictionary<string, float> pull = null;
-            Guard.Run("Forecast.Pull", () => pull = WhatATraderWouldPickAt(site));
-            _pull[site.StringId] = pull;
-            return pull;
+            if (!_pull.TryGetValue(site.StringId, out pull))
+            {
+                Dictionary<string, float> read = null;
+                Guard.Run("Forecast.Pull", () => read = WhatATraderWouldPickAt(site));
+                float total = 0f;
+                if (read != null) foreach (float one in read.Values) total += one;
+                pull = read;
+                _pull[site.StringId] = read;
+                _across[site.StringId] = total;
+            }
+            _across.TryGetValue(site.StringId, out across);
+            return pull != null && across > 0f;
         }
 
         private static Dictionary<string, float> WhatATraderWouldPickAt(Settlement site)
@@ -149,7 +164,7 @@ namespace TradeLord
         {
             if (!On || shop == null) return "";
             string made = "";
-            Guard.Run("Forecast.WillMake", () => made = Named(Output(shop)));
+            Guard.Run("Forecast.WillMake", () => made = Named(Output(shop, out _)));
             return made;
         }
 
@@ -168,6 +183,8 @@ namespace TradeLord
             _landing.Clear();
             _spending.Clear();
             _pull.Clear();
+            _across.Clear();
+            _standsForAt.Clear();
             Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);
             Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
         }
@@ -212,26 +229,30 @@ namespace TradeLord
                 if (site == null) continue;
                 for (int k = 0; k < shops.Length; k++)
                 {
-                    foreach (var (category, count) in Output(shops[k]))
+                    List<(ItemCategory category, int count)> made = Output(shops[k], out float progress);
+                    float lands = TradeMath.RunLandsIn(progress, WorkshopRunDays);
+                    for (int at = 0; at < made.Count; at++)
                     {
-                        ItemObject stands = StandsFor(category);
+                        var (category, count) = made[at];
+                        ItemObject stands = StandsForAt(site, category);
                         Note(site, null, category, count,
                              TradeMath.WorthOf(count, stands == null ? 0 : stands.Value),
-                             WorkshopRunDays);
+                             lands);
                     }
                 }
             }
         }
 
-        private static List<(ItemCategory category, int count)> Output(Workshop shop)
+        private static List<(ItemCategory category, int count)> Output(Workshop shop, out float progress)
         {
+            progress = 0f;
             var made = new List<(ItemCategory, int)>();
             WorkshopType type = shop?.WorkshopType;
             Settlement site = shop?.Settlement;
             if (type == null || type.Productions == null || site == null) return made;
 
             Dictionary<string, int> held = WhatTheMarketHolds(site);
-            var ready = new List<(bool, float)>();
+            var ready = new List<(bool held, float progress)>();
             for (int i = 0; i < type.Productions.Count; i++)
             {
                 WorkshopType.Production production = type.Productions[i];
@@ -247,6 +268,7 @@ namespace TradeLord
 
             int pick = TradeRules.RunsSoonest(ready);
             if (pick < 0) return made;
+            progress = ready[pick].progress;
             MBReadOnlyList<(ItemCategory, int)> outputs = type.Productions[pick].Outputs;
             for (int k = 0; outputs != null && k < outputs.Count; k++)
             {
@@ -270,6 +292,29 @@ namespace TradeLord
                 held[category] = have + stock.GetElementNumber(i);
             }
             return held;
+        }
+
+        private static ItemObject StandsForAt(Settlement site, ItemCategory category)
+        {
+            if (site == null || category == null) return StandsFor(category);
+            string key = site.StringId + "/" + category.StringId;
+            if (_standsForAt.TryGetValue(key, out ItemObject kept)) return kept;
+            ItemObject stocked = null;
+            int most = 0;
+            ItemRoster stock = site.ItemRoster;
+            for (int i = 0; stock != null && i < stock.Count; i++)
+            {
+                ItemObject item = stock.GetItemAtIndex(i);
+                if (item == null || item.ItemCategory != category || !TradePolicy.Priced(item)) continue;
+                int count = stock.GetElementNumber(i);
+                if (!TradeMath.StandsBetter(count, item.Value, most,
+                                            stocked == null ? 0 : stocked.Value)) continue;
+                stocked = item;
+                most = count;
+            }
+            ItemObject stands = stocked ?? StandsFor(category);
+            _standsForAt[key] = stands;
+            return stands;
         }
 
         private static ItemObject StandsFor(ItemCategory category)
