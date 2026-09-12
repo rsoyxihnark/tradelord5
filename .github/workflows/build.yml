@@ -122,6 +122,12 @@ jobs:
         shell: bash
         run: python3 tools/regression_sweep.py
 
+      - name: Changelog against the releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/released.py "${{ steps.ver.outputs.version }}"
+
       - name: Codec tests
         shell: bash
         run: dotnet test tests/TradeLord.Tests.csproj -c Release --nologo

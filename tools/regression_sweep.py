@@ -21,6 +21,7 @@ GAME_VERSION_BETA = '1.5.2.121216'
 COMPAT = io.open('tools/compat/Program.cs', encoding='utf-8').read()
 SWEEP = io.open('tools/regression_sweep.py', encoding='utf-8').read()
 NEXUS = io.open('tools/nexus_changelog.py', encoding='utf-8').read()
+RELEASED = io.open('tools/released.py', encoding='utf-8').read()
 
 def panel_columns():
     import xml.etree.ElementTree as ET
@@ -6367,6 +6368,37 @@ def a_version_already_out_is_never_claimed_a_second_time():
 
 chk("1.62.2", "a commit claiming a version that is already out is refused rather than quietly publishing nothing, and a no-release commit says so for itself",
     a_version_already_out_is_never_claimed_a_second_time())
+
+
+
+def the_changelog_is_held_against_what_was_actually_published():
+    step = between(WORKFLOW, "- name: Changelog against the releases", "- name: Codec tests")
+    return ('python3 tools/released.py "${{ steps.ver.outputs.version }}"' in step
+            and "GH_TOKEN: ${{ github.token }}" in step
+            and ordered(WORKFLOW, "- name: Resolve version from SubModule.xml",
+                        "- name: Changelog against the releases", "- name: Publish release")
+            and "from nexus_changelog import sections" in RELEASED
+            and "was published and the changelog carries no section for it" in RELEASED
+            and "has a changelog section and was never published" in RELEASED
+            and "says one thing in the changelog and another in its release notes" in RELEASED
+            and "was published with no file attached" in RELEASED
+            and "is still a draft release" in RELEASED
+            and "  skipped  the releases could not be read" in RELEASED
+            and "version == shipping" in RELEASED)
+
+def an_outstanding_disagreement_is_named_and_cannot_linger_once_settled():
+    return ("OUTSTANDING = {" in RELEASED
+            and RELEASED.count("': '") >= 7
+            and "is listed as an outstanding disagreement and no longer disagrees" in RELEASED
+            and "from before this check existed" in RELEASED
+            and "The entries in a version section and the bullet points in that version's commit body say "
+                "the same thing in the same words" in RULES)
+
+
+chk("1.62.2", "the changelog is held against every release that was actually published, before anything else is published",
+    the_changelog_is_held_against_what_was_actually_published())
+chk("1.62.2", "a disagreement that predates the check is named one by one, and a settled one has to leave the list",
+    an_outstanding_disagreement_is_named_and_cannot_linger_once_settled())
 
 
 
