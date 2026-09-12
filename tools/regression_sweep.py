@@ -1884,7 +1884,7 @@ chk("1.5.2", "a timed-out publish is retried rather than abandoned",
 chk("1.5.2", "a draft release left by a timeout is deleted before republishing",
     "--json isDraft -q .isDraft" in WORKFLOW and
     'gh release delete "$VERSION" --yes' in WORKFLOW and
-    "is already published - nothing to publish for this push" in WORKFLOW)
+    "exists only as a draft left by a timed-out attempt" in WORKFLOW)
 
 chk("1.5.3", "every declared Harmony patch is installed",
     every_declared_patch_is_installed())
@@ -2953,7 +2953,8 @@ def the_workflow_refuses_to_publish_an_unfinished_changelog():
     return ("still carries an Unreleased heading" in WORKFLOW
             and "carries no section for" in WORKFLOW
             and ordered(WORKFLOW,
-                        "nothing to publish for this push",
+                        "this commit is marked [no release], so it publishes nothing",
+                        "is already published, from commit $AT",
                         "still carries an Unreleased heading",
                         "carries no section for",
                         "gh release create"))
@@ -6345,6 +6346,27 @@ def a_quantity_that_leans_on_goods_still_on_the_road_says_so():
 
 chk("1.62.1", "a route whose quantity leans on goods still on the road is marked on the panel, and the mark is explained where the other marks are",
     a_quantity_that_leans_on_goods_still_on_the_road_says_so())
+
+
+
+def a_version_already_out_is_never_claimed_a_second_time():
+    step = between(WORKFLOW, "- name: Publish release", "could not publish")
+    return (ordered(step,
+                    'SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")',
+                    '"[no release]"*)',
+                    "this commit is marked [no release], so it publishes nothing",
+                    'gh release view "$VERSION" --json tagName',
+                    '--json targetCommitish -q .targetCommitish',
+                    'if [ "$AT" = "$GITHUB_SHA" ]; then',
+                    "was published by this very commit, so there is nothing left to do",
+                    "is already published, from commit $AT, and this commit claims it again:",
+                    "raise the version in TradeLord/SubModule.xml, or mark this commit [no release]")
+            and "nothing to publish for this push" not in step
+            and "A version is published once" in RULES)
+
+
+chk("1.62.2", "a commit claiming a version that is already out is refused rather than quietly publishing nothing, and a no-release commit says so for itself",
+    a_version_already_out_is_never_claimed_a_second_time())
 
 
 
