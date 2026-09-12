@@ -168,6 +168,7 @@
 		<string id="TL244" text="交易经验倍率"/>
 		<string id="TL245" text="在地图上自动标出最佳卖出市场"/>
 		<string id="TL246" text="把价格追踪写入日志"/>
+		<string id="TL280" text="把预测的准头写入日志"/>
 		<string id="TL247" text="成交时的金币声"/>
 		<string id="TL248" text="详细的交易摘要"/>
 		<string id="TL249" text="静音交易消息" />
@@ -216,6 +217,7 @@
 		<string id="TL348" text="在一行交易摘要里点出货物的名字，比如“TradeLord 卖出 8 橄榄、3 葡萄酒，得到 240 第纳尔”，而不是只给一个件数。完整清单始终会写进 TradeLord.log。"/>
 		<string id="TL349" text="自动进行的交易，无论是走进市场时，还是在路上遇到商队或一队村民时，都只写进 TradeLord.log，屏幕上不出现任何提示。菜单里的交易项则一律照常提示。"/>
 		<string id="TL389" text="把你携带的每样货物在这个市场的买价与卖价写进 TradeLord.log，让你看清某个价格为何与交易界面对不上。它会写明市场，以及任何在改动价格的模组。默认关闭，因为它会让日志长很多。"/>
+		<string id="TL398" text="把预测对一个市场的说法，和你走进去时市场实际的样子，一样货一样货地写进 TradeLord.log，并写出差了多少。需要开启“计入正在赶往市场的东西”。默认关闭，因为它会让日志变长。"/>
 		<string id="TL100" text="语言"/>
 		<string id="TL101" text="情报"/>
 		<string id="TL102" text="洞察"/>

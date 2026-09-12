@@ -3,7 +3,7 @@ import io, re, sys
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
       'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
-      'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs']}
+      'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs', 'Hindsight.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -4191,6 +4191,7 @@ EVER_SHIPPED = {
     "ShowMapButton": "bool", "SimulationMode": "bool", "SuppressVanillaTradeLines": "bool",
     "TooltipHints": "bool", "TradeWithCaravans": "bool", "TradeWithTowns": "bool",
     "TradeWithVillages": "bool",
+    "ForecastScore": "bool",
     "TradeXpMultiplier": "float", "UseFleetCapacity": "bool",
 }
 
@@ -6448,6 +6449,67 @@ def one_word_for_one_thing_in_every_language():
 chk("1.62.2", "a term the settings screen names is translated the same way in every line that names it",
     one_word_for_one_thing_in_every_language())
 
+
+
+def the_forecast_is_scored_against_the_market_it_predicted():
+    h = S['Hindsight.cs']
+    noted = method_body(h, "private static void Noted")
+    return ("internal static bool On => Options.Current.ForecastScore && Forecast.On;" in h
+            and option_default('ForecastScore') == 'false'
+            and EVER_SHIPPED.get('ForecastScore') == 'bool'
+            and "_o.ForecastScore" in M
+            and all(i in strings_declared() for i in ('TL280', 'TL398'))
+            and "Hindsight.Note(best);" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+            and "Hindsight.Score(settlement);" in method_body(S['Trading.cs'], "private void OnSettlementEntered")
+            and 'Guard.Run("GameEnd.Hindsight", Hindsight.Forget);' in S['SubModule.cs']
+            and "Forecast.UnitsLanding(site, item, withinDays)" in noted
+            and "Forecast.WorthShift(site, item, withinDays)" in noted
+            and "LedgerBehavior.StockOf(site, item)" in noted
+            and "WorthOnTheShelf(site, item)" in noted)
+
+def the_score_works_out_how_far_off_it_was_in_the_layer_the_tests_reach():
+    written = method_body(S['Hindsight.cs'], "private static void Written")
+    reads = ('TradeMath.MissedBy(', 'TradeMath.OffByShare(', 'TradeMath.MeanOf(', 'TradeMath.DaysSince(')
+    return (all(one in written for one in reads)
+            and all(one.rstrip('(') in MATHTESTS for one in reads)
+            and 'TradeMath.NoShareToGive' in MATHTESTS
+            and 'public static float OffByShare' in S['TradeMath.cs']
+            and 'if (said == 0) return NoShareToGive;' in S['TradeMath.cs'])
+
+def a_figure_is_read_once_it_is_walked_into_and_no_more_are_kept_than_it_says():
+    h = S['Hindsight.cs']
+    noted = method_body(h, "private static void Noted")
+    written = method_body(h, "private static void Written")
+    return ("private const int Most = 600;" in h
+            and "if (_held >= Most)" in noted
+            and 'Log.Repeatable("forecast check", "full",' in noted
+            and "_said.Remove(site.StringId);" in written
+            and "if (scored == 0) return;" in written
+            and "no worth is kept for a kind of good here, which only a town does" in written)
+
+def the_switch_names_the_setting_it_leans_on():
+    said = spoken(ENGLISH)
+    return ("TradeLord.log" in said['TL398']
+            and "Needs " + said['TL279'] in said['TL398']
+            and "OFF by default" in said['TL398']
+            and said['TL280'] == "Score the forecast in the log")
+
+def every_source_file_is_read_by_these_checks():
+    import os
+    onDisk = {f for f in os.listdir('src') if f.endswith('.cs')}
+    return bool(onDisk) and onDisk == set(S)
+
+
+chk("1.63.0", "what the forecast said a market would hold is written down with the route and read back when you walk in",
+    the_forecast_is_scored_against_the_market_it_predicted())
+chk("1.63.0", "how far off a figure was is worked out where a test can reach it, and tested there",
+    the_score_works_out_how_far_off_it_was_in_the_layer_the_tests_reach())
+chk("1.63.0", "a figure is scored once and dropped, and the count held at one time has a ceiling that says when it is reached",
+    a_figure_is_read_once_it_is_walked_into_and_no_more_are_kept_than_it_says())
+chk("1.63.0", "the switch that writes the score names the setting it needs by that setting's own name",
+    the_switch_names_the_setting_it_leans_on())
+chk("1.63.0", "every source file the mod ships is read by these checks, so a new one cannot slip past them",
+    every_source_file_is_read_by_these_checks())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
