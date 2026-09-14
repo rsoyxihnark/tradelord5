@@ -168,6 +168,36 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_purse_takes_whole_units_off_the_shelf_and_never_part_of_one()
+        {
+            Assert.Equal(4, Projection.UnitsLeaving(400, 100));
+            Assert.Equal(4, Projection.UnitsLeaving(499, 100));
+            Assert.Equal(0, Projection.UnitsLeaving(99, 100));
+        }
+
+        [Fact]
+        public void A_purse_of_nothing_and_a_good_worth_nothing_take_nothing()
+        {
+            Assert.Equal(0, Projection.UnitsLeaving(0, 100));
+            Assert.Equal(0, Projection.UnitsLeaving(-400, 100));
+            Assert.Equal(0, Projection.UnitsLeaving(400, 0));
+            Assert.Equal(0, Projection.UnitsLeaving(400, -5));
+        }
+
+        [Fact]
+        public void What_a_purse_takes_off_the_shelf_is_what_it_takes_off_the_worth()
+        {
+            var rng = new System.Random(8117);
+            for (int round = 0; round < 20000; round++)
+            {
+                int unitValue = rng.Next(1, 400);
+                int units = rng.Next(0, 500);
+                int worth = units * unitValue + rng.Next(0, unitValue);
+                Assert.Equal(units, Projection.UnitsLeaving(worth, unitValue));
+            }
+        }
+
+        [Fact]
         public void A_purse_split_across_a_market_never_hands_out_more_than_the_purse()
         {
             var rng = new System.Random(3312);

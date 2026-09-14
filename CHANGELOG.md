@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.70.0
+
+- Share of the hold TradeLord may fill, a new setting under Buying, now stops it buying once your cargo reaches the share of your capacity you set, so there is room left for what a battle or a quest hands you. It ships at the full hold, so nothing changes until you move it.
+- Share of the profit your companions learn from, a new setting under General, now credits every companion riding with you Trade XP worth that share of a trade's profit. It ships at 0, so the XP is yours alone until you ask for it.
+- An item tooltip now says what you paid for that good, per unit, once you have bought one, so you can see at a glance whether the market in front of you is beating it.
+- The panel no longer quotes more of a good than a market will have when you arrive: the purses the caravans are bringing now come off its shelf as well as off its price.
+- The feature list says so too.
+
 ## 1.69.3
 
 - TradeLord.log now says each day how many recorded prices it forgot for being older than the days you set, and how many it is still keeping, so you can see what Days to keep a price you recorded is actually doing.
