@@ -437,6 +437,7 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
             and "The_reserve_reaches_past_the_biggest_helping_to_every_other_one" in FOODTESTS
             and "The_variety_floor_counts_every_helping_of_a_kind_together" in FOODTESTS
             and "The_reserve_holds_no_more_than_you_carry_and_no_less_than_it_asked_for" in FOODTESTS
+            and "Asking_for_another_day_of_food_never_holds_back_less_of_it" in FOODTESTS
             and "new Random(1447)" in FOODTESTS
             and ("if (at.TryGetValue(held.Good.Id, out int seen))"
                  in method_body(S['Rules.cs'],
@@ -487,7 +488,8 @@ def the_best_markets_are_picked_without_sorting_every_town():
             and "if (kept.Count > TopCacheSize) kept.RemoveAt(TopCacheSize);" in keep
             and "Only_eight_markets_are_ever_kept" in RANKTESTS
             and "A_market_worse_than_the_eight_already_kept_is_turned_away" in RANKTESTS
-            and "The_eight_are_chosen_on_the_straight_line_and_ordered_on_the_real_ride" in RANKTESTS)
+            and "The_eight_are_chosen_on_the_straight_line_and_ordered_on_the_real_ride" in RANKTESTS
+            and "The_eight_it_keeps_are_the_eight_a_full_sort_would_have_picked" in RANKTESTS)
 
 def a_route_scan_prices_each_town_once_for_every_good_it_wants():
     l = S['Ledger.cs']
@@ -613,7 +615,8 @@ def what_is_on_the_road_is_added_up_where_a_test_can_ask_it():
             and "Projection.WorthLanding(Read(site), item.ItemCategory.StringId, withinDays);"
                 in S['Forecast.cs']
             and "Units_landing_add_up_only_for_the_good_asked_about" in PROJECTIONTESTS
-            and "An_empty_purse_leaves_nothing_whatever_the_pull_says" in PROJECTIONTESTS)
+            and "An_empty_purse_leaves_nothing_whatever_the_pull_says" in PROJECTIONTESTS
+            and "A_purse_split_across_a_market_never_hands_out_more_than_the_purse" in PROJECTIONTESTS)
 
 def how_a_forecast_and_a_promise_held_is_scored_where_a_test_can_ask_it():
     c = S['Scoring.cs']
@@ -1151,6 +1154,7 @@ def the_route_rules_are_covered_by_tests_the_build_runs():
     return ('Confidence.cs' in TESTPROJ
             and ROUTETESTS.count('[Fact]') + ROUTETESTS.count('[Theory]') >= 15
             and 'TradeMath.Budget' in ROUTETESTS and 'Confidence.Of' in ROUTETESTS
+            and 'Worse_news_never_raises_confidence_whatever_the_route_looks_like' in ROUTETESTS
             and 'NeverSet' in ROUTETESTS)
 
 def saved_field_types():
