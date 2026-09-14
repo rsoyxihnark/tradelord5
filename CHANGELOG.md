@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.69.2
 
+- A travel time, a price or a workshop's progress that the game cannot put a number to is now read as the safest sensible figure, so a market can never look as though it is next door because its distance would not work out.
+- The panel works out how many of a good are worth showing without ever dividing by a price of nothing.
 - The feature list now opens with five short lines instead of four and one long paragraph, so what TradeLord is reads at a glance and the detail stays in the list below it.
 - The comparison with the other trade mods now says when the nine were read and that anything they have changed since is not in it.
 
