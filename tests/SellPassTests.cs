@@ -146,6 +146,33 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Cargo_the_selling_pass_moved_is_written_into_the_books_for_the_other_half()
+        {
+            var market = new FakeMarket();
+            Load load = market.Add(Cargo("iron"), amount: 2, price: 200);
+            load.Basis = 100;
+            load.Purchased = 2;
+            Run run = Sell(market);
+            Assert.Equal(2, run.Units);
+            Assert.True(run.Books.Sold(false, "iron"));
+        }
+
+        [Fact]
+        public void A_good_the_buying_pass_took_here_is_left_alone_by_the_selling_pass()
+        {
+            var books = new Books();
+            books.NoteBought("iron", 100);
+            var market = new FakeMarket();
+            Load load = market.Add(Cargo("iron"), amount: 3, price: 200);
+            load.Basis = 100;
+            load.Purchased = 3;
+            Run run = Sell(market, books: books);
+            Assert.Equal(0, run.Units);
+            Assert.Empty(market.Given);
+            Assert.True(run.Tally.Saw(Block.TradedHereAlready));
+        }
+
+        [Fact]
         public void Cargo_that_beats_what_you_paid_for_it_is_sold()
         {
             var market = new FakeMarket();

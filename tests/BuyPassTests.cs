@@ -140,6 +140,17 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_good_the_buying_pass_took_is_written_into_the_books_for_the_other_half()
+        {
+            var market = new FakeMarket();
+            market.Add(Cargo("iron"), amount: 2);
+            Run run = Buy(market);
+            Assert.Equal(2, run.Units);
+            Assert.True(run.Books.Bought(false, "iron"));
+            Assert.Equal((2, 200), run.Books.Purchases(false, "iron"));
+        }
+
+        [Fact]
         public void A_good_worth_reselling_is_bought_off_the_shelf()
         {
             var market = new FakeMarket();

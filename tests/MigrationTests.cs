@@ -148,6 +148,17 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void ASettingIsHeldInsideItsRangeHoweverItWasCapitalisedInTheFile()
+        {
+            Assert.True(Limits.Knows("maxtraveldaystown"));
+            Assert.True(Limits.Knows("MAXTRAVELDAYSTOWN"));
+            Assert.Equal("0 and 20", Limits.Range("maxtraveldaystown"));
+            Assert.Equal(20.0, Limits.Kept("MAXTRAVELDAYSTOWN", 99.0));
+            Assert.Equal(0.0, Limits.Kept("MinProfitMargin", -5.0));
+            Assert.Equal(0.0, Limits.Kept("minprofitmargin", -5.0));
+        }
+
+        [Fact]
         public void TheAutoMarkerCeilingHasNoRangeLeftToKeepItInside()
         {
             Assert.False(Limits.Knows("MarkerMaxTravelDays"));

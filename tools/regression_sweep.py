@@ -16,6 +16,19 @@ RANKTESTS = io.open('tests/MarketRankTests.cs', encoding='utf-8').read()
 PROJECTIONTESTS = io.open('tests/ProjectionTests.cs', encoding='utf-8').read()
 SCORINGTESTS = io.open('tests/ScoringTests.cs', encoding='utf-8').read()
 FOODTESTS = io.open('tests/FoodReserveTests.cs', encoding='utf-8').read()
+STALLTESTS = io.open('tests/StallReasonTests.cs', encoding='utf-8').read()
+BUYPASSTESTS = io.open('tests/BuyPassTests.cs', encoding='utf-8').read()
+SELLPASSTESTS = io.open('tests/SellPassTests.cs', encoding='utf-8').read()
+BUYRULETESTS = io.open('tests/BuyRulesTests.cs', encoding='utf-8').read()
+HERDTESTS = io.open('tests/HerdRulesTests.cs', encoding='utf-8').read()
+T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
+     'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
+     'BooksTests.cs': BOOKTESTS, 'SellRulesTests.cs': SELLTESTS,
+     'PriceDriftTests.cs': DRIFTTESTS, 'MarketRankTests.cs': RANKTESTS,
+     'ProjectionTests.cs': PROJECTIONTESTS, 'ScoringTests.cs': SCORINGTESTS,
+     'FoodReserveTests.cs': FOODTESTS, 'StallReasonTests.cs': STALLTESTS,
+     'BuyPassTests.cs': BUYPASSTESTS, 'SellPassTests.cs': SELLPASSTESTS,
+     'BuyRulesTests.cs': BUYRULETESTS, 'HerdRulesTests.cs': HERDTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -1342,6 +1355,9 @@ chk("1.3.2", "a good one half of the pass moved here is left alone by the other 
         method_body(S['Books.cs'], "internal void NoteBought") and
     (lambda b: "_sold.Contains(id) || (sim && _drySold.Contains(id))" in b)
     (between(S['Books.cs'], "internal bool Sold(bool sim, string id) =>", ";")) and
+    "A_good_the_buying_pass_took_is_written_into_the_books_for_the_other_half" in BUYPASSTESTS and
+    "Cargo_the_selling_pass_moved_is_written_into_the_books_for_the_other_half" in SELLPASSTESTS and
+    "A_good_the_buying_pass_took_here_is_left_alone_by_the_selling_pass" in SELLPASSTESTS and
     (lambda b: "_bought.ContainsKey(id) || (sim && _dryBought.ContainsKey(id))" in b)
     (between(S['Books.cs'], "internal bool Bought(bool sim, string id) =>", ";")))
 chk("1.3.2", "a transaction that moves gold the wrong way stops the pass instead of draining the purse",
@@ -4712,6 +4728,8 @@ def the_file_holds_a_number_to_the_same_limits_the_screen_does():
             and "double kept = Limits.Kept(field.Name, asked);" in within
             and "if (double.IsNaN(asked)) return edge[0];" in
                 method_body(S['Migrate.cs'], "public static double Kept")
+            and "new Dictionary<string, double[]>(StringComparer.OrdinalIgnoreCase)" in S['Migrate.cs']
+            and "ASettingIsHeldInsideItsRangeHoweverItWasCapitalisedInTheFile" in MIGRATIONTESTS
             and 'Limits.Range(field.Name)' in within)
 
 chk("1.26.1", "a number in the settings file is held to the same limits the settings screen holds it to",
@@ -4894,7 +4912,11 @@ def a_stalled_pass_names_the_first_guard_it_met():
                         "if (_firstGuard == Block.None && Guarded(reason)) _firstGuard = reason;",
                         "_counts[reason] = seen + 1;")
             and "return Guarded(top) ? _firstGuard : top;" in dominant
-            and set(re.findall(r'Block\.(\w+)', guarded)) == GUARDS)
+            and set(re.findall(r'Block\.(\w+)', guarded)) == GUARDS
+            and all(one in STALLTESTS for one in
+                    ("A_pass_that_was_stopped_by_nothing_keeps_no_reason_at_all",
+                     "The_first_protection_met_is_named_rather_than_the_one_met_most",
+                     "A_reason_that_is_not_a_protection_is_named_on_its_own_count")))
 
 def a_full_cargo_is_told_the_three_ways_out_of_it():
     body = method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
@@ -6835,6 +6857,11 @@ def every_source_file_is_read_by_these_checks():
     onDisk = {f for f in os.listdir('src') if f.endswith('.cs')}
     return bool(onDisk) and onDisk == set(S)
 
+def every_test_file_is_read_by_these_checks():
+    import os
+    onDisk = {f for f in os.listdir('tests') if f.endswith('Tests.cs')}
+    return bool(onDisk) and onDisk == set(T)
+
 
 chk("1.63.0", "what the forecast said a market would hold is written down with the route and read back when you walk in",
     the_forecast_is_scored_against_the_market_it_predicted())
@@ -6846,6 +6873,8 @@ chk("1.63.0", "the switch that writes the score names the setting it needs by th
     the_switch_names_the_setting_it_leans_on())
 chk("1.63.0", "every source file the mod ships is read by these checks, so a new one cannot slip past them",
     every_source_file_is_read_by_these_checks())
+chk("1.68.0", "every test file the build runs is read by these checks too, so a new one cannot slip past them",
+    every_test_file_is_read_by_these_checks())
 
 
 def the_panel_promise_is_written_down_whatever_the_debug_switch_says():
