@@ -5,6 +5,16 @@ using TaleWorlds.MountAndBlade;
 
 namespace TradeLord
 {
+    internal static class SelfCheck
+    {
+        internal static void Say() => Guard.Run("SelfCheck", () =>
+            Log.Write("self-check: " + Patcher.Tally() +
+                      " | " + TradeActionBehavior.HerdPenaltyRead() +
+                      " | " + (Errands.Known ? "quest goods read" : "quest goods not read") +
+                      " | " + Tongue.StringsRead() +
+                      " | " + Priced.ModelInForce()));
+    }
+
     public class SubModule : MBSubModuleBase
     {
         public const string HarmonyId = "mod.tradelord";
