@@ -30,11 +30,13 @@ uses the game's own pathfinder, includes villages, and leaves the price model al
 TradeLord's ledger panel: unit by unit pricing, caravan snapshots, workshop prediction, sea legs.
 Towns only, never trades, keeps no price history, and its wage reserve is hardcoded. TradeLord
 forecasts the same two things, estimates what the caravans' purses will buy, adds villages and the
-age of your own notes, and it trades. Two things it does that TradeLord does not: it re-times the
-trip at the speed the cargo you would buy leaves you with, and it marks how many hours a route has
-before a caravan arrives to buy that same good. The game's own cargo penalty is 2 percent at a full
-hold, so the first moves a route's gold per day by less than the panel can show, and TradeLord
-leaves it alone rather than carry the machinery for it.
+age of your own notes, and it trades. One thing it does that TradeLord does not: it re-times the
+trip at the speed the cargo you would buy leaves you with. The game's own cargo penalty is 2 percent
+at a full hold, so that moves a route's gold per day by less than the panel can show, and TradeLord
+leaves it alone rather than carry the machinery for it. Its other idea, saying how long a route has
+left, TradeLord does its own way: rather than watching for one caravan, it counts what every purse
+heading for that market will take off the shelf, and the Left column says how long the amount it
+quotes survives.
 
 **11607 Trade Optimizer, FriendlyTurtle.** A capable engine with 27 settings and a dry run, built on
 someone else's framework: four modules must be installed and load ordered first, and quest goods are
