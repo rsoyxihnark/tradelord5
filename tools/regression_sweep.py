@@ -3483,6 +3483,7 @@ def flattened(text):
     said = []
     for line in text.split('\n'):
         bare = re.sub(r'^-\s+', '', re.sub(r'^#{1,6}\s+', '', line.strip()))
+        bare = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', bare)
         said.append(re.sub(r'[`*]', '', bare))
     return ' '.join(' '.join(said).split())
 
@@ -3603,6 +3604,7 @@ def the_page_is_written_from_the_repository_rather_than_pasted():
         return False
     sources = flattened(README + '\n' + COMPARISON + '\n' + CHANGES)
     bare = re.sub(r'\[/?(?:b|list|size=5|size|spoiler|\*)\]', '', out)
+    bare = re.sub(r'\[url=[^\]]+\]|\[/url\]', '', bare)
     for line in bare.split('\n'):
         said = ' '.join(line.split())
         if said and said != 'Changelog' and said not in sources:
@@ -3623,6 +3625,8 @@ def the_page_leaves_no_markdown_behind_and_closes_every_tag():
                      if one.startswith('#') or one.startswith('- ')]
             and all(len(re.findall(r'\[' + tag + r'[^\]/]*\]', out)) == out.count('[/' + tag + ']')
                     for tag in ('b', 'list', 'size', 'spoiler'))
+            and len(re.findall(r'\[url=[^\]]+\]', out)) == out.count('[/url]')
+            and out.count('[/url]') == len(re.findall(r'\[[^\]]+\]\([^)]+\)', COMPARISON))
             and out.count('[*]') == bullets + len(section_entries(version)))
 
 def the_page_and_the_notes_are_asked_for_one_at_a_time():
@@ -7297,12 +7301,12 @@ def the_page_leads_with_lines_short_enough_to_read_at_a_glance():
             and max(len(one.split()) for one in lead) >= 10)
 
 def the_comparison_says_when_the_nine_were_read():
-    opening = COMPARISON.split('\n**', 1)[0]
+    opening = COMPARISON.split('\n- ', 1)[0]
     months = ('January', 'February', 'March', 'April', 'May', 'June', 'July',
               'August', 'September', 'October', 'November', 'December')
     return (any(month + ' 20' in opening for month in months)
             and 'decompiled and read in ' in opening
-            and 'has changed since then is not' in opening)
+            and 'changed since then is not in here' in opening)
 
 
 chk("1.69.1", "the five lines the mod page opens with are each short enough to read at a glance",
@@ -7505,6 +7509,30 @@ chk("1.71.0", "how long a market's shelf holds the quantity a route quotes is wo
     how_long_a_shelf_holds_a_deal_is_worked_out_where_a_test_can_ask_it())
 chk("1.71.0", "every route says how long its buy market holds that quantity, and the panel names it in every language",
     a_route_says_how_long_its_buy_market_holds_that_quantity())
+
+
+def the_comparison_is_one_entry_a_mod_naming_and_linking_to_each():
+    lines = [one for one in COMPARISON.split('\n') if one.startswith('- ')]
+    wanted = ['135', '1490', '3206', '8474', '10369', '11607', '11648', '11708', '11988']
+    if len(lines) != len(wanted):
+        return False
+    for mod, line in zip(wanted, lines):
+        said = re.match(r'- (\d+) - \[([^\]]+)\]'
+                        r'\(https://www\.nexusmods\.com/mountandblade2bannerlord/mods/(\d+)\)'
+                        r' - ([^:]+): \S', line)
+        if not said or said.group(1) != mod or said.group(3) != mod:
+            return False
+        if not said.group(2).strip() or not said.group(4).strip():
+            return False
+    out = made_page()
+    return (len(COMPARISON) <= 5000
+            and out is not None
+            and all('[url=https://www.nexusmods.com/mountandblade2bannerlord/mods/'
+                    + mod + ']' in out for mod in wanted))
+
+
+chk("1.71.0", "the comparison is one entry a mod, each naming and linking to the mod it weighs, and short enough for a mod page",
+    the_comparison_is_one_entry_a_mod_naming_and_linking_to_each())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

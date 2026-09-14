@@ -6,6 +6,7 @@ ANY_HEADING = re.compile(r'^#{1,6}\s+(.+?)\s*$')
 BOLD = re.compile(r'\*\*(.+?)\*\*')
 CODE = re.compile(r'`([^`]+)`')
 LONE_BOLD = re.compile(r'^\*\*(.+?)\*\*$')
+LINK = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
 
 def sections(text):
     out, version, said = [], None, []
@@ -50,7 +51,7 @@ def blocks(text):
         yield kind, held
 
 def marked(line):
-    return BOLD.sub(r'[b]\1[/b]', CODE.sub(r'\1', line))
+    return LINK.sub(r'[url=\2]\1[/url]', BOLD.sub(r'[b]\1[/b]', CODE.sub(r'\1', line)))
 
 def listed(lines):
     return '[list]\n' + '\n'.join('[*]' + marked(one) for one in lines) + '\n[/list]'
