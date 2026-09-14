@@ -63,6 +63,21 @@ namespace TradeLord
             return Projection.UnitsLeaving(WorthLeaving(site, item, withinDays), item.Value);
         }
 
+        internal static float RunsOutIn(Settlement site, ItemObject item, int stockNow,
+                                       int wanted, float afterDays)
+        {
+            if (!On || site == null || item == null || item.ItemCategory == null)
+                return Projection.NeverRunsOut;
+            Build();
+            _landing.TryGetValue(site.StringId, out List<Landing> listed);
+            _spending.TryGetValue(site.StringId, out List<Spending> coming);
+            if (listed == null && coming == null) return Projection.NeverRunsOut;
+            PullAt(site, out Dictionary<string, float> pull, out float across);
+            return Projection.RunsOutAt(listed, coming, pull, across, item.StringId,
+                                        item.ItemCategory.StringId, item.Value,
+                                        stockNow, wanted, afterDays);
+        }
+
         internal static int WorthShift(Settlement site, ItemObject item, float withinDays) =>
             TradeMath.WorthShift(WorthLanding(site, item, withinDays),
                                  WorthLeaving(site, item, withinDays));
