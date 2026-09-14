@@ -125,5 +125,42 @@ namespace TradeLord.Tests
             string twice = LedgerCodec.WriteLedger(LedgerCodec.ReadLedger(once));
             Assert.Equal(once, twice);
         }
+    
+        [Fact]
+        public void A_price_you_recorded_today_is_kept()
+        {
+            Assert.True(TradeMath.WorthKeeping(100f, 100f, 15));
+            Assert.True(TradeMath.WorthKeeping(100f, 100.5f, 15));
+        }
+
+        [Fact]
+        public void A_price_is_kept_through_its_fifteenth_day_and_forgotten_on_the_sixteenth()
+        {
+            Assert.True(TradeMath.WorthKeeping(100f, 115f, 15));
+            Assert.False(TradeMath.WorthKeeping(100f, 115.5f, 15));
+            Assert.False(TradeMath.WorthKeeping(100f, 116f, 15));
+            Assert.False(TradeMath.WorthKeeping(100f, 400f, 15));
+        }
+
+        [Fact]
+        public void A_shelf_life_of_nothing_keeps_every_price_for_as_long_as_the_campaign_lasts()
+        {
+            Assert.Equal(0, TradeMath.KeptForever);
+            Assert.True(TradeMath.WorthKeeping(100f, 100000f, TradeMath.KeptForever));
+            Assert.True(TradeMath.WorthKeeping(100f, 100000f, -5));
+        }
+
+        [Fact]
+        public void A_shelf_life_of_one_day_forgets_a_price_the_day_after_you_saw_it()
+        {
+            Assert.True(TradeMath.WorthKeeping(100f, 101f, 1));
+            Assert.False(TradeMath.WorthKeeping(100f, 101.25f, 1));
+        }
+
+        [Fact]
+        public void A_price_recorded_later_than_the_clock_says_is_never_thrown_away()
+        {
+            Assert.True(TradeMath.WorthKeeping(200f, 100f, 15));
+        }
     }
 }

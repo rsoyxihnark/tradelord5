@@ -24,6 +24,11 @@ namespace TradeLord
 
         public const float DaysBeforeAnotherReading = 1f;
 
+        public const int KeptForever = 0;
+
+        public static bool WorthKeeping(float capturedDay, float now, int shelfLifeDays) =>
+            shelfLifeDays <= KeptForever || now - capturedDay <= shelfLifeDays;
+
         public static bool ReadingIsNew(float day, float lastDay) =>
             day - lastDay >= DaysBeforeAnotherReading;
 

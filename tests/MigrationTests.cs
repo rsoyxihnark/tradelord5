@@ -121,14 +121,23 @@ namespace TradeLord.Tests
         [InlineData("45")]
         [InlineData("0")]
         [InlineData("200")]
-        public void TheObservationShelfLifeIsDroppedAndNamed(string held)
+        public void TheObservationShelfLifeASaveAlreadyCarriesIsKept(string held)
         {
             var written = File("ObservationShelfLifeDays", held, "GoldReserve", "800");
             var notes = new List<string>();
-            Assert.True(Migration.Lift(4, written, notes));
-            Assert.False(written.ContainsKey("ObservationShelfLifeDays"));
+            Migration.Lift(4, written, notes);
+            Assert.Equal(held, written["ObservationShelfLifeDays"]);
             Assert.Equal("800", written["GoldReserve"]);
-            Assert.NotEmpty(notes);
+        }
+
+        [Fact]
+        public void TheObservationShelfLifeIsHeldInsideItsRange()
+        {
+            Assert.True(Limits.Knows("ObservationShelfLifeDays"));
+            Assert.Equal("0 and 60", Limits.Range("ObservationShelfLifeDays"));
+            Assert.Equal(0.0, Limits.Kept("ObservationShelfLifeDays", -5.0));
+            Assert.Equal(60.0, Limits.Kept("ObservationShelfLifeDays", 900.0));
+            Assert.Equal(15.0, Limits.Kept("ObservationShelfLifeDays", 15.0));
         }
 
         [Theory]
