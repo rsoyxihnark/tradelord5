@@ -98,7 +98,7 @@ def main(argv):
     if not found:
         sys.stderr.write('CHANGELOG.md carries no version section\n')
         return 1
-    if wanted is None and found[0][0].lower() == 'unreleased':
+    if wanted is None and not as_page and found[0][0].lower() == 'unreleased':
         sys.stderr.write('the top section is Unreleased, which has not shipped - name a version first\n')
         return 1
     found = [(v, said) for v, said in found if v.lower() != 'unreleased']
