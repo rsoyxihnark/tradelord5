@@ -30,7 +30,11 @@ uses the game's own pathfinder, includes villages, and leaves the price model al
 TradeLord's ledger panel: unit by unit pricing, caravan snapshots, workshop prediction, sea legs.
 Towns only, never trades, keeps no price history, and its wage reserve is hardcoded. TradeLord
 forecasts the same two things, estimates what the caravans' purses will buy, adds villages and the
-age of your own notes, and it trades.
+age of your own notes, and it trades. Two things it does that TradeLord does not: it re-times the
+trip at the speed the cargo you would buy leaves you with, and it marks how many hours a route has
+before a caravan arrives to buy that same good. The game's own cargo penalty is 2 percent at a full
+hold, so the first moves a route's gold per day by less than the panel can show, and TradeLord
+leaves it alone rather than carry the machinery for it.
 
 **11607 Trade Optimizer, FriendlyTurtle.** A capable engine with 27 settings and a dry run, built on
 someone else's framework: four modules must be installed and load ordered first, and quest goods are
@@ -39,7 +43,8 @@ covered only by vanilla's own flags. TradeLord is one module, one dependency.
 **11648 ArmouredRay Quick Trade, ArmouredRay.** One Quick Trade entry, 24 settings, a good pack
 animal ratio. It does not use the game's trade actions: it moves goods and gold by hand, which is
 why its page admits a 2 percent price error and that it sells the item you locked. Every TradeLord
-unit goes through the game's own sell action, so the price and the XP are vanilla's.
+unit goes through the game's own sell action, so the price and the XP are vanilla's. It was the only
+one of the nine crediting companions with Trade XP, and TradeLord now does that too.
 
 **11708 Auto Trader, DarkStyleee.** The leanest honest auto trader: no Harmony patches, a cost
 ledger so it never sells below what you paid, a map marker. It trades in chunks of ten, re-pricing
@@ -50,7 +55,8 @@ distance limit; and it only touches trade goods, so loot, livestock and animals 
 best known buy and sell, in the vanilla tooltip. It only knows what you looked at, has no settings
 screen, and is the only one here writing save types of its own into your save. TradeLord's notebook
 is the same with Live world prices off, and all it saves is three strings, two numbers, a settlement
-and a flag, types vanilla already reads.
+and a flag, types vanilla already reads. Saying what you paid for a good on its tooltip was the one
+thing it showed that TradeLord kept to itself, and TradeLord shows it now.
 
 ## What none of the nine do
 
@@ -67,7 +73,10 @@ prices.
 
 ## Where they are ahead
 
-135 lets you see and edit the deal first. 8474's damping is something some players want, and
-TradeLord will not do it, because it would change the economy for everyone else. 10369's forecast
-rests on a larger market model. 11988 records what the screen said rather than modelling it. 11607
-fits an automation family you may already run.
+8474's damping is something some players want, and TradeLord will not do it, because it patches the
+price model itself, softening prices for every caravan and AI party in Calradia rather than only for
+you. 10369's forecast rests on a larger market model. 11988 records what the screen said rather than
+modelling it. 11607 fits an automation family you may already run, and its margin swapping, selling
+a thinner margin to make room for a fatter one, is something TradeLord will not do. 135 stages every
+deal on the trade screen and waits for you to press Done, where TradeLord does that only once you
+switch Lay the trade out for you first on.

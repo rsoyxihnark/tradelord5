@@ -66,6 +66,10 @@ namespace TradeLord
                 ? (ledger.GetCostBasis(item))
                 : Priced.At(market, item, MobileParty.MainParty, false);
 
+            int paid = ledger.PaidPerUnit(item);
+            if (paid > 0)
+                AddLine(vm, Tongue.Text("{=TL409}You paid").ToString(), paid + GoldIcon, Title);
+
             if (sells.Count > 0)
             {
                 AddLine(vm, Tongue.Text("{=TL20}Best sell prices").ToString(), "", Title);

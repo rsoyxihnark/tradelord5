@@ -158,6 +158,26 @@ namespace TradeLord
             return after > int.MaxValue ? int.MaxValue : (int)after;
         }
 
+        public static float RoomToFill(float capacity, float carried, float cargoShare)
+        {
+            float ceiling = cargoShare > 0f && cargoShare < 1f ? capacity * cargoShare : capacity;
+            return ceiling - carried;
+        }
+
+        public static float PartyShareOfProfit(int profit, float share)
+        {
+            if (profit <= 0 || share <= 0f) return 0f;
+            return Finite(profit * share, 0f);
+        }
+
+        public static int StockAfterShift(int stock, int landingUnits, int leavingUnits)
+        {
+            long after = (long)StockAfterLanding(stock, landingUnits) -
+                         (leavingUnits < 0 ? 0 : leavingUnits);
+            if (after < 0L) return 0;
+            return after > int.MaxValue ? int.MaxValue : (int)after;
+        }
+
         public static float PullOfAPrice(float priceFactor)
         {
             float pull = 1f - Finite(priceFactor, 1f);

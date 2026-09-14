@@ -518,6 +518,35 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void What_the_purses_on_the_road_will_take_comes_off_the_shelf_too()
+        {
+            Assert.Equal(26, TradeMath.StockAfterShift(12, 24, 10));
+            Assert.Equal(36, TradeMath.StockAfterShift(12, 24, 0));
+            Assert.Equal(36, TradeMath.StockAfterShift(12, 24, -10));
+            Assert.Equal(0, TradeMath.StockAfterShift(12, 24, 900));
+            Assert.Equal(int.MaxValue, TradeMath.StockAfterShift(int.MaxValue, 5, 0));
+        }
+
+        [Fact]
+        public void The_hold_is_filled_no_further_than_the_share_you_allow()
+        {
+            Assert.Equal(100f, TradeMath.RoomToFill(1000f, 900f, 1f));
+            Assert.Equal(0f, TradeMath.RoomToFill(1000f, 900f, 0.9f));
+            Assert.Equal(-400f, TradeMath.RoomToFill(1000f, 900f, 0.5f));
+            Assert.Equal(100f, TradeMath.RoomToFill(1000f, 900f, 0f));
+        }
+
+        [Fact]
+        public void A_companion_learns_from_a_share_of_the_profit_and_from_nothing_when_it_is_off()
+        {
+            Assert.Equal(50f, TradeMath.PartyShareOfProfit(200, 0.25f));
+            Assert.Equal(0f, TradeMath.PartyShareOfProfit(200, 0f));
+            Assert.Equal(0f, TradeMath.PartyShareOfProfit(200, -1f));
+            Assert.Equal(0f, TradeMath.PartyShareOfProfit(0, 0.25f));
+            Assert.Equal(0f, TradeMath.PartyShareOfProfit(-200, 0.25f));
+        }
+
+        [Fact]
         public void Cargo_counts_only_when_it_arrives_before_you_do()
         {
             Assert.True(TradeMath.LandsInTime(1.5f, 2.4f));

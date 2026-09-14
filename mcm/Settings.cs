@@ -574,6 +574,11 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool MarkBestSellTownOnMap { get => _o.MarkBestSellTownOnMap; set { _o.MarkBestSellTownOnMap = value; Options.Bump(); } }
 
+        [SettingPropertyFloatingInteger("{=TL412}Share of the profit your companions learn from", 0f, 2f, "#0%", Order = 14, RequireRestart = false,
+            HintText = "{=TL413}Every companion riding with you also earns Trade XP from a trade, worth this share of the profit each. 0 keeps the XP to you alone, which is what TradeLord ships with.")]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
+        public float PartyTradeXpShare { get => _o.PartyTradeXpShare; set { _o.PartyTradeXpShare = value; Options.Bump(); } }
+
         [SettingPropertyBool("{=TL247}Coin sound on trade", Order = 15, RequireRestart = false,
             HintText = "{=TL347}Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
@@ -719,6 +724,11 @@ namespace TradeLord.Mcm
             HintText = "{=TL374}Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and haul animals. 0 turns it off. Selling is unaffected.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float MaxHeldShare { get => _o.MaxHeldShare; set { _o.MaxHeldShare = value; Options.Bump(); } }
+
+        [SettingPropertyFloatingInteger("{=TL410}Share of the hold TradeLord may fill", 0.1f, 1f, "#0%", Order = 15, RequireRestart = false,
+            HintText = "{=TL411}Stop buying once your cargo reaches this share of what your party can carry, so there is room left for what a battle or a quest hands you. 100% lets it fill the hold. Selling is unaffected.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
+        public float MaxCargoShare { get => _o.MaxCargoShare; set { _o.MaxCargoShare = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL246}Write a price trace to the log", Order = 0, RequireRestart = false,
             HintText = "{=TL389}Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. OFF by default, since it makes the log much longer.")]
