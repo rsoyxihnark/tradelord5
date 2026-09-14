@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The feature list now opens with five short lines instead of four and one long paragraph, so what TradeLord is reads at a glance and the detail stays in the list below it.
+- The comparison with the other trade mods now says when the nine were read and that anything they have changed since is not in it.
+
 ## 1.69.1
 
 - A campaign saved by a newer TradeLord than the one you are running now keeps every recorded price that version can still read, instead of losing the lot the moment you go back to an older build.
