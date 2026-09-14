@@ -15,7 +15,8 @@ namespace TradeLord.Tests
             {
                 ["grain"] = new List<PriceObservation>
                 {
-                    new PriceObservation { ItemId = "grain", TownId = "town_S5", BuyPrice = 17, SellPrice = 23, CapturedDay = 134.25f },
+                    new PriceObservation { ItemId = "grain", TownId = "town_S5", BuyPrice = 17, SellPrice = 23, CapturedDay = 134.25f,
+                                          WasBuyPrice = 14, WasSellPrice = 19, WasDay = 121.5f },
                     new PriceObservation { ItemId = "grain", TownId = "town_V2", BuyPrice = 9, SellPrice = 41, CapturedDay = 0f }
                 },
                 ["hardwood"] = new List<PriceObservation>
@@ -54,6 +55,11 @@ namespace TradeLord.Tests
             Assert.Equal(17, back["grain"][0].BuyPrice);
             Assert.Equal(23, back["grain"][0].SellPrice);
             Assert.Equal(134.25f, back["grain"][0].CapturedDay, 3);
+            Assert.Equal(14, back["grain"][0].WasBuyPrice);
+            Assert.Equal(19, back["grain"][0].WasSellPrice);
+            Assert.Equal(121.5f, back["grain"][0].WasDay, 3);
+            Assert.True(back["grain"][0].SeenBefore);
+            Assert.False(back["grain"][1].SeenBefore);
             Assert.Equal(int.MaxValue, back["hardwood"][0].SellPrice);
             Assert.Equal(0, back["hardwood"][0].BuyPrice);
         }
