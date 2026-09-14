@@ -46,6 +46,8 @@ namespace TradeLord
 
         public bool Omniscient = true;
 
+        public int ObservationShelfLifeDays = 15;
+
         public int CostBasisMode = 0;
 
         public bool ExcludeHostileTowns = true;
