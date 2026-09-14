@@ -479,5 +479,27 @@ namespace TradeLord.Tests
             Dictionary<string, int> keep = TradeRules.LivestockKeep(bags, 4);
             Assert.Equal(4, keep["cow"]);
         }
+
+        [Fact]
+        public void Asking_for_another_day_of_food_never_holds_back_less_of_it()
+        {
+            var rng = new Random(6604);
+            for (int round = 0; round < 20000; round++)
+            {
+                var bags = new List<TradeRules.Ration>();
+                for (int i = 0; i < rng.Next(1, 5); i++)
+                    bags.Add(Food("food" + i, rng.Next(1, 60), rng.Next(1, 200)));
+                int days = rng.Next(1, 20);
+                float perDay = rng.Next(1, 12);
+
+                int fewer = 0, more = 0;
+                foreach (var kept in Keep(bags, new Options { KeepFoodDays = days }, perDay))
+                    fewer += kept.Value;
+                foreach (var kept in Keep(bags, new Options { KeepFoodDays = days + 1 }, perDay))
+                    more += kept.Value;
+
+                Assert.True(more >= fewer);
+            }
+        }
     }
 }
