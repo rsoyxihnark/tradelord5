@@ -1223,6 +1223,18 @@ def the_codec_is_covered_by_tests_the_build_runs():
             and TESTS.count('[Fact]') + TESTS.count('[Theory]') >= 12
             and 'InvariantCulture' not in TESTS)
 
+def a_saved_price_costs_the_same_eight_fields_every_time():
+    write = method_body(S['LedgerCodec.cs'],
+                        "public static string WriteLedger(Dictionary<string, "
+                        "List<PriceObservation>> ledger)")
+    read = method_body(S['LedgerCodec.cs'],
+                       "public static Dictionary<string, List<PriceObservation>> ReadLedger(string text)")
+    return (write.count(".Append(FieldMark)") == 7
+            and write.count("if (sb.Length > 0) sb.Append(RecordMark);") == 1
+            and "parts.Length != 5 && parts.Length != 8" in read
+            and "A_saved_price_is_written_out_field_by_field_exactly_as_it_reads_back" in TESTS
+            and "Every_saved_price_costs_the_same_eight_fields_however_many_are_kept" in TESTS)
+
 def each_preset_gets_its_own_settings():
     made = method_body(M, "public override BaseSettings CreateNew")
     return ('public Settings() { Bound(Options.Current); }' in M
@@ -2679,6 +2691,8 @@ chk("1.6.20", "a line of saved text that cannot be read is dropped on its own, n
     a_record_that_cannot_be_read_is_dropped_on_its_own())
 chk("1.6.20", "the saved ledger is proved to survive a save and a load by tests the build runs",
     the_codec_is_covered_by_tests_the_build_runs())
+chk("1.68.0", "a saved price costs the same eight fields every time, so a ninth cannot be added to every campaign's save unnoticed",
+    a_saved_price_costs_the_same_eight_fields_every_time())
 chk("1.6.21", "a visit that traded something is not then told its cargo is full",
     the_full_cargo_warning_waits_for_a_visit_that_traded_nothing())
 chk("1.6.21", "the trade skill gain is reported once, in TradeLord's own line",
