@@ -1,63 +1,9 @@
-using System.Collections.Generic;
-using System.Text;
 using TaleWorlds.Localization;
 
 namespace TradeLord
 {
-    internal sealed class BlockTally
+    internal sealed partial class BlockTally
     {
-        private readonly Dictionary<Block, int> _counts = new Dictionary<Block, int>();
-        private Block _firstGuard = Block.None;
-
-        internal void Note(Block reason)
-        {
-            if (reason == Block.None) return;
-            if (_firstGuard == Block.None && Guarded(reason)) _firstGuard = reason;
-            _counts.TryGetValue(reason, out int seen);
-            _counts[reason] = seen + 1;
-        }
-
-        internal bool Any => _counts.Count > 0;
-
-        internal bool Saw(Block reason) => _counts.ContainsKey(reason);
-
-        private static bool Structural(Block reason) =>
-            reason == Block.NotTradable || reason == Block.NotMerchandise ||
-            reason == Block.MountOrHaulAnimal;
-
-        private static bool Guarded(Block reason) =>
-            reason == Block.NeverList || reason == Block.Locked || reason == Block.Protected ||
-            reason == Block.QuestGoods || reason == Block.FoodReserve;
-
-        internal Block Dominant()
-        {
-            Block top = Block.None;
-            int best = 0;
-            foreach (var kv in _counts)
-                if (!Structural(kv.Key) && kv.Key != Block.BudgetSpent &&
-                    (kv.Value > best || (kv.Value == best && kv.Key < top)))
-                { best = kv.Value; top = kv.Key; }
-            if (top == Block.None && Saw(Block.BudgetSpent)) return Block.BudgetSpent;
-            return Guarded(top) ? _firstGuard : top;
-        }
-
-        internal string Summary()
-        {
-            var order = new List<KeyValuePair<Block, int>>(_counts);
-            order.Sort((x, y) =>
-            {
-                int byCount = y.Value.CompareTo(x.Value);
-                return byCount != 0 ? byCount : x.Key.CompareTo(y.Key);
-            });
-            var sb = new StringBuilder();
-            foreach (var kv in order)
-            {
-                if (sb.Length > 0) sb.Append(", ");
-                sb.Append(kv.Key).Append("=").Append(kv.Value);
-            }
-            return sb.ToString();
-        }
-
         internal static TextObject Phrase(Block reason)
         {
             switch (reason)
