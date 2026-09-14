@@ -446,34 +446,12 @@ namespace TradeLord
             return WithinTravelCeiling(s, lower);
         }
 
-        internal static float TravelCeiling(Settlement s)
-        {
-            float cap = Options.Current.MaxTravelDaysTown;
-            float vcap = Options.Current.MaxTravelDaysVillage;
-            if (s.IsVillage && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;
-            return cap;
-        }
+        internal static float TravelCeiling(Settlement s) =>
+            MarketRank.Ceiling(s.IsVillage, Options.Current);
 
-        private static bool WithinTravelCeiling(Settlement s, float days)
-        {
-            float cap = TravelCeiling(s);
-            return cap <= 0f || days <= cap;
-        }
+        private static bool WithinTravelCeiling(Settlement s, float days) =>
+            MarketRank.WithinCeiling(s.IsVillage, days, Options.Current);
 
-        private static int Rank(bool selling, (Settlement s, int price, float days) x,
-                                              (Settlement s, int price, float days) y)
-        {
-            int p = selling ? y.price.CompareTo(x.price) : x.price.CompareTo(y.price);
-            return p != 0 ? p : x.days.CompareTo(y.days);
-        }
-
-        private static readonly Comparison<(Settlement s, int price, float days)> DearestFirst =
-            (x, y) => Rank(true, x, y);
-
-        private static readonly Comparison<(Settlement s, int price, float days)> CheapestFirst =
-            (x, y) => Rank(false, x, y);
-
-        private const int TopCacheSize = 8;
         private const float MovedFar = 100f;
         private readonly Dictionary<(string item, bool selling), (int hour, int gen, string kind, List<(Settlement, int)> markets)> _marketCache
             = new Dictionary<(string, bool), (int, int, string, List<(Settlement, int)>)>();
@@ -548,40 +526,26 @@ namespace TradeLord
 
         private static List<(Settlement, int)> Rerank(List<(Settlement s, int price, float days)> all, bool selling)
         {
-            var kept = new List<(Settlement s, int price, float straight, float days)>(TopCacheSize + 1);
+            var kept = new List<Reach<Settlement>>(MarketRank.TopCacheSize + 1);
             for (int i = 0; i < all.Count; i++)
             {
                 float days = Travel.EstimateDaysFromParty(all[i].s);
                 if (!WithinTravelCeiling(all[i].s, days)) continue;
-                Keep(kept, (all[i].s, all[i].price, all[i].days, days), selling);
+                MarketRank.Keep(kept, new Reach<Settlement>
+                {
+                    Where = all[i].s, Price = all[i].price, Straight = all[i].days, Days = days
+                }, selling);
             }
             return Settled(kept, selling);
         }
 
-        private static List<(Settlement, int)> Settled(
-            List<(Settlement s, int price, float straight, float days)> kept, bool selling)
+        private static List<(Settlement, int)> Settled(List<Reach<Settlement>> kept, bool selling)
         {
-            var top = new List<(Settlement s, int price, float days)>(kept.Count);
-            for (int i = 0; i < kept.Count; i++) top.Add((kept[i].s, kept[i].price, kept[i].days));
-            top.Sort(selling ? DearestFirst : CheapestFirst);
+            List<Reach<Settlement>> top = MarketRank.Settled(kept, selling);
             var result = new List<(Settlement, int)>(top.Count);
             for (int i = 0; i < top.Count; i++)
-                result.Add((top[i].s, top[i].price));
+                result.Add((top[i].Where, top[i].Price));
             return result;
-        }
-
-        private static (Settlement s, int price, float days) ByStraightLine(
-            (Settlement s, int price, float straight, float days) one) => (one.s, one.price, one.straight);
-
-        private static void Keep(List<(Settlement s, int price, float straight, float days)> kept,
-                                 (Settlement s, int price, float straight, float days) one, bool selling)
-        {
-            if (kept.Count == TopCacheSize &&
-                Rank(selling, ByStraightLine(one), ByStraightLine(kept[TopCacheSize - 1])) >= 0) return;
-            int at = kept.Count;
-            while (at > 0 && Rank(selling, ByStraightLine(one), ByStraightLine(kept[at - 1])) < 0) at--;
-            kept.Insert(at, one);
-            if (kept.Count > TopCacheSize) kept.RemoveAt(TopCacheSize);
         }
 
         private void PrimeLiveRankings(List<ItemObject> wanted, int hour)
@@ -592,12 +556,12 @@ namespace TradeLord
             int minStock = Options.Current.MinTownStock;
             MobileParty me = MobileParty.MainParty;
             int n = wanted.Count;
-            var sells = new List<(Settlement s, int price, float straight, float days)>[n];
-            var buys = new List<(Settlement s, int price, float straight, float days)>[n];
+            var sells = new List<Reach<Settlement>>[n];
+            var buys = new List<Reach<Settlement>>[n];
             for (int i = 0; i < n; i++)
             {
-                sells[i] = new List<(Settlement, int, float, float)>(TopCacheSize + 1);
-                buys[i] = new List<(Settlement, int, float, float)>(TopCacheSize + 1);
+                sells[i] = new List<Reach<Settlement>>(MarketRank.TopCacheSize + 1);
+                buys[i] = new List<Reach<Settlement>>(MarketRank.TopCacheSize + 1);
             }
             for (int t = 0; t < candidates.Count; t++)
             {
@@ -613,12 +577,14 @@ namespace TradeLord
                     if (tillOpen)
                     {
                         int price = Priced.At(market, item, me, true);
-                        if (price > 0) Keep(sells[i], (town, price, straight, days), true);
+                        if (price > 0) MarketRank.Keep(sells[i], new Reach<Settlement>
+                        { Where = town, Price = price, Straight = straight, Days = days }, true);
                     }
                     if (minStock <= 0 || StockOf(town, item) >= minStock)
                     {
                         int price = Priced.At(market, item, me, false);
-                        if (price > 0) Keep(buys[i], (town, price, straight, days), false);
+                        if (price > 0) MarketRank.Keep(buys[i], new Reach<Settlement>
+                        { Where = town, Price = price, Straight = straight, Days = days }, false);
                     }
                 }
             }
@@ -764,8 +730,8 @@ namespace TradeLord
             {
                 ItemObject item = wanted[at];
 
-                var buys = TopBuy(item, TopCacheSize);
-                var sells = TopSell(item, TopCacheSize);
+                var buys = TopBuy(item, MarketRank.TopCacheSize);
+                var sells = TopSell(item, MarketRank.TopCacheSize);
                 if (buys.Count == 0 || sells.Count == 0) continue;
 
                 TradeRoute best = null;
