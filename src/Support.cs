@@ -318,14 +318,27 @@ namespace TradeLord
 
     internal static class Patcher
     {
+        private static readonly List<string> Applied = new List<string>();
+        private static readonly List<string> Refused = new List<string>();
+
+        internal static string Tally()
+        {
+            string said = "patches " + Applied.Count + "/" + (Applied.Count + Refused.Count) + " applied";
+            return Refused.Count == 0
+                ? said
+                : said + ", " + string.Join(", ", Refused.ToArray()) + " refused";
+        }
+
         internal static void TryPatch(Harmony harmony, Type patchClass)
         {
             try
             {
                 harmony.CreateClassProcessor(patchClass).Patch();
+                Applied.Add(patchClass.Name);
             }
             catch (Exception e)
             {
+                Refused.Add(patchClass.Name);
                 Log.Error(e, "patching " + patchClass.Name + " (feature disabled, mod continues)");
             }
         }

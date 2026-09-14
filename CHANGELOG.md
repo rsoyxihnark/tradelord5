@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.66.0
+
+- TradeLord.log now opens every campaign with one self-check line, saying which of its patches applied and whether it could read the herd penalty, the quest goods, your language file and the game's price model, so a bug report is one line to paste rather than a hunt through the log.
+- Anything TradeLord cannot read is now said as your campaign opens rather than the first time it matters, so the herd penalty and your language file report themselves before you reach a market.
+- The feature list says so too.
+
 ## 1.65.0
 
 - Lay the trade out for you first, a new switch under Automation that ships off: TradeLord opens the trade screen and lays its whole deal on it, everything it would sell on one side and everything it would buy on the other, so you can change what you like and press Done to trade or Cancel to leave it.

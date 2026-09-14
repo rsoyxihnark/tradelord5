@@ -481,11 +481,11 @@ def a_route_scan_prices_each_town_once_for_every_good_it_wants():
             and scan.find("PrimeLiveRankings(wanted,") < scan.find("var buys = TopBuy(item, TopCacheSize);"))
 
 def a_language_file_that_could_not_be_read_is_tried_again():
-    said = method_body(S['Tongue.cs'], "private static string Translated")
+    said = method_body(S['Tongue.cs'], "private static bool Ready")
     failed = said.find("if (read == null)")
     settled = said.find("_saidFor = language;")
     return (0 <= failed < settled
-            and "if (_tryingAgainAt > DateTime.UtcNow) return null;" in said
+            and "if (_tryingAgainAt > DateTime.UtcNow) return false;" in said
             and "_tryingAgainAt = DateTime.UtcNow + BeforeTryingAgain;" in said
             and "_tryingAgainAt = default(DateTime);" in said
             and "if (_toldItFailedFor != language)" in said
@@ -493,7 +493,8 @@ def a_language_file_that_could_not_be_read_is_tried_again():
             and "Guard.Read(\"Tongue.Read\", language, Reading, null)" in said
             and "() =>" not in said
             and "private static Dictionary<string, string> Reading(int language) => Read(Where(language));"
-                in S['Tongue.cs'])
+                in S['Tongue.cs']
+            and S['Tongue.cs'].count("Ready(") == 3)
 
 def a_price_is_found_by_its_town_rather_than_by_looking_down_the_list():
     led = S['Ledger.cs']
@@ -2901,8 +2902,11 @@ def every_language_the_screen_offers_has_a_file_the_mod_reads():
             and len(choices.group(1).split(',')) == len(TRANSLATIONS) + 1
             and 'internal const int English = 0, Turkish = 1, Russian = 2, Chinese = 3;' in S['Tongue.cs']
             and S['Tongue.cs'].count('module_strings_') == len(TRANSLATIONS)
-            and 'if (_saidFor != language)' in method_body(S['Tongue.cs'], "private static string Translated")
-            and '_saidFor = language;' in method_body(S['Tongue.cs'], "private static string Translated"))
+            and 'if (_saidFor == language) return true;' in
+                method_body(S['Tongue.cs'], "private static bool Ready")
+            and '_saidFor = language;' in method_body(S['Tongue.cs'], "private static bool Ready")
+            and 'if (!Ready(Options.Current.Language)) return null;' in
+                method_body(S['Tongue.cs'], "private static string Translated"))
 
 def a_line_is_matched_to_its_translation_the_same_way_in_every_language():
     tongue = S['Tongue.cs']
@@ -6814,6 +6818,47 @@ def an_empty_counter_says_so_rather_than_leaving_you_guessing():
             and "Cancel" in said['TL402'] and "Done" in said['TL401'])
 
 
+def asking_the_herd_early_never_switches_livestock_off_for_the_session():
+    herd = method_body(S['Trading.cs'], "private static DefaultPartySpeedCalculatingModel HerdModel")
+    return (ordered(herd, "if (_herdLookupFailed) return null;",
+                    "var models = Campaign.Current?.Models;",
+                    "if (models == null) return null;",
+                    "var model = models.PartySpeedCalculatingModel as DefaultPartySpeedCalculatingModel;",
+                    "_herdLookupFailed = true;")
+            and "Campaign.Current?.Models?.PartySpeedCalculatingModel" not in S['Trading.cs']
+            and S['Trading.cs'].count("_herdLookupFailed = false;") == 1
+            and "_herdLookupFailed = false;" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
+
+def one_line_says_what_the_mod_could_read_when_your_campaign_opened():
+    say = method_body(S['SubModule.cs'], "internal static void Say")
+    launched = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    return ('Log.Write("self-check: "' in say
+            and 'Guard.Run("SelfCheck"' in say
+            and all(one in say for one in (
+                "Patcher.Tally()", "TradeActionBehavior.HerdPenaltyRead()", "Errands.Known",
+                "Tongue.StringsRead()", "Priced.ModelInForce()"))
+            and say.count('" | "') == 4
+            and S['Trading.cs'].count("SelfCheck.Say();") == 1
+            and "SelfCheck.Say();" in launched
+            and ordered(launched, "naval capability", "SelfCheck.Say();"))
+
+def the_startup_line_names_what_each_reader_found():
+    patched = method_body(S['Support.cs'], "internal static void TryPatch")
+    tally = method_body(S['Support.cs'], "internal static string Tally")
+    strings = method_body(S['Tongue.cs'], "internal static string StringsRead")
+    return (ordered(patched, "harmony.CreateClassProcessor(patchClass).Patch();",
+                    "Applied.Add(patchClass.Name);")
+            and "Refused.Add(patchClass.Name);" in patched
+            and '"patches " + Applied.Count + "/" + (Applied.Count + Refused.Count) + " applied"' in tally
+            and '" refused"' in tally
+            and '"herd penalty not read" : "herd penalty read"' in
+                between(S['Trading.cs'], "internal static string HerdPenaltyRead() =>", ";")
+            and '"price model not read" : "prices from " + model.GetType().Name' in
+                method_body(S['Market.cs'], "internal static string ModelInForce")
+            and 'if (language == English) return "English";' in strings
+            and '" strings read"' in strings
+            and '" strings not read, speaking English"' in strings)
+
 chk("1.65.0", "the deal is laid out on the trade screen rather than traded, and only while that switch is on and no dry run is",
     the_deal_is_laid_out_rather_than_traded_only_while_that_is_switched_on())
 chk("1.65.0", "nothing moves while a deal is laid out: every pass books it as it would a dry run and lays each unit on the screen",
@@ -6826,6 +6871,13 @@ chk("1.65.0", "a deal with nothing in it says so, and a deal with something in i
     an_empty_counter_says_so_rather_than_leaving_you_guessing())
 chk("1.65.0", "a deal that breaks off half laid out never leaves trading switched off, and each deal starts from a clean slate",
     a_deal_left_half_laid_out_never_leaves_trading_switched_off())
+
+chk("1.66.0", "one self-check line says what TradeLord could read when your campaign opened, rather than five reports scattered through the log",
+    one_line_says_what_the_mod_could_read_when_your_campaign_opened())
+chk("1.66.0", "that line names what each reader found, both when it could read and when it could not",
+    the_startup_line_names_what_each_reader_found())
+chk("1.66.0", "asking the herd penalty as the campaign opens never mistakes a campaign it cannot read yet for a mod that replaced the model",
+    asking_the_herd_early_never_switches_livestock_off_for_the_session())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
