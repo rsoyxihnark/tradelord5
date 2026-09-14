@@ -720,7 +720,7 @@ namespace TradeLord
             int stocked = Options.Current.BuyCapPerItem > 0
                 ? Options.Current.BuyCapPerItem : UncappedBuyProjection;
             int spendCap = Options.Current.BuyValueCapPerItem;
-            return spendCap > 0 ? Math.Min(stocked, spendCap / buyPrice) : stocked;
+            return spendCap > 0 && buyPrice > 0 ? Math.Min(stocked, spendCap / buyPrice) : stocked;
         }
 
         private List<TradeRoute> ScanRoutes()
