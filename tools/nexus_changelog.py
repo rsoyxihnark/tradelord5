@@ -5,6 +5,7 @@ ENTRY = re.compile(r'^-\s+(.*\S)\s*$')
 ANY_HEADING = re.compile(r'^#{1,6}\s+(.+?)\s*$')
 BOLD = re.compile(r'\*\*(.+?)\*\*')
 CODE = re.compile(r'`([^`]+)`')
+LONE_BOLD = re.compile(r'^\*\*(.+?)\*\*$')
 
 def sections(text):
     out, version, said = [], None, []
@@ -54,15 +55,24 @@ def marked(line):
 def listed(lines):
     return '[list]\n' + '\n'.join('[*]' + marked(one) for one in lines) + '\n[/list]'
 
+def folded(title, lines):
+    return '[b]' + marked(title) + '[/b]\n[spoiler]\n' + listed(lines) + '\n[/spoiler]'
+
 def markup(text):
-    out = []
-    for kind, held in blocks(text):
+    out, held, at = [], list(blocks(text)), 0
+    while at < len(held):
+        kind, lines = held[at]
+        alone = LONE_BOLD.match(lines[0]) if kind == 'text' and len(lines) == 1 else None
         if kind == 'heading':
-            out.append('[size=5][b]' + marked(held[0]) + '[/b][/size]')
+            out.append('[size=5][b]' + marked(lines[0]) + '[/b][/size]')
         elif kind == 'list':
-            out.append(listed(held))
+            out.append(listed(lines))
+        elif alone and at + 1 < len(held) and held[at + 1][0] == 'list':
+            out.append(folded(alone.group(1), held[at + 1][1]))
+            at += 1
         else:
-            out.append(marked(' '.join(held)))
+            out.append(marked(' '.join(lines)))
+        at += 1
     return '\n\n'.join(out)
 
 def page(version, entries):
