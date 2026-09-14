@@ -193,6 +193,13 @@ namespace TradeLord
             return null;
         }
 
+        internal static string ModelInForce()
+        {
+            object model = Campaign.Current == null || Campaign.Current.Models == null
+                ? null : Campaign.Current.Models.TradeItemPriceFactorModel;
+            return model == null ? "price model not read" : "prices from " + model.GetType().Name;
+        }
+
         internal static int At(SettlementComponent market, ItemObject item, MobileParty who, bool selling) =>
             item == null ? 0 : At(market, new EquipmentElement(item), who, selling);
 

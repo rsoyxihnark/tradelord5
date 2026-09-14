@@ -571,6 +571,7 @@ namespace TradeLord
                 Log.Write(Travel.NavalActive
                     ? "naval capability: party can sail - routes and travel times include sea legs"
                     : "naval capability: land-only - land routing in effect");
+                SelfCheck.Say();
 
                 void AddOptions(string menu) => Guard.Run(
                     "menu " + menu + " (the other menus are unaffected)", () =>
@@ -1009,11 +1010,15 @@ namespace TradeLord
             }
         }
 
+        internal static string HerdPenaltyRead() =>
+            HerdModel() == null ? "herd penalty not read" : "herd penalty read";
+
         private static DefaultPartySpeedCalculatingModel HerdModel()
         {
             if (_herdLookupFailed) return null;
-            var model = Campaign.Current?.Models?.PartySpeedCalculatingModel
-                as DefaultPartySpeedCalculatingModel;
+            var models = Campaign.Current?.Models;
+            if (models == null) return null;
+            var model = models.PartySpeedCalculatingModel as DefaultPartySpeedCalculatingModel;
             if (model == null)
             {
                 _herdLookupFailed = true;
