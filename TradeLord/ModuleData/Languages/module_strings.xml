@@ -261,5 +261,9 @@
 		<string id="TL411" text="Stop buying once your cargo reaches this share of what your party can carry, so there is room left for what a battle or a quest hands you. 100% lets it fill the hold. Selling is unaffected."/>
 		<string id="TL412" text="Share of the profit your companions learn from"/>
 		<string id="TL413" text="Every companion riding with you also earns Trade XP from a trade, worth this share of the profit each. 0 keeps the XP to you alone, which is what TradeLord ships with."/>
+		<string id="TL414" text="h"/>
+		<string id="TL415" text="d"/>
+		<string id="TL416" text="Left"/>
+		<string id="TL417" text=" | Left = how long that shelf still holds this Qty before the caravans heading there buy it out"/>
 	</strings>
 </base>

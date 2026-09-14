@@ -49,9 +49,9 @@ def panel_columns():
                 else k.get('WidthSizePolicy') for k in kids]
     head = next((widths(c) for lp in root.iter('ListPanel')
                  for c in [lp.find('Children')]
-                 if c is not None and len(c) == 11 and all(k.tag == 'TextWidget' for k in c)), None)
+                 if c is not None and len(c) == 12 and all(k.tag == 'TextWidget' for k in c)), None)
     row = next((widths(c) for lp in root.find('.//ItemTemplate').iter('ListPanel')
-                for c in [lp.find('Children')] if c is not None and len(c) == 11), None)
+                for c in [lp.find('Children')] if c is not None and len(c) == 12), None)
     return head, row
 
 def panel_paths():
@@ -7455,6 +7455,56 @@ chk("1.70.0", "a companion riding with you earns a share of the profit, and noth
     a_companion_riding_with_you_earns_a_share_of_the_profit_and_nothing_by_default())
 chk("1.70.0", "the tooltip says what you paid for a good you have bought, in every language",
     the_tooltip_says_what_you_paid_for_a_good_you_have_bought())
+
+
+def how_long_a_shelf_holds_a_deal_is_worked_out_where_a_test_can_ask_it():
+    p = S['Projection.cs']
+    runs = method_body(p, "internal static float RunsOutAt")
+    moments = method_body(p, "internal static List<float> Moments")
+    note = method_body(p, "private static void Note")
+    return ("TaleWorlds" not in p and "Settlement" not in p and "ItemObject" not in p
+            and "internal const float NeverRunsOut = -1f;" in p
+            and "if (item == null || wanted <= 0 || unitValue <= 0) return NeverRunsOut;" in runs
+            and "WorthLeaving(PurseLanding(coming, days), pull, across, category), unitValue);" in runs
+            and "UnitsLanding(listed, item, days), taken);" in runs
+            and "if (shelf < wanted) return days;" in runs
+            and "return NeverRunsOut;" in runs
+            and "when.Sort();" in moments
+            and "float at = TradeMath.UpToTheQuarterDay(days);" in note
+            and "if (at <= afterDays || when.Contains(at)) return;" in note
+            and "double steps = Math.Ceiling(days / HorizonStep);" in
+                method_body(S['TradeMath.cs'], "public static float UpToTheQuarterDay")
+            and all(one in PROJECTIONTESTS for one in
+                    ("A_shelf_nobody_is_coming_for_never_runs_out",
+                     "A_shelf_runs_out_at_the_moment_a_purse_takes_the_last_of_it",
+                     "A_load_landing_first_holds_the_shelf_up_past_a_purse",
+                     "Nothing_that_lands_before_you_arrive_can_expire_the_deal",
+                     "Every_moment_counted_is_after_you_arrive_and_on_the_quarter_day",
+                     "A_shelf_that_runs_out_never_reports_a_moment_you_have_already_passed"))
+            and "What_lands_on_a_day_is_counted_by_the_moment_that_day_rounds_up_to" in MATHTESTS)
+
+def a_route_says_how_long_its_buy_market_holds_that_quantity():
+    ask = method_body(S['Forecast.cs'], "internal static float RunsOutIn")
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    return ("if (!On || site == null || item == null || item.ItemCategory == null)" in ask
+            and "return Projection.RunsOutAt(listed, coming, pull, across, item.StringId," in ask
+            and "public float RunsOutInDays = Projection.NeverRunsOut;" in S['Ledger.cs']
+            and "RunsOutInDays = Forecast.RunsOutIn(from, item, onTheShelfNow," in scan
+            and "q.Units, toBuy)" in scan
+            and "float days = _route.RunsOutInDays;" in S['Panel.cs']
+            and 'if (days <= 0f) return "";' in S['Panel.cs']
+            and '"HeadDays", "HeadRunsOut",' in S['Panel.cs']
+            and '{=TL416}Left' in S['Panel.cs']
+            and '{=TL417} | Left = how long that shelf still holds this Qty' in S['Panel.cs']
+            and 'Text="@RunsOut"' in PREFAB and 'Text="@HeadRunsOut"' in PREFAB
+            and all(said_in_every_language(one) for one in ("TL414", "TL415", "TL416", "TL417"))
+            and panel_columns()[0] is not None and len(panel_columns()[0]) == 12)
+
+
+chk("1.71.0", "how long a market's shelf holds the quantity a route quotes is worked out where a test can ask it",
+    how_long_a_shelf_holds_a_deal_is_worked_out_where_a_test_can_ask_it())
+chk("1.71.0", "every route says how long its buy market holds that quantity, and the panel names it in every language",
+    a_route_says_how_long_its_buy_market_holds_that_quantity())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

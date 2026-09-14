@@ -31,7 +31,7 @@
                       Command.Click="ExecuteClose" />
 
         <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-                   SuggestedWidth="900" SuggestedHeight="680"
+                   SuggestedWidth="960" SuggestedHeight="680"
                    HorizontalAlignment="Center" VerticalAlignment="Center"
                    StackLayout.LayoutMethod="VerticalTopToBottom">
           <Children>
@@ -104,6 +104,8 @@
                                     Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadProfit" />
                         <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="60" HeightSizePolicy="StretchToParent"
                                     Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadDays" />
+                        <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="55" HeightSizePolicy="StretchToParent"
+                                    Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadRunsOut" />
                         <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="45" HeightSizePolicy="StretchToParent"
                                     Brush="Popup.Button.Text" Brush.FontSize="15" Brush.FontColor="#FFD700FF" Text="@HeadCaravans" />
                         <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="45" HeightSizePolicy="StretchToParent"
@@ -186,6 +188,11 @@
                                                         HeightSizePolicy="StretchToParent"
                                                         Brush="Popup.Button.Text" Brush.FontSize="16"
                                                         Text="@Days" />
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="55"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="14"
+                                                        Brush.FontColor="#BBBBBBFF"
+                                                        Text="@RunsOut" />
                                             <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="45"
                                                         HeightSizePolicy="StretchToParent"
                                                         Brush="Popup.Button.Text" Brush.FontSize="16"
