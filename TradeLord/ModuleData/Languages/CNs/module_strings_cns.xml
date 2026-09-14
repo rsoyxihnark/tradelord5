@@ -261,5 +261,9 @@
 		<string id="TL411" text="当货物达到队伍载重的这一比例时停止买入，好为战斗或任务交给你的东西留出空间。100% 允许把载重装满。出售不受影响。"/>
 		<string id="TL412" text="同伴分享的利润比例"/>
 		<string id="TL413" text="随你同行的每位同伴也会从交易中获得交易经验，各按利润的这一比例计算。0 表示经验只归你一人，这也是 TradeLord 出厂时的设置。"/>
+		<string id="TL414" text="时"/>
+		<string id="TL415" text="天"/>
+		<string id="TL416" text="剩余"/>
+		<string id="TL417" text=" | 剩余 = 在前往该地的商队把货买空之前，那个货架还能保有这个数量多久"/>
 	</strings>
 </base>

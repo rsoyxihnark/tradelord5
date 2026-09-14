@@ -528,6 +528,37 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_moment_is_taken_up_to_the_quarter_day_so_what_lands_then_is_counted()
+        {
+            Assert.Equal(0.75f, TradeMath.UpToTheQuarterDay(0.75f));
+            Assert.Equal(0.75f, TradeMath.UpToTheQuarterDay(0.6f));
+            Assert.Equal(1f, TradeMath.UpToTheQuarterDay(0.8f));
+            Assert.Equal(0.25f, TradeMath.UpToTheQuarterDay(0.01f));
+            Assert.Equal(0f, TradeMath.UpToTheQuarterDay(0f));
+            Assert.Equal(0f, TradeMath.UpToTheQuarterDay(-3f));
+        }
+
+        [Fact]
+        public void What_lands_on_a_day_is_counted_by_the_moment_that_day_rounds_up_to()
+        {
+            var rng = new System.Random(9021);
+            for (int round = 0; round < 20000; round++)
+            {
+                float days = (float)(rng.NextDouble() * 12d);
+                Assert.True(TradeMath.LandsInTime(days, TradeMath.UpToTheQuarterDay(days)));
+            }
+        }
+
+        [Fact]
+        public void Days_are_read_back_as_hours()
+        {
+            Assert.Equal(24f, TradeMath.HoursOf(1f));
+            Assert.Equal(6f, TradeMath.HoursOf(0.25f));
+            Assert.Equal(0f, TradeMath.HoursOf(0f));
+            Assert.Equal(0f, TradeMath.HoursOf(-2f));
+        }
+
+        [Fact]
         public void The_hold_is_filled_no_further_than_the_share_you_allow()
         {
             Assert.Equal(100f, TradeMath.RoomToFill(1000f, 900f, 1f));
