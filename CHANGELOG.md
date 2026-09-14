@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- The comparison with the other trade mods no longer says Trade Advisor tells you how long a route lasts and TradeLord does not, now that the Left column does.
+- The comparison with the other trade mods is now one short entry a mod, each naming and linking to the mod it weighs, and it no longer credits Trade Advisor with telling you how long a route lasts, which TradeLord now does itself.
 
 ## 1.71.0
 
