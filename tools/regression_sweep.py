@@ -1,7 +1,7 @@
 import io, re, sys
 
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
-     ['Trading.cs', 'Passes.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
+     ['Trading.cs', 'Passes.cs', 'Ranking.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
       'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
       'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs', 'Hindsight.cs', 'Counter.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
@@ -11,6 +11,7 @@ MIGRATIONTESTS = io.open('tests/MigrationTests.cs', encoding='utf-8').read()
 BOOKTESTS = io.open('tests/BooksTests.cs', encoding='utf-8').read()
 SELLTESTS = io.open('tests/SellRulesTests.cs', encoding='utf-8').read()
 DRIFTTESTS = io.open('tests/PriceDriftTests.cs', encoding='utf-8').read()
+RANKTESTS = io.open('tests/MarketRankTests.cs', encoding='utf-8').read()
 FOODTESTS = io.open('tests/FoodReserveTests.cs', encoding='utf-8').read()
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
@@ -460,13 +461,17 @@ def the_ledger_lists_a_route_you_could_not_take_this_second():
 def the_best_markets_are_picked_without_sorting_every_town():
     l = S['Ledger.cs']
     rerank = method_body(l, "private static List<(Settlement, int)> Rerank")
-    keep = method_body(l, "private static void Keep(List<(Settlement s, int price, float straight, float days)> kept,")
+    keep = method_body(S['Ranking.cs'], "internal static void Keep<T>")
     return ("all.Sort(" not in l
-            and "Keep(kept, (all[i].s, all[i].price, all[i].days, days), selling);" in rerank
+            and "MarketRank.Keep(kept, new Reach<Settlement>" in rerank
+            and "Where = all[i].s, Price = all[i].price, Straight = all[i].days, Days = days" in rerank
             and "return Settled(kept, selling);" in rerank
             and "if (kept.Count == TopCacheSize &&" in keep
-            and "ByStraightLine(kept[TopCacheSize - 1])) >= 0) return;" in keep
-            and "if (kept.Count > TopCacheSize) kept.RemoveAt(TopCacheSize);" in keep)
+            and "kept[TopCacheSize - 1].Price, kept[TopCacheSize - 1].Straight) >= 0) return;" in keep
+            and "if (kept.Count > TopCacheSize) kept.RemoveAt(TopCacheSize);" in keep
+            and "Only_eight_markets_are_ever_kept" in RANKTESTS
+            and "A_market_worse_than_the_eight_already_kept_is_turned_away" in RANKTESTS
+            and "The_eight_are_chosen_on_the_straight_line_and_ordered_on_the_real_ride" in RANKTESTS)
 
 def a_route_scan_prices_each_town_once_for_every_good_it_wants():
     l = S['Ledger.cs']
@@ -479,7 +484,7 @@ def a_route_scan_prices_each_town_once_for_every_good_it_wants():
             and "_marketCache[(item.StringId, false)] = (hour, Options.Generation, kind, Settled(buys[i], false));" in prime
             and "PrimeLiveRankings(wanted, (int)CampaignTime.Now.ToHours);" in scan
             and scan.find("wanted.Add(item);") < scan.find("PrimeLiveRankings(wanted,")
-            and scan.find("PrimeLiveRankings(wanted,") < scan.find("var buys = TopBuy(item, TopCacheSize);"))
+            and scan.find("PrimeLiveRankings(wanted,") < scan.find("var buys = TopBuy(item, MarketRank.TopCacheSize);"))
 
 def a_language_file_that_could_not_be_read_is_tried_again():
     said = method_body(S['Tongue.cs'], "private static bool Ready")
@@ -566,14 +571,28 @@ def the_tooltip_patches_hand_their_state_over_instead_of_capturing_it():
             and "private static bool Sectioned(ItemVM itemVm)" in t
             and "() =>" not in t)
 
+def which_market_is_best_is_worked_out_where_a_test_can_ask_it():
+    r = S['Ranking.cs']
+    return ("TaleWorlds" not in r and "Settlement" not in r and "ItemObject" not in r
+            and "internal struct Reach<T>" in r
+            and "internal static class MarketRank" in r
+            and "Options s" in r and "Options.Current" not in r
+            and 'Ranking.cs' in TESTPROJ
+            and "Reach<Settlement>" in S['Ledger.cs']
+            and "MarketRank.TopCacheSize" in S['Ledger.cs']
+            and "Two_markets_at_the_same_price_are_split_by_the_nearer_one" in RANKTESTS
+            and "A_village_is_held_to_its_own_travel_ceiling_when_that_is_the_shorter_one" in RANKTESTS
+            and "A_ceiling_of_zero_looks_as_far_as_it_likes" in RANKTESTS)
+
 def a_market_ranking_sorts_through_one_comparison_for_each_way():
-    l = S['Ledger.cs']
-    settled = method_body(l, "private static List<(Settlement, int)> Settled(")
-    return ("private static readonly Comparison<(Settlement s, int price, float days)> DearestFirst" in l
-            and "private static readonly Comparison<(Settlement s, int price, float days)> CheapestFirst" in l
-            and "top.Sort(selling ? DearestFirst : CheapestFirst);" in settled
-            and "Sort((x, y) => Rank(" not in l
-            and l.count("top.Sort(") == 1)
+    r = S['Ranking.cs']
+    settled = method_body(r, "internal static List<Reach<T>> Settled<T>")
+    return ("internal static readonly Comparison<Reach<T>> DearestFirst" in r
+            and "internal static readonly Comparison<Reach<T>> CheapestFirst" in r
+            and "top.Sort(selling ? Order<T>.DearestFirst : Order<T>.CheapestFirst);" in settled
+            and "Sort((x, y) => Rank(" not in r + S['Ledger.cs']
+            and r.count("top.Sort(") == 1
+            and S['Ledger.cs'].count(".Sort(") == 1)
 
 def a_good_on_the_shelf_is_asked_the_buying_questions_once():
     t = S['Trading.cs']
@@ -1385,14 +1404,16 @@ chk("1.3.9", "per-hour cache serves both price modes",
     ordered(S['Ledger.cs'], "_marketCache.TryGetValue", "? TopLive"))
 chk("1.3.9", "entering a market drops cached rankings", "ForgetMarketRankings();" in S['Ledger.cs'])
 chk("1.3.9", "the best market to sell at is the dearest and the best to buy at is the cheapest",
-    "int p = selling ? y.price.CompareTo(x.price) : x.price.CompareTo(y.price);" in
-    method_body(S['Ledger.cs'], "private static int Rank(bool selling"))
+    "int p = selling ? yPrice.CompareTo(xPrice) : xPrice.CompareTo(yPrice);" in
+    method_body(S['Ranking.cs'], "internal static int Rank(bool selling") and
+    "Selling_puts_the_market_that_pays_most_first" in RANKTESTS and
+    "Buying_puts_the_market_that_charges_least_first" in RANKTESTS)
 chk("1.3.9", "the scan keeps to the stock floor and the village ceiling, and passes over no price for its age",
     "if (!selling && minStock > 0 && StockOf(s, item) < minStock) continue;" in
     method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive") and
     "CapturedDay" not in method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopObserved") and
-    "if (s.IsVillage && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;" in
-    method_body(S['Ledger.cs'], "internal static float TravelCeiling"))
+    "if (village && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;" in
+    method_body(S['Ranking.cs'], "internal static float Ceiling"))
 chk("1.3.26", "the unit-by-unit walk stops at the merchant's till and at the spending cap",
     (lambda b: "if (merchantTill > 0 && q.SellTotal + sellPrice > merchantTill) break;" in b
            and "if (spendCap > 0 && q.BuyTotal + buyPrice > spendCap) break;" in b)
@@ -5554,6 +5575,8 @@ chk("1.41.4", "the price tooltip and the profit colouring hand their state to th
     the_tooltip_patches_hand_their_state_over_instead_of_capturing_it())
 chk("1.41.4", "a market ranking sorts through one comparison for selling and one for buying, made once",
     a_market_ranking_sorts_through_one_comparison_for_each_way())
+chk("1.68.0", "which market is best, and how far is too far, stand clear of the game so a test can run them",
+    which_market_is_best_is_worked_out_where_a_test_can_ask_it())
 chk("1.41.3", "a good on the shelf is asked once whether it may be bought, and the resale half of the round-trip question stands on its own",
     a_good_on_the_shelf_is_asked_the_buying_questions_once())
 chk("1.41.3", "the panel reads the hotkey before it walks the map's layers looking for a text field",
@@ -6389,8 +6412,10 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
              and "town.Gold" not in marker)
     gated = ("s.IsVillage && Options.Current.TradeWithVillages" in pool
              and "s.IsTown && Options.Current.TradeWithTowns" in pool)
-    ceiling = ("if (s.IsVillage && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;" in
-               method_body(S['Ledger.cs'], "internal static float TravelCeiling"))
+    ceiling = ("if (village && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;" in
+               method_body(S['Ranking.cs'], "internal static float Ceiling")
+               and "MarketRank.Ceiling(s.IsVillage, Options.Current)" in
+                   between(S['Ledger.cs'], "internal static float TravelCeiling(Settlement s) =>", ";"))
     said = "A village is only ever marked while Trade with villages is on." in en['TL345']
     swept = "Town.AllTowns" not in S['Trading.cs']
     return walks and gated and ceiling and said and swept
