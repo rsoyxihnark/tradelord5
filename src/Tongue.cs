@@ -57,35 +57,47 @@ namespace TradeLord
             return close > 2 ? written.Substring(2, close - 2) : null;
         }
 
+        internal static string StringsRead()
+        {
+            int language = Options.Current.Language;
+            if (language == English) return "English";
+            return Ready(language) && _said != null && _said.Count > 0
+                ? Named(language) + ", " + _said.Count + " strings read"
+                : Named(language) + " strings not read, speaking English";
+        }
+
         private static string Translated(string id)
         {
             if (id == null) return null;
-            int language = Options.Current.Language;
-            if (_saidFor != language)
-            {
-                if (_tryingAgainAt > DateTime.UtcNow) return null;
-                Dictionary<string, string> read = Guard.Read("Tongue.Read", language, Reading, null);
-                if (read == null)
-                {
-                    _tryingAgainAt = DateTime.UtcNow + BeforeTryingAgain;
-                    if (_toldItFailedFor != language)
-                    {
-                        _toldItFailedFor = language;
-                        Log.Write("the " + Named(language) + " strings could not be read from the module folder - " +
-                                  "TradeLord speaks English until it can be read");
-                    }
-                    return null;
-                }
-                _saidFor = language;
-                _said = read;
-                _tryingAgainAt = default(DateTime);
-                _toldItFailedFor = English - 1;
-                if (read.Count == 0)
-                    Log.Write("the " + Named(language) + " strings could not be read from the module folder - TradeLord speaks English");
-                else
-                    Log.Write(Named(language) + " selected - " + read.Count + " strings read from the module folder");
-            }
+            if (!Ready(Options.Current.Language)) return null;
             return _said != null && _said.TryGetValue(id, out string text) ? text : null;
+        }
+
+        private static bool Ready(int language)
+        {
+            if (_saidFor == language) return true;
+            if (_tryingAgainAt > DateTime.UtcNow) return false;
+            Dictionary<string, string> read = Guard.Read("Tongue.Read", language, Reading, null);
+            if (read == null)
+            {
+                _tryingAgainAt = DateTime.UtcNow + BeforeTryingAgain;
+                if (_toldItFailedFor != language)
+                {
+                    _toldItFailedFor = language;
+                    Log.Write("the " + Named(language) + " strings could not be read from the module folder - " +
+                              "TradeLord speaks English until it can be read");
+                }
+                return false;
+            }
+            _saidFor = language;
+            _said = read;
+            _tryingAgainAt = default(DateTime);
+            _toldItFailedFor = English - 1;
+            if (read.Count == 0)
+                Log.Write("the " + Named(language) + " strings could not be read from the module folder - TradeLord speaks English");
+            else
+                Log.Write(Named(language) + " selected - " + read.Count + " strings read from the module folder");
+            return true;
         }
 
         private static Dictionary<string, string> Reading(int language) => Read(Where(language));
