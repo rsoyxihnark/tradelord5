@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.69.0
+
+- Days to keep a price you recorded, a new setting under Knowledge, now forgets a price you wrote down yourself once it is older than the days you set, so a market you have not looked at in a fortnight stops being suggested and leaves your save.
+- It is set to 15 days to begin with, and setting it to 0 keeps every price for as long as your campaign lasts, the way it worked before.
+- A shelf life you had set under an older TradeLord is read again instead of being thrown away.
+
 ## 1.68.0
 
 - Mark a market rising or falling, a new switch under Insight, now decides whether the tooltip marks which way a market's price has moved, and it ships off, so tooltips read as they did before until you turn it on.
