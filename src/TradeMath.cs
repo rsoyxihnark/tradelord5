@@ -20,6 +20,21 @@ namespace TradeLord
                 ? townSellPrice >= costBasis * (1f + margin)
                 : townSellPrice > 0;
 
+        public const float DriftWorthSaying = 0.05f;
+
+        public const float DaysBeforeAnotherReading = 1f;
+
+        public static bool ReadingIsNew(float day, float lastDay) =>
+            day - lastDay >= DaysBeforeAnotherReading;
+
+        public static int Drift(int now, int was)
+        {
+            if (now <= 0 || was <= 0) return 0;
+            float moved = (float)(now - was) / was;
+            if (moved >= DriftWorthSaying) return 1;
+            return moved <= -DriftWorthSaying ? -1 : 0;
+        }
+
         public static float Realizable(int farSellPrice, float safetyFactor) =>
             farSellPrice * safetyFactor;
 

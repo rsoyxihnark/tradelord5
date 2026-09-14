@@ -250,5 +250,7 @@
 		<string id="TL401" text="TradeLord has laid out {SOLD} unit(s) to sell for {GAINED} denars and {BOUGHT} to buy for {SPENT}. Change anything you like, then press Done to trade, or Cancel to leave it."/>
 		<string id="TL402" text="TradeLord found nothing here worth trading, so it has laid out nothing. Press Cancel to leave the market as it is."/>
 		<string id="TL403" text="TradeLord is holding its trade back until you have seen it. Choose {ENTRY} in this menu to have it laid out on the trade screen."/>
+		<string id="TL404" text="rising"/>
+		<string id="TL405" text="falling"/>
 	</strings>
 </base>

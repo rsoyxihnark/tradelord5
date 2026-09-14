@@ -250,5 +250,7 @@
 		<string id="TL401" text="TradeLord satmak için {SOLD} adet ({GAINED} dinar) ve almak için {BOUGHT} adet ({SPENT} dinar) önüne koydu. İstediğini değiştir, sonra ticaret için Tamam'a bas, bırakmak için İptal'e."/>
 		<string id="TL402" text="TradeLord burada ticarete değer bir şey bulamadı, bu yüzden hiçbir şey koymadı. Pazarı olduğu gibi bırakmak için İptal'e bas."/>
 		<string id="TL403" text="TradeLord, sen görene kadar ticaretini bekletiyor. Ticaret ekranına koyması için bu menüden {ENTRY} seç."/>
+		<string id="TL404" text="yükseliyor"/>
+		<string id="TL405" text="düşüyor"/>
 	</strings>
 </base>
