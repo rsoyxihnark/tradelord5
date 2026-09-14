@@ -785,6 +785,7 @@ def empty_release_notes_are_rejected():
 
 README = io.open('README.md', encoding='utf-8').read()
 CHANGES = io.open('CHANGELOG.md', encoding='utf-8').read()
+COMPARISON = io.open('COMPARISON.md', encoding='utf-8').read()
 
 def option_default(name):
     m = re.search(r'public\s+(?:bool|int|float|string)\s+' + name + r'\s*=\s*([^;]+);', S['Options.cs'])
@@ -3376,6 +3377,75 @@ def the_paste_tool_reads_past_an_unreleased_heading():
             and b'no section for Unreleased' in asked.stderr
             and "if wanted is None and found[0][0].lower() == 'unreleased':" in NEXUS
             and "found = [(v, said) for v, said in found if v.lower() != 'unreleased']" in NEXUS)
+
+def flattened(text):
+    said = []
+    for line in text.split('\n'):
+        bare = re.sub(r'^-\s+', '', re.sub(r'^#{1,6}\s+', '', line.strip()))
+        said.append(re.sub(r'[`*]', '', bare))
+    return ' '.join(' '.join(said).split())
+
+def made_page():
+    import subprocess
+    made = subprocess.run([sys.executable, 'tools/nexus_changelog.py', '--page'],
+                          capture_output=True)
+    return None if made.returncode != 0 else made.stdout.decode('utf-8')
+
+def the_page_carries_the_summary_the_features_the_comparison_and_the_changelog():
+    out = made_page()
+    version = module_version()
+    if out is None or version is None:
+        return False
+    return ('[*]' + README.split('\n', 1)[0][2:] in out
+            and '[size=5][b]Everything it does[/b][/size]' in out
+            and '[b]What it tells you[/b]' in out
+            and '[b]What it doesn\'t touch[/b]' in out
+            and '[size=5][b]What it needs[/b][/size]' in out
+            and '[size=5][b]' + COMPARISON.split('\n', 1)[0][2:] + '[/b][/size]' in out
+            and '[size=5][b]What none of the nine do[/b][/size]' in out
+            and '[size=5][b]Where they are ahead[/b][/size]' in out
+            and '[size=5][b]Changelog[/b][/size]' in out
+            and '[b]' + version + '[/b]' in out
+            and all('[*]' + one in out for one in section_entries(version)))
+
+def the_page_is_written_from_the_repository_rather_than_pasted():
+    out = made_page()
+    if out is None:
+        return False
+    sources = flattened(README + '\n' + COMPARISON + '\n' + CHANGES)
+    bare = re.sub(r'\[/?(?:b|list|size=5|size|\*)\]', '', out)
+    for line in bare.split('\n'):
+        said = ' '.join(line.split())
+        if said and said != 'Changelog' and said not in sources:
+            return False
+    return ("io.open('README.md', encoding='utf-8').read()" in NEXUS
+            and "io.open('COMPARISON.md', encoding='utf-8').read()" in NEXUS
+            and "io.open('CHANGELOG.md', encoding='utf-8').read()" in NEXUS)
+
+def the_page_leaves_no_markdown_behind_and_closes_every_tag():
+    out = made_page()
+    version = module_version()
+    if out is None or version is None:
+        return False
+    bullets = len([one for one in (README + '\n' + COMPARISON).split('\n')
+                   if one.startswith('- ')])
+    return ('**' not in out and '`' not in out
+            and not [one for one in out.split('\n')
+                     if one.startswith('#') or one.startswith('- ')]
+            and all(len(re.findall(r'\[' + tag + r'[^\]/]*\]', out)) == out.count('[/' + tag + ']')
+                    for tag in ('b', 'list', 'size'))
+            and out.count('[*]') == bullets + len(section_entries(version)))
+
+def the_page_and_the_notes_are_asked_for_one_at_a_time():
+    import subprocess
+    def run(*args):
+        return subprocess.run([sys.executable, 'tools/nexus_changelog.py'] + list(args),
+                              capture_output=True)
+    both = run('--notes', '--page')
+    unknown = run('--nope')
+    return (both.returncode != 0 and b'ask for one' in both.stderr
+            and unknown.returncode != 0
+            and b'is not something this tool knows' in unknown.stderr)
 
 def a_version_that_has_not_shipped_is_refused_by_the_paste_tool():
     import subprocess
@@ -6878,6 +6948,15 @@ chk("1.66.0", "that line names what each reader found, both when it could read a
     the_startup_line_names_what_each_reader_found())
 chk("1.66.0", "asking the herd penalty as the campaign opens never mistakes a campaign it cannot read yet for a mod that replaced the model",
     asking_the_herd_early_never_switches_livestock_off_for_the_session())
+
+chk("1.66.0", "the mod page is written out whole: the summary, the feature list, the comparison and the changelog for the version that shipped",
+    the_page_carries_the_summary_the_features_the_comparison_and_the_changelog())
+chk("1.66.0", "every line of that page comes from README.md, COMPARISON.md or CHANGELOG.md, so the page cannot drift from the repository",
+    the_page_is_written_from_the_repository_rather_than_pasted())
+chk("1.66.0", "the page is handed over in the markup Nexus reads, with no markdown left in it and every tag closed",
+    the_page_leaves_no_markdown_behind_and_closes_every_tag())
+chk("1.66.0", "the release notes and the mod page are asked for one at a time, and a flag the tool does not know is refused",
+    the_page_and_the_notes_are_asked_for_one_at_a_time())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
