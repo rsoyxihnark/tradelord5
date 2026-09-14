@@ -13,6 +13,8 @@
     <Compile Include="..\src\Rules.cs" Link="Rules.cs"/>
     <Compile Include="..\src\Passes.cs" Link="Passes.cs"/>
     <Compile Include="..\src\Ranking.cs" Link="Ranking.cs"/>
+    <Compile Include="..\src\Projection.cs" Link="Projection.cs"/>
+    <Compile Include="..\src\Scoring.cs" Link="Scoring.cs"/>
     <Compile Include="..\src\Confidence.cs" Link="Confidence.cs"/>
     <Compile Include="..\src\Options.cs" Link="Options.cs"/>
     <Compile Include="..\src\Migrate.cs" Link="Migrate.cs"/>

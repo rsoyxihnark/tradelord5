@@ -11,25 +11,8 @@ using TaleWorlds.Library;
 
 namespace TradeLord
 {
-    internal struct Spending
-    {
-        internal int Gold;
-        internal float Days;
-    }
-
-    internal struct Landing
-    {
-        internal string Item;
-        internal string Category;
-        internal int Units;
-        internal int Worth;
-        internal float Days;
-    }
-
     internal static class Forecast
     {
-        private const float WorkshopRunDays = 1f;
-
         private static int _readAtHour = -1;
         private static int _readForGeneration = -1;
 
@@ -71,18 +54,7 @@ namespace TradeLord
         internal static int UnitsLanding(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null) return 0;
-            withinDays = TradeMath.ToTheQuarterDay(withinDays);
-            List<Landing> listed = Read(site);
-            if (listed == null) return 0;
-            int units = 0;
-            for (int i = 0; i < listed.Count; i++)
-            {
-                Landing landing = listed[i];
-                if (landing.Item != item.StringId) continue;
-                if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;
-                units += landing.Units;
-            }
-            return units;
+            return Projection.UnitsLanding(Read(site), item.StringId, withinDays);
         }
 
         internal static int WorthShift(Settlement site, ItemObject item, float withinDays) =>
@@ -92,38 +64,18 @@ namespace TradeLord
         internal static int WorthLanding(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
-            withinDays = TradeMath.ToTheQuarterDay(withinDays);
-            List<Landing> listed = Read(site);
-            if (listed == null) return 0;
-            string category = item.ItemCategory.StringId;
-            int worth = 0;
-            for (int i = 0; i < listed.Count; i++)
-            {
-                Landing landing = listed[i];
-                if (landing.Category != category) continue;
-                if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;
-                worth = TradeMath.ShelfAfterLanding(worth, landing.Worth);
-            }
-            return worth;
+            return Projection.WorthLanding(Read(site), item.ItemCategory.StringId, withinDays);
         }
 
         internal static int WorthLeaving(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
-            withinDays = TradeMath.ToTheQuarterDay(withinDays);
             Build();
             if (!_spending.TryGetValue(site.StringId, out List<Spending> coming)) return 0;
-            int purse = 0;
-            for (int i = 0; i < coming.Count; i++)
-            {
-                Spending spending = coming[i];
-                if (!TradeMath.LandsInTime(spending.Days, withinDays)) continue;
-                purse += spending.Gold;
-            }
+            int purse = Projection.PurseLanding(coming, withinDays);
             if (purse <= 0) return 0;
             if (!PullAt(site, out Dictionary<string, float> pull, out float across)) return 0;
-            if (!pull.TryGetValue(item.ItemCategory.StringId, out float mine)) return 0;
-            return TradeMath.ShareOfAPurse(purse, mine, across);
+            return Projection.WorthLeaving(purse, pull, across, item.ItemCategory.StringId);
         }
 
         private static bool PullAt(Settlement site, out Dictionary<string, float> pull, out float across)
@@ -132,14 +84,12 @@ namespace TradeLord
             {
                 Dictionary<string, float> read = null;
                 Guard.Run("Forecast.Pull", () => read = WhatATraderWouldPickAt(site));
-                float total = 0f;
-                if (read != null) foreach (float one in read.Values) total += one;
                 pull = read;
                 _pull[site.StringId] = read;
-                _across[site.StringId] = total;
+                _across[site.StringId] = Projection.PullAcross(read);
             }
             _across.TryGetValue(site.StringId, out across);
-            return pull != null && across > 0f;
+            return Projection.PullReadable(pull, across);
         }
 
         private static Dictionary<string, float> WhatATraderWouldPickAt(Settlement site)
@@ -230,7 +180,7 @@ namespace TradeLord
                 for (int k = 0; k < shops.Length; k++)
                 {
                     List<(ItemCategory category, int count)> made = Output(shops[k], out float progress);
-                    float lands = TradeMath.RunLandsIn(progress, WorkshopRunDays);
+                    float lands = TradeMath.RunLandsIn(progress, Projection.WorkshopRunDays);
                     for (int at = 0; at < made.Count; at++)
                     {
                         var (category, count) = made[at];
@@ -334,15 +284,10 @@ namespace TradeLord
 
         private static string Named(List<(ItemCategory category, int count)> made)
         {
-            if (made.Count == 0) return "";
-            var said = new List<string>();
+            var said = new List<(string, int)>(made.Count);
             for (int i = 0; i < made.Count; i++)
-            {
-                ItemCategory category = made[i].category;
-                string name = Spoken(category);
-                said.Add(name + " x" + made[i].count);
-            }
-            return string.Join(", ", said.ToArray());
+                said.Add((Spoken(made[i].category), made[i].count));
+            return Projection.Named(said);
         }
 
         private static string Spoken(ItemCategory category)
