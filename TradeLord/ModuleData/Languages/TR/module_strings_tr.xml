@@ -261,5 +261,9 @@
 		<string id="TL411" text="Yükün, bölüğünün taşıyabileceğinin bu payına ulaştığında satın almayı bırakır, böylece bir savaşın veya bir görevin sana vereceğine yer kalır. %100 ambarı doldurmasına izin verir. Satış bundan etkilenmez."/>
 		<string id="TL412" text="Yoldaşlarının öğrendiği kâr payı"/>
 		<string id="TL413" text="Yanında giden her yoldaş da bir ticaretten Ticaret TP kazanır, her biri kârın bu payı kadar. 0, TP’yi yalnızca sana bırakır ve TradeLord bununla gelir."/>
+		<string id="TL414" text="s"/>
+		<string id="TL415" text="g"/>
+		<string id="TL416" text="Kalan"/>
+		<string id="TL417" text=" | Kalan = oraya giden kervanlar satın alıp bitirmeden önce o tezgahın bu Adet kadarını daha ne kadar elinde tutacağı"/>
 	</strings>
 </base>

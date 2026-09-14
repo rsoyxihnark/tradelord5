@@ -45,6 +45,19 @@ namespace TradeLord
         [DataSourceProperty] public string Profit => "+" + _route.TotalProfit;
         [DataSourceProperty] public string Days => "~" + _route.TravelDays.ToString("0.#");
 
+        [DataSourceProperty] public string RunsOut
+        {
+            get
+            {
+                float days = _route.RunsOutInDays;
+                if (days <= 0f) return "";
+                float hours = TradeMath.HoursOf(days);
+                return hours < 48f
+                    ? (int)Math.Round(hours) + Tongue.Text("{=TL414}h").ToString()
+                    : days.ToString("0.#") + Tongue.Text("{=TL415}d").ToString();
+            }
+        }
+
         [DataSourceProperty] public string Caravans => _route.Caravans.ToString();
 
         [DataSourceProperty] public string Confidence =>
@@ -180,6 +193,7 @@ namespace TradeLord
         [DataSourceProperty] public string HeadQuantity => Tongue.Text("{=TL54}Qty").ToString();
         [DataSourceProperty] public string HeadProfit => Tongue.Text("{=TL55}Profit").ToString();
         [DataSourceProperty] public string HeadDays => Tongue.Text("{=TL56}Days").ToString();
+        [DataSourceProperty] public string HeadRunsOut => Tongue.Text("{=TL416}Left").ToString();
         [DataSourceProperty] public string HeadCaravans => Tongue.Text("{=TL58}Carv.").ToString();
         [DataSourceProperty] public string HeadConfidence => Tongue.Text("{=TL59}Conf").ToString();
         [DataSourceProperty] public string HeadScore => Tongue.Text("{=TL60}Score").ToString();
@@ -226,8 +240,8 @@ namespace TradeLord
         private static readonly string[] SpokenLabels =
         {
             "BrandLabel", "TitleLabel", "RefreshLabel", "CloseLabel", "HeadItem", "HeadBuyTown",
-            "HeadPrice", "HeadSellTown", "HeadQuantity", "HeadProfit", "HeadDays", "HeadCaravans",
-            "HeadConfidence", "HeadScore"
+            "HeadPrice", "HeadSellTown", "HeadQuantity", "HeadProfit", "HeadDays", "HeadRunsOut",
+            "HeadCaravans", "HeadConfidence", "HeadScore"
         };
 
         internal void Respeak() => Refresh();
@@ -271,6 +285,7 @@ namespace TradeLord
                   + (Forecast.On
                         ? Tongue.Text("{=TL394} | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there").ToString()
                           + Tongue.Text("{=TL397} | Qty! = part of that amount is still on the road and lands before you would").ToString()
+                          + Tongue.Text("{=TL417} | Left = how long that shelf still holds this Qty before the caravans heading there buy it out").ToString()
                         : ""))
                 + HowThePromiseHasHeld()
                 + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero));

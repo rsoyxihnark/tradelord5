@@ -79,6 +79,44 @@ namespace TradeLord
             return worthLeaving / unitValue;
         }
 
+        internal const float NeverRunsOut = -1f;
+
+        internal static List<float> Moments(IList<Landing> listed, IList<Spending> coming,
+                                            float afterDays)
+        {
+            var when = new List<float>();
+            for (int i = 0; listed != null && i < listed.Count; i++) Note(when, listed[i].Days, afterDays);
+            for (int i = 0; coming != null && i < coming.Count; i++) Note(when, coming[i].Days, afterDays);
+            when.Sort();
+            return when;
+        }
+
+        private static void Note(List<float> when, float days, float afterDays)
+        {
+            float at = TradeMath.UpToTheQuarterDay(days);
+            if (at <= afterDays || when.Contains(at)) return;
+            when.Add(at);
+        }
+
+        internal static float RunsOutAt(IList<Landing> listed, IList<Spending> coming,
+                                        IDictionary<string, float> pull, float across,
+                                        string item, string category, int unitValue,
+                                        int stockNow, int wanted, float afterDays)
+        {
+            if (item == null || wanted <= 0 || unitValue <= 0) return NeverRunsOut;
+            List<float> when = Moments(listed, coming, afterDays);
+            for (int i = 0; i < when.Count; i++)
+            {
+                float days = when[i];
+                int taken = UnitsLeaving(
+                    WorthLeaving(PurseLanding(coming, days), pull, across, category), unitValue);
+                int shelf = TradeMath.StockAfterShift(stockNow,
+                                UnitsLanding(listed, item, days), taken);
+                if (shelf < wanted) return days;
+            }
+            return NeverRunsOut;
+        }
+
         internal static float PullAcross(IDictionary<string, float> pull)
         {
             float total = 0f;

@@ -30,6 +30,8 @@ namespace TradeLord
         public int Caravans;
 
         public float DataAgeDays = -1f;
+
+        public float RunsOutInDays = Projection.NeverRunsOut;
     }
 
     public class LedgerBehavior : CampaignBehaviorBase
@@ -840,7 +842,9 @@ namespace TradeLord
                             TravelDays = days, TotalProfit = profit, ProfitPerDay = perDay,
                             Confidence = confidence, Score = perDay * confidence,
                             Simulated = q.Simulated, Caravans = caravans, DataAgeDays = age,
-                            StillComing = TradeMath.StillComing(q.Units, onTheShelfNow)
+                            StillComing = TradeMath.StillComing(q.Units, onTheShelfNow),
+                            RunsOutInDays = Forecast.RunsOutIn(from, item, onTheShelfNow,
+                                                               q.Units, toBuy)
                         };
                     }
                 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.71.0
+
+- The ledger panel has a new Left column saying how long the market you would buy from still holds the amount that route quotes, before the caravans heading there buy it out. It counts what those caravans will spend and what is still landing, and it leaves the column blank when nobody TradeLord can see is coming for that good.
+- The panel is a little wider to make room for it.
+- The feature list says so too.
+
 ## 1.70.0
 
 - Share of the hold TradeLord may fill, a new setting under Buying, now stops it buying once your cargo reaches the share of your capacity you set, so there is room left for what a battle or a quest hands you. It ships at the full hold, so nothing changes until you move it.

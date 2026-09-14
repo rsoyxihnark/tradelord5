@@ -197,6 +197,89 @@ namespace TradeLord.Tests
             }
         }
 
+        private static IDictionary<string, float> OnePull(string category) =>
+            new Dictionary<string, float> { { category, 1f } };
+
+        [Fact]
+        public void A_shelf_nobody_is_coming_for_never_runs_out()
+        {
+            Assert.Equal(Projection.NeverRunsOut,
+                Projection.RunsOutAt(new List<Landing>(), new List<Spending>(),
+                                     OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+        }
+
+        [Fact]
+        public void A_shelf_runs_out_at_the_moment_a_purse_takes_the_last_of_it()
+        {
+            var coming = new List<Spending> { Purse(150, 1f), Purse(150, 2f) };
+            Assert.Equal(2f,
+                Projection.RunsOutAt(new List<Landing>(), coming,
+                                     OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+        }
+
+        [Fact]
+        public void A_load_landing_first_holds_the_shelf_up_past_a_purse()
+        {
+            var listed = new List<Landing> { Coming("grain", "grain", 30, 300, 0.75f) };
+            var coming = new List<Spending> { Purse(300, 1f) };
+            Assert.Equal(Projection.NeverRunsOut,
+                Projection.RunsOutAt(listed, coming,
+                                     OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+        }
+
+        [Fact]
+        public void Nothing_that_lands_before_you_arrive_can_expire_the_deal()
+        {
+            var coming = new List<Spending> { Purse(5000, 0.25f) };
+            Assert.Equal(Projection.NeverRunsOut,
+                Projection.RunsOutAt(new List<Landing>(), coming,
+                                     OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+        }
+
+        [Fact]
+        public void A_deal_of_nothing_and_a_good_worth_nothing_never_expire()
+        {
+            var coming = new List<Spending> { Purse(5000, 2f) };
+            Assert.Equal(Projection.NeverRunsOut,
+                Projection.RunsOutAt(null, coming, OnePull("grain"), 1f, "grain", "grain", 10, 40, 0, 0.5f));
+            Assert.Equal(Projection.NeverRunsOut,
+                Projection.RunsOutAt(null, coming, OnePull("grain"), 1f, "grain", "grain", 0, 40, 20, 0.5f));
+            Assert.Equal(Projection.NeverRunsOut,
+                Projection.RunsOutAt(null, coming, OnePull("grain"), 1f, null, "grain", 10, 40, 20, 0.5f));
+        }
+
+        [Fact]
+        public void Every_moment_counted_is_after_you_arrive_and_on_the_quarter_day()
+        {
+            var listed = new List<Landing>
+            {
+                Coming("grain", "grain", 5, 50, 0.1f),
+                Coming("grain", "grain", 5, 50, 0.8f),
+                Coming("grain", "grain", 5, 50, 2.3f)
+            };
+            var coming = new List<Spending> { Purse(100, 0.8f), Purse(100, 3f) };
+            var when = Projection.Moments(listed, coming, 0.5f);
+            Assert.Equal(new List<float> { 1f, 2.5f, 3f }, when);
+        }
+
+        [Fact]
+        public void A_shelf_that_runs_out_never_reports_a_moment_you_have_already_passed()
+        {
+            var rng = new System.Random(4471);
+            for (int round = 0; round < 20000; round++)
+            {
+                float after = (float)(rng.NextDouble() * 3d);
+                var coming = new List<Spending>();
+                int purses = rng.Next(0, 5);
+                for (int i = 0; i < purses; i++)
+                    coming.Add(Purse(rng.Next(1, 4000), (float)(rng.NextDouble() * 6d)));
+                float at = Projection.RunsOutAt(null, coming, OnePull("grain"), 1f,
+                                                "grain", "grain", rng.Next(1, 200),
+                                                rng.Next(0, 200), rng.Next(1, 60), after);
+                Assert.True(at == Projection.NeverRunsOut || at > after);
+            }
+        }
+
         [Fact]
         public void A_purse_split_across_a_market_never_hands_out_more_than_the_purse()
         {
