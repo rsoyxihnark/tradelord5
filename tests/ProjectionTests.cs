@@ -166,5 +166,24 @@ namespace TradeLord.Tests
             Assert.Equal(1f, Projection.WorkshopRunDays);
             Assert.Equal(0.25f, TradeMath.RunLandsIn(0.75f, Projection.WorkshopRunDays), 4);
         }
+
+        [Fact]
+        public void A_purse_split_across_a_market_never_hands_out_more_than_the_purse()
+        {
+            var rng = new System.Random(3312);
+            for (int round = 0; round < 20000; round++)
+            {
+                var pull = new Dictionary<string, float>();
+                int kinds = rng.Next(1, 8);
+                for (int i = 0; i < kinds; i++) pull["c" + i] = (float)rng.NextDouble();
+                float across = Projection.PullAcross(pull);
+                int purse = rng.Next(1, 2000000);
+
+                long handed = 0;
+                foreach (var kind in pull) handed += Projection.WorthLeaving(purse, pull, across, kind.Key);
+
+                Assert.True(handed <= purse + kinds);
+            }
+        }
     }
 }
