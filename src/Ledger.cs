@@ -337,6 +337,12 @@ namespace TradeLord
             }
             if (byTown.TryGetValue(townId, out PriceObservation seen))
             {
+                if (TradeMath.ReadingIsNew(day, seen.CapturedDay))
+                {
+                    seen.WasBuyPrice = seen.BuyPrice;
+                    seen.WasSellPrice = seen.SellPrice;
+                    seen.WasDay = seen.CapturedDay;
+                }
                 seen.BuyPrice = buy;
                 seen.SellPrice = sell;
                 seen.CapturedDay = day;
@@ -659,6 +665,16 @@ namespace TradeLord
                 all.Add((s, price, lower));
             }
             return Rerank(all, selling);
+        }
+
+        public int PriceDrift(ItemObject item, Settlement town, bool selling)
+        {
+            if (item == null || town == null ||
+                !_ledger.TryGetValue(item.StringId, out var byTown)) return 0;
+            if (!byTown.TryGetValue(town.StringId, out PriceObservation seen) ||
+                seen == null || !seen.SeenBefore) return 0;
+            return selling ? TradeMath.Drift(seen.SellPrice, seen.WasSellPrice)
+                           : TradeMath.Drift(seen.BuyPrice, seen.WasBuyPrice);
         }
 
         public float ObservationAgeDays(ItemObject item, Settlement town)
