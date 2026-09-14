@@ -123,5 +123,30 @@ namespace TradeLord.Tests
             Assert.Equal(1f, MarketRank.Ceiling(village: true, s: townOff));
             Assert.True(MarketRank.WithinCeiling(false, 500f, townOff));
         }
+
+        [Fact]
+        public void The_eight_it_keeps_are_the_eight_a_full_sort_would_have_picked()
+        {
+            var rng = new System.Random(4021);
+            for (int round = 0; round < 20000; round++)
+            {
+                bool selling = rng.Next(2) == 0;
+                var offered = new List<Reach<string>>();
+                for (int i = 0; i < rng.Next(0, 25); i++)
+                    offered.Add(At("t" + i, rng.Next(0, 12), rng.Next(0, 6), rng.Next(0, 6)));
+
+                var kept = new List<Reach<string>>(MarketRank.TopCacheSize + 1);
+                foreach (Reach<string> one in offered) MarketRank.Keep(kept, one, selling);
+
+                var sorted = new List<Reach<string>>(offered);
+                sorted.Sort((x, y) => MarketRank.Rank(selling, x.Price, x.Straight, y.Price, y.Straight));
+
+                int want = offered.Count < MarketRank.TopCacheSize ? offered.Count : MarketRank.TopCacheSize;
+                Assert.Equal(want, kept.Count);
+                for (int i = 0; i < want; i++)
+                    Assert.Equal(0, MarketRank.Rank(selling, kept[i].Price, kept[i].Straight,
+                                                    sorted[i].Price, sorted[i].Straight));
+            }
+        }
     }
 }

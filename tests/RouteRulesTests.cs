@@ -376,5 +376,26 @@ namespace TradeLord.Tests
         {
             Assert.Equal(0, TradeRules.RunsSoonest(new List<(bool, float)> { (true, 0f) }));
         }
+
+        [Fact]
+        public void Worse_news_never_raises_confidence_whatever_the_route_looks_like()
+        {
+            var rng = new Random(9155);
+            for (int round = 0; round < 20000; round++)
+            {
+                bool sim = rng.Next(2) == 0;
+                int flat = rng.Next(1, 5000), simProfit = rng.Next(0, 5000);
+                int stock = rng.Next(2, 500), units = rng.Next(1, 200);
+                float days = (float)rng.NextDouble() * 30f;
+                int caravans = rng.Next(0, 20);
+                float age = (float)rng.NextDouble() * 60f;
+
+                float asIs = Confidence.Of(sim, flat, simProfit, stock, units, days, caravans, age);
+                Assert.True(Confidence.Of(sim, flat, simProfit, stock, units, days, caravans, age + 5f) <= asIs);
+                Assert.True(Confidence.Of(sim, flat, simProfit, stock, units, days + 5f, caravans, age) <= asIs);
+                Assert.True(Confidence.Of(sim, flat, simProfit, stock, units, days, caravans + 5, age) <= asIs);
+                Assert.True(Confidence.Of(sim, flat, simProfit, stock / 2, units, days, caravans, age) <= asIs);
+            }
+        }
     }
 }
