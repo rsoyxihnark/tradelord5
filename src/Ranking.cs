@@ -26,8 +26,8 @@ namespace TradeLord
 
         internal static float Ceiling(bool village, Options s)
         {
-            float cap = s.MaxTravelDaysTown;
-            float vcap = s.MaxTravelDaysVillage;
+            float cap = TradeMath.Finite(s.MaxTravelDaysTown, 0f);
+            float vcap = TradeMath.Finite(s.MaxTravelDaysVillage, 0f);
             if (village && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;
             return cap;
         }
