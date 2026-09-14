@@ -1,9 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.67.0
 
+- The item tooltip now marks a market rising or falling when its price has moved 5% or more since the last day you looked there, on the best sell list and the best buy list alike.
+- TradeLord now remembers the price it saw on your previous visit to a market as well as the latest one, and a second look on the same day refreshes the price without counting as a new visit.
+- A campaign saved before this version keeps every price it had, and starts marking a direction once you have looked at a market on two different days.
 - The feature list now says prices are read through each market's own price model, naming the merchant, the way the trade screen asks, rather than calling it the game's own brain.
 - The opening line now says the default settings are there to get you earning as fast as possible.
+- The feature list says so too.
 
 ## 1.66.0
 
