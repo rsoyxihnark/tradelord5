@@ -30,6 +30,10 @@ namespace TradeLord
 
     public static class LedgerCodec
     {
+        public const int FieldsAPriceNeeds = 5;
+
+        public const int FieldsAPriceIsWrittenIn = 8;
+
         private const char FieldMark = '|';
         private const char RecordMark = ';';
 
@@ -71,22 +75,28 @@ namespace TradeLord
             return sb.ToString();
         }
 
-        public static Dictionary<string, List<PriceObservation>> ReadLedger(string text)
+        public static Dictionary<string, List<PriceObservation>> ReadLedger(string text) =>
+            ReadLedger(text, out _);
+
+        public static Dictionary<string, List<PriceObservation>> ReadLedger(string text,
+                                                                           out int unreadable)
         {
             var book = new Dictionary<string, List<PriceObservation>>();
+            unreadable = 0;
             if (string.IsNullOrEmpty(text)) return book;
             string[] records = text.Split(RecordMark);
             for (int i = 0; i < records.Length; i++)
             {
+                if (records[i].Length == 0) continue;
                 string[] parts = records[i].Split(FieldMark);
-                if (parts.Length != 5 && parts.Length != 8) continue;
-                if (!Storable(parts[0]) || !Storable(parts[1])) continue;
-                if (!Whole(parts[2], out int buy) || !Whole(parts[3], out int sell)) continue;
-                if (!float.TryParse(parts[4], NumberStyles.Float, CultureInfo.InvariantCulture, out float day)) continue;
-                if (!Storable(day)) continue;
+                if (parts.Length < FieldsAPriceNeeds) { unreadable++; continue; }
+                if (!Storable(parts[0]) || !Storable(parts[1])) { unreadable++; continue; }
+                if (!Whole(parts[2], out int buy) || !Whole(parts[3], out int sell)) { unreadable++; continue; }
+                if (!float.TryParse(parts[4], NumberStyles.Float, CultureInfo.InvariantCulture, out float day)) { unreadable++; continue; }
+                if (!Storable(day)) { unreadable++; continue; }
                 int wasBuy = 0, wasSell = 0;
                 float wasDay = PriceObservation.NoEarlierReading;
-                if (parts.Length == 8 && Whole(parts[5], out int earlierBuy) &&
+                if (parts.Length >= FieldsAPriceIsWrittenIn && Whole(parts[5], out int earlierBuy) &&
                     Whole(parts[6], out int earlierSell) &&
                     float.TryParse(parts[7], NumberStyles.Float, CultureInfo.InvariantCulture,
                                    out float earlierDay) && Storable(earlierDay))

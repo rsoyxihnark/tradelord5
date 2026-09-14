@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.69.1
+
+- A campaign saved by a newer TradeLord than the one you are running now keeps every recorded price that version can still read, instead of losing the lot the moment you go back to an older build.
+- When a save does hold a recorded price it cannot read, the log now says how many and why, instead of dropping them without a word.
+
 ## 1.69.0
 
 - Days to keep a price you recorded, a new setting under Knowledge, now forgets a price you wrote down yourself once it is older than the days you set, so a market you have not looked at in a fortnight stops being suggested and leaves your save.

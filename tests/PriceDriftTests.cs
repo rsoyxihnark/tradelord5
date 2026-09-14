@@ -112,10 +112,81 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_record_of_a_length_this_version_never_wrote_is_dropped()
+        public void A_record_a_newer_TradeLord_wrote_keeps_every_field_this_one_understands()
         {
-            Assert.Empty(LedgerCodec.ReadLedger("grain|town_S5|17|23|134.25|14"));
-            Assert.Empty(LedgerCodec.ReadLedger("grain|town_S5|17|23|134.25|14|19"));
+            var back = LedgerCodec.ReadLedger(
+                "grain|town_S5|17|23|134.25|14|19|121.5|99|something", out int unreadable);
+
+            Assert.Equal(0, unreadable);
+            PriceObservation one = back["grain"][0];
+            Assert.Equal(17, one.BuyPrice);
+            Assert.Equal(23, one.SellPrice);
+            Assert.Equal(134.25f, one.CapturedDay, 3);
+            Assert.Equal(14, one.WasBuyPrice);
+            Assert.Equal(19, one.WasSellPrice);
+            Assert.Equal(121.5f, one.WasDay, 3);
+            Assert.True(one.SeenBefore);
+        }
+
+        [Fact]
+        public void A_record_too_short_to_hold_a_price_keeps_the_current_price_it_does_hold()
+        {
+            var back = LedgerCodec.ReadLedger("grain|town_S5|17|23|134.25|14", out int unreadable);
+
+            Assert.Equal(0, unreadable);
+            PriceObservation one = back["grain"][0];
+            Assert.Equal(17, one.BuyPrice);
+            Assert.Equal(23, one.SellPrice);
+            Assert.False(one.SeenBefore);
+        }
+
+        [Fact]
+        public void A_record_with_too_few_fields_to_read_at_all_is_dropped_and_counted()
+        {
+            Assert.Empty(LedgerCodec.ReadLedger("grain|town_S5|17|23", out int unreadable));
+            Assert.Equal(1, unreadable);
+            Assert.Empty(LedgerCodec.ReadLedger("grain", out unreadable));
+            Assert.Equal(1, unreadable);
+        }
+
+        [Fact]
+        public void A_ledger_that_reads_whole_reports_nothing_it_could_not_read()
+        {
+            LedgerCodec.ReadLedger(Written(17, 23, 134.25f, 14, 19, 121.5f), out int unreadable);
+            Assert.Equal(0, unreadable);
+            LedgerCodec.ReadLedger("", out unreadable);
+            Assert.Equal(0, unreadable);
+            LedgerCodec.ReadLedger(null, out unreadable);
+            Assert.Equal(0, unreadable);
+        }
+
+        [Fact]
+        public void A_stray_separator_in_the_saved_text_is_not_a_price_that_could_not_be_read()
+        {
+            var back = LedgerCodec.ReadLedger("grain|town_S5|17|23|134.25;", out int unreadable);
+
+            Assert.Equal(0, unreadable);
+            Assert.Equal(17, back["grain"][0].BuyPrice);
+        }
+
+        [Fact]
+        public void Every_record_a_save_holds_that_cannot_be_read_is_counted_on_its_own()
+        {
+            var back = LedgerCodec.ReadLedger(
+                "grain|town_S5|17|23|134.25;broken;wine|town_A1|5|9|2.5;also|broken",
+                out int unreadable);
+
+            Assert.Equal(2, unreadable);
+            Assert.Equal(2, back.Count);
+            Assert.Equal(17, back["grain"][0].BuyPrice);
+            Assert.Equal(5, back["wine"][0].BuyPrice);
+        }
+
+        [Fact]
+        public void The_fields_a_price_needs_and_the_fields_it_is_written_in_are_named()
+        {
+            Assert.Equal(5, LedgerCodec.FieldsAPriceNeeds);
+            Assert.Equal(8, LedgerCodec.FieldsAPriceIsWrittenIn);
         }
 
         [Fact]

@@ -41,6 +41,7 @@ namespace TradeLord
         private List<PurchaseRecord> _purchases = new List<PurchaseRecord>();
         private string _ledgerText = "";
         private string _purchaseText = "";
+        private int _unreadable;
         private Dictionary<string, PurchaseRecord> _paid;
         private long _lifetimeProfit;
         private int _lifetimeProfitCapped;
@@ -102,14 +103,18 @@ namespace TradeLord
             Guard.Run("Ledger.Reindex", Reindex);
             if (dataStore.IsLoading)
                 Log.Write("ledger restored: " + _ledger.Count + " observed items, " +
-                          _purchases.Count + " purchase records, lifetime profit " + _lifetimeProfit);
+                          _purchases.Count + " purchase records, lifetime profit " + _lifetimeProfit +
+                          (_unreadable == 0
+                               ? ""
+                               : ", and " + _unreadable + " recorded price(s) this version could not read, " +
+                                 "which happens when a save was written by a newer TradeLord than this one"));
         }
 
         private void ReadSavedText() => Guard.Run("Ledger.ReadSaved", RestoreSaved);
 
         private void RestoreSaved()
         {
-            _ledger = KeyedByTown(LedgerCodec.ReadLedger(_ledgerText));
+            _ledger = KeyedByTown(LedgerCodec.ReadLedger(_ledgerText, out _unreadable));
             _purchases = LedgerCodec.ReadPurchases(_purchaseText);
         }
 
