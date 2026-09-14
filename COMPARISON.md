@@ -1,7 +1,8 @@
 # What TradeLord does differently: nine trade mods examined
 
-All nine were decompiled and read, not taken from their pages: what each patches, how it prices, how
-it moves a good, what it saves.
+All nine were decompiled and read in September 2026, not taken from their pages: what each patches,
+how it prices, how it moves a good, what it saves. Anything any of them has changed since then is not
+in here.
 
 **Run only one mod that trades.** Two auto traders fight over the same cargo, purse and Trade XP.
 BestTradePrice patches the tooltip and row colour TradeLord uses, so run one or the other.
