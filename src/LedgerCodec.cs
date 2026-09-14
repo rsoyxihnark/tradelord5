@@ -11,6 +11,13 @@ namespace TradeLord
         public int BuyPrice;
         public int SellPrice;
         public float CapturedDay;
+        public int WasBuyPrice;
+        public int WasSellPrice;
+        public float WasDay = NoEarlierReading;
+
+        public const float NoEarlierReading = -1f;
+
+        public bool SeenBefore => WasDay >= 0f;
     }
 
     public class PurchaseRecord
@@ -55,7 +62,10 @@ namespace TradeLord
                       .Append(o.TownId).Append(FieldMark)
                       .Append(Number(o.BuyPrice)).Append(FieldMark)
                       .Append(Number(o.SellPrice)).Append(FieldMark)
-                      .Append(Number(o.CapturedDay));
+                      .Append(Number(o.CapturedDay)).Append(FieldMark)
+                      .Append(Number(o.WasBuyPrice)).Append(FieldMark)
+                      .Append(Number(o.WasSellPrice)).Append(FieldMark)
+                      .Append(Number(o.WasDay));
                 }
             }
             return sb.ToString();
@@ -69,10 +79,22 @@ namespace TradeLord
             for (int i = 0; i < records.Length; i++)
             {
                 string[] parts = records[i].Split(FieldMark);
-                if (parts.Length != 5 || !Storable(parts[0]) || !Storable(parts[1])) continue;
+                if (parts.Length != 5 && parts.Length != 8) continue;
+                if (!Storable(parts[0]) || !Storable(parts[1])) continue;
                 if (!Whole(parts[2], out int buy) || !Whole(parts[3], out int sell)) continue;
                 if (!float.TryParse(parts[4], NumberStyles.Float, CultureInfo.InvariantCulture, out float day)) continue;
                 if (!Storable(day)) continue;
+                int wasBuy = 0, wasSell = 0;
+                float wasDay = PriceObservation.NoEarlierReading;
+                if (parts.Length == 8 && Whole(parts[5], out int earlierBuy) &&
+                    Whole(parts[6], out int earlierSell) &&
+                    float.TryParse(parts[7], NumberStyles.Float, CultureInfo.InvariantCulture,
+                                   out float earlierDay) && Storable(earlierDay))
+                {
+                    wasBuy = earlierBuy;
+                    wasSell = earlierSell;
+                    wasDay = earlierDay;
+                }
                 if (!book.TryGetValue(parts[0], out var list))
                 {
                     list = new List<PriceObservation>();
@@ -80,7 +102,8 @@ namespace TradeLord
                 }
                 list.Add(new PriceObservation
                 {
-                    ItemId = parts[0], TownId = parts[1], BuyPrice = buy, SellPrice = sell, CapturedDay = day
+                    ItemId = parts[0], TownId = parts[1], BuyPrice = buy, SellPrice = sell,
+                    CapturedDay = day, WasBuyPrice = wasBuy, WasSellPrice = wasSell, WasDay = wasDay
                 });
             }
             return book;

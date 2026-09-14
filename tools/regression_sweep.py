@@ -10,6 +10,7 @@ ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
 MIGRATIONTESTS = io.open('tests/MigrationTests.cs', encoding='utf-8').read()
 BOOKTESTS = io.open('tests/BooksTests.cs', encoding='utf-8').read()
 SELLTESTS = io.open('tests/SellRulesTests.cs', encoding='utf-8').read()
+DRIFTTESTS = io.open('tests/PriceDriftTests.cs', encoding='utf-8').read()
 FOODTESTS = io.open('tests/FoodReserveTests.cs', encoding='utf-8').read()
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
@@ -1113,11 +1114,12 @@ def saved_numbers_read_the_same_in_every_language():
     numeric = [c for c in re.findall(
         r'\w+\.ToString\([^)]*\)|\b(?:int|float|double|long)\.(?:Try)?Parse\([^;]*', codec)
         if not c.startswith('sb.ToString')]
-    return (len(numeric) == 4
+    return (len(numeric) == 5
             and all('CultureInfo.InvariantCulture' in c for c in numeric)
             and 'NumberStyles.Integer, CultureInfo.InvariantCulture' in codec
             and 'NumberStyles.Float, CultureInfo.InvariantCulture' in codec
-            and not re.search(r'\.Append\(\w+\.(?:BuyPrice|SellPrice|CapturedDay|TotalPaid|Count|LastUnitPaid)\)',
+            and not re.search(r'\.Append\(\w+\.(?:BuyPrice|SellPrice|CapturedDay|WasBuyPrice'
+                              r'|WasSellPrice|WasDay|TotalPaid|Count|LastUnitPaid)\)',
                               codec))
 
 def a_name_that_looks_like_a_separator_is_left_out():
@@ -1134,7 +1136,7 @@ def a_name_that_looks_like_a_separator_is_left_out():
 def a_record_that_cannot_be_read_is_dropped_on_its_own():
     ledger = method_body(S['LedgerCodec.cs'], "public static Dictionary<string, List<PriceObservation>> ReadLedger")
     purchases = method_body(S['LedgerCodec.cs'], "public static List<PurchaseRecord> ReadPurchases")
-    return (ledger.count('continue;') == 4 and purchases.count('continue;') == 3
+    return (ledger.count('continue;') == 5 and purchases.count('continue;') == 3
             and 'return book;' in ledger and 'return kept;' in purchases
             and 'throw' not in ledger and 'throw' not in purchases)
 
@@ -3390,6 +3392,54 @@ def made_page():
     made = subprocess.run([sys.executable, 'tools/nexus_changelog.py', '--page'],
                           capture_output=True)
     return None if made.returncode != 0 else made.stdout.decode('utf-8')
+
+def a_price_that_moved_since_your_last_look_says_so_in_the_tooltip():
+    record = method_body(S['Ledger.cs'], "private void Record")
+    drift = method_body(S['Ledger.cs'], "public int PriceDrift")
+    tip = method_body(S['TooltipPatches.cs'], "private static string Drifted")
+    return (ordered(record, "if (TradeMath.ReadingIsNew(day, seen.CapturedDay))",
+                    "seen.WasBuyPrice = seen.BuyPrice;",
+                    "seen.WasSellPrice = seen.SellPrice;",
+                    "seen.WasDay = seen.CapturedDay;",
+                    "seen.BuyPrice = buy;")
+            and "!seen.SeenBefore) return 0;" in drift
+            and "TradeMath.Drift(seen.SellPrice, seen.WasSellPrice)" in drift
+            and "TradeMath.Drift(seen.BuyPrice, seen.WasBuyPrice)" in drift
+            and "LedgerBehavior.Instance?.PriceDrift(item, town, selling)" in tip
+            and "{=TL404}rising" in tip and "{=TL405}falling" in tip
+            and S['TooltipPatches.cs'].count("Drifted(item, town, selling: true)") == 1
+            and S['TooltipPatches.cs'].count("Drifted(item, town, selling: false)") == 1
+            and {'TL404', 'TL405'} <= strings_declared()
+            and all({'TL404', 'TL405'} <= set(spoken(f))
+                    for f in [ENGLISH] + list(TRANSLATIONS.values())))
+
+def which_way_a_price_moved_is_worked_out_where_a_test_can_ask_it():
+    rule = method_body(S['TradeMath.cs'], "public static int Drift")
+    return ("public const float DriftWorthSaying = 0.05f;" in S['TradeMath.cs']
+            and "if (now <= 0 || was <= 0) return 0;" in rule
+            and "float moved = (float)(now - was) / was;" in rule
+            and "if (moved >= DriftWorthSaying) return 1;" in rule
+            and "return moved <= -DriftWorthSaying ? -1 : 0;" in rule
+            and "day - lastDay >= DaysBeforeAnotherReading" in
+                between(S['TradeMath.cs'],
+                        "public static bool ReadingIsNew(float day, float lastDay) =>", ";")
+            and "DriftWorthSaying" not in S['Ledger.cs'] + S['TooltipPatches.cs']
+            and 'TradeMath.cs' in TESTPROJ and 'LedgerCodec.cs' in TESTPROJ
+            and "A_price_that_climbed_since_your_last_look_is_rising" in DRIFTTESTS
+            and "A_price_that_dropped_since_your_last_look_is_falling" in DRIFTTESTS
+            and "A_second_look_on_the_same_day_is_not_a_second_reading" in DRIFTTESTS)
+
+def a_campaign_saved_before_this_version_keeps_every_price_it_had():
+    read = method_body(S['LedgerCodec.cs'],
+                       "public static Dictionary<string, List<PriceObservation>> ReadLedger")
+    return ("if (parts.Length != 5 && parts.Length != 8) continue;" in read
+            and "float wasDay = PriceObservation.NoEarlierReading;" in read
+            and "public const float NoEarlierReading = -1f;" in S['LedgerCodec.cs']
+            and "public bool SeenBefore => WasDay >= 0f;" in S['LedgerCodec.cs']
+            and "public float WasDay = NoEarlierReading;" in S['LedgerCodec.cs']
+            and "A_campaign_saved_before_this_version_loads_with_no_earlier_reading" in DRIFTTESTS
+            and "An_earlier_reading_that_cannot_be_read_costs_only_the_history" in DRIFTTESTS
+            and "A_record_of_a_length_this_version_never_wrote_is_dropped" in DRIFTTESTS)
 
 def the_feature_list_says_how_a_price_is_read_rather_than_naming_a_brain():
     return ('brain' not in README.lower()
@@ -6989,6 +7039,13 @@ chk("1.66.0", "the feature list says a price is read through that market's own p
     the_feature_list_says_how_a_price_is_read_rather_than_naming_a_brain())
 chk("1.66.0", "the mod page opens with five lines saying what TradeLord is, no ticks on them, and folds each headed run of the feature list away behind its own heading",
     the_page_leads_with_what_the_mod_is_and_folds_the_long_tail_away())
+
+chk("1.67.0", "a market whose price has moved since you last looked says rising or falling next to it, on both sides of the tooltip and in every language",
+    a_price_that_moved_since_your_last_look_says_so_in_the_tooltip())
+chk("1.67.0", "which way a price moved, and what counts as a second reading, are worked out in one place a test can ask",
+    which_way_a_price_moved_is_worked_out_where_a_test_can_ask_it())
+chk("1.67.0", "a campaign saved before this version keeps every price it had and simply carries no earlier reading yet",
+    a_campaign_saved_before_this_version_keeps_every_price_it_had())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

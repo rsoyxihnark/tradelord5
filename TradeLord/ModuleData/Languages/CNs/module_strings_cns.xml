@@ -250,5 +250,7 @@
 		<string id="TL401" text="TradeLord 摆出了 {SOLD} 件要卖，值 {GAINED} 第纳尔，以及 {BOUGHT} 件要买，值 {SPENT}。你随意改动，然后按“完成”成交，或按“取消”作罢。"/>
 		<string id="TL402" text="TradeLord 在这里没找到值得买卖的东西，因此什么也没摆出来。按“取消”让市场保持原样。"/>
 		<string id="TL403" text="TradeLord 先把交易按住，等你过目。从本菜单选“{ENTRY}”，它就把交易摆到交易界面上。"/>
+		<string id="TL404" text="上涨"/>
+		<string id="TL405" text="下跌"/>
 	</strings>
 </base>

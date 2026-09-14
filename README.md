@@ -12,6 +12,7 @@
 
 - ✅ Live prices from every market on the map, read through that market's own price model, naming the merchant, the way the trade screen asks
 - ✅ The five best places to sell and the five cheapest to buy, in every item tooltip, each priced as that market will be when you arrive rather than as it stands while you read, so the tooltip and the ledger panel never disagree about the same market
+- ✅ Which way each of those markets is going, marked next to its price: a market whose price has moved 5% or more since the last day you looked there is marked rising or falling, in the best sell and the best buy lists alike
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying
 - ✅ Stock counts, so you know the deal is actually there

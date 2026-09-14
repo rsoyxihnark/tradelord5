@@ -82,7 +82,8 @@ namespace TradeLord
                         pct = "  " + p.ToString();
                     }
                     AddLine(vm, (town == here ? "* " : "") + town.Name,
-                        RowText(town, price) + pct, Lerp(SellLo, SellHi, t));
+                        RowText(town, price) + Drifted(item, town, selling: true) + pct,
+                        Lerp(SellLo, SellHi, t));
                 }
             }
 
@@ -103,7 +104,8 @@ namespace TradeLord
                         st = "  " + k.ToString();
                     }
                     AddLine(vm, (town == here ? "* " : "") + town.Name,
-                        RowText(town, price) + st, Lerp(BuyLo, BuyHi, t));
+                        RowText(town, price) + Drifted(item, town, selling: false) + st,
+                        Lerp(BuyLo, BuyHi, t));
                 }
             }
 
@@ -150,6 +152,13 @@ namespace TradeLord
                                                    Forecast.WorthShift(town, item, days)));
             }
             markets.Sort((a, b) => selling ? b.price.CompareTo(a.price) : a.price.CompareTo(b.price));
+        }
+
+        private static string Drifted(ItemObject item, Settlement town, bool selling)
+        {
+            int way = LedgerBehavior.Instance?.PriceDrift(item, town, selling) ?? 0;
+            if (way == 0) return "";
+            return "  " + Tongue.Text(way > 0 ? "{=TL404}rising" : "{=TL405}falling").ToString();
         }
 
         private static string RowText(Settlement town, int price)
