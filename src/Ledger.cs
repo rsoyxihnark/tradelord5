@@ -164,19 +164,26 @@ namespace TradeLord
             if (_ledger == null) return;
             float now = (float)CampaignTime.Now.ToDays;
             int shelfLife = Options.Current.ObservationShelfLifeDays;
+            int tooOld = 0, stillKept = 0;
             var spent = new List<string>();
             foreach (var kv in _ledger)
             {
                 if (kv.Value == null) { spent.Add(kv.Key); continue; }
                 var dead = new List<string>();
                 foreach (var seen in kv.Value)
-                    if (seen.Value == null || seen.Value.TownId == null ||
-                        !TradeMath.WorthKeeping(seen.Value.CapturedDay, now, shelfLife))
-                        dead.Add(seen.Key);
+                {
+                    if (seen.Value == null || seen.Value.TownId == null) { dead.Add(seen.Key); continue; }
+                    if (TradeMath.WorthKeeping(seen.Value.CapturedDay, now, shelfLife)) { stillKept++; continue; }
+                    dead.Add(seen.Key);
+                    tooOld++;
+                }
                 for (int i = 0; i < dead.Count; i++) kv.Value.Remove(dead[i]);
                 if (kv.Value.Count == 0) spent.Add(kv.Key);
             }
             for (int i = 0; i < spent.Count; i++) _ledger.Remove(spent[i]);
+            if (tooOld > 0)
+                Log.Write("prices forgotten: " + tooOld + " older than " + shelfLife +
+                          " day(s), " + stillKept + " still kept");
         }
 
         private void PruneSettledPurchases() =>

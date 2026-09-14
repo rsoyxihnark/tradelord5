@@ -7228,7 +7228,8 @@ def a_price_you_recorded_is_forgotten_once_it_is_older_than_you_asked():
     tick = method_body(S['Ledger.cs'], "private void OnDailyTick")
     return (ordered(prune, "float now = (float)CampaignTime.Now.ToDays;",
                     "int shelfLife = Options.Current.ObservationShelfLifeDays;",
-                    "!TradeMath.WorthKeeping(seen.Value.CapturedDay, now, shelfLife)")
+                    "if (TradeMath.WorthKeeping(seen.Value.CapturedDay, now, shelfLife)) "
+                    "{ stillKept++; continue; }")
             and "shelfLifeDays <= KeptForever || now - capturedDay <= shelfLifeDays" in keep
             and "public const int KeptForever = 0;" in S['TradeMath.cs']
             and "PruneObservations();" in tick
@@ -7342,6 +7343,25 @@ chk("1.69.2", "no travel time, price factor or workshop run hands back a number 
     no_travel_or_price_rule_hands_back_a_number_that_is_not_one())
 chk("1.69.2", "how many of a good are worth showing is counted without dividing by a price of nothing",
     a_good_worth_showing_is_counted_without_dividing_by_a_price_of_nothing())
+
+
+def what_the_shelf_life_forgot_is_said_in_the_log():
+    prune = method_body(S['Ledger.cs'], "private void PruneObservations")
+    return (ordered(prune,
+                    "int tooOld = 0, stillKept = 0;",
+                    "if (seen.Value == null || seen.Value.TownId == null) { dead.Add(seen.Key); continue; }",
+                    "if (TradeMath.WorthKeeping(seen.Value.CapturedDay, now, shelfLife)) "
+                    "{ stillKept++; continue; }",
+                    "tooOld++;",
+                    "if (tooOld > 0)",
+                    'Log.Write("prices forgotten: " + tooOld + " older than " + shelfLife +',
+                    '" day(s), " + stillKept + " still kept");')
+            and prune.count("Log.Write(") == 1
+            and "PruneObservations();" in method_body(S['Ledger.cs'], "private void OnDailyTick"))
+
+
+chk("1.69.3", "the log says how many recorded prices were forgotten for their age and how many are still kept",
+    what_the_shelf_life_forgot_is_said_in_the_log())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
