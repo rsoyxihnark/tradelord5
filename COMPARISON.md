@@ -1,84 +1,21 @@
-# What TradeLord does differently: nine trade mods examined
+# What TradeLord does differently: all nine trade mods examined
 
-All nine were decompiled and read in September 2026, not taken from their pages: what each patches,
-how it prices, how it moves a good, what it saves. Anything any of them has changed since then is not
-in here.
+All nine were decompiled and read in September 2026, not taken from their pages: what each patches, how it prices, how it moves a good, what it saves. Anything changed since then is not in here. Run only one mod that trades: two fight over the same cargo.
 
-**Run only one mod that trades.** Two auto traders fight over the same cargo, purse and Trade XP.
-BestTradePrice patches the tooltip and row colour TradeLord uses, so run one or the other.
-
-**135 AutoTrader, Eskalior.** The one everyone has and the closest rival: it stages the vanilla
-trade screen and you press Done. Its decision is an average of prices inside a radius, so nothing it
-does knows how long the ride is. 33 settings in its own XML file, no MCM, no tooltip, no panel.
-TradeLord trades instantly, one unit at a time, with travel days in every decision.
-
-**1490 Latest Trade Rumors, StormLightningSL.** Does not trade: it fills the vanilla rumour list by
-replacing `Campaign.UpdateTradeRumors` and reading two private fields by name. Built against game
-e1.5.7 and the MCMv3 API, last updated February 2021, and what it gives is still vanilla rumour
-data. TradeLord reads every market live, or only what you have seen in person.
-
-**3206 AutoTrader Fixed, hyper1on.** A 2021 repair of 135 for game 1.6.1: the older feature set,
-bundled Harmony, two bugs its page admits. 135 is maintained again and well ahead of it.
-
-**8474 BestTradePrice, nabil_dz.** The prettiest tooltip here: five buys, five sells, a compass
-arrow. Two things the page understates: distance is a straight line across the map, and the Market
-Stability Fix patches the game's price model, on by default at 70 percent, softening prices for
-every caravan and AI party in Calradia, not just yours. Towns only, and it never trades. TradeLord
-uses the game's own pathfinder, includes villages, and leaves the price model alone.
-
-**10369 Trade Advisor, quezzas.** The strongest engineering here and the nearest thing to
-TradeLord's ledger panel: unit by unit pricing, caravan snapshots, workshop prediction, sea legs.
-Towns only, never trades, keeps no price history, and its wage reserve is hardcoded. TradeLord
-forecasts the same two things, estimates what the caravans' purses will buy, adds villages and the
-age of your own notes, and it trades. One thing it does that TradeLord does not: it re-times the
-trip at the speed the cargo you would buy leaves you with. The game's own cargo penalty is 2 percent
-at a full hold, so that moves a route's gold per day by less than the panel can show, and TradeLord
-leaves it alone rather than carry the machinery for it. Its other idea, saying how long a route has
-left, TradeLord does its own way: rather than watching for one caravan, it counts what every purse
-heading for that market will take off the shelf, and the Left column says how long the amount it
-quotes survives.
-
-**11607 Trade Optimizer, FriendlyTurtle.** A capable engine with 27 settings and a dry run, built on
-someone else's framework: four modules must be installed and load ordered first, and quest goods are
-covered only by vanilla's own flags. TradeLord is one module, one dependency.
-
-**11648 ArmouredRay Quick Trade, ArmouredRay.** One Quick Trade entry, 24 settings, a good pack
-animal ratio. It does not use the game's trade actions: it moves goods and gold by hand, which is
-why its page admits a 2 percent price error and that it sells the item you locked. Every TradeLord
-unit goes through the game's own sell action, so the price and the XP are vanilla's. It was the only
-one of the nine crediting companions with Trade XP, and TradeLord now does that too.
-
-**11708 Auto Trader, DarkStyleee.** The leanest honest auto trader: no Harmony patches, a cost
-ledger so it never sells below what you paid, a map marker. It trades in chunks of ten, re-pricing
-only between chunks, so a large sale can walk past your margin; its best sell town scan has no
-distance limit; and it only touches trade goods, so loot, livestock and animals are outside it.
-
-**11988 Trade Tracker, aslheyairam.** A notebook, and a good one: last seen and last paid price,
-best known buy and sell, in the vanilla tooltip. It only knows what you looked at, has no settings
-screen, and is the only one here writing save types of its own into your save. TradeLord's notebook
-is the same with Live world prices off, and all it saves is three strings, two numbers, a settlement
-and a flag, types vanilla already reads. Saying what you paid for a good on its tooltip was the one
-thing it showed that TradeLord kept to itself, and TradeLord shows it now.
+- 135 - [Bannerlord AutoTrader](https://www.nexusmods.com/mountandblade2bannerlord/mods/135) - Eskalior: The one everyone has. It stages the vanilla trade screen and you press Done. It decides on an average price inside a map radius, so nothing it does knows how long the ride is. 33 settings in its own XML file, no MCM, no panel. Ours trades instantly, unit by unit, with travel days in every decision.
+- 1490 - [Latest Trade Rumors](https://www.nexusmods.com/mountandblade2bannerlord/mods/1490) - StormLightningSL: Does not trade. It fills the vanilla rumour list by replacing Campaign.UpdateTradeRumors and reading two private fields by name. Built on game e1.5.7, untouched since February 2021, and what it hands you is still vanilla rumour data.
+- 3206 - [AutoTrader Fixed 1.6.1](https://www.nexusmods.com/mountandblade2bannerlord/mods/3206) - hyper1on: A 2021 repair of 135 for game 1.6.1: the older feature set, bundled Harmony, two bugs its page admits. 135 is maintained again and well ahead of it.
+- 8474 - [BestTradePrice](https://www.nexusmods.com/mountandblade2bannerlord/mods/8474) - nabil_dz: The prettiest tooltip here: five buys, five sells, a compass arrow. Two things its page understates. Distance is a straight line across the map. And the Market Stability Fix patches the game's price model itself, on at 70% out of the box, softening prices for every caravan and AI party in Calradia. Towns only, never trades. Ours uses the real pathfinder, counts villages, and leaves the model alone.
+- 10369 - [Trade Advisor](https://www.nexusmods.com/mountandblade2bannerlord/mods/10369) - quezzas: The strongest engineering here and the nearest thing to our ledger panel: unit by unit pricing, caravan snapshots, workshop prediction, sea legs. Towns only, never trades, no price history, wage reserve hardcoded. Ours forecasts the same two, estimates what their purses will buy, adds villages, the age of your notes and how long each route lasts, and it trades.
+- 11607 - [Trade Optimizer](https://www.nexusmods.com/mountandblade2bannerlord/mods/11607) - FriendlyTurtle: A capable engine, 27 settings and a dry run, built on someone else's framework: four modules must be installed and load ordered first, and quest goods are covered only by vanilla's flags. Ours is one module, one dependency.
+- 11648 - [ArmouredRay Quick Trade](https://www.nexusmods.com/mountandblade2bannerlord/mods/11648) - ArmouredRay: One Quick Trade entry, 24 settings, a pack animal ratio, and the only one of the nine giving your companions Trade XP, which ours now does too. It does not use the game's trade actions: goods and gold move by hand, which is why its page admits a 2% price error and that it sells the item you locked. Every TradeLord unit goes through the game's own sale.
+- 11708 - [Auto Trader](https://www.nexusmods.com/mountandblade2bannerlord/mods/11708) - DarkStyleee: The leanest here: no Harmony patches, a cost ledger so it never sells below what you paid, a map marker. It trades in chunks of ten and re-prices only between chunks, so a large sale can walk past your margin, its best sell scan has no distance limit, and it only touches trade goods, so loot and animals are outside it.
+- 11988 - [Bannerlord Trade Tracker](https://www.nexusmods.com/mountandblade2bannerlord/mods/11988) - aslheyairam: A notebook, and a good one: last seen and last paid price, best known buy and sell, in the vanilla tooltip. It only knows what you looked at, has no settings screen, and is the only one here writing its own save types. Ours is the same with Live world prices off, saving only types vanilla reads.
 
 ## What none of the nine do
 
-Trade on a forecast: price a route on what the caravans and workshops will add to its markets before
-you arrive, less what their purses will buy off them. Put travel time inside every decision, through
-the game's own pathfinder, at your real speed with the cargo you carry. Check the margin on every
-single unit and stop the moment it fails. Hold back what a quest is waiting on, read from the nine
-vanilla quest types that ask for one. Read the game's own herding model, so a purchase never slows
-you down and no more animals are sold than it takes to get your speed back. Trade with caravans and
-villagers met on the road. Keep your own prices per market, with their age discounting a route. Keep
-a settings file and the settings screen as twins, with a migration ladder so nothing is quietly
-reset. Four languages switched with no restart. A price trace naming any other mod changing your
-prices.
+Trade on a forecast: price a route on what the caravans and workshops will add to a market before you arrive, less what their purses will buy off it, and say how long the quoted amount survives. Put travel time inside every decision, through the game's own pathfinder. Check the margin on every single unit and stop the moment it fails. Hold back what a quest is waiting on. Read the game's own herding model. Trade with caravans and villagers met on the road. Keep your own prices per market, their age discounting a route.
 
 ## Where they are ahead
 
-8474's damping is something some players want, and TradeLord will not do it, because it patches the
-price model itself, softening prices for every caravan and AI party in Calradia rather than only for
-you. 10369's forecast rests on a larger market model. 11988 records what the screen said rather than
-modelling it. 11607 fits an automation family you may already run, and its margin swapping, selling
-a thinner margin to make room for a fatter one, is something TradeLord will not do. 135 stages every
-deal on the trade screen and waits for you to press Done, where TradeLord does that only once you
-switch Lay the trade out for you first on.
+8474's damping is something some players want; TradeLord will not, because it changes the economy for everyone else. 10369 re-times a trip at the speed your new cargo leaves you with; the game's cargo penalty is 2% at a full hold, so TradeLord leaves that alone. 11988 records what the screen said rather than modelling it. 11607 fits an automation family you may already run. 135 stages every deal by default; TradeLord does that only with Lay the trade out for you first on.
