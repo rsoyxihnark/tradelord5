@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.68.0
+
+- Mark a market rising or falling, a new switch under Insight, now decides whether the tooltip marks which way a market's price has moved, and it ships off, so tooltips read as they did before until you turn it on.
+- The feature list says so too.
+
 ## 1.67.0
 
 - The item tooltip now marks a market rising or falling when its price has moved 5% or more since the last day you looked there, on the best sell list and the best buy list alike.

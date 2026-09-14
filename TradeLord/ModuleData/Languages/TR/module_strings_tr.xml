@@ -252,5 +252,7 @@
 		<string id="TL403" text="TradeLord, sen görene kadar ticaretini bekletiyor. Ticaret ekranına koyması için bu menüden {ENTRY} seç."/>
 		<string id="TL404" text="yükseliyor"/>
 		<string id="TL405" text="düşüyor"/>
+		<string id="TL406" text="Pazarı yükseliyor ya da düşüyor diye işaretle"/>
+		<string id="TL407" text="Bir pazarın fiyatı oraya son baktığın günden bu yana %5 ya da daha fazla oynadıysa, ipucunda o pazarı yükseliyor ya da düşüyor diye işaretler. Bir şey söyleyebilmesi için aynı pazara iki ayrı günde iki kez bakman gerekir. Varsayılan olarak KAPALI."/>
 	</strings>
 </base>
