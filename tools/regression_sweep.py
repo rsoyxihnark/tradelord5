@@ -529,10 +529,10 @@ def a_price_is_found_by_its_town_rather_than_by_looking_down_the_list():
             and "for (int i = 0" not in aged
             and "public static string WriteLedger(Dictionary<string, List<PriceObservation>> ledger)"
                 in S['LedgerCodec.cs']
-            and "public static Dictionary<string, List<PriceObservation>> ReadLedger(string text)"
+            and "public static Dictionary<string, List<PriceObservation>> ReadLedger(string text) =>"
                 in S['LedgerCodec.cs']
             and "LedgerCodec.WriteLedger(Listed(_ledger))" in led
-            and "KeyedByTown(LedgerCodec.ReadLedger(_ledgerText))" in led)
+            and "KeyedByTown(LedgerCodec.ReadLedger(_ledgerText, out _unreadable))" in led)
 
 def the_screen_is_asked_for_again_until_mcm_hands_it_over():
     ask = method_body(S['Support.cs'], "internal static void TryHandover")
@@ -1213,7 +1213,8 @@ def a_name_that_looks_like_a_separator_is_left_out():
 def a_record_that_cannot_be_read_is_dropped_on_its_own():
     ledger = method_body(S['LedgerCodec.cs'], "public static Dictionary<string, List<PriceObservation>> ReadLedger")
     purchases = method_body(S['LedgerCodec.cs'], "public static List<PurchaseRecord> ReadPurchases")
-    return (ledger.count('continue;') == 5 and purchases.count('continue;') == 3
+    return (ledger.count('continue;') == 6 and purchases.count('continue;') == 3
+            and ledger.count('unreadable++;') == 5
             and 'return book;' in ledger and 'return kept;' in purchases
             and 'throw' not in ledger and 'throw' not in purchases)
 
@@ -1231,7 +1232,9 @@ def a_saved_price_costs_the_same_eight_fields_every_time():
                        "public static Dictionary<string, List<PriceObservation>> ReadLedger(string text)")
     return (write.count(".Append(FieldMark)") == 7
             and write.count("if (sb.Length > 0) sb.Append(RecordMark);") == 1
-            and "parts.Length != 5 && parts.Length != 8" in read
+            and "parts.Length < FieldsAPriceNeeds" in read
+            and "parts.Length >= FieldsAPriceIsWrittenIn" in read
+            and "public const int FieldsAPriceIsWrittenIn = 8;" in S['LedgerCodec.cs']
             and "A_saved_price_is_written_out_field_by_field_exactly_as_it_reads_back" in TESTS
             and "Every_saved_price_costs_the_same_eight_fields_however_many_are_kept" in TESTS)
 
@@ -3536,14 +3539,14 @@ def which_way_a_price_moved_is_worked_out_where_a_test_can_ask_it():
 def a_campaign_saved_before_this_version_keeps_every_price_it_had():
     read = method_body(S['LedgerCodec.cs'],
                        "public static Dictionary<string, List<PriceObservation>> ReadLedger")
-    return ("if (parts.Length != 5 && parts.Length != 8) continue;" in read
+    return ("if (parts.Length < FieldsAPriceNeeds) { unreadable++; continue; }" in read
             and "float wasDay = PriceObservation.NoEarlierReading;" in read
             and "public const float NoEarlierReading = -1f;" in S['LedgerCodec.cs']
             and "public bool SeenBefore => WasDay >= 0f;" in S['LedgerCodec.cs']
             and "public float WasDay = NoEarlierReading;" in S['LedgerCodec.cs']
             and "A_campaign_saved_before_this_version_loads_with_no_earlier_reading" in DRIFTTESTS
             and "An_earlier_reading_that_cannot_be_read_costs_only_the_history" in DRIFTTESTS
-            and "A_record_of_a_length_this_version_never_wrote_is_dropped" in DRIFTTESTS)
+            and "A_record_too_short_to_hold_a_price_keeps_the_current_price_it_does_hold" in DRIFTTESTS)
 
 def the_feature_list_says_how_a_price_is_read_rather_than_naming_a_brain():
     return ('brain' not in README.lower()
@@ -7252,6 +7255,32 @@ chk("1.69.0", "a price you recorded yourself is forgotten once it is older than 
     a_price_you_recorded_is_forgotten_once_it_is_older_than_you_asked())
 chk("1.69.0", "the setting that forgets old prices names the setting it needs and says what nothing means, in every language",
     the_shelf_life_setting_says_what_it_needs_and_what_nothing_means())
+
+
+def a_save_from_a_newer_tradelord_keeps_every_price_this_one_can_read():
+    read = method_body(S['LedgerCodec.cs'],
+                       "public static Dictionary<string, List<PriceObservation>> ReadLedger(string text,")
+    restored = method_body(S['Ledger.cs'], "public override void SyncData")
+    return ("if (parts.Length < FieldsAPriceNeeds) { unreadable++; continue; }" in read
+            and "if (parts.Length >= FieldsAPriceIsWrittenIn && Whole(parts[5], out int earlierBuy) &&" in read
+            and "if (records[i].Length == 0) continue;" in read
+            and "public const int FieldsAPriceNeeds = 5;" in S['LedgerCodec.cs']
+            and "public const int FieldsAPriceIsWrittenIn = 8;" in S['LedgerCodec.cs']
+            and ("public static Dictionary<string, List<PriceObservation>> ReadLedger(string text) =>\n"
+                 "            ReadLedger(text, out _);") in S['LedgerCodec.cs']
+            and ordered(restored, "(_unreadable == 0", '? ""',
+                        'recorded price(s) this version could not read',
+                        "written by a newer TradeLord than this one")
+            and all(one in DRIFTTESTS for one in
+                    ("A_record_a_newer_TradeLord_wrote_keeps_every_field_this_one_understands",
+                     "A_record_too_short_to_hold_a_price_keeps_the_current_price_it_does_hold",
+                     "A_record_with_too_few_fields_to_read_at_all_is_dropped_and_counted",
+                     "Every_record_a_save_holds_that_cannot_be_read_is_counted_on_its_own",
+                     "A_ledger_that_reads_whole_reports_nothing_it_could_not_read")))
+
+
+chk("1.69.1", "a save written by a newer TradeLord keeps every price this one can read, rather than losing the lot, and the log says how many it could not read",
+    a_save_from_a_newer_tradelord_keeps_every_price_this_one_can_read())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
