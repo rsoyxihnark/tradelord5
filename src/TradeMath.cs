@@ -215,6 +215,17 @@ namespace TradeLord
             return steps <= 0d ? 0f : Finite((float)(steps * HorizonStep), days);
         }
 
+        public static float UpToTheQuarterDay(float days)
+        {
+            days = Finite(days, 0f);
+            if (days <= 0f) return 0f;
+            double steps = Math.Ceiling(days / HorizonStep);
+            return steps <= 0d ? HorizonStep : Finite((float)(steps * HorizonStep), days);
+        }
+
+        public static float HoursOf(float days) =>
+            days <= 0f ? 0f : Finite(days * 24f, 0f);
+
         public static float RunLandsIn(float progress, float runDays)
         {
             progress = Finite(progress, 0f);
