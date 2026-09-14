@@ -44,6 +44,37 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_saved_price_is_written_out_field_by_field_exactly_as_it_reads_back()
+        {
+            var one = new Dictionary<string, List<PriceObservation>>
+            {
+                ["grain"] = new List<PriceObservation>
+                {
+                    new PriceObservation
+                    {
+                        ItemId = "grain", TownId = "town_V1", BuyPrice = 143, SellPrice = 121,
+                        CapturedDay = 1234.75f, WasBuyPrice = 138, WasSellPrice = 117,
+                        WasDay = 1233.5f
+                    }
+                }
+            };
+
+            Assert.Equal("grain|town_V1|143|121|1234.75|138|117|1233.5",
+                         LedgerCodec.WriteLedger(one));
+        }
+
+        [Fact]
+        public void Every_saved_price_costs_the_same_eight_fields_however_many_are_kept()
+        {
+            string written = LedgerCodec.WriteLedger(SampleLedger());
+
+            string[] records = written.Split(';');
+            Assert.Equal(3, records.Length);
+            foreach (string record in records)
+                Assert.Equal(8, record.Split('|').Length);
+        }
+
+        [Fact]
         public void A_ledger_survives_a_save_and_a_load_unchanged()
         {
             var back = LedgerCodec.ReadLedger(LedgerCodec.WriteLedger(SampleLedger()));
