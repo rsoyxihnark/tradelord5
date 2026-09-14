@@ -406,6 +406,13 @@ namespace TradeLord
             return best.price > 0 ? best.price : item.Value;
         }
 
+        public int PaidPerUnit(ItemObject item)
+        {
+            if (item == null) return TradeMath.NoRecordedBasis;
+            Paid.TryGetValue(item.StringId, out var rec);
+            return TradeMath.UnitBasis(rec, 0);
+        }
+
         public (Settlement town, int price) BestSell(ItemObject item) => First(TopMarkets(item, selling: true));
         public (Settlement town, int price) BestBuy(ItemObject item) => First(TopMarkets(item, selling: false));
 
@@ -769,8 +776,9 @@ namespace TradeLord
                     if (Options.Current.Omniscient)
                     {
                         onTheShelfNow = StockOf(from, item) - (from.IsVillage ? 1 : 0);
-                        shelf = TradeMath.StockAfterLanding(onTheShelfNow,
-                                    Forecast.UnitsLanding(from, item, toBuy));
+                        shelf = TradeMath.StockAfterShift(onTheShelfNow,
+                                    Forecast.UnitsLanding(from, item, toBuy),
+                                    Forecast.UnitsLeaving(from, item, toBuy));
                         stocked = Math.Min(stocked, shelf);
                     }
                     if (stocked <= 0) continue;

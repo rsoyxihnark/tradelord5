@@ -16,6 +16,7 @@
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying
 - ✅ Stock counts, so you know the deal is actually there
+- ✅ What you paid for a good, per unit, on its own tooltip once you have bought one, so you can see at a glance whether the market in front of you is beating it
 - ✅ Inventory rows tinted good to bad against the best price known
 - ✅ One clean set of price hints, bypassing the vanilla rumour system, which is usually out of date by the time you get there
 - ✅ A ledger panel on the campaign map ranking the best route it can find for each good, thirty rows of them, on hotkey **T**, on the map button, or from its own entry in the town menu, which falls back to the six best routes written out as text if the panel cannot open
@@ -49,6 +50,7 @@
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, once you switch it on. Off out of the box, so looted gear goes to the first market that can pay for it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
+- ✅ Credits every companion riding with you a share of that same profit as Trade XP, at a share you set, so a trading clan learns from the run as well as its lord. Off out of the box, so the XP is yours alone until you ask for it
 - ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good
 - ✅ Trade with towns and Trade with villages each switch their own kind of market off, so TradeLord can work villages alone, towns alone, or leave both markets to you
 - ✅ Trades with a caravan or a party of villagers the moment you meet them on the road, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of their own purse. A party on the road is held to every rule a market visit is: it sells your looted gear when the goods you bought fall short of your margin, it holds your cargo back for the best market if you asked for that, it can never sell you enough livestock to drop you into the herd speed penalty, your caps on how many of a good you hold and what share of the hold it may fill both apply, and the settling delay keeps it away from a brand new campaign. Once the goods have changed hands you can say so, and the trader answers
@@ -84,6 +86,7 @@
 - ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses and the workshops into a route's price; it follows Live world prices, so turning those off turns this off too
 - ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock
+- ✅ A share of the whole hold TradeLord may fill, so it stops buying with room left for what a battle or a quest hands you. It ships at the full hold, and selling is unaffected
 - ✅ Caps on one good by count or by denars, on how many of it you will carry, on the share of the hold it may fill, which ships at 45% so one cheap good cannot take your whole cargo, and on the whole visit. They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off a haul animal, since one of those adds to the hold rather than filling it
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know. It sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells

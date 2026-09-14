@@ -73,6 +73,12 @@ namespace TradeLord
             return TradeMath.ShareOfAPurse(purse, mine, across);
         }
 
+        internal static int UnitsLeaving(int worthLeaving, int unitValue)
+        {
+            if (worthLeaving <= 0 || unitValue <= 0) return 0;
+            return worthLeaving / unitValue;
+        }
+
         internal static float PullAcross(IDictionary<string, float> pull)
         {
             float total = 0f;
