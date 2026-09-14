@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.69.3
+
+- TradeLord.log now says each day how many recorded prices it forgot for being older than the days you set, and how many it is still keeping, so you can see what Days to keep a price you recorded is actually doing.
+
 ## 1.69.2
 
 - A travel time, a price or a workshop's progress that the game cannot put a number to is now read as the safest sensible figure, so a market can never look as though it is next door because its distance would not work out.
