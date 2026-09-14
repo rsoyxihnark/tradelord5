@@ -3,7 +3,8 @@ import io, re, sys
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Passes.cs', 'Ranking.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
       'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
-      'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs', 'Hindsight.cs', 'Counter.cs']}
+      'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs', 'Projection.cs', 'Hindsight.cs',
+      'Scoring.cs', 'Counter.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -12,6 +13,8 @@ BOOKTESTS = io.open('tests/BooksTests.cs', encoding='utf-8').read()
 SELLTESTS = io.open('tests/SellRulesTests.cs', encoding='utf-8').read()
 DRIFTTESTS = io.open('tests/PriceDriftTests.cs', encoding='utf-8').read()
 RANKTESTS = io.open('tests/MarketRankTests.cs', encoding='utf-8').read()
+PROJECTIONTESTS = io.open('tests/ProjectionTests.cs', encoding='utf-8').read()
+SCORINGTESTS = io.open('tests/ScoringTests.cs', encoding='utf-8').read()
 FOODTESTS = io.open('tests/FoodReserveTests.cs', encoding='utf-8').read()
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
@@ -583,6 +586,48 @@ def which_market_is_best_is_worked_out_where_a_test_can_ask_it():
             and "Two_markets_at_the_same_price_are_split_by_the_nearer_one" in RANKTESTS
             and "A_village_is_held_to_its_own_travel_ceiling_when_that_is_the_shorter_one" in RANKTESTS
             and "A_ceiling_of_zero_looks_as_far_as_it_likes" in RANKTESTS)
+
+def what_is_on_the_road_is_added_up_where_a_test_can_ask_it():
+    p = S['Projection.cs']
+    return ("TaleWorlds" not in p and "Settlement" not in p and "ItemObject" not in p
+            and "ItemCategory" not in p and "Options.Current" not in p
+            and "internal struct Landing" in p and "internal struct Spending" in p
+            and "internal static class Projection" in p
+            and "pull != null && across > 0f;" in p
+            and 'Projection.cs' in TESTPROJ
+            and "Landing" not in S['Forecast.cs'].split("namespace TradeLord")[0]
+            and "Projection.UnitsLanding(Read(site), item.StringId, withinDays);" in S['Forecast.cs']
+            and "Projection.WorthLanding(Read(site), item.ItemCategory.StringId, withinDays);"
+                in S['Forecast.cs']
+            and "Units_landing_add_up_only_for_the_good_asked_about" in PROJECTIONTESTS
+            and "An_empty_purse_leaves_nothing_whatever_the_pull_says" in PROJECTIONTESTS)
+
+def how_a_forecast_and_a_promise_held_is_scored_where_a_test_can_ask_it():
+    c = S['Scoring.cs']
+    return ("TaleWorlds" not in c and "Settlement" not in c and "ItemObject" not in c
+            and "Options.Current" not in c
+            and "internal class Keeps<TRecord>" in c
+            and "internal class BandTally" in c
+            and "int band = TradeMath.BandOf(confidence);" in method_body(c, "internal void Add")
+            and "internal static class Scoring" in c
+            and 'Scoring.cs' in TESTPROJ
+            and "Keeps<Said>" in S['Hindsight.cs'] and "Keeps<Promised>" in S['Hindsight.cs']
+            and "Scoring.NoWorth" in S['Hindsight.cs']
+            and "private const int Most" not in S['Hindsight.cs']
+            and "A_promise_is_kept_once_however_often_the_panel_repeats_it" in SCORINGTESTS
+            and "Fewer_units_landing_than_it_said_reads_as_fewer" in SCORINGTESTS
+            and "Shares_and_figures_read_the_same_whatever_the_player_s_own_numbers_look_like"
+                in SCORINGTESTS)
+
+def the_log_reads_its_figures_the_same_way_in_every_language():
+    c = S['Scoring.cs']
+    return ('internal static string Share(float share) =>' in c
+            and '(share * 100f).ToString("0", CultureInfo.InvariantCulture) + "%";' in c
+            and 'internal static string Figure(float number) =>' in c
+            and 'number.ToString("0.0", CultureInfo.InvariantCulture);' in c
+            and c.count('CultureInfo.InvariantCulture') == 2
+            and 'CultureInfo' not in S['Hindsight.cs']
+            and 'NumberDecimalSeparator = ","' in SCORINGTESTS)
 
 def a_market_ranking_sorts_through_one_comparison_for_each_way():
     r = S['Ranking.cs']
@@ -5577,6 +5622,12 @@ chk("1.41.4", "a market ranking sorts through one comparison for selling and one
     a_market_ranking_sorts_through_one_comparison_for_each_way())
 chk("1.68.0", "which market is best, and how far is too far, stand clear of the game so a test can run them",
     which_market_is_best_is_worked_out_where_a_test_can_ask_it())
+chk("1.68.0", "what is on the road and what a purse will take off the shelf stand clear of the game so a test can run them",
+    what_is_on_the_road_is_added_up_where_a_test_can_ask_it())
+chk("1.68.0", "the forecast score, the promise score and the store that holds them stand clear of the game so a test can run them",
+    how_a_forecast_and_a_promise_held_is_scored_where_a_test_can_ask_it())
+chk("1.68.0", "every figure and share the log writes reads the same whatever numbers the player's own language uses",
+    the_log_reads_its_figures_the_same_way_in_every_language())
 chk("1.41.3", "a good on the shelf is asked once whether it may be bought, and the resale half of the round-trip question stands on its own",
     a_good_on_the_shelf_is_asked_the_buying_questions_once())
 chk("1.41.3", "the panel reads the hotkey before it walks the map's layers looking for a text field",
@@ -6471,22 +6522,27 @@ def a_caravan_already_in_the_market_is_not_counted_twice():
                     S['Forecast.cs'], "private static void ReadWhatTheShopsWillMake"))
 
 def what_lands_after_you_arrive_is_not_counted():
-    units = method_body(S['Forecast.cs'], "internal static int UnitsLanding")
-    worth = method_body(S['Forecast.cs'], "internal static int WorthLanding")
+    units = method_body(S['Projection.cs'], "internal static int UnitsLanding")
+    worth = method_body(S['Projection.cs'], "internal static int WorthLanding")
+    purse = method_body(S['Projection.cs'], "internal static int PurseLanding")
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
     return ("if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;" in units
             and "if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;" in worth
+            and "if (!TradeMath.LandsInTime(spending.Days, withinDays)) continue;" in purse
             and "int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);" in scan
             and "Forecast.WorthShift(to, item, days));" in scan
             and "Forecast.UnitsLanding(from, item, toBuy)" in scan
-            and "if (!TradeMath.LandsInTime(spending.Days, withinDays)) continue;" in
-                method_body(S['Forecast.cs'], "internal static int WorthLeaving"))
+            and "A_load_still_on_the_road_past_the_window_is_left_out" in PROJECTIONTESTS
+            and "The_purse_on_the_road_adds_up_within_the_window" in PROJECTIONTESTS)
 
 def a_workshop_run_moves_the_price_of_its_kind_and_never_the_stock_of_one_good():
     shops = method_body(S['Forecast.cs'], "private static void ReadWhatTheShopsWillMake")
     return ("Note(site, null, category, count," in shops
-            and "if (landing.Item != item.StringId) continue;" in
-                method_body(S['Forecast.cs'], "internal static int UnitsLanding")
+            and "if (landing.Item != item) continue;" in
+                method_body(S['Projection.cs'], "internal static int UnitsLanding")
+            and "if (landing.Category != category) continue;" in
+                method_body(S['Projection.cs'], "internal static int WorthLanding")
+            and "Worth_landing_goes_by_the_kind_of_good_not_the_good" in PROJECTIONTESTS
             and "TradeRules.InputsHeld(needs, held)" in S['Forecast.cs']
             and "int pick = TradeRules.RunsSoonest(ready);" in S['Forecast.cs'])
 
@@ -6539,16 +6595,20 @@ def a_purse_on_its_way_is_spent_on_what_is_cheap_at_that_market():
     leaving = method_body(S['Forecast.cs'], "internal static int WorthLeaving")
     picked = method_body(S['Forecast.cs'], "private static Dictionary<string, float> WhatATraderWouldPickAt")
     road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
-    at = method_body(S['Forecast.cs'], "private static bool PullAt")
+    across = method_body(S['Projection.cs'], "internal static float PullAcross")
+    share = method_body(S['Projection.cs'], "internal static int WorthLeaving")
     return (ordered(leaving,
-                    "purse += spending.Gold;",
+                    "int purse = Projection.PurseLanding(coming, withinDays);",
                     "if (!PullAt(site, out Dictionary<string, float> pull, out float across)) return 0;",
-                    "if (!pull.TryGetValue(item.ItemCategory.StringId, out float mine)) return 0;",
-                    "return TradeMath.ShareOfAPurse(purse, mine, across);")
-            and "foreach (float one in read.Values) total += one;" in at
+                    "return Projection.WorthLeaving(purse, pull, across, item.ItemCategory.StringId);")
+            and ordered(share,
+                        "if (!pull.TryGetValue(category, out float mine)) return 0;",
+                        "return TradeMath.ShareOfAPurse(purse, mine, across);")
+            and "foreach (float one in pull.Values) total += one;" in across
             and "NoteAPurse(bound, party.PartyTradeGold, days);" in road
             and "TradeMath.PullOfAPrice(town.MarketData.GetPriceFactor(category))" in picked
-            and "Town town = site.IsTown ? site.Town : null;" in picked)
+            and "Town town = site.IsTown ? site.Town : null;" in picked
+            and "What_leaves_the_shelf_is_the_purse_share_the_kind_of_good_pulls" in PROJECTIONTESTS)
 
 def a_purse_is_never_counted_twice_and_never_beyond_what_it_holds():
     shift = method_body(S['Forecast.cs'], "internal static int WorthShift")
@@ -6735,24 +6795,33 @@ def the_forecast_is_scored_against_the_market_it_predicted():
             and "WorthOnTheShelf(site, item)" in noted)
 
 def the_score_works_out_how_far_off_it_was_in_the_layer_the_tests_reach():
+    weighed = method_body(S['Scoring.cs'], "internal static Outcome Weigh")
     written = method_body(S['Hindsight.cs'], "private static void Written")
-    reads = ('TradeMath.MissedBy(', 'TradeMath.OffByShare(', 'TradeMath.MeanOf(', 'TradeMath.DaysSince(')
-    return (all(one in written for one in reads)
+    reads = ('TradeMath.MissedBy(', 'TradeMath.OffByShare(')
+    return (all(one in weighed for one in reads)
             and all(one.rstrip('(') in MATHTESTS for one in reads)
+            and 'TradeMath.MeanOf(' in written and 'TradeMath.DaysSince(' in written
+            and 'Outcome how = Scoring.Weigh(kept.StockSaid, kept.StockThen,' in written
             and 'TradeMath.NoShareToGive' in MATHTESTS
             and 'public static float OffByShare' in S['TradeMath.cs']
-            and 'if (said == 0) return NoShareToGive;' in S['TradeMath.cs'])
+            and 'if (said == 0) return NoShareToGive;' in S['TradeMath.cs']
+            and 'How_far_the_worth_figure_was_off_is_scored_as_a_share_of_what_it_said' in SCORINGTESTS
+            and 'A_worth_figure_of_nothing_cannot_be_held_to_anything' in SCORINGTESTS)
 
 def a_figure_is_read_once_it_is_walked_into_and_no_more_are_kept_than_it_says():
     h = S['Hindsight.cs']
     noted = method_body(h, "private static void Noted")
     written = method_body(h, "private static void Written")
-    return ("private const int Most = 600;" in h
-            and "if (_held >= Most)" in noted
+    taken = method_body(S['Scoring.cs'], "internal Dictionary<string, TRecord> TakeAt")
+    return ("internal const int Most = 600;" in S['Scoring.cs']
+            and "if (!_said.Holds(site.StringId, item.StringId) && _said.Full)" in noted
             and 'Log.Repeatable("forecast check", "full",' in noted
-            and "_said.Remove(site.StringId);" in written
+            and "Dictionary<string, Said> here = _said.TakeAt(site.StringId);" in written
+            and ordered(taken, "_by.Remove(site);", "_count -= here.Count;", "if (_count < 0) _count = 0;")
             and "if (scored == 0) return;" in written
-            and "no worth is kept for a kind of good here, which only a town does" in written)
+            and "no worth is kept for a kind of good here, which only a town does" in written
+            and "It_fills_up_at_six_hundred" in SCORINGTESTS
+            and "Walking_into_a_market_takes_every_promise_it_held_for_that_market" in SCORINGTESTS)
 
 def the_switch_names_the_setting_it_leans_on():
     said = spoken(ENGLISH)
@@ -6792,15 +6861,23 @@ def the_panel_promise_is_written_down_whatever_the_debug_switch_says():
 
 def a_promise_is_scored_against_the_price_the_market_actually_pays():
     kept = method_body(S['Hindsight.cs'], "private static void Kept")
+    weighed = method_body(S['Scoring.cs'], "internal static Holding Weigh")
     return ("Priced.At(market, said.Item, MobileParty.MainParty, true)" in kept
             and ordered(kept, "Priced.At(market, said.Item, MobileParty.MainParty, true)",
-                        "if (found <= 0)", "unpriced++;")
-            and "TradeMath.HeldShare(said.SellPrice, found)" in kept
-            and "if (!TradeMath.WorthScoring(said.WithinDays, since))" in kept
+                        "Holding holding = Scoring.Weigh(said.SellPrice, found, out float held);",
+                        "if (holding == Holding.NoPrice)", "unpriced++;")
+            and ordered(weighed, "if (found <= 0) return Holding.NoPrice;",
+                        "held = TradeMath.HeldShare(promised, found);")
+            and "Scoring.TooOldToSay(said.WithinDays, said.AtHours, now, out float since)" in kept
+            and "TradeMath.WorthScoring(withinDays, since)" in
+                method_body(S['Scoring.cs'], "internal static bool TooOldToSay")
             and "LedgerBehavior.Instance?.KeepPromiseScore(held);" in kept
-            and "TradeMath.BandOf(said.Confidence)" in kept
+            and "_bands.Add(said.Confidence, held);" in kept
+            and "TradeMath.BandOf(confidence)" in method_body(S['Scoring.cs'], "internal void Add")
             and ordered(kept, "LedgerBehavior.Instance?.KeepPromiseScore(held);",
-                        "if (!Writing || scored == 0) return;"))
+                        "if (!Writing || scored == 0) return;")
+            and "A_market_that_puts_no_price_on_a_good_scores_nothing" in SCORINGTESTS
+            and "What_the_market_pays_is_scored_as_a_share_of_what_was_promised" in SCORINGTESTS)
 
 def how_the_promise_has_held_is_kept_in_the_save_and_shown_on_the_panel():
     ledger = S['Ledger.cs']
@@ -6819,12 +6896,19 @@ def how_the_promise_has_held_is_kept_in_the_save_and_shown_on_the_panel():
 def a_promise_too_old_to_say_anything_is_dropped_rather_than_scored():
     h = S['Hindsight.cs']
     room = method_body(h, "private static bool RoomForOneMore")
-    return ("TradeMath.WorthScoring(one.Value.WithinDays," in room
-            and "_promises--;" in room
-            and "return _promises < Most;" in room
+    pruned = method_body(S['Scoring.cs'], "internal bool Prune(Func<TRecord, bool> stillWorthKeeping)")
+    return ("one => !Scoring.TooOldToSay(one.WithinDays, one.AtHours, now, out _));" in room
+            and "return _promised.Prune(" in room
+            and ordered(pruned, "if (!stillWorthKeeping(one.Value)) past.Add(one.Key);",
+                        "_count--;", "if (site.Value.Count == 0) emptied.Add(site.Key);",
+                        "for (int i = 0; i < emptied.Count; i++) _by.Remove(emptied[i]);",
+                        "return !Full;")
             and 'Log.Repeatable("promise check", "full",' in method_body(h, "private static void Promise")
             and all(one in MATHTESTS for one in
-                    ('TradeMath.WorthScoring', 'TradeMath.HeldShare', 'TradeMath.BandOf')))
+                    ('TradeMath.WorthScoring', 'TradeMath.HeldShare', 'TradeMath.BandOf'))
+            and "A_promise_stays_worth_scoring_for_twice_the_ride_and_a_day" in SCORINGTESTS
+            and "Clearing_out_old_promises_drops_a_market_it_no_longer_holds_any_for" in SCORINGTESTS
+            and "A_full_store_that_can_free_nothing_says_there_is_no_room" in SCORINGTESTS)
 
 def every_confidence_sits_in_one_band_and_the_bands_are_counted_in_one_place():
     t = S['TradeMath.cs']
@@ -6840,11 +6924,13 @@ def every_confidence_sits_in_one_band_and_the_bands_are_counted_in_one_place():
             and len(cuts) == int(said.group(1)) - 1
             and cuts[0] > 0.0 and cuts[-1] < 1.0
             and returned == list(range(int(said.group(1))))
-            and "new float[TradeMath.Bands]" in h
-            and "new int[TradeMath.Bands]" in h
+            and "new float[TradeMath.Bands]" in S['Scoring.cs']
+            and "new int[TradeMath.Bands]" in S['Scoring.cs']
             and "for (int band = TradeMath.Bands - 1; band >= 0; band--)"
                 in method_body(h, "private static void Kept")
-            and "Every_confidence_falls_in_one_band_and_a_dearer_one_never_falls_lower" in MATHTESTS)
+            and "Every_confidence_falls_in_one_band_and_a_dearer_one_never_falls_lower" in MATHTESTS
+            and "Each_confidence_band_keeps_its_own_score" in SCORINGTESTS
+            and "The_bands_are_named_by_the_confidence_they_cover" in SCORINGTESTS)
 
 
 chk("1.64.0", "the promise a route makes is written down whatever the debug switch says, and scored when you walk in",
@@ -6865,36 +6951,39 @@ def the_pull_across_a_market_is_added_up_once_an_hour():
     leaving = method_body(f, "internal static int WorthLeaving")
     return ("private static readonly Dictionary<string, float> _across =" in f
             and ordered(at, "if (!_pull.TryGetValue(site.StringId, out pull))",
-                        "foreach (float one in read.Values) total += one;",
-                        "_across[site.StringId] = total;")
+                        "_across[site.StringId] = Projection.PullAcross(read);")
             and "_across.Clear();" in method_body(f, "private static void Build")
             and "_across.Clear();" in method_body(f, "internal static void Forget")
             and "foreach" not in leaving
-            and f.count("total += one;") == 1)
+            and S['Projection.cs'].count("total += one;") == 1
+            and "A_market_with_no_pull_at_all_is_not_read" in PROJECTIONTESTS)
 
 def two_routes_that_land_within_a_few_hours_share_one_price_ladder():
-    f = S['Forecast.cs']
+    f = S['Projection.cs']
     quartered = "withinDays = TradeMath.ToTheQuarterDay(withinDays);"
     return (f.count(quartered) == 3
             and all(quartered in method_body(f, sig)
                     for sig in ("internal static int UnitsLanding",
                                 "internal static int WorthLanding",
-                                "internal static int WorthLeaving"))
+                                "internal static int PurseLanding"))
             and "public const float HorizonStep = 0.25f;" in S['TradeMath.cs']
             and "days / HorizonStep + 0.5d" in method_body(S['TradeMath.cs'], "public static float ToTheQuarterDay")
-            and "TradeMath.ToTheQuarterDay" in MATHTESTS)
+            and "TradeMath.ToTheQuarterDay" in MATHTESTS
+            and "The_window_is_read_to_the_nearest_quarter_day" in PROJECTIONTESTS
+            and "The_purse_window_is_read_to_the_nearest_quarter_day_as_well" in PROJECTIONTESTS)
 
 def a_workshop_run_lands_by_how_far_along_it_already_is():
     f = S['Forecast.cs']
     shops = method_body(f, "private static void ReadWhatTheShopsWillMake")
     made = method_body(f, "private static List<(ItemCategory category, int count)> Output")
-    return ("private const float WorkshopRunDays = 1f;" in f
-            and "float lands = TradeMath.RunLandsIn(progress, WorkshopRunDays);" in shops
-            and f.count("WorkshopRunDays") == 2
+    return ("internal const float WorkshopRunDays = 1f;" in S['Projection.cs']
+            and "float lands = TradeMath.RunLandsIn(progress, Projection.WorkshopRunDays);" in shops
+            and f.count("WorkshopRunDays") == 1
             and ordered(made, "shop.GetProductionProgress(i)",
                         "int pick = TradeRules.RunsSoonest(ready);",
                         "progress = ready[pick].progress;")
-            and "TradeMath.RunLandsIn" in MATHTESTS)
+            and "TradeMath.RunLandsIn" in MATHTESTS
+            and "A_workshop_run_is_measured_over_one_day" in PROJECTIONTESTS)
 
 def what_a_workshop_makes_is_valued_at_the_good_that_town_stocks():
     f = S['Forecast.cs']
