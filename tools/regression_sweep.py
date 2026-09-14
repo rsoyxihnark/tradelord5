@@ -7283,5 +7283,26 @@ chk("1.69.1", "a save written by a newer TradeLord keeps every price this one ca
     a_save_from_a_newer_tradelord_keeps_every_price_this_one_can_read())
 
 
+def the_page_leads_with_lines_short_enough_to_read_at_a_glance():
+    lead = [one for one in README.split('\n## ', 1)[0].split('\n') if one.startswith('- ')]
+    return (len(lead) == 5
+            and all(len(one.split()) <= 35 for one in lead)
+            and max(len(one.split()) for one in lead) >= 10)
+
+def the_comparison_says_when_the_nine_were_read():
+    opening = COMPARISON.split('\n**', 1)[0]
+    months = ('January', 'February', 'March', 'April', 'May', 'June', 'July',
+              'August', 'September', 'October', 'November', 'December')
+    return (any(month + ' 20' in opening for month in months)
+            and 'decompiled and read in ' in opening
+            and 'has changed since then is not' in opening)
+
+
+chk("1.69.1", "the five lines the mod page opens with are each short enough to read at a glance",
+    the_page_leads_with_lines_short_enough_to_read_at_a_glance())
+chk("1.69.1", "the comparison with the other trade mods says when the nine were read, so no claim in it reads as current forever",
+    the_comparison_says_when_the_nine_were_read())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
