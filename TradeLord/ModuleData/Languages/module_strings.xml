@@ -252,5 +252,7 @@
 		<string id="TL403" text="TradeLord is holding its trade back until you have seen it. Choose {ENTRY} in this menu to have it laid out on the trade screen."/>
 		<string id="TL404" text="rising"/>
 		<string id="TL405" text="falling"/>
+		<string id="TL406" text="Mark a market rising or falling"/>
+		<string id="TL407" text="Marks a market in the tooltip rising or falling when its price has moved 5% or more since the last day you looked there. It needs two looks at the same market on two different days before it can say anything. OFF by default."/>
 	</strings>
 </base>

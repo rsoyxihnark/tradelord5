@@ -252,5 +252,7 @@
 		<string id="TL403" text="TradeLord 先把交易按住，等你过目。从本菜单选“{ENTRY}”，它就把交易摆到交易界面上。"/>
 		<string id="TL404" text="上涨"/>
 		<string id="TL405" text="下跌"/>
+		<string id="TL406" text="标出市场是上涨还是下跌"/>
+		<string id="TL407" text="若某个市场的价格自你上次查看那天起变动了 5% 或更多，就在提示中把它标为上涨或下跌。需要在两个不同的日子查看同一市场两次，它才能给出结论。默认关闭。"/>
 	</strings>
 </base>

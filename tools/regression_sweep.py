@@ -3405,12 +3405,24 @@ def a_price_that_moved_since_your_last_look_says_so_in_the_tooltip():
             and "!seen.SeenBefore) return 0;" in drift
             and "TradeMath.Drift(seen.SellPrice, seen.WasSellPrice)" in drift
             and "TradeMath.Drift(seen.BuyPrice, seen.WasBuyPrice)" in drift
+            and 'if (!Options.Current.MarkPriceDirection) return "";' in tip
+            and tip.index('MarkPriceDirection') < tip.index('PriceDrift')
             and "LedgerBehavior.Instance?.PriceDrift(item, town, selling)" in tip
             and "{=TL404}rising" in tip and "{=TL405}falling" in tip
             and S['TooltipPatches.cs'].count("Drifted(item, town, selling: true)") == 1
             and S['TooltipPatches.cs'].count("Drifted(item, town, selling: false)") == 1
             and {'TL404', 'TL405'} <= strings_declared()
             and all({'TL404', 'TL405'} <= set(spoken(f))
+                    for f in [ENGLISH] + list(TRANSLATIONS.values())))
+
+def the_price_direction_marker_ships_switched_off_with_a_switch_of_its_own():
+    return (option_default('MarkPriceDirection') == 'false'
+            and "_o.MarkPriceDirection" in M
+            and "{=TL406}Mark a market rising or falling" in M
+            and "{=TL407}" in M
+            and 'OFF by default.' in spoken(ENGLISH)['TL407']
+            and {'TL406', 'TL407'} <= strings_declared()
+            and all({'TL406', 'TL407'} <= set(spoken(f))
                     for f in [ENGLISH] + list(TRANSLATIONS.values())))
 
 def which_way_a_price_moved_is_worked_out_where_a_test_can_ask_it():
@@ -7046,6 +7058,8 @@ chk("1.67.0", "which way a price moved, and what counts as a second reading, are
     which_way_a_price_moved_is_worked_out_where_a_test_can_ask_it())
 chk("1.67.0", "a campaign saved before this version keeps every price it had and simply carries no earlier reading yet",
     a_campaign_saved_before_this_version_keeps_every_price_it_had())
+chk("1.68.0", "the rising and falling marker ships switched off, behind a switch of its own on the settings screen, named in every language",
+    the_price_direction_marker_ships_switched_off_with_a_switch_of_its_own())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

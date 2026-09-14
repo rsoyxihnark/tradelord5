@@ -63,6 +63,8 @@ namespace TradeLord
         public bool MarketForecast = true;
 
         public bool TooltipHints = true;
+
+        public bool MarkPriceDirection = false;
         public bool SuppressVanillaTradeLines = true;
 
         public bool ProfitColoring = true;
