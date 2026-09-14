@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The feature list now says prices are read through each market's own price model, naming the merchant, the way the trade screen asks, rather than calling it the game's own brain.
+- The opening line now says the default settings are there to get you earning as fast as possible.
+
 ## 1.66.0
 
 - TradeLord.log now opens every campaign with one self-check line, saying which of its patches applied and whether it could read the herd penalty, the quest goods, your language file and the game's price model, so a bug report is one line to paste rather than a hunt through the log.

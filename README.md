@@ -1,8 +1,8 @@
-- It reads what every market in Calradia is paying right now, live, straight from the game's own brain.
+- It reads what every market in Calradia is paying right now, live, through each market's own price model, naming the merchant, the way the trade screen asks.
 - It shows you the best ways to buy and sell, right in the item tooltip and in a ledger.
 - It can buy & sell for you automatically as you enter a settlement.
 - It ranks the trade routes worth travelling on a panel. Every unit of a route is priced in turn at both ends through the game's own price model, against the stock the market holds, the gold the merchant has, your own caps and what the caravans and workshops will do to that market before you get there. Profit per travel day is worked out by the game's own pathfinding at your party's own speed, with the cargo you are carrying, from where you are, to the buy town, on to the sell town. The two are then scored together into the confidence figure the panel shows.
-- You can change how it works. The default settings are thoroughly tested in game and work great to get you to "take off speed" as fast as possible.
+- You can change how it works. The default settings are thoroughly tested in game and work great to get you earning as fast as possible.
 
 ## Everything it does
 
@@ -10,7 +10,7 @@
 
 **What it tells you**
 
-- ✅ Live prices from every market on the map, read directly from the game's own economy brain
+- ✅ Live prices from every market on the map, read through that market's own price model, naming the merchant, the way the trade screen asks
 - ✅ The five best places to sell and the five cheapest to buy, in every item tooltip, each priced as that market will be when you arrive rather than as it stands while you read, so the tooltip and the ledger panel never disagree about the same market
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying

@@ -3375,7 +3375,7 @@ def the_paste_tool_reads_past_an_unreleased_heading():
     return (named.returncode == 0 and named.stdout.startswith(b'- ')
             and asked.returncode != 0
             and b'no section for Unreleased' in asked.stderr
-            and "if wanted is None and found[0][0].lower() == 'unreleased':" in NEXUS
+            and "if wanted is None and not as_page and found[0][0].lower() == 'unreleased':" in NEXUS
             and "found = [(v, said) for v, said in found if v.lower() != 'unreleased']" in NEXUS)
 
 def flattened(text):
@@ -3390,6 +3390,15 @@ def made_page():
     made = subprocess.run([sys.executable, 'tools/nexus_changelog.py', '--page'],
                           capture_output=True)
     return None if made.returncode != 0 else made.stdout.decode('utf-8')
+
+def the_feature_list_says_how_a_price_is_read_rather_than_naming_a_brain():
+    return ('brain' not in README.lower()
+            and 'take off speed' not in README.lower()
+            and README.count('naming the merchant, the way the trade screen asks') == 2
+            and 'return held.GetPrice(el, who, selling, site.Party);' in S['Market.cs']
+            and 'the way the trade screen asks it, naming ' in S['Market.cs']
+            and '(IMarketData)site.Town.MarketData' in S['Market.cs']
+            and '(IMarketData)site.Village.MarketData' in S['Market.cs'])
 
 def the_page_carries_the_summary_the_features_the_comparison_and_the_changelog():
     out = made_page()
@@ -3406,6 +3415,7 @@ def the_page_carries_the_summary_the_features_the_comparison_and_the_changelog()
             and '[size=5][b]Where they are ahead[/b][/size]' in out
             and '[size=5][b]Changelog[/b][/size]' in out
             and '[b]' + version + '[/b]' in out
+            and 'Unreleased' not in out
             and all('[*]' + one in out for one in section_entries(version)))
 
 def the_page_is_written_from_the_repository_rather_than_pasted():
@@ -6957,6 +6967,8 @@ chk("1.66.0", "the page is handed over in the markup Nexus reads, with no markdo
     the_page_leaves_no_markdown_behind_and_closes_every_tag())
 chk("1.66.0", "the release notes and the mod page are asked for one at a time, and a flag the tool does not know is refused",
     the_page_and_the_notes_are_asked_for_one_at_a_time())
+chk("1.66.0", "the feature list says a price is read through that market's own price model, naming the merchant, rather than calling it the game's brain",
+    the_feature_list_says_how_a_price_is_read_rather_than_naming_a_brain())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
