@@ -57,6 +57,12 @@ namespace TradeLord
             return Projection.UnitsLanding(Read(site), item.StringId, withinDays);
         }
 
+        internal static int UnitsLeaving(Settlement site, ItemObject item, float withinDays)
+        {
+            if (!On || site == null || item == null) return 0;
+            return Projection.UnitsLeaving(WorthLeaving(site, item, withinDays), item.Value);
+        }
+
         internal static int WorthShift(Settlement site, ItemObject item, float withinDays) =>
             TradeMath.WorthShift(WorthLanding(site, item, withinDays),
                                  WorthLeaving(site, item, withinDays));
