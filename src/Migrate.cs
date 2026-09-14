@@ -27,7 +27,6 @@ namespace TradeLord
                 changed |= FoodVarietyBecameASwitchAndAnAmount(written, notes);
                 changed |= SmeltableWeaponsBecameAChoiceOfThree(written, notes);
                 changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);
-                changed |= TheObservationShelfLifeIsGone(written, notes);
             }
             if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);
             if (from < 7) changed |= TheScanRadiusIsGone(written, notes);
@@ -85,17 +84,6 @@ namespace TradeLord
             written[name] = picked.ToString(CultureInfo.InvariantCulture);
             notes?.Add("smeltable weapons are a choice of three now, so your setting of " + held +
                        " became " + (kept ? "keep every one" : "sell them"));
-            return true;
-        }
-
-        private static bool TheObservationShelfLifeIsGone(IDictionary<string, string> written,
-                                                         ICollection<string> notes)
-        {
-            const string was = "ObservationShelfLifeDays";
-            if (!written.TryGetValue(was, out string held)) return false;
-            written.Remove(was);
-            notes?.Add("a price you recorded yourself is kept for as long as you have it now, so the observation " +
-                       "shelf life is gone and your setting of " + held + " is no longer read");
             return true;
         }
 
@@ -176,6 +164,7 @@ namespace TradeLord
             new Dictionary<string, double[]>(StringComparer.OrdinalIgnoreCase)
             {
                 { "MinTownStock", new double[] { 0, 100 } },
+                { "ObservationShelfLifeDays", new double[] { 0, 60 } },
                 { "MaxTravelDaysTown", new double[] { 0, 20 } },
                 { "MaxTravelDaysVillage", new double[] { 0, 10 } },
                 { "MinProfitMargin", new double[] { 0, 2 } },

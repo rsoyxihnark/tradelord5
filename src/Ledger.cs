@@ -157,13 +157,17 @@ namespace TradeLord
         private void PruneObservations()
         {
             if (_ledger == null) return;
+            float now = (float)CampaignTime.Now.ToDays;
+            int shelfLife = Options.Current.ObservationShelfLifeDays;
             var spent = new List<string>();
             foreach (var kv in _ledger)
             {
                 if (kv.Value == null) { spent.Add(kv.Key); continue; }
                 var dead = new List<string>();
                 foreach (var seen in kv.Value)
-                    if (seen.Value == null || seen.Value.TownId == null) dead.Add(seen.Key);
+                    if (seen.Value == null || seen.Value.TownId == null ||
+                        !TradeMath.WorthKeeping(seen.Value.CapturedDay, now, shelfLife))
+                        dead.Add(seen.Key);
                 for (int i = 0; i < dead.Count; i++) kv.Value.Remove(dead[i]);
                 if (kv.Value.Count == 0) spent.Add(kv.Key);
             }
@@ -227,7 +231,11 @@ namespace TradeLord
             Guard.Run("Ledger.OnSettlementEntered", () => CaptureSettlement(settlement));
         }
 
-        private void OnDailyTick() => Guard.Run("Ledger.OnDailyTick", MatchPurchasesToWhatIsHeld);
+        private void OnDailyTick() => Guard.Run("Ledger.OnDailyTick", () =>
+        {
+            MatchPurchasesToWhatIsHeld();
+            PruneObservations();
+        });
 
         private void OnSessionLaunched(CampaignGameStarter starter) =>
             Guard.Run("Ledger.WatchTheParty", WatchTheParty);

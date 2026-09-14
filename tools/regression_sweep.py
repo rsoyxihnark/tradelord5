@@ -2147,11 +2147,10 @@ chk("1.41.6", "a market TradeLord traded in drops only the rankings its own pric
     a_traded_market_drops_only_the_rankings_its_own_prices_decide())
 chk("1.5.6", "live-price mode records no price observations, and a visit that records nothing leaves the market rankings standing",
     capture_skipped_after_the_caches_are_dropped())
-chk("1.5.6", "unreadable observations are pruned on both save and load, and none is dropped for its age",
+chk("1.5.6", "unreadable observations are pruned on both save and load",
     method_body(S['Ledger.cs'], "public override void SyncData").count("PruneExpired();") == 2 and
     "if (!dataStore.IsLoading) PruneExpired();" in S['Ledger.cs'] and
-    "if (dataStore.IsLoading) PruneExpired();" in S['Ledger.cs'] and
-    "CapturedDay" not in method_body(S['Ledger.cs'], "private void PruneObservations"))
+    "if (dataStore.IsLoading) PruneExpired();" in S['Ledger.cs'])
 chk("1.5.6", "the message filter is armed only around a game call that talks back",
     the_filter_is_armed_only_around_a_game_call_that_talks())
 chk("1.5.6", "every place the filter comes down logs how many messages it suppressed",
@@ -2437,19 +2436,17 @@ chk("1.6.11", "every reader of a purchase record already requires units left, so
     and "TradeMath.UnitBasis(rec, Options.Current.CostBasisMode);" in
         method_body(S['Ledger.cs'], "public int GetCostBasis"))
 chk("1.6.11", "observation pruning stays independent of purchase pruning, so a spent record still goes",
-    "ObservationShelfLifeDays" not in S['Ledger.cs'] and
-    "ObservationShelfLifeDays" not in S['Options.cs'] and
-    "ObservationShelfLifeDays" not in M and
-    '"ObservationShelfLifeDays"' in S['Migrate.cs'] and
     re.search(r'private void Prune\(\)\s*\{\s*PruneObservations\(\);\s*PruneSettledPurchases\(\);\s*\}',
-              S['Ledger.cs']) is not None)
+              S['Ledger.cs']) is not None and
+    "PruneSettledPurchases" not in method_body(S['Ledger.cs'], "private void PruneObservations") and
+    "ObservationShelfLifeDays" not in method_body(S['Ledger.cs'], "private void PruneSettledPurchases"))
 
 def what_left_without_a_sale_stops_counting_as_bought():
     body = method_body(S['Ledger.cs'], "private void MatchPurchasesToWhatIsHeld")
     return ("CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);" in
                 method_body(S['Ledger.cs'], "public override void RegisterEvents")
-            and 'private void OnDailyTick() => Guard.Run("Ledger.OnDailyTick", '
-                'MatchPurchasesToWhatIsHeld);' in S['Ledger.cs']
+            and 'private void OnDailyTick() => Guard.Run("Ledger.OnDailyTick", () =>' in S['Ledger.cs']
+            and "MatchPurchasesToWhatIsHeld();" in method_body(S['Ledger.cs'], "private void OnDailyTick")
             and "ItemRoster carried = MobileParty.MainParty?.ItemRoster;" in body
             and "if (rec.Count <= have) continue;" in body
             and "TradeMath.DrainSale(rec, gone);" in body
@@ -2578,10 +2575,9 @@ chk("1.6.14", "a settings change reopens the hourly capture, so a market is not 
            and ordered(b, "Options.Generation == _capturedGen", "_capturedGen = Options.Generation;"))
     (method_body(S['Ledger.cs'], "public void CaptureSettlement")))
 
-chk("1.6.15", "an unreadable price observation is dropped, and a readable one is never dropped for its age",
+chk("1.6.15", "an unreadable price observation is dropped",
     (lambda b: "if (_ledger == null) return;" in b
-           and "seen.Value == null || seen.Value.TownId == null" in b
-           and "CapturedDay" not in b)
+           and "seen.Value == null || seen.Value.TownId == null" in b)
     (method_body(S['Ledger.cs'], "private void PruneObservations")))
 chk("1.6.15", "an item whose observations have all gone is dropped from the save",
     (lambda b: "if (kv.Value == null) { spent.Add(kv.Key); continue; }" in b
@@ -4622,10 +4618,9 @@ def the_shape_a_settings_file_declares_gates_every_step_of_the_lift():
                         "changed |= FoodVarietyBecameASwitchAndAnAmount(written, notes);",
                         "changed |= SmeltableWeaponsBecameAChoiceOfThree(written, notes);",
                         "changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);",
-                        "changed |= TheObservationShelfLifeIsGone(written, notes);",
                         "if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);",
                         "if (from < 7) changed |= TheScanRadiusIsGone(written, notes);")
-            and lift.count("changed |=") == 8
+            and lift.count("changed |=") == 7
             and (("if (from < " + shape.group(1) + ")") in lift
                  or ("public const int CracksAt = " + shape.group(1) + ";"
                      in method_body(S['Migrate.cs'], "public static class Whip")))
@@ -7217,6 +7212,46 @@ chk("1.67.0", "a campaign saved before this version keeps every price it had and
     a_campaign_saved_before_this_version_keeps_every_price_it_had())
 chk("1.68.0", "the rising and falling marker ships switched off, behind a switch of its own on the settings screen, named in every language",
     the_price_direction_marker_ships_switched_off_with_a_switch_of_its_own())
+
+
+def a_price_you_recorded_is_forgotten_once_it_is_older_than_you_asked():
+    prune = method_body(S['Ledger.cs'], "private void PruneObservations")
+    keep = between(S['TradeMath.cs'],
+                   "public static bool WorthKeeping(float capturedDay, float now, int shelfLifeDays) =>", ";")
+    tick = method_body(S['Ledger.cs'], "private void OnDailyTick")
+    return (ordered(prune, "float now = (float)CampaignTime.Now.ToDays;",
+                    "int shelfLife = Options.Current.ObservationShelfLifeDays;",
+                    "!TradeMath.WorthKeeping(seen.Value.CapturedDay, now, shelfLife)")
+            and "shelfLifeDays <= KeptForever || now - capturedDay <= shelfLifeDays" in keep
+            and "public const int KeptForever = 0;" in S['TradeMath.cs']
+            and "PruneObservations();" in tick
+            and option_default('ObservationShelfLifeDays') == '15'
+            and EVER_SHIPPED.get('ObservationShelfLifeDays') == 'int'
+            and "ObservationShelfLifeDays" in M
+            and '{ "ObservationShelfLifeDays", new double[] { 0, 60 } },' in S['Migrate.cs']
+            and "TheObservationShelfLifeIsGone" not in S['Migrate.cs']
+            and all(one in DRIFTTESTS for one in
+                    ("A_price_is_kept_through_its_fifteenth_day_and_forgotten_on_the_sixteenth",
+                     "A_shelf_life_of_nothing_keeps_every_price_for_as_long_as_the_campaign_lasts",
+                     "A_price_recorded_later_than_the_clock_says_is_never_thrown_away"))
+            and "TheObservationShelfLifeASaveAlreadyCarriesIsKept" in MIGRATIONTESTS
+            and "TheObservationShelfLifeIsHeldInsideItsRange" in MIGRATIONTESTS)
+
+def the_shelf_life_setting_says_what_it_needs_and_what_nothing_means():
+    said = spoken(ENGLISH)
+    return (said['TL282'] == "Days to keep a price you recorded"
+            and "Live world prices" in said['TL408']
+            and "0 keeps every price" in said['TL408']
+            and {'TL282', 'TL408'} <= strings_declared()
+            and all({'TL282', 'TL408'} <= set(spoken(f))
+                    for f in list(TRANSLATIONS.values()) + [ENGLISH])
+            and "{=TL282}Days to keep a price you recorded" in M
+            and "{=TL408}" in M)
+
+chk("1.69.0", "a price you recorded yourself is forgotten once it is older than the days you asked for, and nothing means keep it forever",
+    a_price_you_recorded_is_forgotten_once_it_is_older_than_you_asked())
+chk("1.69.0", "the setting that forgets old prices names the setting it needs and says what nothing means, in every language",
+    the_shelf_life_setting_says_what_it_needs_and_what_nothing_means())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

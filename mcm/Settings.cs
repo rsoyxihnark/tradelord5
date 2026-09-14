@@ -392,6 +392,11 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool Omniscient { get => _o.Omniscient; set { _o.Omniscient = value; Options.Bump(); } }
 
+        [SettingPropertyInteger("{=TL282}Days to keep a price you recorded", 0, 60, Order = 1, RequireRestart = false,
+            HintText = "{=TL408}A price you wrote down yourself is kept this many days, then forgotten: a market you last looked at longer ago than this stops being suggested and drops out of your save. 0 keeps every price for as long as your campaign lasts. Only does anything with Live world prices off, since that is when TradeLord records prices at all.")]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
+        public int ObservationShelfLifeDays { get => _o.ObservationShelfLifeDays; set { _o.ObservationShelfLifeDays = value; Options.Bump(); } }
+
 
         [SettingPropertyInteger("{=TL205}Minimum stock for buy suggestions", 0, 100, Order = 3, RequireRestart = false,
             HintText = "{=TL305}Best-buy hints require at least this many units in stock. 0 = off. Live-price mode only, because observed mode records prices, not stock levels.")]
