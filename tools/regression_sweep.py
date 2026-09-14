@@ -1813,7 +1813,7 @@ chk("1.4.1", "the automatic path asks the same market question the menu does",
     "IsMarket" not in method_body(S['Trading.cs'], "private void OnSettlementEntered"))
 chk("1.4.1", "planner and executor apply the same village last-unit clamp",
     "onTheShelfNow = StockOf(from, item) - (from.IsVillage ? 1 : 0);" in S['Ledger.cs'] and
-    "TradeMath.StockAfterLanding(onTheShelfNow," in S['Ledger.cs'] and
+    "TradeMath.StockAfterShift(onTheShelfNow," in S['Ledger.cs'] and
     "if (lastInVillage) return Block.VillageLastUnit;" in S['Rules.cs'] and
     "market.Village && remaining <= 1, s);" in
         buy_pass())
@@ -3993,7 +3993,7 @@ def a_share_of_the_hold_caps_one_good_and_ships_off():
             and buy.count("(held + 1) * good.Weight > shareCap") == 2
             and "MaxHeldShare" not in sell_pass()
             and (lambda src: "internal float Capacity => _capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity;" in src
-                         and "internal float Room() => Capacity - Carry.Carried(Party);" in src
+                         and "TradeMath.RoomToFill(Capacity, Carry.Carried(Party), Options.Current.MaxCargoShare);" in src
                          and "Options.Current.MaxHeldShare > 0f ? Capacity * Options.Current.MaxHeldShare : 0f;" in src
                          and src.count("Options.Current.MaxHeldShare") == 2
                          and src.count("Carry.Capacity(") == 1
@@ -4500,6 +4500,8 @@ EVER_SHIPPED = {
     "TradeWithVillages": "bool",
     "ForecastScore": "bool", "StagedTrading": "bool",
     "TradeXpMultiplier": "float", "UseFleetCapacity": "bool",
+    "MaxCargoShare": "float", "PartyTradeXpShare": "float",
+    "MarkPriceDirection": "bool", "PriceTrace": "bool",
 }
 
 def settings_now():
@@ -4511,7 +4513,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
     lift = S['Migrate.cs']
     stranded = [name for name, kind in EVER_SHIPPED.items()
                 if now.get(name) != kind and '"' + name + '"' not in lift]
-    return not stranded and len(EVER_SHIPPED) >= 64
+    return not stranded and len(EVER_SHIPPED) >= 75
 
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
@@ -7362,6 +7364,97 @@ def what_the_shelf_life_forgot_is_said_in_the_log():
 
 chk("1.69.3", "the log says how many recorded prices were forgotten for their age and how many are still kept",
     what_the_shelf_life_forgot_is_said_in_the_log())
+
+
+def said_in_every_language(tid):
+    en = spoken(ENGLISH)
+    if tid not in en or not en[tid].strip():
+        return False
+    for path in TRANSLATIONS.values():
+        said = spoken(path)
+        if tid not in said or not said[tid].strip() or said[tid] == en[tid]:
+            return False
+    return True
+
+def held_inside_a_range(name):
+    return '{ "' + name + '", new double[]' in S['Migrate.cs']
+
+def what_the_purses_on_the_road_take_comes_off_the_shelf_as_well_as_the_price():
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    leaving = method_body(S['Forecast.cs'], "internal static int UnitsLeaving")
+    return ("int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);" in scan
+            and "TradeMath.StockAfterShift(onTheShelfNow," in scan
+            and "Forecast.UnitsLanding(from, item, toBuy)," in scan
+            and "Forecast.UnitsLeaving(from, item, toBuy));" in scan
+            and "return Projection.UnitsLeaving(WorthLeaving(site, item, withinDays), item.Value);"
+                in leaving
+            and "if (!On" in leaving
+            and "return worthLeaving / unitValue;" in
+                method_body(S['Projection.cs'], "internal static int UnitsLeaving")
+            and "TaleWorlds" not in S['Projection.cs']
+            and "What_the_purses_on_the_road_will_take_comes_off_the_shelf_too" in MATHTESTS
+            and "What_a_purse_takes_off_the_shelf_is_what_it_takes_off_the_worth" in PROJECTIONTESTS
+            and "A_purse_takes_whole_units_off_the_shelf_and_never_part_of_one" in PROJECTIONTESTS)
+
+def the_share_of_the_hold_it_may_fill_ships_at_the_whole_hold_and_binds_buying_only():
+    src = S['Trading.cs']
+    return (option_default('MaxCargoShare') == '1f'
+            and "_o.MaxCargoShare" in M
+            and EVER_SHIPPED.get('MaxCargoShare') == 'float'
+            and held_inside_a_range('MaxCargoShare')
+            and src.count("Options.Current.MaxCargoShare") == 2
+            and "TradeMath.RoomToFill(Capacity(party), Carried(party), Options.Current.MaxCargoShare);"
+                in src
+            and "TradeMath.RoomToFill(Capacity, Carry.Carried(Party), Options.Current.MaxCargoShare);"
+                in src
+            and "float ceiling = cargoShare > 0f && cargoShare < 1f ? capacity * cargoShare : capacity;"
+                in method_body(S['TradeMath.cs'], "public static float RoomToFill")
+            and "MaxCargoShare" not in sell_pass()
+            and "MaxCargoShare" not in sell_rule()
+            and "The_hold_is_filled_no_further_than_the_share_you_allow" in MATHTESTS
+            and said_in_every_language('TL410') and said_in_every_language('TL411'))
+
+def a_companion_riding_with_you_earns_a_share_of_the_profit_and_nothing_by_default():
+    credit = method_body(S['Trading.cs'], "private static void CreditTheCompanionsWithYou")
+    return (option_default('PartyTradeXpShare') == '0f'
+            and "_o.PartyTradeXpShare" in M
+            and EVER_SHIPPED.get('PartyTradeXpShare') == 'float'
+            and held_inside_a_range('PartyTradeXpShare')
+            and ordered(credit,
+                        "float each = TradeMath.PartyShareOfProfit(xp, Options.Current.PartyTradeXpShare);",
+                        "if (each <= 0f) return;",
+                        "foreach (Hero companion in Hero.MainHero.CompanionsInParty)",
+                        "companion.AddSkillXp(DefaultSkills.Trade, each);")
+            and 'Guard.Run("TradeXp.Party", () => CreditTheCompanionsWithYou(xp));' in
+                method_body(S['Trading.cs'], "private static void CreditTradeSkill")
+            and "SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);" in S['Trading.cs']
+            and S['Trading.cs'].count("CompanionsInParty") == 1
+            and "A_companion_learns_from_a_share_of_the_profit_and_from_nothing_when_it_is_off"
+                in MATHTESTS
+            and said_in_every_language('TL412') and said_in_every_language('TL413'))
+
+def the_tooltip_says_what_you_paid_for_a_good_you_have_bought():
+    paid = method_body(S['Ledger.cs'], "public int PaidPerUnit")
+    add = method_body(S['TooltipPatches.cs'],
+                      "internal static void Append(ItemMenuVM vm, ItemVM itemVm)")
+    return ("return TradeMath.UnitBasis(rec, 0);" in paid
+            and "if (item == null) return TradeMath.NoRecordedBasis;" in paid
+            and ordered(add,
+                        "int paid = ledger.PaidPerUnit(item);",
+                        "if (paid > 0)",
+                        'AddLine(vm, Tongue.Text("{=TL409}You paid").ToString(), paid + GoldIcon, Title);',
+                        'Tongue.Text("{=TL20}Best sell prices")')
+            and said_in_every_language('TL409'))
+
+
+chk("1.70.0", "what the purses on the road will take comes off the shelf, the same as it already comes off the price",
+    what_the_purses_on_the_road_take_comes_off_the_shelf_as_well_as_the_price())
+chk("1.70.0", "the share of the hold TradeLord may fill ships at the whole hold and binds buying only",
+    the_share_of_the_hold_it_may_fill_ships_at_the_whole_hold_and_binds_buying_only())
+chk("1.70.0", "a companion riding with you earns a share of the profit, and nothing until you ask for it",
+    a_companion_riding_with_you_earns_a_share_of_the_profit_and_nothing_by_default())
+chk("1.70.0", "the tooltip says what you paid for a good you have bought, in every language",
+    the_tooltip_says_what_you_paid_for_a_good_you_have_bought())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

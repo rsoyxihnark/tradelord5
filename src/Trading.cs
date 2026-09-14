@@ -58,7 +58,8 @@ namespace TradeLord
 
         internal static float Carried(MobileParty party) => Read(party, capacity: false);
 
-        internal static float Room(MobileParty party) => Capacity(party) - Carried(party);
+        internal static float Room(MobileParty party) =>
+            TradeMath.RoomToFill(Capacity(party), Carried(party), Options.Current.MaxCargoShare);
     }
 
     public class TradeActionBehavior : CampaignBehaviorBase
@@ -394,7 +395,8 @@ namespace TradeLord
 
             internal float Capacity => _capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity;
 
-            internal float Room() => Capacity - Carry.Carried(Party);
+            internal float Room() =>
+                TradeMath.RoomToFill(Capacity, Carry.Carried(Party), Options.Current.MaxCargoShare);
 
             internal float ShareCap =>
                 Options.Current.MaxHeldShare > 0f ? Capacity * Options.Current.MaxHeldShare : 0f;
@@ -873,6 +875,22 @@ namespace TradeLord
             }
         }
 
+        private static void CreditTheCompanionsWithYou(int xp)
+        {
+            float each = TradeMath.PartyShareOfProfit(xp, Options.Current.PartyTradeXpShare);
+            if (each <= 0f) return;
+            int credited = 0;
+            foreach (Hero companion in Hero.MainHero.CompanionsInParty)
+            {
+                if (companion == null) continue;
+                companion.AddSkillXp(DefaultSkills.Trade, each);
+                credited++;
+            }
+            if (credited > 0)
+                Log.Write("trade skill: " + credited + " companion(s) riding with you were each credited " +
+                          ((int)each) + " of the " + xp + " denars of profit");
+        }
+
         private static void CreditTradeSkill(int xp, bool muted)
         {
             if (Campaign.Current == null || Hero.MainHero == null) return;
@@ -880,6 +898,7 @@ namespace TradeLord
             OpenTransaction();
             try { SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp); }
             finally { CloseTransaction(); ReportSilenced(); }
+            Guard.Run("TradeXp.Party", () => CreditTheCompanionsWithYou(xp));
             int now = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
             bool rose = now > before;
             TextObject earned = Tongue.Text(rose

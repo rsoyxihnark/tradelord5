@@ -115,6 +115,8 @@ namespace TradeLord
 
         public float MaxHeldShare = 0.45f;
 
+        public float MaxCargoShare = 1f;
+
         public int MaxSpendPerVisit = 1000;
 
         public bool UseFleetCapacity = false;
@@ -136,6 +138,8 @@ namespace TradeLord
         public bool StagedTrading = false;
         public int EconomySettlingDays = 0;
         public float TradeXpMultiplier = 1f;
+
+        public float PartyTradeXpShare = 0f;
 
         public bool MarkBestSellTownOnMap = true;
 
