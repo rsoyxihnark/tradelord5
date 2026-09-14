@@ -443,6 +443,11 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 4)]
         public bool ShowMapButton { get => _o.ShowMapButton; set { _o.ShowMapButton = value; Options.Bump(); } }
 
+        [SettingPropertyBool("{=TL406}Mark a market rising or falling", Order = 5, RequireRestart = false,
+            HintText = "{=TL407}Marks a market in the tooltip rising or falling when its price has moved 5% or more since the last day you looked there. It needs two looks at the same market on two different days before it can say anything. OFF by default.")]
+        [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 4)]
+        public bool MarkPriceDirection { get => _o.MarkPriceDirection; set { _o.MarkPriceDirection = value; Options.Bump(); } }
+
         [SettingPropertyBool("{=TL217}Auto sell", Order = 0, RequireRestart = false,
             HintText = "{=TL317}Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu.")]
         [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 1)]
