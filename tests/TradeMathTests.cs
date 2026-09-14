@@ -762,5 +762,81 @@ namespace TradeLord.Tests
             Assert.Equal(0f, TradeMath.DaysSince(48f, 24f), 4);
             Assert.Equal(0f, TradeMath.DaysSince(48f, 48f), 4);
         }
+
+        [Fact]
+        public void A_number_that_is_not_a_number_is_read_as_the_value_asked_for_instead()
+        {
+            Assert.Equal(7f, TradeMath.Finite(float.NaN, 7f));
+            Assert.Equal(7f, TradeMath.Finite(float.PositiveInfinity, 7f));
+            Assert.Equal(7f, TradeMath.Finite(float.NegativeInfinity, 7f));
+            Assert.Equal(3.5f, TradeMath.Finite(3.5f, 7f));
+            Assert.Equal(0f, TradeMath.Finite(0f, 7f));
+        }
+
+        [Fact]
+        public void A_distance_the_game_cannot_work_out_reads_as_far_away_rather_than_next_door()
+        {
+            Assert.Equal(TradeMath.FurthestThereIs, TradeMath.DaysAtSpeed(float.NaN, 1f, 5f, 5f));
+            Assert.Equal(TradeMath.FurthestThereIs, TradeMath.DaysAtSpeed(100f, float.NaN, 5f, 5f));
+            Assert.Equal(TradeMath.FurthestThereIs, TradeMath.DaysAtBestSpeed(float.NaN, 5f, 5f));
+            Assert.Equal(TradeMath.FurthestThereIs, TradeMath.EtaDays(float.NaN, 5f));
+            Assert.Equal(100f / (TradeMath.WalkingPace * 24f), TradeMath.EtaDays(100f, float.NaN), 5);
+        }
+
+        [Fact]
+        public void A_travel_time_the_game_can_work_out_is_left_exactly_as_it_was()
+        {
+            Assert.Equal(120f / (5f * 24f), TradeMath.DaysAtSpeed(120f, 1f, 5f, 9f), 5);
+            Assert.Equal(120f / (9f * 24f), TradeMath.DaysAtBestSpeed(120f, 5f, 9f), 5);
+            Assert.Equal(120f / (5f * 24f), TradeMath.EtaDays(120f, 5f), 5);
+            Assert.Equal(0f, TradeMath.DaysAtSpeed(0f, 1f, 5f, 5f));
+            Assert.Equal(0f, TradeMath.EtaDays(-5f, 5f));
+        }
+
+        [Fact]
+        public void A_window_a_price_or_a_run_that_is_not_a_number_falls_back_to_the_safe_reading()
+        {
+            Assert.Equal(0f, TradeMath.ToTheQuarterDay(float.NaN));
+            Assert.Equal(0f, TradeMath.ToTheQuarterDay(float.PositiveInfinity));
+            Assert.Equal(1f, TradeMath.RunLandsIn(float.NaN, 1f));
+            Assert.Equal(0f, TradeMath.RunLandsIn(0f, float.NaN));
+            Assert.Equal(0f, TradeMath.PullOfAPrice(float.NaN));
+            Assert.Equal(0f, TradeMath.MeanOf(float.NaN, 4));
+            Assert.Equal(0f, TradeMath.DaysSince(float.PositiveInfinity, float.PositiveInfinity));
+            Assert.Equal(0f, TradeMath.Realizable(100, float.NaN));
+            Assert.Equal(0f, TradeMath.FleetSpeed(float.NaN, 2, 5f));
+        }
+
+        [Fact]
+        public void A_workshop_whose_progress_cannot_be_read_is_taken_as_not_started_yet()
+        {
+            Assert.Equal(1f, TradeMath.RunLandsIn(float.NaN, 1f));
+            Assert.Equal(1f, TradeMath.RunLandsIn(0f, 1f));
+            Assert.Equal(0.25f, TradeMath.RunLandsIn(0.75f, 1f), 5);
+            Assert.Equal(0f, TradeMath.RunLandsIn(1f, 1f));
+        }
+
+        [Fact]
+        public void Every_travel_rule_hands_back_a_real_number_whatever_it_is_handed()
+        {
+            float[] odd = { float.NaN, float.PositiveInfinity, float.NegativeInfinity,
+                            float.MaxValue, float.MinValue, 0f, -1f, 1f };
+            foreach (float a in odd)
+                foreach (float b in odd)
+                {
+                    Assert.False(float.IsNaN(TradeMath.DaysAtSpeed(a, b, a, b)));
+                    Assert.False(float.IsInfinity(TradeMath.DaysAtSpeed(a, b, a, b)));
+                    Assert.False(float.IsNaN(TradeMath.DaysAtBestSpeed(a, a, b)));
+                    Assert.False(float.IsInfinity(TradeMath.DaysAtBestSpeed(a, a, b)));
+                    Assert.False(float.IsNaN(TradeMath.EtaDays(a, b)));
+                    Assert.False(float.IsInfinity(TradeMath.EtaDays(a, b)));
+                    Assert.False(float.IsNaN(TradeMath.ToTheQuarterDay(a)));
+                    Assert.False(float.IsInfinity(TradeMath.ToTheQuarterDay(a)));
+                    Assert.False(float.IsNaN(TradeMath.RunLandsIn(a, b)));
+                    Assert.False(float.IsNaN(TradeMath.DaysSince(a, b)));
+                    Assert.False(float.IsNaN(TradeMath.PullOfAPrice(a)));
+                    Assert.False(float.IsNaN(TradeMath.MeanOf(a, 3)));
+                }
+        }
     }
 }

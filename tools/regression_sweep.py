@@ -1499,7 +1499,7 @@ chk("1.3.26", "the unit-by-unit walk stops at the merchant's till and at the spe
            and "if (spendCap > 0 && q.BuyTotal + buyPrice > spendCap) break;" in b)
     (method_body(S['Market.cs'], "internal static RouteQuote Walk")))
 chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has moved",
-    "return (landLeg / landSpeed + seaLeg / seaSpeed) / 24f;" in
+    "return Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs);" in
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
     "return TradeMath.DaysAtSpeed(distance, landRatio, land, sea);" in
     method_body(S['Travel.cs'], "internal static float Days") and
@@ -6656,7 +6656,7 @@ def a_purse_is_never_counted_twice_and_never_beyond_what_it_holds():
             and "WorthLeaving(site, item, withinDays));" in shift
             and "if (purse <= 0 || pull <= 0f || pullAcrossTheMarket <= 0f) return 0;" in share
             and "(double)purse * pull / pullAcrossTheMarket" in share
-            and "float pull = 1f - priceFactor;" in pull
+            and "float pull = 1f - Finite(priceFactor, 1f);" in pull
             and "return pull < 0f ? 0f : (pull > 1f ? 1f : pull);" in pull)
 
 def what_a_market_will_hold_nets_the_buying_off_against_the_landing():
@@ -7306,6 +7306,42 @@ chk("1.69.1", "the five lines the mod page opens with are each short enough to r
     the_page_leads_with_lines_short_enough_to_read_at_a_glance())
 chk("1.69.1", "the comparison with the other trade mods says when the nine were read, so no claim in it reads as current forever",
     the_comparison_says_when_the_nine_were_read())
+
+
+def no_travel_or_price_rule_hands_back_a_number_that_is_not_one():
+    t = S['TradeMath.cs']
+    return ("public const float FurthestThereIs = float.MaxValue;" in t
+            and "public static float Finite(float value, float ifNot) =>" in t
+            and "float.IsNaN(value) || float.IsInfinity(value) ? ifNot : value;" in t
+            and "Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs)" in t
+            and "Finite(distance / (Math.Max(landSpeed, seaSpeed) * 24f), FurthestThereIs)" in t
+            and "Finite(distance / (pace * 24f), FurthestThereIs)" in t
+            and "days = Finite(days, 0f);" in method_body(t, "public static float ToTheQuarterDay")
+            and "progress = Finite(progress, 0f);" in method_body(t, "public static float RunLandsIn")
+            and "float days = Finite((nowHours - thenHours) / 24f, 0f);" in t
+            and "Finite(total / counted, 0f)" in t
+            and "Finite(farSellPrice * safetyFactor, 0f)" in t
+            and "float pull = 1f - Finite(priceFactor, 1f);" in t
+            and "TradeMath.Finite(s.MaxTravelDaysTown, 0f)" in S['Ranking.cs']
+            and "TradeMath.Finite(s.MaxTravelDaysVillage, 0f)" in S['Ranking.cs']
+            and all(one in MATHTESTS for one in
+                    ("Every_travel_rule_hands_back_a_real_number_whatever_it_is_handed",
+                     "A_distance_the_game_cannot_work_out_reads_as_far_away_rather_than_next_door",
+                     "A_travel_time_the_game_can_work_out_is_left_exactly_as_it_was",
+                     "A_workshop_whose_progress_cannot_be_read_is_taken_as_not_started_yet"))
+            and "A_travel_ceiling_that_is_not_a_number_looks_as_far_as_it_likes" in RANKTESTS)
+
+def a_good_worth_showing_is_counted_without_dividing_by_a_price_of_nothing():
+    return ("return spendCap > 0 && buyPrice > 0 ? Math.Min(stocked, spendCap / buyPrice) : stocked;"
+            in method_body(S['Ledger.cs'], "private static int MostWorthShowing")
+            and "if (buyPrice <= 0) continue;" in method_body(S['Ledger.cs'],
+                                                              "private List<TradeRoute> ScanRoutes"))
+
+
+chk("1.69.2", "no travel time, price factor or workshop run hands back a number that is not a number, whatever the game reports",
+    no_travel_or_price_rule_hands_back_a_number_that_is_not_one())
+chk("1.69.2", "how many of a good are worth showing is counted without dividing by a price of nothing",
+    a_good_worth_showing_is_counted_without_dividing_by_a_price_of_nothing())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

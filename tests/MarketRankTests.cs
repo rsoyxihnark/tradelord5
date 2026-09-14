@@ -148,5 +148,14 @@ namespace TradeLord.Tests
                                                     sorted[i].Price, sorted[i].Straight));
             }
         }
+
+        [Fact]
+        public void A_travel_ceiling_that_is_not_a_number_looks_as_far_as_it_likes()
+        {
+            var s = new Options { MaxTravelDaysTown = float.NaN, MaxTravelDaysVillage = float.NaN };
+            Assert.Equal(0f, MarketRank.Ceiling(village: false, s: s));
+            Assert.Equal(0f, MarketRank.Ceiling(village: true, s: s));
+            Assert.True(MarketRank.WithinCeiling(village: false, days: 500f, s: s));
+        }
     }
 }

@@ -41,7 +41,7 @@ namespace TradeLord
         }
 
         public static float Realizable(int farSellPrice, float safetyFactor) =>
-            farSellPrice * safetyFactor;
+            Finite(farSellPrice * safetyFactor, 0f);
 
         public static bool BuyAcceptable(int buyPrice, float realizable, float margin) =>
             buyPrice > 0 && realizable >= buyPrice * (1f + margin);
@@ -106,6 +106,11 @@ namespace TradeLord
             return hold > int.MaxValue ? int.MaxValue : (int)hold;
         }
 
+        public const float FurthestThereIs = float.MaxValue;
+
+        public static float Finite(float value, float ifNot) =>
+            float.IsNaN(value) || float.IsInfinity(value) ? ifNot : value;
+
         public const float StandingStill = 0.01f;
 
         public const float WalkingPace = 5f;
@@ -118,7 +123,7 @@ namespace TradeLord
         }
 
         public static float FleetSpeed(float total, int count, float slowest) =>
-            count <= 0 ? 0f : (total / count + slowest) * 0.5f;
+            count <= 0 ? 0f : Finite((total / count + slowest) * 0.5f, 0f);
 
         public static float DaysAtSpeed(float distance, float landRatio,
                                         float landSpeed, float seaSpeed)
@@ -126,11 +131,12 @@ namespace TradeLord
             if (distance <= 0f) return 0f;
             float landLeg = distance * landRatio;
             float seaLeg = distance * (1f - landRatio);
-            return (landLeg / landSpeed + seaLeg / seaSpeed) / 24f;
+            return Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs);
         }
 
         public static float DaysAtBestSpeed(float distance, float landSpeed, float seaSpeed) =>
-            distance <= 0f ? 0f : distance / (Math.Max(landSpeed, seaSpeed) * 24f);
+            distance <= 0f ? 0f
+                           : Finite(distance / (Math.Max(landSpeed, seaSpeed) * 24f), FurthestThereIs);
 
         public static int WorthOf(int units, int unitValue)
         {
@@ -154,7 +160,7 @@ namespace TradeLord
 
         public static float PullOfAPrice(float priceFactor)
         {
-            float pull = 1f - priceFactor;
+            float pull = 1f - Finite(priceFactor, 1f);
             return pull < 0f ? 0f : (pull > 1f ? 1f : pull);
         }
 
@@ -183,13 +189,16 @@ namespace TradeLord
 
         public static float ToTheQuarterDay(float days)
         {
+            days = Finite(days, 0f);
             if (days <= 0f) return 0f;
             double steps = Math.Floor(days / HorizonStep + 0.5d);
-            return steps <= 0d ? 0f : (float)(steps * HorizonStep);
+            return steps <= 0d ? 0f : Finite((float)(steps * HorizonStep), days);
         }
 
         public static float RunLandsIn(float progress, float runDays)
         {
+            progress = Finite(progress, 0f);
+            runDays = Finite(runDays, 0f);
             float left = 1f - (progress < 0f ? 0f : (progress > 1f ? 1f : progress));
             float days = left * (runDays < 0f ? 0f : runDays);
             return days < 0f ? 0f : days;
@@ -216,7 +225,7 @@ namespace TradeLord
         }
 
         public static float MeanOf(float total, int counted) =>
-            counted <= 0 ? 0f : total / counted;
+            counted <= 0 ? 0f : Finite(total / counted, 0f);
 
         public static float HeldShare(int promised, int found) =>
             promised <= 0 ? NoShareToGive : (found < 0 ? 0f : (float)found / promised);
@@ -237,15 +246,16 @@ namespace TradeLord
 
         public static float DaysSince(float thenHours, float nowHours)
         {
-            float days = (nowHours - thenHours) / 24f;
+            float days = Finite((nowHours - thenHours) / 24f, 0f);
             return days < 0f ? 0f : days;
         }
 
         public static float EtaDays(float distance, float speed)
         {
             if (distance <= 0f) return 0f;
-            float pace = speed <= StandingStill ? WalkingPace : speed;
-            return distance / (pace * 24f);
+            float pace = Finite(speed, WalkingPace);
+            if (pace <= StandingStill) pace = WalkingPace;
+            return Finite(distance / (pace * 24f), FurthestThereIs);
         }
 
         public static int Budget(int gold, int goldReserve, int maxSpendPerVisit,
