@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The comparison with the other trade mods no longer says Trade Advisor tells you how long a route lasts and TradeLord does not, now that the Left column does.
+
 ## 1.71.0
 
 - The ledger panel has a new Left column saying how long the market you would buy from still holds the amount that route quotes, before the caravans heading there buy it out. It counts what those caravans will spend and what is still landing, and it leaves the column blank when nobody TradeLord can see is coming for that good.
