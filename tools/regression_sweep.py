@@ -3418,12 +3418,30 @@ def the_page_carries_the_summary_the_features_the_comparison_and_the_changelog()
             and 'Unreleased' not in out
             and all('[*]' + one in out for one in section_entries(version)))
 
+def the_page_leads_with_what_the_mod_is_and_folds_the_long_tail_away():
+    out = made_page()
+    if out is None:
+        return False
+    summary = out.split('[size=5]', 1)[0]
+    lead = [one for one in README.split('\n## ', 1)[0].split('\n') if one.startswith('- ')]
+    headed = [one[2:-2] for one in README.split('\n')
+              if one.startswith('**') and one.endswith('**') and one.count('**') == 2]
+    return (len(lead) == 5 and len(headed) == 5
+            and '\u2705' not in summary
+            and not [one for one in lead if one.startswith('- \u2705')]
+            and len([one for one in summary.split('\n') if one.startswith('[*]')]) == len(lead)
+            and re.findall(r'\[b\]([^\[]+)\[/b\]\n\[spoiler\]', out) == headed
+            and out.count('[spoiler]') == out.count('[/spoiler]') == len(headed)
+            and all(one.startswith('[list]\n[*]\u2705')
+                    for one in out.split('[spoiler]\n')[1:])
+            and '[spoiler]' not in out.split('[size=5][b]What it needs', 1)[1])
+
 def the_page_is_written_from_the_repository_rather_than_pasted():
     out = made_page()
     if out is None:
         return False
     sources = flattened(README + '\n' + COMPARISON + '\n' + CHANGES)
-    bare = re.sub(r'\[/?(?:b|list|size=5|size|\*)\]', '', out)
+    bare = re.sub(r'\[/?(?:b|list|size=5|size|spoiler|\*)\]', '', out)
     for line in bare.split('\n'):
         said = ' '.join(line.split())
         if said and said != 'Changelog' and said not in sources:
@@ -3443,7 +3461,7 @@ def the_page_leaves_no_markdown_behind_and_closes_every_tag():
             and not [one for one in out.split('\n')
                      if one.startswith('#') or one.startswith('- ')]
             and all(len(re.findall(r'\[' + tag + r'[^\]/]*\]', out)) == out.count('[/' + tag + ']')
-                    for tag in ('b', 'list', 'size'))
+                    for tag in ('b', 'list', 'size', 'spoiler'))
             and out.count('[*]') == bullets + len(section_entries(version)))
 
 def the_page_and_the_notes_are_asked_for_one_at_a_time():
@@ -6969,6 +6987,8 @@ chk("1.66.0", "the release notes and the mod page are asked for one at a time, a
     the_page_and_the_notes_are_asked_for_one_at_a_time())
 chk("1.66.0", "the feature list says a price is read through that market's own price model, naming the merchant, rather than calling it the game's brain",
     the_feature_list_says_how_a_price_is_read_rather_than_naming_a_brain())
+chk("1.66.0", "the mod page opens with five lines saying what TradeLord is, no ticks on them, and folds each headed run of the feature list away behind its own heading",
+    the_page_leads_with_what_the_mod_is_and_folds_the_long_tail_away())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
