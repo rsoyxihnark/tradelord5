@@ -458,15 +458,10 @@ namespace TradeLord
             float screenH = TaleWorlds.Engine.Screen.RealScreenResolutionHeight;
             float width = button.ScaledSuggestedWidth;
             float height = button.ScaledSuggestedHeight;
-            if (screenW < 1f || screenH < 1f || width < 1f || height < 1f ||
-                width > screenW || height > screenH) return OverAssumedBounds(m);
-
-            float padX = 6f / screenW, padY = 6f / screenH;
-            float right = 1f - button.ScaledMarginRight / screenW;
-            float left = right - width / screenW;
-            float half = height / screenH * 0.5f;
-            return m.x >= left - padX && m.x <= right + padX &&
-                   m.y >= 0.5f - half - padY && m.y <= 0.5f + half + padY;
+            if (!MapButton.BoundsReadable(screenW, screenH, width, height))
+                return OverAssumedBounds(m);
+            return MapButton.Over(m.x, m.y, screenW, screenH, width, height,
+                                  button.ScaledMarginRight);
         }
 
         private static bool OverAssumedBounds(Vec2 m)
@@ -477,7 +472,7 @@ namespace TradeLord
                 Log.Write("map button bounds unreadable - falling back to an assumed strip on the right edge. " +
                           "Map clicks near that edge may be taken by the button; turn the map button off if it gets in the way.");
             }
-            return m.x >= 0.90f && m.y >= 0.46f && m.y <= 0.54f;
+            return MapButton.OverTheStripInstead(m.x, m.y);
         }
 
         private static void UpdateIdleInput(bool buttonOn)
