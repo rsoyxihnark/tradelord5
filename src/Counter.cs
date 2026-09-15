@@ -130,6 +130,9 @@ namespace TradeLord
             return true;
         }
 
+        internal static int PurseMovedOnTheScreen() =>
+            _shown == null ? 0 : (Hero.MainHero?.Gold ?? _goldAtOpen) - _goldAtOpen;
+
         internal static TextObject Watch()
         {
             if (_shown == null) return null;
