@@ -579,6 +579,7 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public float PartyTradeXpShare { get => _o.PartyTradeXpShare; set { _o.PartyTradeXpShare = value; Options.Bump(); } }
 
+
         [SettingPropertyBool("{=TL247}Coin sound on trade", Order = 15, RequireRestart = false,
             HintText = "{=TL347}Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
@@ -598,6 +599,11 @@ namespace TradeLord.Mcm
             HintText = "{=TL369}When you run into looters or bandits, TradeLord adds a line asking to be let past. Saying it ends the encounter with no fight and no ransom, and they leave you alone for a few hours. It is ON by default.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool BanditGetawayCheat { get => _o.BanditGetawayCheat; set { _o.BanditGetawayCheat = value; Options.Bump(); } }
+
+        [SettingPropertyInteger("{=TL429}Most workshops you may own (0 = the game's own limit)", 0, 200, Order = 19, RequireRestart = false,
+            HintText = "{=TL430}Lifts the limit the game puts on how many workshops you may own. 200 is as good as no limit at all. 0 hands the decision back to the game, which allows more as your clan tier rises. Default 200.")]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
+        public int MaxWorkshopsOwned { get => _o.MaxWorkshopsOwned; set { _o.MaxWorkshopsOwned = value; Options.Bump(); } }
 
 
         [SettingPropertyInteger("{=TL221}Restock and keep food (days of supply)", 0, 30, Order = 0, RequireRestart = false,
@@ -741,12 +747,12 @@ namespace TradeLord.Mcm
         public float MaxCargoShare { get => _o.MaxCargoShare; set { _o.MaxCargoShare = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL246}Write a price trace to the log", Order = 0, RequireRestart = false,
-            HintText = "{=TL389}Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. OFF by default, since it makes the log much longer.")]
+            HintText = "{=TL389}Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. ON by default; turn it off to keep the log short.")]
         [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
         public bool PriceTrace { get => _o.PriceTrace; set { _o.PriceTrace = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL280}Score the forecast in the log", Order = 1, RequireRestart = false,
-            HintText = "{=TL398}Writes to TradeLord.log what the forecast said a market would hold and what it held when you walked in, good by good, with how far off it was. Needs Count what is on its way to a market. OFF by default, since it makes the log longer.")]
+            HintText = "{=TL398}Writes to TradeLord.log what the forecast said a market would hold and what it held when you walked in, good by good, with how far off it was. Needs Count what is on its way to a market. ON by default; turn it off to keep the log short.")]
         [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
         public bool ForecastScore { get => _o.ForecastScore; set { _o.ForecastScore = value; Options.Bump(); } }
     }
