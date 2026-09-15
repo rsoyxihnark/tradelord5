@@ -27,6 +27,8 @@ RANKROWTESTS = io.open('tests/RankTests.cs', encoding='utf-8').read()
 MAPBUTTONTESTS = io.open('tests/MapButtonTests.cs', encoding='utf-8').read()
 TWINSTESTS = io.open('tests/TwinsTests.cs', encoding='utf-8').read()
 SETTINGSFILETESTS = io.open('tests/SettingsFileTests.cs', encoding='utf-8').read()
+SCREENTESTS = io.open('tests/ScreenTests.cs', encoding='utf-8').read()
+TALLYTESTS = io.open('tests/TallyTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
      'BooksTests.cs': BOOKTESTS, 'SellRulesTests.cs': SELLTESTS,
@@ -37,7 +39,8 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'BuyRulesTests.cs': BUYRULETESTS, 'HerdRulesTests.cs': HERDTESTS,
      'ArrivalTests.cs': ARRIVALTESTS, 'SettlingTests.cs': SETTLINGTESTS,
      'RankTests.cs': RANKROWTESTS, 'MapButtonTests.cs': MAPBUTTONTESTS,
-     'TwinsTests.cs': TWINSTESTS, 'SettingsFileTests.cs': SETTINGSFILETESTS}
+     'TwinsTests.cs': TWINSTESTS, 'SettingsFileTests.cs': SETTINGSFILETESTS,
+     'ScreenTests.cs': SCREENTESTS, 'TallyTests.cs': TALLYTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -2560,7 +2563,10 @@ def mcm_generation_matches_the_package():
 chk("1.6.13", "the MCM line the loader expects is the one the settings companion is built against",
     mcm_generation_matches_the_package())
 chk("1.6.13", "no MCM line is written into the loader by hand, so bumping the package moves it",
-    '"MCMv5"' not in S['Support.cs'] and 'Named(int generation) => "MCMv" + generation;' in S['Support.cs'])
+    '"MCMv5"' not in S['Support.cs'] and '"MCMv5"' not in S['Rules.cs']
+    and 'internal const string Family = "MCMv";' in S['Rules.cs']
+    and 'internal static string Named(int generation) => Family + generation;' in S['Rules.cs']
+    and 'private static string Named(int generation) => Screens.Named(generation);' in S['Support.cs'])
 chk("1.6.13", "an MCM this build was not made for is reported as a mismatch, not as MCM being absent",
     (lambda b: "MCM not detected" in b and "the game has loaded" in b and
                ordered(b, "MCM not detected", "the game has loaded"))
@@ -2572,11 +2578,17 @@ chk("1.6.13", "a settings screen is only registered for the line the companion c
     (lambda b: ordered(b, "string.Equals(found, Named(McmGeneration)", "Bannerlord.ButterLib"))
     (method_body(S['Support.cs'], "internal static void TryLoad")))
 chk("1.6.13", "detection reads the line off the assembly name rather than testing for one known line",
-    (lambda b: "while (end < name.Length && char.IsDigit(name[end])) end++;" in b and "return end > 4" in b)
-    (method_body(S['Support.cs'], "private static string GenerationOf")))
+    (lambda b: "while (end < name.Length && char.IsDigit(name[end])) end++;" in b
+           and "return end > Family.Length ? name.Substring(0, end) : null;" in b
+           and "int end = Family.Length;" in b)
+    (method_body(S['Rules.cs'], "internal static string GenerationOf")))
 chk("1.6.13", "an already-loaded usable line wins over a newer one, so the settings screen still opens",
-    (lambda b: ordered(b, "return generation;", "if (other == null) other = generation;"))
-    (method_body(S['Support.cs'], "private static string Detect")))
+    (lambda b: ordered(b, "return generation;", "if (other == null) other = generation;")
+           and "return other;" in b)
+    (method_body(S['Rules.cs'], "internal static string Which"))
+    and ordered(method_body(S['Support.cs'], "private static string Detect"),
+                "string found = Screens.Which(LoadedNames(), Named(McmGeneration));",
+                "if (found != null) return found;"))
 chk("1.6.13", "a line newer than this build is still found when nothing has loaded it yet",
     "g <= McmGeneration + GenerationsAhead" in method_body(S['Support.cs'], "private static string Detect"))
 
@@ -7206,12 +7218,13 @@ def one_line_says_what_the_mod_could_read_when_your_campaign_opened():
 
 def the_startup_line_names_what_each_reader_found():
     patched = method_body(S['Support.cs'], "internal static void TryPatch")
-    tally = method_body(S['Support.cs'], "internal static string Tally")
+    tally = method_body(S['Rules.cs'], "internal static string Of(int applied, IList<string> refused)")
     strings = method_body(S['Tongue.cs'], "internal static string StringsRead")
     return (ordered(patched, "harmony.CreateClassProcessor(patchClass).Patch();",
                     "Applied.Add(patchClass.Name);")
             and "Refused.Add(patchClass.Name);" in patched
-            and '"patches " + Applied.Count + "/" + (Applied.Count + Refused.Count) + " applied"' in tally
+            and 'internal static string Tally() => Tallies.Of(Applied.Count, Refused);' in S['Support.cs']
+            and '"patches " + applied + "/" + (applied + turned) + " applied"' in tally
             and '" refused"' in tally
             and '"herd penalty not read" : "herd penalty read"' in
                 between(S['Trading.cs'], "internal static string HerdPenaltyRead() =>", ";")
@@ -7809,6 +7822,63 @@ def how_a_settings_file_is_read_and_written_is_worked_out_where_a_test_can_ask()
 
 chk("1.71.2", "how a settings file is read and written is worked out where a test can ask, carriage returns and all",
     how_a_settings_file_is_read_and_written_is_worked_out_where_a_test_can_ask())
+
+
+
+def which_settings_screen_the_game_loaded_is_worked_out_where_a_test_can_ask():
+    rules = S['Rules.cs']
+    support = S['Support.cs']
+    which = method_body(rules, "internal static string Which")
+    return ("internal static class Screens" in rules
+            and "TaleWorlds" not in rules and "HarmonyLib" not in rules
+            and "if (loaded == null) return null;" in which
+            and "AppDomain" not in rules and "Assembly" not in rules
+            and ordered(method_body(support, "private static IEnumerable<string> LoadedNames"),
+                        "foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())",
+                        "yield return a.GetName().Name;")
+            and "g <= McmGeneration + GenerationsAhead" in method_body(support, "private static string Detect")
+            and 'Rules.cs' in TESTPROJ
+            and all(one in SCREENTESTS for one in
+                    ("The_line_this_build_wants_is_built_from_its_number_alone",
+                     "The_line_is_read_off_the_assembly_name_however_long_the_number_is",
+                     "An_assembly_that_is_not_an_MCM_line_at_all_is_passed_over",
+                     "An_MCM_name_with_no_number_after_it_is_not_a_line",
+                     "The_line_is_recognised_whatever_case_the_assembly_was_named_in",
+                     "The_line_this_build_was_made_for_wins_wherever_it_sits_in_the_list",
+                     "A_line_this_build_was_not_made_for_is_reported_rather_than_passed_over",
+                     "The_first_other_line_found_is_the_one_reported",
+                     "Nothing_that_looks_like_MCM_at_all_leaves_the_loader_to_go_looking",
+                     "The_line_this_build_wants_is_matched_whatever_case_it_loaded_under",
+                     "What_the_loader_asks_for_is_always_what_it_takes_when_it_is_there",
+                     "new Random(3391)")))
+
+
+chk("1.71.2", "which line of MCM the game loaded, and whether it is the one this build was made for, is worked out where a test can ask",
+    which_settings_screen_the_game_loaded_is_worked_out_where_a_test_can_ask())
+
+
+def the_startup_tally_is_worked_out_where_a_test_can_ask():
+    rules = S['Rules.cs']
+    of = method_body(rules, "internal static string Of(int applied, IList<string> refused)")
+    return ("internal static class Tallies" in rules
+            and "int turned = refused == null ? 0 : refused.Count;" in of
+            and "if (applied < 0) applied = 0;" in of
+            and "return turned == 0 ? said : said" in of
+            and "Applied.Count" in method_body(S['Support.cs'], "internal static string Tally")
+            and 'Rules.cs' in TESTPROJ
+            and all(one in TALLYTESTS for one in
+                    ("Every_reader_applied_is_said_plainly_with_nothing_about_refusals",
+                     "A_refused_reader_is_counted_in_the_total_and_named_after_it",
+                     "Every_refused_reader_is_named_in_the_order_it_was_refused",
+                     "A_reader_with_no_name_still_counts_against_the_total",
+                     "Nothing_applied_and_everything_refused_still_reads_as_a_tally",
+                     "A_count_that_cannot_be_right_never_reads_as_a_negative_tally",
+                     "The_total_is_always_what_was_applied_and_what_was_refused_together",
+                     "new Random(6604)")))
+
+
+chk("1.71.2", "the startup line counting the readers that took and the readers that refused is worked out where a test can ask",
+    the_startup_tally_is_worked_out_where_a_test_can_ask())
 
 
 

@@ -136,6 +136,55 @@ namespace TradeLord
             (herd < 0 ? 0 : herd) + MountsNobodyRides(mounts, menOnFoot);
     }
 
+    internal static class Screens
+    {
+        internal const string Family = "MCMv";
+
+        internal static string Named(int generation) => Family + generation;
+
+        internal static string GenerationOf(string assemblyName)
+        {
+            string name = assemblyName ?? "";
+            if (!name.StartsWith(Family, StringComparison.OrdinalIgnoreCase)) return null;
+            int end = Family.Length;
+            while (end < name.Length && char.IsDigit(name[end])) end++;
+            return end > Family.Length ? name.Substring(0, end) : null;
+        }
+
+        internal static string Which(IEnumerable<string> loaded, string wanted)
+        {
+            if (loaded == null) return null;
+            string other = null;
+            foreach (string assemblyName in loaded)
+            {
+                string generation = GenerationOf(assemblyName);
+                if (generation == null) continue;
+                if (string.Equals(generation, wanted, StringComparison.OrdinalIgnoreCase))
+                    return generation;
+                if (other == null) other = generation;
+            }
+            return other;
+        }
+    }
+
+    internal static class Tallies
+    {
+        internal static string Of(int applied, IList<string> refused)
+        {
+            int turned = refused == null ? 0 : refused.Count;
+            if (applied < 0) applied = 0;
+            string said = "patches " + applied + "/" + (applied + turned) + " applied";
+            return turned == 0 ? said : said + ", " + string.Join(", ", ToArray(refused)) + " refused";
+        }
+
+        private static string[] ToArray(IList<string> refused)
+        {
+            var named = new string[refused.Count];
+            for (int i = 0; i < refused.Count; i++) named[i] = refused[i] ?? "";
+            return named;
+        }
+    }
+
     internal static class TradeRules
     {
         internal static bool Listed(ItemList list, in Good good) =>
