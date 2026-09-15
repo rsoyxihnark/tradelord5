@@ -8763,5 +8763,22 @@ chk("1.76.9", "a record of what you paid written by a newer TradeLord is read as
     a_record_from_a_newer_version_is_read_as_far_as_this_one_understands_it())
 
 
+
+def a_whip_that_cracks_writes_the_file_back_so_it_never_cracks_twice():
+    read = method_body(S['Config.cs'], "private static void Read")
+    write = method_body(S['Config.cs'], "private static void Write(string path, string why)")
+    return (ordered(read, "Whip.Crack(shape, written);",
+                    "else if (whipped)",
+                    'Write(found, "every setting put back to what TradeLord ships with");')
+            and ordered(write, "new KeyValuePair<string, string>(Migration.ShapeKey,",
+                        "Migration.Shape.ToString(CultureInfo.InvariantCulture)),")
+            and "AFileAlreadyAtTheShapeThisVersionShipsIsNeverResetBySecondTime" in MIGRATIONTESTS
+            and "TheWhipIsStillWiredToTheShapeThisVersionShips" in MIGRATIONTESTS)
+
+
+chk("1.77.0", "a settings file put back to what TradeLord ships with is written out again carrying the shape this version ships, so it is put back once and never again",
+    a_whip_that_cracks_writes_the_file_back_so_it_never_cracks_twice())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
