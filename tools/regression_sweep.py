@@ -7702,7 +7702,7 @@ def how_long_a_shelf_holds_a_deal_is_worked_out_where_a_test_can_ask_it():
             and "return NeverRunsOut;" in runs
             and "when.Sort();" in moments
             and "float at = TradeMath.UpToTheQuarterDay(days);" in note
-            and "if (at <= afterDays || when.Contains(at)) return;" in note
+            and "if (at <= afterDays || !already.Add(at)) return;" in note
             and "double steps = Math.Ceiling(days / HorizonStep);" in
                 method_body(S['TradeMath.cs'], "public static float UpToTheQuarterDay")
             and all(one in PROJECTIONTESTS for one in
@@ -8507,6 +8507,50 @@ chk("1.76.5", "a version left half published by an attempt that did not finish n
     a_half_published_version_never_blocks_the_run_that_would_finish_it())
 
 
+
+def the_few_markets_handed_out_are_never_the_ranked_list_itself():
+    few = between(S['Ranking.cs'], "internal static List<T> TopFew<T>(", "\n        }")
+    taken = between(S['Ledger.cs'], "private static List<(Settlement, int)> TakeN(", ";")
+    return ("ranked.GetRange(0, take)" in few
+            and "return new List<T>()" in few
+            and "most > ranked.Count ? ranked.Count : most" in few
+            and "return ranked;" not in few
+            and "MarketRank.TopFew(list, n)" in taken
+            and "list.Count <= n ? list" not in taken
+            and "TopSell" in S['TooltipPatches.cs']
+            and "markets[i] = (town," in S['TooltipPatches.cs'])
+
+
+chk("1.76.5", "the best markets handed to a tooltip are a list of its own, so working the forecast into them never reaches what the ledger recorded",
+    the_few_markets_handed_out_are_never_the_ranked_list_itself())
+
+
+def a_moment_is_looked_up_rather_than_searched_for():
+    moments = between(S['Projection.cs'], "internal static List<float> Moments(", "\n        }")
+    note = between(S['Projection.cs'], "private static void Note(List<float> when,", "\n        }")
+    return ("HashSet<float>" in moments
+            and "already" in moments
+            and "!already.Add(at)" in note
+            and "when.Contains(" not in note
+            and "when.Sort();" in moments)
+
+
+chk("1.76.5", "a moment several things land on is found by looking it up, never by walking every moment already counted",
+    a_moment_is_looked_up_rather_than_searched_for())
+
+
+def a_shelf_that_cannot_be_walked_is_never_walked():
+    at = between(S['Market.cs'], "internal int At(int taken)", "\n        }")
+    price = between(S['Market.cs'], "internal int Price()", "\n        }")
+    restock = between(S['Market.cs'], "internal void Restock(int units)", "\n        }")
+    return ("if (!_shelf.Walkable) return _shelf.Price();" in at
+            and at.index("if (!_shelf.Walkable)") < at.index("while (_priced.Count <= taken)")
+            and "if (!_walkable) return _quoted;" in price
+            and "if (!_walkable) return;" in restock)
+
+
+chk("1.76.5", "a price that cannot move with what is taken off a shelf is read once, not once for every unit",
+    a_shelf_that_cannot_be_walked_is_never_walked())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

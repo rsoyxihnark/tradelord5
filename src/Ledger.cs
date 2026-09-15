@@ -492,7 +492,7 @@ namespace TradeLord
             list.Count == 0 ? (null, 0) : list[0];
 
         private static List<(Settlement, int)> TakeN(List<(Settlement, int)> list, int n) =>
-            list.Count <= n ? list : list.GetRange(0, n);
+            MarketRank.TopFew(list, n);
 
         private List<(Settlement, int)> TopMarkets(ItemObject item, bool selling)
         {

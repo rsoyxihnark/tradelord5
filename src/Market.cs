@@ -93,6 +93,7 @@ namespace TradeLord
 
         internal int At(int taken)
         {
+            if (!_shelf.Walkable) return _shelf.Price();
             while (_priced.Count <= taken)
             {
                 _priced.Add(_shelf.Price());

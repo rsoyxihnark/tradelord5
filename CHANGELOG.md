@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.76.5
+
+- Hovering a good in a market no longer changes the best buy and sell prices TradeLord has recorded for it. With Show best buy/sell in tooltips and Count what is on its way to a market both on, every hover wrote what that good will fetch once the caravans land back over the recorded prices themselves, and did it again on the next hover, so the towns the tooltip named drifted further from what they really pay the longer you looked at them.
+- Those drifting prices are the same ones Color prices by world market colours your inventory by, Hold cargo for the best market measures this town against, and TradeLord itself buys and sells by, so a hover could quietly change what it was willing to pay and what it held back for a better town.
+- The TradeLord ledger opens faster, and faster again with Live world prices or Bulk price simulation turned off.
+
 ## 1.76.4
 
 - TradeLord now knows the trade screen it laid a deal out on has closed by asking whether that same screen is still the one open, rather than waiting for the game to report no screen at all. If that report had ever not come, TradeLord would have gone on claiming every trade you made by hand afterwards as its own.
