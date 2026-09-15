@@ -2442,10 +2442,13 @@ chk("1.6.11", "every reader of a purchase record already requires units left, so
         method_body(S['TradeMath.cs'], "public static int UnitBasis")
     and "TradeMath.UnitBasis(rec, Options.Current.CostBasisMode);" in
         method_body(S['Ledger.cs'], "public int GetCostBasis"))
-chk("1.6.11", "observation pruning stays independent of purchase pruning, so a spent record still goes",
-    re.search(r'private void Prune\(\)\s*\{\s*PruneObservations\(\);\s*PruneSettledPurchases\(\);\s*\}',
+chk("1.6.11", "each pruning step stays independent of the others, so a spent record still goes",
+    re.search(r'private void Prune\(\)\s*\{\s*PruneObservations\(\);\s*TrimToWhatItKeeps\(\);'
+              r'\s*PruneSettledPurchases\(\);\s*\}',
               S['Ledger.cs']) is not None and
     "PruneSettledPurchases" not in method_body(S['Ledger.cs'], "private void PruneObservations") and
+    "Kept.MostPricesKept" not in method_body(S['Ledger.cs'], "private void PruneObservations") and
+    "ObservationShelfLifeDays" not in method_body(S['Ledger.cs'], "private void TrimToWhatItKeeps") and
     "ObservationShelfLifeDays" not in method_body(S['Ledger.cs'], "private void PruneSettledPurchases"))
 
 def what_left_without_a_sale_stops_counting_as_bought():
@@ -7533,6 +7536,41 @@ def the_comparison_is_one_entry_a_mod_naming_and_linking_to_each():
 
 chk("1.71.0", "the comparison is one entry a mod, each naming and linking to the mod it weighs, and short enough for a mod page",
     the_comparison_is_one_entry_a_mod_naming_and_linking_to_each())
+
+
+def the_recorded_prices_are_held_to_a_ceiling_oldest_forgotten_first():
+    trim = method_body(S['Ledger.cs'], "private void TrimToWhatItKeeps")
+    rule = method_body(S['Scoring.cs'], "internal static List<Reading> OldestBeyond")
+    return ("internal const int MostPricesKept = 2500;" in S['Scoring.cs']
+            and "TaleWorlds" not in S['Scoring.cs']
+            and "Settlement" not in S['Scoring.cs']
+            and "held.Sort((x, y) => x.Day.CompareTo(y.Day));" in rule
+            and "if (held == null || cap <= 0 || held.Count <= cap) return dropped;" in rule
+            and "int over = held.Count - cap;" in rule
+            and "var dropped = Kept.OldestBeyond(held, Kept.MostPricesKept);" in trim
+            and "if (dropped.Count == 0) return;" in trim
+            and 'Log.Write("prices forgotten: " + dropped.Count + " of the oldest' in trim
+            and trim.count("Log.Write(") == 1
+            and all(one in SCORINGTESTS for one in
+                    ("A_book_inside_what_it_keeps_drops_nothing",
+                     "A_book_past_what_it_keeps_drops_the_oldest_first",
+                     "A_book_with_no_ceiling_or_nothing_in_it_drops_nothing",
+                     "What_is_left_after_a_trim_is_never_more_than_the_ceiling",
+                     "Nothing_kept_is_older_than_anything_dropped")))
+
+def the_log_says_what_went_into_the_save_as_well_as_what_came_out():
+    sync = method_body(S['Ledger.cs'], "public override void SyncData")
+    return ('Log.Write("ledger written into the save: " + RecordedPrices() + " recorded price(s) in "' in sync
+            and '_ledgerText.Length + " character(s), and " + _purchases.Count +' in sync
+            and 'Log.Write("ledger restored: "' in sync
+            and "foreach (var kv in _ledger) held += kv.Value == null ? 0 : kv.Value.Count;" in
+                method_body(S['Ledger.cs'], "private int RecordedPrices"))
+
+
+chk("1.71.1", "the recorded prices are held to a ceiling, the oldest forgotten first, and the log says so",
+    the_recorded_prices_are_held_to_a_ceiling_oldest_forgotten_first())
+chk("1.71.1", "the log says what went into the save as well as what came out of it",
+    the_log_says_what_went_into_the_save_as_well_as_what_came_out())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
