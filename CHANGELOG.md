@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.76.9
+
+- What you paid for your goods, written into a save by a newer TradeLord than the one you are running, is now read as far as this version understands it rather than dropped, the way the prices it has recorded already were.
+
 ## 1.76.8
 
 - The list of what TradeLord moved now reaches TradeLord.log in one go rather than a line at a time, so a pass that trades a lot of goods no longer stutters as it finishes.
