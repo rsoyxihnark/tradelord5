@@ -443,6 +443,11 @@ namespace TradeLord
         internal static bool TradedAsMerchandise(in Good good) =>
             good.IsTradeGood || good.IsLivestock;
 
+        internal static int BestMarketFloor(int elsewhere, float tolerance) =>
+            (int)(elsewhere * tolerance);
+
+        internal static bool BelowTheBestMarket(int price, int holdFloor) => price < holdFloor;
+
         internal static int WorthToBeat(in Good good, int paid, int unpaidWorth) =>
             paid > 0 || !TradedAsMerchandise(good) ? paid : unpaidWorth;
 
