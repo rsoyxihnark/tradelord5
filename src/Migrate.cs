@@ -136,6 +136,17 @@ namespace TradeLord
         }
     }
 
+    public static class Twins
+    {
+        public static readonly TimeSpan HandTolerance = TimeSpan.FromSeconds(30);
+
+        public static bool ChangedByHand(DateTime lastWritten, DateTime stamped) =>
+            stamped == default(DateTime) || lastWritten > stamped + HandTolerance;
+
+        public static bool ScreenWins(bool screenInHand, bool screenWroteIt, bool changedByHand) =>
+            screenInHand && screenWroteIt && !changedByHand;
+    }
+
     public static class Whip
     {
         public const bool Armed = true;
