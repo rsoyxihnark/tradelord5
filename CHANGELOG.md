@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.72.1
+
+- The feature list now names Recent trades, so the ledger panel's new section is on the mod page with everything else TradeLord does.
+
 ## 1.72.0
 
 - The ledger panel now ends with Recent trades, the last twenty buys and sells TradeLord made for you, each with the day, the town, what moved and the gold it gained or cost.
