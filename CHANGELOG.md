@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.78.0
+
+- The TradeLord ledger now learns from what a market has really paid you: a market that has paid less than the panel promised is scored lower, so routes selling there fall down the list.
+- It keeps that record for each market on its own, written into your save, and counts it only once you have walked into that market five times, so one bad arrival never moves the list.
+- It can never move a route's Score by more than a quarter, so a market that has disappointed you is pushed down rather than buried.
+- Trust a market by what it has paid, in the Knowledge settings, turns it off; it ships on.
+- What this means now says when a market's own record is lowering a route's Score.
+
 ## 1.77.2
 
 - Auto-mark best sell market on map now works through the richest markets first and stops the moment none of the rest could outpay the one it has found, and it stops pricing a town once that town's own purse is all it could pay, so riding across Calradia costs far less than it did.

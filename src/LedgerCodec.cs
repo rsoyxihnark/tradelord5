@@ -28,6 +28,13 @@ namespace TradeLord
         public int LastUnitPaid;
     }
 
+    public class PromiseRecord
+    {
+        public string TownId;
+        public int Scored;
+        public float Held;
+    }
+
     public static class LedgerCodec
     {
         public const int FieldsAPriceNeeds = 5;
@@ -35,6 +42,8 @@ namespace TradeLord
         public const int FieldsAPriceIsWrittenIn = 8;
 
         public const int FieldsAPurchaseNeeds = 4;
+
+        public const int FieldsAPromiseNeeds = 3;
 
         private const char FieldMark = '|';
         private const char RecordMark = ';';
@@ -136,6 +145,40 @@ namespace TradeLord
                   .Append(Number(rec.LastUnitPaid));
             }
             return sb.ToString();
+        }
+
+        public static string WritePromises(List<PromiseRecord> promises)
+        {
+            var sb = new StringBuilder();
+            if (promises == null) return sb.ToString();
+            for (int i = 0; i < promises.Count; i++)
+            {
+                PromiseRecord rec = promises[i];
+                if (rec == null || !Storable(rec.TownId) || rec.Scored <= 0) continue;
+                if (!Storable(rec.Held)) continue;
+                if (sb.Length > 0) sb.Append(RecordMark);
+                sb.Append(rec.TownId).Append(FieldMark)
+                  .Append(Number(rec.Scored)).Append(FieldMark)
+                  .Append(Number(rec.Held));
+            }
+            return sb.ToString();
+        }
+
+        public static List<PromiseRecord> ReadPromises(string text)
+        {
+            var kept = new List<PromiseRecord>();
+            if (string.IsNullOrEmpty(text)) return kept;
+            string[] records = text.Split(RecordMark);
+            for (int i = 0; i < records.Length; i++)
+            {
+                string[] parts = records[i].Split(FieldMark);
+                if (parts.Length < FieldsAPromiseNeeds || !Storable(parts[0])) continue;
+                if (!Whole(parts[1], out int scored) || scored <= 0) continue;
+                if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture,
+                                    out float held) || !Storable(held) || held < 0f) continue;
+                kept.Add(new PromiseRecord { TownId = parts[0], Scored = scored, Held = held });
+            }
+            return kept;
         }
 
         public static List<PurchaseRecord> ReadPurchases(string text)

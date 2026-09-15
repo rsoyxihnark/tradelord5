@@ -266,6 +266,16 @@ namespace TradeLord
         public static float MeanOf(float total, int counted) =>
             counted <= 0 ? 0f : Finite(total / counted, 0f);
 
+        public static void AddPromise(PromiseRecord rec, float held)
+        {
+            if (rec == null || held < 0f || float.IsNaN(held) || float.IsInfinity(held)) return;
+            rec.Held += held;
+            rec.Scored++;
+        }
+
+        public static float PromiseMean(PromiseRecord rec) =>
+            rec == null || rec.Scored <= 0 ? NoShareToGive : MeanOf(rec.Held, rec.Scored);
+
         public static float HeldShare(int promised, int found) =>
             promised <= 0 ? NoShareToGive : (found < 0 ? 0f : (float)found / promised);
 

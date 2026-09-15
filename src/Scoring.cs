@@ -79,6 +79,8 @@ namespace TradeLord
     {
         internal const int MostPricesKept = 2500;
 
+        internal const int MostPromisesKept = 500;
+
         internal static List<Reading> OldestBeyond(List<Reading> held, int cap)
         {
             var dropped = new List<Reading>();

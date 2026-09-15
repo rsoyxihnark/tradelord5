@@ -57,6 +57,9 @@ namespace TradeLord
         private int _lifetimeProfitCapped;
         private int _promisesScored;
         private float _promiseHeld;
+        private string _promiseText = "";
+        private Dictionary<string, PromiseRecord> _promises =
+            new Dictionary<string, PromiseRecord>(StringComparer.Ordinal);
         private ItemRoster _watched;
         private bool _settle;
 
@@ -76,11 +79,30 @@ namespace TradeLord
                 Day = day,
             }, Recent.MostKept);
 
-        internal void KeepPromiseScore(float held)
+        internal void KeepPromiseScore(string townId, float held)
         {
             if (held < 0f) return;
             _promisesScored++;
             _promiseHeld += held;
+            if (townId == null) return;
+            if (!_promises.TryGetValue(townId, out PromiseRecord rec))
+            {
+                rec = new PromiseRecord { TownId = townId };
+                _promises[townId] = rec;
+            }
+            TradeMath.AddPromise(rec, held);
+        }
+
+        internal bool PromiseScoreAt(string townId, out int scored, out float held)
+        {
+            scored = 0;
+            held = 0f;
+            if (townId == null || !_promises.TryGetValue(townId, out PromiseRecord rec)) return false;
+            float mean = TradeMath.PromiseMean(rec);
+            if (mean == TradeMath.NoShareToGive) return false;
+            scored = rec.Scored;
+            held = mean;
+            return true;
         }
 
         internal bool PromiseScore(out int scored, out float held)
@@ -112,6 +134,7 @@ namespace TradeLord
                 {
                     _ledgerText = LedgerCodec.WriteLedger(Listed(_ledger));
                     _purchaseText = LedgerCodec.WritePurchases(_purchases);
+                    _promiseText = LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));
                     Log.Write("ledger written into the save: " + RecordedPrices() + " recorded price(s) in " +
                               _ledgerText.Length + " character(s), and " + _purchases.Count +
                               " purchase record(s) in " + _purchaseText.Length);
@@ -123,6 +146,7 @@ namespace TradeLord
             dataStore.SyncData("TradeLord_LifetimeProfitWide", ref _lifetimeProfit);
             dataStore.SyncData("TradeLord_PromisesScored", ref _promisesScored);
             dataStore.SyncData("TradeLord_PromiseHeld", ref _promiseHeld);
+            dataStore.SyncData("TradeLord_PromiseText", ref _promiseText);
             if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;
             if (dataStore.IsLoading) ReadSavedText();
             if (dataStore.IsLoading) PruneExpired();
@@ -142,6 +166,7 @@ namespace TradeLord
         {
             _ledger = KeyedByTown(LedgerCodec.ReadLedger(_ledgerText, out _unreadable));
             _purchases = LedgerCodec.ReadPurchases(_purchaseText);
+            _promises = KeyedByTownId(LedgerCodec.ReadPromises(_promiseText));
         }
 
         private static Dictionary<string, Dictionary<string, PriceObservation>> KeyedByTown(
@@ -177,6 +202,14 @@ namespace TradeLord
             return book;
         }
 
+        private static Dictionary<string, PromiseRecord> KeyedByTownId(List<PromiseRecord> listed)
+        {
+            var book = new Dictionary<string, PromiseRecord>(StringComparer.Ordinal);
+            for (int i = 0; listed != null && i < listed.Count; i++)
+                if (listed[i]?.TownId != null) book[listed[i].TownId] = listed[i];
+            return book;
+        }
+
         private void PruneExpired() => Guard.Run("Ledger.Prune", Prune);
 
         private void Prune()
@@ -184,6 +217,18 @@ namespace TradeLord
             PruneObservations();
             TrimToWhatItKeeps();
             PruneSettledPurchases();
+            TrimThePromisesKept();
+        }
+
+        private void TrimThePromisesKept()
+        {
+            if (_promises == null || _promises.Count <= Kept.MostPromisesKept) return;
+            var held = new List<PromiseRecord>(_promises.Values);
+            held.Sort((x, y) => y.Scored.CompareTo(x.Scored));
+            int over = held.Count - Kept.MostPromisesKept;
+            for (int i = 0; i < over; i++) _promises.Remove(held[held.Count - 1 - i].TownId);
+            Log.Write("market records forgotten: " + over + " of the least walked, because TradeLord " +
+                      "keeps at most " + Kept.MostPromisesKept + " markets' records of what they paid");
         }
 
         private int RecordedPrices()
@@ -806,6 +851,7 @@ namespace TradeLord
             ISet<string> locked = TradePolicy.LockedKeys();
             float cap = Options.Current.MaxTravelDaysTown;
             bool rankByScore = Options.Current.ConfidenceRanking;
+            bool trustWhatItPaid = Options.Current.TrustWhatAMarketPaid;
             var pressure = CaravanPressure();
             var wanted = new List<ItemObject>();
             foreach (ItemObject item in Items.All)
@@ -892,7 +938,11 @@ namespace TradeLord
                                                          q.Units, days, caravans, age,
                                                          runsOut, toBuy);
                         float perDay = profit / Math.Max(days, 0.25f);
-                        float key = rankByScore ? perDay * confidence : perDay;
+                        float score = perDay * confidence;
+                        if (trustWhatItPaid &&
+                            PromiseScoreAt(to.StringId, out int arrivals, out float heldThere))
+                            score = Confidence.AsPromisesHaveHeld(score, arrivals, heldThere);
+                        float key = rankByScore ? score : perDay;
                         if (best != null && key <= bestKey) continue;
 
                         bestKey = key;
@@ -902,7 +952,7 @@ namespace TradeLord
                             BuyPrice = buyPrice, SellPrice = sellPrice,
                             Quantity = q.Units,
                             TravelDays = days, TotalProfit = profit, ProfitPerDay = perDay,
-                            Confidence = confidence, Score = perDay * confidence,
+                            Confidence = confidence, Score = score,
                             Simulated = q.Simulated, Caravans = caravans, DataAgeDays = age,
                             StillComing = TradeMath.StillComing(q.Units, onTheShelfNow),
                             RunsOutInDays = runsOut

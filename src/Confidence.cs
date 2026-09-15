@@ -21,6 +21,22 @@ namespace TradeLord
             return Clamp(Gone + (1f - Gone) * (slack / (slack + Patience)));
         }
 
+        public const int EnoughArrivals = 5;
+
+        public const float MostItDiscounts = 0.25f;
+
+        public static float AsPromisesHaveHeld(float score, int arrivals, float held)
+        {
+            if (score <= 0f || arrivals < EnoughArrivals) return score;
+            if (held < 0f || float.IsNaN(held) || float.IsInfinity(held)) return score;
+            float trust = held > 1f ? 1f : held;
+            float weight = (float)arrivals / (arrivals + EnoughArrivals);
+            float factor = 1f - (1f - trust) * weight;
+            float floor = 1f - MostItDiscounts;
+            if (factor < floor) factor = floor;
+            return score * (factor > 1f ? 1f : factor);
+        }
+
         public static float Of(bool simulated, int flatProfit, int simulatedProfit,
                                  int stock, int units, float travelDays,
                                  int caravans, float dataAgeDays,

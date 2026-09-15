@@ -31,6 +31,7 @@ SCREENTESTS = io.open('tests/ScreenTests.cs', encoding='utf-8').read()
 RECENTTESTS = io.open('tests/RecentTests.cs', encoding='utf-8').read()
 EXPIRYTESTS = io.open('tests/ExpiryTests.cs', encoding='utf-8').read()
 SHELFORDERTESTS = io.open('tests/ShelfOrderTests.cs', encoding='utf-8').read()
+PROMISETESTS = io.open('tests/PromiseTests.cs', encoding='utf-8').read()
 STAMPTESTS = io.open('tests/StampTests.cs', encoding='utf-8').read()
 DEALTESTS = io.open('tests/DealTests.cs', encoding='utf-8').read()
 FLOORTESTS = io.open('tests/BestMarketFloorTests.cs', encoding='utf-8').read()
@@ -52,6 +53,7 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RecentTests.cs': RECENTTESTS, 'ExpiryTests.cs': EXPIRYTESTS,
      'ShelfOrderTests.cs': SHELFORDERTESTS,
      'StampTests.cs': STAMPTESTS,
+     'PromiseTests.cs': PROMISETESTS,
      'BestMarketFloorTests.cs': FLOORTESTS,
      'DealTests.cs': DEALTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
@@ -694,7 +696,11 @@ def a_market_ranking_sorts_through_one_comparison_for_each_way():
             and "top.Sort(selling ? Order<T>.DearestFirst : Order<T>.CheapestFirst);" in settled
             and "Sort((x, y) => Rank(" not in r + S['Ledger.cs']
             and r.count("top.Sort(") == 1
-            and S['Ledger.cs'].count(".Sort(") == 1)
+            and S['Ledger.cs'].count(".Sort(") == 2
+            and "held.Sort((x, y) => y.Scored.CompareTo(x.Scored));" in
+                method_body(S['Ledger.cs'], "private void TrimThePromisesKept")
+            and "routes.Sort((x, y) => rankByScore" in
+                method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"))
 
 def a_good_on_the_shelf_is_asked_the_buying_questions_once():
     t = S['Trading.cs']
@@ -1297,7 +1303,7 @@ def saved_numbers_read_the_same_in_every_language():
     numeric = [c for c in re.findall(
         r'\w+\.ToString\([^)]*\)|\b(?:int|float|double|long)\.(?:Try)?Parse\([^;]*', codec)
         if not c.startswith('sb.ToString')]
-    return (len(numeric) == 5
+    return (len(numeric) == 6
             and all('CultureInfo.InvariantCulture' in c for c in numeric)
             and 'NumberStyles.Integer, CultureInfo.InvariantCulture' in codec
             and 'NumberStyles.Float, CultureInfo.InvariantCulture' in codec
@@ -2032,7 +2038,8 @@ chk("1.5.0", "route pruning uses the flat-quote upper bound, so it cannot discar
 chk("1.5.0", "a broke selling town is no destination, in the mode that can see its till",
     "if (till <= 0) continue;" in S['Ledger.cs'])
 chk("1.5.0", "the panel is ordered by the column it shows",
-    "rankByScore ? perDay * confidence : perDay" in S['Ledger.cs'] and
+    "rankByScore ? score : perDay" in S['Ledger.cs'] and
+    "float score = perDay * confidence;" in S['Ledger.cs'] and
     "Options.Current.ConfidenceRanking ? _route.Score : _route.ProfitPerDay" in S['Panel.cs'] and
     "y.Score.CompareTo(x.Score)" in S['Ledger.cs'])
 chk("1.5.0", "caravan pressure is counted once, by the planner that scores on it",
@@ -2606,8 +2613,11 @@ chk("1.6.11", "every reader of a purchase record already requires units left, so
         method_body(S['Ledger.cs'], "public int GetCostBasis"))
 chk("1.6.11", "each pruning step stays independent of the others, so a spent record still goes",
     re.search(r'private void Prune\(\)\s*\{\s*PruneObservations\(\);\s*TrimToWhatItKeeps\(\);'
-              r'\s*PruneSettledPurchases\(\);\s*\}',
+              r'\s*PruneSettledPurchases\(\);\s*TrimThePromisesKept\(\);\s*\}',
               S['Ledger.cs']) is not None and
+    "_promises" not in method_body(S['Ledger.cs'], "private void PruneObservations") and
+    "_promises" not in method_body(S['Ledger.cs'], "private void TrimToWhatItKeeps") and
+    "Kept.MostPricesKept" not in method_body(S['Ledger.cs'], "private void TrimThePromisesKept") and
     "PruneSettledPurchases" not in method_body(S['Ledger.cs'], "private void PruneObservations") and
     "Kept.MostPricesKept" not in method_body(S['Ledger.cs'], "private void PruneObservations") and
     "ObservationShelfLifeDays" not in method_body(S['Ledger.cs'], "private void TrimToWhatItKeeps") and
@@ -4718,6 +4728,7 @@ EVER_SHIPPED = {
     "BuyPackAnimals": "bool",
     "BuyValueCapPerItem": "int", "CoinSound": "bool", "ConfidenceRanking": "bool",
     "ConservativeRouteProjection": "bool", "CostBasisMode": "int", "CraftingPolicy": "int",
+    "TrustWhatAMarketPaid": "bool",
     "DetailedTradeSummary": "bool", "EconomySettlingDays": "int", "ExcludeHostileTowns": "bool",
     "FoodPolicy": "int", "GoldReserve": "int", "KeepEveryFoodKind": "bool", "KeepFoodDays": "int",
     "KeepFoodVariety": "int", "KeepPerFoodKind": "int", "KeepSmeltableWeapons": "bool",
@@ -5295,9 +5306,10 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
             and 'Guard.Run("Ledger.Reindex", Reindex);' in ledger
             and ordered(ledger, "LedgerCodec.WriteLedger(Listed(_ledger));",
                         "LedgerCodec.WritePurchases(_purchases);",
+                        "LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));",
                         'dataStore.SyncData("TradeLord_LedgerText"')
             and trade.count("dataStore.SyncData(") == 2
-            and ledger.count("dataStore.SyncData(") == 6)
+            and ledger.count("dataStore.SyncData(") == 7)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
     arrays = dict(re.findall(r'private static readonly string\[\] (\w+) =\s*\{(.*?)\};', M, re.S))
@@ -7208,10 +7220,10 @@ def a_promise_is_scored_against_the_price_the_market_actually_pays():
             and "Scoring.TooOldToSay(said.WithinDays, said.AtHours, now, out float since)" in kept
             and "TradeMath.WorthScoring(withinDays, since)" in
                 method_body(S['Scoring.cs'], "internal static bool TooOldToSay")
-            and "LedgerBehavior.Instance?.KeepPromiseScore(held);" in kept
+            and "LedgerBehavior.Instance?.KeepPromiseScore(site.StringId, held);" in kept
             and "_bands.Add(said.Confidence, held);" in kept
             and "TradeMath.BandOf(confidence)" in method_body(S['Scoring.cs'], "internal void Add")
-            and ordered(kept, "LedgerBehavior.Instance?.KeepPromiseScore(held);",
+            and ordered(kept, "LedgerBehavior.Instance?.KeepPromiseScore(site.StringId, held);",
                         "if (!Writing || scored == 0) return;")
             and "A_market_that_puts_no_price_on_a_good_scores_nothing" in SCORINGTESTS
             and "What_the_market_pays_is_scored_as_a_share_of_what_was_promised" in SCORINGTESTS)
@@ -7224,7 +7236,7 @@ def how_the_promise_has_held_is_kept_in_the_save_and_shown_on_the_panel():
             and 'dataStore.SyncData("TradeLord_PromiseHeld", ref _promiseHeld);' in sync
             and "if (held < 0f) return;" in method_body(ledger, "internal void KeepPromiseScore")
             and "held = TradeMath.MeanOf(_promiseHeld, _promisesScored);" in
-                method_body(ledger, "internal bool PromiseScore")
+                method_body(ledger, "internal bool PromiseScore(out int scored, out float held)")
             and 'if (ledger == null || !ledger.PromiseScore(out int arrivals, out float held)) return "";' in panel
             and '{=TL399}' in panel
             and 'TL399' in strings_declared()
@@ -8892,6 +8904,54 @@ def the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till():
 
 chk("1.77.2", "the map marker walks the richest purses first and stops as soon as no market left can beat the best it found, stops pricing a town once its own purse is the ceiling, and works out what to write in the log only when the marker actually moves",
     the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till())
+
+
+def a_market_is_trusted_by_what_it_has_really_paid():
+    ledger = S['Ledger.cs']
+    scan = method_body(ledger, "private List<TradeRoute> ScanRoutes()")
+    kept = method_body(ledger, "internal void KeepPromiseScore")
+    read = method_body(ledger, "internal bool PromiseScoreAt")
+    moved = method_body(S['Confidence.cs'], "public static float AsPromisesHaveHeld")
+    return (option_default('TrustWhatAMarketPaid') == 'true'
+            and "_o.TrustWhatAMarketPaid" in M
+            and EVER_SHIPPED.get('TrustWhatAMarketPaid') == 'bool'
+            and "TradeMath.AddPromise(rec, held);" in kept
+            and 'rec = new PromiseRecord { TownId = townId };' in kept
+            and "float mean = TradeMath.PromiseMean(rec);" in read
+            and ordered(scan, "bool trustWhatItPaid = Options.Current.TrustWhatAMarketPaid;",
+                        "float score = perDay * confidence;",
+                        "if (trustWhatItPaid &&",
+                        "PromiseScoreAt(to.StringId, out int arrivals, out float heldThere))",
+                        "score = Confidence.AsPromisesHaveHeld(score, arrivals, heldThere);",
+                        "float key = rankByScore ? score : perDay;")
+            and "Score = score," in scan
+            and "perDay * confidence" not in scan[scan.index("Score = score,"):]
+            and ordered(moved, "if (score <= 0f || arrivals < Confidence.EnoughArrivals) return score;".replace("Confidence.", ""),
+                        "float trust = held > 1f ? 1f : held;",
+                        "float weight = (float)arrivals / (arrivals + EnoughArrivals);",
+                        "float factor = 1f - (1f - trust) * weight;",
+                        "float floor = 1f - MostItDiscounts;")
+            and "public const int EnoughArrivals = 5;" in S['Confidence.cs']
+            and "public const float MostItDiscounts = 0.25f;" in S['Confidence.cs']
+            and "TaleWorlds" not in S['Confidence.cs']
+            and 'dataStore.SyncData("TradeLord_PromiseText", ref _promiseText);' in
+                method_body(ledger, "public override void SyncData")
+            and "_promises = KeyedByTownId(LedgerCodec.ReadPromises(_promiseText));" in
+                method_body(ledger, "private void RestoreSaved")
+            and "{=TL445}" in method_body(S['Panel.cs'], "private void Refresh")
+            and said_in_every_language('TL443') and said_in_every_language('TL444')
+            and said_in_every_language('TL445')
+            and all(one in PROMISETESTS for one in
+                    ("Too_few_arrivals_leave_a_score_exactly_where_it_was",
+                     "Paying_above_the_promise_is_never_a_bonus",
+                     "More_arrivals_make_the_same_shortfall_count_for_more",
+                     "A_shortfall_can_never_move_a_score_by_more_than_the_ceiling_it_is_held_to",
+                     "What_a_market_paid_survives_a_save_and_a_load",
+                     "A_record_written_by_a_newer_TradeLord_is_read_as_far_as_this_one_understands_it")))
+
+
+chk("1.78.0", "a market that has paid less than the panel promised is scored lower, from what it really paid on your own arrivals, kept in the save and never moving a route's score by more than a quarter",
+    a_market_is_trusted_by_what_it_has_really_paid())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
