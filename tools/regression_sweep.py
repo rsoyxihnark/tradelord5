@@ -3595,7 +3595,7 @@ def the_page_leads_with_what_the_mod_is_and_folds_the_long_tail_away():
     lead = [one for one in README.split('\n## ', 1)[0].split('\n') if one.startswith('- ')]
     headed = [one[2:-2] for one in README.split('\n')
               if one.startswith('**') and one.endswith('**') and one.count('**') == 2]
-    return (len(lead) == 5 and len(headed) == 5
+    return (len(lead) == 5 and len(headed) == 6
             and '\u2705' not in summary
             and not [one for one in lead if one.startswith('- \u2705')]
             and len([one for one in summary.split('\n') if one.startswith('[*]')]) == len(lead)
@@ -7625,6 +7625,25 @@ def what_the_party_drives_is_worked_out_in_one_place_a_test_can_ask():
 
 chk("1.71.1", "what the party drives, and the mounts its men on foot ride rather than drive, is worked out in one place a test can ask",
     what_the_party_drives_is_worked_out_in_one_place_a_test_can_ask())
+
+
+def the_feature_list_answers_what_people_ask_before_installing():
+    answers = README.split("**Answers to what people ask**", 1)
+    if len(answers) != 2:
+        return False
+    asked = [one for one in answers[1].split("\n## What it needs", 1)[0].split("\n")
+             if one.startswith("- \u2705")]
+    out = made_page()
+    return (len(asked) >= 6
+            and all("?" in one for one in asked)
+            and all(len(one.split("?", 1)[1].strip()) > 20 for one in asked)
+            and out is not None
+            and "[b]Answers to what people ask[/b]\n[spoiler]" in out
+            and "[spoiler]" not in out.split("[size=5][b]What it needs", 1)[1])
+
+
+chk("1.71.1", "the feature list ends with short answers to what people ask before installing, folded away like every other run of it",
+    the_feature_list_answers_what_people_ask_before_installing())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
