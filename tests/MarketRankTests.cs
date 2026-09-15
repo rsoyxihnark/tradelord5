@@ -157,5 +157,35 @@ namespace TradeLord.Tests
             Assert.Equal(0f, MarketRank.Ceiling(village: true, s: s));
             Assert.True(MarketRank.WithinCeiling(village: false, days: 500f, s: s));
         }
+
+        [Fact]
+        public void The_few_handed_out_are_the_first_of_the_ranked()
+        {
+            var ranked = new List<string> { "a", "b", "c", "d" };
+            Assert.Equal(new[] { "a", "b" }, MarketRank.TopFew(ranked, 2));
+            Assert.Equal(new[] { "a", "b", "c", "d" }, MarketRank.TopFew(ranked, 9));
+            Assert.Empty(MarketRank.TopFew(ranked, 0));
+            Assert.Empty(MarketRank.TopFew(ranked, -3));
+            Assert.Empty(MarketRank.TopFew<string>(null, 4));
+        }
+
+        [Fact]
+        public void Changing_the_few_handed_out_never_reaches_the_ranked()
+        {
+            var ranked = new List<string> { "a", "b", "c" };
+
+            List<string> shorter = MarketRank.TopFew(ranked, 2);
+            shorter[0] = "z";
+            shorter.Sort();
+
+            List<string> whole = MarketRank.TopFew(ranked, ranked.Count);
+            whole[0] = "z";
+            whole.Reverse();
+
+            List<string> asked = MarketRank.TopFew(ranked, 50);
+            asked.Clear();
+
+            Assert.Equal(new[] { "a", "b", "c" }, ranked);
+        }
     }
 }
