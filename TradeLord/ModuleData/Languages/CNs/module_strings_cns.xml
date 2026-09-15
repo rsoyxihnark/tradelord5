@@ -286,5 +286,6 @@
 		<string id="TL438" text="要以 {GOLD} 第纳尔从 {OWNER} 手中买下 {TOWN} 的{SHOP}吗？"/>
 		<string id="TL439" text="待售作坊：{COUNT} 家，你已拥有 {MOST} 中的 {OWNED} 家"/>
 		<string id="TL440" text="够得着的作坊里，没有一家是显要手中可售的"/>
+		<string id="TL441" text=" 这笔买卖会让你跌到 TradeLord 留作金钱储备和军饨、不会拿去进货的 {HELD} 第纳尔之下。"/>
 	</strings>
 </base>

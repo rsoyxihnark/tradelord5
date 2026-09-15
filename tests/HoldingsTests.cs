@@ -48,5 +48,69 @@ namespace TradeLord.Tests
                 Assert.Equal(allowed > 0, Holdings.RoomForOneMore(0, allowed));
             }
         }
+
+        [Fact]
+        public void The_limit_is_only_lifted_where_the_game_is_asking_about_your_own_clan()
+        {
+            Assert.True(Holdings.TheGameIsAskingAboutYou(3, 3));
+            Assert.True(Holdings.TheGameIsAskingAboutYou(0, 0));
+            Assert.False(Holdings.TheGameIsAskingAboutYou(2, 3));
+            Assert.False(Holdings.TheGameIsAskingAboutYou(4, 3));
+        }
+
+        [Fact]
+        public void A_clan_the_game_cannot_place_never_has_the_limit_lifted_for_it()
+        {
+            Assert.False(Holdings.TheGameIsAskingAboutYou(3, -1));
+            Assert.False(Holdings.TheGameIsAskingAboutYou(-1, -1));
+            Assert.False(Holdings.TheGameIsAskingAboutYou(0, -1));
+        }
+
+        [Fact]
+        public void No_tier_but_your_own_is_ever_lifted_whatever_the_game_asks()
+        {
+            var rng = new System.Random(7715);
+            for (int round = 0; round < 20000; round++)
+            {
+                int yours = rng.Next(0, 7);
+                int asked = rng.Next(-2, 9);
+                Assert.Equal(asked == yours, Holdings.TheGameIsAskingAboutYou(asked, yours));
+            }
+        }
+
+        [Fact]
+        public void A_purchase_that_leaves_the_reserve_whole_is_not_warned_about()
+        {
+            Assert.False(Holdings.DipsIntoWhatYouHoldBack(1000, 6000, 5000));
+            Assert.False(Holdings.DipsIntoWhatYouHoldBack(1000, 60000, 5000));
+        }
+
+        [Fact]
+        public void A_purchase_that_eats_into_the_reserve_is_warned_about()
+        {
+            Assert.True(Holdings.DipsIntoWhatYouHoldBack(1001, 6000, 5000));
+            Assert.True(Holdings.DipsIntoWhatYouHoldBack(6000, 6000, 5000));
+        }
+
+        [Fact]
+        public void Holding_nothing_back_means_there_is_nothing_to_warn_about()
+        {
+            Assert.False(Holdings.DipsIntoWhatYouHoldBack(50000, 100, 0));
+            Assert.False(Holdings.DipsIntoWhatYouHoldBack(50000, 100, -1));
+            Assert.False(Holdings.DipsIntoWhatYouHoldBack(0, 100, 5000));
+        }
+
+        [Fact]
+        public void The_warning_follows_what_is_left_rather_than_what_it_costs()
+        {
+            var rng = new System.Random(3308);
+            for (int round = 0; round < 20000; round++)
+            {
+                int cost = rng.Next(1, 40000);
+                int purse = rng.Next(0, 80000);
+                int held = rng.Next(1, 20000);
+                Assert.Equal(purse - cost < held, Holdings.DipsIntoWhatYouHoldBack(cost, purse, held));
+            }
+        }
     }
 }

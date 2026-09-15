@@ -166,12 +166,17 @@ def workflow_reads_the_manifest_version():
             and '<Version value="\\(v[0-9][^"]*\\)"' in WORKFLOW)
 
 def harmony_targets():
-    return sorted(t + '.' + m for t, m in
-                  re.findall(r'\[HarmonyPatch\(typeof\((\w+)\), "(\w+)"\)\]', ALL))
+    found = []
+    for t, m, kind in re.findall(
+            r'\[HarmonyPatch\(typeof\((\w+)\), "(\w+)"(?:,\s*MethodType\.(\w+))?\)\]', ALL):
+        name = 'get_' + m if kind == 'Getter' else 'set_' + m if kind == 'Setter' else m
+        found.append(t + '.' + name)
+    return sorted(found)
 
 def every_declared_patch_is_installed():
     declared = sorted(re.findall(
-        r'\[HarmonyPatch\(typeof\(\w+\), "\w+"\)\]\s*internal static class (\w+)', ALL))
+        r'\[HarmonyPatch\(typeof\(\w+\), "\w+"(?:,\s*MethodType\.\w+)?\)\]\s*'
+        r'internal static class (\w+)', ALL))
     installed = sorted(re.findall(
         r'Patcher\.TryPatch\(harmony, typeof\((\w+)\)\)', S['SubModule.cs']))
     return len(declared) > 0 and declared == installed and len(harmony_targets()) == len(declared)
@@ -8301,6 +8306,51 @@ def the_deal_you_took_is_reported_and_credited_like_any_pass():
 
 chk("1.76.0", "the deal you took on the laid out trade screen is reported and credited to your Trade skill the same way a pass of its own would be",
     the_deal_you_took_is_reported_and_credited_like_any_pass())
+
+
+def the_workshop_limit_is_lifted_for_your_clan_alone():
+    rules = S['Rules.cs']
+    shops = S['Workshops.cs']
+    tier = method_body(shops, "private static void Postfix(int tier, ref int __result)")
+    return ("public static bool TheGameIsAskingAboutYou(int askedAboutTier, int yourTier) =>" in rules
+            and "yourTier >= 0 && askedAboutTier == yourTier;" in rules
+            and "if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier())) return;" in tier
+            and '[HarmonyPatch(typeof(DefaultWorkshopModel), "MaximumWorkshopsPlayerCanHave", MethodType.Getter)]' in shops
+            and "Patcher.TryPatch(harmony, typeof(Patch_WorkshopsYouMayHave));" in S['SubModule.cs']
+            and '"get_MaximumWorkshopsPlayerCanHave"' in COMPAT
+            and 'Rules.cs' in TESTPROJ
+            and all(one in HOLDINGTESTS for one in
+                    ("The_limit_is_only_lifted_where_the_game_is_asking_about_your_own_clan",
+                     "A_clan_the_game_cannot_place_never_has_the_limit_lifted_for_it",
+                     "No_tier_but_your_own_is_ever_lifted_whatever_the_game_asks",
+                     "new System.Random(7715)")))
+
+
+chk("1.76.1", "the workshop limit is only ever lifted where the game is asking about your own clan, and through the member that is yours alone",
+    the_workshop_limit_is_lifted_for_your_clan_alone())
+
+
+def buying_a_workshop_says_when_it_eats_into_your_reserve():
+    rules = S['Rules.cs']
+    buy = method_body(S['Panel.cs'], "public void ExecuteBuy")
+    return ("public static bool DipsIntoWhatYouHoldBack(int cost, int purse, int heldBack) =>" in rules
+            and "cost > 0 && heldBack > 0 && purse - cost < heldBack;" in rules
+            and ordered(buy, "int heldBack = TradeActionBehavior.GoldHeldBack();",
+                        "if (Holdings.DipsIntoWhatYouHoldBack(_cost, Hero.MainHero?.Gold ?? 0, heldBack))",
+                        '{=TL441}', 'warned.SetTextVariable("HELD"', "body += warned.ToString();")
+            and "new TextObject(" not in buy
+            and said_in_every_language("TL441")
+            and all(one in HOLDINGTESTS for one in
+                    ("A_purchase_that_leaves_the_reserve_whole_is_not_warned_about",
+                     "A_purchase_that_eats_into_the_reserve_is_warned_about",
+                     "Holding_nothing_back_means_there_is_nothing_to_warn_about",
+                     "The_warning_follows_what_is_left_rather_than_what_it_costs",
+                     "new System.Random(3308)")))
+
+
+chk("1.76.1", "buying a workshop says so when it takes you below the gold reserve, and still lets you",
+    buying_a_workshop_says_when_it_eats_into_your_reserve())
+
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
