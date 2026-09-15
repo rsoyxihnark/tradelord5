@@ -102,6 +102,59 @@ namespace TradeLord
         [DataSourceProperty] public bool Spent => !Gained;
     }
 
+    public class ShopOfferRowVM : ViewModel
+    {
+        private readonly Workshop _shop;
+        private readonly Action _bought;
+
+        public ShopOfferRowVM(Workshop shop, int cost, bool affordable, Action bought)
+        {
+            _shop = shop;
+            _bought = bought;
+            Where = shop.Settlement?.Name.ToString() ?? "";
+            What = shop.WorkshopType?.Name.ToString() ?? "";
+            Owner = shop.Owner?.Name.ToString() ?? "";
+            Profit = (shop.ProfitMade >= 0 ? "+" : "") + shop.ProfitMade;
+            Cost = cost.ToString("N0");
+            Affordable = affordable;
+        }
+
+        [DataSourceProperty] public string Where { get; }
+        [DataSourceProperty] public string What { get; }
+        [DataSourceProperty] public string Owner { get; }
+        [DataSourceProperty] public string Profit { get; }
+        [DataSourceProperty] public string Cost { get; }
+        [DataSourceProperty] public bool Affordable { get; }
+        [DataSourceProperty] public bool Dear => !Affordable;
+        [DataSourceProperty] public string BuyLabel => Tongue.Text("{=TL433}Buy").ToString();
+
+        public void ExecuteBuy() => Guard.Run("Panel.BuyWorkshop", () =>
+        {
+            TextObject asked = Tongue.Text("{=TL438}Buy the {SHOP} in {TOWN} from {OWNER} for {GOLD} denars?");
+            asked.SetTextVariable("SHOP", What);
+            asked.SetTextVariable("TOWN", Where);
+            asked.SetTextVariable("OWNER", Owner);
+            asked.SetTextVariable("GOLD", Cost);
+            InformationManager.ShowInquiry(new InquiryData(
+                Tongue.Text("{=TL431}Workshops for sale").ToString(), asked.ToString(),
+                true, true, Tongue.Text("{=TL433}Buy").ToString(),
+                Tongue.Text("{=TL09}Close").ToString(),
+                () => Guard.Run("Panel.BuyWorkshopTaken", Take), null));
+        });
+
+        private void Take()
+        {
+            if (Shops.Buy(_shop, out TextObject said) && said != null)
+                InformationManager.DisplayMessage(new InformationMessage(said.ToString(), Told));
+            else if (said != null)
+                InformationManager.DisplayMessage(new InformationMessage(said.ToString(), Refused));
+            _bought?.Invoke();
+        }
+
+        private static readonly Color Told = new Color(0.40f, 0.90f, 0.40f);
+        private static readonly Color Refused = new Color(0.90f, 0.28f, 0.28f);
+    }
+
     public class LedgerPanelVM : ViewModel
     {
         private readonly Action _onClose;
@@ -109,6 +162,8 @@ namespace TradeLord
         private readonly Action<Settlement> _centerMap;
         private bool _isVisible;
         private bool _isTradesVisible;
+        private bool _isLegendVisible;
+        private bool _isShopsVisible;
         private bool _isMapButtonVisible;
         private string _playerGold = "";
         private string _capacityText = "";
@@ -120,7 +175,9 @@ namespace TradeLord
         private MBBindingList<RouteRowVM> _routes = new MBBindingList<RouteRowVM>();
         private MBBindingList<WorkshopRowVM> _workshops = new MBBindingList<WorkshopRowVM>();
         private MBBindingList<TradeRowVM> _trades = new MBBindingList<TradeRowVM>();
+        private MBBindingList<ShopOfferRowVM> _shops = new MBBindingList<ShopOfferRowVM>();
         private string _tradesHeader = "";
+        private string _shopsHeader = "";
 
         public LedgerPanelVM(Action onClose, Action onOpen, Action<Settlement> centerMap)
         {
@@ -137,7 +194,7 @@ namespace TradeLord
             set
             {
                 if (value != _isVisible) { _isVisible = value; OnPropertyChangedWithValue(value, "IsVisible"); }
-                if (!value) IsTradesVisible = false;
+                if (!value) { IsTradesVisible = false; IsLegendVisible = false; IsShopsVisible = false; }
                 IsMapButtonVisible = Options.Current.ShowMapButton && !value;
             }
         }
@@ -147,6 +204,34 @@ namespace TradeLord
         {
             get => _isTradesVisible;
             set { if (value != _isTradesVisible) { _isTradesVisible = value; OnPropertyChangedWithValue(value, "IsTradesVisible"); } }
+        }
+
+        [DataSourceProperty]
+        public bool IsLegendVisible
+        {
+            get => _isLegendVisible;
+            set { if (value != _isLegendVisible) { _isLegendVisible = value; OnPropertyChangedWithValue(value, "IsLegendVisible"); } }
+        }
+
+        [DataSourceProperty]
+        public bool IsShopsVisible
+        {
+            get => _isShopsVisible;
+            set { if (value != _isShopsVisible) { _isShopsVisible = value; OnPropertyChangedWithValue(value, "IsShopsVisible"); } }
+        }
+
+        [DataSourceProperty]
+        public MBBindingList<ShopOfferRowVM> Shops
+        {
+            get => _shops;
+            set { if (value != _shops) { _shops = value; OnPropertyChangedWithValue(value, "Shops"); } }
+        }
+
+        [DataSourceProperty]
+        public string ShopsHeader
+        {
+            get => _shopsHeader;
+            set { if (value != _shopsHeader) { _shopsHeader = value; OnPropertyChangedWithValue(value, "ShopsHeader"); } }
         }
 
         [DataSourceProperty]
@@ -230,6 +315,8 @@ namespace TradeLord
         [DataSourceProperty] public string TitleLabel => Tongue.Text("{=TL07}TradeLord ledger").ToString();
         [DataSourceProperty] public string RefreshLabel => Tongue.Text("{=TL62}Refresh").ToString();
         [DataSourceProperty] public string TradesLabel => Tongue.Text("{=TL424}Recent trades").ToString();
+        [DataSourceProperty] public string LegendLabel => Tongue.Text("{=TL432}What this means").ToString();
+        [DataSourceProperty] public string ShopsLabel => Tongue.Text("{=TL431}Workshops for sale").ToString();
         [DataSourceProperty] public string CloseLabel => Tongue.Text("{=TL09}Close").ToString();
         [DataSourceProperty] public string HeadItem => Tongue.Text("{=TL50}Item").ToString();
         [DataSourceProperty] public string HeadBuyTown => Tongue.Text("{=TL51}Buy From").ToString();
@@ -267,6 +354,18 @@ namespace TradeLord
 
         public void ExecuteCloseTrades() => IsTradesVisible = false;
 
+        public void ExecuteOpenLegend() => IsLegendVisible = true;
+
+        public void ExecuteCloseLegend() => IsLegendVisible = false;
+
+        public void ExecuteOpenShops() => Guard.Run("Panel.OpenShops", () =>
+        {
+            RefreshShops();
+            IsShopsVisible = true;
+        });
+
+        public void ExecuteCloseShops() => IsShopsVisible = false;
+
         public void ExecuteOpenPanel() => _onOpen?.Invoke();
 
         public void ExecuteRefresh() => Guard.Run("Panel.Refresh", () =>
@@ -292,7 +391,8 @@ namespace TradeLord
 
         private static readonly string[] SpokenLabels =
         {
-            "BrandLabel", "TitleLabel", "RefreshLabel", "TradesLabel", "CloseLabel", "HeadItem", "HeadBuyTown",
+            "BrandLabel", "TitleLabel", "RefreshLabel", "TradesLabel", "LegendLabel", "ShopsLabel",
+            "CloseLabel", "HeadItem", "HeadBuyTown",
             "HeadPrice", "HeadSellTown", "HeadQuantity", "HeadProfit", "HeadDays", "HeadRunsOut",
             "HeadCaravans", "HeadConfidence", "HeadScore"
         };
@@ -342,10 +442,40 @@ namespace TradeLord
                         : ""))
                 + HowThePromiseHasHeld()
                 + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero));
+            LegendText = OneClauseToALine(LegendText);
 
             RefreshWorkshops();
             RefreshTrades();
         }
+
+        private void RefreshShops()
+        {
+            var offers = Shops_OnOffer();
+            int purse = Hero.MainHero?.Gold ?? 0;
+            int owned = TradeLord.Shops.Owned(), mayOwn = TradeLord.Shops.MayOwn();
+            var rows = new MBBindingList<ShopOfferRowVM>();
+            for (int i = 0; i < offers.Count; i++)
+            {
+                Workshop shop = offers[i];
+                int cost = TradeLord.Shops.CostOf(shop);
+                if (cost <= 0) continue;
+                rows.Add(new ShopOfferRowVM(shop, cost, cost <= purse && owned < mayOwn,
+                                            () => Guard.Run("Panel.ShopsAgain", RefreshShops)));
+            }
+            Shops = rows;
+            if (rows.Count == 0)
+            {
+                ShopsHeader = Tongue.Text("{=TL440}No workshop in reach is a notable's to sell").ToString();
+                return;
+            }
+            TextObject head = Tongue.Text("{=TL439}Workshops for sale: {COUNT}, and you own {OWNED} of {MOST}");
+            head.SetTextVariable("COUNT", rows.Count.ToString());
+            head.SetTextVariable("OWNED", owned.ToString());
+            head.SetTextVariable("MOST", mayOwn.ToString());
+            ShopsHeader = head.ToString();
+        }
+
+        private static List<Workshop> Shops_OnOffer() => TradeLord.Shops.OnOffer();
 
         private void RefreshTrades()
         {
@@ -366,6 +496,9 @@ namespace TradeLord
 
         private static string DayOf(float day) =>
             Line("{=TL420}Day {DAY}", "DAY", ((int)day).ToString("N0"));
+
+        private static string OneClauseToALine(string said) =>
+            said == null ? "" : said.Replace(" | ", "\n");
 
         private static string HowThePromiseHasHeld()
         {

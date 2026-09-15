@@ -215,8 +215,8 @@
 		<string id="TL347" text="真的成交时播放金币声。什么都没交易的一趟保持安静。"/>
 		<string id="TL348" text="在一行交易摘要里点出货物的名字，比如“TradeLord 卖出 8 橄榄、3 葡萄酒，得到 240 第纳尔”，而不是只给一个件数。完整清单始终会写进 TradeLord.log。"/>
 		<string id="TL349" text="自动进行的交易，无论是走进市场时，还是在路上遇到商队或一队村民时，都只写进 TradeLord.log，屏幕上不出现任何提示。菜单里的交易项则一律照常提示。"/>
-		<string id="TL389" text="把你携带的每样货物在这个市场的买价与卖价写进 TradeLord.log，让你看清某个价格为何与交易界面对不上。它会写明市场，以及任何在改动价格的模组。默认关闭，因为它会让日志长很多。"/>
-		<string id="TL398" text="把预测对一个市场的说法，和你走进去时市场实际的样子，一样货一样货地写进 TradeLord.log，并写出差了多少。需要开启“计入正在赶往市场的东西”。默认关闭，因为它会让日志变长。"/>
+		<string id="TL389" text="把你携带的每样货物在这个市场的买价与卖价写进 TradeLord.log，让你看清某个价格为何与交易界面对不上。它会写明市场，以及任何在改动价格的模组。默认开启；想让日志短一些就关掉它。"/>
+		<string id="TL398" text="把预测对一个市场的说法，和你走进去时市场实际的样子，一样货一样货地写进 TradeLord.log，并写出差了多少。需要开启“计入正在赶往市场的东西”。默认开启；想让日志短一些就关掉它。"/>
 		<string id="TL100" text="语言"/>
 		<string id="TL101" text="情报"/>
 		<string id="TL102" text="洞察"/>
@@ -274,5 +274,17 @@
 		<string id="TL426" text="在你的钱袋超过这个数之前，完全不买驮兽。低于它时，TradeLord 再便宜也不碰，让早期的金钱先花在货物上。填 0 则从第一枚第纳尔起就可以买。默认 2000。"/>
 		<string id="TL427" text="买一头驮兽最多肯出的价"/>
 		<string id="TL428" text="比你见过的该驮兽最低价高出多少，TradeLord 仍然愿意付。100% 表示只在你见过的最低价买。默认 1.25，即最多比最低价高出四分之一。"/>
+		<string id="TL429" text="你最多能拥有的作坊数（0 = 游戏自己的上限）"/>
+		<string id="TL430" text="解开游戏对你能拥有多少作坊的限制。200 形同毫无上限。填 0 则交回给游戏决定，它会随着家族等级提升而放宽。默认 200。"/>
+		<string id="TL431" text="待售的作坊"/>
+		<string id="TL432" text="这些是什么意思"/>
+		<string id="TL433" text="买下"/>
+		<string id="TL434" text="TradeLord 以 {GOLD} 第纳尔买下了 {TOWN} 的{SHOP}。"/>
+		<string id="TL435" text="你已经有 {OWNED} 家作坊，这已是“你最多能拥有的作坊数”允许的全部。到 TradeLord 设置里调高它才能再买。"/>
+		<string id="TL436" text="那家作坊要 {GOLD} 第纳尔，而你的钱袋里只有 {PURSE}。"/>
+		<string id="TL437" text="游戏没有把那家作坊交出来。TradeLord.log 里写着发生了什么。"/>
+		<string id="TL438" text="要以 {GOLD} 第纳尔从 {OWNER} 手中买下 {TOWN} 的{SHOP}吗？"/>
+		<string id="TL439" text="待售作坊：{COUNT} 家，你已拥有 {MOST} 中的 {OWNED} 家"/>
+		<string id="TL440" text="够得着的作坊里，没有一家是显要手中可售的"/>
 	</strings>
 </base>
