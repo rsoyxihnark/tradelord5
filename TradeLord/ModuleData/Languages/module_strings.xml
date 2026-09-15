@@ -264,7 +264,7 @@
 		<string id="TL414" text="h"/>
 		<string id="TL415" text="d"/>
 		<string id="TL416" text="Left"/>
-		<string id="TL417" text=" | Left = how long that shelf still holds this Qty before the caravans heading there buy it out"/>
+		<string id="TL417" text=" | Left = how long that shelf still holds this Qty once you arrive, and a shelf that empties first lowers Conf"/>
 		<string id="TL418" text="Recent trades (last {COUNT})"/>
 		<string id="TL419" text="Recent trades: nothing traded yet this campaign"/>
 		<string id="TL420" text="Day {DAY}"/>
