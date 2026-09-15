@@ -31,7 +31,7 @@
                       Command.Click="ExecuteClose" />
 
         <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-                   SuggestedWidth="960" SuggestedHeight="810"
+                   SuggestedWidth="960" SuggestedHeight="670"
                    HorizontalAlignment="Center" VerticalAlignment="Center"
                    StackLayout.LayoutMethod="VerticalTopToBottom">
           <Children>
@@ -258,12 +258,6 @@
                     </ScrollablePanel>
 
                     <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
-                                SuggestedHeight="140" MarginTop="8"
-                                Brush="Popup.Button.Text" Brush.FontSize="17"
-                                Brush.FontColor="#D8D8D8FF"
-                                Text="@LegendText" />
-
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
                                 SuggestedHeight="22" MarginTop="8"
                                 Brush="Popup.Button.Text" Brush.FontSize="15"
                                 Brush.FontColor="#FFD700FF"
@@ -308,37 +302,61 @@
                       <Children>
                         <ButtonWidget DoNotPassEventsToChildren="true"
                                       WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-                                      SuggestedWidth="180" SuggestedHeight="45"
-                                      MarginRight="15"
+                                      SuggestedWidth="140" SuggestedHeight="45"
+                                      MarginRight="10"
                                       Brush="Popup.Done.Button.NineGrid"
                                       Command.Click="ExecuteRefresh"
                                       UpdateChildrenStates="true">
                           <Children>
                             <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
-                                        Brush="Popup.Button.Text" Text="@RefreshLabel" />
+                                        Brush="Popup.Button.Text" Brush.FontSize="16" Text="@RefreshLabel" />
                           </Children>
                         </ButtonWidget>
                         <ButtonWidget DoNotPassEventsToChildren="true"
                                       WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-                                      SuggestedWidth="220" SuggestedHeight="45"
-                                      MarginRight="15"
+                                      SuggestedWidth="185" SuggestedHeight="45"
+                                      MarginRight="10"
                                       Brush="Popup.Done.Button.NineGrid"
                                       Command.Click="ExecuteOpenTrades"
                                       UpdateChildrenStates="true">
                           <Children>
                             <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
-                                        Brush="Popup.Button.Text" Text="@TradesLabel" />
+                                        Brush="Popup.Button.Text" Brush.FontSize="16" Text="@TradesLabel" />
                           </Children>
                         </ButtonWidget>
                         <ButtonWidget DoNotPassEventsToChildren="true"
                                       WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-                                      SuggestedWidth="180" SuggestedHeight="45"
+                                      SuggestedWidth="205" SuggestedHeight="45"
+                                      MarginRight="10"
+                                      Brush="Popup.Done.Button.NineGrid"
+                                      Command.Click="ExecuteOpenShops"
+                                      UpdateChildrenStates="true">
+                          <Children>
+                            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                        Brush="Popup.Button.Text" Brush.FontSize="16" Text="@ShopsLabel" />
+                          </Children>
+                        </ButtonWidget>
+                        <ButtonWidget DoNotPassEventsToChildren="true"
+                                      WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                                      SuggestedWidth="195" SuggestedHeight="45"
+                                      MarginRight="10"
+                                      Brush="Popup.Done.Button.NineGrid"
+                                      Command.Click="ExecuteOpenLegend"
+                                      UpdateChildrenStates="true">
+                          <Children>
+                            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                        Brush="Popup.Button.Text" Brush.FontSize="16" Text="@LegendLabel" />
+                          </Children>
+                        </ButtonWidget>
+                        <ButtonWidget DoNotPassEventsToChildren="true"
+                                      WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                                      SuggestedWidth="140" SuggestedHeight="45"
                                       Brush="Popup.Done.Button.NineGrid"
                                       Command.Click="ExecuteClose"
                                       UpdateChildrenStates="true">
                           <Children>
                             <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
-                                        Brush="Popup.Button.Text" Text="@CloseLabel" />
+                                        Brush="Popup.Button.Text" Brush.FontSize="16" Text="@CloseLabel" />
                           </Children>
                         </ButtonWidget>
                       </Children>
@@ -492,6 +510,232 @@
                   </Children>
                 </BrushWidget>
 
+              </Children>
+            </ListPanel>
+
+          </Children>
+        </Widget>
+
+        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                IsVisible="@IsLegendVisible" DoNotAcceptEvents="true">
+          <Children>
+
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                    Sprite="BlankWhiteSquare_9" Color="#000000AA" DoNotAcceptEvents="true" />
+            <ButtonWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                          DoNotPassEventsToChildren="true"
+                          Command.Click="ExecuteCloseLegend" />
+
+            <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                       SuggestedWidth="900" SuggestedHeight="560"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       StackLayout.LayoutMethod="VerticalTopToBottom">
+              <Children>
+                <BrushWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                             Brush="Frame1Brush">
+                  <Children>
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                               MarginLeft="15" MarginRight="15" MarginTop="15" MarginBottom="15"
+                               StackLayout.LayoutMethod="VerticalTopToBottom">
+                      <Children>
+
+                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                    SuggestedHeight="36" MarginBottom="8"
+                                    Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
+                                    Text="@LegendLabel" />
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                SuggestedHeight="2" MarginBottom="8"
+                                Sprite="BlankWhiteSquare_9" Color="#FFD70055" DoNotAcceptEvents="true" />
+
+                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                    SuggestedHeight="390"
+                                    Brush="Popup.Button.Text" Brush.FontSize="18"
+                                    Brush.FontColor="#E2E2E2FF"
+                                    Text="@LegendText" />
+
+                        <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed"
+                                   SuggestedHeight="50" MarginTop="10"
+                                   StackLayout.LayoutMethod="HorizontalLeftToRight"
+                                   HorizontalAlignment="Center">
+                          <Children>
+                            <ButtonWidget DoNotPassEventsToChildren="true"
+                                          WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                                          SuggestedWidth="180" SuggestedHeight="45"
+                                          Brush="Popup.Done.Button.NineGrid"
+                                          Command.Click="ExecuteCloseLegend"
+                                          UpdateChildrenStates="true">
+                              <Children>
+                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                            Brush="Popup.Button.Text" Text="@CloseLabel" />
+                              </Children>
+                            </ButtonWidget>
+                          </Children>
+                        </ListPanel>
+
+                      </Children>
+                    </ListPanel>
+                  </Children>
+                </BrushWidget>
+              </Children>
+            </ListPanel>
+
+          </Children>
+        </Widget>
+
+        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                IsVisible="@IsShopsVisible" DoNotAcceptEvents="true">
+          <Children>
+
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                    Sprite="BlankWhiteSquare_9" Color="#000000AA" DoNotAcceptEvents="true" />
+            <ButtonWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                          DoNotPassEventsToChildren="true"
+                          Command.Click="ExecuteCloseShops" />
+
+            <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                       SuggestedWidth="920" SuggestedHeight="600"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       StackLayout.LayoutMethod="VerticalTopToBottom">
+              <Children>
+                <BrushWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                             Brush="Frame1Brush">
+                  <Children>
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                               MarginLeft="15" MarginRight="15" MarginTop="15" MarginBottom="15"
+                               StackLayout.LayoutMethod="VerticalTopToBottom">
+                      <Children>
+
+                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                    SuggestedHeight="36" MarginBottom="8"
+                                    Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
+                                    Text="@ShopsHeader" />
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                SuggestedHeight="2" MarginBottom="6"
+                                Sprite="BlankWhiteSquare_9" Color="#FFD70055" DoNotAcceptEvents="true" />
+
+                        <ScrollablePanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                         SuggestedHeight="430"
+                                         AutoHideScrollBars="true"
+                                         ClipRect="ShopListContainer\ClipRect"
+                                         InnerPanel="ShopListContainer\ClipRect\ShopList"
+                                         VerticalScrollbar="ShopListContainer\ShopScrollbarSync\ShopScrollbar">
+                          <Children>
+                            <ListPanel Id="ShopListContainer" WidthSizePolicy="StretchToParent"
+                                       HeightSizePolicy="CoverChildren">
+                              <Children>
+                                <Widget Id="ClipRect" WidthSizePolicy="StretchToParent"
+                                        HeightSizePolicy="CoverChildren" ClipContents="true" MaxHeight="430">
+                                  <Children>
+                                    <ListPanel Id="ShopList" DataSource="{Shops}"
+                                               WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren"
+                                               StackLayout.LayoutMethod="VerticalTopToBottom">
+                                      <ItemTemplate>
+                                        <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                                   SuggestedHeight="38" MarginBottom="2"
+                                                   StackLayout.LayoutMethod="HorizontalLeftToRight">
+                                          <Children>
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="170"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="17"
+                                                        Text="@Where" />
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="190"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="17"
+                                                        Brush.FontColor="#FFD78CFF"
+                                                        Text="@What" />
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="170"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="17"
+                                                        Brush.FontColor="#BBBBBBFF"
+                                                        Text="@Owner" />
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="90"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="17"
+                                                        Brush.FontColor="#7FD633FF"
+                                                        Text="@Profit" />
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="110"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="17"
+                                                        Brush.FontColor="#FFD700FF"
+                                                        IsVisible="@Affordable"
+                                                        Text="@Cost" />
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="110"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="17"
+                                                        Brush.FontColor="#E08A5AFF"
+                                                        IsVisible="@Dear"
+                                                        Text="@Cost" />
+                                            <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                                                          SuggestedWidth="90" SuggestedHeight="32"
+                                                          VerticalAlignment="Center"
+                                                          IsVisible="@Affordable"
+                                                          DoNotPassEventsToChildren="true"
+                                                          Brush="Popup.Done.Button.NineGrid"
+                                                          Command.Click="ExecuteBuy"
+                                                          UpdateChildrenStates="true">
+                                              <Children>
+                                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                                            Brush="Popup.Button.Text" Brush.FontSize="16"
+                                                            Text="@BuyLabel" />
+                                              </Children>
+                                            </ButtonWidget>
+                                          </Children>
+                                        </ListPanel>
+                                      </ItemTemplate>
+                                    </ListPanel>
+                                  </Children>
+                                </Widget>
+                                <DimensionSyncWidget Id="ShopScrollbarSync" DoNotAcceptEvents="true"
+                                                     WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed"
+                                                     HorizontalAlignment="Right"
+                                                     DimensionToSync="Vertical" WidgetToCopyHeightFrom="..\ClipRect"
+                                                     UpdateChildrenStates="true">
+                                  <Children>
+                                    <ScrollbarWidget Id="ShopScrollbar" WidthSizePolicy="Fixed"
+                                                     HeightSizePolicy="StretchToParent" SuggestedWidth="8"
+                                                     MarginRight="5" AlignmentAxis="Vertical"
+                                                     Handle="ShopScrollHandle" MaxValue="100" MinValue="0"
+                                                     IsVisible="false">
+                                      <Children>
+                                        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent"
+                                                SuggestedWidth="4" HorizontalAlignment="Center"
+                                                Sprite="BlankWhiteSquare_9" Color="#5a4033FF" AlphaFactor="0.2" />
+                                        <ImageWidget Id="ShopScrollHandle" WidthSizePolicy="Fixed"
+                                                     HeightSizePolicy="Fixed" SuggestedHeight="10"
+                                                     SuggestedWidth="8" HorizontalAlignment="Center"
+                                                     Brush="FaceGen.Scrollbar.Handle" />
+                                      </Children>
+                                    </ScrollbarWidget>
+                                  </Children>
+                                </DimensionSyncWidget>
+                              </Children>
+                            </ListPanel>
+                          </Children>
+                        </ScrollablePanel>
+
+                        <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed"
+                                   SuggestedHeight="50" MarginTop="10"
+                                   StackLayout.LayoutMethod="HorizontalLeftToRight"
+                                   HorizontalAlignment="Center">
+                          <Children>
+                            <ButtonWidget DoNotPassEventsToChildren="true"
+                                          WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                                          SuggestedWidth="180" SuggestedHeight="45"
+                                          Brush="Popup.Done.Button.NineGrid"
+                                          Command.Click="ExecuteCloseShops"
+                                          UpdateChildrenStates="true">
+                              <Children>
+                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                            Brush="Popup.Button.Text" Text="@CloseLabel" />
+                              </Children>
+                            </ButtonWidget>
+                          </Children>
+                        </ListPanel>
+
+                      </Children>
+                    </ListPanel>
+                  </Children>
+                </BrushWidget>
               </Children>
             </ListPanel>
 

@@ -24,6 +24,8 @@ namespace TradeLord.Compat
             (Inventory + "ItemMenuVM", "SetMerchandiseComponentTooltip"),
             (Inventory + "SPItemVM", "UpdateProfitType"),
             ("TaleWorlds.Library.InformationManager", "DisplayMessage"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultWorkshopModel",
+                "GetMaxWorkshopCountForClanTier"),
         };
 
         private static readonly (string type, string member)[] ReflectedMethods =

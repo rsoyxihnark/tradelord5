@@ -30,6 +30,7 @@ namespace TradeLord
             Patcher.TryPatch(harmony, typeof(Patch_SuppressVanillaTradeLines));
             Patcher.TryPatch(harmony, typeof(Patch_SPItemVM_UpdateProfitType));
             Patcher.TryPatch(harmony, typeof(Patch_SilenceChunkedTradeLines));
+            Patcher.TryPatch(harmony, typeof(Patch_WorkshopLimit));
 
             Guard.Run("McmLoader", McmLoader.TryLoad);
             Config.Follow();

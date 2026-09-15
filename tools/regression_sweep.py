@@ -4,7 +4,7 @@ S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Passes.cs', 'Ranking.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
       'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
       'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs', 'Projection.cs', 'Hindsight.cs',
-      'Scoring.cs', 'Counter.cs']}
+      'Scoring.cs', 'Counter.cs', 'Workshops.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -32,7 +32,9 @@ RECENTTESTS = io.open('tests/RecentTests.cs', encoding='utf-8').read()
 EXPIRYTESTS = io.open('tests/ExpiryTests.cs', encoding='utf-8').read()
 SHELFORDERTESTS = io.open('tests/ShelfOrderTests.cs', encoding='utf-8').read()
 TALLYTESTS = io.open('tests/TallyTests.cs', encoding='utf-8').read()
+HOLDINGTESTS = io.open('tests/HoldingsTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
+     'HoldingsTests.cs': HOLDINGTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
      'BooksTests.cs': BOOKTESTS, 'SellRulesTests.cs': SELLTESTS,
      'PriceDriftTests.cs': DRIFTTESTS, 'MarketRankTests.cs': RANKTESTS,
@@ -741,7 +743,7 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
             and ordered(floor, "if (!Options.Current.PreferBestSellTown) return 0;",
                         "LedgerBehavior.Instance?.BestSell(item)",
                         "(int)(best.Item2 * Options.Current.BestSellTownTolerance)")
-            and S['Trading.cs'].count("TradePolicy.WorthToBeat(") == 1)
+            and S['Trading.cs'].count("TradePolicy.WorthToBeat(") == 2)
 
 
 def the_marker_says_in_the_log_which_town_it_picked_and_why():
@@ -1399,7 +1401,7 @@ chk("1.3.18", "neither pass trades before the settling delay is served, in a mar
         method_body(S['Trading.cs'], "internal static Pass Open") and
     "MarketOpen(site, quiet)" not in S['Trading.cs'] and
     S['Trading.cs'].count("MarketOpen(") == 2 and
-    S['Trading.cs'].count("Pass.Open(settlement, quiet)") == 5 and
+    S['Trading.cs'].count("Pass.Open(settlement, quiet)") == 7 and
     S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 2)
 chk("1.3.2", "how far a scan reaches is the two travel ceilings alone, and the scan radius that used to narrow it is gone",
     "WithinRadius" not in S['Ledger.cs'] and "ScanRadius" not in S['Ledger.cs'] and
@@ -1796,7 +1798,7 @@ chk("1.36.0", "a trade on the road moves one unit and its price itself, because 
     S['Trading.cs'].count("HandOver(") == 2 and S['Trading.cs'].count("TakeDelivery(") == 2)
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
-    S['Trading.cs'].count("[Simulated, best case]") == 5 and
+    S['Trading.cs'].count("[Simulated, best case]") == 7 and
     S['Trading.cs'].count("(simulated, best case): ") == 3 and
     'internal string Headed(string label) => label + (Sim ? Counter.Heading : ": ");'
         in S['Trading.cs'] and
@@ -4536,13 +4538,13 @@ def every_animal_that_moves_is_named_with_its_reason():
     src = S['Trading.cs']
     reasons = ("the selling pass", "restocking the larder", "trading with a party on the road",
                "herd relief, getting the party back up to speed", "stocking the baggage train",
-               "the buying pass")
+               "the buying pass", "the deal you took on the trade screen")
     return ("if (item == null || !item.HasHorseComponent) return;" in moved
             and '"  animal " + (selling ? "out: " : "in: ")' in moved
             and '" - " + why + "; TradeLord counts it as " + TradePolicy.AnimalGroup(item)' in moved
             and "LogAnimalMoved(selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);" in detail
             and "LogDetail(selling, Sim, Detail, Quoted, why)" in between(src, "internal void Logged(", ";")
-            and src.count("pass.Logged(selling:") == 5
+            and src.count("pass.Logged(selling:") == 7
             and src.count("LogDetail(selling:") == 0
             and all(r in src for r in reasons))
 
@@ -5415,7 +5417,8 @@ def every_market_pass_is_opened_and_carried_by_one_object():
     t = S['Trading.cs']
     passes = ("private static void SellPass", "public static void ExecuteResupply",
               "public static void ExecuteHerdRelief", "public static void ExecuteHaulage",
-              "private static void BuyPass")
+              "private static void BuyPass", "private static void ReportWhatYouSold",
+              "private static void ReportWhatYouBought")
     held = method_body(t, "private sealed class Pass")
     opened = method_body(t, "internal static Pass Open")
     alone = ("SettlementComponent market = settlement.SettlementComponent;",
@@ -5440,8 +5443,8 @@ def every_market_pass_is_opened_and_carried_by_one_object():
             and ordered(opened, "if (!MarketOpen(site, TradeActionBehavior.Muted(quiet))) return null;",
                         "MobileParty party = MobileParty.MainParty;",
                         "return party == null ? null : new Pass(site, null, null, Visit, party, quiet);")
-            and t.count("Pass.Open(settlement, quiet)") == 5
-            and t.count("if (pass == null) return;") == 5
+            and t.count("Pass.Open(settlement, quiet)") == 7
+            and t.count("if (pass == null) return;") == 7
             and all("if (pass == null) return;" in method_body(t, one) for one in passes)
             and not any(one in method_body(t, where) for where in passes for one in alone)
             and "SettlementComponent market = settlement.SettlementComponent;" not in t
@@ -5450,7 +5453,7 @@ def every_market_pass_is_opened_and_carried_by_one_object():
             and t.count("Priced.At(Market,") == 1
             and "Priced.At(Market, what, Party, selling)" in
                 between(t, "internal int Price(", "Road.GetPrice")
-            and t.count("pass.Price(el.EquipmentElement, selling: ") == 5
+            and t.count("pass.Price(el.EquipmentElement, selling: ") == 7
             and "_pass.Price(_plan[at].EquipmentElement, selling: true)" in t
             and "_pass.Price(Shelf[at].EquipmentElement, selling: false)" in t
             and "TradeActionBehavior.Tally(Detail, item, count, gold)" in
@@ -5606,7 +5609,7 @@ def the_venue_is_the_only_thing_a_pass_asks_where_it_is():
                 'internal string Where => Site != null ? "at " + Site.Name : "from " + Met.Name;',
                 "internal ItemRoster Stock => Site != null ? Site.ItemRoster : Met.ItemRoster;",
                 "internal int TillNow => Site != null ? Market.Gold : Met.PartyTradeGold;"))
-            and t.count("pass.Where") == 5)
+            and t.count("pass.Where") == 7)
 
 
 chk("1.40.4", "a market visit and a meeting on the road sell and buy through the same two passes",
@@ -6072,8 +6075,8 @@ chk("1.46.2", "trading on arrival runs once and waits for the party to take to t
 
 chk("1.47.0", "the price trace reads one market's price four ways, names the price model and any mod changing it, and trades nothing",
     the_price_trace_reads_one_price_four_ways_and_names_what_changes_it())
-chk("1.47.0", "the price trace is off until you ask for it",
-    "public bool PriceTrace = false;" in S['Options.cs'])
+chk("1.47.0", "the price trace ships on, so a price that looks wrong is already written down when you come to ask",
+    "public bool PriceTrace = true;" in S['Options.cs'])
 
 chk("1.47.1", "every price TradeLord quotes is asked of the market the way the trade screen asks it, naming the merchant, and falls back to the plain question only if that cannot be asked",
     every_price_is_asked_the_way_the_trade_screen_asks_it())
@@ -7007,7 +7010,7 @@ def the_forecast_is_scored_against_the_market_it_predicted():
     noted = method_body(h, "private static void Noted")
     return ("internal static bool Writing => Options.Current.ForecastScore;" in h
             and "internal static bool On => Writing && Forecast.On;" in h
-            and option_default('ForecastScore') == 'false'
+            and option_default('ForecastScore') == 'true'
             and EVER_SHIPPED.get('ForecastScore') == 'bool'
             and "_o.ForecastScore" in M
             and all(i in strings_declared() for i in ('TL280', 'TL398'))
@@ -7052,7 +7055,7 @@ def the_switch_names_the_setting_it_leans_on():
     said = spoken(ENGLISH)
     return ("TradeLord.log" in said['TL398']
             and "Needs " + said['TL279'] in said['TL398']
-            and "OFF by default" in said['TL398']
+            and "ON by default" in said['TL398']
             and said['TL280'] == "Score the forecast in the log")
 
 def every_source_file_is_read_by_these_checks():
@@ -8126,7 +8129,8 @@ def the_recent_trades_open_in_a_window_of_their_own():
             and within(opens, 'IsVisible', '@IsVisible')
             and PREFAB.count('Text="@TradesLabel"') == 1
             and PREFAB.count('Command.Click="ExecuteCloseTrades"') == 2
-            and 'if (!value) IsTradesVisible = false;' in panel
+            and 'if (!value) { IsTradesVisible = false; IsLegendVisible = false; IsShopsVisible = false; }'
+                in panel
             and 'RefreshTrades();' in method_body(panel, "public void ExecuteOpenTrades")
             and named <= bound and named <= have
             and 'TL424' in strings_declared())
@@ -8151,7 +8155,7 @@ def every_panel_frame_holds_everything_it_lays_out():
               if e.get('HeightSizePolicy') == 'Fixed' and e.get('SuggestedHeight')
               and e.find('Children/BrushWidget') is not None]
     room = [slack(f) for f in frames]
-    return len(frames) == 2 and all(r is not None and r >= 0 for r in room)
+    return len(frames) == 4 and all(r is not None and r >= 0 for r in room)
 
 chk("1.74.0", "every frame the panel draws is tall enough for everything stacked inside it, so nothing spills past its edge",
     every_panel_frame_holds_everything_it_lays_out())
@@ -8198,6 +8202,105 @@ def the_staged_trading_switch_is_named_the_same_everywhere():
 
 chk("1.74.0", "the switch that lays the deal out is called Staged Trading on the settings screen and in the feature list alike",
     the_staged_trading_switch_is_named_the_same_everywhere())
+
+
+def the_workshop_limit_is_lifted_by_one_patch_and_one_setting():
+    w = S['Workshops.cs']
+    rule = method_body(S['Rules.cs'], "public static int WorkshopsYouMayOwn")
+    return ('[HarmonyPatch(typeof(DefaultWorkshopModel), "GetMaxWorkshopCountForClanTier")]' in w
+            and "__result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);" in w
+            and ordered(rule, "if (youAsked <= 0) return gameSays;", "return youAsked;")
+            and "TaleWorlds" not in method_body(S['Rules.cs'], "public static class Holdings")
+            and option_default('MaxWorkshopsOwned') == '200'
+            and "_o.MaxWorkshopsOwned" in M
+            and 'Patcher.TryPatch(harmony, typeof(Patch_WorkshopLimit));' in S['SubModule.cs']
+            and 'Rules.cs' in TESTPROJ
+            and all(one in HOLDINGTESTS for one in
+                    ("Asking_for_nothing_leaves_the_game_to_say_how_many_you_may_own",
+                     "The_number_you_ask_for_is_the_number_you_get",
+                     "There_is_room_for_one_more_until_you_are_at_the_ceiling",
+                     "A_ceiling_of_nothing_leaves_no_room_at_all",
+                     "What_you_ask_for_never_depends_on_what_the_game_says",
+                     "new System.Random(3316)")))
+
+chk("1.76.0", "the limit the game puts on how many workshops you may own is lifted by one patch reading one setting, and the rule behind it is proved by tests the build runs",
+    the_workshop_limit_is_lifted_by_one_patch_and_one_setting())
+
+
+def a_workshop_is_bought_from_the_panel_through_the_games_own_action():
+    w = S['Workshops.cs']
+    buy = method_body(w, "internal static bool Buy")
+    stops = method_body(w, "internal static Block WhatStopsBuying")
+    row = method_body(S['Panel.cs'], "public void ExecuteBuy")
+    bound, have = panel_bindings()
+    named = {'IsShopsVisible', 'ShopsLabel', 'ShopsHeader', 'Shops', 'ExecuteOpenShops',
+             'ExecuteCloseShops', 'ExecuteBuy', 'BuyLabel', 'Affordable', 'Dear', 'Cost'}
+    return (ordered(stops, "if (shop == null || !OnTheMarket(shop)) return Block.NotTradable;",
+                    "if (!Holdings.RoomForOneMore(owned, mayOwn)) return Block.HeldEnough;",
+                    "if (cost > purse) return Block.BudgetSpent;",
+                    "return Block.None;")
+            and "owner != null && owner != Hero.MainHero && owner.IsNotable && !owner.IsDead" in
+                between(w, "internal static bool OnTheMarket", "\n        }")
+            and ordered(buy, "Block why = WhatStopsBuying(shop, cost, purse, owned, mayOwn);",
+                        "if (why != Block.None)", "ChangeOwnerOfWorkshopAction.ApplyByPlayerBuying(shop);",
+                        "done = shop.Owner == Hero.MainHero;")
+            and "model.GetCostForPlayer(shop)" in method_body(w, "internal static int CostOf")
+            and "InformationManager.ShowInquiry" in row and "{=TL438}" in row
+            and w.count("ChangeOwnerOfWorkshopAction.ApplyByPlayerBuying(") == 1
+            and named <= bound and named <= have
+            and all(i in strings_declared() for i in
+                    ('TL431', 'TL433', 'TL434', 'TL435', 'TL436', 'TL437', 'TL438', 'TL439', 'TL440')))
+
+chk("1.76.0", "a workshop is bought from the panel through the game's own buying action, behind a yes or no, and never past your purse or the ceiling you set",
+    a_workshop_is_bought_from_the_panel_through_the_games_own_action())
+
+
+def the_legend_reads_one_clause_to_a_line_in_a_window_of_its_own():
+    import xml.etree.ElementTree as ET
+    tree = ET.parse('TradeLord/GUI/Prefabs/TradeLordPanel.xml')
+    parent = {c: p for p in tree.iter() for c in p}
+    def within(node, attr, value):
+        while node is not None:
+            if node.get(attr) == value:
+                return True
+            node = parent.get(node)
+        return False
+    legend = [e for e in tree.iter() if e.get('Text') == '@LegendText']
+    button = [e for e in tree.iter() if e.get('Command.Click') == 'ExecuteOpenLegend']
+    panel = S['Panel.cs']
+    return (len(legend) == 1 and len(button) == 1
+            and within(legend[0], 'IsVisible', '@IsLegendVisible')
+            and not within(button[0], 'IsVisible', '@IsLegendVisible')
+            and within(button[0], 'IsVisible', '@IsVisible')
+            and 'said.Replace(" | ", "\\n")' in
+                between(panel, "private static string OneClauseToALine", ";")
+            and "LegendText = OneClauseToALine(LegendText);" in
+                method_body(panel, "private void Refresh()")
+            and 'TL432' in strings_declared())
+
+chk("1.76.0", "the line under the routes is gone from the ledger and reads one clause to a line in a window of its own",
+    the_legend_reads_one_clause_to_a_line_in_a_window_of_its_own())
+
+
+def the_deal_you_took_is_reported_and_credited_like_any_pass():
+    t = S['Trading.cs']
+    took = method_body(t, "internal static void TookTheDeal")
+    sold = method_body(t, "private static void ReportWhatYouSold")
+    ledger = method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange")
+    return (ordered(took, "if (here?.SettlementComponent == null) return;",
+                    "ReportWhatYouSold(here, sold);", "ReportWhatYouBought(here, bought);")
+            and ordered(sold, "int worth = TradePolicy.WorthToBeat(item);",
+                        "profit += TradeMath.Credit(price, worth, TradePolicy.UnpaidWorth(item)) * count;",
+                        "pass.Moved(profit, gained, selling: true);",
+                        "{=TL02}", "AwardTradeXp(profit, pass.Muted);")
+            and ordered(ledger, "if (Counter.Awaiting)",
+                        "TradeActionBehavior.TookTheDeal(purchased, sold)",
+                        "foreach (var (element, count) in sold)")
+            and "internal static bool Awaiting => _shown != null;" in S['Counter.cs']
+            and t.count("AwardTradeXp(") == 4)
+
+chk("1.76.0", "the deal you took on the laid out trade screen is reported and credited to your Trade skill the same way a pass of its own would be",
+    the_deal_you_took_is_reported_and_credited_like_any_pass())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

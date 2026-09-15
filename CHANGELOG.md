@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.76.0
+
+- Workshops for sale is a new button below the TradeLord ledger, listing every workshop in Calradia a notable would sell you, with its town, what it makes, who owns it, what it has earned lately and what it would cost, most profitable first.
+- You can buy any of those workshops from that window wherever you are standing, without riding to the town or finding the owner, and it asks you to confirm before it spends a denar.
+- Most workshops you may own is a new setting under General, at 200: the limit the game puts on how many you may own is lifted out of the box, and a 0 hands the decision back to the game.
+- The deal Staged Trading lays out now reports what moved once you press Done, the same way TradeLord reports a trade of its own, and credits the profit to your Trade skill.
+- The line that used to run under the routes has left the ledger for a window of its own, on a new What this means button, and now reads one clause to a line.
+- Write a price trace to the log and Score the forecast in the log both ship on now, so a price or a forecast that looks wrong is already written down when you come to ask.
+
 ## 1.75.1
 
 - The line TradeLord.log writes when the map marker moves now names the market it beat as the next best it priced, rather than as the second best on the map, which it never worked out.

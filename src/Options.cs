@@ -123,6 +123,8 @@ namespace TradeLord
 
         public bool SellSpareMounts = true;
 
+        public int MaxWorkshopsOwned = 200;
+
         public bool BuyHaulAnimals = true;
 
         public int HaulAnimalGoldFloor = 2000;
@@ -137,8 +139,8 @@ namespace TradeLord
         public bool TradeWithVillages = true;
         public bool TradeWithCaravans = true;
         public bool SimulationMode = false;
-        public bool PriceTrace = false;
-        public bool ForecastScore = false;
+        public bool PriceTrace = true;
+        public bool ForecastScore = true;
         public bool StagedTrading = false;
         public int EconomySettlingDays = 0;
         public float TradeXpMultiplier = 1f;
