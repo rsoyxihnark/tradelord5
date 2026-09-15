@@ -8208,12 +8208,15 @@ def the_laid_out_deal_shows_its_gold_and_says_what_it_came_to():
                         "if (++_waited < TicksToWaitForTheScreen) return;")
             and ordered(watch, "if (_shown == null) return null;",
                         "if (!_totalHandedOver) HandTheTotalOver();",
-                        "if (InventoryScreenHelper.GetActiveInventoryState() != null) return null;",
+                        "if (TheScreenIsStillOurs()) return null;",
                         "int moved = (Hero.MainHero?.Gold ?? _goldAtOpen) - _goldAtOpen;",
                         "Unwatch();", "{=TL423}", "{=TL421}", "{=TL422}")
             and 'Guard.Run("Tick.Counter", TradeActionBehavior.WatchTheTradeScreen);' in S['SubModule.cs']
             and "TextObject closed = Counter.Watch();" in
                 method_body(S['Trading.cs'], "internal static void WatchTheTradeScreen")
+            and ordered(method_body(c, "private static bool TheScreenIsStillOurs"),
+                        "InventoryState open = InventoryScreenHelper.GetActiveInventoryState();",
+                        "return open != null && ReferenceEquals(open.InventoryLogic, _shown);")
             and "Unwatch();" in method_body(c, "internal static void Forget")
             and "Unwatch();" in method_body(c, "internal static bool Ready")
             and all(sid in strings_declared() for sid in ('TL421', 'TL422', 'TL423'))
@@ -8450,6 +8453,31 @@ def nothing_the_game_hands_back_is_read_as_a_count_without_the_one_door():
 
 chk("1.76.3", "a figure the game hands back for a traded line is read as gold and turned into units by one rule, never taken for a count on the spot",
     nothing_the_game_hands_back_is_read_as_a_count_without_the_one_door())
+
+
+
+def a_workshop_the_game_did_not_charge_for_is_still_paid_for():
+    rules = S['Rules.cs']
+    buy = method_body(S['Workshops.cs'], "internal static bool Buy")
+    return ("public static int StillOwedForTheWorkshop(int cost, int paid) =>" in rules
+            and "cost <= 0 || paid > 0 ? 0 : cost;" in rules
+            and ordered(buy, "Hero seller = shop.Owner;",
+                        "int before = Hero.MainHero?.Gold ?? 0;",
+                        "ChangeOwnerOfWorkshopAction.ApplyByPlayerBuying(shop);",
+                        "int paid = before - (Hero.MainHero?.Gold ?? before);",
+                        "int owed = Holdings.StillOwedForTheWorkshop(cost, paid);",
+                        "GiveGoldAction.ApplyBetweenCharacters(Hero.MainHero, seller, owed, true);")
+            and 'Rules.cs' in TESTPROJ
+            and all(one in HOLDINGTESTS for one in
+                    ("A_workshop_the_game_charged_for_is_never_charged_again",
+                     "A_workshop_the_game_handed_over_for_nothing_is_still_paid_for",
+                     "A_workshop_with_no_price_on_it_is_never_charged_for",
+                     "Nothing_is_ever_charged_twice_however_the_game_behaves",
+                     "new System.Random(6193)")))
+
+
+chk("1.76.4", "a workshop the game hands over without taking the gold for it is paid for all the same, and one it charged for is never charged twice",
+    a_workshop_the_game_did_not_charge_for_is_still_paid_for())
 
 
 

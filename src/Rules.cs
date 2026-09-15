@@ -539,6 +539,9 @@ namespace TradeLord
 
         public static bool RoomForOneMore(int owned, int mayOwn) => owned < mayOwn;
 
+        public static int StillOwedForTheWorkshop(int cost, int paid) =>
+            cost <= 0 || paid > 0 ? 0 : cost;
+
         public static bool TheGameIsAskingAboutYou(int askedAboutTier, int yourTier) =>
             yourTier >= 0 && askedAboutTier == yourTier;
 
