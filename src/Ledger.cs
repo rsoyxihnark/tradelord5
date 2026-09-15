@@ -91,6 +91,9 @@ namespace TradeLord
                 {
                     _ledgerText = LedgerCodec.WriteLedger(Listed(_ledger));
                     _purchaseText = LedgerCodec.WritePurchases(_purchases);
+                    Log.Write("ledger written into the save: " + RecordedPrices() + " recorded price(s) in " +
+                              _ledgerText.Length + " character(s), and " + _purchases.Count +
+                              " purchase record(s) in " + _purchaseText.Length);
                 });
             _lifetimeProfitCapped = Capped(_lifetimeProfit);
             dataStore.SyncData("TradeLord_LedgerText", ref _ledgerText);
@@ -158,7 +161,44 @@ namespace TradeLord
         private void Prune()
         {
             PruneObservations();
+            TrimToWhatItKeeps();
             PruneSettledPurchases();
+        }
+
+        private int RecordedPrices()
+        {
+            int held = 0;
+            if (_ledger == null) return held;
+            foreach (var kv in _ledger) held += kv.Value == null ? 0 : kv.Value.Count;
+            return held;
+        }
+
+        private void TrimToWhatItKeeps()
+        {
+            if (_ledger == null) return;
+            var held = new List<Reading>();
+            foreach (var kv in _ledger)
+            {
+                if (kv.Value == null) continue;
+                foreach (var seen in kv.Value)
+                {
+                    if (seen.Value == null) continue;
+                    held.Add(new Reading
+                    {
+                        Item = kv.Key, Town = seen.Key, Day = seen.Value.CapturedDay
+                    });
+                }
+            }
+            var dropped = Kept.OldestBeyond(held, Kept.MostPricesKept);
+            if (dropped.Count == 0) return;
+            for (int i = 0; i < dropped.Count; i++)
+                if (_ledger.TryGetValue(dropped[i].Item, out var byTown))
+                {
+                    byTown.Remove(dropped[i].Town);
+                    if (byTown.Count == 0) _ledger.Remove(dropped[i].Item);
+                }
+            Log.Write("prices forgotten: " + dropped.Count + " of the oldest, because TradeLord keeps at most " +
+                      Kept.MostPricesKept + " recorded prices so a campaign cannot grow your save without end");
         }
 
         private void PruneObservations()
