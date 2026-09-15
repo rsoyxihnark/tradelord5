@@ -2130,9 +2130,18 @@ chk("1.5.2", "every setting default lies within its own declared range",
     mcm_defaults_within_range())
 chk("1.5.2", "every option the module reads is exposed in the settings screen",
     every_option_has_a_control())
-chk("1.5.2", "a timed-out publish is retried rather than abandoned",
-    "for attempt in 1 2 3 4 5; do" in WORKFLOW and
-    "the request landed despite the error" in WORKFLOW)
+def a_failed_publish_is_retried_and_nothing_in_the_loop_can_kill_it():
+    at = WORKFLOW.find("- name: Publish release")
+    step = "" if at < 0 else WORKFLOW[at:]
+    tidying = [one.strip() for one in step.split("\n")
+               if one.strip().startswith("gh release delete")]
+    return ("for attempt in 1 2 3 4 5; do" in WORKFLOW
+            and "the request landed despite the error" in WORKFLOW
+            and len(tidying) == 2
+            and all("||" in one for one in tidying))
+
+chk("1.5.2", "a timed-out publish is retried, and tidying a stranded draft can never end the run before the retry",
+    a_failed_publish_is_retried_and_nothing_in_the_loop_can_kill_it())
 chk("1.5.2", "a draft release left by a timeout is deleted before republishing",
     "--json isDraft -q .isDraft" in WORKFLOW and
     'gh release delete "$VERSION" --yes' in WORKFLOW and
@@ -8478,6 +8487,24 @@ def a_workshop_the_game_did_not_charge_for_is_still_paid_for():
 
 chk("1.76.4", "a workshop the game hands over without taking the gold for it is paid for all the same, and one it charged for is never charged twice",
     a_workshop_the_game_did_not_charge_for_is_still_paid_for())
+
+
+
+def a_half_published_version_never_blocks_the_run_that_would_finish_it():
+    at = WORKFLOW.find("- name: Publish release")
+    step = "" if at < 0 else WORKFLOW[at:]
+    tidying = [one.strip() for one in step.split("\n")
+               if one.strip().startswith("gh release delete")]
+    return ("if version == shipping and (row['draft'] or row['files'] == 0):" in RELEASED
+            and "is part-published from an attempt that did not finish" in RELEASED
+            and "' is still a draft release'" in RELEASED
+            and "' was published with no file attached'" in RELEASED
+            and len(tidying) == 2 and all("||" in one for one in tidying)
+            and WORKFLOW.index("released.py") < WORKFLOW.index("- name: Publish release"))
+
+
+chk("1.76.5", "a version left half published by an attempt that did not finish never blocks the run that would finish it, and tidying it cannot end that run",
+    a_half_published_version_never_blocks_the_run_that_would_finish_it())
 
 
 
