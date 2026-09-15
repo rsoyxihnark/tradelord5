@@ -127,7 +127,7 @@ namespace TradeLord
                 scored++;
                 heldTotal += held;
                 _bands.Add(said.Confidence, held);
-                LedgerBehavior.Instance?.KeepPromiseScore(held);
+                LedgerBehavior.Instance?.KeepPromiseScore(site.StringId, held);
                 lines.Add("  " + Named(said.Item) + ": the panel promised " + said.SellPrice +
                           " a unit for " + said.Units + " unit(s) within " + Figure(said.WithinDays) +
                           " day(s) at Conf " + Share(said.Confidence) + "; you walked in " + Figure(since) +
