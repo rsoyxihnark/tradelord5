@@ -817,11 +817,11 @@ namespace TradeLord
             int wait = Options.Current.EconomySettlingDays;
             if (wait <= 0) return false;
             float elapsed = Campaign.Current.Models.CampaignTimeModel.CampaignStartTime.ElapsedDaysUntilNow;
-            if (elapsed >= wait) return false;
+            if (!Settling.StillHolding(wait, elapsed, out int daysLeft)) return false;
             if (!quiet)
             {
                 TextObject msg = Tongue.Text("{=TL18}The market is still settling ({DAYS} more days).");
-                msg.SetTextVariable("DAYS", (int)Math.Ceiling(wait - elapsed));
+                msg.SetTextVariable("DAYS", daysLeft);
                 Toast(msg);
             }
             return true;

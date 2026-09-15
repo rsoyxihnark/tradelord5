@@ -22,6 +22,7 @@ SELLPASSTESTS = io.open('tests/SellPassTests.cs', encoding='utf-8').read()
 BUYRULETESTS = io.open('tests/BuyRulesTests.cs', encoding='utf-8').read()
 HERDTESTS = io.open('tests/HerdRulesTests.cs', encoding='utf-8').read()
 ARRIVALTESTS = io.open('tests/ArrivalTests.cs', encoding='utf-8').read()
+SETTLINGTESTS = io.open('tests/SettlingTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
      'BooksTests.cs': BOOKTESTS, 'SellRulesTests.cs': SELLTESTS,
@@ -30,7 +31,7 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'FoodReserveTests.cs': FOODTESTS, 'StallReasonTests.cs': STALLTESTS,
      'BuyPassTests.cs': BUYPASSTESTS, 'SellPassTests.cs': SELLPASSTESTS,
      'BuyRulesTests.cs': BUYRULETESTS, 'HerdRulesTests.cs': HERDTESTS,
-     'ArrivalTests.cs': ARRIVALTESTS}
+     'ArrivalTests.cs': ARRIVALTESTS, 'SettlingTests.cs': SETTLINGTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -1326,8 +1327,11 @@ chk("1.3.2", "ExcludeHostileTowns blocks trading, not just scans",
         between(S['Trading.cs'], "private static bool MarketOpen(Settlement settlement, bool quiet) =>", ";"))
 chk("1.3.18", "neither pass trades before the settling delay is served, in a market or on the road",
     (lambda b: ordered(b, "int wait = Options.Current.EconomySettlingDays;", "if (wait <= 0) return false;",
-                       "CampaignStartTime.ElapsedDaysUntilNow", "if (elapsed >= wait) return false;",
-                       '{=TL18}', "return true;"))
+                       "CampaignStartTime.ElapsedDaysUntilNow",
+                       "if (!Settling.StillHolding(wait, elapsed, out int daysLeft)) return false;",
+                       '{=TL18}', "return true;")
+           and "if (elapsed >= waitDays) return false;" in
+               method_body(S['Rules.cs'], "internal static bool StillHolding"))
     (method_body(S['Trading.cs'], "private static bool StillSettling")) and
     "CanTradeHere(settlement) && !StillSettling(quiet)" in
         between(S['Trading.cs'], "private static bool MarketOpen(Settlement settlement, bool quiet) =>", ";") and
@@ -7644,6 +7648,28 @@ def the_feature_list_answers_what_people_ask_before_installing():
 
 chk("1.71.1", "the feature list ends with short answers to what people ask before installing, folded away like every other run of it",
     the_feature_list_answers_what_people_ask_before_installing())
+
+
+def how_long_a_new_campaign_is_left_to_settle_is_worked_out_where_a_test_can_ask():
+    rule = method_body(S['Rules.cs'], "internal static bool StillHolding")
+    return ("internal static class Settling" in S['Rules.cs']
+            and "float elapsed = TradeMath.Finite(elapsedDays, float.MaxValue);" in rule
+            and "if (daysLeft < 1) daysLeft = 1;" in rule
+            and "if (daysLeft > waitDays) daysLeft = waitDays;" in rule
+            and "msg.SetTextVariable(\"DAYS\", daysLeft);" in S['Trading.cs']
+            and "Math.Ceiling(wait - elapsed)" not in S['Trading.cs']
+            and all(one in SETTLINGTESTS for one in
+                    ("A_delay_of_nothing_never_holds_a_market_back",
+                     "A_campaign_older_than_the_delay_trades_at_once",
+                     "A_young_campaign_is_told_how_many_days_are_left",
+                     "A_market_held_back_is_never_told_it_has_no_days_left",
+                     "A_campaign_age_the_game_cannot_work_out_never_holds_a_market_back",
+                     "The_days_left_are_always_between_one_and_the_delay_you_set",
+                     "A_day_further_on_is_never_a_day_further_from_trading")))
+
+
+chk("1.71.2", "how long a new campaign is left to settle is worked out where a test can ask, and an age the game cannot report never holds a market shut",
+    how_long_a_new_campaign_is_left_to_settle_is_worked_out_where_a_test_can_ask())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
