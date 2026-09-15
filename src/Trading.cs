@@ -982,7 +982,6 @@ namespace TradeLord
 
         private static MethodInfo _herdModifier;
         private static bool _herdLookupFailed;
-        private const int HerdCushion = 2;
 
         private static bool HerdTally(MobileParty party, out int men, out int herd,
                                      out int mounts, out int foot)
@@ -1015,11 +1014,11 @@ namespace TradeLord
                 DefaultPartySpeedCalculatingModel model = HerdModel();
                 if (model == null) return 0;
                 if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return 0;
-                herd += Math.Max(0, mounts - foot);
+                herd = Herding.DrivenInAll(herd, mounts, foot);
                 float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });
                 return TradeMath.MostThatHolds(256, room => room == 0 || TradeMath.Unchanged(
                     (float)_herdModifier.Invoke(model,
-                        new object[] { men, herd + room + HerdCushion }), neutral));
+                        new object[] { men, herd + room + Herding.Cushion }), neutral));
             }
             catch (Exception e)
             {
@@ -1067,8 +1066,7 @@ namespace TradeLord
                 DefaultPartySpeedCalculatingModel model = HerdModel();
                 if (model == null) return 0;
                 if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return 0;
-                int spare = Math.Max(0, mounts - foot);
-                int driven = herd + spare;
+                int driven = Herding.DrivenInAll(herd, mounts, foot);
                 if (driven <= 0) return 0;
                 float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });
                 return TradeMath.MostThatHolds(driven, shed => shed == 0 || !TradeMath.Unchanged(
@@ -1112,12 +1110,12 @@ namespace TradeLord
                 if (party == null) return;
                 if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return;
                 HerdSplit(party, out int packs, out int stock);
-                int spare = Math.Max(0, mounts - foot);
+                int spare = Herding.MountsNobodyRides(mounts, foot);
                 int shed = counted >= 0 ? counted : DrivenAnimalsToShed(party);
                 Log.Write("herd check (" + when + "): " + men + " men of whom " + foot + " on foot, " +
                           mounts + " loose mount(s) with " + spare + " nobody rides, " +
                           packs + " pack animal(s), " + stock + " livestock, " +
-                          (herd + spare) + " driven in all, " +
+                          Herding.DrivenInAll(herd, mounts, foot) + " driven in all, " +
                           (shed > 0
                               ? "the herd is slowing you down and " + shed + " must go"
                               : _herdLookupFailed
@@ -1132,7 +1130,7 @@ namespace TradeLord
             try
             {
                 return HerdTally(party, out _, out _, out int mounts, out int foot)
-                    ? Math.Max(0, mounts - foot) : 0;
+                    ? Herding.MountsNobodyRides(mounts, foot) : 0;
             }
             catch (Exception e)
             {
