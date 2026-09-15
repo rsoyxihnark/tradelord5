@@ -29,6 +29,7 @@ TWINSTESTS = io.open('tests/TwinsTests.cs', encoding='utf-8').read()
 SETTINGSFILETESTS = io.open('tests/SettingsFileTests.cs', encoding='utf-8').read()
 SCREENTESTS = io.open('tests/ScreenTests.cs', encoding='utf-8').read()
 RECENTTESTS = io.open('tests/RecentTests.cs', encoding='utf-8').read()
+EXPIRYTESTS = io.open('tests/ExpiryTests.cs', encoding='utf-8').read()
 TALLYTESTS = io.open('tests/TallyTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
@@ -42,7 +43,7 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RankTests.cs': RANKROWTESTS, 'MapButtonTests.cs': MAPBUTTONTESTS,
      'TwinsTests.cs': TWINSTESTS, 'SettingsFileTests.cs': SETTINGSFILETESTS,
      'ScreenTests.cs': SCREENTESTS, 'TallyTests.cs': TALLYTESTS,
-     'RecentTests.cs': RECENTTESTS}
+     'RecentTests.cs': RECENTTESTS, 'ExpiryTests.cs': EXPIRYTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -99,6 +100,13 @@ def panel_bindings():
             | set(re.findall(r'public void (Execute\w+)\(\)', S['Panel.cs'])))
     return bound, have
 ALL = "\n".join(S.values())
+
+def english_string(sid):
+    import xml.etree.ElementTree as ET
+    for e in ET.parse('TradeLord/ModuleData/Languages/module_strings.xml').getroot().iter('string'):
+        if e.get('id') == sid:
+            return e.get('text') or ''
+    return ''
 
 def strings_declared():
     import xml.etree.ElementTree as ET
@@ -7546,13 +7554,13 @@ def a_route_says_how_long_its_buy_market_holds_that_quantity():
     return ("if (!On || site == null || item == null || item.ItemCategory == null)" in ask
             and "return Projection.RunsOutAt(listed, coming, pull, across, item.StringId," in ask
             and "public float RunsOutInDays = Projection.NeverRunsOut;" in S['Ledger.cs']
-            and "RunsOutInDays = Forecast.RunsOutIn(from, item, onTheShelfNow," in scan
-            and "q.Units, toBuy)" in scan
+            and "float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);" in scan
+            and "RunsOutInDays = runsOut" in scan
             and "float days = _route.RunsOutInDays;" in S['Panel.cs']
             and 'if (days <= 0f) return "";' in S['Panel.cs']
             and '"HeadDays", "HeadRunsOut",' in S['Panel.cs']
             and '{=TL416}Left' in S['Panel.cs']
-            and '{=TL417} | Left = how long that shelf still holds this Qty' in S['Panel.cs']
+            and '{=TL417} | Left = how long that shelf still holds this Qty once you arrive' in S['Panel.cs']
             and 'Text="@RunsOut"' in PREFAB and 'Text="@HeadRunsOut"' in PREFAB
             and all(said_in_every_language(one) for one in ("TL414", "TL415", "TL416", "TL417"))
             and panel_columns()[0] is not None and len(panel_columns()[0]) == 12)
@@ -7926,6 +7934,47 @@ def the_panel_says_what_it_traded_for_you_lately():
 
 chk("1.72.0", "the panel ends with the last trades TradeLord made for you, held in memory only and never written into your save",
     the_panel_says_what_it_traded_for_you_lately())
+
+
+
+def how_long_a_shelf_lasts_now_counts_towards_the_route_score():
+    conf = S['Confidence.cs']
+    holds = method_body(conf, "public static float Holds")
+    of = method_body(conf, "public static float Of")
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    return ('TaleWorlds' not in conf
+            and "public const float NotKnown = -1f;" in conf
+            and "private const float Gone = 0.25f;" in conf
+            and "private const float Patience = 2f;" in conf
+            and ordered(holds, "if (runsOutInDays < 0f || float.IsNaN(runsOutInDays)) return 1f;",
+                        "float slack = runsOutInDays - waited;",
+                        "if (slack <= 0f) return Gone;",
+                        "return Clamp(Gone + (1f - Gone) * (slack / (slack + Patience)));")
+            and ordered(of, "float quiet = runsOutInDays >= 0f",
+                        "? Holds(runsOutInDays, daysToTheBuyTown)",
+                        ": 1f / (1f + Math.Max(caravans, 0) * 0.15f);")
+            and "float c = resilience * depth * haste * quiet * fresh;" in of
+            and ordered(scan, "float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);",
+                        "runsOut, toBuy);", "RunsOutInDays = runsOut")
+            and scan.count("Forecast.RunsOutIn(") == 1
+            and '{=TL417}' in S['Panel.cs']
+            and 'lowers Conf' in english_string('TL417')
+            and 'Confidence.cs' in TESTPROJ
+            and all(one in EXPIRYTESTS for one in
+                    ("A_shelf_the_forecast_never_sees_empty_is_not_discounted_at_all",
+                     "A_shelf_that_empties_before_you_arrive_is_discounted_hardest",
+                     "A_shelf_that_empties_the_moment_you_arrive_counts_as_gone",
+                     "The_longer_the_shelf_outlasts_your_arrival_the_less_it_is_discounted",
+                     "A_discount_is_never_worse_than_gone_and_never_better_than_untouched",
+                     "A_negative_journey_is_read_as_no_journey_rather_than_extra_room",
+                     "A_route_whose_shelf_holds_is_no_longer_punished_for_the_caravans_going_there",
+                     "A_route_whose_shelf_empties_first_scores_below_one_that_lasts",
+                     "The_caravan_count_still_decides_it_wherever_the_forecast_is_off",
+                     "new Random(4471)")))
+
+
+chk("1.73.0", "how long a shelf lasts counts towards a route's score in place of the caravans it already counted, and the panel says so",
+    how_long_a_shelf_lasts_now_counts_towards_the_route_score())
 
 
 

@@ -320,7 +320,7 @@ namespace TradeLord
                   + (Forecast.On
                         ? Tongue.Text("{=TL394} | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there").ToString()
                           + Tongue.Text("{=TL397} | Qty! = part of that amount is still on the road and lands before you would").ToString()
-                          + Tongue.Text("{=TL417} | Left = how long that shelf still holds this Qty before the caravans heading there buy it out").ToString()
+                          + Tongue.Text("{=TL417} | Left = how long that shelf still holds this Qty once you arrive, and a shelf that empties first lowers Conf").ToString()
                         : ""))
                 + HowThePromiseHasHeld()
                 + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero));

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.73.0
+
+- Left now counts towards a route's Conf, so a route whose shelf empties before or soon after you arrive ranks below one that still has the goods waiting for you.
+- A route whose shelf the forecast says will hold is no longer marked down for the caravans heading to those towns, because those are the same caravans Left has already counted.
+- The line under the routes now says what Left does rather than only what it means.
+- Routes are ranked by Left only where Live world prices is on, since that is what works out how long a shelf lasts; with it off, the caravan count still decides as before.
+
 ## 1.72.1
 
 - The feature list now names Recent trades, so the ledger panel's new section is on the mod page with everything else TradeLord does.
