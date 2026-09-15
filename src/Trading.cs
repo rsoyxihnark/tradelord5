@@ -846,75 +846,84 @@ namespace TradeLord
         private static void ToastAfterXp(TextObject msg, Color color) =>
             _pendingAfterXp.Add(new InformationMessage(msg.ToString(), color));
 
-        internal static void TookTheDeal(List<(ItemRosterElement, int)> bought,
-                                        List<(ItemRosterElement, int)> sold)
+        private struct Took
         {
-            Settlement here = Settlement.CurrentSettlement;
-            if (here?.SettlementComponent == null) return;
-            ReportWhatYouSold(here, sold);
-            ReportWhatYouBought(here, bought);
+            internal int Units;
+            internal int Gold;
+            internal int Profit;
         }
 
-        private static void ReportWhatYouSold(Settlement settlement, List<(ItemRosterElement, int)> sold,
-                                              bool quiet = false)
+        private static Took Reckon(Pass pass, List<(ItemRosterElement, int)> lines, bool selling)
         {
-            if (sold == null) return;
-            Pass pass = Pass.Open(settlement, quiet);
-            if (pass == null) return;
-            int units = 0, gained = 0, profit = 0;
-            for (int i = 0; i < sold.Count; i++)
+            var took = default(Took);
+            if (pass == null || lines == null) return took;
+            for (int i = 0; i < lines.Count; i++)
             {
-                var (el, count) = sold[i];
+                var (el, said) = lines[i];
                 ItemObject item = el.EquipmentElement.Item;
-                if (item == null || count <= 0) continue;
-                int price = pass.Price(el.EquipmentElement, selling: true);
+                if (item == null || said <= 0) continue;
+                int price = pass.Price(el.EquipmentElement, selling: selling);
                 if (price <= 0) continue;
-                int worth = TradePolicy.WorthToBeat(item);
-                units += count;
-                gained += price * count;
-                profit += TradeMath.Credit(price, worth, TradePolicy.UnpaidWorth(item)) * count;
-                pass.Tally(item, count, price * count);
+                int count = Deals.UnitsMoved(el.Amount, said, price);
+                if (count <= 0) continue;
+                took.Units += count;
+                took.Gold += said;
+                if (selling)
+                    took.Profit += TradeMath.Credit(price, TradePolicy.WorthToBeat(item),
+                                                    TradePolicy.UnpaidWorth(item)) * count;
+                pass.Tally(item, count, said);
             }
-            if (units <= 0) return;
-            pass.Moved(profit, gained, selling: true);
-            Log.Write("the deal you took sold " + units + " item(s) for about +" + gained +
-                      " gold, profit about " + profit + " " + pass.Where +
+            took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);
+            return took;
+        }
+
+        internal static void TookTheDeal(List<(ItemRosterElement, int)> bought,
+                                        List<(ItemRosterElement, int)> sold, bool quiet = false)
+        {
+            Settlement settlement = Settlement.CurrentSettlement;
+            if (settlement?.SettlementComponent == null) return;
+            int purseMoved = Counter.PurseMovedOnTheScreen();
+            Pass selling = Pass.Open(settlement, quiet);
+            Pass buying = Pass.Open(settlement, quiet);
+            if (selling == null || buying == null) return;
+            Took got = Reckon(selling, sold, true);
+            Took paid = Reckon(buying, bought, false);
+            bool addsUp = Deals.AddsUp(got.Gold - paid.Gold, purseMoved);
+            if (!addsUp)
+                Log.Write("ERROR: the deal you took reckons as " + got.Gold + " gold in and " + paid.Gold +
+                          " out, a net of " + (got.Gold - paid.Gold) + ", but your purse moved " + purseMoved +
+                          " on that screen. TradeLord reports what it read and counts none of it towards your " +
+                          "Trade skill or your TradeLord profit, because it cannot square the two.");
+            ReportWhatYouSold(selling, got, addsUp);
+            ReportWhatYouBought(buying, paid, addsUp);
+        }
+
+        private static void ReportWhatYouSold(Pass pass, Took got, bool addsUp)
+        {
+            if (got.Units <= 0) return;
+            pass.Moved(addsUp ? (int?)got.Profit : null, got.Gold, selling: true);
+            Log.Write("the deal you took sold " + got.Units + " item(s) for about +" + got.Gold +
+                      " gold, profit about " + got.Profit + " " + pass.Where +
                       " (priced from the market once the deal was done, so both are close rather than exact)");
             pass.Logged(selling: true, "the deal you took on the trade screen");
             TextObject msg = pass.Said(
                 "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
-                "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).", units, gained);
-            msg.SetTextVariable("PROFIT", profit);
-            Toast(msg, profit > 0 ? ToastGain : ToastFlat);
-            if (profit > 0) AwardTradeXp(profit, pass.Muted);
+                "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).", got.Units, got.Gold);
+            msg.SetTextVariable("PROFIT", got.Profit);
+            Toast(msg, got.Profit > 0 ? ToastGain : ToastFlat);
+            if (addsUp && got.Profit > 0) AwardTradeXp(got.Profit, pass.Muted);
         }
 
-        private static void ReportWhatYouBought(Settlement settlement, List<(ItemRosterElement, int)> bought,
-                                                bool quiet = false)
+        private static void ReportWhatYouBought(Pass pass, Took paid, bool addsUp)
         {
-            if (bought == null) return;
-            Pass pass = Pass.Open(settlement, quiet);
-            if (pass == null) return;
-            int units = 0, spent = 0;
-            for (int i = 0; i < bought.Count; i++)
-            {
-                var (el, count) = bought[i];
-                ItemObject item = el.EquipmentElement.Item;
-                if (item == null || count <= 0) continue;
-                int price = pass.Price(el.EquipmentElement, selling: false);
-                if (price <= 0) continue;
-                units += count;
-                spent += price * count;
-                pass.Tally(item, count, price * count);
-            }
-            if (units <= 0) return;
-            pass.Moved(gold: spent, selling: false);
-            Log.Write("the deal you took bought " + units + " item(s) for about -" + spent +
+            if (paid.Units <= 0) return;
+            pass.Moved(gold: paid.Gold, selling: false);
+            Log.Write("the deal you took bought " + paid.Units + " item(s) for about -" + paid.Gold +
                       " gold " + pass.Where +
                       " (priced from the market once the deal was done, so it is close rather than exact)");
             pass.Logged(selling: false, "the deal you took on the trade screen");
             Toast(pass.Said("{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
-                            "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.", units, spent), ToastSpend);
+                            "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.", paid.Units, paid.Gold), ToastSpend);
         }
 
         internal static void WatchTheTradeScreen()

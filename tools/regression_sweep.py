@@ -31,6 +31,7 @@ SCREENTESTS = io.open('tests/ScreenTests.cs', encoding='utf-8').read()
 RECENTTESTS = io.open('tests/RecentTests.cs', encoding='utf-8').read()
 EXPIRYTESTS = io.open('tests/ExpiryTests.cs', encoding='utf-8').read()
 SHELFORDERTESTS = io.open('tests/ShelfOrderTests.cs', encoding='utf-8').read()
+DEALTESTS = io.open('tests/DealTests.cs', encoding='utf-8').read()
 FLOORTESTS = io.open('tests/BestMarketFloorTests.cs', encoding='utf-8').read()
 TALLYTESTS = io.open('tests/TallyTests.cs', encoding='utf-8').read()
 HOLDINGTESTS = io.open('tests/HoldingsTests.cs', encoding='utf-8').read()
@@ -49,7 +50,8 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'ScreenTests.cs': SCREENTESTS, 'TallyTests.cs': TALLYTESTS,
      'RecentTests.cs': RECENTTESTS, 'ExpiryTests.cs': EXPIRYTESTS,
      'ShelfOrderTests.cs': SHELFORDERTESTS,
-     'BestMarketFloorTests.cs': FLOORTESTS}
+     'BestMarketFloorTests.cs': FLOORTESTS,
+     'DealTests.cs': DEALTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -5440,8 +5442,7 @@ def every_market_pass_is_opened_and_carried_by_one_object():
     t = S['Trading.cs']
     passes = ("private static void SellPass", "public static void ExecuteResupply",
               "public static void ExecuteHerdRelief", "public static void ExecuteHaulage",
-              "private static void BuyPass", "private static void ReportWhatYouSold",
-              "private static void ReportWhatYouBought")
+              "private static void BuyPass")
     held = method_body(t, "private sealed class Pass")
     opened = method_body(t, "internal static Pass Open")
     alone = ("SettlementComponent market = settlement.SettlementComponent;",
@@ -5467,8 +5468,12 @@ def every_market_pass_is_opened_and_carried_by_one_object():
                         "MobileParty party = MobileParty.MainParty;",
                         "return party == null ? null : new Pass(site, null, null, Visit, party, quiet);")
             and t.count("Pass.Open(settlement, quiet)") == 7
-            and t.count("if (pass == null) return;") == 7
+            and t.count("if (pass == null) return;") == 5
             and all("if (pass == null) return;" in method_body(t, one) for one in passes)
+            and ordered(method_body(t, "internal static void TookTheDeal"),
+                        "Pass selling = Pass.Open(settlement, quiet);",
+                        "Pass buying = Pass.Open(settlement, quiet);",
+                        "if (selling == null || buying == null) return;")
             and not any(one in method_body(t, where) for where in passes for one in alone)
             and "SettlementComponent market = settlement.SettlementComponent;" not in t
             and "PartyBase shop = settlement.Party;" not in t
@@ -5476,7 +5481,7 @@ def every_market_pass_is_opened_and_carried_by_one_object():
             and t.count("Priced.At(Market,") == 1
             and "Priced.At(Market, what, Party, selling)" in
                 between(t, "internal int Price(", "Road.GetPrice")
-            and t.count("pass.Price(el.EquipmentElement, selling: ") == 7
+            and t.count("pass.Price(el.EquipmentElement, selling: ") == 6
             and "_pass.Price(_plan[at].EquipmentElement, selling: true)" in t
             and "_pass.Price(Shelf[at].EquipmentElement, selling: false)" in t
             and "TradeActionBehavior.Tally(Detail, item, count, gold)" in
@@ -8310,19 +8315,30 @@ def the_deal_you_took_is_reported_and_credited_like_any_pass():
     took = method_body(t, "internal static void TookTheDeal")
     sold = method_body(t, "private static void ReportWhatYouSold")
     ledger = method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange")
-    return (ordered(took, "if (here?.SettlementComponent == null) return;",
-                    "ReportWhatYouSold(here, sold);", "ReportWhatYouBought(here, bought);")
-            and ordered(sold, "int worth = TradePolicy.WorthToBeat(item);",
-                        "profit += TradeMath.Credit(price, worth, TradePolicy.UnpaidWorth(item)) * count;",
-                        "pass.Moved(profit, gained, selling: true);",
-                        "{=TL02}", "AwardTradeXp(profit, pass.Muted);")
+    reckon = method_body(t, "private static Took Reckon")
+    return (ordered(took, "if (settlement?.SettlementComponent == null) return;",
+                    "int purseMoved = Counter.PurseMovedOnTheScreen();",
+                    "Took got = Reckon(selling, sold, true);",
+                    "Took paid = Reckon(buying, bought, false);",
+                    "bool addsUp = Deals.AddsUp(got.Gold - paid.Gold, purseMoved);",
+                    "ReportWhatYouSold(selling, got, addsUp);",
+                    "ReportWhatYouBought(buying, paid, addsUp);")
+            and ordered(reckon, "int count = Deals.UnitsMoved(el.Amount, said, price);",
+                        "took.Gold += said;",
+                        "TradeMath.Credit(price, TradePolicy.WorthToBeat(item),",
+                        "pass.Tally(item, count, said);",
+                        "took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);")
+            and "gained += price * count;" not in t and "spent += price * count;" not in t
+            and ordered(sold, "pass.Moved(addsUp ? (int?)got.Profit : null, got.Gold, selling: true);",
+                        "{=TL02}", "if (addsUp && got.Profit > 0) AwardTradeXp(got.Profit, pass.Muted);")
             and ordered(ledger, "if (Counter.Awaiting)",
                         "TradeActionBehavior.TookTheDeal(purchased, sold)",
                         "foreach (var (element, count) in sold)")
             and "internal static bool Awaiting => _shown != null;" in S['Counter.cs']
+            and "_shown == null ? 0 : (Hero.MainHero?.Gold ?? _goldAtOpen) - _goldAtOpen;" in S['Counter.cs']
             and t.count("AwardTradeXp(") == 4)
 
-chk("1.76.0", "the deal you took on the laid out trade screen is reported and credited to your Trade skill the same way a pass of its own would be",
+chk("1.76.2", "the deal you took is read in the gold the game hands over, squared against what your purse actually did, and credited only when the two agree",
     the_deal_you_took_is_reported_and_credited_like_any_pass())
 
 
@@ -8368,6 +8384,43 @@ def buying_a_workshop_says_when_it_eats_into_your_reserve():
 
 chk("1.76.1", "buying a workshop says so when it takes you below the gold reserve, and still lets you",
     buying_a_workshop_says_when_it_eats_into_your_reserve())
+
+
+
+def what_a_trade_moved_is_never_read_as_the_gold_it_fetched():
+    rules = S['Rules.cs']
+    units = method_body(rules, "public static int UnitsMoved")
+    panel = method_body(S['Panel.cs'], "private static string DayOf")
+    return ("public static class Deals" in rules
+            and ordered(units, "if (amount > 0) return amount;",
+                        "if (price > 0 && gold > 0) return Math.Max(1, gold / price);",
+                        "return gold > 0 ? 1 : 0;")
+            and "Math.Abs((long)reckonedNet - purseMoved) <= Slack + Math.Abs((long)purseMoved) / 100L;" in rules
+            and "if (profit <= 0 || gained <= 0) return 0;" in rules
+            and "internal static int DaysAgo(float then, float now)" in rules
+            and ordered(panel, "int ago = Recent.DaysAgo(day, (float)CampaignTime.Now.ToDays);",
+                        "{=TL442}", "{=TL420}")
+            and "{=TL420}Day {DAY}" not in S['Panel.cs']
+            and said_in_every_language("TL420") and said_in_every_language("TL442")
+            and 'Rules.cs' in TESTPROJ
+            and all(one in DEALTESTS for one in
+                    ("The_count_the_game_hands_over_is_taken_when_it_has_one",
+                     "With_no_count_to_go_on_the_units_come_from_the_gold_and_the_price",
+                     "A_line_worth_less_than_one_unit_still_counts_as_one",
+                     "A_line_with_nothing_on_it_moves_nothing",
+                     "The_deal_that_broke_the_ledger_no_longer_adds_up_and_says_so",
+                     "The_deal_as_it_really_was_adds_up_against_the_purse",
+                     "A_denar_or_two_of_rounding_is_allowed_and_a_wild_figure_is_not",
+                     "A_large_deal_is_allowed_the_same_small_share_of_slack",
+                     "Profit_can_never_be_more_than_the_sale_that_earned_it",
+                     "Nothing_reckoned_from_a_line_ever_outruns_what_the_purse_did",
+                     "A_trade_from_today_reads_as_today_and_an_older_one_counts_the_days",
+                     "A_day_the_game_cannot_work_out_reads_as_today_rather_than_a_wild_number",
+                     "new Random(8812)")))
+
+
+chk("1.76.2", "what a trade moved is never read as the gold it fetched, and the ledger dates a trade by how long ago it was",
+    what_a_trade_moved_is_never_read_as_the_gold_it_fetched())
 
 
 
