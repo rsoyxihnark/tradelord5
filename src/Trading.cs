@@ -1,15 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Text;
 using HarmonyLib;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
-using TaleWorlds.CampaignSystem.GameComponents;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ComponentInterfaces;
-using TaleWorlds.CampaignSystem.Conversation;
-using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.GameMenus;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
@@ -64,9 +60,10 @@ namespace TradeLord
 
     public class TradeActionBehavior : CampaignBehaviorBase
     {
-        private Settlement _trackedTown;
         private string _pinnedTowns = "";
         private static readonly Books Visit = new Books();
+
+        internal static Books TheVisit => Visit;
         private static bool _cargoWasFull;
         private static Block? _sellStalled;
         private static Block? _buyStalled;
@@ -128,18 +125,16 @@ namespace TradeLord
             ResetVisit();
             _transactionDepth = 0;
             _silenced = 0;
-            _pending.Clear();
-            _pendingAfterXp.Clear();
+            Notices.Forget();
             _pendingXp = 0;
             _pendingXpMuted = true;
             AutomatedTradeInProgress = false;
             _sittingAt = null;
             _sittingHour = -1;
             ForgetArrivals();
-            _markerHour = -1;
-            ForgetTheMarkerRead();
+            Marker.Forget();
             Shops.ForgetWhoIsBuying();
-            _herdLookupFailed = false;
+            Drove.Forget();
             Carry.Forget();
             TradePolicy.ForgetItemListAudit();
             TradePolicy.ForgetCraftingLookup();
@@ -147,15 +142,16 @@ namespace TradeLord
             Priced.Forget();
             ForgetRoadMarket();
             ForgetTheMeeting();
-            _tradedWith = null;
-            _tradedIn = null;
+            Meetings.ForgetWhoYouTradedWith();
         }
 
         public override void SyncData(IDataStore dataStore)
         {
             if (!dataStore.IsLoading)
                 Guard.Run("Visit.PinsForSave", () => _pinnedTowns = LedgerPanel.PinnedIds());
-            dataStore.SyncData("TradeLord_TrackedTown", ref _trackedTown);
+            Settlement tracked = Marker.Tracked;
+            dataStore.SyncData("TradeLord_TrackedTown", ref tracked);
+            Marker.Tracked = tracked;
             dataStore.SyncData("TradeLord_PanelPins", ref _pinnedTowns);
             if (_pinnedTowns == null) _pinnedTowns = "";
         }
@@ -170,41 +166,35 @@ namespace TradeLord
             CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEnded);
         }
 
-        private static int _markerHour = -1;
-        private static Vec2 _markerAt;
-        private const float MarkerMovedFar = 100f;
+        private void OnConversationEnded(IEnumerable<CharacterObject> spoke) => Meetings.ConversationEnded();
 
         private void OnTick(float dt)
         {
             MobileParty party = MobileParty.MainParty;
             if (party == null || party.CurrentSettlement != null) return;
             NoteTheRoadTaken(party);
-            int hour = (int)CampaignTime.Now.ToHours;
-            Vec2 at = party.GetPosition2D;
-            if (hour == _markerHour && at.DistanceSquared(_markerAt) <= MarkerMovedFar) return;
-            _markerHour = hour;
-            _markerAt = at;
-            Guard.Run("Action.MarkerAsYouMove", UpdateBestSellTownTracker);
+            if (!Marker.DueAgain(party.GetPosition2D)) return;
+            Guard.Run("Action.MarkerAsYouMove", Marker.Update);
         }
 
         private void OnDailyTick()
         {
             Guard.Run("Action.DailyHerdCheck", () =>
             {
-                int shed = DrivenAnimalsToShed(MobileParty.MainParty);
-                if (shed > 0) LogHerdState("on the road, no market in reach", shed);
+                int shed = Drove.AnimalsToShed(MobileParty.MainParty);
+                if (shed > 0) Drove.LogState("on the road, no market in reach", shed);
             });
-            Guard.Run("Action.DailyTick", UpdateBestSellTownTracker);
+            Guard.Run("Action.DailyTick", Marker.Update);
         }
 
         private void OnSettlementLeft(MobileParty party, Settlement settlement)
         {
             if (party != MobileParty.MainParty) return;
             NoteTheGateBehind(party);
-            ForgetWhatYouCarry();
+            Marker.ForgetWhatYouCarry();
             Guard.Run("Action.HerdReliefOnLeaving", () =>
             {
-                LogHerdState("leaving " + settlement.Name);
+                Drove.LogState("leaving " + settlement.Name);
                 if (!_visitTradeAllowed)
                 {
                     if (IsMarket(settlement))
@@ -214,7 +204,7 @@ namespace TradeLord
                 }
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
             });
-            Guard.Run("Action.OnSettlementLeft", UpdateBestSellTownTracker);
+            Guard.Run("Action.OnSettlementLeft", Marker.Update);
         }
 
         private static bool _visitTradeAllowed;
@@ -226,7 +216,7 @@ namespace TradeLord
         private static Vec2 _gateBehind;
         private static bool _gateBehindKnown;
         private static bool _tookToTheRoad;
-        private static bool StillTheSameArrival(Settlement settlement) =>
+        internal static bool StillTheSameArrival(Settlement settlement) =>
             Arrivals.StillTheSame(settlement?.StringId, _lastArrivalAt, _tookToTheRoad);
 
         private static void NoteThisArrival(Settlement settlement)
@@ -271,7 +261,7 @@ namespace TradeLord
         private static void ResetVisit(bool sameSitting = false)
         {
             _visitTradeAllowed = false;
-            ForgetWhatYouCarry();
+            Marker.ForgetWhatYouCarry();
             if (sameSitting) Visit.ForgetTheDryRun(); else Visit.Forget();
             _cargoWasFull = false;
             _sellStalled = null;
@@ -500,7 +490,7 @@ namespace TradeLord
         {
             TradePolicy.ItemListsNameTwoAnimals();
             if (!TradePolicy.ItemListsNameNothing()) return;
-            Toast(Tongue.Text("{=TL91}An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which."), ToastAlert);
+            Notices.Say(Tongue.Text("{=TL91}An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which."), Notices.Alert);
         }
 
         internal static int GoldHeldBack()
@@ -550,7 +540,7 @@ namespace TradeLord
             msg.SetTextVariable("RESERVE", held);
             msg.SetTextVariable("FLAT", flat);
             msg.SetTextVariable("WAGES", held - flat);
-            Toast(msg, ToastAlert);
+            Notices.Say(msg, Notices.Alert);
             return true;
         }
 
@@ -558,8 +548,8 @@ namespace TradeLord
         {
             if (TradedThisVisit()) return;
             if (!NoRoomToCarry() && !_cargoWasFull) return;
-            Toast(Tongue.Text("{=TL82}Cargo is full. Recruit more men, buy more horses, or sell goods manually."),
-                  ToastAlert);
+            Notices.Say(Tongue.Text("{=TL82}Cargo is full. Recruit more men, buy more horses, or sell goods manually."),
+                  Notices.Alert);
         }
 
         private void OnSessionLaunched(CampaignGameStarter starter)
@@ -567,11 +557,11 @@ namespace TradeLord
             Guard.Run("Action.OnSessionLaunched", () =>
             {
                 ResetVisit();
-                ForgetTheMarkerRead();
+                Marker.ForgetTheRead();
                 Settlement inside = MobileParty.MainParty?.CurrentSettlement;
                 if (inside != null) _visitTradeAllowed = CanTradeHere(inside);
                 Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));
-                Guard.Run("Action.RestoreMarker", UpdateBestSellTownTracker);
+                Guard.Run("Action.RestoreMarker", Marker.Update);
                 Log.Write(Travel.NavalActive
                     ? "naval capability: party can sail - routes and travel times include sea legs"
                     : "naval capability: land-only - land routing in effect");
@@ -593,20 +583,20 @@ namespace TradeLord
                             if (!Counter.Ready(Settlement.CurrentSettlement)) return;
                             try
                             {
-                                LogHerdState("trading by hand at " + Settlement.CurrentSettlement.Name);
+                                Drove.LogState("trading by hand at " + Settlement.CurrentSettlement.Name);
                                 ExecuteQuickSell(Settlement.CurrentSettlement);
                                 ExecuteHerdRelief(Settlement.CurrentSettlement);
                                 ExecuteResupply(Settlement.CurrentSettlement);
                                 ExecuteHaulage(Settlement.CurrentSettlement);
                                 ExecuteQuickBuy(Settlement.CurrentSettlement);
                                 ExecuteHerdRelief(Settlement.CurrentSettlement);
-                                LogHerdState("after trading by hand at " + Settlement.CurrentSettlement.Name);
+                                Drove.LogState("after trading by hand at " + Settlement.CurrentSettlement.Name);
                                 ReportStalledPasses();
                             }
                             finally
                             {
                                 TextObject laid = Counter.Settle();
-                                if (laid != null) Toast(laid, ToastNote);
+                                if (laid != null) Notices.Say(laid, Notices.Note);
                             }
                         }),
                         false, 6);
@@ -630,106 +620,8 @@ namespace TradeLord
                     foreach (string port in new[] { "port_menu", "naval_storyline_virtualport" })
                         AddOptions(port);
 
-                AddCaravanLines(starter);
-                AddBanditLines(starter);
+                Meetings.Lines(starter);
             });
-        }
-
-        private static MobileParty _tradedWith;
-        private static object _tradedIn;
-
-        private void AddCaravanLines(CampaignGameStarter starter) => Guard.Run(
-            "caravan dialog (trading in a market is unaffected)", () =>
-            {
-                const string said = "{=TL114}That was a nice trade. [TRADELORD]";
-                const string answered = "{=TL115}Agreed. I wish I could use that mod too. Hope you gave a thumbs up endorsement on NexusMods!";
-                starter.AddPlayerLine("tradelord_caravan_done", "caravan_talk", "tradelord_caravan_reply",
-                    Tongue.Slot(said),
-                    () => Tongue.Spoken(said) && CaravanMet(), null, 200);
-                starter.AddDialogLine("tradelord_caravan_reply", "tradelord_caravan_reply", "close_window",
-                    Tongue.Slot(answered),
-                    () => Tongue.Spoken(answered), null, 200);
-            });
-
-        private static bool CaravanMet()
-        {
-            MobileParty caravan = MobileParty.ConversationParty;
-            if (!Options.Current.TradeWithCaravans || caravan == null || !caravan.IsCaravan) return false;
-            TradeOnce(caravan);
-            return true;
-        }
-
-        private void AddBanditLines(CampaignGameStarter starter) => Guard.Run(
-            "bandit dialog (meeting a band is otherwise unaffected)", () =>
-            {
-                const string said = "{=TL387}Let us pass, and we will be on our way. [TRADELORD]";
-                const string answered = "{=TL113}Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!";
-                ConversationSentence asked = starter.AddPlayerLine(
-                    "tradelord_bandit_pass", Parley.OwnState, "tradelord_bandit_pass_reply",
-                    Tongue.Slot(said),
-                    () => Tongue.Spoken(said) && BanditMet(), null, 200);
-                starter.AddDialogLine("tradelord_bandit_pass_reply", "tradelord_bandit_pass_reply", "close_window",
-                    Tongue.Slot(answered),
-                    () => Tongue.Spoken(answered),
-                    () => Guard.Run("Action.Getaway", LetPlayerGo), 200);
-                Parley.Remember(asked);
-            });
-
-        private static bool BanditMet()
-        {
-            MobileParty band = MobileParty.ConversationParty;
-            return Options.Current.BanditGetawayCheat && band != null && band.IsBandit;
-        }
-
-        private static void TradeOnce(MobileParty met)
-        {
-            object here = PlayerEncounter.Current;
-            if (_tradedWith == met || (here != null && _tradedIn == here)) return;
-            _tradedWith = met;
-            _tradedIn = here;
-            Guard.Run("Action.RoadTrade", () => ExecuteRoadTrade(met));
-        }
-
-        internal static bool IsRoadTrader(MobileParty party) =>
-            party != null && (party.IsCaravan || party.IsVillager);
-
-        private static object _handledEncounter;
-
-        internal static void WatchEncounter()
-        {
-            if (Campaign.Current == null) { _handledEncounter = null; Parley.Forget(); return; }
-            object here = PlayerEncounter.Current;
-            if (here == null) { _handledEncounter = null; return; }
-            if (_handledEncounter == here) return;
-            MobileParty met = PlayerEncounter.EncounteredMobileParty;
-            if (met == null) return;
-            _handledEncounter = here;
-            if (IsRoadTrader(met)) TradeOnce(met);
-        }
-
-        internal static void ForgetEncounter()
-        {
-            ForgetTheMeeting();
-            _tradedWith = null;
-            _tradedIn = null;
-            _handledEncounter = null;
-        }
-
-        private void OnConversationEnded(IEnumerable<CharacterObject> spoke) => _tradedWith = null;
-
-        private static void LetPlayerGo()
-        {
-            MobileParty band = MobileParty.ConversationParty;
-            Log.Write("free passage taken against " + (band == null ? "an unnamed party" : band.StringId));
-            band?.IgnoreForHours(GetawayHours);
-            MobileParty.MainParty?.IgnoreByOtherPartiesTill(CampaignTime.HoursFromNow(GetawayHours));
-            if (PlayerEncounter.Current != null)
-            {
-                PlayerEncounter.ProtectPlayerSide(GetawayHours);
-                PlayerEncounter.LeaveEncounter = true;
-            }
-            Log.Write("free passage held for " + GetawayHours + " hours: your party is passed over by other parties, " +
-                      "and " + (band == null ? "that band" : band.StringId) + " is passed over by yours");
         }
 
         private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)
@@ -743,23 +635,23 @@ namespace TradeLord
                 ResetVisit(StillTheSameSitting(settlement));
                 _visitTradeAllowed = CanTradeHere(settlement);
                 WarnUnmatchedItemLists();
-                LogHerdState("entering " + settlement.Name);
+                Drove.LogState("entering " + settlement.Name);
 
                 if (StillTheSameArrival(settlement))
                 {
                     Log.Write("trading on arrival at " + settlement.Name + " is left alone: your party has " +
                               "not taken to the road since it last traded here, so this is the same arrival");
-                    UpdateBestSellTownTracker();
+                    Marker.Update();
                     return;
                 }
                 NoteThisArrival(settlement);
 
                 if (Counter.HoldsBack())
                 {
-                    Toast(TheDealWaitsForYou(), ToastNote);
+                    Notices.Say(TheDealWaitsForYou(), Notices.Note);
                     Log.Write("trading on arrival at " + settlement.Name + " is held back: the deal is laid out " +
                               "on the trade screen from the menu entry instead, so nothing moved");
-                    UpdateBestSellTownTracker();
+                    Marker.Update();
                     return;
                 }
 
@@ -769,14 +661,14 @@ namespace TradeLord
                 if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
-                LogHerdState("after trading at " + settlement.Name);
+                Drove.LogState("after trading at " + settlement.Name);
                 ReportStalledPasses();
                 if (CanTradeHere(settlement) &&
                     (Options.Current.AutoBuyOnEntry || Options.Current.QuickSellMenu))
                 {
                     if (!WarnPurseBelowReserve()) WarnNoRoomToCarry();
                 }
-                UpdateBestSellTownTracker();
+                Marker.Update();
             });
         }
 
@@ -823,7 +715,7 @@ namespace TradeLord
             {
                 TextObject msg = Tongue.Text("{=TL18}The market is still settling ({DAYS} more days).");
                 msg.SetTextVariable("DAYS", daysLeft);
-                Toast(msg);
+                Notices.Say(msg);
             }
             return true;
         }
@@ -831,25 +723,8 @@ namespace TradeLord
         private static bool MarketOpen(Settlement settlement, bool quiet) =>
             CanTradeHere(settlement) && !StillSettling(quiet);
 
-        private static readonly Color ToastGain = new Color(0.40f, 0.90f, 0.40f);
-        private static readonly Color ToastSpend = new Color(0.55f, 0.78f, 1f);
-        private static readonly Color ToastFlat = new Color(0.85f, 0.75f, 0.45f);
-        private static readonly Color ToastNote = new Color(0.75f, 0.75f, 0.75f);
-        private static readonly Color ToastXp = new Color(1f, 0.72f, 0.20f);
-        private static readonly Color ToastAlert = new Color(0.90f, 0.28f, 0.28f);
-
-        private static readonly List<InformationMessage> _pending = new List<InformationMessage>();
-        private static readonly List<InformationMessage> _pendingAfterXp = new List<InformationMessage>();
         private static int _pendingXp;
         private static bool _pendingXpMuted = true;
-
-        private static void Toast(TextObject msg) => Toast(msg, ToastNote);
-
-        private static void Toast(TextObject msg, Color color) =>
-            _pending.Add(new InformationMessage(msg.ToString(), color));
-
-        private static void ToastAfterXp(TextObject msg, Color color) =>
-            _pendingAfterXp.Add(new InformationMessage(msg.ToString(), color));
 
         private struct Took
         {
@@ -915,7 +790,7 @@ namespace TradeLord
                 "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
                 "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).", got.Units, got.Gold);
             msg.SetTextVariable("PROFIT", got.Profit);
-            Toast(msg, got.Profit > 0 ? ToastGain : ToastFlat);
+            Notices.Say(msg, got.Profit > 0 ? Notices.Gain : Notices.Flat);
             if (addsUp && got.Profit > 0) AwardTradeXp(got.Profit, pass.Muted);
         }
 
@@ -927,14 +802,14 @@ namespace TradeLord
                       " gold " + pass.Where +
                       " (priced from the market once the deal was done, so it is close rather than exact)");
             pass.Logged(selling: false, "the deal you took on the trade screen");
-            Toast(pass.Said("{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
-                            "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.", paid.Units, paid.Gold), ToastSpend);
+            Notices.Say(pass.Said("{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
+                            "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.", paid.Units, paid.Gold), Notices.Spend);
         }
 
         internal static void WatchTheTradeScreen()
         {
             TextObject closed = Counter.Watch();
-            if (closed != null) Toast(closed, ToastNote);
+            if (closed != null) Notices.Say(closed, Notices.Note);
         }
 
         internal static void FlushToasts()
@@ -944,21 +819,7 @@ namespace TradeLord
             _pendingXp = 0;
             _pendingXpMuted = true;
             if (xp > 0) CreditTradeSkill(xp, muted);
-            if (_pendingAfterXp.Count > 0)
-            {
-                _pending.AddRange(_pendingAfterXp);
-                _pendingAfterXp.Clear();
-            }
-            if (_pending.Count > 0)
-            {
-                try
-                {
-                    for (int i = 0; i < _pending.Count; i++)
-                        if (i == 0 || _pending[i].Information != _pending[i - 1].Information)
-                            InformationManager.DisplayMessage(_pending[i]);
-                }
-                finally { _pending.Clear(); }
-            }
+            Notices.Drain();
         }
 
         private static void CreditTheCompanionsWithYou(int xp)
@@ -992,13 +853,11 @@ namespace TradeLord
                 : "{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.");
             earned.SetTextVariable("GOLD", xp);
             if (rose) earned.SetTextVariable("LEVEL", now);
-            if (!muted) Toast(earned, ToastXp);
+            if (!muted) Notices.Say(earned, Notices.Xp);
             if (rose) Log.Write("trade skill rose to " + now + " - named in TradeLord's own line");
         }
 
         private const int NamedItemCap = 6;
-
-        private const float GetawayHours = 4f;
 
         private static void LogDetail(bool selling, bool sim, Dictionary<ItemObject, (int count, int gold)> detail,
                                       Dictionary<ItemObject, (int count, int gold)> quoted, string why)
@@ -1069,198 +928,6 @@ namespace TradeLord
             detail[item] = (t.count + count, t.gold + gold);
         }
 
-        private static MethodInfo _herdModifier;
-        private static bool _herdLookupFailed;
-
-        private static bool HerdTally(MobileParty party, out int men, out int herd,
-                                     out int mounts, out int foot)
-        {
-            men = 0; herd = 0; mounts = 0; foot = 0;
-            ItemRoster roster = party?.ItemRoster;
-            if (roster == null) return false;
-            men = party.MemberRoster?.TotalManCount ?? 0;
-            herd = roster.NumberOfPackAnimals + roster.NumberOfLivestockAnimals;
-            mounts = roster.NumberOfMounts;
-            foot = party.Party?.NumberOfMenWithoutHorse ?? 0;
-            var attached = party.AttachedParties;
-            for (int i = 0; attached != null && i < attached.Count; i++)
-            {
-                MobileParty a = attached[i];
-                if (a?.ItemRoster == null) continue;
-                herd += a.ItemRoster.NumberOfPackAnimals + a.ItemRoster.NumberOfLivestockAnimals;
-                mounts += a.ItemRoster.NumberOfMounts;
-                men += a.MemberRoster?.TotalManCount ?? 0;
-                foot += a.Party?.NumberOfMenWithoutHorse ?? 0;
-            }
-            return men > 0;
-        }
-
-        internal static int HerdRoomForLivestock(MobileParty party)
-        {
-            try
-            {
-                if (party == null) return 0;
-                DefaultPartySpeedCalculatingModel model = HerdModel();
-                if (model == null) return 0;
-                if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return 0;
-                herd = Herding.DrivenInAll(herd, mounts, foot);
-                float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });
-                return TradeMath.MostThatHolds(256, room => room == 0 || TradeMath.Unchanged(
-                    (float)_herdModifier.Invoke(model,
-                        new object[] { men, herd + room + Herding.Cushion }), neutral));
-            }
-            catch (Exception e)
-            {
-                if (!_herdLookupFailed) { _herdLookupFailed = true; Log.Error(e, "herd guard (the herd cannot be counted, so no livestock and no haul animals are bought and no animal is sold to get you back up to speed; every other trade is unaffected)"); }
-                return 0;
-            }
-        }
-
-        internal static string HerdPenaltyRead() =>
-            HerdModel() == null ? "herd penalty not read" : "herd penalty read";
-
-        private static DefaultPartySpeedCalculatingModel HerdModel()
-        {
-            if (_herdLookupFailed) return null;
-            var models = Campaign.Current?.Models;
-            if (models == null) return null;
-            var model = models.PartySpeedCalculatingModel as DefaultPartySpeedCalculatingModel;
-            if (model == null)
-            {
-                _herdLookupFailed = true;
-                Log.Write("herd guard: a mod replaced the party speed model - " +
-                          "the herd cannot be counted, so no livestock and no haul animals are bought and no animal is sold to get you back up to speed; every other trade is unaffected");
-                return null;
-            }
-            if (_herdModifier == null)
-            {
-                _herdModifier = typeof(DefaultPartySpeedCalculatingModel).GetMethod(
-                    "GetHerdingModifier", BindingFlags.Instance | BindingFlags.NonPublic);
-                if (_herdModifier == null)
-                {
-                    _herdLookupFailed = true;
-                    Log.Write("herd guard: GetHerdingModifier not found on this game version - " +
-                              "the herd cannot be counted, so no livestock and no haul animals are bought and no animal is sold to get you back up to speed; every other trade is unaffected");
-                    return null;
-                }
-            }
-            return model;
-        }
-
-        internal static int DrivenAnimalsToShed(MobileParty party)
-        {
-            try
-            {
-                if (party == null) return 0;
-                DefaultPartySpeedCalculatingModel model = HerdModel();
-                if (model == null) return 0;
-                if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return 0;
-                int driven = Herding.DrivenInAll(herd, mounts, foot);
-                if (driven <= 0) return 0;
-                float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });
-                return TradeMath.MostThatHolds(driven, shed => shed == 0 || !TradeMath.Unchanged(
-                    (float)_herdModifier.Invoke(model, new object[] { men, driven - shed + 1 }), neutral));
-            }
-            catch (Exception e)
-            {
-                if (!_herdLookupFailed)
-                {
-                    _herdLookupFailed = true;
-                    Log.Error(e, "herd relief check (no animal is sold)");
-                }
-                return 0;
-            }
-        }
-
-        private static void HerdSplit(MobileParty party, out int packs, out int stock)
-        {
-            packs = 0; stock = 0;
-            ItemRoster roster = party?.ItemRoster;
-            if (roster == null) return;
-            packs = roster.NumberOfPackAnimals;
-            stock = roster.NumberOfLivestockAnimals;
-            var attached = party.AttachedParties;
-            for (int i = 0; attached != null && i < attached.Count; i++)
-            {
-                ItemRoster other = attached[i]?.ItemRoster;
-                if (other == null) continue;
-                packs += other.NumberOfPackAnimals;
-                stock += other.NumberOfLivestockAnimals;
-            }
-        }
-
-        internal static void LogHerdState(string when) => LogHerdState(when, -1);
-
-        internal static void LogHerdState(string when, int counted)
-        {
-            try
-            {
-                MobileParty party = MobileParty.MainParty;
-                if (party == null) return;
-                if (!HerdTally(party, out int men, out int herd, out int mounts, out int foot)) return;
-                HerdSplit(party, out int packs, out int stock);
-                int spare = Herding.MountsNobodyRides(mounts, foot);
-                int shed = counted >= 0 ? counted : DrivenAnimalsToShed(party);
-                Log.Write("herd check (" + when + "): " + men + " men of whom " + foot + " on foot, " +
-                          mounts + " loose mount(s) with " + spare + " nobody rides, " +
-                          packs + " pack animal(s), " + stock + " livestock, " +
-                          Herding.DrivenInAll(herd, mounts, foot) + " driven in all, " +
-                          (shed > 0
-                              ? "the herd is slowing you down and " + shed + " must go"
-                              : _herdLookupFailed
-                                  ? "the herd penalty cannot be read on this game version"
-                                  : "no herd penalty"));
-            }
-            catch (Exception e) { Log.Error(e, "herd check log (nothing else is affected)"); }
-        }
-
-        internal static int SpareMountRoom(MobileParty party)
-        {
-            try
-            {
-                return HerdTally(party, out _, out _, out int mounts, out int foot)
-                    ? Herding.MountsNobodyRides(mounts, foot) : 0;
-            }
-            catch (Exception e)
-            {
-                Log.Error(e, "spare mount count (no mount is sold to relieve the herd)");
-                return 0;
-            }
-        }
-
-        internal static int HaulAnimalsHeld(MobileParty party)
-        {
-            ItemRoster roster = party?.ItemRoster;
-            if (roster == null) return 0;
-            int held = 0;
-            for (int i = 0; i < roster.Count; i++)
-            {
-                ItemRosterElement el = roster.GetElementCopyAtIndex(i);
-                if (el.Amount > 0 && TradePolicy.IsHaulAnimal(el.EquipmentElement.Item)) held += el.Amount;
-            }
-            return held;
-        }
-
-        internal static int HaulAnimalsCargoCanSpare(MobileParty party)
-        {
-            int held = HaulAnimalsHeld(party);
-            if (held <= 0) return 0;
-            try
-            {
-                InventoryCapacityModel model = Campaign.Current?.Models?.InventoryCapacityModel;
-                if (model == null) return 0;
-                bool atSea = Carry.Sailing();
-                float carried = model.CalculateTotalWeightCarried(party, atSea).ResultNumber;
-                return TradeMath.MostThatHolds(held, fewer => fewer == 0 ||
-                    model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber >= carried);
-            }
-            catch (Exception e)
-            {
-                Log.Error(e, "haul animal cargo floor (every haul animal is kept)");
-                return 0;
-            }
-        }
-
         private static void CoinSound()
         {
             if (!Options.Current.CoinSound) return;
@@ -1308,7 +975,7 @@ namespace TradeLord
                 none = Tongue.Text("{=TL33}Nothing bought here - {REASON}.");
                 none.SetTextVariable("REASON", BlockTally.Phrase(buy.Value));
             }
-            Toast(none);
+            Notices.Say(none);
         }
 
         public static void ExecuteQuickSell(Settlement settlement, bool quiet = false) =>
@@ -1345,7 +1012,7 @@ namespace TradeLord
                     "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).",
                     soldItems, goldGained);
                 msg.SetTextVariable("PROFIT", profit);
-                if (!pass.Muted) Toast(msg, profit > 0 ? ToastGain : ToastFlat);
+                if (!pass.Muted) Notices.Say(msg, profit > 0 ? Notices.Gain : Notices.Flat);
                 if (!pass.Sim && profit > 0) AwardTradeXp(profit, pass.Muted);
             }
             else if (!pass.DirectionError)
@@ -1563,7 +1230,7 @@ namespace TradeLord
                 "{=TL98}[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars.",
                 "{=TL97}TradeLord restocked {ITEMS} for {GOLD} denars.",
                 stocked, spent);
-            if (!pass.Muted) Toast(msg, ToastSpend);
+            if (!pass.Muted) Notices.Say(msg, Notices.Spend);
         }
 
         private static IMarketData _roadMarket;
@@ -1604,7 +1271,7 @@ namespace TradeLord
 
         private static bool RoadPartyReachable(MobileParty met)
         {
-            if (!IsRoadTrader(met)) return false;
+            if (!Meetings.IsRoadTrader(met)) return false;
             if (!Options.Current.ExcludeHostileTowns) return true;
             IFaction mine = Hero.MainHero?.MapFaction;
             return mine == null || met.MapFaction == null ||
@@ -1656,37 +1323,13 @@ namespace TradeLord
         private const int RankLivestock = TradeRules.RankLivestock;
         private const int RankHaulAnimal = TradeRules.RankHaulAnimal;
 
-        private static int HerdShedRank(ItemObject item) =>
-            item == null ? TradeRules.RankNotAnAnimal
-                         : TradeRules.HerdShedRank(TradePolicy.Describe(item));
-
-        private static void SayWhatTheHerdWillNotGiveUp(ItemRoster mine, int shed, Settlement settlement)
-        {
-            var kinds = new List<string>();
-            for (int i = 0; i < mine.Count; i++)
-            {
-                ItemRosterElement el = mine.GetElementCopyAtIndex(i);
-                ItemObject it = el.EquipmentElement.Item;
-                if (el.Amount <= 0 || it == null || !it.HasHorseComponent) continue;
-                if (HerdShedRank(it) >= 0) continue;
-                kinds.Add(it.StringId + " x" + el.Amount);
-            }
-            Log.Repeatable("herd-stuck " + settlement.StringId, shed + "/" + kinds.Count,
-                           "herd relief at " + settlement.Name + " has " + shed +
-                           " animal(s) to shed and nothing it may sell" +
-                           (kinds.Count == 0
-                               ? ", because every animal you drive is held back by your own rules"
-                               : "; these are driven but TradeLord counts them as ordinary cargo, so it never sells them: " +
-                                 string.Join(", ", kinds.ToArray())));
-        }
-
         public static void ExecuteHerdRelief(Settlement settlement, bool quiet = false)
         {
             if (!Options.Current.SellSpareMounts) return;
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
 
-            int shed = DrivenAnimalsToShed(pass.Party);
+            int shed = Drove.AnimalsToShed(pass.Party);
             shed -= pass.Books.Shed(pass.Sim);
             if (shed <= 0) return;
 
@@ -1695,7 +1338,7 @@ namespace TradeLord
                 TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);
             if (promised == null) return;
 
-            int mountsLeft = SpareMountRoom(pass.Party);
+            int mountsLeft = Drove.SpareMounts(pass.Party);
             mountsLeft -= pass.Books.MountsShed(pass.Sim);
             int haulsLeft = -1;
 
@@ -1705,14 +1348,14 @@ namespace TradeLord
                 ItemRosterElement el = mine.GetElementCopyAtIndex(i);
                 ItemObject it = el.EquipmentElement.Item;
                 if (el.Amount <= 0 || !TradePolicy.MayShedForHerd(el.EquipmentElement, pass.Locked)) continue;
-                int rank = HerdShedRank(it);
+                int rank = Drove.ShedRank(it);
                 if (rank < 0) continue;
                 if (pass.YoursToSell(el) <= 0) continue;
                 int price = pass.Price(el.EquipmentElement, selling: true);
                 if (price <= 0) continue;
                 stable.Add((el, rank, price));
             }
-            if (stable.Count == 0) { SayWhatTheHerdWillNotGiveUp(mine, shed, settlement); return; }
+            if (stable.Count == 0) { Drove.SayWhatItWillNotGiveUp(mine, shed, settlement); return; }
             stable.Sort((x, y) => x.rank != y.rank ? x.rank.CompareTo(y.rank) : x.price.CompareTo(y.price));
 
             int sold = 0, profit = 0, simGold = 0, simTill = pass.Till;
@@ -1740,7 +1383,7 @@ namespace TradeLord
                     {
                         if (rank != RankLivestock && rank != RankHaulAnimal && mountsLeft <= 0) break;
                         if (rank == RankHaulAnimal && haulsLeft < 0)
-                            haulsLeft = Math.Max(0, HaulAnimalsCargoCanSpare(pass.Party) - pass.Books.HaulsShed(pass.Sim));
+                            haulsLeft = Math.Max(0, Drove.HaulAnimalsCargoCanSpare(pass.Party) - pass.Books.HaulsShed(pass.Sim));
                         if (rank == RankHaulAnimal && haulsLeft <= 0) break;
                         int price = pass.Price(el.EquipmentElement, selling: true);
                         if (price <= 0) break;
@@ -1791,7 +1434,7 @@ namespace TradeLord
                 "{=TL117}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars to get your party back up to speed.",
                 "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.",
                 sold, gained);
-            if (!pass.Muted) Toast(msg, ToastGain);
+            if (!pass.Muted) Notices.Say(msg, Notices.Gain);
             if (!pass.Sim && profit > 0) AwardTradeXp(profit, pass.Muted);
         }
 
@@ -1815,7 +1458,7 @@ namespace TradeLord
             if (pass == null) return;
             if (PurseBelowTheHaulAnimalFloor(pass)) return;
 
-            int herdRoom = HerdRoomForLivestock(pass.Party);
+            int herdRoom = Drove.RoomForLivestock(pass.Party);
             herdRoom -= pass.Books.HerdTaken(pass.Sim);
             if (herdRoom <= 0) return;
 
@@ -1882,7 +1525,7 @@ namespace TradeLord
                 "{=TL111}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more.",
                 "{=TL110}TradeLord bought {ITEMS} for {GOLD} denars to carry more.",
                 hauled, spent);
-            if (!pass.Muted) ToastAfterXp(msg, ToastSpend);
+            if (!pass.Muted) Notices.SayAfterXp(msg, Notices.Spend);
         }
 
         public static void ExecuteQuickBuy(Settlement settlement, bool quiet = false) =>
@@ -1926,7 +1569,7 @@ namespace TradeLord
                     "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
                     "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.",
                     bought, spent);
-                if (!pass.Muted) Toast(msg, ToastSpend);
+                if (!pass.Muted) Notices.Say(msg, Notices.Spend);
             }
             else if (!pass.DirectionError)
             {
@@ -2003,7 +1646,7 @@ namespace TradeLord
 
             public float Room() => _pass.Room();
 
-            public int HerdRoom() => HerdRoomForLivestock(_pass.Party);
+            public int HerdRoom() => Drove.RoomForLivestock(_pass.Party);
 
             public void Staged(int at, int price)
             {
@@ -2063,176 +1706,6 @@ namespace TradeLord
                 true, false, Tongue.Text("{=TL09}Close").ToString(), "", null, null));
         }
 
-        private void UpdateBestSellTownTracker()
-        {
-            VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;
-            if (tracker == null) return;
-            Settlement target = null;
-            string why = "the map marker is switched off";
-            if (Options.Current.MarkBestSellTownOnMap) target = FindBestSellTownForCargo(out why);
-
-            if (target == _trackedTown)
-            {
-                if (target != null && !tracker.CheckTracked(target))
-                    tracker.RegisterObject(target);
-                return;
-            }
-            if (_trackedTown != null && !LedgerPanel.IsPinned(_trackedTown) && tracker.CheckTracked(_trackedTown))
-                tracker.RemoveTrackedObject(_trackedTown);
-            _trackedTown = null;
-            if (target != null && !tracker.CheckTracked(target))
-            {
-                tracker.RegisterObject(target);
-                _trackedTown = target;
-            }
-            Log.Write(_trackedTown != null
-                ? "map marker moved to " + _trackedTown.Name + ": " + why
-                : "map marker taken off the map: " + why);
-        }
-
-        private static int _cargoHour = -1;
-        private static int _cargoGen = -1;
-        private static int _cargoVersion = -1;
-        private static List<(EquipmentElement item, int amount, int worth, int floor)> _cargo;
-
-        private static int _markerPriceHour = -1;
-        private static int _markerPriceGen = -1;
-
-        private static readonly Dictionary<(string site, string good, string quality), int> _markerPrices =
-            new Dictionary<(string, string, string), int>();
-
-        private static void ForgetWhatYouCarry()
-        {
-            _cargo = null;
-            _cargoHour = -1;
-            _cargoVersion = -1;
-        }
-
-        private static void ForgetTheMarkerRead()
-        {
-            ForgetWhatYouCarry();
-            _markerPrices.Clear();
-            _markerPriceHour = -1;
-        }
-
-        private List<(EquipmentElement item, int amount, int worth, int floor)> WhatYouCarryToSell(MobileParty party)
-        {
-            int hour = (int)CampaignTime.Now.ToHours;
-            int version = party.ItemRoster.VersionNo;
-            if (_cargo != null && hour == _cargoHour && Options.Generation == _cargoGen &&
-                version == _cargoVersion) return _cargo;
-            _cargoHour = hour;
-            _cargoGen = Options.Generation;
-            _cargoVersion = version;
-            ISet<string> locked = TradePolicy.LockedKeys();
-            var keepBack = TradePolicy.KeptBack(party.ItemRoster, Visit, sim: false, out var awaited);
-            var cargo = new List<(EquipmentElement item, int amount, int worth, int floor)>();
-            for (int i = 0; i < party.ItemRoster.Count; i++)
-            {
-                ItemRosterElement el = party.ItemRoster.GetElementCopyAtIndex(i);
-                if (!TradePolicy.MaySell(el, locked, keepBack, awaited, out int keep)) continue;
-                if (el.Amount - keep <= 0) continue;
-                ItemObject item = el.EquipmentElement.Item;
-                cargo.Add((el.EquipmentElement, el.Amount - keep,
-                           TradePolicy.WorthToBeat(item), BestMarketFloor(item)));
-            }
-            _cargo = cargo;
-            return cargo;
-        }
-
-        private static int WhatThatMarketPays(Settlement site, SettlementComponent market,
-                                              EquipmentElement el, MobileParty party)
-        {
-            ItemObject good = el.Item;
-            if (good == null) return Priced.At(market, el, party, true);
-            int hour = (int)CampaignTime.Now.ToHours;
-            if (hour != _markerPriceHour || Options.Generation != _markerPriceGen)
-            {
-                _markerPriceHour = hour;
-                _markerPriceGen = Options.Generation;
-                _markerPrices.Clear();
-            }
-            var key = (site.StringId, good.StringId,
-                       el.ItemModifier == null ? "" : el.ItemModifier.StringId);
-            if (_markerPrices.TryGetValue(key, out int kept)) return kept;
-            int price = Priced.At(market, el, party, true);
-            _markerPrices[key] = price;
-            return price;
-        }
-
-        private Settlement FindBestSellTownForCargo(out string why)
-        {
-            why = "nothing in your cargo is yours to sell";
-            MobileParty party = MobileParty.MainParty;
-            if (party == null) return null;
-            var cargo = WhatYouCarryToSell(party);
-            if (cargo.Count == 0) return null;
-
-            Settlement bestTown = null, runnerUp = null;
-            long bestValue = 0, runnerUpValue = 0;
-            int bestUnits = 0, bestKinds = 0, bestPurse = 0, weighed = 0, refused = 0;
-            foreach (Settlement s in Settlement.All)
-            {
-                SettlementComponent market = s.SettlementComponent;
-                if (market == null) continue;
-                if (s == party.CurrentSettlement) continue;
-                if (StillTheSameArrival(s)) continue;
-                if (!IsMarket(s)) continue;
-                if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;
-                if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;
-                weighed++;
-                if (market.Gold <= bestValue) continue;
-                float cap = LedgerBehavior.TravelCeiling(s);
-                if (cap > 0f)
-                {
-                    if (Travel.StraightDaysFromParty(s) > cap) continue;
-                    if (Travel.EstimateDaysFromParty(s) > cap) continue;
-                }
-                long total = 0;
-                int units = 0, kinds = 0;
-                foreach (var (item, amount, worth, floor) in cargo)
-                {
-                    int price = WhatThatMarketPays(s, market, item, party);
-                    if (price < floor) continue;
-                    if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) continue;
-                    total += (long)price * amount;
-                    units += amount;
-                    kinds++;
-                }
-                if (total <= 0) { refused++; continue; }
-                if (total > market.Gold) total = market.Gold;
-                if (total > bestValue)
-                {
-                    runnerUp = bestTown;
-                    runnerUpValue = bestValue;
-                    bestValue = total;
-                    bestTown = s;
-                    bestUnits = units;
-                    bestKinds = kinds;
-                    bestPurse = market.Gold;
-                }
-                else if (total > runnerUpValue) { runnerUpValue = total; runnerUp = s; }
-            }
-            why = bestTown == null
-                ? "of the " + weighed + " market(s) it looked at, " + refused + " would pay too little for any " +
-                  "of the " + cargo.Count + " good(s) you carry to clear Minimum profit margin, and the rest are " +
-                  "past your travel ceilings or have no gold at all"
-                : bestKinds + " of the " + cargo.Count + " good(s) you carry clear Minimum profit margin there, " +
-                  bestUnits + " unit(s) for " + bestValue + " gold against a town purse of " + bestPurse +
-                  ", about " + Travel.EstimateDaysFromParty(bestTown).ToString("0.#") + " day(s) away" +
-                  (runnerUp == null
-                      ? ", and no other market it priced would take any of it"
-                      : ", ahead of " + runnerUp.Name + ", the next best it priced, at " +
-                        runnerUpValue + " gold");
-            return bestTown;
-        }
-
-        private static int BestMarketFloor(ItemObject item)
-        {
-            if (!Options.Current.PreferBestSellTown) return 0;
-            var best = LedgerBehavior.Instance?.BestSell(item) ?? (null, 0);
-            return best.Item1 == null ? 0 : (int)(best.Item2 * Options.Current.BestSellTownTolerance);
-        }
 
         private static void AwardTradeXp(int profit, bool muted)
         {

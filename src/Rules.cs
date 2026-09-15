@@ -59,6 +59,32 @@ namespace TradeLord
         internal int DrewFood;
     }
 
+    internal struct Stamp
+    {
+        internal const int Timeless = int.MinValue;
+
+        private int _hour;
+        private int _generation;
+        private bool _taken;
+
+        internal bool Fresh(int hour, int generation) =>
+            _taken && _hour == hour && _generation == generation;
+
+        internal void Taken(int hour, int generation)
+        {
+            _taken = true;
+            _hour = hour;
+            _generation = generation;
+        }
+
+        internal void Stale()
+        {
+            _taken = false;
+            _hour = 0;
+            _generation = 0;
+        }
+    }
+
     internal static class Arrivals
     {
         internal const float SetOffFromTheGate = 1f;

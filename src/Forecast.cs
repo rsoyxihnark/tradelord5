@@ -13,8 +13,7 @@ namespace TradeLord
 {
     internal static class Forecast
     {
-        private static int _readAtHour = -1;
-        private static int _readForGeneration = -1;
+        private static Stamp _readStamp;
 
         private static readonly Dictionary<string, List<Landing>> _landing =
             new Dictionary<string, List<Landing>>(StringComparer.Ordinal);
@@ -44,8 +43,7 @@ namespace TradeLord
 
         internal static void Forget()
         {
-            _readAtHour = -1;
-            _readForGeneration = -1;
+            _readStamp.Stale();
             _landing.Clear();
             _spending.Clear();
             _pull.Clear();
@@ -164,10 +162,8 @@ namespace TradeLord
 
         private static void Build()
         {
-            int hour = (int)CampaignTime.Now.ToHours;
-            if (hour == _readAtHour && Options.Generation == _readForGeneration) return;
-            _readAtHour = hour;
-            _readForGeneration = Options.Generation;
+            if (Freshness.Fresh(ref _readStamp)) return;
+            Freshness.Taken(ref _readStamp);
             _landing.Clear();
             _spending.Clear();
             _pull.Clear();
