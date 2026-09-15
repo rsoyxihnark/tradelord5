@@ -31,6 +31,7 @@ SCREENTESTS = io.open('tests/ScreenTests.cs', encoding='utf-8').read()
 RECENTTESTS = io.open('tests/RecentTests.cs', encoding='utf-8').read()
 EXPIRYTESTS = io.open('tests/ExpiryTests.cs', encoding='utf-8').read()
 SHELFORDERTESTS = io.open('tests/ShelfOrderTests.cs', encoding='utf-8').read()
+FLOORTESTS = io.open('tests/BestMarketFloorTests.cs', encoding='utf-8').read()
 TALLYTESTS = io.open('tests/TallyTests.cs', encoding='utf-8').read()
 HOLDINGTESTS = io.open('tests/HoldingsTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
@@ -47,7 +48,8 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'TwinsTests.cs': TWINSTESTS, 'SettingsFileTests.cs': SETTINGSFILETESTS,
      'ScreenTests.cs': SCREENTESTS, 'TallyTests.cs': TALLYTESTS,
      'RecentTests.cs': RECENTTESTS, 'ExpiryTests.cs': EXPIRYTESTS,
-     'ShelfOrderTests.cs': SHELFORDERTESTS}
+     'ShelfOrderTests.cs': SHELFORDERTESTS,
+     'BestMarketFloorTests.cs': FLOORTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -1649,8 +1651,24 @@ chk("1.42.0", "a livestock route is listed even when your herd is already full, 
     "herdRoom" not in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes") and
     "HerdRoomForLivestock(pass.Party)" in S['Trading.cs'])
 chk("1.3.15", "recurring errors reported once", "is recurring - not reporting it again" in S['Support.cs'])
-chk("1.3.16", "hold-for-best-market re-tested per chunk",
-    "if (price < holdFloor) { tally.Note(Block.BelowBestMarket); break; }" in S['Passes.cs'])
+chk("1.3.16", "the hold-for-best-market floor is tested against every unit as the lot drains, and a test holds it to that",
+    "internal static int BestMarketFloor(int elsewhere, float tolerance) =>" in S['Rules.cs']
+    and "internal static bool BelowTheBestMarket(int price, int holdFloor) => price < holdFloor;" in S['Rules.cs']
+    and ordered(method_body(S['Passes.cs'], "internal static Traded SellThem"),
+                "bestMarketFloor = TradeRules.BestMarketFloor(elsewhere, s.BestSellTownTolerance);",
+                "holdFloor = bestMarketFloor;",
+                "if (TradeRules.BelowTheBestMarket(price, holdFloor))")
+    and "(int)(elsewhere * s.BestSellTownTolerance)" not in S['Passes.cs']
+    and 'Rules.cs' in TESTPROJ and 'Passes.cs' in TESTPROJ
+    and all(one in FLOORTESTS for one in
+            ("The_floor_is_the_other_market_price_less_the_tolerance_you_set",
+             "A_part_denar_floor_is_cut_off_rather_than_rounded_up",
+             "No_other_market_worth_naming_leaves_no_floor_to_clear",
+             "A_price_under_the_floor_is_held_back_and_one_on_it_is_not",
+             "With_no_floor_in_force_nothing_is_ever_held_back_for_a_better_market",
+             "Selling_stops_at_the_first_unit_that_falls_under_the_floor",
+             "A_lower_tolerance_never_holds_back_more_than_a_higher_one",
+             "new Random(5540)")))
 chk("1.3.16", "food branch falls through to the sell rules",
     ordered(sell_rule(),
             "int reserved = DrawKeepBack(amount, facts.FoodHeld, out bool fed);",

@@ -296,12 +296,13 @@ namespace TradeLord
                         {
                             floorKnown = true;
                             if (market.ResaleMarket(at, out int elsewhere))
-                                bestMarketFloor = (int)(elsewhere * s.BestSellTownTolerance);
+                                bestMarketFloor = TradeRules.BestMarketFloor(elsewhere, s.BestSellTownTolerance);
                         }
                         holdFloor = bestMarketFloor;
                     }
                     int price = market.PriceToSell(at);
-                    if (price < holdFloor) { tally.Note(Block.BelowBestMarket); break; }
+                    if (TradeRules.BelowTheBestMarket(price, holdFloor))
+                    { tally.Note(Block.BelowBestMarket); break; }
                     if (!TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))
                     {
                         tally.Note(Block.BelowMargin);
