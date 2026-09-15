@@ -137,7 +137,7 @@ namespace TradeLord
         {
             if (_shown == null) return null;
             if (!_totalHandedOver) HandTheTotalOver();
-            if (InventoryScreenHelper.GetActiveInventoryState() != null) return null;
+            if (TheScreenIsStillOurs()) return null;
             int moved = (Hero.MainHero?.Gold ?? _goldAtOpen) - _goldAtOpen;
             Unwatch();
             Log.Write("the trade screen is closed and your purse moved " + moved + " gold on it");
@@ -148,6 +148,12 @@ namespace TradeLord
                 : "{=TL422}The deal TradeLord laid out is closed: your purse is down {GOLD} denars.");
             line.SetTextVariable("GOLD", Math.Abs(moved).ToString("N0"));
             return line;
+        }
+
+        private static bool TheScreenIsStillOurs()
+        {
+            InventoryState open = InventoryScreenHelper.GetActiveInventoryState();
+            return open != null && ReferenceEquals(open.InventoryLogic, _shown);
         }
 
         private static void HandTheTotalOver()

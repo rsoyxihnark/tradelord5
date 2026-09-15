@@ -103,11 +103,25 @@ namespace TradeLord
                 return false;
             }
             bool done = false;
+            Hero seller = shop.Owner;
+            int before = Hero.MainHero?.Gold ?? 0;
             Guard.Run("Shops.Buy", () =>
             {
                 ChangeOwnerOfWorkshopAction.ApplyByPlayerBuying(shop);
                 done = shop.Owner == Hero.MainHero;
             });
+            int paid = before - (Hero.MainHero?.Gold ?? before);
+            int owed = Holdings.StillOwedForTheWorkshop(cost, paid);
+            if (done && owed > 0)
+                Guard.Run("Shops.Settle", () =>
+                {
+                    if (seller != null)
+                        GiveGoldAction.ApplyBetweenCharacters(Hero.MainHero, seller, owed, true);
+                    Log.Write("the game handed over " + Named(shop) + " without taking the " + cost +
+                              " gold for it, so TradeLord paid " + Named(shop) + "'s seller itself");
+                });
+            else if (done)
+                Log.Write("the game took " + paid + " gold for " + Named(shop) + ", priced at " + cost);
             if (!done)
             {
                 said = Tongue.Text("{=TL437}The game would not hand that workshop over. TradeLord.log says what happened.");
