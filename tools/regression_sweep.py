@@ -907,9 +907,9 @@ def the_readme_counts_the_saved_values_right():
     numbers = tally.get('int', 0) + tally.get('long', 0) + tally.get('float', 0)
     counted = 'a number' if numbers == 1 else words.get(numbers, 'no') + ' numbers'
     said = ('All it puts in a save is ' + words.get(tally.get('string'), 'no') +
-            ' strings, ' + counted + ', a settlement reference and a flag')
+            ' strings, ' + counted + ' and a settlement reference')
     return (said in README and numbers == 4
-            and tally.get('Settlement') == 1 and tally.get('bool') == 1)
+            and tally.get('Settlement') == 1 and 'bool' not in tally)
 
 def readme_defaults_match_the_shipped_ones():
     def on(name):
@@ -1079,9 +1079,10 @@ def the_item_tooltip_does_not_announce_the_mod():
             and "AddSeparator(vm);" in body)
 
 def the_panel_legend_is_legible():
-    m = re.search(r'Brush\.FontSize="(\d+)"\s*\n\s*Brush\.FontColor="#(\w{6})(\w{2})"\s*\n\s*Text="@LegendText"',
-                  PREFAB)
-    return m is not None and int(m.group(1)) >= 14 and int(m.group(3), 16) >= 0xCC
+    m = re.search(r'SuggestedHeight="(\d+)"[^>]*?Brush\.FontSize="(\d+)"\s*\n\s*Brush\.FontColor="#(\w{6})(\w{2})"\s*\n\s*Text="@LegendText"',
+                  PREFAB, re.S)
+    return (m is not None and int(m.group(1)) >= 130 and int(m.group(2)) >= 16
+            and int(m.group(4), 16) >= 0xCC)
 
 GITIGNORE = io.open('.gitignore', encoding='utf-8').read()
 
@@ -2697,28 +2698,23 @@ chk("1.6.16", "the auto-marker is put back on the map when a save loads, and can
            and 'Guard.Run("Action.RestoreMarker", UpdateBestSellTownTracker);' in b
            and ordered(b, 'Guard.Run("Action.RestorePins"', 'Guard.Run("Action.RestoreMarker"', 'AddOptions("town");'))
     (method_body(S['Trading.cs'], "private void OnSessionLaunched")))
-chk("1.6.18", "a campaign is told once that entering a market trades for it, before the pass that does so",
-    (lambda b: "if (_announcedAutomation) return false;" in b
-           and "if (!Options.Current.AutoSellOnEntry && !Options.Current.AutoBuyOnEntry) return false;" in b
-           and "if (!CanTradeHere(settlement)) return false;" in b
-           and "_announcedAutomation = true;" in b and '{=TL87}' in b and b.rstrip().endswith("return true;\n        }"))
-    (method_body(S['Trading.cs'], "private bool AnnounceAutomation")) and
-    "TL87" in strings_declared())
-chk("1.6.24", "the market that carries the notice is left alone, so a campaign can turn automation off before it runs",
-    (lambda b: "if (!AnnounceAutomation(settlement))" in b
-           and ordered(b, "if (!AnnounceAutomation(settlement))", "ExecuteQuickSell(settlement, quiet: true)")
-           and ordered(b, "ExecuteQuickBuy(settlement, quiet: true)", "WarnNoRoomToCarry()"))
-    (method_body(S['Trading.cs'], "private void OnSettlementEntered")) and
-    "starting at the next one" in S['Trading.cs'])
-chk("1.6.18", "the notice is remembered in the save, so it is shown once per campaign and not once per market",
-    'dataStore.SyncData("TradeLord_AutomationNotice", ref _announcedAutomation);' in S['Trading.cs'] and
-    "_announcedAutomation" not in method_body(S['Trading.cs'], "internal static void ForgetVisit") and
-    "private bool _announcedAutomation;" in S['Trading.cs'])
+def the_first_market_of_a_campaign_trades_like_every_other_one():
+    entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
+    return ("AnnounceAutomation" not in ALL
+            and "_announcedAutomation" not in ALL
+            and "TradeLord_AutomationNotice" not in ALL
+            and "starting at the next one" not in ALL
+            and not any(sid in strings_declared() for sid in ("TL87", "TL96"))
+            and ordered(entered, "NoteThisArrival(settlement);",
+                        "ExecuteQuickSell(settlement, quiet: true);",
+                        "ExecuteQuickBuy(settlement, quiet: true);",
+                        "WarnNoRoomToCarry()"))
+
+chk("1.74.0", "the first market a campaign walks into trades like every other one, with no notice held over it",
+    the_first_market_of_a_campaign_trades_like_every_other_one())
 chk("1.6.18", "every variable a shipped line leaves a slot for is filled in by name",
     every_text_variable_is_supplied())
-chk("1.13.2", "the automation notice names MCM when there is no settings screen to send you to",
-    (lambda b: ordered(b, "Toast(McmLoader.SettingsReachable", "{=TL87}", "{=TL96}"))
-    (method_body(S['Trading.cs'], "private bool AnnounceAutomation")) and
+chk("1.13.2", "whether a settings screen could be reached at all is written down once, where MCM is loaded",
     "SettingsReachable = true;" in method_body(S['Support.cs'], "internal static void TryLoad") and
     S['Support.cs'].count("SettingsReachable = true;") == 1)
 chk("1.13.0", "the README counts what goes into a save as the source actually saves it",
@@ -2941,9 +2937,8 @@ def quiet_automation_silences_only_the_automated_lines():
             "if (!muted) Toast(earned, ToastXp);" in credit and
             "AwardTradeXp(profit, pass.Muted);" in sell)
 
-def quiet_automation_leaves_the_notice_and_the_cargo_warning_alone():
-    return ("Muted(" not in method_body(S['Trading.cs'], "private bool AnnounceAutomation") and
-            "Muted(" not in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry"))
+def quiet_automation_leaves_the_cargo_warning_alone():
+    return "Muted(" not in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
 
 def a_second_campaign_starts_the_panel_from_scratch():
     reset = method_body(S['Panel.cs'], "internal static void Reset")
@@ -2969,8 +2964,8 @@ chk("1.6.26", "editing a list has it checked again rather than answered from the
     the_list_audit_is_redone_when_the_lists_are_edited())
 chk("1.6.26", "quiet automation silences the entry summaries, the buy line and the skill line",
     quiet_automation_silences_only_the_automated_lines())
-chk("1.6.26", "quiet automation leaves the first-run notice and the cargo warning speaking",
-    quiet_automation_leaves_the_notice_and_the_cargo_warning_alone())
+chk("1.6.26", "quiet automation leaves the cargo warning speaking",
+    quiet_automation_leaves_the_cargo_warning_alone())
 chk("1.6.26", "a second campaign in one sitting starts the panel from scratch",
     a_second_campaign_starts_the_panel_from_scratch())
 chk("1.6.26", "the item lists are read the way the tests the build runs say they are",
@@ -4157,7 +4152,7 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
             and "public int HerdRoom() => HerdRoomForLivestock(_pass.Party);" in buy
             and "if (livestock && herdRoom <= 0) return Block.HerdFull;" in buy
             and buy.count("if (livestock) herdRoom--;") == 1
-            and "var books = new Books();" in road
+            and "Books books = BooksForTheMeeting(met);" in road
             and t.count("private static readonly Books Visit = new Books();") == 1
             and "Visit" not in road)
 
@@ -4906,13 +4901,36 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
 def a_meeting_on_the_road_is_priced_as_one_meeting():
     t = S['Trading.cs']
     body = method_body(t, "public static void ExecuteRoadTrade")
-    return ("var books = new Books();" in body
+    return ("Books books = BooksForTheMeeting(met);" in body
             and body.count("books, party)") == 2
-            and body.count("new Books()") == 1
+            and "new Books()" not in body
+            and method_body(t, "private static Books BooksForTheMeeting").count("new Books()") == 1
+            and t.count("new Books()") == 2
             and "internal static Pass Meet(MobileParty met, IMarketData road, Books books, MobileParty party) =>"
                 in t
             and "new Pass(null, met, road, books, party, quiet: true);" in t
             and "new Pass(site, null, null, Visit, party, quiet)" in t)
+
+
+def meeting_the_same_party_again_keeps_the_books_it_already_wrote():
+    t = S['Trading.cs']
+    books = method_body(t, "private static Books BooksForTheMeeting")
+    passes = S['Passes.cs']
+    return (ordered(books, "if (_meetingBooks != null && _meetingBooksFor == met)",
+                    "_meetingBooks.ForgetTheDryRun();", "return _meetingBooks;",
+                    "_meetingBooks = new Books();", "_meetingBooksFor = met;")
+            and "_meetingBooks = null;" in method_body(t, "internal static void ForgetTheMeeting")
+            and "ForgetTheMeeting();" in method_body(t, "internal static void ForgetVisit")
+            and "ForgetTheMeeting();" in method_body(t, "internal static void ForgetEncounter")
+            and "books.Sold(sim, good.Id)" in method_body(passes, "internal static List<Pick> WhatToBuy")
+            and "books.Bought(sim, market.IdAt(at))" in method_body(passes, "internal static Traded SellThem")
+            and "internal bool Sold(bool sim, string id) =>" in S['Books.cs']
+            and "internal bool Bought(bool sim, string id) =>" in S['Books.cs']
+            and "_sold.Clear();" in method_body(S['Books.cs'], "internal void Forget")
+            and "_sold" not in method_body(S['Books.cs'], "internal void ForgetTheDryRun")
+            and "_bought" not in method_body(S['Books.cs'], "internal void ForgetTheDryRun")
+            and "ForgettingOnlyTheDryRunKeepsWhatTheSittingReallyMoved" in BOOKTESTS
+            and "ForgettingTheWholeVisitClearsWhatTheSittingReallyMovedAsWell" in BOOKTESTS)
 
 chk("1.37.6", "a dry run carries the merchant's gold, the purse, the cargo room and every cap from one pass of a visit to the next",
     a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own())
@@ -4920,6 +4938,8 @@ chk("1.37.6", "a dry run keeps its running totals apart from the real ones, empt
     a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones())
 chk("1.37.6", "a dry run of a meeting on the road spends what the same meeting just earned and never buys back what it just sold",
     a_meeting_on_the_road_is_priced_as_one_meeting())
+chk("1.74.0", "meeting the same party again keeps the books already written with them, so nothing sold to them is bought straight back",
+    meeting_the_same_party_again_keeps_the_books_it_already_wrote())
 
 
 def every_pass_hands_one_place_the_trade_and_the_visits_books():
@@ -5095,7 +5115,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
             and ordered(ledger, "LedgerCodec.WriteLedger(Listed(_ledger));",
                         "LedgerCodec.WritePurchases(_purchases);",
                         'dataStore.SyncData("TradeLord_LedgerText"')
-            and trade.count("dataStore.SyncData(") == 3
+            and trade.count("dataStore.SyncData(") == 2
             and ledger.count("dataStore.SyncData(") == 6)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
@@ -5790,7 +5810,6 @@ def trading_on_arrival_waits_for_the_party_to_take_to_the_road():
     return (ordered(entered, 'LogHerdState("entering " + settlement.Name);',
                     "if (StillTheSameArrival(settlement))",
                     "NoteThisArrival(settlement);",
-                    "if (!AnnounceAutomation(settlement))",
                     "ExecuteQuickSell(settlement, quiet: true);")
             and "Arrivals.StillTheSame(settlement?.StringId, _lastArrivalAt, _tookToTheRoad);" in t
             and "here != null && here == lastArrivalAt && !tookToTheRoad;" in S['Rules.cs']
@@ -7188,7 +7207,8 @@ def arriving_at_a_market_holds_its_trade_back_while_the_deal_is_laid_out():
     line = method_body(S['Trading.cs'], "private static TextObject TheDealWaitsForYou")
     holds = method_body(S['Counter.cs'], "internal static bool HoldsBack")
     return (ordered(entered, "NoteThisArrival(settlement);", "if (Counter.HoldsBack())",
-                    "Toast(TheDealWaitsForYou(), ToastNote);", "if (!AnnounceAutomation(settlement))")
+                    "Toast(TheDealWaitsForYou(), ToastNote);",
+                    "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);")
             and "TradeRules.StagesTheDeal(Options.Current)" in holds
             and "Options.Current.AutoSellOnEntry || Options.Current.AutoBuyOnEntry" in holds
             and '{=TL26}' in line and '{=TL403}' in line
@@ -7989,6 +8009,106 @@ def how_long_a_shelf_lasts_now_counts_towards_the_route_score():
 chk("1.73.0", "how long a shelf lasts counts towards a route's score in place of the caravans it already counted, and the panel says so",
     how_long_a_shelf_lasts_now_counts_towards_the_route_score())
 
+
+
+def the_recent_trades_open_in_a_window_of_their_own():
+    import xml.etree.ElementTree as ET
+    tree = ET.parse('TradeLord/GUI/Prefabs/TradeLordPanel.xml')
+    parent = {c: p for p in tree.iter() for c in p}
+    def within(node, attr, value):
+        while node is not None:
+            if node.get(attr) == value:
+                return True
+            node = parent.get(node)
+        return False
+    def only(attr, value):
+        found = [e for e in tree.iter() if e.get(attr) == value]
+        return found[0] if len(found) == 1 else None
+    trades = only('DataSource', '{Trades}')
+    header = only('Text', '@TradesHeader')
+    opens = only('Command.Click', 'ExecuteOpenTrades')
+    panel = S['Panel.cs']
+    bound, have = panel_bindings()
+    named = {'IsTradesVisible', 'TradesLabel', 'ExecuteOpenTrades', 'ExecuteCloseTrades'}
+    return (trades is not None and header is not None and opens is not None
+            and within(trades, 'IsVisible', '@IsTradesVisible')
+            and within(header, 'IsVisible', '@IsTradesVisible')
+            and not within(opens, 'IsVisible', '@IsTradesVisible')
+            and within(opens, 'IsVisible', '@IsVisible')
+            and PREFAB.count('Text="@TradesLabel"') == 1
+            and PREFAB.count('Command.Click="ExecuteCloseTrades"') == 2
+            and 'if (!value) IsTradesVisible = false;' in panel
+            and 'RefreshTrades();' in method_body(panel, "public void ExecuteOpenTrades")
+            and named <= bound and named <= have
+            and 'TL424' in strings_declared())
+
+chk("1.74.0", "the recent trades open in a window of their own, from a button below the ledger, and close with it",
+    the_recent_trades_open_in_a_window_of_their_own())
+
+
+def every_panel_frame_holds_everything_it_lays_out():
+    import xml.etree.ElementTree as ET
+    tree = ET.parse('TradeLord/GUI/Prefabs/TradeLordPanel.xml')
+    def slack(frame):
+        stack = frame.find('Children/BrushWidget/Children/ListPanel')
+        if stack is None or stack.find('Children') is None:
+            return None
+        used = int(stack.get('MarginTop', 0)) + int(stack.get('MarginBottom', 0))
+        for kid in stack.find('Children'):
+            used += (int(kid.get('SuggestedHeight', 0)) + int(kid.get('MarginTop', 0))
+                     + int(kid.get('MarginBottom', 0)))
+        return int(frame.get('SuggestedHeight')) - used
+    frames = [e for e in tree.iter('ListPanel')
+              if e.get('HeightSizePolicy') == 'Fixed' and e.get('SuggestedHeight')
+              and e.find('Children/BrushWidget') is not None]
+    room = [slack(f) for f in frames]
+    return len(frames) == 2 and all(r is not None and r >= 0 for r in room)
+
+chk("1.74.0", "every frame the panel draws is tall enough for everything stacked inside it, so nothing spills past its edge",
+    every_panel_frame_holds_everything_it_lays_out())
+
+
+def the_laid_out_deal_shows_its_gold_and_says_what_it_came_to():
+    c = S['Counter.cs']
+    opened = method_body(c, "private static bool Opened")
+    watch = method_body(c, "internal static TextObject Watch")
+    over = method_body(c, "private static void HandTheTotalOver")
+    return ("private static readonly Action<int> Ours = whatever => { };" in c
+            and ordered(opened, "if (logic.TotalAmountChange == null) logic.TotalAmountChange = Ours;",
+                        "_shown = logic;", "_totalHandedOver = false;",
+                        "_goldAtOpen = Hero.MainHero?.Gold ?? 0;")
+            and ordered(over, "Action<int> reading = _shown.TotalAmountChange;",
+                        "if (reading != null && !ReferenceEquals(reading, Ours))",
+                        "reading(_shown.TotalAmount);",
+                        "if (++_waited < TicksToWaitForTheScreen) return;")
+            and ordered(watch, "if (_shown == null) return null;",
+                        "if (!_totalHandedOver) HandTheTotalOver();",
+                        "if (InventoryScreenHelper.GetActiveInventoryState() != null) return null;",
+                        "int moved = (Hero.MainHero?.Gold ?? _goldAtOpen) - _goldAtOpen;",
+                        "Unwatch();", "{=TL423}", "{=TL421}", "{=TL422}")
+            and 'Guard.Run("Tick.Counter", TradeActionBehavior.WatchTheTradeScreen);' in S['SubModule.cs']
+            and "TextObject closed = Counter.Watch();" in
+                method_body(S['Trading.cs'], "internal static void WatchTheTradeScreen")
+            and "Unwatch();" in method_body(c, "internal static void Forget")
+            and "Unwatch();" in method_body(c, "internal static bool Ready")
+            and all(sid in strings_declared() for sid in ('TL421', 'TL422', 'TL423'))
+            and all('{GOLD}' in english_string(sid) for sid in ('TL421', 'TL422')))
+
+chk("1.74.0", "the trade screen is handed what the laid out deal comes to, and the deal says what your purse did once you close it",
+    the_laid_out_deal_shows_its_gold_and_says_what_it_came_to())
+
+
+def the_staged_trading_switch_is_named_the_same_everywhere():
+    label = english_string('TL281')
+    return (label == 'Staged Trading'
+            and '"{=TL281}' + label + '"' in M
+            and '- \u2705 ' + label + ', off out of the box:' in README
+            and 'Lay the trade out' not in README
+            and 'Lay the trade out' not in M
+            and 'Lay the trade out' not in ALL)
+
+chk("1.74.0", "the switch that lays the deal out is called Staged Trading on the settings screen and in the feature list alike",
+    the_staged_trading_switch_is_named_the_same_everywhere())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
