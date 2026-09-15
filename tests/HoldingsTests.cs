@@ -112,5 +112,41 @@ namespace TradeLord.Tests
                 Assert.Equal(purse - cost < held, Holdings.DipsIntoWhatYouHoldBack(cost, purse, held));
             }
         }
+
+        [Fact]
+        public void A_workshop_the_game_charged_for_is_never_charged_again()
+        {
+            Assert.Equal(0, Holdings.StillOwedForTheWorkshop(120000, 120000));
+            Assert.Equal(0, Holdings.StillOwedForTheWorkshop(120000, 1));
+            Assert.Equal(0, Holdings.StillOwedForTheWorkshop(120000, 999999));
+        }
+
+        [Fact]
+        public void A_workshop_the_game_handed_over_for_nothing_is_still_paid_for()
+        {
+            Assert.Equal(120000, Holdings.StillOwedForTheWorkshop(120000, 0));
+            Assert.Equal(120000, Holdings.StillOwedForTheWorkshop(120000, -5));
+        }
+
+        [Fact]
+        public void A_workshop_with_no_price_on_it_is_never_charged_for()
+        {
+            Assert.Equal(0, Holdings.StillOwedForTheWorkshop(0, 0));
+            Assert.Equal(0, Holdings.StillOwedForTheWorkshop(-1, 0));
+        }
+
+        [Fact]
+        public void Nothing_is_ever_charged_twice_however_the_game_behaves()
+        {
+            var rng = new System.Random(6193);
+            for (int round = 0; round < 20000; round++)
+            {
+                int cost = rng.Next(-100, 300000);
+                int paid = rng.Next(-100, 300000);
+                int owed = Holdings.StillOwedForTheWorkshop(cost, paid);
+                Assert.True(owed == 0 || (paid <= 0 && owed == cost));
+                Assert.True(owed >= 0);
+            }
+        }
     }
 }

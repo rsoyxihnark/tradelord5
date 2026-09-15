@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.76.4
+
+- TradeLord now knows the trade screen it laid a deal out on has closed by asking whether that same screen is still the one open, rather than waiting for the game to report no screen at all. If that report had ever not come, TradeLord would have gone on claiming every trade you made by hand afterwards as its own.
+- Buying a workshop now checks that the gold actually left your purse. Where the game hands the workshop over without taking anything, TradeLord pays the seller itself, so a workshop is never free; where the game did take the gold, TradeLord never takes it a second time.
+- TradeLord.log now says what a workshop cost you and what the game actually took for it.
+
 ## 1.76.3
 
 - Fixed the same fault as 1.76.2 in a second, older place: a good you traded by hand was written into TradeLord's record of what you paid using the gold that line fetched in place of how many of it moved, so selling 29 iron for 1742 denars wiped the record of what all your iron had cost.
