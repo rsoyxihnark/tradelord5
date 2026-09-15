@@ -43,7 +43,7 @@ namespace TradeLord
         private static DateTime _askedAt;
         private static readonly TimeSpan BetweenAsks = TimeSpan.FromSeconds(1);
 
-        private static string Named(int generation) => "MCMv" + generation;
+        private static string Named(int generation) => Screens.Named(generation);
 
         private static bool Loaded(string prefix)
         {
@@ -51,27 +51,16 @@ namespace TradeLord
                 .Any(a => (a.GetName().Name ?? "").StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
         }
 
-        private static string GenerationOf(string assemblyName)
+        private static IEnumerable<string> LoadedNames()
         {
-            string name = assemblyName ?? "";
-            if (!name.StartsWith("MCMv", StringComparison.OrdinalIgnoreCase)) return null;
-            int end = 4;
-            while (end < name.Length && char.IsDigit(name[end])) end++;
-            return end > 4 ? name.Substring(0, end) : null;
+            foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
+                yield return a.GetName().Name;
         }
 
         private static string Detect()
         {
-            string other = null;
-            foreach (Assembly a in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                string generation = GenerationOf(a.GetName().Name);
-                if (generation == null) continue;
-                if (string.Equals(generation, Named(McmGeneration), StringComparison.OrdinalIgnoreCase))
-                    return generation;
-                if (other == null) other = generation;
-            }
-            if (other != null) return other;
+            string found = Screens.Which(LoadedNames(), Named(McmGeneration));
+            if (found != null) return found;
             for (int g = McmGeneration; g <= McmGeneration + GenerationsAhead; g++)
                 try { if (Assembly.Load(Named(g)) != null) return Named(g); }
                 catch { }
@@ -321,13 +310,7 @@ namespace TradeLord
         private static readonly List<string> Applied = new List<string>();
         private static readonly List<string> Refused = new List<string>();
 
-        internal static string Tally()
-        {
-            string said = "patches " + Applied.Count + "/" + (Applied.Count + Refused.Count) + " applied";
-            return Refused.Count == 0
-                ? said
-                : said + ", " + string.Join(", ", Refused.ToArray()) + " refused";
-        }
+        internal static string Tally() => Tallies.Of(Applied.Count, Refused);
 
         internal static void TryPatch(Harmony harmony, Type patchClass)
         {
