@@ -69,5 +69,58 @@ namespace TradeLord.Tests
             Assert.Equal("a haul animal", TradeRules.AnimalGroup(both));
             Assert.Equal(TradeRules.RankPlainMount, TradeRules.HerdShedRank(both));
         }
+        [Fact]
+        public void A_horse_a_man_on_foot_can_ride_is_ridden_rather_than_driven()
+        {
+            Assert.Equal(0, Herding.MountsNobodyRides(4, 4));
+            Assert.Equal(0, Herding.MountsNobodyRides(4, 9));
+            Assert.Equal(3, Herding.MountsNobodyRides(7, 4));
+        }
+
+        [Fact]
+        public void A_party_with_nobody_on_foot_drives_every_loose_mount()
+        {
+            Assert.Equal(6, Herding.MountsNobodyRides(6, 0));
+        }
+
+        [Fact]
+        public void Nothing_counted_below_nothing_ever_shrinks_the_herd()
+        {
+            Assert.Equal(0, Herding.MountsNobodyRides(-3, 2));
+            Assert.Equal(4, Herding.MountsNobodyRides(4, -2));
+            Assert.Equal(4, Herding.DrivenInAll(-5, 6, 2));
+            Assert.Equal(10, Herding.DrivenInAll(10, -1, -1));
+        }
+
+        [Fact]
+        public void What_is_driven_is_the_herd_plus_the_mounts_nobody_rides()
+        {
+            Assert.Equal(12, Herding.DrivenInAll(10, 6, 4));
+            Assert.Equal(10, Herding.DrivenInAll(10, 4, 4));
+            Assert.Equal(10, Herding.DrivenInAll(10, 2, 9));
+        }
+
+        [Fact]
+        public void Putting_a_man_on_foot_never_makes_the_herd_larger()
+        {
+            var rng = new System.Random(7741);
+            for (int round = 0; round < 20000; round++)
+            {
+                int herd = rng.Next(0, 200);
+                int mounts = rng.Next(0, 200);
+                int foot = rng.Next(0, 200);
+                int driven = Herding.DrivenInAll(herd, mounts, foot);
+                Assert.True(Herding.DrivenInAll(herd, mounts, foot + 1) <= driven);
+                Assert.True(driven >= herd);
+                Assert.True(driven <= herd + mounts);
+            }
+        }
+
+        [Fact]
+        public void The_herd_guard_keeps_a_cushion_of_its_own()
+        {
+            Assert.True(Herding.Cushion > 0);
+        }
+
     }
 }
