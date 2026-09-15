@@ -219,8 +219,8 @@
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports."/>
-		<string id="TL389" text="Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. OFF by default, since it makes the log much longer."/>
-		<string id="TL398" text="Writes to TradeLord.log what the forecast said a market would hold and what it held when you walked in, good by good, with how far off it was. Needs Count what is on its way to a market. OFF by default, since it makes the log longer."/>
+		<string id="TL389" text="Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. ON by default; turn it off to keep the log short."/>
+		<string id="TL398" text="Writes to TradeLord.log what the forecast said a market would hold and what it held when you walked in, good by good, with how far off it was. Needs Count what is on its way to a market. ON by default; turn it off to keep the log short."/>
 		<string id="TL100" text="Language"/>
 		<string id="TL101" text="Knowledge"/>
 		<string id="TL102" text="Insight"/>
@@ -274,5 +274,17 @@
 		<string id="TL426" text="Buy no haul animal at all until your purse is above this. Below it TradeLord leaves them alone however cheap they are, so early gold goes on goods instead. 0 lets it buy from the first denar. Default 2000."/>
 		<string id="TL427" text="Most it will pay for a haul animal"/>
 		<string id="TL428" text="How far above the cheapest price you have ever seen for that animal TradeLord will still pay. 100% means only at the cheapest you have seen. Default 1.25, so it pays up to a quarter more than the cheapest."/>
+		<string id="TL429" text="Most workshops you may own (0 = the game's own limit)"/>
+		<string id="TL430" text="Lifts the limit the game puts on how many workshops you may own. 200 is as good as no limit at all. 0 hands the decision back to the game, which allows more as your clan tier rises. Default 200."/>
+		<string id="TL431" text="Workshops for sale"/>
+		<string id="TL432" text="What this means"/>
+		<string id="TL433" text="Buy"/>
+		<string id="TL434" text="TradeLord bought the {SHOP} in {TOWN} for {GOLD} denars."/>
+		<string id="TL435" text="You already own {OWNED} workshop(s), which is all Most workshops you may own allows. Raise it in TradeLord's settings to buy another."/>
+		<string id="TL436" text="That workshop costs {GOLD} denars and your purse is at {PURSE}."/>
+		<string id="TL437" text="The game would not hand that workshop over. TradeLord.log says what happened."/>
+		<string id="TL438" text="Buy the {SHOP} in {TOWN} from {OWNER} for {GOLD} denars?"/>
+		<string id="TL439" text="Workshops for sale: {COUNT}, and you own {OWNED} of {MOST}"/>
+		<string id="TL440" text="No workshop in reach is a notable's to sell"/>
 	</strings>
 </base>

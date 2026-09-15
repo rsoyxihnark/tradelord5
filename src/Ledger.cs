@@ -343,6 +343,9 @@ namespace TradeLord
             Guard.Run("Ledger.OnPlayerInventoryExchange", () =>
             {
                 if (!isTrading || TradeActionBehavior.AutomatedTradeInProgress) return;
+                if (Counter.Awaiting)
+                    Guard.Run("Counter.TookTheDeal",
+                              () => TradeActionBehavior.TookTheDeal(purchased, sold));
                 Settlement here = Settlement.CurrentSettlement;
                 SettlementComponent market = here?.SettlementComponent;
                 ItemRoster carried = MobileParty.MainParty?.ItemRoster;

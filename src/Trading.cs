@@ -846,6 +846,77 @@ namespace TradeLord
         private static void ToastAfterXp(TextObject msg, Color color) =>
             _pendingAfterXp.Add(new InformationMessage(msg.ToString(), color));
 
+        internal static void TookTheDeal(List<(ItemRosterElement, int)> bought,
+                                        List<(ItemRosterElement, int)> sold)
+        {
+            Settlement here = Settlement.CurrentSettlement;
+            if (here?.SettlementComponent == null) return;
+            ReportWhatYouSold(here, sold);
+            ReportWhatYouBought(here, bought);
+        }
+
+        private static void ReportWhatYouSold(Settlement settlement, List<(ItemRosterElement, int)> sold,
+                                              bool quiet = false)
+        {
+            if (sold == null) return;
+            Pass pass = Pass.Open(settlement, quiet);
+            if (pass == null) return;
+            int units = 0, gained = 0, profit = 0;
+            for (int i = 0; i < sold.Count; i++)
+            {
+                var (el, count) = sold[i];
+                ItemObject item = el.EquipmentElement.Item;
+                if (item == null || count <= 0) continue;
+                int price = pass.Price(el.EquipmentElement, selling: true);
+                if (price <= 0) continue;
+                int worth = TradePolicy.WorthToBeat(item);
+                units += count;
+                gained += price * count;
+                profit += TradeMath.Credit(price, worth, TradePolicy.UnpaidWorth(item)) * count;
+                pass.Tally(item, count, price * count);
+            }
+            if (units <= 0) return;
+            pass.Moved(profit, gained, selling: true);
+            Log.Write("the deal you took sold " + units + " item(s) for about +" + gained +
+                      " gold, profit about " + profit + " " + pass.Where +
+                      " (priced from the market once the deal was done, so both are close rather than exact)");
+            pass.Logged(selling: true, "the deal you took on the trade screen");
+            TextObject msg = pass.Said(
+                "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
+                "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).", units, gained);
+            msg.SetTextVariable("PROFIT", profit);
+            Toast(msg, profit > 0 ? ToastGain : ToastFlat);
+            if (profit > 0) AwardTradeXp(profit, pass.Muted);
+        }
+
+        private static void ReportWhatYouBought(Settlement settlement, List<(ItemRosterElement, int)> bought,
+                                                bool quiet = false)
+        {
+            if (bought == null) return;
+            Pass pass = Pass.Open(settlement, quiet);
+            if (pass == null) return;
+            int units = 0, spent = 0;
+            for (int i = 0; i < bought.Count; i++)
+            {
+                var (el, count) = bought[i];
+                ItemObject item = el.EquipmentElement.Item;
+                if (item == null || count <= 0) continue;
+                int price = pass.Price(el.EquipmentElement, selling: false);
+                if (price <= 0) continue;
+                units += count;
+                spent += price * count;
+                pass.Tally(item, count, price * count);
+            }
+            if (units <= 0) return;
+            pass.Moved(gold: spent, selling: false);
+            Log.Write("the deal you took bought " + units + " item(s) for about -" + spent +
+                      " gold " + pass.Where +
+                      " (priced from the market once the deal was done, so it is close rather than exact)");
+            pass.Logged(selling: false, "the deal you took on the trade screen");
+            Toast(pass.Said("{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
+                            "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.", units, spent), ToastSpend);
+        }
+
         internal static void WatchTheTradeScreen()
         {
             TextObject closed = Counter.Watch();
