@@ -717,8 +717,11 @@ def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
     held = method_body(S['Support.cs'], "private static StreamWriter Held")
     letgo = method_body(S['Support.cs'], "private static void LetGo")
     resolve = method_body(S['Support.cs'], "private static string Resolve")
+    write = method_body(S['Support.cs'], "internal static void Write")
+    many = method_body(S['Support.cs'], "internal static void WriteMany")
+    pushed = method_body(S['Support.cs'], "private static void Pushed")
     return ("FileMode.Append, FileAccess.Write, FileShare.ReadWrite" in held
-            and "{ AutoFlush = true };" in held
+            and "{ AutoFlush = false };" in held
             and "if (_open != null || DateTime.UtcNow < _holdAgainAt) return _open;" in held
             and "catch { LetGo(); }" in held
             and "_holdAgainAt = DateTime.UtcNow + BeforeHoldingAgain;" in letgo
@@ -727,7 +730,13 @@ def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
                         "try { held.WriteLine(line); return; }",
                         "catch { LetGo(); }",
                         "File.AppendAllText(_path, line + Environment.NewLine);")
-            and "Put(message);" in method_body(S['Support.cs'], "internal static void Write")
+            and ordered(write, "Put(message);", "Pushed();")
+            and write.count("Pushed();") == 1
+            and ordered(many, "for (int i = 0; i < messages.Count; i++) Put(messages[i]);",
+                        "Pushed();")
+            and many.count("Pushed();") == 1
+            and ordered(pushed, "StreamWriter held = _open;", "try { held.Flush(); }",
+                        "catch { LetGo(); }")
             and 'File.AppendAllText(candidate, "");' in resolve
             and S['Support.cs'].count("File.AppendAllText(") == 2)
 
@@ -1515,7 +1524,7 @@ chk("1.3.5", "detailed-summary setting does not gate the log",
 chk("1.3.5", "log path worked out once per launch, at the first path that accepts the write",
     "foreach (string candidate in Candidates(FileName))" in
         method_body(S['Support.cs'], "private static string Resolve") and
-    ordered(method_body(S['Support.cs'], "internal static void Write"),
+    ordered(method_body(S['Support.cs'], "private static bool Ready"),
             "if (!_resolved)", "_resolved = true;", "_path = Resolve();") and
     S['Support.cs'].count("_path = Resolve();") == 1)
 chk("1.3.5", "hotkey blocked while escape menu open", "!map.IsEscapeMenuOpened" in S['Panel.cs'])
@@ -2274,7 +2283,7 @@ chk("1.5.5", "simulation mode mutates no per-visit state",
 chk("1.5.6", "the log prefers the game's user folder over the module folder",
     log_prefers_the_user_folder())
 chk("1.5.6", "log path resolution is attempted once, not per line",
-    "if (_path == null) return;" in method_body(S['Support.cs'], "internal static void Write"))
+    "if (_path == null) return false;" in method_body(S['Support.cs'], "private static bool Ready"))
 chk("1.41.6", "a market TradeLord traded in drops only the rankings its own prices decide, and drops them all when its gold has run out",
     a_traded_market_drops_only_the_rankings_its_own_prices_decide())
 chk("1.5.6", "live-price mode records no price observations, and a visit that records nothing leaves the market rankings standing",
@@ -5790,7 +5799,7 @@ def the_log_is_kept_from_one_launch_to_the_next():
             and support.count("File.WriteAllText(") == 1
             and support.count("EmptyIfItOutgrewItsLimit();") == 1
             and "EmptyIfItOutgrewItsLimit();" in
-                method_body(support, "internal static void Write")
+                method_body(support, "private static bool Ready")
             and "File.Delete(" not in support
             and "FileMode.Create" not in support
             and "FileMode.Truncate" not in support
@@ -5820,15 +5829,17 @@ def the_purchase_records_it_drops_are_named():
 def the_log_is_emptied_only_once_it_has_outgrown_its_limit():
     support = S['Support.cs']
     empty = method_body(support, "private static void EmptyIfItOutgrewItsLimit")
+    ready = method_body(support, "private static bool Ready")
     write = method_body(support, "internal static void Write")
     return ("private const long MostItHolds = 999 * 1024;" in support
             and ordered(empty, "try { held = new FileInfo(_path).Length; }",
                         "if (held <= MostItHolds) return;",
                         'try { File.WriteAllText(_path, ""); }',
                         "_emptied =")
-            and ordered(write, "if (!_resolved)", "_path = Resolve();",
+            and ordered(ready, "if (!_resolved)", "_path = Resolve();",
                         "if (_path != null) EmptyIfItOutgrewItsLimit();",
-                        "if (_emptied != null)", "Put(said);", "Put(message);")
+                        "if (_emptied != null)", "Put(said);")
+            and ordered(write, "if (!Ready()) return;", "Put(message);")
             and support.count("MostItHolds") == 3)
 
 def one_line_the_log_would_not_take_never_slows_the_rest_of_the_session():
@@ -5841,7 +5852,7 @@ def one_line_the_log_would_not_take_never_slows_the_rest_of_the_session():
             and "catch { LetGo(); }" in held
             and ordered(letgo, "_holdAgainAt = DateTime.UtcNow + BeforeHoldingAgain;",
                         "try { _open?.Dispose(); } catch { }", "_open = null;")
-            and support.count("LetGo();") == 2)
+            and support.count("LetGo();") == 3)
 
 
 chk("1.46.0", "TradeLord.log is emptied only once it has outgrown the size it is allowed, and only from the first line a launch writes",
@@ -5908,7 +5919,7 @@ chk("1.41.3", "a good on the shelf is asked once whether it may be bought, and t
     a_good_on_the_shelf_is_asked_the_buying_questions_once())
 chk("1.41.3", "the panel reads the hotkey before it walks the map's layers looking for a text field",
     the_panel_reads_the_key_before_it_walks_the_screen())
-chk("1.41.2", "TradeLord.log is held open and each line is pushed out as it is written, with appending a line at a time left as the fallback",
+chk("1.41.2", "TradeLord.log is held open, a line written on its own is pushed out at once and a burst of lines when the burst ends, with appending a line at a time left as the fallback",
     the_log_is_held_open_and_pushed_out_a_line_at_a_time())
 chk("1.41.2", "the market marked on your map skips one whose gold cannot beat the best found so far before it prices your cargo there",
     the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet())
@@ -6131,8 +6142,8 @@ chk("1.46.2", "trading on arrival runs once and waits for the party to take to t
 
 chk("1.47.0", "the price trace reads one market's price four ways, names the price model and any mod changing it, and trades nothing",
     the_price_trace_reads_one_price_four_ways_and_names_what_changes_it())
-chk("1.47.0", "the price trace ships on, so a price that looks wrong is already written down when you come to ask",
-    "public bool PriceTrace = true;" in S['Options.cs'])
+chk("1.76.7", "the price trace ships off, so walking into a market costs nothing until a price looks wrong and you turn it on",
+    "public bool PriceTrace = false;" in S['Options.cs'])
 
 chk("1.47.1", "every price TradeLord quotes is asked of the market the way the trade screen asks it, naming the merchant, and falls back to the plain question only if that cannot be asked",
     every_price_is_asked_the_way_the_trade_screen_asks_it())
@@ -8678,6 +8689,43 @@ def a_town_shelf_is_read_ahead_once_for_every_deal_that_asks_it():
 
 chk("1.76.6", "how long a buy market holds a quantity is worked out once for that market and arrival, and answered from it for every size of deal the scan tries",
     a_town_shelf_is_read_ahead_once_for_every_deal_that_asks_it())
+
+
+
+def the_price_trace_is_written_in_one_burst():
+    written = method_body(S['Market.cs'], "private static void Written")
+    return ("var lines = new List<string>();" in written
+            and "Log.Write(" not in written
+            and written.count("lines.Add(") >= 6
+            and written.count("Log.WriteMany(lines);") == 1
+            and written.index("Log.WriteMany(lines);") > written.rindex("lines.Add("))
+
+
+chk("1.76.7", "the price trace reaches the log in one burst rather than a line at a time, so a market it reads costs one push of the file and not one for every good",
+    the_price_trace_is_written_in_one_burst())
+
+
+def the_markets_behind_a_screen_are_priced_once_for_the_screen():
+    prime = method_body(S['Market.cs'], "internal static void Prime")
+    gather = method_body(S['Market.cs'], "private static void Gather")
+    tip = S['TooltipPatches.cs']
+    markets = method_body(tip, "Markets(ItemVM itemVm)")
+    coloured = method_body(tip, "private static void Coloured")
+    return (ordered(prime,
+                    "if (ledger == null || !Options.Current.Omniscient) return;",
+                    "if (at == _primedAt && hour == _primedHour && Options.Generation == _primedGen) return;",
+                    "Gather(MobileParty.MainParty == null ? null : MobileParty.MainParty.ItemRoster, goods);",
+                    "Gather(here == null ? null : here.ItemRoster, goods);",
+                    "if (goods.Count > 0) ledger.PrimeMarketsFor(goods);")
+            and "if (item != null && TradePolicy.Priced(item)) goods.Add(item);" in gather
+            and ordered(markets, "ScreenMarkets.Prime();", "ledger.TopSell(item, TopN)")
+            and ordered(coloured, "ScreenMarkets.Prime();", "ledger.BestBuy(item)")
+            and tip.count("ScreenMarkets.Prime();") == 2
+            and 'Guard.Run("GameEnd.ScreenMarkets", ScreenMarkets.Forget);' in S['SubModule.cs'])
+
+
+chk("1.76.7", "the markets behind the item tooltips and the inventory colours are priced once for the market you are standing in, not once for every good on the screen",
+    the_markets_behind_a_screen_are_priced_once_for_the_screen())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
