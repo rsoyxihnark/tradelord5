@@ -495,4 +495,15 @@ namespace TradeLord
             return said;
         }
     }
+
+    public static class Holdings
+    {
+        public static int WorkshopsYouMayOwn(int gameSays, int youAsked)
+        {
+            if (youAsked <= 0) return gameSays;
+            return youAsked;
+        }
+
+        public static bool RoomForOneMore(int owned, int mayOwn) => owned < mayOwn;
+    }
 }
