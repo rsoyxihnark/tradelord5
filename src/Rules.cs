@@ -136,6 +136,20 @@ namespace TradeLord
             (herd < 0 ? 0 : herd) + MountsNobodyRides(mounts, menOnFoot);
     }
 
+    internal static class Recent
+    {
+        internal const int MostKept = 20;
+
+        internal static void Keep<TRecord>(IList<TRecord> held, TRecord one, int most)
+        {
+            if (held == null || most <= 0) return;
+            held.Insert(0, one);
+            while (held.Count > most) held.RemoveAt(held.Count - 1);
+        }
+
+        internal static string Coins(int gold) => gold > 0 ? "+" + gold : gold.ToString();
+    }
+
     internal static class Screens
     {
         internal const string Family = "MCMv";

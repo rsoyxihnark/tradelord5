@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.72.0
+
+- The ledger panel now ends with Recent trades, the last twenty buys and sells TradeLord made for you, each with the day, the town, what moved and the gold it gained or cost.
+- Gold gained reads in green and gold spent in amber, so a buying visit and a selling visit tell themselves apart at a glance.
+- Recent trades is kept in memory for the session only and is never written into your save, so it adds nothing to the file and nothing to load.
+
 ## 1.71.2
 
 - A campaign whose age the game cannot work out no longer leaves every market shut with Economy settling delay set: TradeLord trades as it would on a campaign long past that delay instead.
