@@ -308,8 +308,6 @@ namespace TradeLord
     {
         internal static int Hour => (int)CampaignTime.Now.ToHours;
 
-        internal static int Generation => Options.Generation;
-
         internal static bool Fresh(ref Stamp stamp) => stamp.Fresh(Hour, Options.Generation);
 
         internal static bool Fresh(ref Stamp stamp, int hour) => stamp.Fresh(hour, Options.Generation);
