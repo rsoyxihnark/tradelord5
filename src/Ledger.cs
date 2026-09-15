@@ -34,6 +34,14 @@ namespace TradeLord
         public float RunsOutInDays = Projection.NeverRunsOut;
     }
 
+    public struct TradeNote
+    {
+        public string Where;
+        public string What;
+        public int Gold;
+        public float Day;
+    }
+
     public class LedgerBehavior : CampaignBehaviorBase
     {
         public static LedgerBehavior Instance { get; internal set; }
@@ -52,8 +60,21 @@ namespace TradeLord
         private ItemRoster _watched;
         private bool _settle;
 
+        private readonly List<TradeNote> _lately = new List<TradeNote>();
+
         public long LifetimeProfit => _lifetimeProfit;
         public void AddProfit(int amount) => _lifetimeProfit += amount;
+
+        public IList<TradeNote> Lately => _lately;
+
+        public void NoteTrade(string where, string what, int gold, float day) =>
+            Recent.Keep(_lately, new TradeNote
+            {
+                Where = where ?? "",
+                What = what ?? "",
+                Gold = gold,
+                Day = day,
+            }, Recent.MostKept);
 
         internal void KeepPromiseScore(float held)
         {
