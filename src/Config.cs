@@ -19,9 +19,7 @@ namespace TradeLord
 
         private const string ByFile = "this file";
 
-        private static readonly TimeSpan HandTolerance = TimeSpan.FromSeconds(30);
-
-        private static string _path;
+            private static string _path;
         private static readonly TimeSpan Settling = TimeSpan.FromMilliseconds(400);
 
         private static DateTime _stillMoving;
@@ -130,7 +128,7 @@ namespace TradeLord
         private static bool ChangedByHand(string path, DateTime stamped)
         {
             if (stamped == default(DateTime)) return true;
-            try { return File.GetLastWriteTimeUtc(path) > stamped + HandTolerance; }
+            try { return Twins.ChangedByHand(File.GetLastWriteTimeUtc(path), stamped); }
             catch (Exception e)
             {
                 Log.Error(e, "reading when the settings file was last changed (the file is taken as the newer one)");
@@ -189,7 +187,8 @@ namespace TradeLord
                 McmLoader.PutBackWhatItShipsWithOnceTheScreenArrives();
             }
 
-            if (screen && screenWroteIt && !ChangedByHand(found, stamped))
+            bool handEdited = screen && screenWroteIt && ChangedByHand(found, stamped);
+            if (Twins.ScreenWins(screen, screenWroteIt, handEdited))
             {
                 Log.Write("settings file: the settings screen was saved more recently, so this file is written to match it");
                 Write(found, "made to match the settings screen");

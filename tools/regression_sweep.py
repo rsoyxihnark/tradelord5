@@ -25,6 +25,7 @@ ARRIVALTESTS = io.open('tests/ArrivalTests.cs', encoding='utf-8').read()
 SETTLINGTESTS = io.open('tests/SettlingTests.cs', encoding='utf-8').read()
 RANKROWTESTS = io.open('tests/RankTests.cs', encoding='utf-8').read()
 MAPBUTTONTESTS = io.open('tests/MapButtonTests.cs', encoding='utf-8').read()
+TWINSTESTS = io.open('tests/TwinsTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
      'BooksTests.cs': BOOKTESTS, 'SellRulesTests.cs': SELLTESTS,
@@ -34,7 +35,8 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'BuyPassTests.cs': BUYPASSTESTS, 'SellPassTests.cs': SELLPASSTESTS,
      'BuyRulesTests.cs': BUYRULETESTS, 'HerdRulesTests.cs': HERDTESTS,
      'ArrivalTests.cs': ARRIVALTESTS, 'SettlingTests.cs': SETTLINGTESTS,
-     'RankTests.cs': RANKROWTESTS, 'MapButtonTests.cs': MAPBUTTONTESTS}
+     'RankTests.cs': RANKROWTESTS, 'MapButtonTests.cs': MAPBUTTONTESTS,
+     'TwinsTests.cs': TWINSTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -4567,11 +4569,13 @@ def the_file_and_the_screen_are_twins_and_the_newer_one_wins():
             and 'private const string ByScreen = "the settings screen";' in S['Config.cs']
             and 'private const string ByFile = "this file";' in S['Config.cs']
             and "McmLoader.SettingsInHand ? ByScreen : ByFile" in write
-            and "File.GetLastWriteTimeUtc(path) > stamped + HandTolerance" in hand
+            and "Twins.ChangedByHand(File.GetLastWriteTimeUtc(path), stamped)" in hand
             and "if (stamped == default(DateTime)) return true;" in hand
+            and "lastWritten > stamped + HandTolerance;" in S['Migrate.cs']
+            and "A_file_touched_after_the_tolerance_is_an_edit_by_hand" in TWINSTESTS
             and ordered(read, "bool screen = McmLoader.SettingsInHand;",
                         "written.Remove(ChangedKey);",
-                        "if (screen && screenWroteIt && !ChangedByHand(found, stamped))",
+                        "if (Twins.ScreenWins(screen, screenWroteIt, handEdited))",
                         "Write(found, \"made to match the settings screen\");",
                         "McmLoader.Reseat?.Invoke();")
             and "Options.Changed = Noted;" in follow
@@ -4619,9 +4623,12 @@ def a_file_no_settings_screen_wrote_is_never_written_over_by_one():
             and ordered(read,
                         "bool screenWroteIt = written.TryGetValue(WrittenByKey, out string wroteIt) &&",
                         "string.Equals(wroteIt, ByScreen, StringComparison.Ordinal);",
-                        "if (screen && screenWroteIt && !ChangedByHand(found, stamped))",
+                        "bool handEdited = screen && screenWroteIt && ChangedByHand(found, stamped);",
+                        "if (Twins.ScreenWins(screen, screenWroteIt, handEdited))",
                         "Log.Write(screenWroteIt")
-            and read.count("screenWroteIt") == 3)
+            and "screenInHand && screenWroteIt && !changedByHand;" in S['Migrate.cs']
+            and "Nothing_the_screen_never_wrote_is_ever_overwritten_by_it" in TWINSTESTS
+            and read.count("screenWroteIt") == 4)
 
 chk("1.30.3", "a settings file no settings screen ever wrote is read rather than written over, however old its stamp looks",
     a_file_no_settings_screen_wrote_is_never_written_over_by_one())
@@ -5888,7 +5895,7 @@ def the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off():
                         "SayWhatYouHadSet(written);",
                         "Whip.Crack(shape, written);",
                         "BackToWhatItShipsWith();",
-                        "if (screen && screenWroteIt && !ChangedByHand(found, stamped))",
+                        "if (Twins.ScreenWins(screen, screenWroteIt, handEdited))",
                         "if (Taken(field, line.Value)) taken++;",
                         "else if (whipped)")
             and "var stock = new Options();" in back
@@ -7725,6 +7732,28 @@ def where_the_map_button_catches_the_mouse_is_worked_out_where_a_test_can_ask():
 
 chk("1.71.2", "where the map button catches the mouse, and the strip it falls back to, is worked out where a test can ask",
     where_the_map_button_catches_the_mouse_is_worked_out_where_a_test_can_ask())
+
+
+def which_of_the_twins_wins_is_worked_out_where_a_test_can_ask():
+    m = S['Migrate.cs']
+    return ("public static class Twins" in m
+            and "TaleWorlds" not in m
+            and "public static readonly TimeSpan HandTolerance = TimeSpan.FromSeconds(30);" in m
+            and "stamped == default(DateTime) || lastWritten > stamped + HandTolerance;" in m
+            and "HandTolerance" not in S['Config.cs']
+            and 'Migrate.cs' in TESTPROJ
+            and all(one in TWINSTESTS for one in
+                    ("A_file_with_no_stamp_at_all_is_taken_as_edited_by_hand",
+                     "A_file_written_when_it_says_it_was_is_not_an_edit_by_hand",
+                     "A_file_touched_after_the_tolerance_is_an_edit_by_hand",
+                     "The_tolerance_is_generous_enough_for_a_slow_write_and_no_more",
+                     "The_screen_wins_only_when_it_is_there_and_wrote_the_file_last",
+                     "An_edit_by_hand_always_beats_the_screen",
+                     "Nothing_the_screen_never_wrote_is_ever_overwritten_by_it")))
+
+
+chk("1.71.2", "which of the twins wins, the settings file or the settings screen, is worked out where a test can ask",
+    which_of_the_twins_wins_is_worked_out_where_a_test_can_ask())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
