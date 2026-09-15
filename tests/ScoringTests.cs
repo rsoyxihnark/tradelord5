@@ -291,5 +291,77 @@ namespace TradeLord.Tests
                 CultureInfo.CurrentCulture = was;
             }
         }
+        private static Reading Seen(string item, string town, float day) =>
+            new Reading { Item = item, Town = town, Day = day };
+
+        [Fact]
+        public void A_book_inside_what_it_keeps_drops_nothing()
+        {
+            var held = new List<Reading> { Seen("grain", "a", 1f), Seen("wine", "b", 2f) };
+            Assert.Empty(Kept.OldestBeyond(held, 5));
+            Assert.Empty(Kept.OldestBeyond(held, 2));
+        }
+
+        [Fact]
+        public void A_book_past_what_it_keeps_drops_the_oldest_first()
+        {
+            var held = new List<Reading>
+            {
+                Seen("grain", "a", 9f), Seen("wine", "b", 2f),
+                Seen("olives", "c", 5f), Seen("oil", "d", 1f)
+            };
+            var dropped = Kept.OldestBeyond(held, 2);
+            Assert.Equal(2, dropped.Count);
+            Assert.Equal("oil", dropped[0].Item);
+            Assert.Equal("wine", dropped[1].Item);
+        }
+
+        [Fact]
+        public void A_book_with_no_ceiling_or_nothing_in_it_drops_nothing()
+        {
+            Assert.Empty(Kept.OldestBeyond(null, 10));
+            Assert.Empty(Kept.OldestBeyond(new List<Reading>(), 10));
+            Assert.Empty(Kept.OldestBeyond(new List<Reading> { Seen("grain", "a", 1f) }, 0));
+            Assert.Empty(Kept.OldestBeyond(new List<Reading> { Seen("grain", "a", 1f) }, -4));
+        }
+
+        [Fact]
+        public void What_is_left_after_a_trim_is_never_more_than_the_ceiling()
+        {
+            var rng = new System.Random(6613);
+            for (int round = 0; round < 20000; round++)
+            {
+                int count = rng.Next(0, 60);
+                int cap = rng.Next(1, 40);
+                var held = new List<Reading>();
+                for (int i = 0; i < count; i++)
+                    held.Add(Seen("i" + i, "t" + i, (float)(rng.NextDouble() * 50d)));
+                int dropped = Kept.OldestBeyond(held, cap).Count;
+                Assert.True(count - dropped <= cap);
+                Assert.True(dropped >= 0 && dropped <= count);
+            }
+        }
+
+        [Fact]
+        public void Nothing_kept_is_older_than_anything_dropped()
+        {
+            var rng = new System.Random(2288);
+            for (int round = 0; round < 20000; round++)
+            {
+                int count = rng.Next(2, 40);
+                int cap = rng.Next(1, count);
+                var held = new List<Reading>();
+                for (int i = 0; i < count; i++)
+                    held.Add(Seen("i" + i, "t" + i, (float)(rng.NextDouble() * 50d)));
+                var dropped = Kept.OldestBeyond(held, cap);
+                float oldestKept = float.MaxValue;
+                var gone = new HashSet<string>();
+                foreach (Reading one in dropped) gone.Add(one.Item);
+                foreach (Reading one in held)
+                    if (!gone.Contains(one.Item) && one.Day < oldestKept) oldestKept = one.Day;
+                foreach (Reading one in dropped) Assert.True(one.Day <= oldestKept);
+            }
+        }
+
     }
 }

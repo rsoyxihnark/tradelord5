@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.71.1
 
+- TradeLord now keeps at most 2500 recorded prices, forgetting the oldest first, so a long campaign with Days to keep a price you recorded set to 0 can no longer grow your save without end.
+- TradeLord.log now says at every save how many recorded prices and purchase records went into it and how large they are, so a save that has grown can be read rather than guessed at.
 - The comparison with the other trade mods is now one short entry a mod, each naming and linking to the mod it weighs, and it no longer credits Trade Advisor with telling you how long a route lasts, which TradeLord now does itself.
 
 ## 1.71.0
