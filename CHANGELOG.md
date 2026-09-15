@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.76.8
+
+- The list of what TradeLord moved now reaches TradeLord.log in one go rather than a line at a time, so a pass that trades a lot of goods no longer stutters as it finishes.
+- The score the panel keeps of what it promised you, and Score the forecast in the log, now reach the log the same way as you walk into a market.
+
 ## 1.76.7
 
 - Write a price trace to the log now ships off, so walking into a market costs nothing until a price looks wrong and you turn it on.
