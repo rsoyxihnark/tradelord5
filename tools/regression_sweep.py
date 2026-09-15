@@ -26,6 +26,7 @@ SETTLINGTESTS = io.open('tests/SettlingTests.cs', encoding='utf-8').read()
 RANKROWTESTS = io.open('tests/RankTests.cs', encoding='utf-8').read()
 MAPBUTTONTESTS = io.open('tests/MapButtonTests.cs', encoding='utf-8').read()
 TWINSTESTS = io.open('tests/TwinsTests.cs', encoding='utf-8').read()
+SETTINGSFILETESTS = io.open('tests/SettingsFileTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
      'BooksTests.cs': BOOKTESTS, 'SellRulesTests.cs': SELLTESTS,
@@ -36,7 +37,7 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'BuyRulesTests.cs': BUYRULETESTS, 'HerdRulesTests.cs': HERDTESTS,
      'ArrivalTests.cs': ARRIVALTESTS, 'SettlingTests.cs': SETTLINGTESTS,
      'RankTests.cs': RANKROWTESTS, 'MapButtonTests.cs': MAPBUTTONTESTS,
-     'TwinsTests.cs': TWINSTESTS}
+     'TwinsTests.cs': TWINSTESTS, 'SettingsFileTests.cs': SETTINGSFILETESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -4547,7 +4548,8 @@ def a_settings_file_says_which_shape_it_is_in():
     write = method_body(S['Config.cs'], "private static void Write")
     return ('public const int Shape = 11;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
-            and ordered(read, "written[line.Substring(0, mark).Trim()]",
+            and "written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();" in S['Migrate.cs']
+            and ordered(read, "var written = SettingsFile.Read(File.ReadAllLines(found), ignored);",
                         "written.TryGetValue(Migration.ShapeKey, out string held)",
                         "written.Remove(Migration.ShapeKey);",
                         "bool lifted = Migration.Lift(shape, written, notes);",
@@ -4555,7 +4557,7 @@ def a_settings_file_says_which_shape_it_is_in():
                         "if (Taken(field, line.Value)) taken++;",
                         "if (lifted || shape != Migration.Shape)")
             and "int shape = 1;" in read
-            and "sb.Append(Migration.ShapeKey).Append(\" = \")" in write)
+            and "new KeyValuePair<string, string>(Migration.ShapeKey," in write)
 
 def the_file_and_the_screen_are_twins_and_the_newer_one_wins():
     read = method_body(S['Config.cs'], "private static void Read")
@@ -4564,8 +4566,9 @@ def the_file_and_the_screen_are_twins_and_the_newer_one_wins():
     follow = method_body(S['Config.cs'], "internal static void Follow")
     return ('internal const string ChangedKey = "SettingsChanged";' in S['Config.cs']
             and 'internal const string WrittenByKey = "SettingsWrittenBy";' in S['Config.cs']
-            and "sb.Append(ChangedKey)" in write and "DateTime.UtcNow.ToString(\"o\"" in write
-            and "sb.Append(WrittenByKey)" in write
+            and "new KeyValuePair<string, string>(ChangedKey," in write
+            and "DateTime.UtcNow.ToString(\"o\"" in write
+            and "new KeyValuePair<string, string>(WrittenByKey," in write
             and 'private const string ByScreen = "the settings screen";' in S['Config.cs']
             and 'private const string ByFile = "this file";' in S['Config.cs']
             and "McmLoader.SettingsInHand ? ByScreen : ByFile" in write
@@ -7754,6 +7757,59 @@ def which_of_the_twins_wins_is_worked_out_where_a_test_can_ask():
 
 chk("1.71.2", "which of the twins wins, the settings file or the settings screen, is worked out where a test can ask",
     which_of_the_twins_wins_is_worked_out_where_a_test_can_ask())
+
+
+def how_a_settings_file_is_read_and_written_is_worked_out_where_a_test_can_ask():
+    m = S['Migrate.cs']
+    read = method_body(m, "public static Dictionary<string, string> Read(IEnumerable<string> lines, ICollection<string> ignored)")
+    compose = method_body(m, "public static string Compose(IEnumerable<string> header,")
+    config = method_body(S['Config.cs'], "private static void Read")
+    write = method_body(S['Config.cs'], "private static void Write")
+    return ("public static class SettingsFile" in m
+            and "TaleWorlds" not in m and "Log." not in m
+            and "public const char Marks = '#';" in m
+            and "public const char Splits = '=';" in m
+            and ordered(read, "if (lines == null) return written;",
+                        "if (raw == null) continue;",
+                        "string line = raw.Trim();",
+                        "if (line.Length == 0 || line[0] == Marks) continue;",
+                        "int mark = line.IndexOf(Splits);",
+                        "if (mark < 0) { ignored?.Add(line); continue; }",
+                        "written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();")
+            and "StringComparer.OrdinalIgnoreCase" in read
+            and ordered(compose, "if (header != null)", "sb.Append(Marks);",
+                        "if (!string.IsNullOrEmpty(line)) sb.Append(' ').Append(line);",
+                        "sb.AppendLine();", "if (settings != null)",
+                        "if (string.IsNullOrEmpty(line.Key)) continue;",
+                        "sb.Append(line.Key).Append(' ').Append(Splits).Append(' ').AppendLine(line.Value ?? \"\");")
+            and ordered(config, "var ignored = new List<string>();",
+                        "var written = SettingsFile.Read(File.ReadAllLines(found), ignored);",
+                        "foreach (string line in ignored)",
+                        "is not a name = value line, so it is ignored")
+            and "File.WriteAllText(path, SettingsFile.Compose(Header, lines));" in write
+            and "StringBuilder" not in S['Config.cs']
+            and 'Migrate.cs' in TESTPROJ
+            and all(one in SETTINGSFILETESTS for one in
+                    ("A_comment_line_and_a_blank_line_carry_no_setting",
+                     "The_space_around_a_name_and_its_value_is_not_part_of_either",
+                     "A_line_with_no_equals_sign_is_handed_back_rather_than_read_as_a_setting",
+                     "The_last_line_carrying_a_name_is_the_one_that_counts",
+                     "A_name_is_found_whatever_case_it_was_written_in",
+                     "A_value_carrying_an_equals_sign_survives_whole",
+                     "A_name_with_nothing_after_the_equals_sign_is_read_as_an_empty_value",
+                     "Nothing_to_read_and_nothing_to_report_are_both_taken_in_their_stride",
+                     "The_header_goes_out_behind_the_comment_mark_with_a_blank_line_after_it",
+                     "A_file_composed_with_no_header_and_no_settings_is_still_a_file",
+                     "A_setting_with_no_name_is_not_written_and_one_with_no_value_is",
+                     "What_is_composed_is_read_back_as_what_went_in",
+                     "A_file_stored_with_carriage_returns_reads_the_same_as_one_without",
+                     "Whatever_is_written_comes_back_unchanged_however_it_is_spaced_and_stored",
+                     "new Random(8823)")))
+
+
+chk("1.71.2", "how a settings file is read and written is worked out where a test can ask, carriage returns and all",
+    how_a_settings_file_is_read_and_written_is_worked_out_where_a_test_can_ask())
+
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

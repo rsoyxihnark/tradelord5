@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 
 namespace TradeLord
 {
@@ -133,6 +134,50 @@ namespace TradeLord
                        "so paying over the odds for one while your bags are full is gone and your setting of " +
                        held + " is no longer read");
             return true;
+        }
+    }
+
+    public static class SettingsFile
+    {
+        public const char Marks = '#';
+
+        public const char Splits = '=';
+
+        public static Dictionary<string, string> Read(IEnumerable<string> lines, ICollection<string> ignored)
+        {
+            var written = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (lines == null) return written;
+            foreach (string raw in lines)
+            {
+                if (raw == null) continue;
+                string line = raw.Trim();
+                if (line.Length == 0 || line[0] == Marks) continue;
+                int mark = line.IndexOf(Splits);
+                if (mark < 0) { ignored?.Add(line); continue; }
+                written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();
+            }
+            return written;
+        }
+
+        public static string Compose(IEnumerable<string> header,
+                                     IEnumerable<KeyValuePair<string, string>> settings)
+        {
+            var sb = new StringBuilder();
+            if (header != null)
+                foreach (string line in header)
+                {
+                    sb.Append(Marks);
+                    if (!string.IsNullOrEmpty(line)) sb.Append(' ').Append(line);
+                    sb.AppendLine();
+                }
+            sb.AppendLine();
+            if (settings != null)
+                foreach (var line in settings)
+                {
+                    if (string.IsNullOrEmpty(line.Key)) continue;
+                    sb.Append(line.Key).Append(' ').Append(Splits).Append(' ').AppendLine(line.Value ?? "");
+                }
+            return sb.ToString();
         }
     }
 
