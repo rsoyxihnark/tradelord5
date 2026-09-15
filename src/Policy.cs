@@ -69,13 +69,13 @@ namespace TradeLord
             catch (Exception e) { Log.Error(e, "learned parts check (the weapon is kept)"); return false; }
         }
 
-        private static int _readGeneration = -1;
+        private static Stamp _readStamp;
         private static HashSet<string> _knownIds, _knownNames;
 
         private static void ReadTheGoodsInThisGame()
         {
-            if (_readGeneration == Options.Generation) return;
-            _readGeneration = Options.Generation;
+            if (Freshness.Fresh(ref _readStamp, Stamp.Timeless)) return;
+            Freshness.Taken(ref _readStamp, Stamp.Timeless);
             if (_knownIds == null)
             {
                 _knownIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -94,12 +94,12 @@ namespace TradeLord
             s.AlwaysBuySet.ReadWordsAsIds(_knownIds);
         }
 
-        private static int _auditedGeneration = -1;
+        private static Stamp _auditStamp;
 
         internal static bool ItemListsNameNothing()
         {
-            if (_auditedGeneration == Options.Generation) return false;
-            _auditedGeneration = Options.Generation;
+            if (Freshness.Fresh(ref _auditStamp, Stamp.Timeless)) return false;
+            Freshness.Taken(ref _auditStamp, Stamp.Timeless);
             Options s = Options.Current;
             if (string.IsNullOrEmpty(s.NeverSellItems) && string.IsNullOrEmpty(s.AlwaysSellItems) &&
                 string.IsNullOrEmpty(s.NeverBuyItems) && string.IsNullOrEmpty(s.AlwaysBuyItems)) return false;
@@ -114,9 +114,9 @@ namespace TradeLord
 
         internal static void ForgetItemListAudit()
         {
-            _auditedGeneration = -1;
-            _clashGeneration = -1;
-            _readGeneration = -1;
+            _auditStamp.Stale();
+            _clashStamp.Stale();
+            _readStamp.Stale();
             _knownIds = null;
             _knownNames = null;
             _spoken.Clear();
@@ -133,15 +133,15 @@ namespace TradeLord
             return said;
         }
 
-        private static int _clashGeneration = -1;
+        private static Stamp _clashStamp;
 
         internal static string AnimalGroup(ItemObject item) =>
             item == null ? null : TradeRules.AnimalGroup(Describe(item));
 
         internal static bool ItemListsNameTwoAnimals()
         {
-            if (_clashGeneration == Options.Generation) return false;
-            _clashGeneration = Options.Generation;
+            if (Freshness.Fresh(ref _clashStamp, Stamp.Timeless)) return false;
+            Freshness.Taken(ref _clashStamp, Stamp.Timeless);
             Options s = Options.Current;
             var written = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (string list in new[] { s.NeverSellItems, s.AlwaysSellItems, s.NeverBuyItems, s.AlwaysBuyItems })

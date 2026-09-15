@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
+using TaleWorlds.CampaignSystem;
 
 namespace TradeLord
 {
@@ -301,6 +302,30 @@ namespace TradeLord
             _repeats.Clear();
             _errors.Clear();
         }
+    }
+
+    internal static class Freshness
+    {
+        internal static int Hour => (int)CampaignTime.Now.ToHours;
+
+        internal static int Generation => Options.Generation;
+
+        internal static bool Fresh(ref Stamp stamp) => stamp.Fresh(Hour, Options.Generation);
+
+        internal static bool Fresh(ref Stamp stamp, int hour) => stamp.Fresh(hour, Options.Generation);
+
+        internal static void Taken(ref Stamp stamp) => stamp.Taken(Hour, Options.Generation);
+
+        internal static void Taken(ref Stamp stamp, int hour) => stamp.Taken(hour, Options.Generation);
+
+        internal static Stamp At(int hour)
+        {
+            Stamp stamp = default(Stamp);
+            stamp.Taken(hour, Options.Generation);
+            return stamp;
+        }
+
+        internal static bool Held(Stamp stamp, int hour) => stamp.Fresh(hour, Options.Generation);
     }
 
     internal static class Guard

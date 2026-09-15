@@ -377,8 +377,7 @@ namespace TradeLord
         }
 
         private string _capturedTown;
-        private int _capturedHour = -1;
-        private int _capturedGen = -1;
+        private Stamp _capturedStamp;
 
         public void CaptureSettlement(Settlement settlement, bool force = false) =>
             CaptureSettlement(settlement, force, null);
@@ -388,12 +387,10 @@ namespace TradeLord
             if (settlement == null || (!settlement.IsTown && !settlement.IsVillage)) return;
             SettlementComponent market = settlement.SettlementComponent;
             if (market == null) return;
-            int hour = (int)CampaignTime.Now.ToHours;
-            if (!force && hour == _capturedHour && settlement.StringId == _capturedTown &&
-                Options.Generation == _capturedGen) return;
-            _capturedHour = hour;
+            if (!force && settlement.StringId == _capturedTown &&
+                Freshness.Fresh(ref _capturedStamp)) return;
+            Freshness.Taken(ref _capturedStamp);
             _capturedTown = settlement.StringId;
-            _capturedGen = Options.Generation;
             if (force || !Options.Current.Omniscient)
                 DropRankings(settlement, Options.Current.Omniscient ? moved : null);
             if (Options.Current.Omniscient) return;
@@ -499,13 +496,13 @@ namespace TradeLord
             DropRankingsIfThePartyMoved();
             var key = (item.StringId, selling);
             int hour = (int)CampaignTime.Now.ToHours;
-            if (_marketCache.TryGetValue(key, out var hit) && hit.hour == hour && hit.gen == Options.Generation)
+            if (_marketCache.TryGetValue(key, out var hit) && Freshness.Held(hit.stamp, hour))
                 return hit.markets;
 
             var result = Options.Current.Omniscient
                 ? TopLive(item, selling, hour)
                 : TopObserved(item, selling);
-            _marketCache[key] = (hour, Options.Generation, KindOf(item), result);
+            _marketCache[key] = (Freshness.At(hour), KindOf(item), result);
             return result;
         }
 
@@ -549,15 +546,13 @@ namespace TradeLord
             MarketRank.WithinCeiling(s.IsVillage, days, Options.Current);
 
         private const float MovedFar = 100f;
-        private readonly Dictionary<(string item, bool selling), (int hour, int gen, string kind, List<(Settlement, int)> markets)> _marketCache
-            = new Dictionary<(string, bool), (int, int, string, List<(Settlement, int)>)>();
+        private readonly Dictionary<(string item, bool selling), (Stamp stamp, string kind, List<(Settlement, int)> markets)> _marketCache
+            = new Dictionary<(string, bool), (Stamp, string, List<(Settlement, int)>)>();
 
-        private int _candHour = -1;
-        private int _candGen = -1;
+        private Stamp _candStamp;
         private List<(Settlement s, float days)> _candidates;
 
-        private int _routeHour = -1;
-        private int _routeGen = -1;
+        private Stamp _routeStamp;
         private List<TradeRoute> _routes;
 
         internal void ForgetMarketRankings()
@@ -605,7 +600,7 @@ namespace TradeLord
 
         private List<(Settlement s, float days)> LiveCandidates(int hour)
         {
-            if (_candidates != null && _candHour == hour && _candGen == Options.Generation) return _candidates;
+            if (_candidates != null && Freshness.Fresh(ref _candStamp, hour)) return _candidates;
 
             var list = new List<(Settlement, float)>();
             foreach (Settlement s in Settlement.All)
@@ -615,8 +610,7 @@ namespace TradeLord
                 list.Add((s, lower));
             }
             _candidates = list;
-            _candHour = hour;
-            _candGen = Options.Generation;
+            Freshness.Taken(ref _candStamp, hour);
             return list;
         }
 
@@ -688,8 +682,8 @@ namespace TradeLord
             {
                 ItemObject item = wanted[i];
                 string kind = KindOf(item);
-                _marketCache[(item.StringId, true)] = (hour, Options.Generation, kind, Settled(sells[i], true));
-                _marketCache[(item.StringId, false)] = (hour, Options.Generation, kind, Settled(buys[i], false));
+                _marketCache[(item.StringId, true)] = (Freshness.At(hour), kind, Settled(sells[i], true));
+                _marketCache[(item.StringId, false)] = (Freshness.At(hour), kind, Settled(buys[i], false));
             }
         }
 
@@ -712,7 +706,7 @@ namespace TradeLord
 
         private bool Ranked(string itemId, bool selling, int hour) =>
             _marketCache.TryGetValue((itemId, selling), out var hit) &&
-            hit.hour == hour && hit.gen == Options.Generation;
+            Freshness.Held(hit.stamp, hour);
 
         private List<(Settlement, int)> TopLive(ItemObject item, bool selling, int hour)
         {
@@ -789,11 +783,10 @@ namespace TradeLord
         {
             DropRankingsIfThePartyMoved();
             int hour = (int)CampaignTime.Now.ToHours;
-            if (_routes == null || _routeHour != hour || _routeGen != Options.Generation)
+            if (_routes == null || !Freshness.Fresh(ref _routeStamp, hour))
             {
                 _routes = ScanRoutes();
-                _routeHour = hour;
-                _routeGen = Options.Generation;
+                Freshness.Taken(ref _routeStamp, hour);
             }
             return _routes.Count <= top ? _routes : _routes.GetRange(0, top);
         }

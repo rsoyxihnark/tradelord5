@@ -231,14 +231,12 @@ namespace TradeLord
     internal static class ScreenMarkets
     {
         private static string _primedAt;
-        private static int _primedHour = -1;
-        private static int _primedGen = -1;
+        private static Stamp _primedStamp;
 
         internal static void Forget()
         {
             _primedAt = null;
-            _primedHour = -1;
-            _primedGen = -1;
+            _primedStamp.Stale();
         }
 
         internal static void Prime()
@@ -247,11 +245,9 @@ namespace TradeLord
             if (ledger == null || !Options.Current.Omniscient) return;
             Settlement here = Settlement.CurrentSettlement;
             string at = here == null ? "" : here.StringId;
-            int hour = (int)CampaignTime.Now.ToHours;
-            if (at == _primedAt && hour == _primedHour && Options.Generation == _primedGen) return;
+            if (at == _primedAt && Freshness.Fresh(ref _primedStamp)) return;
             _primedAt = at;
-            _primedHour = hour;
-            _primedGen = Options.Generation;
+            Freshness.Taken(ref _primedStamp);
             var goods = new List<ItemObject>();
             Gather(MobileParty.MainParty == null ? null : MobileParty.MainParty.ItemRoster, goods);
             Gather(here == null ? null : here.ItemRoster, goods);

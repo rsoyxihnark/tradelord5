@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Conversation;
+using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.Extensions;
 using TaleWorlds.CampaignSystem.Issues;
+using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.Core;
 
 namespace TradeLord
@@ -163,6 +165,118 @@ namespace TradeLord
         }
     }
 
+
+    internal static class Meetings
+    {
+        private const float GetawayHours = 4f;
+
+        private static MobileParty _tradedWith;
+        private static object _tradedIn;
+        private static object _handledEncounter;
+
+        internal static void Lines(CampaignGameStarter starter)
+        {
+            AddCaravanLines(starter);
+            AddBanditLines(starter);
+        }
+
+        private static void AddCaravanLines(CampaignGameStarter starter) => Guard.Run(
+            "caravan dialog (trading in a market is unaffected)", () =>
+            {
+                const string said = "{=TL114}That was a nice trade. [TRADELORD]";
+                const string answered = "{=TL115}Agreed. I wish I could use that mod too. Hope you gave a thumbs up endorsement on NexusMods!";
+                starter.AddPlayerLine("tradelord_caravan_done", "caravan_talk", "tradelord_caravan_reply",
+                    Tongue.Slot(said),
+                    () => Tongue.Spoken(said) && CaravanMet(), null, 200);
+                starter.AddDialogLine("tradelord_caravan_reply", "tradelord_caravan_reply", "close_window",
+                    Tongue.Slot(answered),
+                    () => Tongue.Spoken(answered), null, 200);
+            });
+
+        private static bool CaravanMet()
+        {
+            MobileParty caravan = MobileParty.ConversationParty;
+            if (!Options.Current.TradeWithCaravans || caravan == null || !caravan.IsCaravan) return false;
+            TradeOnce(caravan);
+            return true;
+        }
+
+        private static void AddBanditLines(CampaignGameStarter starter) => Guard.Run(
+            "bandit dialog (meeting a band is otherwise unaffected)", () =>
+            {
+                const string said = "{=TL387}Let us pass, and we will be on our way. [TRADELORD]";
+                const string answered = "{=TL113}Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!";
+                ConversationSentence asked = starter.AddPlayerLine(
+                    "tradelord_bandit_pass", Parley.OwnState, "tradelord_bandit_pass_reply",
+                    Tongue.Slot(said),
+                    () => Tongue.Spoken(said) && BanditMet(), null, 200);
+                starter.AddDialogLine("tradelord_bandit_pass_reply", "tradelord_bandit_pass_reply", "close_window",
+                    Tongue.Slot(answered),
+                    () => Tongue.Spoken(answered),
+                    () => Guard.Run("Action.Getaway", LetPlayerGo), 200);
+                Parley.Remember(asked);
+            });
+
+        private static bool BanditMet()
+        {
+            MobileParty band = MobileParty.ConversationParty;
+            return Options.Current.BanditGetawayCheat && band != null && band.IsBandit;
+        }
+
+        private static void TradeOnce(MobileParty met)
+        {
+            object here = PlayerEncounter.Current;
+            if (_tradedWith == met || (here != null && _tradedIn == here)) return;
+            _tradedWith = met;
+            _tradedIn = here;
+            Guard.Run("Action.RoadTrade", () => TradeActionBehavior.ExecuteRoadTrade(met));
+        }
+
+        internal static bool IsRoadTrader(MobileParty party) =>
+            party != null && (party.IsCaravan || party.IsVillager);
+
+        internal static void Watch()
+        {
+            if (Campaign.Current == null) { _handledEncounter = null; Parley.Forget(); return; }
+            object here = PlayerEncounter.Current;
+            if (here == null) { _handledEncounter = null; return; }
+            if (_handledEncounter == here) return;
+            MobileParty met = PlayerEncounter.EncounteredMobileParty;
+            if (met == null) return;
+            _handledEncounter = here;
+            if (IsRoadTrader(met)) TradeOnce(met);
+        }
+
+        internal static void ForgetEncounter()
+        {
+            TradeActionBehavior.ForgetTheMeeting();
+            ForgetWhoYouTradedWith();
+            _handledEncounter = null;
+        }
+
+        internal static void ForgetWhoYouTradedWith()
+        {
+            _tradedWith = null;
+            _tradedIn = null;
+        }
+
+        internal static void ConversationEnded() => _tradedWith = null;
+
+        private static void LetPlayerGo()
+        {
+            MobileParty band = MobileParty.ConversationParty;
+            Log.Write("free passage taken against " + (band == null ? "an unnamed party" : band.StringId));
+            band?.IgnoreForHours(GetawayHours);
+            MobileParty.MainParty?.IgnoreByOtherPartiesTill(CampaignTime.HoursFromNow(GetawayHours));
+            if (PlayerEncounter.Current != null)
+            {
+                PlayerEncounter.ProtectPlayerSide(GetawayHours);
+                PlayerEncounter.LeaveEncounter = true;
+            }
+            Log.Write("free passage held for " + GetawayHours + " hours: your party is passed over by other parties, " +
+                      "and " + (band == null ? "that band" : band.StringId) + " is passed over by yours");
+        }
+    }
 
     internal static class Parley
     {

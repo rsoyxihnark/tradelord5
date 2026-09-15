@@ -9,7 +9,7 @@ namespace TradeLord
     {
         internal static void Say() => Guard.Run("SelfCheck", () =>
             Log.Write("self-check: " + Patcher.Tally() +
-                      " | " + TradeActionBehavior.HerdPenaltyRead() +
+                      " | " + Drove.PenaltyRead() +
                       " | " + (Errands.Known ? "quest goods read" : "quest goods not read") +
                       " | " + Tongue.StringsRead() +
                       " | " + Priced.ModelInForce()));
@@ -66,7 +66,7 @@ namespace TradeLord
             Guard.Run("Tick.FlushToasts", TradeActionBehavior.FlushToasts);
             Guard.Run("Tick.Mcm", McmLoader.TryHandover);
             Guard.Run("Tick.Settings", Config.Flush);
-            Guard.Run("Tick.Encounter", TradeActionBehavior.WatchEncounter);
+            Guard.Run("Tick.Encounter", Meetings.Watch);
             Guard.Run("Tick.Counter", TradeActionBehavior.WatchTheTradeScreen);
             Guard.Run("Tick.Parley", Parley.HangWhereTheBandAnswers);
             LedgerPanel.Tick();
@@ -83,7 +83,7 @@ namespace TradeLord
             Guard.Run("GameEnd.Hindsight", Hindsight.Forget);
             Guard.Run("GameEnd.Counter", Counter.Forget);
             Guard.Run("GameEnd.Visit", TradeActionBehavior.ForgetVisit);
-            Guard.Run("GameEnd.Encounter", TradeActionBehavior.ForgetEncounter);
+            Guard.Run("GameEnd.Encounter", Meetings.ForgetEncounter);
             LedgerBehavior.Instance = null;
             Guard.Run("GameEnd.Settings", Config.Settle);
             Guard.Run("GameEnd.Log", Log.Forget);
