@@ -30,6 +30,12 @@ namespace TradeLord
             catch { return 0; }
         }
 
+        internal static int YourTier()
+        {
+            try { return Clan.PlayerClan?.Tier ?? -1; }
+            catch { return -1; }
+        }
+
         internal static int Owned()
         {
             try { return Hero.MainHero?.OwnedWorkshops?.Count ?? 0; }
@@ -145,6 +151,16 @@ namespace TradeLord
 
     [HarmonyPatch(typeof(DefaultWorkshopModel), "GetMaxWorkshopCountForClanTier")]
     internal static class Patch_WorkshopLimit
+    {
+        private static void Postfix(int tier, ref int __result)
+        {
+            if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier())) return;
+            __result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);
+        }
+    }
+
+    [HarmonyPatch(typeof(DefaultWorkshopModel), "MaximumWorkshopsPlayerCanHave", MethodType.Getter)]
+    internal static class Patch_WorkshopsYouMayHave
     {
         private static void Postfix(ref int __result)
         {
