@@ -72,7 +72,7 @@
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus. It follows Restock and keep food (days of supply): set that to 0 and TradeLord keeps no food back at all
 - ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
-- ✅ Your gold reserve of 300 denars, the days of your troops' wages you ask it to keep on top of that, and anything past your spending cap for the visit
+- ✅ Your gold reserve of 300 denars, the days of your troops' wages you ask it to keep on top of that, and anything past your spending cap for the visit, which ships at 1000 denars
 - ✅ Smithing materials such as iron ore, ingots, charcoal and hardwood, once you switch their policy to leave them alone, off by default
 - ✅ Any good you put on the never-sell or never-buy list, named by its item id or by the name on screen
 - ✅ More livestock than your party can drive, so a purchase never slows you down
@@ -87,7 +87,7 @@
 - ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ A share of the whole hold TradeLord may fill, so it stops buying with room left for what a battle or a quest hands you. It ships at the full hold, and selling is unaffected
-- ✅ Caps on one good by count or by denars, on how many of it you will carry, on the share of the hold it may fill, which ships at 45% so one cheap good cannot take your whole cargo, and on the whole visit. They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off a haul animal, since one of those adds to the hold rather than filling it
+- ✅ Caps on one good by count, which ships at 32 units a visit, or by denars, on how many of it you will carry, on the share of the hold it may fill, which ships at 45% so one cheap good cannot take your whole cargo, and on the whole visit, which ships at 1000 denars so a full purse is never spent in one town. They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off a haul animal, since one of those adds to the hold rather than filling it
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know. It sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
@@ -123,7 +123,7 @@ MCM whenever you like and edit the file by hand either way without losing what y
 - ✅ Will it sell something I wanted to keep? Not what you locked in the inventory screen, not what a quest of yours is waiting on, not unique or player-crafted gear, and not what you name on the never-sell list
 - ✅ Does it change prices or the economy? No. It buys and sells at the game's own prices, through the game's own buying and selling, so every other party in Calradia sees the Calradia it always saw
 - ✅ Do I need the War Sails DLC? No. With it TradeLord counts sea legs and appears in port menus, and without it everything else works the same
-- ✅ It traded nothing, why? It says so on screen and names what stopped it, with the longer answer in `TradeLord.log`. The two usual reasons are your gold reserve holding your purse back and your cargo being too full to buy
+- ✅ It traded nothing, why? It says so on screen and names what stopped it, with the longer answer in `TradeLord.log`. The usual reasons are your gold reserve holding your purse back, your cargo being too full to buy, and Max spend per visit or Buy cap per item being spent for that town
 - ✅ Can I run another trade mod alongside it? Run only one mod that trades, or the two of them fight over the same cargo and the same purse
 
 ## What it needs

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.77.1
+
+- Auto-mark best sell market on map no longer asks every market on the map its price all over again each time you walk into a settlement or out of it, since stepping through a gate cannot move what another town pays.
+- The feature list now names the two limits TradeLord ships with that it had left unsaid: Buy cap per item stops it at 32 units of one good a visit, and Max spend per visit stops it at 1000 denars in one town.
+
 ## 1.77.0
 
 - Every setting goes back to the value TradeLord ships with, once, so the values this version ships with are the ones you are running: anything you had set is listed in TradeLord.log first so you can put it back, and it happens only this once.

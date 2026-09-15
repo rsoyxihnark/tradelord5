@@ -8627,6 +8627,7 @@ def the_marker_reads_your_cargo_once_and_prices_each_market_once():
                              "WhatYouCarryToSell")
     asked = method_body(t, "private static int WhatThatMarketPays")
     forget = method_body(t, "private static void ForgetTheMarkerRead")
+    carry = method_body(t, "private static void ForgetWhatYouCarry")
     return (ordered(carried,
                     "int version = party.ItemRoster.VersionNo;",
                     "if (_cargo != null && hour == _cargoHour && Options.Generation == _cargoGen &&",
@@ -8640,13 +8641,15 @@ def the_marker_reads_your_cargo_once_and_prices_each_market_once():
                         "if (_markerPrices.TryGetValue(key, out int kept)) return kept;",
                         "_markerPrices[key] = price;")
             and "el.ItemModifier == null ? \"\" : el.ItemModifier.StringId);" in asked
-            and ordered(forget, "_cargo = null;", "_cargoVersion = -1;", "_markerPrices.Clear();",
+            and ordered(carry, "_cargo = null;", "_cargoHour = -1;", "_cargoVersion = -1;")
+            and ordered(forget, "ForgetWhatYouCarry();", "_markerPrices.Clear();",
                         "_markerPriceHour = -1;")
-            and t.count("ForgetTheMarkerRead();") == 3
-            and all("ForgetTheMarkerRead();" in method_body(t, where)
-                    for where in ("internal static void ForgetVisit",
+            and t.count("ForgetWhatYouCarry();") == 3
+            and all("ForgetWhatYouCarry();" in method_body(t, where)
+                    for where in ("private static void ForgetTheMarkerRead",
                                   "private static void ResetVisit",
                                   "private void OnSettlementLeft"))
+            and "ForgetTheMarkerRead();" in method_body(t, "internal static void ForgetVisit")
             and '"VersionNo"' in COMPAT)
 
 
@@ -8778,6 +8781,26 @@ def a_whip_that_cracks_writes_the_file_back_so_it_never_cracks_twice():
 
 chk("1.77.0", "a settings file put back to what TradeLord ships with is written out again carrying the shape this version ships, so it is put back once and never again",
     a_whip_that_cracks_writes_the_file_back_so_it_never_cracks_twice())
+
+
+
+def walking_through_a_gate_keeps_the_prices_the_marker_read():
+    t = S['Trading.cs']
+    left = method_body(t, "private void OnSettlementLeft")
+    reset = method_body(t, "private static void ResetVisit")
+    launched = method_body(t, "private void OnSessionLaunched")
+    ended = method_body(t, "internal static void ForgetVisit")
+    gates = [left, reset]
+    return (t.count("ForgetTheMarkerRead();") == 2
+            and "ForgetTheMarkerRead();" in ended
+            and ordered(launched, "ResetVisit();", "ForgetTheMarkerRead();")
+            and all("ForgetTheMarkerRead();" not in gate for gate in gates)
+            and all("ForgetWhatYouCarry();" in gate for gate in gates)
+            and all("_markerPrices" not in gate for gate in gates))
+
+
+chk("1.77.1", "walking into a market or out of it drops what TradeLord read of your cargo and keeps the prices it read of every other market, which only a new campaign or the end of one drops",
+    walking_through_a_gate_keeps_the_prices_the_marker_read())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
