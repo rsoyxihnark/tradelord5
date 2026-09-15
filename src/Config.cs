@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
-using System.Text;
 
 namespace TradeLord
 {
@@ -147,15 +146,10 @@ namespace TradeLord
                 return;
             }
 
-            var written = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (string raw in File.ReadAllLines(found))
-            {
-                string line = raw.Trim();
-                if (line.Length == 0 || line[0] == '#') continue;
-                int mark = line.IndexOf('=');
-                if (mark < 0) { Log.Write("settings file: '" + line + "' is not a name = value line, so it is ignored"); continue; }
-                written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();
-            }
+            var ignored = new List<string>();
+            var written = SettingsFile.Read(File.ReadAllLines(found), ignored);
+            foreach (string line in ignored)
+                Log.Write("settings file: '" + line + "' is not a name = value line, so it is ignored");
 
             int shape = 1;
             if (written.TryGetValue(Migration.ShapeKey, out string held) &&
@@ -316,21 +310,20 @@ namespace TradeLord
                 Log.Write("settings file: nowhere to write one, so TradeLord runs on its built-in settings");
                 return;
             }
-            var sb = new StringBuilder();
-            foreach (string line in Header)
-                sb.AppendLine(line.Length == 0 ? "#" : "# " + line);
-            sb.AppendLine();
-            sb.Append(Migration.ShapeKey).Append(" = ")
-              .AppendLine(Migration.Shape.ToString(CultureInfo.InvariantCulture));
-            sb.Append(ChangedKey).Append(" = ")
-              .AppendLine(DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture));
-            sb.Append(WrittenByKey).Append(" = ")
-              .AppendLine(McmLoader.SettingsInHand ? ByScreen : ByFile);
+            var lines = new List<KeyValuePair<string, string>>
+            {
+                new KeyValuePair<string, string>(Migration.ShapeKey,
+                    Migration.Shape.ToString(CultureInfo.InvariantCulture)),
+                new KeyValuePair<string, string>(ChangedKey,
+                    DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)),
+                new KeyValuePair<string, string>(WrittenByKey,
+                    McmLoader.SettingsInHand ? ByScreen : ByFile),
+            };
             foreach (FieldInfo field in Fields())
-                sb.Append(field.Name).Append(" = ").AppendLine(Shown(field));
+                lines.Add(new KeyValuePair<string, string>(field.Name, Shown(field)));
             try
             {
-                File.WriteAllText(path, sb.ToString());
+                File.WriteAllText(path, SettingsFile.Compose(Header, lines));
                 Log.Write("settings file written to " + path + " (" + why + ") - edit it to change how TradeLord trades");
             }
             catch (Exception e) { Log.Error(e, "writing the settings file (TradeLord runs on the settings it has)"); }
