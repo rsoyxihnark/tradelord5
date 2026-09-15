@@ -505,5 +505,11 @@ namespace TradeLord
         }
 
         public static bool RoomForOneMore(int owned, int mayOwn) => owned < mayOwn;
+
+        public static bool TheGameIsAskingAboutYou(int askedAboutTier, int yourTier) =>
+            yourTier >= 0 && askedAboutTier == yourTier;
+
+        public static bool DipsIntoWhatYouHoldBack(int cost, int purse, int heldBack) =>
+            cost > 0 && heldBack > 0 && purse - cost < heldBack;
     }
 }
