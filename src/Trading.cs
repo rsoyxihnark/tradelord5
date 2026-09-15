@@ -223,10 +223,8 @@ namespace TradeLord
         private static Vec2 _gateBehind;
         private static bool _gateBehindKnown;
         private static bool _tookToTheRoad;
-        private const float SetOffFromTheGate = 1f;
-
         private static bool StillTheSameArrival(Settlement settlement) =>
-            settlement != null && settlement.StringId == _lastArrivalAt && !_tookToTheRoad;
+            Arrivals.StillTheSame(settlement?.StringId, _lastArrivalAt, _tookToTheRoad);
 
         private static void NoteThisArrival(Settlement settlement)
         {
@@ -243,9 +241,9 @@ namespace TradeLord
 
         private static void NoteTheRoadTaken(MobileParty party)
         {
-            if (_tookToTheRoad || !_gateBehindKnown) return;
-            if (party.GetPosition2D.DistanceSquared(_gateBehind) > SetOffFromTheGate)
-                _tookToTheRoad = true;
+            _tookToTheRoad = Arrivals.TakenToTheRoad(
+                _tookToTheRoad, _gateBehindKnown,
+                party.GetPosition2D.DistanceSquared(_gateBehind));
         }
 
         private static void ForgetArrivals()
@@ -258,7 +256,8 @@ namespace TradeLord
         private static bool StillTheSameSitting(Settlement settlement)
         {
             int hour = (int)CampaignTime.Now.ToHours;
-            bool same = settlement != null && settlement.StringId == _sittingAt && hour == _sittingHour;
+            bool same = Arrivals.StillTheSameSitting(settlement?.StringId, _sittingAt,
+                                                     hour, _sittingHour);
             _sittingAt = settlement?.StringId;
             _sittingHour = hour;
             return same;
