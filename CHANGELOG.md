@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.77.0
+
+- Every setting goes back to the value TradeLord ships with, once, so the values this version ships with are the ones you are running: anything you had set is listed in TradeLord.log first so you can put it back, and it happens only this once.
+- Your never-sell, always-sell, never-buy and always-buy lists are emptied by that same reset, so write them in again if you were using them.
+
 ## 1.76.9
 
 - What you paid for your goods, written into a save by a newer TradeLord than the one you are running, is now read as far as this version understands it rather than dropped, the way the prices it has recorded already were.
