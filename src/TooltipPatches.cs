@@ -35,6 +35,7 @@ namespace TradeLord
             if (!TradePolicy.Priced(item)) return (null, null, null);
             var ledger = LedgerBehavior.Instance;
             if (ledger == null) return (null, null, null);
+            ScreenMarkets.Prime();
 
             var sells = ledger.TopSell(item, TopN);
             var buys = ledger.TopBuy(item, TopN);
@@ -220,6 +221,7 @@ namespace TradeLord
             if (!TradePolicy.Priced(item)) return;
             int cost = shown.ItemCost;
             if (cost <= 0) return;
+            ScreenMarkets.Prime();
 
             if (shown.InventorySide == InventoryLogic.InventorySide.OtherInventory)
             {

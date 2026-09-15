@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.76.7
+
+- Write a price trace to the log now ships off, so walking into a market costs nothing until a price looks wrong and you turn it on.
+- With it turned on, the price trace no longer stutters as you walk into a market: it reaches TradeLord.log in one go instead of a line at a time for every good you carry.
+- Show best buy/sell in tooltips and Color prices by world market now work out their markets once for the market you are standing in rather than once for every good on the screen, so the trade screen opens faster.
+
 ## 1.76.6
 
 - Most workshops you may own was raising the limit for every other clan in Calradia sitting at your own clan tier, not just for yours, so those clans could buy workshops without limit too; it now only ever lifts the limit while you are the one buying.
