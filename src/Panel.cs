@@ -504,8 +504,13 @@ namespace TradeLord
             Trades = rows;
         }
 
-        private static string DayOf(float day) =>
-            Line("{=TL420}Day {DAY}", "DAY", ((int)day).ToString("N0"));
+        private static string DayOf(float day)
+        {
+            int ago = Recent.DaysAgo(day, (float)CampaignTime.Now.ToDays);
+            return ago <= 0
+                ? Tongue.Text("{=TL442}Today").ToString()
+                : Line("{=TL420}{DAYS} day(s) ago", "DAYS", ago.ToString("N0"));
+        }
 
         private static string OneClauseToALine(string said) =>
             said == null ? "" : said.Replace(" | ", "\n");

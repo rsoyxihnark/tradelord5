@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.76.2
+
+- Fixed a serious fault in Staged Trading: the deal you took on the trade screen was read back with each good's price in place of how many of it moved, so a sale of 29 iron was reported as 1742 iron, a purchase of 3 wine as 813 wine, and the gold ran to hundreds of thousands of denars that never left your purse.
+- That wrong profit was being fed to your Trade skill and to the TradeLord profit on the ledger, so both were credited with gold you never made. They now take the real figure.
+- TradeLord now squares what it read off the trade screen against what your purse actually did on it, and where the two do not agree it says so in TradeLord.log and counts none of it towards your Trade skill or your TradeLord profit.
+- Profit from a sale can no longer be reported as more than the sale itself fetched.
+- Recent trades dated every row by a running day count that started at the founding of Calradia, so a trade made today read as Day 91,082. Rows now say Today, or how many days ago it was.
+
 ## 1.76.1
 
 - Most workshops you may own now only ever lifts the limit for your own clan, so no other clan in Calradia can end up owning more workshops because of it.

@@ -265,7 +265,7 @@
 		<string id="TL417" text=" | Left = how long that shelf still holds this Qty once you arrive, and a shelf that empties first lowers Conf"/>
 		<string id="TL418" text="Recent trades (last {COUNT})"/>
 		<string id="TL419" text="Recent trades: nothing traded yet this campaign"/>
-		<string id="TL420" text="Day {DAY}"/>
+		<string id="TL420" text="{DAYS} day(s) ago"/>
 		<string id="TL421" text="The deal TradeLord laid out is closed: your purse is up {GOLD} denars."/>
 		<string id="TL422" text="The deal TradeLord laid out is closed: your purse is down {GOLD} denars."/>
 		<string id="TL423" text="The deal TradeLord laid out is closed and your purse is where it was."/>
@@ -287,5 +287,6 @@
 		<string id="TL439" text="Workshops for sale: {COUNT}, and you own {OWNED} of {MOST}"/>
 		<string id="TL440" text="No workshop in reach is a notable's to sell"/>
 		<string id="TL441" text=" This takes you below the {HELD} denars TradeLord holds back as your gold reserve and wage cover, which it will not spend on goods."/>
+		<string id="TL442" text="Today"/>
 	</strings>
 </base>

@@ -148,6 +148,13 @@ namespace TradeLord
         }
 
         internal static string Coins(int gold) => gold > 0 ? "+" + gold : gold.ToString();
+
+        internal static int DaysAgo(float then, float now)
+        {
+            float gap = TradeMath.Finite(now - then, 0f);
+            if (gap <= 0f) return 0;
+            return (int)gap;
+        }
     }
 
     internal static class Screens
@@ -498,6 +505,27 @@ namespace TradeLord
 
             said.Allowed = true;
             return said;
+        }
+    }
+
+    public static class Deals
+    {
+        public const int Slack = 2;
+
+        public static int UnitsMoved(int amount, int gold, int price)
+        {
+            if (amount > 0) return amount;
+            if (price > 0 && gold > 0) return Math.Max(1, gold / price);
+            return gold > 0 ? 1 : 0;
+        }
+
+        public static bool AddsUp(int reckonedNet, int purseMoved) =>
+            Math.Abs((long)reckonedNet - purseMoved) <= Slack + Math.Abs((long)purseMoved) / 100L;
+
+        public static int NoMoreThanTheSale(int profit, int gained)
+        {
+            if (profit <= 0 || gained <= 0) return 0;
+            return profit > gained ? gained : profit;
         }
     }
 
