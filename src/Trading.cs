@@ -1755,7 +1755,7 @@ namespace TradeLord
         private static bool Prefix(InformationMessage __0)
         {
             if (!TradeActionBehavior.InGameTransaction) return true;
-            TradeActionBehavior.NoteSilenced(__0.Information);
+            TradeActionBehavior.NoteSilenced(__0?.Information);
             return false;
         }
     }
