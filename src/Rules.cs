@@ -59,6 +59,22 @@ namespace TradeLord
         internal int DrewFood;
     }
 
+    internal static class Arrivals
+    {
+        internal const float SetOffFromTheGate = 1f;
+
+        internal static bool StillTheSame(string here, string lastArrivalAt, bool tookToTheRoad) =>
+            here != null && here == lastArrivalAt && !tookToTheRoad;
+
+        internal static bool TakenToTheRoad(bool already, bool gateKnown,
+                                            float squaredFromTheGate) =>
+            already || (gateKnown && squaredFromTheGate > SetOffFromTheGate);
+
+        internal static bool StillTheSameSitting(string here, string sittingAt,
+                                                 int hour, int sittingHour) =>
+            here != null && here == sittingAt && hour == sittingHour;
+    }
+
     internal static class TradeRules
     {
         internal static bool Listed(ItemList list, in Good good) =>

@@ -21,6 +21,7 @@ BUYPASSTESTS = io.open('tests/BuyPassTests.cs', encoding='utf-8').read()
 SELLPASSTESTS = io.open('tests/SellPassTests.cs', encoding='utf-8').read()
 BUYRULETESTS = io.open('tests/BuyRulesTests.cs', encoding='utf-8').read()
 HERDTESTS = io.open('tests/HerdRulesTests.cs', encoding='utf-8').read()
+ARRIVALTESTS = io.open('tests/ArrivalTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
      'BooksTests.cs': BOOKTESTS, 'SellRulesTests.cs': SELLTESTS,
@@ -28,7 +29,8 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'ProjectionTests.cs': PROJECTIONTESTS, 'ScoringTests.cs': SCORINGTESTS,
      'FoodReserveTests.cs': FOODTESTS, 'StallReasonTests.cs': STALLTESTS,
      'BuyPassTests.cs': BUYPASSTESTS, 'SellPassTests.cs': SELLPASSTESTS,
-     'BuyRulesTests.cs': BUYRULETESTS, 'HerdRulesTests.cs': HERDTESTS}
+     'BuyRulesTests.cs': BUYRULETESTS, 'HerdRulesTests.cs': HERDTESTS,
+     'ArrivalTests.cs': ARRIVALTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -5541,14 +5543,15 @@ def a_market_you_step_back_into_inside_the_hour_is_the_same_visit():
     entered = method_body(t, "private void OnSettlementEntered")
     forget = method_body(t, "internal static void ForgetVisit")
     return ("int hour = (int)CampaignTime.Now.ToHours;" in sitting
-            and "bool same = settlement != null && settlement.StringId == _sittingAt "
-                "&& hour == _sittingHour;" in sitting
+            and "bool same = Arrivals.StillTheSameSitting(settlement?.StringId, _sittingAt," in sitting
+            and "here != null && here == sittingAt && hour == sittingHour;" in S['Rules.cs']
+            and "A_sitting_is_the_same_only_at_the_same_market_in_the_same_hour" in ARRIVALTESTS
             and ordered(sitting, "bool same =", "_sittingAt = settlement?.StringId;",
                         "_sittingHour = hour;", "return same;")
             and "private static void ResetVisit(bool sameSitting = false)" in t
             and "if (sameSitting) Visit.ForgetTheDryRun(); else Visit.Forget();" in reset
             and "ResetVisit(StillTheSameSitting(settlement));" in entered
-            and t.count("StillTheSameSitting(") == 2
+            and t.count("StillTheSameSitting(") == 3
             and "_sittingAt = null;" in forget
             and "_sittingHour = -1;" in forget)
 
@@ -5727,14 +5730,19 @@ def trading_on_arrival_waits_for_the_party_to_take_to_the_road():
                     "NoteThisArrival(settlement);",
                     "if (!AnnounceAutomation(settlement))",
                     "ExecuteQuickSell(settlement, quiet: true);")
-            and "settlement.StringId == _lastArrivalAt && !_tookToTheRoad" in t
+            and "Arrivals.StillTheSame(settlement?.StringId, _lastArrivalAt, _tookToTheRoad);" in t
+            and "here != null && here == lastArrivalAt && !tookToTheRoad;" in S['Rules.cs']
+            and "already || (gateKnown && squaredFromTheGate > SetOffFromTheGate);" in S['Rules.cs']
+            and "_tookToTheRoad = Arrivals.TakenToTheRoad(" in road
+            and "Taking_to_the_road_ends_an_arrival_even_at_the_same_market" in ARRIVALTESTS
+            and "The_road_is_taken_once_you_are_further_from_the_gate_than_the_threshold" in ARRIVALTESTS
             and ordered(tick, "if (party == null || party.CurrentSettlement != null) return;",
                         "NoteTheRoadTaken(party);")
             and "NoteTheGateBehind(party);" in left
             and "_gateBehind = party.GetPosition2D;" in
                 method_body(t, "private static void NoteTheGateBehind")
-            and "if (_tookToTheRoad || !_gateBehindKnown) return;" in road
-            and "party.GetPosition2D.DistanceSquared(_gateBehind) > SetOffFromTheGate" in road
+            and "_tookToTheRoad, _gateBehindKnown," in road
+            and "party.GetPosition2D.DistanceSquared(_gateBehind));" in road
             and "ForgetArrivals();" in method_body(t, "internal static void ForgetVisit"))
 
 def the_price_trace_reads_one_price_four_ways_and_names_what_changes_it():
@@ -6376,7 +6384,7 @@ def the_map_marker_leaves_out_a_market_it_would_not_trade_in():
     return (ordered(marker, "if (s == party.CurrentSettlement) continue;",
                     "if (StillTheSameArrival(s)) continue;",
                     "if (!IsMarket(s)) continue;")
-            and "settlement.StringId == _lastArrivalAt && !_tookToTheRoad" in
+            and "Arrivals.StillTheSame(settlement?.StringId, _lastArrivalAt, _tookToTheRoad)" in
                 between(S['Trading.cs'], "private static bool StillTheSameArrival", ";"))
 
 
@@ -7571,6 +7579,27 @@ chk("1.71.1", "the recorded prices are held to a ceiling, the oldest forgotten f
     the_recorded_prices_are_held_to_a_ceiling_oldest_forgotten_first())
 chk("1.71.1", "the log says what went into the save as well as what came out of it",
     the_log_says_what_went_into_the_save_as_well_as_what_came_out())
+
+
+def what_counts_as_the_same_arrival_is_worked_out_where_a_test_can_ask_it():
+    r = S['Rules.cs']
+    return ("TaleWorlds" not in r and "Settlement" not in r and "MobileParty" not in r
+            and "internal static class Arrivals" in r
+            and "internal const float SetOffFromTheGate = 1f;" in r
+            and "SetOffFromTheGate" not in S['Trading.cs']
+            and 'Rules.cs' in TESTPROJ
+            and all(one in ARRIVALTESTS for one in
+                    ("Walking_back_through_the_same_gate_is_the_same_arrival",
+                     "Taking_to_the_road_ends_an_arrival_even_at_the_same_market",
+                     "A_different_market_is_never_the_same_arrival",
+                     "The_road_is_taken_once_you_are_further_from_the_gate_than_the_threshold",
+                     "A_gate_nobody_wrote_down_never_starts_the_road",
+                     "Once_the_road_is_taken_standing_still_does_not_untake_it",
+                     "A_sitting_is_the_same_only_at_the_same_market_in_the_same_hour")))
+
+
+chk("1.71.1", "what counts as the same arrival, the same sitting and taking to the road is worked out where a test can ask it",
+    what_counts_as_the_same_arrival_is_worked_out_where_a_test_can_ask_it())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
