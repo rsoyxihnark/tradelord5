@@ -202,7 +202,6 @@ namespace TradeLord.Tests
         [InlineData("")]
         [InlineData(";;")]
         [InlineData("grain|340|20")]
-        [InlineData("grain|340|20|17|9")]
         [InlineData("|340|20|17")]
         [InlineData("grain|x|20|17")]
         [InlineData("grain|340|0|17")]
@@ -329,6 +328,26 @@ namespace TradeLord.Tests
 
             Assert.Single(back["grain"]);
             Assert.Equal("t4", back["grain"][0].TownId);
+        }
+
+        [Fact]
+        public void A_record_written_by_a_newer_TradeLord_is_read_as_far_as_this_one_understands_it()
+        {
+            var purchases = LedgerCodec.ReadPurchases("wine|500|10|50|something|else");
+
+            Assert.Single(purchases);
+            Assert.Equal("wine", purchases[0].ItemId);
+            Assert.Equal(500, purchases[0].TotalPaid);
+            Assert.Equal(10, purchases[0].Count);
+            Assert.Equal(50, purchases[0].LastUnitPaid);
+
+            var prices = LedgerCodec.ReadLedger("wine|town_S5|17|23|134.25|11|19|133|something|else");
+
+            Assert.Single(prices["wine"]);
+            Assert.Equal(17, prices["wine"][0].BuyPrice);
+            Assert.Equal(23, prices["wine"][0].SellPrice);
+            Assert.Equal(11, prices["wine"][0].WasBuyPrice);
+            Assert.Equal(19, prices["wine"][0].WasSellPrice);
         }
 
         [Fact]
