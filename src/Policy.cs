@@ -436,6 +436,9 @@ namespace TradeLord
             return best.Item2 > 0 ? best.Item2 : item.Value;
         }
 
+        internal static int WorthToBeat(ItemObject item) =>
+            TradeRules.WorthToBeat(Describe(item), CostBasis(item), UnpaidWorth(item));
+
         internal static int Credit(int proceeds, int basis, int unpaidWorth) =>
             TradeMath.Credit(proceeds, basis, unpaidWorth);
 

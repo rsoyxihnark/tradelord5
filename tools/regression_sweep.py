@@ -294,7 +294,7 @@ def method_body(src, signature):
 
 SHARED_PASS_RULES = {
     "CheapestFirst(": ('Trading.cs',
-        "private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst"),
+        "private static List<(ItemRosterElement el, Good good, int price, int ceiling)> CheapestFirst"),
     "WhatStopsBuying(": ('Rules.cs', "internal static Block WhatStopsBuying"),
     "WhatCapsAGood(": ('Rules.cs', "internal static Block WhatCapsAGood"),
     "Basis.For(": ('Passes.cs', "internal struct Basis"),
@@ -718,13 +718,46 @@ def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
 
 def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
     marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
-    return (ordered(marker, "long bestValue = 0;",
+    return (ordered(marker, "long bestValue = 0, runnerUpValue = 0;",
                     "if (market.Gold <= bestValue) continue;",
-                    "foreach (var (item, amount) in cargo)",
+                    "foreach (var (item, amount, worth, floor) in cargo)",
+                    "int price = Priced.At(market, item, party, true);",
                     "if (total > market.Gold) total = market.Gold;",
-                    "if (total > bestValue) { bestValue = total; bestTown = s; }")
-            and "Priced.At(market, item, party, true)" in marker
+                    "if (total > bestValue)")
             and marker.count("Priced.At(market,") == 1)
+
+
+def the_marker_counts_only_what_the_selling_rules_would_really_move():
+    marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
+    floor = method_body(S['Trading.cs'], "private static int BestMarketFloor")
+    worth = between(S['Policy.cs'], "internal static int WorthToBeat", ";")
+    return ("TradePolicy.WorthToBeat(item), BestMarketFloor(item)));" in marker
+            and "TradeRules.WorthToBeat(Describe(item), CostBasis(item), UnpaidWorth(item))" in worth
+            and ordered(marker, "int price = Priced.At(market, item, party, true);",
+                        "if (price < floor) continue;",
+                        "if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) continue;",
+                        "total += (long)price * amount;")
+            and "if (total <= 0) { refused++; continue; }" in marker
+            and ordered(floor, "if (!Options.Current.PreferBestSellTown) return 0;",
+                        "LedgerBehavior.Instance?.BestSell(item)",
+                        "(int)(best.Item2 * Options.Current.BestSellTownTolerance)")
+            and S['Trading.cs'].count("TradePolicy.WorthToBeat(") == 1)
+
+
+def the_marker_says_in_the_log_which_town_it_picked_and_why():
+    track = method_body(S['Trading.cs'], "private void UpdateBestSellTownTracker")
+    marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
+    return (ordered(track, 'string why = "the map marker is switched off";',
+                    "if (Options.Current.MarkBestSellTownOnMap) target = FindBestSellTownForCargo(out why);",
+                    "if (target == _trackedTown)",
+                    'Log.Write(_trackedTown != null')
+            and '"map marker moved to " + _trackedTown.Name + ": " + why' in track
+            and '"map marker taken off the map: " + why' in track
+            and 'why = "nothing in your cargo is yours to sell";' in marker
+            and all(said in marker for said in
+                    ("clear Minimum profit margin", "against a town purse of",
+                     "day(s) away", "ahead of ", "past your travel ceilings"))
+            and "bestUnits + \" unit(s) for \" + bestValue" in marker)
 
 def a_traded_market_drops_only_the_rankings_its_own_prices_decide():
     ledger = S['Ledger.cs']
@@ -1017,7 +1050,7 @@ def a_zero_cap_never_means_buy_nothing():
             and "private const int UncappedBuyProjection" in S['Ledger.cs'])
 
 def every_numeric_setting_that_switches_off_at_zero_says_so():
-    off = {'TL206': 'Town travel ceiling',
+    off = {'TL206': 'Town travel ceiling', 'TL425': 'Gold before it buys a haul animal',
            'TL207': 'Village travel ceiling', 'TL228': 'Sell loot up to tier',
            'TL235': 'Buy cap per item (count', 'TL236': 'Buy cap per item (denars',
            'TL237': 'Max spend per visit', 'TL243': 'Economy settling delay'}
@@ -1301,7 +1334,10 @@ def restocking_runs_between_selling_and_buying():
             and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
             and "price >= pass.Spendable()" in body
             and "int worth = TradePolicy.UnpaidWorth(it);" in body
-            and body.count("price > worth") == 2
+            and body.count("price > ceiling") == 2
+            and "int ceiling = TradeMath.MostToPayOverTheCheapest(worth, tolerance);" in body
+            and "TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true));"
+                in method_body(S['Trading.cs'], "public static void ExecuteResupply")
             and "settlement.IsVillage && remaining <= 1" in body
             and "pass.Room() - simWeight" in body
             and "pass.Books.Sold(pass.Sim, it.StringId)" in body
@@ -2257,7 +2293,8 @@ chk("1.5.6", "panel setup is retried before being disabled",
 chk("1.5.6", "an unrecognized hotkey name is logged before falling back to T",
     hotkey_fallback_is_reported())
 chk("1.5.6", "the cargo marker only targets a town where the cargo has a price",
-    "long bestValue = 0;" in method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo"))
+    "long bestValue = 0, runnerUpValue = 0;" in
+        method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo"))
 chk("1.5.7", "units with no cost basis are still sold when purchased units miss the margin",
     (lambda b: b.count("return false;") == 1 and b.count("return true;") == 1
            and "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;" in b
@@ -3953,9 +3990,16 @@ def only_a_carrying_animal_is_hauled_and_the_herd_still_binds():
 
 def a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_below_the_reserve():
     body = pass_body("public static void ExecuteHaulage")
+    most = method_body(S['TradeMath.cs'], "public static int MostToPayOverTheCheapest")
     return ("int worth = TradePolicy.UnpaidWorth(it);" in body
-            and body.count("price > worth") == 2
-            and "Ceiling" not in body
+            and body.count("price > ceiling") == 2
+            and "int ceiling = TradeMath.MostToPayOverTheCheapest(worth, tolerance);" in body
+            and "Options.Current.HaulAnimalPriceTolerance);" in body
+            and ordered(most, "if (cheapest <= 0) return 0;",
+                        "if (float.IsNaN(tolerance) || tolerance <= 1f) return cheapest;",
+                        "Math.Floor((double)cheapest * tolerance)")
+            and option_default('HaulAnimalPriceTolerance') == '1.25f'
+            and "_o.HaulAnimalPriceTolerance" in M
             and "CargoIsFull" not in ALL
             and "PackAnimalFullCargoPremium" not in S['Trading.cs']
             and "price >= pass.Spendable()" in body
@@ -3964,6 +4008,34 @@ def a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_below_the_reser
             and "PackAnimalFullCargoPremium" not in M
             and "PackAnimalFullCargoPremium" not in S['Options.cs']
             and '"PackAnimalFullCargoPremium"' in S['Migrate.cs'])
+
+
+def no_haul_animal_is_bought_until_the_purse_is_above_its_floor():
+    t = S['Trading.cs']
+    floor = method_body(t, "private static bool PurseBelowTheHaulAnimalFloor")
+    haul = method_body(t, "public static void ExecuteHaulage")
+    return (ordered(haul, "if (!Options.Current.BuyHaulAnimals) return;",
+                    "Pass pass = Pass.Open(settlement, quiet);",
+                    "if (PurseBelowTheHaulAnimalFloor(pass)) return;",
+                    "int herdRoom = HerdRoomForLivestock(pass.Party);")
+            and ordered(floor, "int floor = Options.Current.HaulAnimalGoldFloor;",
+                        "if (floor <= 0) return false;",
+                        "int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);",
+                        "if (purse > floor) return false;",
+                        'Log.Repeatable("haul animal floor"',
+                        "return true;")
+            and t.count("PurseBelowTheHaulAnimalFloor(") == 2
+            and option_default('HaulAnimalGoldFloor') == '2000'
+            and "_o.HaulAnimalGoldFloor" in M
+            and "0 = " in re.search(r'\{=TL425\}([^"]*)"', M).group(1)
+            and 'TradeMath.cs' in TESTPROJ
+            and all(one in MATHTESTS for one in
+                    ("A_tolerance_of_one_pays_no_more_than_the_cheapest_ever_seen",
+                     "A_quarter_over_the_cheapest_is_what_the_shipped_tolerance_allows",
+                     "A_tolerance_below_one_never_pays_less_than_the_cheapest",
+                     "A_cheapest_of_nothing_is_no_ceiling_at_all",
+                     "A_tolerance_that_is_not_a_number_falls_back_to_the_cheapest",
+                     "The_ceiling_never_overflows_however_large_the_tolerance")))
 
 def the_getaway_ships_on_names_no_cheat_and_only_answers_bandits():
     asked = method_body(S['Trading.cs'], "private void AddBanditLines")
@@ -4017,8 +4089,10 @@ chk("1.18.0", "pack animals are bought after the larder is filled and before the
     pack_animals_are_bought_between_restocking_and_the_profit_pass())
 chk("1.19.0", "only an animal that carries for you is bought that way, the herd guard still binds it and the carry weight never does",
     only_a_carrying_animal_is_hauled_and_the_herd_still_binds())
-chk("1.30.0", "a haul animal is bought only where it costs no more than the cheapest TradeLord has seen, and never below the gold reserve",
+chk("1.30.0", "a haul animal is bought only within the ceiling over the cheapest TradeLord has seen, and never below the gold reserve",
     a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_below_the_reserve())
+chk("1.75.0", "no haul animal is bought at all until your purse is above the floor its own setting names, however cheap one is",
+    no_haul_animal_is_bought_until_the_purse_is_above_its_floor())
 chk("1.36.0", "the getaway is offered as you meet a band, and leaving holds both sides off each other",
     the_getaway_ships_on_names_no_cheat_and_only_answers_bandits())
 chk("1.19.0", "the smeltable hint names all three choices and says looted weapons are held too",
@@ -4544,6 +4618,7 @@ EVER_SHIPPED = {
     "FoodPolicy": "int", "GoldReserve": "int", "KeepEveryFoodKind": "bool", "KeepFoodDays": "int",
     "KeepFoodVariety": "int", "KeepPerFoodKind": "int", "KeepSmeltableWeapons": "bool",
     "KeepWageDays": "int", "Language": "int", "LedgerMenuEntry": "bool", "LivestockPolicy": "int",
+    "HaulAnimalGoldFloor": "int", "HaulAnimalPriceTolerance": "float",
     "MarkBestSellTownOnMap": "bool", "MarketForecast": "bool", "MarkerMaxTravelDays": "float", "MaxHeldPerItem": "int",
     "MaxHeldShare": "float", "MaxLootTier": "int", "MaxSpendPerVisit": "int",
     "MaxTravelDays": "float", "MaxTravelDaysTown": "float", "MaxTravelDaysVillage": "float",
@@ -4866,7 +4941,7 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and t.count("pass.Books.Sold(pass.Sim,") == 1
             and S['Passes.cs'].count("books.Sold(sim, good.Id)") == 1
             and "pass.Books.Sold(pass.Sim, it.StringId)" in method_body(t,
-                    "private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst")
+                    "private static List<(ItemRosterElement el, Good good, int price, int ceiling)> CheapestFirst")
             and "CheapestFirst(" in larder and "CheapestFirst(" in haul
             and S['Passes.cs'].count("books.Bought(sim, market.IdAt(at))") == 1
             and t.count("pass.Books.Purchases(pass.Sim,") == 2
@@ -5372,7 +5447,7 @@ def every_market_pass_is_opened_and_carried_by_one_object():
                 between(t, "internal void Tally(ItemObject item", ";")
             and t.count("pass.Tally(item, 1, ") == 5
             and t.count("_pass.Tally(Item(at), 1, price);") == 2
-            and "CheapestFirst(\n            Pass pass, Func<ItemObject, bool> wanted)" in t)
+            and "CheapestFirst(\n            Pass pass, Func<ItemObject, bool> wanted, float tolerance = 1f)" in t)
 
 chk("1.40.0", "every pass says what it moved and what it did about it from one place, the meeting on the road with them",
     every_pass_says_what_it_moved_from_one_place())
@@ -5567,7 +5642,7 @@ def a_market_visit_prices_each_town_once_for_everything_on_the_shelf():
     prime = method_body(l, "internal void PrimeMarketsFor")
     buy = buy_pass()
     cheapest = method_body(t,
-        "private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst")
+        "private static List<(ItemRosterElement el, Good good, int price, int ceiling)> CheapestFirst")
     sell = sell_pass()
     return ("PrimeLiveRankings(cold, hour);" in prime
             and "if (item == null || !asked.Add(item.StringId)) continue;" in prime
@@ -5768,6 +5843,10 @@ chk("1.41.2", "TradeLord.log is held open and each line is pushed out as it is w
     the_log_is_held_open_and_pushed_out_a_line_at_a_time())
 chk("1.41.2", "the market marked on your map skips one whose gold cannot beat the best found so far before it prices your cargo there",
     the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet())
+chk("1.75.0", "the market marked on your map counts only the cargo the selling rules would really move there, so the marker never sends you somewhere it will refuse to sell",
+    the_marker_counts_only_what_the_selling_rules_would_really_move())
+chk("1.75.0", "every move of the map marker is written to the log, with what the cargo would fetch there, the town's purse, the days away and the market it beat",
+    the_marker_says_in_the_log_which_town_it_picked_and_why())
 
 def a_good_another_pass_handles_never_speaks_for_a_stalled_pass():
     reasons = S['Reasons.cs']

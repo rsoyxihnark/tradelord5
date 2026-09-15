@@ -125,6 +125,10 @@ namespace TradeLord
 
         public bool BuyHaulAnimals = true;
 
+        public int HaulAnimalGoldFloor = 2000;
+
+        public float HaulAnimalPriceTolerance = 1.25f;
+
         public float ResaleSafetyFactor = 0.85f;
 
         public string PanelKey = "T";

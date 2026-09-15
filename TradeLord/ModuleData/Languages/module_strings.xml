@@ -111,7 +111,7 @@
 		<string id="TL266" text="Keep gold for days of wages" />
 		<string id="TL366" text="Also hold back this many days of your troops' wages on top of the gold reserve above, so a shopping trip never eats the payroll. It is worked out from your real wage bill every time TradeLord trades, so it grows with the army. 0 holds back the flat reserve only." />
 		<string id="TL267" text="Buy haul animals" />
-		<string id="TL367" text="Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, whenever a market asks no more than one is worth, so your party carries more. It never buys more than you can drive without slowing down, and it stops before your gold reaches your reserve. ON by default." />
+		<string id="TL367" text="Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, so your party carries more. It never buys more than you can drive without slowing down, and it stops before your gold reaches your reserve. The two settings below say how much gold it waits for and how much it will pay. ON by default."/>
 		<string id="TL269" text="Free passage from bandits" />
 		<string id="TL369" text="When you run into looters or bandits, TradeLord adds a line asking to be let past. Saying it ends the encounter with no fight and no ransom, and they leave you alone for a few hours. It is ON by default." />
 		<string id="TL270" text="Sell them" />
@@ -215,7 +215,7 @@
 		<string id="TL342" text="Reports what TradeLord would sell and buy, without trading. Treat it as a best case: nothing moves, so every unit is priced at today's opening price and a real pass usually trades less. Every cap and the merchant's gold are modelled exactly."/>
 		<string id="TL343" text="No TradeLord trading before this campaign day, from the menu or on entry. Prices in a new campaign have not settled yet."/>
 		<string id="TL344" text="Scales the Trade XP awarded for automated profit. 0 disables XP."/>
-		<string id="TL345" text="Moves a map tracker to whichever market in reach pays most for your current cargo, following you as you ride. A village is only ever marked while Trade with villages is on. It keeps to the travel ceilings. ON by default; clicking a town in the ledger panel still pins a marker by hand."/>
+		<string id="TL345" text="Moves a map tracker to the market in reach paying most for the cargo it would really sell there, counting only what clears Minimum profit margin, following you as you ride. A village is only ever marked while Trade with villages is on. It keeps to the travel ceilings. ON by default; clicking a town in the ledger panel still pins a marker by hand."/>
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports."/>
@@ -270,5 +270,9 @@
 		<string id="TL422" text="The deal TradeLord laid out is closed: your purse is down {GOLD} denars."/>
 		<string id="TL423" text="The deal TradeLord laid out is closed and your purse is where it was."/>
 		<string id="TL424" text="Recent trades"/>
+		<string id="TL425" text="Gold before it buys a haul animal (0 = off)"/>
+		<string id="TL426" text="Buy no haul animal at all until your purse is above this. Below it TradeLord leaves them alone however cheap they are, so early gold goes on goods instead. 0 lets it buy from the first denar. Default 2000."/>
+		<string id="TL427" text="Most it will pay for a haul animal"/>
+		<string id="TL428" text="How far above the cheapest price you have ever seen for that animal TradeLord will still pay. 100% means only at the cheapest you have seen. Default 1.25, so it pays up to a quarter more than the cheapest."/>
 	</strings>
 </base>

@@ -238,6 +238,8 @@ namespace TradeLord
                 { "MaxSpendPerVisit", new double[] { 0, 100000 } },
                 { "ResaleSafetyFactor", new double[] { 0.5, 1 } },
                 { "MaxHeldShare", new double[] { 0, 1 } },
+                { "HaulAnimalGoldFloor", new double[] { 0, 100000 } },
+                { "HaulAnimalPriceTolerance", new double[] { 1, 3 } },
                 { "MaxCargoShare", new double[] { 0.1, 1 } },
                 { "PartyTradeXpShare", new double[] { 0, 2 } },
                 { "Language", new double[] { 0, 3 } },
