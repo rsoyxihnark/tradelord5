@@ -349,24 +349,27 @@ namespace TradeLord
                 Settlement here = Settlement.CurrentSettlement;
                 SettlementComponent market = here?.SettlementComponent;
                 ItemRoster carried = MobileParty.MainParty?.ItemRoster;
-                foreach (var (element, count) in purchased)
+                foreach (var (element, said) in purchased)
                 {
                     ItemObject item = element.EquipmentElement.Item;
-                    if (item == null || count <= 0) continue;
-                    int took = Math.Min(count, carried?.GetItemNumber(item) ?? 0);
-                    if (took <= 0) continue;
-
+                    if (item == null || said <= 0) continue;
                     int unit = market != null
                         ? Priced.At(market, element.EquipmentElement, MobileParty.MainParty, false)
                         : item.Value;
+                    int bought = Deals.UnitsMoved(element.Amount, said, unit);
+                    int took = Math.Min(bought, carried?.GetItemNumber(item) ?? 0);
+                    if (took <= 0) continue;
                     RecordPurchase(item.StringId, took,
                                    Bulk.PricePaid(here, element.EquipmentElement, took, unit));
                 }
-                foreach (var (element, count) in sold)
+                foreach (var (element, said) in sold)
                 {
                     ItemObject item = element.EquipmentElement.Item;
-                    if (item == null || count <= 0) continue;
-                    RecordSale(item.StringId, count);
+                    if (item == null || said <= 0) continue;
+                    int unit = market != null
+                        ? Priced.At(market, element.EquipmentElement, MobileParty.MainParty, true)
+                        : item.Value;
+                    RecordSale(item.StringId, Deals.UnitsMoved(element.Amount, said, unit));
                 }
                 CaptureSettlement(Settlement.CurrentSettlement, force: true);
                 PriceTrace.Say(Settlement.CurrentSettlement, "traded by hand");
