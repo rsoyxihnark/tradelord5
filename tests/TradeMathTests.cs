@@ -898,5 +898,61 @@ namespace TradeLord.Tests
                     Assert.False(float.IsNaN(TradeMath.MeanOf(a, 3)));
                 }
         }
+
+        [Fact]
+        public void A_tolerance_of_one_pays_no_more_than_the_cheapest_ever_seen()
+        {
+            Assert.Equal(110, TradeMath.MostToPayOverTheCheapest(110, 1f));
+        }
+
+        [Fact]
+        public void A_quarter_over_the_cheapest_is_what_the_shipped_tolerance_allows()
+        {
+            Assert.Equal(137, TradeMath.MostToPayOverTheCheapest(110, 1.25f));
+            Assert.Equal(500, TradeMath.MostToPayOverTheCheapest(400, 1.25f));
+        }
+
+        [Fact]
+        public void A_tolerance_below_one_never_pays_less_than_the_cheapest()
+        {
+            Assert.Equal(110, TradeMath.MostToPayOverTheCheapest(110, 0.5f));
+            Assert.Equal(110, TradeMath.MostToPayOverTheCheapest(110, 0f));
+            Assert.Equal(110, TradeMath.MostToPayOverTheCheapest(110, -3f));
+        }
+
+        [Fact]
+        public void A_cheapest_of_nothing_is_no_ceiling_at_all()
+        {
+            Assert.Equal(0, TradeMath.MostToPayOverTheCheapest(0, 1.25f));
+            Assert.Equal(0, TradeMath.MostToPayOverTheCheapest(-40, 1.25f));
+        }
+
+        [Fact]
+        public void A_tolerance_that_is_not_a_number_falls_back_to_the_cheapest()
+        {
+            Assert.Equal(110, TradeMath.MostToPayOverTheCheapest(110, float.NaN));
+        }
+
+        [Fact]
+        public void The_ceiling_never_overflows_however_large_the_tolerance()
+        {
+            Assert.Equal(int.MaxValue,
+                         TradeMath.MostToPayOverTheCheapest(int.MaxValue, float.PositiveInfinity));
+            Assert.Equal(int.MaxValue, TradeMath.MostToPayOverTheCheapest(int.MaxValue, 1000f));
+        }
+
+        [Fact]
+        public void The_ceiling_never_falls_below_the_cheapest_at_any_tolerance()
+        {
+            var roll = new System.Random(5518);
+            for (int i = 0; i < 20000; i++)
+            {
+                int cheapest = roll.Next(1, 50000);
+                float tolerance = (float)(roll.NextDouble() * 4.0);
+                int ceiling = TradeMath.MostToPayOverTheCheapest(cheapest, tolerance);
+                Assert.True(ceiling >= cheapest);
+                if (tolerance > 1f) Assert.True(ceiling <= (long)cheapest * 4L + 1L);
+            }
+        }
     }
 }
