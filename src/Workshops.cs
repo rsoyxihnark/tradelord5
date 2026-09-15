@@ -36,6 +36,19 @@ namespace TradeLord
             catch { return -1; }
         }
 
+        private static int _youBuying;
+
+        internal static bool ItIsYouBuying => _youBuying > 0;
+
+        internal static void WhileItIsYouBuying(Action work)
+        {
+            _youBuying++;
+            try { work(); }
+            finally { _youBuying--; }
+        }
+
+        internal static void ForgetWhoIsBuying() => _youBuying = 0;
+
         internal static int Owned()
         {
             try { return Hero.MainHero?.OwnedWorkshops?.Count ?? 0; }
@@ -105,11 +118,11 @@ namespace TradeLord
             bool done = false;
             Hero seller = shop.Owner;
             int before = Hero.MainHero?.Gold ?? 0;
-            Guard.Run("Shops.Buy", () =>
+            Guard.Run("Shops.Buy", () => WhileItIsYouBuying(() =>
             {
                 ChangeOwnerOfWorkshopAction.ApplyByPlayerBuying(shop);
                 done = shop.Owner == Hero.MainHero;
-            });
+            }));
             int paid = before - (Hero.MainHero?.Gold ?? before);
             int owed = Holdings.StillOwedForTheWorkshop(cost, paid);
             if (done && owed > 0)
@@ -168,7 +181,7 @@ namespace TradeLord
     {
         private static void Postfix(int tier, ref int __result)
         {
-            if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier())) return;
+            if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier(), Shops.ItIsYouBuying)) return;
             __result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);
         }
     }

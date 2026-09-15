@@ -137,6 +137,8 @@ namespace TradeLord
             _sittingHour = -1;
             ForgetArrivals();
             _markerHour = -1;
+            ForgetTheMarkerRead();
+            Shops.ForgetWhoIsBuying();
             _herdLookupFailed = false;
             Carry.Forget();
             TradePolicy.ForgetItemListAudit();
@@ -199,6 +201,7 @@ namespace TradeLord
         {
             if (party != MobileParty.MainParty) return;
             NoteTheGateBehind(party);
+            ForgetTheMarkerRead();
             Guard.Run("Action.HerdReliefOnLeaving", () =>
             {
                 LogHerdState("leaving " + settlement.Name);
@@ -268,6 +271,7 @@ namespace TradeLord
         private static void ResetVisit(bool sameSitting = false)
         {
             _visitTradeAllowed = false;
+            ForgetTheMarkerRead();
             if (sameSitting) Visit.ForgetTheDryRun(); else Visit.Forget();
             _cargoWasFull = false;
             _sellStalled = null;
@@ -2083,11 +2087,35 @@ namespace TradeLord
                 : "map marker taken off the map: " + why);
         }
 
-        private Settlement FindBestSellTownForCargo(out string why)
+        private static int _cargoHour = -1;
+        private static int _cargoGen = -1;
+        private static int _cargoVersion = -1;
+        private static List<(EquipmentElement item, int amount, int worth, int floor)> _cargo;
+
+        private static int _markerPriceHour = -1;
+        private static int _markerPriceGen = -1;
+
+        private static readonly Dictionary<(string site, string good, string quality), int> _markerPrices =
+            new Dictionary<(string, string, string), int>();
+
+        private static void ForgetTheMarkerRead()
         {
-            why = "nothing in your cargo is yours to sell";
-            MobileParty party = MobileParty.MainParty;
-            if (party == null) return null;
+            _cargo = null;
+            _cargoHour = -1;
+            _cargoVersion = -1;
+            _markerPrices.Clear();
+            _markerPriceHour = -1;
+        }
+
+        private List<(EquipmentElement item, int amount, int worth, int floor)> WhatYouCarryToSell(MobileParty party)
+        {
+            int hour = (int)CampaignTime.Now.ToHours;
+            int version = party.ItemRoster.VersionNo;
+            if (_cargo != null && hour == _cargoHour && Options.Generation == _cargoGen &&
+                version == _cargoVersion) return _cargo;
+            _cargoHour = hour;
+            _cargoGen = Options.Generation;
+            _cargoVersion = version;
             ISet<string> locked = TradePolicy.LockedKeys();
             var keepBack = TradePolicy.KeptBack(party.ItemRoster, Visit, sim: false, out var awaited);
             var cargo = new List<(EquipmentElement item, int amount, int worth, int floor)>();
@@ -2100,6 +2128,36 @@ namespace TradeLord
                 cargo.Add((el.EquipmentElement, el.Amount - keep,
                            TradePolicy.WorthToBeat(item), BestMarketFloor(item)));
             }
+            _cargo = cargo;
+            return cargo;
+        }
+
+        private static int WhatThatMarketPays(Settlement site, SettlementComponent market,
+                                              EquipmentElement el, MobileParty party)
+        {
+            ItemObject good = el.Item;
+            if (good == null) return Priced.At(market, el, party, true);
+            int hour = (int)CampaignTime.Now.ToHours;
+            if (hour != _markerPriceHour || Options.Generation != _markerPriceGen)
+            {
+                _markerPriceHour = hour;
+                _markerPriceGen = Options.Generation;
+                _markerPrices.Clear();
+            }
+            var key = (site.StringId, good.StringId,
+                       el.ItemModifier == null ? "" : el.ItemModifier.StringId);
+            if (_markerPrices.TryGetValue(key, out int kept)) return kept;
+            int price = Priced.At(market, el, party, true);
+            _markerPrices[key] = price;
+            return price;
+        }
+
+        private Settlement FindBestSellTownForCargo(out string why)
+        {
+            why = "nothing in your cargo is yours to sell";
+            MobileParty party = MobileParty.MainParty;
+            if (party == null) return null;
+            var cargo = WhatYouCarryToSell(party);
             if (cargo.Count == 0) return null;
 
             Settlement bestTown = null, runnerUp = null;
@@ -2126,7 +2184,7 @@ namespace TradeLord
                 int units = 0, kinds = 0;
                 foreach (var (item, amount, worth, floor) in cargo)
                 {
-                    int price = Priced.At(market, item, party, true);
+                    int price = WhatThatMarketPays(s, market, item, party);
                     if (price < floor) continue;
                     if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) continue;
                     total += (long)price * amount;

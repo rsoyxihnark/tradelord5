@@ -542,8 +542,9 @@ namespace TradeLord
         public static int StillOwedForTheWorkshop(int cost, int paid) =>
             cost <= 0 || paid > 0 ? 0 : cost;
 
-        public static bool TheGameIsAskingAboutYou(int askedAboutTier, int yourTier) =>
-            yourTier >= 0 && askedAboutTier == yourTier;
+        public static bool TheGameIsAskingAboutYou(int askedAboutTier, int yourTier,
+                                                   bool whileYouBuy) =>
+            whileYouBuy && yourTier >= 0 && askedAboutTier == yourTier;
 
         public static bool DipsIntoWhatYouHoldBack(int cost, int purse, int heldBack) =>
             cost > 0 && heldBack > 0 && purse - cost < heldBack;

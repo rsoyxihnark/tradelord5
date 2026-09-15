@@ -34,6 +34,10 @@ namespace TradeLord
         private static readonly Dictionary<string, ItemObject> _standsForAt =
             new Dictionary<string, ItemObject>(StringComparer.Ordinal);
 
+        private static readonly Dictionary<(string site, string item, int stockNow, float afterDays),
+                                           List<(float days, int shelf)>> _shelfAhead =
+            new Dictionary<(string, string, int, float), List<(float, int)>>();
+
         private static bool _saidItCouldNotRead;
 
         internal static bool On => Options.Current.MarketForecast && Options.Current.Omniscient;
@@ -48,6 +52,7 @@ namespace TradeLord
             _across.Clear();
             _standsFor.Clear();
             _standsForAt.Clear();
+            _shelfAhead.Clear();
             _saidItCouldNotRead = false;
         }
 
@@ -69,13 +74,25 @@ namespace TradeLord
             if (!On || site == null || item == null || item.ItemCategory == null)
                 return Projection.NeverRunsOut;
             Build();
+            return Projection.RunsOutOf(ShelfAhead(site, item, stockNow, afterDays), wanted);
+        }
+
+        private static List<(float days, int shelf)> ShelfAhead(Settlement site, ItemObject item,
+                                                                int stockNow, float afterDays)
+        {
+            var key = (site.StringId, item.StringId, stockNow, afterDays);
+            if (_shelfAhead.TryGetValue(key, out List<(float days, int shelf)> curve)) return curve;
             _landing.TryGetValue(site.StringId, out List<Landing> listed);
             _spending.TryGetValue(site.StringId, out List<Spending> coming);
-            if (listed == null && coming == null) return Projection.NeverRunsOut;
-            PullAt(site, out Dictionary<string, float> pull, out float across);
-            return Projection.RunsOutAt(listed, coming, pull, across, item.StringId,
-                                        item.ItemCategory.StringId, item.Value,
-                                        stockNow, wanted, afterDays);
+            if (listed != null || coming != null)
+            {
+                PullAt(site, out Dictionary<string, float> pull, out float across);
+                curve = Projection.ShelfAhead(listed, coming, pull, across, item.StringId,
+                                              item.ItemCategory.StringId, item.Value,
+                                              stockNow, afterDays);
+            }
+            _shelfAhead[key] = curve;
+            return curve;
         }
 
         internal static int WorthShift(Settlement site, ItemObject item, float withinDays) =>
@@ -156,6 +173,7 @@ namespace TradeLord
             _pull.Clear();
             _across.Clear();
             _standsForAt.Clear();
+            _shelfAhead.Clear();
             Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);
             Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
         }

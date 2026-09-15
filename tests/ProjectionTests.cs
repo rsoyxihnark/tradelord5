@@ -249,6 +249,55 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_shelf_a_town_will_hold_is_the_same_whatever_size_deal_asks_for_it()
+        {
+            var listed = new List<Landing> { Coming("grain", "grain", 30, 300, 1.5f) };
+            var coming = new List<Spending> { Purse(150, 1f), Purse(150, 2f) };
+            var once = Projection.ShelfAhead(listed, coming, OnePull("grain"), 1f,
+                                             "grain", "grain", 10, 40, 0.5f);
+            for (int wanted = 1; wanted <= 60; wanted++)
+                Assert.Equal(
+                    Projection.RunsOutAt(listed, coming, OnePull("grain"), 1f,
+                                         "grain", "grain", 10, 40, wanted, 0.5f),
+                    Projection.RunsOutOf(once, wanted));
+        }
+
+        [Fact]
+        public void The_shelf_a_town_will_hold_is_read_once_for_every_moment_it_changes()
+        {
+            var listed = new List<Landing> { Coming("grain", "grain", 30, 300, 1.5f) };
+            var coming = new List<Spending> { Purse(150, 1f), Purse(150, 2f) };
+            var curve = Projection.ShelfAhead(listed, coming, OnePull("grain"), 1f,
+                                              "grain", "grain", 10, 40, 0.5f);
+            Assert.Equal(Projection.Moments(listed, coming, 0.5f).Count, curve.Count);
+            for (int i = 0; i < curve.Count; i++) Assert.True(curve[i].days > 0.5f);
+        }
+
+        [Fact]
+        public void A_shelf_read_ahead_that_never_dips_hands_back_no_moment_at_all()
+        {
+            var curve = Projection.ShelfAhead(new List<Landing>(), new List<Spending>(),
+                                              OnePull("grain"), 1f, "grain", "grain", 10, 40, 0.5f);
+            Assert.Empty(curve);
+            Assert.Equal(Projection.NeverRunsOut, Projection.RunsOutOf(curve, 20));
+            Assert.Equal(Projection.NeverRunsOut, Projection.RunsOutOf(null, 20));
+        }
+
+        [Fact]
+        public void A_deal_of_nothing_never_expires_against_a_shelf_read_ahead()
+        {
+            var coming = new List<Spending> { Purse(5000, 2f) };
+            var curve = Projection.ShelfAhead(null, coming, OnePull("grain"), 1f,
+                                              "grain", "grain", 10, 40, 0.5f);
+            Assert.Equal(Projection.NeverRunsOut, Projection.RunsOutOf(curve, 0));
+            Assert.Equal(Projection.NeverRunsOut, Projection.RunsOutOf(curve, -3));
+            Assert.Empty(Projection.ShelfAhead(null, coming, OnePull("grain"), 1f,
+                                               "grain", "grain", 0, 40, 0.5f));
+            Assert.Empty(Projection.ShelfAhead(null, coming, OnePull("grain"), 1f,
+                                               null, "grain", 10, 40, 0.5f));
+        }
+
+        [Fact]
         public void Every_moment_counted_is_after_you_arrive_and_on_the_quarter_day()
         {
             var listed = new List<Landing>

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.76.6
+
+- Most workshops you may own was raising the limit for every other clan in Calradia sitting at your own clan tier, not just for yours, so those clans could buy workshops without limit too; it now only ever lifts the limit while you are the one buying.
+- Auto-mark best sell market on map costs far less while you ride, because TradeLord now reads what you are carrying once an hour and asks each market its price once, rather than working both out again every time your party moves.
+- The TradeLord ledger opens faster again, because how long a market's shelf holds a quantity is now worked out once for that market and arrival instead of once for every size of deal it tries.
+- Filling in Never sell, Always sell, Never buy or Always buy no longer slows every trading pass down, because the name of each good is now read from the game once and kept.
+
 ## 1.76.5
 
 - Hovering a good in a market no longer changes the best buy and sell prices TradeLord has recorded for it. With Show best buy/sell in tooltips and Count what is on its way to a market both on, every hover wrote what that good will fetch once the caravans land back over the recorded prices themselves, and did it again on the next hover, so the towns the tooltip named drifted further from what they really pay the longer you looked at them.

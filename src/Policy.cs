@@ -119,6 +119,18 @@ namespace TradeLord
             _readGeneration = -1;
             _knownIds = null;
             _knownNames = null;
+            _spoken.Clear();
+        }
+
+        private static readonly Dictionary<ItemObject, string> _spoken =
+            new Dictionary<ItemObject, string>();
+
+        private static string SpokenName(ItemObject item)
+        {
+            if (_spoken.TryGetValue(item, out string said)) return said;
+            said = item.Name == null ? null : item.Name.ToString();
+            _spoken[item] = said;
+            return said;
         }
 
         private static int _clashGeneration = -1;
@@ -317,7 +329,7 @@ namespace TradeLord
             if (AnyListNamesAGood(Options.Current))
             {
                 ReadTheGoodsInThisGame();
-                good.Name = item.Name == null ? null : item.Name.ToString();
+                good.Name = SpokenName(item);
             }
             good.Weight = item.Weight;
             good.Value = item.Value;
