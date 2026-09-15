@@ -7,7 +7,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 11;
+        public const int Shape = 12;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -196,7 +196,7 @@ namespace TradeLord
     {
         public const bool Armed = true;
 
-        public const int CracksAt = 11;
+        public const int CracksAt = 12;
 
         public static bool Cracks(bool armed, int cracksAt, int shipped, int shape) =>
             armed && cracksAt > 0 && cracksAt == shipped && shape < cracksAt;
