@@ -127,12 +127,14 @@ namespace TradeLord
                 scored++;
                 heldTotal += held;
                 _bands.Add(said.Confidence, held);
-                LedgerBehavior.Instance?.KeepPromiseScore(site.StringId, held);
+                LedgerBehavior.Instance?.KeepPromiseScore(held);
                 lines.Add("  " + Named(said.Item) + ": the panel promised " + said.SellPrice +
                           " a unit for " + said.Units + " unit(s) within " + Figure(said.WithinDays) +
                           " day(s) at Conf " + Share(said.Confidence) + "; you walked in " + Figure(since) +
                           " day(s) later and it pays " + found + ", " + Share(held) + " of what it promised");
             }
+            if (scored > 0)
+                LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(heldTotal, scored));
             if (!Writing || scored == 0) return;
             lines.Insert(0, "promise check at " + site.Name + ", " + scored + " promise(s) scored" +
                       (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") +
@@ -144,12 +146,17 @@ namespace TradeLord
                 if (_bands.Scored(band) == 0) continue;
                 lines.Add("  " + Scoring.Banded(band) + ": held at " +
                           Share(_bands.Held(band)) + " of promise over " +
-                          _bands.Scored(band) + " arrival(s) this session");
+                          _bands.Scored(band) + " price(s) checked this session");
             }
             if (LedgerBehavior.Instance != null &&
                 LedgerBehavior.Instance.PromiseScore(out int kept, out float overall))
                 lines.Add("  over this campaign: the price has held at " + Share(overall) +
-                          " of promise over " + kept + " arrival(s)");
+                          " of promise over " + kept + " price(s) checked");
+            if (LedgerBehavior.Instance != null &&
+                LedgerBehavior.Instance.PromiseScoreAt(site.StringId, out int walkIns, out float hereOverall))
+                lines.Add("  at " + site.Name + ": the price has held at " + Share(hereOverall) +
+                          " of promise over " + walkIns + " walk-in(s) here, which is what lowers " +
+                          "the score of a route selling here");
             Log.WriteMany(lines);
         }
 

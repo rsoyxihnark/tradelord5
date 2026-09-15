@@ -521,10 +521,10 @@ namespace TradeLord
         private static string HowThePromiseHasHeld()
         {
             LedgerBehavior ledger = LedgerBehavior.Instance;
-            if (ledger == null || !ledger.PromiseScore(out int arrivals, out float held)) return "";
-            TextObject line = Tongue.Text("{=TL399} | the Sell price has held at {HELD} of what this panel promised, over {COUNT} arrival(s) so far");
+            if (ledger == null || !ledger.PromiseScore(out int checked_, out float held)) return "";
+            TextObject line = Tongue.Text("{=TL399} | the Sell price has held at {HELD} of what this panel promised, over {COUNT} price(s) it has checked");
             line.SetTextVariable("HELD", ((int)Math.Round(held * 100f)).ToString() + "%");
-            line.SetTextVariable("COUNT", arrivals.ToString());
+            line.SetTextVariable("COUNT", checked_.ToString());
             return line.ToString();
         }
 

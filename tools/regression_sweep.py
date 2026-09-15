@@ -2320,7 +2320,7 @@ chk("1.5.6", "every place the filter comes down logs how many messages it suppre
     "ReportSilenced();" in method_body(S['Trading.cs'], "internal static void ReleaseMessageFilter") and
     "finally { CloseTransaction(); ReportSilenced(); }" in
         method_body(S['Trading.cs'], "private static void CreditTradeSkill") and
-    "NoteSilenced(__0.Information);" in
+    "NoteSilenced(__0?.Information);" in
         method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines") and
     "_silenced[line] = seen + 1;" in method_body(S['Trading.cs'], "internal static void NoteSilenced") and
     'lines.Add("    " + kv.Value + " x " + kv.Key);' in
@@ -7220,11 +7220,14 @@ def a_promise_is_scored_against_the_price_the_market_actually_pays():
             and "Scoring.TooOldToSay(said.WithinDays, said.AtHours, now, out float since)" in kept
             and "TradeMath.WorthScoring(withinDays, since)" in
                 method_body(S['Scoring.cs'], "internal static bool TooOldToSay")
-            and "LedgerBehavior.Instance?.KeepPromiseScore(site.StringId, held);" in kept
+            and "LedgerBehavior.Instance?.KeepPromiseScore(held);" in kept
             and "_bands.Add(said.Confidence, held);" in kept
             and "TradeMath.BandOf(confidence)" in method_body(S['Scoring.cs'], "internal void Add")
-            and ordered(kept, "LedgerBehavior.Instance?.KeepPromiseScore(site.StringId, held);",
+            and ordered(kept, "LedgerBehavior.Instance?.KeepPromiseScore(held);",
+                        "LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(heldTotal, scored));",
                         "if (!Writing || scored == 0) return;")
+            and kept.index("LedgerBehavior.Instance?.KeepArrival(") >
+                kept.rindex("heldTotal += held;")
             and "A_market_that_puts_no_price_on_a_good_scores_nothing" in SCORINGTESTS
             and "What_the_market_pays_is_scored_as_a_share_of_what_was_promised" in SCORINGTESTS)
 
@@ -7235,9 +7238,12 @@ def how_the_promise_has_held_is_kept_in_the_save_and_shown_on_the_panel():
     return ('dataStore.SyncData("TradeLord_PromisesScored", ref _promisesScored);' in sync
             and 'dataStore.SyncData("TradeLord_PromiseHeld", ref _promiseHeld);' in sync
             and "if (held < 0f) return;" in method_body(ledger, "internal void KeepPromiseScore")
+            and "TradeMath.AddPromise(" not in method_body(ledger, "internal void KeepPromiseScore")
+            and "_promises[" not in method_body(ledger, "internal void KeepPromiseScore")
+            and '{=TL399}' in S['Panel.cs'] and "arrival" not in spoken(ENGLISH)['TL399']
             and "held = TradeMath.MeanOf(_promiseHeld, _promisesScored);" in
                 method_body(ledger, "internal bool PromiseScore(out int scored, out float held)")
-            and 'if (ledger == null || !ledger.PromiseScore(out int arrivals, out float held)) return "";' in panel
+            and 'if (ledger == null || !ledger.PromiseScore(out int checked_, out float held)) return "";' in panel
             and '{=TL399}' in panel
             and 'TL399' in strings_declared()
             and 'HowThePromiseHasHeld()' in method_body(S['Panel.cs'], "private void Refresh"))
@@ -8909,7 +8915,7 @@ chk("1.77.2", "the map marker walks the richest purses first and stops as soon a
 def a_market_is_trusted_by_what_it_has_really_paid():
     ledger = S['Ledger.cs']
     scan = method_body(ledger, "private List<TradeRoute> ScanRoutes()")
-    kept = method_body(ledger, "internal void KeepPromiseScore")
+    kept = method_body(ledger, "internal void KeepArrival")
     read = method_body(ledger, "internal bool PromiseScoreAt")
     moved = method_body(S['Confidence.cs'], "public static float AsPromisesHaveHeld")
     return (option_default('TrustWhatAMarketPaid') == 'true'
@@ -8917,6 +8923,7 @@ def a_market_is_trusted_by_what_it_has_really_paid():
             and EVER_SHIPPED.get('TrustWhatAMarketPaid') == 'bool'
             and "TradeMath.AddPromise(rec, held);" in kept
             and 'rec = new PromiseRecord { TownId = townId };' in kept
+            and "if (townId == null || held < 0f) return;" in kept
             and "float mean = TradeMath.PromiseMean(rec);" in read
             and ordered(scan, "bool trustWhatItPaid = Options.Current.TrustWhatAMarketPaid;",
                         "float score = perDay * confidence;",
@@ -8952,6 +8959,36 @@ def a_market_is_trusted_by_what_it_has_really_paid():
 
 chk("1.78.0", "a market that has paid less than the panel promised is scored lower, from what it really paid on your own arrivals, kept in the save and never moving a route's score by more than a quarter",
     a_market_is_trusted_by_what_it_has_really_paid())
+
+
+def a_markets_record_counts_your_walk_ins_not_the_prices_it_checked():
+    kept = method_body(S['Hindsight.cs'], "private static void Kept")
+    ledger = S['Ledger.cs']
+    arrival = method_body(ledger, "internal void KeepArrival")
+    tally = method_body(ledger, "internal void KeepPromiseScore")
+    enough = re.search(r'public const int EnoughArrivals = (\d+);', S['Confidence.cs'])
+    said = spoken(ENGLISH)
+    words = {5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten'}
+    return (enough is not None
+            and kept.count("LedgerBehavior.Instance?.KeepArrival(") == 1
+            and kept.count("LedgerBehavior.Instance?.KeepPromiseScore(") == 1
+            and kept.index("LedgerBehavior.Instance?.KeepArrival(") >
+                kept.rindex("heldTotal += held;")
+            and kept.index("LedgerBehavior.Instance?.KeepArrival(") <
+                kept.index("if (!Writing || scored == 0) return;")
+            and "TradeMath.MeanOf(heldTotal, scored));" in kept
+            and "if (scored > 0)" in kept
+            and "TradeMath.AddPromise(rec, held);" in arrival
+            and "TradeMath.AddPromise(" not in tally
+            and "_promisesScored++;" in tally
+            and "_promisesScored" not in arrival
+            and "arrival" not in said['TL399']
+            and ("walked into that market " + words[int(enough.group(1))] + " times") in said['TL444']
+            and ("walked into that market " + words[int(enough.group(1))] + " times") in README)
+
+
+chk("1.78.1", "a market's own record counts one walk-in rather than one price checked there, and the number of walk-ins it waits for is the same number the settings screen and the feature list name",
+    a_markets_record_counts_your_walk_ins_not_the_prices_it_checked())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
