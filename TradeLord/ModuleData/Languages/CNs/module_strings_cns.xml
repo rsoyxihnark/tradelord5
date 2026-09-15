@@ -265,7 +265,7 @@
 		<string id="TL417" text=" | 剩余 = 你抵达后那个货架还能保有这个数量多久；提前空掉的货架会降低信度"/>
 		<string id="TL418" text="近期交易（最近 {COUNT} 笔）"/>
 		<string id="TL419" text="近期交易：本次战役还没有交易过"/>
-		<string id="TL420" text="第 {DAY} 天"/>
+		<string id="TL420" text="{DAYS} 天前"/>
 		<string id="TL421" text="TradeLord 摆出的交易已结束：你的钱袋多了 {GOLD} 第纳尔。"/>
 		<string id="TL422" text="TradeLord 摆出的交易已结束：你的钱袋少了 {GOLD} 第纳尔。"/>
 		<string id="TL423" text="TradeLord 摆出的交易已结束，你的钱袋没有变化。"/>
@@ -287,5 +287,6 @@
 		<string id="TL439" text="待售作坊：{COUNT} 家，你已拥有 {MOST} 中的 {OWNED} 家"/>
 		<string id="TL440" text="够得着的作坊里，没有一家是显要手中可售的"/>
 		<string id="TL441" text=" 这笔买卖会让你跌到 TradeLord 留作金钱储备和军饨、不会拿去进货的 {HELD} 第纳尔之下。"/>
+		<string id="TL442" text="今天"/>
 	</strings>
 </base>
