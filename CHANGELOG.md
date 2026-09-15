@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.71.2
 
+- A campaign whose age the game cannot work out no longer leaves every market shut with Economy settling delay set: TradeLord trades as it would on a campaign long past that delay instead.
+- The days left of that delay are now never shown as none, and never as more days than the delay you set.
 - The feature list now ends with short answers to the questions people ask before installing: whether it is safe on a campaign already running, whether MCM is needed, what it will never sell, whether it changes the economy, and what to do when it trades nothing.
 
 ## 1.71.1
