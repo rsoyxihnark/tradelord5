@@ -99,6 +99,10 @@ def main(argv):
 
     for version in sorted(live, key=order):
         row = live[version]
+        if version == shipping and (row['draft'] or row['files'] == 0):
+            print('  note     ' + version + ' is part-published from an attempt that did not finish, '
+                  'and this run publishes it, so it is left to the publish step to settle')
+            continue
         if row['draft']:
             faults.append(version + ' is still a draft release')
         if row['files'] == 0:
