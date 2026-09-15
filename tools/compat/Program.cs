@@ -26,6 +26,8 @@ namespace TradeLord.Compat
             ("TaleWorlds.Library.InformationManager", "DisplayMessage"),
             ("TaleWorlds.CampaignSystem.GameComponents.DefaultWorkshopModel",
                 "GetMaxWorkshopCountForClanTier"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultWorkshopModel",
+                "get_MaximumWorkshopsPlayerCanHave"),
         };
 
         private static readonly (string type, string member)[] ReflectedMethods =

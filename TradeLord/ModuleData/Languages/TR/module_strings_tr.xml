@@ -286,5 +286,6 @@
 		<string id="TL438" text="{TOWN} şehrindeki {SHOP} işyeri {OWNER} adlı kişiden {GOLD} dinara alınsın mı?"/>
 		<string id="TL439" text="Satılık işyeri: {COUNT}, senin {MOST} hakkından {OWNED} tanesi var"/>
 		<string id="TL440" text="Erişilebilir hiçbir işyeri bir ileri gelenin satacağı işyeri değil"/>
+		<string id="TL441" text=" Bu alış, TradeLord’un altın rezerv ve asker ücreti karşılığı olarak ayırdığı, mala harcamadığı {HELD} dinarın altına düşmenize yol açar."/>
 	</strings>
 </base>

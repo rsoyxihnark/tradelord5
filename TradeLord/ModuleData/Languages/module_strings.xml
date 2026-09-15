@@ -286,5 +286,6 @@
 		<string id="TL438" text="Buy the {SHOP} in {TOWN} from {OWNER} for {GOLD} denars?"/>
 		<string id="TL439" text="Workshops for sale: {COUNT}, and you own {OWNED} of {MOST}"/>
 		<string id="TL440" text="No workshop in reach is a notable's to sell"/>
+		<string id="TL441" text=" This takes you below the {HELD} denars TradeLord holds back as your gold reserve and wage cover, which it will not spend on goods."/>
 	</strings>
 </base>
