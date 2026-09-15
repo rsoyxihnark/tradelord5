@@ -243,7 +243,7 @@
 		<string id="TL394" text=" | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there"/>
 		<string id="TL395" text=" and what each will make next"/>
 		<string id="TL397" text=" | Qty! = part of that amount is still on the road and lands before you would"/>
-		<string id="TL399" text=" | the Sell price has held at {HELD} of what this panel promised, over {COUNT} arrival(s) so far"/>
+		<string id="TL399" text=" | the Sell price has held at {HELD} of what this panel promised, over {COUNT} price(s) it has checked"/>
 		<string id="TL400" text="Rather than trading for you, TradeLord opens the trade screen and lays its whole deal on it: all it would sell on one side, all it would buy on the other. Change what you like, then press Done to trade or Cancel to leave it. Nothing is traded as you arrive while this is on, and a party met on the road still trades as before. OFF by default."/>
 		<string id="TL401" text="TradeLord has laid out {SOLD} unit(s) to sell for {GAINED} denars and {BOUGHT} to buy for {SPENT}. Change anything you like, then press Done to trade, or Cancel to leave it."/>
 		<string id="TL402" text="TradeLord found nothing here worth trading, so it has laid out nothing. Press Cancel to leave the market as it is."/>

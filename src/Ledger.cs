@@ -79,12 +79,16 @@ namespace TradeLord
                 Day = day,
             }, Recent.MostKept);
 
-        internal void KeepPromiseScore(string townId, float held)
+        internal void KeepPromiseScore(float held)
         {
             if (held < 0f) return;
             _promisesScored++;
             _promiseHeld += held;
-            if (townId == null) return;
+        }
+
+        internal void KeepArrival(string townId, float held)
+        {
+            if (townId == null || held < 0f) return;
             if (!_promises.TryGetValue(townId, out PromiseRecord rec))
             {
                 rec = new PromiseRecord { TownId = townId };
