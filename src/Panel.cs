@@ -106,11 +106,13 @@ namespace TradeLord
     {
         private readonly Workshop _shop;
         private readonly Action _bought;
+        private readonly int _cost;
 
         public ShopOfferRowVM(Workshop shop, int cost, bool affordable, Action bought)
         {
             _shop = shop;
             _bought = bought;
+            _cost = cost;
             Where = shop.Settlement?.Name.ToString() ?? "";
             What = shop.WorkshopType?.Name.ToString() ?? "";
             Owner = shop.Owner?.Name.ToString() ?? "";
@@ -135,8 +137,16 @@ namespace TradeLord
             asked.SetTextVariable("TOWN", Where);
             asked.SetTextVariable("OWNER", Owner);
             asked.SetTextVariable("GOLD", Cost);
+            string body = asked.ToString();
+            int heldBack = TradeActionBehavior.GoldHeldBack();
+            if (Holdings.DipsIntoWhatYouHoldBack(_cost, Hero.MainHero?.Gold ?? 0, heldBack))
+            {
+                TextObject warned = Tongue.Text("{=TL441} This takes you below the {HELD} denars TradeLord holds back as your gold reserve and wage cover, which it will not spend on goods.");
+                warned.SetTextVariable("HELD", heldBack.ToString("N0"));
+                body += warned.ToString();
+            }
             InformationManager.ShowInquiry(new InquiryData(
-                Tongue.Text("{=TL431}Workshops for sale").ToString(), asked.ToString(),
+                Tongue.Text("{=TL431}Workshops for sale").ToString(), body,
                 true, true, Tongue.Text("{=TL433}Buy").ToString(),
                 Tongue.Text("{=TL09}Close").ToString(),
                 () => Guard.Run("Panel.BuyWorkshopTaken", Take), null));
