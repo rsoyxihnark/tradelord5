@@ -108,6 +108,7 @@ namespace TradeLord
         private readonly Action _onOpen;
         private readonly Action<Settlement> _centerMap;
         private bool _isVisible;
+        private bool _isTradesVisible;
         private bool _isMapButtonVisible;
         private string _playerGold = "";
         private string _capacityText = "";
@@ -136,8 +137,16 @@ namespace TradeLord
             set
             {
                 if (value != _isVisible) { _isVisible = value; OnPropertyChangedWithValue(value, "IsVisible"); }
+                if (!value) IsTradesVisible = false;
                 IsMapButtonVisible = Options.Current.ShowMapButton && !value;
             }
+        }
+
+        [DataSourceProperty]
+        public bool IsTradesVisible
+        {
+            get => _isTradesVisible;
+            set { if (value != _isTradesVisible) { _isTradesVisible = value; OnPropertyChangedWithValue(value, "IsTradesVisible"); } }
         }
 
         [DataSourceProperty]
@@ -220,6 +229,7 @@ namespace TradeLord
         [DataSourceProperty] public string BrandLabel => "TradeLord";
         [DataSourceProperty] public string TitleLabel => Tongue.Text("{=TL07}TradeLord ledger").ToString();
         [DataSourceProperty] public string RefreshLabel => Tongue.Text("{=TL62}Refresh").ToString();
+        [DataSourceProperty] public string TradesLabel => Tongue.Text("{=TL424}Recent trades").ToString();
         [DataSourceProperty] public string CloseLabel => Tongue.Text("{=TL09}Close").ToString();
         [DataSourceProperty] public string HeadItem => Tongue.Text("{=TL50}Item").ToString();
         [DataSourceProperty] public string HeadBuyTown => Tongue.Text("{=TL51}Buy From").ToString();
@@ -249,6 +259,14 @@ namespace TradeLord
 
         public void ExecuteClose() => _onClose?.Invoke();
 
+        public void ExecuteOpenTrades() => Guard.Run("Panel.OpenTrades", () =>
+        {
+            RefreshTrades();
+            IsTradesVisible = true;
+        });
+
+        public void ExecuteCloseTrades() => IsTradesVisible = false;
+
         public void ExecuteOpenPanel() => _onOpen?.Invoke();
 
         public void ExecuteRefresh() => Guard.Run("Panel.Refresh", () =>
@@ -274,7 +292,7 @@ namespace TradeLord
 
         private static readonly string[] SpokenLabels =
         {
-            "BrandLabel", "TitleLabel", "RefreshLabel", "CloseLabel", "HeadItem", "HeadBuyTown",
+            "BrandLabel", "TitleLabel", "RefreshLabel", "TradesLabel", "CloseLabel", "HeadItem", "HeadBuyTown",
             "HeadPrice", "HeadSellTown", "HeadQuantity", "HeadProfit", "HeadDays", "HeadRunsOut",
             "HeadCaravans", "HeadConfidence", "HeadScore"
         };
