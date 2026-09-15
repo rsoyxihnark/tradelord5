@@ -83,6 +83,25 @@ namespace TradeLord
         [DataSourceProperty] public string Owner { get; }
     }
 
+    public class TradeRowVM : ViewModel
+    {
+        public TradeRowVM(string when, string where, string what, string gold, bool gained)
+        {
+            When = when;
+            Where = where;
+            What = what;
+            Gold = gold;
+            Gained = gained;
+        }
+
+        [DataSourceProperty] public string When { get; }
+        [DataSourceProperty] public string Where { get; }
+        [DataSourceProperty] public string What { get; }
+        [DataSourceProperty] public string Gold { get; }
+        [DataSourceProperty] public bool Gained { get; }
+        [DataSourceProperty] public bool Spent => !Gained;
+    }
+
     public class LedgerPanelVM : ViewModel
     {
         private readonly Action _onClose;
@@ -99,6 +118,8 @@ namespace TradeLord
         private string _workshopsHeader = "";
         private MBBindingList<RouteRowVM> _routes = new MBBindingList<RouteRowVM>();
         private MBBindingList<WorkshopRowVM> _workshops = new MBBindingList<WorkshopRowVM>();
+        private MBBindingList<TradeRowVM> _trades = new MBBindingList<TradeRowVM>();
+        private string _tradesHeader = "";
 
         public LedgerPanelVM(Action onClose, Action onOpen, Action<Settlement> centerMap)
         {
@@ -180,6 +201,20 @@ namespace TradeLord
         {
             get => _workshops;
             set { if (value != _workshops) { _workshops = value; OnPropertyChangedWithValue(value, "Workshops"); } }
+        }
+
+        [DataSourceProperty]
+        public MBBindingList<TradeRowVM> Trades
+        {
+            get => _trades;
+            set { if (value != _trades) { _trades = value; OnPropertyChangedWithValue(value, "Trades"); } }
+        }
+
+        [DataSourceProperty]
+        public string TradesHeader
+        {
+            get => _tradesHeader;
+            set { if (value != _tradesHeader) { _tradesHeader = value; OnPropertyChangedWithValue(value, "TradesHeader"); } }
         }
 
         [DataSourceProperty] public string BrandLabel => "TradeLord";
@@ -291,7 +326,28 @@ namespace TradeLord
                 + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero));
 
             RefreshWorkshops();
+            RefreshTrades();
         }
+
+        private void RefreshTrades()
+        {
+            var lately = LedgerBehavior.Instance?.Lately;
+            int count = lately?.Count ?? 0;
+            TradesHeader = count == 0
+                ? Tongue.Text("{=TL419}Recent trades: nothing traded yet this campaign").ToString()
+                : Line("{=TL418}Recent trades (last {COUNT})", "COUNT", count.ToString());
+            var rows = new MBBindingList<TradeRowVM>();
+            for (int i = 0; i < count; i++)
+            {
+                TradeNote note = lately[i];
+                rows.Add(new TradeRowVM(DayOf(note.Day), note.Where, note.What,
+                                        Recent.Coins(note.Gold), note.Gold > 0));
+            }
+            Trades = rows;
+        }
+
+        private static string DayOf(float day) =>
+            Line("{=TL420}Day {DAY}", "DAY", ((int)day).ToString("N0"));
 
         private static string HowThePromiseHasHeld()
         {

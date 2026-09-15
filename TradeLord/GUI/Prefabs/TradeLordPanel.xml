@@ -301,6 +301,51 @@
                       </ItemTemplate>
                     </ListPanel>
 
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                SuggestedHeight="22" MarginTop="8"
+                                Brush="Popup.Button.Text" Brush.FontSize="15"
+                                Brush.FontColor="#FFD700FF"
+                                Text="@TradesHeader" />
+                    <ListPanel DataSource="{Trades}"
+                               WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                               SuggestedHeight="110"
+                               StackLayout.LayoutMethod="VerticalTopToBottom">
+                      <ItemTemplate>
+                        <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                   SuggestedHeight="22"
+                                   StackLayout.LayoutMethod="HorizontalLeftToRight">
+                          <Children>
+                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="90"
+                                        HeightSizePolicy="StretchToParent"
+                                        Brush="Popup.Button.Text" Brush.FontSize="15"
+                                        Brush.FontColor="#BBBBBBFF"
+                                        Text="@When" />
+                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="170"
+                                        HeightSizePolicy="StretchToParent"
+                                        Brush="Popup.Button.Text" Brush.FontSize="15"
+                                        Text="@Where" />
+                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="90"
+                                        HeightSizePolicy="StretchToParent"
+                                        Brush="Popup.Button.Text" Brush.FontSize="15"
+                                        Brush.FontColor="#7FD633FF"
+                                        IsVisible="@Gained"
+                                        Text="@Gold" />
+                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="90"
+                                        HeightSizePolicy="StretchToParent"
+                                        Brush="Popup.Button.Text" Brush.FontSize="15"
+                                        Brush.FontColor="#E08A5AFF"
+                                        IsVisible="@Spent"
+                                        Text="@Gold" />
+                            <TextWidget WidthSizePolicy="StretchToParent"
+                                        HeightSizePolicy="StretchToParent"
+                                        Brush="Popup.Button.Text" Brush.FontSize="15"
+                                        Brush.FontColor="#CFCFCFDD"
+                                        Text="@What" />
+                          </Children>
+                        </ListPanel>
+                      </ItemTemplate>
+                    </ListPanel>
+
                     <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed"
                                SuggestedHeight="50" MarginTop="10"
                                StackLayout.LayoutMethod="HorizontalLeftToRight"
