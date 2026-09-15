@@ -196,7 +196,7 @@ namespace TradeLord
             {
                 _open = new StreamWriter(new FileStream(
                     _path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite))
-                { AutoFlush = true };
+                { AutoFlush = false };
             }
             catch { LetGo(); }
             return _open;
@@ -225,20 +225,42 @@ namespace TradeLord
 
         internal static void Write(string message)
         {
+            if (!Ready()) return;
+            Put(message);
+            Pushed();
+        }
+
+        internal static void WriteMany(List<string> messages)
+        {
+            if (messages == null || messages.Count == 0 || !Ready()) return;
+            for (int i = 0; i < messages.Count; i++) Put(messages[i]);
+            Pushed();
+        }
+
+        private static bool Ready()
+        {
             if (!_resolved)
             {
                 _resolved = true;
                 _path = Resolve();
                 if (_path != null) EmptyIfItOutgrewItsLimit();
             }
-            if (_path == null) return;
+            if (_path == null) return false;
             if (_emptied != null)
             {
                 string said = _emptied;
                 _emptied = null;
                 Put(said);
             }
-            Put(message);
+            return true;
+        }
+
+        private static void Pushed()
+        {
+            StreamWriter held = _open;
+            if (held == null) return;
+            try { held.Flush(); }
+            catch { LetGo(); }
         }
 
         private static void Put(string message)

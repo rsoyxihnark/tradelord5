@@ -228,6 +228,47 @@ namespace TradeLord
         }
     }
 
+    internal static class ScreenMarkets
+    {
+        private static string _primedAt;
+        private static int _primedHour = -1;
+        private static int _primedGen = -1;
+
+        internal static void Forget()
+        {
+            _primedAt = null;
+            _primedHour = -1;
+            _primedGen = -1;
+        }
+
+        internal static void Prime()
+        {
+            LedgerBehavior ledger = LedgerBehavior.Instance;
+            if (ledger == null || !Options.Current.Omniscient) return;
+            Settlement here = Settlement.CurrentSettlement;
+            string at = here == null ? "" : here.StringId;
+            int hour = (int)CampaignTime.Now.ToHours;
+            if (at == _primedAt && hour == _primedHour && Options.Generation == _primedGen) return;
+            _primedAt = at;
+            _primedHour = hour;
+            _primedGen = Options.Generation;
+            var goods = new List<ItemObject>();
+            Gather(MobileParty.MainParty == null ? null : MobileParty.MainParty.ItemRoster, goods);
+            Gather(here == null ? null : here.ItemRoster, goods);
+            if (goods.Count > 0) ledger.PrimeMarketsFor(goods);
+        }
+
+        private static void Gather(ItemRoster roster, List<ItemObject> goods)
+        {
+            if (roster == null) return;
+            for (int i = 0; i < roster.Count; i++)
+            {
+                ItemObject item = roster.GetItemAtIndex(i);
+                if (item != null && TradePolicy.Priced(item)) goods.Add(item);
+            }
+        }
+    }
+
     internal static class PriceTrace
     {
         internal static void Say(Settlement site, string when)
@@ -242,18 +283,19 @@ namespace TradeLord
             ItemRoster carried = MobileParty.MainParty == null ? null : MobileParty.MainParty.ItemRoster;
             if (market == null || carried == null) return;
             IMarketData kept = Priced.Kept(site);
+            var lines = new List<string>();
 
-            Log.Write("price trace (" + when + ") at " + site.Name + ", " + Named(site) +
+            lines.Add("price trace (" + when + ") at " + site.Name + ", " + Named(site) +
                       ", prices kept by " +
                       (kept == null ? "nothing TradeLord can read" : kept.GetType().Name) + LeansOn(site));
-            Log.Write("  the price model in force is " + ModelName());
-            Log.Write("  " + PatchedBy("that model's GetPrice", ModelPrice()));
+            lines.Add("  the price model in force is " + ModelName());
+            lines.Add("  " + PatchedBy("that model's GetPrice", ModelPrice()));
             MethodBase asked = MarketPrice(market.GetType());
             MethodBase inherited = MarketPrice(typeof(SettlementComponent));
-            Log.Write("  " + PatchedBy("this market's own GetItemPrice", asked));
+            lines.Add("  " + PatchedBy("this market's own GetItemPrice", asked));
             if (inherited != null && inherited != asked)
-                Log.Write("  " + PatchedBy("the GetItemPrice every market inherits", inherited));
-            Log.Write("  live world prices are " + (Options.Current.Omniscient ? "on" : "off") +
+                lines.Add("  " + PatchedBy("the GetItemPrice every market inherits", inherited));
+            lines.Add("  live world prices are " + (Options.Current.Omniscient ? "on" : "off") +
                       ", and the four readings below are for one unit, before anything is traded");
 
             for (int i = 0; i < carried.Count; i++)
@@ -261,7 +303,7 @@ namespace TradeLord
                 EquipmentElement el = carried.GetElementCopyAtIndex(i).EquipmentElement;
                 ItemObject item = el.Item;
                 if (!TradePolicy.Priced(item)) continue;
-                Log.Write("  " + item.StringId + " (" + (item.Name == null ? item.StringId : item.Name.ToString()) +
+                lines.Add("  " + item.StringId + " (" + (item.Name == null ? item.StringId : item.Name.ToString()) +
                           ") worth " + el.ItemValue + ": TradeLord uses " + Uses(market, el) +
                           (kept == null ? "" :
                            "; asked the plain way, which names no merchant, " + Asked(market, el) +
@@ -270,6 +312,7 @@ namespace TradeLord
                            "; naming nobody at all, " + Read(kept, el, null, null)) +
                           Noted(item, site));
             }
+            Log.WriteMany(lines);
         }
 
         private static string Named(Settlement site) =>
