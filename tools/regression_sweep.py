@@ -24,6 +24,7 @@ HERDTESTS = io.open('tests/HerdRulesTests.cs', encoding='utf-8').read()
 ARRIVALTESTS = io.open('tests/ArrivalTests.cs', encoding='utf-8').read()
 SETTLINGTESTS = io.open('tests/SettlingTests.cs', encoding='utf-8').read()
 RANKROWTESTS = io.open('tests/RankTests.cs', encoding='utf-8').read()
+MAPBUTTONTESTS = io.open('tests/MapButtonTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
      'BooksTests.cs': BOOKTESTS, 'SellRulesTests.cs': SELLTESTS,
@@ -33,7 +34,7 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'BuyPassTests.cs': BUYPASSTESTS, 'SellPassTests.cs': SELLPASSTESTS,
      'BuyRulesTests.cs': BUYRULETESTS, 'HerdRulesTests.cs': HERDTESTS,
      'ArrivalTests.cs': ARRIVALTESTS, 'SettlingTests.cs': SETTLINGTESTS,
-     'RankTests.cs': RANKROWTESTS}
+     'RankTests.cs': RANKROWTESTS, 'MapButtonTests.cs': MAPBUTTONTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -2412,8 +2413,10 @@ chk("1.6.7", "the panel's own pin list, not the map's marker state, decides what
     "LedgerPanel.IsPinned(_trackedTown)" in S['Trading.cs'])
 
 chk("1.6.8", "the map button reserves the mouse over the button, not over the map around it",
-    (lambda b: "m.x >= 0.90f" in b and "m.y >= 0.46f && m.y <= 0.54f" in b)
-    (method_body(S['Panel.cs'], "private static bool OverAssumedBounds")))
+    "MapButton.OverTheStripInstead(m.x, m.y);" in
+        method_body(S['Panel.cs'], "private static bool OverAssumedBounds") and
+    "x >= 0.90f && y >= 0.46f && y <= 0.54f;" in S['Rules.cs'] and
+    "The_strip_it_falls_back_to_is_the_right_edge_at_mid_height" in MAPBUTTONTESTS)
 chk("1.6.8", "the food reserve is spent only on goods the sell rules would actually move",
     (lambda b: ordered(b, "said.Why = Block.NotTradable; return said;",
                        "int reserved = DrawKeepBack(amount, facts.FoodHeld, out bool fed);"))
@@ -2427,8 +2430,10 @@ chk("1.6.9", "every setting name, hint and group heading carries a translation m
 
 chk("1.6.10", "the button's own measured size decides the reserved region, so it holds at any aspect ratio",
     (lambda b: "Screen.RealScreenResolutionWidth" in b and "button.ScaledSuggestedWidth" in b
-           and "button.ScaledMarginRight" in b and "0.90f" not in b)
-    (method_body(S['Panel.cs'], "private static bool OverButtonBounds")))
+           and "button.ScaledMarginRight" in b and "0.90f" not in b
+           and "MapButton.Over(m.x, m.y, screenW, screenH, width, height," in b)
+    (method_body(S['Panel.cs'], "private static bool OverButtonBounds")) and
+    "The_region_holds_at_any_aspect_ratio" in MAPBUTTONTESTS)
 chk("1.6.10", "the prefab carries the id the panel looks the button up by",
     'Id="TradeLordMapButton"' in PREFAB and 'MapButtonId = "TradeLordMapButton"' in S['Panel.cs'])
 chk("1.6.10", "the button still sits flush right and centred, which is what the reserved region assumes",
@@ -7695,6 +7700,31 @@ def which_band_a_route_row_falls_in_is_worked_out_where_a_test_can_ask():
 
 chk("1.71.2", "which band a route row falls in, and where in the list it ranks, is worked out where a test can ask",
     which_band_a_route_row_falls_in_is_worked_out_where_a_test_can_ask())
+
+
+def where_the_map_button_catches_the_mouse_is_worked_out_where_a_test_can_ask():
+    r = S['Rules.cs']
+    over = method_body(r, "internal static bool Over")
+    return ("internal static class MapButton" in r
+            and "internal const float Pad = 6f;" in r
+            and "TaleWorlds" not in r and "Widget" not in r
+            and "if (!BoundsReadable(screenW, screenH, width, height)) return false;" in over
+            and "float padX = Pad / screenW, padY = Pad / screenH;" in over
+            and "float right = 1f - marginRight / screenW;" in over
+            and "6f / screenW" not in S['Panel.cs']
+            and "!MapButton.BoundsReadable(screenW, screenH, width, height)" in S['Panel.cs']
+            and all(one in MAPBUTTONTESTS for one in
+                    ("The_middle_of_the_button_is_over_the_button",
+                     "The_middle_of_the_map_is_not",
+                     "The_button_sits_flush_right_and_centred",
+                     "A_cursor_just_outside_is_still_caught_and_one_further_out_is_not",
+                     "A_screen_or_a_button_the_game_cannot_measure_is_not_readable",
+                     "Nothing_is_over_a_button_that_cannot_be_measured",
+                     "The_region_holds_at_any_aspect_ratio")))
+
+
+chk("1.71.2", "where the map button catches the mouse, and the strip it falls back to, is worked out where a test can ask",
+    where_the_map_button_catches_the_mouse_is_worked_out_where_a_test_can_ask())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
