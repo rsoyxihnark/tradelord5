@@ -75,6 +75,17 @@ namespace TradeLord
             here != null && here == sittingAt && hour == sittingHour;
     }
 
+    internal static class Herding
+    {
+        internal const int Cushion = 2;
+
+        internal static int MountsNobodyRides(int mounts, int menOnFoot) =>
+            Math.Max(0, (mounts < 0 ? 0 : mounts) - (menOnFoot < 0 ? 0 : menOnFoot));
+
+        internal static int DrivenInAll(int herd, int mounts, int menOnFoot) =>
+            (herd < 0 ? 0 : herd) + MountsNobodyRides(mounts, menOnFoot);
+    }
+
     internal static class TradeRules
     {
         internal static bool Listed(ItemList list, in Good good) =>

@@ -1603,7 +1603,9 @@ chk("1.58.0", "a good you can store feeds one, and anything with a horse compone
     "MeatCount" not in method_body(S['Policy.cs'], "internal static Good Describe") and
     "Math.Min(held.Amount - had, (reserve + perUnit - 1) / perUnit)" in food_rule())
 chk("1.3.23", "herd surplus counts mounts against unmounted men",
-    "Math.Max(0, mounts - foot)" in S['Trading.cs'] and "NumberOfMenWithoutHorse" in S['Trading.cs'])
+    "Math.Max(0, (mounts < 0 ? 0 : mounts) - (menOnFoot < 0 ? 0 : menOnFoot));" in S['Rules.cs'] and
+    "Herding.MountsNobodyRides(mounts, foot)" in S['Trading.cs'] and
+    "NumberOfMenWithoutHorse" in S['Trading.cs'])
 chk("1.3.23", "herd guard includes attached parties", "party.AttachedParties" in S['Trading.cs'])
 chk("1.3.23", "the game's own trade permission gates trading",
     "SettlementAction.Trade, out _, out _" in S['Trading.cs'] and
@@ -3987,8 +3989,10 @@ def a_horse_a_footman_can_ride_costs_the_herd_nothing():
     kind = between(S['Policy.cs'], "internal static bool IsSpareMount", ";")
     return ("party.AttachedParties" in tally
             and "NumberOfMenWithoutHorse" in tally
-            and "Math.Max(0, mounts - foot)" in room
-            and "Math.Max(0, mounts - foot)" in spare
+            and "herd = Herding.DrivenInAll(herd, mounts, foot);" in room
+            and "Herding.MountsNobodyRides(mounts, foot)" in spare
+            and "A_horse_a_man_on_foot_can_ride_is_ridden_rather_than_driven" in HERDTESTS
+            and "Putting_a_man_on_foot_never_makes_the_herd_larger" in HERDTESTS
             and "HerdTally(party, out int men, out int herd, out int mounts, out int foot)" in room
             and "IsMount && !item.HorseComponent.IsPackAnimal" in kind
             and "while (remaining > 0 && herdRoom > 0)" in haul)
@@ -4169,8 +4173,7 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
     entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
     return (option_default('SellSpareMounts') == 'true'
             and "_o.SellSpareMounts" in M
-            and "int spare = Math.Max(0, mounts - foot);" in shed
-            and "int driven = herd + spare;" in shed
+            and "int driven = Herding.DrivenInAll(herd, mounts, foot);" in shed
             and "if (driven <= 0) return 0;" in shed
             and 'float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });' in shed
             and "return TradeMath.MostThatHolds(driven, shed => shed == 0 || !TradeMath.Unchanged(" in shed
@@ -4196,9 +4199,11 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
 
 def the_herd_guard_keeps_a_cushion_below_the_speed_penalty():
     room = method_body(S['Trading.cs'], "internal static int HerdRoomForLivestock")
-    cushion = re.search(r'private const int HerdCushion = (\d+);', S['Trading.cs'])
+    cushion = re.search(r'internal const int Cushion = (\d+);', S['Rules.cs'])
     return (cushion is not None and int(cushion.group(1)) > 0
-            and "new object[] { men, herd + room + HerdCushion }), neutral));" in room
+            and "HerdCushion" not in S['Trading.cs']
+            and "The_herd_guard_keeps_a_cushion_of_its_own" in HERDTESTS
+            and "new object[] { men, herd + room + Herding.Cushion }), neutral));" in room
             and "float neutral = (float)_herdModifier.Invoke(model, new object[] { men, 0 });" in room
             and "return TradeMath.MostThatHolds(256, room => room == 0 || TradeMath.Unchanged(" in room)
 
@@ -4259,7 +4264,7 @@ def the_herd_gives_up_its_animals_in_the_order_the_player_set():
             and "if (rank == RankHaulAnimal && haulsLeft <= 0) break;" in relief
             and "if (rank == RankHaulAnimal) haulsLeft--;" in relief
             and "else if (rank != RankLivestock) mountsLeft--;" in relief
-            and "Math.Max(0, mounts - foot)" in room
+            and "Herding.MountsNobodyRides(mounts, foot)" in room
             and "TradePolicy.IsHaulAnimal(el.EquipmentElement.Item)" in held
             and "bool atSea = Carry.Sailing();" in spared
             and "model.CalculateTotalWeightCarried(party, atSea).ResultNumber" in spared
@@ -4383,7 +4388,7 @@ def what_the_herd_check_writes_down():
             and all(needle in body for needle in
                 ("HerdTally(party, out int men, out int herd, out int mounts, out int foot)",
                  "HerdSplit(party, out int packs, out int stock)",
-                 "int spare = Math.Max(0, mounts - foot);",
+                 "int spare = Herding.MountsNobodyRides(mounts, foot);",
                  "int shed = counted >= 0 ? counted : DrivenAnimalsToShed(party);",
                  '" men of whom "', '" on foot, "', '" loose mount(s) with "',
                  '" pack animal(s), "', '" livestock, "', '" driven in all, "',
@@ -7600,6 +7605,26 @@ def what_counts_as_the_same_arrival_is_worked_out_where_a_test_can_ask_it():
 
 chk("1.71.1", "what counts as the same arrival, the same sitting and taking to the road is worked out where a test can ask it",
     what_counts_as_the_same_arrival_is_worked_out_where_a_test_can_ask_it())
+
+
+def what_the_party_drives_is_worked_out_in_one_place_a_test_can_ask():
+    r = S['Rules.cs']
+    return ("internal static class Herding" in r
+            and "TaleWorlds" not in r and "MobileParty" not in r
+            and "(herd < 0 ? 0 : herd) + MountsNobodyRides(mounts, menOnFoot);" in r
+            and S['Trading.cs'].count("Herding.MountsNobodyRides(") == 2
+            and S['Trading.cs'].count("Herding.DrivenInAll(") == 3
+            and "Math.Max(0, mounts - foot)" not in S['Trading.cs']
+            and all(one in HERDTESTS for one in
+                    ("A_horse_a_man_on_foot_can_ride_is_ridden_rather_than_driven",
+                     "A_party_with_nobody_on_foot_drives_every_loose_mount",
+                     "Nothing_counted_below_nothing_ever_shrinks_the_herd",
+                     "What_is_driven_is_the_herd_plus_the_mounts_nobody_rides",
+                     "Putting_a_man_on_foot_never_makes_the_herd_larger")))
+
+
+chk("1.71.1", "what the party drives, and the mounts its men on foot ride rather than drive, is worked out in one place a test can ask",
+    what_the_party_drives_is_worked_out_in_one_place_a_test_can_ask())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
