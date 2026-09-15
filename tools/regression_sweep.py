@@ -23,6 +23,7 @@ BUYRULETESTS = io.open('tests/BuyRulesTests.cs', encoding='utf-8').read()
 HERDTESTS = io.open('tests/HerdRulesTests.cs', encoding='utf-8').read()
 ARRIVALTESTS = io.open('tests/ArrivalTests.cs', encoding='utf-8').read()
 SETTLINGTESTS = io.open('tests/SettlingTests.cs', encoding='utf-8').read()
+RANKROWTESTS = io.open('tests/RankTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
      'BooksTests.cs': BOOKTESTS, 'SellRulesTests.cs': SELLTESTS,
@@ -31,7 +32,8 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'FoodReserveTests.cs': FOODTESTS, 'StallReasonTests.cs': STALLTESTS,
      'BuyPassTests.cs': BUYPASSTESTS, 'SellPassTests.cs': SELLPASSTESTS,
      'BuyRulesTests.cs': BUYRULETESTS, 'HerdRulesTests.cs': HERDTESTS,
-     'ArrivalTests.cs': ARRIVALTESTS, 'SettlingTests.cs': SETTLINGTESTS}
+     'ArrivalTests.cs': ARRIVALTESTS, 'SettlingTests.cs': SETTLINGTESTS,
+     'RankTests.cs': RANKROWTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -7670,6 +7672,29 @@ def how_long_a_new_campaign_is_left_to_settle_is_worked_out_where_a_test_can_ask
 
 chk("1.71.2", "how long a new campaign is left to settle is worked out where a test can ask, and an age the game cannot report never holds a market shut",
     how_long_a_new_campaign_is_left_to_settle_is_worked_out_where_a_test_can_ask())
+
+
+def which_band_a_route_row_falls_in_is_worked_out_where_a_test_can_ask():
+    r = S['Rules.cs']
+    p = S['Panel.cs']
+    return ("internal static class Ranks" in r
+            and "internal const int Bands = 5;" in r
+            and "count <= 1 || at < 0 ? 0f : (float)at / (count - 1);" in r
+            and "rank < 0.2f ? 1 : rank < 0.45f ? 2 : rank < 0.7f ? 3 : rank < 0.85f ? 4 : Bands;" in r
+            and all("Ranks.BandOf(_rank) == " + str(band) + ";" in p
+                    for band in range(1, 6))
+            and "Ranks.Of(i, routes.Count), _centerMap));" in p
+            and "_rank <" not in p and "_rank >=" not in p
+            and all(one in RANKROWTESTS for one in
+                    ("The_best_route_ranks_at_the_top_and_the_last_at_the_bottom",
+                     "A_list_of_one_or_none_ranks_everything_at_the_top",
+                     "Every_band_starts_where_the_one_before_it_ends",
+                     "A_row_is_never_two_bands_and_never_none",
+                     "A_row_further_down_the_list_is_never_in_an_earlier_band")))
+
+
+chk("1.71.2", "which band a route row falls in, and where in the list it ranks, is worked out where a test can ask",
+    which_band_a_route_row_falls_in_is_worked_out_where_a_test_can_ask())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

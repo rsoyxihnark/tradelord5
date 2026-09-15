@@ -75,6 +75,17 @@ namespace TradeLord
             here != null && here == sittingAt && hour == sittingHour;
     }
 
+    internal static class Ranks
+    {
+        internal const int Bands = 5;
+
+        internal static float Of(int at, int count) =>
+            count <= 1 || at < 0 ? 0f : (float)at / (count - 1);
+
+        internal static int BandOf(float rank) =>
+            rank < 0.2f ? 1 : rank < 0.45f ? 2 : rank < 0.7f ? 3 : rank < 0.85f ? 4 : Bands;
+    }
+
     internal static class Settling
     {
         internal static bool StillHolding(int waitDays, float elapsedDays, out int daysLeft)

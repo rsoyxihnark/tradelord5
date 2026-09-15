@@ -30,11 +30,11 @@ namespace TradeLord
 
         [DataSourceProperty] public bool IsAlternateRow { get; }
 
-        [DataSourceProperty] public bool Tier1 => _rank < 0.2f;
-        [DataSourceProperty] public bool Tier2 => _rank >= 0.2f && _rank < 0.45f;
-        [DataSourceProperty] public bool Tier3 => _rank >= 0.45f && _rank < 0.7f;
-        [DataSourceProperty] public bool Tier4 => _rank >= 0.7f && _rank < 0.85f;
-        [DataSourceProperty] public bool Tier5 => _rank >= 0.85f;
+        [DataSourceProperty] public bool Tier1 => Ranks.BandOf(_rank) == 1;
+        [DataSourceProperty] public bool Tier2 => Ranks.BandOf(_rank) == 2;
+        [DataSourceProperty] public bool Tier3 => Ranks.BandOf(_rank) == 3;
+        [DataSourceProperty] public bool Tier4 => Ranks.BandOf(_rank) == 4;
+        [DataSourceProperty] public bool Tier5 => Ranks.BandOf(_rank) == 5;
         [DataSourceProperty] public string ItemName => _route.Item.Name.ToString();
         [DataSourceProperty] public string BuyTownName => _route.From.Name.ToString();
         [DataSourceProperty] public string BuyPrice => _route.BuyPrice.ToString();
@@ -266,7 +266,7 @@ namespace TradeLord
             if (routes != null)
                 for (int i = 0; i < routes.Count; i++)
                     rows.Add(new RouteRowVM(routes[i], i % 2 == 1,
-                        routes.Count <= 1 ? 0f : (float)i / (routes.Count - 1), _centerMap));
+                        Ranks.Of(i, routes.Count), _centerMap));
             Routes = rows;
             bool empty = rows.Count == 0;
             StatusText = empty
