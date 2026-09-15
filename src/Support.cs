@@ -12,8 +12,6 @@ namespace TradeLord
         private const int McmGeneration = 5;
         private const int GenerationsAhead = 2;
 
-        internal static bool SettingsReachable { get; private set; }
-
         internal static bool SettingsInHand { get; private set; }
 
         internal static Action Reseat;
@@ -106,7 +104,6 @@ namespace TradeLord
             _handover = init;
             object answered = init.Invoke(null, null);
             SettingsInHand = answered is bool taken && taken;
-            SettingsReachable = true;
             Log.Write(SettingsInHand
                 ? "MCM detected - settings menu registered"
                 : "MCM detected, but it has not handed over its settings yet - TradeLord.ini is read as it stands, and the settings screen takes over once MCM has loaded");

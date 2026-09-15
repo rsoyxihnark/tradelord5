@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.75.1
+
+- The line TradeLord.log writes when the map marker moves now names the market it beat as the next best it priced, rather than as the second best on the map, which it never worked out.
+- A market whose prices TradeLord could not read says so again in your next campaign, instead of going quiet about it for the rest of the session once it had said it.
+- The feature list now says that meeting the same caravan or villagers again keeps the books of what was already traded with them.
+
 ## 1.75.0
 
 - The market marked on your map now counts only the goods it would really sell there, so it no longer sends you to a town that then refuses to sell anything and tells you your cargo is full.

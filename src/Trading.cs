@@ -142,6 +142,7 @@ namespace TradeLord
             TradePolicy.ForgetItemListAudit();
             TradePolicy.ForgetCraftingLookup();
             Errands.Forget();
+            Priced.Forget();
             ForgetRoadMarket();
             ForgetTheMeeting();
             _tradedWith = null;
@@ -2074,8 +2075,9 @@ namespace TradeLord
                   bestUnits + " unit(s) for " + bestValue + " gold against a town purse of " + bestPurse +
                   ", about " + Travel.EstimateDaysFromParty(bestTown).ToString("0.#") + " day(s) away" +
                   (runnerUp == null
-                      ? ", and no other market in reach would take any of it"
-                      : ", ahead of " + runnerUp.Name + " at " + runnerUpValue + " gold");
+                      ? ", and no other market it priced would take any of it"
+                      : ", ahead of " + runnerUp.Name + ", the next best it priced, at " +
+                        runnerUpValue + " gold");
             return bestTown;
         }
 

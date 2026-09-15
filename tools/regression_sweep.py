@@ -2751,9 +2751,8 @@ chk("1.74.0", "the first market a campaign walks into trades like every other on
     the_first_market_of_a_campaign_trades_like_every_other_one())
 chk("1.6.18", "every variable a shipped line leaves a slot for is filled in by name",
     every_text_variable_is_supplied())
-chk("1.13.2", "whether a settings screen could be reached at all is written down once, where MCM is loaded",
-    "SettingsReachable = true;" in method_body(S['Support.cs'], "internal static void TryLoad") and
-    S['Support.cs'].count("SettingsReachable = true;") == 1)
+chk("1.13.2", "nothing is written down about MCM that nothing reads back",
+    "SettingsReachable" not in ALL and "SettingsReachable" not in M)
 chk("1.13.0", "the README counts what goes into a save as the source actually saves it",
     the_readme_counts_the_saved_values_right())
 chk("1.6.18", "the defaults the README publishes are the defaults the module ships",
@@ -3758,6 +3757,17 @@ def a_rule_that_names_missing_source_reports_itself_broken():
 chk("1.7.0", "a rule naming source that is no longer there reports itself broken, and every later rule is still read",
     a_rule_that_names_missing_source_reports_itself_broken())
 
+chk("1.75.1", "a price model that could not be asked says so again in the next campaign rather than staying quiet for the rest of the session",
+    "internal static void Forget() => _saidItCouldNotAsk = false;" in S['Market.cs'] and
+    "Priced.Forget();" in method_body(S['Trading.cs'], "internal static void ForgetVisit") and
+    S['Trading.cs'].count("Priced.Forget();") == 1)
+
+chk("1.75.1", "the map marker names the market it beat as the next best it priced, never as the second best on the map",
+    (lambda b: '", and no other market it priced would take any of it"' in b
+           and '", ahead of " + runnerUp.Name + ", the next best it priced, at " +' in b
+           and "if (market.Gold <= bestValue) continue;" in b)
+    (method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")))
+
 chk("1.14.1", "the panel hotkey is ignored while a text field on the map has the keyboard",
     "layers[i].IsFocusedOnInput()" in method_body(S['Panel.cs'], "private static bool TypingOnScreen") and
     S['Panel.cs'].count("HotkeyReleased() && !TypingOnScreen(map)") == 2 and
@@ -4714,7 +4724,7 @@ def the_screen_only_wins_once_it_has_actually_handed_its_settings_over():
                         "Settings.Reseat();", "return true;")
             and ordered(load, "object answered = init.Invoke(null, null);",
                         "SettingsInHand = answered is bool taken && taken;",
-                        "SettingsReachable = true;")
+                        "Log.Write(SettingsInHand")
             and "bool screen = McmLoader.SettingsInHand;" in read
             and "McmLoader.SettingsReachable" not in S['Config.cs']
             and "McmLoader.SettingsInHand ? ByScreen : ByFile" in write
