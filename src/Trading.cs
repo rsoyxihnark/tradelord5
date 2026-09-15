@@ -201,7 +201,7 @@ namespace TradeLord
         {
             if (party != MobileParty.MainParty) return;
             NoteTheGateBehind(party);
-            ForgetTheMarkerRead();
+            ForgetWhatYouCarry();
             Guard.Run("Action.HerdReliefOnLeaving", () =>
             {
                 LogHerdState("leaving " + settlement.Name);
@@ -271,7 +271,7 @@ namespace TradeLord
         private static void ResetVisit(bool sameSitting = false)
         {
             _visitTradeAllowed = false;
-            ForgetTheMarkerRead();
+            ForgetWhatYouCarry();
             if (sameSitting) Visit.ForgetTheDryRun(); else Visit.Forget();
             _cargoWasFull = false;
             _sellStalled = null;
@@ -567,6 +567,7 @@ namespace TradeLord
             Guard.Run("Action.OnSessionLaunched", () =>
             {
                 ResetVisit();
+                ForgetTheMarkerRead();
                 Settlement inside = MobileParty.MainParty?.CurrentSettlement;
                 if (inside != null) _visitTradeAllowed = CanTradeHere(inside);
                 Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));
@@ -2100,11 +2101,16 @@ namespace TradeLord
         private static readonly Dictionary<(string site, string good, string quality), int> _markerPrices =
             new Dictionary<(string, string, string), int>();
 
-        private static void ForgetTheMarkerRead()
+        private static void ForgetWhatYouCarry()
         {
             _cargo = null;
             _cargoHour = -1;
             _cargoVersion = -1;
+        }
+
+        private static void ForgetTheMarkerRead()
+        {
+            ForgetWhatYouCarry();
             _markerPrices.Clear();
             _markerPriceHour = -1;
         }
