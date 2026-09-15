@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.78.1
+
+- Trust a market by what it has paid now counts one walk-in at a market rather than every price it checked there, so the five walk-ins it waits for are five real visits; before this a single arrival at a market the panel had promised several goods at was enough to start lowering that market's score.
+- The line under the routes, and TradeLord.log, now say how many prices the panel has checked rather than calling them arrivals, which is what that number has always counted.
+- TradeLord.log now says, as you walk into a market, how that market's own record stands and that it is what lowers the score of a route selling there.
+- A message raised with nothing in it while TradeLord was moving a good could stop the game showing messages, and no longer can.
+
 ## 1.78.0
 
 - The TradeLord ledger now learns from what a market has really paid you: a market that has paid less than the panel promised is scored lower, so routes selling there fall down the list.
