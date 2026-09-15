@@ -745,12 +745,15 @@ def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
 def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     asked = method_body(S['Marker.cs'], "private static int WhatThatMarketPays")
-    return (ordered(marker, "long bestValue = 0, runnerUpValue = 0;",
-                    "if (market.Gold <= bestValue) continue;",
+    return (ordered(marker, "reachable.Sort(DearestPurseFirst);",
+                    "if (gold <= how.Value) break;",
                     "foreach (var (item, amount, worth, floor) in cargo)",
                     "int price = WhatThatMarketPays(s, market, item, party);",
-                    "if (total > market.Gold) total = market.Gold;",
-                    "if (total > bestValue)")
+                    "if (total >= gold) { capped = true; break; }",
+                    "if (total > gold) total = gold;",
+                    "if (total > how.Value)")
+            and "x.gold != y.gold ? y.gold.CompareTo(x.gold)" in S['Marker.cs']
+            and "string.CompareOrdinal(x.s.StringId, y.s.StringId);" in S['Marker.cs']
             and marker.count("WhatThatMarketPays(") == 1
             and "Priced.At(" not in marker
             and asked.count("Priced.At(market, el, party, true)") == 2)
@@ -770,7 +773,7 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
                         "if (price < floor) continue;",
                         "if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) continue;",
                         "total += (long)price * amount;")
-            and "if (total <= 0) { refused++; continue; }" in marker
+            and "if (total <= 0) { how.Refused++; continue; }" in marker
             and ordered(floor, "if (!Options.Current.PreferBestSellTown) return 0;",
                         "LedgerBehavior.Instance?.BestSell(item)",
                         "(int)(best.Item2 * Options.Current.BestSellTownTolerance)")
@@ -781,17 +784,20 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
 def the_marker_says_in_the_log_which_town_it_picked_and_why():
     track = method_body(S['Marker.cs'], "internal static void Update")
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
-    return (ordered(track, 'string why = "the map marker is switched off";',
-                    "if (Options.Current.MarkBestSellTownOnMap) target = BestSellTownForCargo(out why);",
+    said = method_body(S['Marker.cs'], "private static string Why")
+    return (ordered(track, "if (on) target = BestSellTownForCargo(out how);",
                     "if (target == _tracked)",
+                    'string why = on ? Why(how) : "the map marker is switched off";',
                     'Log.Write(_tracked != null')
             and '"map marker moved to " + _tracked.Name + ": " + why' in track
             and '"map marker taken off the map: " + why' in track
-            and 'why = "nothing in your cargo is yours to sell";' in marker
-            and all(said in marker for said in
+            and "Why(" not in marker
+            and 'return "nothing in your cargo is yours to sell";' in said
+            and all(one in said for one in
                     ("clear Minimum profit margin", "against a town purse of",
-                     "day(s) away", "ahead of ", "past your travel ceilings"))
-            and "bestUnits + \" unit(s) for \" + bestValue" in marker)
+                     "day(s) away", "ahead of ", "past your travel ceilings",
+                     "which is all that town's purse of"))
+            and "how.Units + \" unit(s) for \" + how.Value" in said)
 
 def a_traded_market_drops_only_the_rankings_its_own_prices_decide():
     ledger = S['Ledger.cs']
@@ -2307,7 +2313,11 @@ chk("1.5.6", "every place the filter comes down logs how many messages it suppre
     "ReportSilenced();" in method_body(S['Trading.cs'], "internal static void ReleaseMessageFilter") and
     "finally { CloseTransaction(); ReportSilenced(); }" in
         method_body(S['Trading.cs'], "private static void CreditTradeSkill") and
-    "NoteSilenced();" in method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines"))
+    "NoteSilenced(__0.Information);" in
+        method_body(S['Trading.cs'], "internal static class Patch_SilenceChunkedTradeLines") and
+    "_silenced[line] = seen + 1;" in method_body(S['Trading.cs'], "internal static void NoteSilenced") and
+    'lines.Add("    " + kv.Value + " x " + kv.Key);' in
+        method_body(S['Trading.cs'], "private static void ReportSilenced"))
 chk("1.5.12", "the message filter uses a depth counter, so nesting cannot disarm it early",
     "internal static bool InGameTransaction => _transactionDepth > 0;" in S['Trading.cs'] and
     "private static void OpenTransaction() => _transactionDepth++;" in S['Trading.cs'] and
@@ -2356,7 +2366,9 @@ chk("1.5.6", "panel setup is retried before being disabled",
 chk("1.5.6", "an unrecognized hotkey name is logged before falling back to T",
     hotkey_fallback_is_reported())
 chk("1.5.6", "the cargo marker only targets a town where the cargo has a price",
-    "long bestValue = 0, runnerUpValue = 0;" in
+    "internal long Value;" in method_body(S['Marker.cs'], "private struct Reckoning") and
+    "internal long RunnerUpValue;" in method_body(S['Marker.cs'], "private struct Reckoning") and
+    "if (total <= 0) { how.Refused++; continue; }" in
         method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo"))
 chk("1.5.7", "units with no cost basis are still sold when purchased units miss the margin",
     (lambda b: b.count("return false;") == 1 and b.count("return true;") == 1
@@ -3114,7 +3126,7 @@ chk("1.6.30", "the party speed behind every travel estimate is read once an hour
     the_party_speeds_are_read_once_an_hour())
 
 def the_cargo_marker_counts_the_town_till():
-    return ("if (total > market.Gold) total = market.Gold;" in
+    return ("if (total > gold) total = gold;" in
             method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo"))
 
 chk("1.6.31", "the cargo marker never points at a market that cannot pay for the cargo",
@@ -3836,10 +3848,12 @@ chk("1.75.1", "a price model that could not be asked says so again in the next c
     S['Trading.cs'].count("Priced.Forget();") == 1)
 
 chk("1.75.1", "the map marker names the market it beat as the next best it priced, never as the second best on the map",
-    (lambda b: '", and no other market it priced would take any of it"' in b
-           and '", ahead of " + runnerUp.Name + ", the next best it priced, at " +' in b
-           and "if (market.Gold <= bestValue) continue;" in b)
-    (method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")))
+    (lambda said, walk: '", and no other market it priced would take any of it"' in said
+           and '", ahead of " + how.RunnerUp.Name + ", the next best it priced, at " +' in said
+           and "if (gold <= how.Value) break;" in walk
+           and "else if (total > how.RunnerUpValue) { how.RunnerUpValue = total; how.RunnerUp = s; }" in walk)
+    (method_body(S['Marker.cs'], "private static string Why"),
+     method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")))
 
 chk("1.14.1", "the panel hotkey is ignored while a text field on the map has the keyboard",
     "layers[i].IsFocusedOnInput()" in method_body(S['Panel.cs'], "private static bool TypingOnScreen") and
@@ -4208,7 +4222,7 @@ def a_share_of_the_hold_caps_one_good_and_ships_off():
             and buy.count("(held + 1) * good.Weight > shareCap") == 2
             and "MaxHeldShare" not in sell_pass()
             and (lambda src: "internal float Capacity => _capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity;" in src
-                         and "TradeMath.RoomToFill(Capacity, Carry.Carried(Party), Options.Current.MaxCargoShare);" in src
+                         and "TradeMath.RoomToFill(Capacity, Carried(), Options.Current.MaxCargoShare);" in src
                          and "Options.Current.MaxHeldShare > 0f ? Capacity * Options.Current.MaxHeldShare : 0f;" in src
                          and src.count("Options.Current.MaxHeldShare") == 2
                          and src.count("Carry.Capacity(") == 1
@@ -6772,7 +6786,7 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
                      "if (market == null) continue;",
                      "if (!TradeActionBehavior.IsMarket(s)) continue;",
                      "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;",
-                     "if (market.Gold <= bestValue) continue;",
+                     "if (gold <= how.Value) break;",
                      "float cap = LedgerBehavior.TravelCeiling(s);",
                      "WhatThatMarketPays(s, market, item, party)")
              and "Town.AllTowns" not in marker
@@ -7683,8 +7697,10 @@ def the_share_of_the_hold_it_may_fill_ships_at_the_whole_hold_and_binds_buying_o
             and src.count("Options.Current.MaxCargoShare") == 2
             and "TradeMath.RoomToFill(Capacity(party), Carried(party), Options.Current.MaxCargoShare);"
                 in src
-            and "TradeMath.RoomToFill(Capacity, Carry.Carried(Party), Options.Current.MaxCargoShare);"
+            and "TradeMath.RoomToFill(Capacity, Carried(), Options.Current.MaxCargoShare);"
                 in src
+            and "if (_carried >= 0f && version == _carriedAt) return _carried;" in src
+            and src.count("Carry.Carried(") == 1
             and "float ceiling = cargoShare > 0f && cargoShare < 1f ? capacity * cargoShare : capacity;"
                 in method_body(S['TradeMath.cs'], "public static float RoomToFill")
             and "MaxCargoShare" not in sell_pass()
@@ -8657,7 +8673,8 @@ def the_marker_reads_your_cargo_once_and_prices_each_market_once():
                     "_cargo = cargo;")
             and ordered(asked,
                         "if (good == null) return Priced.At(market, el, party, true);",
-                        "if (!Freshness.Fresh(ref _priceStamp))",
+                        "int shelf = Freshness.Hour / PriceShelfHours;",
+                        "if (!Freshness.Fresh(ref _priceStamp, shelf))",
                         "_prices.Clear();",
                         "if (_prices.TryGetValue(key, out int kept)) return kept;",
                         "_prices[key] = price;")
@@ -8852,6 +8869,29 @@ def no_cache_can_forget_to_ask_whether_a_setting_moved():
 
 chk("1.77.2", "every cache the mod keeps asks one tested rule whether the hour or a setting has moved, and nothing else in the source may read that setting counter at all",
     no_cache_can_forget_to_ask_whether_a_setting_moved())
+
+
+def the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till():
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    asked = method_body(S['Marker.cs'], "private static int WhatThatMarketPays")
+    update = method_body(S['Marker.cs'], "internal static void Update")
+    return ("reachable.Sort(DearestPurseFirst);" in marker
+            and "if (gold <= how.Value) break;" in marker
+            and "continue;" not in between(marker, "if (gold <= how.Value)", "\n")
+            and marker.find("reachable.Sort(DearestPurseFirst);") <
+                marker.find("float cap = LedgerBehavior.TravelCeiling(s);")
+            and "if (total >= gold) { capped = true; break; }" in marker
+            and "how.PurseCapped = capped;" in marker
+            and "private const int PriceShelfHours = 3;" in S['Marker.cs']
+            and "int shelf = Freshness.Hour / PriceShelfHours;" in asked
+            and "Freshness.Taken(ref _priceStamp, shelf);" in asked
+            and 'string why = on ? Why(how) : "the map marker is switched off";' in update
+            and update.find("if (target == _tracked)") < update.find("string why = on ?")
+            and "Why(how)" not in between(update, "bool on =", "if (target == _tracked)"))
+
+
+chk("1.77.2", "the map marker walks the richest purses first and stops as soon as no market left can beat the best it found, stops pricing a town once its own purse is the ceiling, and works out what to write in the log only when the marker actually moves",
+    the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

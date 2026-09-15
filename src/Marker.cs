@@ -22,6 +22,8 @@ namespace TradeLord
 
         private static Stamp _priceStamp;
 
+        private const int PriceShelfHours = 3;
+
         private static readonly Dictionary<(string site, string good, string quality), int> _prices =
             new Dictionary<(string, string, string), int>();
 
@@ -61,13 +63,29 @@ namespace TradeLord
             _hour = -1;
         }
 
+        private struct Reckoning
+        {
+            internal Settlement Best;
+            internal Settlement RunnerUp;
+            internal long Value;
+            internal long RunnerUpValue;
+            internal int Units;
+            internal int Kinds;
+            internal int Purse;
+            internal int Carried;
+            internal int Weighed;
+            internal int Refused;
+            internal bool PurseCapped;
+        }
+
         internal static void Update()
         {
             VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;
             if (tracker == null) return;
             Settlement target = null;
-            string why = "the map marker is switched off";
-            if (Options.Current.MarkBestSellTownOnMap) target = BestSellTownForCargo(out why);
+            Reckoning how = default(Reckoning);
+            bool on = Options.Current.MarkBestSellTownOnMap;
+            if (on) target = BestSellTownForCargo(out how);
 
             if (target == _tracked)
             {
@@ -83,9 +101,30 @@ namespace TradeLord
                 tracker.RegisterObject(target);
                 _tracked = target;
             }
+            string why = on ? Why(how) : "the map marker is switched off";
             Log.Write(_tracked != null
                 ? "map marker moved to " + _tracked.Name + ": " + why
                 : "map marker taken off the map: " + why);
+        }
+
+        private static string Why(in Reckoning how)
+        {
+            if (how.Carried == 0) return "nothing in your cargo is yours to sell";
+            if (how.Best == null)
+                return "of the " + how.Weighed + " market(s) it looked at, " + how.Refused +
+                       " would pay too little for any of the " + how.Carried + " good(s) you carry to " +
+                       "clear Minimum profit margin, and the rest are past your travel ceilings or " +
+                       "have no gold at all";
+            return how.Kinds + " of the " + how.Carried + " good(s) you carry clear Minimum profit " +
+                   "margin there, " + how.Units + " unit(s) for " + how.Value + " gold" +
+                   (how.PurseCapped
+                       ? ", which is all that town's purse of " + how.Purse + " can take"
+                       : " against a town purse of " + how.Purse) +
+                   ", about " + Travel.EstimateDaysFromParty(how.Best).ToString("0.#") + " day(s) away" +
+                   (how.RunnerUp == null
+                       ? ", and no other market it priced would take any of it"
+                       : ", ahead of " + how.RunnerUp.Name + ", the next best it priced, at " +
+                         how.RunnerUpValue + " gold");
         }
 
         private static List<(EquipmentElement item, int amount, int worth, int floor)> WhatYouCarryToSell(
@@ -118,9 +157,10 @@ namespace TradeLord
         {
             ItemObject good = el.Item;
             if (good == null) return Priced.At(market, el, party, true);
-            if (!Freshness.Fresh(ref _priceStamp))
+            int shelf = Freshness.Hour / PriceShelfHours;
+            if (!Freshness.Fresh(ref _priceStamp, shelf))
             {
-                Freshness.Taken(ref _priceStamp);
+                Freshness.Taken(ref _priceStamp, shelf);
                 _prices.Clear();
             }
             var key = (site.StringId, good.StringId,
@@ -131,17 +171,21 @@ namespace TradeLord
             return price;
         }
 
-        private static Settlement BestSellTownForCargo(out string why)
+        private static readonly System.Comparison<(Settlement s, SettlementComponent market, int gold)>
+            DearestPurseFirst = (x, y) =>
+                x.gold != y.gold ? y.gold.CompareTo(x.gold)
+                                 : string.CompareOrdinal(x.s.StringId, y.s.StringId);
+
+        private static Settlement BestSellTownForCargo(out Reckoning how)
         {
-            why = "nothing in your cargo is yours to sell";
+            how = default(Reckoning);
             MobileParty party = MobileParty.MainParty;
             if (party == null) return null;
             var cargo = WhatYouCarryToSell(party);
+            how.Carried = cargo.Count;
             if (cargo.Count == 0) return null;
 
-            Settlement bestTown = null, runnerUp = null;
-            long bestValue = 0, runnerUpValue = 0;
-            int bestUnits = 0, bestKinds = 0, bestPurse = 0, weighed = 0, refused = 0;
+            var reachable = new List<(Settlement s, SettlementComponent market, int gold)>();
             foreach (Settlement s in Settlement.All)
             {
                 SettlementComponent market = s.SettlementComponent;
@@ -151,8 +195,16 @@ namespace TradeLord
                 if (!TradeActionBehavior.IsMarket(s)) continue;
                 if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;
-                weighed++;
-                if (market.Gold <= bestValue) continue;
+                how.Weighed++;
+                if (market.Gold <= 0) continue;
+                reachable.Add((s, market, market.Gold));
+            }
+            reachable.Sort(DearestPurseFirst);
+
+            for (int at = 0; at < reachable.Count; at++)
+            {
+                var (s, market, gold) = reachable[at];
+                if (gold <= how.Value) break;
                 float cap = LedgerBehavior.TravelCeiling(s);
                 if (cap > 0f)
                 {
@@ -161,6 +213,7 @@ namespace TradeLord
                 }
                 long total = 0;
                 int units = 0, kinds = 0;
+                bool capped = false;
                 foreach (var (item, amount, worth, floor) in cargo)
                 {
                     int price = WhatThatMarketPays(s, market, item, party);
@@ -169,33 +222,24 @@ namespace TradeLord
                     total += (long)price * amount;
                     units += amount;
                     kinds++;
+                    if (total >= gold) { capped = true; break; }
                 }
-                if (total <= 0) { refused++; continue; }
-                if (total > market.Gold) total = market.Gold;
-                if (total > bestValue)
+                if (total <= 0) { how.Refused++; continue; }
+                if (total > gold) total = gold;
+                if (total > how.Value)
                 {
-                    runnerUp = bestTown;
-                    runnerUpValue = bestValue;
-                    bestValue = total;
-                    bestTown = s;
-                    bestUnits = units;
-                    bestKinds = kinds;
-                    bestPurse = market.Gold;
+                    how.RunnerUp = how.Best;
+                    how.RunnerUpValue = how.Value;
+                    how.Value = total;
+                    how.Best = s;
+                    how.Units = units;
+                    how.Kinds = kinds;
+                    how.Purse = gold;
+                    how.PurseCapped = capped;
                 }
-                else if (total > runnerUpValue) { runnerUpValue = total; runnerUp = s; }
+                else if (total > how.RunnerUpValue) { how.RunnerUpValue = total; how.RunnerUp = s; }
             }
-            why = bestTown == null
-                ? "of the " + weighed + " market(s) it looked at, " + refused + " would pay too little for any " +
-                  "of the " + cargo.Count + " good(s) you carry to clear Minimum profit margin, and the rest are " +
-                  "past your travel ceilings or have no gold at all"
-                : bestKinds + " of the " + cargo.Count + " good(s) you carry clear Minimum profit margin there, " +
-                  bestUnits + " unit(s) for " + bestValue + " gold against a town purse of " + bestPurse +
-                  ", about " + Travel.EstimateDaysFromParty(bestTown).ToString("0.#") + " day(s) away" +
-                  (runnerUp == null
-                      ? ", and no other market it priced would take any of it"
-                      : ", ahead of " + runnerUp.Name + ", the next best it priced, at " +
-                        runnerUpValue + " gold");
-            return bestTown;
+            return how.Best;
         }
 
         private static int BestMarketFloor(ItemObject item)
