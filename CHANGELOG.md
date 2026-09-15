@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.77.2
+
+- Auto-mark best sell market on map now works through the richest markets first and stops the moment none of the rest could outpay the one it has found, and it stops pricing a town once that town's own purse is all it could pay, so riding across Calradia costs far less than it did.
+- A price the map marker read for a market now keeps for a few hours rather than a single one, so it asks each market its price far less often; the town it points you at can be picked on prices a little older than the ones you walk in on.
+- The line TradeLord.log writes about the map marker is now worked out only when the marker actually moves, and it says when a town's own purse is all the cargo could fetch there rather than what the goods are worth.
+- Buy to fill the ships now asks the game what your fleet is carrying once for each time your cargo actually moves, instead of once for every single unit it buys.
+- TradeLord.log now names the messages it held back while the game was moving a good, rather than only counting them, so a message of another mod's that goes missing during a trade can be found.
+
 ## 1.77.1
 
 - Auto-mark best sell market on map no longer asks every market on the map its price all over again each time you walk into a settlement or out of it, since stepping through a gate cannot move what another town pays.
