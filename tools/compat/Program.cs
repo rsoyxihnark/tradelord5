@@ -278,6 +278,18 @@ namespace TradeLord.Compat
             return null;
         }
 
+        private static List<MethodInfo> WhereHarmonyLooks(string version, string type, string name)
+        {
+            for (Type t = Find(version, type); t != null; t = t.BaseType)
+            {
+                var here = t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance |
+                                        BindingFlags.Static | BindingFlags.DeclaredOnly)
+                            .Where(m => m.Name == name).ToList();
+                if (here.Count > 0) return here;
+            }
+            return new List<MethodInfo>();
+        }
+
         private static List<MethodInfo> Methods(string version, string type, string name)
         {
             var found = new List<MethodInfo>();
@@ -404,12 +416,12 @@ namespace TradeLord.Compat
                 string first = null;
                 foreach (string v in versions)
                 {
-                    var found = Methods(v, type, member);
+                    var found = WhereHarmonyLooks(v, type, member);
                     if (found.Count == 0) { Failures.Add(label + " is gone in " + v); ok = false; continue; }
                     if (found.Count > 1)
                     {
-                        Failures.Add(label + " has " + found.Count + " overloads in " + v
-                                     + " - the patch lookup turns ambiguous and throws at load");
+                        Failures.Add(label + " has " + found.Count + " overloads on " + found[0].DeclaringType.Name
+                                     + " in " + v + " - the patch lookup turns ambiguous and throws at load");
                         ok = false;
                         continue;
                     }
