@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.76.1
+
+- Most workshops you may own now only ever lifts the limit for your own clan, so no other clan in Calradia can end up owning more workshops because of it.
+- Buying a workshop now says so in the confirm box when the price takes you below the gold reserve and wage cover TradeLord holds back, and still lets you buy it.
+- The comparison with the other trade mods now names the things TradeLord has gained since it was written: the trades it shows you, the workshops it buys, and the shelf life it ranks a route on.
+- The comparison called Staged Trading by the name it had before 1.74.0, and now calls it what the settings screen calls it.
+
 ## 1.76.0
 
 - Workshops for sale is a new button below the TradeLord ledger, listing every workshop in Calradia a notable would sell you, with its town, what it makes, who owns it, what it has earned lately and what it would cost, most profitable first.
