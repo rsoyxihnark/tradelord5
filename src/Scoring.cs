@@ -68,6 +68,28 @@ namespace TradeLord
         }
     }
 
+    internal struct Reading
+    {
+        internal string Item;
+        internal string Town;
+        internal float Day;
+    }
+
+    internal static class Kept
+    {
+        internal const int MostPricesKept = 2500;
+
+        internal static List<Reading> OldestBeyond(List<Reading> held, int cap)
+        {
+            var dropped = new List<Reading>();
+            if (held == null || cap <= 0 || held.Count <= cap) return dropped;
+            held.Sort((x, y) => x.Day.CompareTo(y.Day));
+            int over = held.Count - cap;
+            for (int i = 0; i < over; i++) dropped.Add(held[i]);
+            return dropped;
+        }
+    }
+
     internal class BandTally
     {
         private readonly float[] _held = new float[TradeMath.Bands];
