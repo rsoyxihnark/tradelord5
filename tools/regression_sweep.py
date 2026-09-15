@@ -28,6 +28,7 @@ MAPBUTTONTESTS = io.open('tests/MapButtonTests.cs', encoding='utf-8').read()
 TWINSTESTS = io.open('tests/TwinsTests.cs', encoding='utf-8').read()
 SETTINGSFILETESTS = io.open('tests/SettingsFileTests.cs', encoding='utf-8').read()
 SCREENTESTS = io.open('tests/ScreenTests.cs', encoding='utf-8').read()
+RECENTTESTS = io.open('tests/RecentTests.cs', encoding='utf-8').read()
 TALLYTESTS = io.open('tests/TallyTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
@@ -40,7 +41,8 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'ArrivalTests.cs': ARRIVALTESTS, 'SettlingTests.cs': SETTLINGTESTS,
      'RankTests.cs': RANKROWTESTS, 'MapButtonTests.cs': MAPBUTTONTESTS,
      'TwinsTests.cs': TWINSTESTS, 'SettingsFileTests.cs': SETTINGSFILETESTS,
-     'ScreenTests.cs': SCREENTESTS, 'TallyTests.cs': TALLYTESTS}
+     'ScreenTests.cs': SCREENTESTS, 'TallyTests.cs': TALLYTESTS,
+     'RecentTests.cs': RECENTTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -1050,8 +1052,8 @@ def a_market_that_traded_something_drops_the_empty_lines():
                         "_sellStalled = null;", "_buyStalled = null;",
                         "if (!sell.HasValue && !buy.HasValue) return;")
             and "_runMovedGoods" not in S['Trading.cs']
-            and "pass.Moved(profit);" in sell
-            and "pass.Moved();" in buy
+            and "pass.Moved(profit, goldGained, selling: true);" in sell
+            and "pass.Moved(gold: spent, selling: false);" in buy
             and sell.count("NoteStalled(") == 1 and buy.count("NoteStalled(") == 1
             and all(one.index("NoteStalled(") > one.index("else if (!pass.DirectionError)")
                     for one in (sell, buy))
@@ -2288,13 +2290,13 @@ chk("1.5.11", "the workshop board respects the knowledge mode",
     '{=TL80}' in S['Panel.cs'])
 chk("1.5.11", "the panel profit line counts only profit made by this module",
     '{=TL66}TradeLord profit' in S['Panel.cs'] and
-    "pass.Moved(profit);" in
+    "pass.Moved(profit, goldGained, selling: true);" in
         sell_pass() and
     "if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);" in
         method_body(S['Trading.cs'], "internal void Moved") and
     S['Trading.cs'].count("AddProfit") == 1 and
     "AddProfit" not in buy_pass() and
-    "pass.Moved();" in
+    "pass.Moved(gold: spent, selling: false);" in
         buy_pass())
 
 chk("1.6.1", "the trade XP the pass earns reaches the game only once the pass is over",
@@ -5116,7 +5118,7 @@ def getting_back_up_to_speed_credits_what_it_makes():
     return ("Basis basis = Basis.For(TradePolicy.CostBasis(item)," in relief
             and "int worth = basis.Unit(out bool askTheMarket);" in relief
             and "profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);" in relief
-            and "pass.Moved(profit);" in relief
+            and "pass.Moved(profit, gained, selling: true);" in relief
             and "if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);" in
                 method_body(S['Trading.cs'], "internal void Moved")
             and "if (!pass.Sim && profit > 0) AwardTradeXp(profit, pass.Muted);" in relief
@@ -7879,6 +7881,50 @@ def the_startup_tally_is_worked_out_where_a_test_can_ask():
 
 chk("1.71.2", "the startup line counting the readers that took and the readers that refused is worked out where a test can ask",
     the_startup_tally_is_worked_out_where_a_test_can_ask())
+
+
+
+def the_panel_says_what_it_traded_for_you_lately():
+    rules = S['Rules.cs']
+    panel = S['Panel.cs']
+    ledger = S['Ledger.cs']
+    keep = method_body(rules, "internal static void Keep<TRecord>")
+    note = method_body(S['Trading.cs'], "private void NoteTrade")
+    fill = method_body(panel, "private void RefreshTrades")
+    bound, have = panel_bindings()
+    return ("internal static class Recent" in rules
+            and "internal const int MostKept = 20;" in rules
+            and ordered(keep, "if (held == null || most <= 0) return;",
+                        "held.Insert(0, one);",
+                        "while (held.Count > most) held.RemoveAt(held.Count - 1);")
+            and 'internal static string Coins(int gold) => gold > 0 ? "+" + gold : gold.ToString();' in rules
+            and "public struct TradeNote" in ledger
+            and "Recent.Keep(_lately, new TradeNote" in
+                method_body(ledger, "public void NoteTrade")
+            and "TradeLord_Lately" not in ledger and "SyncData" not in method_body(ledger, "public void NoteTrade")
+            and ordered(note, "if (gold <= 0 || Detail.Count == 0) return;",
+                        "foreach (var kv in Detail) units += kv.Value.count;",
+                        "selling ? gold : -gold")
+            and 'Guard.Run("Pass.NoteTrade"' in method_body(S['Trading.cs'], "internal void Moved")
+            and ordered(fill, "var lately = LedgerBehavior.Instance?.Lately;",
+                        "{=TL419}", "{=TL418}", "Recent.Coins(note.Gold), note.Gold > 0")
+            and {'Trades', 'TradesHeader', 'When', 'Where', 'What', 'Gold', 'Gained', 'Spent'} <= bound
+            and {'Trades', 'TradesHeader', 'When', 'Where', 'What', 'Gold', 'Gained', 'Spent'} <= have
+            and 'Rules.cs' in TESTPROJ
+            and all(one in RECENTTESTS for one in
+                    ("The_newest_trade_is_the_one_at_the_top",
+                     "The_oldest_trade_falls_off_once_the_list_is_full",
+                     "A_list_that_is_already_too_long_is_brought_back_to_its_ceiling",
+                     "A_ceiling_of_nothing_keeps_nothing_and_never_throws",
+                     "Nowhere_to_keep_a_trade_is_taken_in_its_stride",
+                     "The_number_TradeLord_keeps_is_enough_to_read_and_small_enough_to_hold",
+                     "Gold_gained_is_marked_and_gold_spent_keeps_its_own_sign",
+                     "The_list_never_outgrows_its_ceiling_and_always_holds_the_latest",
+                     "new Random(9142)")))
+
+
+chk("1.72.0", "the panel ends with the last trades TradeLord made for you, held in memory only and never written into your save",
+    the_panel_says_what_it_traded_for_you_lately())
 
 
 

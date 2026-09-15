@@ -368,6 +368,8 @@ namespace TradeLord
 
             internal string Where => Site != null ? "at " + Site.Name : "from " + Met.Name;
 
+            internal string Place => Site != null ? Site.Name.ToString() : Met.Name.ToString();
+
             internal string Headed(string label) => label + (Sim ? Counter.Heading : ": ");
 
             internal ItemRoster Stock => Site != null ? Site.ItemRoster : Met.ItemRoster;
@@ -459,14 +461,24 @@ namespace TradeLord
                 return moved.Count > 0 ? moved : null;
             }
 
-            internal void Moved(int? profit = null)
+            internal void Moved(int? profit = null, int gold = 0, bool selling = true)
             {
                 if (Sim) return;
                 if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);
+                Guard.Run("Pass.NoteTrade", () => NoteTrade(selling, gold));
                 CoinSound();
                 if (Site == null) return;
                 LedgerBehavior.Instance?.CaptureSettlement(Site, force: true, KindsMoved());
                 Guard.Run("Pass.PinCleared", () => LedgerPanel.Unpin(Site));
+            }
+
+            private void NoteTrade(bool selling, int gold)
+            {
+                if (gold <= 0 || Detail.Count == 0) return;
+                int units = 0;
+                foreach (var kv in Detail) units += kv.Value.count;
+                LedgerBehavior.Instance?.NoteTrade(Place, ItemSummary(Detail, units),
+                                                   selling ? gold : -gold, (float)CampaignTime.Now.ToDays);
             }
 
             internal void Capture()
@@ -1246,7 +1258,7 @@ namespace TradeLord
 
             if (soldItems > 0)
             {
-                pass.Moved(profit);
+                pass.Moved(profit, goldGained, selling: true);
                 Log.Write(pass.Headed(label) + soldItems +
                           " items, +" + goldGained + " gold, profit " + profit + " " + pass.Where);
                 pass.Logged(selling: true, why);
@@ -1464,7 +1476,7 @@ namespace TradeLord
             if (stocked <= 0) return;
 
             int spent = pass.Spent(simSpent);
-            pass.Moved();
+            pass.Moved(gold: spent, selling: false);
             Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") + stocked +
                       " items, -" + spent + " gold at " + settlement.Name +
                       ", still short " + (shortfall > 0 ? shortfall : 0) + " unit(s) of food");
@@ -1670,7 +1682,7 @@ namespace TradeLord
             if (sold <= 0) return;
 
             int gained = pass.Gained(simGold);
-            pass.Moved(profit);
+            pass.Moved(profit, gained, selling: true);
             Log.Write((pass.Sim ? "herd relief (simulated, best case): " : "herd relief: ") + sold +
                       " sold, +" + gained + " gold, profit " + profit + " at " + settlement.Name);
             pass.Logged(selling: true, "herd relief, getting the party back up to speed");
@@ -1746,7 +1758,7 @@ namespace TradeLord
             if (hauled <= 0) return;
 
             int spent = pass.Spent(simSpent);
-            pass.Moved();
+            pass.Moved(gold: spent, selling: false);
             Log.Write((pass.Sim ? "haul animals (simulated, best case): " : "haul animals: ") + hauled +
                       " bought, -" + spent + " gold at " + settlement.Name);
             pass.Logged(selling: false, "stocking the baggage train");
@@ -1789,7 +1801,7 @@ namespace TradeLord
             int spent = pass.Spent(moved.SimGold);
             if (bought > 0)
             {
-                pass.Moved();
+                pass.Moved(gold: spent, selling: false);
                 Log.Write(pass.Headed(label) + bought +
                           " items, -" + spent + " gold " + pass.Where);
                 pass.Logged(selling: false, why);
