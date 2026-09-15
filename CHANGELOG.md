@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The feature list now ends with short answers to the questions people ask before installing: whether it is safe on a campaign already running, whether MCM is needed, what it will never sell, whether it changes the economy, and what to do when it trades nothing.
+
 ## 1.71.1
 
 - TradeLord now keeps at most 2500 recorded prices, forgetting the oldest first, so a long campaign with Days to keep a price you recorded set to 0 can no longer grow your save without end.
