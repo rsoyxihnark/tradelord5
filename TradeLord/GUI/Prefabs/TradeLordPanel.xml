@@ -31,7 +31,7 @@
                       Command.Click="ExecuteClose" />
 
         <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-                   SuggestedWidth="960" SuggestedHeight="680"
+                   SuggestedWidth="960" SuggestedHeight="810"
                    HorizontalAlignment="Center" VerticalAlignment="Center"
                    StackLayout.LayoutMethod="VerticalTopToBottom">
           <Children>
@@ -258,9 +258,9 @@
                     </ScrollablePanel>
 
                     <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
-                                SuggestedHeight="34" MarginTop="6"
-                                Brush="Popup.Button.Text" Brush.FontSize="14"
-                                Brush.FontColor="#CFCFCFDD"
+                                SuggestedHeight="140" MarginTop="8"
+                                Brush="Popup.Button.Text" Brush.FontSize="17"
+                                Brush.FontColor="#D8D8D8FF"
                                 Text="@LegendText" />
 
                     <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
@@ -301,51 +301,6 @@
                       </ItemTemplate>
                     </ListPanel>
 
-                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
-                                SuggestedHeight="22" MarginTop="8"
-                                Brush="Popup.Button.Text" Brush.FontSize="15"
-                                Brush.FontColor="#FFD700FF"
-                                Text="@TradesHeader" />
-                    <ListPanel DataSource="{Trades}"
-                               WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
-                               SuggestedHeight="110"
-                               StackLayout.LayoutMethod="VerticalTopToBottom">
-                      <ItemTemplate>
-                        <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
-                                   SuggestedHeight="22"
-                                   StackLayout.LayoutMethod="HorizontalLeftToRight">
-                          <Children>
-                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="90"
-                                        HeightSizePolicy="StretchToParent"
-                                        Brush="Popup.Button.Text" Brush.FontSize="15"
-                                        Brush.FontColor="#BBBBBBFF"
-                                        Text="@When" />
-                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="170"
-                                        HeightSizePolicy="StretchToParent"
-                                        Brush="Popup.Button.Text" Brush.FontSize="15"
-                                        Text="@Where" />
-                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="90"
-                                        HeightSizePolicy="StretchToParent"
-                                        Brush="Popup.Button.Text" Brush.FontSize="15"
-                                        Brush.FontColor="#7FD633FF"
-                                        IsVisible="@Gained"
-                                        Text="@Gold" />
-                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="90"
-                                        HeightSizePolicy="StretchToParent"
-                                        Brush="Popup.Button.Text" Brush.FontSize="15"
-                                        Brush.FontColor="#E08A5AFF"
-                                        IsVisible="@Spent"
-                                        Text="@Gold" />
-                            <TextWidget WidthSizePolicy="StretchToParent"
-                                        HeightSizePolicy="StretchToParent"
-                                        Brush="Popup.Button.Text" Brush.FontSize="15"
-                                        Brush.FontColor="#CFCFCFDD"
-                                        Text="@What" />
-                          </Children>
-                        </ListPanel>
-                      </ItemTemplate>
-                    </ListPanel>
-
                     <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed"
                                SuggestedHeight="50" MarginTop="10"
                                StackLayout.LayoutMethod="HorizontalLeftToRight"
@@ -361,6 +316,18 @@
                           <Children>
                             <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                                         Brush="Popup.Button.Text" Text="@RefreshLabel" />
+                          </Children>
+                        </ButtonWidget>
+                        <ButtonWidget DoNotPassEventsToChildren="true"
+                                      WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                                      SuggestedWidth="220" SuggestedHeight="45"
+                                      MarginRight="15"
+                                      Brush="Popup.Done.Button.NineGrid"
+                                      Command.Click="ExecuteOpenTrades"
+                                      UpdateChildrenStates="true">
+                          <Children>
+                            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                        Brush="Popup.Button.Text" Text="@TradesLabel" />
                           </Children>
                         </ButtonWidget>
                         <ButtonWidget DoNotPassEventsToChildren="true"
@@ -386,6 +353,149 @@
         </ListPanel>
 
       </Children>
+        </Widget>
+
+        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                IsVisible="@IsTradesVisible" DoNotAcceptEvents="true">
+          <Children>
+
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                    Sprite="BlankWhiteSquare_9" Color="#000000AA" DoNotAcceptEvents="true" />
+            <ButtonWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                          DoNotPassEventsToChildren="true"
+                          Command.Click="ExecuteCloseTrades" />
+
+            <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                       SuggestedWidth="900" SuggestedHeight="560"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       StackLayout.LayoutMethod="VerticalTopToBottom">
+              <Children>
+
+                <BrushWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                             Brush="Frame1Brush">
+                  <Children>
+                    <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                               MarginLeft="15" MarginRight="15" MarginTop="15" MarginBottom="15"
+                               StackLayout.LayoutMethod="VerticalTopToBottom">
+                      <Children>
+
+                        <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                    SuggestedHeight="36" MarginBottom="8"
+                                    Brush="Recruitment.Popup.Title.Text" Brush.FontSize="24"
+                                    Text="@TradesHeader" />
+                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                SuggestedHeight="2" MarginBottom="6"
+                                Sprite="BlankWhiteSquare_9" Color="#FFD70055" DoNotAcceptEvents="true" />
+
+                        <ScrollablePanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                         SuggestedHeight="390"
+                                         AutoHideScrollBars="true"
+                                         ClipRect="TradeListContainer\ClipRect"
+                                         InnerPanel="TradeListContainer\ClipRect\TradeList"
+                                         VerticalScrollbar="TradeListContainer\TradeScrollbarSync\TradeScrollbar">
+                          <Children>
+                            <ListPanel Id="TradeListContainer" WidthSizePolicy="StretchToParent"
+                                       HeightSizePolicy="CoverChildren">
+                              <Children>
+                                <Widget Id="ClipRect" WidthSizePolicy="StretchToParent"
+                                        HeightSizePolicy="CoverChildren" ClipContents="true" MaxHeight="390">
+                                  <Children>
+                                    <ListPanel Id="TradeList" DataSource="{Trades}"
+                                               WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren"
+                                               StackLayout.LayoutMethod="VerticalTopToBottom">
+                                      <ItemTemplate>
+                                        <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
+                                                   SuggestedHeight="26" MarginBottom="1"
+                                                   StackLayout.LayoutMethod="HorizontalLeftToRight">
+                                          <Children>
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="110"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="17"
+                                                        Brush.FontColor="#BBBBBBFF"
+                                                        Text="@When" />
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="200"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="17"
+                                                        Text="@Where" />
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="110"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="17"
+                                                        Brush.FontColor="#7FD633FF"
+                                                        IsVisible="@Gained"
+                                                        Text="@Gold" />
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="110"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="17"
+                                                        Brush.FontColor="#E08A5AFF"
+                                                        IsVisible="@Spent"
+                                                        Text="@Gold" />
+                                            <TextWidget WidthSizePolicy="StretchToParent"
+                                                        HeightSizePolicy="StretchToParent"
+                                                        Brush="Popup.Button.Text" Brush.FontSize="17"
+                                                        Brush.FontColor="#CFCFCFDD"
+                                                        Text="@What" />
+                                          </Children>
+                                        </ListPanel>
+                                      </ItemTemplate>
+                                    </ListPanel>
+                                  </Children>
+                                </Widget>
+                                <DimensionSyncWidget Id="TradeScrollbarSync" DoNotAcceptEvents="true"
+                                                     WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed"
+                                                     HorizontalAlignment="Right"
+                                                     DimensionToSync="Vertical" WidgetToCopyHeightFrom="..\ClipRect"
+                                                     UpdateChildrenStates="true">
+                                  <Children>
+                                    <ScrollbarWidget Id="TradeScrollbar" WidthSizePolicy="Fixed"
+                                                     HeightSizePolicy="StretchToParent" SuggestedWidth="8"
+                                                     MarginRight="5" AlignmentAxis="Vertical"
+                                                     Handle="TradeScrollHandle" MaxValue="100" MinValue="0"
+                                                     IsVisible="false">
+                                      <Children>
+                                        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent"
+                                                SuggestedWidth="4" HorizontalAlignment="Center"
+                                                Sprite="BlankWhiteSquare_9" Color="#5a4033FF" AlphaFactor="0.2" />
+                                        <ImageWidget Id="TradeScrollHandle" WidthSizePolicy="Fixed"
+                                                     HeightSizePolicy="Fixed" SuggestedHeight="10"
+                                                     SuggestedWidth="8" HorizontalAlignment="Center"
+                                                     Brush="FaceGen.Scrollbar.Handle" />
+                                      </Children>
+                                    </ScrollbarWidget>
+                                  </Children>
+                                </DimensionSyncWidget>
+                              </Children>
+                            </ListPanel>
+                          </Children>
+                        </ScrollablePanel>
+
+                        <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed"
+                                   SuggestedHeight="50" MarginTop="10"
+                                   StackLayout.LayoutMethod="HorizontalLeftToRight"
+                                   HorizontalAlignment="Center">
+                          <Children>
+                            <ButtonWidget DoNotPassEventsToChildren="true"
+                                          WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                                          SuggestedWidth="180" SuggestedHeight="45"
+                                          Brush="Popup.Done.Button.NineGrid"
+                                          Command.Click="ExecuteCloseTrades"
+                                          UpdateChildrenStates="true">
+                              <Children>
+                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                            Brush="Popup.Button.Text" Text="@CloseLabel" />
+                              </Children>
+                            </ButtonWidget>
+                          </Children>
+                        </ListPanel>
+
+                      </Children>
+                    </ListPanel>
+                  </Children>
+                </BrushWidget>
+
+              </Children>
+            </ListPanel>
+
+          </Children>
         </Widget>
 
       </Children>

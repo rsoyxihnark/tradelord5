@@ -66,7 +66,6 @@ namespace TradeLord
     {
         private Settlement _trackedTown;
         private string _pinnedTowns = "";
-        private bool _announcedAutomation;
         private static readonly Books Visit = new Books();
         private static bool _cargoWasFull;
         private static Block? _sellStalled;
@@ -144,6 +143,7 @@ namespace TradeLord
             TradePolicy.ForgetCraftingLookup();
             Errands.Forget();
             ForgetRoadMarket();
+            ForgetTheMeeting();
             _tradedWith = null;
             _tradedIn = null;
         }
@@ -154,7 +154,6 @@ namespace TradeLord
                 Guard.Run("Visit.PinsForSave", () => _pinnedTowns = LedgerPanel.PinnedIds());
             dataStore.SyncData("TradeLord_TrackedTown", ref _trackedTown);
             dataStore.SyncData("TradeLord_PanelPins", ref _pinnedTowns);
-            dataStore.SyncData("TradeLord_AutomationNotice", ref _announcedAutomation);
             if (_pinnedTowns == null) _pinnedTowns = "";
         }
 
@@ -558,20 +557,6 @@ namespace TradeLord
                   ToastAlert);
         }
 
-        private bool AnnounceAutomation(Settlement settlement)
-        {
-            if (_announcedAutomation) return false;
-            if (!Options.Current.AutoSellOnEntry && !Options.Current.AutoBuyOnEntry) return false;
-            if (!CanTradeHere(settlement)) return false;
-            _announcedAutomation = true;
-            Toast(McmLoader.SettingsReachable
-                ? Tongue.Text("{=TL87}TradeLord buys and sells for you as you enter a market, starting at the next one. Turn auto-sell and auto-buy on entry off in its settings to trade by hand.")
-                : Tongue.Text("{=TL96}TradeLord buys and sells for you as you enter a market, starting at the next one. MCM is not installed, so its settings live in TradeLord.ini, beside TradeLord.log in your Bannerlord folder in Documents."), ToastAlert);
-            Log.Write("automation notice shown - this market is left alone so the campaign can turn it off first"
-                      + (McmLoader.SettingsReachable ? "" : "; MCM is absent, so the notice names the settings file instead"));
-            return true;
-        }
-
         private void OnSessionLaunched(CampaignGameStarter starter)
         {
             Guard.Run("Action.OnSessionLaunched", () =>
@@ -718,6 +703,7 @@ namespace TradeLord
 
         internal static void ForgetEncounter()
         {
+            ForgetTheMeeting();
             _tradedWith = null;
             _tradedIn = null;
             _handledEncounter = null;
@@ -771,17 +757,14 @@ namespace TradeLord
                     return;
                 }
 
-                if (!AnnounceAutomation(settlement))
-                {
-                    if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
-                    if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
-                    if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);
-                    if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);
-                    if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
-                    if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
-                    LogHerdState("after trading at " + settlement.Name);
-                    ReportStalledPasses();
-                }
+                if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
+                if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
+                if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);
+                if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);
+                if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
+                if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
+                LogHerdState("after trading at " + settlement.Name);
+                ReportStalledPasses();
                 if (CanTradeHere(settlement) &&
                     (Options.Current.AutoBuyOnEntry || Options.Current.QuickSellMenu))
                 {
@@ -861,6 +844,12 @@ namespace TradeLord
 
         private static void ToastAfterXp(TextObject msg, Color color) =>
             _pendingAfterXp.Add(new InformationMessage(msg.ToString(), color));
+
+        internal static void WatchTheTradeScreen()
+        {
+            TextObject closed = Counter.Watch();
+            if (closed != null) Toast(closed, ToastNote);
+        }
 
         internal static void FlushToasts()
         {
@@ -1533,6 +1522,29 @@ namespace TradeLord
                    !FactionManager.IsAtWarAgainstFaction(met.MapFaction, mine);
         }
 
+        private static Books _meetingBooks;
+        private static MobileParty _meetingBooksFor;
+
+        internal static void ForgetTheMeeting()
+        {
+            _meetingBooks = null;
+            _meetingBooksFor = null;
+        }
+
+        private static Books BooksForTheMeeting(MobileParty met)
+        {
+            if (_meetingBooks != null && _meetingBooksFor == met)
+            {
+                _meetingBooks.ForgetTheDryRun();
+                Log.Write("meeting " + met.Name + " again: what TradeLord already traded with them still " +
+                          "stands, so nothing it sold them is bought back and what it spent still counts");
+                return _meetingBooks;
+            }
+            _meetingBooks = new Books();
+            _meetingBooksFor = met;
+            return _meetingBooks;
+        }
+
         public static void ExecuteRoadTrade(MobileParty met)
         {
             if (!Options.Current.TradeWithCaravans) return;
@@ -1543,7 +1555,7 @@ namespace TradeLord
             MobileParty party = MobileParty.MainParty;
             if (party == null) return;
 
-            var books = new Books();
+            Books books = BooksForTheMeeting(met);
             string why = "trading with a party on the road";
             SellPass(Pass.Meet(met, road, books, party),
                      "sale on the road", "selling on the road", "Road trading", why);

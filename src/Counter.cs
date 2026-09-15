@@ -1,3 +1,4 @@
+using System;
 using Helpers;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.GameState;
@@ -11,11 +12,20 @@ namespace TradeLord
 {
     internal static class Counter
     {
+        private const int TicksToWaitForTheScreen = 240;
+
+        private static readonly Action<int> Ours = whatever => { };
+
         private static InventoryLogic _logic;
         private static int _toSell;
         private static int _toBuy;
         private static int _gained;
         private static int _spent;
+
+        private static InventoryLogic _shown;
+        private static bool _totalHandedOver;
+        private static int _waited;
+        private static int _goldAtOpen;
 
         internal static bool Staging => _logic != null;
 
@@ -23,7 +33,11 @@ namespace TradeLord
 
         internal static string Aside => Staging ? " (laid out)" : " (simulated)";
 
-        internal static void Forget() => Drop();
+        internal static void Forget()
+        {
+            Drop();
+            Unwatch();
+        }
 
         internal static bool HoldsBack() =>
             TradeRules.StagesTheDeal(Options.Current) &&
@@ -32,6 +46,7 @@ namespace TradeLord
         internal static bool Ready(Settlement site)
         {
             Drop();
+            Unwatch();
             if (!TradeRules.StagesTheDeal(Options.Current))
             {
                 if (Options.Current.StagedTrading)
@@ -100,13 +115,59 @@ namespace TradeLord
             InventoryState screen = InventoryScreenHelper.GetActiveInventoryState();
             InventoryLogic logic = screen?.InventoryLogic;
             if (logic == null) return false;
-            if (logic.TotalAmountChange == null) logic.TotalAmountChange = whatever => { };
+            if (logic.TotalAmountChange == null) logic.TotalAmountChange = Ours;
             if (logic.DonationXpChange == null) logic.DonationXpChange = () => { };
             _logic = logic;
+            _shown = logic;
+            _totalHandedOver = false;
+            _waited = 0;
+            _goldAtOpen = Hero.MainHero?.Gold ?? 0;
             TradeActionBehavior.StartAFreshDryRun();
             Log.Write("the trade screen is open at " + site.Name +
                       " and TradeLord is laying its deal out on it rather than trading");
             return true;
+        }
+
+        internal static TextObject Watch()
+        {
+            if (_shown == null) return null;
+            if (!_totalHandedOver) HandTheTotalOver();
+            if (InventoryScreenHelper.GetActiveInventoryState() != null) return null;
+            int moved = (Hero.MainHero?.Gold ?? _goldAtOpen) - _goldAtOpen;
+            Unwatch();
+            Log.Write("the trade screen is closed and your purse moved " + moved + " gold on it");
+            if (moved == 0)
+                return Tongue.Text("{=TL423}The deal TradeLord laid out is closed and your purse is where it was.");
+            TextObject line = Tongue.Text(moved > 0
+                ? "{=TL421}The deal TradeLord laid out is closed: your purse is up {GOLD} denars."
+                : "{=TL422}The deal TradeLord laid out is closed: your purse is down {GOLD} denars.");
+            line.SetTextVariable("GOLD", Math.Abs(moved).ToString("N0"));
+            return line;
+        }
+
+        private static void HandTheTotalOver()
+        {
+            Action<int> reading = _shown.TotalAmountChange;
+            if (reading != null && !ReferenceEquals(reading, Ours))
+            {
+                _totalHandedOver = true;
+                reading(_shown.TotalAmount);
+                Log.Write("the trade screen was handed the " + _shown.TotalAmount +
+                          " gold the laid out deal comes to, so its own running total shows it");
+                return;
+            }
+            if (++_waited < TicksToWaitForTheScreen) return;
+            _totalHandedOver = true;
+            Log.Write("the trade screen never took a running total of its own, so what the laid out " +
+                      "deal comes to is left off it");
+        }
+
+        private static void Unwatch()
+        {
+            _shown = null;
+            _totalHandedOver = false;
+            _waited = 0;
+            _goldAtOpen = 0;
         }
 
         private static void Drop()

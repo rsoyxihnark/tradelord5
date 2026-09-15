@@ -6,7 +6,7 @@
 
 ## Everything it does
 
-- ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is three strings, four numbers, a settlement reference and a flag, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
+- ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is three strings, four numbers and a settlement reference, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
 
 **What it tells you**
 
@@ -39,7 +39,6 @@
 
 - ✅ One trade entry in the town menu, selling then buying in one go, whenever you want it
 - ✅ Sells and buys the moment you enter a market by default, once for each arrival: Wait here for some time, a walk through the lands, or anything else that drops you back at the town or village menu does not set it trading again, and it leaves that market alone until your party has taken to the road. Trade here now (TradeLord) still trades whenever you ask
-- ✅ Says once, at the first market of a campaign, that it will trade for you as you arrive, and leaves that market untraded so you can switch it off first. Without MCM the same line names the settings file instead
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
 - ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has and never paying more than the cheapest price it knows of for it, before it trades for profit
 - ✅ Buys and sells livestock as ordinary goods, checking the game's own herding penalty against the men in your party first, so cattle never slow you down. A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
@@ -60,7 +59,7 @@
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
 - ✅ A coin sound on a trade that lands, silence on one that does not
-- ✅ A quiet mode that keeps automated trading to the log and off your screen, apart from the notice on your first market and the warning that your cargo is full
+- ✅ A quiet mode that keeps automated trading to the log and off your screen, apart from the warning that your cargo is full
 - ✅ A dry run that simulates every trade it would have made and shows you the estimate, marked a best case in the message and in the log, moving nothing
 - ✅ Free passage past bandits, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and TradeLord adds a line to what you can say to them, asking to be let past, and they let you go with no fight and no ransom, then leave you be for the next few hours instead of turning round and hitting you again
 
@@ -93,7 +92,7 @@
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know. It sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay, off out of the box, that keeps it out of a brand new campaign until prices calm down
-- ✅ Lay the trade out for you first, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other, one unit to a transfer at the price each unit really fetches. Change what you like, then press Done to trade or Cancel to leave it. While it is on, nothing is traded as you arrive: Trade here now (TradeLord) in the town menu is what lays the deal out. A party met on the road still trades as before
+- ✅ Staged Trading, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other, one unit to a transfer at the price each unit really fetches. Change what you like, then press Done to trade or Cancel to leave it. While it is on, nothing is traded as you arrive: Trade here now (TradeLord) in the town menu is what lays the deal out. A party met on the road still trades as before. The trade screen's own running total shows what the deal comes to, and once you close it TradeLord says what your purse did
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
 
 **And**
@@ -103,7 +102,7 @@
 - ✅ Built on Bannerlord 1.4.8.119303, for Bannerlord 1.4.8.119303, and it runs on the 1.5.2.121216 beta too
 - ✅ A price trace you can switch on when a price looks wrong: it writes to `TradeLord.log` what the market you are standing in pays and charges for every good you are carrying, read four ways, before anything is traded, and names that market, the price model the game is running and any other mod changing either of them, then records what it quoted for every good it trades next to what the market actually paid
 - ✅ A score for the forecast you can switch on: every time it works out a route, TradeLord writes down what it expects a market to hold by the time you get there, and when you walk into that market it puts that next to what the market really holds, good by good, with how far off it was and an average across the visit, in `TradeLord.log`
-- ✅ Recent trades at the bottom of the ledger panel: the last twenty buys and sells it made for you, newest first, each with the day, the town, the gold it gained or cost, and what moved. Gold gained reads green and gold spent amber. It is kept for the session only and never written into your save
+- ✅ Recent trades, on its own button below the TradeLord ledger: the last twenty buys and sells it made for you, newest first, each with the day, the town, the gold it gained or cost, and what moved. Gold gained reads green and gold spent amber. It is kept for the session only and never written into your save
 - ✅ One self-check line at the top of every campaign in `TradeLord.log`, saying which of its patches applied and whether it could read the herd penalty, the quest goods, your language file and the game's price model, so a bug report is one line to paste
 - ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it. It is kept from one session to the next, and the one thing that ever empties it is starting the game with it already past 999 KB, which it says in the log itself
 
