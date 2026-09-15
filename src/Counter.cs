@@ -29,6 +29,8 @@ namespace TradeLord
 
         internal static bool Staging => _logic != null;
 
+        internal static bool Awaiting => _shown != null;
+
         internal static string Heading => Staging ? " (laid out): " : " (simulated, best case): ";
 
         internal static string Aside => Staging ? " (laid out)" : " (simulated)";
