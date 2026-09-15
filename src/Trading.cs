@@ -71,7 +71,11 @@ namespace TradeLord
         internal static bool AutomatedTradeInProgress { get; private set; }
 
         private static int _transactionDepth;
-        private static int _silenced;
+
+        private const int SilencedNamed = 6;
+
+        private static readonly Dictionary<string, int> _silenced =
+            new Dictionary<string, int>(StringComparer.Ordinal);
 
         internal static bool InGameTransaction => _transactionDepth > 0;
 
@@ -111,20 +115,37 @@ namespace TradeLord
             ReportSilenced();
         }
 
-        internal static void NoteSilenced() => _silenced++;
+        internal static void NoteSilenced(string said)
+        {
+            string line = said ?? "(a message with no words)";
+            _silenced.TryGetValue(line, out int seen);
+            _silenced[line] = seen + 1;
+        }
 
         private static void ReportSilenced()
         {
-            if (_silenced == 0) return;
-            Log.Write("  silenced " + _silenced + " message(s) raised inside the game's own transaction");
-            _silenced = 0;
+            if (_silenced.Count == 0) return;
+            int total = 0, named = 0;
+            var lines = new List<string>();
+            foreach (var kv in _silenced)
+            {
+                total += kv.Value;
+                if (named++ < SilencedNamed)
+                    lines.Add("    " + kv.Value + " x " + kv.Key);
+            }
+            lines.Insert(0, "  silenced " + total + " message(s) raised inside the game's own " +
+                            "transaction, " + _silenced.Count + " of them different:");
+            if (_silenced.Count > SilencedNamed)
+                lines.Add("    and " + (_silenced.Count - SilencedNamed) + " more not named here");
+            _silenced.Clear();
+            Log.WriteMany(lines);
         }
 
         internal static void ForgetVisit()
         {
             ResetVisit();
             _transactionDepth = 0;
-            _silenced = 0;
+            _silenced.Clear();
             Notices.Forget();
             _pendingXp = 0;
             _pendingXpMuted = true;
@@ -312,6 +333,8 @@ namespace TradeLord
             private ISet<string> _locked;
             private bool _lockedRead;
             private float _capacity = -1f;
+            private float _carried = -1f;
+            private int _carriedAt = -1;
             private int _goldBefore;
             private ItemRosterElement _unit;
             private int _unitPrice;
@@ -390,8 +413,16 @@ namespace TradeLord
 
             internal float Capacity => _capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity;
 
+            internal float Carried()
+            {
+                int version = Party.ItemRoster.VersionNo;
+                if (_carried >= 0f && version == _carriedAt) return _carried;
+                _carriedAt = version;
+                return _carried = Carry.Carried(Party);
+            }
+
             internal float Room() =>
-                TradeMath.RoomToFill(Capacity, Carry.Carried(Party), Options.Current.MaxCargoShare);
+                TradeMath.RoomToFill(Capacity, Carried(), Options.Current.MaxCargoShare);
 
             internal float ShareCap =>
                 Options.Current.MaxHeldShare > 0f ? Capacity * Options.Current.MaxHeldShare : 0f;
@@ -1721,10 +1752,10 @@ namespace TradeLord
     internal static class Patch_SilenceChunkedTradeLines
     {
         [HarmonyPriority(Priority.Last)]
-        private static bool Prefix()
+        private static bool Prefix(InformationMessage __0)
         {
             if (!TradeActionBehavior.InGameTransaction) return true;
-            TradeActionBehavior.NoteSilenced();
+            TradeActionBehavior.NoteSilenced(__0.Information);
             return false;
         }
     }
