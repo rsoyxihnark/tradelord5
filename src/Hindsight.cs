@@ -134,23 +134,23 @@ namespace TradeLord
                           " day(s) later and it pays " + found + ", " + Share(held) + " of what it promised");
             }
             if (!Writing || scored == 0) return;
-            Log.Write("promise check at " + site.Name + ", " + scored + " promise(s) scored" +
+            lines.Insert(0, "promise check at " + site.Name + ", " + scored + " promise(s) scored" +
                       (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") +
                       (unpriced == 0 ? "" : ", " + unpriced + " the market would put no price on"));
-            for (int i = 0; i < lines.Count; i++) Log.Write(lines[i]);
-            Log.Write("  here: the price held at " + Share(TradeMath.MeanOf(heldTotal, scored)) +
+            lines.Add("  here: the price held at " + Share(TradeMath.MeanOf(heldTotal, scored)) +
                       " of what the panel promised");
             for (int band = TradeMath.Bands - 1; band >= 0; band--)
             {
                 if (_bands.Scored(band) == 0) continue;
-                Log.Write("  " + Scoring.Banded(band) + ": held at " +
+                lines.Add("  " + Scoring.Banded(band) + ": held at " +
                           Share(_bands.Held(band)) + " of promise over " +
                           _bands.Scored(band) + " arrival(s) this session");
             }
             if (LedgerBehavior.Instance != null &&
                 LedgerBehavior.Instance.PromiseScore(out int kept, out float overall))
-                Log.Write("  over this campaign: the price has held at " + Share(overall) +
+                lines.Add("  over this campaign: the price has held at " + Share(overall) +
                           " of promise over " + kept + " arrival(s)");
+            Log.WriteMany(lines);
         }
 
         private static void Noted(Settlement site, ItemObject item, float withinDays)
@@ -214,14 +214,14 @@ namespace TradeLord
                           how.Moved + ", " + Counted(how.WorthOff) + Shared(how.Share));
             }
             if (scored == 0) return;
-            Log.Write("forecast check at " + site.Name + ", " + scored + " good(s) it had a figure for:");
-            for (int i = 0; i < lines.Count; i++) Log.Write(lines[i]);
-            Log.Write("  in all: the landing figure was off by " +
+            lines.Insert(0, "forecast check at " + site.Name + ", " + scored + " good(s) it had a figure for:");
+            lines.Add("  in all: the landing figure was off by " +
                       Figure(TradeMath.MeanOf(landingMiss, scored)) + " unit(s) a good" +
                       (shared == 0
                           ? ", and no worth figure could be held to anything here"
                           : ", the worth figure by " + Share(TradeMath.MeanOf(shareTotal, shared)) +
                             " of what it said would move, over " + shared + " good(s)"));
+            Log.WriteMany(lines);
         }
 
         private static int WorthOnTheShelf(Settlement site, ItemObject item)

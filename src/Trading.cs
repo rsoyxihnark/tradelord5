@@ -1002,13 +1002,15 @@ namespace TradeLord
         private static void LogDetail(bool selling, bool sim, Dictionary<ItemObject, (int count, int gold)> detail,
                                       Dictionary<ItemObject, (int count, int gold)> quoted, string why)
         {
+            var lines = new List<string>();
             foreach (var kv in detail)
             {
-                Log.Write((selling ? "  sold " : "  bought ") + kv.Value.count + " " +
+                lines.Add((selling ? "  sold " : "  bought ") + kv.Value.count + " " +
                           kv.Key.StringId + " for " + kv.Value.gold + (sim ? Counter.Aside : "") +
                           Quotation(quoted, kv.Key, kv.Value.gold));
-                LogAnimalMoved(selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);
+                LogAnimalMoved(lines, selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);
             }
+            Log.WriteMany(lines);
         }
 
         private static string Quotation(Dictionary<ItemObject, (int count, int gold)> quoted,
@@ -1020,10 +1022,10 @@ namespace TradeLord
                                       : " and the market moved " + gold + " instead");
         }
 
-        private static void LogAnimalMoved(bool selling, bool sim, ItemObject item, int count, int gold, string why)
+        private static void LogAnimalMoved(List<string> lines, bool selling, bool sim, ItemObject item, int count, int gold, string why)
         {
             if (item == null || !item.HasHorseComponent) return;
-            Log.Write("  animal " + (selling ? "out: " : "in: ") + item.StringId +
+            lines.Add("  animal " + (selling ? "out: " : "in: ") + item.StringId +
                       " (" + (item.Name == null ? item.StringId : item.Name.ToString()) + ") x" + count +
                       (selling ? " for +" : " for -") + gold + " gold" + (sim ? Counter.Aside : "") +
                       " - " + why + "; TradeLord counts it as " + TradePolicy.AnimalGroup(item));
