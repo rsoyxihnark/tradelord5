@@ -62,5 +62,12 @@ namespace TradeLord
             top.Sort(selling ? Order<T>.DearestFirst : Order<T>.CheapestFirst);
             return top;
         }
+
+        internal static List<T> TopFew<T>(List<T> ranked, int most)
+        {
+            if (ranked == null) return new List<T>();
+            int take = most < 0 ? 0 : (most > ranked.Count ? ranked.Count : most);
+            return ranked.GetRange(0, take);
+        }
     }
 }

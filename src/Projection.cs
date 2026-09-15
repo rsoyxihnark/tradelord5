@@ -85,16 +85,17 @@ namespace TradeLord
                                             float afterDays)
         {
             var when = new List<float>();
-            for (int i = 0; listed != null && i < listed.Count; i++) Note(when, listed[i].Days, afterDays);
-            for (int i = 0; coming != null && i < coming.Count; i++) Note(when, coming[i].Days, afterDays);
+            var already = new HashSet<float>();
+            for (int i = 0; listed != null && i < listed.Count; i++) Note(when, already, listed[i].Days, afterDays);
+            for (int i = 0; coming != null && i < coming.Count; i++) Note(when, already, coming[i].Days, afterDays);
             when.Sort();
             return when;
         }
 
-        private static void Note(List<float> when, float days, float afterDays)
+        private static void Note(List<float> when, HashSet<float> already, float days, float afterDays)
         {
             float at = TradeMath.UpToTheQuarterDay(days);
-            if (at <= afterDays || when.Contains(at)) return;
+            if (at <= afterDays || !already.Add(at)) return;
             when.Add(at);
         }
 

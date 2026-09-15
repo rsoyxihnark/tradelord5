@@ -263,6 +263,20 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_moment_many_things_land_on_is_still_counted_once()
+        {
+            var listed = new List<Landing>();
+            var coming = new List<Spending>();
+            for (int i = 0; i < 500; i++)
+            {
+                listed.Add(Coming("grain", "grain", 1, 10, 1.2f));
+                coming.Add(Purse(10, 1.2f));
+            }
+            listed.Add(Coming("grain", "grain", 1, 10, 4.1f));
+            Assert.Equal(new List<float> { 1.25f, 4.25f }, Projection.Moments(listed, coming, 0.5f));
+        }
+
+        [Fact]
         public void A_shelf_that_runs_out_never_reports_a_moment_you_have_already_passed()
         {
             var rng = new System.Random(4471);
