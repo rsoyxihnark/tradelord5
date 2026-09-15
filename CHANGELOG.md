@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.76.3
+
+- Fixed the same fault as 1.76.2 in a second, older place: a good you traded by hand was written into TradeLord's record of what you paid using the gold that line fetched in place of how many of it moved, so selling 29 iron for 1742 denars wiped the record of what all your iron had cost.
+- With that record gone, TradeLord no longer knew what your goods had cost you, so Minimum profit margin had nothing to measure against and it could sell a good for less than you paid for it. It now records what actually moved.
+- Buying by hand could also be written down as far more of a good than you bought, whenever you were already carrying more of it than the gold that line cost.
+
 ## 1.76.2
 
 - Fixed a serious fault in Staged Trading: the deal you took on the trade screen was read back with each good's price in place of how many of it moved, so a sale of 29 iron was reported as 1742 iron, a purchase of 3 wine as 813 wine, and the gold ran to hundreds of thousands of denars that never left your purse.

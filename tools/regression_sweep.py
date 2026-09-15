@@ -481,10 +481,14 @@ def the_food_reserve_is_worked_out_where_a_test_can_ask_it():
 def a_good_you_bought_by_hand_is_never_counted_beyond_what_you_carry():
     body = method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange")
     return ("ItemRoster carried = MobileParty.MainParty?.ItemRoster;" in body
-            and "int took = Math.Min(count, carried?.GetItemNumber(item) ?? 0);" in body
+            and "int bought = Deals.UnitsMoved(element.Amount, said, unit);" in body
+            and "int took = Math.Min(bought, carried?.GetItemNumber(item) ?? 0);" in body
             and "if (took <= 0) continue;" in body
-            and ordered(body, "int took = Math.Min(", "if (took <= 0) continue;",
+            and ordered(body, "int bought = Deals.UnitsMoved(", "int took = Math.Min(",
+                        "if (took <= 0) continue;",
                         "Bulk.PricePaid(here, element.EquipmentElement, took, unit)")
+            and "RecordSale(item.StringId, Deals.UnitsMoved(element.Amount, said, unit));" in body
+            and "RecordSale(item.StringId, count);" not in body
             and "RecordPurchase(item.StringId, count," not in body
             and "element.EquipmentElement, count, unit" not in body)
 
@@ -5830,7 +5834,7 @@ chk("1.43.0", "TradeLord.ini is left alone when a settings handover sets every v
 chk("1.43.0", "a purchase record dropped because the goods left the party unsold names those goods",
     the_purchase_records_it_drops_are_named())
 
-chk("1.42.4", "a good you bought by hand is never written down as more of it than your party is carrying",
+chk("1.76.3", "a good traded by hand is written down in units, never in the gold it fetched, and a purchase never beyond what your party carries",
     a_good_you_bought_by_hand_is_never_counted_beyond_what_you_carry())
 chk("1.42.2", "a market visit asks each town its prices once for everything on the shelf and everything in your bags, through the same priming the route scan uses, and never asks again for a good it has already ranked this hour",
     a_market_visit_prices_each_town_once_for_everything_on_the_shelf())
@@ -8333,7 +8337,7 @@ def the_deal_you_took_is_reported_and_credited_like_any_pass():
                         "{=TL02}", "if (addsUp && got.Profit > 0) AwardTradeXp(got.Profit, pass.Muted);")
             and ordered(ledger, "if (Counter.Awaiting)",
                         "TradeActionBehavior.TookTheDeal(purchased, sold)",
-                        "foreach (var (element, count) in sold)")
+                        "foreach (var (element, said) in sold)")
             and "internal static bool Awaiting => _shown != null;" in S['Counter.cs']
             and "_shown == null ? 0 : (Hero.MainHero?.Gold ?? _goldAtOpen) - _goldAtOpen;" in S['Counter.cs']
             and t.count("AwardTradeXp(") == 4)
@@ -8421,6 +8425,31 @@ def what_a_trade_moved_is_never_read_as_the_gold_it_fetched():
 
 chk("1.76.2", "what a trade moved is never read as the gold it fetched, and the ledger dates a trade by how long ago it was",
     what_a_trade_moved_is_never_read_as_the_gold_it_fetched())
+
+
+
+def nothing_the_game_hands_back_is_read_as_a_count_without_the_one_door():
+    t, l = S['Trading.cs'], S['Ledger.cs']
+    both = t + l
+    lists = re.findall(r'foreach \(var \((\w+), (\w+)\) in (purchased|sold)\)', both)
+    return (len(lists) == 2
+            and all(named == 'said' for _, named, _ in lists)
+            and 'var (el, said) = lines[i];' in t
+            and both.count('Deals.UnitsMoved(') == 3
+            and 'RecordSale(item.StringId, Deals.UnitsMoved(element.Amount, said, unit));' in l
+            and 'int bought = Deals.UnitsMoved(element.Amount, said, unit);' in l
+            and 'int count = Deals.UnitsMoved(el.Amount, said, price);' in t
+            and 'RecordSale(item.StringId, said)' not in l
+            and 'RecordSale(item.StringId, count)' not in l
+            and 'RecordPurchase(item.StringId, said' not in l
+            and all(one not in both for one in
+                    ('foreach (var (element, count) in purchased)',
+                     'foreach (var (element, count) in sold)',
+                     'var (el, count) = lines[i];')))
+
+
+chk("1.76.3", "a figure the game hands back for a traded line is read as gold and turned into units by one rule, never taken for a count on the spot",
+    nothing_the_game_hands_back_is_read_as_a_count_without_the_one_door())
 
 
 
