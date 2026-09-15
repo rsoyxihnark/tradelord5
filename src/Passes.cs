@@ -74,6 +74,12 @@ namespace TradeLord
         internal float Margin;
     }
 
+    internal static class Picks
+    {
+        internal static void BestMarginFirst(List<Pick> stock) =>
+            stock?.Sort((x, y) => y.Margin.CompareTo(x.Margin));
+    }
+
     internal interface IBuyingMarket
     {
         int Count { get; }
@@ -185,7 +191,7 @@ namespace TradeLord
                 picked.Margin = (realizable - here) / here;
                 stock.Add(picked);
             }
-            stock.Sort((x, y) => y.Margin.CompareTo(x.Margin));
+            Picks.BestMarginFirst(stock);
             return stock;
         }
 

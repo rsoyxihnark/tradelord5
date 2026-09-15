@@ -30,6 +30,7 @@ SETTINGSFILETESTS = io.open('tests/SettingsFileTests.cs', encoding='utf-8').read
 SCREENTESTS = io.open('tests/ScreenTests.cs', encoding='utf-8').read()
 RECENTTESTS = io.open('tests/RecentTests.cs', encoding='utf-8').read()
 EXPIRYTESTS = io.open('tests/ExpiryTests.cs', encoding='utf-8').read()
+SHELFORDERTESTS = io.open('tests/ShelfOrderTests.cs', encoding='utf-8').read()
 TALLYTESTS = io.open('tests/TallyTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
@@ -43,7 +44,8 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'RankTests.cs': RANKROWTESTS, 'MapButtonTests.cs': MAPBUTTONTESTS,
      'TwinsTests.cs': TWINSTESTS, 'SettingsFileTests.cs': SETTINGSFILETESTS,
      'ScreenTests.cs': SCREENTESTS, 'TallyTests.cs': TALLYTESTS,
-     'RecentTests.cs': RECENTTESTS, 'ExpiryTests.cs': EXPIRYTESTS}
+     'RecentTests.cs': RECENTTESTS, 'ExpiryTests.cs': EXPIRYTESTS,
+     'ShelfOrderTests.cs': SHELFORDERTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -1573,7 +1575,18 @@ chk("1.3.11", "panel drops input restrictions on teardown",
 chk("1.3.12", "sieges/raids excluded from scans",
     "if (UnderAttack(s) || VillageShut(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "LedgerBehavior.UnderAttack(s)" in S['Trading.cs'])
-chk("1.3.13", "buy shelf ordered by margin", "stock.Sort((x, y) => y.Margin.CompareTo(x.Margin));" in S['Passes.cs'])
+chk("1.3.13", "the buy shelf is worked through best margin first, and a test holds it to that rather than a line of source",
+    "Picks.BestMarginFirst(stock);" in method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
+    and "stock?.Sort((x, y) => y.Margin.CompareTo(x.Margin));" in
+        method_body(S['Passes.cs'], "internal static void BestMarginFirst")
+    and 'Passes.cs' in TESTPROJ
+    and all(one in SHELFORDERTESTS for one in
+            ("The_best_margin_is_bought_first",
+             "A_shelf_already_in_order_is_left_in_it",
+             "A_losing_margin_goes_behind_a_winning_one",
+             "An_empty_shelf_and_no_shelf_at_all_are_both_taken_in_their_stride",
+             "Nothing_is_lost_or_invented_however_the_shelf_arrives",
+             "new Random(2276)")))
 chk("1.3.13", "cost basis read once per stack", "ProfitAcceptable(int costBasis, int townSellPrice)" in S['Policy.cs'])
 chk("1.13.0", "the automation switches are plain switches like the rest, with nothing behind them",
     "if (value == _o.AutoBuyOnEntry) return;" not in M and
