@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.74.0
+
+- TradeLord now trades at the first market of a campaign like any other, instead of leaving it untraded behind a warning that it trades for you.
+- Meeting the same villagers or caravan again no longer buys back what TradeLord has just sold them, and what it spent on them still counts against its caps.
+- Staged Trading is the new name of the setting that was called Lay the trade out for you first.
+- The trade screen Staged Trading opens now shows the gold the laid out deal comes to in its own running total.
+- Once you close that trade screen, TradeLord says what your purse did on it.
+- Recent trades now opens in a window of its own, from its own button below the TradeLord ledger.
+- The line under the routes in the ledger is now large enough to read and no longer runs off the bottom of the panel.
+
 ## 1.73.0
 
 - Left now counts towards a route's Conf, so a route whose shelf empties before or soon after you arrive ranks below one that still has the goods waiting for you.

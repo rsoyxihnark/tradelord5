@@ -73,13 +73,11 @@
 		<string id="TL84" text="{ITEM}: {FROM} şehrinden al ({BUY} dinar) -&gt; {TO} şehrinde sat ({SELL})  x{QTY} = +{PROFIT} dinar, buradan ~{DAYS} gün"/>
 		<string id="TL85" text="bu yükü daha iyi bir pazar için tutuyorsunuz"/>
 		<string id="TL86" text="müfrezeniz daha fazla hayvan güdemez"/>
-		<string id="TL87" text="TradeLord bir pazara girdiğinizde sizin için alıp satar, bir sonrakinden başlayarak. Elle ticaret yapmak için ayarlarından girişte otomatik satışı ve alışı kapatın."/>
 		<string id="TL88" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}."/>
 		<string id="TL89" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde kârlı rota yok. Daha çok pazar gezin ya da Bilgi ayarlarından sınırları yükseltin."/>
 		<string id="TL90" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde rota yok. Daha çok pazar gezin ya da Bilgi ayarlarından sınırları yükseltin."/>
 		<string id="TL91" text="TradeLord mal listelerinizden birindeki bir girdi bu oyundaki hiçbir mala uymuyor ve hiçbir işe yaramıyor. Hangisi olduğunu TradeLord.log yazıyor."/>
 		<string id="TL92" text="Keseniz {GOLD} dinar, altın rezerviniz {RESERVE}, bu yüzden TradeLord burada bir şey almayacak. Biraz yük satın ya da ayarlardan Altın rezervi değerini düşürün."/>
-		<string id="TL96" text="TradeLord bir pazara girer girmez sizin için alıp satar, bir sonrakinden başlayarak. MCM kurulu değil; ayarları Belgeler klasörünüzdeki Bannerlord klasöründe, TradeLord.log dosyasının yanındaki TradeLord.ini dosyasındadır."/>
 		<string id="TL97" text="TradeLord {ITEMS} ikmal etti, {GOLD} dinar."/>
 		<string id="TL98" text="[Benzetim, en iyi durum] TradeLord {ITEMS} ikmal ederdi, {GOLD} dinar."/>
 		<string id="TL99" text="demirci ocağının parçalarına ayırabileceğini saklıyorsunuz"/>
@@ -169,7 +167,7 @@
 		<string id="TL245" text="En iyi satış pazarını haritada işaretle"/>
 		<string id="TL246" text="TradeLord.log'a fiyat izi yaz"/>
 		<string id="TL280" text="Tahminin ne kadar tuttuğunu günlüğe yaz"/>
-		<string id="TL281" text="Ticareti önce önüne koy"/>
+		<string id="TL281" text="Önüne konan ticaret"/>
 		<string id="TL247" text="Ticarette para sesi"/>
 		<string id="TL248" text="Ayrıntılı ticaret özeti"/>
 		<string id="TL249" text="Ticaret iletilerini sustur" />
@@ -268,5 +266,9 @@
 		<string id="TL418" text="Son ticaretler (son {COUNT})"/>
 		<string id="TL419" text="Son ticaretler: bu seferde henüz ticaret yapılmadı"/>
 		<string id="TL420" text="{DAY}. gün"/>
+		<string id="TL421" text="TradeLord'un önüne koyduğu ticaret kapandı: kesen {GOLD} dinar arttı."/>
+		<string id="TL422" text="TradeLord'un önüne koyduğu ticaret kapandı: kesen {GOLD} dinar azaldı."/>
+		<string id="TL423" text="TradeLord'un önüne koyduğu ticaret kapandı ve kesen olduğu yerde."/>
+		<string id="TL424" text="Son ticaretler"/>
 	</strings>
 </base>

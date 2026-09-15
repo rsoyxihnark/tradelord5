@@ -73,13 +73,11 @@
 		<string id="TL84" text="{ITEM}: buy {FROM} ({BUY} denars) -&gt; sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} days from here"/>
 		<string id="TL85" text="you are holding this cargo for a better market"/>
 		<string id="TL86" text="your party cannot drive any more livestock"/>
-		<string id="TL87" text="TradeLord buys and sells for you as you enter a market, starting at the next one. Turn auto-sell and auto-buy on entry off in its settings to trade by hand."/>
 		<string id="TL88" text="TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."/>
 		<string id="TL89" text="No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
 		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
 		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
 		<string id="TL92" text="Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower Gold reserve in its settings."/>
-		<string id="TL96" text="TradeLord buys and sells for you as you enter a market, starting at the next one. MCM is not installed, so its settings live in TradeLord.ini, beside TradeLord.log in your Bannerlord folder in Documents."/>
 		<string id="TL97" text="TradeLord restocked {ITEMS} for {GOLD} denars."/>
 		<string id="TL98" text="[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars."/>
 		<string id="TL99" text="you are keeping what the smithy can break down"/>
@@ -173,7 +171,7 @@
 		<string id="TL245" text="Auto-mark best sell market on map"/>
 		<string id="TL246" text="Write a price trace to the log"/>
 		<string id="TL280" text="Score the forecast in the log"/>
-		<string id="TL281" text="Lay the trade out for you first"/>
+		<string id="TL281" text="Staged Trading"/>
 		<string id="TL247" text="Coin sound on trade"/>
 		<string id="TL248" text="Detailed trade summary"/>
 		<string id="TL249" text="Silence trade messages" />
@@ -268,5 +266,9 @@
 		<string id="TL418" text="Recent trades (last {COUNT})"/>
 		<string id="TL419" text="Recent trades: nothing traded yet this campaign"/>
 		<string id="TL420" text="Day {DAY}"/>
+		<string id="TL421" text="The deal TradeLord laid out is closed: your purse is up {GOLD} denars."/>
+		<string id="TL422" text="The deal TradeLord laid out is closed: your purse is down {GOLD} denars."/>
+		<string id="TL423" text="The deal TradeLord laid out is closed and your purse is where it was."/>
+		<string id="TL424" text="Recent trades"/>
 	</strings>
 </base>

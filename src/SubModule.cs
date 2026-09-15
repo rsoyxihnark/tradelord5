@@ -65,6 +65,7 @@ namespace TradeLord
             Guard.Run("Tick.Mcm", McmLoader.TryHandover);
             Guard.Run("Tick.Settings", Config.Flush);
             Guard.Run("Tick.Encounter", TradeActionBehavior.WatchEncounter);
+            Guard.Run("Tick.Counter", TradeActionBehavior.WatchTheTradeScreen);
             Guard.Run("Tick.Parley", Parley.HangWhereTheBandAnswers);
             LedgerPanel.Tick();
         }
