@@ -34,6 +34,8 @@ namespace TradeLord
 
         public const int FieldsAPriceIsWrittenIn = 8;
 
+        public const int FieldsAPurchaseNeeds = 4;
+
         private const char FieldMark = '|';
         private const char RecordMark = ';';
 
@@ -144,7 +146,7 @@ namespace TradeLord
             for (int i = 0; i < records.Length; i++)
             {
                 string[] parts = records[i].Split(FieldMark);
-                if (parts.Length != 4 || !Storable(parts[0])) continue;
+                if (parts.Length < FieldsAPurchaseNeeds || !Storable(parts[0])) continue;
                 if (!Whole(parts[1], out int total) || !Whole(parts[2], out int count) ||
                     !Whole(parts[3], out int last)) continue;
                 if (count <= 0) continue;

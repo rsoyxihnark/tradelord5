@@ -8747,5 +8747,21 @@ chk("1.76.8", "the lines TradeLord writes as it trades and as it scores what it 
     the_log_bursts_a_trade_writes_reach_the_file_in_one_go())
 
 
+
+def a_record_from_a_newer_version_is_read_as_far_as_this_one_understands_it():
+    codec = S['LedgerCodec.cs']
+    purchases = method_body(codec, "public static List<PurchaseRecord> ReadPurchases")
+    return ("public const int FieldsAPurchaseNeeds = 4;" in codec
+            and "if (parts.Length < FieldsAPurchaseNeeds || !Storable(parts[0])) continue;" in purchases
+            and "parts.Length != 4" not in codec
+            and purchases.count("continue;") == 3
+            and "A_record_written_by_a_newer_TradeLord_is_read_as_far_as_this_one_understands_it" in TESTS
+            and '[InlineData("grain|340|20|17|9")]' not in TESTS)
+
+
+chk("1.76.9", "a record of what you paid written by a newer TradeLord is read as far as this one understands it rather than dropped, the way a recorded price already was",
+    a_record_from_a_newer_version_is_read_as_far_as_this_one_understands_it())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
