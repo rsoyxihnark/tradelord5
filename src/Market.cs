@@ -185,6 +185,8 @@ namespace TradeLord
     {
         private static bool _saidItCouldNotAsk;
 
+        internal static void Forget() => _saidItCouldNotAsk = false;
+
         internal static IMarketData Kept(Settlement site)
         {
             if (site == null) return null;
