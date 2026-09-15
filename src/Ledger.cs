@@ -888,8 +888,10 @@ namespace TradeLord
                         int flat = (Options.Current.ConservativeRouteProjection
                                         ? (int)TradePolicy.Realizable(flatSell)
                                         : flatSell) - q.OpeningBuyPrice * q.Units;
+                        float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);
                         float confidence = Confidence.Of(q.Simulated, flat, profit, shelf,
-                                                         q.Units, days, caravans, age);
+                                                         q.Units, days, caravans, age,
+                                                         runsOut, toBuy);
                         float perDay = profit / Math.Max(days, 0.25f);
                         float key = rankByScore ? perDay * confidence : perDay;
                         if (best != null && key <= bestKey) continue;
@@ -904,8 +906,7 @@ namespace TradeLord
                             Confidence = confidence, Score = perDay * confidence,
                             Simulated = q.Simulated, Caravans = caravans, DataAgeDays = age,
                             StillComing = TradeMath.StillComing(q.Units, onTheShelfNow),
-                            RunsOutInDays = Forecast.RunsOutIn(from, item, onTheShelfNow,
-                                                               q.Units, toBuy)
+                            RunsOutInDays = runsOut
                         };
                     }
                 }
