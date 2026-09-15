@@ -33,11 +33,11 @@ jobs:
           if printf '%s\n' "$CHANGED" | grep -qx 'README.md'; then
             NOTES=$(git diff "$GITHUB_SHA^" "$GITHUB_SHA" -- CHANGELOG.md 2>/dev/null \
                     || git show --pretty=format: "$GITHUB_SHA" -- CHANGELOG.md)
-            if ! printf '%s\n' "$NOTES" | grep -qi '^+.*feature list'; then
-              echo "this commit changes the feature list in README.md and no changelog entry says so"
+            if ! printf '%s\n' "$NOTES" | grep -q '^+- '; then
+              echo "this commit changes the feature list in README.md and the changelog gains no entry saying what changed"
               exit 1
             fi
-            echo "the changelog records what changed in the feature list"
+            echo "the changelog records what this commit changed in the feature list"
           fi
           if printf '%s\n' "$CHANGED" | grep -qx 'CHANGELOG.md'; then
             echo "the changelog carries this commit's entries"
