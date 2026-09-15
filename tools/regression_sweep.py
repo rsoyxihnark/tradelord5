@@ -4700,6 +4700,7 @@ EVER_SHIPPED = {
     "TradeXpMultiplier": "float", "UseFleetCapacity": "bool",
     "MaxCargoShare": "float", "PartyTradeXpShare": "float",
     "MarkPriceDirection": "bool", "PriceTrace": "bool",
+    "MaxWorkshopsOwned": "int",
 }
 
 def settings_now():
@@ -4711,7 +4712,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
     lift = S['Migrate.cs']
     stranded = [name for name, kind in EVER_SHIPPED.items()
                 if now.get(name) != kind and '"' + name + '"' not in lift]
-    return not stranded and len(EVER_SHIPPED) >= 75
+    return not stranded and len(EVER_SHIPPED) >= 78
 
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
