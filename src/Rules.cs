@@ -75,6 +75,21 @@ namespace TradeLord
             here != null && here == sittingAt && hour == sittingHour;
     }
 
+    internal static class Settling
+    {
+        internal static bool StillHolding(int waitDays, float elapsedDays, out int daysLeft)
+        {
+            daysLeft = 0;
+            if (waitDays <= 0) return false;
+            float elapsed = TradeMath.Finite(elapsedDays, float.MaxValue);
+            if (elapsed >= waitDays) return false;
+            daysLeft = (int)Math.Ceiling(waitDays - (elapsed < 0f ? 0f : elapsed));
+            if (daysLeft < 1) daysLeft = 1;
+            if (daysLeft > waitDays) daysLeft = waitDays;
+            return true;
+        }
+    }
+
     internal static class Herding
     {
         internal const int Cushion = 2;
