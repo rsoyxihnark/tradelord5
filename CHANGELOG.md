@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.75.0
+
+- The market marked on your map now counts only the goods it would really sell there, so it no longer sends you to a town that then refuses to sell anything and tells you your cargo is full.
+- TradeLord.log now says every time that marker moves, naming the town, what your cargo would fetch there, that town's purse, how far away it is and the market it beat.
+- Gold before it buys a haul animal is a new setting under Buying, at 2000 denars: below that TradeLord buys no haul animal however cheap one is, so your early gold goes on goods instead.
+- Most it will pay for a haul animal is a new setting under Buying, at 125%: it will now pay up to a quarter more than the cheapest price it has seen for one, where before it would only ever pay the cheapest.
+
 ## 1.74.0
 
 - TradeLord now trades at the first market of a campaign like any other, instead of leaving it untraded behind a warning that it trades for you.

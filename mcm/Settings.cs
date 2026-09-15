@@ -570,7 +570,7 @@ namespace TradeLord.Mcm
         public float TradeXpMultiplier { get => _o.TradeXpMultiplier; set { _o.TradeXpMultiplier = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL245}Auto-mark best sell market on map", Order = 13, RequireRestart = false,
-            HintText = "{=TL345}Moves a map tracker to whichever market in reach pays most for your current cargo, following you as you ride. A village is only ever marked while Trade with villages is on. It keeps to the travel ceilings. ON by default; clicking a town in the ledger panel still pins a marker by hand.")]
+            HintText = "{=TL345}Moves a map tracker to the market in reach paying most for the cargo it would really sell there, counting only what clears Minimum profit margin, following you as you ride. A village is only ever marked while Trade with villages is on. It keeps to the travel ceilings. ON by default; clicking a town in the ledger panel still pins a marker by hand.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool MarkBestSellTownOnMap { get => _o.MarkBestSellTownOnMap; set { _o.MarkBestSellTownOnMap = value; Options.Bump(); } }
 
@@ -716,16 +716,26 @@ namespace TradeLord.Mcm
         public string AlwaysBuyItems { get => _o.AlwaysBuyItems; set { _o.AlwaysBuyItems = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL267}Buy haul animals", Order = 12, RequireRestart = false,
-            HintText = "{=TL367}Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, whenever a market asks no more than one is worth, so your party carries more. It never buys more than you can drive without slowing down, and it stops before your gold reaches your reserve. ON by default.")]
+            HintText = "{=TL367}Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, so your party carries more. It never buys more than you can drive without slowing down, and it stops before your gold reaches your reserve. The two settings below say how much gold it waits for and how much it will pay. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool BuyHaulAnimals { get => _o.BuyHaulAnimals; set { _o.BuyHaulAnimals = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL274}Share of the hold one good may fill (0 = off)", 0f, 1f, "#0%", Order = 14, RequireRestart = false,
+        [SettingPropertyInteger("{=TL425}Gold before it buys a haul animal (0 = off)", 0, 100000, Order = 13, RequireRestart = false,
+            HintText = "{=TL426}Buy no haul animal at all until your purse is above this. Below it TradeLord leaves them alone however cheap they are, so early gold goes on goods instead. 0 lets it buy from the first denar. Default 2000.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
+        public int HaulAnimalGoldFloor { get => _o.HaulAnimalGoldFloor; set { _o.HaulAnimalGoldFloor = value; Options.Bump(); } }
+
+        [SettingPropertyFloatingInteger("{=TL427}Most it will pay for a haul animal", 1f, 3f, "#0%", Order = 14, RequireRestart = false,
+            HintText = "{=TL428}How far above the cheapest price you have ever seen for that animal TradeLord will still pay. 100% means only at the cheapest you have seen. Default 1.25, so it pays up to a quarter more than the cheapest.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
+        public float HaulAnimalPriceTolerance { get => _o.HaulAnimalPriceTolerance; set { _o.HaulAnimalPriceTolerance = value; Options.Bump(); } }
+
+        [SettingPropertyFloatingInteger("{=TL274}Share of the hold one good may fill (0 = off)", 0f, 1f, "#0%", Order = 15, RequireRestart = false,
             HintText = "{=TL374}Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and haul animals. 0 turns it off. Selling is unaffected.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float MaxHeldShare { get => _o.MaxHeldShare; set { _o.MaxHeldShare = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL410}Share of the hold TradeLord may fill", 0.1f, 1f, "#0%", Order = 15, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL410}Share of the hold TradeLord may fill", 0.1f, 1f, "#0%", Order = 16, RequireRestart = false,
             HintText = "{=TL411}Stop buying once your cargo reaches this share of what your party can carry, so there is room left for what a battle or a quest hands you. 100% lets it fill the hold. Selling is unaffected.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float MaxCargoShare { get => _o.MaxCargoShare; set { _o.MaxCargoShare = value; Options.Bump(); } }
