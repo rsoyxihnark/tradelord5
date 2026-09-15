@@ -52,18 +52,34 @@ namespace TradeLord.Tests
         [Fact]
         public void The_limit_is_only_lifted_where_the_game_is_asking_about_your_own_clan()
         {
-            Assert.True(Holdings.TheGameIsAskingAboutYou(3, 3));
-            Assert.True(Holdings.TheGameIsAskingAboutYou(0, 0));
-            Assert.False(Holdings.TheGameIsAskingAboutYou(2, 3));
-            Assert.False(Holdings.TheGameIsAskingAboutYou(4, 3));
+            Assert.True(Holdings.TheGameIsAskingAboutYou(3, 3, whileYouBuy: true));
+            Assert.True(Holdings.TheGameIsAskingAboutYou(0, 0, whileYouBuy: true));
+            Assert.False(Holdings.TheGameIsAskingAboutYou(2, 3, whileYouBuy: true));
+            Assert.False(Holdings.TheGameIsAskingAboutYou(4, 3, whileYouBuy: true));
         }
 
         [Fact]
         public void A_clan_the_game_cannot_place_never_has_the_limit_lifted_for_it()
         {
-            Assert.False(Holdings.TheGameIsAskingAboutYou(3, -1));
-            Assert.False(Holdings.TheGameIsAskingAboutYou(-1, -1));
-            Assert.False(Holdings.TheGameIsAskingAboutYou(0, -1));
+            Assert.False(Holdings.TheGameIsAskingAboutYou(3, -1, whileYouBuy: true));
+            Assert.False(Holdings.TheGameIsAskingAboutYou(-1, -1, whileYouBuy: true));
+            Assert.False(Holdings.TheGameIsAskingAboutYou(0, -1, whileYouBuy: true));
+        }
+
+        [Fact]
+        public void A_clan_sitting_at_your_own_tier_keeps_its_own_limit_when_you_are_not_buying()
+        {
+            for (int tier = 0; tier <= 6; tier++)
+                Assert.False(Holdings.TheGameIsAskingAboutYou(tier, tier, whileYouBuy: false));
+        }
+
+        [Fact]
+        public void Nothing_the_game_asks_lifts_a_limit_while_you_are_not_buying()
+        {
+            var rng = new System.Random(48802);
+            for (int round = 0; round < 20000; round++)
+                Assert.False(Holdings.TheGameIsAskingAboutYou(
+                    rng.Next(-2, 9), rng.Next(0, 7), whileYouBuy: false));
         }
 
         [Fact]
@@ -74,7 +90,8 @@ namespace TradeLord.Tests
             {
                 int yours = rng.Next(0, 7);
                 int asked = rng.Next(-2, 9);
-                Assert.Equal(asked == yours, Holdings.TheGameIsAskingAboutYou(asked, yours));
+                Assert.Equal(asked == yours,
+                    Holdings.TheGameIsAskingAboutYou(asked, yours, whileYouBuy: true));
             }
         }
 

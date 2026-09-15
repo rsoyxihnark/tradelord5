@@ -99,23 +99,41 @@ namespace TradeLord
             when.Add(at);
         }
 
-        internal static float RunsOutAt(IList<Landing> listed, IList<Spending> coming,
-                                        IDictionary<string, float> pull, float across,
-                                        string item, string category, int unitValue,
-                                        int stockNow, int wanted, float afterDays)
+        internal static List<(float days, int shelf)> ShelfAhead(
+            IList<Landing> listed, IList<Spending> coming,
+            IDictionary<string, float> pull, float across,
+            string item, string category, int unitValue, int stockNow, float afterDays)
         {
-            if (item == null || wanted <= 0 || unitValue <= 0) return NeverRunsOut;
+            var curve = new List<(float, int)>();
+            if (item == null || unitValue <= 0) return curve;
             List<float> when = Moments(listed, coming, afterDays);
             for (int i = 0; i < when.Count; i++)
             {
                 float days = when[i];
                 int taken = UnitsLeaving(
                     WorthLeaving(PurseLanding(coming, days), pull, across, category), unitValue);
-                int shelf = TradeMath.StockAfterShift(stockNow,
-                                UnitsLanding(listed, item, days), taken);
-                if (shelf < wanted) return days;
+                curve.Add((days, TradeMath.StockAfterShift(stockNow,
+                               UnitsLanding(listed, item, days), taken)));
             }
+            return curve;
+        }
+
+        internal static float RunsOutOf(IList<(float days, int shelf)> curve, int wanted)
+        {
+            if (curve == null || wanted <= 0) return NeverRunsOut;
+            for (int i = 0; i < curve.Count; i++)
+                if (curve[i].shelf < wanted) return curve[i].days;
             return NeverRunsOut;
+        }
+
+        internal static float RunsOutAt(IList<Landing> listed, IList<Spending> coming,
+                                        IDictionary<string, float> pull, float across,
+                                        string item, string category, int unitValue,
+                                        int stockNow, int wanted, float afterDays)
+        {
+            if (item == null || wanted <= 0 || unitValue <= 0) return NeverRunsOut;
+            return RunsOutOf(ShelfAhead(listed, coming, pull, across, item, category,
+                                        unitValue, stockNow, afterDays), wanted);
         }
 
         internal static float PullAcross(IDictionary<string, float> pull)

@@ -51,6 +51,8 @@ namespace TradeLord.Compat
              "how many of a good the party holds in all"),
             ("TaleWorlds.CampaignSystem.Roster.ItemRoster", "GetElementCopyAtIndex",
              "how many of it sit in the one lot"),
+            ("TaleWorlds.CampaignSystem.Roster.ItemRoster", "VersionNo",
+             "the mark the game moves whenever what your party carries changes"),
         };
 
         private static readonly (string type, string contract)[] ReflectedTypes =
