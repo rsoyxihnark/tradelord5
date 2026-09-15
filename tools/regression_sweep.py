@@ -733,22 +733,29 @@ def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
 
 def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
     marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
+    asked = method_body(S['Trading.cs'], "private static int WhatThatMarketPays")
     return (ordered(marker, "long bestValue = 0, runnerUpValue = 0;",
                     "if (market.Gold <= bestValue) continue;",
                     "foreach (var (item, amount, worth, floor) in cargo)",
-                    "int price = Priced.At(market, item, party, true);",
+                    "int price = WhatThatMarketPays(s, market, item, party);",
                     "if (total > market.Gold) total = market.Gold;",
                     "if (total > bestValue)")
-            and marker.count("Priced.At(market,") == 1)
+            and marker.count("WhatThatMarketPays(") == 1
+            and "Priced.At(" not in marker
+            and asked.count("Priced.At(market, el, party, true)") == 2)
 
 
 def the_marker_counts_only_what_the_selling_rules_would_really_move():
     marker = method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo")
+    carried = method_body(S['Trading.cs'],
+                          "private List<(EquipmentElement item, int amount, int worth, int floor)> "
+                          "WhatYouCarryToSell")
     floor = method_body(S['Trading.cs'], "private static int BestMarketFloor")
     worth = between(S['Policy.cs'], "internal static int WorthToBeat", ";")
-    return ("TradePolicy.WorthToBeat(item), BestMarketFloor(item)));" in marker
+    return ("TradePolicy.WorthToBeat(item), BestMarketFloor(item)));" in carried
+            and "var cargo = WhatYouCarryToSell(party);" in marker
             and "TradeRules.WorthToBeat(Describe(item), CostBasis(item), UnpaidWorth(item))" in worth
-            and ordered(marker, "int price = Priced.At(market, item, party, true);",
+            and ordered(marker, "int price = WhatThatMarketPays(s, market, item, party);",
                         "if (price < floor) continue;",
                         "if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) continue;",
                         "total += (long)price * amount;")
@@ -1523,7 +1530,8 @@ chk("1.3.6", "the smithing-material rule still binds buying as well as selling",
         method_body(S['Policy.cs'], "internal static Good Describe"))
 chk("1.3.6", "vanilla suppression asks the ledger", "TooltipHelper.HasSection(____targetItem)" in S['TooltipPatches.cs'])
 chk("1.3.6", "marker respects the sell policy",
-    "TradePolicy.MaySell(el, locked, keepBack" in method_body(S['Trading.cs'], "private Settlement FindBestSellTownForCargo"))
+    "TradePolicy.MaySell(el, locked, keepBack" in method_body(S['Trading.cs'],
+        "private List<(EquipmentElement item, int amount, int worth, int floor)> WhatYouCarryToSell"))
 chk("1.3.6", "chunked trade lines silenced",
     "AutomatedTradeInProgress" in S['Trading.cs'] and "Patch_SilenceChunkedTradeLines" in S['Trading.cs'])
 chk("1.3.6", "smithing materials still ship tradable, as the old switch shipped off",
@@ -2945,7 +2953,13 @@ def an_item_list_is_matched_by_name_as_well_as_by_id():
             "list.HasName(" not in S['Policy.cs'] and
             ordered(describe, "if (AnyListNamesAGood(Options.Current))",
                     "ReadTheGoodsInThisGame();",
-                    "good.Name = item.Name == null ? null : item.Name.ToString();"))
+                    "good.Name = SpokenName(item);") and
+            ordered(method_body(S['Policy.cs'], "private static string SpokenName"),
+                    "if (_spoken.TryGetValue(item, out string said)) return said;",
+                    "said = item.Name == null ? null : item.Name.ToString();",
+                    "_spoken[item] = said;") and
+            "_spoken.Clear();" in
+                method_body(S['Policy.cs'], "internal static void ForgetItemListAudit"))
 
 def a_written_word_stands_for_an_id_and_never_for_another_goods_name():
     read = method_body(S['Options.cs'], "public void ReadWordsAsIds")
@@ -4491,7 +4505,7 @@ def a_quest_animal_is_held_back_from_every_sale_not_just_the_herd():
             and all("TradePolicy.KeptBack(" in method_body(S['Trading.cs'], where)
                     for where in ("private sealed class SellingFrom",
                                   "public static void ExecuteHerdRelief",
-                                  "private Settlement FindBestSellTownForCargo")))
+                                  "private List<(EquipmentElement item, int amount, int worth, int floor)> WhatYouCarryToSell")))
 
 chk("1.37.5", "an animal a quest is waiting on is held back from every sale, not only from thinning the herd",
     a_quest_animal_is_held_back_from_every_sale_not_just_the_herd())
@@ -5331,7 +5345,7 @@ def an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on():
     t = S['Trading.cs']
     sell = method_body(S['Policy.cs'], "internal static bool MaySell(ItemRosterElement el")
     quick = sell_pass()
-    marker = method_body(t, "private Settlement FindBestSellTownForCargo")
+    carried = method_body(t, "private List<(EquipmentElement item, int amount, int worth, int floor)> WhatYouCarryToSell")
     return (ordered(sell_rule(),
                     "int promised = DrawKeepBack(amount, facts.AwaitedHeld, out bool owed);",
                     "said.KeepCount = promised;",
@@ -5345,7 +5359,7 @@ def an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on():
                         "reserve[item] = held - drawn;")
             and "KeptBack(ItemRoster roster)" not in t
             and "IDictionary<ItemObject, int> foodKeep, out int keepCount)" not in t
-            and "_keepBack, _awaited" in quick and "keepBack, awaited" in marker)
+            and "_keepBack, _awaited" in quick and "keepBack, awaited" in carried)
 
 chk("1.39.2", "an animal a quest is waiting on is held back even where your always-sell list names it, in every pass that sells",
     an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on())
@@ -6452,7 +6466,7 @@ def the_food_reserve_carries_a_dry_run_from_one_pass_to_the_next():
             and "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);"
                 in method_body(t, "public static void ExecuteHerdRelief")
             and "TradePolicy.KeptBack(party.ItemRoster, Visit, sim: false, out var awaited);" in
-                method_body(t, "private Settlement FindBestSellTownForCargo")
+                method_body(t, "private List<(EquipmentElement item, int amount, int worth, int floor)> WhatYouCarryToSell")
             and "What_a_dry_run_sold_is_taken_off_one_stack_after_another_and_never_twice" in FOODTESTS
             and "A_real_pass_leaves_every_stack_exactly_as_the_party_holds_it" in FOODTESTS
             and "A_reserve_worked_out_after_a_dry_run_reaches_past_what_it_already_sold" in FOODTESTS)
@@ -6727,7 +6741,7 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
                      "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;",
                      "if (market.Gold <= bestValue) continue;",
                      "float cap = LedgerBehavior.TravelCeiling(s);",
-                     "Priced.At(market, item, party, true)")
+                     "WhatThatMarketPays(s, market, item, party)")
              and "Town.AllTowns" not in marker
              and "town.Gold" not in marker)
     gated = ("s.IsVillage && Options.Current.TradeWithVillages" in pool
@@ -7691,15 +7705,21 @@ chk("1.70.0", "the tooltip says what you paid for a good you have bought, in eve
 def how_long_a_shelf_holds_a_deal_is_worked_out_where_a_test_can_ask_it():
     p = S['Projection.cs']
     runs = method_body(p, "internal static float RunsOutAt")
+    curve = method_body(p, "internal static List<(float days, int shelf)> ShelfAhead")
+    reads = method_body(p, "internal static float RunsOutOf")
     moments = method_body(p, "internal static List<float> Moments")
     note = method_body(p, "private static void Note")
     return ("TaleWorlds" not in p and "Settlement" not in p and "ItemObject" not in p
             and "internal const float NeverRunsOut = -1f;" in p
             and "if (item == null || wanted <= 0 || unitValue <= 0) return NeverRunsOut;" in runs
-            and "WorthLeaving(PurseLanding(coming, days), pull, across, category), unitValue);" in runs
-            and "UnitsLanding(listed, item, days), taken);" in runs
-            and "if (shelf < wanted) return days;" in runs
-            and "return NeverRunsOut;" in runs
+            and "return RunsOutOf(ShelfAhead(listed, coming, pull, across, item, category," in runs
+            and "if (item == null || unitValue <= 0) return curve;" in curve
+            and "WorthLeaving(PurseLanding(coming, days), pull, across, category), unitValue);" in curve
+            and "UnitsLanding(listed, item, days), taken)));" in curve
+            and "wanted" not in curve
+            and "if (curve == null || wanted <= 0) return NeverRunsOut;" in reads
+            and "if (curve[i].shelf < wanted) return curve[i].days;" in reads
+            and "return NeverRunsOut;" in reads
             and "when.Sort();" in moments
             and "float at = TradeMath.UpToTheQuarterDay(days);" in note
             and "if (at <= afterDays || !already.Add(at)) return;" in note
@@ -7711,14 +7731,24 @@ def how_long_a_shelf_holds_a_deal_is_worked_out_where_a_test_can_ask_it():
                      "A_load_landing_first_holds_the_shelf_up_past_a_purse",
                      "Nothing_that_lands_before_you_arrive_can_expire_the_deal",
                      "Every_moment_counted_is_after_you_arrive_and_on_the_quarter_day",
-                     "A_shelf_that_runs_out_never_reports_a_moment_you_have_already_passed"))
+                     "A_shelf_that_runs_out_never_reports_a_moment_you_have_already_passed",
+                     "The_shelf_a_town_will_hold_is_the_same_whatever_size_deal_asks_for_it",
+                     "The_shelf_a_town_will_hold_is_read_once_for_every_moment_it_changes",
+                     "A_shelf_read_ahead_that_never_dips_hands_back_no_moment_at_all",
+                     "A_deal_of_nothing_never_expires_against_a_shelf_read_ahead"))
             and "What_lands_on_a_day_is_counted_by_the_moment_that_day_rounds_up_to" in MATHTESTS)
 
 def a_route_says_how_long_its_buy_market_holds_that_quantity():
     ask = method_body(S['Forecast.cs'], "internal static float RunsOutIn")
+    kept = method_body(S['Forecast.cs'],
+                       "private static List<(float days, int shelf)> ShelfAhead")
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
     return ("if (!On || site == null || item == null || item.ItemCategory == null)" in ask
-            and "return Projection.RunsOutAt(listed, coming, pull, across, item.StringId," in ask
+            and "return Projection.RunsOutOf(ShelfAhead(site, item, stockNow, afterDays), wanted);" in ask
+            and "if (_shelfAhead.TryGetValue(key, out List<(float days, int shelf)> curve)) return curve;"
+                in kept
+            and "curve = Projection.ShelfAhead(listed, coming, pull, across, item.StringId," in kept
+            and "_shelfAhead.Clear();" in method_body(S['Forecast.cs'], "private static void Build")
             and "public float RunsOutInDays = Projection.NeverRunsOut;" in S['Ledger.cs']
             and "float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);" in scan
             and "RunsOutInDays = runsOut" in scan
@@ -8362,9 +8392,11 @@ def the_workshop_limit_is_lifted_for_your_clan_alone():
     rules = S['Rules.cs']
     shops = S['Workshops.cs']
     tier = method_body(shops, "private static void Postfix(int tier, ref int __result)")
-    return ("public static bool TheGameIsAskingAboutYou(int askedAboutTier, int yourTier) =>" in rules
-            and "yourTier >= 0 && askedAboutTier == yourTier;" in rules
-            and "if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier())) return;" in tier
+    return ("public static bool TheGameIsAskingAboutYou(int askedAboutTier, int yourTier," in rules
+            and "bool whileYouBuy) =>" in rules
+            and "whileYouBuy && yourTier >= 0 && askedAboutTier == yourTier;" in rules
+            and "if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier(), Shops.ItIsYouBuying)) return;"
+                in tier
             and '[HarmonyPatch(typeof(DefaultWorkshopModel), "MaximumWorkshopsPlayerCanHave", MethodType.Getter)]' in shops
             and "Patcher.TryPatch(harmony, typeof(Patch_WorkshopsYouMayHave));" in S['SubModule.cs']
             and '"get_MaximumWorkshopsPlayerCanHave"' in COMPAT
@@ -8551,6 +8583,101 @@ def a_shelf_that_cannot_be_walked_is_never_walked():
 
 chk("1.76.5", "a price that cannot move with what is taken off a shelf is read once, not once for every unit",
     a_shelf_that_cannot_be_walked_is_never_walked())
+
+def the_workshop_limit_is_only_lifted_while_it_is_you_buying():
+    shops = S['Workshops.cs']
+    rule = between(S['Rules.cs'], "public static bool TheGameIsAskingAboutYou", ";")
+    tier = method_body(shops, "private static void Postfix(int tier, ref int __result)")
+    window = method_body(shops, "internal static void WhileItIsYouBuying")
+    return ("whileYouBuy &&" in rule
+            and "Shops.ItIsYouBuying" in tier
+            and "internal static bool ItIsYouBuying => _youBuying > 0;" in shops
+            and ordered(window, "_youBuying++;", "try { work(); }", "finally { _youBuying--; }")
+            and "internal static void ForgetWhoIsBuying() => _youBuying = 0;" in shops
+            and shops.count("WhileItIsYouBuying(") == 2
+            and "WhileItIsYouBuying(" in method_body(shops, "internal static bool Buy")
+            and "Shops.ForgetWhoIsBuying();" in
+                method_body(S['Trading.cs'], "internal static void ForgetVisit")
+            and all(one in HOLDINGTESTS for one in
+                    ("A_clan_sitting_at_your_own_tier_keeps_its_own_limit_when_you_are_not_buying",
+                     "Nothing_the_game_asks_lifts_a_limit_while_you_are_not_buying",
+                     "new System.Random(48802)")))
+
+
+chk("1.76.6", "the workshop limit is lifted only while it is you buying one, so a clan sitting at your own tier keeps the limit the game gives it",
+    the_workshop_limit_is_only_lifted_while_it_is_you_buying())
+
+
+def the_marker_reads_your_cargo_once_and_prices_each_market_once():
+    t = S['Trading.cs']
+    carried = method_body(t, "private List<(EquipmentElement item, int amount, int worth, int floor)> "
+                             "WhatYouCarryToSell")
+    asked = method_body(t, "private static int WhatThatMarketPays")
+    forget = method_body(t, "private static void ForgetTheMarkerRead")
+    return (ordered(carried,
+                    "int version = party.ItemRoster.VersionNo;",
+                    "if (_cargo != null && hour == _cargoHour && Options.Generation == _cargoGen &&",
+                    "version == _cargoVersion) return _cargo;",
+                    "TradePolicy.KeptBack(party.ItemRoster, Visit, sim: false, out var awaited);",
+                    "_cargo = cargo;")
+            and ordered(asked,
+                        "if (good == null) return Priced.At(market, el, party, true);",
+                        "if (hour != _markerPriceHour || Options.Generation != _markerPriceGen)",
+                        "_markerPrices.Clear();",
+                        "if (_markerPrices.TryGetValue(key, out int kept)) return kept;",
+                        "_markerPrices[key] = price;")
+            and "el.ItemModifier == null ? \"\" : el.ItemModifier.StringId);" in asked
+            and ordered(forget, "_cargo = null;", "_cargoVersion = -1;", "_markerPrices.Clear();",
+                        "_markerPriceHour = -1;")
+            and t.count("ForgetTheMarkerRead();") == 3
+            and all("ForgetTheMarkerRead();" in method_body(t, where)
+                    for where in ("internal static void ForgetVisit",
+                                  "private static void ResetVisit",
+                                  "private void OnSettlementLeft"))
+            and '"VersionNo"' in COMPAT)
+
+
+chk("1.76.6", "the market marked on your map reads what you carry once an hour and asks each market its price once, and reads both again the moment your cargo or a market can have moved",
+    the_marker_reads_your_cargo_once_and_prices_each_market_once())
+
+
+def the_name_a_good_is_shown_by_is_read_once():
+    policy = S['Policy.cs']
+    spoken = method_body(policy, "private static string SpokenName")
+    describe = method_body(policy, "internal static Good Describe")
+    return ("good.Name = SpokenName(item);" in describe
+            and "item.Name.ToString()" not in describe
+            and ordered(spoken, "if (_spoken.TryGetValue(item, out string said)) return said;",
+                        "said = item.Name == null ? null : item.Name.ToString();",
+                        "_spoken[item] = said;")
+            and "_spoken.Clear();" in
+                method_body(policy, "internal static void ForgetItemListAudit"))
+
+
+chk("1.76.6", "the name a good is shown by is read from the game once and kept, however many times the selling rules ask for it",
+    the_name_a_good_is_shown_by_is_read_once())
+
+
+def a_town_shelf_is_read_ahead_once_for_every_deal_that_asks_it():
+    f = S['Forecast.cs']
+    kept = method_body(f, "private static List<(float days, int shelf)> ShelfAhead")
+    ask = method_body(f, "internal static float RunsOutIn")
+    return ("Dictionary<(string site, string item, int stockNow, float afterDays)," in f
+            and "_shelfAhead" in f
+            and "var key = (site.StringId, item.StringId, stockNow, afterDays);" in kept
+            and "if (_shelfAhead.TryGetValue(key, out List<(float days, int shelf)> curve)) return curve;"
+                in kept
+            and "_shelfAhead[key] = curve;" in kept
+            and "return Projection.RunsOutOf(ShelfAhead(site, item, stockNow, afterDays), wanted);" in ask
+            and "Projection.RunsOutAt(" not in f
+            and f.count("_shelfAhead.Clear();") == 2
+            and "_shelfAhead.Clear();" in method_body(f, "private static void Build")
+            and "_shelfAhead.Clear();" in method_body(f, "internal static void Forget"))
+
+
+chk("1.76.6", "how long a buy market holds a quantity is worked out once for that market and arrival, and answered from it for every size of deal the scan tries",
+    a_town_shelf_is_read_ahead_once_for_every_deal_that_asks_it())
+
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
