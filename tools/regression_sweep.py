@@ -4603,7 +4603,8 @@ def every_animal_that_moves_is_named_with_its_reason():
     return ("if (item == null || !item.HasHorseComponent) return;" in moved
             and '"  animal " + (selling ? "out: " : "in: ")' in moved
             and '" - " + why + "; TradeLord counts it as " + TradePolicy.AnimalGroup(item)' in moved
-            and "LogAnimalMoved(selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);" in detail
+            and "LogAnimalMoved(lines, selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);" in detail
+            and 'lines.Add("  animal " + (selling ? "out: " : "in: ")' in moved
             and "LogDetail(selling, Sim, Detail, Quoted, why)" in between(src, "internal void Logged(", ";")
             and src.count("pass.Logged(selling:") == 7
             and src.count("LogDetail(selling:") == 0
@@ -8726,6 +8727,24 @@ def the_markets_behind_a_screen_are_priced_once_for_the_screen():
 
 chk("1.76.7", "the markets behind the item tooltips and the inventory colours are priced once for the market you are standing in, not once for every good on the screen",
     the_markets_behind_a_screen_are_priced_once_for_the_screen())
+
+
+
+def the_log_bursts_a_trade_writes_reach_the_file_in_one_go():
+    detail = method_body(S['Trading.cs'], "private static void LogDetail")
+    promise = method_body(S['Hindsight.cs'], "private static void Kept")
+    forecast = method_body(S['Hindsight.cs'], "private static void Written")
+    bursts = [detail, promise, forecast]
+    return (all("Log.Write(" not in b for b in bursts)
+            and all(b.count("Log.WriteMany(lines);") == 1 for b in bursts)
+            and all(b.index("Log.WriteMany(lines);") > b.rindex("lines.Add(") for b in bursts)
+            and "lines.Insert(0, \"promise check at \"" in promise
+            and "lines.Insert(0, \"forecast check at \"" in forecast
+            and "for (int i = 0; i < lines.Count; i++) Log.Write(lines[i]);" not in S['Hindsight.cs'])
+
+
+chk("1.76.8", "the lines TradeLord writes as it trades and as it scores what it promised you reach the log in one go, not one push of the file for every good",
+    the_log_bursts_a_trade_writes_reach_the_file_in_one_go())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
