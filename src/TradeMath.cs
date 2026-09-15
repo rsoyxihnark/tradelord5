@@ -20,6 +20,14 @@ namespace TradeLord
                 ? townSellPrice >= costBasis * (1f + margin)
                 : townSellPrice > 0;
 
+        public static int MostToPayOverTheCheapest(int cheapest, float tolerance)
+        {
+            if (cheapest <= 0) return 0;
+            if (float.IsNaN(tolerance) || tolerance <= 1f) return cheapest;
+            double most = Math.Floor((double)cheapest * tolerance);
+            return most > int.MaxValue ? int.MaxValue : (int)most;
+        }
+
         public const float DriftWorthSaying = 0.05f;
 
         public const float DaysBeforeAnotherReading = 1f;

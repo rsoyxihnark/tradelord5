@@ -109,7 +109,7 @@
 		<string id="TL266" text="Kaç günlük ücret için altın tut" />
 		<string id="TL366" text="Yukarıdaki altın rezervinin üstüne, askerlerinizin bu kadar günlük ücretini de ayırır, böylece bir alışveriş turu maaşları yemez. TradeLord her ticaret yaptığında gerçek ücret yükünüzden hesaplanır, yani orduyla birlikte büyür. 0 yalnızca sabit rezervi tutar." />
 		<string id="TL267" text="Yük hayvanı satın al" />
-		<string id="TL367" text="Herhangi bir yük hayvanı alır, bir Katır, bir Yük Atı, bir İş Atı, bir Eyer Atı ya da bir Yük Devesi, pazar bir tanesinin değerinden fazlasını istemiyorsa, böylece bölüğünüz daha çok taşır. Sizi yavaşlatmadan güdebileceğinizden fazlasını almaz ve altın rezervinize ulaşmadan durur. Öntanımlı olarak AÇIK." />
+		<string id="TL367" text="Bir katır, yük atı, iş atı, binek atı ya da yük devesi; herhangi bir yük hayvanı al, böylece partin daha çok taşısın. Yavaşlamadan sürebileceğinden fazlasını asla almaz ve altının rezervine inmeden durur. Aşağıdaki iki ayar ne kadar altın beklediğini ve ne kadar ödeyeceğini söyler. Varsayılan AÇIK."/>
 		<string id="TL269" text="Haydutlardan serbest geçiş" />
 		<string id="TL369" text="Çapulcularla ya da haydutlarla karşılaştığınızda TradeLord, geçmenize izin vermelerini isteyen bir konuşma satırı ekler. Bunu söylemek karşılaşmayı dövüşsüz ve fidyesiz bitirir, birkaç saat sizi rahat bırakırlar. Öntanımlı olarak AÇIK." />
 		<string id="TL270" text="Sat" />
@@ -211,7 +211,7 @@
 		<string id="TL342" text="TradeLord'un ne satıp ne alacağını, ticaret yapmadan bildirir. Bunu en iyi durum olarak görün: hiçbir şey kıpırdamaz, her birim bugünün açılış fiyatından fiyatlanır ve gerçek bir geçiş genelde daha az ticaret yapar. Her sınır ve tüccarın altını tam olarak modellenir."/>
 		<string id="TL343" text="Bu sefer gününden önce, menüden ya da girişte, TradeLord ticaret yapmaz. Yeni bir seferde fiyatlar henüz oturmamıştır."/>
 		<string id="TL344" text="Otomatik kâr için verilen Ticaret tecrübesini ölçekler. 0 tecrübeyi kapatır."/>
-		<string id="TL345" text="Harita izleyicisini, şu anki kargonuza en çok ödeyen erişilebilir pazara taşır ve siz at sürerken sizi takip eder. Bir köy yalnızca Köylerle ticaret yap açıkken işaretlenir. Yol süresi sınırlarına uyar. Öntanımlı olarak AÇIK; defter panelinde bir şehre tıklamak yine elle işaret koyar."/>
+		<string id="TL345" text="Harita izleyicisini, orada gerçekten satabileceği kargoya en çok ödeyen erişilebilir pazara taşır; yalnızca en az kâr marjını geçenleri sayar ve siz at sürerken sizi takip eder. Bir köy yalnızca Köylerle ticaret yap açıkken işaretlenir. Yol süresi sınırlarına uyar. Öntanımlı olarak AÇIK; defter panelinde bir şehre tıklamak yine elle işaret koyar."/>
 		<string id="TL347" text="Bir geçiş gerçekten bir şey taşıdığında bozuk para sesi çal. Hiçbir şey taşımayan geçiş sessiz kalır."/>
 		<string id="TL348" text="Tek satırlık ticaret özetinde malları adlandır, örneğin 'TradeLord 8 Zeytin, 3 Şarap sattı, 240 dinar', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
 		<string id="TL349" text="Kendiliğinden yapılan ticaret, hem bir pazara girdiğinizde hem de yolda bir kervanla ya da bir köylü bölüğüyle karşılaştığınızda, ekranda satır olmadan yalnızca TradeLord.log dosyasına bildirir. Menüdeki ticaret girdisi her zaman bildirir."/>
@@ -270,5 +270,9 @@
 		<string id="TL422" text="TradeLord'un önüne koyduğu ticaret kapandı: kesen {GOLD} dinar azaldı."/>
 		<string id="TL423" text="TradeLord'un önüne koyduğu ticaret kapandı ve kesen olduğu yerde."/>
 		<string id="TL424" text="Son ticaretler"/>
+		<string id="TL425" text="Yük hayvanı almadan önce gereken altın (0 = kapalı)"/>
+		<string id="TL426" text="Keseniz bunun üzerine çıkana kadar hiç yük hayvanı alma. Altında kaldıkça TradeLord ne kadar ucuz olursa olsun onlara dokunmaz, böylece erken altın mala gider. 0 ilk dinardan itibaren almasına izin verir. Varsayılan 2000."/>
+		<string id="TL427" text="Bir yük hayvanı için ödeyeceği en yüksek tutar"/>
+		<string id="TL428" text="O hayvan için gördüğünüz en ucuz fiyatın ne kadar üstüne kadar TradeLord yine de öder. %100 yalnızca gördüğünüz en ucuz fiyata demektir. Varsayılan 1.25, yani en ucuzun dörtte biri kadar üstüne kadar öder."/>
 	</strings>
 </base>

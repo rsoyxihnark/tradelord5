@@ -1363,8 +1363,8 @@ namespace TradeLord
         private static bool NoRoomForOneMore(in Good good, float roomLeft) =>
             TradeRules.NoRoomForOneMore(good, roomLeft);
 
-        private static List<(ItemRosterElement el, Good good, int price, int worth)> CheapestFirst(
-            Pass pass, Func<ItemObject, bool> wanted)
+        private static List<(ItemRosterElement el, Good good, int price, int ceiling)> CheapestFirst(
+            Pass pass, Func<ItemObject, bool> wanted, float tolerance = 1f)
         {
             var shelf = new List<(ItemRosterElement el, int price)>();
             var goods = new List<ItemObject>();
@@ -1383,13 +1383,14 @@ namespace TradeLord
             }
             LedgerBehavior.Instance?.PrimeMarketsFor(goods);
 
-            var found = new List<(ItemRosterElement el, Good good, int price, int worth)>();
+            var found = new List<(ItemRosterElement el, Good good, int price, int ceiling)>();
             foreach (var (el, price) in shelf)
             {
                 ItemObject it = el.EquipmentElement.Item;
                 int worth = TradePolicy.UnpaidWorth(it);
-                if (price > worth) continue;
-                found.Add((el, TradePolicy.Describe(it), price, worth));
+                int ceiling = TradeMath.MostToPayOverTheCheapest(worth, tolerance);
+                if (price > ceiling) continue;
+                found.Add((el, TradePolicy.Describe(it), price, ceiling));
             }
             found.Sort((x, y) => x.price.CompareTo(y.price));
             return found;
@@ -1416,7 +1417,7 @@ namespace TradeLord
             pass.CountFrom();
             InAPass(() =>
             {
-                foreach (var (el, good, _, worth) in larder)
+                foreach (var (el, good, _, ceiling) in larder)
                 {
                     if (pass.DirectionError || shortfall <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
@@ -1431,7 +1432,7 @@ namespace TradeLord
                     while (shortfall > 0 && remaining > 0)
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
-                        if (price <= 0 || price > worth) break;
+                        if (price <= 0 || price > ceiling) break;
                         if (price >= pass.Spendable()) break;
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
@@ -1706,11 +1707,25 @@ namespace TradeLord
             if (!pass.Sim && profit > 0) AwardTradeXp(profit, pass.Muted);
         }
 
+        private static bool PurseBelowTheHaulAnimalFloor(Pass pass)
+        {
+            int floor = Options.Current.HaulAnimalGoldFloor;
+            if (floor <= 0) return false;
+            int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);
+            if (purse > floor) return false;
+            Log.Repeatable("haul animal floor", purse + "/" + floor,
+                           "haul animals are left alone: your purse is at " + purse +
+                           " gold and Gold before it buys a haul animal is " + floor +
+                           ", so nothing is bought until you are above it");
+            return true;
+        }
+
         public static void ExecuteHaulage(Settlement settlement, bool quiet = false)
         {
             if (!Options.Current.BuyHaulAnimals) return;
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
+            if (PurseBelowTheHaulAnimalFloor(pass)) return;
 
             int herdRoom = HerdRoomForLivestock(pass.Party);
             herdRoom -= pass.Books.HerdTaken(pass.Sim);
@@ -1718,13 +1733,14 @@ namespace TradeLord
 
             int hauled = 0, simSpent = 0;
 
-            var stable = CheapestFirst(pass, it => TradePolicy.MayHaul(it, pass.Locked));
+            var stable = CheapestFirst(pass, it => TradePolicy.MayHaul(it, pass.Locked),
+                                       Options.Current.HaulAnimalPriceTolerance);
             if (stable.Count == 0) return;
 
             pass.CountFrom();
             InAPass(() =>
             {
-                foreach (var (el, good, _, worth) in stable)
+                foreach (var (el, good, _, ceiling) in stable)
                 {
                     if (pass.DirectionError) break;
                     ItemObject item = el.EquipmentElement.Item;
@@ -1737,7 +1753,7 @@ namespace TradeLord
                     while (remaining > 0 && herdRoom > 0)
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
-                        if (price <= 0 || price > worth) break;
+                        if (price <= 0 || price > ceiling) break;
                         if (price >= pass.Spendable()) break;
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, HoldShareOff) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
@@ -1963,7 +1979,9 @@ namespace TradeLord
         {
             VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;
             if (tracker == null) return;
-            Settlement target = Options.Current.MarkBestSellTownOnMap ? FindBestSellTownForCargo() : null;
+            Settlement target = null;
+            string why = "the map marker is switched off";
+            if (Options.Current.MarkBestSellTownOnMap) target = FindBestSellTownForCargo(out why);
 
             if (target == _trackedTown)
             {
@@ -1979,25 +1997,33 @@ namespace TradeLord
                 tracker.RegisterObject(target);
                 _trackedTown = target;
             }
+            Log.Write(_trackedTown != null
+                ? "map marker moved to " + _trackedTown.Name + ": " + why
+                : "map marker taken off the map: " + why);
         }
 
-        private Settlement FindBestSellTownForCargo()
+        private Settlement FindBestSellTownForCargo(out string why)
         {
+            why = "nothing in your cargo is yours to sell";
             MobileParty party = MobileParty.MainParty;
             if (party == null) return null;
             ISet<string> locked = TradePolicy.LockedKeys();
             var keepBack = TradePolicy.KeptBack(party.ItemRoster, Visit, sim: false, out var awaited);
-            var cargo = new List<(EquipmentElement item, int amount)>();
+            var cargo = new List<(EquipmentElement item, int amount, int worth, int floor)>();
             for (int i = 0; i < party.ItemRoster.Count; i++)
             {
                 ItemRosterElement el = party.ItemRoster.GetElementCopyAtIndex(i);
                 if (!TradePolicy.MaySell(el, locked, keepBack, awaited, out int keep)) continue;
-                if (el.Amount - keep > 0) cargo.Add((el.EquipmentElement, el.Amount - keep));
+                if (el.Amount - keep <= 0) continue;
+                ItemObject item = el.EquipmentElement.Item;
+                cargo.Add((el.EquipmentElement, el.Amount - keep,
+                           TradePolicy.WorthToBeat(item), BestMarketFloor(item)));
             }
             if (cargo.Count == 0) return null;
 
-            Settlement bestTown = null;
-            long bestValue = 0;
+            Settlement bestTown = null, runnerUp = null;
+            long bestValue = 0, runnerUpValue = 0;
+            int bestUnits = 0, bestKinds = 0, bestPurse = 0, weighed = 0, refused = 0;
             foreach (Settlement s in Settlement.All)
             {
                 SettlementComponent market = s.SettlementComponent;
@@ -2007,6 +2033,7 @@ namespace TradeLord
                 if (!IsMarket(s)) continue;
                 if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;
+                weighed++;
                 if (market.Gold <= bestValue) continue;
                 float cap = LedgerBehavior.TravelCeiling(s);
                 if (cap > 0f)
@@ -2015,12 +2042,48 @@ namespace TradeLord
                     if (Travel.EstimateDaysFromParty(s) > cap) continue;
                 }
                 long total = 0;
-                foreach (var (item, amount) in cargo)
-                    total += (long)Priced.At(market, item, party, true) * amount;
+                int units = 0, kinds = 0;
+                foreach (var (item, amount, worth, floor) in cargo)
+                {
+                    int price = Priced.At(market, item, party, true);
+                    if (price < floor) continue;
+                    if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) continue;
+                    total += (long)price * amount;
+                    units += amount;
+                    kinds++;
+                }
+                if (total <= 0) { refused++; continue; }
                 if (total > market.Gold) total = market.Gold;
-                if (total > bestValue) { bestValue = total; bestTown = s; }
+                if (total > bestValue)
+                {
+                    runnerUp = bestTown;
+                    runnerUpValue = bestValue;
+                    bestValue = total;
+                    bestTown = s;
+                    bestUnits = units;
+                    bestKinds = kinds;
+                    bestPurse = market.Gold;
+                }
+                else if (total > runnerUpValue) { runnerUpValue = total; runnerUp = s; }
             }
+            why = bestTown == null
+                ? "of the " + weighed + " market(s) it looked at, " + refused + " would pay too little for any " +
+                  "of the " + cargo.Count + " good(s) you carry to clear Minimum profit margin, and the rest are " +
+                  "past your travel ceilings or have no gold at all"
+                : bestKinds + " of the " + cargo.Count + " good(s) you carry clear Minimum profit margin there, " +
+                  bestUnits + " unit(s) for " + bestValue + " gold against a town purse of " + bestPurse +
+                  ", about " + Travel.EstimateDaysFromParty(bestTown).ToString("0.#") + " day(s) away" +
+                  (runnerUp == null
+                      ? ", and no other market in reach would take any of it"
+                      : ", ahead of " + runnerUp.Name + " at " + runnerUpValue + " gold");
             return bestTown;
+        }
+
+        private static int BestMarketFloor(ItemObject item)
+        {
+            if (!Options.Current.PreferBestSellTown) return 0;
+            var best = LedgerBehavior.Instance?.BestSell(item) ?? (null, 0);
+            return best.Item1 == null ? 0 : (int)(best.Item2 * Options.Current.BestSellTownTolerance);
         }
 
         private static void AwardTradeXp(int profit, bool muted)
