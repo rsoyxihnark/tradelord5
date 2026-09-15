@@ -113,6 +113,16 @@ or set it to whatever you like. The same switches and numbers are also in `Trade
 was last saved, whichever was saved last wins, and the other is written to match, so you can install or remove
 MCM whenever you like and edit the file by hand either way without losing what you set.
 
+**Answers to what people ask**
+
+- ✅ Can I add it to a campaign already running? Yes, and take it out again. It declares no save types of its own, so a save written with it still opens without it
+- ✅ Do I need MCM? No. MCM is what the settings screen is built on; without it every setting is in `TradeLord.ini`, written beside the log the first time TradeLord loads, and you edit it there instead
+- ✅ Will it sell something I wanted to keep? Not what you locked in the inventory screen, not what a quest of yours is waiting on, not unique or player-crafted gear, and not what you name on the never-sell list
+- ✅ Does it change prices or the economy? No. It buys and sells at the game's own prices, through the game's own buying and selling, so every other party in Calradia sees the Calradia it always saw
+- ✅ Do I need the War Sails DLC? No. With it TradeLord counts sea legs and appears in port menus, and without it everything else works the same
+- ✅ It traded nothing, why? It says so on screen and names what stopped it, with the longer answer in `TradeLord.log`. The two usual reasons are your gold reserve holding your purse back and your cargo being too full to buy
+- ✅ Can I run another trade mod alongside it? Run only one mod that trades, or the two of them fight over the same cargo and the same purse
+
 ## What it needs
 
 - **Harmony** (`Bannerlord.Harmony`), required. TradeLord does not load without it. Put it above TradeLord in the launcher's load order.
