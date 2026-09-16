@@ -147,6 +147,72 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_list_typed_across_lines_keeps_to_its_own_line_and_leaves_every_other_setting_alone()
+        {
+            var went = Pairs("GoldReserve", "300",
+                             "NeverSell", "grain\nGoldReserve = 99999",
+                             "MaxCargoShare", "0.9");
+            var ignored = new List<string>();
+            var read = SettingsFile.Read(Lines(SettingsFile.Compose(Header, went)), ignored);
+            Assert.Empty(ignored);
+            Assert.Equal(3, read.Count);
+            Assert.Equal("300", read["GoldReserve"]);
+            Assert.Equal("0.9", read["MaxCargoShare"]);
+            Assert.Equal("grain GoldReserve = 99999", read["NeverSell"]);
+        }
+
+        [Fact]
+        public void A_list_typed_across_lines_loses_none_of_what_was_typed()
+        {
+            var went = Pairs("NeverSell", "grain\r\nwine\nolives");
+            var read = SettingsFile.Read(Lines(SettingsFile.Compose(Header, went)), new List<string>());
+            string kept = read["NeverSell"];
+            Assert.Contains("grain", kept);
+            Assert.Contains("wine", kept);
+            Assert.Contains("olives", kept);
+            Assert.DoesNotContain("\n", kept);
+            Assert.DoesNotContain("\r", kept);
+        }
+
+        [Fact]
+        public void A_value_with_no_line_break_in_it_is_written_exactly_as_it_was_given()
+        {
+            string[] each = { "", "300", "true", "sumpter_horse, mule", "Pack Camel, Mule",
+                              "a = b", "# not a comment here", "\tspaced\t" };
+            foreach (string one in each)
+            {
+                Assert.Equal(one, SettingsFile.OneLine(one));
+                Assert.Same(one, SettingsFile.OneLine(one));
+            }
+        }
+
+        [Fact]
+        public void Whatever_is_written_comes_back_whole_even_when_a_value_was_typed_across_lines()
+        {
+            var rng = new Random(20260916);
+            for (int round = 0; round < 20000; round++)
+            {
+                var went = new List<KeyValuePair<string, string>>();
+                var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                int count = rng.Next(1, 6);
+                for (int i = 0; i < count; i++)
+                {
+                    string name = Word(rng, 1 + rng.Next(8));
+                    if (!names.Add(name)) continue;
+                    went.Add(new KeyValuePair<string, string>(name, ValueThatMayRunOn(rng)));
+                }
+                string text = SettingsFile.Compose(rng.Next(2) == 0 ? Header : null, went);
+                var ignored = new List<string>();
+                var read = SettingsFile.Read(
+                    rng.Next(2) == 0 ? Lines(text) : LinesKeepingCarriageReturns(text), ignored);
+                Assert.Empty(ignored);
+                Assert.Equal(went.Count, read.Count);
+                foreach (var line in went)
+                    Assert.Equal(SettingsFile.OneLine(line.Value).Trim(), read[line.Key]);
+            }
+        }
+
+        [Fact]
         public void Whatever_is_written_comes_back_unchanged_however_it_is_spaced_and_stored()
         {
             var rng = new Random(8823);
@@ -176,6 +242,15 @@ namespace TradeLord.Tests
             var made = new char[length];
             for (int i = 0; i < length; i++) made[i] = (char)('a' + rng.Next(26));
             return new string(made);
+        }
+
+        private static string ValueThatMayRunOn(Random rng)
+        {
+            int kind = rng.Next(8);
+            if (kind == 5) return Word(rng, 4) + "\n" + Word(rng, 5);
+            if (kind == 6) return Word(rng, 3) + "\r\n" + Word(rng, 4) + " = " + rng.Next(9999);
+            if (kind == 7) return "\n\r" + Word(rng, 3) + "\n#" + Word(rng, 2);
+            return Value(rng);
         }
 
         private static string Value(Random rng)
