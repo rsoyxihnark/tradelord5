@@ -159,6 +159,14 @@ namespace TradeLord
             return written;
         }
 
+        public static string OneLine(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "";
+            return value.IndexOf('\n') < 0 && value.IndexOf('\r') < 0
+                ? value
+                : value.Replace('\r', ' ').Replace('\n', ' ');
+        }
+
         public static string Compose(IEnumerable<string> header,
                                      IEnumerable<KeyValuePair<string, string>> settings)
         {
@@ -167,7 +175,7 @@ namespace TradeLord
                 foreach (string line in header)
                 {
                     sb.Append(Marks);
-                    if (!string.IsNullOrEmpty(line)) sb.Append(' ').Append(line);
+                    if (!string.IsNullOrEmpty(line)) sb.Append(' ').Append(OneLine(line));
                     sb.AppendLine();
                 }
             sb.AppendLine();
@@ -175,7 +183,8 @@ namespace TradeLord
                 foreach (var line in settings)
                 {
                     if (string.IsNullOrEmpty(line.Key)) continue;
-                    sb.Append(line.Key).Append(' ').Append(Splits).Append(' ').AppendLine(line.Value ?? "");
+                    sb.Append(OneLine(line.Key)).Append(' ').Append(Splits).Append(' ')
+                      .AppendLine(OneLine(line.Value));
                 }
             return sb.ToString();
         }

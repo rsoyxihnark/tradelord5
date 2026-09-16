@@ -8065,10 +8065,11 @@ def how_a_settings_file_is_read_and_written_is_worked_out_where_a_test_can_ask()
                         "written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();")
             and "StringComparer.OrdinalIgnoreCase" in read
             and ordered(compose, "if (header != null)", "sb.Append(Marks);",
-                        "if (!string.IsNullOrEmpty(line)) sb.Append(' ').Append(line);",
+                        "if (!string.IsNullOrEmpty(line)) sb.Append(' ').Append(OneLine(line));",
                         "sb.AppendLine();", "if (settings != null)",
                         "if (string.IsNullOrEmpty(line.Key)) continue;",
-                        "sb.Append(line.Key).Append(' ').Append(Splits).Append(' ').AppendLine(line.Value ?? \"\");")
+                        "sb.Append(OneLine(line.Key)).Append(' ').Append(Splits).Append(' ')",
+                        ".AppendLine(OneLine(line.Value));")
             and ordered(config, "var ignored = new List<string>();",
                         "var written = SettingsFile.Read(File.ReadAllLines(found), ignored);",
                         "foreach (string line in ignored)",
@@ -9080,6 +9081,37 @@ def the_feature_list_says_which_purse_a_route_is_held_to():
 
 chk("1.78.2", "the feature list says the purse a route is held to is read live, so it names what live prices off takes away",
     the_feature_list_says_which_purse_a_route_is_held_to())
+
+
+
+def a_setting_is_written_on_one_line_so_a_file_reads_back_as_what_was_written():
+    onto = method_body(S['Migrate.cs'], "public static string OneLine(string value)")
+    composed = method_body(S['Migrate.cs'],
+                           "public static string Compose(IEnumerable<string> header,")
+    if not (onto and composed):
+        return False
+    migrate = code_only(S['Migrate.cs'])
+    return ("value.Replace('\\r', ' ').Replace('\\n', ' ')" in onto
+            and "value.IndexOf('\\n') < 0 && value.IndexOf('\\r') < 0" in onto
+            and 'if (string.IsNullOrEmpty(value)) return "";' in onto
+            and "Append(' ').Append(OneLine(line))" in composed
+            and "Append(OneLine(line.Key))" in composed
+            and "AppendLine(OneLine(line.Value))" in composed
+            and "Append(line.Value" not in composed
+            and "AppendLine(line.Value" not in composed
+            and "Append(line.Key)" not in composed
+            and migrate.count("OneLine(") == 4
+            and all(one in SETTINGSFILETESTS for one in
+                    ("A_list_typed_across_lines_keeps_to_its_own_line_and_leaves_every_other_setting_alone",
+                     "A_list_typed_across_lines_loses_none_of_what_was_typed",
+                     "A_value_with_no_line_break_in_it_is_written_exactly_as_it_was_given",
+                     "Whatever_is_written_comes_back_whole_even_when_a_value_was_typed_across_lines"))
+            and "Assert.Same(one, SettingsFile.OneLine(one));" in SETTINGSFILETESTS
+            and "grain\\nGoldReserve = 99999" in SETTINGSFILETESTS)
+
+
+chk("1.78.3", "every setting goes into the settings file on a line of its own, so a list typed across lines cannot lose part of itself or land on top of another setting",
+    a_setting_is_written_on_one_line_so_a_file_reads_back_as_what_was_written())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
