@@ -3206,9 +3206,13 @@ def every_translation_says_everything_the_english_one_does():
 
 def every_translated_line_keeps_its_placeholders():
     en = spoken(ENGLISH)
-    holes = lambda text: sorted(re.findall(r'\{([A-Z][A-Z0-9_]*)\}', text))
-    return all(holes(en[k]) == holes(spoken(path)[k])
-               for path in TRANSLATIONS.values() for k in en)
+    holes = lambda text: sorted(re.findall(r'\{([A-Z][A-Z0-9_]*)\}', text or ''))
+    for path in TRANSLATIONS.values():
+        said = spoken(path)
+        for k in en:
+            if k not in said or holes(en[k]) != holes(said[k]):
+                return False
+    return True
 
 def every_language_the_screen_offers_has_a_file_the_mod_reads():
     choices = re.search(r'LanguageWords =\s*\{([^}]*)\}', M)
@@ -4792,7 +4796,8 @@ def no_setting_a_player_ever_saved_is_left_stranded():
     lift = S['Migrate.cs']
     stranded = [name for name, kind in EVER_SHIPPED.items()
                 if now.get(name) != kind and '"' + name + '"' not in lift]
-    return not stranded and len(EVER_SHIPPED) >= 78
+    unlisted = [name for name in now if name not in EVER_SHIPPED]
+    return not stranded and not unlisted and len(EVER_SHIPPED) >= 79
 
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
@@ -5767,11 +5772,11 @@ def the_grain_switch_owns_the_reason_it_holds_a_good_back():
                 "            { why = Block.NeverList; return false; }" in buy
             and "case Block.GrainSwitch:" in phrase
             and '{=TL388}grain is left alone, since it fills the cargo for little return' in phrase
+            and "TL388" in strings_declared()
+            and all("TL388" in spoken(f) for f in [ENGLISH] + list(TRANSLATIONS.values()))
             and all(word not in spoken(f)['TL388'].lower()
                     for f in [ENGLISH] + list(TRANSLATIONS.values())
                     for word in ("setting", "ayar", "настройк", "\u8bbe\u7f6e"))
-            and "TL388" in strings_declared()
-            and all("TL388" in spoken(f) for f in [ENGLISH] + list(TRANSLATIONS.values()))
             and "GrainSwitch" not in method_body(S['Passes.cs'], "private static bool Guarded"))
 
 
