@@ -1426,7 +1426,8 @@ def chk(ver, claim, ok):
     print(('  ok      ' if ok else '  BROKEN  ') + f"[{ver}] {claim}")
 
 chk("1.3.2", "smithing compares live DefaultItems, no cached static set",
-    "item == DefaultItems.Charcoal" in S['Policy.cs'] and not re.search(r'static.*HashSet<ItemObject>', ALL))
+    "item == DefaultItems.Charcoal" in S['Policy.cs']
+    and not re.search(r'static\s+(readonly\s+)?HashSet<ItemObject>\s+\w+\s*[=;]', ALL))
 chk("1.3.2", "ExcludeHostileTowns blocks trading, not just scans",
     (lambda gate: "IsMarket(s)" in gate
               and "Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)" in gate)
@@ -8809,7 +8810,9 @@ def the_markets_behind_a_screen_are_priced_once_for_the_screen():
             and "if (item != null && TradePolicy.Priced(item)) goods.Add(item);" in gather
             and ordered(markets, "ScreenMarkets.Prime();", "ledger.TopSell(item, TopN)")
             and ordered(coloured, "ScreenMarkets.Prime();", "ledger.BestBuy(item)")
-            and tip.count("ScreenMarkets.Prime();") == 2
+            and ordered(method_body(tip, "private static bool Sectioned"),
+                        "ScreenMarkets.Prime();", "ledger.AnyMarketFor(item)")
+            and tip.count("ScreenMarkets.Prime();") == 3
             and 'Guard.Run("GameEnd.ScreenMarkets", ScreenMarkets.Forget);' in S['SubModule.cs'])
 
 
@@ -9445,6 +9448,45 @@ def the_till_is_never_divided_by_a_price_nothing_has_tested():
 
 chk("1.80.2", "a route's sell price is put to the profit test before the merchant's purse is divided by it, and the margin and the safety factor cannot go low enough to let a price of nothing through, so working out the routes cannot stop the ledger opening",
     the_till_is_never_divided_by_a_price_nothing_has_tested())
+
+
+def a_market_is_never_searched_for_a_good_it_does_not_stock():
+    prime = method_body(S['Ledger.cs'], "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
+    stocks = method_body(S['Ledger.cs'], "private static HashSet<ItemObject> WhatItStocks")
+    return (ordered(prime,
+                    "HashSet<ItemObject> onTheShelf = minStock > 0 ? WhatItStocks(town) : null;",
+                    "if (onTheShelf == null ||",
+                    "(onTheShelf.Contains(item) && StockOf(town, item) >= minStock))")
+            and prime.find("Priced.At(market, item, me, true)") <
+                prime.find("onTheShelf.Contains(item)")
+            and "StockOf(town, item)" in prime
+            and prime.count("WhatItStocks(town)") == 1
+            and "ItemObject item = shelf.GetItemAtIndex(i);" in stocks
+            and "if (item != null) held.Add(item);" in stocks
+            and "GetItemNumber" not in stocks)
+
+
+chk("1.80.3", "the TradeLord ledger asks a market how much of a good it holds only where that good is on its shelves, so a market is no longer searched top to bottom for every good it never stocked",
+    a_market_is_never_searched_for_a_good_it_does_not_stock())
+
+
+def asking_whether_a_tooltip_has_a_section_builds_no_list():
+    tip = S['TooltipPatches.cs']
+    sectioned = method_body(tip, "private static bool Sectioned")
+    any_market = method_body(S['Ledger.cs'], "internal bool AnyMarketFor")
+    return ("return ledger.AnyMarketFor(item);" in sectioned
+            and "Markets(itemVm)" not in sectioned
+            and "TopSell" not in sectioned and "TopBuy" not in sectioned
+            and "int sells = TopMarkets(item, true).Count;" in any_market
+            and "int buys = TopMarkets(item, false).Count;" in any_market
+            and "return sells > 0 || buys > 0;" in any_market
+            and "TakeN" not in any_market and "TopFew" not in any_market
+            and "var (item, sells, buys) = Markets(itemVm);" in
+                method_body(tip, "internal static void Append(ItemMenuVM vm, ItemVM itemVm)"))
+
+
+chk("1.80.3", "the item tooltip works out whether it has anything to say without building the two lists of best markets it would then throw away, and still builds them once when it draws them",
+    asking_whether_a_tooltip_has_a_section_builds_no_list())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

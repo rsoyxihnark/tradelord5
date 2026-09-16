@@ -42,7 +42,16 @@ namespace TradeLord
             return sells.Count == 0 && buys.Count == 0 ? (null, null, null) : (item, sells, buys);
         }
 
-        private static bool Sectioned(ItemVM itemVm) => Markets(itemVm).item != null;
+        private static bool Sectioned(ItemVM itemVm)
+        {
+            if (itemVm == null || !Options.Current.TooltipHints) return false;
+            ItemObject item = itemVm.ItemRosterElement.EquipmentElement.Item;
+            if (!TradePolicy.Priced(item)) return false;
+            LedgerBehavior ledger = LedgerBehavior.Instance;
+            if (ledger == null) return false;
+            ScreenMarkets.Prime();
+            return ledger.AnyMarketFor(item);
+        }
 
         internal static bool HasSection(ItemVM itemVm) =>
             Guard.Read("Tooltip.HasSection", itemVm, Sectioned, false);

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.80.3
+
+- The TradeLord ledger opens faster: a market is no longer searched from top to bottom for every good it never had on its shelves.
+- Item tooltips do less work as you move the mouse over them, because working out whether TradeLord has anything to say about a good no longer builds the lists of best markets twice.
+
 ## 1.80.2
 
 - Recent trades opened from the campaign map can now be scrolled and closed.
