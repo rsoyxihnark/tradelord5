@@ -1,4 +1,4 @@
-# What to drop here
+# What is here
 
 Shipped Bannerlord assemblies, dropped here so the compatibility tool and a session can read
 what reference assemblies cannot answer. Reference assemblies carry signatures only: they have
@@ -8,14 +8,28 @@ does are all out of reach without the real files.
 Nothing here is packaged into the release. The workflow copies named paths into the download and
 this folder is not one of them.
 
-Say which game version each file came from, since the mod is built against 1.4.8.119303 and
-checked against 1.5.2.121216-beta.
+To read them:
 
-## First, and worth the most
+    TRADELORD_GAME_BIN=<path to this folder> dotnet run --project tools/compat -c Release -- 1.5.3.122374-beta
 
-bin/Win64_Shipping_Client/TaleWorlds.CampaignSystem.dll
+## What has been dropped
 
-This one file answers every assumption the mod currently guards at runtime rather than knows:
+From build 1.5.3.122374, taken from the owner's install. TaleWorlds stamps every one of these
+1.0.0.0, so the build number is what the owner says it is and nothing in the files confirms it.
+
+    TaleWorlds.CampaignSystem.dll
+    SandBox.dll
+    SandBox.View.dll
+    StoryMode.dll
+
+## What they answered
+
+The menu-id check now runs instead of skipping. It found `town` and `village` in SandBox.View.dll,
+`port_menu` in TaleWorlds.CampaignSystem.dll, and `naval_storyline_virtualport` in none of them,
+which is what a guarded id absent from a plain install should look like.
+
+TaleWorlds.CampaignSystem.dll is the one worth the most. It is the only file that can answer, from
+the method bodies themselves rather than from a runtime guard:
 
 - how a market's price moves as its shelf fills and empties, which is what the ledger's whole
   unit by unit price walk rests on
@@ -25,17 +39,9 @@ This one file answers every assumption the mod currently guards at runtime rathe
 - whether buying a workshop takes the gold for it, which the mod pays itself when it does not
 - how a party met on the road is priced
 
-## Next, for the ids nothing else can confirm
+## Still wanted
 
-Modules/SandBox/bin/Win64_Shipping_Client/SandBox.dll
-Modules/StoryMode/bin/Win64_Shipping_Client/StoryMode.dll
-Modules/NavalDLC/bin/Win64_Shipping_Client/NavalDLC.dll
+    Modules/NavalDLC/bin/Win64_Shipping_Client/NavalDLC.dll
 
-These carry the town and village menu ids the trade entries hang off, the port menu ids, and the
-lines a band of bandits opens with. A wrong id is silent: the entry simply never appears.
-
-## Last, for the inventory colours
-
-Modules/SandBox/bin/Win64_Shipping_Client/SandBox.View.dll
-
-Says what the profit colour values on an inventory row are allowed to be.
+The War Sails module, for `naval_storyline_virtualport`. Without it the id cannot be told apart
+from a typo, only from an id the install does not carry.
