@@ -329,6 +329,7 @@ namespace TradeLord
         [DataSourceProperty] public string RefreshLabel => Tongue.Text("{=TL62}Refresh").ToString();
         [DataSourceProperty] public string TradesLabel => Tongue.Text("{=TL424}Recent trades").ToString();
         [DataSourceProperty] public string LegendLabel => Tongue.Text("{=TL432}What this means").ToString();
+        [DataSourceProperty] public string HelpLabel => Tongue.Text("{=TL446}?").ToString();
         [DataSourceProperty] public string ShopsLabel => Tongue.Text("{=TL431}Workshops for sale").ToString();
         [DataSourceProperty] public string CloseLabel => Tongue.Text("{=TL09}Close").ToString();
         [DataSourceProperty] public string HeadItem => Tongue.Text("{=TL50}Item").ToString();
@@ -404,7 +405,7 @@ namespace TradeLord
 
         private static readonly string[] SpokenLabels =
         {
-            "BrandLabel", "TitleLabel", "RefreshLabel", "TradesLabel", "LegendLabel", "ShopsLabel",
+            "BrandLabel", "TitleLabel", "RefreshLabel", "TradesLabel", "LegendLabel", "HelpLabel", "ShopsLabel",
             "CloseLabel", "HeadItem", "HeadBuyTown",
             "HeadPrice", "HeadSellTown", "HeadQuantity", "HeadProfit", "HeadDays", "HeadRunsOut",
             "HeadCaravans", "HeadConfidence", "HeadScore"

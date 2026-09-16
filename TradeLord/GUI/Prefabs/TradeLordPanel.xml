@@ -52,6 +52,18 @@
                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                                     Brush="Recruitment.Popup.Title.Text" Brush.FontSize="26"
                                     Text="@TitleLabel" />
+                        <ButtonWidget DoNotPassEventsToChildren="true"
+                                      WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                                      SuggestedWidth="40" SuggestedHeight="36"
+                                      VerticalAlignment="Center"
+                                      Brush="Popup.Done.Button.NineGrid"
+                                      Command.Click="ExecuteOpenLegend"
+                                      UpdateChildrenStates="true">
+                          <Children>
+                            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                                        Brush="Popup.Button.Text" Brush.FontSize="20" Text="@HelpLabel" />
+                          </Children>
+                        </ButtonWidget>
                       </Children>
                     </ListPanel>
 
@@ -334,18 +346,6 @@
                           <Children>
                             <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                                         Brush="Popup.Button.Text" Brush.FontSize="16" Text="@ShopsLabel" />
-                          </Children>
-                        </ButtonWidget>
-                        <ButtonWidget DoNotPassEventsToChildren="true"
-                                      WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-                                      SuggestedWidth="195" SuggestedHeight="45"
-                                      MarginRight="10"
-                                      Brush="Popup.Done.Button.NineGrid"
-                                      Command.Click="ExecuteOpenLegend"
-                                      UpdateChildrenStates="true">
-                          <Children>
-                            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
-                                        Brush="Popup.Button.Text" Brush.FontSize="16" Text="@LegendLabel" />
                           </Children>
                         </ButtonWidget>
                         <ButtonWidget DoNotPassEventsToChildren="true"

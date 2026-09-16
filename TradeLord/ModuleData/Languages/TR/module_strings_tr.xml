@@ -291,5 +291,6 @@
 		<string id="TL443" text="Bir pazara, daha önce ödediği fiyata göre güven"/>
 		<string id="TL444" text="Bu panelin söz verdiğinden az ödeyen bir pazar daha düşük puan alır, böylece oraya satan rotalar listede aşağı iner. Yalnızca o pazara beş kez girdikten sonra sayılır ve bir rotanın Puanını asla dörtte birden fazla oynatamaz. Varsayılan olarak AÇIK."/>
 		<string id="TL445" text=" | Bu panelin söz verdiğinden az ödemiş bir pazar için Puan düşürülür"/>
+		<string id="TL446" text="?"/>
 	</strings>
 </base>
