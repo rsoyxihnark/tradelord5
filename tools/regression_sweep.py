@@ -1,4 +1,15 @@
-import io, re, sys
+import io, os, re, sys
+
+NEVER_DELETED = ['CHANGELOG.md', 'CLAUDE.md', '.github/workflows/build.yml',
+                 '.claude/settings.json', '.claude/hooks/session-start.sh',
+                 '.claude/hooks/no-new-branch.sh']
+_gone = [one for one in NEVER_DELETED if not os.path.exists(one)]
+if _gone:
+    print('  BROKEN  a file this repository never deletes is gone, so nothing else could be checked:')
+    for one in _gone:
+        print('            ' + one)
+    print('\n0/0 source checks passed')
+    sys.exit(1)
 
 S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Drove.cs', 'Marker.cs', 'Notices.cs', 'Passes.cs', 'Ranking.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
@@ -9519,6 +9530,25 @@ def a_version_commit_says_in_its_message_what_the_changelog_says():
 
 chk("1.80.4", "a commit that ships a version is refused unless its message and that version's changelog section say the same thing, so the history and the published notes can never disagree",
     a_version_commit_says_in_its_message_what_the_changelog_says())
+
+
+def the_files_this_repository_never_deletes_are_looked_for_first():
+    head = SWEEP[:SWEEP.find("S = {f: io.open")]
+    return ("NEVER_DELETED = [" in head
+            and all("'" + one + "'" in head for one in
+                    ('CHANGELOG.md', 'CLAUDE.md', '.github/workflows/build.yml',
+                     '.claude/settings.json', '.claude/hooks/session-start.sh',
+                     '.claude/hooks/no-new-branch.sh'))
+            and "not os.path.exists(one)" in head
+            and "a file this repository never deletes is gone" in head
+            and "sys.exit(1)" in head
+            and all(os.path.exists(one) for one in NEVER_DELETED)
+            and "Never delete `CHANGELOG.md` or `CLAUDE.md`" in RULES
+            and "Never delete or disable the release workflow" in RULES)
+
+
+chk("1.80.5", "the files this repository never deletes are looked for before anything is read, so losing one is said plainly rather than stopping the checks with an error",
+    the_files_this_repository_never_deletes_are_looked_for_first())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
