@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.78.3
+
+- A Never sell, Always sell, Never buy or Always buy list saved with a line break in it is now kept on one line in the settings file, so it can no longer lose the goods after the break or land on top of a different setting.
+
 ## 1.78.2
 
 - Silence trade messages now names the three warnings it still puts on screen, rather than saying it shows nothing at all: a full cargo, a purse below your Gold reserve, and an item list entry that matches no good.
