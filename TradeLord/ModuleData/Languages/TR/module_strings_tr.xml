@@ -289,8 +289,9 @@
 		<string id="TL441" text=" Bu alış, TradeLord’un altın rezerv ve asker ücreti karşılığı olarak ayırdığı, mala harcamadığı {HELD} dinarın altına düşmenize yol açar."/>
 		<string id="TL442" text="Bugün"/>
 		<string id="TL443" text="Bir pazara, daha önce ödediği fiyata göre güven"/>
-		<string id="TL444" text="Bu panelin söz verdiğinden az ödeyen bir pazar daha düşük puan alır, böylece oraya satan rotalar listede aşağı iner. Yalnızca o pazara beş kez girdikten sonra sayılır ve bir rotanın Puanını asla dörtte birden fazla oynatamaz. Varsayılan olarak AÇIK."/>
+		<string id="TL444" text="Bu panelin söz verdiğinden az ödeyen bir pazar daha düşük puan alır, böylece oraya satan rotalar listede aşağı iner. Yalnızca o pazara beş kez girdikten sonra sayılır ve bir rotanın Puanını asla dörtte birden fazla oynatamaz. Rotaları güvene göre sırala gerekir. Varsayılan olarak AÇIK."/>
 		<string id="TL445" text=" | Bu panelin söz verdiğinden az ödemiş bir pazar için Puan düşürülür"/>
 		<string id="TL446" text="?"/>
+		<string id="TL447" text=" | stok, sen varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek; fiyatlar için Toplu fiyat benzetimi gerekir"/>
 	</strings>
 </base>

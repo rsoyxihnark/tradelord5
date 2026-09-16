@@ -424,7 +424,7 @@ namespace TradeLord.Mcm
         public bool MarketForecast { get => _o.MarketForecast; set { _o.MarketForecast = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL443}Trust a market by what it has paid", Order = 11, RequireRestart = false,
-            HintText = "{=TL444}A market that has paid less than this panel promised is scored lower, so routes that sell there fall down the list. It counts only once you have walked into that market five times, and it can never move a route's Score by more than a quarter. ON by default.")]
+            HintText = "{=TL444}A market that has paid less than this panel promised is scored lower, so routes that sell there fall down the list. It counts only once you have walked into that market five times, and it can never move a route's Score by more than a quarter. Needs Rank routes by confidence. ON by default.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool TrustWhatAMarketPaid { get => _o.TrustWhatAMarketPaid; set { _o.TrustWhatAMarketPaid = value; Options.Bump(); } }
 

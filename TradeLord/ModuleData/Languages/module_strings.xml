@@ -289,8 +289,9 @@
 		<string id="TL441" text=" This takes you below the {HELD} denars TradeLord holds back as your gold reserve and wage cover, which it will not spend on goods."/>
 		<string id="TL442" text="Today"/>
 		<string id="TL443" text="Trust a market by what it has paid"/>
-		<string id="TL444" text="A market that has paid less than this panel promised is scored lower, so routes that sell there fall down the list. It counts only once you have walked into that market five times, and it can never move a route's Score by more than a quarter. ON by default."/>
+		<string id="TL444" text="A market that has paid less than this panel promised is scored lower, so routes that sell there fall down the list. It counts only once you have walked into that market five times, and it can never move a route's Score by more than a quarter. Needs Rank routes by confidence. ON by default."/>
 		<string id="TL445" text=" | Score is lowered for a market that has paid less than this panel promised"/>
 		<string id="TL446" text="?"/>
+		<string id="TL447" text=" | stock counts what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there; prices need Bulk price simulation"/>
 	</strings>
 </base>
