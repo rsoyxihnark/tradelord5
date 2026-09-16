@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.80.6
+
+- What this means now says stock alone counts what is on its way to a market while Bulk price simulation is off, since with that off nothing on the way moves a price.
+- The Trust a market by what it has paid setting now says it needs Rank routes by confidence, the way TradeLord's other settings name what they need.
+
 ## 1.80.5
 
 - What this means no longer says a market's Score is lowered for paying you less than it promised while Rank routes by confidence is off, because with that off the Score is profit per day and nothing lowers it.
