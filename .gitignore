@@ -10,3 +10,4 @@ TradeLord.log
 release-notes.md
 *.dll
 __pycache__/
+!DLLsNeeded/*.dll
