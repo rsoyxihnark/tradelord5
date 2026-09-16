@@ -76,6 +76,21 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_window_open_over_the_map_takes_the_mouse_wherever_the_cursor_is()
+        {
+            Assert.True(MapButton.TakesTheMouse(windowOpen: true, buttonOn: true, overButton: false));
+            Assert.True(MapButton.TakesTheMouse(windowOpen: true, buttonOn: false, overButton: false));
+        }
+
+        [Fact]
+        public void With_no_window_open_only_the_cursor_on_the_button_takes_the_mouse()
+        {
+            Assert.True(MapButton.TakesTheMouse(windowOpen: false, buttonOn: true, overButton: true));
+            Assert.False(MapButton.TakesTheMouse(windowOpen: false, buttonOn: true, overButton: false));
+            Assert.False(MapButton.TakesTheMouse(windowOpen: false, buttonOn: false, overButton: true));
+        }
+
+        [Fact]
         public void The_region_holds_at_any_aspect_ratio()
         {
             var rng = new System.Random(8890);

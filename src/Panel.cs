@@ -644,6 +644,7 @@ namespace TradeLord
                 bool button = Options.Current.ShowMapButton;
                 if (_vm.IsMapButtonVisible != button)
                     _vm.IsMapButtonVisible = button;
+                if (_vm.IsTradesVisible && map.IsEscapeMenuOpened) _vm.IsTradesVisible = false;
                 UpdateIdleInput(button);
                 if (!map.IsEscapeMenuOpened && HotkeyReleased() && !TypingOnScreen(map))
                     Guard.Run("Panel.Show", Show);
@@ -707,7 +708,8 @@ namespace TradeLord
 
         private static void UpdateIdleInput(bool buttonOn)
         {
-            bool wantMouse = buttonOn && OverButtonBounds(Input.MousePositionRanged);
+            bool wantMouse = MapButton.TakesTheMouse(
+                _vm.IsTradesVisible, buttonOn, OverButtonBounds(Input.MousePositionRanged));
             if (wantMouse == _idleMouseActive) return;
             _idleMouseActive = wantMouse;
             if (wantMouse)
