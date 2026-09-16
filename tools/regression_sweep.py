@@ -9114,5 +9114,65 @@ chk("1.78.3", "every setting goes into the settings file on a line of its own, s
     a_setting_is_written_on_one_line_so_a_file_reads_back_as_what_was_written())
 
 
+
+def every_name_the_source_reaches_for_by_string_is_held_by_something():
+    block = re.search(r'ReflectedTypes\s*=\s*\{(.*?)\};', COMPAT, re.S)
+    if block is None:
+        return False
+    resolved = set(re.findall(r'"([\w.+]+)"', block.group(1)))
+    asked = sorted(set(re.findall(r'\.GetType\(\s*"([\w.+]+)"', ALL)))
+    if not asked:
+        return False
+    for name in asked:
+        if not name.startswith('TradeLord.'):
+            if name not in resolved:
+                return False
+            continue
+        space, cls = name.rsplit('.', 1)
+        if ('namespace ' + space) not in M or ('class ' + cls) not in M:
+            return False
+    ours = re.findall(
+        r'\.GetType\(\s*"TradeLord\.[\w.]*?(\w+)"\s*\)\s*\?\s*\.GetMethod\(\s*"(\w+)"', ALL)
+    if not ours:
+        return False
+    for cls, called in ours:
+        if ('public static class ' + cls) not in M:
+            return False
+        if ('public static bool ' + called + '()') not in M:
+            return False
+    return not re.search(r'\.GetProperty\(\s*"', ALL)
+
+
+chk("1.78.3", "every game type the source reads by name is one the game-version check resolves, the settings screen it loads by name is the class and method the MCM project really ships, and no property is read by a name nothing holds",
+    every_name_the_source_reaches_for_by_string_is_held_by_something())
+
+
+
+def the_module_manifest_names_what_the_rest_of_the_project_really_is():
+    entry = re.search(r'<SubModuleClassType value="([\w.]+)"', MANIFEST)
+    dll = re.search(r'<DLLName value="([\w.]+)\.dll"', MANIFEST)
+    mod = re.search(r'<Id value="(\w+)"', MANIFEST)
+    companion = re.search(r'Path\.Combine\(dir \?\? "", "([\w.]+)\.dll"\)', S['Support.cs'])
+    if not (entry and dll and mod and companion):
+        return False
+    space, named = entry.group(1).rsplit('.', 1)
+    core = io.open('src/TradeLord.csproj', encoding='utf-8').read()
+    beside = io.open('mcm/TradeLord.MCM.csproj', encoding='utf-8').read()
+    return (('namespace ' + space) in S['SubModule.cs']
+            and ('public class ' + named + ' : MBSubModuleBase') in S['SubModule.cs']
+            and ('<AssemblyName>' + dll.group(1) + '</AssemblyName>') in core
+            and ('<AssemblyName>' + companion.group(1) + '</AssemblyName>') in beside
+            and ('GetModuleInfo("' + mod.group(1) + '")') in S['SubModule.cs']
+            and ('cp TradeLord/SubModule.xml dist/Modules/' + mod.group(1) + '/') in WORKFLOW
+            and ('cp -r TradeLord/ModuleData dist/Modules/' + mod.group(1) + '/') in WORKFLOW
+            and ('cp -r TradeLord/GUI dist/Modules/' + mod.group(1) + '/') in WORKFLOW
+            and ('cp src/bin/Release/net472/' + dll.group(1) + '.dll') in WORKFLOW
+            and ('cp mcm/bin/Release/net472/' + companion.group(1) + '.dll') in WORKFLOW)
+
+
+chk("1.78.3", "the module file names the class the game starts the mod through, the two files it loads and the folder it is installed into, and every one of them is what the projects and the release workflow really build",
+    the_module_manifest_names_what_the_rest_of_the_project_really_is())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
