@@ -534,6 +534,14 @@ namespace TradeLord
         public List<(Settlement town, int price)> TopSell(ItemObject item, int n) => TakeN(TopMarkets(item, true), n);
         public List<(Settlement town, int price)> TopBuy(ItemObject item, int n) => TakeN(TopMarkets(item, false), n);
 
+        internal bool AnyMarketFor(ItemObject item)
+        {
+            if (item == null) return false;
+            int sells = TopMarkets(item, true).Count;
+            int buys = TopMarkets(item, false).Count;
+            return sells > 0 || buys > 0;
+        }
+
         private static (Settlement, int) First(List<(Settlement, int)> list) =>
             list.Count == 0 ? (null, 0) : list[0];
 
@@ -576,6 +584,18 @@ namespace TradeLord
         {
             try { return s.ItemRoster?.GetItemNumber(item) ?? 0; }
             catch { return 0; }
+        }
+
+        private static HashSet<ItemObject> WhatItStocks(Settlement s)
+        {
+            var held = new HashSet<ItemObject>();
+            ItemRoster shelf = s.ItemRoster;
+            for (int i = 0; shelf != null && i < shelf.Count; i++)
+            {
+                ItemObject item = shelf.GetItemAtIndex(i);
+                if (item != null) held.Add(item);
+            }
+            return held;
         }
 
         private static bool Eligible(Settlement s, out float lower)
@@ -710,6 +730,7 @@ namespace TradeLord
                 if (!WithinTravelCeiling(town, days)) continue;
                 SettlementComponent market = town.SettlementComponent;
                 bool tillOpen = market.Gold > 0;
+                HashSet<ItemObject> onTheShelf = minStock > 0 ? WhatItStocks(town) : null;
                 for (int i = 0; i < n; i++)
                 {
                     ItemObject item = wanted[i];
@@ -719,7 +740,8 @@ namespace TradeLord
                         if (price > 0) MarketRank.Keep(sells[i], new Reach<Settlement>
                         { Where = town, Price = price, Straight = straight, Days = days }, true);
                     }
-                    if (minStock <= 0 || StockOf(town, item) >= minStock)
+                    if (onTheShelf == null ||
+                        (onTheShelf.Contains(item) && StockOf(town, item) >= minStock))
                     {
                         int price = Priced.At(market, item, me, false);
                         if (price > 0) MarketRank.Keep(buys[i], new Reach<Settlement>
