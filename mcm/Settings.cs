@@ -454,7 +454,7 @@ namespace TradeLord.Mcm
         public bool ShowMapButton { get => _o.ShowMapButton; set { _o.ShowMapButton = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL406}Mark a market rising or falling", Order = 5, RequireRestart = false,
-            HintText = "{=TL407}Marks a market in the tooltip rising or falling when its price has moved 5% or more since the last day you looked there. It needs two looks at the same market on two different days before it can say anything. OFF by default.")]
+            HintText = "{=TL407}Marks a market in the tooltip rising or falling when its price has moved 5% or more since the last day you looked there. It needs two looks at the same market on two different days before it can say anything. Only does anything with Live world prices off, since that is when TradeLord records prices at all. OFF by default.")]
         [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 4)]
         public bool MarkPriceDirection { get => _o.MarkPriceDirection; set { _o.MarkPriceDirection = value; Options.Bump(); } }
 
@@ -596,7 +596,7 @@ namespace TradeLord.Mcm
         public bool DetailedTradeSummary { get => _o.DetailedTradeSummary; set { _o.DetailedTradeSummary = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL249}Silence trade messages", Order = 17, RequireRestart = false,
-            HintText = "{=TL349}Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports.")]
+            HintText = "{=TL349}Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. Warnings still show on screen: cargo full, a purse below your Gold reserve, and an item list entry that matches no good. The trade entry in the menu always reports.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool QuietAutomation { get => _o.QuietAutomation; set { _o.QuietAutomation = value; Options.Bump(); } }
 

@@ -8990,5 +8990,97 @@ def a_markets_record_counts_your_walk_ins_not_the_prices_it_checked():
 chk("1.78.1", "a market's own record counts one walk-in rather than one price checked there, and the number of walk-ins it waits for is the same number the settings screen and the feature list name",
     a_markets_record_counts_your_walk_ins_not_the_prices_it_checked())
 
+
+def closing_clause(said):
+    text = said.strip()
+    if '\u3002' in text:
+        return [p for p in text.split('\u3002') if p][-1] + '\u3002'
+    return [p for p in text.split('. ') if p][-1]
+
+def the_rising_or_falling_mark_says_it_needs_live_prices_off():
+    captured = method_body(S['Ledger.cs'],
+                           "public void CaptureSettlement(Settlement settlement, bool force, ISet<string> moved)")
+    written = method_body(S['Ledger.cs'],
+                          "private void Record(string itemId, string townId, int buy, int sell, float day)")
+    drift = method_body(S['Ledger.cs'], "public int PriceDrift(ItemObject item, Settlement town, bool selling)")
+    marked = method_body(S['TooltipPatches.cs'],
+                         "private static string Drifted(ItemObject item, Settlement town, bool selling)")
+    if not (captured and written and drift and marked):
+        return False
+    ledger = code_only(S['Ledger.cs'])
+    if not (ledger.count("Record(item.StringId") == 2
+            and captured.count("Record(item.StringId, settlement.StringId, buy, sell, day);") == 2
+            and ledger.count("_ledger[itemId] = byTown;") == 1
+            and "_ledger[itemId] = byTown;" in written
+            and "if (Options.Current.Omniscient) return;" in captured
+            and captured.index("if (Options.Current.Omniscient) return;")
+                < captured.index("Record(item.StringId")
+            and "_ledger.TryGetValue(item.StringId, out var byTown)) return 0;" in drift
+            and 'if (!Options.Current.MarkPriceDirection) return "";' in marked
+            and "PriceDrift(item, town, selling)" in marked):
+        return False
+    for path in [ENGLISH] + list(TRANSLATIONS.values()):
+        said = spoken(path)
+        if closing_clause(said['TL408']) not in said['TL407']:
+            return False
+    return ("Only does anything with Live world prices off" in spoken(ENGLISH)['TL407']
+            and "{=TL407}" in M
+            and "Only does anything with Live world prices off" in M
+            and "It needs Live world prices off, since that is when TradeLord records prices at all" in README)
+
+def quiet_mode_names_the_warnings_it_still_shows():
+    entered = method_body(S['Trading.cs'],
+                          "private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)")
+    if not entered:
+        return False
+    for name, signature in (("WarnUnmatchedItemLists", "private static void WarnUnmatchedItemLists()"),
+                            ("WarnPurseBelowReserve", "private static bool WarnPurseBelowReserve()"),
+                            ("WarnNoRoomToCarry", "private static void WarnNoRoomToCarry()")):
+        body = method_body(S['Trading.cs'], signature)
+        if not body or "Notices.Say(" not in body or "Muted" in body:
+            return False
+        if (name + "()") not in entered:
+            return False
+    onscreen = [l for l in code_only(S['Trading.cs']).splitlines()
+                if "Notices.Say(" in l or "Notices.SayAfterXp(" in l]
+    asked = [l for l in onscreen if "Muted" in l or "muted" in l]
+    said = spoken(ENGLISH)
+    return (len(onscreen) == 16
+            and len(asked) == 6
+            and all(("{=TL" + s + "}") in S['Trading.cs'] for s in ("82", "91", "92", "392"))
+            and "Warnings still show on screen" in said['TL349']
+            and "cargo full" in said['TL349']
+            and "Gold reserve" in said['TL349']
+            and "matches no good" in said['TL349']
+            and "{=TL349}" in M
+            and "Warnings still show on screen" in M
+            and "apart from three warnings" in README
+            and "a purse below your Gold reserve" in README
+            and all({'TL249', 'TL349'} <= set(spoken(f))
+                    for f in list(TRANSLATIONS.values()) + [ENGLISH]))
+
+
+chk("1.78.2", "the setting that marks a market rising or falling says it needs live prices off, in every language, and nothing records a price while they are on",
+    the_rising_or_falling_mark_says_it_needs_live_prices_off())
+chk("1.78.2", "silencing trade messages names the warnings it still puts on screen, in every language, and no further line reaches the screen without asking whether it is silenced",
+    quiet_mode_names_the_warnings_it_still_shows())
+
+
+def the_feature_list_says_which_purse_a_route_is_held_to():
+    routes = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes()")
+    if not routes:
+        return False
+    return ("till = to.SettlementComponent?.Gold ?? 0;" in routes
+            and "if (Options.Current.Omniscient)" in routes
+            and routes.index("if (Options.Current.Omniscient)") < routes.index("till = to.SettlementComponent")
+            and "int qtyCap = till > 0 ? Math.Min(stocked, till / sellPrice) : stocked;" in routes
+            and code_only(S['Ledger.cs']).count("to.SettlementComponent?.Gold") == 1
+            and "It reads that purse live, so with Live world prices off it plans on the stock alone" in README)
+
+
+chk("1.78.2", "the feature list says the purse a route is held to is read live, so it names what live prices off takes away",
+    the_feature_list_says_which_purse_a_route_is_held_to())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

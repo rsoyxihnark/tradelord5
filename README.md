@@ -12,7 +12,7 @@
 
 - ✅ Live prices from every market on the map, read through that market's own price model, naming the merchant, the way the trade screen asks
 - ✅ The five best places to sell and the five cheapest to buy, in every item tooltip, each priced as that market will be when you arrive rather than as it stands while you read, so the tooltip and the ledger panel never disagree about the same market
-- ✅ Which way each of those markets is going, marked next to its price once you switch Mark a market rising or falling on: a market whose price has moved 5% or more since the last day you looked there is marked rising or falling, in the best sell and the best buy lists alike. Off out of the box
+- ✅ Which way each of those markets is going, marked next to its price once you switch Mark a market rising or falling on: a market whose price has moved 5% or more since the last day you looked there is marked rising or falling, in the best sell and the best buy lists alike. It needs Live world prices off, since that is when TradeLord records prices at all. Off out of the box
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying
 - ✅ Stock counts, so you know the deal is actually there
@@ -27,7 +27,7 @@
 - ✅ How long each route lasts, under Left: the caravans heading for the market you would buy from are spending as they arrive, and the panel says how many hours that shelf still holds the amount the route quotes before they buy it out. Blank means nobody TradeLord can see is coming for it
 - ✅ Prices and stock that count what is still on its way: the cargo the caravans on the road will unload at a market, what that town's workshops will make next, and the purses those caravans are bringing to spend, spread over the goods that are cheap there as an estimate of what they will buy off the shelf. Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into. Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
-- ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
+- ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for. It reads that purse live, so with Live world prices off it plans on the stock alone
 - ✅ A route listed whether or not your purse could pay for it today, or your herd is already as large as your men can drive, so the panel always shows you where the profit is, and says under the routes when your gold reserve is what is stopping you buying
 - ✅ Click any town to jump the camera there and pin a marker on it, and a pin comes off by itself once TradeLord has traded in that town
 - ✅ The best market for the cargo you are carrying, a town or a village, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement. It counts only the goods it would really sell there, the ones that clear Minimum profit margin, so it never sends you somewhere it will then refuse to sell. It works through the richest markets first and stops as soon as none of the rest could outpay the one it has found, and it prices a town only as far as that town's own purse can pay for, so riding across Calradia costs it very little. A price it read for a market keeps for a few hours rather than a single one, so the marker can be pointing at a town on prices a little older than the ones you will find when you walk in. TradeLord.log says every time the marker moves, what the cargo would fetch there, that town's purse, how far away it is and the market it beat
@@ -60,7 +60,7 @@
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
 - ✅ A coin sound on a trade that lands, silence on one that does not
-- ✅ A quiet mode that keeps automated trading to the log and off your screen, apart from the warning that your cargo is full
+- ✅ A quiet mode that keeps automated trading to the log and off your screen, apart from three warnings: cargo full, a purse below your Gold reserve, and an item list entry that matches no good
 - ✅ A dry run that simulates every trade it would have made and shows you the estimate, marked a best case in the message and in the log, moving nothing
 - ✅ Free passage past bandits, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and TradeLord adds a line to what you can say to them, asking to be let past, and they let you go with no fight and no ransom, then leave you be for the next few hours instead of turning round and hitting you again
 
