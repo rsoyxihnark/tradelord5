@@ -540,7 +540,7 @@ def a_route_scan_prices_each_town_once_for_every_good_it_wants():
     scan = method_body(l, "private List<TradeRoute> ScanRoutes()")
     return ("if (!Options.Current.Omniscient || wanted.Count == 0) return;" in prime
             and prime.find("if (!WithinTravelCeiling(town, days)) continue;") <
-                prime.find("Priced.At(market, item, me, true)")
+                prime.find("AsItWillBe(market, town, item, me, true, landed)")
             and "_marketCache[(item.StringId, true)] = (Freshness.At(hour), kind, Settled(sells[i], true));" in prime
             and "_marketCache[(item.StringId, false)] = (Freshness.At(hour), kind, Settled(buys[i], false));" in prime
             and "PrimeLiveRankings(wanted, (int)CampaignTime.Now.ToHours);" in scan
@@ -2174,8 +2174,8 @@ chk("1.5.2", "the Price columns the panel shows are the first unit of the very q
     "BuyPrice = buyPrice" not in S['Ledger.cs'] and
     "SellPrice = sellPrice" not in S['Ledger.cs'] and
     S['Ledger.cs'].count("q.Opening") == 4 and
-    "Bulk.FirstUnit(town, item, selling, price," in
-        method_body(S['TooltipPatches.cs'], "private static void AsTheyWillBe"))
+    "Bulk.FirstUnit(town, item, selling, price, landed);" in
+        method_body(S['Ledger.cs'], "private static int AsItWillBe"))
 chk("1.5.2", "RouteQuote carries no unread field",
     "ClosingBuyPrice" not in S['Market.cs'] and "ClosingSellPrice" not in S['Market.cs'] and
     S['Market.cs'].count("OpeningBuyPrice") == 2 and S['Market.cs'].count("OpeningSellPrice") == 2)
@@ -4006,7 +4006,7 @@ chk("1.14.2", "the ladders are dropped when a scan starts, given back when it fi
 chk("1.14.3", "a market whose merchant has no gold is no destination in any list the mod ranks, not just the route scan",
     (lambda body: "if (selling && s.SettlementComponent.Gold <= 0) continue;" in body
               and ordered(body, "if (selling && s.SettlementComponent.Gold <= 0) continue;",
-                          "int price = Priced.At(s.SettlementComponent,"))
+                          "int price = AsItWillBe(s.SettlementComponent,"))
     (method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")) and
     "LedgerBehavior.Instance?.BestSell(Item(at)) ?? (null, 0)" in
         buy_pass() and
@@ -7007,25 +7007,26 @@ chk("1.61.0", "what a market will hold when you get there is what lands there le
 
 
 
-def a_tooltip_prices_a_market_as_it_will_be_when_you_get_there():
-    shift = method_body(S['TooltipPatches.cs'], "private static void AsTheyWillBe")
-    append = method_body(S['TooltipPatches.cs'], "internal static void Append(ItemMenuVM vm, ItemVM itemVm)")
+def a_market_is_priced_as_it_will_be_when_you_get_there():
+    ahead = method_body(S['Ledger.cs'], "private static int AsItWillBe")
+    live = method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")
+    prime = method_body(S['Ledger.cs'], "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
     first = method_body(S['Market.cs'], "internal static int FirstUnit")
-    return (ordered(shift,
-                    "if (!Forecast.On || markets == null || markets.Count == 0) return;",
-                    "float days = Travel.EstimateDaysFromParty(town);",
-                    "Bulk.FirstUnit(town, item, selling, price,",
-                    "Forecast.WorthShift(town, item, days)));",
-                    "markets.Sort(")
-            and "AsTheyWillBe(item, sells, selling: true);" in append
-            and "AsTheyWillBe(item, buys, selling: false);" in append
+    return (ordered(ahead,
+                    "int price = Priced.At(market, item, who, selling);",
+                    "Bulk.FirstUnit(town, item, selling, price, landed);")
+            and "int landed = Forecast.WorthShift(s, item, Travel.EstimateDaysFromParty(s));" in live
+            and "int landed = Forecast.WorthShift(town, item, days);" in prime
+            and live.count("AsItWillBe(") == 1 and prime.count("AsItWillBe(") == 2
+            and "Priced.At(" not in live and "Priced.At(" not in prime
+            and "Forecast." not in S['TooltipPatches.cs']
             and "if (landed == 0 || site == null || item == null) return quoted;" in first
             and "return rung.Walkable ? rung.At(0) : quoted;" in first
             and "a price in a tooltip" in spoken(ENGLISH)['TL396'])
 
 
-chk("1.62.0", "a market in a tooltip is priced as it will be when you get there, through the same forecast the ledger panel reads, and the five are ordered on those prices",
-    a_tooltip_prices_a_market_as_it_will_be_when_you_get_there())
+chk("1.62.0", "a market is priced as it will be when you get there wherever the mod ranks one, so the tooltip, the ledger and what it buys to sell on all read the one forecast",
+    a_market_is_priced_as_it_will_be_when_you_get_there())
 
 
 
@@ -8647,7 +8648,9 @@ def the_few_markets_handed_out_are_never_the_ranked_list_itself():
             and "MarketRank.TopFew(list, n)" in taken
             and "list.Count <= n ? list" not in taken
             and "TopSell" in S['TooltipPatches.cs']
-            and "markets[i] = (town," in S['TooltipPatches.cs'])
+            and "markets[i] =" not in S['TooltipPatches.cs']
+            and "sells.Sort(" not in S['TooltipPatches.cs']
+            and "buys.Sort(" not in S['TooltipPatches.cs'])
 
 
 chk("1.76.5", "the best markets handed to a tooltip are a list of its own, so working the forecast into them never reaches what the ledger recorded",
@@ -9400,6 +9403,25 @@ def a_route_is_judged_only_on_what_that_market_will_charge_when_you_reach_it():
 
 chk("1.79.3", "a route is weighed, capped and priced on what its two markets will charge when you reach them, never on what they charge while you are still standing somewhere else",
     a_route_is_judged_only_on_what_that_market_will_charge_when_you_reach_it())
+
+
+def one_ranking_works_the_forecast_in_and_everything_else_reads_it():
+    return (ALL.count("Bulk.FirstUnit(") == 1
+            and "Bulk.FirstUnit(town, item, selling, price, landed);" in
+                method_body(S['Ledger.cs'], "private static int AsItWillBe")
+            and S['Ledger.cs'].count("Forecast.WorthShift(") == 4
+            and S['Hindsight.cs'].count("Forecast.WorthShift(") == 1
+            and "int worthSaid = Forecast.WorthShift(site, item, withinDays);" in
+                method_body(S['Hindsight.cs'], "private static void Noted")
+            and ALL.count("Forecast.WorthShift(") == 5
+            and "var best = LedgerBehavior.Instance?.BestSell(item) ?? (null, 0);" in S['Marker.cs']
+            and "var best = LedgerBehavior.Instance?.BestBuy(item) ?? (null, 0);" in S['Policy.cs']
+            and S['Trading.cs'].count("LedgerBehavior.Instance?.BestSell(Item(at))") == 2
+            and "var sells = ledger.TopSell(item, TopN);" in S['TooltipPatches.cs'])
+
+
+chk("1.80.0", "one ranking works out what a market will charge by the time you could reach it, and the tooltips, the ledger, the map marker and what TradeLord buys to sell on all read that one answer",
+    one_ranking_works_the_forecast_in_and_everything_else_reads_it())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
