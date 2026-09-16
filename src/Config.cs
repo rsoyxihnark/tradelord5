@@ -18,7 +18,7 @@ namespace TradeLord
 
         private const string ByFile = "this file";
 
-            private static string _path;
+        private static string _path;
         private static readonly TimeSpan Settling = TimeSpan.FromMilliseconds(400);
 
         private static DateTime _stillMoving;
