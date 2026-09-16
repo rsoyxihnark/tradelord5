@@ -291,5 +291,6 @@
 		<string id="TL443" text="Trust a market by what it has paid"/>
 		<string id="TL444" text="A market that has paid less than this panel promised is scored lower, so routes that sell there fall down the list. It counts only once you have walked into that market five times, and it can never move a route's Score by more than a quarter. ON by default."/>
 		<string id="TL445" text=" | Score is lowered for a market that has paid less than this panel promised"/>
+		<string id="TL446" text="?"/>
 	</strings>
 </base>
