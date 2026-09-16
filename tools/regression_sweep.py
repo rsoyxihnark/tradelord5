@@ -3165,11 +3165,19 @@ def every_translation_says_everything_the_english_one_does():
     en = spoken(ENGLISH)
     if len(en) <= 150:
         return False
+    marks = {k for k, said in en.items()
+             if said is not None and len(said) == 1 and not said.isalnum()}
+    if len(marks) > 1:
+        return False
     for tag, path in TRANSLATIONS.items():
         said = spoken(path)
         if set(en) != set(said):
             return False
-        if not all(said[k] and said[k].strip() and said[k] != en[k] for k in en):
+        if not all(said[k] and said[k].strip() for k in en):
+            return False
+        if not all(said[k] != en[k] for k in en if k not in marks):
+            return False
+        if not all(len(said[k]) == 1 and not said[k].isalnum() for k in marks):
             return False
         if '<tag language="' + tag + '"/>' not in io.open(path, encoding='utf-8').read():
             return False
@@ -3445,7 +3453,7 @@ chk("1.6.32", "a good named on an item list never drags in a second good whose w
 chk("1.6.32", "a route's spending caps are spent unit by unit, the way a buying pass spends them",
     the_spend_cap_is_walked_not_divided())
 
-chk("1.12.0", "every translation carries every line the English one does, translated",
+chk("1.12.0", "every translation carries every line the English one does, put into that language, and the one line that is a bare mark is a bare mark in every one of them",
     every_translation_says_everything_the_english_one_does())
 chk("1.12.0", "every language the screen offers has a file the mod reads, and switching re-reads it",
     every_language_the_screen_offers_has_a_file_the_mod_reads())
@@ -9210,6 +9218,49 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
 
 chk("1.78.4", "nothing turns a name into text without asking first whether the good, the market or the party has one, so a nameless one is shown by its id rather than stopping the panel",
     nothing_reads_a_name_without_asking_whether_it_has_one())
+
+
+
+def the_explanation_is_opened_by_a_mark_beside_the_title():
+    import xml.etree.ElementTree as ET
+    tree = ET.parse('TradeLord/GUI/Prefabs/TradeLordPanel.xml')
+    parent = {c: p for p in tree.iter() for c in p}
+    def row(node):
+        node = parent.get(node)
+        while node is not None and node.tag in ('Children', 'ItemTemplate'):
+            node = parent.get(node)
+        return node
+    def texts(node):
+        return {e.get('Text') for e in node.iter() if e.get('Text')}
+    opens = [e for e in tree.iter() if e.get('Command.Click') == 'ExecuteOpenLegend']
+    closes = [e for e in tree.iter() if e.get('Command.Click') == 'ExecuteClose']
+    if len(opens) != 1 or not closes:
+        return False
+    beside = row(opens[0])
+    if beside is None:
+        return False
+    if '@TitleLabel' not in texts(beside):
+        return False
+    if any('@CloseLabel' in texts(row(one)) and row(one) is beside for one in closes):
+        return False
+    said = spoken(ENGLISH)
+    return (texts(opens[0]) == {'@HelpLabel'}
+            and opens[0].get('SuggestedWidth') == '40'
+            and said.get('TL446') == '?'
+            and said.get('TL432') == 'What this means'
+            and '[DataSourceProperty] public string HelpLabel => Tongue.Text("{=TL446}?").ToString();'
+                in S['Panel.cs']
+            and '"LegendLabel", "HelpLabel"' in S['Panel.cs']
+            and 'Text="@LegendLabel"' in PREFAB
+            and PREFAB.count('Text="@LegendLabel"') == 1
+            and PREFAB.count('Command.Click="ExecuteOpenLegend"') == 1
+            and {'TL432', 'TL446'} <= strings_declared()
+            and all({'TL432', 'TL446'} <= set(spoken(f))
+                    for f in list(TRANSLATIONS.values()) + [ENGLISH]))
+
+
+chk("1.78.5", "the explanation is opened by a mark beside the panel title rather than a button in the row along the bottom, and the window it opens is still the one that says what it all means",
+    the_explanation_is_opened_by_a_mark_beside_the_title())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.78.5
+
+- The What this means button has left the row along the bottom of the TradeLord ledger; a ? beside the title opens the same explanation.
+
 ## 1.78.4
 
 - The TradeLord panel no longer stops drawing when a good or a market on a route has no name of its own, and shows its id instead.
