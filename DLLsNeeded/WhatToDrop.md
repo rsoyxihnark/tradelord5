@@ -45,3 +45,9 @@ the method bodies themselves rather than from a runtime guard:
 
 The War Sails module, for `naval_storyline_virtualport`. Without it the id cannot be told apart
 from a typo, only from an id the install does not carry.
+
+It has to be the shipped file. The `Bannerlord.ReferenceAssemblies.NavalDLC` package on nuget
+holds a NavalDLC.dll with no user-string heap in it at all, so it carries no menu id and answers
+nothing here, and the compatibility tool already has it on disk anyway. Searching one of those
+for an id as raw bytes does turn up hits, in the name and blob heaps, and every one of them is a
+coincidence. Read the heap, not the file.
