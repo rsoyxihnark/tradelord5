@@ -62,7 +62,7 @@ namespace TradeLord
             if (open) return true;
             Drop();
             Log.Write("ERROR: the trade screen would not open at " +
-                      (site == null ? "this market" : site.Name.ToString()) +
+                      (site == null ? "this market" : Tongue.Named(site.Name, site.StringId)) +
                       ", so nothing was laid out and nothing was traded");
             return false;
         }
