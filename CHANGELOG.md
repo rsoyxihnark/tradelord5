@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.80.2
+
+- Recent trades opened from the campaign map can now be scrolled and closed.
+- Recent trades now closes when you open the game menu over it.
+
 ## 1.80.1
 
 - The best markets for a good are picked again by what each market charges today, the way they were before 1.80.0.
