@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.78.2
+
+- Silence trade messages now names the three warnings it still puts on screen, rather than saying it shows nothing at all: a full cargo, a purse below your Gold reserve, and an item list entry that matches no good.
+- Mark a market rising or falling now says it needs Live world prices off, since that is when TradeLord records the prices it compares, and with them on it marks nothing.
+- The mod description now says the town purse a route is held to is read live, so with Live world prices off a route is planned on the market's stock alone.
+
 ## 1.78.1
 
 - Trust a market by what it has paid now counts one walk-in at a market rather than every price it checked there, so the five walk-ins it waits for are five real visits; before this a single arrival at a market the panel had promised several goods at was enough to start lowering that market's score.
