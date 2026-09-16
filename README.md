@@ -6,7 +6,7 @@
 
 ## Everything it does
 
-- ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is four strings, four numbers and a settlement reference, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
+- ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is five strings, four numbers and a settlement reference, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
 
 **What it tells you**
 
@@ -106,7 +106,7 @@
 - ✅ A price trace, off out of the box, for when a price looks wrong: turn it on and it writes to `TradeLord.log` what the market you are standing in pays and charges for every good you are carrying, read four ways, before anything is traded, and names that market, the price model the game is running and any other mod changing either of them, then records what it quoted for every good it trades next to what the market actually paid
 - ✅ A score for the forecast, on out of the box: every time it works out a route, TradeLord writes down what it expects a market to hold by the time you get there, and when you walk into that market it puts that next to what the market really holds, good by good, with how far off it was and an average across the visit, in `TradeLord.log`
 - ✅ What this means, behind a ? beside the TradeLord ledger title: the line that used to run under the routes, one clause to a line in a window of its own, so the ledger itself stays clean
-- ✅ Recent trades, on its own button on the campaign map under the TradeLord one, so it opens without the ledger: the last twenty buys and sells it made for you, newest first, each with the day, the town, the gold it gained or cost, and what moved. Gold gained reads green and gold spent amber. It is kept for the session only and never written into your save
+- ✅ Recent trades, on its own button on the campaign map under the TradeLord one, so it opens without the ledger: the last twenty buys and sells it made for you, newest first, each with the day, the town, the gold it gained or cost, and what moved. Gold gained reads green and gold spent amber. It is kept in your save, so the list is still there when you load the campaign again
 - ✅ One self-check line at the top of every campaign in `TradeLord.log`, saying which of its patches applied and whether it could read the herd penalty, the quest goods, your language file and the game's price model, so a bug report is one line to paste
 - ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it. It is kept from one session to the next, and the one thing that ever empties it is starting the game with it already past 999 KB, which it says in the log itself
 
