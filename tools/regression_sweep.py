@@ -9494,5 +9494,32 @@ chk("1.80.3", "the item tooltip works out whether it has anything to say without
     asking_whether_a_tooltip_has_a_section_builds_no_list())
 
 
+def a_version_commit_says_in_its_message_what_the_changelog_says():
+    held = between(RELEASED, "def theMessageSaysWhatTheChangelogSays", "\ndef main(")
+    main = between(RELEASED, "def main(argv):", "\n    first = min(live")
+    return ("def thisCommit():" in RELEASED
+            and "os.environ.get('GITHUB_SHA') or 'HEAD'" in RELEASED
+            and "'--format=%s%x00%b'" in RELEASED
+            and "if subject.startswith('[no release]'):" in held
+            and "entries = notes(said.get(shipping, []))" in held
+            and "written = bulleted(body)" in held
+            and "if written != entries:" in held
+            and "only in the changelog: " in held
+            and "only in the message  : " in held
+            and "this commit could not be read" in held
+            and ordered(main,
+                        "said = {head: entries for head, entries in",
+                        "agreed = theMessageSaysWhatTheChangelogSays(shipping, said)",
+                        "rows, how = asked()",
+                        "return 0 if agreed else 1")
+            and RELEASED.count("return 0 if agreed else 1") == 2
+            and "The entries in a version section and the bullet points in that version's commit body say "
+                "the same thing in the same words" in RULES)
+
+
+chk("1.80.4", "a commit that ships a version is refused unless its message and that version's changelog section say the same thing, so the history and the published notes can never disagree",
+    a_version_commit_says_in_its_message_what_the_changelog_says())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

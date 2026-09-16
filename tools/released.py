@@ -80,15 +80,60 @@ def bulleted(body):
     return [line.strip()[2:].strip() for line in body.split('\n') if line.strip().startswith('- ')]
 
 
+def thisCommit():
+    sha = os.environ.get('GITHUB_SHA') or 'HEAD'
+    try:
+        run = subprocess.run(['git', 'log', '-1', '--format=%s%x00%b', sha],
+                             capture_output=True, text=True)
+    except OSError as missing:
+        return None, None, str(missing)
+    if run.returncode != 0:
+        return None, None, run.stderr.strip().split('\n')[-1]
+    subject, _, body = run.stdout.partition('\0')
+    return subject.strip(), body, None
+
+
+def theMessageSaysWhatTheChangelogSays(shipping, said):
+    subject, body, why = thisCommit()
+    if subject is None:
+        print('  BROKEN   this commit could not be read, so its message was not held against the changelog')
+        print('           git said: ' + (why or 'nothing'))
+        return False
+    if subject.startswith('[no release]'):
+        print('  ok       this commit is marked [no release], so it publishes no notes to disagree with')
+        return True
+    if not shipping:
+        print('  BROKEN   this commit ships a version and none was named for this check')
+        return False
+    entries = notes(said.get(shipping, []))
+    written = bulleted(body)
+    if not entries:
+        print('  BROKEN   the changelog carries no ' + shipping + ' section for this commit to agree with')
+        return False
+    if written != entries:
+        print('  BROKEN   this commit ships ' + shipping + ' and its message says one thing while the '
+              'changelog says another, so the history and the published notes would disagree')
+        for line in entries:
+            if line not in written:
+                print('           only in the changelog: ' + line)
+        for line in written:
+            if line not in entries:
+                print('           only in the message  : ' + line)
+        return False
+    print('  ok       this commit\'s message and the ' + shipping + ' changelog section say the same thing')
+    return True
+
+
 def main(argv):
     shipping = (argv[1] if len(argv) > 1 else '').lstrip('v')
-    rows, how = asked()
-    if rows is None:
-        return 0
-
-    live = {row['tag'].lstrip('v'): row for row in rows}
     said = {head: entries for head, entries in
             sections(io.open('CHANGELOG.md', encoding='utf-8').read())}
+    agreed = theMessageSaysWhatTheChangelogSays(shipping, said)
+    rows, how = asked()
+    if rows is None:
+        return 0 if agreed else 1
+
+    live = {row['tag'].lstrip('v'): row for row in rows}
     versions = sorted([head for head in said if numbered(head)], key=order)
     if not live or not versions:
         print('  BROKEN   there are no releases or no versions to compare')
@@ -144,7 +189,7 @@ def main(argv):
               'by making one side match the other; a version that is not on that list and disagrees fails here')
     if not faults:
         print('  ok       every published version has its section, and every section that shipped is out')
-        return 0
+        return 0 if agreed else 1
     for fault in faults:
         print('  BROKEN   ' + fault)
     return 1

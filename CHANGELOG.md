@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.80.4
+
+- Recent trades no longer says nothing has been traded this campaign when it means nothing has been traded since you loaded the game, which is all it ever keeps.
+
 ## 1.80.3
 
 - The TradeLord ledger opens faster: a market is no longer searched from top to bottom for every good it never had on its shelves.
