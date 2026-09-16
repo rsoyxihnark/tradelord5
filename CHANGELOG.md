@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.79.1
+
+- The TradeLord ledger no longer stops drawing, and Buy Workshops Remotely no longer fails to open, when a workshop, the town it sits in or its owner has no name of its own, and shows its id instead.
+- TradeLord.log no longer repeats the map marker line over and over when the market it marks is one you had already pinned from the ledger.
+
 ## 1.79.0
 
 - Recent trades now opens from the campaign map, on a button under the TradeLord one, so the last twenty buys and sells are there without opening the ledger; its button has left the row along the bottom of the ledger.

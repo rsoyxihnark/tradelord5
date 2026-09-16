@@ -792,10 +792,10 @@ def the_marker_says_in_the_log_which_town_it_picked_and_why():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     said = method_body(S['Marker.cs'], "private static string Why")
     return (ordered(track, "if (on) target = BestSellTownForCargo(out how);",
-                    "if (target == _tracked)",
+                    "if (target == _picked)",
                     'string why = on ? Why(how) : "the map marker is switched off";',
-                    'Log.Write(_tracked != null')
-            and '"map marker moved to " + _tracked.Name + ": " + why' in track
+                    'Log.Write(target != null')
+            and '"map marker moved to " + target.Name + ": " + why' in track
             and '"map marker taken off the map: " + why' in track
             and "Why(" not in marker
             and 'return "nothing in your cargo is yours to sell";' in said
@@ -2744,9 +2744,11 @@ chk("1.6.13", "a line newer than this build is still found when nothing has load
     "g <= McmGeneration + GenerationsAhead" in method_body(S['Support.cs'], "private static string Detect"))
 
 chk("1.6.14", "the auto-marker claims a town only when it placed the marker itself, so it never removes one you set",
-    re.search(r'if \(target != null && !tracker\.CheckTracked\(target\)\)\s*\{\s*'
-              r'tracker\.RegisterObject\(target\);\s*_tracked = target;\s*\}',
-              method_body(S['Marker.cs'], "internal static void Update")) is not None and
+    len(re.findall(r'if \(target != null && !tracker\.CheckTracked\(target\)\)\s*\{\s*'
+                   r'tracker\.RegisterObject\(target\);\s*_tracked = target;\s*\}',
+                   method_body(S['Marker.cs'], "internal static void Update"))) == 2 and
+    "_tracked = target;" not in between(method_body(S['Marker.cs'], "internal static void Update"),
+                                        "tracker.RemoveTrackedObject(_tracked);", "if (target != null") and
     "if (_tracked != null && !LedgerPanel.IsPinned(_tracked) && tracker.CheckTracked(_tracked))" in S['Marker.cs'])
 chk("1.6.14", "a pin restored from a save is put back on the map, so the panel and the map agree",
     (lambda b: "VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;" in b
@@ -8914,8 +8916,9 @@ def the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till():
             and "int shelf = Freshness.Hour / PriceShelfHours;" in asked
             and "Freshness.Taken(ref _priceStamp, shelf);" in asked
             and 'string why = on ? Why(how) : "the map marker is switched off";' in update
-            and update.find("if (target == _tracked)") < update.find("string why = on ?")
-            and "Why(how)" not in between(update, "bool on =", "if (target == _tracked)"))
+            and 0 <= update.find("if (target == _picked)") < update.find("string why = on ?")
+            and "_picked = target;" in update
+            and "Why(how)" not in between(update, "bool on =", "if (target == _picked)"))
 
 
 chk("1.77.2", "the map marker walks the richest purses first and stops as soon as no market left can beat the best it found, stops pricing a town once its own purse is the ceiling, and works out what to write in the log only when the marker actually moves",
@@ -9198,18 +9201,27 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
             read += 1
             at = text[:m.start()].count('\n')
             asked = '\n'.join(lines[max(0, at - 1):at + 1])
-            if text[m.start() - 1] == '?':
-                continue
             if 'Name == null' in asked or 'Name != null' in asked:
                 continue
             return False
-    return (read == 12
-            and ALL.count("Tongue.Named(") == 6
+    return (read == 7
+            and ALL.count("Tongue.Named(") == 12
             and '_route.Item == null ? "" : Tongue.Named(_route.Item.Name, _route.Item.StringId)'
                 in S['Panel.cs']
             and '_route.From == null ? "" : Tongue.Named(_route.From.Name, _route.From.StringId)'
                 in S['Panel.cs']
             and '_route.To == null ? "" : Tongue.Named(_route.To.Name, _route.To.StringId)'
+                in S['Panel.cs']
+            and 'shop.Settlement == null ? "" : Tongue.Named(shop.Settlement.Name, shop.Settlement.StringId)'
+                in S['Panel.cs']
+            and 'shop.WorkshopType == null ? "" : Tongue.Named(shop.WorkshopType.Name, shop.WorkshopType.StringId)'
+                in S['Panel.cs']
+            and 'shop.Owner == null ? "" : Tongue.Named(shop.Owner.Name, shop.Owner.StringId)'
+                in S['Panel.cs']
+            and "Tongue.Named(w.WorkshopType.Name, w.WorkshopType.StringId)" in S['Panel.cs']
+            and 'w.Settlement == null ? "?" : Tongue.Named(w.Settlement.Name, w.Settlement.StringId)'
+                in S['Panel.cs']
+            and 'w.Owner == null ? "" : Tongue.Named(w.Owner.Name, w.Owner.StringId)'
                 in S['Panel.cs']
             and "Tongue.Named(Site.Name, Site.StringId)" in S['Trading.cs']
             and "Tongue.Named(Met.Name, Met.StringId)" in S['Trading.cs']
@@ -9300,6 +9312,36 @@ def the_map_carries_both_buttons_inside_the_region_it_reserves():
 
 chk("1.79.0", "the campaign map carries the TradeLord button with Recent trades stacked under it, both inside the one region the map reserves for the mouse, and the ledger's own row no longer repeats either",
     the_map_carries_both_buttons_inside_the_region_it_reserves())
+
+
+def a_workshop_row_is_drawn_whether_or_not_its_parts_are_named():
+    offer = method_body(S['Panel.cs'], "public ShopOfferRowVM")
+    listed = method_body(S['Panel.cs'], "private void RefreshWorkshops")
+    return (".Name.ToString()" not in offer + listed
+            and offer.count("Tongue.Named(") == 3
+            and listed.count("Tongue.Named(") == 3
+            and "w.WorkshopType.Name + " not in listed
+            and "Tongue.Named(w.WorkshopType.Name, w.WorkshopType.StringId)" in listed)
+
+
+chk("1.79.1", "a workshop, its town or its owner with no name of its own is shown by its id rather than stopping the ledger drawing or the Buy Workshops Remotely window opening",
+    a_workshop_row_is_drawn_whether_or_not_its_parts_are_named())
+
+
+def the_marker_settles_on_a_town_already_on_your_map():
+    update = method_body(S['Marker.cs'], "internal static void Update")
+    forget = method_body(S['Marker.cs'], "internal static void Forget()")
+    held = between(S['Marker.cs'], "internal static Settlement Tracked", "}\n\n")
+    return ("private static Settlement _picked;" in S['Marker.cs']
+            and "if (target == _picked)" in update
+            and "if (target == _tracked)" not in update
+            and ordered(update, "_tracked = null;", "_picked = target;")
+            and "_picked = null;" in forget
+            and ordered(held, "_tracked = value;", "if (value != null) _picked = value;"))
+
+
+chk("1.79.1", "a market that is already on your map is still taken as the one the marker picked, so the line it writes to TradeLord.log is written once rather than over and over",
+    the_marker_settles_on_a_town_already_on_your_map())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
