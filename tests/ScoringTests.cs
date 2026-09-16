@@ -363,5 +363,16 @@ namespace TradeLord.Tests
             }
         }
 
+        [Fact]
+        public void A_market_that_lost_stock_is_said_in_words_rather_than_as_a_figure_below_zero()
+        {
+            Assert.Equal("8 left instead", Scoring.Landing(-8));
+            Assert.Equal("0 did", Scoring.Landing(0));
+            Assert.Equal("5 did", Scoring.Landing(5));
+            Assert.Equal("2320 left instead", Scoring.Moving(-2320));
+            Assert.Equal("it moved 0", Scoring.Moving(0));
+            Assert.Equal("it moved 580", Scoring.Moving(580));
+        }
+
     }
 }

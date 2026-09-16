@@ -203,7 +203,7 @@ namespace TradeLord
                                             WorthOnTheShelf(site, kept.Item));
                 landingMiss += Math.Abs(how.LandingOff);
                 string line = "  " + Named(kept.Item) + ": said " + kept.StockSaid + " unit(s) would land within " +
-                              Figure(kept.WithinDays) + " day(s) and " + how.Landed + " did, " +
+                              Figure(kept.WithinDays) + " day(s) and " + Landing(how.Landed) + ", " +
                               Counted(how.LandingOff) +
                               "; you walked in " + Figure(TradeMath.DaysSince(kept.AtHours, now)) +
                               " day(s) after it said so";
@@ -217,8 +217,8 @@ namespace TradeLord
                     shared++;
                     shareTotal += how.Share;
                 }
-                lines.Add(line + "; said its kind would move " + kept.WorthSaid + " in worth and it moved " +
-                          how.Moved + ", " + Counted(how.WorthOff) + Shared(how.Share));
+                lines.Add(line + "; said its kind would move " + kept.WorthSaid + " in worth and " +
+                          Moving(how.Moved) + ", " + Counted(how.WorthOff) + Shared(how.Share));
             }
             if (scored == 0) return;
             lines.Insert(0, "forecast check at " + site.Name + ", " + scored + " good(s) it had a figure for:");
@@ -244,6 +244,10 @@ namespace TradeLord
             item.Name == null ? item.StringId : item.Name.ToString();
 
         private static string Counted(int off) => Scoring.Counted(off);
+
+        private static string Landing(int landed) => Scoring.Landing(landed);
+
+        private static string Moving(int moved) => Scoring.Moving(moved);
 
         private static string Shared(float share) => Scoring.Shared(share);
 
