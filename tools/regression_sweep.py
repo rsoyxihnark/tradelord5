@@ -9402,5 +9402,32 @@ chk("1.79.3", "a route is weighed, capped and priced on what its two markets wil
     a_route_is_judged_only_on_what_that_market_will_charge_when_you_reach_it())
 
 
+def a_window_a_map_button_opens_can_be_reached_with_the_mouse():
+    import xml.etree.ElementTree as ET
+    tree = ET.parse('TradeLord/GUI/Prefabs/TradeLordPanel.xml')
+    block = [e for e in tree.iter() if e.get('Id') == 'TradeLordMapButton']
+    if len(block) != 1:
+        return False
+    opens = [b.get('Command.Click') for b in block[0].iter() if b.get('Command.Click')]
+    idle = method_body(S['Panel.cs'], "private static void UpdateIdleInput")
+    return ('ExecuteOpenTrades' in opens
+            and PREFAB.count('Command.Click="ExecuteOpenTrades"') == 1
+            and 'internal static bool TakesTheMouse(bool windowOpen, bool buttonOn, bool overButton) =>\n'
+                '            windowOpen || (buttonOn && overButton);' in S['Rules.cs']
+            and 'MapButton.TakesTheMouse(\n'
+                '                _vm.IsTradesVisible, buttonOn, OverButtonBounds(Input.MousePositionRanged))'
+                in idle
+            and 'buttonOn && OverButtonBounds' not in S['Panel.cs']
+            and S['Panel.cs'].count('MapButton.TakesTheMouse') == 1
+            and 'if (_vm.IsTradesVisible && map.IsEscapeMenuOpened) _vm.IsTradesVisible = false;'
+                in S['Panel.cs']
+            and 'MapButton.TakesTheMouse(windowOpen: true' in T['MapButtonTests.cs']
+            and 'MapButton.TakesTheMouse(windowOpen: false' in T['MapButtonTests.cs'])
+
+
+chk("1.80.2", "a window a button on the campaign map opens holds the mouse while it is up, wherever the cursor is, so it can be scrolled and closed, and it gives the mouse back when the escape menu opens",
+    a_window_a_map_button_opens_can_be_reached_with_the_mouse())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
