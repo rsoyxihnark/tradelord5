@@ -385,7 +385,9 @@ namespace TradeLord
 
             internal string Where => Site != null ? "at " + Site.Name : "from " + Met.Name;
 
-            internal string Place => Site != null ? Site.Name.ToString() : Met.Name.ToString();
+            internal string Place => Site != null
+                ? Tongue.Named(Site.Name, Site.StringId)
+                : Tongue.Named(Met.Name, Met.StringId);
 
             internal string Headed(string label) => label + (Sim ? Counter.Heading : ": ");
 

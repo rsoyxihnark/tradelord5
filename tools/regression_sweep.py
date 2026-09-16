@@ -9174,5 +9174,43 @@ chk("1.78.3", "the module file names the class the game starts the mod through, 
     the_module_manifest_names_what_the_rest_of_the_project_really_is())
 
 
+
+def nothing_reads_a_name_without_asking_whether_it_has_one():
+    named = method_body(S['Tongue.cs'], "internal static string Named(TextObject name, string id)")
+    if named is None:
+        named = between(S['Tongue.cs'],
+                        "internal static string Named(TextObject name, string id) =>", ";")
+    if not named or 'name == null ? id ?? "" : name.ToString()' not in named:
+        return False
+    read = 0
+    for where, text in S.items():
+        lines = text.split('\n')
+        for m in re.finditer(r'\.Name\.ToString\(\)', text):
+            read += 1
+            at = text[:m.start()].count('\n')
+            asked = '\n'.join(lines[max(0, at - 1):at + 1])
+            if text[m.start() - 1] == '?':
+                continue
+            if 'Name == null' in asked or 'Name != null' in asked:
+                continue
+            return False
+    return (read == 12
+            and ALL.count("Tongue.Named(") == 6
+            and '_route.Item == null ? "" : Tongue.Named(_route.Item.Name, _route.Item.StringId)'
+                in S['Panel.cs']
+            and '_route.From == null ? "" : Tongue.Named(_route.From.Name, _route.From.StringId)'
+                in S['Panel.cs']
+            and '_route.To == null ? "" : Tongue.Named(_route.To.Name, _route.To.StringId)'
+                in S['Panel.cs']
+            and "Tongue.Named(Site.Name, Site.StringId)" in S['Trading.cs']
+            and "Tongue.Named(Met.Name, Met.StringId)" in S['Trading.cs']
+            and 'site == null ? "this market" : Tongue.Named(site.Name, site.StringId)'
+                in S['Counter.cs'])
+
+
+chk("1.78.4", "nothing turns a name into text without asking first whether the good, the market or the party has one, so a nameless one is shown by its id rather than stopping the panel",
+    nothing_reads_a_name_without_asking_whether_it_has_one())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
