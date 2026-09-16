@@ -501,7 +501,7 @@ namespace TradeLord
             var lately = LedgerBehavior.Instance?.Lately;
             int count = lately?.Count ?? 0;
             TradesHeader = count == 0
-                ? Tongue.Text("{=TL419}Recent trades: nothing traded yet this session").ToString()
+                ? Tongue.Text("{=TL419}Recent trades: nothing traded yet this campaign").ToString()
                 : Line("{=TL418}Recent trades (last {COUNT})", "COUNT", count.ToString());
             var rows = new MBBindingList<TradeRowVM>();
             for (int i = 0; i < count; i++)

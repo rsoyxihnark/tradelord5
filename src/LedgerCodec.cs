@@ -35,6 +35,14 @@ namespace TradeLord
         public float Held;
     }
 
+    public struct TradeNote
+    {
+        public string Where;
+        public string What;
+        public int Gold;
+        public float Day;
+    }
+
     public static class LedgerCodec
     {
         public const int FieldsAPriceNeeds = 5;
@@ -44,6 +52,8 @@ namespace TradeLord
         public const int FieldsAPurchaseNeeds = 4;
 
         public const int FieldsAPromiseNeeds = 3;
+
+        public const int FieldsATradeNeeds = 4;
 
         private const char FieldMark = '|';
         private const char RecordMark = ';';
@@ -60,6 +70,14 @@ namespace TradeLord
 
         private static bool Storable(float day) =>
             !float.IsNaN(day) && !float.IsInfinity(day);
+
+        private static string OneField(string said)
+        {
+            if (string.IsNullOrEmpty(said)) return "";
+            return said.IndexOf(FieldMark) < 0 && said.IndexOf(RecordMark) < 0
+                ? said
+                : said.Replace(FieldMark, ' ').Replace(RecordMark, ' ');
+        }
 
         public static string WriteLedger(Dictionary<string, List<PriceObservation>> ledger)
         {
@@ -177,6 +195,43 @@ namespace TradeLord
                 if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture,
                                     out float held) || !Storable(held) || held < 0f) continue;
                 kept.Add(new PromiseRecord { TownId = parts[0], Scored = scored, Held = held });
+            }
+            return kept;
+        }
+
+        public static string WriteTrades(List<TradeNote> lately)
+        {
+            var sb = new StringBuilder();
+            if (lately == null) return sb.ToString();
+            for (int i = 0; i < lately.Count; i++)
+            {
+                TradeNote note = lately[i];
+                if (!Storable(note.Day)) continue;
+                if (sb.Length > 0) sb.Append(RecordMark);
+                sb.Append(OneField(note.Where)).Append(FieldMark)
+                  .Append(OneField(note.What)).Append(FieldMark)
+                  .Append(Number(note.Gold)).Append(FieldMark)
+                  .Append(Number(note.Day));
+            }
+            return sb.ToString();
+        }
+
+        public static List<TradeNote> ReadTrades(string text, int most)
+        {
+            var kept = new List<TradeNote>();
+            if (string.IsNullOrEmpty(text) || most <= 0) return kept;
+            string[] records = text.Split(RecordMark);
+            for (int i = 0; i < records.Length && kept.Count < most; i++)
+            {
+                string[] parts = records[i].Split(FieldMark);
+                if (parts.Length < FieldsATradeNeeds) continue;
+                if (!Whole(parts[2], out int gold)) continue;
+                if (!float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture,
+                                    out float day) || !Storable(day)) continue;
+                kept.Add(new TradeNote
+                {
+                    Where = parts[0], What = parts[1], Gold = gold, Day = day
+                });
             }
             return kept;
         }

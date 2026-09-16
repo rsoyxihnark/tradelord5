@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.80.11
+
+- Recent trades is now kept in your save, so the last twenty buys and sells are still listed when you load the campaign again instead of starting empty every time.
+
 ## 1.80.10
 
 - With Staged Trading on, prices now match what the trade screen will charge, so the deal TradeLord lays out is priced the way the screen prices it.

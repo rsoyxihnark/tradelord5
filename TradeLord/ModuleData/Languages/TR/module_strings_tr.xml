@@ -264,7 +264,7 @@
 		<string id="TL416" text="Kalan"/>
 		<string id="TL417" text=" | Kalan = siz vardıktan sonra o tezgahın bu Adet kadarını daha ne kadar elinde tutacağı; önce boşalan bir tezgah Güven değerini düşürür"/>
 		<string id="TL418" text="Son ticaretler (son {COUNT})"/>
-		<string id="TL419" text="Son ticaretler: bu oturumda henüz ticaret yapılmadı"/>
+		<string id="TL419" text="Son ticaretler: bu seferde henüz ticaret yapılmadı"/>
 		<string id="TL420" text="{DAYS} gün önce"/>
 		<string id="TL421" text="TradeLord'un önüne koyduğu ticaret kapandı: kesen {GOLD} dinar arttı."/>
 		<string id="TL422" text="TradeLord'un önüne koyduğu ticaret kapandı: kesen {GOLD} dinar azaldı."/>
