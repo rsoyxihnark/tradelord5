@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.80.1
+
+- The best markets for a good are picked again by what each market charges today, the way they were before 1.80.0.
+- Restocking your food, buying a haul animal and judging whether a sale clears Minimum profit margin no longer move with the caravans heading for a market you are not going to.
+
 ## 1.80.0
 
 - The best markets for a good, in the item tooltips, on the map marker, in the ledger and in what TradeLord buys to sell on, are now picked by what each market will charge by the time you could get there, so one about to be cleared out can beat one that looks dearer today.
