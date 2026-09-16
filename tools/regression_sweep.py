@@ -3788,8 +3788,8 @@ def the_feature_list_says_how_a_price_is_read_rather_than_naming_a_brain():
     return ('brain' not in README.lower()
             and 'take off speed' not in README.lower()
             and README.count('so the price it shows is the price it pays') == 2
-            and 'return held.GetPrice(el, who, selling, null);' in S['Market.cs']
-            and 'the way a trade of its own is charged, ' in S['Market.cs']
+            and 'return held.GetPrice(el, who, selling, Merchant(site));' in S['Market.cs']
+            and 'the way the trade that follows is charged' in S['Market.cs']
             and '(IMarketData)site.Town.MarketData' in S['Market.cs']
             and '(IMarketData)site.Village.MarketData' in S['Market.cs'])
 
@@ -6109,7 +6109,7 @@ def the_price_trace_reads_one_price_four_ways_and_names_what_changes_it():
             and not any(w in trace for w in ("SellItemsAction", "ChangeGold", "AddToCounts")))
 
 
-def every_price_is_asked_the_way_a_trade_of_its_own_is_charged():
+def every_price_is_asked_the_way_the_trade_that_follows_is_charged():
     market = S['Market.cs']
     at = method_body(market, "internal static int At(SettlementComponent market, "
                              "EquipmentElement el, MobileParty who, bool selling)")
@@ -6120,7 +6120,7 @@ def every_price_is_asked_the_way_a_trade_of_its_own_is_charged():
             and market.count("GetItemPrice(") == 3
             and compared.count("market.GetItemPrice(") == 2
             and ordered(at, "IMarketData held = Kept(site);",
-                        "return held.GetPrice(el, who, selling, null);",
+                        "return held.GetPrice(el, who, selling, Merchant(site));",
                         "return market.GetItemPrice(el, who, selling);")
             and all("Priced.At(" in S[f] for f in ('Ledger.cs', 'TooltipPatches.cs', 'Trading.cs')))
 
@@ -6238,8 +6238,8 @@ chk("1.47.0", "the price trace reads one market's price four ways, names the pri
 chk("1.76.7", "the price trace ships off, so walking into a market costs nothing until a price looks wrong and you turn it on",
     "public bool PriceTrace = false;" in S['Options.cs'])
 
-chk("1.47.1", "every price TradeLord quotes is asked of the market the way a trade of its own is charged, naming no merchant, and falls back to the plain question only if that cannot be asked",
-    every_price_is_asked_the_way_a_trade_of_its_own_is_charged())
+chk("1.47.1", "every price TradeLord quotes is asked of the market the way the trade that follows it is charged, and falls back to the plain question only if that cannot be asked",
+    every_price_is_asked_the_way_the_trade_that_follows_is_charged())
 
 
 def one_stack_of_a_good_never_spends_what_another_stack_holds():
@@ -9589,18 +9589,20 @@ chk("1.80.6", "the panel says a price counts what is on its way only where that 
     a_setting_that_leans_on_another_names_it_in_every_language())
 
 
-def a_price_is_read_the_way_a_trade_of_its_own_is_charged():
-    asked = method_body(S['Market.cs'],
+def a_price_is_read_the_way_the_trade_that_follows_it_is_charged():
+    market = S['Market.cs']
+    asked = method_body(market,
                         "internal static int At(SettlementComponent market, EquipmentElement el, MobileParty who, bool selling)")
-    walk = method_body(S['Market.cs'], "internal int Price()")
-    return ("held.GetPrice(el, who, selling, null)" in asked
-            and "site.Party" not in asked
-            and "_element, MobileParty.MainParty, null, _selling," in walk
-            and "_party" not in S['Market.cs'])
+    walk = method_body(market, "internal int Price()")
+    return ("held.GetPrice(el, who, selling, Merchant(site))" in asked
+            and "_element, MobileParty.MainParty, _party, _selling," in walk
+            and "_party = Priced.Merchant(site);" in market
+            and "site != null && TradeRules.StagesTheDeal(Options.Current) ? site.Party : null;" in market
+            and market.count("site.Party") == 1)
 
 
-chk("1.80.9", "a price is read naming no merchant, the way SellItemsAction charges it, in the quote and in the simulated walk alike",
-    a_price_is_read_the_way_a_trade_of_its_own_is_charged())
+chk("1.80.10", "a merchant is named only where the trade screen will do the trading, in the quote and in the simulated walk alike",
+    a_price_is_read_the_way_the_trade_that_follows_it_is_charged())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

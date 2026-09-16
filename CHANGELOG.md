@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.80.10
+
+- With Staged Trading on, prices now match what the trade screen will charge, so the deal TradeLord lays out is priced the way the screen prices it.
+
 ## 1.80.9
 
 - A village no longer looks like it pays about half what it really does for what you sell, so TradeLord stops passing over village sales worth making.
