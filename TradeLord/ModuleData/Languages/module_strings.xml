@@ -218,7 +218,7 @@
 		<string id="TL345" text="Moves a map tracker to the market in reach paying most for the cargo it would really sell there, counting only what clears Minimum profit margin, following you as you ride. A village is only ever marked while Trade with villages is on. It keeps to the travel ceilings. ON by default; clicking a town in the ledger panel still pins a marker by hand."/>
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
-		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. The trade entry in the menu always reports."/>
+		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. Warnings still show on screen: cargo full, a purse below your Gold reserve, and an item list entry that matches no good. The trade entry in the menu always reports."/>
 		<string id="TL389" text="Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. OFF by default; turn it on when a price looks wrong."/>
 		<string id="TL398" text="Writes to TradeLord.log what the forecast said a market would hold and what it held when you walked in, good by good, with how far off it was. Needs Count what is on its way to a market. ON by default; turn it off to keep the log short."/>
 		<string id="TL100" text="Language"/>
@@ -251,7 +251,7 @@
 		<string id="TL404" text="rising"/>
 		<string id="TL405" text="falling"/>
 		<string id="TL406" text="Mark a market rising or falling"/>
-		<string id="TL407" text="Marks a market in the tooltip rising or falling when its price has moved 5% or more since the last day you looked there. It needs two looks at the same market on two different days before it can say anything. OFF by default."/>
+		<string id="TL407" text="Marks a market in the tooltip rising or falling when its price has moved 5% or more since the last day you looked there. It needs two looks at the same market on two different days before it can say anything. Only does anything with Live world prices off, since that is when TradeLord records prices at all. OFF by default."/>
 		<string id="TL282" text="Days to keep a price you recorded"/>
 		<string id="TL408" text="A price you wrote down yourself is kept this many days, then forgotten: a market you last looked at longer ago than this stops being suggested and drops out of your save. 0 keeps every price for as long as your campaign lasts. Only does anything with Live world prices off, since that is when TradeLord records prices at all."/>
 		<string id="TL409" text="You paid"/>

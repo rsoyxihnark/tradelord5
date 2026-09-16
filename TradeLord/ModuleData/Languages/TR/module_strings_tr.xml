@@ -214,7 +214,7 @@
 		<string id="TL345" text="Harita izleyicisini, orada gerçekten satabileceği kargoya en çok ödeyen erişilebilir pazara taşır; yalnızca en az kâr marjını geçenleri sayar ve siz at sürerken sizi takip eder. Bir köy yalnızca Köylerle ticaret yap açıkken işaretlenir. Yol süresi sınırlarına uyar. Öntanımlı olarak AÇIK; defter panelinde bir şehre tıklamak yine elle işaret koyar."/>
 		<string id="TL347" text="Bir geçiş gerçekten bir şey taşıdığında bozuk para sesi çal. Hiçbir şey taşımayan geçiş sessiz kalır."/>
 		<string id="TL348" text="Tek satırlık ticaret özetinde malları adlandır, örneğin 'TradeLord 8 Zeytin, 3 Şarap sattı, 240 dinar', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
-		<string id="TL349" text="Kendiliğinden yapılan ticaret, hem bir pazara girdiğinizde hem de yolda bir kervanla ya da bir köylü bölüğüyle karşılaştığınızda, ekranda satır olmadan yalnızca TradeLord.log dosyasına bildirir. Menüdeki ticaret girdisi her zaman bildirir."/>
+		<string id="TL349" text="Kendiliğinden yapılan ticaret, hem bir pazara girdiğinizde hem de yolda bir kervanla ya da bir köylü bölüğüyle karşılaştığınızda, ekranda satır olmadan yalnızca TradeLord.log dosyasına bildirir. Uyarılar yine de ekranda görünür: yükünüzün dolu olması, kesenizin Altın rezervinin altına düşmesi ve bir mal listesi girdinizin hiçbir mala uymaması. Menüdeki ticaret girdisi her zaman bildirir."/>
 		<string id="TL389" text="Bir pazarın taşıdığınız her mal için ne ödediğini ve ne istediğini TradeLord.log dosyasına yazar, böylece bir fiyatın neden ticaret ekranıyla uyuşmadığını görebilirsiniz. Pazarı ve fiyatları oynatan modu adlandırır. Öntanımlı olarak KAPALI; bir fiyat yanlış göründüğünde aç."/>
 		<string id="TL398" text="Tahminin bir pazar için söylediğini ve içeri girdiğinizde pazarın gerçekte ne tuttuğunu, mal mal, ne kadar şaştığıyla birlikte TradeLord.log dosyasına yazar. Bir pazara doğru yolda olanları say gerekir. Öntanımlı olarak AÇIK; günlüğü kısa tutmak için kapat."/>
 		<string id="TL100" text="Dil"/>
@@ -251,7 +251,7 @@
 		<string id="TL404" text="yükseliyor"/>
 		<string id="TL405" text="düşüyor"/>
 		<string id="TL406" text="Pazarı yükseliyor ya da düşüyor diye işaretle"/>
-		<string id="TL407" text="Bir pazarın fiyatı oraya son baktığın günden bu yana %5 ya da daha fazla oynadıysa, ipucunda o pazarı yükseliyor ya da düşüyor diye işaretler. Bir şey söyleyebilmesi için aynı pazara iki ayrı günde iki kez bakman gerekir. Varsayılan olarak KAPALI."/>
+		<string id="TL407" text="Bir pazarın fiyatı oraya son baktığın günden bu yana %5 ya da daha fazla oynadıysa, ipucunda o pazarı yükseliyor ya da düşüyor diye işaretler. Bir şey söyleyebilmesi için aynı pazara iki ayrı günde iki kez bakman gerekir. Yalnızca Canlı dünya fiyatları kapalıyken bir işe yarar, çünkü TradeLord fiyatları ancak o zaman kaydeder. Varsayılan olarak KAPALI."/>
 		<string id="TL282" text="Kaydettiğin bir fiyatın saklanacağı gün sayısı"/>
 		<string id="TL408" text="Kendi yazdığın bir fiyat bu kadar gün saklanır, sonra unutulur: buradan daha uzun süre önce baktığın bir pazar artık önerilmez ve kayıttan düşer. 0, her fiyatı kampanyan sürdüğü sürece saklar. Yalnızca Canlı dünya fiyatları kapalıyken bir işe yarar, çünkü TradeLord fiyatları ancak o zaman kaydeder."/>
 		<string id="TL409" text="Ödediğin"/>
