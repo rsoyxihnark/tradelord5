@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.79.2
+
+- The TradeLord ledger no longer drops a route that should have led the list, which could happen when Count what is on its way to a market raised what the selling market would pay.
+
 ## 1.79.1
 
 - The TradeLord ledger no longer stops drawing, and Buy Workshops Remotely no longer fails to open, when a workshop, the town it sits in or its owner has no name of its own, and shows its id instead.
