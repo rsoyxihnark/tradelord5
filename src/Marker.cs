@@ -12,6 +12,8 @@ namespace TradeLord
     {
         private static Settlement _tracked;
 
+        private static Settlement _picked;
+
         private static int _hour = -1;
         private static Vec2 _at;
         private const float MovedFar = 100f;
@@ -30,7 +32,11 @@ namespace TradeLord
         internal static Settlement Tracked
         {
             get => _tracked;
-            set => _tracked = value;
+            set
+            {
+                _tracked = value;
+                if (value != null) _picked = value;
+            }
         }
 
         internal static bool DueAgain(Vec2 at)
@@ -60,6 +66,7 @@ namespace TradeLord
         {
             ForgetTheRead();
             _tracked = null;
+            _picked = null;
             _hour = -1;
         }
 
@@ -87,23 +94,27 @@ namespace TradeLord
             bool on = Options.Current.MarkBestSellTownOnMap;
             if (on) target = BestSellTownForCargo(out how);
 
-            if (target == _tracked)
+            if (target == _picked)
             {
                 if (target != null && !tracker.CheckTracked(target))
+                {
                     tracker.RegisterObject(target);
+                    _tracked = target;
+                }
                 return;
             }
             if (_tracked != null && !LedgerPanel.IsPinned(_tracked) && tracker.CheckTracked(_tracked))
                 tracker.RemoveTrackedObject(_tracked);
             _tracked = null;
+            _picked = target;
             if (target != null && !tracker.CheckTracked(target))
             {
                 tracker.RegisterObject(target);
                 _tracked = target;
             }
             string why = on ? Why(how) : "the map marker is switched off";
-            Log.Write(_tracked != null
-                ? "map marker moved to " + _tracked.Name + ": " + why
+            Log.Write(target != null
+                ? "map marker moved to " + target.Name + ": " + why
                 : "map marker taken off the map: " + why);
         }
 
