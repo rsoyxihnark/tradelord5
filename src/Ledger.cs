@@ -878,13 +878,13 @@ namespace TradeLord
                 foreach (var (from, buyPrice) in buys)
                 {
                     if (buyPrice <= 0) continue;
-                    if (!TradePolicy.BuyAcceptable(buyPrice, TradePolicy.Realizable(sells[0].price))) break;
 
-                    int spendCap = Options.Current.BuyValueCapPerItem;
-                    int stocked = MostWorthShowing(buyPrice);
-                    int shelf = 0, onTheShelfNow = int.MaxValue;
                     float toBuy = Travel.EstimateDaysFromParty(from);
                     int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);
+                    int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);
+                    int spendCap = Options.Current.BuyValueCapPerItem;
+                    int stocked = MostWorthShowing(openingBuy);
+                    int shelf = 0, onTheShelfNow = int.MaxValue;
                     if (Options.Current.Omniscient)
                     {
                         onTheShelfNow = StockOf(from, item) - (from.IsVillage ? 1 : 0);
@@ -894,12 +894,9 @@ namespace TradeLord
                         stocked = Math.Min(stocked, shelf);
                     }
                     if (stocked <= 0) continue;
-                    int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);
 
                     foreach (var (to, sellPrice) in sells)
                     {
-                        float realizable = TradePolicy.Realizable(sellPrice);
-                        if (sellPrice <= buyPrice || !TradePolicy.BuyAcceptable(buyPrice, realizable)) break;
                         if (to == from) continue;
 
                         int till = 0;
@@ -908,8 +905,6 @@ namespace TradeLord
                             till = to.SettlementComponent?.Gold ?? 0;
                             if (till <= 0) continue;
                         }
-                        int qtyCap = till > 0 ? Math.Min(stocked, till / sellPrice) : stocked;
-                        if (qtyCap <= 0) continue;
 
                         float soonest = toBuy + Travel.StraightDaysBetween(from, to);
                         if (cap > 0f && soonest > cap) continue;
@@ -919,6 +914,12 @@ namespace TradeLord
 
                         int landedAtSellTown = Forecast.WorthShift(to, item, days);
                         int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);
+                        float realizable = TradePolicy.Realizable(openingSell);
+                        if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) continue;
+
+                        int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;
+                        if (qtyCap <= 0) continue;
+
                         float ceiling = (float)(openingSell - openingBuy) * qtyCap;
                         if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey) continue;
 
@@ -956,7 +957,7 @@ namespace TradeLord
                         best = new TradeRoute
                         {
                             Item = item, From = from, To = to,
-                            BuyPrice = buyPrice, SellPrice = sellPrice,
+                            BuyPrice = q.OpeningBuyPrice, SellPrice = q.OpeningSellPrice,
                             Quantity = q.Units,
                             TravelDays = days, TotalProfit = profit, ProfitPerDay = perDay,
                             Confidence = confidence, Score = score,
