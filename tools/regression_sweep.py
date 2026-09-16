@@ -1782,9 +1782,11 @@ chk("1.3.25", "the herd probe runs only once livestock is actually on the shelf"
 chk("1.3.26", "pathfinder calls are gated behind a straight-line lower bound",
     "float soonest = toBuy + Travel.StraightDaysBetween(from, to);" in S['Ledger.cs'] and
     ordered(S['Ledger.cs'], "float soonest = toBuy", "float days = toBuy + Travel.EstimateDaysBetween"))
-chk("1.3.26", "the best route so far prunes pairs before they cost a path query",
-    "if (best != null && ceiling / Math.Max(soonest, 0.25f) <= bestKey) continue;" in S['Ledger.cs'] and
-    ordered(S['Ledger.cs'], "ceiling / Math.Max(soonest, 0.25f)", "Travel.EstimateDaysBetween(from, to)"))
+chk("1.3.26", "the best route so far prunes a pair before it costs a walk through every unit's price",
+    "if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey) continue;" in S['Ledger.cs'] and
+    S['Ledger.cs'].count("ceiling / Math.Max") == 1 and
+    "Math.Max(soonest, 0.25f)" not in S['Ledger.cs'] and
+    ordered(S['Ledger.cs'], "ceiling / Math.Max(days, 0.25f)", "Bulk.Walk(from, to, item"))
 chk("1.3.26", "a route's whole trip stays inside the travel ceiling, on the straight line and on the real path",
     (lambda b: ordered(b, "if (cap > 0f && soonest > cap) continue;", "if (cap > 0f && days > cap) continue;"))
     (method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")))
@@ -2032,8 +2034,15 @@ chk("1.5.0", "buying strips the shelf and selling stocks it",
     "if (_selling) _shelf.Restock(1); else _shelf.Restock(-1);" in
         method_body(S['Market.cs'], "internal int At(int taken)") and
     "Restock" not in method_body(S['Market.cs'], "internal static RouteQuote Walk"))
-chk("1.5.0", "route pruning uses the flat-quote upper bound, so it cannot discard a viable route",
-    "float ceiling = (float)(sellPrice - buyPrice) * qtyCap;" in S['Ledger.cs'] and
+chk("1.5.0", "route pruning is bounded by the very prices the quote opens at, so it cannot discard a viable route",
+    "float ceiling = (float)(openingSell - openingBuy) * qtyCap;" in S['Ledger.cs'] and
+    "(sellPrice - buyPrice) * qtyCap" not in S['Ledger.cs'] and
+    "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);"
+        in S['Ledger.cs'] and
+    "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);"
+        in S['Ledger.cs'] and
+    "return Rung(site, item, selling, quoted, landed).At(0);" in
+        method_body(S['Market.cs'], "internal static int Opening") and
     ordered(S['Ledger.cs'], "float ceiling =", "Bulk.Walk(from, to, item"))
 chk("1.5.0", "a broke selling town is no destination, in the mode that can see its till",
     "if (till <= 0) continue;" in S['Ledger.cs'])
@@ -6882,7 +6891,7 @@ def what_lands_after_you_arrive_is_not_counted():
             and "if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;" in worth
             and "if (!TradeMath.LandsInTime(spending.Days, withinDays)) continue;" in purse
             and "int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);" in scan
-            and "Forecast.WorthShift(to, item, days));" in scan
+            and "int landedAtSellTown = Forecast.WorthShift(to, item, days);" in scan
             and "Forecast.UnitsLanding(from, item, toBuy)" in scan
             and "A_load_still_on_the_road_past_the_window_is_left_out" in PROJECTIONTESTS
             and "The_purse_on_the_road_adds_up_within_the_window" in PROJECTIONTESTS)
@@ -9342,6 +9351,25 @@ def the_marker_settles_on_a_town_already_on_your_map():
 
 chk("1.79.1", "a market that is already on your map is still taken as the one the marker picked, so the line it writes to TradeLord.log is written once rather than over and over",
     the_marker_settles_on_a_town_already_on_your_map())
+
+
+def the_ceiling_and_the_quote_read_one_forecast_at_one_arrival():
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    return (scan.count("Forecast.WorthShift(to, item,") == 1
+            and scan.count("Forecast.WorthShift(from, item,") == 1
+            and scan.count("Bulk.Opening(") == 2
+            and ordered(scan,
+                        "int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);",
+                        "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown)",
+                        "float days = toBuy + Travel.EstimateDaysBetween(from, to);",
+                        "int landedAtSellTown = Forecast.WorthShift(to, item, days);",
+                        "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown)",
+                        "float ceiling =",
+                        "landedAtBuyTown,\n                                                 landedAtSellTown);"))
+
+
+chk("1.79.2", "what a route could at best be worth is worked out from the same arrival, and the same count of what reaches that market before you, as the quote the panel then shows",
+    the_ceiling_and_the_quote_read_one_forecast_at_one_arrival())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

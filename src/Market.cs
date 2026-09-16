@@ -122,6 +122,13 @@ namespace TradeLord
             return rung;
         }
 
+        internal static int Opening(Settlement site, ItemObject item, bool selling, int quoted,
+                                   int landed)
+        {
+            if (site == null || item == null) return quoted;
+            return Rung(site, item, selling, quoted, landed).At(0);
+        }
+
         internal static RouteQuote Walk(Settlement from, Settlement to, ItemObject item,
                                         int maxUnits, int merchantTill, int spendCap,
                                         int quotedBuyPrice, int quotedSellPrice,
