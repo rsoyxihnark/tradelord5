@@ -23,6 +23,9 @@ namespace TradeLord
             return new TextObject(said ?? written);
         }
 
+        internal static string Named(TextObject name, string id) =>
+            name == null ? id ?? "" : name.ToString();
+
         internal static string Slot(string written) => "{=!}{" + Marker(written) + "}";
 
         internal static bool Spoken(string written)

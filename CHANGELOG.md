@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.78.4
+
+- The TradeLord panel no longer stops drawing when a good or a market on a route has no name of its own, and shows its id instead.
+- Recent trades, and the line TradeLord.log writes when the trade screen will not open, name a market or a party by its id where it has no name.
+
 ## 1.78.3
 
 - A Never sell, Always sell, Never buy or Always buy list saved with a line break in it is now kept on one line in the settings file, so it can no longer lose the goods after the break or land on top of a different setting.

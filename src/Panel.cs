@@ -35,10 +35,13 @@ namespace TradeLord
         [DataSourceProperty] public bool Tier3 => Ranks.BandOf(_rank) == 3;
         [DataSourceProperty] public bool Tier4 => Ranks.BandOf(_rank) == 4;
         [DataSourceProperty] public bool Tier5 => Ranks.BandOf(_rank) == 5;
-        [DataSourceProperty] public string ItemName => _route.Item.Name.ToString();
-        [DataSourceProperty] public string BuyTownName => _route.From.Name.ToString();
+        [DataSourceProperty] public string ItemName =>
+            _route.Item == null ? "" : Tongue.Named(_route.Item.Name, _route.Item.StringId);
+        [DataSourceProperty] public string BuyTownName =>
+            _route.From == null ? "" : Tongue.Named(_route.From.Name, _route.From.StringId);
         [DataSourceProperty] public string BuyPrice => _route.BuyPrice.ToString();
-        [DataSourceProperty] public string SellTownName => _route.To.Name.ToString();
+        [DataSourceProperty] public string SellTownName =>
+            _route.To == null ? "" : Tongue.Named(_route.To.Name, _route.To.StringId);
         [DataSourceProperty] public string SellPrice => _route.SellPrice.ToString();
         [DataSourceProperty] public string Quantity =>
             "x" + _route.Quantity + (_route.StillComing ? "!" : "");
