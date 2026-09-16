@@ -183,7 +183,7 @@
 		<string id="TL312" text="Oyunun kendi ticaret söylenti bölümünü atlar, böylece ipucunda tek ve tutarlı bir fiyat kümesi görünür."/>
 		<string id="TL313" text="Envanterdeki ticaret malı ve hayvan satırlarını, bu pazarın fiyatının bilinen en iyi pazarla karşılaştırmasına göre renklendirir."/>
 		<string id="TL314" text="Kampanya haritasında defter panelini açan tuş. T, Y ya da F5 gibi tek bir tuş adı, istenirse önünde Ctrl, Alt veya Shift ile, örneğin Ctrl+T. Oyunun da kullandığı çıplak bir tuş iki işi birden tetikler. Bilinmeyen bir şey T'ye döner." />
-		<string id="TL315" text="Sefer haritasının sağ kenarında, defter panelini açan tıklanabilir bir TradeLord düğmesi. Harita tıklamalarına karışıyorsa KAPATIN."/>
+		<string id="TL315" text="Sefer haritasının sağ kenarında tıklanabilir iki düğme: TradeLord defter panelini açar, altındaki Son ticaretler ise son yirmi alım ve satımı açar. Harita tıklamalarına karışıyorlarsa KAPATIN."/>
 		<string id="TL316" text="Şehir ve köy menülerinde, önce satıp sonra alan tek TradeLord ticaret girdisini gösterir. Menüyü vardığınızda kendiliğinden yapılan ticarete bırakmak için kapatın."/>
 		<string id="TL317" text="Bir pazara adım attığınız anda, sorulmadan, kurallarınızın izin verdiği her şeyi satar. Ticaret tecrübesi verilir. Kapalıyken TradeLord yalnızca menüdeki ticaret girdisini seçtiğinizde satar."/>
 		<string id="TL318" text="Bir pazara adım attığınız anda, varsa satıştan sonra alır. Bu kapalıyken TradeLord yalnızca menüdeki ticaret girdisini seçtiğinizde alır."/>
@@ -276,7 +276,7 @@
 		<string id="TL428" text="O hayvan için gördüğünüz en ucuz fiyatın ne kadar üstüne kadar TradeLord yine de öder. %100 yalnızca gördüğünüz en ucuz fiyata demektir. Varsayılan 1.25, yani en ucuzun dörtte biri kadar üstüne kadar öder."/>
 		<string id="TL429" text="Sahip olabileceğin en fazla işyeri (0 = oyunun kendi sınırı)"/>
 		<string id="TL430" text="Oyunun kaç işyerine sahip olabileceğine koyduğu sınırı kaldırır. 200, hiç sınır yok demekle aynı kapıya çıkar. 0 kararı oyuna geri bırakır; oyun klan kademen yükseldikçe daha fazlasına izin verir. Varsayılan 200."/>
-		<string id="TL431" text="Satılık işyerleri"/>
+		<string id="TL431" text="İşyerlerini uzaktan satın al"/>
 		<string id="TL432" text="Bunlar ne demek"/>
 		<string id="TL433" text="Satın al"/>
 		<string id="TL434" text="TradeLord, {TOWN} şehrindeki {SHOP} işyerini {GOLD} dinara satın aldı."/>
