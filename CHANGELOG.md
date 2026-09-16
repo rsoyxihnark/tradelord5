@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.80.8
+
+- The forecast score in TradeLord.log now says how many units left a market when its stock fell, rather than writing that as a figure below zero.
+
 ## 1.80.7
 
 - The mod is supported on 1.4.8.119303 and 1.5.3.122374.
