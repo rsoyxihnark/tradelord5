@@ -116,9 +116,9 @@ namespace TradeLord
             _shop = shop;
             _bought = bought;
             _cost = cost;
-            Where = shop.Settlement?.Name.ToString() ?? "";
-            What = shop.WorkshopType?.Name.ToString() ?? "";
-            Owner = shop.Owner?.Name.ToString() ?? "";
+            Where = shop.Settlement == null ? "" : Tongue.Named(shop.Settlement.Name, shop.Settlement.StringId);
+            What = shop.WorkshopType == null ? "" : Tongue.Named(shop.WorkshopType.Name, shop.WorkshopType.StringId);
+            Owner = shop.Owner == null ? "" : Tongue.Named(shop.Owner.Name, shop.Owner.StringId);
             Profit = (shop.ProfitMade >= 0 ? "+" : "") + shop.ProfitMade;
             Cost = cost.ToString("N0");
             Affordable = affordable;
@@ -572,10 +572,11 @@ namespace TradeLord
             {
                 Workshop w = best[i];
                 rows.Add(new WorkshopRowVM(
-                    w.WorkshopType.Name + " - " + (w.Settlement?.Name.ToString() ?? "?"),
+                    Tongue.Named(w.WorkshopType.Name, w.WorkshopType.StringId) + " - " +
+                        (w.Settlement == null ? "?" : Tongue.Named(w.Settlement.Name, w.Settlement.StringId)),
                     (w.ProfitMade >= 0 ? "+" : "") + w.ProfitMade,
                     Forecast.WillMake(w),
-                    w.Owner?.Name.ToString() ?? ""));
+                    w.Owner == null ? "" : Tongue.Named(w.Owner.Name, w.Owner.StringId)));
             }
             Workshops = rows;
         }
