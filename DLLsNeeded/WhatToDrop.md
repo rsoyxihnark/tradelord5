@@ -18,6 +18,7 @@ From build 1.5.3.122374, taken from the owner's install. TaleWorlds stamps every
 1.0.0.0, so the build number is what the owner says it is and nothing in the files confirms it.
 
     TaleWorlds.CampaignSystem.dll
+    TaleWorlds.CampaignSystem.ViewModelCollection.dll
     SandBox.dll
     SandBox.View.dll
     StoryMode.dll
@@ -43,22 +44,21 @@ now has an answer on this build:
 - buying a workshop does take the gold for it, so the fallback that pays the seller itself cannot
   fire here
 - a village applies a trade penalty only when the caller names the merchant: a full one on the
-  way out, a tenth on the way in
+  way out, a tenth on the way in. A trade of the mod's own names no merchant, so it is charged
+  neither, which is the basis the mod now reads a price on
+- the profit colour on an inventory row runs from -2 to 2, and the mod writes every one of the
+  five. The game's own reading never returns -2: it tests for a small loss before a large one,
+  so the large case cannot be reached
 
 ## Still wanted
 
     Modules/NavalDLC/bin/Win64_Shipping_Client/NavalDLC.dll
 
-The War Sails module, for `naval_storyline_virtualport`. Without it the id cannot be told apart
-from a typo, only from an id the install does not carry.
+The War Sails module, for `naval_storyline_virtualport`. It is the last id here that nothing has
+answered for, and without the module it can only be shown absent, never shown right.
 
-    bin/Win64_Shipping_Client/TaleWorlds.CampaignSystem.ViewModelCollection.dll
-
-For the profit colour on an inventory row. SPItemVM is in this file, not in SandBox.View.dll where
-this note first looked for it, so what those colour values are allowed to be is still unread.
-
-Both have to be the shipped file. The reference assemblies on nuget hold a NavalDLC.dll with no
-user-string heap in it at all, so one carries no menu id and answers nothing here, and the
+It has to be the shipped file. The reference assemblies on nuget hold a NavalDLC.dll with no
+user-string heap in it at all, so it carries no menu id and answers nothing here, and the
 compatibility tool already has it on disk anyway. Searching one of those for an id as raw bytes
 does turn up hits, in the name and blob heaps, and every one of them is a coincidence. Read the
 heap, not the file.
