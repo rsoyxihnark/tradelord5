@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.80.5
+
+- What this means no longer says a market's Score is lowered for paying you less than it promised while Rank routes by confidence is off, because with that off the Score is profit per day and nothing lowers it.
+
 ## 1.80.4
 
 - Recent trades no longer says nothing has been traded this campaign when it means nothing has been traded since you loaded the game, which is all it ever keeps.

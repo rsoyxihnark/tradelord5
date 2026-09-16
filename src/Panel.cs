@@ -447,7 +447,7 @@ namespace TradeLord
                   + (Options.Current.ConfidenceRanking
                         ? Tongue.Text("{=TL71} | Score = profit per day discounted by Conf").ToString()
                         : Tongue.Text("{=TL72} | Score = profit per day").ToString())
-                  + (Options.Current.TrustWhatAMarketPaid
+                  + (Options.Current.ConfidenceRanking && Options.Current.TrustWhatAMarketPaid
                         ? Tongue.Text("{=TL445} | Score is lowered for a market that has paid less than this panel promised").ToString()
                         : "")
                   + (Options.Current.ConservativeRouteProjection
