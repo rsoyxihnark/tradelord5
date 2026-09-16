@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.80.0
+
+- The best markets for a good, in the item tooltips, on the map marker, in the ledger and in what TradeLord buys to sell on, are now picked by what each market will charge by the time you could get there, so one about to be cleared out can beat one that looks dearer today.
+- None of that moves unless Count what is on its way to a market is on; with it off every list is picked exactly as it was before.
+
 ## 1.79.3
 
 - The two Price columns in the TradeLord ledger now show what you would really pay and be paid once you get there, so they agree with the Profit and Qty beside them.
