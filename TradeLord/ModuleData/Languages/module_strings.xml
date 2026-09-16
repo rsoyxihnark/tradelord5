@@ -187,7 +187,7 @@
 		<string id="TL312" text="Skips the vanilla merchandise rumor block so the tooltip shows one consistent set of price hints."/>
 		<string id="TL313" text="Colors trade-good and livestock rows in the inventory by how this market's price compares with the best known market."/>
 		<string id="TL314" text="Key that opens the ledger panel on the campaign map. One key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, such as Ctrl+T. A bare key the game also uses triggers both actions. Anything unknown falls back to T." />
-		<string id="TL315" text="A clickable TradeLord button on the right edge of the campaign map that opens the ledger panel. Turn OFF if it interferes with map clicks."/>
+		<string id="TL315" text="Two clickable buttons on the right edge of the campaign map: TradeLord opens the ledger panel, and Recent trades below it opens the last twenty buys and sells. Turn OFF if they interfere with map clicks."/>
 		<string id="TL316" text="Shows the single TradeLord trade entry in town and village menus, which sells and then buys in one go. Turn it off to leave the menu to trading done automatically as you arrive."/>
 		<string id="TL317" text="Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu."/>
 		<string id="TL318" text="Buys the moment you walk into a market, after any selling. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
@@ -276,7 +276,7 @@
 		<string id="TL428" text="How far above the cheapest price you have ever seen for that animal TradeLord will still pay. 100% means only at the cheapest you have seen. Default 1.25, so it pays up to a quarter more than the cheapest."/>
 		<string id="TL429" text="Most workshops you may own (0 = the game's own limit)"/>
 		<string id="TL430" text="Lifts the limit the game puts on how many workshops you may own. 200 is as good as no limit at all. 0 hands the decision back to the game, which allows more as your clan tier rises. Default 200."/>
-		<string id="TL431" text="Workshops for sale"/>
+		<string id="TL431" text="Buy Workshops Remotely"/>
 		<string id="TL432" text="What this means"/>
 		<string id="TL433" text="Buy"/>
 		<string id="TL434" text="TradeLord bought the {SHOP} in {TOWN} for {GOLD} denars."/>
