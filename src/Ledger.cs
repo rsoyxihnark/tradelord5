@@ -894,6 +894,7 @@ namespace TradeLord
                         stocked = Math.Min(stocked, shelf);
                     }
                     if (stocked <= 0) continue;
+                    int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);
 
                     foreach (var (to, sellPrice) in sells)
                     {
@@ -910,18 +911,20 @@ namespace TradeLord
                         int qtyCap = till > 0 ? Math.Min(stocked, till / sellPrice) : stocked;
                         if (qtyCap <= 0) continue;
 
-                        float ceiling = (float)(sellPrice - buyPrice) * qtyCap;
                         float soonest = toBuy + Travel.StraightDaysBetween(from, to);
                         if (cap > 0f && soonest > cap) continue;
-                        if (best != null && ceiling / Math.Max(soonest, 0.25f) <= bestKey) continue;
 
                         float days = toBuy + Travel.EstimateDaysBetween(from, to);
                         if (cap > 0f && days > cap) continue;
+
+                        int landedAtSellTown = Forecast.WorthShift(to, item, days);
+                        int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);
+                        float ceiling = (float)(openingSell - openingBuy) * qtyCap;
                         if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey) continue;
 
                         RouteQuote q = Bulk.Walk(from, to, item, qtyCap, till, spendCap,
                                                  buyPrice, sellPrice, landedAtBuyTown,
-                                                 Forecast.WorthShift(to, item, days));
+                                                 landedAtSellTown);
                         if (q.Units <= 0) continue;
 
                         int proceeds = Options.Current.ConservativeRouteProjection
