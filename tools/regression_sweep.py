@@ -9566,5 +9566,24 @@ chk("1.80.5", "the panel says a market's Score is lowered for paying less than i
     the_score_is_only_said_to_be_lowered_where_the_lowering_reaches_it())
 
 
+def a_setting_that_leans_on_another_names_it_in_every_language():
+    refresh = method_body(S['Panel.cs'], "private void Refresh")
+    shelf = method_body(S['Market.cs'], "internal Shelf(Settlement site, EquipmentElement stocked, "
+                                        "bool selling, int quoted, bool projecting, int landed = 0)")
+    everywhere = [ENGLISH] + list(TRANSLATIONS.values())
+    return ("if (projecting && (!Options.Current.Omniscient || !Options.Current.BulkSimulation)) return;"
+                in shelf
+            and "(Options.Current.BulkSimulation" in refresh
+            and "{=TL394}" in refresh and "{=TL447}" in refresh
+            and refresh.index("{=TL394}") < refresh.index("{=TL447}")
+            and said_in_every_language('TL447')
+            and all(spoken(f)['TL209'] in spoken(f)['TL447'] for f in everywhere)
+            and all(spoken(f)['TL210'] in spoken(f)['TL444'] for f in everywhere))
+
+
+chk("1.80.6", "the panel says a price counts what is on its way only where that can move a price, and a setting that leans on another names it in the reader's own language",
+    a_setting_that_leans_on_another_names_it_in_every_language())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
