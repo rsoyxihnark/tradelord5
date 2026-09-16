@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.79.3
+
+- The two Price columns in the TradeLord ledger now show what you would really pay and be paid once you get there, so they agree with the Profit and Qty beside them.
+- A route is no longer left out of the ledger, or its Qty cut short, because of what its markets charge while you are still standing somewhere else.
+
 ## 1.79.2
 
 - The TradeLord ledger no longer drops a route that should have led the list, which could happen when Count what is on its way to a market raised what the selling market would pay.

@@ -1721,9 +1721,15 @@ chk("1.3.17", "the marker picks its town through the same ceiling as everything 
     "WithinRadius" not in S['Trading.cs'] and
     "float cap = LedgerBehavior.TravelCeiling(s);" in
         method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo"))
-chk("1.3.17", "haircut always filters routes",
-    "float realizable = TradePolicy.Realizable(sellPrice);" in S['Ledger.cs'] and
-    "!TradePolicy.BuyAcceptable(buyPrice, realizable)) break;" in S['Ledger.cs'])
+chk("1.3.17", "the haircut filters every route pair, on the prices that pair would really open at",
+    "float realizable = TradePolicy.Realizable(openingSell);" in S['Ledger.cs'] and
+    "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) continue;" in S['Ledger.cs'] and
+    "Realizable(sellPrice)" not in S['Ledger.cs'] and
+    "BuyAcceptable(buyPrice" not in S['Ledger.cs'] and
+    ordered(method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"),
+            "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
+            "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) continue;",
+            "Bulk.Walk(from, to, item"))
 chk("1.3.18", "denar cap reaches route quantities",
     "int spendCap = Options.Current.BuyValueCapPerItem;" in S['Ledger.cs'])
 chk("1.3.19", "marker re-evaluated on settlement exit", "OnSettlementLeftEvent.AddNonSerializedListener" in S['Trading.cs'])
@@ -2163,10 +2169,13 @@ chk("1.5.2", "port menus are asked for only where the module that owns them is i
     "if (NavalModulePresent())" in S['Trading.cs'] and
     'ModuleHelper.GetModuleInfo("NavalDLC")' in
     method_body(S['Trading.cs'], "private static bool NavalModulePresent"))
-chk("1.5.2", "panel and tooltip read prices through the same lookup",
-    "BuyPrice = buyPrice, SellPrice = sellPrice," in S['Ledger.cs'] and
-    "q.OpeningSellPrice" in S['Ledger.cs'] and
-    S['Ledger.cs'].count("q.Opening") == 2)
+chk("1.5.2", "the Price columns the panel shows are the first unit of the very quote behind them, as the tooltip's are",
+    "BuyPrice = q.OpeningBuyPrice, SellPrice = q.OpeningSellPrice," in S['Ledger.cs'] and
+    "BuyPrice = buyPrice" not in S['Ledger.cs'] and
+    "SellPrice = sellPrice" not in S['Ledger.cs'] and
+    S['Ledger.cs'].count("q.Opening") == 4 and
+    "Bulk.FirstUnit(town, item, selling, price," in
+        method_body(S['TooltipPatches.cs'], "private static void AsTheyWillBe"))
 chk("1.5.2", "RouteQuote carries no unread field",
     "ClosingBuyPrice" not in S['Market.cs'] and "ClosingSellPrice" not in S['Market.cs'] and
     S['Market.cs'].count("OpeningBuyPrice") == 2 and S['Market.cs'].count("OpeningSellPrice") == 2)
@@ -9095,7 +9104,7 @@ def the_feature_list_says_which_purse_a_route_is_held_to():
     return ("till = to.SettlementComponent?.Gold ?? 0;" in routes
             and "if (Options.Current.Omniscient)" in routes
             and routes.index("if (Options.Current.Omniscient)") < routes.index("till = to.SettlementComponent")
-            and "int qtyCap = till > 0 ? Math.Min(stocked, till / sellPrice) : stocked;" in routes
+            and "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;" in routes
             and code_only(S['Ledger.cs']).count("to.SettlementComponent?.Gold") == 1
             and "It reads that purse live, so with Live world prices off it plans on the stock alone" in README)
 
@@ -9370,6 +9379,27 @@ def the_ceiling_and_the_quote_read_one_forecast_at_one_arrival():
 
 chk("1.79.2", "what a route could at best be worth is worked out from the same arrival, and the same count of what reaches that market before you, as the quote the panel then shows",
     the_ceiling_and_the_quote_read_one_forecast_at_one_arrival())
+
+
+def a_route_is_judged_only_on_what_that_market_will_charge_when_you_reach_it():
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    return (scan.count("sellPrice") == 3
+            and scan.count("buyPrice") == 4
+            and "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);" in scan
+            and "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);" in scan
+            and "int stocked = MostWorthShowing(openingBuy);" in scan
+            and "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;" in scan
+            and "float ceiling = (float)(openingSell - openingBuy) * qtyCap;" in scan
+            and "BuyPrice = q.OpeningBuyPrice, SellPrice = q.OpeningSellPrice," in scan
+            and "sells[0]" not in scan
+            and "till / sellPrice" not in scan
+            and "MostWorthShowing(buyPrice)" not in scan
+            and ") break;" not in between(scan, "foreach (var (to, sellPrice) in sells)",
+                                          "Bulk.Walk(from, to, item"))
+
+
+chk("1.79.3", "a route is weighed, capped and priced on what its two markets will charge when you reach them, never on what they charge while you are still standing somewhere else",
+    a_route_is_judged_only_on_what_that_market_will_charge_when_you_reach_it())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
