@@ -713,16 +713,15 @@ namespace TradeLord
                 for (int i = 0; i < n; i++)
                 {
                     ItemObject item = wanted[i];
-                    int landed = Forecast.WorthShift(town, item, days);
                     if (tillOpen)
                     {
-                        int price = AsItWillBe(market, town, item, me, true, landed);
+                        int price = Priced.At(market, item, me, true);
                         if (price > 0) MarketRank.Keep(sells[i], new Reach<Settlement>
                         { Where = town, Price = price, Straight = straight, Days = days }, true);
                     }
                     if (minStock <= 0 || StockOf(town, item) >= minStock)
                     {
-                        int price = AsItWillBe(market, town, item, me, false, landed);
+                        int price = Priced.At(market, item, me, false);
                         if (price > 0) MarketRank.Keep(buys[i], new Reach<Settlement>
                         { Where = town, Price = price, Straight = straight, Days = days }, false);
                     }
@@ -758,13 +757,6 @@ namespace TradeLord
             _marketCache.TryGetValue((itemId, selling), out var hit) &&
             Freshness.Held(hit.stamp, hour);
 
-        private static int AsItWillBe(SettlementComponent market, Settlement town, ItemObject item,
-                                      MobileParty who, bool selling, int landed)
-        {
-            int price = Priced.At(market, item, who, selling);
-            return price <= 0 ? price : Bulk.FirstUnit(town, item, selling, price, landed);
-        }
-
         private List<(Settlement, int)> TopLive(ItemObject item, bool selling, int hour)
         {
             int minStock = Options.Current.MinTownStock;
@@ -773,9 +765,7 @@ namespace TradeLord
             {
                 if (selling && s.SettlementComponent.Gold <= 0) continue;
                 if (!selling && minStock > 0 && StockOf(s, item) < minStock) continue;
-                int landed = Forecast.WorthShift(s, item, Travel.EstimateDaysFromParty(s));
-                int price = AsItWillBe(s.SettlementComponent, s, item, MobileParty.MainParty,
-                                       selling, landed);
+                int price = Priced.At(s.SettlementComponent, item, MobileParty.MainParty, selling);
                 if (price <= 0) continue;
                 all.Add((s, price, lower));
             }
