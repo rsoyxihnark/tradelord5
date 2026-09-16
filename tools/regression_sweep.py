@@ -3787,9 +3787,9 @@ def a_campaign_saved_before_this_version_keeps_every_price_it_had():
 def the_feature_list_says_how_a_price_is_read_rather_than_naming_a_brain():
     return ('brain' not in README.lower()
             and 'take off speed' not in README.lower()
-            and README.count('naming the merchant, the way the trade screen asks') == 2
-            and 'return held.GetPrice(el, who, selling, site.Party);' in S['Market.cs']
-            and 'the way the trade screen asks it, naming ' in S['Market.cs']
+            and README.count('so the price it shows is the price it pays') == 2
+            and 'return held.GetPrice(el, who, selling, null);' in S['Market.cs']
+            and 'the way a trade of its own is charged, ' in S['Market.cs']
             and '(IMarketData)site.Town.MarketData' in S['Market.cs']
             and '(IMarketData)site.Village.MarketData' in S['Market.cs'])
 
@@ -6109,7 +6109,7 @@ def the_price_trace_reads_one_price_four_ways_and_names_what_changes_it():
             and not any(w in trace for w in ("SellItemsAction", "ChangeGold", "AddToCounts")))
 
 
-def every_price_is_asked_the_way_the_trade_screen_asks_it():
+def every_price_is_asked_the_way_a_trade_of_its_own_is_charged():
     market = S['Market.cs']
     at = method_body(market, "internal static int At(SettlementComponent market, "
                              "EquipmentElement el, MobileParty who, bool selling)")
@@ -6120,7 +6120,7 @@ def every_price_is_asked_the_way_the_trade_screen_asks_it():
             and market.count("GetItemPrice(") == 3
             and compared.count("market.GetItemPrice(") == 2
             and ordered(at, "IMarketData held = Kept(site);",
-                        "return held.GetPrice(el, who, selling, site.Party);",
+                        "return held.GetPrice(el, who, selling, null);",
                         "return market.GetItemPrice(el, who, selling);")
             and all("Priced.At(" in S[f] for f in ('Ledger.cs', 'TooltipPatches.cs', 'Trading.cs')))
 
@@ -6238,8 +6238,8 @@ chk("1.47.0", "the price trace reads one market's price four ways, names the pri
 chk("1.76.7", "the price trace ships off, so walking into a market costs nothing until a price looks wrong and you turn it on",
     "public bool PriceTrace = false;" in S['Options.cs'])
 
-chk("1.47.1", "every price TradeLord quotes is asked of the market the way the trade screen asks it, naming the merchant, and falls back to the plain question only if that cannot be asked",
-    every_price_is_asked_the_way_the_trade_screen_asks_it())
+chk("1.47.1", "every price TradeLord quotes is asked of the market the way a trade of its own is charged, naming no merchant, and falls back to the plain question only if that cannot be asked",
+    every_price_is_asked_the_way_a_trade_of_its_own_is_charged())
 
 
 def one_stack_of_a_good_never_spends_what_another_stack_holds():
@@ -7567,7 +7567,7 @@ chk("1.66.0", "the page is handed over in the markup Nexus reads, with no markdo
     the_page_leaves_no_markdown_behind_and_closes_every_tag())
 chk("1.66.0", "the release notes and the mod page are asked for one at a time, and a flag the tool does not know is refused",
     the_page_and_the_notes_are_asked_for_one_at_a_time())
-chk("1.66.0", "the feature list says a price is read through that market's own price model, naming the merchant, rather than calling it the game's brain",
+chk("1.66.0", "the feature list says a price is read through that market's own price model, and that the price it shows is the price it pays, rather than calling it the game's brain",
     the_feature_list_says_how_a_price_is_read_rather_than_naming_a_brain())
 chk("1.66.0", "the mod page opens with five lines saying what TradeLord is, no ticks on them, and folds each headed run of the feature list away behind its own heading",
     the_page_leads_with_what_the_mod_is_and_folds_the_long_tail_away())
@@ -9587,6 +9587,20 @@ def a_setting_that_leans_on_another_names_it_in_every_language():
 
 chk("1.80.6", "the panel says a price counts what is on its way only where that can move a price, and a setting that leans on another names it in the reader's own language",
     a_setting_that_leans_on_another_names_it_in_every_language())
+
+
+def a_price_is_read_the_way_a_trade_of_its_own_is_charged():
+    asked = method_body(S['Market.cs'],
+                        "internal static int At(SettlementComponent market, EquipmentElement el, MobileParty who, bool selling)")
+    walk = method_body(S['Market.cs'], "internal int Price()")
+    return ("held.GetPrice(el, who, selling, null)" in asked
+            and "site.Party" not in asked
+            and "_element, MobileParty.MainParty, null, _selling," in walk
+            and "_party" not in S['Market.cs'])
+
+
+chk("1.80.9", "a price is read naming no merchant, the way SellItemsAction charges it, in the quote and in the simulated walk alike",
+    a_price_is_read_the_way_a_trade_of_its_own_is_charged())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

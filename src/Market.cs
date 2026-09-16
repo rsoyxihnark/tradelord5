@@ -23,7 +23,6 @@ namespace TradeLord
 
     internal sealed class Shelf
     {
-        private readonly PartyBase _party;
         private readonly ItemObject _item;
         private readonly EquipmentElement _element;
         private readonly bool _selling;
@@ -40,7 +39,6 @@ namespace TradeLord
             ItemObject item = stocked.Item;
             _item = item;
             _element = stocked;
-            _party = site?.Party;
             _selling = selling;
             _quoted = quoted;
             if (projecting && (!Options.Current.Omniscient || !Options.Current.BulkSimulation)) return;
@@ -63,7 +61,7 @@ namespace TradeLord
             try
             {
                 return Campaign.Current.Models.TradeItemPriceFactorModel.GetPrice(
-                    _element, MobileParty.MainParty, _party, _selling,
+                    _element, MobileParty.MainParty, null, _selling,
                     _inStoreValue, _supply, _demand);
             }
             catch (Exception e) { Log.Error(e, "bulk price walk"); return _quoted; }
@@ -220,14 +218,14 @@ namespace TradeLord
             IMarketData held = Kept(site);
             if (held != null)
             {
-                try { return held.GetPrice(el, who, selling, site.Party); }
+                try { return held.GetPrice(el, who, selling, null); }
                 catch (Exception e)
                 {
                     if (!_saidItCouldNotAsk)
                     {
                         _saidItCouldNotAsk = true;
-                        Log.Error(e, "asking a market its price the way the trade screen asks it, naming " +
-                                     "the merchant - TradeLord falls back to asking without one");
+                        Log.Error(e, "asking a market its price the way a trade of its own is charged, " +
+                                     "naming no merchant - TradeLord falls back to the market's own price");
                     }
                 }
             }

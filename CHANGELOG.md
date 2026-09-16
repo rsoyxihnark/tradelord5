@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.80.9
+
+- A village no longer looks like it pays about half what it really does for what you sell, so TradeLord stops passing over village sales worth making.
+- Prices in a market whose faction you are at war with no longer carry a penalty that TradeLord's own trade is never charged.
+- The feature list now says the price TradeLord shows is the price it pays.
+
 ## 1.80.8
 
 - The forecast score in TradeLord.log now says how many units left a market when its stock fell, rather than writing that as a figure below zero.
