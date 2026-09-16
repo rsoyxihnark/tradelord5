@@ -2294,7 +2294,11 @@ def tracked_files():
 
 def no_tracked_source_carries_a_comment():
     import tokenize
-    names = tracked_files()
+    listed = tracked_files()
+    if not listed:
+        return False
+    names = [n for n in listed
+             if n.endswith((".cs", ".py", ".xml", ".csproj", ".yml", ".yaml", ".sh"))]
     if not names:
         return False
     found = []
