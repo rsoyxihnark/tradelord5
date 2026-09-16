@@ -178,6 +178,12 @@ namespace TradeLord
             off == 0 ? "exactly what it said"
                      : (off > 0 ? off + " more than it said" : -off + " fewer than it said");
 
+        internal static string Landing(int landed) =>
+            landed < 0 ? -landed + " left instead" : landed + " did";
+
+        internal static string Moving(int moved) =>
+            moved < 0 ? -moved + " left instead" : "it moved " + moved;
+
         internal static string Shared(float share) =>
             share == TradeMath.NoShareToGive ? "" : ", " + Share(share) + " off";
 
