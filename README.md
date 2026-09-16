@@ -1,4 +1,4 @@
-- It reads what every market in Calradia is paying right now, live, through each market's own price model, naming the merchant, the way the trade screen asks.
+- It reads what every market in Calradia is paying right now, live, through each market's own price model, so the price it shows is the price it pays.
 - It shows you the best ways to buy and sell, right in the item tooltip and in a ledger.
 - It can buy & sell for you automatically as you enter a settlement.
 - It ranks the trade routes worth travelling on a panel, scored on profit per travel day and on how likely that profit is to survive the trip.
@@ -10,7 +10,7 @@
 
 **What it tells you**
 
-- ✅ Live prices from every market on the map, read through that market's own price model, naming the merchant, the way the trade screen asks
+- ✅ Live prices from every market on the map, read through that market's own price model, so the price it shows is the price it pays
 - ✅ The five best places to sell and the five cheapest to buy, in every item tooltip, each priced as that market will be when you arrive rather than as it stands while you read, so the tooltip and the ledger panel never disagree about the same market
 - ✅ Which way each of those markets is going, marked next to its price once you switch Mark a market rising or falling on: a market whose price has moved 5% or more since the last day you looked there is marked rising or falling, in the best sell and the best buy lists alike. It needs Live world prices off, since that is when TradeLord records prices at all. Off out of the box
 - ✅ Travel time to each of them, from wherever you are
