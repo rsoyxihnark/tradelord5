@@ -9551,5 +9551,20 @@ chk("1.80.5", "the files this repository never deletes are looked for before any
     the_files_this_repository_never_deletes_are_looked_for_first())
 
 
+def the_score_is_only_said_to_be_lowered_where_the_lowering_reaches_it():
+    refresh = method_body(S['Panel.cs'], "private void Refresh")
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    return ("(Options.Current.ConfidenceRanking && Options.Current.TrustWhatAMarketPaid" in refresh
+            and "{=TL445}" in refresh
+            and "float key = rankByScore ? score : perDay;" in scan
+            and "score = Confidence.AsPromisesHaveHeld(score, arrivals, heldThere);" in scan
+            and "bool rankByScore = Options.Current.ConfidenceRanking;" in scan
+            and "Options.Current.ConfidenceRanking ? _route.Score : _route.ProfitPerDay" in S['Panel.cs'])
+
+
+chk("1.80.5", "the panel says a market's Score is lowered for paying less than it promised only where that lowering reaches the Score at all",
+    the_score_is_only_said_to_be_lowered_where_the_lowering_reaches_it())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
