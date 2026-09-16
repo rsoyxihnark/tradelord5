@@ -1314,7 +1314,7 @@ def saved_numbers_read_the_same_in_every_language():
     numeric = [c for c in re.findall(
         r'\w+\.ToString\([^)]*\)|\b(?:int|float|double|long)\.(?:Try)?Parse\([^;]*', codec)
         if not c.startswith('sb.ToString')]
-    return (len(numeric) == 6
+    return (len(numeric) == 7
             and all('CultureInfo.InvariantCulture' in c for c in numeric)
             and 'NumberStyles.Integer, CultureInfo.InvariantCulture' in codec
             and 'NumberStyles.Float, CultureInfo.InvariantCulture' in codec
@@ -5358,7 +5358,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
                         "LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));",
                         'dataStore.SyncData("TradeLord_LedgerText"')
             and trade.count("dataStore.SyncData(") == 2
-            and ledger.count("dataStore.SyncData(") == 7)
+            and ledger.count("dataStore.SyncData(") == 8)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
     arrays = dict(re.findall(r'private static readonly string\[\] (\w+) =\s*\{(.*?)\};', M, re.S))
@@ -8220,10 +8220,13 @@ def the_panel_says_what_it_traded_for_you_lately():
                         "held.Insert(0, one);",
                         "while (held.Count > most) held.RemoveAt(held.Count - 1);")
             and 'internal static string Coins(int gold) => gold > 0 ? "+" + gold : gold.ToString();' in rules
-            and "public struct TradeNote" in ledger
+            and "public struct TradeNote" in S['LedgerCodec.cs']
             and "Recent.Keep(_lately, new TradeNote" in
                 method_body(ledger, "public void NoteTrade")
-            and "TradeLord_Lately" not in ledger and "SyncData" not in method_body(ledger, "public void NoteTrade")
+            and 'dataStore.SyncData("TradeLord_LatelyText", ref _latelyText);' in ledger
+            and "_latelyText = LedgerCodec.WriteTrades(_lately);" in ledger
+            and "_lately.AddRange(LedgerCodec.ReadTrades(_latelyText, Recent.MostKept));" in ledger
+            and "SyncData" not in method_body(ledger, "public void NoteTrade")
             and ordered(note, "if (gold <= 0 || Detail.Count == 0) return;",
                         "foreach (var kv in Detail) units += kv.Value.count;",
                         "selling ? gold : -gold")
@@ -8245,7 +8248,7 @@ def the_panel_says_what_it_traded_for_you_lately():
                      "new Random(9142)")))
 
 
-chk("1.72.0", "the panel ends with the last trades TradeLord made for you, held in memory only and never written into your save",
+chk("1.80.11", "the panel ends with the last trades TradeLord made for you, kept in your save as plain text so the list survives loading the campaign again",
     the_panel_says_what_it_traded_for_you_lately())
 
 

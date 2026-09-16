@@ -407,5 +407,58 @@ namespace TradeLord.Tests
             Assert.Equal(24000, back.Values.Sum(v => v.Count));
             Assert.Equal(written, LedgerCodec.WriteLedger(back));
         }
-    }
+    
+        [Fact]
+        public void A_trade_written_out_comes_back_the_same()
+        {
+            var lately = new List<TradeNote>
+            {
+                new TradeNote { Where = "Epicrotea", What = "5 Grain, 2 Wine", Gold = 340, Day = 12.5f },
+                new TradeNote { Where = "Zeonica", What = "3 Iron", Gold = -210, Day = 9f },
+            };
+            List<TradeNote> back = LedgerCodec.ReadTrades(LedgerCodec.WriteTrades(lately), 20);
+            Assert.Equal(2, back.Count);
+            Assert.Equal("Epicrotea", back[0].Where);
+            Assert.Equal("5 Grain, 2 Wine", back[0].What);
+            Assert.Equal(340, back[0].Gold);
+            Assert.Equal(12.5f, back[0].Day);
+            Assert.Equal(-210, back[1].Gold);
+        }
+
+        [Fact]
+        public void A_name_carrying_a_separator_is_written_so_it_reads_back_whole()
+        {
+            var lately = new List<TradeNote>
+            {
+                new TradeNote { Where = "Odd|Town;Here", What = "2 Some;Good", Gold = 10, Day = 1f },
+                new TradeNote { Where = "Sane", What = "1 Grain", Gold = 20, Day = 2f },
+            };
+            List<TradeNote> back = LedgerCodec.ReadTrades(LedgerCodec.WriteTrades(lately), 20);
+            Assert.Equal(2, back.Count);
+            Assert.DoesNotContain("|", back[0].Where);
+            Assert.DoesNotContain(";", back[0].Where);
+            Assert.Equal("Sane", back[1].Where);
+            Assert.Equal(20, back[1].Gold);
+        }
+
+        [Fact]
+        public void A_saved_list_never_comes_back_longer_than_the_ceiling()
+        {
+            var lately = new List<TradeNote>();
+            for (int i = 0; i < 60; i++)
+                lately.Add(new TradeNote { Where = "T" + i, What = "1 Grain", Gold = i, Day = i });
+            Assert.Equal(20, LedgerCodec.ReadTrades(LedgerCodec.WriteTrades(lately), 20).Count);
+            Assert.Empty(LedgerCodec.ReadTrades(LedgerCodec.WriteTrades(lately), 0));
+        }
+
+        [Fact]
+        public void Text_that_cannot_be_read_costs_only_its_own_row()
+        {
+            Assert.Empty(LedgerCodec.ReadTrades(null, 20));
+            Assert.Empty(LedgerCodec.ReadTrades("", 20));
+            List<TradeNote> back = LedgerCodec.ReadTrades("Town|1 Grain|notanumber|3;Town|1 Grain|40|4", 20);
+            Assert.Single(back);
+            Assert.Equal(40, back[0].Gold);
+        }
+}
 }

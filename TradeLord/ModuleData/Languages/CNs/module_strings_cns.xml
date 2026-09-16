@@ -264,7 +264,7 @@
 		<string id="TL416" text="剩余"/>
 		<string id="TL417" text=" | 剩余 = 你抵达后那个货架还能保有这个数量多久；提前空掉的货架会降低信度"/>
 		<string id="TL418" text="近期交易（最近 {COUNT} 笔）"/>
-		<string id="TL419" text="近期交易：本次游戏还没有交易过"/>
+		<string id="TL419" text="近期交易：本次战役还没有交易过"/>
 		<string id="TL420" text="{DAYS} 天前"/>
 		<string id="TL421" text="TradeLord 摆出的交易已结束：你的钱袋多了 {GOLD} 第纳尔。"/>
 		<string id="TL422" text="TradeLord 摆出的交易已结束：你的钱袋少了 {GOLD} 第纳尔。"/>
