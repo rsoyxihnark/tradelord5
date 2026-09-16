@@ -142,7 +142,7 @@ jobs:
 
       - name: Game version fit
         shell: bash
-        run: dotnet run --project tools/compat -c Release -- 1.5.2.121216-beta
+        run: dotnet run --project tools/compat -c Release -- 1.5.3.122374-beta
 
       - name: Assemble the module folder
         shell: bash

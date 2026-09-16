@@ -73,7 +73,7 @@ WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
 PROJ = [io.open(f, encoding='utf-8').read() for f in
         ['src/TradeLord.csproj', 'mcm/TradeLord.MCM.csproj']]
 PREFAB = io.open('TradeLord/GUI/Prefabs/TradeLordPanel.xml', encoding='utf-8').read()
-GAME_VERSION_BETA = '1.5.2.121216'
+GAME_VERSION_BETA = '1.5.3.122374'
 COMPAT = io.open('tools/compat/Program.cs', encoding='utf-8').read()
 SWEEP = io.open('tools/regression_sweep.py', encoding='utf-8').read()
 NEXUS = io.open('tools/nexus_changelog.py', encoding='utf-8').read()
@@ -233,11 +233,11 @@ def the_readme_names_the_game_versions_the_mod_was_checked_against():
         return False
     built = used.pop()
     also = GAME_VERSION_BETA
+    supported = 'The mod is supported on ' + built + ' and ' + also
     return (README.count(built) >= 2
             and README.count(also) >= 2
             and 'Built on Bannerlord ' + built in README
-            and 'runs on the ' + also + ' beta too' in README
-            and 'or the **' + also + '** beta' in README)
+            and README.count(supported) == 2)
 
 def one_hard_dependency():
     required = re.findall(r'<DependedModuleMetadata id="([^"]+)" order="[^"]+" optional="false"/>',
@@ -2939,7 +2939,7 @@ chk("1.35.3", "a commit that changes the feature list is refused unless the chan
     r"grep -q '^+- '" in WORKFLOW and
     r"grep -qi '^+.*feature list'" not in WORKFLOW and
     WORKFLOW.index("grep -qx 'README.md'") < WORKFLOW.index("grep -qx 'CHANGELOG.md'"))
-chk("1.34.0", "the build runs the compatibility tool, on the built assemblies, against the beta the feature list claims",
+chk("1.34.0", "the build runs the compatibility tool, on the built assemblies, against the other game version the feature list claims",
     "dotnet run --project tools/compat" in WORKFLOW and
     GAME_VERSION_BETA + "-beta" in WORKFLOW and
     WORKFLOW.index("dotnet build mcm/TradeLord.MCM.csproj") <
