@@ -264,7 +264,7 @@
 		<string id="TL416" text="Left"/>
 		<string id="TL417" text=" | Left = how long that shelf still holds this Qty once you arrive, and a shelf that empties first lowers Conf"/>
 		<string id="TL418" text="Recent trades (last {COUNT})"/>
-		<string id="TL419" text="Recent trades: nothing traded yet this session"/>
+		<string id="TL419" text="Recent trades: nothing traded yet this campaign"/>
 		<string id="TL420" text="{DAYS} day(s) ago"/>
 		<string id="TL421" text="The deal TradeLord laid out is closed: your purse is up {GOLD} denars."/>
 		<string id="TL422" text="The deal TradeLord laid out is closed: your purse is down {GOLD} denars."/>

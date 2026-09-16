@@ -34,14 +34,6 @@ namespace TradeLord
         public float RunsOutInDays = Projection.NeverRunsOut;
     }
 
-    public struct TradeNote
-    {
-        public string Where;
-        public string What;
-        public int Gold;
-        public float Day;
-    }
-
     public class LedgerBehavior : CampaignBehaviorBase
     {
         public static LedgerBehavior Instance { get; internal set; }
@@ -60,6 +52,7 @@ namespace TradeLord
         private string _promiseText = "";
         private Dictionary<string, PromiseRecord> _promises =
             new Dictionary<string, PromiseRecord>(StringComparer.Ordinal);
+        private string _latelyText = "";
         private ItemRoster _watched;
         private bool _settle;
 
@@ -139,6 +132,7 @@ namespace TradeLord
                     _ledgerText = LedgerCodec.WriteLedger(Listed(_ledger));
                     _purchaseText = LedgerCodec.WritePurchases(_purchases);
                     _promiseText = LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));
+                    _latelyText = LedgerCodec.WriteTrades(_lately);
                     Log.Write("ledger written into the save: " + RecordedPrices() + " recorded price(s) in " +
                               _ledgerText.Length + " character(s), and " + _purchases.Count +
                               " purchase record(s) in " + _purchaseText.Length);
@@ -151,13 +145,15 @@ namespace TradeLord
             dataStore.SyncData("TradeLord_PromisesScored", ref _promisesScored);
             dataStore.SyncData("TradeLord_PromiseHeld", ref _promiseHeld);
             dataStore.SyncData("TradeLord_PromiseText", ref _promiseText);
+            dataStore.SyncData("TradeLord_LatelyText", ref _latelyText);
             if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;
             if (dataStore.IsLoading) ReadSavedText();
             if (dataStore.IsLoading) PruneExpired();
             Guard.Run("Ledger.Reindex", Reindex);
             if (dataStore.IsLoading)
                 Log.Write("ledger restored: " + _ledger.Count + " observed items, " +
-                          _purchases.Count + " purchase records, lifetime profit " + _lifetimeProfit +
+                          _purchases.Count + " purchase records, " + _lately.Count +
+                          " recent trade(s), lifetime profit " + _lifetimeProfit +
                           (_unreadable == 0
                                ? ""
                                : ", and " + _unreadable + " recorded price(s) this version could not read, " +
@@ -171,6 +167,8 @@ namespace TradeLord
             _ledger = KeyedByTown(LedgerCodec.ReadLedger(_ledgerText, out _unreadable));
             _purchases = LedgerCodec.ReadPurchases(_purchaseText);
             _promises = KeyedByTownId(LedgerCodec.ReadPromises(_promiseText));
+            _lately.Clear();
+            _lately.AddRange(LedgerCodec.ReadTrades(_latelyText, Recent.MostKept));
         }
 
         private static Dictionary<string, Dictionary<string, PriceObservation>> KeyedByTown(
