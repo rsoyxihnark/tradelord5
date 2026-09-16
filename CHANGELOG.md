@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.80.7
+
+- The mod is supported on 1.4.8.119303 and 1.5.3.122374.
+
 ## 1.80.6
 
 - What this means now says stock alone counts what is on its way to a market while Bulk price simulation is off, since with that off nothing on the way moves a price.
