@@ -9429,5 +9429,23 @@ chk("1.80.2", "a window a button on the campaign map opens holds the mouse while
     a_window_a_map_button_opens_can_be_reached_with_the_mouse())
 
 
+def the_till_is_never_divided_by_a_price_nothing_has_tested():
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    tested = scan.find("if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) continue;")
+    divided = scan.find("till / openingSell")
+    bounds = {name: (float(lo), float(hi)) for name, lo, hi in re.findall(
+        r'\{\s*"(\w+)",\s*new double\[\]\s*\{\s*([-\d.]+),\s*([-\d.]+)\s*\}', S['Migrate.cs'])}
+    return (tested > 0 and divided > tested
+            and scan.count("till / openingSell") == 1
+            and "float realizable = TradePolicy.Realizable(openingSell);" in scan
+            and "buyPrice > 0 && realizable >= buyPrice * (1f + margin)" in S['TradeMath.cs']
+            and bounds.get("MinProfitMargin", (-1.0, 0.0))[0] >= 0.0
+            and bounds.get("ResaleSafetyFactor", (-1.0, 0.0))[0] > 0.0)
+
+
+chk("1.80.2", "a route's sell price is put to the profit test before the merchant's purse is divided by it, and the margin and the safety factor cannot go low enough to let a price of nothing through, so working out the routes cannot stop the ledger opening",
+    the_till_is_never_divided_by_a_price_nothing_has_tested())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
