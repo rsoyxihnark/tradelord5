@@ -114,6 +114,14 @@ The release workflow publishes the commit body as the release notes, so a commit
 - A run that looks stuck is usually a clock you misread. Before you call one hung, or cancel it and start it again, read the time off the machine you are on and work out how long it has really been. Wait for the thing that says the work is finished, the published release or the job's own conclusion, rather than a status view that lags behind it.
 - Say plainly what this session could not verify. Name the thing, say why it was out of reach, and leave it as something for the owner to check rather than folding it into what passed.
 
+## In chat
+
+- Keep messages short and in plain language. A decision buried in git output, check names and commit hashes is a decision the owner never gets to make.
+- Lead with the answer. Where something needs deciding, say what it is in a sentence or two, say which way you would go and why, then stop. The full working waits until it is asked for.
+- Run the checks a session opens with quietly: the fetch, `HEAD` against `origin/main`, the signature, the hijack check. Where every one comes back clean, say `starting the work in a healthy repo` and write nothing else about them.
+- What a check actually finds is the exception worth writing out: a checkout behind `origin/main`, uncommitted work, a branch that is not `main`, a signature that is wrong. Say what it is and what it means for the work.
+- Never narrate a plan before carrying it out, and never list what you are about to read. Do it, then say what came of it.
+
 ## Never
 
 Every rule here covers the whole repository at all times, not only the files a session was asked to change. When you find something that breaks one of them, fix it in the same commit. Do not report it and wait to be asked, and do not put it off as a change of its own. The entries that say to warn and refuse are the exception, because those need an answer before anything happens, and so is anything the Changing the source section reserves for the owner.
