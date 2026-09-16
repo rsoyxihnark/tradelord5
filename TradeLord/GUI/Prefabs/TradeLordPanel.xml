@@ -4,21 +4,39 @@
             DoNotAcceptEvents="true">
       <Children>
 
-        <ButtonWidget Id="TradeLordMapButton"
-                      WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-                      SuggestedWidth="120" SuggestedHeight="36"
-                      HorizontalAlignment="Right" VerticalAlignment="Center"
-                      MarginRight="5"
-                      IsVisible="@IsMapButtonVisible"
-                      Brush="Popup.Done.Button.NineGrid"
-                      DoNotPassEventsToChildren="true"
-                      Command.Click="ExecuteOpenPanel"
-                      UpdateChildrenStates="true">
+        <ListPanel Id="TradeLordMapButton"
+                   WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                   SuggestedWidth="120" SuggestedHeight="78"
+                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                   MarginRight="5"
+                   IsVisible="@IsMapButtonVisible"
+                   StackLayout.LayoutMethod="VerticalTopToBottom">
           <Children>
-            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
-                        Brush="Popup.Button.Text" Brush.FontSize="16" Text="@BrandLabel" />
+            <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                          SuggestedWidth="120" SuggestedHeight="36"
+                          Brush="Popup.Done.Button.NineGrid"
+                          DoNotPassEventsToChildren="true"
+                          Command.Click="ExecuteOpenPanel"
+                          UpdateChildrenStates="true">
+              <Children>
+                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                            Brush="Popup.Button.Text" Brush.FontSize="16" Text="@BrandLabel" />
+              </Children>
+            </ButtonWidget>
+            <ButtonWidget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
+                          SuggestedWidth="120" SuggestedHeight="36"
+                          MarginTop="6"
+                          Brush="Popup.Done.Button.NineGrid"
+                          DoNotPassEventsToChildren="true"
+                          Command.Click="ExecuteOpenTrades"
+                          UpdateChildrenStates="true">
+              <Children>
+                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
+                            Brush="Popup.Button.Text" Brush.FontSize="14" Text="@TradesLabel" />
+              </Children>
+            </ButtonWidget>
           </Children>
-        </ButtonWidget>
+        </ListPanel>
 
         <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                 IsVisible="@IsVisible" DoNotAcceptEvents="true">
@@ -326,19 +344,7 @@
                         </ButtonWidget>
                         <ButtonWidget DoNotPassEventsToChildren="true"
                                       WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-                                      SuggestedWidth="185" SuggestedHeight="45"
-                                      MarginRight="10"
-                                      Brush="Popup.Done.Button.NineGrid"
-                                      Command.Click="ExecuteOpenTrades"
-                                      UpdateChildrenStates="true">
-                          <Children>
-                            <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
-                                        Brush="Popup.Button.Text" Brush.FontSize="16" Text="@TradesLabel" />
-                          </Children>
-                        </ButtonWidget>
-                        <ButtonWidget DoNotPassEventsToChildren="true"
-                                      WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
-                                      SuggestedWidth="205" SuggestedHeight="45"
+                                      SuggestedWidth="250" SuggestedHeight="45"
                                       MarginRight="10"
                                       Brush="Popup.Done.Button.NineGrid"
                                       Command.Click="ExecuteOpenShops"

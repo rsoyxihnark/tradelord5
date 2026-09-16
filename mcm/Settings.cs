@@ -449,7 +449,7 @@ namespace TradeLord.Mcm
         public string PanelKey { get => _o.PanelKey; set { _o.PanelKey = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL215}TradeLord button on the map screen", Order = 4, RequireRestart = false,
-            HintText = "{=TL315}A clickable TradeLord button on the right edge of the campaign map that opens the ledger panel. Turn OFF if it interferes with map clicks.")]
+            HintText = "{=TL315}Two clickable buttons on the right edge of the campaign map: TradeLord opens the ledger panel, and Recent trades below it opens the last twenty buys and sells. Turn OFF if they interfere with map clicks.")]
         [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 4)]
         public bool ShowMapButton { get => _o.ShowMapButton; set { _o.ShowMapButton = value; Options.Bump(); } }
 

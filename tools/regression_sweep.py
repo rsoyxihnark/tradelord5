@@ -8273,7 +8273,8 @@ def the_recent_trades_open_in_a_window_of_their_own():
             and within(trades, 'IsVisible', '@IsTradesVisible')
             and within(header, 'IsVisible', '@IsTradesVisible')
             and not within(opens, 'IsVisible', '@IsTradesVisible')
-            and within(opens, 'IsVisible', '@IsVisible')
+            and not within(opens, 'IsVisible', '@IsVisible')
+            and within(opens, 'IsVisible', '@IsMapButtonVisible')
             and PREFAB.count('Text="@TradesLabel"') == 1
             and PREFAB.count('Command.Click="ExecuteCloseTrades"') == 2
             and 'if (!value) { IsTradesVisible = false; IsLegendVisible = false; IsShopsVisible = false; }'
@@ -8282,7 +8283,7 @@ def the_recent_trades_open_in_a_window_of_their_own():
             and named <= bound and named <= have
             and 'TL424' in strings_declared())
 
-chk("1.74.0", "the recent trades open in a window of their own, from a button below the ledger, and close with it",
+chk("1.74.0", "the recent trades open in a window of their own, from a button on the campaign map under the TradeLord one, and close with the ledger",
     the_recent_trades_open_in_a_window_of_their_own())
 
 
@@ -9261,6 +9262,44 @@ def the_explanation_is_opened_by_a_mark_beside_the_title():
 
 chk("1.78.5", "the explanation is opened by a mark beside the panel title rather than a button in the row along the bottom, and the window it opens is still the one that says what it all means",
     the_explanation_is_opened_by_a_mark_beside_the_title())
+
+
+
+def the_map_carries_both_buttons_inside_the_region_it_reserves():
+    import xml.etree.ElementTree as ET
+    tree = ET.parse('TradeLord/GUI/Prefabs/TradeLordPanel.xml')
+    block = [e for e in tree.iter() if e.get('Id') == 'TradeLordMapButton']
+    if len(block) != 1:
+        return False
+    block = block[0]
+    stacked = [c for w in block if w.tag == 'Children' for c in w]
+    if len(stacked) != 2 or any(b.tag != 'ButtonWidget' for b in stacked):
+        return False
+    if block.get('StackLayout.LayoutMethod') != 'VerticalTopToBottom':
+        return False
+    tall = 0
+    for b in stacked:
+        if b.get('HeightSizePolicy') != 'Fixed' or b.get('WidthSizePolicy') != 'Fixed':
+            return False
+        if b.get('SuggestedWidth') != block.get('SuggestedWidth'):
+            return False
+        tall += int(b.get('SuggestedHeight')) + int(b.get('MarginTop') or 0)
+    if block.get('HeightSizePolicy') != 'Fixed' or int(block.get('SuggestedHeight')) != tall:
+        return False
+    named = [[e.get('Text') for e in b.iter() if e.get('Text')][0] for b in stacked]
+    opens = [b.get('Command.Click') for b in stacked]
+    said = spoken(ENGLISH)
+    return (named == ['@BrandLabel', '@TradesLabel']
+            and opens == ['ExecuteOpenPanel', 'ExecuteOpenTrades']
+            and PREFAB.count('Command.Click="ExecuteOpenTrades"') == 1
+            and said.get('TL431') == 'Buy Workshops Remotely'
+            and S['Panel.cs'].count('{=TL431}Buy Workshops Remotely') == 2
+            and 'Recent trades' in said.get('TL315', '')
+            and all('TL315' in set(spoken(f)) for f in list(TRANSLATIONS.values()) + [ENGLISH]))
+
+
+chk("1.79.0", "the campaign map carries the TradeLord button with Recent trades stacked under it, both inside the one region the map reserves for the mouse, and the ledger's own row no longer repeats either",
+    the_map_carries_both_buttons_inside_the_region_it_reserves())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

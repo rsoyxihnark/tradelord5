@@ -149,7 +149,7 @@ namespace TradeLord
                 body += warned.ToString();
             }
             InformationManager.ShowInquiry(new InquiryData(
-                Tongue.Text("{=TL431}Workshops for sale").ToString(), body,
+                Tongue.Text("{=TL431}Buy Workshops Remotely").ToString(), body,
                 true, true, Tongue.Text("{=TL433}Buy").ToString(),
                 Tongue.Text("{=TL09}Close").ToString(),
                 () => Guard.Run("Panel.BuyWorkshopTaken", Take), null));
@@ -330,7 +330,7 @@ namespace TradeLord
         [DataSourceProperty] public string TradesLabel => Tongue.Text("{=TL424}Recent trades").ToString();
         [DataSourceProperty] public string LegendLabel => Tongue.Text("{=TL432}What this means").ToString();
         [DataSourceProperty] public string HelpLabel => Tongue.Text("{=TL446}?").ToString();
-        [DataSourceProperty] public string ShopsLabel => Tongue.Text("{=TL431}Workshops for sale").ToString();
+        [DataSourceProperty] public string ShopsLabel => Tongue.Text("{=TL431}Buy Workshops Remotely").ToString();
         [DataSourceProperty] public string CloseLabel => Tongue.Text("{=TL09}Close").ToString();
         [DataSourceProperty] public string HeadItem => Tongue.Text("{=TL50}Item").ToString();
         [DataSourceProperty] public string HeadBuyTown => Tongue.Text("{=TL51}Buy From").ToString();

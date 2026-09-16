@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.79.0
+
+- Recent trades now opens from the campaign map, on a button under the TradeLord one, so the last twenty buys and sells are there without opening the ledger; its button has left the row along the bottom of the ledger.
+- The Workshops for sale button is now called Buy Workshops Remotely, and so is the window that asks you to confirm a purchase.
+- TradeLord button on the map screen now says it puts two buttons on the map rather than one.
+
 ## 1.78.5
 
 - The What this means button has left the row along the bottom of the TradeLord ledger; a ? beside the title opens the same explanation.
