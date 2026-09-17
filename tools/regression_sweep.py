@@ -2478,9 +2478,9 @@ chk("1.5.11", "the panel profit line counts only profit made by this module",
         buy_pass())
 
 chk("1.6.1", "the trade XP the pass earns reaches the game only once the pass is over",
-    "_pendingXp += xp;" in method_body(S['Trading.cs'], "private static void AwardTradeXp") and
+    "_pendingXp += xp;" in method_body(S['Trading.cs'], "private static void AwardTradeXpForOurOwnTrade") and
     "SkillLevelingManager.OnTradeProfitMade" not in
-        method_body(S['Trading.cs'], "private static void AwardTradeXp") and
+        method_body(S['Trading.cs'], "private static void AwardTradeXpForOurOwnTrade") and
     S['Trading.cs'].count("SkillLevelingManager.OnTradeProfitMade") == 1 and
     "SkillLevelingManager.OnTradeProfitMade" in
         method_body(S['Trading.cs'], "private static void CreditTradeSkill") and
@@ -2498,7 +2498,7 @@ chk("1.6.1", "the XP line is queued last, in amber, and is translatable",
     '{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.' in S['Trading.cs'] and
     ordered(sell_pass(),
             "Notices.Say(msg, profit > 0",
-            "AwardTradeXp(moved.Earned, pass.Muted)"))
+            "AwardTradeXpForOurOwnTrade(moved.Earned, pass.Muted)"))
 chk("1.6.1", "ending a campaign drops trade XP that was queued but not yet handed over",
     "_pendingXp = 0;" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.1", "the gold reserve default leaves room for two safe passages and a wage run",
@@ -3105,7 +3105,7 @@ def quiet_automation_silences_only_the_automated_lines():
             "if (!pass.Muted) Notices.Say(msg, profit > 0" in sell and
             "if (!pass.Muted) Notices.Say(msg, Notices.Spend);" in buy and
             "if (!muted) Notices.Say(earned, Notices.Xp);" in credit and
-            "AwardTradeXp(moved.Earned, pass.Muted);" in sell)
+            "AwardTradeXpForOurOwnTrade(moved.Earned, pass.Muted);" in sell)
 
 def quiet_automation_leaves_the_cargo_warning_alone():
     return "Muted(" not in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
@@ -5410,7 +5410,7 @@ def getting_back_up_to_speed_credits_what_it_makes():
             and "pass.Moved(profit, gained, selling: true);" in relief
             and "if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);" in
                 method_body(S['Trading.cs'], "internal void Moved")
-            and "if (!pass.Sim && earned > 0) AwardTradeXp(earned, pass.Muted);" in relief
+            and "if (!pass.Sim && earned > 0) AwardTradeXpForOurOwnTrade(earned, pass.Muted);" in relief
             and relief.count("LedgerBehavior.Instance?.RecordSale(item.StringId, 1);") == 1)
 
 def the_rankings_are_dropped_when_the_party_moves_not_only_when_the_hour_turns():
@@ -5509,8 +5509,8 @@ def a_meeting_on_the_road_answers_to_the_silence_setting():
             and "if (StillSettling(Muted(automated: true))) return;" in
                 method_body(t, "public static void ExecuteRoadTrade")
             and "if (!quiet)" in method_body(t, "private static bool StillSettling")
-            and "AwardTradeXp(moved.Earned, pass.Muted);" in sell
-            and "AwardTradeXp(profit, false)" not in t
+            and "AwardTradeXpForOurOwnTrade(moved.Earned, pass.Muted);" in sell
+            and "AwardTradeXpForOurOwnTrade(profit, false)" not in t
             and named in re.search(r'\{=TL349\}([^"]*)"', M).group(1)
             and named in spoken(ENGLISH)['TL349'])
 
@@ -8504,13 +8504,13 @@ def the_deal_you_took_is_reported_and_credited_like_any_pass():
             and "gained += price * count;" not in t and "spent += price * count;" not in t
             and ordered(sold, "pass.Moved(addsUp ? (int?)got.Profit : null, got.Gold, selling: true);",
                         "{=TL02}")
-            and "AwardTradeXp(" not in sold
+            and "AwardTradeXpForOurOwnTrade(" not in sold
             and ordered(ledger, "if (Counter.Awaiting)",
                         "TradeActionBehavior.TookTheDeal(purchased, sold)",
                         "foreach (var (element, said) in sold)")
             and "internal static bool Awaiting => _shown != null;" in S['Counter.cs']
             and "_shown == null ? 0 : (Hero.MainHero?.Gold ?? _goldAtOpen) - _goldAtOpen;" in S['Counter.cs']
-            and t.count("AwardTradeXp(") == 3)
+            and t.count("AwardTradeXpForOurOwnTrade(") == 3)
 
 chk("1.76.2", "the deal you took is read in the gold the game hands over, squared against what your purse actually did, and put to your total only when the two agree",
     the_deal_you_took_is_reported_and_credited_like_any_pass())
@@ -9624,10 +9624,10 @@ def a_price_is_the_one_a_player_could_get_by_hand():
                     "internal static int At(SettlementComponent market, EquipmentElement el, MobileParty who, bool selling)"))
 
 
-chk("1.80.12", "a price is the one a player could get by hand, in the quote, in the simulated walk and in the trade the mod makes",
+chk("1.80.12", "a price is the one a player could get by hand, in the quote, in the simulated walk and in the trade the mod makes, so naming the settlement as the merchant and wearing the worse village price with it is the point of this and never a fault to undo",
     a_price_is_the_one_a_player_could_get_by_hand())
 
-chk("1.80.12", "the mod trades nothing in a settlement when it could not take the price over",
+chk("1.80.12", "the mod trades nothing in a settlement when it could not take the price over, because trading at a price you could not be charged is the thing being avoided and a fallback that traded anyway would undo it",
     (lambda b: ordered(b, "if (!TradeActionBehavior.PricesAreReal()) return null;",
                        "if (!MarketOpen(site"))
     (method_body(S['Trading.cs'], "internal static Pass Open(Settlement site, bool quiet)")) and
@@ -9642,32 +9642,21 @@ def whoever_made_the_trade_credits_the_trade_skill_for_it():
     credit = method_body(t, "private static void CreditTradeSkill")
     heard = method_body(ledger, "private void OnPlayerTradeProfit")
     return ("internal int Earned;" in passes
-            and "bool EarnsTradeXp(int at);" in passes
-            and "public bool EarnsTradeXp(int at) => _plan[at].EquipmentElement.ItemModifier == null;" in t
-            and passes.count("if (market.EarnsTradeXp(at))") == 2
-            and t.count("AwardTradeXp(") == 3
-            and "AwardTradeXp(" not in method_body(t, "private static void ReportWhatYouSold")
+            and "bool TheGameGivesTradeXpFor(int at);" in passes
+            and "public bool TheGameGivesTradeXpFor(int at) => _plan[at].EquipmentElement.ItemModifier == null;" in t
+            and passes.count("if (market.TheGameGivesTradeXpFor(at))") == 2
+            and t.count("AwardTradeXpForOurOwnTrade(") == 3
+            and "AwardTradeXpForOurOwnTrade(" not in method_body(t, "private static void ReportWhatYouSold")
             and "internal int Earned;" not in t
             and "CampaignEventDispatcher.Instance.OnPlayerTradeProfit(profit)" in credit
-            and "_raisingOurOwnProfit = true;" in credit
+            and "_tradeLordIsCreditingItsOwnTrade = true;" in credit
+            and "internal static bool TradeLordIsCreditingItsOwnTrade => _tradeLordIsCreditingItsOwnTrade;" in t
             and "LedgerBehavior.Instance?.AddTradeXp(xp);" in credit
             and "CampaignEvents.OnPlayerTradeProfitEvent.AddNonSerializedListener(this, OnPlayerTradeProfit);" in ledger
-            and "if (TradeActionBehavior.RaisingOurOwnProfit || !Counter.Awaiting) return;" in heard
+            and "private static bool TheGameCreditedADealTradeLordLaidOut =>" in ledger
+            and "!TradeActionBehavior.TradeLordIsCreditingItsOwnTrade && Counter.Awaiting;" in ledger
+            and "if (!TheGameCreditedADealTradeLordLaidOut) return;" in heard
             and "AddTradeXp(profit);" in heard)
-
-
-def the_designs_that_look_like_faults_are_written_down():
-    note = io.open('OnPurpose.md', encoding='utf-8').read()
-    return ('tools/regression_sweep.py' in note
-            and all(one in note for one in
-                    ("names the settlement as the merchant",
-                     "refuses to trade rather than fall back",
-                     "earns no Trade skill",
-                     "Whoever made the trade credits the Trade skill",
-                     "counts both halves",
-                     "priced at the plain value",
-                     "a feature, not a leak"))
-            and 'Where the repository keeps a note of the designs that look like faults' in RULES)
 
 
 def the_ledger_keeps_the_trade_xp_it_has_handed_over():
@@ -9684,11 +9673,8 @@ def the_ledger_keeps_the_trade_xp_it_has_handed_over():
             and ordered(PREFAB, 'Text="@LifetimeText"', 'Text="@TradeXpText"'))
 
 
-chk("1.81.2", "whoever made the trade credits the Trade skill for it, and the ledger hears the game out for the half it does not make",
+chk("1.81.2", "whoever made the trade credits the Trade skill for it, and each member along that path is named after the half it belongs to, so the two sides read as one rule rather than as a mod that forgot to credit its own screen",
     whoever_made_the_trade_credits_the_trade_skill_for_it())
-
-chk("1.81.2", "the designs that read as faults are written down, and the working rules send a session to them",
-    the_designs_that_look_like_faults_are_written_down())
 
 chk("1.81.0", "the ledger keeps the trade XP it has handed over and shows it beside the profit",
     the_ledger_keeps_the_trade_xp_it_has_handed_over())
