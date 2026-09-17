@@ -390,11 +390,14 @@ namespace TradeLord
             Guard.Run("Ledger.OnTick", MatchPurchasesToWhatIsHeld);
         }
 
+        private static bool TheGameCreditedADealTradeLordLaidOut =>
+            !TradeActionBehavior.TradeLordIsCreditingItsOwnTrade && Counter.Awaiting;
+
         private void OnPlayerTradeProfit(int profit)
         {
             Guard.Run("Ledger.OnPlayerTradeProfit", () =>
             {
-                if (TradeActionBehavior.RaisingOurOwnProfit || !Counter.Awaiting) return;
+                if (!TheGameCreditedADealTradeLordLaidOut) return;
                 AddTradeXp(profit);
             });
         }

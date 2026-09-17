@@ -114,7 +114,7 @@ namespace TradeLord
         int UnpaidWorth(int at);
         bool ResaleMarket(int at, out int price);
         int PriceToSell(int at);
-        bool EarnsTradeXp(int at);
+        bool TheGameGivesTradeXpFor(int at);
         int Till();
         int TillNow();
         void Staged(int at, int price);
@@ -319,7 +319,7 @@ namespace TradeLord
                         moved.SimGold += price;
                         int credited = TradeMath.Credit(price, worth, basis.UnpaidWorth);
                         moved.Profit += credited;
-                        if (market.EarnsTradeXp(at)) moved.Earned += credited;
+                        if (market.TheGameGivesTradeXpFor(at)) moved.Earned += credited;
                         int herdRank = TradeRules.HerdShedRank(good);
                         books.NoteSale(good.Id, price,
                                        herdRank == TradeRules.RankHaulAnimal ? 0f : good.Weight,
@@ -342,7 +342,7 @@ namespace TradeLord
                     moved.Units++;
                     int earned = TradeMath.Credit(proceeds, worth, basis.UnpaidWorth);
                     moved.Profit += earned;
-                    if (market.EarnsTradeXp(at)) moved.Earned += earned;
+                    if (market.TheGameGivesTradeXpFor(at)) moved.Earned += earned;
                     remaining--;
                 }
             }

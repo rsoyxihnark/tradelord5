@@ -790,9 +790,9 @@ namespace TradeLord
 
         private static int _pendingXp;
         private static int _pendingProfit;
-        private static bool _raisingOurOwnProfit;
+        private static bool _tradeLordIsCreditingItsOwnTrade;
 
-        internal static bool RaisingOurOwnProfit => _raisingOurOwnProfit;
+        internal static bool TradeLordIsCreditingItsOwnTrade => _tradeLordIsCreditingItsOwnTrade;
         private static bool _pendingXpMuted = true;
 
         private struct Took
@@ -919,9 +919,9 @@ namespace TradeLord
             if (profit > 0)
                 Guard.Run("TradeXp.Event", () =>
                 {
-                    _raisingOurOwnProfit = true;
+                    _tradeLordIsCreditingItsOwnTrade = true;
                     try { CampaignEventDispatcher.Instance.OnPlayerTradeProfit(profit); }
-                    finally { _raisingOurOwnProfit = false; }
+                    finally { _tradeLordIsCreditingItsOwnTrade = false; }
                 });
             Guard.Run("TradeXp.Party", () => CreditTheCompanionsWithYou(xp));
             int now = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
@@ -1091,7 +1091,7 @@ namespace TradeLord
                     soldItems, goldGained);
                 msg.SetTextVariable("PROFIT", profit);
                 if (!pass.Muted) Notices.Say(msg, profit > 0 ? Notices.Gain : Notices.Flat);
-                if (!pass.Sim && moved.Earned > 0) AwardTradeXp(moved.Earned, pass.Muted);
+                if (!pass.Sim && moved.Earned > 0) AwardTradeXpForOurOwnTrade(moved.Earned, pass.Muted);
             }
             else if (!pass.DirectionError)
             {
@@ -1142,7 +1142,7 @@ namespace TradeLord
 
             public Good GoodAt(int at) => TradePolicy.Describe(Item(at));
 
-            public bool EarnsTradeXp(int at) => _plan[at].EquipmentElement.ItemModifier == null;
+            public bool TheGameGivesTradeXpFor(int at) => _plan[at].EquipmentElement.ItemModifier == null;
 
             public bool MaySell(int at, in Good good, out int keep, out Block why) =>
                 TradePolicy.MaySell(good, _plan[at], _pass.Locked, _keepBack, _awaited,
@@ -1517,7 +1517,7 @@ namespace TradeLord
                 "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.",
                 sold, gained);
             if (!pass.Muted) Notices.Say(msg, Notices.Gain);
-            if (!pass.Sim && earned > 0) AwardTradeXp(earned, pass.Muted);
+            if (!pass.Sim && earned > 0) AwardTradeXpForOurOwnTrade(earned, pass.Muted);
         }
 
         private static bool PurseBelowTheHaulAnimalFloor(Pass pass)
@@ -1789,7 +1789,7 @@ namespace TradeLord
         }
 
 
-        private static void AwardTradeXp(int profit, bool muted)
+        private static void AwardTradeXpForOurOwnTrade(int profit, bool muted)
         {
             int xp = (int)(profit * Options.Current.TradeXpMultiplier);
             if (xp <= 0) return;
