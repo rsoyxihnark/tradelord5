@@ -135,10 +135,21 @@ namespace TradeLord
             return forecast < least ? least : forecast;
         }
 
-        public const float WhatACaravanLeavesAtOneStop = 0.34f;
+        public const float ACaravanSellsAbove = 1.1f;
 
-        public static int WhatACaravanUnloads(int carried) =>
-            carried <= 0 ? 0 : (int)(carried * WhatACaravanLeavesAtOneStop);
+        public const float ACaravanSellsThisEagerly = 3f;
+
+        public static int WhatACaravanUnloads(int carried, float priceFactor, float dailyBudget,
+                                              int unitPrice)
+        {
+            if (carried <= 0 || unitPrice <= 0) return 0;
+            float over = Finite(priceFactor, 0f) - ACaravanSellsAbove;
+            float budget = Finite(dailyBudget, 0f);
+            if (over <= 0f || budget <= 0f) return 0;
+            float units = budget * over * ACaravanSellsThisEagerly / unitPrice;
+            if (units <= 0f) return 0;
+            return units >= carried ? carried : (int)units;
+        }
 
         public const float StandingStill = 0.01f;
 

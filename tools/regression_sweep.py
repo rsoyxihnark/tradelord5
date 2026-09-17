@@ -1672,25 +1672,36 @@ def a_forecast_may_not_move_a_shown_price_out_of_all_recognition():
             and "A_forecast_far_below_the_live_price_is_held_to_the_cap" in MATHTESTS)
 
 
-def a_caravan_leaves_only_part_of_its_cargo_at_its_next_stop():
+def a_caravan_leaves_what_the_town_will_take_and_a_villager_leaves_the_lot():
     m = S['TradeMath.cs']
+    unloads = method_body(m, "public static int WhatACaravanUnloads")
     road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
-    return ("public const float WhatACaravanLeavesAtOneStop = 0.34f;" in m
-            and "carried <= 0 ? 0 : (int)(carried * WhatACaravanLeavesAtOneStop);" in m
-            and "int landing = TradeMath.WhatACaravanUnloads(amount);" in road
-            and "if (landing <= 0) continue;" in road
-            and "Note(bound, item.StringId, item.ItemCategory, landing," in road
+    leaves = method_body(S['Forecast.cs'], "private static int WhatACaravanLeavesHere")
+    return ("public const float ACaravanSellsAbove = 1.1f;" in m
+            and "public const float ACaravanSellsThisEagerly = 3f;" in m
+            and "float over = Finite(priceFactor, 0f) - ACaravanSellsAbove;" in unloads
+            and "if (over <= 0f || budget <= 0f) return 0;" in unloads
+            and "float units = budget * over * ACaravanSellsThisEagerly / unitPrice;" in unloads
+            and "return units >= carried ? carried : (int)units;" in unloads
+            and "WhatACaravanLeavesAtOneStop" not in m
+            and "bool caravan = party.IsCaravan;" in road
+            and "if (!caravan && !party.IsVillager) continue;" in road
+            and "if (caravan) NoteAPurse(bound, party.PartyTradeGold, days);" in road
+            and "int landing = caravan ? WhatACaravanLeavesHere(bound, item, amount) : amount;" in road
             and "TradeMath.WorthOf(landing, item.Value), days);" in road
-            and "TradeMath.WorthOf(amount," not in road
-            and "A_caravan_leaves_only_part_of_what_it_carries" in MATHTESTS)
+            and "where.MarketData.GetPriceFactor(category)" in leaves
+            and "CalculateDailySettlementBudgetForItemCategory(where, demand, category)" in leaves
+            and "A_caravan_passing_a_town_that_pays_no_more_than_usual_leaves_nothing" in MATHTESTS
+            and "A_caravan_leaves_no_more_than_the_town_daily_purse_for_that_kind_can_pay_for"
+                in MATHTESTS)
 
 
 chk("1.81.10", "a market the game could not find a road to is turned away and shows no travel time, whatever the travel ceilings are set to",
     a_market_the_game_cannot_reach_is_never_offered_or_timed())
 chk("1.81.10", "what a market is forecast to pay is held within reach of what it pays today, so a bad forecast can no longer show a price nothing would ever take",
     a_forecast_may_not_move_a_shown_price_out_of_all_recognition())
-chk("1.81.10", "a caravan is counted as leaving only part of its cargo at the next market it calls at, because the rest rides on",
-    a_caravan_leaves_only_part_of_its_cargo_at_its_next_stop())
+chk("1.81.11", "a caravan is counted as leaving only what the town it is calling at will actually take off it, and only where that town pays above the usual, while a villager party is counted as leaving its whole load at the town its village trades through",
+    a_caravan_leaves_what_the_town_will_take_and_a_villager_leaves_the_lot())
 
 chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has moved",
     "float days = Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs);" in
@@ -7007,7 +7018,7 @@ def the_forecast_reads_the_world_only_while_live_world_prices_are_on():
 def a_caravan_already_in_the_market_is_not_counted_twice():
     road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
     return (ordered(road,
-                    "if (party == null || !party.IsCaravan) continue;",
+                    "if (!caravan && !party.IsVillager) continue;",
                     "if (party.CurrentSettlement != null) continue;",
                     "Settlement bound = party.TargetSettlement;",
                     "TradeMath.EtaDays(",
