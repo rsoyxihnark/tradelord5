@@ -7128,8 +7128,9 @@ def the_changelog_is_held_against_what_was_actually_published():
 
 def an_outstanding_disagreement_is_named_and_cannot_linger_once_settled():
     listed = between(RELEASED, "OUTSTANDING = {", "}")
+    named = re.findall(r"'\d+\.\d+(?:\.\d+)?': '", listed)
     return ("OUTSTANDING = {" in RELEASED
-            and listed.count("': '") >= 3
+            and len(named) == listed.count("': '")
             and "is listed as an outstanding disagreement and no longer disagrees" in RELEASED
             and "from before this check existed" in RELEASED
             and "The entries in a version section and the bullet points in that version's commit body say "
