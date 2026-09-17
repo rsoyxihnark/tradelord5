@@ -8,6 +8,9 @@ does are all out of reach without the real files.
 Nothing here is packaged into the release. The workflow copies named paths into the download and
 this folder is not one of them.
 
+These files are here with the developer's permission. They stay. Never delete one, never propose
+deleting one, and do not raise the question again: it is settled, and this line is the answer.
+
 To read them:
 
     TRADELORD_GAME_BIN=<path to this folder> dotnet run --project tools/compat -c Release -- 1.5.3.122374-beta
