@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.81.7
+
+- The first time you enter a campaign after this update, TradeLord puts 1000 denars back in every village left with an empty purse, so the villages an older version spent out can be traded with again.
+- It says on screen how many village purses it refilled, and TradeLord.log names each village and what went back into it.
+- The feature list now says TradeLord puts an empty village purse back, once for a campaign.
+- The feature list now counts the switch TradeLord writes into a save alongside the strings and numbers it already listed.
+
 ## 1.81.6
 
 - Selling to a village now leaves the last coin in its purse, so Buy products no longer greys out with Village shop is not available right now.

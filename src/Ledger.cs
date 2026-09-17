@@ -7,6 +7,7 @@ using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
+using TaleWorlds.Localization;
 using TaleWorlds.SaveSystem;
 
 namespace TradeLord
@@ -56,6 +57,7 @@ namespace TradeLord
         private string _latelyText = "";
         private ItemRoster _watched;
         private bool _settle;
+        private bool _villagePursesPutBack;
 
         private readonly List<TradeNote> _lately = new List<TradeNote>();
 
@@ -152,6 +154,7 @@ namespace TradeLord
             dataStore.SyncData("TradeLord_PromiseHeld", ref _promiseHeld);
             dataStore.SyncData("TradeLord_PromiseText", ref _promiseText);
             dataStore.SyncData("TradeLord_LatelyText", ref _latelyText);
+            dataStore.SyncData("TradeLord_VillagePursesPutBack", ref _villagePursesPutBack);
             if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;
             if (dataStore.IsLoading) ReadSavedText();
             if (dataStore.IsLoading) PruneExpired();
@@ -366,8 +369,39 @@ namespace TradeLord
             PruneObservations();
         });
 
-        private void OnSessionLaunched(CampaignGameStarter starter) =>
+        private void OnSessionLaunched(CampaignGameStarter starter)
+        {
             Guard.Run("Ledger.WatchTheParty", WatchTheParty);
+            Guard.Run("Ledger.VillagePurses", PutBackEmptyVillagePurses);
+        }
+
+        private void PutBackEmptyVillagePurses()
+        {
+            if (_villagePursesPutBack) return;
+            _villagePursesPutBack = true;
+            int putBack = 0;
+            foreach (Settlement s in Settlement.All)
+            {
+                Village village = s?.Village;
+                if (village == null) continue;
+                int owed = TradeRules.PutBackIntoAnEmptyPurse(village.Gold);
+                if (owed <= 0) continue;
+                village.ChangeGold(owed);
+                putBack++;
+                Log.Write("village purse: " + s.Name + " had nothing left to trade with, so " + owed +
+                          " denars were put back and it holds " + village.Gold + " now");
+            }
+            if (putBack == 0)
+            {
+                Log.Write("village purses: none of them were empty, so nothing was put back");
+                return;
+            }
+            Log.Write("village purses: " + putBack + " village(s) were put back to " +
+                      TradeRules.VillagePurse + " denars, which is done once for a campaign");
+            TextObject line = Tongue.Text("{=TL449}TradeLord has refilled {COUNT} empty village purse(s), so those village shops can trade again.");
+            line.SetTextVariable("COUNT", putBack);
+            Notices.Say(line);
+        }
 
         private void WatchTheParty()
         {

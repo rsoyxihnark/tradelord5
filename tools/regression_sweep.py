@@ -1000,10 +1000,12 @@ def the_readme_counts_the_saved_values_right():
     words = {1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six'}
     numbers = tally.get('int', 0) + tally.get('long', 0) + tally.get('float', 0)
     counted = 'a number' if numbers == 1 else words.get(numbers, 'no') + ' numbers'
+    switches = tally.get('bool', 0)
+    marked = 'a switch' if switches == 1 else words.get(switches, 'no') + ' switches'
     said = ('All it puts in a save is ' + words.get(tally.get('string'), 'no') +
-            ' strings, ' + counted + ' and a settlement reference')
+            ' strings, ' + counted + ', ' + marked + ' and a settlement reference')
     return (said in README and numbers == 5
-            and tally.get('Settlement') == 1 and 'bool' not in tally)
+            and tally.get('Settlement') == 1 and switches == 1)
 
 def readme_defaults_match_the_shipped_ones():
     def on(name):
@@ -5379,7 +5381,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
                         "LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));",
                         'dataStore.SyncData("TradeLord_LedgerText"')
             and trade.count("dataStore.SyncData(") == 2
-            and ledger.count("dataStore.SyncData(") == 9)
+            and ledger.count("dataStore.SyncData(") == 10)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
     arrays = dict(re.findall(r'private static readonly string\[\] (\w+) =\s*\{(.*?)\};', M, re.S))
@@ -9761,6 +9763,32 @@ def a_village_keeps_the_coin_that_keeps_its_shop_open():
 
 chk("1.81.6", "a village is left the coin that keeps its shop open, in the pass, in the herd relief, in the route scan and on the map marker",
     a_village_keeps_the_coin_that_keeps_its_shop_open())
+
+
+def a_village_left_with_an_empty_purse_is_put_back_once():
+    ledger = S['Ledger.cs']
+    put = method_body(ledger, "private void PutBackEmptyVillagePurses")
+    if not put:
+        return False
+    return ("internal const int VillagePurse = 1000;" in S['Rules.cs']
+            and "gold <= 0 ? VillagePurse - gold : 0" in
+                between(S['Rules.cs'], "internal static int PutBackIntoAnEmptyPurse", ";")
+            and 'dataStore.SyncData("TradeLord_VillagePursesPutBack", ref _villagePursesPutBack);' in
+                method_body(ledger, "public override void SyncData")
+            and 'Guard.Run("Ledger.VillagePurses", PutBackEmptyVillagePurses);' in
+                method_body(ledger, "private void OnSessionLaunched")
+            and "if (_villagePursesPutBack) return;" in put
+            and "_villagePursesPutBack = true;" in put
+            and ordered(put, "if (_villagePursesPutBack) return;", "_villagePursesPutBack = true;",
+                        "int owed = TradeRules.PutBackIntoAnEmptyPurse(village.Gold);",
+                        "village.ChangeGold(owed);")
+            and "{=TL449}" in ledger
+            and said_in_every_language('TL449')
+            and "An_empty_village_purse_is_put_back_to_a_thousand" in SELLTESTS)
+
+
+chk("1.81.7", "a village left with an empty purse is put back to a thousand denars, once for a campaign and never again",
+    a_village_left_with_an_empty_purse_is_put_back_once())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

@@ -321,5 +321,14 @@ namespace TradeLord.Tests
             Assert.Equal(0, TradeRules.WhatTheTillCanPay(0, true));
             Assert.Equal(0, TradeRules.WhatTheTillCanPay(0, false));
         }
+
+        [Fact]
+        public void An_empty_village_purse_is_put_back_to_a_thousand_and_one_with_money_in_it_is_left_alone()
+        {
+            Assert.Equal(1000, TradeRules.PutBackIntoAnEmptyPurse(0));
+            Assert.Equal(0, TradeRules.PutBackIntoAnEmptyPurse(1));
+            Assert.Equal(0, TradeRules.PutBackIntoAnEmptyPurse(1000));
+            Assert.Equal(0, TradeRules.PutBackIntoAnEmptyPurse(2500));
+        }
     }
 }
