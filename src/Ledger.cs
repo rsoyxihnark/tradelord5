@@ -46,6 +46,7 @@ namespace TradeLord
         private int _unreadable;
         private Dictionary<string, PurchaseRecord> _paid;
         private long _lifetimeProfit;
+        private long _lifetimeTradeXp;
         private int _lifetimeProfitCapped;
         private int _promisesScored;
         private float _promiseHeld;
@@ -60,6 +61,9 @@ namespace TradeLord
 
         public long LifetimeProfit => _lifetimeProfit;
         public void AddProfit(int amount) => _lifetimeProfit += amount;
+
+        public long LifetimeTradeXp => _lifetimeTradeXp;
+        public void AddTradeXp(int amount) { if (amount > 0) _lifetimeTradeXp += amount; }
 
         public IList<TradeNote> Lately => _lately;
 
@@ -142,6 +146,7 @@ namespace TradeLord
             dataStore.SyncData("TradeLord_PurchaseText", ref _purchaseText);
             dataStore.SyncData("TradeLord_LifetimeProfit", ref _lifetimeProfitCapped);
             dataStore.SyncData("TradeLord_LifetimeProfitWide", ref _lifetimeProfit);
+            dataStore.SyncData("TradeLord_LifetimeTradeXp", ref _lifetimeTradeXp);
             dataStore.SyncData("TradeLord_PromisesScored", ref _promisesScored);
             dataStore.SyncData("TradeLord_PromiseHeld", ref _promiseHeld);
             dataStore.SyncData("TradeLord_PromiseText", ref _promiseText);
@@ -154,6 +159,7 @@ namespace TradeLord
                 Log.Write("ledger restored: " + _ledger.Count + " observed items, " +
                           _purchases.Count + " purchase records, " + _lately.Count +
                           " recent trade(s), lifetime profit " + _lifetimeProfit +
+                          ", lifetime trade XP " + _lifetimeTradeXp +
                           (_unreadable == 0
                                ? ""
                                : ", and " + _unreadable + " recorded price(s) this version could not read, " +
