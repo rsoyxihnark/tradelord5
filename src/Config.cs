@@ -25,6 +25,7 @@ namespace TradeLord
 
         private static bool _dirty;
         private static bool _applying;
+        private static bool _unreadable;
         private static Dictionary<string, string> _lastSeen;
 
         private static readonly string[] Header =
@@ -124,6 +125,18 @@ namespace TradeLord
             Guard.Run("Config.Flush", () => Write(_path, "a setting changed"));
         }
 
+        private static string[] Lines(string path)
+        {
+            try { return File.ReadAllLines(path); }
+            catch (Exception e)
+            {
+                _unreadable = true;
+                Log.Error(e, "reading the settings file (it is left exactly as it is, so nothing you set in it " +
+                             "is written over, and TradeLord runs on the settings it starts up with)");
+                return null;
+            }
+        }
+
         private static bool ChangedByHand(string path, DateTime stamped)
         {
             if (stamped == default(DateTime)) return true;
@@ -146,8 +159,11 @@ namespace TradeLord
                 return;
             }
 
+            string[] lines = Lines(found);
+            if (lines == null) return;
+
             var ignored = new List<string>();
-            var written = SettingsFile.Read(File.ReadAllLines(found), ignored);
+            var written = SettingsFile.Read(lines, ignored);
             foreach (string line in ignored)
                 Log.Write("settings file: '" + line + "' is not a name = value line, so it is ignored");
 
@@ -309,6 +325,13 @@ namespace TradeLord
             if (path == null)
             {
                 Log.Write("settings file: nowhere to write one, so TradeLord runs on its built-in settings");
+                return;
+            }
+            if (_unreadable)
+            {
+                Log.Repeatable("settings file unreadable", "left alone",
+                               "settings file: it could not be read this session, so it is left exactly as it " +
+                               "is rather than written over with settings that never came out of it");
                 return;
             }
             var lines = new List<KeyValuePair<string, string>>

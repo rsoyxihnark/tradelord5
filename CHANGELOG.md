@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.81.8
+
+- A TradeLord.ini that could not be opened is now left exactly as it is, rather than being written over with the settings TradeLord starts up on, so a file locked by something else no longer costs you everything you had set.
+
 ## 1.81.7
 
 - The first time you enter a campaign after this update, TradeLord puts 1000 denars back in every village left with an empty purse, so the villages an older version spent out can be traded with again.
