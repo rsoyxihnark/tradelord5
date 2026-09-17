@@ -210,8 +210,7 @@ namespace TradeLord
             return model == null ? "price model not read" : "prices from " + model.GetType().Name;
         }
 
-        internal static PartyBase Merchant(Settlement site) =>
-            site != null && TradeRules.StagesTheDeal(Options.Current) ? site.Party : null;
+        internal static PartyBase Merchant(Settlement site) => site?.Party;
 
         internal static int At(SettlementComponent market, ItemObject item, MobileParty who, bool selling) =>
             item == null ? 0 : At(market, new EquipmentElement(item), who, selling);
@@ -380,6 +379,16 @@ namespace TradeLord
             if (found == null || found.Owners == null || found.Owners.Count == 0)
                 return what + " is untouched, so no other mod is changing it";
             return what + " is being changed by " + string.Join(", ", new List<string>(found.Owners).ToArray());
+        }
+    }
+
+    [HarmonyPatch(typeof(TownMarketData), "GetPrice",
+        new[] { typeof(EquipmentElement), typeof(MobileParty), typeof(bool), typeof(PartyBase) })]
+    internal static class Patch_TownMarketData_GetPrice
+    {
+        private static void Prefix(ref PartyBase merchantParty)
+        {
+            if (merchantParty == null) merchantParty = TradeActionBehavior.TradingWith;
         }
     }
 }
