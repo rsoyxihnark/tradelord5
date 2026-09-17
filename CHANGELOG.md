@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.81.3
+
+- The TradeLord ledger does less work as it reads what each town's workshops will make next: a town's shelves are now read once for the town rather than once for every workshop in it.
+
 ## 1.81.2
 
 - A deal you take on the trade screen now earns your Trade skill once, from the game, instead of twice.
