@@ -125,6 +125,7 @@ namespace TradeLord
             CampaignEvents.TickEvent.AddNonSerializedListener(this, OnTick);
             CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
             CampaignEvents.PlayerInventoryExchangeEvent.AddNonSerializedListener(this, OnPlayerInventoryExchange);
+            CampaignEvents.OnPlayerTradeProfitEvent.AddNonSerializedListener(this, OnPlayerTradeProfit);
         }
 
         public override void SyncData(IDataStore dataStore)
@@ -387,6 +388,15 @@ namespace TradeLord
             if (!_settle) return;
             _settle = false;
             Guard.Run("Ledger.OnTick", MatchPurchasesToWhatIsHeld);
+        }
+
+        private void OnPlayerTradeProfit(int profit)
+        {
+            Guard.Run("Ledger.OnPlayerTradeProfit", () =>
+            {
+                if (TradeActionBehavior.RaisingOurOwnProfit || !Counter.Awaiting) return;
+                AddTradeXp(profit);
+            });
         }
 
         private void OnPlayerInventoryExchange(
