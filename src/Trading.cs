@@ -863,7 +863,7 @@ namespace TradeLord
                 "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).", got.Units, got.Gold);
             msg.SetTextVariable("PROFIT", got.Profit);
             Notices.Say(msg, got.Profit > 0 ? Notices.Gain : Notices.Flat);
-            if (addsUp && got.Earned > 0) AwardTradeXp(got.Earned, pass.Muted);
+            if (addsUp && got.Earned > 0) AwardTradeXp(got.Earned, pass.Muted, ours: false);
         }
 
         private static void ReportWhatYouBought(Pass pass, Took paid, bool addsUp)
@@ -1789,12 +1789,12 @@ namespace TradeLord
         }
 
 
-        private static void AwardTradeXp(int profit, bool muted)
+        private static void AwardTradeXp(int profit, bool muted, bool ours = true)
         {
             int xp = (int)(profit * Options.Current.TradeXpMultiplier);
             if (xp <= 0) return;
             _pendingXp += xp;
-            _pendingProfit += profit;
+            if (ours) _pendingProfit += profit;
             if (!muted) _pendingXpMuted = false;
             Log.Write("trade profit fed to the XP system: " + xp + " denars");
         }

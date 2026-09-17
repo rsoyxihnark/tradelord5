@@ -8505,7 +8505,8 @@ def the_deal_you_took_is_reported_and_credited_like_any_pass():
                         "took.Earned = Deals.NoMoreThanTheSale(took.Earned, took.Gold);")
             and "gained += price * count;" not in t and "spent += price * count;" not in t
             and ordered(sold, "pass.Moved(addsUp ? (int?)got.Profit : null, got.Gold, selling: true);",
-                        "{=TL02}", "if (addsUp && got.Earned > 0) AwardTradeXp(got.Earned, pass.Muted);")
+                        "{=TL02}",
+                        "if (addsUp && got.Earned > 0) AwardTradeXp(got.Earned, pass.Muted, ours: false);")
             and ordered(ledger, "if (Counter.Awaiting)",
                         "TradeActionBehavior.TookTheDeal(purchased, sold)",
                         "foreach (var (element, said) in sold)")
@@ -9648,7 +9649,9 @@ def trade_xp_is_earned_the_way_a_sale_by_hand_earns_it():
             and t.count("AwardTradeXp(") == 4
             and "AwardTradeXp(profit" not in t
             and "CampaignEventDispatcher.Instance.OnPlayerTradeProfit(profit)" in credit
-            and "LedgerBehavior.Instance?.AddTradeXp(xp);" in credit)
+            and "LedgerBehavior.Instance?.AddTradeXp(xp);" in credit
+            and "if (ours) _pendingProfit += profit;" in method_body(t, "private static void AwardTradeXp")
+            and t.count("ours: false") == 1)
 
 
 def the_ledger_keeps_the_trade_xp_it_has_handed_over():
