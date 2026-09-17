@@ -25,14 +25,21 @@ From build 1.5.3.122374, taken from the owner's install. TaleWorlds stamps every
     SandBox.dll
     SandBox.View.dll
     StoryMode.dll
+    NavalDLC.dll
 
 ## What they answered
 
-The menu-id check now runs instead of skipping. It found `town` and `village` in SandBox.View.dll,
-`port_menu` in TaleWorlds.CampaignSystem.dll, and `naval_storyline_virtualport` in none of them,
-which is what a guarded id absent from a plain install should look like. Both of the lines a band
-of bandits opens with, `bandit_start_defender` and `bandit_start_defender_2`, are in
-TaleWorlds.CampaignSystem.dll.
+The menu-id check now runs instead of skipping, and with the War Sails module here every one of
+the four ids is answered. All four, `town`, `village`, `port_menu` and `naval_storyline_virtualport`,
+are real user strings in NavalDLC.dll, which is the one the check names because it reads the
+assemblies in name order and that one comes first. Without it, `town` and `village` were found in
+SandBox.View.dll and `port_menu` in TaleWorlds.CampaignSystem.dll, while
+`naval_storyline_virtualport` was in none of them. Both of the lines a band of bandits opens with,
+`bandit_start_defender` and `bandit_start_defender_2`, are in TaleWorlds.CampaignSystem.dll.
+
+The shipped NavalDLC.dll carries a user-string heap of 444900 bytes holding 3523 entries. The
+NavalDLC.dll on nuget carries no `#US` stream at all, so it holds no menu id and can answer
+nothing, which is why the shipped file is the only one worth keeping here.
 
 Read from the method bodies, every runtime assumption the mod was guarding rather than knowing
 now has an answer on this build:
@@ -55,13 +62,4 @@ now has an answer on this build:
 
 ## Still wanted
 
-    Modules/NavalDLC/bin/Win64_Shipping_Client/NavalDLC.dll
-
-The War Sails module, for `naval_storyline_virtualport`. It is the last id here that nothing has
-answered for, and without the module it can only be shown absent, never shown right.
-
-It has to be the shipped file. The reference assemblies on nuget hold a NavalDLC.dll with no
-user-string heap in it at all, so it carries no menu id and answers nothing here, and the
-compatibility tool already has it on disk anyway. Searching one of those for an id as raw bytes
-does turn up hits, in the name and blob heaps, and every one of them is a coincidence. Read the
-heap, not the file.
+Nothing. Every id the compatibility tool asks about is answered by the assemblies here.
