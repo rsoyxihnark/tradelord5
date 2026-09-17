@@ -215,7 +215,7 @@
 		<string id="TL347" text="Bir geçiş gerçekten bir şey taşıdığında bozuk para sesi çal. Hiçbir şey taşımayan geçiş sessiz kalır."/>
 		<string id="TL348" text="Tek satırlık ticaret özetinde malları adlandır, örneğin 'TradeLord 8 Zeytin, 3 Şarap sattı, 240 dinar', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
 		<string id="TL349" text="Kendiliğinden yapılan ticaret, hem bir pazara girdiğinizde hem de yolda bir kervanla ya da bir köylü bölüğüyle karşılaştığınızda, ekranda satır olmadan yalnızca TradeLord.log dosyasına bildirir. Uyarılar yine de ekranda görünür: yükünüzün dolu olması, kesenizin Altın rezervinin altına düşmesi ve bir mal listesi girdinizin hiçbir mala uymaması. Menüdeki ticaret girdisi her zaman bildirir."/>
-		<string id="TL389" text="Bir pazarın taşıdığınız her mal için ne ödediğini ve ne istediğini TradeLord.log dosyasına yazar, böylece bir fiyatın neden ticaret ekranıyla uyuşmadığını görebilirsiniz. Pazarı ve fiyatları oynatan modu adlandırır. Öntanımlı olarak KAPALI; bir fiyat yanlış göründüğünde aç."/>
+		<string id="TL389" text="Bir pazarın taşıdığınız her mal için ne ödediğini ve ne istediğini TradeLord.log dosyasına yazar, böylece bir fiyatın neden ticaret ekranıyla uyuşmadığını görebilirsiniz. Pazarı ve fiyatları oynatan modu adlandırır. Öntanımlı olarak AÇIK; günlüğü kısa tutmak için kapat."/>
 		<string id="TL398" text="Tahminin bir pazar için söylediğini ve içeri girdiğinizde pazarın gerçekte ne tuttuğunu, mal mal, ne kadar şaştığıyla birlikte TradeLord.log dosyasına yazar. Bir pazara doğru yolda olanları say gerekir. Öntanımlı olarak AÇIK; günlüğü kısa tutmak için kapat."/>
 		<string id="TL100" text="Dil"/>
 		<string id="TL101" text="Bilgi"/>
