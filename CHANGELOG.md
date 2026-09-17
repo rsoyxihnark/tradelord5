@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.81.13
+
+- The line an item tooltip shows when no market in reach holds enough to suggest is now written a clause to a line and says it in fewer words, so the tooltip no longer stretches across the screen to fit it.
+
 ## 1.81.12
 
 - The best market for your cargo is no longer marked on a town the game can find no road to, and no route is offered through one, however high you have set your travel ceilings.
