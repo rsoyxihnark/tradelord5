@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.80.14
+
+- A trade that fails to unwind no longer leaves TradeLord's hold on prices in place, which could have moved what a caravan or a villager paid for its own goods.
+- A good whose price cannot be read the way the trade screen reads it is now left alone, rather than traded at a price you could not be charged.
+
 ## 1.80.13
 
 - Write a price trace to the log now ships on, so a log sent in carries the four readings for every good you were carrying.

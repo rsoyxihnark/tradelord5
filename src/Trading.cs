@@ -138,6 +138,7 @@ namespace TradeLord
         {
             if (_transactionDepth == 0) return;
             _transactionDepth = 0;
+            _tradingWith = null;
             Log.Write("ERROR: the message filter was still armed at the start of a frame - forced open. " +
                       "A transaction did not unwind; no message is suppressed beyond this frame.");
             ReportSilenced();
@@ -173,6 +174,7 @@ namespace TradeLord
         {
             ResetVisit();
             _transactionDepth = 0;
+            _tradingWith = null;
             _silenced.Clear();
             Notices.Forget();
             _pendingXp = 0;
