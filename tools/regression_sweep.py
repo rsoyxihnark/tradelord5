@@ -9488,22 +9488,36 @@ chk("1.80.2", "a route's sell price is put to the profit test before the merchan
 
 def a_market_is_never_searched_for_a_good_it_does_not_stock():
     prime = method_body(S['Ledger.cs'], "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
-    stocks = method_body(S['Ledger.cs'], "private static HashSet<ItemObject> WhatItStocks")
+    stocks = method_body(S['Ledger.cs'], "private static Dictionary<ItemObject, int> WhatItStocks")
     return (ordered(prime,
-                    "HashSet<ItemObject> onTheShelf = minStock > 0 ? WhatItStocks(town) : null;",
+                    "Dictionary<ItemObject, int> onTheShelf = minStock > 0 ? WhatItStocks(town) : null;",
                     "if (onTheShelf == null ||",
-                    "(onTheShelf.Contains(item) && StockOf(town, item) >= minStock))")
+                    "(onTheShelf.TryGetValue(item, out int stocked) && stocked >= minStock))")
             and prime.find("Priced.At(market, item, me, true)") <
-                prime.find("onTheShelf.Contains(item)")
-            and "StockOf(town, item)" in prime
+                prime.find("onTheShelf.TryGetValue(item,")
             and prime.count("WhatItStocks(town)") == 1
             and "ItemObject item = shelf.GetItemAtIndex(i);" in stocks
-            and "if (item != null) held.Add(item);" in stocks
             and "GetItemNumber" not in stocks)
 
 
 chk("1.80.3", "the TradeLord ledger asks a market how much of a good it holds only where that good is on its shelves, so a market is no longer searched top to bottom for every good it never stocked",
     a_market_is_never_searched_for_a_good_it_does_not_stock())
+
+
+def one_read_of_a_shelf_answers_both_what_it_holds_and_how_much():
+    l = S['Ledger.cs']
+    prime = method_body(l, "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
+    stocks = method_body(l, "private static Dictionary<ItemObject, int> WhatItStocks")
+    return ("if (item != null && !held.ContainsKey(item)) held[item] = shelf.GetElementNumber(i);" in stocks
+            and "var held = new Dictionary<ItemObject, int>();" in stocks
+            and stocks.count("for (int i = 0; shelf != null && i < shelf.Count; i++)") == 1
+            and "StockOf(town, item)" not in prime
+            and "onTheShelf.Contains(" not in prime
+            and "internal static int StockOf(Settlement s, ItemObject item)" in l)
+
+
+chk("1.81.4", "one read of a town's shelves answers both whether it stocks a good and how much of it, so ranking the markets no longer searches a shelf again for every good already found on it",
+    one_read_of_a_shelf_answers_both_what_it_holds_and_how_much())
 
 
 def asking_whether_a_tooltip_has_a_section_builds_no_list():
