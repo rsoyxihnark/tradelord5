@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.81.12
+
+- The best market for your cargo is no longer marked on a town the game can find no road to, and no route is offered through one, however high you have set your travel ceilings.
+- An item tooltip with no best buy prices now says that no market in reach holds as much as Minimum stock for buy suggestions asks for, instead of leaving the list out with no word why.
+- The forecast check in TradeLord.log now says how many units of the good it named were expected and how many denars of every good of that kind, so the two figures no longer read as one.
+
 ## 1.81.11
 
 - A caravan heading for a market is now counted as leaving only what that market will really take off it, and only where it pays above what the goods usually fetch, because a caravan that is merely passing through sells nothing and carries its load onward.

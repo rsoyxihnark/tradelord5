@@ -108,6 +108,14 @@ namespace TradeLord
                 }
             }
 
+            if (buys.Count == 0 && sells.Count > 0 && Options.Current.MinTownStock > 0)
+            {
+                TextObject none = Tongue.Text("{=TL450}No market in reach stocks {COUNT} or more of this, which is what Minimum stock for buy suggestions asks for. Lower it to see where to buy this.");
+                none.SetTextVariable("COUNT", Options.Current.MinTownStock);
+                AddLine(vm, Tongue.Text("{=TL21}Best buy prices").ToString(), "", Title);
+                AddLine(vm, "", none.ToString(), Warn);
+            }
+
             if (buys.Count > 0)
             {
                 AddLine(vm, Tongue.Text("{=TL21}Best buy prices").ToString(), "", Title);
