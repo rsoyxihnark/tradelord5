@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.81.9
+
+- The best sell and best buy lists in an item tooltip now pick their five markets after every market has been priced for the day you would arrive, so a town the forecast marks down drops out of the list instead of sitting in it at a price you would never take.
+
 ## 1.81.8
 
 - A TradeLord.ini that could not be opened is now left exactly as it is, rather than being written over with the settings TradeLord starts up on, so a file locked by something else no longer costs you everything you had set.
