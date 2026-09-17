@@ -7,12 +7,8 @@ REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
     '1.14.1': 'the section and the notes each carry lines the other does not',
-    '1.15.0': 'the one entry was reworded on one side only',
-    '1.16.0': 'the one entry was reworded on one side only',
     '1.34.0': 'the section gained two entries after the release went out',
     '1.35.0': 'the section gained two entries after the release went out',
-    '1.50.0': 'the notes carry four entries the section never got',
-    '1.50.1': 'the section was replaced by a summary, and the notes hold the six entries that shipped',
 }
 
 
