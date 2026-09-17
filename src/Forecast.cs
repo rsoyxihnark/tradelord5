@@ -198,8 +198,10 @@ namespace TradeLord
                     ItemObject item = carried.GetItemAtIndex(k);
                     int amount = carried.GetElementNumber(k);
                     if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;
-                    Note(bound, item.StringId, item.ItemCategory, amount,
-                         TradeMath.WorthOf(amount, item.Value), days);
+                    int landing = TradeMath.WhatACaravanUnloads(amount);
+                    if (landing <= 0) continue;
+                    Note(bound, item.StringId, item.ItemCategory, landing,
+                         TradeMath.WorthOf(landing, item.Value), days);
                 }
             }
         }
