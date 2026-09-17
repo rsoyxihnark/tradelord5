@@ -64,6 +64,7 @@ namespace TradeLord
         internal int Units;
         internal int SimGold;
         internal int Profit;
+        internal int Earned;
     }
 
     internal struct Pick
@@ -113,6 +114,7 @@ namespace TradeLord
         int UnpaidWorth(int at);
         bool ResaleMarket(int at, out int price);
         int PriceToSell(int at);
+        bool EarnsTradeXp(int at);
         int Till();
         int TillNow();
         void Staged(int at, int price);
@@ -315,7 +317,9 @@ namespace TradeLord
                     {
                         simTill -= price;
                         moved.SimGold += price;
-                        moved.Profit += TradeMath.Credit(price, worth, basis.UnpaidWorth);
+                        int credited = TradeMath.Credit(price, worth, basis.UnpaidWorth);
+                        moved.Profit += credited;
+                        if (market.EarnsTradeXp(at)) moved.Earned += credited;
                         int herdRank = TradeRules.HerdShedRank(good);
                         books.NoteSale(good.Id, price,
                                        herdRank == TradeRules.RankHaulAnimal ? 0f : good.Weight,
@@ -336,7 +340,9 @@ namespace TradeLord
                     if (basis.SoldOne()) market.RecordedSale(at);
                     books.NoteSold(good.Id);
                     moved.Units++;
-                    moved.Profit += TradeMath.Credit(proceeds, worth, basis.UnpaidWorth);
+                    int earned = TradeMath.Credit(proceeds, worth, basis.UnpaidWorth);
+                    moved.Profit += earned;
+                    if (market.EarnsTradeXp(at)) moved.Earned += earned;
                     remaining--;
                 }
             }

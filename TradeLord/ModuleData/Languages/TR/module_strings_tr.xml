@@ -293,5 +293,6 @@
 		<string id="TL445" text=" | Bu panelin söz verdiğinden az ödemiş bir pazar için Puan düşürülür"/>
 		<string id="TL446" text="?"/>
 		<string id="TL447" text=" | stok, sen varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek; fiyatlar için Toplu fiyat benzetimi gerekir"/>
+		<string id="TL448" text="Ticaret TP: {AMOUNT}" />
 	</strings>
 </base>

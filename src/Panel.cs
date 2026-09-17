@@ -182,6 +182,7 @@ namespace TradeLord
         private string _capacityText = "";
         private string _speedText = "";
         private string _lifetimeText = "";
+        private string _tradeXpText = "";
         private string _statusText = "";
         private string _legendText = "";
         private string _workshopsHeader = "";
@@ -280,6 +281,13 @@ namespace TradeLord
         {
             get => _lifetimeText;
             set { if (value != _lifetimeText) { _lifetimeText = value; OnPropertyChangedWithValue(value, "LifetimeText"); } }
+        }
+
+        [DataSourceProperty]
+        public string TradeXpText
+        {
+            get => _tradeXpText;
+            set { if (value != _tradeXpText) { _tradeXpText = value; OnPropertyChangedWithValue(value, "TradeXpText"); } }
         }
 
         [DataSourceProperty]
@@ -427,6 +435,8 @@ namespace TradeLord
             long lifetime = LedgerBehavior.Instance?.LifetimeProfit ?? 0L;
             LifetimeText = Line("{=TL66}TradeLord profit: {AMOUNT}", "AMOUNT",
                                 (lifetime >= 0 ? "+" : "") + lifetime.ToString("N0"));
+            long earned = LedgerBehavior.Instance?.LifetimeTradeXp ?? 0L;
+            TradeXpText = Line("{=TL448}Trade XP: {AMOUNT}", "AMOUNT", earned.ToString("N0"));
 
             var rows = new MBBindingList<RouteRowVM>();
             var routes = LedgerBehavior.Instance?.BestRoutes(30);
