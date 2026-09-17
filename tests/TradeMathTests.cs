@@ -985,13 +985,23 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_caravan_leaves_only_part_of_what_it_carries()
+        public void A_caravan_passing_a_town_that_pays_no_more_than_usual_leaves_nothing()
         {
-            Assert.Equal(0, TradeMath.WhatACaravanUnloads(0));
-            Assert.Equal(0, TradeMath.WhatACaravanUnloads(-5));
-            Assert.Equal(0, TradeMath.WhatACaravanUnloads(1));
-            Assert.Equal(40, TradeMath.WhatACaravanUnloads(119));
-            Assert.True(TradeMath.WhatACaravanUnloads(100) < 100);
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 1.0f, 500f, 10));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, TradeMath.ACaravanSellsAbove, 500f, 10));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 0.5f, 500f, 10));
+        }
+
+        [Fact]
+        public void A_caravan_leaves_no_more_than_the_town_daily_purse_for_that_kind_can_pay_for()
+        {
+            Assert.Equal(30, TradeMath.WhatACaravanUnloads(100, 1.2f, 1000f, 10));
+            Assert.Equal(100, TradeMath.WhatACaravanUnloads(100, 2.0f, 1000f, 10));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 1.2f, 0f, 10));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(0, 2.0f, 1000f, 10));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 2.0f, 1000f, 0));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, float.NaN, 1000f, 10));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 1.2f, float.NaN, 10));
         }
     }
 }
