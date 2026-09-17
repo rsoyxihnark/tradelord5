@@ -150,7 +150,8 @@ namespace TradeLord
         {
             if (!On || shop == null) return "";
             string made = "";
-            Guard.Run("Forecast.WillMake", () => made = Named(Output(shop, out _)));
+            Guard.Run("Forecast.WillMake",
+                      () => made = Named(Output(shop, WhatTheMarketHolds(shop.Settlement), out _)));
             return made;
         }
 
@@ -212,9 +213,10 @@ namespace TradeLord
                 if (shops == null) continue;
                 Settlement site = town.Settlement;
                 if (site == null) continue;
+                Dictionary<string, int> held = WhatTheMarketHolds(site);
                 for (int k = 0; k < shops.Length; k++)
                 {
-                    List<(ItemCategory category, int count)> made = Output(shops[k], out float progress);
+                    List<(ItemCategory category, int count)> made = Output(shops[k], held, out float progress);
                     float lands = TradeMath.RunLandsIn(progress, Projection.WorkshopRunDays);
                     for (int at = 0; at < made.Count; at++)
                     {
@@ -228,7 +230,9 @@ namespace TradeLord
             }
         }
 
-        private static List<(ItemCategory category, int count)> Output(Workshop shop, out float progress)
+        private static List<(ItemCategory category, int count)> Output(Workshop shop,
+                                                                      Dictionary<string, int> held,
+                                                                      out float progress)
         {
             progress = 0f;
             var made = new List<(ItemCategory, int)>();
@@ -236,7 +240,6 @@ namespace TradeLord
             Settlement site = shop?.Settlement;
             if (type == null || type.Productions == null || site == null) return made;
 
-            Dictionary<string, int> held = WhatTheMarketHolds(site);
             var ready = new List<(bool held, float progress)>();
             for (int i = 0; i < type.Productions.Count; i++)
             {
@@ -266,7 +269,7 @@ namespace TradeLord
         private static Dictionary<string, int> WhatTheMarketHolds(Settlement site)
         {
             var held = new Dictionary<string, int>(StringComparer.Ordinal);
-            ItemRoster stock = site.ItemRoster;
+            ItemRoster stock = site?.ItemRoster;
             if (stock == null) return held;
             for (int i = 0; i < stock.Count; i++)
             {

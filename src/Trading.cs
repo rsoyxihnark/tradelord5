@@ -445,6 +445,8 @@ namespace TradeLord
 
             internal int Spendable() => TradeActionBehavior.Spendable(Books, Sim);
 
+            internal bool WouldReachYourReserve(int price) => price >= Spendable();
+
             internal float Capacity => _capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity;
 
             internal float Carried()
@@ -1268,7 +1270,7 @@ namespace TradeLord
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (price <= 0 || price > ceiling) break;
-                        if (price >= pass.Spendable()) break;
+                        if (pass.WouldReachYourReserve(price)) break;
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
                         if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;
@@ -1567,7 +1569,7 @@ namespace TradeLord
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (price <= 0 || price > ceiling) break;
-                        if (price >= pass.Spendable()) break;
+                        if (pass.WouldReachYourReserve(price)) break;
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, HoldShareOff) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
 

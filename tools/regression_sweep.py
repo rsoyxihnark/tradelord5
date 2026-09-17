@@ -1396,7 +1396,7 @@ def restocking_runs_between_selling_and_buying():
                 in method_body(S['Trading.cs'], "public static void ExecuteResupply")
             and "if (el.Amount <= 0 || !wanted(it)) continue;" in body
             and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
-            and "price >= pass.Spendable()" in body
+            and "pass.WouldReachYourReserve(price)" in body
             and "int worth = TradePolicy.UnpaidWorth(it);" in body
             and body.count("price > ceiling") == 2
             and "int ceiling = TradeMath.MostToPayOverTheCheapest(worth, tolerance);" in body
@@ -4119,7 +4119,7 @@ def pack_animals_are_bought_between_restocking_and_the_profit_pass():
             and "if (!Options.Current.BuyHaulAnimals) return;" in body
             and "it => TradePolicy.MayHaul(it, pass.Locked)" in body
             and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
-            and "price >= pass.Spendable()" in body
+            and "pass.WouldReachYourReserve(price)" in body
             and "settlement.IsVillage && remaining <= 1" in body
             and "BuyAcceptable" not in body
             and "BestSell" not in body)
@@ -4161,7 +4161,7 @@ def a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_below_the_reser
             and "_o.HaulAnimalPriceTolerance" in M
             and "CargoIsFull" not in ALL
             and "PackAnimalFullCargoPremium" not in S['Trading.cs']
-            and "price >= pass.Spendable()" in body
+            and "pass.WouldReachYourReserve(price)" in body
             and option_default('BuyHaulAnimals') == 'true'
             and "_o.BuyHaulAnimals" in M
             and "PackAnimalFullCargoPremium" not in M
@@ -5081,7 +5081,9 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
                  "                             Options.Current.MaxSpendPerVisit, "
                  "books.PaidOut(sim));") in t
             and "private static bool Simulating => Options.Current.SimulationMode;" in t
-            and all("pass.Spendable()" in b for b in (larder, haul, buy))
+            and all("pass.WouldReachYourReserve(price)" in b for b in (larder, haul))
+            and "pass.Spendable()" in buy
+            and "price >= Spendable()" in between(t, "internal bool WouldReachYourReserve", ";")
             and t.count("simTill = pass.Till;") == 1
             and "int simTill = market.Till();" in S['Passes.cs']
             and "TillNow - Books.TillDrawn(Sim)" in between(t, "internal int Till =>", ";")
@@ -5438,8 +5440,11 @@ def the_larder_and_the_stable_leave_the_gold_reserve_whole():
     stable = pass_body("public static void ExecuteHaulage")
     capped = cap_rule()
     said = "it stops before your gold reaches your reserve"
-    return ("if (price >= pass.Spendable()) break;" in larder
-            and "if (price >= pass.Spendable()) break;" in stable
+    reserve = between(S['Trading.cs'], "internal bool WouldReachYourReserve", ";")
+    return ("if (pass.WouldReachYourReserve(price)) break;" in larder
+            and "if (pass.WouldReachYourReserve(price)) break;" in stable
+            and "price >= Spendable()" in reserve
+            and "pass.Spendable()" not in larder and "pass.Spendable()" not in stable
             and "if (price > pass.Spendable()) break;" not in S['Trading.cs']
             and "if (price > budget) return Block.BudgetSpent;" in capped
             and said in re.search(r'\{=TL321\}([^"]*)"', M).group(1)
