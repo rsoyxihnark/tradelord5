@@ -25,6 +25,7 @@ namespace TradeLord.Tests
             internal int Worth = 100;
             internal int Resale;
             internal bool Elsewhere;
+            internal bool Modified;
             internal int Reserved;
         }
 
@@ -97,6 +98,8 @@ namespace TradeLord.Tests
 
             public int PriceToSell(int at) => Cargo[at].Price;
 
+            public bool EarnsTradeXp(int at) => !Cargo[at].Modified;
+
             int ISellingMarket.Till() => Till;
 
             public int TillNow() => Till;
@@ -128,6 +131,7 @@ namespace TradeLord.Tests
         {
             internal int Units;
             internal int Profit;
+            internal int Earned;
             internal int SimGold;
             internal BlockTally Tally;
             internal Books Books;
@@ -141,6 +145,7 @@ namespace TradeLord.Tests
             Traded moved = TradePass.SellThem(market, run.Books, sim, market.Rules, run.Tally);
             run.Units = moved.Units;
             run.Profit = moved.Profit;
+            run.Earned = moved.Earned;
             run.SimGold = moved.SimGold;
             return run;
         }
@@ -377,6 +382,20 @@ namespace TradeLord.Tests
             var books = new Books();
             Assert.Equal(3, Sell(market, sim: true, books: books).Units);
             Assert.Equal(0, Sell(market, sim: true, books: books).Units);
+        }
+
+        [Fact]
+        public void A_good_with_a_modifier_is_sold_but_earns_no_trade_xp()
+        {
+            var market = new FakeMarket();
+            market.Add(Cargo("iron"), price: 200).Basis = 100;
+            market.Add(Cargo("sword"), price: 200).Modified = true;
+            market.Cargo[1].Basis = 100;
+            Run run = Sell(market);
+            Assert.Equal(2, run.Units);
+            Assert.True(run.Profit > 0);
+            Assert.True(run.Earned > 0);
+            Assert.True(run.Earned < run.Profit);
         }
     }
 }
