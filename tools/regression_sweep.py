@@ -4817,6 +4817,13 @@ def no_setting_a_player_ever_saved_is_left_stranded():
     unlisted = [name for name in now if name not in EVER_SHIPPED]
     return not stranded and not unlisted and len(EVER_SHIPPED) >= 79
 
+def every_setting_the_file_keeps_is_on_the_settings_screen():
+    bound = method_body(M, "private void Bound")
+    shown = set(re.findall(r'public\s+(?:bool|int|float|string)\s+(\w+)\s*\{\s*get\s*=>\s*_o\.\w+;', M))
+    shown |= set(re.findall(r'to\.(\w+)\)', bound))
+    kept = set(settings_now())
+    return len(kept) >= 70 and shown == kept
+
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
@@ -4921,6 +4928,8 @@ def the_lift_needs_nothing_from_the_game_and_is_covered_by_tests():
 
 chk("1.24.0", "every setting a player could have saved since the last public release is still read, or is named in the lift",
     no_setting_a_player_ever_saved_is_left_stranded())
+chk("1.27.3", "every setting TradeLord keeps is on the settings screen, and the screen carries nothing the settings file does not keep",
+    every_setting_the_file_keeps_is_on_the_settings_screen())
 chk("1.24.0", "the settings file carries its own shape, is lifted before anything is applied, and is written back once lifted",
     a_settings_file_says_which_shape_it_is_in())
 chk("1.24.0", "the lift needs nothing from the game, says nothing itself, and is covered by tests the build runs",
