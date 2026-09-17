@@ -9610,10 +9610,15 @@ def a_price_is_the_one_a_player_could_get_by_hand():
             and "StagesTheDeal" not in market
             and "if (merchantParty == null) merchantParty = TradeActionBehavior.TradingWith;" in prefix
             and trading.count("_tradingWith = merchant;") == 1
-            and trading.count("_tradingWith = null;") == 2
+            and trading.count("_tradingWith = null;") == 4
+            and all("_tradingWith = null;" in method_body(trading, one) for one in
+                    ("private static bool SwapOneUnit", "private static void InAPass",
+                     "internal static void ReleaseMessageFilter", "internal static void ForgetVisit"))
             and "if (!TradeActionBehavior.PricesAreReal()) return null;" in
                 method_body(trading, "internal static Pass Open(Settlement site, bool quiet)")
-            and "Patcher.Holds(nameof(Patch_TownMarketData_GetPrice))" in trading)
+            and "Patcher.Holds(nameof(Patch_TownMarketData_GetPrice))" in trading
+            and "return 0;" in method_body(market,
+                    "internal static int At(SettlementComponent market, EquipmentElement el, MobileParty who, bool selling)"))
 
 
 chk("1.80.12", "a price is the one a player could get by hand, in the quote, in the simulated walk and in the trade the mod makes",

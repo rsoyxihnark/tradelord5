@@ -229,8 +229,9 @@ namespace TradeLord
                     {
                         _saidItCouldNotAsk = true;
                         Log.Error(e, "asking a market its price the way the trade that follows is charged - " +
-                                     "TradeLord falls back to the market's own price");
+                                     "that good is left alone rather than priced a way you could not be charged");
                     }
+                    return 0;
                 }
             }
             return market.GetItemPrice(el, who, selling);
