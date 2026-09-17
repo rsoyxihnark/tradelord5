@@ -999,7 +999,7 @@ def the_readme_counts_the_saved_values_right():
     counted = 'a number' if numbers == 1 else words.get(numbers, 'no') + ' numbers'
     said = ('All it puts in a save is ' + words.get(tally.get('string'), 'no') +
             ' strings, ' + counted + ' and a settlement reference')
-    return (said in README and numbers == 4
+    return (said in README and numbers == 5
             and tally.get('Settlement') == 1 and 'bool' not in tally)
 
 def readme_defaults_match_the_shipped_ones():
@@ -2490,7 +2490,7 @@ chk("1.6.1", "the XP line is queued last, in amber, and is translatable",
     'internal static readonly Color Xp = new Color(1f, 0.72f, 0.20f);' in S['Notices.cs'] and
     'Notices.Say(earned, Notices.Xp);' in method_body(S['Trading.cs'], "private static void CreditTradeSkill") and
     ordered(method_body(S['Trading.cs'], "internal static void FlushToasts"),
-            "CreditTradeSkill(xp, muted)",
+            "CreditTradeSkill(xp, profit, muted)",
             "Notices.Drain();") and
     ordered(method_body(S['Notices.cs'], "internal static void Drain"),
             "_pending.AddRange(_afterXp);",
@@ -2498,7 +2498,7 @@ chk("1.6.1", "the XP line is queued last, in amber, and is translatable",
     '{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.' in S['Trading.cs'] and
     ordered(sell_pass(),
             "Notices.Say(msg, profit > 0",
-            "AwardTradeXp(profit, pass.Muted)"))
+            "AwardTradeXp(moved.Earned, pass.Muted)"))
 chk("1.6.1", "ending a campaign drops trade XP that was queued but not yet handed over",
     "_pendingXp = 0;" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.1", "the gold reserve default leaves room for two safe passages and a wage run",
@@ -3105,7 +3105,7 @@ def quiet_automation_silences_only_the_automated_lines():
             "if (!pass.Muted) Notices.Say(msg, profit > 0" in sell and
             "if (!pass.Muted) Notices.Say(msg, Notices.Spend);" in buy and
             "if (!muted) Notices.Say(earned, Notices.Xp);" in credit and
-            "AwardTradeXp(profit, pass.Muted);" in sell)
+            "AwardTradeXp(moved.Earned, pass.Muted);" in sell)
 
 def quiet_automation_leaves_the_cargo_warning_alone():
     return "Muted(" not in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
@@ -4432,7 +4432,7 @@ def the_pack_animal_line_lands_after_the_trade_skill_line():
     flush = method_body(S['Trading.cs'], "internal static void FlushToasts")
     haul = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
     forget = method_body(S['Trading.cs'], "internal static void ForgetVisit")
-    return (ordered(flush, "if (xp > 0) CreditTradeSkill(xp, muted);", "Notices.Drain();")
+    return (ordered(flush, "if (xp > 0) CreditTradeSkill(xp, profit, muted);", "Notices.Drain();")
             and ordered(method_body(S['Notices.cs'], "internal static void Drain"),
                         "_pending.AddRange(_afterXp);", "_afterXp.Clear();",
                         "if (_pending.Count == 0) return;")
@@ -5361,7 +5361,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
                         "LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));",
                         'dataStore.SyncData("TradeLord_LedgerText"')
             and trade.count("dataStore.SyncData(") == 2
-            and ledger.count("dataStore.SyncData(") == 8)
+            and ledger.count("dataStore.SyncData(") == 9)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
     arrays = dict(re.findall(r'private static readonly string\[\] (\w+) =\s*\{(.*?)\};', M, re.S))
@@ -5404,11 +5404,13 @@ def getting_back_up_to_speed_credits_what_it_makes():
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
     return ("Basis basis = Basis.For(TradePolicy.CostBasis(item)," in relief
             and "int worth = basis.Unit(out bool askTheMarket);" in relief
-            and "profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);" in relief
+            and "int credited = TradePolicy.Credit(price, worth, basis.UnpaidWorth);" in relief
+            and "profit += credited;" in relief
+            and "if (el.EquipmentElement.ItemModifier == null) earned += credited;" in relief
             and "pass.Moved(profit, gained, selling: true);" in relief
             and "if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);" in
                 method_body(S['Trading.cs'], "internal void Moved")
-            and "if (!pass.Sim && profit > 0) AwardTradeXp(profit, pass.Muted);" in relief
+            and "if (!pass.Sim && earned > 0) AwardTradeXp(earned, pass.Muted);" in relief
             and relief.count("LedgerBehavior.Instance?.RecordSale(item.StringId, 1);") == 1)
 
 def the_rankings_are_dropped_when_the_party_moves_not_only_when_the_hour_turns():
@@ -5507,7 +5509,7 @@ def a_meeting_on_the_road_answers_to_the_silence_setting():
             and "if (StillSettling(Muted(automated: true))) return;" in
                 method_body(t, "public static void ExecuteRoadTrade")
             and "if (!quiet)" in method_body(t, "private static bool StillSettling")
-            and "AwardTradeXp(profit, pass.Muted);" in sell
+            and "AwardTradeXp(moved.Earned, pass.Muted);" in sell
             and "AwardTradeXp(profit, false)" not in t
             and named in re.search(r'\{=TL349\}([^"]*)"', M).group(1)
             and named in spoken(ENGLISH)['TL349'])
@@ -8497,11 +8499,13 @@ def the_deal_you_took_is_reported_and_credited_like_any_pass():
             and ordered(reckon, "int count = Deals.UnitsMoved(el.Amount, said, price);",
                         "took.Gold += said;",
                         "TradeMath.Credit(price, TradePolicy.WorthToBeat(item),",
+                        "if (el.EquipmentElement.ItemModifier == null) took.Earned += credited;",
                         "pass.Tally(item, count, said);",
-                        "took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);")
+                        "took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);",
+                        "took.Earned = Deals.NoMoreThanTheSale(took.Earned, took.Gold);")
             and "gained += price * count;" not in t and "spent += price * count;" not in t
             and ordered(sold, "pass.Moved(addsUp ? (int?)got.Profit : null, got.Gold, selling: true);",
-                        "{=TL02}", "if (addsUp && got.Profit > 0) AwardTradeXp(got.Profit, pass.Muted);")
+                        "{=TL02}", "if (addsUp && got.Earned > 0) AwardTradeXp(got.Earned, pass.Muted);")
             and ordered(ledger, "if (Counter.Awaiting)",
                         "TradeActionBehavior.TookTheDeal(purchased, sold)",
                         "foreach (var (element, said) in sold)")
@@ -9630,6 +9634,42 @@ chk("1.80.12", "the mod trades nothing in a settlement when it could not take th
     (method_body(S['Trading.cs'], "internal static Pass Open(Settlement site, bool quiet)")) and
     "trading in towns and villages is off" in S['Trading.cs'] and
     S['Trading.cs'].count("PricesAreReal()") == 2)
+
+
+def trade_xp_is_earned_the_way_a_sale_by_hand_earns_it():
+    t = S['Trading.cs']
+    passes = S['Passes.cs']
+    credit = method_body(t, "private static void CreditTradeSkill")
+    return ("internal int Earned;" in passes
+            and "internal int Earned;" in t
+            and "bool EarnsTradeXp(int at);" in passes
+            and "public bool EarnsTradeXp(int at) => _plan[at].EquipmentElement.ItemModifier == null;" in t
+            and passes.count("if (market.EarnsTradeXp(at))") == 2
+            and t.count("AwardTradeXp(") == 4
+            and "AwardTradeXp(profit" not in t
+            and "CampaignEventDispatcher.Instance.OnPlayerTradeProfit(profit)" in credit
+            and "LedgerBehavior.Instance?.AddTradeXp(xp);" in credit)
+
+
+def the_ledger_keeps_the_trade_xp_it_has_handed_over():
+    ledger = S['Ledger.cs']
+    panel = S['Panel.cs']
+    return ("public long LifetimeTradeXp => _lifetimeTradeXp;" in ledger
+            and "public void AddTradeXp(int amount) { if (amount > 0) _lifetimeTradeXp += amount; }" in ledger
+            and 'dataStore.SyncData("TradeLord_LifetimeTradeXp", ref _lifetimeTradeXp);' in
+                method_body(ledger, "public override void SyncData")
+            and ordered(method_body(panel, "private void Refresh"),
+                        "LifetimeText = Line(", "TradeXpText = Line(")
+            and '{=TL448}Trade XP: {AMOUNT}' in panel
+            and said_in_every_language('TL448')
+            and ordered(PREFAB, 'Text="@LifetimeText"', 'Text="@TradeXpText"'))
+
+
+chk("1.81.0", "trade XP is earned only where a sale by hand would earn it, and the game's own trade profit event is raised",
+    trade_xp_is_earned_the_way_a_sale_by_hand_earns_it())
+
+chk("1.81.0", "the ledger keeps the trade XP it has handed over and shows it beside the profit",
+    the_ledger_keeps_the_trade_xp_it_has_handed_over())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

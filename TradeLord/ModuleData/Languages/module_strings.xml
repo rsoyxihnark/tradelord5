@@ -293,5 +293,6 @@
 		<string id="TL445" text=" | Score is lowered for a market that has paid less than this panel promised"/>
 		<string id="TL446" text="?"/>
 		<string id="TL447" text=" | stock counts what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there; prices need Bulk price simulation"/>
+		<string id="TL448" text="Trade XP: {AMOUNT}" />
 	</strings>
 </base>
