@@ -34,6 +34,7 @@ namespace TradeLord
 
         internal static bool WithinCeiling(bool village, float days, Options s)
         {
+            if (TradeMath.OutOfReach(days)) return false;
             float cap = Ceiling(village, s);
             return cap <= 0f || days <= cap;
         }
