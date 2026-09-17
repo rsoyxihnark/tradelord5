@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using HarmonyLib;
 using TaleWorlds.CampaignSystem.Inventory;
@@ -15,6 +16,8 @@ namespace TradeLord
     internal static class TooltipHelper
     {
         private const int TopN = 5;
+
+        private static readonly string[] Clauses = { " | " };
 
         private const string GoldIcon = "<img src=\"General\\Icons\\Coin@2x\" extend=\"4\">";
         private static readonly Color Title = new Color(0.95f, 0.85f, 0.5f, 1f);
@@ -110,10 +113,11 @@ namespace TradeLord
 
             if (buys.Count == 0 && sells.Count > 0 && Options.Current.MinTownStock > 0)
             {
-                TextObject none = Tongue.Text("{=TL450}No market in reach stocks {COUNT} or more of this, which is what Minimum stock for buy suggestions asks for. Lower it to see where to buy this.");
+                TextObject none = Tongue.Text("{=TL450}No market in reach stocks {COUNT} or more. | Minimum stock for buy suggestions asks for that. | Lower it to see where to buy this.");
                 none.SetTextVariable("COUNT", Options.Current.MinTownStock);
                 AddLine(vm, Tongue.Text("{=TL21}Best buy prices").ToString(), "", Title);
-                AddLine(vm, "", none.ToString(), Warn);
+                foreach (string clause in none.ToString().Split(Clauses, StringSplitOptions.RemoveEmptyEntries))
+                    AddLine(vm, "", clause, Warn);
             }
 
             if (buys.Count > 0)

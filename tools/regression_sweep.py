@@ -9918,6 +9918,15 @@ def an_empty_best_buy_list_says_why_it_is_empty():
             and "{=TL450}" in append
             and 'none.SetTextVariable("COUNT", Options.Current.MinTownStock);' in append
             and append.find("buys.Count == 0") < append.find("if (buys.Count > 0)")
+            and 'private static readonly string[] Clauses = { " | " };' in S['TooltipPatches.cs']
+            and "foreach (string clause in none.ToString().Split(Clauses, "
+                "StringSplitOptions.RemoveEmptyEntries))" in append
+            and 'AddLine(vm, "", clause, Warn);' in append
+            and all(len(one.strip()) <= 60
+                    for one in spoken(ENGLISH)['TL450'].split(" | "))
+            and spoken(ENGLISH)['TL450'].count(" | ") == 2
+            and all(said.count(" | ") == 2
+                    for said in (spoken(path)['TL450'] for path in TRANSLATIONS.values()))
             and said_in_every_language('TL450'))
 
 
