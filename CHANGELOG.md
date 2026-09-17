@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.81.1
+
+- A deal you take on the trade screen is reported to the rest of your game once rather than twice, because the game already reports it itself.
+
 ## 1.81.0
 
 - The ledger now shows the Trade XP TradeLord has earned you, beside the profit, and keeps it in your save.
