@@ -489,6 +489,11 @@ namespace TradeLord
         internal static int WhatTheTillCanPay(int till, bool village) =>
             Math.Max(0, village ? till - VillageLastCoin : till);
 
+        internal const int VillagePurse = 1000;
+
+        internal static int PutBackIntoAnEmptyPurse(int gold) =>
+            gold <= 0 ? VillagePurse - gold : 0;
+
         internal static int WorthToBeat(in Good good, int paid, int unpaidWorth) =>
             paid > 0 || !TradedAsMerchandise(good) ? paid : unpaidWorth;
 

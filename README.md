@@ -6,7 +6,7 @@
 
 ## Everything it does
 
-- ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is five strings, five numbers and a settlement reference, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
+- ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is five strings, five numbers, a switch and a settlement reference, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
 
 **What it tells you**
 
@@ -53,6 +53,7 @@
 - ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
 - ✅ Credits every companion riding with you a share of that same profit as Trade XP, at a share you set, so a trading clan learns from the run as well as its lord. Off out of the box, so the XP is yours alone until you ask for it
 - ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good and the last coin in its purse, so its shop stays open
+- ✅ Puts 1000 denars back in every village left with an empty purse, once for a campaign, the first time you enter it, so a village an older version spent out can be traded with again, and it says on screen how many it refilled
 - ✅ Trade with towns and Trade with villages each switch their own kind of market off, so TradeLord can work villages alone, towns alone, or leave both markets to you
 - ✅ Trades with a caravan or a party of villagers the moment you meet them on the road, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of their own purse. A party on the road is held to every rule a market visit is: it sells your looted gear when the goods you bought fall short of your margin, it holds your cargo back for the best market if you asked for that, it can never sell you enough livestock to drop you into the herd speed penalty, your caps on how many of a good you hold and what share of the hold it may fill both apply, and the settling delay keeps it away from a brand new campaign. Meeting that same party again keeps the books of what was already traded with them, so it never buys back what it has just sold them and what it spent still counts against its caps. Once the goods have changed hands you can say so, and the trader answers
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC

@@ -294,5 +294,6 @@
 		<string id="TL446" text="？"/>
 		<string id="TL447" text=" | 库存已计入你到达前商队与工坊会给市场添上的东西，并扣除商队钱袋预计会在那里买走的部分；价格需要开启“整批价格模拟”"/>
 		<string id="TL448" text="交易经验：{AMOUNT}" />
+		<string id="TL449" text="TradeLord 为 {COUNT} 个空了的村庄钱袋补上了钱，这些村庄商店又能交易了。"/>
 	</strings>
 </base>
