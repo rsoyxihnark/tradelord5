@@ -37,9 +37,18 @@ namespace TradeLord
             if (ledger == null) return (null, null, null);
             ScreenMarkets.Prime();
 
-            var sells = ledger.TopSell(item, TopN);
-            var buys = ledger.TopBuy(item, TopN);
+            var sells = ledger.TopSell(item, MarketRank.TopCacheSize);
+            var buys = ledger.TopBuy(item, MarketRank.TopCacheSize);
+            AsTheyWillBe(item, sells, selling: true);
+            AsTheyWillBe(item, buys, selling: false);
+            KeepTheBest(sells);
+            KeepTheBest(buys);
             return sells.Count == 0 && buys.Count == 0 ? (null, null, null) : (item, sells, buys);
+        }
+
+        private static void KeepTheBest(List<(Settlement town, int price)> markets)
+        {
+            if (markets.Count > TopN) markets.RemoveRange(TopN, markets.Count - TopN);
         }
 
         private static bool Sectioned(ItemVM itemVm)
@@ -64,8 +73,6 @@ namespace TradeLord
             var (item, sells, buys) = Markets(itemVm);
             if (item == null) return;
             var ledger = LedgerBehavior.Instance;
-            AsTheyWillBe(item, sells, selling: true);
-            AsTheyWillBe(item, buys, selling: false);
 
             AddSeparator(vm);
 
