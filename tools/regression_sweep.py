@@ -6956,7 +6956,7 @@ def a_workshop_run_moves_the_price_of_its_kind_and_never_the_stock_of_one_good()
             and "if (landing.Category != category) continue;" in
                 method_body(S['Projection.cs'], "internal static int WorthLanding")
             and "Worth_landing_goes_by_the_kind_of_good_not_the_good" in PROJECTIONTESTS
-            and "TradeRules.InputsHeld(needs, held)" in S['Forecast.cs']
+            and "TradeRules.InputsHeld(_needs, held)" in S['Forecast.cs']
             and "int pick = TradeRules.RunsSoonest(ready);" in S['Forecast.cs'])
 
 def the_walk_starts_from_what_the_market_will_hold_when_you_get_there():
@@ -7423,6 +7423,24 @@ def what_a_workshop_makes_is_valued_at_the_good_that_town_stocks():
             and "_standsForAt.Clear();" in method_body(f, "private static void Build")
             and "TradeMath.StandsBetter" in MATHTESTS)
 
+
+def reading_what_the_shops_will_make_leaves_nothing_behind_to_clear_away():
+    f = S['Forecast.cs']
+    out = method_body(f, "private static List<(ItemCategory category, int count)> Output")
+    stands = method_body(f, "private static ItemObject StandsForAt")
+    return ("private static readonly List<(string, int)> _needs = new List<(string, int)>();" in f
+            and "_needs.Clear();" in out
+            and "_needs.Add((category == null ? null : category.StringId, count));" in out
+            and "TradeRules.InputsHeld(_needs, held)" in out
+            and "new List<(string, int)>()" not in out
+            and "private static readonly Dictionary<(string site, string category), ItemObject> _standsForAt =" in f
+            and "var key = (site.StringId, category.StringId);" in stands
+            and 'site.StringId + "/"' not in f
+            and "_standsForAt.Clear();" in method_body(f, "private static void Build"))
+
+
+chk("1.81.5", "an hour's reading of what the workshops will make builds up no list or key of its own to be cleared away afterwards",
+    reading_what_the_shops_will_make_leaves_nothing_behind_to_clear_away())
 
 chk("1.64.1", "how much a market pulls in all is added up once an hour rather than once for every good priced",
     the_pull_across_a_market_is_added_up_once_an_hour())
