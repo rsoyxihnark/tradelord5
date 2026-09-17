@@ -354,6 +354,8 @@ namespace TradeLord
 
         internal static string Tally() => Tallies.Of(Applied.Count, Refused);
 
+        internal static bool Holds(string patchClass) => Applied.Contains(patchClass);
+
         internal static void TryPatch(Harmony harmony, Type patchClass)
         {
             try

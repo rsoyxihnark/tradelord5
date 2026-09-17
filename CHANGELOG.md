@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.80.12
+
+- TradeLord now buys and sells at the price the trade screen would charge you yourself, so what it earns you is what your own hands would earn.
+- A village pays about half for what you sell, the way it always has at the trade screen, so TradeLord goes back to passing over most village sales.
+- Trading with a faction you are at war with costs what it costs you by hand, rather than the peacetime price.
+- TradeLord trades nothing in a town or a village if it cannot read the price you would be charged, rather than trading at a price you could not get.
+
 ## 1.80.11
 
 - Recent trades is now kept in your save, so the last twenty buys and sells are still listed when you load the campaign again instead of starting empty every time.

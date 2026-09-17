@@ -79,6 +79,26 @@ namespace TradeLord
 
         internal static bool InGameTransaction => _transactionDepth > 0;
 
+        private static PartyBase _tradingWith;
+
+        internal static PartyBase TradingWith => _tradingWith;
+
+        private static bool _saidPricesAreNotReal;
+
+        internal static bool PricesAreReal()
+        {
+            if (Patcher.Holds(nameof(Patch_TownMarketData_GetPrice))) return true;
+            if (!_saidPricesAreNotReal)
+            {
+                _saidPricesAreNotReal = true;
+                Log.Write("trading in towns and villages is off: TradeLord could not take over the price a " +
+                          "trade is charged at, so it would pay you a price you could not get at the trade " +
+                          "screen yourself. It trades nothing in a settlement until that is fixed. Trading " +
+                          "with a party on the road is unaffected.");
+            }
+            return false;
+        }
+
         private static void OpenTransaction() => _transactionDepth++;
 
         private static void CloseTransaction()
@@ -86,12 +106,14 @@ namespace TradeLord
             if (_transactionDepth > 0) _transactionDepth--;
         }
 
-        private static bool SwapOneUnit(bool selling, Action swap, string what, string pass, out int gold)
+        private static bool SwapOneUnit(bool selling, Action swap, PartyBase merchant,
+                                        string what, string pass, out int gold)
         {
             int before = Hero.MainHero.Gold;
+            _tradingWith = merchant;
             OpenTransaction();
             try { swap(); }
-            finally { CloseTransaction(); }
+            finally { CloseTransaction(); _tradingWith = null; }
             gold = selling ? Hero.MainHero.Gold - before : before - Hero.MainHero.Gold;
             if (gold >= 0) return true;
             Log.Write("ERROR: " + what + (selling ? " removed " : " added ") + (-gold) +
@@ -103,7 +125,13 @@ namespace TradeLord
         {
             AutomatedTradeInProgress = true;
             try { work(); }
-            finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }
+            finally
+            {
+                AutomatedTradeInProgress = false;
+                _transactionDepth = 0;
+                _tradingWith = null;
+                ReportSilenced();
+            }
         }
 
         internal static void ReleaseMessageFilter()
@@ -358,6 +386,7 @@ namespace TradeLord
 
             internal static Pass Open(Settlement site, bool quiet)
             {
+                if (!TradeActionBehavior.PricesAreReal()) return null;
                 if (!MarketOpen(site, TradeActionBehavior.Muted(quiet))) return null;
                 MobileParty party = MobileParty.MainParty;
                 return party == null ? null : new Pass(site, null, null, Visit, party, quiet);
@@ -471,7 +500,7 @@ namespace TradeLord
 
             private bool Swap(bool selling, Action swap, string what, string named, out int gold)
             {
-                if (SwapOneUnit(selling, swap, what, named, out gold)) return true;
+                if (SwapOneUnit(selling, swap, Site == null ? null : Shop, what, named, out gold)) return true;
                 DirectionError = true;
                 return false;
             }

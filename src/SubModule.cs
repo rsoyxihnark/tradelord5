@@ -26,6 +26,7 @@ namespace TradeLord
 
             var harmony = new Harmony(HarmonyId);
 
+            Patcher.TryPatch(harmony, typeof(Patch_TownMarketData_GetPrice));
             Patcher.TryPatch(harmony, typeof(Patch_ItemMenuVM_RefreshItemTooltips));
             Patcher.TryPatch(harmony, typeof(Patch_SuppressVanillaTradeLines));
             Patcher.TryPatch(harmony, typeof(Patch_SPItemVM_UpdateProfitType));

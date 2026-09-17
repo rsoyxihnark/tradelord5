@@ -187,15 +187,15 @@ def workflow_reads_the_manifest_version():
 def harmony_targets():
     found = []
     for t, m, kind in re.findall(
-            r'\[HarmonyPatch\(typeof\((\w+)\), "(\w+)"(?:,\s*MethodType\.(\w+))?\)\]', ALL):
+            r'\[HarmonyPatch\(typeof\((\w+)\), "(\w+)"(?:,\s*MethodType\.(\w+))?.*?\)\]', ALL, re.S):
         name = 'get_' + m if kind == 'Getter' else 'set_' + m if kind == 'Setter' else m
         found.append(t + '.' + name)
     return sorted(found)
 
 def every_declared_patch_is_installed():
     declared = sorted(re.findall(
-        r'\[HarmonyPatch\(typeof\(\w+\), "\w+"(?:,\s*MethodType\.\w+)?\)\]\s*'
-        r'internal static class (\w+)', ALL))
+        r'\[HarmonyPatch\(typeof\(\w+\), "\w+"(?:,\s*MethodType\.\w+)?.*?\)\]\s*'
+        r'internal static class (\w+)', ALL, re.S))
     installed = sorted(re.findall(
         r'Patcher\.TryPatch\(harmony, typeof\((\w+)\)\)', S['SubModule.cs']))
     return len(declared) > 0 and declared == installed and len(harmony_targets()) == len(declared)
@@ -204,7 +204,8 @@ def compat_list(name):
     m = re.search(re.escape(name) + r'\s*=\s*\{(.*?)\};', COMPAT, re.S)
     return None if m is None else sorted(
         t.split('.')[-1] + '.' + member for t, member in
-        re.findall(r'\(\s*(?:(?:Inventory|Issues) \+ )?"([\w.+]+)"\s*,\s*"(\w+)"\s*\)', m.group(1)))
+        re.findall(r'\(\s*(?:(?:Inventory|Issues) \+ )?"([\w.+]+)"\s*,\s*"(\w+)"\s*(?:,[^)]*)?\)',
+                   m.group(1)))
 
 def compat_checks_every_game_hook():
     reflected = sorted({t.split('.')[-1] + '.' + m for t, m in
@@ -1059,7 +1060,8 @@ PLAIN_SAVED_TYPES = {'string', 'int', 'long', 'bool', 'float', 'Settlement'}
 def the_filter_is_armed_only_around_a_game_call_that_talks():
     t = S['Trading.cs']
     armed = re.findall(r'OpenTransaction\(\);\s*try \{ ([\w\.]+)\([^)]*\); \}\s*'
-                       r'finally \{ CloseTransaction\(\);( ReportSilenced\(\);)? \}', t)
+                       r'finally \{ CloseTransaction\(\);(?: _tradingWith = null;)?'
+                       r'( ReportSilenced\(\);)? \}', t)
     return (t.count('OpenTransaction();') == len(armed) == 2
             and sorted(c for c, _ in armed) == ['SkillLevelingManager.OnTradeProfitMade', 'swap']
             and sorted(re.findall(r'\(Action\)\(\(\) => ([\w\.]+)\(', t)) ==
@@ -1068,7 +1070,7 @@ def the_filter_is_armed_only_around_a_game_call_that_talks():
                 ['HandOver', 'TakeDelivery']
             and sorted(re.findall(r'\bSwap\((?:true|false), (_\w+),', t)) ==
                 ['_buyUnit', '_sellUnit']
-            and t.count("SwapOneUnit(selling, swap, what, named, out gold)") == 1
+            and t.count("SwapOneUnit(selling, swap, Site == null ? null : Shop, what, named, out gold)") == 1
             and 'InGameTransaction = true' not in t
             and 'if (!TradeActionBehavior.InGameTransaction) return true;' in t
             and 'AutomatedTradeInProgress' not in
@@ -1513,7 +1515,7 @@ chk("1.3.2", "a transaction that moves gold the wrong way stops the pass instead
     (method_body(S['Trading.cs'], "private static bool SwapOneUnit")) and
     S['Trading.cs'].count("SwapOneUnit(") == 2 and
     ordered(method_body(S['Trading.cs'], "private bool Swap(bool selling"),
-            "if (SwapOneUnit(selling, swap, what, named, out gold)) return true;",
+            "if (SwapOneUnit(selling, swap, Site == null ? null : Shop, what, named, out gold)) return true;",
             "DirectionError = true;", "return false;") and
     S['Trading.cs'].count("DirectionError = true;") == 1 and
     all("if (pass.DirectionError" in method_body(S['Trading.cs'], one) for one in
@@ -2349,8 +2351,9 @@ chk("1.5.6", "the message filter is armed only around a game call that talks bac
     the_filter_is_armed_only_around_a_game_call_that_talks())
 chk("1.5.6", "every place the filter comes down logs how many messages it suppressed",
     S['Trading.cs'].count("ReportSilenced();") == 3 and
-    "finally { AutomatedTradeInProgress = false; _transactionDepth = 0; ReportSilenced(); }" in
-        method_body(S['Trading.cs'], "private static void InAPass") and
+    (lambda b: ordered(b, "AutomatedTradeInProgress = false;", "_transactionDepth = 0;",
+                       "_tradingWith = null;", "ReportSilenced();"))
+        (method_body(S['Trading.cs'], "private static void InAPass")) and
     "ReportSilenced();" in method_body(S['Trading.cs'], "internal static void ReleaseMessageFilter") and
     "finally { CloseTransaction(); ReportSilenced(); }" in
         method_body(S['Trading.cs'], "private static void CreditTradeSkill") and
@@ -9592,20 +9595,35 @@ chk("1.80.6", "the panel says a price counts what is on its way only where that 
     a_setting_that_leans_on_another_names_it_in_every_language())
 
 
-def a_price_is_read_the_way_the_trade_that_follows_it_is_charged():
+def a_price_is_the_one_a_player_could_get_by_hand():
     market = S['Market.cs']
+    trading = S['Trading.cs']
     asked = method_body(market,
                         "internal static int At(SettlementComponent market, EquipmentElement el, MobileParty who, bool selling)")
     walk = method_body(market, "internal int Price()")
+    prefix = method_body(market, "private static void Prefix(ref PartyBase merchantParty)")
     return ("held.GetPrice(el, who, selling, Merchant(site))" in asked
             and "_element, MobileParty.MainParty, _party, _selling," in walk
             and "_party = Priced.Merchant(site);" in market
-            and "site != null && TradeRules.StagesTheDeal(Options.Current) ? site.Party : null;" in market
-            and market.count("site.Party") == 1)
+            and "internal static PartyBase Merchant(Settlement site) => site?.Party;" in market
+            and "StagesTheDeal" not in market
+            and "if (merchantParty == null) merchantParty = TradeActionBehavior.TradingWith;" in prefix
+            and trading.count("_tradingWith = merchant;") == 1
+            and trading.count("_tradingWith = null;") == 2
+            and "if (!TradeActionBehavior.PricesAreReal()) return null;" in
+                method_body(trading, "internal static Pass Open(Settlement site, bool quiet)")
+            and "Patcher.Holds(nameof(Patch_TownMarketData_GetPrice))" in trading)
 
 
-chk("1.80.10", "a merchant is named only where the trade screen will do the trading, in the quote and in the simulated walk alike",
-    a_price_is_read_the_way_the_trade_that_follows_it_is_charged())
+chk("1.80.12", "a price is the one a player could get by hand, in the quote, in the simulated walk and in the trade the mod makes",
+    a_price_is_the_one_a_player_could_get_by_hand())
+
+chk("1.80.12", "the mod trades nothing in a settlement when it could not take the price over",
+    (lambda b: ordered(b, "if (!TradeActionBehavior.PricesAreReal()) return null;",
+                       "if (!MarketOpen(site"))
+    (method_body(S['Trading.cs'], "internal static Pass Open(Settlement site, bool quiet)")) and
+    "trading in towns and villages is off" in S['Trading.cs'] and
+    S['Trading.cs'].count("PricesAreReal()") == 2)
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

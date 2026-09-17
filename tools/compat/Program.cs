@@ -18,16 +18,18 @@ namespace TradeLord.Compat
 
         private const string Issues = "TaleWorlds.CampaignSystem.Issues.";
 
-        private static readonly (string type, string member)[] HarmonyTargets =
+        private static readonly (string type, string member, string[] takes)[] HarmonyTargets =
         {
-            (Inventory + "ItemMenuVM", "RefreshItemTooltips"),
-            (Inventory + "ItemMenuVM", "SetMerchandiseComponentTooltip"),
-            (Inventory + "SPItemVM", "UpdateProfitType"),
-            ("TaleWorlds.Library.InformationManager", "DisplayMessage"),
+            (Inventory + "ItemMenuVM", "RefreshItemTooltips", null),
+            (Inventory + "ItemMenuVM", "SetMerchandiseComponentTooltip", null),
+            (Inventory + "SPItemVM", "UpdateProfitType", null),
+            ("TaleWorlds.Library.InformationManager", "DisplayMessage", null),
             ("TaleWorlds.CampaignSystem.GameComponents.DefaultWorkshopModel",
-                "GetMaxWorkshopCountForClanTier"),
+                "GetMaxWorkshopCountForClanTier", null),
             ("TaleWorlds.CampaignSystem.GameComponents.DefaultWorkshopModel",
-                "get_MaximumWorkshopsPlayerCanHave"),
+                "get_MaximumWorkshopsPlayerCanHave", null),
+            ("TaleWorlds.CampaignSystem.Settlements.TownMarketData", "GetPrice",
+                new[] { "EquipmentElement", "MobileParty", "Boolean", "PartyBase" }),
         };
 
         private static readonly (string type, string member)[] ReflectedMethods =
@@ -304,6 +306,15 @@ namespace TradeLord.Compat
             return found;
         }
 
+        private static bool Takes(MethodInfo m, string[] takes)
+        {
+            ParameterInfo[] had = m.GetParameters();
+            if (had.Length != takes.Length) return false;
+            for (int i = 0; i < takes.Length; i++)
+                if (had[i].ParameterType.Name != takes[i]) return false;
+            return true;
+        }
+
         private static string Signature(MethodInfo m)
         {
             string parameters;
@@ -413,14 +424,16 @@ namespace TradeLord.Compat
         private static void CheckHarmonyTargets(List<string> versions)
         {
             Console.WriteLine("== Harmony patch targets - resolved by name at runtime, so a clean build proves nothing ==");
-            foreach (var (type, member) in HarmonyTargets)
+            foreach (var (type, member, takes) in HarmonyTargets)
             {
-                string label = type.Split('.').Last() + "." + member;
+                string label = type.Split('.').Last() + "." + member
+                             + (takes == null ? "" : "(" + string.Join(", ", takes) + ")");
                 bool ok = true;
                 string first = null;
                 foreach (string v in versions)
                 {
                     var found = WhereHarmonyLooks(v, type, member);
+                    if (takes != null) found = found.FindAll(m => Takes(m, takes));
                     if (found.Count == 0) { Failures.Add(label + " is gone in " + v); ok = false; continue; }
                     if (found.Count > 1)
                     {
