@@ -7082,7 +7082,7 @@ chk("1.61.0", "what a market will hold when you get there is what lands there le
 
 def a_tooltip_prices_a_market_as_it_will_be_when_you_get_there():
     shift = method_body(S['TooltipPatches.cs'], "private static void AsTheyWillBe")
-    append = method_body(S['TooltipPatches.cs'], "internal static void Append(ItemMenuVM vm, ItemVM itemVm)")
+    picked = between(S['TooltipPatches.cs'], "ScreenMarkets.Prime();", "private static void KeepTheBest")
     first = method_body(S['Market.cs'], "internal static int FirstUnit")
     return (ordered(shift,
                     "if (!Forecast.On || markets == null || markets.Count == 0) return;",
@@ -7090,12 +7090,32 @@ def a_tooltip_prices_a_market_as_it_will_be_when_you_get_there():
                     "Bulk.FirstUnit(town, item, selling, price,",
                     "Forecast.WorthShift(town, item, days)));",
                     "markets.Sort(")
-            and "AsTheyWillBe(item, sells, selling: true);" in append
-            and "AsTheyWillBe(item, buys, selling: false);" in append
+            and "AsTheyWillBe(item, sells, selling: true);" in picked
+            and "AsTheyWillBe(item, buys, selling: false);" in picked
             and "if (landed == 0 || site == null || item == null) return quoted;" in first
             and "return rung.Walkable ? rung.At(0) : quoted;" in first
             and "a price in a tooltip" in spoken(ENGLISH)['TL396'])
 
+
+def the_tooltip_picks_its_five_after_the_forecast_has_priced_them():
+    tip = S['TooltipPatches.cs']
+    markets = method_body(tip, "private static (ItemObject item, List<(Settlement town, int price)> sells,")
+    keep = method_body(tip, "private static void KeepTheBest")
+    append = method_body(tip, "internal static void Append(ItemMenuVM vm, ItemVM itemVm)")
+    return ("ledger.TopSell(item, MarketRank.TopCacheSize);" in markets
+            and "ledger.TopBuy(item, MarketRank.TopCacheSize);" in markets
+            and ordered(markets,
+                        "ledger.TopSell(item, MarketRank.TopCacheSize);",
+                        "AsTheyWillBe(item, sells, selling: true);",
+                        "KeepTheBest(sells);")
+            and "if (markets.Count > TopN) markets.RemoveRange(TopN, markets.Count - TopN);" in keep
+            and "AsTheyWillBe" not in append
+            and "TopSell(item, TopN)" not in tip
+            and "TopBuy(item, TopN)" not in tip)
+
+
+chk("1.81.9", "the item tooltip picks the five markets it shows after the forecast has priced every one it ranked, so a market the forecast marks down loses its place to a better one instead of keeping it",
+    the_tooltip_picks_its_five_after_the_forecast_has_priced_them())
 
 chk("1.62.0", "a market in a tooltip is priced as it will be when you get there, through the same forecast the ledger panel reads, and the five are ordered on those prices",
     a_tooltip_prices_a_market_as_it_will_be_when_you_get_there())
@@ -8905,7 +8925,8 @@ def the_markets_behind_a_screen_are_priced_once_for_the_screen():
                     "Gather(here == null ? null : here.ItemRoster, goods);",
                     "if (goods.Count > 0) ledger.PrimeMarketsFor(goods);")
             and "if (item != null && TradePolicy.Priced(item)) goods.Add(item);" in gather
-            and ordered(markets, "ScreenMarkets.Prime();", "ledger.TopSell(item, TopN)")
+            and ordered(markets, "ScreenMarkets.Prime();",
+                        "ledger.TopSell(item, MarketRank.TopCacheSize)")
             and ordered(coloured, "ScreenMarkets.Prime();", "ledger.BestBuy(item)")
             and ordered(method_body(tip, "private static bool Sectioned"),
                         "ScreenMarkets.Prime();", "ledger.AnyMarketFor(item)")
