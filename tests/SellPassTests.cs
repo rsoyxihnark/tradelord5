@@ -98,7 +98,7 @@ namespace TradeLord.Tests
 
             public int PriceToSell(int at) => Cargo[at].Price;
 
-            public bool EarnsTradeXp(int at) => !Cargo[at].Modified;
+            public bool TheGameGivesTradeXpFor(int at) => !Cargo[at].Modified;
 
             int ISellingMarket.Till() => Till;
 
