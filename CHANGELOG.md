@@ -520,10 +520,19 @@
 
 ## 1.50.1
 
-- One-time settings override for this version only; due to so many improvements made into whole Trade Engine and couple defaults tweaked better
+- The reset in 1.50.0 did not stick if you have MCM installed, because the settings screen keeps a copy of its own and handed your old settings straight back a few seconds after the game started.
+- TradeLord now puts the settings screen's own copy back to what it ships with as well, so the reset holds.
+- Because 1.50.0's reset never took, every setting goes back to the value TradeLord ships with once more, the first time you run this version.
+- Anything you had set is written into TradeLord.log as it happens, named setting by setting, so you can put back the ones you want.
+- Your never sell, always sell, never buy and always buy lists are emptied by that reset along with everything else.
+- This happens on this version only and never again on a later one.
 
 ## 1.50.0
 
+- Every setting goes back to the value TradeLord ships with, once, the first time you run this version, because the settings it ships with now trade better out of the box than they used to.
+- Anything you had set yourself is written into TradeLord.log as it happens, named setting by setting, so you can put back the ones you want.
+- Your never sell, always sell, never buy and always buy lists are emptied by that reset along with everything else.
+- This happens on this version only and never again on a later one.
 - Getting your party back up to speed no longer sells the animals Restock and keep food (days of supply) is holding back for your men.
 - Where your herd is also your food, that can now leave the herd speed penalty in place rather than eat into the reserve, and TradeLord.log says the penalty is still there.
 - An animal on your always-sell list is still sold to get you back up to speed, because the food reserve never holds one of those back.
@@ -1105,11 +1114,11 @@
 
 ## 1.16.0
 
-- Keeping some of every kind of food is now a switch, with its own setting for how many of each to keep, starting at three.
+- Keeping some of every kind of food is now a switch you turn on, with how many to keep set separately and starting at three of each.
 
 ## 1.15.0
 
-- TradeLord can now hold back a few of every kind of food you carry, so auto-selling no longer costs your party its food variety morale bonus.
+- TradeLord can now hold back a few of every kind of food you carry, so selling your stores no longer costs your party the morale bonus it gets from eating a variety of things.
 
 ## 1.14.5
 
