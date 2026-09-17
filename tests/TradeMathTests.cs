@@ -954,5 +954,44 @@ namespace TradeLord.Tests
                 if (tolerance > 1f) Assert.True(ceiling <= (long)cheapest * 4L + 1L);
             }
         }
+
+        [Fact]
+        public void A_ride_longer_than_any_on_the_map_is_out_of_reach()
+        {
+            Assert.False(TradeMath.OutOfReach(0f));
+            Assert.False(TradeMath.OutOfReach(999f));
+            Assert.True(TradeMath.OutOfReach(TradeMath.LongerThanAnyRide));
+            Assert.True(TradeMath.OutOfReach(float.MaxValue));
+            Assert.True(TradeMath.OutOfReach(float.NaN));
+            Assert.True(TradeMath.OutOfReach(float.PositiveInfinity));
+            Assert.True(TradeMath.DaysAtSpeed(float.MaxValue, 1f, 4.8f, 4.8f) == TradeMath.FurthestThereIs);
+            Assert.True(TradeMath.DaysAtBestSpeed(float.MaxValue, 4.8f, 4.8f) == TradeMath.FurthestThereIs);
+            Assert.True(TradeMath.DaysAtSpeed(240f, 1f, 10f, 10f) == 1f);
+        }
+
+        [Fact]
+        public void A_forecast_far_above_the_live_price_is_held_to_the_cap()
+        {
+            Assert.Equal(150, TradeMath.ForecastWithin(100, 900));
+            Assert.Equal(120, TradeMath.ForecastWithin(100, 120));
+        }
+
+        [Fact]
+        public void A_forecast_far_below_the_live_price_is_held_to_the_cap()
+        {
+            Assert.Equal(58, TradeMath.ForecastWithin(117, 15));
+            Assert.Equal(80, TradeMath.ForecastWithin(100, 80));
+            Assert.Equal(15, TradeMath.ForecastWithin(0, 15));
+        }
+
+        [Fact]
+        public void A_caravan_leaves_only_part_of_what_it_carries()
+        {
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(0));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(-5));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(1));
+            Assert.Equal(40, TradeMath.WhatACaravanUnloads(119));
+            Assert.True(TradeMath.WhatACaravanUnloads(100) < 100);
+        }
     }
 }
