@@ -4820,7 +4820,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 12;' in S['Migrate.cs']
+    return ('public const int Shape = 13;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and "written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();" in S['Migrate.cs']
             and ordered(read, "var written = SettingsFile.Read(File.ReadAllLines(found), ignored);",
@@ -6238,8 +6238,9 @@ chk("1.46.2", "trading on arrival runs once and waits for the party to take to t
 
 chk("1.47.0", "the price trace reads one market's price four ways, names the price model and any mod changing it, and trades nothing",
     the_price_trace_reads_one_price_four_ways_and_names_what_changes_it())
-chk("1.76.7", "the price trace ships off, so walking into a market costs nothing until a price looks wrong and you turn it on",
-    "public bool PriceTrace = false;" in S['Options.cs'])
+chk("1.80.13", "both log toggles ship on while the way a price is read is settling, so every log carries the readings",
+    "public bool PriceTrace = true;" in S['Options.cs'] and
+    "public bool ForecastScore = true;" in S['Options.cs'])
 
 chk("1.47.1", "every price TradeLord quotes is asked of the market the way the trade that follows it is charged, and falls back to the plain question only if that cannot be asked",
     every_price_is_asked_the_way_the_trade_that_follows_is_charged())
