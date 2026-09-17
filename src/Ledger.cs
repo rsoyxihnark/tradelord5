@@ -603,14 +603,14 @@ namespace TradeLord
             catch { return 0; }
         }
 
-        private static HashSet<ItemObject> WhatItStocks(Settlement s)
+        private static Dictionary<ItemObject, int> WhatItStocks(Settlement s)
         {
-            var held = new HashSet<ItemObject>();
+            var held = new Dictionary<ItemObject, int>();
             ItemRoster shelf = s.ItemRoster;
             for (int i = 0; shelf != null && i < shelf.Count; i++)
             {
                 ItemObject item = shelf.GetItemAtIndex(i);
-                if (item != null) held.Add(item);
+                if (item != null && !held.ContainsKey(item)) held[item] = shelf.GetElementNumber(i);
             }
             return held;
         }
@@ -747,7 +747,7 @@ namespace TradeLord
                 if (!WithinTravelCeiling(town, days)) continue;
                 SettlementComponent market = town.SettlementComponent;
                 bool tillOpen = market.Gold > 0;
-                HashSet<ItemObject> onTheShelf = minStock > 0 ? WhatItStocks(town) : null;
+                Dictionary<ItemObject, int> onTheShelf = minStock > 0 ? WhatItStocks(town) : null;
                 for (int i = 0; i < n; i++)
                 {
                     ItemObject item = wanted[i];
@@ -758,7 +758,7 @@ namespace TradeLord
                         { Where = town, Price = price, Straight = straight, Days = days }, true);
                     }
                     if (onTheShelf == null ||
-                        (onTheShelf.Contains(item) && StockOf(town, item) >= minStock))
+                        (onTheShelf.TryGetValue(item, out int stocked) && stocked >= minStock))
                     {
                         int price = Priced.At(market, item, me, false);
                         if (price > 0) MarketRank.Keep(buys[i], new Reach<Settlement>
