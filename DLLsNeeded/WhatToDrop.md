@@ -1,1 +1,0 @@
-ALL WORK IS DONE, DELETE WhatToDrop.md FILE.
