@@ -790,6 +790,9 @@ namespace TradeLord
 
         private static int _pendingXp;
         private static int _pendingProfit;
+        private static bool _raisingOurOwnProfit;
+
+        internal static bool RaisingOurOwnProfit => _raisingOurOwnProfit;
         private static bool _pendingXpMuted = true;
 
         private struct Took
@@ -797,7 +800,6 @@ namespace TradeLord
             internal int Units;
             internal int Gold;
             internal int Profit;
-            internal int Earned;
         }
 
         private static Took Reckon(Pass pass, List<(ItemRosterElement, int)> lines, bool selling)
@@ -816,16 +818,11 @@ namespace TradeLord
                 took.Units += count;
                 took.Gold += said;
                 if (selling)
-                {
-                    int credited = TradeMath.Credit(price, TradePolicy.WorthToBeat(item),
+                    took.Profit += TradeMath.Credit(price, TradePolicy.WorthToBeat(item),
                                                     TradePolicy.UnpaidWorth(item)) * count;
-                    took.Profit += credited;
-                    if (el.EquipmentElement.ItemModifier == null) took.Earned += credited;
-                }
                 pass.Tally(item, count, said);
             }
             took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);
-            took.Earned = Deals.NoMoreThanTheSale(took.Earned, took.Gold);
             return took;
         }
 
@@ -863,7 +860,6 @@ namespace TradeLord
                 "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).", got.Units, got.Gold);
             msg.SetTextVariable("PROFIT", got.Profit);
             Notices.Say(msg, got.Profit > 0 ? Notices.Gain : Notices.Flat);
-            if (addsUp && got.Earned > 0) AwardTradeXp(got.Earned, pass.Muted, ours: false);
         }
 
         private static void ReportWhatYouBought(Pass pass, Took paid, bool addsUp)
@@ -922,7 +918,11 @@ namespace TradeLord
             LedgerBehavior.Instance?.AddTradeXp(xp);
             if (profit > 0)
                 Guard.Run("TradeXp.Event", () =>
-                    CampaignEventDispatcher.Instance.OnPlayerTradeProfit(profit));
+                {
+                    _raisingOurOwnProfit = true;
+                    try { CampaignEventDispatcher.Instance.OnPlayerTradeProfit(profit); }
+                    finally { _raisingOurOwnProfit = false; }
+                });
             Guard.Run("TradeXp.Party", () => CreditTheCompanionsWithYou(xp));
             int now = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
             bool rose = now > before;
@@ -1789,12 +1789,12 @@ namespace TradeLord
         }
 
 
-        private static void AwardTradeXp(int profit, bool muted, bool ours = true)
+        private static void AwardTradeXp(int profit, bool muted)
         {
             int xp = (int)(profit * Options.Current.TradeXpMultiplier);
             if (xp <= 0) return;
             _pendingXp += xp;
-            if (ours) _pendingProfit += profit;
+            _pendingProfit += profit;
             if (!muted) _pendingXpMuted = false;
             Log.Write("trade profit fed to the XP system: " + xp + " denars");
         }
