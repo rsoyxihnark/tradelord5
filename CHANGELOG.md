@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.80.13
+
+- Write a price trace to the log now ships on, so a log sent in carries the four readings for every good you were carrying.
+- Every setting goes back to the value TradeLord ships with, once on this update, because the prices it now trades at are not the ones your settings were tuned against. What you had set is listed in TradeLord.log so you can put it back.
+- The line that says your settings were put back no longer promises it will not happen again, because while TradeLord's trading is settling an update may do it again.
+
 ## 1.80.12
 
 - TradeLord now buys and sells at the price the trade screen would charge you yourself, so what it earns you is what your own hands would earn.
