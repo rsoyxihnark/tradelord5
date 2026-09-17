@@ -107,6 +107,11 @@
                                     Brush="Popup.Button.Text" Brush.FontSize="16"
                                     Brush.FontColor="#FFD700FF"
                                     Text="@LifetimeText" />
+                        <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent"
+                                    SuggestedWidth="175"
+                                    Brush="Popup.Button.Text" Brush.FontSize="16"
+                                    Brush.FontColor="#FFB833FF"
+                                    Text="@TradeXpText" />
                         <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                                     Brush="Popup.Button.Text" Brush.FontSize="14"
                                     HorizontalAlignment="Right"

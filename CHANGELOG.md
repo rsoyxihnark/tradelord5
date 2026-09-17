@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.81.0
+
+- The ledger now shows the Trade XP TradeLord has earned you, beside the profit, and keeps it in your save.
+- Selling something that carries a quality, like a Fine sword, no longer earns Trade XP, because selling it yourself at the trade screen never earned any either.
+- Anything else in your game that watches what you make from trading now sees what TradeLord trades, the same way it sees what you trade by hand.
+
 ## 1.80.14
 
 - A trade that fails to unwind no longer leaves TradeLord's hold on prices in place, which could have moved what a caravan or a villager paid for its own goods.
