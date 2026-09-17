@@ -165,7 +165,7 @@ namespace TradeLord
         {
             if (landed == 0 || site == null || item == null) return quoted;
             Ladder rung = new Ladder(site, item, selling, quoted, landed);
-            return rung.Walkable ? rung.At(0) : quoted;
+            return rung.Walkable ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;
         }
 
         internal static int PricePaid(Settlement site, EquipmentElement bought, int units, int quotedUnitPrice)

@@ -1643,8 +1643,59 @@ chk("1.3.26", "the unit-by-unit walk stops at the merchant's till and at the spe
     (lambda b: "if (merchantTill > 0 && q.SellTotal + sellPrice > merchantTill) break;" in b
            and "if (spendCap > 0 && q.BuyTotal + buyPrice > spendCap) break;" in b)
     (method_body(S['Market.cs'], "internal static RouteQuote Walk")))
+def a_market_the_game_cannot_reach_is_never_offered_or_timed():
+    m = S['TradeMath.cs']
+    ceiling = method_body(S['Ranking.cs'], "internal static bool WithinCeiling")
+    label = method_body(S['Travel.cs'], "internal static string EstimateLabel")
+    return ("public const float LongerThanAnyRide = 1000f;" in m
+            and "float.IsNaN(days) || float.IsInfinity(days) || days >= LongerThanAnyRide;" in m
+            and "if (TradeMath.OutOfReach(days)) return false;" in ceiling
+            and ceiling.find("OutOfReach") < ceiling.find("Ceiling(village, s)")
+            and 'if (days < 0.05f || TradeMath.OutOfReach(days)) return "";' in label
+            and "OutOfReach(days) ? FurthestThereIs : days;" in
+                method_body(m, "public static float DaysAtBestSpeed")
+            and "A_ride_longer_than_any_on_the_map_is_out_of_reach" in MATHTESTS
+            and "A_market_out_of_reach_is_turned_away_though_no_ceiling_is_set" in RANKTESTS)
+
+
+def a_forecast_may_not_move_a_shown_price_out_of_all_recognition():
+    m = S['TradeMath.cs']
+    within = method_body(m, "public static int ForecastWithin")
+    first = method_body(S['Market.cs'], "internal static int FirstUnit")
+    return ("public const float MostAForecastMayMoveAPrice = 0.5f;" in m
+            and "if (live <= 0 || forecast <= 0) return forecast;" in within
+            and "int most = (int)(live * (1f + MostAForecastMayMoveAPrice));" in within
+            and "int least = (int)(live * (1f - MostAForecastMayMoveAPrice));" in within
+            and "return TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;" in
+                first.replace("rung.Walkable ? ", "")
+            and "A_forecast_far_above_the_live_price_is_held_to_the_cap" in MATHTESTS
+            and "A_forecast_far_below_the_live_price_is_held_to_the_cap" in MATHTESTS)
+
+
+def a_caravan_leaves_only_part_of_its_cargo_at_its_next_stop():
+    m = S['TradeMath.cs']
+    road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
+    return ("public const float WhatACaravanLeavesAtOneStop = 0.34f;" in m
+            and "carried <= 0 ? 0 : (int)(carried * WhatACaravanLeavesAtOneStop);" in m
+            and "int landing = TradeMath.WhatACaravanUnloads(amount);" in road
+            and "if (landing <= 0) continue;" in road
+            and "Note(bound, item.StringId, item.ItemCategory, landing," in road
+            and "TradeMath.WorthOf(landing, item.Value), days);" in road
+            and "TradeMath.WorthOf(amount," not in road
+            and "A_caravan_leaves_only_part_of_what_it_carries" in MATHTESTS)
+
+
+chk("1.81.10", "a market the game could not find a road to is turned away and shows no travel time, whatever the travel ceilings are set to",
+    a_market_the_game_cannot_reach_is_never_offered_or_timed())
+chk("1.81.10", "what a market is forecast to pay is held within reach of what it pays today, so a bad forecast can no longer show a price nothing would ever take",
+    a_forecast_may_not_move_a_shown_price_out_of_all_recognition())
+chk("1.81.10", "a caravan is counted as leaving only part of its cargo at the next market it calls at, because the rest rides on",
+    a_caravan_leaves_only_part_of_its_cargo_at_its_next_stop())
+
 chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has moved",
-    "return Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs);" in
+    "float days = Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs);" in
+    method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
+    "return OutOfReach(days) ? FurthestThereIs : days;" in
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
     "return TradeMath.DaysAtSpeed(distance, landRatio, land, sea);" in
     method_body(S['Travel.cs'], "internal static float Days") and
@@ -7093,7 +7144,7 @@ def a_tooltip_prices_a_market_as_it_will_be_when_you_get_there():
             and "AsTheyWillBe(item, sells, selling: true);" in picked
             and "AsTheyWillBe(item, buys, selling: false);" in picked
             and "if (landed == 0 || site == null || item == null) return quoted;" in first
-            and "return rung.Walkable ? rung.At(0) : quoted;" in first
+            and "return rung.Walkable ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;" in first
             and "a price in a tooltip" in spoken(ENGLISH)['TL396'])
 
 

@@ -187,5 +187,15 @@ namespace TradeLord.Tests
 
             Assert.Equal(new[] { "a", "b", "c" }, ranked);
         }
+
+        [Fact]
+        public void A_market_out_of_reach_is_turned_away_though_no_ceiling_is_set()
+        {
+            var off = new Options { MaxTravelDaysTown = 0f, MaxTravelDaysVillage = 0f };
+            Assert.True(MarketRank.WithinCeiling(false, 500f, off));
+            Assert.False(MarketRank.WithinCeiling(false, TradeMath.LongerThanAnyRide, off));
+            Assert.False(MarketRank.WithinCeiling(false, float.MaxValue, off));
+            Assert.False(MarketRank.WithinCeiling(true, float.MaxValue, off));
+        }
     }
 }
