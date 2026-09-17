@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.81.2
+
+- A deal you take on the trade screen now earns your Trade skill once, from the game, instead of twice.
+- The ledger's Trade XP still counts that deal, by listening for what the game credited, so the total covers both the trades TradeLord makes itself and the ones it lays out for you.
+
 ## 1.81.1
 
 - A deal you take on the trade screen is reported to the rest of your game once rather than twice, because the game already reports it itself.
