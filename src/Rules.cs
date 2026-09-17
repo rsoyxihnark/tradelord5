@@ -484,6 +484,11 @@ namespace TradeLord
 
         internal static bool BelowTheBestMarket(int price, int holdFloor) => price < holdFloor;
 
+        internal const int VillageLastCoin = 1;
+
+        internal static int WhatTheTillCanPay(int till, bool village) =>
+            Math.Max(0, village ? till - VillageLastCoin : till);
+
         internal static int WorthToBeat(in Good good, int paid, int unpaidWorth) =>
             paid > 0 || !TradedAsMerchandise(good) ? paid : unpaidWorth;
 

@@ -1136,6 +1136,8 @@ namespace TradeLord
 
             public bool Stopped => _pass.DirectionError;
 
+            public bool Village => _pass.Site != null && _pass.Site.IsVillage;
+
             public string IdAt(int at)
             {
                 ItemObject item = Item(at);
@@ -1469,7 +1471,8 @@ namespace TradeLord
                         if (rank == RankHaulAnimal && haulsLeft <= 0) break;
                         int price = pass.Price(el.EquipmentElement, selling: true);
                         if (price <= 0) break;
-                        if ((pass.Sim ? simTill : pass.TillNow) < price) break;
+                        if (TradeRules.WhatTheTillCanPay(pass.Sim ? simTill : pass.TillNow,
+                                                         settlement.IsVillage) < price) break;
                         int worth = basis.Unit(out bool askTheMarket);
                         if (askTheMarket) basis.UnpaidWorth = TradePolicy.UnpaidWorth(item);
 
