@@ -219,7 +219,7 @@
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. Warnings still show on screen: cargo full, a purse below your Gold reserve, and an item list entry that matches no good. The trade entry in the menu always reports."/>
-		<string id="TL389" text="Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. OFF by default; turn it on when a price looks wrong."/>
+		<string id="TL389" text="Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. ON by default; turn it off to keep the log short."/>
 		<string id="TL398" text="Writes to TradeLord.log what the forecast said a market would hold and what it held when you walked in, good by good, with how far off it was. Needs Count what is on its way to a market. ON by default; turn it off to keep the log short."/>
 		<string id="TL100" text="Language"/>
 		<string id="TL101" text="Knowledge"/>

@@ -176,8 +176,9 @@ namespace TradeLord
                 Whip.Crack(shape, written);
                 BackToWhatItShipsWith();
                 Log.Write("settings file: this version puts every setting back to the value TradeLord ships with, " +
-                          "once, because the settings it ships with trade better than they used to. Anything you had " +
-                          "set is listed above so you can put it back, and this happens only this once.");
+                          "because the settings it ships with trade better than they used to. Anything you had " +
+                          "set is listed above so you can put it back. While TradeLord's trading is settling, " +
+                          "an update may do this again.");
                 McmLoader.PutBackWhatItShipsWithOnceTheScreenArrives();
             }
 
