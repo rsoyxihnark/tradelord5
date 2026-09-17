@@ -1026,7 +1026,17 @@ def readme_defaults_match_the_shipped_ones():
               'from tier ' + option_default('MaxLootTier') + ' out of the box',
               'The ' + tooltip + ' best places to sell and the ' + tooltip + ' cheapest to buy',
               'The ' + shops + ' workshops in Calradia']
+    shipped = [('A price trace', 'PriceTrace'),
+               ('A score for the forecast', 'ForecastScore'),
+               ('Count what is on its way to a market', 'MarketForecast'),
+               ('Live world prices', 'Omniscient'),
+               ('Staged Trading', 'StagedTrading'),
+               ('A settling delay', 'EconomySettlingDays'),
+               ('Free passage past bandits', 'BanditGetawayCheat')]
+    switched = [lead + ', ' + ('off' if option_default(name) in ('false', '0') else 'on') +
+                ' out of the box' for lead, name in shipped]
     return (all(c in README for c in claims)
+            and all(c in README for c in switched)
             and on('Omniscient') and on('AutoSellOnEntry') and on('AutoBuyOnEntry')
             and on('NeverBuyGrain') and on('TradeWithVillages')
             and on('ProtectSpecial') and on('RespectLocks') and on('ExcludeHostileTowns')
