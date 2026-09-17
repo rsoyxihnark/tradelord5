@@ -202,7 +202,7 @@ namespace TradeLord
                                             kept.WorthSaid, kept.WorthThen,
                                             WorthOnTheShelf(site, kept.Item));
                 landingMiss += Math.Abs(how.LandingOff);
-                string line = "  " + Named(kept.Item) + ": said " + kept.StockSaid + " unit(s) would land within " +
+                string line = "  " + Named(kept.Item) + ": said " + kept.StockSaid + " unit(s) of it would land within " +
                               Figure(kept.WithinDays) + " day(s) and " + Landing(how.Landed) + ", " +
                               Counted(how.LandingOff) +
                               "; you walked in " + Figure(TradeMath.DaysSince(kept.AtHours, now)) +
@@ -217,8 +217,9 @@ namespace TradeLord
                     shared++;
                     shareTotal += how.Share;
                 }
-                lines.Add(line + "; said its kind would move " + kept.WorthSaid + " in worth and " +
-                          Moving(how.Moved) + ", " + Counted(how.WorthOff) + Shared(how.Share));
+                lines.Add(line + "; said every good of that kind heading there was worth " +
+                          kept.WorthSaid + " denars in all and " + Moving(how.Moved) + " denars, " +
+                          Counted(how.WorthOff) + Shared(how.Share));
             }
             if (scored == 0) return;
             lines.Insert(0, "forecast check at " + site.Name + ", " + scored + " good(s) it had a figure for:");

@@ -9898,5 +9898,44 @@ chk("1.81.7", "a village left with an empty purse is put back to a thousand dena
     a_village_left_with_an_empty_purse_is_put_back_once())
 
 
+
+def nothing_out_of_reach_is_marked_on_the_map_or_offered_as_a_route():
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    return ("float ride = Travel.EstimateDaysFromParty(s);" in marker
+            and "if (TradeMath.OutOfReach(ride)) continue;" in marker
+            and marker.find("if (TradeMath.OutOfReach(ride)) continue;") <
+                marker.find("if (cap > 0f && ride > cap) continue;")
+            and "if (cap > 0f)\n" not in marker
+            and "if (TradeMath.OutOfReach(days)) continue;" in scan
+            and scan.find("if (TradeMath.OutOfReach(days)) continue;") <
+                scan.find("if (cap > 0f && days > cap) continue;"))
+
+
+def an_empty_best_buy_list_says_why_it_is_empty():
+    append = method_body(S['TooltipPatches.cs'], "internal static void Append(ItemMenuVM vm, ItemVM itemVm)")
+    return ("if (buys.Count == 0 && sells.Count > 0 && Options.Current.MinTownStock > 0)" in append
+            and "{=TL450}" in append
+            and 'none.SetTextVariable("COUNT", Options.Current.MinTownStock);' in append
+            and append.find("buys.Count == 0") < append.find("if (buys.Count > 0)")
+            and said_in_every_language('TL450'))
+
+
+def the_forecast_log_says_units_of_a_good_and_denars_of_its_kind():
+    written = method_body(S['Hindsight.cs'], "private static void Written")
+    return ('" unit(s) of it would land within "' in written
+            and '"; said every good of that kind heading there was worth "' in written
+            and '" denars in all and "' in written
+            and '" denars, "' in written
+            and '" in worth and "' not in written)
+
+
+chk("1.81.12", "nothing the game could find no road to is marked on your map or offered as a route, whatever the travel ceilings are set to",
+    nothing_out_of_reach_is_marked_on_the_map_or_offered_as_a_route())
+chk("1.81.12", "a best buy list left empty by the minimum stock setting says so rather than vanishing",
+    an_empty_best_buy_list_says_why_it_is_empty())
+chk("1.81.12", "the forecast check in the log says units of the good it named and denars of every good of that kind, so neither figure reads as the other",
+    the_forecast_log_says_units_of_a_good_and_denars_of_its_kind())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
