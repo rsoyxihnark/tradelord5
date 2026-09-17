@@ -6,9 +6,6 @@ from nexus_changelog import sections
 REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
-    '1.14.1': 'the section and the notes each carry lines the other does not',
-    '1.34.0': 'the section gained two entries after the release went out',
-    '1.35.0': 'the section gained two entries after the release went out',
 }
 
 
