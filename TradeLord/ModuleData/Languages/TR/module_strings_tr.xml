@@ -295,6 +295,6 @@
 		<string id="TL447" text=" | stok, sen varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek; fiyatlar için Toplu fiyat benzetimi gerekir"/>
 		<string id="TL448" text="Ticaret TP: {AMOUNT}" />
 		<string id="TL449" text="TradeLord boş kalmış {COUNT} köy kesesini yeniden doldurdu, böylece o köy dükkanları tekrar alışveriş yapabiliyor."/>
-		<string id="TL450" text="Ulasabileceginiz hicbir pazarda bundan {COUNT} veya daha fazla yok; Alim onerileri icin en az stok bunu istiyor. Nereden alacaginizi gormek icin onu dusurun."/>
+		<string id="TL450" text="Ulasilabilir hicbir pazarda bundan {COUNT} veya daha fazla yok. | Alim onerileri icin en az stok bunu istiyor. | Nereden alacaginizi gormek icin onu dusurun."/>
 	</strings>
 </base>
