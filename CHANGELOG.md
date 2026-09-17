@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The feature list now says that Write a price trace to the log ships on, rather than off.
+
 ## 1.81.4
 
 - The TradeLord ledger does less work as it picks the best markets for a good: a town's shelves are now read once for the town, rather than searched through again for every good Minimum stock for buy suggestions has it count.
