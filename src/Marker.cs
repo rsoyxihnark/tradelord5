@@ -207,8 +207,9 @@ namespace TradeLord
                 if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;
                 how.Weighed++;
-                if (market.Gold <= 0) continue;
-                reachable.Add((s, market, market.Gold));
+                int purse = TradeRules.WhatTheTillCanPay(market.Gold, s.IsVillage);
+                if (purse <= 0) continue;
+                reachable.Add((s, market, purse));
             }
             reachable.Sort(DearestPurseFirst);
 

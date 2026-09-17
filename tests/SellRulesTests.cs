@@ -311,5 +311,15 @@ namespace TradeLord.Tests
             Assert.False(TradeMath.ProfitAcceptable(worth, 114, 0.15f));
             Assert.True(TradeMath.ProfitAcceptable(worth, 115, 0.15f));
         }
+
+        [Fact]
+        public void A_village_till_is_read_one_coin_short_and_a_town_till_in_full()
+        {
+            Assert.Equal(999, TradeRules.WhatTheTillCanPay(1000, true));
+            Assert.Equal(1000, TradeRules.WhatTheTillCanPay(1000, false));
+            Assert.Equal(0, TradeRules.WhatTheTillCanPay(1, true));
+            Assert.Equal(0, TradeRules.WhatTheTillCanPay(0, true));
+            Assert.Equal(0, TradeRules.WhatTheTillCanPay(0, false));
+        }
     }
 }
