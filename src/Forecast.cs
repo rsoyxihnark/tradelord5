@@ -184,7 +184,9 @@ namespace TradeLord
             for (int i = 0; i < all.Count; i++)
             {
                 MobileParty party = all[i];
-                if (party == null || !party.IsCaravan) continue;
+                if (party == null) continue;
+                bool caravan = party.IsCaravan;
+                if (!caravan && !party.IsVillager) continue;
                 if (party.CurrentSettlement != null) continue;
                 Settlement bound = party.TargetSettlement;
                 if (bound == null || !(bound.IsTown || bound.IsVillage)) continue;
@@ -192,18 +194,35 @@ namespace TradeLord
                 if (carried == null) continue;
                 float days = TradeMath.EtaDays(
                     party.GetPosition2D.Distance(bound.GetPosition2D), party.Speed);
-                NoteAPurse(bound, party.PartyTradeGold, days);
+                if (caravan) NoteAPurse(bound, party.PartyTradeGold, days);
                 for (int k = 0; k < carried.Count; k++)
                 {
                     ItemObject item = carried.GetItemAtIndex(k);
                     int amount = carried.GetElementNumber(k);
                     if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;
-                    int landing = TradeMath.WhatACaravanUnloads(amount);
+                    int landing = caravan ? WhatACaravanLeavesHere(bound, item, amount) : amount;
                     if (landing <= 0) continue;
                     Note(bound, item.StringId, item.ItemCategory, landing,
                          TradeMath.WorthOf(landing, item.Value), days);
                 }
             }
+        }
+
+        private static int WhatACaravanLeavesHere(Settlement bound, ItemObject item, int carried)
+        {
+            Town town = bound.IsTown ? bound.Town : null;
+            ItemCategory category = item.ItemCategory;
+            if (town == null || category == null) return 0;
+            return Guard.Read("Forecast.WhatACaravanLeaves", town, where =>
+            {
+                float priceFactor = where.MarketData.GetPriceFactor(category);
+                float demand = where.MarketData.GetCategoryData(category).Demand;
+                float budget = Campaign.Current.Models.SettlementEconomyModel
+                    .CalculateDailySettlementBudgetForItemCategory(where, demand, category);
+                int price = Priced.At(where.Settlement.SettlementComponent, item,
+                                      MobileParty.MainParty, selling: true);
+                return TradeMath.WhatACaravanUnloads(carried, priceFactor, budget, price);
+            }, 0);
         }
 
         private static void ReadWhatTheShopsWillMake()

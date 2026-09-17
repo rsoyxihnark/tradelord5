@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.81.11
+
+- A caravan heading for a market is now counted as leaving only what that market will really take off it, and only where it pays above what the goods usually fetch, because a caravan that is merely passing through sells nothing and carries its load onward.
+- A party of villagers on the road is now counted too, leaving its whole load at the town its village trades through, which is what it does when it arrives.
+
 ## 1.81.10
 
 - What a market is forecast to pay by the time you get there is now held within reach of what it pays today, so a town that pays well can no longer be listed at a price you would never take.
