@@ -752,7 +752,7 @@ namespace TradeLord.Mcm
         public float MaxCargoShare { get => _o.MaxCargoShare; set { _o.MaxCargoShare = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL246}Write a price trace to the log", Order = 0, RequireRestart = false,
-            HintText = "{=TL389}Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. OFF by default; turn it on when a price looks wrong.")]
+            HintText = "{=TL389}Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. ON by default; turn it off to keep the log short.")]
         [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
         public bool PriceTrace { get => _o.PriceTrace; set { _o.PriceTrace = value; Options.Bump(); } }
 
