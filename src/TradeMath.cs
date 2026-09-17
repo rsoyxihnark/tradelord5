@@ -119,6 +119,27 @@ namespace TradeLord
         public static float Finite(float value, float ifNot) =>
             float.IsNaN(value) || float.IsInfinity(value) ? ifNot : value;
 
+        public const float LongerThanAnyRide = 1000f;
+
+        public static bool OutOfReach(float days) =>
+            float.IsNaN(days) || float.IsInfinity(days) || days >= LongerThanAnyRide;
+
+        public const float MostAForecastMayMoveAPrice = 0.5f;
+
+        public static int ForecastWithin(int live, int forecast)
+        {
+            if (live <= 0 || forecast <= 0) return forecast;
+            int most = (int)(live * (1f + MostAForecastMayMoveAPrice));
+            int least = (int)(live * (1f - MostAForecastMayMoveAPrice));
+            if (forecast > most) return most;
+            return forecast < least ? least : forecast;
+        }
+
+        public const float WhatACaravanLeavesAtOneStop = 0.34f;
+
+        public static int WhatACaravanUnloads(int carried) =>
+            carried <= 0 ? 0 : (int)(carried * WhatACaravanLeavesAtOneStop);
+
         public const float StandingStill = 0.01f;
 
         public const float WalkingPace = 5f;
@@ -139,12 +160,16 @@ namespace TradeLord
             if (distance <= 0f) return 0f;
             float landLeg = distance * landRatio;
             float seaLeg = distance * (1f - landRatio);
-            return Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs);
+            float days = Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs);
+            return OutOfReach(days) ? FurthestThereIs : days;
         }
 
-        public static float DaysAtBestSpeed(float distance, float landSpeed, float seaSpeed) =>
-            distance <= 0f ? 0f
-                           : Finite(distance / (Math.Max(landSpeed, seaSpeed) * 24f), FurthestThereIs);
+        public static float DaysAtBestSpeed(float distance, float landSpeed, float seaSpeed)
+        {
+            if (distance <= 0f) return 0f;
+            float days = Finite(distance / (Math.Max(landSpeed, seaSpeed) * 24f), FurthestThereIs);
+            return OutOfReach(days) ? FurthestThereIs : days;
+        }
 
         public static int WorthOf(int units, int unitValue)
         {

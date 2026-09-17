@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.81.10
+
+- What a market is forecast to pay by the time you get there is now held within reach of what it pays today, so a town that pays well can no longer be listed at a price you would never take.
+- A caravan on the road is now counted as leaving only part of its cargo at the next market it calls at, because the rest rides on with it, so what a market is forecast to hold when you arrive is closer to what you find there.
+- A market the game could not find a road to is no longer offered as a place to sell, and shows no travel time beside it, however high you have set your travel ceilings.
+
 ## 1.81.9
 
 - The best sell and best buy lists in an item tooltip now pick their five markets after every market has been priced for the day you would arrive, so a town the forecast marks down drops out of the list instead of sitting in it at a price you would never take.
