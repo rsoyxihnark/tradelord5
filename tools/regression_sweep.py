@@ -832,7 +832,9 @@ def a_traded_market_drops_only_the_rankings_its_own_prices_decide():
             and "ForgetPricedRankings();" in drop
             and "if (kv.Value.kind == null || moved.Contains(kv.Value.kind)) spent.Add(kv.Key);" in drop
             and "_routes = null;" in drop
-            and "(s?.SettlementComponent?.Gold ?? 0) > 0" in
+            and "TradeRules.WhatTheTillCanPay(s?.SettlementComponent?.Gold ?? 0," in
+                between(ledger, "private static bool TillStillOpen", ";")
+            and "s != null && s.IsVillage) > 0" in
                 between(ledger, "private static bool TillStillOpen", ";")
             and "item?.ItemCategory?.StringId" in
                 between(ledger, "internal static string KindOf", ";")
@@ -1616,8 +1618,10 @@ chk("1.3.2", "the buying pass stops at the purse, the per-item denar cap, the ca
                        "                    { tally.Note(Block.CarryWeight); break; }"))
     (buy_pass()))
 chk("1.3.14", "the selling pass stops when the merchant's till cannot cover the next unit, on a dry run too",
-    "if ((sim ? simTill : market.TillNow()) < price) { tally.Note(Block.MerchantTillEmpty); break; }" in
-        sell_pass() and
+    (lambda sell: "TradeRules.WhatTheTillCanPay(sim ? simTill : market.TillNow()," in sell
+              and "market.Village) < price)" in sell
+              and "{ tally.Note(Block.MerchantTillEmpty); break; }" in sell)
+    (sell_pass()) and
     "internal int TillNow => Site != null ? Market.Gold : Met.PartyTradeGold;" in S['Trading.cs'])
 chk("1.3.9", "per-hour cache serves both price modes",
     ordered(S['Ledger.cs'], "_marketCache.TryGetValue", "? TopLive"))
@@ -4038,8 +4042,9 @@ chk("1.14.2", "the ladders are dropped when a scan starts, given back when it fi
     "internal static void Forget() => _rungs.Clear();" in S['Market.cs'])
 
 chk("1.14.3", "a market whose merchant has no gold is no destination in any list the mod ranks, not just the route scan",
-    (lambda body: "if (selling && s.SettlementComponent.Gold <= 0) continue;" in body
-              and ordered(body, "if (selling && s.SettlementComponent.Gold <= 0) continue;",
+    (lambda body: "if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold," in body
+              and "s.IsVillage) <= 0) continue;" in body
+              and ordered(body, "if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold,",
                           "int price = Priced.At(s.SettlementComponent,"))
     (method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")) and
     "LedgerBehavior.Instance?.BestSell(Item(at)) ?? (null, 0)" in
@@ -4347,7 +4352,7 @@ def a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod():
                 between(S['Trading.cs'], "internal int Price(", ";")
             and "internal int TillNow => Site != null ? Market.Gold : Met.PartyTradeGold;"
                 in S['Trading.cs']
-            and "if ((pass.Sim ? simTill : pass.TillNow) < price)" in S['Trading.cs']
+            and "if (TradeRules.WhatTheTillCanPay(pass.Sim ? simTill : pass.TillNow," in S['Trading.cs']
             and "TradeOnce(caravan);" in met
             and "object here = PlayerEncounter.Current;" in once
             and "if (_tradedWith == met || (here != null && _tradedIn == here)) return;" in once
@@ -5778,7 +5783,7 @@ def the_venue_is_the_only_thing_a_pass_asks_where_it_is():
     sell = sell_pass()
     buy = buy_pass()
     held = method_body(t, "private sealed class Pass")
-    return (sell.count("pass.Site") == 1 and buy.count("pass.Site") == 3
+    return (sell.count("pass.Site") == 3 and buy.count("pass.Site") == 3
             and sell.count("pass.Reports") == 0 and buy.count("pass.Reports") == 1
             and sell.count("pass.Key") == 1 and buy.count("pass.Key") == 1
             and "Site" not in method_body(t, "public static void ExecuteRoadTrade")
@@ -9170,9 +9175,9 @@ def the_feature_list_says_which_purse_a_route_is_held_to():
     routes = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes()")
     if not routes:
         return False
-    return ("till = to.SettlementComponent?.Gold ?? 0;" in routes
+    return ("till = TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0," in routes
             and "if (Options.Current.Omniscient)" in routes
-            and routes.index("if (Options.Current.Omniscient)") < routes.index("till = to.SettlementComponent")
+            and routes.index("if (Options.Current.Omniscient)") < routes.index("till = TradeRules.WhatTheTillCanPay(")
             and "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;" in routes
             and code_only(S['Ledger.cs']).count("to.SettlementComponent?.Gold") == 1
             and "It reads that purse live, so with Live world prices off it plans on the stock alone" in README)
@@ -9728,6 +9733,34 @@ chk("1.81.2", "whoever made the trade credits the Trade skill for it, and each m
 
 chk("1.81.0", "the ledger keeps the trade XP it has handed over and shows it beside the profit",
     the_ledger_keeps_the_trade_xp_it_has_handed_over())
+
+
+def a_village_keeps_the_coin_that_keeps_its_shop_open():
+    ledger = S['Ledger.cs']
+    rule = between(S['Rules.cs'], "internal static int WhatTheTillCanPay", ";")
+    return ("internal const int VillageLastCoin = 1;" in S['Rules.cs']
+            and "Math.Max(0, village ? till - VillageLastCoin : till)" in rule
+            and "        bool Stopped { get; }\n        bool Village { get; }\n"
+                "        string IdAt(int at);" in S['Passes.cs']
+            and "public bool Village => _pass.Site != null && _pass.Site.IsVillage;" in sell_pass()
+            and "market.Village) < price)" in sell_pass()
+            and (lambda herd: "TradeRules.WhatTheTillCanPay(pass.Sim ? simTill : pass.TillNow," in herd
+                          and "settlement.IsVillage) < price) break;" in herd)
+                (method_body(S['Trading.cs'], "public static void ExecuteHerdRelief"))
+            and "till = TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0," in
+                method_body(ledger, "private List<TradeRoute> ScanRoutes()")
+            and "TradeRules.WhatTheTillCanPay(market.Gold, town.IsVillage) > 0;" in ledger
+            and "int purse = TradeRules.WhatTheTillCanPay(market.Gold, s.IsVillage);" in S['Marker.cs']
+            and "reachable.Add((s, market, purse));" in S['Marker.cs']
+            and code_only(S['Trading.cs']).count("pass.TillNow") == 2
+            and "A_village_is_left_its_last_coin" in SELLPASSTESTS
+            and "A_town_spends_its_till_to_the_last_coin" in SELLPASSTESTS
+            and "A_dry_run_leaves_a_village_its_last_coin_too" in SELLPASSTESTS
+            and "A_village_till_is_read_one_coin_short_and_a_town_till_in_full" in SELLTESTS)
+
+
+chk("1.81.6", "a village is left the coin that keeps its shop open, in the pass, in the herd relief, in the route scan and on the map marker",
+    a_village_keeps_the_coin_that_keeps_its_shop_open())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

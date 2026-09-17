@@ -656,7 +656,8 @@ namespace TradeLord
         internal static string KindOf(ItemObject item) => item?.ItemCategory?.StringId;
 
         private static bool TillStillOpen(Settlement s) =>
-            (s?.SettlementComponent?.Gold ?? 0) > 0;
+            TradeRules.WhatTheTillCanPay(s?.SettlementComponent?.Gold ?? 0,
+                                         s != null && s.IsVillage) > 0;
 
         private void DropRankings(Settlement settlement, ISet<string> moved)
         {
@@ -746,7 +747,7 @@ namespace TradeLord
                 float days = Travel.EstimateDaysFromParty(town);
                 if (!WithinTravelCeiling(town, days)) continue;
                 SettlementComponent market = town.SettlementComponent;
-                bool tillOpen = market.Gold > 0;
+                bool tillOpen = TradeRules.WhatTheTillCanPay(market.Gold, town.IsVillage) > 0;
                 Dictionary<ItemObject, int> onTheShelf = minStock > 0 ? WhatItStocks(town) : null;
                 for (int i = 0; i < n; i++)
                 {
@@ -802,7 +803,8 @@ namespace TradeLord
             var all = new List<(Settlement s, int price, float days)>();
             foreach (var (s, lower) in LiveCandidates(hour))
             {
-                if (selling && s.SettlementComponent.Gold <= 0) continue;
+                if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold,
+                                                           s.IsVillage) <= 0) continue;
                 if (!selling && minStock > 0 && StockOf(s, item) < minStock) continue;
                 int price = Priced.At(s.SettlementComponent, item, MobileParty.MainParty, selling);
                 if (price <= 0) continue;
@@ -941,7 +943,8 @@ namespace TradeLord
                         int till = 0;
                         if (Options.Current.Omniscient)
                         {
-                            till = to.SettlementComponent?.Gold ?? 0;
+                            till = TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0,
+                                                               to.IsVillage);
                             if (till <= 0) continue;
                         }
 

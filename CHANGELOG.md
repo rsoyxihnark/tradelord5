@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.81.6
+
+- Selling to a village now leaves the last coin in its purse, so Buy products no longer greys out with Village shop is not available right now.
+- The map marker and the ledger's routes pass over a village left with nothing but that coin, since there is nothing there for TradeLord to sell.
+- The feature list now says a village keeps the last coin in its purse as well as its last of each good.
+
 ## 1.81.5
 
 - TradeLord makes less work for itself each hour as it reads what the workshops will make next, so a campaign left running at speed stays smoother.

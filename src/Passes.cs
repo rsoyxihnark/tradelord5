@@ -105,6 +105,7 @@ namespace TradeLord
     {
         int Count { get; }
         bool Stopped { get; }
+        bool Village { get; }
         string IdAt(int at);
         Good GoodAt(int at);
         bool MaySell(int at, in Good good, out int keep, out Block why);
@@ -311,7 +312,9 @@ namespace TradeLord
                         if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;
                         continue;
                     }
-                    if ((sim ? simTill : market.TillNow()) < price) { tally.Note(Block.MerchantTillEmpty); break; }
+                    if (TradeRules.WhatTheTillCanPay(sim ? simTill : market.TillNow(),
+                                                     market.Village) < price)
+                    { tally.Note(Block.MerchantTillEmpty); break; }
 
                     if (sim)
                     {

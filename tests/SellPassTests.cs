@@ -39,6 +39,7 @@ namespace TradeLord.Tests
             internal Books Ledger = new Books();
             internal bool Sim;
             internal int Till = 100000;
+            internal bool AtAVillage;
             internal bool Halted;
             internal int RefuseAfter = -1;
             internal int PayNothingAfter = -1;
@@ -55,6 +56,8 @@ namespace TradeLord.Tests
             public int Count => Cargo.Count;
 
             public bool Stopped => Halted;
+
+            public bool Village => AtAVillage;
 
             public string IdAt(int at) => Cargo[at].Good.Id;
 
@@ -396,6 +399,38 @@ namespace TradeLord.Tests
             Assert.True(run.Profit > 0);
             Assert.True(run.Earned > 0);
             Assert.True(run.Earned < run.Profit);
+        }
+
+        [Fact]
+        public void A_village_is_left_its_last_coin()
+        {
+            var market = new FakeMarket { Till = 400, AtAVillage = true };
+            market.Add(Cargo("iron"), amount: 3, price: 200).Worth = 50;
+            Run run = Sell(market);
+            Assert.Equal(1, run.Units);
+            Assert.Equal(200, market.Till);
+            Assert.True(run.Tally.Saw(Block.MerchantTillEmpty));
+        }
+
+        [Fact]
+        public void A_town_spends_its_till_to_the_last_coin()
+        {
+            var market = new FakeMarket { Till = 400 };
+            market.Add(Cargo("iron"), amount: 3, price: 200).Worth = 50;
+            Run run = Sell(market);
+            Assert.Equal(2, run.Units);
+            Assert.Equal(0, market.Till);
+            Assert.True(run.Tally.Saw(Block.MerchantTillEmpty));
+        }
+
+        [Fact]
+        public void A_dry_run_leaves_a_village_its_last_coin_too()
+        {
+            var market = new FakeMarket { Till = 400, AtAVillage = true };
+            market.Add(Cargo("iron"), amount: 3, price: 200).Worth = 50;
+            Run run = Sell(market, sim: true);
+            Assert.Equal(1, run.Units);
+            Assert.Equal(200, run.SimGold);
         }
     }
 }
