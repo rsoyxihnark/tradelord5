@@ -178,6 +178,7 @@ namespace TradeLord
             _silenced.Clear();
             Notices.Forget();
             _pendingXp = 0;
+            _pendingProfit = 0;
             _pendingXpMuted = true;
             AutomatedTradeInProgress = false;
             _sittingAt = null;
@@ -788,6 +789,7 @@ namespace TradeLord
             CanTradeHere(settlement) && !StillSettling(quiet);
 
         private static int _pendingXp;
+        private static int _pendingProfit;
         private static bool _pendingXpMuted = true;
 
         private struct Took
@@ -795,6 +797,7 @@ namespace TradeLord
             internal int Units;
             internal int Gold;
             internal int Profit;
+            internal int Earned;
         }
 
         private static Took Reckon(Pass pass, List<(ItemRosterElement, int)> lines, bool selling)
@@ -813,11 +816,16 @@ namespace TradeLord
                 took.Units += count;
                 took.Gold += said;
                 if (selling)
-                    took.Profit += TradeMath.Credit(price, TradePolicy.WorthToBeat(item),
+                {
+                    int credited = TradeMath.Credit(price, TradePolicy.WorthToBeat(item),
                                                     TradePolicy.UnpaidWorth(item)) * count;
+                    took.Profit += credited;
+                    if (el.EquipmentElement.ItemModifier == null) took.Earned += credited;
+                }
                 pass.Tally(item, count, said);
             }
             took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);
+            took.Earned = Deals.NoMoreThanTheSale(took.Earned, took.Gold);
             return took;
         }
 
@@ -855,7 +863,7 @@ namespace TradeLord
                 "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).", got.Units, got.Gold);
             msg.SetTextVariable("PROFIT", got.Profit);
             Notices.Say(msg, got.Profit > 0 ? Notices.Gain : Notices.Flat);
-            if (addsUp && got.Profit > 0) AwardTradeXp(got.Profit, pass.Muted);
+            if (addsUp && got.Earned > 0) AwardTradeXp(got.Earned, pass.Muted);
         }
 
         private static void ReportWhatYouBought(Pass pass, Took paid, bool addsUp)
@@ -879,10 +887,12 @@ namespace TradeLord
         internal static void FlushToasts()
         {
             int xp = _pendingXp;
+            int profit = _pendingProfit;
             bool muted = _pendingXpMuted;
             _pendingXp = 0;
+            _pendingProfit = 0;
             _pendingXpMuted = true;
-            if (xp > 0) CreditTradeSkill(xp, muted);
+            if (xp > 0) CreditTradeSkill(xp, profit, muted);
             Notices.Drain();
         }
 
@@ -902,13 +912,17 @@ namespace TradeLord
                           ((int)each) + " of the " + xp + " denars of profit");
         }
 
-        private static void CreditTradeSkill(int xp, bool muted)
+        private static void CreditTradeSkill(int xp, int profit, bool muted)
         {
             if (Campaign.Current == null || Hero.MainHero == null) return;
             int before = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
             OpenTransaction();
             try { SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp); }
             finally { CloseTransaction(); ReportSilenced(); }
+            LedgerBehavior.Instance?.AddTradeXp(xp);
+            if (profit > 0)
+                Guard.Run("TradeXp.Event", () =>
+                    CampaignEventDispatcher.Instance.OnPlayerTradeProfit(profit));
             Guard.Run("TradeXp.Party", () => CreditTheCompanionsWithYou(xp));
             int now = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
             bool rose = now > before;
@@ -1077,7 +1091,7 @@ namespace TradeLord
                     soldItems, goldGained);
                 msg.SetTextVariable("PROFIT", profit);
                 if (!pass.Muted) Notices.Say(msg, profit > 0 ? Notices.Gain : Notices.Flat);
-                if (!pass.Sim && profit > 0) AwardTradeXp(profit, pass.Muted);
+                if (!pass.Sim && moved.Earned > 0) AwardTradeXp(moved.Earned, pass.Muted);
             }
             else if (!pass.DirectionError)
             {
@@ -1127,6 +1141,8 @@ namespace TradeLord
             }
 
             public Good GoodAt(int at) => TradePolicy.Describe(Item(at));
+
+            public bool EarnsTradeXp(int at) => _plan[at].EquipmentElement.ItemModifier == null;
 
             public bool MaySell(int at, in Good good, out int keep, out Block why) =>
                 TradePolicy.MaySell(good, _plan[at], _pass.Locked, _keepBack, _awaited,
@@ -1422,7 +1438,7 @@ namespace TradeLord
             if (stable.Count == 0) { Drove.SayWhatItWillNotGiveUp(mine, shed, settlement); return; }
             stable.Sort((x, y) => x.rank != y.rank ? x.rank.CompareTo(y.rank) : x.price.CompareTo(y.price));
 
-            int sold = 0, profit = 0, simGold = 0, simTill = pass.Till;
+            int sold = 0, profit = 0, earned = 0, simGold = 0, simTill = pass.Till;
 
             pass.CountFrom();
             InAPass(() =>
@@ -1476,7 +1492,9 @@ namespace TradeLord
                             if (pass.Sim) pass.Books.NotePaidDrawn(item.StringId);
                             else LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
                         }
-                        profit += TradePolicy.Credit(price, worth, basis.UnpaidWorth);
+                        int credited = TradePolicy.Credit(price, worth, basis.UnpaidWorth);
+                        profit += credited;
+                        if (el.EquipmentElement.ItemModifier == null) earned += credited;
                         sold++;
                         remaining--;
                         shed--;
@@ -1499,7 +1517,7 @@ namespace TradeLord
                 "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.",
                 sold, gained);
             if (!pass.Muted) Notices.Say(msg, Notices.Gain);
-            if (!pass.Sim && profit > 0) AwardTradeXp(profit, pass.Muted);
+            if (!pass.Sim && earned > 0) AwardTradeXp(earned, pass.Muted);
         }
 
         private static bool PurseBelowTheHaulAnimalFloor(Pass pass)
@@ -1776,6 +1794,7 @@ namespace TradeLord
             int xp = (int)(profit * Options.Current.TradeXpMultiplier);
             if (xp <= 0) return;
             _pendingXp += xp;
+            _pendingProfit += profit;
             if (!muted) _pendingXpMuted = false;
             Log.Write("trade profit fed to the XP system: " + xp + " denars");
         }

@@ -293,5 +293,6 @@
 		<string id="TL445" text=" | 对于支付低于本面板承诺的市场，评分会被调低"/>
 		<string id="TL446" text="？"/>
 		<string id="TL447" text=" | 库存已计入你到达前商队与工坊会给市场添上的东西，并扣除商队钱袋预计会在那里买走的部分；价格需要开启“整批价格模拟”"/>
+		<string id="TL448" text="交易经验：{AMOUNT}" />
 	</strings>
 </base>
