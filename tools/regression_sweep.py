@@ -4787,6 +4787,28 @@ def a_dropdown_only_ever_gains_choices_at_the_end():
             and all(lists[k][:len(v)] == v for k, v in shipped.items())
             and 'keep(from.SelectedIndex);' in method_body(M, "private static void Follows"))
 
+def a_settings_file_that_could_not_be_read_is_never_written_over():
+    c = S['Config.cs']
+    read = method_body(c, "private static void Read()")
+    lines = method_body(c, "private static string[] Lines(string path)")
+    write = method_body(c, "private static void Write(string path, string why)")
+    return ("private static bool _unreadable;" in c
+            and "try { return File.ReadAllLines(path); }" in lines
+            and "_unreadable = true;" in lines
+            and "return null;" in lines
+            and "string[] lines = Lines(found);" in read
+            and "if (lines == null) return;" in read
+            and "File.ReadAllLines" not in read
+            and read.find("string[] lines = Lines(found);") < read.find("SettingsFile.Read(lines, ignored)")
+            and "if (_unreadable)" in write
+            and write.find("if (_unreadable)") < write.find("File.WriteAllText")
+            and 'Log.Repeatable("settings file unreadable", "left alone",' in write)
+
+
+chk("1.81.8", "a settings file TradeLord could not read is left exactly as it is, so a setting changed afterwards never writes what it ships with over what you had",
+    a_settings_file_that_could_not_be_read_is_never_written_over())
+
+
 chk("1.23.1", "a dropdown's choices keep the order they shipped in, so a saved setting never comes back meaning something else",
     a_dropdown_only_ever_gains_choices_at_the_end())
 
@@ -4841,7 +4863,8 @@ def a_settings_file_says_which_shape_it_is_in():
     return ('public const int Shape = 13;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and "written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();" in S['Migrate.cs']
-            and ordered(read, "var written = SettingsFile.Read(File.ReadAllLines(found), ignored);",
+            and ordered(read, "string[] lines = Lines(found);",
+                        "var written = SettingsFile.Read(lines, ignored);",
                         "written.TryGetValue(Migration.ShapeKey, out string held)",
                         "written.Remove(Migration.ShapeKey);",
                         "bool lifted = Migration.Lift(shape, written, notes);",
@@ -8168,8 +8191,9 @@ def how_a_settings_file_is_read_and_written_is_worked_out_where_a_test_can_ask()
                         "if (string.IsNullOrEmpty(line.Key)) continue;",
                         "sb.Append(OneLine(line.Key)).Append(' ').Append(Splits).Append(' ')",
                         ".AppendLine(OneLine(line.Value));")
-            and ordered(config, "var ignored = new List<string>();",
-                        "var written = SettingsFile.Read(File.ReadAllLines(found), ignored);",
+            and ordered(config, "string[] lines = Lines(found);",
+                        "var ignored = new List<string>();",
+                        "var written = SettingsFile.Read(lines, ignored);",
                         "foreach (string line in ignored)",
                         "is not a name = value line, so it is ignored")
             and "File.WriteAllText(path, SettingsFile.Compose(Header, lines));" in write
