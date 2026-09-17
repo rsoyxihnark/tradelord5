@@ -30,8 +30,10 @@ namespace TradeLord
         private static readonly Dictionary<string, ItemObject> _standsFor =
             new Dictionary<string, ItemObject>(StringComparer.Ordinal);
 
-        private static readonly Dictionary<string, ItemObject> _standsForAt =
-            new Dictionary<string, ItemObject>(StringComparer.Ordinal);
+        private static readonly Dictionary<(string site, string category), ItemObject> _standsForAt =
+            new Dictionary<(string, string), ItemObject>();
+
+        private static readonly List<(string, int)> _needs = new List<(string, int)>();
 
         private static readonly Dictionary<(string site, string item, int stockNow, float afterDays),
                                            List<(float days, int shelf)>> _shelfAhead =
@@ -244,14 +246,14 @@ namespace TradeLord
             for (int i = 0; i < type.Productions.Count; i++)
             {
                 WorkshopType.Production production = type.Productions[i];
-                var needs = new List<(string, int)>();
+                _needs.Clear();
                 MBReadOnlyList<(ItemCategory, int)> inputs = production.Inputs;
                 for (int k = 0; inputs != null && k < inputs.Count; k++)
                 {
                     var (category, count) = inputs[k];
-                    needs.Add((category == null ? null : category.StringId, count));
+                    _needs.Add((category == null ? null : category.StringId, count));
                 }
-                ready.Add((TradeRules.InputsHeld(needs, held), shop.GetProductionProgress(i)));
+                ready.Add((TradeRules.InputsHeld(_needs, held), shop.GetProductionProgress(i)));
             }
 
             int pick = TradeRules.RunsSoonest(ready);
@@ -285,7 +287,7 @@ namespace TradeLord
         private static ItemObject StandsForAt(Settlement site, ItemCategory category)
         {
             if (site == null || category == null) return StandsFor(category);
-            string key = site.StringId + "/" + category.StringId;
+            var key = (site.StringId, category.StringId);
             if (_standsForAt.TryGetValue(key, out ItemObject kept)) return kept;
             ItemObject stocked = null;
             int most = 0;
