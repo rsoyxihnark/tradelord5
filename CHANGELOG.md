@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.81.5
 
+- TradeLord makes less work for itself each hour as it reads what the workshops will make next, so a campaign left running at speed stays smoother.
 - The feature list now says that Write a price trace to the log ships on, rather than off.
 
 ## 1.81.4
