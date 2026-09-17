@@ -986,6 +986,7 @@ namespace TradeLord
                         if (cap > 0f && soonest > cap) continue;
 
                         float days = toBuy + Travel.EstimateDaysBetween(from, to);
+                        if (TradeMath.OutOfReach(days)) continue;
                         if (cap > 0f && days > cap) continue;
 
                         int landedAtSellTown = Forecast.WorthShift(to, item, days);

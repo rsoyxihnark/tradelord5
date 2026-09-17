@@ -218,11 +218,10 @@ namespace TradeLord
                 var (s, market, gold) = reachable[at];
                 if (gold <= how.Value) break;
                 float cap = LedgerBehavior.TravelCeiling(s);
-                if (cap > 0f)
-                {
-                    if (Travel.StraightDaysFromParty(s) > cap) continue;
-                    if (Travel.EstimateDaysFromParty(s) > cap) continue;
-                }
+                if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) continue;
+                float ride = Travel.EstimateDaysFromParty(s);
+                if (TradeMath.OutOfReach(ride)) continue;
+                if (cap > 0f && ride > cap) continue;
                 long total = 0;
                 int units = 0, kinds = 0;
                 bool capped = false;
