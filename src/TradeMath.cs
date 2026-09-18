@@ -135,6 +135,16 @@ namespace TradeLord
             return forecast < least ? least : forecast;
         }
 
+        public const float NoTripCountsShorterThan = 0.25f;
+
+        public static float EarnedPerDay(int sellPrice, int paid, float days)
+        {
+            if (sellPrice <= 0 || sellPrice <= paid) return 0f;
+            if (float.IsNaN(days)) return 0f;
+            float over = days > NoTripCountsShorterThan ? days : NoTripCountsShorterThan;
+            return (sellPrice - paid) / over;
+        }
+
         public static float WhatThisPickWouldMake(float profitPerUnit, int unitPrice, float unitWeight,
                                                   int stocked, int spendable, float room)
         {
