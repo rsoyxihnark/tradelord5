@@ -71,7 +71,6 @@ namespace TradeLord
     {
         internal int At;
         internal Good Good;
-        internal int Carried;
         internal float Worth;
         internal int LedgerRank;
     }
@@ -213,10 +212,9 @@ namespace TradeLord
                     s.ResaleSafetyFactor);
                 if (!TradeMath.BuyAcceptable(here, realizable, s.MinProfitMargin)) { tally.Note(Block.BelowMargin); continue; }
                 Pick picked = one;
-                picked.Carried = carried;
                 picked.Worth = WhatThisPickWouldReallyMake(market, one.At, carried, here,
                     TradeMath.MostYouCouldTake(here, one.Good.Weight, market.TheirsToSell(one.At),
-                                               market.Spendable(), market.Room()), s);
+                                               market.Spendable(), market.Room(), s.BuyCapPerItem), s);
                 stock.Add(picked);
             }
             Picks.MostMoneyFirst(stock);
@@ -265,7 +263,7 @@ namespace TradeLord
                 var prior = books.Purchases(sim, good.Id);
                 int remaining = market.TheirsToSell(picked.At);
                 int countThis = prior.count, spentThis = prior.spent;
-                int held = picked.Carried;
+                int held = market.Carried(picked.At) + books.Held(sim, good.Id);
                 int till = market.ResaleTill(picked.At);
                 int drawn = market.ResaleUpTo(picked.At, held);
 
