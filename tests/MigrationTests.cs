@@ -355,6 +355,38 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void TheSwitchForWhatToBuyFirstBecameAChoiceOfTwoAndCarriesTheValueOver()
+        {
+            var kept = File("FollowTheLedgerFirst", "true", "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(13, kept, notes));
+            Assert.False(kept.ContainsKey("FollowTheLedgerFirst"));
+            Assert.Equal("0", kept["WhatToBuyFirst"]);
+            Assert.Equal("800", kept["GoldReserve"]);
+
+            var turnedOff = File("FollowTheLedgerFirst", "false");
+            Assert.True(Migration.Lift(13, turnedOff, new List<string>()));
+            Assert.Equal("1", turnedOff["WhatToBuyFirst"]);
+
+            var nonsense = File("FollowTheLedgerFirst", "maybe");
+            Assert.True(Migration.Lift(13, nonsense, new List<string>()));
+            Assert.False(nonsense.ContainsKey("FollowTheLedgerFirst"));
+            Assert.False(nonsense.ContainsKey("WhatToBuyFirst"));
+        }
+
+        [Fact]
+        public void AFileAlreadyOnTheChoiceOfTwoKeepsWhatItPicked()
+        {
+            var written = File("WhatToBuyFirst", "1");
+            Assert.False(Migration.Lift(Migration.Shape, written, new List<string>()));
+            Assert.Equal("1", written["WhatToBuyFirst"]);
+
+            var both = File("FollowTheLedgerFirst", "true", "WhatToBuyFirst", "1");
+            Assert.True(Migration.Lift(13, both, new List<string>()));
+            Assert.Equal("1", both["WhatToBuyFirst"]);
+        }
+
+        [Fact]
         public void AStepOnlyRunsOnAFileOlderThanTheShapeItArrivedIn()
         {
             var older = File("MarkerMaxTravelDays", "3");
@@ -428,7 +460,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(13, Migration.Shape);
+            Assert.Equal(14, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));
