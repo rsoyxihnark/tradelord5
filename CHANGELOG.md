@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The mod description is rewritten in short lines, so it reads at a glance rather than in paragraphs
+- Fixed the mod description saying your food is topped up before TradeLord trades for profit, when since 1.83.2 the larder is filled after
+
 ## 1.83.3
 
 - Fixed the map marker pointing at the town paying the most in total instead of the one paying the most per day

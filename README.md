@@ -6,32 +6,52 @@
 
 ## Everything it does
 
-- ✅ Install or remove it, before, during or after a campaign, and load a save made with it or without it. It declares no save types of its own. All it puts in a save is five strings, five numbers, a switch and a settlement reference, every one of them something vanilla already knows how to read, so a save written with it still opens without it.
+- ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
+- ✅ It declares no save types of its own. All it puts in a save is five strings, five numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
 - ✅ Live prices from every market on the map, read through that market's own price model, so the price it shows is the price it pays
-- ✅ The five best places to sell and the five cheapest to buy, in every item tooltip, each priced as that market will be when you arrive rather than as it stands while you read, so the tooltip and the ledger panel never disagree about the same market
-- ✅ Which way each of those markets is going, marked next to its price once you switch Mark a market rising or falling on: a market whose price has moved 5% or more since the last day you looked there is marked rising or falling, in the best sell and the best buy lists alike. It needs Live world prices off, since that is when TradeLord records prices at all. Off out of the box
+- ✅ The five best places to sell and the five cheapest to buy, in every item tooltip
+- ✅ Each of those five priced as that market will be when you arrive, not as it stands while you read, so the tooltip and the ledger never disagree about the same market
+- ✅ Which way each market is going, marked beside its price once you switch Mark a market rising or falling on, whenever it has moved 5% or more since the last day you looked there
+- ✅ It needs Live world prices off, since that is when TradeLord records prices at all. Off out of the box
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying
 - ✅ Stock counts, so you know the deal is actually there
 - ✅ What you paid for a good, per unit, on its own tooltip once you have bought one, so you can see at a glance whether the market in front of you is beating it
 - ✅ Inventory rows tinted good to bad against the best price known
 - ✅ One clean set of price hints, bypassing the vanilla rumour system, which is usually out of date by the time you get there
-- ✅ A ledger panel on the campaign map ranking the best route it can find for each good, thirty rows of them, on hotkey **T**, on the map button, or from its own entry in the town menu, which falls back to the six best routes written out as text if the panel cannot open
-- ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get, and a route whose prices could not be walked that way is marked on its confidence figure
-- ✅ A confidence score on each route: profit per day, discounted by how much of the margin survives once every unit is priced in turn, how much of the good the market you are buying from has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
-- ✅ The panel keeps its own score: every route it shows writes down the Sell price it promised you, and when you walk into that market near the time it said, it checks that promise against what the market really pays. The line under the routes then says how much of the promised Sell price has actually been there, over how many prices it has checked, and that tally carries on across your campaign
-- ✅ And the panel learns from that: a market that has paid less than it promised is scored lower, so routes selling there fall down the list. It keeps a record for each market separately, written into your save, counts it only once you have walked into that market five times, and it can never move a route's Score by more than a quarter. Trust a market by what it has paid turns it off
-- ✅ How long each route lasts, under Left: the caravans heading for the market you would buy from are spending as they arrive, and the panel says how many hours that shelf still holds the amount the route quotes before they buy it out. Blank means nobody TradeLord can see is coming for it
-- ✅ Prices and stock that count what is still on its way: the cargo the caravans on the road will unload at a market, what that town's workshops will make next, and the purses those caravans are bringing to spend, spread over the goods that are cheap there as an estimate of what they will buy off the shelf. Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into. Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
+- ✅ A ledger panel on the campaign map, ranking the best route it can find for each good, thirty rows of them
+- ✅ Open it on hotkey **T**, on the map button, or from its own entry in the town menu, which falls back to the six best routes written out as text if the panel cannot open
+- ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get
+- ✅ A route whose prices could not be walked that way is marked on its confidence figure
+- ✅ A confidence score on each route, which starts at profit per day and is marked down by everything that could eat it
+- ✅ What marks it down: how much of the margin survives unit by unit pricing, how much of the good the seller has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
+- ✅ The panel keeps its own score, writing down the Sell price it promised you and holding it against what that market really pays when you walk in near the time it said
+- ✅ The line under the routes says how much of that promised Sell price has actually been there, over how many prices it has checked, and the tally carries on across your campaign
+- ✅ The panel learns from that, and a market that has paid less than it promised is scored lower, so routes selling there fall down the list
+- ✅ It keeps a record for each market on its own, written into your save, counts it only once you have walked into that market five times, and can never move a route's Score by more than a quarter
+- ✅ Trust a market by what it has paid turns that off
+- ✅ How long each route lasts, under Left, which says how many hours the shelf still holds the amount the route quotes before the caravans heading there buy it out
+- ✅ Left is blank when nobody TradeLord can see is coming for that good
+- ✅ Prices and stock that count what is still on its way: the cargo the caravans will unload, what that town's workshops will make next, and the purses those caravans are bringing to spend
+- ✅ That purse is spread over the goods that are cheap there, which is what a trader would really take off the shelf
+- ✅ Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into
+- ✅ Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
-- ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for. It reads that purse live, so with Live world prices off it plans on the stock alone
-- ✅ A route listed whether or not your purse could pay for it today, or your herd is already as large as your men can drive, so the panel always shows you where the profit is, and says under the routes when your gold reserve is what is stopping you buying
+- ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
+- ✅ It reads that purse live, so with Live world prices off it plans on the stock alone
+- ✅ A route listed whether or not your purse could pay for it today, or your herd is already as large as your men can drive, so the panel always shows you where the profit is
+- ✅ It says under the routes when your gold reserve is what is stopping you buying
 - ✅ Click any town to jump the camera there and pin a marker on it, and a pin comes off by itself once TradeLord has traded in that town
-- ✅ The best market for the cargo you are carrying, a town or a village, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement. It counts only the goods it would really sell there, the ones that clear Minimum profit margin, so it never sends you somewhere it will then refuse to sell. It works through the richest markets first and stops as soon as none of the rest could outpay the one it has found, and it prices a town only as far as that town's own purse can pay for, so riding across Calradia costs it very little. A price it read for a market keeps for a few hours rather than a single one, so the marker can be pointing at a town on prices a little older than the ones you will find when you walk in. TradeLord.log says every time the marker moves, what the cargo would fetch there, that town's purse, how far away it is and the market it beat
-- ✅ The five workshops in Calradia earning the most right now, with their town, what each will make next and their owner, on that same panel. With Live world prices turned off it shows yours instead
+- ✅ The best market for the cargo you are carrying, a town or a village, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement
+- ✅ It counts only the goods it would really sell there, the ones that clear Minimum profit margin, so it never sends you somewhere it will then refuse to sell
+- ✅ It works through the richest markets first and stops as soon as none of the rest could outpay the one it has found, so riding across Calradia costs it very little
+- ✅ A price it read for a market keeps for a few hours rather than a single one, so the marker can be pointing at a town on prices a little older than the ones you walk in on
+- ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that town's purse, how far away it is and the market it beat
+- ✅ The five workshops in Calradia earning the most right now, with their town, what each will make next and their owner, on that same panel
+- ✅ With Live world prices turned off it shows yours instead
 - ✅ Your gold, your cargo against what your party can carry, your party's speed and the running total of what TradeLord has made you, along the top of that same panel
 - ✅ A warning on screen when your purse is under your gold reserve, or your cargo is too full to buy anything, so a market that trades nothing is never a mystery
 - ✅ A name on one of your item lists that matches no good in this game said on screen and named in the log, instead of quietly doing nothing
@@ -39,12 +59,23 @@
 **What it does for you**
 
 - ✅ One trade entry in the town menu, selling then buying in one go, whenever you want it
-- ✅ Sells and buys the moment you enter a market by default, once for each arrival: Wait here for some time, a walk through the lands, or anything else that drops you back at the town or village menu does not set it trading again, and it leaves that market alone until your party has taken to the road. Trade here now (TradeLord) still trades whenever you ask
+- ✅ Sells and buys the moment you enter a market by default, once for each arrival
+- ✅ Wait here for some time, a walk through the lands, or anything else that drops you back at the town or village menu does not set it trading again, and it leaves that market alone until your party has taken to the road
+- ✅ Trade here now (TradeLord) still trades whenever you ask
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
-- ✅ Tops your food back up to three days of supply as it trades, buying the cheapest food the market has and never paying more than the cheapest price it knows of for it, before it trades for profit
-- ✅ Buys and sells livestock as ordinary goods, checking the game's own herding penalty against the men in your party first, so cattle never slow you down. A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
-- ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to a quarter more than the cheapest price it knows of for one, which you can set anywhere from the cheapest to three times it. It buys none at all until your purse is above 2000 denars, which you can set too, so early gold goes on goods instead. It buys no riding horses or camels at all, and it stops before your gold reaches your reserve. It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
-- ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it. Your herd is looked at three times a visit, as you enter a settlement, again once it has finished trading, and once more as you leave, so a penalty that arrives while you are in town is caught before you ride out, and losing men in a battle or to desertion is noticed the same way as picking up an animal. Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all, cheapest first at every step. It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, it keeps enough haul animals to carry what you are already carrying, and it keeps back as many animals as a quest of yours is waiting on. One switch turns it off
+- ✅ Tops your food back up to three days of supply, buying the cheapest food the market has and never paying more than the cheapest price it knows of for it
+- ✅ The larder is filled after it has traded for profit, so your gold and your cargo room go to the goods you came to trade first
+- ✅ Buys and sells livestock as ordinary goods, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
+- ✅ A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
+- ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to a quarter more than the cheapest price it knows of for one, which you can set anywhere from the cheapest to three times it
+- ✅ It buys none at all until your purse is above 2000 denars, which you can set too, so early gold goes on goods instead
+- ✅ It buys no riding horses or camels at all, and it stops before your gold reaches your reserve
+- ✅ It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
+- ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it
+- ✅ Your herd is looked at three times a visit, as you enter a settlement, again once it has finished trading, and once more as you leave, so a penalty that arrives while you are in town is caught before you ride out
+- ✅ Losing men in a battle or to desertion is noticed the same way as picking up an animal
+- ✅ Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all, cheapest first at every step
+- ✅ It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, it keeps enough haul animals to carry what you are already carrying, and it keeps back as many animals as a quest of yours is waiting on. One switch turns it off
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Holds trade goods and livestock you never paid for, the ones a town event hands you or a quest leaves in your bags, until a market beats what the cheapest market it knows would have charged for them by your margin, so they are never given away at the first stall that will take them
@@ -55,7 +86,10 @@
 - ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good and the last coin in its purse, so its shop stays open
 - ✅ Puts 1000 denars back in every village left with an empty purse, once for a campaign, the first time you enter it, so a village an older version spent out can be traded with again, and it says on screen how many it refilled
 - ✅ Trade with towns and Trade with villages each switch their own kind of market off, so TradeLord can work villages alone, towns alone, or leave both markets to you
-- ✅ Trades with a caravan or a party of villagers the moment you meet them on the road, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of their own purse. A party on the road is held to every rule a market visit is: it sells your looted gear when the goods you bought fall short of your margin, it holds your cargo back for the best market if you asked for that, it can never sell you enough livestock to drop you into the herd speed penalty, your caps on how many of a good you hold and what share of the hold it may fill both apply, and the settling delay keeps it away from a brand new campaign. Meeting that same party again keeps the books of what was already traded with them, so it never buys back what it has just sold them and what it spent still counts against its caps. Once the goods have changed hands you can say so, and the trader answers
+- ✅ Trades with a caravan or a party of villagers the moment you meet them on the road, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of their own purse
+- ✅ A party on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, your looted gear, Hold cargo for the best market, the herd speed penalty and the settling delay
+- ✅ Meeting that same party again keeps the books of what was already traded with them, so it never buys back what it has just sold them and what it spent still counts against its caps
+- ✅ Once the goods have changed hands you can say so, and the trader answers
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
 - ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
@@ -63,14 +97,18 @@
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen, apart from three warnings: cargo full, a purse below your Gold reserve, and an item list entry that matches no good
 - ✅ A dry run that simulates every trade it would have made and shows you the estimate, marked a best case in the message and in the log, moving nothing
-- ✅ Free passage past bandits, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and TradeLord adds a line to what you can say to them, asking to be let past, and they let you go with no fight and no ransom, then leave you be for the next few hours instead of turning round and hitting you again
+- ✅ Free passage past bandits, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and TradeLord adds a line to what you can say to them, asking to be let past
+- ✅ They let you go with no fight and no ransom, then leave you be for the next few hours instead of turning round and hitting you again
 
 **What it doesn't touch**
 
 - ✅ Anything you locked in the inventory screen
 - ✅ Anything an active quest of yours is waiting on, whether it is an animal, a trade good or a raw material, held back from every pass that sells until the quest is done with it
-- ✅ Unique and player-crafted gear, and quest items. Your haul animals are never sold for profit either, though it will buy them for you, and naming one on your always-sell list is the only way to move one by hand. An animal that carries nothing for you and is not livestock is no haul animal, so it is sold like any other cargo rather than sitting in your bags for good
-- ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it: sell them, which is what it does out of the box; keep every one, which holds anything built from smithing parts, forged or looted off a bandit alike; or **keep the ones you have not learned**, which holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know. Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
+- ✅ Unique and player-crafted gear, and quest items
+- ✅ Your haul animals are never sold for profit either, though it will buy them for you, and naming one on your always-sell list is the only way to move one by hand
+- ✅ An animal that carries nothing for you and is not livestock is no haul animal, so it is sold like any other cargo rather than sitting in your bags for good
+- ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it: sell them, which is what it does out of the box; keep every one, which holds anything built from smithing parts, forged or looted off a bandit alike; or **keep the ones you have not learned**, which holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know
+- ✅ Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus. It follows Restock and keep food (days of supply): set that to 0 and TradeLord keeps no food back at all
 - ✅ Buying grain, which is heavy and low margin, so buying it fills the cargo for little return
@@ -89,12 +127,15 @@
 - ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ A share of the whole hold TradeLord may fill, so it stops buying with room left for what a battle or a quest hands you. It ships at the full hold, and selling is unaffected
-- ✅ Caps on one good by count, which ships at 32 units a visit, or by denars, on how many of it you will carry, on the share of the hold it may fill, which ships at 45% so one cheap good cannot take your whole cargo, and on the whole visit, which ships at 1000 denars so a full purse is never spent in one town. They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off a haul animal, since one of those adds to the hold rather than filling it
+- ✅ Caps on one good by count, which ships at 32 units a visit, or by denars, on how many of it you will carry, on the share of the hold it may fill, which ships at 45% so one cheap good cannot take your whole cargo, and on the whole visit, which ships at 1000 denars so a full purse is never spent in one town
+- ✅ They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off a haul animal, since one of those adds to the hold rather than filling it
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know. It sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay, off out of the box, that keeps it out of a brand new campaign until prices calm down
-- ✅ Staged Trading, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other, one unit to a transfer at the price each unit really fetches. Change what you like, then press Done to trade or Cancel to leave it. While it is on, nothing is traded as you arrive: Trade here now (TradeLord) in the town menu is what lays the deal out. A party met on the road still trades as before. The trade screen's own running total shows what the deal comes to, and once you close it TradeLord says what your purse did. Press Done and it reports what moved the same way it reports a trade of its own, and credits the profit to your Trade skill
+- ✅ Staged Trading, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other, one unit to a transfer at the price each unit really fetches
+- ✅ Change what you like, then press Done to trade or Cancel to leave it. While it is on, nothing is traded as you arrive: Trade here now (TradeLord) in the town menu is what lays the deal out, and a party met on the road still trades as before
+- ✅ The trade screen's own running total shows what the deal comes to, and once you close it TradeLord says what your purse did. Press Done and it reports what moved the same way it reports a trade of its own, and credits the profit to your Trade skill
 - ✅ Buy Workshops Remotely, on its own button below the TradeLord ledger: every workshop in Calradia a notable would sell you, with its town, what it makes, who owns it, what it has earned lately and what it would cost, most profitable first. Buy any of them from there, wherever you are standing, and it asks you to confirm before it spends a denar
 - ✅ The limit the game puts on how many workshops you may own, lifted out of the box, and set to whatever number you like. Put it back to the game's own limit with a 0
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
