@@ -150,19 +150,28 @@ namespace TradeLord
             return PerDay(sellPrice - paid, days);
         }
 
-        public static float WhatThisPickWouldMake(float profitPerUnit, int unitPrice, float unitWeight,
-                                                  int stocked, int spendable, float room)
+        public static int MostYouCouldTake(int unitPrice, float unitWeight, int stocked,
+                                           int spendable, float room)
         {
-            if (profitPerUnit <= 0f || unitPrice <= 0 || stocked <= 0 || spendable <= 0) return 0f;
+            if (unitPrice <= 0 || stocked <= 0 || spendable <= 0) return 0;
             long take = stocked;
             long affordable = spendable / unitPrice;
             if (affordable < take) take = affordable;
             if (unitWeight > 0.01f)
             {
-                if (room <= 0f || float.IsNaN(room)) return 0f;
+                if (room <= 0f || float.IsNaN(room)) return 0;
                 long fits = (long)(room / unitWeight);
                 if (fits < take) take = fits;
             }
+            if (take <= 0) return 0;
+            return take > int.MaxValue ? int.MaxValue : (int)take;
+        }
+
+        public static float WhatThisPickWouldMake(float profitPerUnit, int unitPrice, float unitWeight,
+                                                  int stocked, int spendable, float room)
+        {
+            if (profitPerUnit <= 0f) return 0f;
+            int take = MostYouCouldTake(unitPrice, unitWeight, stocked, spendable, room);
             return take <= 0 ? 0f : take * profitPerUnit;
         }
 

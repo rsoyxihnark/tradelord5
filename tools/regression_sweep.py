@@ -563,7 +563,7 @@ def every_market_a_good_could_be_sold_at_is_offered_to_the_route_scan():
             and "var sells = EverySell(item);" in scan
             and "var buys = TopBuy(item, MarketRank.TopCacheSize);" in scan
             and "ledger.TopSell(item, MarketRank.TopCacheSize);" in S['TooltipPatches.cs']
-            and "var markets = TopSell(item, MarketRank.TopCacheSize);" in
+            and "var markets = EverySell(item);" in
                 method_body(l, "public (Settlement town, int price) WhereThisEarnsFastest")
             and ordered(scan, "float ceiling = (float)(openingSell - openingBuy) * qtyCap;",
                         "if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey) continue;",
@@ -829,7 +829,7 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
             and ordered(floor, "if (!Options.Current.PreferBestSellTown) return 0;",
                         "LedgerBehavior.Instance?.BestSell(item)",
                         "(int)(best.Item2 * Options.Current.BestSellTownTolerance)")
-            and S['Trading.cs'].count("TradePolicy.WorthToBeat(") == 1
+            and S['Trading.cs'].count("TradePolicy.WorthToBeat(") == 2
             and S['Marker.cs'].count("TradePolicy.WorthToBeat(") == 1)
 
 
@@ -1637,9 +1637,10 @@ chk("1.3.8", "quick-buy stops when the budget is spent",
 chk("1.3.8", "the buying pass takes only what a market in reach pays more for, and only above the margin",
     (lambda b, far: "if (!market.ResaleMarket(one.At, here, out int elsewhere))\n"
                     "                { tally.Note(Block.NoResaleMarket); continue; }" in b
-               and "return elsewhere.Item1 != null;" in b
-               and "if (!TradeMath.BuyAcceptable(price, picked.Realizable, s.MinProfitMargin))\n"
-                   "                    { tally.Note(Block.BelowMargin); break; }" in b
+               and "Settlement buyer = elsewhere.Item1;" in b
+               and "if (buyer == null) return false;" in b
+               and "if (!TradeMath.BuyAcceptable(price, TradeMath.Realizable(wouldDraw - drawn," in b
+               and "{ tally.Note(Block.BelowMargin); break; }" in b
                and "if (town == null || price <= 0 || town == notHere) continue;" in far
                and "if (TradeMath.OutOfReach(days)) continue;" in far)
     (buy_pass(),
@@ -1846,7 +1847,7 @@ chk("1.3.16", "the hold-for-best-market floor is tested against every unit as th
              "new Random(5540)")))
 chk("1.3.16", "food branch falls through to the sell rules",
     ordered(sell_rule(),
-            "int reserved = DrawKeepBack(amount, facts.FoodHeld, out bool fed);",
+            "int reserved = DrawKeepBack(amount - said.KeepCount, facts.FoodHeld, out bool fed);",
             "if (amount <= said.KeepCount) { said.Why = Block.FoodReserve; return said; }",
             "            said.Allowed = true;\n            return said;") and
     "reserve[item] = held - drawn;" in
@@ -1955,7 +1956,7 @@ chk("1.3.29", "one buy-side margin rule, for the planner and the executor alike"
     S['Ledger.cs'].count("Options.Current.ResaleSafetyFactor") == 0 and
     "TradePolicy.BuyAcceptable" in S['Ledger.cs'] and
     "TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin)" in S['Policy.cs'] and
-    S['Passes.cs'].count("TradeMath.BuyAcceptable(") == 2 and
+    S['Passes.cs'].count("TradeMath.BuyAcceptable(") == 3 and
     S['Passes.cs'].count("Options.Current") == 0)
 chk("1.3.29", "both knowledge modes filter markets through one eligibility rule",
     S['Ledger.cs'].count("private static bool Eligible(Settlement s, out float lower)") == 1 and
@@ -2730,7 +2731,7 @@ chk("1.6.8", "the map button reserves the mouse over the button, not over the ma
     "The_strip_it_falls_back_to_is_the_right_edge_at_mid_height" in MAPBUTTONTESTS)
 chk("1.6.8", "the food reserve is spent only on goods the sell rules would actually move",
     (lambda b: ordered(b, "said.Why = Block.NotTradable; return said;",
-                       "int reserved = DrawKeepBack(amount, facts.FoodHeld, out bool fed);"))
+                       "int reserved = DrawKeepBack(amount - said.KeepCount, facts.FoodHeld, out bool fed);"))
     (sell_rule()))
 chk("1.6.8", "another mod handles its own notification before TradeLord may hold one back",
     "[HarmonyPriority(Priority.Last)]" in
@@ -4156,7 +4157,7 @@ chk("1.14.3", "a market whose merchant has no gold is no destination in any list
     (method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")) and
     ".WhereThisEarnsFastest(Item(at), paid, _pass.Site) ?? (null, 0);" in
         buy_pass() and
-    "var markets = TopSell(item, MarketRank.TopCacheSize);" in
+    "var markets = EverySell(item);" in
         method_body(S['Ledger.cs'], "public (Settlement town, int price) WhereThisEarnsFastest") and
     "LedgerBehavior.Instance?.BestSell(Item(at)) ?? (null, 0)" in
         sell_pass())
@@ -4497,8 +4498,10 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
                         "remaining -= paidLeft;", "paidLeft = 0;")
             and "TradePolicy.MayBuy(good, Item(at), _pass.Locked, out why)" in buy
             and "TradeRules.ResaleAllowed(good, s)" in buy
-            and "TradeMath.BuyAcceptable(price, picked.Realizable, s.MinProfitMargin)" in buy
-            and "TradeMath.Realizable(elsewhere, s.ResaleSafetyFactor)" in buy
+            and "int wouldDraw = market.ResaleUpTo(picked.At, held + 1);" in buy
+            and "TradeRules.TheBuyerCouldNotPay(wouldDraw, till)" in buy
+            and "s.ResaleSafetyFactor" in buy
+            and "s.MinProfitMargin" in buy
             and "TradeRules.WhatStopsBuying(good, price, market.Spendable()," in buy
             and "TradeRules.NoRoomForOneMore(good, market.Room() - simWeight)" in buy
             and "s.BuyCapPerItem" in buy
@@ -4630,10 +4633,11 @@ def the_buying_pass_counts_what_you_hold_afresh_for_each_good():
     return ("var stock = new List<Pick>();" in buy
             and "alreadyHeld" not in S['Trading.cs'] + S['Passes.cs']
             and "public int Carried(int at) => _pass.Party.ItemRoster.GetItemNumber(Item(at));" in buy
-            and "int held = market.Carried(picked.At) + books.Held(sim, good.Id);" in buy
+            and "int carried = market.Carried(one.At) + books.Held(sim, one.Good.Id);" in buy
+            and "internal int Carried;" in method_body(S['Passes.cs'], "internal struct Pick")
             and ordered(method_body(S['Passes.cs'], "internal static Traded BuyThem"),
                         "var prior = books.Purchases(sim, good.Id);",
-                        "int held = market.Carried(picked.At) + books.Held(sim, good.Id);",
+                        "int held = picked.Carried;",
                         "while (remaining > 0)"))
 
 chk("1.37.9", "an animal is held back from every sale, not just herd thinning, when the quests cannot be read",
@@ -6137,7 +6141,7 @@ chk("1.42.0", "the ledger works a route out from your settings alone and never f
     the_ledger_lists_a_route_you_could_not_take_this_second())
 chk("1.41.9", "the markets a good could be bought at are picked by keeping the best few as they come, rather than putting every town in order first",
     the_best_markets_are_picked_without_sorting_every_town())
-chk("1.85.0", "every market a good could be sold at is put to the route scan, so a market that pays less than the dearest eight is no longer out of the ledger's reach, while the tooltip still shows the dearest",
+chk("1.85.0", "every market a good could be sold at is put to the route scan and to the buying pass, so a market that pays less than the dearest eight is no longer out of their reach, while the tooltip still shows the dearest",
     every_market_a_good_could_be_sold_at_is_offered_to_the_route_scan())
 chk("1.41.9", "a route scan asks each town its prices once for every good it wants, and never prices a town it has already ruled out as too far",
     a_route_scan_prices_each_town_once_for_every_good_it_wants())
@@ -6548,14 +6552,15 @@ def the_food_reserve_holds_against_thinning_the_herd_too():
             and "if (owed.Value > held) keep[owed.Key] = owed.Value;" in kept)
 
 
-def the_larger_of_the_two_reserves_is_what_is_kept_back():
-    return ("if (reserved > said.KeepCount) said.KeepCount = reserved;" in sell_rule()
-            and "said.KeepCount = reserved;" not in sell_rule().replace(
-                "if (reserved > said.KeepCount) said.KeepCount = reserved;", "")
+def both_reserves_are_kept_back_not_just_the_larger_one():
+    return ("said.KeepCount += reserved;" in sell_rule()
+            and "if (reserved > said.KeepCount) said.KeepCount = reserved;" not in sell_rule()
             and ordered(sell_rule(),
                         "said.KeepCount = promised;",
-                        "if (reserved > said.KeepCount) said.KeepCount = reserved;")
-            and "An_animal_held_by_both_a_quest_and_the_food_reserve_keeps_the_larger_of_the_two" in SELLTESTS)
+                        "int reserved = DrawKeepBack(amount - said.KeepCount, facts.FoodHeld, out bool fed);",
+                        "said.KeepCount += reserved;")
+            and "An_animal_held_by_both_a_quest_and_the_food_reserve_is_kept_back_for_both" in SELLTESTS
+            and "A_good_a_quest_wants_and_the_larder_wants_is_held_back_for_both" in SELLTESTS)
 
 
 def what_a_lot_cost_holds_still_while_the_lot_drains():
@@ -6574,8 +6579,8 @@ def what_a_lot_cost_holds_still_while_the_lot_drains():
 
 chk("1.50.0", "the food reserve holds an animal back from thinning the herd, the same as it does from a sale",
     the_food_reserve_holds_against_thinning_the_herd_too())
-chk("1.50.0", "a good a quest and the food reserve both hold keeps the larger of the two, never the last one asked",
-    the_larger_of_the_two_reserves_is_what_is_kept_back())
+chk("1.85.1", "a good a quest is waiting on and the food reserve is holding is kept back for both of them, not for the larger of the two",
+    both_reserves_are_kept_back_not_just_the_larger_one())
 chk("1.50.0", "what a lot cost a unit holds still as the lot drains, so the price a unit must clear never moves under it",
     what_a_lot_cost_holds_still_while_the_lot_drains())
 
@@ -10065,16 +10070,21 @@ def the_pass_buys_what_the_ledger_sent_you_for_first():
 
 def the_shelf_is_ranked_by_what_a_pick_would_really_make():
     want = method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
-    rule = method_body(S['TradeMath.cs'], "public static float WhatThisPickWouldMake")
+    made = method_body(S['Passes.cs'], "private static float WhatThisPickWouldReallyMake")
+    rule = method_body(S['TradeMath.cs'], "public static int MostYouCouldTake")
     return ("long affordable = spendable / unitPrice;" in rule
             and "long fits = (long)(room / unitWeight);" in rule
             and "if (unitWeight > 0.01f)" in rule
-            and "return take <= 0 ? 0f : take * profitPerUnit;" in rule
-            and "if (profitPerUnit <= 0f || unitPrice <= 0 || stocked <= 0 || spendable <= 0) return 0f;"
-                in rule
-            and "picked.Worth = TradeMath.WhatThisPickWouldMake(realizable - here, here," in want
-            and "market.TheirsToSell(one.At)," in want
-            and "market.Spendable(), market.Room());" in want
+            and "if (unitPrice <= 0 || stocked <= 0 || spendable <= 0) return 0;" in rule
+            and "return take <= 0 ? 0f : take * profitPerUnit;" in
+                method_body(S['TradeMath.cs'], "public static float WhatThisPickWouldMake")
+            and "picked.Worth = WhatThisPickWouldReallyMake(market, one.At, carried, here," in want
+            and "TradeMath.MostYouCouldTake(here, one.Good.Weight, market.TheirsToSell(one.At)," in want
+            and "market.Spendable(), market.Room()), s);" in want
+            and ordered(made, "int wouldDraw = market.ResaleUpTo(at, carried + u + 1);",
+                        "if (TradeRules.TheBuyerCouldNotPay(wouldDraw, till)) break;",
+                        "TradeMath.Realizable(wouldDraw - drawn, s.ResaleSafetyFactor)",
+                        "made += realizable - here;")
             and "internal float Worth;" in S['Passes.cs']
             and "Margin" not in method_body(S['Passes.cs'], "internal struct Pick")
             and all(one in MATHTESTS for one in
@@ -10152,7 +10162,7 @@ def a_buyer_is_picked_by_what_it_earns_a_day_not_by_its_price_alone():
             and "float days = Travel.EstimateDaysFromParty(town);" in far
             and "float rate = TradeMath.EarnedPerDay(price, paid, days);" in far
             and "if (best != null && rate <= bestRate) continue;" in far
-            and "var markets = TopSell(item, MarketRank.TopCacheSize);" in far
+            and "var markets = EverySell(item);" in far
             and "bool ResaleMarket(int at, int paid, out int price);" in S['Passes.cs']
             and ordered(want, "int here = market.PriceToBuy(one.At);",
                         "market.ResaleMarket(one.At, here, out int elsewhere)")
@@ -10257,6 +10267,53 @@ def the_marker_walks_the_price_down_the_way_a_sale_really_would():
 
 chk("1.85.0", "the map marker walks a stack down the price ladder the way a sale really would, and counts only the units the selling rules would move",
     the_marker_walks_the_price_down_the_way_a_sale_really_would())
+
+
+def a_stack_is_judged_unit_by_unit_against_the_market_that_would_buy_it():
+    buy = buy_pass()
+    rungs = method_body(S['Trading.cs'], "public int ResaleUpTo(int at, int units)")
+    return (ordered(method_body(S['Passes.cs'], "internal static Traded BuyThem"),
+                    "int held = picked.Carried;",
+                    "int till = market.ResaleTill(picked.At);",
+                    "int drawn = market.ResaleUpTo(picked.At, held);",
+                    "int wouldDraw = market.ResaleUpTo(picked.At, held + 1);",
+                    "if (TradeRules.TheBuyerCouldNotPay(wouldDraw, till))",
+                    "{ tally.Note(Block.BuyerTillEmpty); break; }",
+                    "TradeMath.Realizable(wouldDraw - drawn,")
+            and method_body(S['Passes.cs'], "internal static Traded BuyThem").count("drawn = wouldDraw;") == 2
+            and "int ResaleUpTo(int at, int units);" in S['Passes.cs']
+            and "int ResaleTill(int at);" in S['Passes.cs']
+            and "Realizable" not in method_body(S['Passes.cs'], "internal struct Pick")
+            and "new Ladder(buyer, Item(at), true, price, 0)," in buy
+            and "int price = far.rungs.At(u);" in rungs
+            and "internal static bool TheBuyerCouldNotPay(int drawnSoFar, int till) =>" in S['Rules.cs']
+            and "till > 0 && drawnSoFar > till;" in S['Rules.cs']
+            and "the market you would sell them in cannot pay for more" in S['Reasons.cs']
+            and "TL456" in strings_declared()
+            and all(one in BUYPASSTESTS for one in
+                    ("A_stack_is_bought_only_while_the_far_market_still_pays_for_one_more",
+                     "A_far_market_that_cannot_pay_for_the_whole_stack_stops_the_buying",
+                     "What_you_already_carry_is_counted_against_the_far_market_before_you_buy_more")))
+
+
+chk("1.85.1", "each unit of a stack is judged against what the market that would buy it pays for that unit, counting what you already carry, and the buying stops where that market runs out of gold",
+    a_stack_is_judged_unit_by_unit_against_the_market_that_would_buy_it())
+
+
+def the_selling_pass_takes_what_makes_the_most_first():
+    plan = method_body(S['Trading.cs'], "internal SellingFrom(Pass pass, string what, string named)")
+    gain = method_body(S['Trading.cs'], "private static int WhatThisStackWouldMake")
+    return ("order.Add((held, WhatThisStackWouldMake(pass, held), at));" in plan
+            and "order.Sort((x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain)" in plan
+            and ": x.at.CompareTo(y.at));" in plan
+            and "for (int at = 0; at < order.Count; at++) _plan.Add(order[at].held);" in plan
+            and "int price = pass.Price(held.EquipmentElement, selling: true);" in gain
+            and "long gain = ((long)price - TradePolicy.WorthToBeat(item)) * held.Amount;" in gain
+            and "private ItemObject Item(int at) => _plan[at].EquipmentElement.Item;" in S['Trading.cs'])
+
+
+chk("1.85.1", "the selling pass works down your cargo by what each good would make you, so a merchant who runs out of gold runs out on the goods that would have made you least",
+    the_selling_pass_takes_what_makes_the_most_first())
 
 
 def the_ultralog_says_what_the_marked_market_was_marked_on():

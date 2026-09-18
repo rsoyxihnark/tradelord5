@@ -588,7 +588,7 @@ namespace TradeLord
             Settlement best = null;
             int bestPrice = 0;
             float bestRate = -1f;
-            var markets = TopSell(item, MarketRank.TopCacheSize);
+            var markets = EverySell(item);
             for (int i = 0; i < markets.Count; i++)
             {
                 var (town, price) = markets[i];

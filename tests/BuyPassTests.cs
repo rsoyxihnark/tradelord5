@@ -22,6 +22,8 @@ namespace TradeLord.Tests
             internal int Price = 100;
             internal int Step;
             internal int Resale = 200;
+            internal int ResaleStep;
+            internal int BuyerTill;
             internal bool Elsewhere = true;
             internal int Carried;
         }
@@ -85,6 +87,21 @@ namespace TradeLord.Tests
                 price = Stalls[at].Resale;
                 return Stalls[at].Elsewhere;
             }
+
+            public int ResaleUpTo(int at, int units)
+            {
+                if (units <= 0 || !Stalls[at].Elsewhere) return 0;
+                int total = 0;
+                for (int u = 0; u < units; u++)
+                {
+                    int price = Stalls[at].Resale - Stalls[at].ResaleStep * u;
+                    if (price <= 0) break;
+                    total += price;
+                }
+                return total;
+            }
+
+            public int ResaleTill(int at) => Stalls[at].BuyerTill;
 
             public int PriceToBuy(int at) => Stalls[at].Price + Stalls[at].Step * Stalls[at].Carried;
 
@@ -181,6 +198,38 @@ namespace TradeLord.Tests
             market.Add(Cargo("iron"), price: 100, resale: 130);
             Run run = Buy(market);
             Assert.Equal(0, run.Units);
+            Assert.True(run.Tally.Saw(Block.BelowMargin));
+        }
+
+        [Fact]
+        public void A_stack_is_bought_only_while_the_far_market_still_pays_for_one_more()
+        {
+            var market = new FakeMarket();
+            market.Add(Cargo("iron"), amount: 10, price: 100, resale: 200).ResaleStep = 20;
+            Run run = Buy(market);
+            Assert.Equal(4, run.Units);
+            Assert.True(run.Tally.Saw(Block.BelowMargin));
+        }
+
+        [Fact]
+        public void A_far_market_that_cannot_pay_for_the_whole_stack_stops_the_buying()
+        {
+            var market = new FakeMarket();
+            market.Add(Cargo("iron"), amount: 10, price: 100, resale: 200).BuyerTill = 500;
+            Run run = Buy(market);
+            Assert.Equal(2, run.Units);
+            Assert.True(run.Tally.Saw(Block.BuyerTillEmpty));
+        }
+
+        [Fact]
+        public void What_you_already_carry_is_counted_against_the_far_market_before_you_buy_more()
+        {
+            var market = new FakeMarket();
+            Stall stall = market.Add(Cargo("iron"), amount: 10, price: 100, resale: 200);
+            stall.ResaleStep = 20;
+            stall.Carried = 3;
+            Run run = Buy(market);
+            Assert.Equal(1, run.Units);
             Assert.True(run.Tally.Saw(Block.BelowMargin));
         }
 

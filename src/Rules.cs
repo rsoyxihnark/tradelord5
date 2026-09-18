@@ -9,7 +9,7 @@ namespace TradeLord
         MountOrHaulAnimal, NotTradable, FoodReserve, TradedHereAlready, NoStock,
         NoResaleMarket, BelowMargin, BelowBestMarket, MerchantTillEmpty, BudgetSpent,
         ItemCountCap, ItemValueCap, CarryWeight, HerdFull, VillageLastUnit, HeldEnough, Smeltable,
-        QuestGoods, GrainSwitch
+        QuestGoods, GrainSwitch, BuyerTillEmpty
     }
 
     internal struct Good
@@ -489,6 +489,9 @@ namespace TradeLord
         internal static int WhatTheTillCanPay(int till, bool village) =>
             Math.Max(0, village ? till - VillageLastCoin : till);
 
+        internal static bool TheBuyerCouldNotPay(int drawnSoFar, int till) =>
+            till > 0 && drawnSoFar > till;
+
         internal const int VillagePurse = 1000;
 
         internal static int PutBackIntoAnEmptyPurse(int gold) =>
@@ -534,11 +537,11 @@ namespace TradeLord
                  good.Tier + 1 <= s.MaxLootTier);
             if (!sellable) { said.Why = Block.NotTradable; return said; }
 
-            int reserved = DrawKeepBack(amount, facts.FoodHeld, out bool fed);
+            int reserved = DrawKeepBack(amount - said.KeepCount, facts.FoodHeld, out bool fed);
             if (fed)
             {
                 said.DrewFood = reserved;
-                if (reserved > said.KeepCount) said.KeepCount = reserved;
+                said.KeepCount += reserved;
                 if (amount <= said.KeepCount) { said.Why = Block.FoodReserve; return said; }
             }
 
