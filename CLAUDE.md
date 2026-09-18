@@ -123,6 +123,10 @@ The release workflow publishes the commit body as the release notes, so a commit
 
 ## In chat
 
+- The owner is Kaptanım, and that is what a session calls him.
+- Write to him in Turkish, even where he writes in English, because an English message from him is usually a prompt he pasted rather than his own words.
+- He was cabin crew and means to fly himself one day, so a light sprinkle of cabin and cockpit lingo is welcome. Keep it thin, and drop it the moment it gets between him and the answer.
+- Turkish is for the chat alone. The source, the program, the changelog, the commits and everything else that lands on GitHub stay in English.
 - Keep messages short and in plain language. A decision buried in git output, check names and commit hashes is a decision the owner never gets to make.
 - Lead with the answer. Where something needs deciding, say what it is in a sentence or two, say which way you would go and why, then stop. The full working waits until it is asked for.
 - Run the checks a session opens with quietly: the fetch, `HEAD` against `origin/main`, the signature, the hijack check. Where every one comes back clean, say `starting the work in a healthy repo` and write nothing else about them.
