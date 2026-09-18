@@ -1,7 +1,14 @@
 # Changelog
 
-## Unreleased
+## 1.84.0
 
+- Ultralog is a new switch under Debug, on out of the box, that writes everything the map marker weighed to TradeLord.log
+- With Ultralog on, TradeLord.log lists the markets the map marker priced, best first, with the days, units, gold and rate of each
+- With Ultralog on, TradeLord.log breaks the marked market down good by good, with what each fetches there and what it cost you
+- With Ultralog on, TradeLord.log says how much of what the marked market would pay is profit, and which of the two the marker went on
+- With Ultralog on, TradeLord.log scores the marked market when you walk in, against what it really paid you
+- With Ultralog on, TradeLord.log writes a line when the map marker weighs your cargo again and stays where it is
+- With Ultralog on, TradeLord.log says how many markets the map marker left out and what left each of them out
 - The mod description is rewritten in short lines, so it reads at a glance rather than in paragraphs
 - Fixed the mod description saying your food is topped up before TradeLord trades for profit, when since 1.83.2 the larder is filled after
 

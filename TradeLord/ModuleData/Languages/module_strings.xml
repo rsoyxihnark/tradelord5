@@ -299,5 +299,7 @@
 		<string id="TL451" text="No market in reach holds {COUNT} of these, | nor {WORTH} denars' worth of them. | Lower Minimum stock for buy suggestions | or Minimum stock value for buy suggestions."/>
 		<string id="TL452" text="Minimum stock value for buy suggestions"/>
 		<string id="TL453" text="A market also counts as stocked when what it holds of a good is worth at least this many denars, even where it holds fewer units than Minimum stock for buy suggestions asks for. Worth is counted at the good's own worth, not at what the shop charges. The dearer a good is, the fewer of it a market need hold. 0 = off. Live-price mode only."/>
+		<string id="TL454" text="Ultralog: write everything the map marker weighed"/>
+		<string id="TL455" text="Writes to TradeLord.log everything the map marker weighed: every market it priced with its days and its gold a day, the marked market good by good with what each fetches and what it cost you, what was left out and why, and how the mark held up against what that market paid you. ON by default; turn it off to keep the log short."/>
 	</strings>
 </base>
