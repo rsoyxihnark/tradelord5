@@ -764,14 +764,16 @@ def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
 def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     asked = method_body(S['Marker.cs'], "private static int WhatThatMarketPays")
-    return (ordered(marker, "reachable.Sort(DearestPurseFirst);",
-                    "if (gold <= how.Value) break;",
+    return (ordered(marker, "reachable.Sort(FastestPurseFirst);",
+                    "if (TradeMath.PerDay(gold, ride) <= how.Rate) break;",
                     "foreach (var (item, amount, worth, floor) in cargo)",
                     "int price = WhatThatMarketPays(s, market, item, party);",
                     "if (total >= gold) { capped = true; break; }",
                     "if (total > gold) total = gold;",
-                    "if (total > how.Value)")
-            and "x.gold != y.gold ? y.gold.CompareTo(x.gold)" in S['Marker.cs']
+                    "float rate = TradeMath.PerDay(total, ride);",
+                    "if (rate > how.Rate)")
+            and "float faster = TradeMath.PerDay(x.gold, x.days);" in S['Marker.cs']
+            and "return faster != slower ? slower.CompareTo(faster)" in S['Marker.cs']
             and "string.CompareOrdinal(x.s.StringId, y.s.StringId);" in S['Marker.cs']
             and marker.count("WhatThatMarketPays(") == 1
             and "Priced.At(" not in marker
@@ -3999,8 +4001,9 @@ chk("1.75.1", "a price model that could not be asked says so again in the next c
 chk("1.75.1", "the map marker names the market it beat as the next best it priced, never as the second best on the map",
     (lambda said, walk: '", and no other market it priced would take any of it"' in said
            and '", ahead of " + how.RunnerUp.Name + ", the next best it priced, at " +' in said
-           and "if (gold <= how.Value) break;" in walk
-           and "else if (total > how.RunnerUpValue) { how.RunnerUpValue = total; how.RunnerUp = s; }" in walk)
+           and "if (TradeMath.PerDay(gold, ride) <= how.Rate) break;" in walk
+           and "else if (rate > how.RunnerUpRate)\n"
+               "                { how.RunnerUpRate = rate; how.RunnerUpValue = total; how.RunnerUp = s; }" in walk)
     (method_body(S['Marker.cs'], "private static string Why"),
      method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")))
 
@@ -6141,7 +6144,7 @@ chk("1.41.3", "the panel reads the hotkey before it walks the map's layers looki
     the_panel_reads_the_key_before_it_walks_the_screen())
 chk("1.41.2", "TradeLord.log is held open, a line written on its own is pushed out at once and a burst of lines when the burst ends, with appending a line at a time left as the fallback",
     the_log_is_held_open_and_pushed_out_a_line_at_a_time())
-chk("1.41.2", "the market marked on your map skips one whose gold cannot beat the best found so far before it prices your cargo there",
+chk("1.41.2", "the market marked on your map skips one whose purse could not earn faster than the best found so far before it prices your cargo there",
     the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet())
 chk("1.75.0", "the market marked on your map counts only the cargo the selling rules would really move there, so the marker never sends you somewhere it will refuse to sell",
     the_marker_counts_only_what_the_selling_rules_would_really_move())
@@ -6975,8 +6978,8 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
                      "if (market == null) continue;",
                      "if (!TradeActionBehavior.IsMarket(s)) continue;",
                      "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;",
-                     "if (gold <= how.Value) break;",
                      "float cap = LedgerBehavior.TravelCeiling(s);",
+                     "if (TradeMath.PerDay(gold, ride) <= how.Rate) break;",
                      "WhatThatMarketPays(s, market, item, party)")
              and "Town.AllTowns" not in marker
              and "town.Gold" not in marker)
@@ -9120,11 +9123,11 @@ def the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     asked = method_body(S['Marker.cs'], "private static int WhatThatMarketPays")
     update = method_body(S['Marker.cs'], "internal static void Update")
-    return ("reachable.Sort(DearestPurseFirst);" in marker
-            and "if (gold <= how.Value) break;" in marker
-            and "continue;" not in between(marker, "if (gold <= how.Value)", "\n")
-            and marker.find("reachable.Sort(DearestPurseFirst);") <
-                marker.find("float cap = LedgerBehavior.TravelCeiling(s);")
+    return ("reachable.Sort(FastestPurseFirst);" in marker
+            and "if (TradeMath.PerDay(gold, ride) <= how.Rate) break;" in marker
+            and "continue;" not in between(marker, "if (TradeMath.PerDay(gold, ride)", "\n")
+            and marker.find("float cap = LedgerBehavior.TravelCeiling(s);") <
+                marker.find("reachable.Sort(FastestPurseFirst);")
             and "if (total >= gold) { capped = true; break; }" in marker
             and "how.PurseCapped = capped;" in marker
             and "private const int PriceShelfHours = 3;" in S['Marker.cs']
@@ -9136,7 +9139,7 @@ def the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till():
             and "Why(how)" not in between(update, "bool on =", "if (target == _picked)"))
 
 
-chk("1.77.2", "the map marker walks the richest purses first and stops as soon as no market left can beat the best it found, stops pricing a town once its own purse is the ceiling, and works out what to write in the log only when the marker actually moves",
+chk("1.77.2", "the map marker walks the purses that would earn fastest first and stops as soon as no market left can beat the best it found, stops pricing a town once its own purse is the ceiling, and works out what to write in the log only when the marker actually moves",
     the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till())
 
 
@@ -9875,7 +9878,7 @@ def a_village_keeps_the_coin_that_keeps_its_shop_open():
                 method_body(ledger, "private List<TradeRoute> ScanRoutes()")
             and "TradeRules.WhatTheTillCanPay(market.Gold, town.IsVillage) > 0;" in ledger
             and "int purse = TradeRules.WhatTheTillCanPay(market.Gold, s.IsVillage);" in S['Marker.cs']
-            and "reachable.Add((s, market, purse));" in S['Marker.cs']
+            and "reachable.Add((s, market, purse, ride));" in S['Marker.cs']
             and code_only(S['Trading.cs']).count("pass.TillNow") == 2
             and "A_village_is_left_its_last_coin" in SELLPASSTESTS
             and "A_town_spends_its_till_to_the_last_coin" in SELLPASSTESTS
@@ -10106,8 +10109,10 @@ def a_buyer_is_picked_by_what_it_earns_a_day_not_by_its_price_alone():
     want = method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
     return ("public const float NoTripCountsShorterThan = 0.25f;" in S['TradeMath.cs']
             and "if (sellPrice <= 0 || sellPrice <= paid) return 0f;" in rate
-            and "float over = days > NoTripCountsShorterThan ? days : NoTripCountsShorterThan;" in rate
-            and "return (sellPrice - paid) / over;" in rate
+            and "float over = days > NoTripCountsShorterThan ? days : NoTripCountsShorterThan;" in
+                method_body(S['TradeMath.cs'], "public static float PerDay")
+            and "return amount / over;" in method_body(S['TradeMath.cs'], "public static float PerDay")
+            and "return PerDay(sellPrice - paid, days);" in rate
             and "float days = Travel.EstimateDaysFromParty(town);" in far
             and "float rate = TradeMath.EarnedPerDay(price, paid, days);" in far
             and "if (best != null && rate <= bestRate) continue;" in far
@@ -10125,6 +10130,35 @@ def a_buyer_is_picked_by_what_it_earns_a_day_not_by_its_price_alone():
 
 chk("1.83.1", "the market a buy is judged against is the one that would earn the money back fastest, so a buyer further down the road no longer wins for paying a little more",
     a_buyer_is_picked_by_what_it_earns_a_day_not_by_its_price_alone())
+
+
+
+
+def the_marker_picks_the_market_that_earns_fastest_not_the_one_paying_most():
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    why = method_body(S['Marker.cs'], "private static string Why")
+    rule = method_body(S['TradeMath.cs'], "public static float PerDay")
+    return ("if (amount <= 0f || float.IsNaN(amount) || float.IsNaN(days)) return 0f;" in rule
+            and "return amount / over;" in rule
+            and "internal float Rate;" in S['Marker.cs']
+            and "internal float RunnerUpRate;" in S['Marker.cs']
+            and "internal float Days;" in S['Marker.cs']
+            and "float rate = TradeMath.PerDay(total, ride);" in marker
+            and "if (rate > how.Rate)" in marker
+            and "how.Days = ride;" in marker
+            and "DearestPurseFirst" not in S['Marker.cs']
+            and "Travel.EstimateDaysFromParty(how.Best)" not in why
+            and 'how.Days.ToString("0.#") + " day(s) away, so " +' in why
+            and 'how.Rate.ToString("0") + " gold a day"' in why
+            and 'how.RunnerUpRate.ToString("0") + " gold a day for " +' in why
+            and all(one in MATHTESTS for one in
+                    ("A_nearer_market_paying_less_in_all_still_earns_more_a_day",
+                     "A_far_market_paying_far_more_still_wins",
+                     "Nothing_to_carry_there_and_no_trip_at_all_are_both_handled")))
+
+
+chk("1.83.3", "the market marked on your map is the one that would earn the most a day for the cargo you carry, not the one paying the most in all, and the log says the rate it picked on",
+    the_marker_picks_the_market_that_earns_fastest_not_the_one_paying_most())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

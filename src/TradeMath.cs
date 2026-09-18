@@ -137,12 +137,17 @@ namespace TradeLord
 
         public const float NoTripCountsShorterThan = 0.25f;
 
+        public static float PerDay(float amount, float days)
+        {
+            if (amount <= 0f || float.IsNaN(amount) || float.IsNaN(days)) return 0f;
+            float over = days > NoTripCountsShorterThan ? days : NoTripCountsShorterThan;
+            return amount / over;
+        }
+
         public static float EarnedPerDay(int sellPrice, int paid, float days)
         {
             if (sellPrice <= 0 || sellPrice <= paid) return 0f;
-            if (float.IsNaN(days)) return 0f;
-            float over = days > NoTripCountsShorterThan ? days : NoTripCountsShorterThan;
-            return (sellPrice - paid) / over;
+            return PerDay(sellPrice - paid, days);
         }
 
         public static float WhatThisPickWouldMake(float profitPerUnit, int unitPrice, float unitWeight,

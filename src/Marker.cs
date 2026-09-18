@@ -76,6 +76,9 @@ namespace TradeLord
             internal Settlement RunnerUp;
             internal long Value;
             internal long RunnerUpValue;
+            internal float Rate;
+            internal float RunnerUpRate;
+            internal float Days;
             internal int Units;
             internal int Kinds;
             internal int Purse;
@@ -131,10 +134,12 @@ namespace TradeLord
                    (how.PurseCapped
                        ? ", which is all that town's purse of " + how.Purse + " can take"
                        : " against a town purse of " + how.Purse) +
-                   ", about " + Travel.EstimateDaysFromParty(how.Best).ToString("0.#") + " day(s) away" +
+                   ", about " + how.Days.ToString("0.#") + " day(s) away, so " +
+                   how.Rate.ToString("0") + " gold a day" +
                    (how.RunnerUp == null
                        ? ", and no other market it priced would take any of it"
                        : ", ahead of " + how.RunnerUp.Name + ", the next best it priced, at " +
+                         how.RunnerUpRate.ToString("0") + " gold a day for " +
                          how.RunnerUpValue + " gold");
         }
 
@@ -182,10 +187,15 @@ namespace TradeLord
             return price;
         }
 
-        private static readonly System.Comparison<(Settlement s, SettlementComponent market, int gold)>
-            DearestPurseFirst = (x, y) =>
-                x.gold != y.gold ? y.gold.CompareTo(x.gold)
-                                 : string.CompareOrdinal(x.s.StringId, y.s.StringId);
+        private static readonly
+            System.Comparison<(Settlement s, SettlementComponent market, int gold, float days)>
+            FastestPurseFirst = (x, y) =>
+            {
+                float faster = TradeMath.PerDay(x.gold, x.days);
+                float slower = TradeMath.PerDay(y.gold, y.days);
+                return faster != slower ? slower.CompareTo(faster)
+                                        : string.CompareOrdinal(x.s.StringId, y.s.StringId);
+            };
 
         private static Settlement BestSellTownForCargo(out Reckoning how)
         {
@@ -196,7 +206,7 @@ namespace TradeLord
             how.Carried = cargo.Count;
             if (cargo.Count == 0) return null;
 
-            var reachable = new List<(Settlement s, SettlementComponent market, int gold)>();
+            var reachable = new List<(Settlement s, SettlementComponent market, int gold, float days)>();
             foreach (Settlement s in Settlement.All)
             {
                 SettlementComponent market = s.SettlementComponent;
@@ -209,19 +219,19 @@ namespace TradeLord
                 how.Weighed++;
                 int purse = TradeRules.WhatTheTillCanPay(market.Gold, s.IsVillage);
                 if (purse <= 0) continue;
-                reachable.Add((s, market, purse));
-            }
-            reachable.Sort(DearestPurseFirst);
-
-            for (int at = 0; at < reachable.Count; at++)
-            {
-                var (s, market, gold) = reachable[at];
-                if (gold <= how.Value) break;
                 float cap = LedgerBehavior.TravelCeiling(s);
                 if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) continue;
                 float ride = Travel.EstimateDaysFromParty(s);
                 if (TradeMath.OutOfReach(ride)) continue;
                 if (cap > 0f && ride > cap) continue;
+                reachable.Add((s, market, purse, ride));
+            }
+            reachable.Sort(FastestPurseFirst);
+
+            for (int at = 0; at < reachable.Count; at++)
+            {
+                var (s, market, gold, ride) = reachable[at];
+                if (TradeMath.PerDay(gold, ride) <= how.Rate) break;
                 long total = 0;
                 int units = 0, kinds = 0;
                 bool capped = false;
@@ -237,18 +247,23 @@ namespace TradeLord
                 }
                 if (total <= 0) { how.Refused++; continue; }
                 if (total > gold) total = gold;
-                if (total > how.Value)
+                float rate = TradeMath.PerDay(total, ride);
+                if (rate > how.Rate)
                 {
                     how.RunnerUp = how.Best;
                     how.RunnerUpValue = how.Value;
+                    how.RunnerUpRate = how.Rate;
+                    how.Rate = rate;
                     how.Value = total;
                     how.Best = s;
+                    how.Days = ride;
                     how.Units = units;
                     how.Kinds = kinds;
                     how.Purse = gold;
                     how.PurseCapped = capped;
                 }
-                else if (total > how.RunnerUpValue) { how.RunnerUpValue = total; how.RunnerUp = s; }
+                else if (rate > how.RunnerUpRate)
+                { how.RunnerUpRate = rate; how.RunnerUpValue = total; how.RunnerUp = s; }
             }
             return how.Best;
         }

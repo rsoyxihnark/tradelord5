@@ -1143,5 +1143,28 @@ namespace TradeLord.Tests
             Assert.Equal(0f, TradeMath.EarnedPerDay(0, 300, 1f));
             Assert.Equal(0f, TradeMath.EarnedPerDay(400, 300, float.NaN));
         }
+
+        [Fact]
+        public void A_nearer_market_paying_less_in_all_still_earns_more_a_day()
+        {
+            Assert.True(TradeMath.PerDay(2069f, 3f) > TradeMath.PerDay(2140f, 7.5f));
+            Assert.Equal(2140f / 7.5f, TradeMath.PerDay(2140f, 7.5f), 2);
+        }
+
+        [Fact]
+        public void A_far_market_paying_far_more_still_wins()
+        {
+            Assert.True(TradeMath.PerDay(9000f, 7.5f) > TradeMath.PerDay(500f, 1f));
+        }
+
+        [Fact]
+        public void Nothing_to_carry_there_and_no_trip_at_all_are_both_handled()
+        {
+            Assert.Equal(0f, TradeMath.PerDay(0f, 3f));
+            Assert.Equal(0f, TradeMath.PerDay(-5f, 3f));
+            Assert.Equal(0f, TradeMath.PerDay(100f, float.NaN));
+            Assert.Equal(TradeMath.PerDay(100f, 0f),
+                         TradeMath.PerDay(100f, TradeMath.NoTripCountsShorterThan));
+        }
     }
 }
