@@ -469,7 +469,6 @@
 - A tooltip's five markets are ordered on the prices you will actually be offered, so one about to be picked over no longer tops the list
 - The note under Count what is on its way to a market now says it reaches a tooltip price as well as a route
 - The mod description now says the tooltip prices a market as it will be when you arrive
-- The changelog was missing 1.49.0 and 1.49.1 entirely, and both are back in it word for word
 - The mod description now says the ledger ranks the best route for each good, thirty rows, not every profitable route
 - The mod description now calls the smithing choice Keep the ones you have not learned, its name on the settings screen
 - The mod description now says quiet mode still speaks the notice at your first market and the warning that your cargo is full
