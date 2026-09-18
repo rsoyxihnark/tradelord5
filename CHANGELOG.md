@@ -4,43 +4,6 @@
 
 - The mod description is rewritten in short lines, so it reads at a glance rather than in paragraphs
 - Fixed the mod description saying your food is topped up before TradeLord trades for profit, when since 1.83.2 the larder is filled after
-- In 1.6.4, the working notes file came back to the repository, and nothing that ships with the mod changed
-- In 1.6.2, the working notes file was taken out of the repository, and nothing that ships with the mod changed
-- In 1.6.0, zip files and generated release notes went onto the ignore list
-- In 1.5.10, the build moved onto checkout v7, setup-dotnet v6 and upload-artifact v7, off the retired Node 20 runtime
-- In 1.5.6, the build stopped needing a changelog entry to publish, taking the notes from the commit instead
-- In 1.5.6, both build projects moved next to the source they compile, so CI and a local build compile the same thing
-- In 1.5.6, the build output folder, the IDE folders and the log went onto the ignore list
-- In 1.5.4, every comment was taken out of the C# sources and the build workflow
-- In 1.5.3, the mod description's count of audit findings was corrected
-- In 1.5.3, a wrong check count printed in the 1.5.2 notes was corrected
-- In 1.5.3, all four wrong numbers were put down to the same failure, a fact written by hand that nothing verified
-- In 1.3.30, loading MCM settings was shown not to depend on the order the properties are applied in, so nothing changed
-- In 1.3.30, auto trade on entry was shown not to depend on which handler the game runs first, so nothing changed
-- In 1.3.29, the panel's column widths began being checked automatically instead of measured by hand
-- In 1.3.28, the faster route search was tested over 300,000 random cases and picked the same route every time
-- In 1.3.27, both assemblies began compiling with warnings treated as errors
-- In 1.3.27, a mod description claim that both assemblies build clean at every analyzer level was corrected
-- In 1.3.24, town names were confirmed in the field to fit the panel's columns, so nothing changed
-- In 1.3.22, a diagnostic settled that counting food by item is correct, because the game counts one unit as one food
-- In 1.3.22, a diagnostic settled that the panel hotkey must not depend on which layer has focus
-- In 1.3.17, all five market filters were mapped against all four market scans, which is how two fixes were found
-- In 1.3.16, the panel layout was checked against the code that fills it, and every price lookup either way
-- In 1.3.15, all eighteen numeric defaults were checked against their ranges, and the panel legend against its limit
-- In 1.3.14, town and village gold were confirmed to come from one place, and the map button to sit clear of the map
-- In 1.3.11, settings and translation coverage were rechecked, 45 settings to 45 controls and 23 texts to 23 ids
-- In 1.3.10, the panel's layer name, the inventory lock key and all 23 translated texts were confirmed correct
-- In 1.3.9, the panel layout was measured again and the numbers written down
-- In 1.3.8, every game method the mod hooks into was rechecked and found where it expects
-- In 1.3.5, every setting was checked as reachable from the settings screen and starting inside its range
-- In 1.3.1, releases began publishing automatically when a push carries a version with no release yet
-- In 1.3.1, a push for a version already released began skipping the publish instead of failing the build
-- In 0.915Alpha, how versions are numbered and why releases are never replaced was written down
-- In 0.914Alpha, the version number moved into one place, with everything else reading it from there
-- In 0.914Alpha, releases became permanent, and the build began refusing to publish over one that exists
-- In 0.903Alpha, a sale was confirmed never to be recorded or paid Trade XP twice
-- In 0.900Alpha, the build that compiles the mod and packs the zip on every push arrived, publishing on demand
-- In 0.900Alpha, a formatting mistake that broke the release notes step in that build was fixed
 
 ## 1.83.3
 
@@ -285,8 +248,6 @@
 
 - Fixed Auto-mark best sell market on map repricing every market on the map each time you walk in or out of a settlement
 - The mod description now names two limits it had left unsaid, Buy cap per item at 32 units a visit and Max spend per visit at 1000 denars
-
-## 1.77.0
 
 ## 1.76.9
 
@@ -634,8 +595,6 @@
 
 - Trade with caravans and villagers you meet is now called Trade with caravans and villagers
 
-## 1.50.1
-
 ## 1.50.0
 
 - Fixed getting your party back up to speed selling the animals Restock and keep food (days of supply) was holding back
@@ -643,10 +602,6 @@
 - An animal on your always sell list is still sold to get you back up to speed
 - Fixed what a good cost you drifting by a denar as a stack sold down, which stopped a sale early with goods left worth selling
 - When a quest is waiting on more animals than your food reserve holds back, TradeLord now keeps the larger of the two
-
-## 1.49.1
-
-## 1.49.0
 
 ## 1.48.0
 
@@ -1474,6 +1429,7 @@
 ## 1.6.4
 
 - TradeLord now warns you in red when your cargo is full, instead of quietly buying nothing
+- The working notes file came back to the repository, and nothing that ships with the mod changed
 
 ## 1.6.3
 
@@ -1487,6 +1443,7 @@
 - A fault while showing a trade message, or while closing a campaign, is now logged and stepped over instead of reaching the game
 - Asking the ledger what a good cost when it has never seen that good now answers instead of faulting
 - Tidied the layout of the two trading passes, which behave exactly as before
+- The working notes file was taken out of the repository, and nothing that ships with the mod changed
 
 ## 1.6.1
 
@@ -1500,6 +1457,7 @@
 - Every settings description is rewritten in plain English
 - The panel and the ledger popup now say resale safety factor, the same name the settings screen uses, instead of resale haircut
 - Added this changelog
+- Zip files and generated release notes went onto the ignore list
 
 ## 1.5.11
 
@@ -1512,6 +1470,7 @@
 
 - Fixed a town with no price for a good being called the cheapest place to buy it, because a missing price read as 0 and 0 sorts cheapest
 - Fixed the mod failing to load at all when your Documents folder path could not be worked out
+- The build moved onto checkout v7, setup-dotnet v6 and upload-artifact v7, off the retired Node 20 runtime
 
 ## 1.5.9
 
@@ -1538,6 +1497,9 @@
 - A failed panel setup is now retried twice more before being given up on
 - A panel hotkey the game cannot name is now reported in the log instead of silently becoming T
 - Fixed the cargo marker picking the first town it scanned even when the cargo was worth nothing anywhere
+- The build stopped needing a changelog entry to publish, taking the notes from the commit instead
+- Both build projects moved next to the source they compile, so CI and a local build compile the same thing
+- The build output folder, the IDE folders and the log went onto the ignore list
 
 ## 1.5.5
 
@@ -1551,11 +1513,15 @@
 - Fixed three refusals being answered with a message that was not true, such as blaming your goods when the merchant was simply out of money
 - The panel now marks which routes it could not price unit by unit
 - Fixed an English footnote sitting in an otherwise translated window
+- Every comment was taken out of the C# sources and the build workflow
 
 ## 1.5.3
 
 - The mod description's count of releases, and the version it named, are corrected
 - The Nexus description of what the four Harmony patches do is corrected
+- The mod description's count of audit findings was corrected
+- A wrong check count printed in the 1.5.2 notes was corrected
+- All four wrong numbers were put down to the same failure, a fact written by hand that nothing verified
 
 ## 1.5.2
 
@@ -1644,19 +1610,25 @@
 
 - Fixed a damaged purchase record being able to stop a save from loading
 - The record of what you paid is now rebuilt in one place instead of two
+- Loading MCM settings was shown not to depend on the order the properties are applied in, so nothing changed
+- Auto trade on entry was shown not to depend on which handler the game runs first, so nothing changed
 
 ## 1.3.29
 
 - The buy side margin rule now has one copy instead of four written two different ways
 - The market eligibility filter now has one copy instead of one for each knowledge mode
+- The panel's column widths began being checked automatically instead of measured by hand
 
 ## 1.3.28
 
 - Fixed the straight line travel estimate being able to exceed the real one, which would have wrongly hidden markets you could reach
+- The faster route search was tested over 300,000 random cases and picked the same route every time
 
 ## 1.3.27
 
 - The tooltip hook now takes only the two arguments it actually reads, so a game update has fewer ways to break it
+- Both assemblies began compiling with warnings treated as errors
+- A mod description claim that both assemblies build clean at every analyzer level was corrected
 
 ## 1.3.26
 
@@ -1672,6 +1644,7 @@
 ## 1.3.24
 
 - Fixed a cow being kept back as food ahead of the grain sitting next to it
+- Town names were confirmed in the field to fit the panel's columns, so nothing changed
 
 ## 1.3.23
 
@@ -1685,6 +1658,8 @@
 - Fixed the mod trading at villages the game had closed after a raid
 - Fixed the ledger panel taking the whole keyboard, so space pauses again and the speed keys work while it is open
 - The map wide trade permission diagnostic is gone, because it crashed inside the game's own code when asked about any settlement
+- A diagnostic settled that counting food by item is correct, because the game counts one unit as one food
+- A diagnostic settled that the panel hotkey must not depend on which layer has focus
 
 ## 1.3.21
 
@@ -1715,12 +1690,14 @@
 - Fixed the scan radius never reaching the cargo map marker
 - Fixed the panel listing routes quick buy would refuse when conservative route projection was switched off
 - The setting's hint now says which half of it changes what you see and which half changes what it does
+- All five market filters were mapped against all four market scans, which is how two fixes were found
 
 ## 1.3.16
 
 - Fixed Hold cargo for the best market checking the price once and then letting the whole stack go
 - Fixed the food reserve letting a good skip the rest of the sell rules
 - The ledger popup now explains why Profit is not simply sell price minus buy price times quantity
+- The panel layout was checked against the code that fills it, and every price lookup either way
 
 ## 1.3.15
 
@@ -1728,6 +1705,7 @@
 - Livestock is now kept back last, behind every sack of grain
 - Fixed a fault that could fill the log with hundreds of error reports a second
 - Minimum stock for buy suggestions now says it only applies in live price mode
+- All eighteen numeric defaults were checked against their ranges, and the panel legend against its limit
 
 ## 1.3.14
 
@@ -1736,6 +1714,7 @@
 - Fixed the panel never proposing a livestock route even though quick buy would buy livestock
 - The ledger popup no longer tells you to press T for the panel, since that popup only appears when the panel cannot open
 - A piece of the panel's closing code that nothing could ever reach is gone
+- Town and village gold were confirmed to come from one place, and the map button to sit clear of the map
 
 ## 1.3.13
 
@@ -1756,6 +1735,7 @@
 - Fixed quick sell being able to sell a quest item, which silently failed the quest later
 - Fixed quick sell being able to sell items the game marks as not merchandise, such as tournament prizes and banners
 - Fixed the panel keeping hold of your mouse and keyboard when the screen changed while it was open
+- Settings and translation coverage were rechecked, 45 settings to 45 controls and 23 texts to 23 ids
 
 ## 1.3.10
 
@@ -1763,6 +1743,7 @@
 - Fixed Hold cargo for the best market ignoring livestock
 - Fixed the ledger popup naming the text in the hotkey setting rather than the key the panel actually listens for
 - Fixed the hotkey setting accepting comma separated text like T,Y, which left the panel with no working hotkey at all
+- The panel's layer name, the inventory lock key and all 23 translated texts were confirmed correct
 
 ## 1.3.9
 
@@ -1772,6 +1753,7 @@
 - The one line trade summary now names the six goods worth the most denars, not whichever came first in the list
 - The startup log no longer claims MCM was registered when the companion file was from a different version
 - Fixed an empty or cut off item list setting throwing an error and silently stopping a whole trade pass
+- The panel layout was measured again and the numbers written down
 
 ## 1.3.8
 
@@ -1779,6 +1761,7 @@
 - Fixed quick buy buying goods you had locked in the inventory
 - Fixed Suppress vanilla trade-rumor lines still hiding the game's own hints when TradeLord had no prices to show in their place
 - Quick buy now stops looking once the budget is spent, instead of pricing the rest of the shelf first
+- Every game method the mod hooks into was rechecked and found where it expects
 
 ## 1.3.7
 
@@ -1810,6 +1793,7 @@
 - The cargo marker now refreshes on every settlement entry, not only when entry automation is switched on
 - The travel distances are now cleared with the campaign, like everything else
 - Quick-sell option in town menu now explains that it also hides the quick trade entry
+- Every setting was checked as reachable from the settings screen and starting inside its range
 
 ## 1.3.4
 
@@ -1848,6 +1832,8 @@
 - Observed mode now respects the trade with villages setting exactly as live mode does
 - The panel hotkey is read once instead of being read again every frame
 - Dead code and every source comment are gone
+- Releases began publishing automatically when a push carries a version with no release yet
+- A push for a version already released began skipping the publish instead of failing the build
 
 ## 1.3.0
 
@@ -1893,10 +1879,13 @@ The versions below are the earlier test builds, from the two repositories this o
 - The automatic best sell town marker now ships off, because it hopped between towns with no visible reason
 - The buy cap per item now starts at 32 instead of 50
 - The spend per visit now starts at 1000 denars instead of no limit at all
+- How versions are numbered and why releases are never replaced was written down
 
 ## 0.914Alpha
 
 - Added the first changelog, with an entry for every release so far
+- The version number moved into one place, with everything else reading it from there
+- Releases became permanent, and the build began refusing to publish over one that exists
 
 ## 0.913Alpha
 
@@ -1966,6 +1955,7 @@ The versions below are the earlier test builds, from the two repositories this o
 - Tooltips now use the game's own coin icon instead of a bare d
 - Tooltips now spell out stock, denars and days
 - The startup log now reads the game version from the game itself, instead of trusting the number stamped on its files
+- A sale was confirmed never to be recorded or paid Trade XP twice
 
 ## 0.902Alpha
 
@@ -1982,3 +1972,5 @@ The versions below are the earlier test builds, from the two repositories this o
 ## 0.900Alpha
 
 - First test build, with a price ledger in your save, best prices in item tooltips, and quick sell and quick buy in town
+- The build that compiles the mod and packs the zip on every push arrived, publishing on demand
+- A formatting mistake that broke the release notes step in that build was fixed
