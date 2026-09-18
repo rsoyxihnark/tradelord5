@@ -109,7 +109,7 @@ namespace TradeLord
         int TheirsToSell(int at);
         int Carried(int at);
         void PriceTheMarketsFor(List<Pick> shelf);
-        bool ResaleMarket(int at, out int price);
+        bool ResaleMarket(int at, int paid, out int price);
         int PriceToBuy(int at);
         int Spendable();
         float Room();
@@ -201,9 +201,10 @@ namespace TradeLord
             var stock = new List<Pick>();
             foreach (Pick one in shelf)
             {
-                if (!market.ResaleMarket(one.At, out int elsewhere)) { tally.Note(Block.NoResaleMarket); continue; }
                 int here = market.PriceToBuy(one.At);
                 if (here <= 0) { tally.Note(Block.NoStock); continue; }
+                if (!market.ResaleMarket(one.At, here, out int elsewhere))
+                { tally.Note(Block.NoResaleMarket); continue; }
                 float realizable = TradeMath.Realizable(elsewhere, s.ResaleSafetyFactor);
                 if (!TradeMath.BuyAcceptable(here, realizable, s.MinProfitMargin)) { tally.Note(Block.BelowMargin); continue; }
                 Pick picked = one;

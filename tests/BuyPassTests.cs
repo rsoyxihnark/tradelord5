@@ -80,7 +80,7 @@ namespace TradeLord.Tests
 
             public void PriceTheMarketsFor(List<Pick> shelf) => Ranked = shelf.Count;
 
-            public bool ResaleMarket(int at, out int price)
+            public bool ResaleMarket(int at, int paid, out int price)
             {
                 price = Stalls[at].Resale;
                 return Stalls[at].Elsewhere;

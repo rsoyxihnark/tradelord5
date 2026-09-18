@@ -1730,11 +1730,12 @@ namespace TradeLord
                 LedgerBehavior.Instance?.PrimeMarketsFor(goods);
             }
 
-            public bool ResaleMarket(int at, out int price)
+            public bool ResaleMarket(int at, int paid, out int price)
             {
-                var elsewhere = LedgerBehavior.Instance?.BestSell(Item(at)) ?? (null, 0);
+                var elsewhere = LedgerBehavior.Instance?
+                    .WhereThisEarnsFastest(Item(at), paid, _pass.Site) ?? (null, 0);
                 price = elsewhere.Item2;
-                return elsewhere.Item1 != null && elsewhere.Item1 != _pass.Site;
+                return elsewhere.Item1 != null;
             }
 
             public int PriceToBuy(int at) => _pass.Price(Shelf[at].EquipmentElement, selling: false);

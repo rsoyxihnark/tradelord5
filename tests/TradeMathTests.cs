@@ -1109,5 +1109,39 @@ namespace TradeLord.Tests
             Assert.Equal(0f, TradeMath.WhatThisPickWouldMake(20f, 50, 1f, 10, 1000, float.NaN));
             Assert.Equal(0f, TradeMath.WhatThisPickWouldMake(20f, 500, 1f, 10, 100, 100f));
         }
+
+        [Fact]
+        public void A_nearer_buyer_paying_a_little_less_earns_more_a_day_than_a_far_one()
+        {
+            float near = TradeMath.EarnedPerDay(400, 300, 0.3f);
+            float far = TradeMath.EarnedPerDay(420, 300, 2.3f);
+            Assert.True(near > far);
+            Assert.Equal(100f / 0.3f, near, 2);
+            Assert.Equal(120f / 2.3f, far, 2);
+        }
+
+        [Fact]
+        public void A_far_buyer_paying_much_more_still_wins()
+        {
+            Assert.True(TradeMath.EarnedPerDay(900, 300, 2.3f) >
+                        TradeMath.EarnedPerDay(310, 300, 0.3f));
+        }
+
+        [Fact]
+        public void A_trip_shorter_than_a_quarter_day_counts_as_a_quarter_day()
+        {
+            Assert.Equal(TradeMath.EarnedPerDay(400, 300, 0f),
+                         TradeMath.EarnedPerDay(400, 300, TradeMath.NoTripCountsShorterThan));
+            Assert.Equal(400f, TradeMath.EarnedPerDay(400, 300, 0.01f));
+        }
+
+        [Fact]
+        public void A_buyer_paying_no_more_than_you_paid_earns_nothing_a_day()
+        {
+            Assert.Equal(0f, TradeMath.EarnedPerDay(300, 300, 1f));
+            Assert.Equal(0f, TradeMath.EarnedPerDay(200, 300, 1f));
+            Assert.Equal(0f, TradeMath.EarnedPerDay(0, 300, 1f));
+            Assert.Equal(0f, TradeMath.EarnedPerDay(400, 300, float.NaN));
+        }
     }
 }
