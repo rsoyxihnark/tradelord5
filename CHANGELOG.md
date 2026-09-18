@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.83.0
+
+- What TradeLord buys first on a shelf is now whichever good would make you the most for the amount you could really take of it, counting what the shop has, what is left in your purse and what still fits in your cargo, instead of the fattest percentage on a single unit.
+- What to buy first is gone from the settings screen, because there is one rule now and nothing left to pick between.
+- This version puts every setting back to the value TradeLord ships with, once, and lists what you had set in TradeLord.log so you can put it back.
+
 ## 1.82.3
 
 - Buy what the ledger sent you for first is now a choice called What to buy first, between What the ledger scores highest and The biggest profit margin, and where the ledger lists more than one route out of a market the one it scores highest is bought first.
