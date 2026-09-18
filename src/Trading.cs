@@ -1123,14 +1123,29 @@ namespace TradeLord
                 _named = named;
                 ItemRoster roster = pass.Party.ItemRoster;
                 var goods = new List<ItemObject>();
+                var order = new List<(ItemRosterElement held, int gain, int at)>();
                 for (int at = 0; at < roster.Count; at++)
                 {
                     ItemRosterElement held = roster.GetElementCopyAtIndex(at);
-                    _plan.Add(held);
+                    order.Add((held, WhatThisStackWouldMake(pass, held), at));
                     goods.Add(held.EquipmentElement.Item);
                 }
+                order.Sort((x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain)
+                                                      : x.at.CompareTo(y.at));
+                for (int at = 0; at < order.Count; at++) _plan.Add(order[at].held);
                 LedgerBehavior.Instance?.PrimeMarketsFor(goods);
                 _keepBack = TradePolicy.KeptBack(roster, pass.Books, pass.Sim, out _awaited);
+            }
+
+            private static int WhatThisStackWouldMake(Pass pass, ItemRosterElement held)
+            {
+                ItemObject item = held.EquipmentElement.Item;
+                if (item == null || held.Amount <= 0) return 0;
+                int price = pass.Price(held.EquipmentElement, selling: true);
+                if (price <= 0) return 0;
+                long gain = ((long)price - TradePolicy.WorthToBeat(item)) * held.Amount;
+                if (gain <= 0L) return 0;
+                return gain > int.MaxValue ? int.MaxValue : (int)gain;
             }
 
             private ItemObject Item(int at) => _plan[at].EquipmentElement.Item;
@@ -1677,6 +1692,7 @@ namespace TradeLord
             private readonly string _named;
             private ItemRosterElement[] _shelf;
             private Dictionary<string, int> _asked;
+            private Dictionary<int, (Settlement where, Ladder rungs, int till)> _resale;
 
             internal BuyingAt(Pass pass, string what, string named)
             {
@@ -1738,8 +1754,31 @@ namespace TradeLord
                 var elsewhere = LedgerBehavior.Instance?
                     .WhereThisEarnsFastest(Item(at), paid, _pass.Site) ?? (null, 0);
                 price = elsewhere.Item2;
-                return elsewhere.Item1 != null;
+                Settlement buyer = elsewhere.Item1;
+                if (buyer == null) return false;
+                if (_resale == null)
+                    _resale = new Dictionary<int, (Settlement, Ladder, int)>();
+                _resale[at] = (buyer, new Ladder(buyer, Item(at), true, price, 0),
+                               TradeRules.WhatTheTillCanPay(buyer.SettlementComponent?.Gold ?? 0,
+                                                            buyer.IsVillage));
+                return true;
             }
+
+            public int ResaleUpTo(int at, int units)
+            {
+                if (units <= 0 || _resale == null || !_resale.TryGetValue(at, out var far)) return 0;
+                long total = 0;
+                for (int u = 0; u < units; u++)
+                {
+                    int price = far.rungs.At(u);
+                    if (price <= 0) break;
+                    total += price;
+                }
+                return total > int.MaxValue ? int.MaxValue : (int)total;
+            }
+
+            public int ResaleTill(int at) =>
+                _resale != null && _resale.TryGetValue(at, out var far) ? far.till : 0;
 
             public int PriceToBuy(int at) => _pass.Price(Shelf[at].EquipmentElement, selling: false);
 
