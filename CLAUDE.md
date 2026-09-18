@@ -115,7 +115,6 @@ The release workflow publishes the commit body as the release notes, so a commit
 
 - Never push unless the project builds clean, starts, and its tests pass locally, because every commit that carries a version publishes a release straight from `main`.
 - When the project targets a platform this session is not running on, say so in chat, verify everything the session can verify, and treat the release workflow as the gate that has to come back green.
-- Never commit build output, packaged binaries, third-party libraries or dependency archives to this repository. The workflow installs dependencies from their package index and produces the downloadable file itself.
 
 ## Verification
 
