@@ -582,6 +582,28 @@ namespace TradeLord
         public (Settlement town, int price) BestSell(ItemObject item) => First(TopMarkets(item, selling: true));
         public (Settlement town, int price) BestBuy(ItemObject item) => First(TopMarkets(item, selling: false));
 
+        public (Settlement town, int price) WhereThisEarnsFastest(ItemObject item, int paid,
+                                                                 Settlement notHere)
+        {
+            Settlement best = null;
+            int bestPrice = 0;
+            float bestRate = -1f;
+            var markets = TopSell(item, MarketRank.TopCacheSize);
+            for (int i = 0; i < markets.Count; i++)
+            {
+                var (town, price) = markets[i];
+                if (town == null || price <= 0 || town == notHere) continue;
+                float days = Travel.EstimateDaysFromParty(town);
+                if (TradeMath.OutOfReach(days)) continue;
+                float rate = TradeMath.EarnedPerDay(price, paid, days);
+                if (best != null && rate <= bestRate) continue;
+                best = town;
+                bestPrice = price;
+                bestRate = rate;
+            }
+            return (best, bestPrice);
+        }
+
         public List<(Settlement town, int price)> TopSell(ItemObject item, int n) => TakeN(TopMarkets(item, true), n);
         public List<(Settlement town, int price)> TopBuy(ItemObject item, int n) => TakeN(TopMarkets(item, false), n);
 

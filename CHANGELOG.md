@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.83.1
+
+- The market a purchase is judged against is now the one that would earn the money back fastest rather than the one paying the most, so a buyer two days further on no longer beats a nearer one paying almost as much.
+
 ## 1.83.0
 
 - What TradeLord buys first on a shelf is now whichever good would make you the most for the amount you could really take of it, counting what the shop has, what is left in your purse and what still fits in your cargo, instead of the fattest percentage on a single unit.
