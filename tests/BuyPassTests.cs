@@ -38,6 +38,7 @@ namespace TradeLord.Tests
             internal float Cargo = 1000f;
             internal int Herd = 100;
             internal bool InAVillage;
+            internal readonly HashSet<int> LedgerAsksFor = new HashSet<int>();
             internal bool Halted;
             internal int RefuseAfter = -1;
             internal int PayNothingAfter = -1;
@@ -67,6 +68,8 @@ namespace TradeLord.Tests
 
             public bool MayBuy(int at, in Good good, out Block why) =>
                 TradeRules.MayBuy(good, false, Rules, default(Says), out why);
+
+            public bool TheLedgerAsksFor(int at) => LedgerAsksFor.Contains(at);
 
             public int TheirsToSell(int at) =>
                 System.Math.Min(Stalls[at].Amount,

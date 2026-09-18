@@ -113,8 +113,12 @@ namespace TradeLord
 
             if (buys.Count == 0 && sells.Count > 0 && Options.Current.MinTownStock > 0)
             {
-                TextObject none = Tongue.Text("{=TL450}No market in reach stocks {COUNT} or more. | Minimum stock for buy suggestions asks for that. | Lower it to see where to buy this.");
+                int worthFloor = Options.Current.MinTownStockWorth;
+                TextObject none = worthFloor > 0
+                    ? Tongue.Text("{=TL451}No market in reach holds {COUNT} of these, | nor {WORTH} denars' worth of them. | Lower Minimum stock for buy suggestions | or Minimum stock value for buy suggestions.")
+                    : Tongue.Text("{=TL450}No market in reach stocks {COUNT} or more. | Minimum stock for buy suggestions asks for that. | Lower it to see where to buy this.");
                 none.SetTextVariable("COUNT", Options.Current.MinTownStock);
+                if (worthFloor > 0) none.SetTextVariable("WORTH", worthFloor);
                 AddLine(vm, Tongue.Text("{=TL21}Best buy prices").ToString(), "", Title);
                 foreach (string clause in none.ToString().Split(Clauses, StringSplitOptions.RemoveEmptyEntries))
                     AddLine(vm, "", clause, Warn);

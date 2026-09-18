@@ -54,6 +54,8 @@ namespace TradeLord
 
         public int MinTownStock = 10;
 
+        public int MinTownStockWorth = 500;
+
         public float MaxTravelDaysTown = 2.4f;
         public float MaxTravelDaysVillage = 1f;
 
@@ -64,6 +66,8 @@ namespace TradeLord
         public bool ConfidenceRanking = true;
         public bool TrustWhatAMarketPaid = true;
         public bool MarketForecast = true;
+
+        public bool FollowTheLedgerFirst = true;
 
         public bool TooltipHints = true;
 

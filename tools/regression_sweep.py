@@ -1634,8 +1634,11 @@ chk("1.3.9", "the best market to sell at is the dearest and the best to buy at i
     "Selling_puts_the_market_that_pays_most_first" in RANKTESTS and
     "Buying_puts_the_market_that_charges_least_first" in RANKTESTS)
 chk("1.3.9", "the scan keeps to the stock floor and the village ceiling, and passes over no price for its age",
-    "if (!selling && minStock > 0 && StockOf(s, item) < minStock) continue;" in
-    method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive") and
+    (lambda live: "int stocked = selling || minStock <= 0 ? 0 : StockOf(s, item);" in live
+              and "if (!selling && minStock > 0 && stocked <= 0) continue;" in live
+              and "if (!selling && !TradeMath.EnoughOnTheShelf(stocked, price, minStock, minWorth)) continue;"
+                  in live)
+    (method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")) and
     "CapturedDay" not in method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopObserved") and
     "if (village && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;" in
     method_body(S['Ranking.cs'], "internal static float Ceiling"))
@@ -4891,7 +4894,9 @@ EVER_SHIPPED = {
     "MaxHeldShare": "float", "MaxLootTier": "int", "MaxSpendPerVisit": "int",
     "MaxTravelDays": "float", "MaxTravelDaysTown": "float", "MaxTravelDaysVillage": "float",
     "MaxVillageTravelDays": "float", "MinProfitMargin": "float",
-    "MinTownStock": "int", "NeverBuyGrain": "bool", "NeverBuyItems": "string",
+    "MinTownStock": "int", "MinTownStockWorth": "int",
+    "FollowTheLedgerFirst": "bool",
+    "NeverBuyGrain": "bool", "NeverBuyItems": "string",
     "NeverSellItems": "string", "ObservationShelfLifeDays": "int", "Omniscient": "bool",
     "PackAnimalFullCargoPremium": "float", "PanelKey": "string", "PreferBestSellTown": "bool",
     "ProfitColoring": "bool", "ProtectSpecial": "bool", "QuickSellMenu": "bool",
@@ -4917,7 +4922,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
     stranded = [name for name, kind in EVER_SHIPPED.items()
                 if now.get(name) != kind and '"' + name + '"' not in lift]
     unlisted = [name for name in now if name not in EVER_SHIPPED]
-    return not stranded and not unlisted and len(EVER_SHIPPED) >= 79
+    return not stranded and not unlisted and len(EVER_SHIPPED) >= 81
 
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
@@ -5870,7 +5875,7 @@ def the_venue_is_the_only_thing_a_pass_asks_where_it_is():
     sell = sell_pass()
     buy = buy_pass()
     held = method_body(t, "private sealed class Pass")
-    return (sell.count("pass.Site") == 3 and buy.count("pass.Site") == 3
+    return (sell.count("pass.Site") == 3 and buy.count("pass.Site") == 4
             and sell.count("pass.Reports") == 0 and buy.count("pass.Reports") == 1
             and sell.count("pass.Key") == 1 and buy.count("pass.Key") == 1
             and "Site" not in method_body(t, "public static void ExecuteRoadTrade")
@@ -9635,8 +9640,9 @@ def a_market_is_never_searched_for_a_good_it_does_not_stock():
     stocks = method_body(S['Ledger.cs'], "private static Dictionary<ItemObject, int> WhatItStocks")
     return (ordered(prime,
                     "Dictionary<ItemObject, int> onTheShelf = minStock > 0 ? WhatItStocks(town) : null;",
-                    "if (onTheShelf == null ||",
-                    "(onTheShelf.TryGetValue(item, out int stocked) && stocked >= minStock))")
+                    "bool couldPass = onTheShelf == null;",
+                    "if (!couldPass && onTheShelf.TryGetValue(item, out stocked))",
+                    "couldPass = stocked >= minStock || (minWorth > 0 && stocked > 0);")
             and prime.find("Priced.At(market, item, me, true)") <
                 prime.find("onTheShelf.TryGetValue(item,")
             and prime.count("WhatItStocks(town)") == 1
@@ -9945,6 +9951,71 @@ chk("1.81.12", "a best buy list left empty by the minimum stock setting says so 
     an_empty_best_buy_list_says_why_it_is_empty())
 chk("1.81.12", "the forecast check in the log says units of the good it named and denars of every good of that kind, so neither figure reads as the other",
     the_forecast_log_says_units_of_a_good_and_denars_of_its_kind())
+
+
+
+def a_costly_good_is_not_filtered_out_for_being_rare():
+    m = S['TradeMath.cs']
+    rule = method_body(m, "public static bool EnoughOnTheShelf")
+    prime = method_body(S['Ledger.cs'], "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
+    live = method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")
+    tip = S['TooltipPatches.cs']
+    return ("if (minUnits <= 0) return true;" in rule
+            and "if (stocked >= minUnits) return true;" in rule
+            and "if (minWorth <= 0 || stocked <= 0 || price <= 0) return false;" in rule
+            and "return (long)stocked * price >= minWorth;" in rule
+            and "public int MinTownStockWorth = 500;" in S['Options.cs']
+            and EVER_SHIPPED.get('MinTownStockWorth') == 'int'
+            and '{ "MinTownStockWorth", new double[] { 0, 20000 } },' in S['Migrate.cs']
+            and "int minWorth = Options.Current.MinTownStockWorth;" in prime
+            and "int minWorth = Options.Current.MinTownStockWorth;" in live
+            and "TradeMath.EnoughOnTheShelf(stocked, price, minStock, minWorth)" in prime
+            and "TradeMath.EnoughOnTheShelf(stocked, price, minStock, minWorth)" in live
+            and "{=TL452}Minimum stock value for buy suggestions" in M
+            and "public int MinTownStockWorth { get => _o.MinTownStockWorth;" in M
+            and "{WORTH}" in spoken(ENGLISH)['TL451']
+            and "{COUNT}" in spoken(ENGLISH)['TL451']
+            and 'none.SetTextVariable("WORTH", worthFloor);' in tip
+            and "int worthFloor = Options.Current.MinTownStockWorth;" in tip
+            and all(said_in_every_language(one) for one in ("TL451", "TL452", "TL453"))
+            and "A_shelf_short_on_units_still_counts_when_what_it_holds_is_worth_enough" in MATHTESTS
+            and "A_worth_floor_of_zero_leaves_the_unit_floor_exactly_as_it_was" in MATHTESTS
+            and "No_unit_floor_at_all_lets_every_market_through_as_it_always_did" in MATHTESTS)
+
+
+def the_pass_buys_what_the_ledger_sent_you_for_first():
+    order = method_body(S['Passes.cs'], "internal static void WhatTheLedgerAskedForFirst")
+    want = method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
+    asks = method_body(S['Trading.cs'], "public bool TheLedgerAsksFor")
+    buys = method_body(S['Ledger.cs'], "public HashSet<string> WhatTheLedgerBuysAt")
+    return ("internal bool Asked;" in S['Passes.cs']
+            and "bool TheLedgerAsksFor(int at);" in S['Passes.cs']
+            and "Asked = market.TheLedgerAsksFor(at)" in want
+            and ordered(want, "Picks.BestMarginFirst(stock);",
+                        "if (s.FollowTheLedgerFirst) Picks.WhatTheLedgerAskedForFirst(stock);")
+            and "foreach (Pick one in stock) (one.Asked ? asked : rest).Add(one);" in order
+            and "if (asked.Count == 0 || rest.Count == 0) return;" in order
+            and ordered(order, "stock.Clear();", "stock.AddRange(asked);", "stock.AddRange(rest);")
+            and "if (!Options.Current.FollowTheLedgerFirst) return false;" in asks
+            and "LedgerBehavior.Instance?.WhatTheLedgerBuysAt(_pass.Site)" in asks
+            and "routes[i].From == here && routes[i].Item != null" in buys
+            and "BestRoutes(int.MaxValue)" in buys
+            and "public bool FollowTheLedgerFirst = true;" in S['Options.cs']
+            and EVER_SHIPPED.get('FollowTheLedgerFirst') == 'bool'
+            and "{=TL454}Buy what the ledger sent you for first" in M
+            and "public bool FollowTheLedgerFirst { get => _o.FollowTheLedgerFirst;" in M
+            and all(said_in_every_language(one) for one in ("TL454", "TL455"))
+            and "public bool TheLedgerAsksFor(int at) => LedgerAsksFor.Contains(at);" in BUYPASSTESTS
+            and "The_good_the_ledger_sent_you_for_is_bought_before_a_fatter_margin" in SHELFORDERTESTS
+            and "Everything_else_keeps_the_order_the_margins_put_it_in" in SHELFORDERTESTS
+            and "A_shelf_the_ledger_says_nothing_about_is_left_exactly_as_it_was" in SHELFORDERTESTS)
+
+
+chk("1.82.0", "a market holding only a few units of a costly good is offered where what it holds is worth enough, so a rare good is no longer passed over for being rare",
+    a_costly_good_is_not_filtered_out_for_being_rare())
+chk("1.82.0", "walking into a market the ledger routes a good out of, that good is bought before anything else on the shelf",
+    the_pass_buys_what_the_ledger_sent_you_for_first())
+
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

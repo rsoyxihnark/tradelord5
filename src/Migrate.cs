@@ -229,6 +229,7 @@ namespace TradeLord
             new Dictionary<string, double[]>(StringComparer.OrdinalIgnoreCase)
             {
                 { "MinTownStock", new double[] { 0, 100 } },
+                { "MinTownStockWorth", new double[] { 0, 20000 } },
                 { "ObservationShelfLifeDays", new double[] { 0, 60 } },
                 { "MaxTravelDaysTown", new double[] { 0, 20 } },
                 { "MaxTravelDaysVillage", new double[] { 0, 10 } },
