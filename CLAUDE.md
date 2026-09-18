@@ -92,6 +92,7 @@ The release workflow publishes the commit body as the release notes, so a commit
 - A `[no release]` commit that has entries to write puts them under an `Unreleased` heading at the top, and the next version commit renames that heading to its own version. A `[no release]` commit with nothing to record writes no heading at all, and a version commit leaves no `Unreleased` heading behind it.
 - The entries in a version section and the bullet points in that version's commit body say the same thing in the same words, so the changelog and the published release notes never disagree.
 - A release note that has already gone out carries its own copy of the entry it was made from, so rewording an entry in the changelog leaves the two disagreeing. Bring the published note back in line in the same session, because the published one is what a reader actually sees.
+- The kept copies in `archive/` are a closed record. Every changelog entry a session writes goes into `CHANGELOG.md` and nowhere else, and nothing is ever added to, reworded in or taken out of the files in `archive/` again. They say what the changelog and the commit history held before they were rewritten, and that is the whole of what they will ever say.
 
 ## Version
 
