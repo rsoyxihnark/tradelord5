@@ -4,6 +4,43 @@
 
 - The mod description is rewritten in short lines, so it reads at a glance rather than in paragraphs
 - Fixed the mod description saying your food is topped up before TradeLord trades for profit, when since 1.83.2 the larder is filled after
+- In 1.6.4, the working notes file came back to the repository, and nothing that ships with the mod changed
+- In 1.6.2, the working notes file was taken out of the repository, and nothing that ships with the mod changed
+- In 1.6.0, zip files and generated release notes went onto the ignore list
+- In 1.5.10, the build moved onto checkout v7, setup-dotnet v6 and upload-artifact v7, off the retired Node 20 runtime
+- In 1.5.6, the build stopped needing a changelog entry to publish, taking the notes from the commit instead
+- In 1.5.6, both build projects moved next to the source they compile, so CI and a local build compile the same thing
+- In 1.5.6, the build output folder, the IDE folders and the log went onto the ignore list
+- In 1.5.4, every comment was taken out of the C# sources and the build workflow
+- In 1.5.3, the mod description's count of audit findings was corrected
+- In 1.5.3, a wrong check count printed in the 1.5.2 notes was corrected
+- In 1.5.3, all four wrong numbers were put down to the same failure, a fact written by hand that nothing verified
+- In 1.3.30, loading MCM settings was shown not to depend on the order the properties are applied in, so nothing changed
+- In 1.3.30, auto trade on entry was shown not to depend on which handler the game runs first, so nothing changed
+- In 1.3.29, the panel's column widths began being checked automatically instead of measured by hand
+- In 1.3.28, the faster route search was tested over 300,000 random cases and picked the same route every time
+- In 1.3.27, both assemblies began compiling with warnings treated as errors
+- In 1.3.27, a mod description claim that both assemblies build clean at every analyzer level was corrected
+- In 1.3.24, town names were confirmed in the field to fit the panel's columns, so nothing changed
+- In 1.3.22, a diagnostic settled that counting food by item is correct, because the game counts one unit as one food
+- In 1.3.22, a diagnostic settled that the panel hotkey must not depend on which layer has focus
+- In 1.3.17, all five market filters were mapped against all four market scans, which is how two fixes were found
+- In 1.3.16, the panel layout was checked against the code that fills it, and every price lookup either way
+- In 1.3.15, all eighteen numeric defaults were checked against their ranges, and the panel legend against its limit
+- In 1.3.14, town and village gold were confirmed to come from one place, and the map button to sit clear of the map
+- In 1.3.11, settings and translation coverage were rechecked, 45 settings to 45 controls and 23 texts to 23 ids
+- In 1.3.10, the panel's layer name, the inventory lock key and all 23 translated texts were confirmed correct
+- In 1.3.9, the panel layout was measured again and the numbers written down
+- In 1.3.8, every game method the mod hooks into was rechecked and found where it expects
+- In 1.3.5, every setting was checked as reachable from the settings screen and starting inside its range
+- In 1.3.1, releases began publishing automatically when a push carries a version with no release yet
+- In 1.3.1, a push for a version already released began skipping the publish instead of failing the build
+- In 0.915Alpha, how versions are numbered and why releases are never replaced was written down
+- In 0.914Alpha, the version number moved into one place, with everything else reading it from there
+- In 0.914Alpha, releases became permanent, and the build began refusing to publish over one that exists
+- In 0.903Alpha, a sale was confirmed never to be recorded or paid Trade XP twice
+- In 0.900Alpha, the build that compiles the mod and packs the zip on every push arrived, publishing on demand
+- In 0.900Alpha, a formatting mistake that broke the release notes step in that build was fixed
 
 ## 1.83.3
 
