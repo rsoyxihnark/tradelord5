@@ -1634,10 +1634,9 @@ chk("1.3.9", "the best market to sell at is the dearest and the best to buy at i
     "Selling_puts_the_market_that_pays_most_first" in RANKTESTS and
     "Buying_puts_the_market_that_charges_least_first" in RANKTESTS)
 chk("1.3.9", "the scan keeps to the stock floor and the village ceiling, and passes over no price for its age",
-    (lambda live: "int stocked = selling || minStock <= 0 ? 0 : StockOf(s, item);" in live
-              and "if (!selling && minStock > 0 && stocked <= 0) continue;" in live
-              and "if (!selling && !TradeMath.EnoughOnTheShelf(stocked, price, minStock, minWorth)) continue;"
-                  in live)
+    (lambda live: "if (!selling && !TradeMath.EnoughOnTheShelf(StockOf(s, item), item.Value," in live
+              and "minStock, minWorth)) continue;" in live
+              and live.find("EnoughOnTheShelf") < live.find("Priced.At"))
     (method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")) and
     "CapturedDay" not in method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopObserved") and
     "if (village && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;" in
@@ -9640,9 +9639,9 @@ def a_market_is_never_searched_for_a_good_it_does_not_stock():
     stocks = method_body(S['Ledger.cs'], "private static Dictionary<ItemObject, int> WhatItStocks")
     return (ordered(prime,
                     "Dictionary<ItemObject, int> onTheShelf = minStock > 0 ? WhatItStocks(town) : null;",
-                    "bool couldPass = onTheShelf == null;",
-                    "if (!couldPass && onTheShelf.TryGetValue(item, out stocked))",
-                    "couldPass = stocked >= minStock || (minWorth > 0 && stocked > 0);")
+                    "if (onTheShelf == null ||",
+                    "(onTheShelf.TryGetValue(item, out stocked) &&",
+                    "TradeMath.EnoughOnTheShelf(stocked, item.Value, minStock, minWorth))")
             and prime.find("Priced.At(market, item, me, true)") <
                 prime.find("onTheShelf.TryGetValue(item,")
             and prime.count("WhatItStocks(town)") == 1
@@ -9962,15 +9961,18 @@ def a_costly_good_is_not_filtered_out_for_being_rare():
     tip = S['TooltipPatches.cs']
     return ("if (minUnits <= 0) return true;" in rule
             and "if (stocked >= minUnits) return true;" in rule
-            and "if (minWorth <= 0 || stocked <= 0 || price <= 0) return false;" in rule
-            and "return (long)stocked * price >= minWorth;" in rule
+            and "if (minWorth <= 0 || stocked <= 0 || unitWorth <= 0) return false;" in rule
+            and "return (long)stocked * unitWorth >= minWorth;" in rule
             and "public int MinTownStockWorth = 500;" in S['Options.cs']
             and EVER_SHIPPED.get('MinTownStockWorth') == 'int'
             and '{ "MinTownStockWorth", new double[] { 0, 20000 } },' in S['Migrate.cs']
             and "int minWorth = Options.Current.MinTownStockWorth;" in prime
             and "int minWorth = Options.Current.MinTownStockWorth;" in live
-            and "TradeMath.EnoughOnTheShelf(stocked, price, minStock, minWorth)" in prime
-            and "TradeMath.EnoughOnTheShelf(stocked, price, minStock, minWorth)" in live
+            and "TradeMath.EnoughOnTheShelf(stocked, item.Value, minStock, minWorth)" in prime
+            and "TradeMath.EnoughOnTheShelf(StockOf(s, item), item.Value," in live
+            and "price" not in between(live, "if (!selling", "continue;")
+            and "A_shop_down_to_its_last_unit_cannot_pass_by_asking_a_high_price" in MATHTESTS
+            and "A_shelf_is_counted_the_way_the_game_counts_one_at_the_goods_own_worth" in MATHTESTS
             and "{=TL452}Minimum stock value for buy suggestions" in M
             and "public int MinTownStockWorth { get => _o.MinTownStockWorth;" in M
             and "{WORTH}" in spoken(ENGLISH)['TL451']
