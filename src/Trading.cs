@@ -1712,7 +1712,6 @@ namespace TradeLord
 
             public int TheLedgerAsksFor(int at)
             {
-                if (Options.Current.WhatToBuyFirst != Options.BuyTheLedgersOrder) return 0;
                 if (_asked == null)
                     _asked = LedgerBehavior.Instance?.WhatTheLedgerBuysAt(_pass.Site)
                              ?? new Dictionary<string, int>(StringComparer.Ordinal);
