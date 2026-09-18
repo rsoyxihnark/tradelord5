@@ -920,14 +920,18 @@ namespace TradeLord
             return _routes.Count <= top ? _routes : _routes.GetRange(0, top);
         }
 
-        public HashSet<string> WhatTheLedgerBuysAt(Settlement here)
+        public Dictionary<string, int> WhatTheLedgerBuysAt(Settlement here)
         {
-            var asked = new HashSet<string>(StringComparer.Ordinal);
+            var asked = new Dictionary<string, int>(StringComparer.Ordinal);
             if (here == null) return asked;
             List<TradeRoute> routes = BestRoutes(int.MaxValue);
             for (int i = 0; i < routes.Count; i++)
-                if (routes[i].From == here && routes[i].Item != null)
-                    asked.Add(routes[i].Item.StringId);
+            {
+                TradeRoute route = routes[i];
+                if (route.From != here || route.Item == null) continue;
+                if (!asked.ContainsKey(route.Item.StringId))
+                    asked[route.Item.StringId] = asked.Count + 1;
+            }
             return asked;
         }
 

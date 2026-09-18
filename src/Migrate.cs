@@ -7,7 +7,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 13;
+        public const int Shape = 14;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -32,6 +32,7 @@ namespace TradeLord
             if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);
             if (from < 7) changed |= TheScanRadiusIsGone(written, notes);
             if (from < 8) changed |= KeepingAndRestockingFoodBecameOneSetting(written, notes);
+            if (from < 14) changed |= WhatToBuyFirstBecameAChoiceOfTwo(written, notes);
             if (changed && notes != null)
                 notes.Add("your settings were written by an older TradeLord, so they have been brought forward from shape " +
                           from + " to shape " + Shape);
@@ -85,6 +86,28 @@ namespace TradeLord
             written[name] = picked.ToString(CultureInfo.InvariantCulture);
             notes?.Add("smeltable weapons are a choice of three now, so your setting of " + held +
                        " became " + (kept ? "keep every one" : "sell them"));
+            return true;
+        }
+
+        private static bool WhatToBuyFirstBecameAChoiceOfTwo(IDictionary<string, string> written,
+                                                             ICollection<string> notes)
+        {
+            const string was = "FollowTheLedgerFirst";
+            if (!written.TryGetValue(was, out string held)) return false;
+            written.Remove(was);
+            if (!bool.TryParse(held, out bool followed))
+            {
+                notes?.Add("'" + held + "' could not be read as what to buy first, so the order the " +
+                           "ledger scores highest starts off");
+                return true;
+            }
+            if (!written.ContainsKey("WhatToBuyFirst"))
+                written["WhatToBuyFirst"] =
+                    (followed ? Options.BuyTheLedgersOrder : Options.BuyTheBiggestMargin)
+                        .ToString(CultureInfo.InvariantCulture);
+            notes?.Add("what TradeLord buys first is a choice of two now, so your setting of " + held +
+                       " became " + (followed ? "what the ledger scores highest"
+                                              : "the biggest profit margin"));
             return true;
         }
 
@@ -205,7 +228,7 @@ namespace TradeLord
     {
         public const bool Armed = true;
 
-        public const int CracksAt = 13;
+        public const int CracksAt = 14;
 
         public static bool Cracks(bool armed, int cracksAt, int shipped, int shape) =>
             armed && cracksAt > 0 && cracksAt == shipped && shape < cracksAt;
@@ -230,6 +253,7 @@ namespace TradeLord
             {
                 { "MinTownStock", new double[] { 0, 100 } },
                 { "MinTownStockWorth", new double[] { 0, 20000 } },
+                { "WhatToBuyFirst", new double[] { 0, 1 } },
                 { "ObservationShelfLifeDays", new double[] { 0, 60 } },
                 { "MaxTravelDaysTown", new double[] { 0, 20 } },
                 { "MaxTravelDaysVillage", new double[] { 0, 10 } },

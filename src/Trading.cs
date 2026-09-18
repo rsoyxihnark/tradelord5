@@ -1673,7 +1673,7 @@ namespace TradeLord
             private readonly string _what;
             private readonly string _named;
             private ItemRosterElement[] _shelf;
-            private HashSet<string> _asked;
+            private Dictionary<string, int> _asked;
 
             internal BuyingAt(Pass pass, string what, string named)
             {
@@ -1710,14 +1710,14 @@ namespace TradeLord
             public bool MayBuy(int at, in Good good, out Block why) =>
                 TradePolicy.MayBuy(good, Item(at), _pass.Locked, out why);
 
-            public bool TheLedgerAsksFor(int at)
+            public int TheLedgerAsksFor(int at)
             {
-                if (!Options.Current.FollowTheLedgerFirst) return false;
+                if (Options.Current.WhatToBuyFirst != Options.BuyTheLedgersOrder) return 0;
                 if (_asked == null)
                     _asked = LedgerBehavior.Instance?.WhatTheLedgerBuysAt(_pass.Site)
-                             ?? new HashSet<string>(StringComparer.Ordinal);
+                             ?? new Dictionary<string, int>(StringComparer.Ordinal);
                 ItemObject item = Item(at);
-                return item != null && _asked.Contains(item.StringId);
+                return item != null && _asked.TryGetValue(item.StringId, out int rank) ? rank : 0;
             }
 
             public int TheirsToSell(int at) => _pass.TheirsToSell(Shelf[at]);
