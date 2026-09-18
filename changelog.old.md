@@ -244,8 +244,6 @@
 - Auto-mark best sell market on map no longer asks every market on the map its price all over again each time you walk into a settlement or out of it, since stepping through a gate cannot move what another town pays.
 - The feature list now names the two limits TradeLord ships with that it had left unsaid: Buy cap per item stops it at 32 units of one good a visit, and Max spend per visit stops it at 1000 denars in one town.
 
-## 1.77.0
-
 ## 1.76.9
 
 - What you paid for your goods, written into a save by a newer TradeLord than the one you are running, is now read as far as this version understands it rather than dropped, the way the prices it has recorded already were.
@@ -591,8 +589,6 @@
 
 - Trade with caravans and villagers you meet is now called Trade with caravans and villagers, a shorter name that makes it clear this setting, rather than Trade with villages, is the one that covers a party of villagers you meet on the road.
 
-## 1.50.1
-
 ## 1.50.0
 
 - Getting your party back up to speed no longer sells the animals Restock and keep food (days of supply) is holding back for your men.
@@ -600,10 +596,6 @@
 - An animal on your always-sell list is still sold to get you back up to speed, because the food reserve never holds one of those back.
 - What TradeLord reckons a good cost you no longer drifts by a denar as it sells a stack down, so a sale no longer stops early with goods left that were worth selling.
 - When a quest is waiting on more of an animal than your food reserve holds back, TradeLord now keeps the larger of the two rather than the smaller.
-
-## 1.49.1
-
-## 1.49.0
 
 ## 1.48.0
 
