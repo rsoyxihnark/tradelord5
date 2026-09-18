@@ -58,12 +58,10 @@
 ## 1.83.0
 
 - Fixed TradeLord buying the good with the fattest margin percentage instead of the one that would actually make you the most gold
-- Note: this update resets your settings once, your old ones are listed in TradeLord.log
 
 ## 1.82.3
 
 - Where the ledger lists more than one trade out of a market, the one it scores highest is bought first
-- Note: this update resets your settings once, your old ones are listed in TradeLord.log
 
 ## 1.82.2
 
@@ -158,8 +156,6 @@
 ## 1.80.13
 
 - Write a price trace to the log now ships on, so a log you send in carries the price readings for everything you were carrying
-- Note: this update resets your settings once, your old ones are listed in TradeLord.log
-- The reset message no longer promises it will not happen again, because it might while the trading is still settling
 
 ## 1.80.12
 
@@ -291,9 +287,6 @@
 - The mod description now names two limits it had left unsaid, Buy cap per item at 32 units a visit and Max spend per visit at 1000 denars
 
 ## 1.77.0
-
-- Note: this update resets your settings once, your old ones are listed in TradeLord.log
-- This update also empties your never sell, always sell, never buy and always buy lists, so write them in again
 
 ## 1.76.9
 
@@ -643,19 +636,8 @@
 
 ## 1.50.1
 
-- Fixed the 1.50.0 settings reset not sticking when you have MCM installed
-- TradeLord now puts the settings screen's own copy back to what it ships with too, so the reset holds
-- Note: because the 1.50.0 reset never took, this update resets your settings once more
-- Your old ones are listed in TradeLord.log, setting by setting, so you can put back the ones you want
-- This update also empties your never sell, always sell, never buy and always buy lists
-- Your settings are put back on this version only and never again on a later one
-
 ## 1.50.0
 
-- Note: this update resets your settings once, because the ones TradeLord ships with now trade better out of the box
-- Your old ones are listed in TradeLord.log, setting by setting, so you can put back the ones you want
-- This update also empties your never sell, always sell, never buy and always buy lists
-- Your settings are put back on this version only and never again on a later one
 - Fixed getting your party back up to speed selling the animals Restock and keep food (days of supply) was holding back
 - Where your herd is also your food, the herd speed penalty can now stay rather than eat into the reserve, and TradeLord.log says so
 - An animal on your always sell list is still sold to get you back up to speed
@@ -664,15 +646,7 @@
 
 ## 1.49.1
 
-- The one time settings reset is switched off from this version on, so nothing of yours is put back to what TradeLord ships with again
-- The reset ran on 1.49.0 alone, so coming straight from an older version leaves your settings as you left them
-
 ## 1.49.0
-
-- Note: this update resets your settings once, because the ones TradeLord ships with now trade better out of the box
-- Your old ones are listed in TradeLord.log, setting by setting, so you can put back the ones you want
-- This update also empties your four item lists, and they are listed in TradeLord.log
-- Your settings are put back on this version only and never again on a later one
 
 ## 1.48.0
 
