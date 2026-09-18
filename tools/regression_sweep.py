@@ -1757,15 +1757,15 @@ chk("1.3.11", "panel drops input restrictions on teardown",
 chk("1.3.12", "sieges/raids excluded from scans",
     "if (UnderAttack(s) || VillageShut(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "LedgerBehavior.UnderAttack(s)" in S['Marker.cs'])
-chk("1.3.13", "the buy shelf is worked through best margin first, and a test holds it to that rather than a line of source",
-    "Picks.BestMarginFirst(stock);" in method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
-    and "stock?.Sort((x, y) => y.Margin.CompareTo(x.Margin));" in
-        method_body(S['Passes.cs'], "internal static void BestMarginFirst")
+chk("1.3.13", "the buy shelf is worked through most money first, and a test holds it to that rather than a line of source",
+    "Picks.MostMoneyFirst(stock);" in method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
+    and "stock?.Sort((x, y) => y.Worth.CompareTo(x.Worth));" in
+        method_body(S['Passes.cs'], "internal static void MostMoneyFirst")
     and 'Passes.cs' in TESTPROJ
     and all(one in SHELFORDERTESTS for one in
-            ("The_best_margin_is_bought_first",
+            ("The_pick_that_would_make_the_most_is_bought_first",
              "A_shelf_already_in_order_is_left_in_it",
-             "A_losing_margin_goes_behind_a_winning_one",
+             "A_pick_that_would_make_nothing_goes_behind_one_that_would",
              "An_empty_shelf_and_no_shelf_at_all_are_both_taken_in_their_stride",
              "Nothing_is_lost_or_invented_however_the_shelf_arrives",
              "new Random(2276)")))
@@ -3675,18 +3675,18 @@ def a_choice_between_named_things_is_picked_from_a_list():
     numbered = re.findall(r'\[SettingPropertyInteger\("\{=TL\d+\}[^"]*", 0, [0-3],', M)
     picked = set(re.findall(r'\[SettingPropertyDropdown\("\{=(TL\d+)\}', M))
     return (numbered == []
-            and picked == {'TL250', 'TL222', 'TL223', 'TL224', 'TL227', 'TL264', 'TL454'}
+            and picked == {'TL250', 'TL222', 'TL223', 'TL224', 'TL227', 'TL264'}
             and all('public Dropdown<string> ' + named in M for named in
                     ('Language', 'FoodPolicy', 'CraftingPolicy', 'LivestockPolicy', 'CostBasisMode',
-                     'KeepSmeltableWeapons', 'WhatToBuyFirst')))
+                     'KeepSmeltableWeapons')))
 
 def the_words_in_a_choice_follow_the_mods_language():
     follow = method_body(M, "internal void FollowLanguage")
     return ('Tongue.Text(words[i]).ToString()' in method_body(M, "private static string[] Spoken")
-            and method_body(M, "private void Retell").count('Retold(') == 6
+            and method_body(M, "private void Retell").count('Retold(') == 5
             and 'Language.PropertyChanged += (sender, args) => Retell();' in follow
             and follow.count('Retell();') == 2
-            and follow.count('Follows(') == 7)
+            and follow.count('Follows(') == 6)
 
 def a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists():
     body = buy_rule()
@@ -4847,7 +4847,6 @@ def a_dropdown_only_ever_gains_choices_at_the_end():
         'PolicyWords': ['Leave alone', 'Sell only', 'Buy only', 'Buy and sell'],
         'SmeltableWords': ['Sell them', 'Keep every one', 'Keep the ones you have not learned'],
         'BasisWords': ['Average of what you paid', 'Last price you paid', 'Cheapest market you know'],
-        'BuyFirstWords': ['What the ledger scores highest', 'The biggest profit margin'],
     }
     return (set(lists) == set(shipped)
             and all(lists[k][:len(v)] == v for k, v in shipped.items())
@@ -4928,7 +4927,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 14;' in S['Migrate.cs']
+    return ('public const int Shape = 15;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and "written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();" in S['Migrate.cs']
             and ordered(read, "string[] lines = Lines(found);",
@@ -5048,7 +5047,7 @@ def the_shape_a_settings_file_declares_gates_every_step_of_the_lift():
                         "if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);",
                         "if (from < 7) changed |= TheScanRadiusIsGone(written, notes);")
             and lift.count("changed |=") == 8
-            and "if (from < 14) changed |= WhatToBuyFirstBecameAChoiceOfTwo(written, notes);" in lift
+            and "if (from < 15) changed |= WhatToBuyFirstIsOneRuleNow(written, notes);" in lift
             and (("if (from < " + shape.group(1) + ")") in lift
                  or ("public const int CracksAt = " + shape.group(1) + ";"
                      in method_body(S['Migrate.cs'], "public static class Whip")))
@@ -5158,7 +5157,7 @@ def the_file_holds_a_number_to_the_same_limits_the_screen_does():
     taken = method_body(S['Config.cs'], "private static bool Taken")
     within = method_body(S['Config.cs'], "private static double Within")
     numeric = set(re.findall(r'^\s*public\s+(?:int|float)\s+(\w+)\s*=', S['Options.cs'], re.M))
-    return (len(ranged) >= 18 and len(picked) == 7 and table == wanted
+    return (len(ranged) >= 18 and len(picked) == 6 and table == wanted
             and numeric and not (numeric - set(table))
             and "(int)Within(field, int.Parse(" in taken
             and "(float)Within(field, float.Parse(" in taken
@@ -5327,7 +5326,7 @@ def a_meeting_on_the_road_counts_what_it_spends_against_the_cap():
     return ("Options.Current.MaxSpendPerVisit, books.PaidOut(sim));" in t
             and "internal int PaidOut(bool sim) => _paid + (sim ? _spent : 0);" in S['Books.cs']
             and buy.count("pass.Spendable()") == 2
-            and buy.count("market.Spendable()") == 2
+            and buy.count("market.Spendable()") == 3
             and ordered(method_body(S['Passes.cs'], "internal static Traded BuyThem"),
                         "if (market.Stopped || market.Spendable() <= 0) break;",
                         "TradeRules.WhatStopsBuying(good, price, market.Spendable(),",
@@ -9993,35 +9992,53 @@ def the_pass_buys_what_the_ledger_sent_you_for_first():
     want = method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
     asks = method_body(S['Trading.cs'], "public int TheLedgerAsksFor")
     buys = method_body(S['Ledger.cs'], "public Dictionary<string, int> WhatTheLedgerBuysAt")
-    lift = method_body(S['Migrate.cs'], "private static bool WhatToBuyFirstBecameAChoiceOfTwo")
+    lift = method_body(S['Migrate.cs'], "private static bool WhatToBuyFirstIsOneRuleNow")
     return ("internal int LedgerRank;" in S['Passes.cs']
             and "int TheLedgerAsksFor(int at);" in S['Passes.cs']
             and "LedgerRank = market.TheLedgerAsksFor(at)" in want
-            and ordered(want, "Picks.BestMarginFirst(stock);",
-                        "if (s.WhatToBuyFirst == Options.BuyTheLedgersOrder)",
+            and ordered(want, "Picks.MostMoneyFirst(stock);",
                         "Picks.WhatTheLedgerAskedForFirst(stock);")
             and "foreach (Pick one in stock) (one.LedgerRank > 0 ? asked : rest).Add(one);" in order
             and "if (asked.Count == 0) return;" in order
             and "asked.Sort((x, y) => x.LedgerRank != y.LedgerRank" in order
             and ordered(order, "stock.Clear();", "stock.AddRange(asked);", "stock.AddRange(rest);")
-            and "if (Options.Current.WhatToBuyFirst != Options.BuyTheLedgersOrder) return 0;" in asks
             and "LedgerBehavior.Instance?.WhatTheLedgerBuysAt(_pass.Site)" in asks
             and "asked[route.Item.StringId] = asked.Count + 1;" in buys
             and "BestRoutes(int.MaxValue)" in buys
-            and "public const int BuyTheLedgersOrder = 0, BuyTheBiggestMargin = 1;" in S['Options.cs']
-            and "public int WhatToBuyFirst = BuyTheLedgersOrder;" in S['Options.cs']
+            and "WhatToBuyFirst" not in S['Options.cs']
+            and "FollowTheLedgerFirst" not in S['Options.cs']
             and EVER_SHIPPED.get('FollowTheLedgerFirst') == 'bool'
             and EVER_SHIPPED.get('WhatToBuyFirst') == 'int'
-            and 'const string was = "FollowTheLedgerFirst";' in lift
-            and "followed ? Options.BuyTheLedgersOrder : Options.BuyTheBiggestMargin" in lift
-            and "{=TL454}What to buy first" in M
-            and "public Dropdown<string> WhatToBuyFirst" in M
-            and all(said_in_every_language(one) for one in
-                    ("TL454", "TL455", "TL456", "TL457"))
+            and 'foreach (string was in new[] { "FollowTheLedgerFirst", "WhatToBuyFirst" })' in lift
             and "public int TheLedgerAsksFor(int at) =>" in BUYPASSTESTS
             and "The_route_the_ledger_scores_highest_is_bought_before_its_lower_ones" in SHELFORDERTESTS
             and "The_good_the_ledger_sent_you_for_is_bought_before_a_fatter_margin" in SHELFORDERTESTS
             and "A_shelf_the_ledger_says_nothing_about_is_left_exactly_as_it_was" in SHELFORDERTESTS)
+
+
+def the_shelf_is_ranked_by_what_a_pick_would_really_make():
+    want = method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
+    rule = method_body(S['TradeMath.cs'], "public static float WhatThisPickWouldMake")
+    return ("long affordable = spendable / unitPrice;" in rule
+            and "long fits = (long)(room / unitWeight);" in rule
+            and "if (unitWeight > 0.01f)" in rule
+            and "return take <= 0 ? 0f : take * profitPerUnit;" in rule
+            and "if (profitPerUnit <= 0f || unitPrice <= 0 || stocked <= 0 || spendable <= 0) return 0f;"
+                in rule
+            and "picked.Worth = TradeMath.WhatThisPickWouldMake(realizable - here, here," in want
+            and "market.TheirsToSell(one.At)," in want
+            and "market.Spendable(), market.Room());" in want
+            and "internal float Worth;" in S['Passes.cs']
+            and "Margin" not in method_body(S['Passes.cs'], "internal struct Pick")
+            and all(one in MATHTESTS for one in
+                    ("A_pick_is_worth_what_you_could_actually_take_of_it_not_its_percentage",
+                     "A_thin_purse_holds_the_take_down_to_what_it_can_pay_for",
+                     "A_full_cargo_holds_the_take_down_to_what_still_fits",
+                     "A_good_that_weighs_nothing_is_held_back_by_the_purse_alone")))
+
+
+chk("1.83.0", "the buy shelf is ranked by what each good would really make you for what you could take of it, so a fat percentage on a cheap good no longer outranks a thinner one on a dear good",
+    the_shelf_is_ranked_by_what_a_pick_would_really_make())
 
 
 chk("1.82.0", "a market holding only a few units of a costly good is offered where what it holds is worth enough, so a rare good is no longer passed over for being rare",

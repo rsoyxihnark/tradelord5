@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.83.0
+
+- What TradeLord buys first on a shelf is now whichever good would make you the most for the amount you could really take of it, counting what the shop has, what is left in your purse and what still fits in your cargo, instead of the fattest percentage on a single unit.
+- This version puts every setting back to the value TradeLord ships with, once, and lists what you had set in TradeLord.log so you can put it back.
+
 ## 1.82.3
 
 - Where the ledger lists more than one route out of a market, the one it scores highest is bought first.

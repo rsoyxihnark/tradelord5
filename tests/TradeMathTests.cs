@@ -1068,5 +1068,46 @@ namespace TradeLord.Tests
         {
             Assert.True(TradeMath.EnoughOnTheShelf(100000, 100000, 1000000, 500));
         }
+
+        [Fact]
+        public void A_pick_is_worth_what_you_could_actually_take_of_it_not_its_percentage()
+        {
+            Assert.Equal(60f, TradeMath.WhatThisPickWouldMake(20f, 50, 1f, 3, 100000, 1000f));
+            Assert.Equal(100f, TradeMath.WhatThisPickWouldMake(50f, 500, 1f, 2, 100000, 1000f));
+        }
+
+        [Fact]
+        public void A_thin_purse_holds_the_take_down_to_what_it_can_pay_for()
+        {
+            Assert.Equal(400f, TradeMath.WhatThisPickWouldMake(20f, 50, 1f, 100, 1000, 1000f));
+            Assert.Equal(100f, TradeMath.WhatThisPickWouldMake(50f, 500, 1f, 100, 1000, 1000f));
+            Assert.Equal(0f, TradeMath.WhatThisPickWouldMake(50f, 500, 1f, 100, 0, 1000f));
+        }
+
+        [Fact]
+        public void A_full_cargo_holds_the_take_down_to_what_still_fits()
+        {
+            Assert.Equal(200f, TradeMath.WhatThisPickWouldMake(20f, 50, 1f, 100, 100000, 10f));
+            Assert.Equal(5000f, TradeMath.WhatThisPickWouldMake(50f, 500, 0.1f, 100, 100000, 10f));
+            Assert.Equal(0f, TradeMath.WhatThisPickWouldMake(20f, 50, 1f, 100, 100000, 0f));
+        }
+
+        [Fact]
+        public void A_good_that_weighs_nothing_is_held_back_by_the_purse_alone()
+        {
+            Assert.Equal(1000f, TradeMath.WhatThisPickWouldMake(50f, 500, 0f, 100, 10000, 0.0001f));
+            Assert.Equal(0f, TradeMath.WhatThisPickWouldMake(50f, 500, 1f, 100, 10000, 0.0001f));
+        }
+
+        [Fact]
+        public void A_pick_that_would_make_nothing_is_worth_nothing()
+        {
+            Assert.Equal(0f, TradeMath.WhatThisPickWouldMake(0f, 50, 1f, 10, 1000, 100f));
+            Assert.Equal(0f, TradeMath.WhatThisPickWouldMake(-5f, 50, 1f, 10, 1000, 100f));
+            Assert.Equal(0f, TradeMath.WhatThisPickWouldMake(20f, 0, 1f, 10, 1000, 100f));
+            Assert.Equal(0f, TradeMath.WhatThisPickWouldMake(20f, 50, 1f, 0, 1000, 100f));
+            Assert.Equal(0f, TradeMath.WhatThisPickWouldMake(20f, 50, 1f, 10, 1000, float.NaN));
+            Assert.Equal(0f, TradeMath.WhatThisPickWouldMake(20f, 500, 1f, 10, 100, 100f));
+        }
     }
 }

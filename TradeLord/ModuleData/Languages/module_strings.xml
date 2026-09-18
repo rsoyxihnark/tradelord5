@@ -299,9 +299,5 @@
 		<string id="TL451" text="No market in reach holds {COUNT} of these, | nor {WORTH} denars' worth of them. | Lower Minimum stock for buy suggestions | or Minimum stock value for buy suggestions."/>
 		<string id="TL452" text="Minimum stock value for buy suggestions"/>
 		<string id="TL453" text="A market also counts as stocked when what it holds of a good is worth at least this many denars, even where it holds fewer units than Minimum stock for buy suggestions asks for. Worth is counted at the good's own worth, not at what the shop charges. The dearer a good is, the fewer of it a market need hold. 0 = off. Live-price mode only."/>
-		<string id="TL454" text="What to buy first"/>
-		<string id="TL455" text="Walking into a market, which good on its shelves is bought before the others. What the ledger scores highest takes the route the ledger panel puts top for that market, by its Score column. The biggest profit margin buys the fattest percentage first, whatever the ledger said."/>
-		<string id="TL456" text="What the ledger scores highest"/>
-		<string id="TL457" text="The biggest profit margin"/>
 	</strings>
 </base>

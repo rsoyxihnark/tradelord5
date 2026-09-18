@@ -72,14 +72,14 @@ namespace TradeLord
         internal int At;
         internal Good Good;
         internal float Realizable;
-        internal float Margin;
+        internal float Worth;
         internal int LedgerRank;
     }
 
     internal static class Picks
     {
-        internal static void BestMarginFirst(List<Pick> stock) =>
-            stock?.Sort((x, y) => y.Margin.CompareTo(x.Margin));
+        internal static void MostMoneyFirst(List<Pick> stock) =>
+            stock?.Sort((x, y) => y.Worth.CompareTo(x.Worth));
 
         internal static void WhatTheLedgerAskedForFirst(List<Pick> stock)
         {
@@ -90,7 +90,7 @@ namespace TradeLord
             if (asked.Count == 0) return;
             asked.Sort((x, y) => x.LedgerRank != y.LedgerRank
                 ? x.LedgerRank.CompareTo(y.LedgerRank)
-                : y.Margin.CompareTo(x.Margin));
+                : y.Worth.CompareTo(x.Worth));
             stock.Clear();
             stock.AddRange(asked);
             stock.AddRange(rest);
@@ -208,12 +208,14 @@ namespace TradeLord
                 if (!TradeMath.BuyAcceptable(here, realizable, s.MinProfitMargin)) { tally.Note(Block.BelowMargin); continue; }
                 Pick picked = one;
                 picked.Realizable = realizable;
-                picked.Margin = (realizable - here) / here;
+                picked.Worth = TradeMath.WhatThisPickWouldMake(realizable - here, here,
+                                                               one.Good.Weight,
+                                                               market.TheirsToSell(one.At),
+                                                               market.Spendable(), market.Room());
                 stock.Add(picked);
             }
-            Picks.BestMarginFirst(stock);
-            if (s.WhatToBuyFirst == Options.BuyTheLedgersOrder)
-                Picks.WhatTheLedgerAskedForFirst(stock);
+            Picks.MostMoneyFirst(stock);
+            Picks.WhatTheLedgerAskedForFirst(stock);
             return stock;
         }
 
