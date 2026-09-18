@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.85.1
+
+- Fixed TradeLord buying more of a good than the market it means to sell it in would still pay a good price for
+- Fixed TradeLord filling your cargo for a market whose merchant cannot pay for that much of it
+- Fixed a merchant running out of gold before TradeLord reached the goods that would have made you the most
+- Fixed a purchase being judged against one of the dearest markets when a nearer one would earn the money back faster
+- Fixed a good a quest is waiting on and your food reserve both want being held back only once
+
 ## 1.85.0
 
 - Fixed the map marker going on what a market would pay for your cargo instead of what you would make there
