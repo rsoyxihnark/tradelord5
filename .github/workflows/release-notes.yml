@@ -1,0 +1,28 @@
+name: Sync release notes
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Write the notes. Untick it for a dry run that only says what would change."
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Put every published release note back in line with the changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ inputs.apply }}" = "true" ]; then
+            python3 tools/sync_release_notes.py --apply
+          else
+            python3 tools/sync_release_notes.py
+          fi
