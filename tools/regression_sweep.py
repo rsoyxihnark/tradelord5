@@ -10206,7 +10206,7 @@ RESET_NEVER_WRITTEN = (
 
 def the_one_time_settings_reset_is_never_written_up_for_the_player():
     said = CHANGES.lower()
-    return (not [one for one in RESET_NEVER_WRITTEN if one in said]
+    return (not [one for one in RESET_NEVER_WRITTEN if one.lower() in said]
             and "The one time settings reset never reaches the player in writing." in RULES
             and "is never written into a changelog entry, a release note or a commit message" in RULES
             and "no entry naming it is left anywhere in the changelog" in RULES
@@ -10216,6 +10216,30 @@ def the_one_time_settings_reset_is_never_written_up_for_the_player():
 
 chk("1.83.3", "the one time settings reset is never written up for the player, so the changelog carries no entry naming it and the working rules keep it out of the notes and the commits",
     the_one_time_settings_reset_is_never_written_up_for_the_player())
+
+
+WITHDRAWN_NEVER_WRITTEN = (
+    "buy what the ledger sent you for first",
+    "what to buy first",
+    "what the ledger scores highest",
+)
+
+
+def a_trial_that_was_taken_back_out_is_left_in_no_writing():
+    said = CHANGES.lower()
+    return (not [one for one in WITHDRAWN_NEVER_WRITTEN if one.lower() in said]
+            and "Something tried and then taken back out leaves the player nothing" in RULES
+            and "the entry that announced it, the entries that changed it while it was there, "
+                "and the entry that took it away" in RULES
+            and "Out of the changelog, out of the release notes, out of the commit subjects "
+                "and bodies that carry them." in RULES
+            and "An entry recording that something was looked into and left as it was is the "
+                "same case" in RULES
+            and "take its section out too, and throw its release and its tag away with it" in RULES)
+
+
+chk("1.83.3", "a setting that shipped and was taken away again is left in no changelog entry, and the working rules take the whole run of such a thing out of the notes and the commits too",
+    a_trial_that_was_taken_back_out_is_left_in_no_writing())
 
 
 SYNC = io.open('tools/sync_release_notes.py', encoding='utf-8').read()
