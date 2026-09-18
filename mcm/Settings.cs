@@ -765,5 +765,10 @@ namespace TradeLord.Mcm
             HintText = "{=TL398}Writes to TradeLord.log what the forecast said a market would hold and what it held when you walked in, good by good, with how far off it was. Needs Count what is on its way to a market. ON by default; turn it off to keep the log short.")]
         [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
         public bool ForecastScore { get => _o.ForecastScore; set { _o.ForecastScore = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL454}Ultralog: write everything the map marker weighed", Order = 2, RequireRestart = false,
+            HintText = "{=TL455}Writes to TradeLord.log everything the map marker weighed: every market it priced with its days and its gold a day, the marked market good by good with what each fetches and what it cost you, what was left out and why, and how the mark held up against what that market paid you. ON by default; turn it off to keep the log short.")]
+        [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
+        public bool Ultralog { get => _o.Ultralog; set { _o.Ultralog = value; Options.Bump(); } }
     }
 }
