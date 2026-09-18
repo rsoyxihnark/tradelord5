@@ -234,6 +234,23 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_good_a_quest_wants_and_the_larder_wants_is_held_back_for_both()
+        {
+            SellVerdict spare = Ask(Cargo("grain"), amount: 10,
+                facts: new SellFacts { AwaitedHeld = 3, FoodHeld = 5 });
+            Assert.True(spare.Allowed);
+            Assert.Equal(8, spare.KeepCount);
+            Assert.Equal(3, spare.DrewAwaited);
+            Assert.Equal(5, spare.DrewFood);
+
+            SellVerdict all = Ask(Cargo("grain"), amount: 8,
+                facts: new SellFacts { AwaitedHeld = 3, FoodHeld = 5 });
+            Assert.False(all.Allowed);
+            Assert.Equal(Block.FoodReserve, all.Why);
+            Assert.Equal(8, all.KeepCount);
+        }
+
+        [Fact]
         public void Food_the_reserve_is_holding_stays_in_your_bags()
         {
             SellVerdict all = Ask(Cargo("grain"), amount: 4,
@@ -260,21 +277,22 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void An_animal_held_by_both_a_quest_and_the_food_reserve_keeps_the_larger_of_the_two()
+        public void An_animal_held_by_both_a_quest_and_the_food_reserve_is_kept_back_for_both()
         {
             SellVerdict fed = Ask(Livestock(), amount: 10,
                 facts: new SellFacts { AwaitedHeld = 2, FoodHeld = 3 });
             Assert.True(fed.Allowed);
             Assert.Equal(2, fed.DrewAwaited);
             Assert.Equal(3, fed.DrewFood);
-            Assert.Equal(3, fed.KeepCount);
+            Assert.Equal(5, fed.KeepCount);
 
             SellVerdict owed = Ask(Livestock(), amount: 10,
                 facts: new SellFacts { AwaitedHeld = 8, FoodHeld = 2 });
-            Assert.True(owed.Allowed);
+            Assert.False(owed.Allowed);
+            Assert.Equal(Block.FoodReserve, owed.Why);
             Assert.Equal(8, owed.DrewAwaited);
             Assert.Equal(2, owed.DrewFood);
-            Assert.Equal(8, owed.KeepCount);
+            Assert.Equal(10, owed.KeepCount);
 
             SellVerdict whole = Ask(Livestock(), amount: 8,
                 facts: new SellFacts { AwaitedHeld = 8, FoodHeld = 2 });
