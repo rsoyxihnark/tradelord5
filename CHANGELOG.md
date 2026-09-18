@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.85.0
+
+- Fixed the map marker going on what a market would pay for your cargo instead of what you would make there
+- Fixed the map marker valuing your whole stack at the price of the first unit
+- The TradeLord ledger now weighs every market a good could be sold at, so a nearby market paying a little less can win a place
+
 ## 1.84.0
 
 - Ultralog is a new switch under Debug, on out of the box, that writes everything the map marker weighed to TradeLord.log
