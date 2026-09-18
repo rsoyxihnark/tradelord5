@@ -151,10 +151,11 @@ namespace TradeLord
         }
 
         public static int MostYouCouldTake(int unitPrice, float unitWeight, int stocked,
-                                           int spendable, float room)
+                                           int spendable, float room, int cap)
         {
             if (unitPrice <= 0 || stocked <= 0 || spendable <= 0) return 0;
             long take = stocked;
+            if (cap > 0 && cap < take) take = cap;
             long affordable = spendable / unitPrice;
             if (affordable < take) take = affordable;
             if (unitWeight > 0.01f)
@@ -171,7 +172,7 @@ namespace TradeLord
                                                   int stocked, int spendable, float room)
         {
             if (profitPerUnit <= 0f) return 0f;
-            int take = MostYouCouldTake(unitPrice, unitWeight, stocked, spendable, room);
+            int take = MostYouCouldTake(unitPrice, unitWeight, stocked, spendable, room, 0);
             return take <= 0 ? 0f : take * profitPerUnit;
         }
 

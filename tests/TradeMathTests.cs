@@ -1085,6 +1085,14 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_buy_cap_per_item_holds_the_take_down_to_what_it_allows()
+        {
+            Assert.Equal(10, TradeMath.MostYouCouldTake(50, 1f, 100, 100000, 1000f, 10));
+            Assert.Equal(100, TradeMath.MostYouCouldTake(50, 1f, 100, 100000, 1000f, 0));
+            Assert.Equal(3, TradeMath.MostYouCouldTake(50, 1f, 3, 100000, 1000f, 10));
+        }
+
+        [Fact]
         public void A_full_cargo_holds_the_take_down_to_what_still_fits()
         {
             Assert.Equal(200f, TradeMath.WhatThisPickWouldMake(20f, 50, 1f, 100, 100000, 10f));

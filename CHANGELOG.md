@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.85.2
+
+- Fixed the buying pass going on what you were carrying before it started buying rather than on what you carry now
+- Fixed TradeLord reading how much gold a market has while Live world prices is off, when it goes on what you have seen
+- Fixed the buying pass weighing more of a good than your buy cap per item would ever let it take
+
 ## 1.85.1
 
 - Fixed TradeLord buying more of a good than the market it means to sell it in would still pay a good price for
