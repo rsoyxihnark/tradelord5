@@ -73,18 +73,18 @@ namespace TradeLord.Tests
             }
         }
 
-        private static List<Pick> Asked(params (float margin, bool asked)[] shelf)
+        private static List<Pick> Asked(params (float margin, int rank)[] shelf)
         {
             var stock = new List<Pick>();
             for (int i = 0; i < shelf.Length; i++)
-                stock.Add(new Pick { At = i, Margin = shelf[i].margin, Asked = shelf[i].asked });
+                stock.Add(new Pick { At = i, Margin = shelf[i].margin, LedgerRank = shelf[i].rank });
             return stock;
         }
 
         [Fact]
         public void The_good_the_ledger_sent_you_for_is_bought_before_a_fatter_margin()
         {
-            var stock = Asked((2.4f, false), (0.87f, true), (1.1f, false));
+            var stock = Asked((2.4f, 0), (0.87f, 1), (1.1f, 0));
             Picks.WhatTheLedgerAskedForFirst(stock);
             Assert.Equal(new[] { 0.87f, 2.4f, 1.1f }, MarginsOf(stock));
         }
@@ -92,21 +92,29 @@ namespace TradeLord.Tests
         [Fact]
         public void Everything_else_keeps_the_order_the_margins_put_it_in()
         {
-            var stock = Asked((2.4f, false), (0.87f, true), (1.1f, false), (0.4f, true));
+            var stock = Asked((2.4f, 0), (0.87f, 2), (1.1f, 0), (0.4f, 1));
             Picks.WhatTheLedgerAskedForFirst(stock);
-            Assert.Equal(new[] { 0.87f, 0.4f, 2.4f, 1.1f }, MarginsOf(stock));
+            Assert.Equal(new[] { 0.4f, 0.87f, 2.4f, 1.1f }, MarginsOf(stock));
+        }
+
+        [Fact]
+        public void The_route_the_ledger_scores_highest_is_bought_before_its_lower_ones()
+        {
+            var stock = Asked((0.2f, 3), (0.9f, 1), (0.5f, 2));
+            Picks.WhatTheLedgerAskedForFirst(stock);
+            Assert.Equal(new[] { 0.9f, 0.5f, 0.2f }, MarginsOf(stock));
+
+            var every = Asked((2.4f, 2), (1.1f, 1));
+            Picks.WhatTheLedgerAskedForFirst(every);
+            Assert.Equal(new[] { 1.1f, 2.4f }, MarginsOf(every));
         }
 
         [Fact]
         public void A_shelf_the_ledger_says_nothing_about_is_left_exactly_as_it_was()
         {
-            var stock = Asked((2.4f, false), (1.1f, false), (0.4f, false));
+            var stock = Asked((2.4f, 0), (1.1f, 0), (0.4f, 0));
             Picks.WhatTheLedgerAskedForFirst(stock);
             Assert.Equal(new[] { 2.4f, 1.1f, 0.4f }, MarginsOf(stock));
-
-            var every = Asked((2.4f, true), (1.1f, true));
-            Picks.WhatTheLedgerAskedForFirst(every);
-            Assert.Equal(new[] { 2.4f, 1.1f }, MarginsOf(every));
 
             var none = new List<Pick>();
             Picks.WhatTheLedgerAskedForFirst(none);
@@ -127,7 +135,7 @@ namespace TradeLord.Tests
                     {
                         At = i,
                         Margin = (float)(rng.NextDouble() * 2d - 1d),
-                        Asked = rng.Next(0, 3) == 0
+                        LedgerRank = rng.Next(0, 3) == 0 ? i + 1 : 0
                     });
                 Picks.BestMarginFirst(stock);
                 var was = new List<Pick>(stock);
@@ -138,12 +146,14 @@ namespace TradeLord.Tests
                 for (int i = 0; i < stock.Count; i++)
                 {
                     Assert.True(seen.Add(stock[i].At));
-                    if (!stock[i].Asked) past = true;
+                    if (stock[i].LedgerRank == 0) past = true;
                     else Assert.False(past);
                 }
                 for (int i = 1; i < stock.Count; i++)
-                    if (stock[i - 1].Asked == stock[i].Asked)
+                    if (stock[i - 1].LedgerRank == 0 && stock[i].LedgerRank == 0)
                         Assert.True(stock[i - 1].Margin >= stock[i].Margin);
+                    else if (stock[i - 1].LedgerRank > 0 && stock[i].LedgerRank > 0)
+                        Assert.True(stock[i - 1].LedgerRank < stock[i].LedgerRank);
             }
         }
     }
