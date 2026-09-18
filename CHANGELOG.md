@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.83.2
+
+- Food is restocked after the trading buy rather than before it, so your gold and your cargo room go to the goods you came to trade first and the larder takes what is left.
+
 ## 1.83.1
 
 - The market a purchase is judged against is now the one that would earn the money back fastest rather than the one paying the most, so a buyer two days further on no longer beats a nearer one paying almost as much.

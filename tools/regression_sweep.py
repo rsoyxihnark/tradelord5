@@ -1394,16 +1394,18 @@ def each_preset_gets_its_own_settings():
                                  'LivestockPolicy', 'CostBasisMode', 'KeepSmeltableWeapons')))
 
 
-def restocking_runs_between_selling_and_buying():
+def restocking_runs_after_the_trading_buy():
     menu = method_body(S['Trading.cs'], "private void OnSessionLaunched")
     entry = method_body(S['Trading.cs'], "private void OnSettlementEntered")
     body = pass_body("public static void ExecuteResupply")
     return (ordered(menu, "ExecuteQuickSell(Settlement.CurrentSettlement);",
-                    "ExecuteResupply(Settlement.CurrentSettlement);",
-                    "ExecuteQuickBuy(Settlement.CurrentSettlement);")
+                    "ExecuteHaulage(Settlement.CurrentSettlement);",
+                    "ExecuteQuickBuy(Settlement.CurrentSettlement);",
+                    "ExecuteResupply(Settlement.CurrentSettlement);")
             and ordered(entry, "ExecuteQuickSell(settlement, quiet: true);",
-                        "ExecuteResupply(settlement, quiet: true);",
-                        "ExecuteQuickBuy(settlement, quiet: true);")
+                        "ExecuteHaulage(settlement, quiet: true);",
+                        "ExecuteQuickBuy(settlement, quiet: true);",
+                        "ExecuteResupply(settlement, quiet: true);")
             and "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);" in entry
             and "if (Options.Current.KeepFoodDays <= 0) return;" in body
             and "TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true)"
@@ -4154,8 +4156,8 @@ chk("1.58.0", "a herd is left out of the food floor because TradeLord trades it 
 
 chk("1.17.0", "the settings screen hands every preset its own settings, so Default puts the built-in ones back",
     each_preset_gets_its_own_settings())
-chk("1.17.0", "restocking runs between selling and buying, and asks nothing about profit",
-    restocking_runs_between_selling_and_buying())
+chk("1.17.0", "restocking runs after the trading buy, so the purse and the cargo go to trade goods first, and it asks nothing about profit",
+    restocking_runs_after_the_trading_buy())
 chk("1.17.0", "the food it restocks to is a days-of-supply figure read off the party's own appetite",
     option_default('KeepFoodDays') == '3' and
     "return (int)Math.Ceiling(AppetitePerDay() * days);" in
@@ -4193,16 +4195,16 @@ chk("1.25.0", "the settings file is read whether or not MCM is there, and it car
     "Options.Bump();" in S['Config.cs'] and
     'Log.Beside(FileName, mustExist: true)' in S['Config.cs'])
 
-def pack_animals_are_bought_between_restocking_and_the_profit_pass():
+def pack_animals_are_bought_before_the_profit_pass():
     menu = method_body(S['Trading.cs'], "private void OnSessionLaunched")
     entry = method_body(S['Trading.cs'], "private void OnSettlementEntered")
     body = pass_body("public static void ExecuteHaulage")
-    return (ordered(menu, "ExecuteResupply(Settlement.CurrentSettlement);",
-                    "ExecuteHaulage(Settlement.CurrentSettlement);",
-                    "ExecuteQuickBuy(Settlement.CurrentSettlement);")
-            and ordered(entry, "ExecuteResupply(settlement, quiet: true);",
-                        "ExecuteHaulage(settlement, quiet: true);",
-                        "ExecuteQuickBuy(settlement, quiet: true);")
+    return (ordered(menu, "ExecuteHaulage(Settlement.CurrentSettlement);",
+                    "ExecuteQuickBuy(Settlement.CurrentSettlement);",
+                    "ExecuteResupply(Settlement.CurrentSettlement);")
+            and ordered(entry, "ExecuteHaulage(settlement, quiet: true);",
+                        "ExecuteQuickBuy(settlement, quiet: true);",
+                        "ExecuteResupply(settlement, quiet: true);")
             and "if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);" in entry
             and "if (!Options.Current.BuyHaulAnimals) return;" in body
             and "it => TradePolicy.MayHaul(it, pass.Locked)" in body
@@ -4332,8 +4334,8 @@ def an_unreadable_crafting_record_keeps_the_weapon():
             and "TradePolicy.ForgetCraftingLookup();" in
                 method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 
-chk("1.18.0", "pack animals are bought after the larder is filled and before the goods are, and nothing about profit is asked",
-    pack_animals_are_bought_between_restocking_and_the_profit_pass())
+chk("1.18.0", "pack animals are bought before the goods are, so the room they add is there to fill, and nothing about profit is asked",
+    pack_animals_are_bought_before_the_profit_pass())
 chk("1.19.0", "only an animal that carries for you is bought that way, the herd guard still binds it and the carry weight never does",
     only_a_carrying_animal_is_hauled_and_the_herd_still_binds())
 chk("1.30.0", "a haul animal is bought only within the ceiling over the cheapest TradeLord has seen, and never below the gold reserve",
@@ -4562,8 +4564,8 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
             and "while (remaining > 0 && shed > 0)" in relief
             and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
                         "ExecuteHerdRelief(settlement, quiet: true)",
-                        "ExecuteResupply(settlement, quiet: true)",
-                        "ExecuteHaulage(settlement, quiet: true)")
+                        "ExecuteHaulage(settlement, quiet: true)",
+                        "ExecuteQuickBuy(settlement, quiet: true)")
             and "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);" in entered)
 
 def the_herd_guard_keeps_a_cushion_below_the_speed_penalty():
@@ -4708,9 +4710,9 @@ def the_herd_is_looked_at_three_times_a_visit():
             and entered.count("ExecuteHerdRelief(settlement, quiet: true)") == 2
             and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
                         "ExecuteHerdRelief(settlement, quiet: true)",
-                        "ExecuteResupply(settlement, quiet: true)",
                         "ExecuteHaulage(settlement, quiet: true)",
-                        "ExecuteQuickBuy(settlement, quiet: true)")
+                        "ExecuteQuickBuy(settlement, quiet: true)",
+                        "ExecuteResupply(settlement, quiet: true)")
             and ordered_last(entered, "ExecuteQuickBuy(settlement, quiet: true)",
                              "ExecuteHerdRelief(settlement, quiet: true)",
                              'Drove.LogState("after trading at " + settlement.Name);')

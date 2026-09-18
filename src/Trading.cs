@@ -653,9 +653,9 @@ namespace TradeLord
                                 Drove.LogState("trading by hand at " + Settlement.CurrentSettlement.Name);
                                 ExecuteQuickSell(Settlement.CurrentSettlement);
                                 ExecuteHerdRelief(Settlement.CurrentSettlement);
-                                ExecuteResupply(Settlement.CurrentSettlement);
                                 ExecuteHaulage(Settlement.CurrentSettlement);
                                 ExecuteQuickBuy(Settlement.CurrentSettlement);
+                                ExecuteResupply(Settlement.CurrentSettlement);
                                 ExecuteHerdRelief(Settlement.CurrentSettlement);
                                 Drove.LogState("after trading by hand at " + Settlement.CurrentSettlement.Name);
                                 ReportStalledPasses();
@@ -724,9 +724,9 @@ namespace TradeLord
 
                 if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
-                if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
+                if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
                 Drove.LogState("after trading at " + settlement.Name);
                 ReportStalledPasses();
