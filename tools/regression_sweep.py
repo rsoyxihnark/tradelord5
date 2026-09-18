@@ -10161,5 +10161,32 @@ chk("1.83.3", "the market marked on your map is the one that would earn the most
     the_marker_picks_the_market_that_earns_fastest_not_the_one_paying_most())
 
 
+
+
+GAMER_WORDED_ENTRIES = (
+    "Fixed TradeLord buying other goods just because they had a higher margin percentage "
+    "when the ledger had suggested a much better trade",
+    "Fixed rare high value goods (e.g. jewelry) not being offered in the ledger, because "
+    "they are almost never stocked 10 or more in early game",
+    "Fixed TradeLord valuing a purchase against a buyer days away instead of a nearby one "
+    "paying almost the same",
+    "Fixed the map marker pointing at the town paying the most in total instead of the one "
+    "paying the most per day",
+    "Food is now restocked after trading, so your gold and cargo space go to trade goods first",
+    "Note: this update resets your settings once, your old ones are listed in TradeLord.log",
+)
+
+
+def the_owners_own_wording_for_an_entry_is_kept_word_for_word():
+    return (all("`" + one + "`" in RULES for one in GAMER_WORDED_ENTRIES)
+            and len(GAMER_WORDED_ENTRIES) == 6
+            and "start with `Fixed`, name the thing that was going wrong, and stop" in RULES
+            and "No clause explaining the mechanism behind it" in RULES)
+
+
+chk("1.83.3", "the owner's own wording for a changelog entry is kept in the working rules word for word, so a session writes entries in it rather than in wording of its own",
+    the_owners_own_wording_for_an_entry_is_kept_word_for_word())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
