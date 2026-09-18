@@ -355,35 +355,31 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void TheSwitchForWhatToBuyFirstBecameAChoiceOfTwoAndCarriesTheValueOver()
+        public void BothSwitchesForWhatToBuyFirstAreGoneAndNeitherIsReadAgain()
         {
-            var kept = File("FollowTheLedgerFirst", "true", "GoldReserve", "800");
+            var older = File("FollowTheLedgerFirst", "true", "GoldReserve", "800");
             var notes = new List<string>();
-            Assert.True(Migration.Lift(13, kept, notes));
-            Assert.False(kept.ContainsKey("FollowTheLedgerFirst"));
-            Assert.Equal("0", kept["WhatToBuyFirst"]);
-            Assert.Equal("800", kept["GoldReserve"]);
+            Assert.True(Migration.Lift(13, older, notes));
+            Assert.False(older.ContainsKey("FollowTheLedgerFirst"));
+            Assert.False(older.ContainsKey("WhatToBuyFirst"));
+            Assert.Equal("800", older["GoldReserve"]);
 
-            var turnedOff = File("FollowTheLedgerFirst", "false");
-            Assert.True(Migration.Lift(13, turnedOff, new List<string>()));
-            Assert.Equal("1", turnedOff["WhatToBuyFirst"]);
+            var picked = File("WhatToBuyFirst", "1", "GoldReserve", "800");
+            Assert.True(Migration.Lift(14, picked, new List<string>()));
+            Assert.False(picked.ContainsKey("WhatToBuyFirst"));
+            Assert.Equal("800", picked["GoldReserve"]);
 
-            var nonsense = File("FollowTheLedgerFirst", "maybe");
-            Assert.True(Migration.Lift(13, nonsense, new List<string>()));
-            Assert.False(nonsense.ContainsKey("FollowTheLedgerFirst"));
-            Assert.False(nonsense.ContainsKey("WhatToBuyFirst"));
+            var both = File("FollowTheLedgerFirst", "false", "WhatToBuyFirst", "1");
+            Assert.True(Migration.Lift(13, both, new List<string>()));
+            Assert.Empty(both);
         }
 
         [Fact]
-        public void AFileAlreadyOnTheChoiceOfTwoKeepsWhatItPicked()
+        public void AFileAlreadyPastThatStepIsLeftAlone()
         {
-            var written = File("WhatToBuyFirst", "1");
+            var written = File("GoldReserve", "800");
             Assert.False(Migration.Lift(Migration.Shape, written, new List<string>()));
-            Assert.Equal("1", written["WhatToBuyFirst"]);
-
-            var both = File("FollowTheLedgerFirst", "true", "WhatToBuyFirst", "1");
-            Assert.True(Migration.Lift(13, both, new List<string>()));
-            Assert.Equal("1", both["WhatToBuyFirst"]);
+            Assert.Equal("800", written["GoldReserve"]);
         }
 
         [Fact]
@@ -460,7 +456,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(14, Migration.Shape);
+            Assert.Equal(15, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));
