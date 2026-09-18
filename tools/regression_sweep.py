@@ -2452,16 +2452,16 @@ chk("1.5.6", "every place the filter comes down logs how many messages it suppre
     "_silenced[line] = seen + 1;" in method_body(S['Trading.cs'], "internal static void NoteSilenced") and
     'lines.Add("    " + kv.Value + " x " + kv.Key);' in
         method_body(S['Trading.cs'], "private static void ReportSilenced"))
-chk("1.5.12", "the message filter uses a depth counter, so nesting cannot disarm it early",
+chk("1.6.0", "the message filter uses a depth counter, so nesting cannot disarm it early",
     "internal static bool InGameTransaction => _transactionDepth > 0;" in S['Trading.cs'] and
     "private static void OpenTransaction() => _transactionDepth++;" in S['Trading.cs'] and
     "if (_transactionDepth > 0) _transactionDepth--;" in
         method_body(S['Trading.cs'], "private static void CloseTransaction"))
-chk("1.5.12", "an armed message filter is cleared at the start of the next frame",
+chk("1.6.0", "an armed message filter is cleared at the start of the next frame",
     'Guard.Run("Tick.ReleaseMessageFilter", TradeActionBehavior.ReleaseMessageFilter)' in S['SubModule.cs'] and
     ordered(S['SubModule.cs'], "TradeActionBehavior.ReleaseMessageFilter", "TradeActionBehavior.FlushToasts") and
     "_transactionDepth = 0;" in method_body(S['Trading.cs'], "internal static void ReleaseMessageFilter"))
-chk("1.5.12", "ending a campaign clears the message filter and per-visit state",
+chk("1.6.0", "ending a campaign clears the message filter and per-visit state",
     'Guard.Run("GameEnd.Visit", TradeActionBehavior.ForgetVisit)' in S['SubModule.cs'] and
     all(f in method_body(S['Trading.cs'], "internal static void ForgetVisit")
         for f in ("ResetVisit();", "_transactionDepth = 0;", "AutomatedTradeInProgress = false;")))
@@ -3026,7 +3026,7 @@ chk("1.6.22", "a menu id the mod does not guard fails the run, and a guarded one
     a_menu_id_the_mod_does_not_guard_fails_the_run())
 chk("1.6.22", "with no game install named, the menu-id check is skipped rather than failed",
     the_menu_id_check_is_skipped_rather_than_failed_when_unset())
-chk("1.35.3", "a commit that changes the feature list is refused unless the changelog gains an entry saying what changed in it",
+chk("1.36.0", "a commit that changes the feature list is refused unless the changelog gains an entry saying what changed in it",
     "grep -qx 'README.md'" in WORKFLOW and
     "the changelog gains no entry saying what changed" in WORKFLOW and
     r"grep -q '^+- '" in WORKFLOW and
@@ -6569,10 +6569,10 @@ def a_reset_reaches_the_copy_the_settings_screen_keeps():
             and "BaseSettingsProvider.Instance?.SaveSettings(held);" in reseat)
 
 
-chk("1.50.1", "a reset reaches the copy the settings screen keeps, so a screen that loads late cannot hand the old settings back",
+chk("1.50.2", "a reset reaches the copy the settings screen keeps, so a screen that loads late cannot hand the old settings back",
     a_reset_reaches_the_copy_the_settings_screen_keeps())
 
-chk("1.50.1", "the one-time settings reset is one switch, is armed at the shape this version ships, cannot be set off by the lift and wipes everything the lift carried",
+chk("1.50.2", "the one-time settings reset is one switch, is armed at the shape this version ships, cannot be set off by the lift and wipes everything the lift carried",
     the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off())
 
 
@@ -9065,7 +9065,7 @@ def a_whip_that_cracks_writes_the_file_back_so_it_never_cracks_twice():
             and "TheWhipIsStillWiredToTheShapeThisVersionShips" in MIGRATIONTESTS)
 
 
-chk("1.77.0", "a settings file put back to what TradeLord ships with is written out again carrying the shape this version ships, so it is put back once and never again",
+chk("1.77.1", "a settings file put back to what TradeLord ships with is written out again carrying the shape this version ships, so it is put back once and never again",
     a_whip_that_cracks_writes_the_file_back_so_it_never_cracks_twice())
 
 
