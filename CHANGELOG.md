@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.82.1
+
+- Minimum stock value for buy suggestions now counts a shelf at the good's own worth rather than at what the shop is charging for it, so a shop down to its last unit can no longer pass by asking a high price, and the goods it lets through are the costly ones it was meant for.
+
 ## 1.82.0
 
 - Rare and costly goods such as jewelry, tools and oil are now offered as routes from a market that holds only a few of them, because the new Minimum stock value for buy suggestions counts what is on a shelf in denars, so a shelf worth 500 or more passes even where Minimum stock for buy suggestions asks for ten units.

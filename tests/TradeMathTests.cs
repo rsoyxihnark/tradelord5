@@ -1015,18 +1015,35 @@ namespace TradeLord.Tests
         [Fact]
         public void A_shelf_short_on_units_still_counts_when_what_it_holds_is_worth_enough()
         {
-            Assert.True(TradeMath.EnoughOnTheShelf(2, 445, 10, 500));
-            Assert.True(TradeMath.EnoughOnTheShelf(1, 500, 10, 500));
-            Assert.False(TradeMath.EnoughOnTheShelf(1, 499, 10, 500));
-            Assert.False(TradeMath.EnoughOnTheShelf(9, 29, 10, 500));
+            Assert.True(TradeMath.EnoughOnTheShelf(2, 250, 10, 500));
+            Assert.True(TradeMath.EnoughOnTheShelf(2, 290, 10, 500));
+            Assert.True(TradeMath.EnoughOnTheShelf(5, 100, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(1, 250, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(9, 25, 10, 500));
+        }
+
+        [Fact]
+        public void A_shop_down_to_its_last_unit_cannot_pass_by_asking_a_high_price()
+        {
+            Assert.False(TradeMath.EnoughOnTheShelf(1, 250, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(2, 25, 10, 500));
+            Assert.True(TradeMath.EnoughOnTheShelf(10, 10, 10, 500));
+        }
+
+        [Fact]
+        public void A_shelf_is_counted_the_way_the_game_counts_one_at_the_goods_own_worth()
+        {
+            Assert.Equal(500, TradeMath.WorthOf(2, 250));
+            Assert.True(TradeMath.EnoughOnTheShelf(2, 250, 10, TradeMath.WorthOf(2, 250)));
+            Assert.False(TradeMath.EnoughOnTheShelf(2, 250, 10, TradeMath.WorthOf(2, 250) + 1));
         }
 
         [Fact]
         public void A_worth_floor_of_zero_leaves_the_unit_floor_exactly_as_it_was()
         {
-            Assert.False(TradeMath.EnoughOnTheShelf(2, 445, 10, 0));
-            Assert.False(TradeMath.EnoughOnTheShelf(9, 19, 10, 0));
-            Assert.True(TradeMath.EnoughOnTheShelf(10, 19, 10, 0));
+            Assert.False(TradeMath.EnoughOnTheShelf(2, 250, 10, 0));
+            Assert.False(TradeMath.EnoughOnTheShelf(9, 10, 10, 0));
+            Assert.True(TradeMath.EnoughOnTheShelf(10, 10, 10, 0));
         }
 
         [Fact]
@@ -1040,10 +1057,10 @@ namespace TradeLord.Tests
         [Fact]
         public void An_empty_shelf_or_an_unpriced_good_never_clears_the_worth_floor()
         {
-            Assert.False(TradeMath.EnoughOnTheShelf(0, 445, 10, 500));
-            Assert.False(TradeMath.EnoughOnTheShelf(-3, 445, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(0, 250, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(-3, 250, 10, 500));
             Assert.False(TradeMath.EnoughOnTheShelf(2, 0, 10, 500));
-            Assert.False(TradeMath.EnoughOnTheShelf(2, -445, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(2, -250, 10, 500));
         }
 
         [Fact]

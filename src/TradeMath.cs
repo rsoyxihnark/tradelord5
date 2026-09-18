@@ -135,12 +135,12 @@ namespace TradeLord
             return forecast < least ? least : forecast;
         }
 
-        public static bool EnoughOnTheShelf(int stocked, int price, int minUnits, int minWorth)
+        public static bool EnoughOnTheShelf(int stocked, int unitWorth, int minUnits, int minWorth)
         {
             if (minUnits <= 0) return true;
             if (stocked >= minUnits) return true;
-            if (minWorth <= 0 || stocked <= 0 || price <= 0) return false;
-            return (long)stocked * price >= minWorth;
+            if (minWorth <= 0 || stocked <= 0 || unitWorth <= 0) return false;
+            return (long)stocked * unitWorth >= minWorth;
         }
 
         public const float ACaravanSellsAbove = 1.1f;
