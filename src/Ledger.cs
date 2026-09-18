@@ -605,6 +605,8 @@ namespace TradeLord
         }
 
         public List<(Settlement town, int price)> TopSell(ItemObject item, int n) => TakeN(TopMarkets(item, true), n);
+        public List<(Settlement town, int price)> EverySell(ItemObject item) =>
+            TakeN(TopMarkets(item, true), int.MaxValue);
         public List<(Settlement town, int price)> TopBuy(ItemObject item, int n) => TakeN(TopMarkets(item, false), n);
 
         internal bool AnyMarketFor(ItemObject item)
@@ -764,10 +766,11 @@ namespace TradeLord
             {
                 float days = Travel.EstimateDaysFromParty(all[i].s);
                 if (!WithinTravelCeiling(all[i].s, days)) continue;
-                MarketRank.Keep(kept, new Reach<Settlement>
+                var one = new Reach<Settlement>
                 {
                     Where = all[i].s, Price = all[i].price, Straight = all[i].days, Days = days
-                }, selling);
+                };
+                if (selling) kept.Add(one); else MarketRank.Keep(kept, one, false);
             }
             return Settled(kept, selling);
         }
@@ -812,8 +815,8 @@ namespace TradeLord
                     if (tillOpen)
                     {
                         int price = Priced.At(market, item, me, true);
-                        if (price > 0) MarketRank.Keep(sells[i], new Reach<Settlement>
-                        { Where = town, Price = price, Straight = straight, Days = days }, true);
+                        if (price > 0) sells[i].Add(new Reach<Settlement>
+                        { Where = town, Price = price, Straight = straight, Days = days });
                     }
                     int stocked = 0;
                     if (onTheShelf == null ||
@@ -987,7 +990,7 @@ namespace TradeLord
                 ItemObject item = wanted[at];
 
                 var buys = TopBuy(item, MarketRank.TopCacheSize);
-                var sells = TopSell(item, MarketRank.TopCacheSize);
+                var sells = EverySell(item);
                 if (buys.Count == 0 || sells.Count == 0) continue;
 
                 TradeRoute best = null;
