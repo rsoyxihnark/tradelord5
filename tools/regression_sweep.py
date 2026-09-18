@@ -10219,5 +10219,23 @@ chk("1.83.3", "the one time settings reset is never written up for the player, s
     the_one_time_settings_reset_is_never_written_up_for_the_player())
 
 
+SYNC = io.open('tools/sync_release_notes.py', encoding='utf-8').read()
+NOTESFLOW = io.open('.github/workflows/release-notes.yml', encoding='utf-8').read()
+
+
+def a_release_is_thrown_away_only_where_the_changelog_says_nothing_about_it():
+    return ("still has entries in CHANGELOG.md, so it is not dropped" in SYNC
+            and "if book.get(version):" in SYNC
+            and "'/releases/' + str(row['id']), tok, None, 'DELETE'" in SYNC
+            and "'/git/refs/tags/' + row['tag_name']" in SYNC
+            and "would throw away the release and the tag for" in SYNC
+            and "--drop" in NOTESFLOW
+            and "permissions:\n  contents: write" in NOTESFLOW)
+
+
+chk("1.83.3", "a release and its tag are thrown away only where the changelog carries no entry for that version, and the dry run says which ones would go",
+    a_release_is_thrown_away_only_where_the_changelog_says_nothing_about_it())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
