@@ -403,6 +403,11 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public int MinTownStock { get => _o.MinTownStock; set { _o.MinTownStock = value; Options.Bump(); } }
 
+        [SettingPropertyInteger("{=TL452}Minimum stock value for buy suggestions", 0, 20000, Order = 4, RequireRestart = false,
+            HintText = "{=TL453}A market also counts as stocked when what it holds of a good is worth at least this many denars, even where it holds fewer units than Minimum stock for buy suggestions asks for. That is what lets rare, costly goods such as jewelry, tools and oil be suggested at all. 0 = off. Live-price mode only.")]
+        [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
+        public int MinTownStockWorth { get => _o.MinTownStockWorth; set { _o.MinTownStockWorth = value; Options.Bump(); } }
+
         [SettingPropertyBool("{=TL208}Conservative route projection", Order = 6, RequireRestart = false,
             HintText = "{=TL308}Apply the resale safety factor to the sell side when ranking and totalling routes, so listed profit allows for prices drifting before you arrive. OFF shows raw margins. Routes must clear the safety factor to be listed either way, since that is the same test a buying pass applies on arrival.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
@@ -704,6 +709,11 @@ namespace TradeLord.Mcm
             HintText = "{=TL338}Assume only this fraction of the best sell price is still available by the time you arrive.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL454}Buy what the ledger sent you for first", Order = 7, RequireRestart = false,
+            HintText = "{=TL455}ON (default): walking into a market the ledger lists a route out of, that good is bought before anything else, so your gold and your cargo room go to the trade you came for. OFF buys in order of margin, which can spend both on a cheaper good and leave nothing for the one you travelled to buy.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
+        public bool FollowTheLedgerFirst { get => _o.FollowTheLedgerFirst; set { _o.FollowTheLedgerFirst = value; Options.Bump(); } }
 
 
         [SettingPropertyBool("{=TL265}Buy to fill the ships", Order = 8, RequireRestart = false,

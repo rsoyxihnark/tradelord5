@@ -1003,5 +1003,53 @@ namespace TradeLord.Tests
             Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, float.NaN, 1000f, 10));
             Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 1.2f, float.NaN, 10));
         }
+
+        [Fact]
+        public void A_shelf_holding_enough_units_counts_whatever_a_unit_costs()
+        {
+            Assert.True(TradeMath.EnoughOnTheShelf(10, 19, 10, 500));
+            Assert.True(TradeMath.EnoughOnTheShelf(47, 19, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(9, 19, 10, 500));
+        }
+
+        [Fact]
+        public void A_shelf_short_on_units_still_counts_when_what_it_holds_is_worth_enough()
+        {
+            Assert.True(TradeMath.EnoughOnTheShelf(2, 445, 10, 500));
+            Assert.True(TradeMath.EnoughOnTheShelf(1, 500, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(1, 499, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(9, 29, 10, 500));
+        }
+
+        [Fact]
+        public void A_worth_floor_of_zero_leaves_the_unit_floor_exactly_as_it_was()
+        {
+            Assert.False(TradeMath.EnoughOnTheShelf(2, 445, 10, 0));
+            Assert.False(TradeMath.EnoughOnTheShelf(9, 19, 10, 0));
+            Assert.True(TradeMath.EnoughOnTheShelf(10, 19, 10, 0));
+        }
+
+        [Fact]
+        public void No_unit_floor_at_all_lets_every_market_through_as_it_always_did()
+        {
+            Assert.True(TradeMath.EnoughOnTheShelf(0, 0, 0, 0));
+            Assert.True(TradeMath.EnoughOnTheShelf(0, 0, 0, 500));
+            Assert.True(TradeMath.EnoughOnTheShelf(1, 19, 0, 500));
+        }
+
+        [Fact]
+        public void An_empty_shelf_or_an_unpriced_good_never_clears_the_worth_floor()
+        {
+            Assert.False(TradeMath.EnoughOnTheShelf(0, 445, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(-3, 445, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(2, 0, 10, 500));
+            Assert.False(TradeMath.EnoughOnTheShelf(2, -445, 10, 500));
+        }
+
+        [Fact]
+        public void A_shelf_worth_more_than_an_int_can_hold_still_clears_the_floor()
+        {
+            Assert.True(TradeMath.EnoughOnTheShelf(100000, 100000, 1000000, 500));
+        }
     }
 }

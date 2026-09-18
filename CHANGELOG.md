@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.82.0
+
+- Rare and costly goods such as jewelry, tools and oil are now offered as routes from a market that holds only a few of them, because the new Minimum stock value for buy suggestions counts what is on a shelf in denars, so a shelf worth 500 or more passes even where Minimum stock for buy suggestions asks for ten units.
+- Walk into a market the ledger routes a good out of and TradeLord now buys that good first, so your gold and your cargo room go to the trade you travelled for rather than to a cheaper good with a fatter margin.
+- An item tooltip with no best buy prices now names the denars' worth no market in reach could muster as well as the number of units, and points at both settings that ask for them.
+
 ## 1.81.13
 
 - The line an item tooltip shows when no market in reach holds enough to suggest is now written a clause to a line and says it in fewer words, so the tooltip no longer stretches across the screen to fit it.
