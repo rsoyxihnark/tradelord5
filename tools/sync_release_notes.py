@@ -26,7 +26,9 @@ def ask(url, tok, data=None, method=None):
         'Authorization': 'Bearer ' + tok,
         'Accept': 'application/vnd.github+json',
         'Content-Type': 'application/json'})
-    return json.load(urllib.request.urlopen(req, timeout=60))
+    with urllib.request.urlopen(req, timeout=60) as got:
+        said = got.read()
+    return json.loads(said.decode('utf-8')) if said.strip() else None
 
 
 def releases(tok):
@@ -41,15 +43,60 @@ def releases(tok):
     return found
 
 
+def asked(argv):
+    out, taking = [], False
+    for arg in argv:
+        if arg == '--drop':
+            taking = True
+            continue
+        if arg.startswith('--'):
+            taking = False
+            continue
+        if taking:
+            out += [one.lstrip('v') for one in arg.replace(',', ' ').split() if one.strip()]
+    return out
+
+
+def drop(rows, book, wanted, tok, apply):
+    live = {r['tag_name'].lstrip('v'): r for r in rows}
+    for version in wanted:
+        if book.get(version):
+            sys.stderr.write(version + ' still has entries in CHANGELOG.md, so it is not dropped\n')
+            return 1
+        row = live.get(version)
+        if row is None:
+            print('  ' + version + ' has no release to drop')
+            continue
+        if not apply:
+            print('  would throw away the release and the tag for ' + version)
+            continue
+        ask('https://api.github.com/repos/' + REPO + '/releases/' + str(row['id']), tok, None, 'DELETE')
+        try:
+            ask('https://api.github.com/repos/' + REPO + '/git/refs/tags/' + row['tag_name'],
+                tok, None, 'DELETE')
+        except Exception as why:
+            print('  ' + version + ': the release is gone and the tag would not delete: ' + str(why))
+            continue
+        print('  threw away the release and the tag for ' + version)
+    return 0
+
+
 def main(argv):
     if not os.path.exists('CHANGELOG.md'):
         sys.stderr.write('run this from the repository root, where CHANGELOG.md is\n')
         return 1
     apply = '--apply' in argv
+    wanted = asked(argv)
     tok, how = token()
     print('reading the releases through ' + how)
     book = dict(sections(io.open('CHANGELOG.md', encoding='utf-8').read()))
     rows = releases(tok)
+    if wanted:
+        stopped = drop(rows, book, wanted, tok, apply)
+        if stopped:
+            return stopped
+        if apply:
+            rows = releases(tok)
     absent = sorted(r['tag_name'] for r in rows if r['tag_name'].lstrip('v') not in book)
     if absent:
         sys.stderr.write('CHANGELOG.md carries no section for: ' + ', '.join(absent) + '\n')
