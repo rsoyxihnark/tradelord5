@@ -986,7 +986,6 @@ def empty_release_notes_are_rejected():
 
 README = io.open('README.md', encoding='utf-8').read()
 CHANGES = io.open('CHANGELOG.md', encoding='utf-8').read()
-OLDCHANGES = io.open('archive/changelog.old.md', encoding='utf-8').read()
 COMPARISON = io.open('COMPARISON.md', encoding='utf-8').read()
 
 def option_default(name):
@@ -10206,7 +10205,7 @@ RESET_NEVER_WRITTEN = (
 
 
 def the_one_time_settings_reset_is_never_written_up_for_the_player():
-    said = (CHANGES + "\n" + OLDCHANGES).lower()
+    said = CHANGES.lower()
     return (not [one for one in RESET_NEVER_WRITTEN if one in said]
             and "The one time settings reset never reaches the player in writing." in RULES
             and "is never written into a changelog entry, a release note or a commit message" in RULES
@@ -10215,7 +10214,7 @@ def the_one_time_settings_reset_is_never_written_up_for_the_player():
                 "file was touched and no more" in RULES)
 
 
-chk("1.83.3", "the one time settings reset is never written up for the player, so neither changelog carries an entry naming it and the working rules keep it out of the notes and the commits",
+chk("1.83.3", "the one time settings reset is never written up for the player, so the changelog carries no entry naming it and the working rules keep it out of the notes and the commits",
     the_one_time_settings_reset_is_never_written_up_for_the_player())
 
 
@@ -10253,6 +10252,27 @@ def the_menu_id_check_runs_in_the_build_rather_than_skipping():
 
 chk("1.83.3", "the build points the game menu id check at the shipped assemblies the repository carries, so it runs rather than reporting itself skipped",
     the_menu_id_check_runs_in_the_build_rather_than_skipping())
+
+
+FROZEN = 'archive/'
+
+
+def the_kept_copies_are_a_closed_record_and_entries_go_only_to_the_changelog():
+    kept = io.open(FROZEN + 'changelog.old.md', encoding='utf-8').read()
+    history = io.open(FROZEN + 'commithistory.old.md', encoding='utf-8').read()
+    return (kept.startswith('# Changelog\n\n## 1.83.3\n')
+            and kept.count('\n## ') == 324
+            and history.count('\n## ') == 393
+            and 'ending at 975806af4c0a31c8c2a164e8950df572d6bb7705' in history
+            and SWEEP.count("'" + FROZEN) == 1
+            and 'said = CHANGES.lower()' in SWEEP
+            and not [one for one in (RELEASED, NEXUS, SYNC, WORKFLOW, NOTESFLOW) if FROZEN in one]
+            and 'The kept copies in `archive/` are a closed record.' in RULES
+            and 'goes into `CHANGELOG.md` and nowhere else' in RULES)
+
+
+chk("1.83.3", "the kept copies in the archive folder are a closed record, so a changelog entry is written into CHANGELOG.md and nowhere else and no check reads an entry back out of the archive",
+    the_kept_copies_are_a_closed_record_and_entries_go_only_to_the_changelog())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
