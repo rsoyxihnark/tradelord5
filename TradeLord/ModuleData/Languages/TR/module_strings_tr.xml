@@ -298,7 +298,7 @@
 		<string id="TL450" text="Ulasilabilir hicbir pazarda bundan {COUNT} veya daha fazla yok. | Alim onerileri icin en az stok bunu istiyor. | Nereden alacaginizi gormek icin onu dusurun."/>
 		<string id="TL451" text="Ulasilabilir hicbir pazarda bunlardan {COUNT} tane yok, | {WORTH} dinarlik degerde de yok. | Alim onerileri icin en az stok | ya da Alim onerileri icin en az stok degeri ayarini dusurun."/>
 		<string id="TL452" text="Alim onerileri icin en az stok degeri"/>
-		<string id="TL453" text="Bir pazarin elindeki maldan en az bu kadar dinarlik deger varsa, Alim onerileri icin en az stok ayarinin istedigi adetten az tutsa bile o pazar stoklu sayilir. Mucevher, alet ve yag gibi nadir ve pahali mallarin onerilebilmesini saglayan sey budur. 0 = kapali. Sadece canli fiyat kipinde."/>
+		<string id="TL453" text="Bir pazarin elindeki maldan en az bu kadar dinarlik deger varsa, Alim onerileri icin en az stok ayarinin istedigi adetten az tutsa bile o pazar stoklu sayilir. Deger, dukkanin istedigi fiyattan degil, malin kendi degerinden sayilir. Alet ve yag gibi pahali mallar boylece onerilebilir. 0 = kapali. Sadece canli fiyat kipinde."/>
 		<string id="TL454" text="Once defterin sizi gonderdigi mali al"/>
 		<string id="TL455" text="ACIK (varsayilan): defterin bir rota cikardigi pazara girdiginizde o mal her seyden once alinir, boylece paraniz ve yuk yeriniz geldiginiz ticarete gider. KAPALI kar oranina gore alir, bu da ikisini birden daha ucuz bir mala harcayip almaya geldiginize hicbir sey birakmayabilir."/>
 	</strings>
