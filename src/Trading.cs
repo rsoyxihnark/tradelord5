@@ -1759,8 +1759,10 @@ namespace TradeLord
                 if (_resale == null)
                     _resale = new Dictionary<int, (Settlement, Ladder, int)>();
                 _resale[at] = (buyer, new Ladder(buyer, Item(at), true, price, 0),
-                               TradeRules.WhatTheTillCanPay(buyer.SettlementComponent?.Gold ?? 0,
-                                                            buyer.IsVillage));
+                               Options.Current.Omniscient
+                                   ? TradeRules.WhatTheTillCanPay(buyer.SettlementComponent?.Gold ?? 0,
+                                                                  buyer.IsVillage)
+                                   : 0);
                 return true;
             }
 
