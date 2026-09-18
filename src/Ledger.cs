@@ -765,6 +765,7 @@ namespace TradeLord
             List<(Settlement s, float days)> candidates = LiveCandidates(hour);
             if (candidates.Count == 0) return;
             int minStock = Options.Current.MinTownStock;
+            int minWorth = Options.Current.MinTownStockWorth;
             MobileParty me = MobileParty.MainParty;
             int n = wanted.Count;
             var sells = new List<Reach<Settlement>>[n];
@@ -792,12 +793,17 @@ namespace TradeLord
                         if (price > 0) MarketRank.Keep(sells[i], new Reach<Settlement>
                         { Where = town, Price = price, Straight = straight, Days = days }, true);
                     }
-                    if (onTheShelf == null ||
-                        (onTheShelf.TryGetValue(item, out int stocked) && stocked >= minStock))
+                    int stocked = 0;
+                    bool couldPass = onTheShelf == null;
+                    if (!couldPass && onTheShelf.TryGetValue(item, out stocked))
+                        couldPass = stocked >= minStock || (minWorth > 0 && stocked > 0);
+                    if (couldPass)
                     {
                         int price = Priced.At(market, item, me, false);
-                        if (price > 0) MarketRank.Keep(buys[i], new Reach<Settlement>
-                        { Where = town, Price = price, Straight = straight, Days = days }, false);
+                        if (price > 0 && (onTheShelf == null ||
+                                          TradeMath.EnoughOnTheShelf(stocked, price, minStock, minWorth)))
+                            MarketRank.Keep(buys[i], new Reach<Settlement>
+                            { Where = town, Price = price, Straight = straight, Days = days }, false);
                     }
                 }
             }
@@ -834,14 +840,17 @@ namespace TradeLord
         private List<(Settlement, int)> TopLive(ItemObject item, bool selling, int hour)
         {
             int minStock = Options.Current.MinTownStock;
+            int minWorth = Options.Current.MinTownStockWorth;
             var all = new List<(Settlement s, int price, float days)>();
             foreach (var (s, lower) in LiveCandidates(hour))
             {
                 if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold,
                                                            s.IsVillage) <= 0) continue;
-                if (!selling && minStock > 0 && StockOf(s, item) < minStock) continue;
+                int stocked = selling || minStock <= 0 ? 0 : StockOf(s, item);
+                if (!selling && minStock > 0 && stocked <= 0) continue;
                 int price = Priced.At(s.SettlementComponent, item, MobileParty.MainParty, selling);
                 if (price <= 0) continue;
+                if (!selling && !TradeMath.EnoughOnTheShelf(stocked, price, minStock, minWorth)) continue;
                 all.Add((s, price, lower));
             }
             return Rerank(all, selling);
@@ -913,6 +922,17 @@ namespace TradeLord
                 Freshness.Taken(ref _routeStamp, hour);
             }
             return _routes.Count <= top ? _routes : _routes.GetRange(0, top);
+        }
+
+        public HashSet<string> WhatTheLedgerBuysAt(Settlement here)
+        {
+            var asked = new HashSet<string>(StringComparer.Ordinal);
+            if (here == null) return asked;
+            List<TradeRoute> routes = BestRoutes(int.MaxValue);
+            for (int i = 0; i < routes.Count; i++)
+                if (routes[i].From == here && routes[i].Item != null)
+                    asked.Add(routes[i].Item.StringId);
+            return asked;
         }
 
         private static int MostWorthShowing(int buyPrice)

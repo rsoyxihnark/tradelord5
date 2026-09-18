@@ -73,12 +73,25 @@ namespace TradeLord
         internal Good Good;
         internal float Realizable;
         internal float Margin;
+        internal bool Asked;
     }
 
     internal static class Picks
     {
         internal static void BestMarginFirst(List<Pick> stock) =>
             stock?.Sort((x, y) => y.Margin.CompareTo(x.Margin));
+
+        internal static void WhatTheLedgerAskedForFirst(List<Pick> stock)
+        {
+            if (stock == null || stock.Count < 2) return;
+            var asked = new List<Pick>();
+            var rest = new List<Pick>();
+            foreach (Pick one in stock) (one.Asked ? asked : rest).Add(one);
+            if (asked.Count == 0 || rest.Count == 0) return;
+            stock.Clear();
+            stock.AddRange(asked);
+            stock.AddRange(rest);
+        }
     }
 
     internal interface IBuyingMarket
@@ -89,6 +102,7 @@ namespace TradeLord
         int AmountAt(int at);
         Good GoodAt(int at);
         bool MayBuy(int at, in Good good, out Block why);
+        bool TheLedgerAsksFor(int at);
         int TheirsToSell(int at);
         int Carried(int at);
         void PriceTheMarketsFor(List<Pick> shelf);
@@ -177,7 +191,7 @@ namespace TradeLord
                 int held = market.Carried(at) + books.Held(sim, good.Id);
                 if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }
                 if (shareCap > 0f && (held + 1) * good.Weight > shareCap) { tally.Note(Block.HeldEnough); continue; }
-                shelf.Add(new Pick { At = at, Good = good });
+                shelf.Add(new Pick { At = at, Good = good, Asked = market.TheLedgerAsksFor(at) });
             }
             market.PriceTheMarketsFor(shelf);
 
@@ -195,6 +209,7 @@ namespace TradeLord
                 stock.Add(picked);
             }
             Picks.BestMarginFirst(stock);
+            if (s.FollowTheLedgerFirst) Picks.WhatTheLedgerAskedForFirst(stock);
             return stock;
         }
 
