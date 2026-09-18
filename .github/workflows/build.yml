@@ -142,6 +142,8 @@ jobs:
 
       - name: Game version fit
         shell: bash
+        env:
+          TRADELORD_GAME_BIN: ${{ github.workspace }}/DLLsNeeded
         run: dotnet run --project tools/compat -c Release -- 1.5.3.122374-beta
 
       - name: Assemble the module folder

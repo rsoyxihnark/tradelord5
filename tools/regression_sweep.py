@@ -10237,5 +10237,23 @@ chk("1.83.3", "a release and its tag are thrown away only where the changelog ca
     a_release_is_thrown_away_only_where_the_changelog_says_nothing_about_it())
 
 
+COMPAT = io.open('tools/compat/Program.cs', encoding='utf-8').read()
+
+
+def the_menu_id_check_runs_in_the_build_rather_than_skipping():
+    wanted = ('DLLsNeeded/NavalDLC.dll', 'DLLsNeeded/SandBox.dll', 'DLLsNeeded/SandBox.View.dll',
+              'DLLsNeeded/StoryMode.dll', 'DLLsNeeded/TaleWorlds.CampaignSystem.dll',
+              'DLLsNeeded/TaleWorlds.CampaignSystem.ViewModelCollection.dll')
+    return (all(os.path.exists(one) for one in wanted)
+            and 'TRADELORD_GAME_BIN: ${{ github.workspace }}/DLLsNeeded' in WORKFLOW
+            and WORKFLOW.index('TRADELORD_GAME_BIN') < WORKFLOW.index('tools/compat')
+            and '!DLLsNeeded/*.dll' in io.open('.gitignore', encoding='utf-8').read()
+            and 'skipped  set " + GameBinVariable' in COMPAT)
+
+
+chk("1.83.3", "the build points the game menu id check at the shipped assemblies the repository carries, so it runs rather than reporting itself skipped",
+    the_menu_id_check_runs_in_the_build_rather_than_skipping())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
