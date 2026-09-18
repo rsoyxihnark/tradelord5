@@ -67,9 +67,6 @@ namespace TradeLord
         public bool TrustWhatAMarketPaid = true;
         public bool MarketForecast = true;
 
-        public const int BuyTheLedgersOrder = 0, BuyTheBiggestMargin = 1;
-
-        public int WhatToBuyFirst = BuyTheLedgersOrder;
 
         public bool TooltipHints = true;
 

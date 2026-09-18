@@ -299,9 +299,5 @@
 		<string id="TL451" text="Ulasilabilir hicbir pazarda bunlardan {COUNT} tane yok, | {WORTH} dinarlik degerde de yok. | Alim onerileri icin en az stok | ya da Alim onerileri icin en az stok degeri ayarini dusurun."/>
 		<string id="TL452" text="Alim onerileri icin en az stok degeri"/>
 		<string id="TL453" text="Bir pazarin elindeki maldan en az bu kadar dinarlik deger varsa, Alim onerileri icin en az stok ayarinin istedigi adetten az tutsa bile o pazar stoklu sayilir. Deger, dukkanin istedigi fiyattan degil, malin kendi degerinden sayilir. Mal ne kadar pahaliysa, pazarin o kadar azini tutmasi yeter. 0 = kapali. Sadece canli fiyat kipinde."/>
-		<string id="TL454" text="Once ne alinsin"/>
-		<string id="TL455" text="Bir pazara girdiginde raftaki mallardan hangisinin once alinacagi. Defterin en yuksek puan verdigi, defter panelinin o pazar icin en uste koydugu rotayi, Score sutununa gore alir. En buyuk kar orani ise defter ne derse desin yuzdesi en yuksek olani alir."/>
-		<string id="TL456" text="Defterin en yuksek puan verdigi"/>
-		<string id="TL457" text="En buyuk kar orani"/>
 	</strings>
 </base>

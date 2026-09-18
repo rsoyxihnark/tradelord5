@@ -183,11 +183,6 @@ namespace TradeLord.Mcm
             "{=TL270}Sell them", "{=TL271}Keep every one", "{=TL272}Keep the ones you have not learned"
         };
 
-        private static readonly string[] BuyFirstWords =
-        {
-            "{=TL456}What the ledger scores highest", "{=TL457}The biggest profit margin"
-        };
-
         private static readonly string[] BasisWords =
         {
             "{=TL257}Average of what you paid", "{=TL258}Last price you paid", "{=TL259}Cheapest market you know"
@@ -198,8 +193,6 @@ namespace TradeLord.Mcm
         private Dropdown<string> _livestockPolicy;
         private Dropdown<string> _costBasis;
         private Dropdown<string> _smeltable;
-
-        private Dropdown<string> _buyFirst;
 
         public Settings() { Bound(Options.Current); }
 
@@ -212,7 +205,6 @@ namespace TradeLord.Mcm
             _livestockPolicy = Choice(PolicyWords, to.LivestockPolicy);
             _costBasis = Choice(BasisWords, to.CostBasisMode);
             _smeltable = Choice(SmeltableWords, to.KeepSmeltableWeapons);
-            _buyFirst = Choice(BuyFirstWords, to.WhatToBuyFirst);
         }
 
         public override BaseSettings CreateNew()
@@ -300,7 +292,6 @@ namespace TradeLord.Mcm
             Follows(LivestockPolicy, () => _o.LivestockPolicy, picked => _o.LivestockPolicy = picked);
             Follows(CostBasisMode, () => _o.CostBasisMode, picked => _o.CostBasisMode = picked);
             Follows(KeepSmeltableWeapons, () => _o.KeepSmeltableWeapons, picked => _o.KeepSmeltableWeapons = picked);
-            Follows(WhatToBuyFirst, () => _o.WhatToBuyFirst, picked => _o.WhatToBuyFirst = picked);
             Language.PropertyChanged += (sender, args) => Retell();
             if (!_watchingForSave)
             {
@@ -323,7 +314,6 @@ namespace TradeLord.Mcm
             Taken(LivestockPolicy, picked => _o.LivestockPolicy = picked);
             Taken(CostBasisMode, picked => _o.CostBasisMode = picked);
             Taken(KeepSmeltableWeapons, picked => _o.KeepSmeltableWeapons = picked);
-            Taken(WhatToBuyFirst, picked => _o.WhatToBuyFirst = picked);
             Options.Bump();
             Retell();
         }
@@ -352,7 +342,6 @@ namespace TradeLord.Mcm
             Retold(LivestockPolicy, PolicyWords);
             Retold(CostBasisMode, BasisWords);
             Retold(KeepSmeltableWeapons, SmeltableWords);
-            Retold(WhatToBuyFirst, BuyFirstWords);
             Relabel();
         }
 
@@ -720,15 +709,6 @@ namespace TradeLord.Mcm
             HintText = "{=TL338}Assume only this fraction of the best sell price is still available by the time you arrive.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }
-
-        [SettingPropertyDropdown("{=TL454}What to buy first", Order = 7, RequireRestart = false,
-            HintText = "{=TL455}Walking into a market, which good on its shelves is bought before the others. What the ledger scores highest takes the route the ledger panel puts top for that market, by its Score column. The biggest profit margin buys the fattest percentage first, whatever the ledger said.")]
-        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
-        public Dropdown<string> WhatToBuyFirst
-        {
-            get => _buyFirst;
-            set { _buyFirst = value; Follows(value, () => _o.WhatToBuyFirst, picked => _o.WhatToBuyFirst = picked); Options.Bump(); }
-        }
 
 
         [SettingPropertyBool("{=TL265}Buy to fill the ships", Order = 8, RequireRestart = false,
