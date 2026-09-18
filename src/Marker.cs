@@ -28,11 +28,12 @@ namespace TradeLord
 
         private const int MostMarketsShown = 5;
 
-        private static readonly Dictionary<(string site, string good, string quality), int> _prices =
-            new Dictionary<(string, string, string), int>();
+        private static readonly Dictionary<(string site, string good, string quality), List<int>> _prices =
+            new Dictionary<(string, string, string), List<int>>();
 
         private static string _markedId;
         private static long _markedValue;
+        private static long _markedEarned;
         private static int _markedUnits;
         private static float _markedRate;
         private static float _markedDays;
@@ -82,6 +83,7 @@ namespace TradeLord
             _hour = -1;
             _markedId = null;
             _markedValue = 0L;
+            _markedEarned = 0L;
             _markedUnits = 0;
             _markedRate = 0f;
             _markedDays = 0f;
@@ -94,8 +96,11 @@ namespace TradeLord
         {
             internal string Good;
             internal int Amount;
+            internal int Moved;
             internal int Price;
+            internal int Last;
             internal int Paid;
+            internal long Fetched;
         }
 
         private struct Weighing
@@ -104,6 +109,7 @@ namespace TradeLord
             internal float Days;
             internal int Units;
             internal long Value;
+            internal long Earned;
             internal float Rate;
         }
 
@@ -195,6 +201,7 @@ namespace TradeLord
             _saidRate = how.Rate;
             _markedId = target == null ? null : target.StringId;
             _markedValue = target == null ? 0L : how.Value;
+            _markedEarned = target == null ? 0L : how.Value - how.Cost;
             _markedUnits = how.Units;
             _markedRate = how.Rate;
             _markedDays = how.Days;
@@ -211,7 +218,8 @@ namespace TradeLord
             float since = TradeMath.DaysSince(_markedAt, Freshness.Hour);
             float held = TradeMath.HeldShare(said > int.MaxValue ? int.MaxValue : (int)said, gold);
             Log.Write("marker check at " + site.Name + ": it marked this market for " + _markedUnits +
-                      " unit(s) worth " + said + " gold, " + _markedRate.ToString("0") +
+                      " unit(s) worth " + said + " gold, " + _markedEarned + " of it profit, " +
+                      _markedRate.ToString("0") +
                       " gold a day, about " + _markedDays.ToString("0.#") + " day(s) away; you walked in " +
                       Scoring.Figure(since) + " day(s) later and sold " + units + " unit(s) for " + gold +
                       (held == TradeMath.NoShareToGive
@@ -228,7 +236,8 @@ namespace TradeLord
                        "clear Minimum profit margin, and the rest are past your travel ceilings or " +
                        "have no gold at all";
             return how.Kinds + " of the " + how.Carried + " good(s) you carry clear Minimum profit " +
-                   "margin there, " + how.Units + " unit(s) for " + how.Value + " gold" +
+                   "margin there, " + how.Units + " unit(s) for " + how.Value + " gold, " +
+                   (how.Value - how.Cost) + " of it profit" +
                    (how.PurseCapped
                        ? ", which is all that town's purse of " + how.Purse + " can take"
                        : " against a town purse of " + how.Purse) +
@@ -256,13 +265,16 @@ namespace TradeLord
                     for (int i = 0; i < how.Bill.Count; i++)
                     {
                         Share share = how.Bill[i];
-                        said.Add("    " + share.Amount + " x " + share.Good + ": " + share.Price +
-                                 " a unit = " + (long)share.Price * share.Amount + " gold, cost " +
-                                 share.Paid + " a unit = " + (long)share.Paid * share.Amount +
-                                 " gold, profit " + ((long)share.Price - share.Paid) * share.Amount);
+                        said.Add("    " + share.Good + ": " + share.Moved + " of the " + share.Amount +
+                                 " you carry, " + (share.Last != share.Price
+                                     ? share.Price + " a unit down to " + share.Last
+                                     : share.Price + " a unit") +
+                                 ", " + share.Fetched + " gold, cost " + share.Paid + " a unit = " +
+                                 (long)share.Paid * share.Moved + " gold, profit " +
+                                 (share.Fetched - (long)share.Paid * share.Moved));
                     }
-                said.Add("    " + how.Value + " gold in all, of which " + how.Cost + " is what it cost you and " +
-                         (how.Value - how.Cost) + " is profit, and it marked on the " + how.Value +
+                said.Add("    " + how.Value + " gold in all, of which " + how.Cost +
+                         " is what it cost you, so it marked on the " + (how.Value - how.Cost) +
                          (how.PurseCapped
                              ? ", which is all that town's purse of " + how.Purse +
                                " can take, so the lines above come to more"
@@ -280,6 +292,7 @@ namespace TradeLord
                              one.Days.ToString("0.00").PadLeft(6) + " day(s) " +
                              one.Units.ToString().PadLeft(5) + " unit(s) " +
                              one.Value.ToString().PadLeft(9) + " gold " +
+                             one.Earned.ToString().PadLeft(9) + " profit " +
                              one.Rate.ToString("0").PadLeft(9) + " gold a day" +
                              (one.Where == how.Best ? "  (marked)" : ""));
                 }
@@ -323,23 +336,29 @@ namespace TradeLord
             return cargo;
         }
 
-        private static int WhatThatMarketPays(Settlement site, SettlementComponent market,
-                                              EquipmentElement el, MobileParty party)
+        private static List<int> WhatThatMarketPays(Settlement site, SettlementComponent market,
+                                                    EquipmentElement el, MobileParty party, int upTo)
         {
-            ItemObject good = el.Item;
-            if (good == null) return Priced.At(market, el, party, true);
             int shelf = Freshness.Hour / PriceShelfHours;
             if (!Freshness.Fresh(ref _priceStamp, shelf))
             {
                 Freshness.Taken(ref _priceStamp, shelf);
                 _prices.Clear();
             }
-            var key = (site.StringId, good.StringId,
+            ItemObject good = el.Item;
+            var key = (site.StringId, good == null ? "" : good.StringId,
                        el.ItemModifier == null ? "" : el.ItemModifier.StringId);
-            if (_prices.TryGetValue(key, out int kept)) return kept;
-            int price = Priced.At(market, el, party, true);
-            _prices[key] = price;
-            return price;
+            if (!_prices.TryGetValue(key, out List<int> rungs))
+            {
+                rungs = new List<int>();
+                _prices[key] = rungs;
+            }
+            if (rungs.Count >= upTo) return rungs;
+            int flat = Priced.At(market, el, party, true);
+            Ladder walk = good == null || flat <= 0 ? null : new Ladder(site, good, true, flat, 0);
+            bool walkable = walk != null && walk.Walkable;
+            while (rungs.Count < upTo) rungs.Add(walkable ? walk.At(rungs.Count) : flat);
+            return rungs;
         }
 
         private static Takings WhatItWouldFetch(
@@ -350,21 +369,37 @@ namespace TradeLord
             Takings took = default(Takings);
             foreach (var (item, amount, worth, floor) in cargo)
             {
-                int price = WhatThatMarketPays(site, market, item, party);
-                if (price < floor) continue;
-                if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) continue;
-                took.Value += (long)price * amount;
-                took.Cost += (long)worth * amount;
-                took.Units += amount;
+                List<int> rungs = WhatThatMarketPays(site, market, item, party, amount);
+                long fetched = 0L;
+                int moved = 0, opening = 0, last = 0;
+                for (int u = 0; u < amount && u < rungs.Count; u++)
+                {
+                    int price = rungs[u];
+                    if (price <= 0) break;
+                    if (price < floor) break;
+                    if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) break;
+                    if (moved == 0) opening = price;
+                    last = price;
+                    fetched += price;
+                    moved++;
+                    if (took.Value + fetched >= gold) { took.PurseCapped = true; break; }
+                }
+                if (moved == 0) continue;
+                took.Value += fetched;
+                took.Cost += (long)worth * moved;
+                took.Units += moved;
                 took.Kinds++;
                 bill?.Add(new Share
                 {
                     Good = item.Item == null ? "" : Tongue.Named(item.Item.Name, item.Item.StringId),
                     Amount = amount,
-                    Price = price,
-                    Paid = worth
+                    Moved = moved,
+                    Price = opening,
+                    Last = last,
+                    Paid = worth,
+                    Fetched = fetched
                 });
-                if (took.Value >= gold) { took.PurseCapped = true; break; }
+                if (took.PurseCapped) break;
             }
             return took;
         }
@@ -421,10 +456,12 @@ namespace TradeLord
                 Takings took = WhatItWouldFetch(s, market, party, cargo, gold, null);
                 if (took.Value <= 0L) { how.Refused++; continue; }
                 long total = took.Value > gold ? gold : took.Value;
-                float rate = TradeMath.PerDay(total, ride);
+                long earned = total - took.Cost;
+                float rate = TradeMath.PerDay(earned, ride);
                 how.Board?.Add(new Weighing
                 {
-                    Where = s, Days = ride, Units = took.Units, Value = total, Rate = rate
+                    Where = s, Days = ride, Units = took.Units, Value = total,
+                    Earned = earned, Rate = rate
                 });
                 if (rate > how.Rate)
                 {
