@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.83.3
+
+- The market marked on your map is now the one that would earn the most a day for the cargo you carry rather than the one paying the most in all, so a town a week away no longer wins for paying a little more than one close by.
+- TradeLord.log says how much a day the marked market would earn and how much the runner-up would, instead of the gold alone.
+
 ## 1.83.2
 
 - Food is restocked after the trading buy rather than before it, so your gold and your cargo room go to the goods you came to trade first and the larder takes what is left.
