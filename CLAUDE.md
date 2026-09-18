@@ -72,6 +72,13 @@ The release workflow publishes the commit body as the release notes, so a commit
 - Start every commit subject with the version it ships in in square brackets, then the part of the project it touches, then one plain-English clause saying what changed. `[1.2.0] Settings: the window now remembers where you left it` is the shape. Use `[no release]` when the change ships nothing to users. Leave the commit body exactly as it is, because the body is the published release note.
 - Write the commit body as bullet points, one `- ` line per entry, the way the changelog is written. The body is published as the release notes, so it should read as a list there, not as a run of loose lines.
 - Full technical detail belongs in chat or in a document of its own, never in a changelog entry, a release note or a commit message.
+- Write a fix the way a player would tell another player about it: start with `Fixed`, name the thing that was going wrong, and stop. No clause explaining the mechanism behind it, no second sentence saying it again, nothing written to sound clever. These are the owner's own words and they are the shape to copy:
+  - `Fixed TradeLord buying other goods just because they had a higher margin percentage when the ledger had suggested a much better trade`
+  - `Fixed rare high value goods (e.g. jewelry) not being offered in the ledger, because they are almost never stocked 10 or more in early game`
+  - `Fixed TradeLord valuing a purchase against a buyer days away instead of a nearby one paying almost the same`
+  - `Fixed the map marker pointing at the town paying the most in total instead of the one paying the most per day`
+  - `Food is now restocked after trading, so your gold and cargo space go to trade goods first`
+  - `Note: this update resets your settings once, your old ones are listed in TradeLord.log`
 
 ## Changelog
 
