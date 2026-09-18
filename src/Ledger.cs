@@ -794,16 +794,13 @@ namespace TradeLord
                         { Where = town, Price = price, Straight = straight, Days = days }, true);
                     }
                     int stocked = 0;
-                    bool couldPass = onTheShelf == null;
-                    if (!couldPass && onTheShelf.TryGetValue(item, out stocked))
-                        couldPass = stocked >= minStock || (minWorth > 0 && stocked > 0);
-                    if (couldPass)
+                    if (onTheShelf == null ||
+                        (onTheShelf.TryGetValue(item, out stocked) &&
+                         TradeMath.EnoughOnTheShelf(stocked, item.Value, minStock, minWorth)))
                     {
                         int price = Priced.At(market, item, me, false);
-                        if (price > 0 && (onTheShelf == null ||
-                                          TradeMath.EnoughOnTheShelf(stocked, price, minStock, minWorth)))
-                            MarketRank.Keep(buys[i], new Reach<Settlement>
-                            { Where = town, Price = price, Straight = straight, Days = days }, false);
+                        if (price > 0) MarketRank.Keep(buys[i], new Reach<Settlement>
+                        { Where = town, Price = price, Straight = straight, Days = days }, false);
                     }
                 }
             }
@@ -846,11 +843,10 @@ namespace TradeLord
             {
                 if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold,
                                                            s.IsVillage) <= 0) continue;
-                int stocked = selling || minStock <= 0 ? 0 : StockOf(s, item);
-                if (!selling && minStock > 0 && stocked <= 0) continue;
+                if (!selling && !TradeMath.EnoughOnTheShelf(StockOf(s, item), item.Value,
+                                                            minStock, minWorth)) continue;
                 int price = Priced.At(s.SettlementComponent, item, MobileParty.MainParty, selling);
                 if (price <= 0) continue;
-                if (!selling && !TradeMath.EnoughOnTheShelf(stocked, price, minStock, minWorth)) continue;
                 all.Add((s, price, lower));
             }
             return Rerank(all, selling);
