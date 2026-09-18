@@ -71,7 +71,7 @@ namespace TradeLord
     {
         internal int At;
         internal Good Good;
-        internal float Realizable;
+        internal int Carried;
         internal float Worth;
         internal int LedgerRank;
     }
@@ -110,6 +110,8 @@ namespace TradeLord
         int Carried(int at);
         void PriceTheMarketsFor(List<Pick> shelf);
         bool ResaleMarket(int at, int paid, out int price);
+        int ResaleUpTo(int at, int units);
+        int ResaleTill(int at);
         int PriceToBuy(int at);
         int Spendable();
         float Room();
@@ -205,19 +207,40 @@ namespace TradeLord
                 if (here <= 0) { tally.Note(Block.NoStock); continue; }
                 if (!market.ResaleMarket(one.At, here, out int elsewhere))
                 { tally.Note(Block.NoResaleMarket); continue; }
-                float realizable = TradeMath.Realizable(elsewhere, s.ResaleSafetyFactor);
+                int carried = market.Carried(one.At) + books.Held(sim, one.Good.Id);
+                float realizable = TradeMath.Realizable(
+                    market.ResaleUpTo(one.At, carried + 1) - market.ResaleUpTo(one.At, carried),
+                    s.ResaleSafetyFactor);
                 if (!TradeMath.BuyAcceptable(here, realizable, s.MinProfitMargin)) { tally.Note(Block.BelowMargin); continue; }
                 Pick picked = one;
-                picked.Realizable = realizable;
-                picked.Worth = TradeMath.WhatThisPickWouldMake(realizable - here, here,
-                                                               one.Good.Weight,
-                                                               market.TheirsToSell(one.At),
-                                                               market.Spendable(), market.Room());
+                picked.Carried = carried;
+                picked.Worth = WhatThisPickWouldReallyMake(market, one.At, carried, here,
+                    TradeMath.MostYouCouldTake(here, one.Good.Weight, market.TheirsToSell(one.At),
+                                               market.Spendable(), market.Room()), s);
                 stock.Add(picked);
             }
             Picks.MostMoneyFirst(stock);
             Picks.WhatTheLedgerAskedForFirst(stock);
             return stock;
+        }
+
+        private static float WhatThisPickWouldReallyMake(IBuyingMarket market, int at, int carried,
+                                                         int here, int take, Options s)
+        {
+            if (take <= 0 || here <= 0) return 0f;
+            int till = market.ResaleTill(at);
+            int drawn = market.ResaleUpTo(at, carried);
+            float made = 0f;
+            for (int u = 0; u < take; u++)
+            {
+                int wouldDraw = market.ResaleUpTo(at, carried + u + 1);
+                if (TradeRules.TheBuyerCouldNotPay(wouldDraw, till)) break;
+                float realizable = TradeMath.Realizable(wouldDraw - drawn, s.ResaleSafetyFactor);
+                if (!TradeMath.BuyAcceptable(here, realizable, s.MinProfitMargin)) break;
+                made += realizable - here;
+                drawn = wouldDraw;
+            }
+            return made;
         }
 
         internal static Traded BuyThem(List<Pick> stock, IBuyingMarket market, Books books, bool sim,
@@ -242,12 +265,19 @@ namespace TradeLord
                 var prior = books.Purchases(sim, good.Id);
                 int remaining = market.TheirsToSell(picked.At);
                 int countThis = prior.count, spentThis = prior.spent;
-                int held = market.Carried(picked.At) + books.Held(sim, good.Id);
+                int held = picked.Carried;
+                int till = market.ResaleTill(picked.At);
+                int drawn = market.ResaleUpTo(picked.At, held);
 
                 while (remaining > 0)
                 {
                     int price = market.PriceToBuy(picked.At);
-                    if (!TradeMath.BuyAcceptable(price, picked.Realizable, s.MinProfitMargin))
+                    int wouldDraw = market.ResaleUpTo(picked.At, held + 1);
+                    if (TradeRules.TheBuyerCouldNotPay(wouldDraw, till))
+                    { tally.Note(Block.BuyerTillEmpty); break; }
+                    if (!TradeMath.BuyAcceptable(price, TradeMath.Realizable(wouldDraw - drawn,
+                                                                            s.ResaleSafetyFactor),
+                                                 s.MinProfitMargin))
                     { tally.Note(Block.BelowMargin); break; }
                     Block capped = TradeRules.WhatStopsBuying(good, price, market.Spendable(),
                                                               (countThis, spentThis), held, shareCap,
@@ -265,6 +295,7 @@ namespace TradeLord
                         held++;
                         moved.Units++;
                         remaining--;
+                        drawn = wouldDraw;
                         simWeight += good.Weight;
                         books.NotePurchase(good.Id, price, good.Weight, TradeRules.FoodValue(good));
                         if (livestock) { herdRoom--; books.NoteHerdTaken(); }
@@ -281,6 +312,7 @@ namespace TradeLord
                     held++;
                     moved.Units++;
                     remaining--;
+                    drawn = wouldDraw;
                     if (livestock) herdRoom--;
                 }
             }

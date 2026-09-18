@@ -25,6 +25,8 @@ namespace TradeLord
                     return Tongue.Text("{=TL86}your party cannot drive any more livestock");
                 case Block.MerchantTillEmpty:
                     return Tongue.Text("{=TL46}the merchant has run out of gold");
+                case Block.BuyerTillEmpty:
+                    return Tongue.Text("{=TL456}the market you would sell them in cannot pay for more");
                 case Block.NoResaleMarket:
                     return Tongue.Text("{=TL47}there is nowhere in reach to resell it");
                 case Block.TradedHereAlready:
