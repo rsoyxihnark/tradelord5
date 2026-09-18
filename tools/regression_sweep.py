@@ -986,7 +986,7 @@ def empty_release_notes_are_rejected():
 
 README = io.open('README.md', encoding='utf-8').read()
 CHANGES = io.open('CHANGELOG.md', encoding='utf-8').read()
-OLDCHANGES = io.open('changelog.old.md', encoding='utf-8').read()
+OLDCHANGES = io.open('archive/changelog.old.md', encoding='utf-8').read()
 COMPARISON = io.open('COMPARISON.md', encoding='utf-8').read()
 
 def option_default(name):
