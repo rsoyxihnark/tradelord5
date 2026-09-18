@@ -4634,10 +4634,11 @@ def the_buying_pass_counts_what_you_hold_afresh_for_each_good():
             and "alreadyHeld" not in S['Trading.cs'] + S['Passes.cs']
             and "public int Carried(int at) => _pass.Party.ItemRoster.GetItemNumber(Item(at));" in buy
             and "int carried = market.Carried(one.At) + books.Held(sim, one.Good.Id);" in buy
-            and "internal int Carried;" in method_body(S['Passes.cs'], "internal struct Pick")
+            and "int held = market.Carried(picked.At) + books.Held(sim, good.Id);" in buy
+            and "Carried" not in method_body(S['Passes.cs'], "internal struct Pick")
             and ordered(method_body(S['Passes.cs'], "internal static Traded BuyThem"),
                         "var prior = books.Purchases(sim, good.Id);",
-                        "int held = picked.Carried;",
+                        "int held = market.Carried(picked.At) + books.Held(sim, good.Id);",
                         "while (remaining > 0)"))
 
 chk("1.37.9", "an animal is held back from every sale, not just herd thinning, when the quests cannot be read",
@@ -6429,7 +6430,7 @@ def one_stack_of_a_good_never_spends_what_another_stack_holds():
             and "_pass.TheirsToSell(Shelf[at])" in t
             and len(counted) == 2
             and all("GetItemNumber(" in one and "el.Amount" not in one for one in counted)
-            and len(held_afresh) == 2
+            and len(held_afresh) == 3
             and all("market.Carried(" in one and "AmountAt(" not in one for one in held_afresh))
 
 
@@ -10080,7 +10081,9 @@ def the_shelf_is_ranked_by_what_a_pick_would_really_make():
                 method_body(S['TradeMath.cs'], "public static float WhatThisPickWouldMake")
             and "picked.Worth = WhatThisPickWouldReallyMake(market, one.At, carried, here," in want
             and "TradeMath.MostYouCouldTake(here, one.Good.Weight, market.TheirsToSell(one.At)," in want
-            and "market.Spendable(), market.Room()), s);" in want
+            and "market.Spendable(), market.Room(), s.BuyCapPerItem), s);" in want
+            and "if (cap > 0 && cap < take) take = cap;" in rule
+            and "The_buy_cap_per_item_holds_the_take_down_to_what_it_allows" in MATHTESTS
             and ordered(made, "int wouldDraw = market.ResaleUpTo(at, carried + u + 1);",
                         "if (TradeRules.TheBuyerCouldNotPay(wouldDraw, till)) break;",
                         "TradeMath.Realizable(wouldDraw - drawn, s.ResaleSafetyFactor)",
@@ -10273,7 +10276,7 @@ def a_stack_is_judged_unit_by_unit_against_the_market_that_would_buy_it():
     buy = buy_pass()
     rungs = method_body(S['Trading.cs'], "public int ResaleUpTo(int at, int units)")
     return (ordered(method_body(S['Passes.cs'], "internal static Traded BuyThem"),
-                    "int held = picked.Carried;",
+                    "int held = market.Carried(picked.At) + books.Held(sim, good.Id);",
                     "int till = market.ResaleTill(picked.At);",
                     "int drawn = market.ResaleUpTo(picked.At, held);",
                     "int wouldDraw = market.ResaleUpTo(picked.At, held + 1);",
@@ -10284,6 +10287,7 @@ def a_stack_is_judged_unit_by_unit_against_the_market_that_would_buy_it():
             and "int ResaleUpTo(int at, int units);" in S['Passes.cs']
             and "int ResaleTill(int at);" in S['Passes.cs']
             and "Realizable" not in method_body(S['Passes.cs'], "internal struct Pick")
+            and "Carried" not in method_body(S['Passes.cs'], "internal struct Pick")
             and "new Ladder(buyer, Item(at), true, price, 0)," in buy
             and "int price = far.rungs.At(u);" in rungs
             and "internal static bool TheBuyerCouldNotPay(int drawnSoFar, int till) =>" in S['Rules.cs']
@@ -10314,6 +10318,22 @@ def the_selling_pass_takes_what_makes_the_most_first():
 
 chk("1.85.1", "the selling pass works down your cargo by what each good would make you, so a merchant who runs out of gold runs out on the goods that would have made you least",
     the_selling_pass_takes_what_makes_the_most_first())
+
+
+def the_buyers_gold_is_read_only_where_the_mod_reads_the_world_live():
+    resale = method_body(S['Trading.cs'], "public bool ResaleMarket(int at, int paid, out int price)")
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes()")
+    return (ordered(resale, "Options.Current.Omniscient",
+                    "? TradeRules.WhatTheTillCanPay(buyer.SettlementComponent?.Gold ?? 0,",
+                    ": 0);")
+            and "if (Options.Current.Omniscient)" in scan
+            and "till = TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0," in scan
+            and "internal static bool TheBuyerCouldNotPay(int drawnSoFar, int till) =>" in S['Rules.cs']
+            and "till > 0 && drawnSoFar > till;" in S['Rules.cs'])
+
+
+chk("1.85.2", "how much gold a market you would sell in has is read only while Live world prices is on, the same as the route scan reads it",
+    the_buyers_gold_is_read_only_where_the_mod_reads_the_world_live())
 
 
 def the_ultralog_says_what_the_marked_market_was_marked_on():
