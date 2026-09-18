@@ -986,6 +986,7 @@ def empty_release_notes_are_rejected():
 
 README = io.open('README.md', encoding='utf-8').read()
 CHANGES = io.open('CHANGELOG.md', encoding='utf-8').read()
+OLDCHANGES = io.open('changelog.old.md', encoding='utf-8').read()
 COMPARISON = io.open('COMPARISON.md', encoding='utf-8').read()
 
 def option_default(name):
@@ -10173,19 +10174,49 @@ GAMER_WORDED_ENTRIES = (
     "Fixed the map marker pointing at the town paying the most in total instead of the one "
     "paying the most per day",
     "Food is now restocked after trading, so your gold and cargo space go to trade goods first",
-    "Note: this update resets your settings once, your old ones are listed in TradeLord.log",
 )
 
 
 def the_owners_own_wording_for_an_entry_is_kept_word_for_word():
     return (all("`" + one + "`" in RULES for one in GAMER_WORDED_ENTRIES)
-            and len(GAMER_WORDED_ENTRIES) == 6
+            and len(GAMER_WORDED_ENTRIES) == 5
             and "start with `Fixed`, name the thing that was going wrong, and stop" in RULES
             and "No clause explaining the mechanism behind it" in RULES)
 
 
 chk("1.83.3", "the owner's own wording for a changelog entry is kept in the working rules word for word, so a session writes entries in it rather than in wording of its own",
     the_owners_own_wording_for_an_entry_is_kept_word_for_word())
+
+
+RESET_NEVER_WRITTEN = (
+    "resets your settings",
+    "settings reset",
+    "one time settings reset",
+    "one-time settings reset",
+    "one-time reset",
+    "reset ran on",
+    "reset never took",
+    "so the reset holds",
+    "emptied by that reset",
+    "emptied by that same reset",
+    "put back on this version only",
+    "goes back to the value TradeLord ships with",
+    "puts every setting back to the value TradeLord ships with, once",
+)
+
+
+def the_one_time_settings_reset_is_never_written_up_for_the_player():
+    said = (CHANGES + "\n" + OLDCHANGES).lower()
+    return (not [one for one in RESET_NEVER_WRITTEN if one in said]
+            and "The one time settings reset never reaches the player in writing." in RULES
+            and "is never written into a changelog entry, a release note or a commit message" in RULES
+            and "no entry naming it is left anywhere in the changelog" in RULES
+            and "it ships as `[no release]` under a subject that says the settings "
+                "file was touched and no more" in RULES)
+
+
+chk("1.83.3", "the one time settings reset is never written up for the player, so neither changelog carries an entry naming it and the working rules keep it out of the notes and the commits",
+    the_one_time_settings_reset_is_never_written_up_for_the_player())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

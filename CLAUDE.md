@@ -72,6 +72,8 @@ The release workflow publishes the commit body as the release notes, so a commit
 - Use the words the program itself uses. Where it names a thing on screen, a setting, a panel, a button, write that name rather than a paraphrase of it, and write the entry the way one user would tell another what changed. A reader should never have to translate it back into the program's own terms. Where the program is a mod, the words belong to the thing it is a mod for, so use those.
 - Never drop a changelog bullet-point entry for being minor, internal or cosmetic.
 - Never mention this project's own tests, checks, build scripts, workflow files or working rules in a changelog entry, a release note or the message of a commit that carries a version, not their count, not their running total, not that any were added, rewritten or removed. They verify, govern and ship the project, they are not part of what a user runs, so there is no user-facing change for the rule above to protect. A `[no release]` commit is the exception, because nothing it says is ever published, and it still has to say what it changed. A file the user downloads is not a check, so it belongs in the changelog like any other change.
+- The one time settings reset never reaches the player in writing. Arming it, disarming it, repairing it or changing what it does is never written into a changelog entry, a release note or a commit message, in the version that ships it or in any version after it, and no entry naming it is left anywhere in the changelog. Say in chat what you did with it and leave it there.
+- A version whose only change is that switch has nothing to tell the player, so it rides along with a version that does, or it ships as `[no release]` under a subject that says the settings file was touched and no more.
 - Start every commit subject with the version it ships in in square brackets, then the part of the project it touches, then one plain-English clause saying what changed. `[1.2.0] Settings: the window now remembers where you left it` is the shape. Use `[no release]` when the change ships nothing to users. Leave the commit body exactly as it is, because the body is the published release note.
 - Write the commit body as bullet points, one `- ` line per entry, the way the changelog is written. The body is published as the release notes, so it should read as a list there, not as a run of loose lines.
 - Full technical detail belongs in chat or in a document of its own, never in a changelog entry, a release note or a commit message.
@@ -81,7 +83,6 @@ The release workflow publishes the commit body as the release notes, so a commit
   - `Fixed TradeLord valuing a purchase against a buyer days away instead of a nearby one paying almost the same`
   - `Fixed the map marker pointing at the town paying the most in total instead of the one paying the most per day`
   - `Food is now restocked after trading, so your gold and cargo space go to trade goods first`
-  - `Note: this update resets your settings once, your old ones are listed in TradeLord.log`
 
 ## Changelog
 
