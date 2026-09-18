@@ -73,7 +73,7 @@ namespace TradeLord
         internal Good Good;
         internal float Realizable;
         internal float Margin;
-        internal bool Asked;
+        internal int LedgerRank;
     }
 
     internal static class Picks
@@ -86,8 +86,11 @@ namespace TradeLord
             if (stock == null || stock.Count < 2) return;
             var asked = new List<Pick>();
             var rest = new List<Pick>();
-            foreach (Pick one in stock) (one.Asked ? asked : rest).Add(one);
-            if (asked.Count == 0 || rest.Count == 0) return;
+            foreach (Pick one in stock) (one.LedgerRank > 0 ? asked : rest).Add(one);
+            if (asked.Count == 0) return;
+            asked.Sort((x, y) => x.LedgerRank != y.LedgerRank
+                ? x.LedgerRank.CompareTo(y.LedgerRank)
+                : y.Margin.CompareTo(x.Margin));
             stock.Clear();
             stock.AddRange(asked);
             stock.AddRange(rest);
@@ -102,7 +105,7 @@ namespace TradeLord
         int AmountAt(int at);
         Good GoodAt(int at);
         bool MayBuy(int at, in Good good, out Block why);
-        bool TheLedgerAsksFor(int at);
+        int TheLedgerAsksFor(int at);
         int TheirsToSell(int at);
         int Carried(int at);
         void PriceTheMarketsFor(List<Pick> shelf);
@@ -191,7 +194,7 @@ namespace TradeLord
                 int held = market.Carried(at) + books.Held(sim, good.Id);
                 if (holdCap > 0 && held >= holdCap) { tally.Note(Block.HeldEnough); continue; }
                 if (shareCap > 0f && (held + 1) * good.Weight > shareCap) { tally.Note(Block.HeldEnough); continue; }
-                shelf.Add(new Pick { At = at, Good = good, Asked = market.TheLedgerAsksFor(at) });
+                shelf.Add(new Pick { At = at, Good = good, LedgerRank = market.TheLedgerAsksFor(at) });
             }
             market.PriceTheMarketsFor(shelf);
 
@@ -209,7 +212,8 @@ namespace TradeLord
                 stock.Add(picked);
             }
             Picks.BestMarginFirst(stock);
-            if (s.FollowTheLedgerFirst) Picks.WhatTheLedgerAskedForFirst(stock);
+            if (s.WhatToBuyFirst == Options.BuyTheLedgersOrder)
+                Picks.WhatTheLedgerAskedForFirst(stock);
             return stock;
         }
 

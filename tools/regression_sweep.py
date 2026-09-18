@@ -3674,18 +3674,19 @@ chk("1.27.5", "the hint under the language setting names the language and nothin
 def a_choice_between_named_things_is_picked_from_a_list():
     numbered = re.findall(r'\[SettingPropertyInteger\("\{=TL\d+\}[^"]*", 0, [0-3],', M)
     picked = set(re.findall(r'\[SettingPropertyDropdown\("\{=(TL\d+)\}', M))
-    return (numbered == [] and picked == {'TL250', 'TL222', 'TL223', 'TL224', 'TL227', 'TL264'}
+    return (numbered == []
+            and picked == {'TL250', 'TL222', 'TL223', 'TL224', 'TL227', 'TL264', 'TL454'}
             and all('public Dropdown<string> ' + named in M for named in
                     ('Language', 'FoodPolicy', 'CraftingPolicy', 'LivestockPolicy', 'CostBasisMode',
-                     'KeepSmeltableWeapons')))
+                     'KeepSmeltableWeapons', 'WhatToBuyFirst')))
 
 def the_words_in_a_choice_follow_the_mods_language():
     follow = method_body(M, "internal void FollowLanguage")
     return ('Tongue.Text(words[i]).ToString()' in method_body(M, "private static string[] Spoken")
-            and method_body(M, "private void Retell").count('Retold(') == 5
+            and method_body(M, "private void Retell").count('Retold(') == 6
             and 'Language.PropertyChanged += (sender, args) => Retell();' in follow
             and follow.count('Retell();') == 2
-            and follow.count('Follows(') == 6)
+            and follow.count('Follows(') == 7)
 
 def a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists():
     body = buy_rule()
@@ -4846,6 +4847,7 @@ def a_dropdown_only_ever_gains_choices_at_the_end():
         'PolicyWords': ['Leave alone', 'Sell only', 'Buy only', 'Buy and sell'],
         'SmeltableWords': ['Sell them', 'Keep every one', 'Keep the ones you have not learned'],
         'BasisWords': ['Average of what you paid', 'Last price you paid', 'Cheapest market you know'],
+        'BuyFirstWords': ['What the ledger scores highest', 'The biggest profit margin'],
     }
     return (set(lists) == set(shipped)
             and all(lists[k][:len(v)] == v for k, v in shipped.items())
@@ -4894,7 +4896,7 @@ EVER_SHIPPED = {
     "MaxTravelDays": "float", "MaxTravelDaysTown": "float", "MaxTravelDaysVillage": "float",
     "MaxVillageTravelDays": "float", "MinProfitMargin": "float",
     "MinTownStock": "int", "MinTownStockWorth": "int",
-    "FollowTheLedgerFirst": "bool",
+    "FollowTheLedgerFirst": "bool", "WhatToBuyFirst": "int",
     "NeverBuyGrain": "bool", "NeverBuyItems": "string",
     "NeverSellItems": "string", "ObservationShelfLifeDays": "int", "Omniscient": "bool",
     "PackAnimalFullCargoPremium": "float", "PanelKey": "string", "PreferBestSellTown": "bool",
@@ -4921,12 +4923,12 @@ def no_setting_a_player_ever_saved_is_left_stranded():
     stranded = [name for name, kind in EVER_SHIPPED.items()
                 if now.get(name) != kind and '"' + name + '"' not in lift]
     unlisted = [name for name in now if name not in EVER_SHIPPED]
-    return not stranded and not unlisted and len(EVER_SHIPPED) >= 81
+    return not stranded and not unlisted and len(EVER_SHIPPED) >= 82
 
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 13;' in S['Migrate.cs']
+    return ('public const int Shape = 14;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and "written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();" in S['Migrate.cs']
             and ordered(read, "string[] lines = Lines(found);",
@@ -5045,7 +5047,8 @@ def the_shape_a_settings_file_declares_gates_every_step_of_the_lift():
                         "changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);",
                         "if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);",
                         "if (from < 7) changed |= TheScanRadiusIsGone(written, notes);")
-            and lift.count("changed |=") == 7
+            and lift.count("changed |=") == 8
+            and "if (from < 14) changed |= WhatToBuyFirstBecameAChoiceOfTwo(written, notes);" in lift
             and (("if (from < " + shape.group(1) + ")") in lift
                  or ("public const int CracksAt = " + shape.group(1) + ";"
                      in method_body(S['Migrate.cs'], "public static class Whip")))
@@ -5155,7 +5158,7 @@ def the_file_holds_a_number_to_the_same_limits_the_screen_does():
     taken = method_body(S['Config.cs'], "private static bool Taken")
     within = method_body(S['Config.cs'], "private static double Within")
     numeric = set(re.findall(r'^\s*public\s+(?:int|float)\s+(\w+)\s*=', S['Options.cs'], re.M))
-    return (len(ranged) >= 18 and len(picked) == 6 and table == wanted
+    return (len(ranged) >= 18 and len(picked) == 7 and table == wanted
             and numeric and not (numeric - set(table))
             and "(int)Within(field, int.Parse(" in taken
             and "(float)Within(field, float.Parse(" in taken
@@ -9988,28 +9991,36 @@ def a_costly_good_is_not_filtered_out_for_being_rare():
 def the_pass_buys_what_the_ledger_sent_you_for_first():
     order = method_body(S['Passes.cs'], "internal static void WhatTheLedgerAskedForFirst")
     want = method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
-    asks = method_body(S['Trading.cs'], "public bool TheLedgerAsksFor")
-    buys = method_body(S['Ledger.cs'], "public HashSet<string> WhatTheLedgerBuysAt")
-    return ("internal bool Asked;" in S['Passes.cs']
-            and "bool TheLedgerAsksFor(int at);" in S['Passes.cs']
-            and "Asked = market.TheLedgerAsksFor(at)" in want
+    asks = method_body(S['Trading.cs'], "public int TheLedgerAsksFor")
+    buys = method_body(S['Ledger.cs'], "public Dictionary<string, int> WhatTheLedgerBuysAt")
+    lift = method_body(S['Migrate.cs'], "private static bool WhatToBuyFirstBecameAChoiceOfTwo")
+    return ("internal int LedgerRank;" in S['Passes.cs']
+            and "int TheLedgerAsksFor(int at);" in S['Passes.cs']
+            and "LedgerRank = market.TheLedgerAsksFor(at)" in want
             and ordered(want, "Picks.BestMarginFirst(stock);",
-                        "if (s.FollowTheLedgerFirst) Picks.WhatTheLedgerAskedForFirst(stock);")
-            and "foreach (Pick one in stock) (one.Asked ? asked : rest).Add(one);" in order
-            and "if (asked.Count == 0 || rest.Count == 0) return;" in order
+                        "if (s.WhatToBuyFirst == Options.BuyTheLedgersOrder)",
+                        "Picks.WhatTheLedgerAskedForFirst(stock);")
+            and "foreach (Pick one in stock) (one.LedgerRank > 0 ? asked : rest).Add(one);" in order
+            and "if (asked.Count == 0) return;" in order
+            and "asked.Sort((x, y) => x.LedgerRank != y.LedgerRank" in order
             and ordered(order, "stock.Clear();", "stock.AddRange(asked);", "stock.AddRange(rest);")
-            and "if (!Options.Current.FollowTheLedgerFirst) return false;" in asks
+            and "if (Options.Current.WhatToBuyFirst != Options.BuyTheLedgersOrder) return 0;" in asks
             and "LedgerBehavior.Instance?.WhatTheLedgerBuysAt(_pass.Site)" in asks
-            and "routes[i].From == here && routes[i].Item != null" in buys
+            and "asked[route.Item.StringId] = asked.Count + 1;" in buys
             and "BestRoutes(int.MaxValue)" in buys
-            and "public bool FollowTheLedgerFirst = true;" in S['Options.cs']
+            and "public const int BuyTheLedgersOrder = 0, BuyTheBiggestMargin = 1;" in S['Options.cs']
+            and "public int WhatToBuyFirst = BuyTheLedgersOrder;" in S['Options.cs']
             and EVER_SHIPPED.get('FollowTheLedgerFirst') == 'bool'
-            and "{=TL454}Buy what the ledger sent you for first" in M
-            and "public bool FollowTheLedgerFirst { get => _o.FollowTheLedgerFirst;" in M
-            and all(said_in_every_language(one) for one in ("TL454", "TL455"))
-            and "public bool TheLedgerAsksFor(int at) => LedgerAsksFor.Contains(at);" in BUYPASSTESTS
+            and EVER_SHIPPED.get('WhatToBuyFirst') == 'int'
+            and 'const string was = "FollowTheLedgerFirst";' in lift
+            and "followed ? Options.BuyTheLedgersOrder : Options.BuyTheBiggestMargin" in lift
+            and "{=TL454}What to buy first" in M
+            and "public Dropdown<string> WhatToBuyFirst" in M
+            and all(said_in_every_language(one) for one in
+                    ("TL454", "TL455", "TL456", "TL457"))
+            and "public int TheLedgerAsksFor(int at) =>" in BUYPASSTESTS
+            and "The_route_the_ledger_scores_highest_is_bought_before_its_lower_ones" in SHELFORDERTESTS
             and "The_good_the_ledger_sent_you_for_is_bought_before_a_fatter_margin" in SHELFORDERTESTS
-            and "Everything_else_keeps_the_order_the_margins_put_it_in" in SHELFORDERTESTS
             and "A_shelf_the_ledger_says_nothing_about_is_left_exactly_as_it_was" in SHELFORDERTESTS)
 
 

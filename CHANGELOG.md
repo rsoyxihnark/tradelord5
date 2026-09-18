@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.82.3
+
+- Where the ledger lists more than one route out of a market, the one it scores highest is bought first.
+- This version puts every setting back to the value TradeLord ships with, once, and lists what you had set in TradeLord.log so you can put it back.
+
 ## 1.82.2
 
 - The hint under Minimum stock value for buy suggestions now says that the dearer a good is, the fewer of it a market need hold, rather than naming a couple of goods as examples and leaving every other one out.
