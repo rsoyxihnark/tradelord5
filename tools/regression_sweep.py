@@ -764,19 +764,23 @@ def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
 def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     asked = method_body(S['Marker.cs'], "private static int WhatThatMarketPays")
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
     return (ordered(marker, "reachable.Sort(FastestPurseFirst);",
                     "if (TradeMath.PerDay(gold, ride) <= how.Rate) break;",
-                    "foreach (var (item, amount, worth, floor) in cargo)",
-                    "int price = WhatThatMarketPays(s, market, item, party);",
-                    "if (total >= gold) { capped = true; break; }",
-                    "if (total > gold) total = gold;",
+                    "Takings took = WhatItWouldFetch(s, market, party, cargo, gold, null);",
+                    "long total = took.Value > gold ? gold : took.Value;",
                     "float rate = TradeMath.PerDay(total, ride);",
                     "if (rate > how.Rate)")
+            and ordered(fetch, "foreach (var (item, amount, worth, floor) in cargo)",
+                        "int price = WhatThatMarketPays(site, market, item, party);",
+                        "if (took.Value >= gold) { took.PurseCapped = true; break; }")
             and "float faster = TradeMath.PerDay(x.gold, x.days);" in S['Marker.cs']
             and "return faster != slower ? slower.CompareTo(faster)" in S['Marker.cs']
             and "string.CompareOrdinal(x.s.StringId, y.s.StringId);" in S['Marker.cs']
-            and marker.count("WhatThatMarketPays(") == 1
+            and fetch.count("WhatThatMarketPays(") == 1
+            and "WhatThatMarketPays(" not in marker
             and "Priced.At(" not in marker
+            and "Priced.At(" not in fetch
             and asked.count("Priced.At(market, el, party, true)") == 2)
 
 
@@ -790,11 +794,12 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
     return ("TradePolicy.WorthToBeat(item), BestMarketFloor(item)));" in carried
             and "var cargo = WhatYouCarryToSell(party);" in marker
             and "TradeRules.WorthToBeat(Describe(item), CostBasis(item), UnpaidWorth(item))" in worth
-            and ordered(marker, "int price = WhatThatMarketPays(s, market, item, party);",
+            and ordered(method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch"),
+                        "int price = WhatThatMarketPays(site, market, item, party);",
                         "if (price < floor) continue;",
                         "if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) continue;",
-                        "total += (long)price * amount;")
-            and "if (total <= 0) { how.Refused++; continue; }" in marker
+                        "took.Value += (long)price * amount;")
+            and "if (took.Value <= 0L) { how.Refused++; continue; }" in marker
             and ordered(floor, "if (!Options.Current.PreferBestSellTown) return 0;",
                         "LedgerBehavior.Instance?.BestSell(item)",
                         "(int)(best.Item2 * Options.Current.BestSellTownTolerance)")
@@ -2501,7 +2506,7 @@ chk("1.5.6", "an unrecognized hotkey name is logged before falling back to T",
 chk("1.5.6", "the cargo marker only targets a town where the cargo has a price",
     "internal long Value;" in method_body(S['Marker.cs'], "private struct Reckoning") and
     "internal long RunnerUpValue;" in method_body(S['Marker.cs'], "private struct Reckoning") and
-    "if (total <= 0) { how.Refused++; continue; }" in
+    "if (took.Value <= 0L) { how.Refused++; continue; }" in
         method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo"))
 chk("1.5.7", "units with no cost basis are still sold when purchased units miss the margin",
     (lambda b: b.count("return false;") == 1 and b.count("return true;") == 1
@@ -3264,7 +3269,7 @@ chk("1.6.30", "the party speed behind every travel estimate is read once an hour
     the_party_speeds_are_read_once_an_hour())
 
 def the_cargo_marker_counts_the_town_till():
-    return ("if (total > gold) total = gold;" in
+    return ("long total = took.Value > gold ? gold : took.Value;" in
             method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo"))
 
 chk("1.6.31", "the cargo marker never points at a market that cannot pay for the cargo",
@@ -4920,7 +4925,7 @@ EVER_SHIPPED = {
     "TradeXpMultiplier": "float", "UseFleetCapacity": "bool",
     "MaxCargoShare": "float", "PartyTradeXpShare": "float",
     "MarkPriceDirection": "bool", "PriceTrace": "bool",
-    "MaxWorkshopsOwned": "int",
+    "MaxWorkshopsOwned": "int", "Ultralog": "bool",
 }
 
 def settings_now():
@@ -5887,7 +5892,7 @@ def the_venue_is_the_only_thing_a_pass_asks_where_it_is():
     sell = sell_pass()
     buy = buy_pass()
     held = method_body(t, "private sealed class Pass")
-    return (sell.count("pass.Site") == 3 and buy.count("pass.Site") == 4
+    return (sell.count("pass.Site") == 5 and buy.count("pass.Site") == 4
             and sell.count("pass.Reports") == 0 and buy.count("pass.Reports") == 1
             and sell.count("pass.Key") == 1 and buy.count("pass.Key") == 1
             and "Site" not in method_body(t, "public static void ExecuteRoadTrade")
@@ -6621,8 +6626,8 @@ def the_map_marker_keeps_to_the_same_trade_pool_as_the_scans():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     return (ordered(marker, "foreach (Settlement s in Settlement.All)",
                     "if (!TradeActionBehavior.IsMarket(s)) continue;",
-                    "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;",
-                    "if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s)) continue;")
+                    "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) { how.Shut++; continue; }",
+                    "if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s))")
             and marker.count("if (!TradeActionBehavior.IsMarket(s)) continue;") == 1
             and "Town.AllTowns" not in marker
             and "if (!TradeActionBehavior.IsMarket(s)) return false;" in
@@ -6977,10 +6982,10 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
                      "SettlementComponent market = s.SettlementComponent;",
                      "if (market == null) continue;",
                      "if (!TradeActionBehavior.IsMarket(s)) continue;",
-                     "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) continue;",
+                     "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) { how.Shut++; continue; }",
                      "float cap = LedgerBehavior.TravelCeiling(s);",
                      "if (TradeMath.PerDay(gold, ride) <= how.Rate) break;",
-                     "WhatThatMarketPays(s, market, item, party)")
+                     "WhatItWouldFetch(s, market, party, cargo, gold, null)")
              and "Town.AllTowns" not in marker
              and "town.Gold" not in marker)
     gated = ("s.IsVillage && Options.Current.TradeWithVillages" in pool
@@ -9128,8 +9133,9 @@ def the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till():
             and "continue;" not in between(marker, "if (TradeMath.PerDay(gold, ride)", "\n")
             and marker.find("float cap = LedgerBehavior.TravelCeiling(s);") <
                 marker.find("reachable.Sort(FastestPurseFirst);")
-            and "if (total >= gold) { capped = true; break; }" in marker
-            and "how.PurseCapped = capped;" in marker
+            and "if (took.Value >= gold) { took.PurseCapped = true; break; }" in
+                method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+            and "how.PurseCapped = took.PurseCapped;" in marker
             and "private const int PriceShelfHours = 3;" in S['Marker.cs']
             and "int shelf = Freshness.Hour / PriceShelfHours;" in asked
             and "Freshness.Taken(ref _priceStamp, shelf);" in asked
@@ -9423,7 +9429,7 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 12
+            and ALL.count("Tongue.Named(") == 14
             and '_route.Item == null ? "" : Tongue.Named(_route.Item.Name, _route.Item.StringId)'
                 in S['Panel.cs']
             and '_route.From == null ? "" : Tongue.Named(_route.From.Name, _route.From.StringId)'
@@ -9921,9 +9927,9 @@ def nothing_out_of_reach_is_marked_on_the_map_or_offered_as_a_route():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
     return ("float ride = Travel.EstimateDaysFromParty(s);" in marker
-            and "if (TradeMath.OutOfReach(ride)) continue;" in marker
-            and marker.find("if (TradeMath.OutOfReach(ride)) continue;") <
-                marker.find("if (cap > 0f && ride > cap) continue;")
+            and "if (TradeMath.OutOfReach(ride)) { how.NoRoad++; continue; }" in marker
+            and marker.find("if (TradeMath.OutOfReach(ride)) { how.NoRoad++; continue; }") <
+                marker.find("if (cap > 0f && ride > cap) { how.PastCeiling++; continue; }")
             and "if (cap > 0f)\n" not in marker
             and "if (TradeMath.OutOfReach(days)) continue;" in scan
             and scan.find("if (TradeMath.OutOfReach(days)) continue;") <
@@ -10159,6 +10165,116 @@ def the_marker_picks_the_market_that_earns_fastest_not_the_one_paying_most():
 
 chk("1.83.3", "the market marked on your map is the one that would earn the most a day for the cargo you carry, not the one paying the most in all, and the log says the rate it picked on",
     the_marker_picks_the_market_that_earns_fastest_not_the_one_paying_most())
+
+
+def the_ultralog_is_a_switch_of_its_own_that_ships_on():
+    screen = method_body(M, "public bool Ultralog")
+    marker = S['Marker.cs']
+    return ("public bool Ultralog = true;" in S['Options.cs']
+            and EVER_SHIPPED.get("Ultralog") == "bool"
+            and re.search(r'\{=TL454\}[^"]*Ultralog', M) is not None
+            and '[SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]\n'
+                '        public bool Ultralog' in M
+            and screen.count("_o.Ultralog") == 2
+            and marker.count("Options.Current.Ultralog") == 4
+            and all("if (!Options.Current.Ultralog) return;" in method_body(marker, one)
+                    for one in ("private static void Ultra",
+                                "private static void SayItWeighedAgain",
+                                "internal static void ScoreTheMark"))
+            and "bool ultra = Options.Current.Ultralog;" in
+                method_body(marker, "private static Settlement BestSellTownForCargo"))
+
+
+chk("1.84.0", "everything the ultralog writes is behind a switch of its own, which ships on",
+    the_ultralog_is_a_switch_of_its_own_that_ships_on())
+
+
+def the_ultralog_says_what_the_marked_market_was_marked_on():
+    ultra = method_body(S['Marker.cs'], "private static void Ultra")
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    scan = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    return (ordered(ultra, '"  ultralog: what it marked "', '" a unit = "', '" gold, cost "',
+                    '" gold, profit "', '" gold in all, of which "',
+                    '" is profit, and it marked on the "')
+            and "took.Cost += (long)worth * amount;" in fetch
+            and "bill?.Add(new Share" in fetch
+            and "how.Bill = new List<Share>();" in scan
+            and "if (ultra && how.Best != null)" in scan)
+
+
+chk("1.84.0", "the ultralog breaks the marked market down good by good, with what each fetches there, what it cost you and which of the two the marker went on",
+    the_ultralog_says_what_the_marked_market_was_marked_on())
+
+
+def the_ultralog_lists_the_markets_the_marker_priced():
+    ultra = method_body(S['Marker.cs'], "private static void Ultra")
+    scan = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    return ("private const int MostMarketsShown = 5;" in S['Marker.cs']
+            and "if (ultra) how.Board = new List<Weighing>();" in scan
+            and "how.Board?.Add(new Weighing" in scan
+            and "y.Rate.CompareTo(x.Rate)" in S['Marker.cs']
+            and ordered(ultra, "how.Board.Sort(FastestFirst);",
+                        '" market(s) it priced, best first"', '" day(s) "', '" unit(s) "',
+                        '" gold "', '" gold a day"', '"  (marked)"')
+            and "int shown = how.Board.Count < MostMarketsShown ? how.Board.Count : MostMarketsShown;"
+                in ultra)
+
+
+chk("1.84.0", "the ultralog lists the markets the marker priced, best first, with the days, the units, the gold and the rate of each",
+    the_ultralog_lists_the_markets_the_marker_priced())
+
+
+def the_ultralog_counts_what_the_marker_left_out_and_why():
+    scan = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    ultra = method_body(S['Marker.cs'], "private static void Ultra")
+    return (all(one in scan for one in
+                ("{ how.Shut++; continue; }", "{ how.AtWar++; continue; }",
+                 "{ how.NoTill++; continue; }", "{ how.PastCeiling++; continue; }",
+                 "{ how.NoRoad++; continue; }", "how.Told++;"))
+            and scan.count("how.PastCeiling++") == 2
+            and "how.Left = reachable.Count - how.Told;" in scan
+            and ordered(ultra, '" market(s) weighed, "', '" priced, "',
+                        '" would pay too little for anything you carry, "',
+                        '" left unpriced once no purse left could beat "',
+                        '"  ultralog: left out before pricing, "', '" with nothing in the till, "',
+                        '" past your travel ceilings, "', '" with no road it could find, "',
+                        '" under siege, raided or shut, "', '" at war with you"'))
+
+
+chk("1.84.0", "the ultralog counts every market the marker left out and says what left each of them out",
+    the_ultralog_counts_what_the_marker_left_out_and_why())
+
+
+def the_marker_says_so_when_it_weighs_again_and_stays_put():
+    update = method_body(S['Marker.cs'], "internal static void Update")
+    again = method_body(S['Marker.cs'], "private static void SayItWeighedAgain")
+    stayed = between(update, "if (target == _picked)", "_tracked = null;")
+    return ("if (target != null) SayItWeighedAgain(target, how);" in stayed
+            and "if (how.Value == _saidValue && how.Rate == _saidRate) return;" in again
+            and '"map marker weighed your cargo again and stayed on "' in again
+            and ordered(again, "Log.Write(", "Ultra(how);", "Remember(target, how);")
+            and ordered(update, "map marker moved to ", "Ultra(how);", "Remember(target, how);"))
+
+
+chk("1.84.0", "the ultralog writes a line when the marker weighs your cargo again and stays where it is, and only when the reckoning moved",
+    the_marker_says_so_when_it_weighs_again_and_stays_put())
+
+
+def the_mark_is_scored_against_what_that_market_really_paid():
+    score = method_body(S['Marker.cs'], "internal static void ScoreTheMark")
+    sell = method_body(S['Trading.cs'], "private static void SellPass")
+    return (ordered(score, "site.StringId != _markedId", "if (_markedValue <= 0L) return;",
+                    "_markedValue = 0L;", "TradeMath.DaysSince(_markedAt, Freshness.Hour)",
+                    "TradeMath.HeldShare(", 'Log.Write("marker check at "')
+            and "Scoring.Share(held)" in score
+            and '" of what it marked on"' in score
+            and "if (pass.Site != null && !pass.Sim)" in sell
+            and 'Guard.Run("Marker.Check", () => Marker.ScoreTheMark(pass.Site, soldItems, '
+                'goldGained));' in sell)
+
+
+chk("1.84.0", "the ultralog scores the marked market on arrival, once, against what it really paid you",
+    the_mark_is_scored_against_what_that_market_really_paid())
 
 
 

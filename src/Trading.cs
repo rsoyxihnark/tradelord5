@@ -1080,6 +1080,9 @@ namespace TradeLord
             int profit = moved.Profit;
             int goldGained = pass.Gained(moved.SimGold);
 
+            if (pass.Site != null && !pass.Sim)
+                Guard.Run("Marker.Check", () => Marker.ScoreTheMark(pass.Site, soldItems, goldGained));
+
             if (soldItems > 0)
             {
                 pass.Moved(profit, goldGained, selling: true);
