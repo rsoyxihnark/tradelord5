@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.82.2
+
+- The hint under Minimum stock value for buy suggestions now says that the dearer a good is, the fewer of it a market need hold, rather than naming a couple of goods as examples and leaving every other one out.
+
 ## 1.82.1
 
 - Minimum stock value for buy suggestions now counts a shelf at the good's own worth rather than at what the shop is charging for it, so a shop down to its last unit can no longer pass by asking a high price, and the goods it lets through are the costly ones it was meant for.

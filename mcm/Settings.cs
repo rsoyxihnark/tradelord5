@@ -404,7 +404,7 @@ namespace TradeLord.Mcm
         public int MinTownStock { get => _o.MinTownStock; set { _o.MinTownStock = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL452}Minimum stock value for buy suggestions", 0, 20000, Order = 4, RequireRestart = false,
-            HintText = "{=TL453}A market also counts as stocked when what it holds of a good is worth at least this many denars, even where it holds fewer units than Minimum stock for buy suggestions asks for. Worth is counted at the good's own worth, not at what the shop charges. That lets costly goods such as tools and oil be suggested. 0 = off. Live-price mode only.")]
+            HintText = "{=TL453}A market also counts as stocked when what it holds of a good is worth at least this many denars, even where it holds fewer units than Minimum stock for buy suggestions asks for. Worth is counted at the good's own worth, not at what the shop charges. The dearer a good is, the fewer of it a market need hold. 0 = off. Live-price mode only.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public int MinTownStockWorth { get => _o.MinTownStockWorth; set { _o.MinTownStockWorth = value; Options.Bump(); } }
 

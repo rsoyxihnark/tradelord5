@@ -10019,5 +10019,48 @@ chk("1.82.0", "walking into a market the ledger routes a good out of, that good 
     the_pass_buys_what_the_ledger_sent_you_for_first())
 
 
+
+
+TRADE_GOODS = (
+    "grain", "grape", "date", "olive", "fish", "flax", "clay", "wool", "hardwood", "butter",
+    "cheese", "meat", "salt", "hide", "iron", "silver", "leather", "linen", "tool", "oil",
+    "cotton", "silk", "velvet", "jewel", "wine", "pottery", "fur", "spice", "charcoal",
+    "ingot", "whale", "beer", "honey", "wax", "amber", "papyrus", "marble",
+)
+
+NAMES_A_GOOD_ON_PURPOSE = {
+    "TL239": "the switch is the never-buy-grain switch",
+    "TL339": "the switch is the never-buy-grain switch",
+    "TL352": "it points at the never-buy-grain switch this list overrides",
+    "TL388": "the log line is about grain being left alone",
+    "TL331": "it shows the shape of an item id",
+    "TL348": "it shows the shape of the trade summary line",
+    "TL323": "it says what the crafting category holds",
+}
+
+def a_hint_says_what_it_does_for_every_good_rather_than_naming_a_few():
+    en = spoken(ENGLISH)
+    named = set(re.findall(r'HintText = "\{=(TL\d+)\}', M)) | \
+            set(re.findall(r'SettingProperty\w+\("\{=(TL\d+)\}', M))
+    astray = []
+    for sid in sorted(named):
+        if sid in NAMES_A_GOOD_ON_PURPOSE:
+            continue
+        said = en.get(sid, "").lower()
+        for good in TRADE_GOODS:
+            if re.search(r'\b' + good + r's?\b', said):
+                astray.append(sid + " names " + good)
+    worth = en.get("TL453", "")
+    return (astray == []
+            and "The dearer a good is, the fewer of it a market need hold." in worth
+            and all("dearer" not in NAMES_A_GOOD_ON_PURPOSE.get(sid, "x") for sid in named)
+            and len(NAMES_A_GOOD_ON_PURPOSE) == 7
+            and all(sid in en for sid in NAMES_A_GOOD_ON_PURPOSE))
+
+
+chk("1.82.2", "a setting on the screen says what it does for every good rather than naming a few of them, except where naming the good is the whole point of that setting",
+    a_hint_says_what_it_does_for_every_good_rather_than_naming_a_few())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
