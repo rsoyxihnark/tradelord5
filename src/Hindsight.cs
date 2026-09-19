@@ -36,7 +36,7 @@ namespace TradeLord
 
         private static readonly BandTally _bands = new BandTally();
 
-        internal static bool Writing => Options.Current.ForecastScore;
+        internal static bool Writing => Options.Current.ExtendedDebugLogging;
 
         internal static bool On => Writing && Forecast.On;
 
