@@ -4826,7 +4826,8 @@ def every_animal_that_moves_is_named_with_its_reason():
             and '" - " + why + "; TradeLord counts it as " + TradePolicy.AnimalGroup(item)' in moved
             and "LogAnimalMoved(lines, selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);" in detail
             and 'lines.Add("  animal " + (selling ? "out: " : "in: ")' in moved
-            and "LogDetail(selling, Sim, Detail, Quoted, why)" in between(src, "internal void Logged(", ";")
+            and "LogDetail(selling, Sim, Detail, Quoted, Aimed, why)" in
+                between(src, "internal void Logged(", ";")
             and src.count("pass.Logged(selling:") == 7
             and src.count("LogDetail(selling:") == 0
             and all(r in src for r in reasons))
@@ -6320,7 +6321,7 @@ def the_log_says_what_the_market_charged_against_what_it_was_quoted():
             and '" and the market moved " + gold + " instead"' in quoted
             and "if (quoted == null || !quoted.TryGetValue(item, out var said) || said.count <= 0) return \"\";"
                 in quoted
-            and "Quotation(quoted, kv.Key, kv.Value.gold));" in detail
+            and "Quotation(quoted, kv.Key, kv.Value.gold) +" in detail
             and "if (Options.Current.PriceTrace) TradeActionBehavior.Tally(Quoted, item, count, gold);"
                 in method_body(t, "internal void Quote(ItemObject item, int count, int gold)")
             and t.count("pass.Quote(item, 1, price);") == 2
@@ -9465,7 +9466,7 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 14
+            and ALL.count("Tongue.Named(") == 15
             and '_route.Item == null ? "" : Tongue.Named(_route.Item.Name, _route.Item.StringId)'
                 in S['Panel.cs']
             and '_route.From == null ? "" : Tongue.Named(_route.From.Name, _route.From.StringId)'
@@ -10334,6 +10335,36 @@ def the_buyers_gold_is_read_only_where_the_mod_reads_the_world_live():
 
 chk("1.85.2", "how much gold a market you would sell in has is read only while Live world prices is on, the same as the route scan reads it",
     the_buyers_gold_is_read_only_where_the_mod_reads_the_world_live())
+
+
+def the_log_says_which_market_a_good_was_bought_for():
+    t = S['Trading.cs']
+    meant = method_body(t, "private static string MeantFor")
+    detail = method_body(t, "private static void LogDetail")
+    resale = method_body(t, "public bool ResaleMarket(int at, int paid, out int price)")
+    return ('if (selling || item == null || !Options.Current.Ultralog) return "";' in meant
+            and 'if (!aimed.TryGetValue(item, out var far) || far.where == null) return "";' in meant
+            and '", meant for " + far.where + " at " + far.price + " a unit";' in meant
+            and "MeantFor(selling, aimed, kv.Key));" in detail
+            and "internal readonly Dictionary<ItemObject, (string where, int price)> Aimed =" in t
+            and ordered(resale, "Settlement buyer = elsewhere.Item1;",
+                        "if (buyer == null) return false;",
+                        "_pass.Aimed[good] = (Tongue.Named(buyer.Name, buyer.StringId), price);"))
+
+
+chk("1.86.0", "the log names the market each good was bought for and what it pays a unit there, so cargo that has not sold can be traced back to the market it was bought for",
+    the_log_says_which_market_a_good_was_bought_for())
+
+
+def a_price_that_rose_is_never_written_up_as_a_fall():
+    ultra = method_body(S['Marker.cs'], "private static void Ultra")
+    return (ordered(ultra, "share.Last == share.Price", '? share.Price + " a unit"',
+                    'share.Last < share.Price ? " a unit down to "', '" a unit up to "')
+            and '" a unit down to " : " a unit up to "' not in ultra)
+
+
+chk("1.86.0", "a market that pays a little more for the next unit than the last is written up as a rise, not as a fall",
+    a_price_that_rose_is_never_written_up_as_a_fall())
 
 
 def the_ultralog_says_what_the_marked_market_was_marked_on():

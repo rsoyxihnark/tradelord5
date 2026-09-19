@@ -358,6 +358,8 @@ namespace TradeLord
                 new Dictionary<ItemObject, (int count, int gold)>();
             internal readonly Dictionary<ItemObject, (int count, int gold)> Quoted =
                 new Dictionary<ItemObject, (int count, int gold)>();
+            internal readonly Dictionary<ItemObject, (string where, int price)> Aimed =
+                new Dictionary<ItemObject, (string where, int price)>();
 
             internal bool DirectionError;
 
@@ -550,7 +552,8 @@ namespace TradeLord
             internal TextObject Said(string simSaid, string realSaid, int items, int gold) =>
                 PassMessage(Sim, simSaid, realSaid, Detail, items, gold);
 
-            internal void Logged(bool selling, string why) => LogDetail(selling, Sim, Detail, Quoted, why);
+            internal void Logged(bool selling, string why) =>
+                LogDetail(selling, Sim, Detail, Quoted, Aimed, why);
         }
 
         private static void WarnUnmatchedItemLists()
@@ -939,15 +942,25 @@ namespace TradeLord
 
         private const int NamedItemCap = 6;
 
+        private static string MeantFor(bool selling, Dictionary<ItemObject, (string where, int price)> aimed,
+                                       ItemObject item)
+        {
+            if (selling || item == null || !Options.Current.Ultralog) return "";
+            if (!aimed.TryGetValue(item, out var far) || far.where == null) return "";
+            return ", meant for " + far.where + " at " + far.price + " a unit";
+        }
+
         private static void LogDetail(bool selling, bool sim, Dictionary<ItemObject, (int count, int gold)> detail,
-                                      Dictionary<ItemObject, (int count, int gold)> quoted, string why)
+                                      Dictionary<ItemObject, (int count, int gold)> quoted,
+                                      Dictionary<ItemObject, (string where, int price)> aimed, string why)
         {
             var lines = new List<string>();
             foreach (var kv in detail)
             {
                 lines.Add((selling ? "  sold " : "  bought ") + kv.Value.count + " " +
                           kv.Key.StringId + " for " + kv.Value.gold + (sim ? Counter.Aside : "") +
-                          Quotation(quoted, kv.Key, kv.Value.gold));
+                          Quotation(quoted, kv.Key, kv.Value.gold) +
+                          MeantFor(selling, aimed, kv.Key));
                 LogAnimalMoved(lines, selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);
             }
             Log.WriteMany(lines);
@@ -1756,6 +1769,9 @@ namespace TradeLord
                 price = elsewhere.Item2;
                 Settlement buyer = elsewhere.Item1;
                 if (buyer == null) return false;
+                ItemObject good = Item(at);
+                if (good != null)
+                    _pass.Aimed[good] = (Tongue.Named(buyer.Name, buyer.StringId), price);
                 if (_resale == null)
                     _resale = new Dictionary<int, (Settlement, Ladder, int)>();
                 _resale[at] = (buyer, new Ladder(buyer, Item(at), true, price, 0),
