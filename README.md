@@ -15,7 +15,7 @@
 - ✅ The five best places to sell and the five cheapest to buy, in every item tooltip
 - ✅ Each of those five priced as that market will be when you arrive, not as it stands while you read, so the tooltip and the ledger never disagree about the same market
 - ✅ Which way each market is going, marked beside its price once you switch Mark a market rising or falling on, whenever it has moved 5% or more since the last day you looked there
-- ✅ It needs Live world prices off, since that is when TradeLord records prices at all. Off out of the box
+- ✅ Mark a market rising or falling needs Live world prices off, since that is when TradeLord records prices at all, and it ships off itself
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying
 - ✅ Stock counts, so you know the deal is actually there

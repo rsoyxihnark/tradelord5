@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.88.2
+
+- The buying pass is quicker in a market full of goods, and quicker still when you are already carrying a large load
+- Fixed the mod description saying Live world prices ships off, when it ships on
+
 ## 1.88.1
 
 - The setting that was called Pick the market a buy is aimed at on the whole stack is now called Pick where to sell on the whole load, and says in plainer words what it does
