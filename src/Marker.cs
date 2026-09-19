@@ -188,7 +188,7 @@ namespace TradeLord
 
         private static void SayItWeighedAgain(Settlement target, in Reckoning how)
         {
-            if (!Options.Current.Ultralog) return;
+            if (!Options.Current.ExtendedDebugLogging) return;
             if (how.Value == _saidValue && how.Rate == _saidRate) return;
             Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ": " + Why(how));
             Ultra(how);
@@ -210,7 +210,7 @@ namespace TradeLord
 
         internal static void ScoreTheMark(Settlement site, int units, int gold)
         {
-            if (!Options.Current.Ultralog) return;
+            if (!Options.Current.ExtendedDebugLogging) return;
             if (site == null || _markedId == null || site.StringId != _markedId) return;
             if (_markedValue <= 0L) return;
             long said = _markedValue;
@@ -256,7 +256,7 @@ namespace TradeLord
 
         private static void Ultra(in Reckoning how)
         {
-            if (!Options.Current.Ultralog) return;
+            if (!Options.Current.ExtendedDebugLogging) return;
             var said = new List<string>();
             if (how.Best != null)
             {
@@ -421,7 +421,7 @@ namespace TradeLord
             how = default(Reckoning);
             MobileParty party = MobileParty.MainParty;
             if (party == null) return null;
-            bool ultra = Options.Current.Ultralog;
+            bool ultra = Options.Current.ExtendedDebugLogging;
             var cargo = WhatYouCarryToSell(party);
             how.Carried = cargo.Count;
             if (cargo.Count == 0) return null;
