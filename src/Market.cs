@@ -185,15 +185,16 @@ namespace TradeLord
         }
 
         internal static int SellWalk(Settlement site, ItemObject item, int units, int quoted,
-                                     out int rungs)
+                                     out int rungs, out Ladder walked)
         {
             rungs = 0;
+            walked = null;
             if (site == null || item == null || units <= 0) return 0;
-            Ladder rung = new Ladder(site, item, true, quoted, 0);
+            walked = new Ladder(site, item, true, quoted, 0);
             long total = 0;
             for (int u = 0; u < units; u++)
             {
-                int price = rung.At(u);
+                int price = walked.At(u);
                 rungs++;
                 if (price <= 0) break;
                 total += price;
