@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.86.0
+
+- With Ultralog on, TradeLord.log now names the market TradeLord bought each good for and what it pays a unit there
+- Fixed TradeLord.log saying a price went down to a figure higher than the one it started at
+
 ## 1.85.2
 
 - Fixed the buying pass going on what you were carrying before it started buying rather than on what you carry now
