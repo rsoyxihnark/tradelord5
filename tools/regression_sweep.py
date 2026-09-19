@@ -1063,8 +1063,7 @@ def readme_defaults_match_the_shipped_ones():
               'from tier ' + option_default('MaxLootTier') + ' out of the box',
               'The ' + tooltip + ' best places to sell and the ' + tooltip + ' cheapest to buy',
               'The ' + shops + ' workshops in Calradia']
-    shipped = [('A price trace', 'PriceTrace'),
-               ('A score for the forecast', 'ForecastScore'),
+    shipped = [('Enable extended debug logging', 'ExtendedDebugLogging'),
                ('Count what is on its way to a market', 'MarketForecast'),
                ('Live world prices', 'Omniscient'),
                ('Staged Trading', 'StagedTrading'),
@@ -4957,7 +4956,7 @@ EVER_SHIPPED = {
     "TradeXpMultiplier": "float", "UseFleetCapacity": "bool",
     "MaxCargoShare": "float", "PartyTradeXpShare": "float",
     "MarkPriceDirection": "bool", "PriceTrace": "bool",
-    "MaxWorkshopsOwned": "int", "Ultralog": "bool",
+    "MaxWorkshopsOwned": "int", "Ultralog": "bool", "ExtendedDebugLogging": "bool",
 }
 
 def settings_now():
@@ -4975,7 +4974,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 15;' in S['Migrate.cs']
+    return ('public const int Shape = 16;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and "written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();" in S['Migrate.cs']
             and ordered(read, "string[] lines = Lines(found);",
@@ -5094,7 +5093,7 @@ def the_shape_a_settings_file_declares_gates_every_step_of_the_lift():
                         "changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);",
                         "if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);",
                         "if (from < 7) changed |= TheScanRadiusIsGone(written, notes);")
-            and lift.count("changed |=") == 8
+            and lift.count("changed |=") == 9
             and "if (from < 15) changed |= WhatToBuyFirstIsOneRuleNow(written, notes);" in lift
             and (("if (from < " + shape.group(1) + ")") in lift
                  or ("public const int CracksAt = " + shape.group(1) + ";"
@@ -6252,7 +6251,7 @@ def the_price_trace_reads_one_price_four_ways_and_names_what_changes_it():
     say = method_body(S['Market.cs'], "internal static void Say(Settlement site, string when)")
     written = method_body(S['Market.cs'], "private static void Written(Settlement site, string when)")
     ledger = S['Ledger.cs']
-    return ("if (!Options.Current.PriceTrace || site == null) return;" in say
+    return ("if (!Options.Current.ExtendedDebugLogging || site == null) return;" in say
             and 'Guard.Run("PriceTrace", () => Written(site, when));' in say
             and "Priced.At(market, el, MobileParty.MainParty, true)" in trace
             and "market.GetItemPrice(el, MobileParty.MainParty, true)" in trace
@@ -6322,7 +6321,7 @@ def the_log_says_what_the_market_charged_against_what_it_was_quoted():
             and "if (quoted == null || !quoted.TryGetValue(item, out var said) || said.count <= 0) return \"\";"
                 in quoted
             and "Quotation(quoted, kv.Key, kv.Value.gold) +" in detail
-            and "if (Options.Current.PriceTrace) TradeActionBehavior.Tally(Quoted, item, count, gold);"
+            and "if (Options.Current.ExtendedDebugLogging) TradeActionBehavior.Tally(Quoted, item, count, gold);"
                 in method_body(t, "internal void Quote(ItemObject item, int count, int gold)")
             and t.count("pass.Quote(item, 1, price);") == 2
             and ordered(t, "pass.Quote(item, 1, price);",
@@ -6389,9 +6388,9 @@ def the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off():
                      "AWhipArmedAtNoShapeAtAllNeverCracks",
                      "NothingTheLiftCarriedForwardSurvivesAWhipThatCracks",
                      "AWhipThatDoesNotCrackLeavesTheLiftsWorkExactlyAsItFoundIt",
-                     "ThisVersionShipsTheWhipArmedSoAFileOlderThanItIsResetOnce",
+                     "ThisVersionShipsTheWhipSpentSoAnOlderFileIsLiftedRatherThanReset",
                      "AFileAlreadyAtTheShapeThisVersionShipsIsNeverResetBySecondTime",
-                     "TheWhipIsStillWiredToTheShapeThisVersionShips",
+                     "TheWhipIsWiredToTheShapeItWasArmedAtAndIsSpentOnceALaterShapeShips",
                      "TheWhipLeavesTheLiftItselfAlone")))
 
 
@@ -6404,9 +6403,11 @@ chk("1.46.2", "trading on arrival runs once and waits for the party to take to t
 
 chk("1.47.0", "the price trace reads one market's price four ways, names the price model and any mod changing it, and trades nothing",
     the_price_trace_reads_one_price_four_ways_and_names_what_changes_it())
-chk("1.80.13", "both log toggles ship on while the way a price is read is settling, so every log carries the readings",
-    "public bool PriceTrace = true;" in S['Options.cs'] and
-    "public bool ForecastScore = true;" in S['Options.cs'])
+chk("1.87.0", "the one log switch ships on, so every log carries the price readings, the forecast score and the marker's workings",
+    "public bool ExtendedDebugLogging = true;" in S['Options.cs'] and
+    "public bool PriceTrace" not in S['Options.cs'] and
+    "public bool ForecastScore" not in S['Options.cs'] and
+    "public bool Ultralog" not in S['Options.cs'])
 
 chk("1.47.1", "every price TradeLord quotes is asked of the market the way the trade that follows it is charged, and falls back to the plain question only if that cannot be asked",
     every_price_is_asked_the_way_the_trade_that_follows_is_charged())
@@ -7364,12 +7365,12 @@ chk("1.62.2", "a term the settings screen names is translated the same way in ev
 def the_forecast_is_scored_against_the_market_it_predicted():
     h = S['Hindsight.cs']
     noted = method_body(h, "private static void Noted")
-    return ("internal static bool Writing => Options.Current.ForecastScore;" in h
+    return ("internal static bool Writing => Options.Current.ExtendedDebugLogging;" in h
             and "internal static bool On => Writing && Forecast.On;" in h
-            and option_default('ForecastScore') == 'true'
-            and EVER_SHIPPED.get('ForecastScore') == 'bool'
-            and "_o.ForecastScore" in M
-            and all(i in strings_declared() for i in ('TL280', 'TL398'))
+            and option_default('ExtendedDebugLogging') == 'true'
+            and EVER_SHIPPED.get('ExtendedDebugLogging') == 'bool'
+            and "_o.ExtendedDebugLogging" in M
+            and all(i in strings_declared() for i in ('TL457', 'TL458'))
             and "Hindsight.Note(best);" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
             and "Hindsight.Score(settlement);" in method_body(S['Trading.cs'], "private void OnSettlementEntered")
             and 'Guard.Run("GameEnd.Hindsight", Hindsight.Forget);' in S['SubModule.cs']
@@ -7409,10 +7410,10 @@ def a_figure_is_read_once_it_is_walked_into_and_no_more_are_kept_than_it_says():
 
 def the_switch_names_the_setting_it_leans_on():
     said = spoken(ENGLISH)
-    return ("TradeLord.log" in said['TL398']
-            and "Needs " + said['TL279'] in said['TL398']
-            and "ON by default" in said['TL398']
-            and said['TL280'] == "Score the forecast in the log")
+    return ("TradeLord.log" in said['TL458']
+            and "Needs " + said['TL279'] in said['TL458']
+            and "ON by default" in said['TL458']
+            and said['TL457'] == "Enable extended debug logging")
 
 def every_source_file_is_read_by_these_checks():
     import os
@@ -9103,7 +9104,7 @@ def a_whip_that_cracks_writes_the_file_back_so_it_never_cracks_twice():
             and ordered(write, "new KeyValuePair<string, string>(Migration.ShapeKey,",
                         "Migration.Shape.ToString(CultureInfo.InvariantCulture)),")
             and "AFileAlreadyAtTheShapeThisVersionShipsIsNeverResetBySecondTime" in MIGRATIONTESTS
-            and "TheWhipIsStillWiredToTheShapeThisVersionShips" in MIGRATIONTESTS)
+            and "TheWhipIsWiredToTheShapeItWasArmedAtAndIsSpentOnceALaterShapeShips" in MIGRATIONTESTS)
 
 
 chk("1.77.1", "a settings file put back to what TradeLord ships with is written out again carrying the shape this version ships, so it is put back once and never again",
@@ -10211,26 +10212,33 @@ chk("1.83.3", "the market marked on your map is the one that would earn the most
     the_marker_picks_the_market_that_earns_fastest_not_the_one_paying_most())
 
 
-def the_ultralog_is_a_switch_of_its_own_that_ships_on():
-    screen = method_body(M, "public bool Ultralog")
+def every_extra_line_is_behind_the_one_log_switch_that_ships_on():
+    screen = method_body(M, "public bool ExtendedDebugLogging")
     marker = S['Marker.cs']
-    return ("public bool Ultralog = true;" in S['Options.cs']
-            and EVER_SHIPPED.get("Ultralog") == "bool"
-            and re.search(r'\{=TL454\}[^"]*Ultralog', M) is not None
+    lift = method_body(S['Migrate.cs'], "private static bool ThreeLogSwitchesBecameOne")
+    return ("public bool ExtendedDebugLogging = true;" in S['Options.cs']
+            and EVER_SHIPPED.get("ExtendedDebugLogging") == "bool"
+            and re.search(r'\{=TL457\}Enable extended debug logging', M) is not None
             and '[SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]\n'
-                '        public bool Ultralog' in M
-            and screen.count("_o.Ultralog") == 2
-            and marker.count("Options.Current.Ultralog") == 4
-            and all("if (!Options.Current.Ultralog) return;" in method_body(marker, one)
+                '        public bool ExtendedDebugLogging' in M
+            and M.count("[SettingPropertyGroup(\"{=TL107}Debug\"") == 1
+            and screen.count("_o.ExtendedDebugLogging") == 2
+            and marker.count("Options.Current.ExtendedDebugLogging") == 4
+            and all("if (!Options.Current.ExtendedDebugLogging) return;" in method_body(marker, one)
                     for one in ("private static void Ultra",
                                 "private static void SayItWeighedAgain",
                                 "internal static void ScoreTheMark"))
-            and "bool ultra = Options.Current.Ultralog;" in
-                method_body(marker, "private static Settlement BestSellTownForCargo"))
+            and "bool ultra = Options.Current.ExtendedDebugLogging;" in
+                method_body(marker, "private static Settlement BestSellTownForCargo")
+            and 'foreach (string was in new[] { "PriceTrace", "ForecastScore", "Ultralog" })' in lift
+            and 'written[LogSwitch] = wanted ? "true" : "false";' in lift
+            and "if (from < 16) changed |= ThreeLogSwitchesBecameOne(written, notes);" in
+                method_body(S['Migrate.cs'], "public static bool Lift")
+            and "TheThreeLogSwitchesAreOneSettingNow" in MIGRATIONTESTS)
 
 
-chk("1.84.0", "everything the ultralog writes is behind a switch of its own, which ships on",
-    the_ultralog_is_a_switch_of_its_own_that_ships_on())
+chk("1.87.0", "the price trace, the forecast score and the marker's own workings are behind one switch that ships on, and a settings file that carried the three is brought forward to it",
+    every_extra_line_is_behind_the_one_log_switch_that_ships_on())
 
 
 def the_marker_goes_on_what_you_keep_not_on_what_the_market_pays():
@@ -10342,7 +10350,7 @@ def the_log_says_which_market_a_good_was_bought_for():
     meant = method_body(t, "private static string MeantFor")
     detail = method_body(t, "private static void LogDetail")
     resale = method_body(t, "public bool ResaleMarket(int at, int paid, out int price)")
-    return ('if (selling || item == null || !Options.Current.Ultralog) return "";' in meant
+    return ('if (selling || item == null || !Options.Current.ExtendedDebugLogging) return "";' in meant
             and 'if (!aimed.TryGetValue(item, out var far) || far.where == null) return "";' in meant
             and '", meant for " + far.where + " at " + far.price + " a unit";' in meant
             and "MeantFor(selling, aimed, kv.Key));" in detail

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.87.0
+
+- The three switches under Debug are one setting now, Enable extended debug logging, and it ships on
+- A settings file that carried Write a price trace to the log, Score the forecast in the log or Ultralog is brought forward to Enable extended debug logging
+- The mod description now names Enable extended debug logging and says what it writes
+
 ## 1.86.0
 
 - With Ultralog on, TradeLord.log now names the market TradeLord bought each good for and what it pays a unit there
