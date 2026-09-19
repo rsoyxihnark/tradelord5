@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.88.1
+
+- The setting that was called Pick the market a buy is aimed at on the whole stack is now called Pick where to sell on the whole load, and says in plainer words what it does
+
 ## 1.88.0
 
 - Pick the market a buy is aimed at on the whole stack, a new setting that ships on: the best markets for a good are weighed on what they would pay for the whole lot rather than for one unit

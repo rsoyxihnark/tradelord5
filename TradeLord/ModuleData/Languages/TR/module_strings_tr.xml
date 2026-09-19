@@ -298,7 +298,7 @@
 		<string id="TL456" text="bunları satacağın pazarın daha fazlasını ödeyecek parası yok"/>
 		<string id="TL457" text="Genişletilmiş hata ayıklama günlüğünü aç"/>
 		<string id="TL458" text="TradeLord'un kendi işleyişini TradeLord.log dosyasına yazar: her pazarın taşıdığın mallara ne ödediğini ve ne istediğini, kapıdan girdiğinde tahminin ve panelin sözünün ne kadar tuttuğunu, ve harita imlecinin tarttığı her şeyi. Tahmin kısmı için Pazara yolda olanı say ayarı gerekir. Varsayılan olarak AÇIK; günlüğü kısa tutmak için kapatın."/>
-		<string id="TL459" text="Bir alımın hangi pazar için yapıldığını tüm yığına bakarak seç"/>
-		<string id="TL460" text="TradeLord bir mal alırken onu hangi pazarda satacağını seçer. KAPALI: o pazar tek birime ne ödediğine bakılarak seçilir. AÇIK: en iyi birkaç pazar, tüm yığına gerçekte ne ödeyeceklerine göre yeniden tartılır; bu gerçeğe daha yakındır ve girdiğin her pazarda daha çok zaman harcar. Denendiği sürece AÇIK."/>
+		<string id="TL459" text="Nereye satacağını tüm yüke bakarak seç"/>
+		<string id="TL460" text="TradeLord aldığı her malı, satmayı düşündüğü bir pazar için alır. KAPALI: o pazar tek bir birime ne ödediğine bakılarak seçilir. AÇIK: en iyi beş pazar, tüm yüke ne ödeyeceklerine göre yeniden tartılır; sana gerçekte ödenecek olan budur. Girdiğin her pazarda biraz zaman alır. Denendiği sürece AÇIK."/>
 	</strings>
 </base>

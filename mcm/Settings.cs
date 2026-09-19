@@ -757,8 +757,8 @@ namespace TradeLord.Mcm
         public float MaxCargoShare { get => _o.MaxCargoShare; set { _o.MaxCargoShare = value; Options.Bump(); } }
 
 
-        [SettingPropertyBool("{=TL459}Pick the market a buy is aimed at on the whole stack", Order = 17, RequireRestart = false,
-            HintText = "{=TL460}When TradeLord buys, it picks the market it means to sell that good in. OFF: that market is picked on what it pays for one unit. ON: the few best are weighed again on what they would really pay for the whole lot, which is closer to the truth and costs more time at every market you walk into. ON while it is being tried out.")]
+        [SettingPropertyBool("{=TL459}Pick where to sell on the whole load", Order = 17, RequireRestart = false,
+            HintText = "{=TL460}Every good TradeLord buys is bought for a market it means to sell it in. OFF: that market is picked on what it pays for one unit. ON: the five best are weighed again on what they would pay for the whole load, which is what you will really be paid. It costs a little time at every market you walk into. ON while it is being tried out.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool PickTheBuyerOnTheWholeStack
         { get => _o.PickTheBuyerOnTheWholeStack; set { _o.PickTheBuyerOnTheWholeStack = value; Options.Bump(); } }
