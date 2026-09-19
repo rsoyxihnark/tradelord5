@@ -1777,16 +1777,16 @@ namespace TradeLord
             public bool ResaleMarket(int at, int paid, int units, out int price)
             {
                 var elsewhere = LedgerBehavior.Instance?
-                    .WhereThisEarnsFastest(Item(at), paid, units, _pass.Site) ?? (null, 0);
-                price = elsewhere.Item2;
-                Settlement buyer = elsewhere.Item1;
+                    .WhereThisEarnsFastest(Item(at), paid, units, _pass.Site) ?? (null, 0, null);
+                price = elsewhere.price;
+                Settlement buyer = elsewhere.town;
                 if (buyer == null) return false;
                 ItemObject good = Item(at);
                 if (good != null)
                     _pass.Aimed[good] = (Tongue.Named(buyer.Name, buyer.StringId), price);
                 if (_resale == null)
                     _resale = new Dictionary<int, (Settlement, Ladder, int)>();
-                _resale[at] = (buyer, new Ladder(buyer, Item(at), true, price, 0),
+                _resale[at] = (buyer, elsewhere.rungs ?? new Ladder(buyer, Item(at), true, price, 0),
                                Options.Current.Omniscient
                                    ? TradeRules.WhatTheTillCanPay(buyer.SettlementComponent?.Gold ?? 0,
                                                                   buyer.IsVillage)
