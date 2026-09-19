@@ -266,9 +266,11 @@ namespace TradeLord
                     {
                         Share share = how.Bill[i];
                         said.Add("    " + share.Good + ": " + share.Moved + " of the " + share.Amount +
-                                 " you carry, " + (share.Last != share.Price
-                                     ? share.Price + " a unit down to " + share.Last
-                                     : share.Price + " a unit") +
+                                 " you carry, " + (share.Last == share.Price
+                                     ? share.Price + " a unit"
+                                     : share.Price + (share.Last < share.Price ? " a unit down to "
+                                                                               : " a unit up to ") +
+                                       share.Last) +
                                  ", " + share.Fetched + " gold, cost " + share.Paid + " a unit = " +
                                  (long)share.Paid * share.Moved + " gold, profit " +
                                  (share.Fetched - (long)share.Paid * share.Moved));
