@@ -160,6 +160,23 @@ namespace TradeLord
             return q;
         }
 
+        internal static int SellWalk(Settlement site, ItemObject item, int units, int quoted,
+                                     out int rungs)
+        {
+            rungs = 0;
+            if (site == null || item == null || units <= 0) return 0;
+            Ladder rung = new Ladder(site, item, true, quoted, 0);
+            long total = 0;
+            for (int u = 0; u < units; u++)
+            {
+                int price = rung.At(u);
+                rungs++;
+                if (price <= 0) break;
+                total += price;
+            }
+            return total > int.MaxValue ? int.MaxValue : (int)total;
+        }
+
         internal static int FirstUnit(Settlement site, ItemObject item, bool selling, int quoted,
                                      int landed)
         {

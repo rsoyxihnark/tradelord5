@@ -757,6 +757,12 @@ namespace TradeLord.Mcm
         public float MaxCargoShare { get => _o.MaxCargoShare; set { _o.MaxCargoShare = value; Options.Bump(); } }
 
 
+        [SettingPropertyBool("{=TL459}Pick the market a buy is aimed at on the whole stack", Order = 17, RequireRestart = false,
+            HintText = "{=TL460}When TradeLord buys, it picks the market it means to sell that good in. OFF: that market is picked on what it pays for one unit. ON: the few best are weighed again on what they would really pay for the whole lot, which is closer to the truth and costs more time at every market you walk into. ON while it is being tried out.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
+        public bool PickTheBuyerOnTheWholeStack
+        { get => _o.PickTheBuyerOnTheWholeStack; set { _o.PickTheBuyerOnTheWholeStack = value; Options.Bump(); } }
+
         [SettingPropertyBool("{=TL457}Enable extended debug logging", Order = 0, RequireRestart = false,
             HintText = "{=TL458}Writes TradeLord's own workings to TradeLord.log: what every market pays and charges for the goods you carry, how well the forecast and the panel's promises held up when you walked in, and everything the map marker weighed. Needs Count what is on its way to a market for the forecast half. ON by default; turn it off to keep the log short.")]
         [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]

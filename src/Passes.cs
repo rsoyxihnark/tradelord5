@@ -108,7 +108,7 @@ namespace TradeLord
         int TheirsToSell(int at);
         int Carried(int at);
         void PriceTheMarketsFor(List<Pick> shelf);
-        bool ResaleMarket(int at, int paid, out int price);
+        bool ResaleMarket(int at, int paid, int units, out int price);
         int ResaleUpTo(int at, int units);
         int ResaleTill(int at);
         int PriceToBuy(int at);
@@ -204,17 +204,19 @@ namespace TradeLord
             {
                 int here = market.PriceToBuy(one.At);
                 if (here <= 0) { tally.Note(Block.NoStock); continue; }
-                if (!market.ResaleMarket(one.At, here, out int elsewhere))
-                { tally.Note(Block.NoResaleMarket); continue; }
                 int carried = market.Carried(one.At) + books.Held(sim, one.Good.Id);
+                int take = TradeMath.MostYouCouldTake(here, one.Good.Weight,
+                                                      market.TheirsToSell(one.At),
+                                                      market.Spendable(), market.Room(),
+                                                      s.BuyCapPerItem);
+                if (!market.ResaleMarket(one.At, here, carried + take, out int elsewhere))
+                { tally.Note(Block.NoResaleMarket); continue; }
                 float realizable = TradeMath.Realizable(
                     market.ResaleUpTo(one.At, carried + 1) - market.ResaleUpTo(one.At, carried),
                     s.ResaleSafetyFactor);
                 if (!TradeMath.BuyAcceptable(here, realizable, s.MinProfitMargin)) { tally.Note(Block.BelowMargin); continue; }
                 Pick picked = one;
-                picked.Worth = WhatThisPickWouldReallyMake(market, one.At, carried, here,
-                    TradeMath.MostYouCouldTake(here, one.Good.Weight, market.TheirsToSell(one.At),
-                                               market.Spendable(), market.Room(), s.BuyCapPerItem), s);
+                picked.Worth = WhatThisPickWouldReallyMake(market, one.At, carried, here, take, s);
                 stock.Add(picked);
             }
             Picks.MostMoneyFirst(stock);
