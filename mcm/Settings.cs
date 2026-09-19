@@ -756,19 +756,11 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float MaxCargoShare { get => _o.MaxCargoShare; set { _o.MaxCargoShare = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL246}Write a price trace to the log", Order = 0, RequireRestart = false,
-            HintText = "{=TL389}Writes to TradeLord.log what a market pays and charges for every good you carry, so you can see why a price does not match the trade screen. It names the market and any mod moving prices. ON by default; turn it off to keep the log short.")]
-        [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
-        public bool PriceTrace { get => _o.PriceTrace; set { _o.PriceTrace = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL280}Score the forecast in the log", Order = 1, RequireRestart = false,
-            HintText = "{=TL398}Writes to TradeLord.log what the forecast said a market would hold and what it held when you walked in, good by good, with how far off it was. Needs Count what is on its way to a market. ON by default; turn it off to keep the log short.")]
+        [SettingPropertyBool("{=TL457}Enable extended debug logging", Order = 0, RequireRestart = false,
+            HintText = "{=TL458}Writes TradeLord's own workings to TradeLord.log: what every market pays and charges for the goods you carry, how well the forecast and the panel's promises held up when you walked in, and everything the map marker weighed. Needs Count what is on its way to a market for the forecast half. ON by default; turn it off to keep the log short.")]
         [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
-        public bool ForecastScore { get => _o.ForecastScore; set { _o.ForecastScore = value; Options.Bump(); } }
-
-        [SettingPropertyBool("{=TL454}Ultralog: write everything the map marker weighed", Order = 2, RequireRestart = false,
-            HintText = "{=TL455}Writes to TradeLord.log everything the map marker weighed: every market it priced with its days and its gold a day, the marked market good by good with what each fetches and what it cost you, what was left out and why, and how the mark held up against what that market paid you. ON by default; turn it off to keep the log short.")]
-        [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
-        public bool Ultralog { get => _o.Ultralog; set { _o.Ultralog = value; Options.Bump(); } }
+        public bool ExtendedDebugLogging
+        { get => _o.ExtendedDebugLogging; set { _o.ExtendedDebugLogging = value; Options.Bump(); } }
     }
 }

@@ -480,7 +480,7 @@ namespace TradeLord
 
             internal void Quote(ItemObject item, int count, int gold)
             {
-                if (Options.Current.PriceTrace) TradeActionBehavior.Tally(Quoted, item, count, gold);
+                if (Options.Current.ExtendedDebugLogging) TradeActionBehavior.Tally(Quoted, item, count, gold);
             }
 
             internal bool SellOne(ItemRosterElement el, int price, string what, string named, out int gold)
@@ -945,7 +945,7 @@ namespace TradeLord
         private static string MeantFor(bool selling, Dictionary<ItemObject, (string where, int price)> aimed,
                                        ItemObject item)
         {
-            if (selling || item == null || !Options.Current.Ultralog) return "";
+            if (selling || item == null || !Options.Current.ExtendedDebugLogging) return "";
             if (!aimed.TryGetValue(item, out var far) || far.where == null) return "";
             return ", meant for " + far.where + " at " + far.price + " a unit";
         }

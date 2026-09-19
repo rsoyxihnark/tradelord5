@@ -7,7 +7,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 15;
+        public const int Shape = 16;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -33,6 +33,7 @@ namespace TradeLord
             if (from < 7) changed |= TheScanRadiusIsGone(written, notes);
             if (from < 8) changed |= KeepingAndRestockingFoodBecameOneSetting(written, notes);
             if (from < 15) changed |= WhatToBuyFirstIsOneRuleNow(written, notes);
+            if (from < 16) changed |= ThreeLogSwitchesBecameOne(written, notes);
             if (changed && notes != null)
                 notes.Add("your settings were written by an older TradeLord, so they have been brought forward from shape " +
                           from + " to shape " + Shape);
@@ -86,6 +87,27 @@ namespace TradeLord
             written[name] = picked.ToString(CultureInfo.InvariantCulture);
             notes?.Add("smeltable weapons are a choice of three now, so your setting of " + held +
                        " became " + (kept ? "keep every one" : "sell them"));
+            return true;
+        }
+
+        private const string LogSwitch = "ExtendedDebugLogging";
+
+        private static bool ThreeLogSwitchesBecameOne(IDictionary<string, string> written,
+                                                      ICollection<string> notes)
+        {
+            bool found = false, wanted = false;
+            foreach (string was in new[] { "PriceTrace", "ForecastScore", "Ultralog" })
+            {
+                if (!written.TryGetValue(was, out string held)) continue;
+                written.Remove(was);
+                found = true;
+                if (!bool.TryParse(held, out bool on) || on) wanted = true;
+            }
+            if (!found) return false;
+            if (!written.ContainsKey(LogSwitch))
+                written[LogSwitch] = wanted ? "true" : "false";
+            notes?.Add("the price trace, the forecast score and the ultralog are one setting now, " +
+                       "Enable extended debug logging, and yours is " + (wanted ? "on" : "off"));
             return true;
         }
 
