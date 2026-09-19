@@ -298,7 +298,7 @@
 		<string id="TL456" text="the market you would sell them in cannot pay for more"/>
 		<string id="TL457" text="Enable extended debug logging"/>
 		<string id="TL458" text="Writes TradeLord's own workings to TradeLord.log: what every market pays and charges for the goods you carry, how well the forecast and the panel's promises held up when you walked in, and everything the map marker weighed. Needs Count what is on its way to a market for the forecast half. ON by default; turn it off to keep the log short."/>
-		<string id="TL459" text="Pick the market a buy is aimed at on the whole stack"/>
-		<string id="TL460" text="When TradeLord buys, it picks the market it means to sell that good in. OFF: that market is picked on what it pays for one unit. ON: the few best are weighed again on what they would really pay for the whole lot, which is closer to the truth and costs more time at every market you walk into. ON while it is being tried out."/>
+		<string id="TL459" text="Pick where to sell on the whole load"/>
+		<string id="TL460" text="Every good TradeLord buys is bought for a market it means to sell it in. OFF: that market is picked on what it pays for one unit. ON: the five best are weighed again on what they would pay for the whole load, which is what you will really be paid. It costs a little time at every market you walk into. ON while it is being tried out."/>
 	</strings>
 </base>
