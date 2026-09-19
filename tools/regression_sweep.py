@@ -1634,7 +1634,7 @@ chk("1.3.8", "quick-buy stops when the budget is spent",
     "if (market.Stopped || market.Spendable() <= 0) break;" in
         buy_pass())
 chk("1.3.8", "the buying pass takes only what a market in reach pays more for, and only above the margin",
-    (lambda b, far: "if (!market.ResaleMarket(one.At, here, out int elsewhere))\n"
+    (lambda b, far: "if (!market.ResaleMarket(one.At, here, carried + take, out int elsewhere))\n"
                     "                { tally.Note(Block.NoResaleMarket); continue; }" in b
                and "Settlement buyer = elsewhere.Item1;" in b
                and "if (buyer == null) return false;" in b
@@ -4154,7 +4154,7 @@ chk("1.14.3", "a market whose merchant has no gold is no destination in any list
               and ordered(body, "if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold,",
                           "int price = Priced.At(s.SettlementComponent,"))
     (method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")) and
-    ".WhereThisEarnsFastest(Item(at), paid, _pass.Site) ?? (null, 0);" in
+    ".WhereThisEarnsFastest(Item(at), paid, units, _pass.Site) ?? (null, 0);" in
         buy_pass() and
     "var markets = EverySell(item);" in
         method_body(S['Ledger.cs'], "public (Settlement town, int price) WhereThisEarnsFastest") and
@@ -4957,6 +4957,7 @@ EVER_SHIPPED = {
     "MaxCargoShare": "float", "PartyTradeXpShare": "float",
     "MarkPriceDirection": "bool", "PriceTrace": "bool",
     "MaxWorkshopsOwned": "int", "Ultralog": "bool", "ExtendedDebugLogging": "bool",
+    "PickTheBuyerOnTheWholeStack": "bool",
 }
 
 def settings_now():
@@ -5987,10 +5988,10 @@ def a_market_visit_prices_each_town_once_for_everything_on_the_shelf():
                 in prime
             and ordered(buy, "goods.Add(Item(one.At));",
                         "LedgerBehavior.Instance?.PrimeMarketsFor(goods);",
-                        ".WhereThisEarnsFastest(Item(at), paid, _pass.Site)")
+                        ".WhereThisEarnsFastest(Item(at), paid, units, _pass.Site)")
             and ordered(method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy"),
                         "market.PriceTheMarketsFor(shelf);",
-                        "market.ResaleMarket(one.At, here, out int elsewhere)")
+                        "market.ResaleMarket(one.At, here, carried + take, out int elsewhere)")
             and ordered(cheapest, "goods.Add(it);",
                         "LedgerBehavior.Instance?.PrimeMarketsFor(goods);",
                         "TradePolicy.UnpaidWorth(it);")
@@ -9467,7 +9468,7 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 15
+            and ALL.count("Tongue.Named(") == 16
             and '_route.Item == null ? "" : Tongue.Named(_route.Item.Name, _route.Item.StringId)'
                 in S['Panel.cs']
             and '_route.From == null ? "" : Tongue.Named(_route.From.Name, _route.From.StringId)'
@@ -10081,9 +10082,12 @@ def the_shelf_is_ranked_by_what_a_pick_would_really_make():
             and "if (unitPrice <= 0 || stocked <= 0 || spendable <= 0) return 0;" in rule
             and "return take <= 0 ? 0f : take * profitPerUnit;" in
                 method_body(S['TradeMath.cs'], "public static float WhatThisPickWouldMake")
-            and "picked.Worth = WhatThisPickWouldReallyMake(market, one.At, carried, here," in want
-            and "TradeMath.MostYouCouldTake(here, one.Good.Weight, market.TheirsToSell(one.At)," in want
-            and "market.Spendable(), market.Room(), s.BuyCapPerItem), s);" in want
+            and ordered(want, "int take = TradeMath.MostYouCouldTake(here, one.Good.Weight,",
+                        "market.TheirsToSell(one.At),",
+                        "market.Spendable(), market.Room(),",
+                        "s.BuyCapPerItem);")
+            and "picked.Worth = WhatThisPickWouldReallyMake(market, one.At, carried, here, take, s);"
+                in want
             and "if (cap > 0 && cap < take) take = cap;" in rule
             and "The_buy_cap_per_item_holds_the_take_down_to_what_it_allows" in MATHTESTS
             and ordered(made, "int wouldDraw = market.ResaleUpTo(at, carried + u + 1);",
@@ -10166,11 +10170,12 @@ def a_buyer_is_picked_by_what_it_earns_a_day_not_by_its_price_alone():
             and "return PerDay(sellPrice - paid, days);" in rate
             and "float days = Travel.EstimateDaysFromParty(town);" in far
             and "float rate = TradeMath.EarnedPerDay(price, paid, days);" in far
-            and "if (best != null && rate <= bestRate) continue;" in far
+            and "int at = shortlist.Count;" in far
+            and "while (at > 0 && rate > shortlist[at - 1].rate) at--;" in far
             and "var markets = EverySell(item);" in far
-            and "bool ResaleMarket(int at, int paid, out int price);" in S['Passes.cs']
+            and "bool ResaleMarket(int at, int paid, int units, out int price);" in S['Passes.cs']
             and ordered(want, "int here = market.PriceToBuy(one.At);",
-                        "market.ResaleMarket(one.At, here, out int elsewhere)")
+                        "market.ResaleMarket(one.At, here, carried + take, out int elsewhere)")
             and "BestSell(" not in method_body(S['Trading.cs'], "private sealed class BuyingAt")
             and all(one in MATHTESTS for one in
                     ("A_nearer_buyer_paying_a_little_less_earns_more_a_day_than_a_far_one",
@@ -10330,7 +10335,8 @@ chk("1.85.1", "the selling pass works down your cargo by what each good would ma
 
 
 def the_buyers_gold_is_read_only_where_the_mod_reads_the_world_live():
-    resale = method_body(S['Trading.cs'], "public bool ResaleMarket(int at, int paid, out int price)")
+    resale = method_body(S['Trading.cs'],
+                              "public bool ResaleMarket(int at, int paid, int units, out int price)")
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes()")
     return (ordered(resale, "Options.Current.Omniscient",
                     "? TradeRules.WhatTheTillCanPay(buyer.SettlementComponent?.Gold ?? 0,",
@@ -10349,7 +10355,8 @@ def the_log_says_which_market_a_good_was_bought_for():
     t = S['Trading.cs']
     meant = method_body(t, "private static string MeantFor")
     detail = method_body(t, "private static void LogDetail")
-    resale = method_body(t, "public bool ResaleMarket(int at, int paid, out int price)")
+    resale = method_body(t,
+        "public bool ResaleMarket(int at, int paid, int units, out int price)")
     return ('if (selling || item == null || !Options.Current.ExtendedDebugLogging) return "";' in meant
             and 'if (!aimed.TryGetValue(item, out var far) || far.where == null) return "";' in meant
             and '", meant for " + far.where + " at " + far.price + " a unit";' in meant

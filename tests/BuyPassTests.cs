@@ -46,6 +46,7 @@ namespace TradeLord.Tests
             internal int PayNothingAfter = -1;
             internal int Described;
             internal int Ranked = -1;
+            internal int Weighed = -1;
 
             internal Stall Add(Good good, int amount = 1, int price = 100, int resale = 200)
             {
@@ -82,8 +83,9 @@ namespace TradeLord.Tests
 
             public void PriceTheMarketsFor(List<Pick> shelf) => Ranked = shelf.Count;
 
-            public bool ResaleMarket(int at, int paid, out int price)
+            public bool ResaleMarket(int at, int paid, int units, out int price)
             {
+                Weighed = units;
                 price = Stalls[at].Resale;
                 return Stalls[at].Elsewhere;
             }
@@ -179,6 +181,16 @@ namespace TradeLord.Tests
             Run run = Buy(market);
             Assert.Equal(3, run.Units);
             Assert.Equal(new[] { "iron", "iron", "iron" }, market.Taken);
+        }
+
+        [Fact]
+        public void The_market_a_buy_is_aimed_at_is_asked_about_the_whole_stack()
+        {
+            var market = new FakeMarket();
+            Stall stall = market.Add(Cargo("iron"), amount: 10, price: 100, resale: 200);
+            stall.Carried = 4;
+            Buy(market);
+            Assert.Equal(14, market.Weighed);
         }
 
         [Fact]

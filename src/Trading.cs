@@ -614,6 +614,16 @@ namespace TradeLord
             return true;
         }
 
+        private static void SayWhatPickingABuyerCost()
+        {
+            if (!Options.Current.ExtendedDebugLogging || LedgerBehavior.BuyerWalks <= 0) return;
+            Log.Write("  picking a buyer walked " + LedgerBehavior.BuyerWalks + " price ladder(s), " +
+                      LedgerBehavior.BuyerRungs + " rung(s) in all, in " +
+                      (LedgerBehavior.BuyerTicks / 10000d).ToString("0.0",
+                          System.Globalization.CultureInfo.InvariantCulture) + " ms");
+            LedgerBehavior.ForgetWhatPickingABuyerCost();
+        }
+
         private static void WarnNoRoomToCarry()
         {
             if (TradedThisVisit()) return;
@@ -1660,6 +1670,7 @@ namespace TradeLord
             float shareCap = pass.ShareCap;
             var market = new BuyingAt(pass, what, named);
 
+            LedgerBehavior.ForgetWhatPickingABuyerCost();
             var stock = new List<Pick>();
             if (pass.Spendable() > 0)
                 stock = TradePass.WhatToBuy(market, pass.Books, pass.Sim, shareCap,
@@ -1672,6 +1683,7 @@ namespace TradeLord
                                   Options.Current, tally));
 
             int bought = moved.Units;
+            SayWhatPickingABuyerCost();
 
             if (pass.Reports && tally.Saw(Block.CarryWeight)) _cargoWasFull = true;
 
@@ -1762,10 +1774,10 @@ namespace TradeLord
                 LedgerBehavior.Instance?.PrimeMarketsFor(goods);
             }
 
-            public bool ResaleMarket(int at, int paid, out int price)
+            public bool ResaleMarket(int at, int paid, int units, out int price)
             {
                 var elsewhere = LedgerBehavior.Instance?
-                    .WhereThisEarnsFastest(Item(at), paid, _pass.Site) ?? (null, 0);
+                    .WhereThisEarnsFastest(Item(at), paid, units, _pass.Site) ?? (null, 0);
                 price = elsewhere.Item2;
                 Settlement buyer = elsewhere.Item1;
                 if (buyer == null) return false;

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.88.0
+
+- Pick the market a buy is aimed at on the whole stack, a new setting that ships on: the best markets for a good are weighed on what they would pay for the whole lot rather than for one unit
+- With Enable extended debug logging on, TradeLord.log names the market that weighing the whole stack picked where the price of one unit alone would have picked another
+- With Enable extended debug logging on, TradeLord.log says after every buying pass how many price ladders picking a market to sell in walked, and how long they took
+- The mod description now names Pick the market a buy is aimed at on the whole stack
+
 ## 1.87.0
 
 - The three switches under Debug are one setting now, Enable extended debug logging, and it ships on

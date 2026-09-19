@@ -78,6 +78,7 @@
 - ✅ It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, it keeps enough haul animals to carry what you are already carrying, and it keeps back as many animals as a quest of yours is waiting on. One switch turns it off
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
+- ✅ Pick the market a buy is aimed at on the whole stack, on while it is being tried out: the best markets for a good are weighed on what they would really pay for the whole lot rather than for one unit
 - ✅ Holds trade goods and livestock you never paid for, the ones a town event hands you or a quest leaves in your bags, until a market beats what the cheapest market it knows would have charged for them by your margin, so they are never given away at the first stall that will take them
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, once you switch it on. Off out of the box, so looted gear goes to the first market that can pay for it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
