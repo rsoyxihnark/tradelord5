@@ -582,12 +582,23 @@ namespace TradeLord
         public (Settlement town, int price) BestSell(ItemObject item) => First(TopMarkets(item, selling: true));
         public (Settlement town, int price) BestBuy(ItemObject item) => First(TopMarkets(item, selling: false));
 
-        public (Settlement town, int price) WhereThisEarnsFastest(ItemObject item, int paid,
-                                                                 Settlement notHere)
+        internal const int BuyersWeighedOnTheStack = 5;
+
+        internal static int BuyerWalks;
+        internal static int BuyerRungs;
+        internal static long BuyerTicks;
+
+        internal static void ForgetWhatPickingABuyerCost()
         {
-            Settlement best = null;
-            int bestPrice = 0;
-            float bestRate = -1f;
+            BuyerWalks = 0;
+            BuyerRungs = 0;
+            BuyerTicks = 0L;
+        }
+
+        public (Settlement town, int price) WhereThisEarnsFastest(ItemObject item, int paid,
+                                                                 int units, Settlement notHere)
+        {
+            var shortlist = new List<(Settlement town, int price, float days, float rate)>();
             var markets = EverySell(item);
             for (int i = 0; i < markets.Count; i++)
             {
@@ -596,12 +607,39 @@ namespace TradeLord
                 float days = Travel.EstimateDaysFromParty(town);
                 if (TradeMath.OutOfReach(days)) continue;
                 float rate = TradeMath.EarnedPerDay(price, paid, days);
-                if (best != null && rate <= bestRate) continue;
-                best = town;
-                bestPrice = price;
-                bestRate = rate;
+                int at = shortlist.Count;
+                while (at > 0 && rate > shortlist[at - 1].rate) at--;
+                if (at >= BuyersWeighedOnTheStack) continue;
+                shortlist.Insert(at, (town, price, days, rate));
+                if (shortlist.Count > BuyersWeighedOnTheStack)
+                    shortlist.RemoveAt(BuyersWeighedOnTheStack);
             }
-            return (best, bestPrice);
+            if (shortlist.Count == 0) return (null, 0);
+            var flat = shortlist[0];
+            if (!Options.Current.PickTheBuyerOnTheWholeStack || units <= 1 || shortlist.Count == 1)
+                return (flat.town, flat.price);
+
+            long started = System.DateTime.UtcNow.Ticks;
+            var deep = flat;
+            float bestRate = float.MinValue;
+            for (int i = 0; i < shortlist.Count; i++)
+            {
+                var one = shortlist[i];
+                int fetched = Bulk.SellWalk(one.town, item, units, one.price, out int rungs);
+                BuyerWalks++;
+                BuyerRungs += rungs;
+                float rate = TradeMath.PerDay(fetched - (long)paid * units, one.days);
+                if (rate <= bestRate) continue;
+                bestRate = rate;
+                deep = one;
+            }
+            BuyerTicks += System.DateTime.UtcNow.Ticks - started;
+            if (deep.town != flat.town && Options.Current.ExtendedDebugLogging)
+                Log.Write("buyer for " + Tongue.Named(item.Name, item.StringId) + ": all " + units +
+                          " unit(s) weighed picked " + deep.town.Name + " at " + deep.price +
+                          " a unit, where the first unit alone would have picked " +
+                          flat.town.Name + " at " + flat.price);
+            return (deep.town, deep.price);
         }
 
         public List<(Settlement town, int price)> TopSell(ItemObject item, int n) => TakeN(TopMarkets(item, true), n);
