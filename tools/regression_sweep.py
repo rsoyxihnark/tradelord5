@@ -9302,7 +9302,10 @@ def the_rising_or_falling_mark_says_it_needs_live_prices_off():
     return ("Only does anything with Live world prices off" in spoken(ENGLISH)['TL407']
             and "{=TL407}" in M
             and "Only does anything with Live world prices off" in M
-            and "It needs Live world prices off, since that is when TradeLord records prices at all" in README)
+            and "Mark a market rising or falling needs Live world prices off, since that is when "
+                "TradeLord records prices at all" in README
+            and "Live world prices, on out of the box" in README
+            and "Live world prices off. Off out of the box" not in README)
 
 def quiet_mode_names_the_warnings_it_still_shows():
     entered = method_body(S['Trading.cs'],
@@ -10288,7 +10291,7 @@ chk("1.85.0", "the map marker walks a stack down the price ladder the way a sale
 
 def a_stack_is_judged_unit_by_unit_against_the_market_that_would_buy_it():
     buy = buy_pass()
-    rungs = method_body(S['Trading.cs'], "public int ResaleUpTo(int at, int units)")
+    rungs = method_body(S['Market.cs'], "internal int Through(int units)")
     return (ordered(method_body(S['Passes.cs'], "internal static Traded BuyThem"),
                     "int held = market.Carried(picked.At) + books.Held(sim, good.Id);",
                     "int till = market.ResaleTill(picked.At);",
@@ -10303,7 +10306,10 @@ def a_stack_is_judged_unit_by_unit_against_the_market_that_would_buy_it():
             and "Realizable" not in method_body(S['Passes.cs'], "internal struct Pick")
             and "Carried" not in method_body(S['Passes.cs'], "internal struct Pick")
             and "new Ladder(buyer, Item(at), true, price, 0)," in buy
-            and "int price = far.rungs.At(u);" in rungs
+            and "far.rungs.Through(units)" in buy
+            and "int price = At(_running.Count);" in rungs
+            and "if (price <= 0) { _stopsAt = _running.Count; break; }" in rungs
+            and "_running.Add((_running.Count == 0 ? 0L : _running[_running.Count - 1]) + price);" in rungs
             and "internal static bool TheBuyerCouldNotPay(int drawnSoFar, int till) =>" in S['Rules.cs']
             and "till > 0 && drawnSoFar > till;" in S['Rules.cs']
             and "the market you would sell them in cannot pay for more" in S['Reasons.cs']

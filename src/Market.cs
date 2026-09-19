@@ -82,6 +82,8 @@ namespace TradeLord
         private readonly Shelf _shelf;
         private readonly bool _selling;
         private readonly List<int> _priced = new List<int>();
+        private readonly List<long> _running = new List<long>();
+        private int _stopsAt = -1;
 
         internal Ladder(Settlement site, ItemObject item, bool selling, int quoted, int landed)
         {
@@ -90,6 +92,28 @@ namespace TradeLord
         }
 
         internal bool Walkable => _shelf.Walkable;
+
+        internal int Through(int units)
+        {
+            if (units <= 0) return 0;
+            if (!_shelf.Walkable)
+            {
+                int flat = _shelf.Price();
+                if (flat <= 0) return 0;
+                long whole = (long)flat * units;
+                return whole > int.MaxValue ? int.MaxValue : (int)whole;
+            }
+            while (_stopsAt < 0 && _running.Count < units)
+            {
+                int price = At(_running.Count);
+                if (price <= 0) { _stopsAt = _running.Count; break; }
+                _running.Add((_running.Count == 0 ? 0L : _running[_running.Count - 1]) + price);
+            }
+            int taken = _stopsAt >= 0 && units > _stopsAt ? _stopsAt : units;
+            if (taken <= 0) return 0;
+            long total = _running[taken - 1];
+            return total > int.MaxValue ? int.MaxValue : (int)total;
+        }
 
         internal int At(int taken)
         {
