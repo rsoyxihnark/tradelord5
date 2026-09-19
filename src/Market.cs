@@ -279,7 +279,7 @@ namespace TradeLord
     {
         internal static void Say(Settlement site, string when)
         {
-            if (!Options.Current.PriceTrace || site == null) return;
+            if (!Options.Current.ExtendedDebugLogging || site == null) return;
             Guard.Run("PriceTrace", () => Written(site, when));
         }
 
