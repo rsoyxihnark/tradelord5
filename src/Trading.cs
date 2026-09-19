@@ -1794,18 +1794,9 @@ namespace TradeLord
                 return true;
             }
 
-            public int ResaleUpTo(int at, int units)
-            {
-                if (units <= 0 || _resale == null || !_resale.TryGetValue(at, out var far)) return 0;
-                long total = 0;
-                for (int u = 0; u < units; u++)
-                {
-                    int price = far.rungs.At(u);
-                    if (price <= 0) break;
-                    total += price;
-                }
-                return total > int.MaxValue ? int.MaxValue : (int)total;
-            }
+            public int ResaleUpTo(int at, int units) =>
+                units <= 0 || _resale == null || !_resale.TryGetValue(at, out var far)
+                    ? 0 : far.rungs.Through(units);
 
             public int ResaleTill(int at) =>
                 _resale != null && _resale.TryGetValue(at, out var far) ? far.till : 0;
