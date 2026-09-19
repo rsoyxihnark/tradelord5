@@ -564,9 +564,9 @@ def every_market_a_good_could_be_sold_at_is_offered_to_the_route_scan():
             and "var buys = TopBuy(item, MarketRank.TopCacheSize);" in scan
             and "ledger.TopSell(item, MarketRank.TopCacheSize);" in S['TooltipPatches.cs']
             and "var markets = EverySell(item);" in
-                method_body(l, "public (Settlement town, int price) WhereThisEarnsFastest")
+                method_body(l, "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
             and ordered(scan, "float ceiling = (float)(openingSell - openingBuy) * qtyCap;",
-                        "if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey) continue;",
+                        "if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey)",
                         "RouteQuote q = Bulk.Walk("))
 
 def a_route_scan_prices_each_town_once_for_every_good_it_wants():
@@ -1636,14 +1636,14 @@ chk("1.3.8", "quick-buy stops when the budget is spent",
 chk("1.3.8", "the buying pass takes only what a market in reach pays more for, and only above the margin",
     (lambda b, far: "if (!market.ResaleMarket(one.At, here, carried + take, out int elsewhere))\n"
                     "                { tally.Note(Block.NoResaleMarket); continue; }" in b
-               and "Settlement buyer = elsewhere.Item1;" in b
+               and "Settlement buyer = elsewhere.town;" in b
                and "if (buyer == null) return false;" in b
                and "if (!TradeMath.BuyAcceptable(price, TradeMath.Realizable(wouldDraw - drawn," in b
                and "{ tally.Note(Block.BelowMargin); break; }" in b
                and "if (town == null || price <= 0 || town == notHere) continue;" in far
                and "if (TradeMath.OutOfReach(days)) continue;" in far)
     (buy_pass(),
-     method_body(S['Ledger.cs'], "public (Settlement town, int price) WhereThisEarnsFastest")))
+     method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")))
 chk("1.3.2", "the buying pass stops at the purse, the per-item denar cap, the carry weight and the herd",
     (lambda b: "if (price > budget) return Block.BudgetSpent;" in b
            and "taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;" in b
@@ -1857,12 +1857,12 @@ chk("1.3.17", "the marker picks its town through the same ceiling as everything 
         method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo"))
 chk("1.3.17", "the haircut filters every route pair, on the prices that pair would really open at",
     "float realizable = TradePolicy.Realizable(openingSell);" in S['Ledger.cs'] and
-    "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) continue;" in S['Ledger.cs'] and
+    "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { thrownAway++; continue; }" in S['Ledger.cs'] and
     "Realizable(sellPrice)" not in S['Ledger.cs'] and
     "BuyAcceptable(buyPrice" not in S['Ledger.cs'] and
     ordered(method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes"),
             "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
-            "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) continue;",
+            "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { thrownAway++; continue; }",
             "Bulk.Walk(from, to, item"))
 chk("1.3.18", "denar cap reaches route quantities",
     "int spendCap = Options.Current.BuyValueCapPerItem;" in S['Ledger.cs'])
@@ -1923,7 +1923,7 @@ chk("1.3.26", "pathfinder calls are gated behind a straight-line lower bound",
     "float soonest = toBuy + Travel.StraightDaysBetween(from, to);" in S['Ledger.cs'] and
     ordered(S['Ledger.cs'], "float soonest = toBuy", "float days = toBuy + Travel.EstimateDaysBetween"))
 chk("1.3.26", "the best route so far prunes a pair before it costs a walk through every unit's price",
-    "if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey) continue;" in S['Ledger.cs'] and
+    "if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey)\n                        { thrownAway++; continue; }" in S['Ledger.cs'] and
     S['Ledger.cs'].count("ceiling / Math.Max") == 1 and
     "Math.Max(soonest, 0.25f)" not in S['Ledger.cs'] and
     ordered(S['Ledger.cs'], "ceiling / Math.Max(days, 0.25f)", "Bulk.Walk(from, to, item"))
@@ -4154,10 +4154,10 @@ chk("1.14.3", "a market whose merchant has no gold is no destination in any list
               and ordered(body, "if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold,",
                           "int price = Priced.At(s.SettlementComponent,"))
     (method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopLive")) and
-    ".WhereThisEarnsFastest(Item(at), paid, units, _pass.Site) ?? (null, 0);" in
+    ".WhereThisEarnsFastest(Item(at), paid, units, _pass.Site) ?? (null, 0, null);" in
         buy_pass() and
     "var markets = EverySell(item);" in
-        method_body(S['Ledger.cs'], "public (Settlement town, int price) WhereThisEarnsFastest") and
+        method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest") and
     "LedgerBehavior.Instance?.BestSell(Item(at)) ?? (null, 0)" in
         sell_pass())
 
@@ -9679,7 +9679,7 @@ chk("1.80.2", "a window a button on the campaign map opens holds the mouse while
 
 def the_till_is_never_divided_by_a_price_nothing_has_tested():
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
-    tested = scan.find("if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) continue;")
+    tested = scan.find("if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { thrownAway++; continue; }")
     divided = scan.find("till / openingSell")
     bounds = {name: (float(lo), float(hi)) for name, lo, hi in re.findall(
         r'\{\s*"(\w+)",\s*new double\[\]\s*\{\s*([-\d.]+),\s*([-\d.]+)\s*\}', S['Migrate.cs'])}
@@ -10162,7 +10162,7 @@ chk("1.82.2", "a setting on the screen says what it does for every good rather t
 
 
 def a_buyer_is_picked_by_what_it_earns_a_day_not_by_its_price_alone():
-    far = method_body(S['Ledger.cs'], "public (Settlement town, int price) WhereThisEarnsFastest")
+    far = method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
     rate = method_body(S['TradeMath.cs'], "public static float EarnedPerDay")
     want = method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
     return ("public const float NoTripCountsShorterThan = 0.25f;" in S['TradeMath.cs']
@@ -10305,7 +10305,7 @@ def a_stack_is_judged_unit_by_unit_against_the_market_that_would_buy_it():
             and "int ResaleTill(int at);" in S['Passes.cs']
             and "Realizable" not in method_body(S['Passes.cs'], "internal struct Pick")
             and "Carried" not in method_body(S['Passes.cs'], "internal struct Pick")
-            and "new Ladder(buyer, Item(at), true, price, 0)," in buy
+            and "elsewhere.rungs ?? new Ladder(buyer, Item(at), true, price, 0)," in buy
             and "far.rungs.Through(units)" in buy
             and "int price = At(_running.Count);" in rungs
             and "if (price <= 0) { _stopsAt = _running.Count; break; }" in rungs
@@ -10368,7 +10368,7 @@ def the_log_says_which_market_a_good_was_bought_for():
             and '", meant for " + far.where + " at " + far.price + " a unit";' in meant
             and "MeantFor(selling, aimed, kv.Key));" in detail
             and "internal readonly Dictionary<ItemObject, (string where, int price)> Aimed =" in t
-            and ordered(resale, "Settlement buyer = elsewhere.Item1;",
+            and ordered(resale, "Settlement buyer = elsewhere.town;",
                         "if (buyer == null) return false;",
                         "_pass.Aimed[good] = (Tongue.Named(buyer.Name, buyer.StringId), price);"))
 
@@ -10613,6 +10613,74 @@ def the_kept_copies_are_a_closed_record_and_entries_go_only_to_the_changelog():
 
 chk("1.83.3", "the kept copies in the archive folder are a closed record, so a changelog entry is written into CHANGELOG.md and nowhere else and no check reads an entry back out of the archive",
     the_kept_copies_are_a_closed_record_and_entries_go_only_to_the_changelog())
+
+
+def the_far_market_ladder_is_walked_once_and_handed_on():
+    far = method_body(S['Ledger.cs'],
+                      "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
+    walk = method_body(S['Market.cs'], "internal static int SellWalk")
+    buy = buy_pass()
+    return (far and walk
+            and "internal static int SellWalk(Settlement site, ItemObject item, int units, int quoted,"
+                in S['Market.cs']
+            and "out int rungs, out Ladder walked)" in S['Market.cs']
+            and "walked = new Ladder(site, item, true, quoted, 0);" in walk
+            and "int price = walked.At(u);" in walk
+            and S['Market.cs'].count("new Ladder(site, item, true, quoted, 0);") == 1
+            and "Ladder deepRungs = null;" in far
+            and "out Ladder walked);" in far
+            and "deepRungs = walked;" in far
+            and "return (deep.town, deep.price, deepRungs);" in far
+            and "return (null, 0, null);" in far
+            and "return (flat.town, flat.price, null);" in far
+            and "elsewhere.rungs ?? new Ladder(buyer, Item(at), true, price, 0)," in buy
+            and buy.count("new Ladder(") == 1)
+
+
+chk("1.89.0", "the market a buy is aimed at has its price ladder walked once and handed on, rather than walked again from nothing once it has won",
+    the_far_market_ladder_is_walked_once_and_handed_on())
+
+
+def the_town_ceiling_says_what_turning_it_off_costs():
+    off = "Set it to 0 and the limit comes off, so every town in Calradia is weighed"
+    said = spoken(ENGLISH)
+    if off not in said['TL306'] or off not in M:
+        return False
+    for path in TRANSLATIONS.values():
+        if '0' not in spoken(path).get('TL306', ''):
+            return False
+    live = method_body(S['Ledger.cs'], "private List<(Settlement s, float days)> LiveCandidates")
+    warn = method_body(S['Ledger.cs'], "private static void SayIfTheTownCeilingIsOff")
+    return (live and warn
+            and "SayIfTheTownCeilingIsOff(list.Count);" in live
+            and "if (Options.Current.MaxTravelDaysTown > 0f) return;" in warn
+            and 'Log.Repeatable("town travel ceiling", weighed.ToString(),' in warn
+            and "the town travel ceiling is off" in warn)
+
+
+chk("1.89.0", "the town travel ceiling says on the settings screen what turning it off costs, in every language, and the log says so too while it is off",
+    the_town_ceiling_says_what_turning_it_off_costs())
+
+
+def the_route_scan_says_what_it_cost():
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    say = method_body(S['Ledger.cs'], "private static void SayWhatTheScanCost")
+    return (scan and say
+            and "long started = System.DateTime.UtcNow.Ticks;" in scan
+            and "int opened = 0, thrownAway = 0;" in scan
+            and scan.count("opened++;") == 1
+            and scan.count("thrownAway++;") == 3
+            and ordered(scan,
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
+                        "opened++;")
+            and "SayWhatTheScanCost(routes.Count, opened, thrownAway," in scan
+            and "if (!Options.Current.ExtendedDebugLogging) return;" in say
+            and '"route scan: " + found + " route(s) off " + opened +' in say
+            and "thrownAway + \" of them thrown away by a later test, in \"" in say)
+
+
+chk("1.89.0", "the route scan counts the opening prices it asked for and the ones a later test threw away, and writes both with the time it took",
+    the_route_scan_says_what_it_cost())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
