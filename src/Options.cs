@@ -143,9 +143,7 @@ namespace TradeLord
         public bool TradeWithVillages = true;
         public bool TradeWithCaravans = true;
         public bool SimulationMode = false;
-        public bool PriceTrace = true;
-        public bool ForecastScore = true;
-        public bool Ultralog = true;
+        public bool ExtendedDebugLogging = true;
         public bool StagedTrading = false;
         public int EconomySettlingDays = 0;
         public float TradeXpMultiplier = 1f;

@@ -309,12 +309,12 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void ThisVersionShipsTheWhipArmedSoAFileOlderThanItIsResetOnce()
+        public void ThisVersionShipsTheWhipSpentSoAnOlderFileIsLiftedRatherThanReset()
         {
             Assert.True(Whip.Armed);
             var written = File("GoldReserve", "800");
-            Assert.True(Whip.Crack(1, written));
-            Assert.Empty(written);
+            Assert.False(Whip.Crack(1, written));
+            Assert.Equal("800", written["GoldReserve"]);
         }
 
         [Fact]
@@ -326,12 +326,35 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void TheWhipIsStillWiredToTheShapeThisVersionShips()
+        public void TheWhipIsWiredToTheShapeItWasArmedAtAndIsSpentOnceALaterShapeShips()
         {
-            Assert.Equal(Migration.Shape, Whip.CracksAt);
-            Assert.True(Whip.CracksOn(Migration.Shape - 1));
+            Assert.True(Whip.CracksAt > 0 && Whip.CracksAt < Migration.Shape);
+            Assert.False(Whip.CracksOn(Migration.Shape - 1));
             Assert.False(Whip.CracksOn(Migration.Shape));
             Assert.False(Whip.CracksOn(Migration.Shape + 1));
+            Assert.True(Whip.Cracks(armed: true, cracksAt: Whip.CracksAt, shipped: Whip.CracksAt,
+                                    shape: Whip.CracksAt - 1));
+        }
+
+        [Fact]
+        public void TheThreeLogSwitchesAreOneSettingNow()
+        {
+            var written = File("PriceTrace", "true", "ForecastScore", "false", "Ultralog", "false");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(15, written, notes));
+            Assert.False(written.ContainsKey("PriceTrace"));
+            Assert.False(written.ContainsKey("ForecastScore"));
+            Assert.False(written.ContainsKey("Ultralog"));
+            Assert.Equal("true", written["ExtendedDebugLogging"]);
+            Assert.NotEmpty(notes);
+
+            var quiet = File("PriceTrace", "false", "ForecastScore", "false", "Ultralog", "false");
+            Assert.True(Migration.Lift(15, quiet, new List<string>()));
+            Assert.Equal("false", quiet["ExtendedDebugLogging"]);
+
+            var untouched = File("GoldReserve", "800");
+            Assert.False(Migration.Lift(15, untouched, new List<string>()));
+            Assert.Equal("800", untouched["GoldReserve"]);
         }
 
         [Fact]
@@ -456,7 +479,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(15, Migration.Shape);
+            Assert.Equal(16, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));
