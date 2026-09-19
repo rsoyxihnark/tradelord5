@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.89.0
+
+- Picking where to sell is quicker, so a buying pass in a market full of goods finishes sooner
+- Town travel ceiling now says on the settings screen that setting it to 0 weighs every town in Calradia and is the slowest TradeLord runs
+- With Enable extended debug logging on, TradeLord.log says while Town travel ceiling is off how many markets are being weighed
+- With Enable extended debug logging on, TradeLord.log says after every route scan how many prices it opened and how long it took
+- The mod description now says what turning Town travel ceiling off costs, and names what TradeLord.log writes after a route scan
+
 ## 1.88.2
 
 - The buying pass is quicker in a market full of goods, and quicker still when you are already carrying a large load

@@ -595,7 +595,7 @@ namespace TradeLord
             BuyerTicks = 0L;
         }
 
-        public (Settlement town, int price) WhereThisEarnsFastest(ItemObject item, int paid,
+        internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest(ItemObject item, int paid,
                                                                  int units, Settlement notHere)
         {
             var shortlist = new List<(Settlement town, int price, float days, float rate)>();
@@ -614,24 +614,27 @@ namespace TradeLord
                 if (shortlist.Count > BuyersWeighedOnTheStack)
                     shortlist.RemoveAt(BuyersWeighedOnTheStack);
             }
-            if (shortlist.Count == 0) return (null, 0);
+            if (shortlist.Count == 0) return (null, 0, null);
             var flat = shortlist[0];
             if (!Options.Current.PickTheBuyerOnTheWholeStack || units <= 1 || shortlist.Count == 1)
-                return (flat.town, flat.price);
+                return (flat.town, flat.price, null);
 
             long started = System.DateTime.UtcNow.Ticks;
             var deep = flat;
+            Ladder deepRungs = null;
             float bestRate = float.MinValue;
             for (int i = 0; i < shortlist.Count; i++)
             {
                 var one = shortlist[i];
-                int fetched = Bulk.SellWalk(one.town, item, units, one.price, out int rungs);
+                int fetched = Bulk.SellWalk(one.town, item, units, one.price, out int rungs,
+                                            out Ladder walked);
                 BuyerWalks++;
                 BuyerRungs += rungs;
                 float rate = TradeMath.PerDay(fetched - (long)paid * units, one.days);
                 if (rate <= bestRate) continue;
                 bestRate = rate;
                 deep = one;
+                deepRungs = walked;
             }
             BuyerTicks += System.DateTime.UtcNow.Ticks - started;
             if (deep.town != flat.town && Options.Current.ExtendedDebugLogging)
@@ -639,7 +642,7 @@ namespace TradeLord
                           " unit(s) weighed picked " + deep.town.Name + " at " + deep.price +
                           " a unit, where the first unit alone would have picked " +
                           flat.town.Name + " at " + flat.price);
-            return (deep.town, deep.price);
+            return (deep.town, deep.price, deepRungs);
         }
 
         public List<(Settlement town, int price)> TopSell(ItemObject item, int n) => TakeN(TopMarkets(item, true), n);
@@ -794,7 +797,18 @@ namespace TradeLord
             }
             _candidates = list;
             Freshness.Taken(ref _candStamp, hour);
+            SayIfTheTownCeilingIsOff(list.Count);
             return list;
+        }
+
+        private static void SayIfTheTownCeilingIsOff(int weighed)
+        {
+            if (Options.Current.MaxTravelDaysTown > 0f) return;
+            Log.Repeatable("town travel ceiling", weighed.ToString(),
+                           "the town travel ceiling is off, so nothing is held back by distance and " +
+                           weighed + " market(s) are weighed for every good on every pass. That is the " +
+                           "slowest TradeLord runs. Set Town travel ceiling above 0 if the map runs " +
+                           "roughly.");
         }
 
         private static List<(Settlement, int)> Rerank(List<(Settlement s, int price, float days)> all, bool selling)
@@ -1009,6 +1023,8 @@ namespace TradeLord
         private List<TradeRoute> ScanRoutes()
         {
             Bulk.Forget();
+            long started = System.DateTime.UtcNow.Ticks;
+            int opened = 0, thrownAway = 0;
             var routes = new List<TradeRoute>();
             ISet<string> locked = TradePolicy.LockedKeys();
             float cap = Options.Current.MaxTravelDaysTown;
@@ -1074,14 +1090,16 @@ namespace TradeLord
 
                         int landedAtSellTown = Forecast.WorthShift(to, item, days);
                         int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);
+                        opened++;
                         float realizable = TradePolicy.Realizable(openingSell);
-                        if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) continue;
+                        if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { thrownAway++; continue; }
 
                         int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;
-                        if (qtyCap <= 0) continue;
+                        if (qtyCap <= 0) { thrownAway++; continue; }
 
                         float ceiling = (float)(openingSell - openingBuy) * qtyCap;
-                        if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey) continue;
+                        if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey)
+                        { thrownAway++; continue; }
 
                         RouteQuote q = Bulk.Walk(from, to, item, qtyCap, till, spendCap,
                                                  buyPrice, sellPrice, landedAtBuyTown,
@@ -1134,8 +1152,19 @@ namespace TradeLord
             routes.Sort((x, y) => rankByScore
                 ? y.Score.CompareTo(x.Score)
                 : y.ProfitPerDay.CompareTo(x.ProfitPerDay));
+            SayWhatTheScanCost(routes.Count, opened, thrownAway,
+                               System.DateTime.UtcNow.Ticks - started);
             Bulk.Forget();
             return routes;
+        }
+
+        private static void SayWhatTheScanCost(int found, int opened, int thrownAway, long ticks)
+        {
+            if (!Options.Current.ExtendedDebugLogging) return;
+            Log.Write("route scan: " + found + " route(s) off " + opened +
+                      " opening price(s), " + thrownAway + " of them thrown away by a later test, in " +
+                      (ticks / 10000d).ToString("0.0",
+                          System.Globalization.CultureInfo.InvariantCulture) + " ms");
         }
 
         private static int Pressure(Dictionary<Settlement, int> map, Settlement s) =>
