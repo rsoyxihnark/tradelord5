@@ -11,6 +11,14 @@ using TaleWorlds.Core;
 
 namespace TradeLord
 {
+    internal struct Fetched
+    {
+        internal int Total;
+        internal int Units;
+        internal int Walked;
+        internal Ladder Rungs;
+    }
+
     internal struct RouteQuote
     {
         internal int Units;
@@ -184,22 +192,24 @@ namespace TradeLord
             return q;
         }
 
-        internal static int SellWalk(Settlement site, ItemObject item, int units, int quoted,
-                                     out int rungs, out Ladder walked)
+        internal static Fetched SellWalk(Settlement site, ItemObject item, int units, int quoted,
+                                         int paid)
         {
-            rungs = 0;
-            walked = null;
-            if (site == null || item == null || units <= 0) return 0;
-            walked = new Ladder(site, item, true, quoted, 0);
+            Fetched got = default(Fetched);
+            if (site == null || item == null || units <= 0) return got;
+            got.Rungs = new Ladder(site, item, true, quoted, 0);
             long total = 0;
             for (int u = 0; u < units; u++)
             {
-                int price = walked.At(u);
-                rungs++;
+                int price = got.Rungs.At(u);
+                got.Walked++;
                 if (price <= 0) break;
+                if (paid > 0 && !TradePolicy.BuyAcceptable(paid, TradePolicy.Realizable(price))) break;
                 total += price;
+                got.Units++;
             }
-            return total > int.MaxValue ? int.MaxValue : (int)total;
+            got.Total = total > int.MaxValue ? int.MaxValue : (int)total;
+            return got;
         }
 
         internal static int FirstUnit(Settlement site, ItemObject item, bool selling, int quoted,
