@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.90.0
+
+- The market a buy is aimed at is picked from every market in reach now, not the five paying most for one unit, so buying takes longer
+- The map marker now reads every market's price live, instead of keeping one it read up to three hours earlier
+- A market is weighed on the units it would really take from you, stopping where your Minimum profit margin runs out
+- The map marker is quicker despite reading prices live, because it stops asking a market once your margin is gone
+- The mod description no longer says the map marker can be on prices a few hours old
+
 ## 1.89.1
 
 - The selling pass starts quicker with a full inventory, because it no longer works out a price for gear it cannot sell
