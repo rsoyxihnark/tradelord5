@@ -1150,7 +1150,8 @@ namespace TradeLord
                 for (int at = 0; at < roster.Count; at++)
                 {
                     ItemRosterElement held = roster.GetElementCopyAtIndex(at);
-                    order.Add((held, WhatThisStackWouldMake(pass, held), at));
+                    order.Add((held, TradePolicy.CouldBeSold(held, pass.Locked)
+                                         ? WhatThisStackWouldMake(pass, held) : 0, at));
                     goods.Add(held.EquipmentElement.Item);
                 }
                 order.Sort((x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain)
