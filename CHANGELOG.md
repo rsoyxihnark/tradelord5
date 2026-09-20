@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.89.1
+
+- The selling pass starts quicker with a full inventory, because it no longer works out a price for gear it cannot sell
+- The selling pass and the map marker are quicker for goods you bought yourself, because their worth is read from what you paid
+- When a market sells nothing and several goods are held back for different reasons, the message on screen may name a different one
+
 ## 1.89.0
 
 - Picking where to sell is quicker, so a buying pass in a market full of goods finishes sooner

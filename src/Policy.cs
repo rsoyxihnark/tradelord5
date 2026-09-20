@@ -448,8 +448,28 @@ namespace TradeLord
             return best.Item2 > 0 ? best.Item2 : item.Value;
         }
 
-        internal static int WorthToBeat(ItemObject item) =>
-            TradeRules.WorthToBeat(Describe(item), CostBasis(item), UnpaidWorth(item));
+        internal static int WorthToBeat(ItemObject item)
+        {
+            Good good = Describe(item);
+            int paid = CostBasis(item);
+            return TradeRules.WorthIsWhatYouPaid(good, paid)
+                ? paid
+                : TradeRules.WorthToBeat(good, paid, UnpaidWorth(item));
+        }
+
+        internal static bool CouldBeSold(ItemRosterElement el, ISet<string> lockedKeys)
+        {
+            ItemObject item = el.EquipmentElement.Item;
+            if (item == null) return false;
+            SellFacts facts;
+            facts.QuestItem = el.EquipmentElement.IsQuestItem;
+            facts.AwaitedHeld = 0;
+            facts.FoodHeld = 0;
+            facts.QuestsReadable = Errands.Known;
+            return TradeRules.MaySell(Describe(item), el.Amount, facts, Options.Current,
+                                      new AskTheGame { Locks = lockedKeys, What = el.EquipmentElement })
+                              .Allowed;
+        }
 
         internal static int Credit(int proceeds, int basis, int unpaidWorth) =>
             TradeMath.Credit(proceeds, basis, unpaidWorth);

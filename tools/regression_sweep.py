@@ -815,10 +815,14 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
                           "private static List<(EquipmentElement item, int amount, int worth, int floor)> "
                           "WhatYouCarryToSell")
     floor = method_body(S['Marker.cs'], "private static int BestMarketFloor")
-    worth = between(S['Policy.cs'], "internal static int WorthToBeat", ";")
+    worth = method_body(S['Policy.cs'], "internal static int WorthToBeat(ItemObject item)")
     return ("TradePolicy.WorthToBeat(item), BestMarketFloor(item)));" in carried
             and "var cargo = WhatYouCarryToSell(party);" in marker
-            and "TradeRules.WorthToBeat(Describe(item), CostBasis(item), UnpaidWorth(item))" in worth
+            and "int paid = CostBasis(item);" in worth
+            and "TradeRules.WorthIsWhatYouPaid(good, paid)" in worth
+            and "? paid" in worth
+            and ": TradeRules.WorthToBeat(good, paid, UnpaidWorth(item));" in worth
+            and worth.count("UnpaidWorth(item)") == 1
             and ordered(method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch"),
                         "List<int> rungs = WhatThatMarketPays(site, market, item, party, amount);",
                         "int price = rungs[u];",
@@ -6212,8 +6216,10 @@ def goods_you_were_given_are_held_to_your_margin_like_the_ones_you_bought():
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
     return ("internal static bool TradedAsMerchandise(in Good good) =>" in rules
             and "good.IsTradeGood || good.IsLivestock;" in rules
+            and "internal static bool WorthIsWhatYouPaid(in Good good, int paid) =>" in rules
+            and "paid > 0 || !TradedAsMerchandise(good);" in rules
             and "internal static int WorthToBeat(in Good good, int paid, int unpaidWorth) =>" in rules
-            and "paid > 0 || !TradedAsMerchandise(good) ? paid : unpaidWorth;" in rules
+            and "WorthIsWhatYouPaid(good, paid) ? paid : unpaidWorth;" in rules
             and ordered(sell, "int worth = basis.Unit(out bool askTheMarket);",
                         "int mustBeat = TradeRules.WorthToBeat(good, worth, basis.UnpaidWorth);",
                         "if (!TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))")
@@ -10327,7 +10333,8 @@ chk("1.85.1", "each unit of a stack is judged against what the market that would
 def the_selling_pass_takes_what_makes_the_most_first():
     plan = method_body(S['Trading.cs'], "internal SellingFrom(Pass pass, string what, string named)")
     gain = method_body(S['Trading.cs'], "private static int WhatThisStackWouldMake")
-    return ("order.Add((held, WhatThisStackWouldMake(pass, held), at));" in plan
+    return ("order.Add((held, TradePolicy.CouldBeSold(held, pass.Locked)" in plan
+            and "? WhatThisStackWouldMake(pass, held) : 0, at));" in plan
             and "order.Sort((x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain)" in plan
             and ": x.at.CompareTo(y.at));" in plan
             and "for (int at = 0; at < order.Count; at++) _plan.Add(order[at].held);" in plan
@@ -10681,6 +10688,50 @@ def the_route_scan_says_what_it_cost():
 
 chk("1.89.0", "the route scan counts the opening prices it asked for and the ones a later test threw away, and writes both with the time it took",
     the_route_scan_says_what_it_cost())
+
+
+def the_far_markets_are_asked_only_when_their_answer_is_used():
+    worth = method_body(S['Policy.cs'], "internal static int WorthToBeat(ItemObject item)")
+    rules = S['Rules.cs']
+    return (worth
+            and "Good good = Describe(item);" in worth
+            and "int paid = CostBasis(item);" in worth
+            and ordered(worth, "TradeRules.WorthIsWhatYouPaid(good, paid)", "? paid",
+                        ": TradeRules.WorthToBeat(good, paid, UnpaidWorth(item));")
+            and worth.count("UnpaidWorth(item)") == 1
+            and "internal static bool WorthIsWhatYouPaid(in Good good, int paid) =>" in rules
+            and rules.count("paid > 0 || !TradedAsMerchandise(good);") == 1
+            and "WorthIsWhatYouPaid(good, paid) ? paid : unpaidWorth;" in rules)
+
+
+chk("1.89.1", "what a good is worth is read from what you paid for it wherever that settles it, so the far markets are asked only when their price is the answer",
+    the_far_markets_are_asked_only_when_their_answer_is_used())
+
+
+def the_sell_order_prices_nothing_it_could_never_sell():
+    plan = method_body(S['Trading.cs'], "internal SellingFrom(Pass pass, string what, string named)")
+    peek = method_body(S['Policy.cs'],
+                       "internal static bool CouldBeSold(ItemRosterElement el, ISet<string> lockedKeys)")
+    real = method_body(S['Policy.cs'],
+                       "internal static bool MaySell(in Good good, ItemRosterElement el, ISet<string> lockedKeys,")
+    return (plan and peek and real
+            and "TradePolicy.CouldBeSold(held, pass.Locked)" in plan
+            and "? WhatThisStackWouldMake(pass, held) : 0, at));" in plan
+            and "facts.AwaitedHeld = 0;" in peek
+            and "facts.FoodHeld = 0;" in peek
+            and "TradeRules.MaySell(Describe(item), el.Amount, facts, Options.Current," in peek
+            and "TakeBack" not in peek
+            and real.count("TakeBack(") == 2
+            and "for (int at = 0; at < order.Count; at++) _plan.Add(order[at].held);" in plan
+            and plan.count("order.Add(") == 1
+            and ordered(method_body(S['Passes.cs'], "internal static Traded SellThem"),
+                        "for (int at = 0; at < market.Count; at++)",
+                        "if (!market.MaySell(at, good, out int keep, out Block stopped)) "
+                        "{ tally.Note(stopped); continue; }"))
+
+
+chk("1.89.1", "the selling pass asks no price for a row its own rules could never move, and still carries every row into the pass so a stall is explained",
+    the_sell_order_prices_nothing_it_could_never_sell())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
