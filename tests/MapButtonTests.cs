@@ -67,12 +67,14 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_strip_it_falls_back_to_is_the_right_edge_at_mid_height()
+        public void No_part_of_the_map_is_reserved_when_the_button_cannot_be_measured()
         {
-            Assert.True(MapButton.OverTheStripInstead(0.95f, 0.5f));
-            Assert.False(MapButton.OverTheStripInstead(0.5f, 0.5f));
-            Assert.False(MapButton.OverTheStripInstead(0.95f, 0.2f));
-            Assert.False(MapButton.OverTheStripInstead(0.95f, 0.8f));
+            foreach (float x in new[] { 0.5f, 0.90f, 0.95f, 0.99f })
+                foreach (float y in new[] { 0.2f, 0.46f, 0.5f, 0.54f, 0.8f })
+                {
+                    Assert.False(MapButton.Over(x, y, ScreenW, ScreenH, 0f, 0f, MarginRight));
+                    Assert.False(MapButton.Over(x, y, 0f, 0f, Width, Height, MarginRight));
+                }
         }
 
         [Fact]

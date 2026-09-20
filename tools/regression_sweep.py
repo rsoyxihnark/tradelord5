@@ -1761,9 +1761,12 @@ chk("1.3.11", "the panel hands back the movie and the mouse, and honours the mod
     "layer.ReleaseMovie(movie)" in method_body(S['Panel.cs'], "internal static void Cleanup") and
     "SetInputRestrictions(false, InputUsageMask.All)" in
     method_body(S['Panel.cs'], "private static void ApplyIdleInput") and
-    (lambda b: ordered(b, "if (wantMouse)", "SetInputRestrictions(true, InputUsageMask.Mouse)",
+    (lambda b: ordered(b, "if (wantMouse)", "_layer.ActiveCursor = CursorType.Default;",
+                       "SetInputRestrictions(true, InputUsageMask.MouseButtons)",
                        "else", "SetInputRestrictions(false, InputUsageMask.All)"))
     (method_body(S['Panel.cs'], "private static void UpdateIdleInput")) and
+    "SetInputRestrictions(true, InputUsageMask.Mouse)" in
+    method_body(S['Panel.cs'], "private static void Show") and
     "if (!Input.IsKeyDown(_modifiers[i].left) && !Input.IsKeyDown(_modifiers[i].right)) return false;" in
     method_body(S['Panel.cs'], "private static bool HotkeyReleased"))
 chk("1.3.9", "panel respects locks", "ISet<string> locked = TradePolicy.LockedKeys();" in S['Ledger.cs'])
@@ -2727,11 +2730,14 @@ chk("1.6.7", "the panel's own pin list, not the map's marker state, decides what
     S['Panel.cs'].count("_panelPins.Remove(") == 1 and
     "LedgerPanel.IsPinned(_tracked)" in S['Marker.cs'])
 
-chk("1.6.8", "the map button reserves the mouse over the button, not over the map around it",
-    "MapButton.OverTheStripInstead(m.x, m.y);" in
-        method_body(S['Panel.cs'], "private static bool OverAssumedBounds") and
-    "x >= 0.90f && y >= 0.46f && y <= 0.54f;" in S['Rules.cs'] and
-    "The_strip_it_falls_back_to_is_the_right_edge_at_mid_height" in MAPBUTTONTESTS)
+chk("1.90.1", "the map button reserves the mouse over the button and nowhere else, with no guessed region standing in for it",
+    "OverTheStripInstead" not in S['Rules.cs'] and "OverAssumedBounds" not in S['Panel.cs'] and
+    "0.90f" not in S['Rules.cs'] and
+    "0.90f" not in method_body(S['Panel.cs'], "private static bool OverButtonBounds") and
+    "0.90f" not in method_body(S['Panel.cs'], "private static Widget TheMapButton") and
+    "if (button == null) return false;" in
+        method_body(S['Panel.cs'], "private static bool OverButtonBounds") and
+    "No_part_of_the_map_is_reserved_when_the_button_cannot_be_measured" in MAPBUTTONTESTS)
 chk("1.6.8", "the food reserve is spent only on goods the sell rules would actually move",
     (lambda b: ordered(b, "said.Why = Block.NotTradable; return said;",
                        "int reserved = DrawKeepBack(amount - said.KeepCount, facts.FoodHeld, out bool fed);"))
@@ -2746,7 +2752,7 @@ chk("1.6.9", "every setting name, hint and group heading carries a translation m
 chk("1.6.10", "the button's own measured size decides the reserved region, so it holds at any aspect ratio",
     (lambda b: "Screen.RealScreenResolutionWidth" in b and "button.ScaledSuggestedWidth" in b
            and "button.ScaledMarginRight" in b and "0.90f" not in b
-           and "MapButton.Over(m.x, m.y, screenW, screenH, width, height," in b)
+           and "return MapButton.Over(m.x, m.y," in b)
     (method_body(S['Panel.cs'], "private static bool OverButtonBounds")) and
     "The_region_holds_at_any_aspect_ratio" in MAPBUTTONTESTS)
 chk("1.6.10", "the prefab carries the id the panel looks the button up by",
@@ -2754,9 +2760,17 @@ chk("1.6.10", "the prefab carries the id the panel looks the button up by",
 chk("1.6.10", "the button still sits flush right and centred, which is what the reserved region assumes",
     re.search(r'Id="TradeLordMapButton"[\s\S]{0,400}?HorizontalAlignment="Right"', PREFAB) is not None and
     re.search(r'Id="TradeLordMapButton"[\s\S]{0,400}?VerticalAlignment="Center"', PREFAB) is not None)
-chk("1.6.10", "an unreadable button falls back to the old region instead of reserving nothing",
-    "return OverAssumedBounds(m);" in method_body(S['Panel.cs'], "private static bool OverButtonBounds") and
-    "_mapButton = null;" in method_body(S['Panel.cs'], "internal static void Cleanup"))
+chk("1.90.1", "a button the panel has not read yet reserves nothing, and the panel keeps looking for it rather than giving up after one try",
+    (lambda hunt: hunt
+        and "if (_mapButton != null) return _mapButton;" in hunt
+        and "if (_huntIn > 0) { _huntIn--; return null; }" in hunt
+        and "_huntIn = BetweenButtonHunts;" in hunt
+        and "_mapButton = FindMapButton(_layer.UIContext?.Root);" in hunt)
+    (method_body(S['Panel.cs'], "private static Widget TheMapButton")) and
+    "Widget button = TheMapButton();" in
+        method_body(S['Panel.cs'], "private static bool OverButtonBounds") and
+    S['Panel.cs'].count("FindMapButton(") == 2 and
+    "_mapButton = null; _huntIn = 0;" in method_body(S['Panel.cs'], "internal static void Cleanup"))
 
 chk("1.6.11", "a purchase record with nothing left in it is dropped rather than saved forever",
     re.search(r'PruneSettledPurchases\(\) =>\s*_purchases\?\.RemoveAll\(rec => rec == null \|\| '
@@ -3237,7 +3251,7 @@ def quiet_automation_leaves_the_cargo_warning_alone():
 def a_second_campaign_starts_the_panel_from_scratch():
     reset = method_body(S['Panel.cs'], "internal static void Reset")
     return all(f in reset for f in
-               ("_loggedArmed = false;", "_loggedButtonFallback = false;",
+               ("_loggedArmed = false;", "_loggedButtonMissing = false;",
                 "_idleMouseActive = false;", "_keySource = null;"))
 
 def the_item_list_reading_is_covered_by_tests_the_build_runs():
@@ -8277,7 +8291,6 @@ def where_the_map_button_catches_the_mouse_is_worked_out_where_a_test_can_ask():
             and "float padX = Pad / screenW, padY = Pad / screenH;" in over
             and "float right = 1f - marginRight / screenW;" in over
             and "6f / screenW" not in S['Panel.cs']
-            and "!MapButton.BoundsReadable(screenW, screenH, width, height)" in S['Panel.cs']
             and all(one in MAPBUTTONTESTS for one in
                     ("The_middle_of_the_button_is_over_the_button",
                      "The_middle_of_the_map_is_not",
@@ -8285,10 +8298,11 @@ def where_the_map_button_catches_the_mouse_is_worked_out_where_a_test_can_ask():
                      "A_cursor_just_outside_is_still_caught_and_one_further_out_is_not",
                      "A_screen_or_a_button_the_game_cannot_measure_is_not_readable",
                      "Nothing_is_over_a_button_that_cannot_be_measured",
+                     "No_part_of_the_map_is_reserved_when_the_button_cannot_be_measured",
                      "The_region_holds_at_any_aspect_ratio")))
 
 
-chk("1.71.2", "where the map button catches the mouse, and the strip it falls back to, is worked out where a test can ask",
+chk("1.71.2", "where the map button catches the mouse is worked out where a test can ask",
     where_the_map_button_catches_the_mouse_is_worked_out_where_a_test_can_ask())
 
 
