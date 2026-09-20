@@ -121,9 +121,6 @@ namespace TradeLord
                    y >= 0.5f - half - padY && y <= 0.5f + half + padY;
         }
 
-        internal static bool OverTheStripInstead(float x, float y) =>
-            x >= 0.90f && y >= 0.46f && y <= 0.54f;
-
         internal static bool TakesTheMouse(bool windowOpen, bool buttonOn, bool overButton) =>
             windowOpen || (buttonOn && overButton);
     }
