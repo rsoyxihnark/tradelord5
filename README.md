@@ -48,7 +48,7 @@
 - ✅ The best market for the cargo you are carrying, a town or a village, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement
 - ✅ It counts only the goods it would really sell there, the ones that clear Minimum profit margin, so it never sends you somewhere it will then refuse to sell
 - ✅ It works through the richest markets first and stops as soon as none of the rest could outpay the one it has found, so riding across Calradia costs it very little
-- ✅ A price it read for a market keeps for a few hours rather than a single one, so the marker can be pointing at a town on prices a little older than the ones you walk in on
+- ✅ It reads every market's price live each time it weighs one, so the marker is never pointing at a town on a price it read hours ago
 - ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that town's purse, how far away it is and the market it beat
 - ✅ The five workshops in Calradia earning the most right now, with their town, what each will make next and their owner, on that same panel
 - ✅ With Live world prices turned off it shows yours instead
@@ -78,7 +78,7 @@
 - ✅ It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, it keeps enough haul animals to carry what you are already carrying, and it keeps back as many animals as a quest of yours is waiting on. One switch turns it off
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
-- ✅ Pick where to sell on the whole load, on while it is being tried out: the five best markets for a good are weighed on what they would pay for the whole load rather than on what they pay for one unit
+- ✅ Pick where to sell on the whole load, on while it is being tried out: every market in reach is weighed on what it would pay for the whole load rather than on what it pays for one unit
 - ✅ Holds trade goods and livestock you never paid for, the ones a town event hands you or a quest leaves in your bags, until a market beats what the cheapest market it knows would have charged for them by your margin, so they are never given away at the first stall that will take them
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, once you switch it on. Off out of the box, so looted gear goes to the first market that can pay for it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose

@@ -8,6 +8,47 @@ using TaleWorlds.Library;
 
 namespace TradeLord
 {
+    internal sealed class Paying
+    {
+        private readonly List<int> _rungs = new List<int>();
+        private readonly Settlement _site;
+        private readonly SettlementComponent _market;
+        private readonly EquipmentElement _el;
+        private readonly MobileParty _party;
+        private Ladder _walk;
+        private int _flat;
+        private bool _asked;
+
+        internal Paying(Settlement site, SettlementComponent market, EquipmentElement el,
+                        MobileParty party)
+        {
+            _site = site;
+            _market = market;
+            _el = el;
+            _party = party;
+        }
+
+        internal int At(int taken)
+        {
+            while (_rungs.Count <= taken) _rungs.Add(Next());
+            return _rungs[taken];
+        }
+
+        private int Next()
+        {
+            if (!_asked)
+            {
+                _asked = true;
+                _flat = Priced.At(_market, _el, _party, true);
+                ItemObject good = _el.Item;
+                Ladder walk = good == null || _flat <= 0
+                    ? null : new Ladder(_site, good, true, _flat, 0);
+                _walk = walk != null && walk.Walkable ? walk : null;
+            }
+            return _walk != null ? _walk.At(_rungs.Count) : _flat;
+        }
+    }
+
     internal static class Marker
     {
         private static Settlement _tracked;
@@ -22,14 +63,7 @@ namespace TradeLord
         private static int _cargoVersion = -1;
         private static List<(EquipmentElement item, int amount, int worth, int floor)> _cargo;
 
-        private static Stamp _priceStamp;
-
-        private const int PriceShelfHours = 3;
-
         private const int MostMarketsShown = 5;
-
-        private static readonly Dictionary<(string site, string good, string quality), List<int>> _prices =
-            new Dictionary<(string, string, string), List<int>>();
 
         private static string _markedId;
         private static long _markedValue;
@@ -71,8 +105,6 @@ namespace TradeLord
         internal static void ForgetTheRead()
         {
             ForgetWhatYouCarry();
-            _prices.Clear();
-            _priceStamp.Stale();
         }
 
         internal static void Forget()
@@ -338,30 +370,9 @@ namespace TradeLord
             return cargo;
         }
 
-        private static List<int> WhatThatMarketPays(Settlement site, SettlementComponent market,
-                                                    EquipmentElement el, MobileParty party, int upTo)
-        {
-            int shelf = Freshness.Hour / PriceShelfHours;
-            if (!Freshness.Fresh(ref _priceStamp, shelf))
-            {
-                Freshness.Taken(ref _priceStamp, shelf);
-                _prices.Clear();
-            }
-            ItemObject good = el.Item;
-            var key = (site.StringId, good == null ? "" : good.StringId,
-                       el.ItemModifier == null ? "" : el.ItemModifier.StringId);
-            if (!_prices.TryGetValue(key, out List<int> rungs))
-            {
-                rungs = new List<int>();
-                _prices[key] = rungs;
-            }
-            if (rungs.Count >= upTo) return rungs;
-            int flat = Priced.At(market, el, party, true);
-            Ladder walk = good == null || flat <= 0 ? null : new Ladder(site, good, true, flat, 0);
-            bool walkable = walk != null && walk.Walkable;
-            while (rungs.Count < upTo) rungs.Add(walkable ? walk.At(rungs.Count) : flat);
-            return rungs;
-        }
+        private static Paying WhatThatMarketPays(Settlement site, SettlementComponent market,
+                                                 EquipmentElement el, MobileParty party) =>
+            new Paying(site, market, el, party);
 
         private static Takings WhatItWouldFetch(
             Settlement site, SettlementComponent market, MobileParty party,
@@ -371,12 +382,12 @@ namespace TradeLord
             Takings took = default(Takings);
             foreach (var (item, amount, worth, floor) in cargo)
             {
-                List<int> rungs = WhatThatMarketPays(site, market, item, party, amount);
+                Paying pays = WhatThatMarketPays(site, market, item, party);
                 long fetched = 0L;
                 int moved = 0, opening = 0, last = 0;
-                for (int u = 0; u < amount && u < rungs.Count; u++)
+                for (int u = 0; u < amount; u++)
                 {
-                    int price = rungs[u];
+                    int price = pays.At(u);
                     if (price <= 0) break;
                     if (price < floor) break;
                     if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) break;
