@@ -682,7 +682,9 @@ namespace TradeLord
         private static bool _idleMouseActive;
         private static Widget _mapButton;
         private const string MapButtonId = "TradeLordMapButton";
-        private static bool _loggedButtonFallback;
+        private static int _huntIn;
+        private const int BetweenButtonHunts = 60;
+        private static bool _loggedButtonMissing;
 
         private static Widget FindMapButton(Widget root)
         {
@@ -693,29 +695,31 @@ namespace TradeLord
             return null;
         }
 
-        private static bool OverButtonBounds(Vec2 m)
+        private static Widget TheMapButton()
         {
-            Widget button = _mapButton;
-            if (button == null) return OverAssumedBounds(m);
-            float screenW = TaleWorlds.Engine.Screen.RealScreenResolutionWidth;
-            float screenH = TaleWorlds.Engine.Screen.RealScreenResolutionHeight;
-            float width = button.ScaledSuggestedWidth;
-            float height = button.ScaledSuggestedHeight;
-            if (!MapButton.BoundsReadable(screenW, screenH, width, height))
-                return OverAssumedBounds(m);
-            return MapButton.Over(m.x, m.y, screenW, screenH, width, height,
-                                  button.ScaledMarginRight);
+            if (_mapButton != null) return _mapButton;
+            if (_layer == null) return null;
+            if (_huntIn > 0) { _huntIn--; return null; }
+            _huntIn = BetweenButtonHunts;
+            _mapButton = FindMapButton(_layer.UIContext?.Root);
+            if (_mapButton == null && !_loggedButtonMissing)
+            {
+                _loggedButtonMissing = true;
+                Log.Write("map button not found on the panel yet - TradeLord keeps looking for it and " +
+                          "reserves none of the map until it has read where the button really is");
+            }
+            return _mapButton;
         }
 
-        private static bool OverAssumedBounds(Vec2 m)
+        private static bool OverButtonBounds(Vec2 m)
         {
-            if (!_loggedButtonFallback)
-            {
-                _loggedButtonFallback = true;
-                Log.Write("map button bounds unreadable - falling back to an assumed strip on the right edge. " +
-                          "Map clicks near that edge may be taken by the button; turn the map button off if it gets in the way.");
-            }
-            return MapButton.OverTheStripInstead(m.x, m.y);
+            Widget button = TheMapButton();
+            if (button == null) return false;
+            return MapButton.Over(m.x, m.y,
+                                  TaleWorlds.Engine.Screen.RealScreenResolutionWidth,
+                                  TaleWorlds.Engine.Screen.RealScreenResolutionHeight,
+                                  button.ScaledSuggestedWidth, button.ScaledSuggestedHeight,
+                                  button.ScaledMarginRight);
         }
 
         private static void UpdateIdleInput(bool buttonOn)
@@ -725,7 +729,10 @@ namespace TradeLord
             if (wantMouse == _idleMouseActive) return;
             _idleMouseActive = wantMouse;
             if (wantMouse)
-                _layer.InputRestrictions.SetInputRestrictions(true, InputUsageMask.Mouse);
+            {
+                _layer.ActiveCursor = CursorType.Default;
+                _layer.InputRestrictions.SetInputRestrictions(true, InputUsageMask.MouseButtons);
+            }
             else
                 _layer.InputRestrictions.SetInputRestrictions(false, InputUsageMask.All);
         }
@@ -806,7 +813,6 @@ namespace TradeLord
             _spokenFor = Options.Current.Language;
             _layer = new GauntletLayer("TradeLordPanel", 250);
             _movie = _layer.LoadMovie("TradeLordPanel", _vm);
-            _mapButton = FindMapButton(_layer.UIContext?.Root);
             _mapScreen.AddLayer(_layer);
             _vm.IsVisible = false;
             ApplyIdleInput();
@@ -825,6 +831,7 @@ namespace TradeLord
         {
             if (_vm == null || _layer == null) return;
             _vm.Show();
+            _layer.ActiveCursor = CursorType.Default;
             _layer.InputRestrictions.SetInputRestrictions(true, InputUsageMask.Mouse);
         }
 
@@ -911,7 +918,7 @@ namespace TradeLord
             _setupCooldown = 0;
             _dead = false;
             _loggedArmed = false;
-            _loggedButtonFallback = false;
+            _loggedButtonMissing = false;
             _idleMouseActive = false;
             _keySource = null;
         }
@@ -922,7 +929,7 @@ namespace TradeLord
             GauntletLayer layer = _layer;
             GauntletMovieIdentifier movie = _movie;
             LedgerPanelVM vm = _vm;
-            _mapScreen = null; _layer = null; _movie = null; _vm = null; _mapButton = null;
+            _mapScreen = null; _layer = null; _movie = null; _vm = null; _mapButton = null; _huntIn = 0;
             if (layer != null)
             {
                 try

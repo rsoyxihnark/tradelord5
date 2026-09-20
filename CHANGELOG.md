@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.90.1
+
+- Fixed the mouse showing a forbidden sign over the campaign map when the cursor was near the TradeLord button
+- Fixed a strip down the right edge of the campaign map swallowing your clicks
+- The mouse wheel now still zooms the campaign map while the cursor is over the TradeLord button
+
 ## 1.90.0
 
 - The market a buy is aimed at is picked from every market in reach now, not the five paying most for one unit, so buying takes longer
