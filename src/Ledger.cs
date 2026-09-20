@@ -582,8 +582,6 @@ namespace TradeLord
         public (Settlement town, int price) BestSell(ItemObject item) => First(TopMarkets(item, selling: true));
         public (Settlement town, int price) BestBuy(ItemObject item) => First(TopMarkets(item, selling: false));
 
-        internal const int BuyersWeighedOnTheStack = 5;
-
         internal static int BuyerWalks;
         internal static int BuyerRungs;
         internal static long BuyerTicks;
@@ -609,10 +607,7 @@ namespace TradeLord
                 float rate = TradeMath.EarnedPerDay(price, paid, days);
                 int at = shortlist.Count;
                 while (at > 0 && rate > shortlist[at - 1].rate) at--;
-                if (at >= BuyersWeighedOnTheStack) continue;
                 shortlist.Insert(at, (town, price, days, rate));
-                if (shortlist.Count > BuyersWeighedOnTheStack)
-                    shortlist.RemoveAt(BuyersWeighedOnTheStack);
             }
             if (shortlist.Count == 0) return (null, 0, null);
             var flat = shortlist[0];
@@ -626,15 +621,14 @@ namespace TradeLord
             for (int i = 0; i < shortlist.Count; i++)
             {
                 var one = shortlist[i];
-                int fetched = Bulk.SellWalk(one.town, item, units, one.price, out int rungs,
-                                            out Ladder walked);
+                Fetched got = Bulk.SellWalk(one.town, item, units, one.price, paid);
                 BuyerWalks++;
-                BuyerRungs += rungs;
-                float rate = TradeMath.PerDay(fetched - (long)paid * units, one.days);
+                BuyerRungs += got.Walked;
+                float rate = TradeMath.PerDay(got.Total - (long)paid * got.Units, one.days);
                 if (rate <= bestRate) continue;
                 bestRate = rate;
                 deep = one;
-                deepRungs = walked;
+                deepRungs = got.Rungs;
             }
             BuyerTicks += System.DateTime.UtcNow.Ticks - started;
             if (deep.town != flat.town && Options.Current.ExtendedDebugLogging)
