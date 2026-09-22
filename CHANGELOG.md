@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.90.7
+
+- Fixed the map marker sending you to a nearby town when another was paying far more
+- Fixed a purchase being aimed at a nearby market when one further off earns it back faster
+
 ## 1.90.6
 
 - Fixed TradeLord only learning how far off its forecast has been while Enable extended debug logging was on

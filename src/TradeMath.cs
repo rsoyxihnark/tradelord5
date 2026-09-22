@@ -135,7 +135,7 @@ namespace TradeLord
             return forecast < least ? least : forecast;
         }
 
-        public const float NoTripCountsShorterThan = 0.25f;
+        public const float NoTripCountsShorterThan = 0.5f;
 
         public static float PerDay(float amount, float days)
         {
