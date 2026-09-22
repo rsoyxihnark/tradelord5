@@ -38,7 +38,7 @@ namespace TradeLord
 
         internal static bool Writing => Options.Current.ExtendedDebugLogging;
 
-        internal static bool On => Writing && Forecast.On;
+        internal static bool On => Forecast.On;
 
         internal static void Forget()
         {
@@ -222,7 +222,7 @@ namespace TradeLord
                           kept.WorthSaid + " denars in all and " + Moving(how.Moved) + " denars, " +
                           Counted(how.WorthOff) + Shared(how.Share));
             }
-            if (scored == 0) return;
+            if (!Writing || scored == 0) return;
             lines.Insert(0, "forecast check at " + site.Name + ", " + scored + " good(s) it had a figure for:");
             lines.Add("  in all: the landing figure was off by " +
                       Figure(TradeMath.MeanOf(landingMiss, scored)) + " unit(s) a good" +

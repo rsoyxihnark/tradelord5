@@ -7403,7 +7403,9 @@ def the_forecast_is_scored_against_the_market_it_predicted():
     h = S['Hindsight.cs']
     noted = method_body(h, "private static void Noted")
     return ("internal static bool Writing => Options.Current.ExtendedDebugLogging;" in h
-            and "internal static bool On => Writing && Forecast.On;" in h
+            and "internal static bool On => Forecast.On;" in h
+            and "Writing" not in method_body(h, "internal static void Note")
+            and "Writing" not in method_body(h, "internal static void Score")
             and option_default('ExtendedDebugLogging') == 'true'
             and EVER_SHIPPED.get('ExtendedDebugLogging') == 'bool'
             and "_o.ExtendedDebugLogging" in M
@@ -7440,7 +7442,7 @@ def a_figure_is_read_once_it_is_walked_into_and_no_more_are_kept_than_it_says():
             and 'Log.Repeatable("forecast check", "full",' in noted
             and "Dictionary<string, Said> here = _said.TakeAt(site.StringId);" in written
             and ordered(taken, "_by.Remove(site);", "_count -= here.Count;", "if (_count < 0) _count = 0;")
-            and "if (scored == 0) return;" in written
+            and "if (!Writing || scored == 0) return;" in written
             and "no worth is kept for a kind of good here, which only a town does" in written
             and "It_fills_up_at_six_hundred" in SCORINGTESTS
             and "Walking_into_a_market_takes_every_promise_it_held_for_that_market" in SCORINGTESTS)
@@ -10932,6 +10934,24 @@ def the_ledger_bounds_a_forecast_price_the_way_the_tooltip_already_did():
 
 chk("1.90.5", "the price the ledger opens a route at is held within reach of the price standing there, the same bound the tooltip already kept",
     the_ledger_bounds_a_forecast_price_the_way_the_tooltip_already_did())
+
+
+def the_forecast_is_scored_whatever_the_debug_switch_says():
+    h = S['Hindsight.cs']
+    note = method_body(h, "internal static void Note")
+    score = method_body(h, "internal static void Score")
+    written = method_body(h, "private static void Written")
+    return (note and score and written
+            and "internal static bool On => Forecast.On;" in h
+            and "Writing" not in note and "Writing" not in score
+            and written.find("LedgerBehavior.Instance?.KeepForecastScore(") <
+                written.find("if (!Writing || scored == 0) return;")
+            and "if (!Writing || scored == 0) return;" in written
+            and "if (!Writing || scored == 0) return;" in method_body(h, "private static void Kept"))
+
+
+chk("1.90.6", "the forecast is held to what really moved whatever the debug switch says, so the share it is counted at is learned by every campaign and not only by one writing a log",
+    the_forecast_is_scored_whatever_the_debug_switch_says())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
