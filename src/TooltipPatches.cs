@@ -186,7 +186,7 @@ namespace TradeLord
                 var (town, price) = markets[i];
                 float days = Travel.EstimateDaysFromParty(town);
                 markets[i] = (town, Bulk.FirstUnit(town, item, selling, price,
-                                                   Forecast.WorthShift(town, item, days)));
+                                                   Forecast.WorthShiftAsItHasHeld(town, item, days)));
             }
             markets.Sort((a, b) => selling ? b.price.CompareTo(a.price) : a.price.CompareTo(b.price));
         }

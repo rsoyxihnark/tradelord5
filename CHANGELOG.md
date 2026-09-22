@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.90.5
+
+- What is on its way to a market is now counted at the share that forecast has actually been right by
+- Fixed the ledger opening a route at a price far above what that market is paying
+- TradeLord.log now lists every market the map marker priced, instead of the five best
+- TradeLord.log now says how far off the forecast has been this campaign and how much of it is being counted
+- The mod description now says the forecast is scored against what really moved
+
 ## 1.90.4
 
 - Fixed the map marker swapping between two towns while you were riding to one of them

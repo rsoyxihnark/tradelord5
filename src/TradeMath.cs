@@ -365,6 +365,36 @@ namespace TradeLord
         public static float MeanOf(float total, int counted) =>
             counted <= 0 ? 0f : Finite(total / counted, 0f);
 
+        public const float MostAForecastMissCounts = 2f;
+
+        public static float MissThatCounts(float missed)
+        {
+            if (missed < 0f || float.IsNaN(missed)) return NoShareToGive;
+            return missed > MostAForecastMissCounts ? MostAForecastMissCounts : missed;
+        }
+
+        public const int EnoughForecasts = 5;
+
+        public static float TrustInTheForecast(int scored, float missed)
+        {
+            if (scored <= 0 || missed < 0f || float.IsNaN(missed) || float.IsInfinity(missed)) return 1f;
+            float earned = 1f / (1f + missed);
+            float weight = (float)scored / (scored + EnoughForecasts);
+            float trust = 1f - (1f - earned) * weight;
+            if (trust < 0f) return 0f;
+            return trust > 1f ? 1f : trust;
+        }
+
+        public static int WorthShiftTrusted(int shift, float trust)
+        {
+            if (shift == 0 || float.IsNaN(trust)) return shift;
+            if (trust >= 1f) return shift;
+            if (trust <= 0f) return 0;
+            long held = (long)((double)shift * trust);
+            if (held > int.MaxValue) return int.MaxValue;
+            return held < int.MinValue ? int.MinValue : (int)held;
+        }
+
         public static void AddPromise(PromiseRecord rec, float held)
         {
             if (rec == null || held < 0f || float.IsNaN(held) || float.IsInfinity(held)) return;
