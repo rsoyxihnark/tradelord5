@@ -1460,8 +1460,7 @@ namespace TradeLord
             if (shed <= 0) return;
 
             ItemRoster mine = pass.Party.ItemRoster;
-            Dictionary<ItemObject, int> heldBack =
-                TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);
+            TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);
             if (promised == null) return;
 
             int mountsLeft = Drove.SpareMounts(pass.Party);
@@ -1494,10 +1493,10 @@ namespace TradeLord
                     if (pass.DirectionError || shed <= 0) break;
                     ItemObject item = el.EquipmentElement.Item;
                     int remaining = pass.YoursToSell(el);
-                    if (heldBack.TryGetValue(item, out int owed) && owed > 0)
+                    if (promised.TryGetValue(item, out int owed) && owed > 0)
                     {
                         int spare = Math.Min(remaining, owed);
-                        heldBack[item] = owed - spare;
+                        promised[item] = owed - spare;
                         remaining -= spare;
                     }
 
