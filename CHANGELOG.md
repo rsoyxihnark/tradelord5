@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.90.2
+
+- The Free passage from bandits setting is written as BanditFreePassage in TradeLord.ini now, and the value you had is carried over
+- The mod description now says the most workshops you may own is raised to 200 out of the box
+
 ## 1.90.1
 
 - Fixed the mouse showing a forbidden sign over the campaign map when the cursor was near the TradeLord button
