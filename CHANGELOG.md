@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.90.4
+
+- Fixed the map marker swapping between two towns while you were riding to one of them
+- Fixed the ledger promising a price the market would not pay once you got there
+
 ## 1.90.3
 
 - The mod description now says the most workshops you may own in one line instead of two
