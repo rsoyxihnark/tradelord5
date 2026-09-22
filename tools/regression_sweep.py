@@ -10196,7 +10196,7 @@ def a_buyer_is_picked_by_what_it_earns_a_day_not_by_its_price_alone():
     far = method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
     rate = method_body(S['TradeMath.cs'], "public static float EarnedPerDay")
     want = method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
-    return ("public const float NoTripCountsShorterThan = 0.25f;" in S['TradeMath.cs']
+    return ("public const float NoTripCountsShorterThan = 0.5f;" in S['TradeMath.cs']
             and "if (sellPrice <= 0 || sellPrice <= paid) return 0f;" in rate
             and "float over = days > NoTripCountsShorterThan ? days : NoTripCountsShorterThan;" in
                 method_body(S['TradeMath.cs'], "public static float PerDay")
@@ -10214,7 +10214,8 @@ def a_buyer_is_picked_by_what_it_earns_a_day_not_by_its_price_alone():
             and all(one in MATHTESTS for one in
                     ("A_nearer_buyer_paying_a_little_less_earns_more_a_day_than_a_far_one",
                      "A_far_buyer_paying_much_more_still_wins",
-                     "A_trip_shorter_than_a_quarter_day_counts_as_a_quarter_day",
+                     "A_trip_shorter_than_half_a_day_counts_as_half_a_day",
+                     "A_town_at_the_door_paying_far_less_no_longer_outpaces_a_richer_one_a_day_away",
                      "A_buyer_paying_no_more_than_you_paid_earns_nothing_a_day")))
 
 
