@@ -191,11 +191,16 @@ namespace TradeLord
             if (here == null) return;
             float now = (float)CampaignTime.Now.ToHours;
             var lines = new List<string>();
-            int scored = 0, landingMiss = 0, shared = 0;
+            int scored = 0, stale = 0, landingMiss = 0, shared = 0;
             float shareTotal = 0f;
             foreach (Said kept in here.Values)
             {
                 if (kept.Item == null) continue;
+                if (Scoring.TooOldToSay(kept.WithinDays, kept.AtHours, now, out float since))
+                {
+                    stale++;
+                    continue;
+                }
                 scored++;
                 Outcome how = Scoring.Weigh(kept.StockSaid, kept.StockThen,
                                             LedgerBehavior.StockOf(site, kept.Item),
@@ -205,7 +210,7 @@ namespace TradeLord
                 string line = "  " + Named(kept.Item) + ": said " + kept.StockSaid + " unit(s) of it would land within " +
                               Figure(kept.WithinDays) + " day(s) and " + Landing(how.Landed) + ", " +
                               Counted(how.LandingOff) +
-                              "; you walked in " + Figure(TradeMath.DaysSince(kept.AtHours, now)) +
+                              "; you walked in " + Figure(since) +
                               " day(s) after it said so";
                 if (!how.WorthKept)
                 {
@@ -223,7 +228,8 @@ namespace TradeLord
                           Counted(how.WorthOff) + Shared(how.Share));
             }
             if (!Writing || scored == 0) return;
-            lines.Insert(0, "forecast check at " + site.Name + ", " + scored + " good(s) it had a figure for:");
+            lines.Insert(0, "forecast check at " + site.Name + ", " + scored + " good(s) it had a figure for" +
+                      (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") + ":");
             lines.Add("  in all: the landing figure was off by " +
                       Figure(TradeMath.MeanOf(landingMiss, scored)) + " unit(s) a good" +
                       (shared == 0
