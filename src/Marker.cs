@@ -63,8 +63,6 @@ namespace TradeLord
         private static int _cargoVersion = -1;
         private static List<(EquipmentElement item, int amount, int worth, int floor)> _cargo;
 
-        private const int MostMarketsShown = 5;
-
         private static string _markedId;
         private static long _markedValue;
         private static long _markedEarned;
@@ -326,8 +324,7 @@ namespace TradeLord
             {
                 how.Board.Sort(FastestFirst);
                 said.Add("  ultralog: the " + how.Board.Count + " market(s) it priced, best first");
-                int shown = how.Board.Count < MostMarketsShown ? how.Board.Count : MostMarketsShown;
-                for (int i = 0; i < shown; i++)
+                for (int i = 0; i < how.Board.Count; i++)
                 {
                     Weighing one = how.Board[i];
                     said.Add("    " + Tongue.Named(one.Where.Name, one.Where.StringId).PadRight(18) +
