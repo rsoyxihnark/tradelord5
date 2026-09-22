@@ -1110,7 +1110,7 @@ namespace TradeLord
                         if (qtyCap <= 0) { thrownAway++; continue; }
 
                         float ceiling = (float)(openingSell - openingBuy) * qtyCap;
-                        if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey)
+                        if (best != null && TradeMath.PerDay(ceiling, days) <= bestKey)
                         { thrownAway++; continue; }
 
                         RouteQuote q = Bulk.Walk(from, to, item, qtyCap, till, spendCap,
@@ -1135,7 +1135,7 @@ namespace TradeLord
                         float confidence = Confidence.Of(q.Simulated, flat, profit, shelf,
                                                          q.Units, days, caravans, age,
                                                          runsOut, toBuy);
-                        float perDay = profit / Math.Max(days, 0.25f);
+                        float perDay = TradeMath.PerDay(profit, days);
                         float score = perDay * confidence;
                         if (trustWhatItPaid &&
                             PromiseScoreAt(to.StringId, out int arrivals, out float heldThere))
