@@ -1207,7 +1207,7 @@ namespace TradeLord.Tests
             float near = TradeMath.EarnedPerDay(400, 300, 0.3f);
             float far = TradeMath.EarnedPerDay(420, 300, 2.3f);
             Assert.True(near > far);
-            Assert.Equal(100f / 0.3f, near, 2);
+            Assert.Equal(100f / TradeMath.NoTripCountsShorterThan, near, 2);
             Assert.Equal(120f / 2.3f, far, 2);
         }
 
@@ -1219,11 +1219,19 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_trip_shorter_than_a_quarter_day_counts_as_a_quarter_day()
+        public void A_trip_shorter_than_half_a_day_counts_as_half_a_day()
         {
+            Assert.Equal(0.5f, TradeMath.NoTripCountsShorterThan);
             Assert.Equal(TradeMath.EarnedPerDay(400, 300, 0f),
                          TradeMath.EarnedPerDay(400, 300, TradeMath.NoTripCountsShorterThan));
-            Assert.Equal(400f, TradeMath.EarnedPerDay(400, 300, 0.01f));
+            Assert.Equal(200f, TradeMath.EarnedPerDay(400, 300, 0.01f));
+        }
+
+        [Fact]
+        public void A_town_at_the_door_paying_far_less_no_longer_outpaces_a_richer_one_a_day_away()
+        {
+            Assert.True(TradeMath.PerDay(349, 1.03f) > TradeMath.PerDay(154, 0.18f));
+            Assert.True(TradeMath.PerDay(900, 1.03f) > TradeMath.PerDay(349, 1.03f));
         }
 
         [Fact]
