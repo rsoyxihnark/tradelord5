@@ -566,7 +566,7 @@ def every_market_a_good_could_be_sold_at_is_offered_to_the_route_scan():
             and "var markets = EverySell(item);" in
                 method_body(l, "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
             and ordered(scan, "float ceiling = (float)(openingSell - openingBuy) * qtyCap;",
-                        "if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey)",
+                        "if (best != null && TradeMath.PerDay(ceiling, days) <= bestKey)",
                         "RouteQuote q = Bulk.Walk("))
 
 def a_route_scan_prices_each_town_once_for_every_good_it_wants():
@@ -1936,10 +1936,12 @@ chk("1.3.26", "pathfinder calls are gated behind a straight-line lower bound",
     "float soonest = toBuy + Travel.StraightDaysBetween(from, to);" in S['Ledger.cs'] and
     ordered(S['Ledger.cs'], "float soonest = toBuy", "float days = toBuy + Travel.EstimateDaysBetween"))
 chk("1.3.26", "the best route so far prunes a pair before it costs a walk through every unit's price",
-    "if (best != null && ceiling / Math.Max(days, 0.25f) <= bestKey)\n                        { thrownAway++; continue; }" in S['Ledger.cs'] and
-    S['Ledger.cs'].count("ceiling / Math.Max") == 1 and
+    "if (best != null && TradeMath.PerDay(ceiling, days) <= bestKey)\n                        { thrownAway++; continue; }" in S['Ledger.cs'] and
+    "float perDay = TradeMath.PerDay(profit, days);" in S['Ledger.cs'] and
+    "Math.Max(days, 0.25f)" not in S['Ledger.cs'] and
+    S['Ledger.cs'].count("TradeMath.PerDay(ceiling, days)") == 1 and
     "Math.Max(soonest, 0.25f)" not in S['Ledger.cs'] and
-    ordered(S['Ledger.cs'], "ceiling / Math.Max(days, 0.25f)", "Bulk.Walk(from, to, item"))
+    ordered(S['Ledger.cs'], "TradeMath.PerDay(ceiling, days)", "Bulk.Walk(from, to, item"))
 chk("1.3.26", "a route's whole trip stays inside the travel ceiling, on the straight line and on the real path",
     (lambda b: ordered(b, "if (cap > 0f && soonest > cap) continue;", "if (cap > 0f && days > cap) continue;"))
     (method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")))
