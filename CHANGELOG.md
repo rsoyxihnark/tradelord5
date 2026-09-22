@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.90.6
+
+- Fixed TradeLord only learning how far off its forecast has been while Enable extended debug logging was on
+
 ## 1.90.5
 
 - What is on its way to a market is now counted at the share that forecast has actually been right by
