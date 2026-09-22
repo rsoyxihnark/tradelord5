@@ -1146,18 +1146,18 @@ namespace TradeLord
                 _named = named;
                 ItemRoster roster = pass.Party.ItemRoster;
                 var goods = new List<ItemObject>();
+                for (int at = 0; at < roster.Count; at++) goods.Add(roster.GetItemAtIndex(at));
+                LedgerBehavior.Instance?.PrimeMarketsFor(goods);
                 var order = new List<(ItemRosterElement held, int gain, int at)>();
                 for (int at = 0; at < roster.Count; at++)
                 {
                     ItemRosterElement held = roster.GetElementCopyAtIndex(at);
                     order.Add((held, TradePolicy.CouldBeSold(held, pass.Locked)
                                          ? WhatThisStackWouldMake(pass, held) : 0, at));
-                    goods.Add(held.EquipmentElement.Item);
                 }
                 order.Sort((x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain)
                                                       : x.at.CompareTo(y.at));
                 for (int at = 0; at < order.Count; at++) _plan.Add(order[at].held);
-                LedgerBehavior.Instance?.PrimeMarketsFor(goods);
                 _keepBack = TradePolicy.KeptBack(roster, pass.Books, pass.Sim, out _awaited);
             }
 
