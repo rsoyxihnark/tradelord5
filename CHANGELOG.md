@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.90.3
+
+- The mod description now says the most workshops you may own in one line instead of two
+
 ## 1.90.2
 
 - The Free passage from bandits setting is written as BanditFreePassage in TradeLord.ini now, and the value you had is carried over
@@ -1203,7 +1207,6 @@
 ## 1.21.0
 
 - Looted gear now sells to the first market that can pay for it, and Hold cargo for the best market is the only thing that holds cargo back
-- Asking bandits for free passage is no longer labelled a cheat, and its setting is called Free passage from bandits
 - The setting that buys mules and horses now calls them animals rather than beasts
 - The mod description now names your gold reserve as 300 denars, and says what the settings out of the box are aimed at
 
@@ -1231,7 +1234,7 @@
 - TradeLord now buys mules and sumpter horses when a market asks no more than one is worth
 - TradeLord never buys more pack animals than your party can drive without slowing down
 - Restocking now tops your food back up to three days of supply instead of five
-- Added a cheat, off until you switch it on, that lets you ask bandits to let you go, with no fight and no ransom
+- Added a switch, off until you turn it on, that lets you ask bandits to let you go, with no fight and no ransom
 - The setting that keeps smeltable weapons now says plainly what it holds back, every weapon built from smithing parts
 - The mod description now covers what TradeLord buys for your baggage train and what it leaves alone
 
