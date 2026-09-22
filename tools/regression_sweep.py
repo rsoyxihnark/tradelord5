@@ -1038,14 +1038,15 @@ def the_readme_counts_the_saved_values_right():
         body = method_body(S[name], "public override void SyncData")
         for field in re.findall(r'dataStore\.SyncData\("[^"]+",\s*ref\s+(\w+)\)', body):
             tally[types.get(field)] = tally.get(types.get(field), 0) + 1
-    words = {1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six'}
+    words = {1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six',
+             7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten'}
     numbers = tally.get('int', 0) + tally.get('long', 0) + tally.get('float', 0)
     counted = 'a number' if numbers == 1 else words.get(numbers, 'no') + ' numbers'
     switches = tally.get('bool', 0)
     marked = 'a switch' if switches == 1 else words.get(switches, 'no') + ' switches'
     said = ('All it puts in a save is ' + words.get(tally.get('string'), 'no') +
             ' strings, ' + counted + ', ' + marked + ' and a settlement reference')
-    return (said in README and numbers == 5
+    return (said in README and numbers == 7
             and tally.get('Settlement') == 1 and switches == 1)
 
 def readme_defaults_match_the_shipped_ones():
@@ -2193,7 +2194,7 @@ chk("1.5.0", "route pruning is bounded by the very prices the quote opens at, so
         in S['Ledger.cs'] and
     "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);"
         in S['Ledger.cs'] and
-    "return Rung(site, item, selling, quoted, landed).At(0);" in
+    "int walked = Rung(site, item, selling, quoted, landed).At(0);" in
         method_body(S['Market.cs'], "internal static int Opening") and
     ordered(S['Ledger.cs'], "float ceiling =", "Bulk.Walk(from, to, item"))
 chk("1.5.0", "a broke selling town is no destination, in the mode that can see its till",
@@ -5553,7 +5554,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
                         "LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));",
                         'dataStore.SyncData("TradeLord_LedgerText"')
             and trade.count("dataStore.SyncData(") == 2
-            and ledger.count("dataStore.SyncData(") == 10)
+            and ledger.count("dataStore.SyncData(") == 12)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
     arrays = dict(re.findall(r'private static readonly string\[\] (\w+) =\s*\{(.*?)\};', M, re.S))
@@ -7128,8 +7129,8 @@ def what_lands_after_you_arrive_is_not_counted():
     return ("if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;" in units
             and "if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;" in worth
             and "if (!TradeMath.LandsInTime(spending.Days, withinDays)) continue;" in purse
-            and "int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);" in scan
-            and "int landedAtSellTown = Forecast.WorthShift(to, item, days);" in scan
+            and "int landedAtBuyTown = Forecast.WorthShiftAsItHasHeld(from, item, toBuy);" in scan
+            and "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);" in scan
             and "Forecast.UnitsLanding(from, item, toBuy)" in scan
             and "A_load_still_on_the_road_past_the_window_is_left_out" in PROJECTIONTESTS
             and "The_purse_on_the_road_adds_up_within_the_window" in PROJECTIONTESTS)
@@ -7244,7 +7245,7 @@ def a_tooltip_prices_a_market_as_it_will_be_when_you_get_there():
                     "if (!Forecast.On || markets == null || markets.Count == 0) return;",
                     "float days = Travel.EstimateDaysFromParty(town);",
                     "Bulk.FirstUnit(town, item, selling, price,",
-                    "Forecast.WorthShift(town, item, days)));",
+                    "Forecast.WorthShiftAsItHasHeld(town, item, days)));",
                     "markets.Sort(")
             and "AsTheyWillBe(item, sells, selling: true);" in picked
             and "AsTheyWillBe(item, buys, selling: false);" in picked
@@ -7989,7 +7990,7 @@ def held_inside_a_range(name):
 def what_the_purses_on_the_road_take_comes_off_the_shelf_as_well_as_the_price():
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
     leaving = method_body(S['Forecast.cs'], "internal static int UnitsLeaving")
-    return ("int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);" in scan
+    return ("int landedAtBuyTown = Forecast.WorthShiftAsItHasHeld(from, item, toBuy);" in scan
             and "TradeMath.StockAfterShift(onTheShelfNow," in scan
             and "Forecast.UnitsLanding(from, item, toBuy)," in scan
             and "Forecast.UnitsLeaving(from, item, toBuy));" in scan
@@ -9640,14 +9641,14 @@ chk("1.79.1", "a market that is already on your map is still taken as the one th
 
 def the_ceiling_and_the_quote_read_one_forecast_at_one_arrival():
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
-    return (scan.count("Forecast.WorthShift(to, item,") == 1
-            and scan.count("Forecast.WorthShift(from, item,") == 1
+    return (scan.count("Forecast.WorthShiftAsItHasHeld(to, item,") == 1
+            and scan.count("Forecast.WorthShiftAsItHasHeld(from, item,") == 1
             and scan.count("Bulk.Opening(") == 2
             and ordered(scan,
-                        "int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);",
+                        "int landedAtBuyTown = Forecast.WorthShiftAsItHasHeld(from, item, toBuy);",
                         "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown)",
                         "float days = toBuy + Travel.EstimateDaysBetween(from, to);",
-                        "int landedAtSellTown = Forecast.WorthShift(to, item, days);",
+                        "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);",
                         "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown)",
                         "float ceiling =",
                         "landedAtBuyTown,\n                                                 landedAtSellTown);"))
@@ -10442,15 +10443,15 @@ chk("1.84.0", "the ultralog breaks the marked market down good by good, with wha
 def the_ultralog_lists_the_markets_the_marker_priced():
     ultra = method_body(S['Marker.cs'], "private static void Ultra")
     scan = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
-    return ("private const int MostMarketsShown = 5;" in S['Marker.cs']
+    return ("MostMarketsShown" not in S['Marker.cs']
             and "if (ultra) how.Board = new List<Weighing>();" in scan
             and "how.Board?.Add(new Weighing" in scan
             and "y.Rate.CompareTo(x.Rate)" in S['Marker.cs']
             and ordered(ultra, "how.Board.Sort(FastestFirst);",
-                        '" market(s) it priced, best first"', '" day(s) "', '" unit(s) "',
-                        '" gold "', '" gold a day"', '"  (marked)"')
-            and "int shown = how.Board.Count < MostMarketsShown ? how.Board.Count : MostMarketsShown;"
-                in ultra)
+                        '" market(s) it priced, best first"',
+                        "for (int i = 0; i < how.Board.Count; i++)",
+                        '" day(s) "', '" unit(s) "',
+                        '" gold "', '" gold a day"', '"  (marked)"'))
 
 
 chk("1.84.0", "the ultralog lists the markets the marker priced, best first, with the days, the units, the gold and the rate of each",
@@ -10857,7 +10858,7 @@ def the_forecast_can_never_empty_a_shelf_it_only_expects_to_empty():
             and "if (after < 0L) return 0;" in shelf
             and "_inStoreValue = TradeMath.ShelfAfterLanding(data.InStoreValue, landed);"
                 in S['Market.cs']
-            and "int landedAtSellTown = Forecast.WorthShift(to, item, days);" in S['Ledger.cs']
+            and "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);" in S['Ledger.cs']
             and all(one in MATHTESTS for one in
                     ("A_shelf_cannot_be_bought_down_past_half_of_what_is_on_it",
                      "A_shelf_the_forecast_adds_to_is_left_where_the_landing_puts_it")))
@@ -10865,6 +10866,72 @@ def the_forecast_can_never_empty_a_shelf_it_only_expects_to_empty():
 
 chk("1.90.4", "what is still on its way to a market can only move that market's price so far, so the ledger stops quoting a price the shelf standing there would never pay",
     the_forecast_can_never_empty_a_shelf_it_only_expects_to_empty())
+
+
+def what_is_on_its_way_is_counted_at_the_trust_it_has_earned():
+    miss = method_body(S['TradeMath.cs'], "public static float MissThatCounts")
+    trust = method_body(S['TradeMath.cs'], "public static float TrustInTheForecast")
+    held = method_body(S['TradeMath.cs'], "public static int WorthShiftTrusted")
+    earned = method_body(S['Forecast.cs'], "internal static float TrustEarned")
+    shift = between(S['Forecast.cs'], "internal static int WorthShiftAsItHasHeld", ";")
+    kept = method_body(S['Ledger.cs'], "internal void KeepForecastScore")
+    read = method_body(S['Ledger.cs'], "internal bool ForecastScore")
+    written = method_body(S['Hindsight.cs'], "private static void Written")
+    noted = method_body(S['Hindsight.cs'], "private static void Noted")
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes()")
+    cap = re.search(r'public const float MostAForecastMissCounts = ([\d.]+)f;', S['TradeMath.cs'])
+    enough = re.search(r'public const int EnoughForecasts = (\d+);', S['TradeMath.cs'])
+    return (miss and trust and held and earned and shift and kept and read and written and scan
+            and cap is not None and float(cap.group(1)) > 0
+            and enough is not None and int(enough.group(1)) > 0
+            and "return missed > MostAForecastMissCounts ? MostAForecastMissCounts : missed;" in miss
+            and "float earned = 1f / (1f + missed);" in trust
+            and "float weight = (float)scored / (scored + EnoughForecasts);" in trust
+            and "float trust = 1f - (1f - earned) * weight;" in trust
+            and "if (scored <= 0 || missed < 0f || float.IsNaN(missed) || float.IsInfinity(missed)) return 1f;"
+                in trust
+            and "long held = (long)((double)shift * trust);" in held
+            and "return TradeMath.TrustInTheForecast(scored, missed);" in earned
+            and "TradeMath.WorthShiftTrusted(WorthShift(site, item, withinDays), TrustEarned())" in shift
+            and "_forecastsScored++;" in kept and "_forecastMissed += missed;" in kept
+            and "missed = TradeMath.MeanOf(_forecastMissed, _forecastsScored);" in read
+            and 'dataStore.SyncData("TradeLord_ForecastsScored", ref _forecastsScored);' in S['Ledger.cs']
+            and 'dataStore.SyncData("TradeLord_ForecastMissed", ref _forecastMissed);' in S['Ledger.cs']
+            and "LedgerBehavior.Instance?.KeepForecastScore(TradeMath.MissThatCounts(how.Share));"
+                in written
+            and "Forecast.WorthShift(site, item, withinDays)" in noted
+            and "WorthShiftAsItHasHeld" not in noted
+            and scan.count("Forecast.WorthShiftAsItHasHeld(") == 2
+            and scan.count("Forecast.WorthShift(") == 0
+            and S['TooltipPatches.cs'].count("Forecast.WorthShiftAsItHasHeld(") == 1
+            and "Forecast.WorthShift(" not in S['TooltipPatches.cs']
+            and all(one in MATHTESTS for one in
+                    ("One_wild_miss_cannot_speak_for_the_whole_forecast",
+                     "A_forecast_that_has_never_been_checked_is_taken_at_its_word",
+                     "A_forecast_that_keeps_missing_is_believed_less_and_less",
+                     "What_is_on_its_way_is_counted_at_the_trust_it_has_earned",
+                     "A_forecast_that_has_been_missing_moves_a_shelf_less_than_one_that_has_not")))
+
+
+chk("1.90.5", "what is still on its way is counted at the trust the forecast has earned, measured from what it said against what really moved, with one wild miss counting no more than the cap",
+    what_is_on_its_way_is_counted_at_the_trust_it_has_earned())
+
+
+def the_ledger_bounds_a_forecast_price_the_way_the_tooltip_already_did():
+    opening = method_body(S['Market.cs'], "internal static int Opening")
+    first = method_body(S['Market.cs'], "internal static int FirstUnit")
+    return (opening and first
+            and "int walked = Rung(site, item, selling, quoted, landed).At(0);" in opening
+            and "return landed == 0 ? walked : TradeMath.ForecastWithin(quoted, walked);" in opening
+            and "return rung.Walkable ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;" in first
+            and "int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);"
+                in S['Ledger.cs']
+            and "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);"
+                in S['Ledger.cs'])
+
+
+chk("1.90.5", "the price the ledger opens a route at is held within reach of the price standing there, the same bound the tooltip already kept",
+    the_ledger_bounds_a_forecast_price_the_way_the_tooltip_already_did())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
