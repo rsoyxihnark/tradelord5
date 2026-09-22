@@ -158,6 +158,7 @@ namespace TradeLord
         {
             internal Settlement Best;
             internal Settlement RunnerUp;
+            internal bool Held;
             internal long Value;
             internal long RunnerUpValue;
             internal long Cost;
@@ -274,12 +275,19 @@ namespace TradeLord
                        ? ", which is all that town's purse of " + how.Purse + " can take"
                        : " against a town purse of " + how.Purse) +
                    ", about " + how.Days.ToString("0.#") + " day(s) away, so " +
-                   how.Rate.ToString("0") + " gold a day" +
-                   (how.RunnerUp == null
-                       ? ", and no other market it priced would take any of it"
-                       : ", ahead of " + how.RunnerUp.Name + ", the next best it priced, at " +
-                         how.RunnerUpRate.ToString("0") + " gold a day for " +
-                         how.RunnerUpValue + " gold");
+                   how.Rate.ToString("0") + " gold a day" + TheNextBest(how);
+        }
+
+        private static string TheNextBest(in Reckoning how)
+        {
+            if (how.RunnerUp == null) return ", and no other market it priced would take any of it";
+            string next = how.RunnerUp.Name + ", the next best it priced, at " +
+                          how.RunnerUpRate.ToString("0") + " gold a day for " +
+                          how.RunnerUpValue + " gold";
+            return how.Held
+                ? ", and it holds the mark against " + next +
+                  ", because the marker only moves for a clear gain"
+                : ", ahead of " + next;
         }
 
         private static readonly System.Comparison<Weighing> FastestFirst =
@@ -427,6 +435,20 @@ namespace TradeLord
                                         : string.CompareOrdinal(x.s.StringId, y.s.StringId);
             };
 
+        private static void TheMarkedTownFirst(
+            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable)
+        {
+            if (_picked == null) return;
+            for (int at = 1; at < reachable.Count; at++)
+            {
+                if (reachable[at].s != _picked) continue;
+                var held = reachable[at];
+                reachable.RemoveAt(at);
+                reachable.Insert(0, held);
+                return;
+            }
+        }
+
         private static Settlement BestSellTownForCargo(out Reckoning how)
         {
             how = default(Reckoning);
@@ -459,25 +481,29 @@ namespace TradeLord
                 reachable.Add((s, market, purse, ride));
             }
             reachable.Sort(FastestPurseFirst);
+            TheMarkedTownFirst(reachable);
             if (ultra) how.Board = new List<Weighing>();
 
+            float bar = 0f;
             for (int at = 0; at < reachable.Count; at++)
             {
                 var (s, market, gold, ride) = reachable[at];
-                if (TradeMath.PerDay(gold, ride) <= how.Rate) break;
+                if (TradeMath.PerDay(gold, ride) <= bar) break;
                 how.Told++;
                 Takings took = WhatItWouldFetch(s, market, party, cargo, gold, null);
                 if (took.Value <= 0L) { how.Refused++; continue; }
                 long total = took.Value > gold ? gold : took.Value;
                 long earned = total - took.Cost;
                 float rate = TradeMath.PerDay(earned, ride);
+                float weighed = TradeMath.RateTheMarkHolds(rate, s == _picked);
                 how.Board?.Add(new Weighing
                 {
                     Where = s, Days = ride, Units = took.Units, Value = total,
                     Earned = earned, Rate = rate
                 });
-                if (rate > how.Rate)
+                if (weighed > bar)
                 {
+                    bar = weighed;
                     how.RunnerUp = how.Best;
                     how.RunnerUpValue = how.Value;
                     how.RunnerUpRate = how.Rate;
@@ -494,6 +520,7 @@ namespace TradeLord
                 else if (rate > how.RunnerUpRate)
                 { how.RunnerUpRate = rate; how.RunnerUpValue = total; how.RunnerUp = s; }
             }
+            how.Held = how.Best != null && how.Best == _picked && how.RunnerUpRate > how.Rate;
             how.Left = reachable.Count - how.Told;
             if (ultra && how.Best != null)
             {
