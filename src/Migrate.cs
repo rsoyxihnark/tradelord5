@@ -7,7 +7,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 16;
+        public const int Shape = 17;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -16,6 +16,7 @@ namespace TradeLord
             (5, "BuyPackAnimals", "BuyHaulAnimals"),
             (7, "MaxTravelDays", "MaxTravelDaysTown"),
             (7, "MaxVillageTravelDays", "MaxTravelDaysVillage"),
+            (17, "BanditGetawayCheat", "BanditFreePassage"),
         };
 
         public static bool Lift(int from, IDictionary<string, string> written, ICollection<string> notes)

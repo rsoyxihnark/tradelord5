@@ -139,6 +139,7 @@
 - ✅ Change what you like, then press Done to trade or Cancel to leave it. While it is on, nothing is traded as you arrive: Trade here now (TradeLord) in the town menu is what lays the deal out, and a party met on the road still trades as before
 - ✅ The trade screen's own running total shows what the deal comes to, and once you close it TradeLord says what your purse did. Press Done and it reports what moved the same way it reports a trade of its own, and credits the profit to your Trade skill
 - ✅ Buy Workshops Remotely, on its own button below the TradeLord ledger: every workshop in Calradia a notable would sell you, with its town, what it makes, who owns it, what it has earned lately and what it would cost, most profitable first. Buy any of them from there, wherever you are standing, and it asks you to confirm before it spends a denar
+- ✅ The most workshops you may own, raised to 200 out of the box, so your clan tier no longer decides how many you can hold
 - ✅ The limit the game puts on how many workshops you may own, lifted out of the box, and set to whatever number you like. Put it back to the game's own limit with a 0
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
 

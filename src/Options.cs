@@ -156,7 +156,7 @@ namespace TradeLord
 
         public bool CoinSound = true;
 
-        public bool BanditGetawayCheat = true;
+        public bool BanditFreePassage = true;
 
         public string NeverSellItems = "";
         public string AlwaysSellItems = "";

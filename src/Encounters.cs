@@ -220,7 +220,7 @@ namespace TradeLord
         private static bool BanditMet()
         {
             MobileParty band = MobileParty.ConversationParty;
-            return Options.Current.BanditGetawayCheat && band != null && band.IsBandit;
+            return Options.Current.BanditFreePassage && band != null && band.IsBandit;
         }
 
         private static void TradeOnce(MobileParty met)

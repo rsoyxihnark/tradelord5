@@ -1066,13 +1066,14 @@ def readme_defaults_match_the_shipped_ones():
                else said('KeepWageDays') + " days of your troops' wages"),
               'from tier ' + option_default('MaxLootTier') + ' out of the box',
               'The ' + tooltip + ' best places to sell and the ' + tooltip + ' cheapest to buy',
-              'The ' + shops + ' workshops in Calradia']
+              'The ' + shops + ' workshops in Calradia',
+              'raised to ' + option_default('MaxWorkshopsOwned') + ' out of the box']
     shipped = [('Enable extended debug logging', 'ExtendedDebugLogging'),
                ('Count what is on its way to a market', 'MarketForecast'),
                ('Live world prices', 'Omniscient'),
                ('Staged Trading', 'StagedTrading'),
                ('A settling delay', 'EconomySettlingDays'),
-               ('Free passage past bandits', 'BanditGetawayCheat')]
+               ('Free passage past bandits', 'BanditFreePassage')]
     switched = [lead + ', ' + ('off' if option_default(name) in ('false', '0') else 'on') +
                 ' out of the box' for lead, name in shipped]
     return (all(c in README for c in claims)
@@ -4342,13 +4343,13 @@ def the_getaway_ships_on_names_no_cheat_and_only_answers_bandits():
     asked = method_body(S['Encounters.cs'], "private static void AddBanditLines")
     met = method_body(S['Encounters.cs'], "private static bool BanditMet")
     go = method_body(S['Encounters.cs'], "private static void LetPlayerGo")
-    return (option_default('BanditGetawayCheat') == 'true'
-            and "_o.BanditGetawayCheat" in M
+    return (option_default('BanditFreePassage') == 'true'
+            and "_o.BanditFreePassage" in M
             and "AddGetaway" not in S['Trading.cs']
             and "FacingBandits" not in S['Trading.cs']
             and '"encounter"' not in S['Trading.cs']
             and '("encounter", false)' not in COMPAT
-            and "Options.Current.BanditGetawayCheat && band != null && band.IsBandit;" in met
+            and "Options.Current.BanditFreePassage && band != null && band.IsBandit;" in met
             and "{=TL113}" in asked
             and "band?.IgnoreForHours(GetawayHours);" in go
             and "MobileParty.MainParty?.IgnoreByOtherPartiesTill(CampaignTime.HoursFromNow(GetawayHours));" in go
@@ -4358,13 +4359,16 @@ def the_getaway_ships_on_names_no_cheat_and_only_answers_bandits():
 
 def no_shipped_line_calls_the_free_passage_a_cheat():
     en = spoken(ENGLISH)
-    code = (S['Trading.cs'] + "\n" + M).replace('BanditGetawayCheat', '')
-    return ('[TRADELORD]' in en.get('TL387', '')
+    lift = re.search(r'Renamed\s*=\s*\{(.*?)\};', S['Migrate.cs'], re.S)
+    code = (ALL + "\n" + M).replace(lift.group(0), '') if lift else ALL + "\n" + M
+    return (lift is not None
+            and '[TRADELORD]' in en.get('TL387', '')
             and en.get('TL269') == 'Free passage from bandits'
             and 'TL112' not in en
             and not any('cheat' in text.lower() for text in en.values())
             and 'cheat' not in code.lower()
-            and 'public bool BanditGetawayCheat = true;' in S['Options.cs'])
+            and '(17, "BanditGetawayCheat", "BanditFreePassage"),' in lift.group(1)
+            and 'public bool BanditFreePassage = true;' in S['Options.cs'])
 
 def the_smeltable_hint_says_which_weapons_it_holds_back():
     hint = spoken(ENGLISH).get('TL364', '')
@@ -4944,7 +4948,8 @@ chk("1.23.1", "a dropdown's choices keep the order they shipped in, so a saved s
 
 EVER_SHIPPED = {
     "AlwaysBuyItems": "string", "AlwaysSellItems": "string", "AutoBuyOnEntry": "bool",
-    "AutoSellOnEntry": "bool", "BanditGetawayCheat": "bool", "BestSellTownTolerance": "float",
+    "AutoSellOnEntry": "bool", "BanditFreePassage": "bool", "BanditGetawayCheat": "bool",
+    "BestSellTownTolerance": "float",
     "BulkSimulation": "bool", "BuyCapPerItem": "int", "BuyHaulAnimals": "bool",
     "BuyPackAnimals": "bool",
     "BuyValueCapPerItem": "int", "CoinSound": "bool", "ConfidenceRanking": "bool",
@@ -4988,12 +4993,12 @@ def no_setting_a_player_ever_saved_is_left_stranded():
     stranded = [name for name, kind in EVER_SHIPPED.items()
                 if now.get(name) != kind and '"' + name + '"' not in lift]
     unlisted = [name for name in now if name not in EVER_SHIPPED]
-    return not stranded and not unlisted and len(EVER_SHIPPED) >= 82
+    return not stranded and not unlisted and len(EVER_SHIPPED) >= 86
 
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 16;' in S['Migrate.cs']
+    return ('public const int Shape = 17;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and "written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();" in S['Migrate.cs']
             and ordered(read, "string[] lines = Lines(found);",
@@ -5104,6 +5109,8 @@ def the_shape_a_settings_file_declares_gates_every_step_of_the_lift():
     lift = method_body(S['Migrate.cs'], "public static bool Lift")
     rename = method_body(S['Migrate.cs'], "private static bool Rename")
     shape = re.search(r'public const int Shape = (\d+);', S['Migrate.cs'])
+    block = re.search(r'Renamed\s*=\s*\{(.*?)\};', S['Migrate.cs'], re.S)
+    renamed = block.group(1) if block else ''
     return (shape is not None
             and ordered(lift, "changed |= Rename(from, written, notes);",
                         "if (from < 5)",
@@ -5115,6 +5122,7 @@ def the_shape_a_settings_file_declares_gates_every_step_of_the_lift():
             and lift.count("changed |=") == 9
             and "if (from < 15) changed |= WhatToBuyFirstIsOneRuleNow(written, notes);" in lift
             and (("if (from < " + shape.group(1) + ")") in lift
+                 or ("(" + shape.group(1) + ', "') in renamed
                  or ("public const int CracksAt = " + shape.group(1) + ";"
                      in method_body(S['Migrate.cs'], "public static class Whip")))
             and ordered(rename, "foreach (var (arrivedAt, was, now) in Renamed)",
@@ -5123,6 +5131,8 @@ def the_shape_a_settings_file_declares_gates_every_step_of_the_lift():
             and '(5, "BuyPackAnimals", "BuyHaulAnimals"),' in S['Migrate.cs']
             and '(7, "MaxTravelDays", "MaxTravelDaysTown"),' in S['Migrate.cs']
             and '(7, "MaxVillageTravelDays", "MaxTravelDaysVillage"),' in S['Migrate.cs']
+            and '(17, "BanditGetawayCheat", "BanditFreePassage"),' in S['Migrate.cs']
+            and "TheFreePassageSettingKeepsItsValueUnderItsNewName" in MIGRATIONTESTS
             and "AStepOnlyRunsOnAFileOlderThanTheShapeItArrivedIn" in MIGRATIONTESTS
             and "ARenameOnlyRunsOnAFileOlderThanTheShapeItArrivedIn" in MIGRATIONTESTS
             and "AFileAlreadyInTheCurrentShapeIsNeverLiftedAtAll" in MIGRATIONTESTS
