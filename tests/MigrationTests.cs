@@ -118,6 +118,20 @@ namespace TradeLord.Tests
         }
 
         [Theory]
+        [InlineData("true")]
+        [InlineData("false")]
+        public void TheFreePassageSettingKeepsItsValueUnderItsNewName(string held)
+        {
+            var written = File("BanditGetawayCheat", held, "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(16, written, notes));
+            Assert.False(written.ContainsKey("BanditGetawayCheat"));
+            Assert.Equal(held, written["BanditFreePassage"]);
+            Assert.Equal("800", written["GoldReserve"]);
+            Assert.NotEmpty(notes);
+        }
+
+        [Theory]
         [InlineData("45")]
         [InlineData("0")]
         [InlineData("200")]
@@ -479,7 +493,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(16, Migration.Shape);
+            Assert.Equal(17, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));

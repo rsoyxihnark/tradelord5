@@ -608,7 +608,7 @@ namespace TradeLord.Mcm
         [SettingPropertyBool("{=TL269}Free passage from bandits", Order = 18, RequireRestart = false,
             HintText = "{=TL369}When you run into looters or bandits, TradeLord adds a line asking to be let past. Saying it ends the encounter with no fight and no ransom, and they leave you alone for a few hours. It is ON by default.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
-        public bool BanditGetawayCheat { get => _o.BanditGetawayCheat; set { _o.BanditGetawayCheat = value; Options.Bump(); } }
+        public bool BanditFreePassage { get => _o.BanditFreePassage; set { _o.BanditFreePassage = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL429}Most workshops you may own (0 = the game's own limit)", 0, 200, Order = 19, RequireRestart = false,
             HintText = "{=TL430}Lifts the limit the game puts on how many workshops you may own. 200 is as good as no limit at all. 0 hands the decision back to the game, which allows more as your clan tier rises. Default 200.")]
