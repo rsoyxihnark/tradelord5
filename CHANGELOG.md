@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.90.9
+
+- Fixed TradeLord trusting its forecast less because of a market you reached long after the time that forecast was for
+- The selling pass starts quicker when you carry trade goods you did not buy yourself
+
 ## 1.90.8
 
 - Fixed the ledger ranking a very short route above one that pays far more

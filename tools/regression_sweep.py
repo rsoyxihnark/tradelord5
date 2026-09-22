@@ -6031,8 +6031,9 @@ def a_market_visit_prices_each_town_once_for_everything_on_the_shelf():
             and ordered(cheapest, "goods.Add(it);",
                         "LedgerBehavior.Instance?.PrimeMarketsFor(goods);",
                         "TradePolicy.UnpaidWorth(it);")
-            and ordered(sell, "goods.Add(held.EquipmentElement.Item);",
+            and ordered(sell, "goods.Add(roster.GetItemAtIndex(at));",
                         "LedgerBehavior.Instance?.PrimeMarketsFor(goods);",
+                        "? WhatThisStackWouldMake(pass, held) : 0, at));",
                         "Basis basis = Basis.For(")
             and t.count("PrimeMarketsFor(goods);") == 3
             and l.count("PrimeLiveRankings(") == 3)
@@ -7426,7 +7427,9 @@ def the_score_works_out_how_far_off_it_was_in_the_layer_the_tests_reach():
     reads = ('TradeMath.MissedBy(', 'TradeMath.OffByShare(')
     return (all(one in weighed for one in reads)
             and all(one.rstrip('(') in MATHTESTS for one in reads)
-            and 'TradeMath.MeanOf(' in written and 'TradeMath.DaysSince(' in written
+            and 'TradeMath.MeanOf(' in written
+            and 'Scoring.TooOldToSay(kept.WithinDays, kept.AtHours, now, out float since)' in written
+            and 'TradeMath.DaysSince(' in method_body(S['Scoring.cs'], "internal static bool TooOldToSay")
             and 'Outcome how = Scoring.Weigh(kept.StockSaid, kept.StockThen,' in written
             and 'TradeMath.NoShareToGive' in MATHTESTS
             and 'public static float OffByShare' in S['TradeMath.cs']
@@ -10955,6 +10958,24 @@ def the_forecast_is_scored_whatever_the_debug_switch_says():
 
 chk("1.90.6", "the forecast is held to what really moved whatever the debug switch says, so the share it is counted at is learned by every campaign and not only by one writing a log",
     the_forecast_is_scored_whatever_the_debug_switch_says())
+
+
+def a_forecast_too_old_to_say_anything_is_passed_over_rather_than_scored():
+    h = S['Hindsight.cs']
+    written = method_body(h, "private static void Written")
+    kept = method_body(h, "private static void Kept")
+    return (written and kept
+            and ordered(written, "if (kept.Item == null) continue;",
+                        "if (Scoring.TooOldToSay(kept.WithinDays, kept.AtHours, now, out float since))",
+                        "stale++;", "scored++;",
+                        "LedgerBehavior.Instance?.KeepForecastScore(TradeMath.MissThatCounts(how.Share));")
+            and written.count("scored++;") == 1
+            and '" passed over as too old to say anything"' in written
+            and '" passed over as too old to say anything"' in kept)
+
+
+chk("1.90.9", "a forecast figure the ride outlived is passed over rather than scored, the way an old promise already was, so the share what is on its way is counted at is learned only from figures still worth holding to",
+    a_forecast_too_old_to_say_anything_is_passed_over_rather_than_scored())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
