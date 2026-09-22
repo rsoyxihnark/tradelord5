@@ -99,6 +99,16 @@ namespace TradeLord
             TradeMath.WorthShift(WorthLanding(site, item, withinDays),
                                  WorthLeaving(site, item, withinDays));
 
+        internal static float TrustEarned()
+        {
+            LedgerBehavior kept = LedgerBehavior.Instance;
+            if (kept == null || !kept.ForecastScore(out int scored, out float missed)) return 1f;
+            return TradeMath.TrustInTheForecast(scored, missed);
+        }
+
+        internal static int WorthShiftAsItHasHeld(Settlement site, ItemObject item, float withinDays) =>
+            TradeMath.WorthShiftTrusted(WorthShift(site, item, withinDays), TrustEarned());
+
         internal static int WorthLanding(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;

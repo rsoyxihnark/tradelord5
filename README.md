@@ -7,7 +7,7 @@
 ## Everything it does
 
 - ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
-- ✅ It declares no save types of its own. All it puts in a save is five strings, five numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
+- ✅ It declares no save types of its own. All it puts in a save is five strings, seven numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
@@ -37,6 +37,7 @@
 - ✅ Left is blank when nobody TradeLord can see is coming for that good
 - ✅ Prices and stock that count what is still on its way: the cargo the caravans will unload, what that town's workshops will make next, and the purses those caravans are bringing to spend
 - ✅ That purse is spread over the goods that are cheap there, which is what a trader would really take off the shelf
+- ✅ It keeps score of that forecast as well, against what really moved, and counts what is on its way at the share the forecast has actually been right by, so it leans less and less on one that keeps missing
 - ✅ Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into
 - ✅ Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive

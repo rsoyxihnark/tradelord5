@@ -51,6 +51,8 @@ namespace TradeLord
         private int _lifetimeProfitCapped;
         private int _promisesScored;
         private float _promiseHeld;
+        private int _forecastsScored;
+        private float _forecastMissed;
         private string _promiseText = "";
         private Dictionary<string, PromiseRecord> _promises =
             new Dictionary<string, PromiseRecord>(StringComparer.Ordinal);
@@ -115,6 +117,20 @@ namespace TradeLord
             return scored > 0;
         }
 
+        internal void KeepForecastScore(float missed)
+        {
+            if (missed < 0f || float.IsNaN(missed) || float.IsInfinity(missed)) return;
+            _forecastsScored++;
+            _forecastMissed += missed;
+        }
+
+        internal bool ForecastScore(out int scored, out float missed)
+        {
+            scored = _forecastsScored;
+            missed = TradeMath.MeanOf(_forecastMissed, _forecastsScored);
+            return scored > 0;
+        }
+
         private static int Capped(long total) =>
             total > int.MaxValue ? int.MaxValue : total < int.MinValue ? int.MinValue : (int)total;
 
@@ -153,6 +169,8 @@ namespace TradeLord
             dataStore.SyncData("TradeLord_PromisesScored", ref _promisesScored);
             dataStore.SyncData("TradeLord_PromiseHeld", ref _promiseHeld);
             dataStore.SyncData("TradeLord_PromiseText", ref _promiseText);
+            dataStore.SyncData("TradeLord_ForecastsScored", ref _forecastsScored);
+            dataStore.SyncData("TradeLord_ForecastMissed", ref _forecastMissed);
             dataStore.SyncData("TradeLord_LatelyText", ref _latelyText);
             dataStore.SyncData("TradeLord_VillagePursesPutBack", ref _villagePursesPutBack);
             if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;
@@ -1048,7 +1066,7 @@ namespace TradeLord
                     if (buyPrice <= 0) continue;
 
                     float toBuy = Travel.EstimateDaysFromParty(from);
-                    int landedAtBuyTown = Forecast.WorthShift(from, item, toBuy);
+                    int landedAtBuyTown = Forecast.WorthShiftAsItHasHeld(from, item, toBuy);
                     int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);
                     int spendCap = Options.Current.BuyValueCapPerItem;
                     int stocked = MostWorthShowing(openingBuy);
@@ -1082,7 +1100,7 @@ namespace TradeLord
                         if (TradeMath.OutOfReach(days)) continue;
                         if (cap > 0f && days > cap) continue;
 
-                        int landedAtSellTown = Forecast.WorthShift(to, item, days);
+                        int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);
                         int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);
                         opened++;
                         float realizable = TradePolicy.Realizable(openingSell);

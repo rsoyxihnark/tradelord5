@@ -659,6 +659,55 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void One_wild_miss_cannot_speak_for_the_whole_forecast()
+        {
+            Assert.Equal(TradeMath.MostAForecastMissCounts, TradeMath.MissThatCounts(355f));
+            Assert.Equal(TradeMath.MostAForecastMissCounts, TradeMath.MissThatCounts(2f));
+            Assert.Equal(1f, TradeMath.MissThatCounts(1f));
+            Assert.Equal(0f, TradeMath.MissThatCounts(0f));
+            Assert.Equal(TradeMath.NoShareToGive, TradeMath.MissThatCounts(-1f));
+        }
+
+        [Fact]
+        public void A_forecast_that_has_never_been_checked_is_taken_at_its_word()
+        {
+            Assert.Equal(1f, TradeMath.TrustInTheForecast(0, 1f));
+            Assert.Equal(1f, TradeMath.TrustInTheForecast(-3, 1f));
+            Assert.Equal(1f, TradeMath.TrustInTheForecast(50, TradeMath.NoShareToGive));
+        }
+
+        [Fact]
+        public void A_forecast_that_keeps_missing_is_believed_less_and_less()
+        {
+            float few = TradeMath.TrustInTheForecast(2, 1f);
+            float many = TradeMath.TrustInTheForecast(80, 1f);
+            Assert.True(few > many);
+            Assert.True(many > 0.4f && many < 0.55f);
+            Assert.True(TradeMath.TrustInTheForecast(80, 0f) > 0.99f);
+            Assert.True(TradeMath.TrustInTheForecast(80, 2f) < many);
+        }
+
+        [Fact]
+        public void What_is_on_its_way_is_counted_at_the_trust_it_has_earned()
+        {
+            Assert.Equal(500, TradeMath.WorthShiftTrusted(1000, 0.5f));
+            Assert.Equal(-500, TradeMath.WorthShiftTrusted(-1000, 0.5f));
+            Assert.Equal(1000, TradeMath.WorthShiftTrusted(1000, 1f));
+            Assert.Equal(0, TradeMath.WorthShiftTrusted(1000, 0f));
+            Assert.Equal(0, TradeMath.WorthShiftTrusted(0, 0.5f));
+        }
+
+        [Fact]
+        public void A_forecast_that_has_been_missing_moves_a_shelf_less_than_one_that_has_not()
+        {
+            int wild = TradeMath.WorthShift(0, 8000);
+            int held = TradeMath.WorthShiftTrusted(wild, TradeMath.TrustInTheForecast(80, 1f));
+            Assert.True(held > wild);
+            Assert.Equal(5000, TradeMath.ShelfAfterLanding(10000, wild));
+            Assert.True(TradeMath.ShelfAfterLanding(10000, held) > 5000);
+        }
+
+        [Fact]
         public void A_market_has_to_beat_the_marked_town_by_a_clear_margin()
         {
             float marked = TradeMath.RateTheMarkHolds(500f, true);

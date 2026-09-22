@@ -216,6 +216,7 @@ namespace TradeLord
                 {
                     shared++;
                     shareTotal += how.Share;
+                    LedgerBehavior.Instance?.KeepForecastScore(TradeMath.MissThatCounts(how.Share));
                 }
                 lines.Add(line + "; said every good of that kind heading there was worth " +
                           kept.WorthSaid + " denars in all and " + Moving(how.Moved) + " denars, " +
@@ -229,6 +230,11 @@ namespace TradeLord
                           ? ", and no worth figure could be held to anything here"
                           : ", the worth figure by " + Share(TradeMath.MeanOf(shareTotal, shared)) +
                             " of what it said would move, over " + shared + " good(s)"));
+            if (LedgerBehavior.Instance != null &&
+                LedgerBehavior.Instance.ForecastScore(out int figures, out float missed))
+                lines.Add("  over this campaign: the worth figure has been off by " + Share(missed) +
+                          " over " + figures + " figure(s) checked, so what is on its way is counted at " +
+                          Share(TradeMath.TrustInTheForecast(figures, missed)) + " of what it says");
             Log.WriteMany(lines);
         }
 
