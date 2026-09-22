@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.90.8
+
+- Fixed the ledger ranking a very short route above one that pays far more
+
 ## 1.90.7
 
 - Fixed the map marker sending you to a nearby town when another was paying far more
