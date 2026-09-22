@@ -150,6 +150,15 @@ namespace TradeLord
             return PerDay(sellPrice - paid, days);
         }
 
+        public const float TheMarkedTownHoldsBy = 1.2f;
+
+        public static float RateTheMarkHolds(float rate, bool marked)
+        {
+            if (!marked || rate <= 0f || float.IsNaN(rate)) return rate;
+            float held = rate * TheMarkedTownHoldsBy;
+            return float.IsInfinity(held) ? rate : held;
+        }
+
         public static int MostYouCouldTake(int unitPrice, float unitWeight, int stocked,
                                            int spendable, float room, int cap)
         {
@@ -238,9 +247,14 @@ namespace TradeLord
             return worth > int.MaxValue ? int.MaxValue : (int)worth;
         }
 
+        public const float ShelfTheForecastMayNotEmptyBelow = 0.5f;
+
         public static int ShelfAfterLanding(int inStoreValue, int landingWorth)
         {
             long after = (long)inStoreValue + landingWorth;
+            long floor = inStoreValue > 0
+                ? (long)(inStoreValue * ShelfTheForecastMayNotEmptyBelow) : 0L;
+            if (after < floor) after = floor;
             if (after < 0L) return 0;
             return after > int.MaxValue ? int.MaxValue : (int)after;
         }
