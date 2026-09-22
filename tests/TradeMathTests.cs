@@ -506,7 +506,7 @@ namespace TradeLord.Tests
         {
             Assert.Equal(1200, TradeMath.ShelfAfterLanding(1000, 200));
             Assert.Equal(1000, TradeMath.ShelfAfterLanding(1000, 0));
-            Assert.Equal(0, TradeMath.ShelfAfterLanding(100, -400));
+            Assert.Equal(0, TradeMath.ShelfAfterLanding(0, -400));
             Assert.Equal(36, TradeMath.StockAfterLanding(12, 24));
         }
 
@@ -642,10 +642,44 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_shelf_cannot_be_bought_down_past_empty()
+        public void A_shelf_cannot_be_bought_down_past_half_of_what_is_on_it()
         {
-            Assert.Equal(0, TradeMath.ShelfAfterLanding(500, TradeMath.WorthShift(0, 900)));
-            Assert.Equal(100, TradeMath.ShelfAfterLanding(500, TradeMath.WorthShift(0, 400)));
+            Assert.Equal(250, TradeMath.ShelfAfterLanding(500, TradeMath.WorthShift(0, 900)));
+            Assert.Equal(250, TradeMath.ShelfAfterLanding(500, TradeMath.WorthShift(0, 400)));
+            Assert.Equal(300, TradeMath.ShelfAfterLanding(500, TradeMath.WorthShift(0, 200)));
+            Assert.Equal(0, TradeMath.ShelfAfterLanding(0, TradeMath.WorthShift(0, 900)));
+        }
+
+        [Fact]
+        public void A_shelf_the_forecast_adds_to_is_left_where_the_landing_puts_it()
+        {
+            Assert.Equal(900, TradeMath.ShelfAfterLanding(500, TradeMath.WorthShift(400, 0)));
+            Assert.Equal(500, TradeMath.ShelfAfterLanding(500, TradeMath.WorthShift(0, 0)));
+            Assert.Equal(int.MaxValue, TradeMath.ShelfAfterLanding(int.MaxValue, int.MaxValue));
+        }
+
+        [Fact]
+        public void A_market_has_to_beat_the_marked_town_by_a_clear_margin()
+        {
+            float marked = TradeMath.RateTheMarkHolds(500f, true);
+            Assert.True(marked > 500f);
+            Assert.False(TradeMath.RateTheMarkHolds(550f, false) > marked);
+            Assert.True(TradeMath.RateTheMarkHolds(700f, false) > marked);
+        }
+
+        [Fact]
+        public void A_town_that_is_not_marked_is_weighed_at_what_it_pays()
+        {
+            Assert.Equal(500f, TradeMath.RateTheMarkHolds(500f, false));
+            Assert.Equal(0f, TradeMath.RateTheMarkHolds(0f, false));
+        }
+
+        [Fact]
+        public void A_marked_town_that_pays_nothing_holds_on_to_nothing()
+        {
+            Assert.Equal(0f, TradeMath.RateTheMarkHolds(0f, true));
+            Assert.Equal(float.MaxValue, TradeMath.RateTheMarkHolds(float.MaxValue, true));
+            Assert.True(TradeMath.RateTheMarkHolds(1f, false) > TradeMath.RateTheMarkHolds(0f, true));
         }
 
         [Fact]
