@@ -4741,9 +4741,9 @@ def an_animal_a_quest_is_waiting_on_is_counted_out_of_the_herd():
             and "if (!Readable()) return null;" in promised
             and "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);" in relief
             and "if (promised == null) return;" in relief
-            and "if (heldBack.TryGetValue(item, out int owed) && owed > 0)" in relief
+            and "if (promised.TryGetValue(item, out int owed) && owed > 0)" in relief
             and "int spare = Math.Min(remaining, owed);" in relief
-            and "heldBack[item] = owed - spare;" in relief
+            and "promised[item] = owed - spare;" in relief
             and "remaining -= spare;" in relief
             and "Errands.Forget();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 
@@ -4755,7 +4755,10 @@ def a_quest_animal_is_held_back_from_every_sale_not_just_the_herd():
     return ("awaited = Errands.Promised(out int anyLivestock);" in kept
             and "TradeRules.LivestockKeep(carried, anyLivestock)" in kept
             and "if (awaited == null) return keep;" in kept
-            and "if (owed.Value > held) keep[owed.Key] = owed.Value;" in kept
+            and "facts.AwaitedHeld = HeldBack(awaited, item);" in
+                method_body(S['Policy.cs'], "internal static bool MaySell(in Good good, ItemRosterElement el")
+            and "TradePolicy.MaySell(good, _plan[at], _pass.Locked, _keepBack, _awaited," in S['Trading.cs']
+            and "TradePolicy.MaySell(el, locked, keepBack, awaited, out int keep)" in S['Marker.cs']
             and "TradePolicy.FoodKeep(" not in S['Trading.cs']
             and S['Trading.cs'].count("TradePolicy.KeptBack(") == 2
             and S['Marker.cs'].count("TradePolicy.KeptBack(") == 1
@@ -6590,9 +6593,11 @@ def the_food_reserve_holds_against_thinning_the_herd_too():
                         "ItemRoster mine = pass.Party.ItemRoster;",
                         "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);",
                         "if (promised == null) return;",
-                        "if (heldBack.TryGetValue(item, out int owed) && owed > 0)")
+                        "if (promised.TryGetValue(item, out int owed) && owed > 0)")
             and "Named(TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current), byId);" in kept
-            and "if (owed.Value > held) keep[owed.Key] = owed.Value;" in kept)
+            and "awaited[owed.Key] = had + owed.Value;" in kept
+            and "if (good.Id == null || good.HasHorse) return 0;" in
+                method_body(S['Rules.cs'], "internal static int FoodValue"))
 
 
 def both_reserves_are_kept_back_not_just_the_larger_one():
@@ -10976,6 +10981,25 @@ def a_forecast_too_old_to_say_anything_is_passed_over_rather_than_scored():
 
 chk("1.90.9", "a forecast figure the ride outlived is passed over rather than scored, the way an old promise already was, so the share what is on its way is counted at is learned only from figures still worth holding to",
     a_forecast_too_old_to_say_anything_is_passed_over_rather_than_scored())
+
+
+def a_quest_good_is_held_back_once_and_not_again_as_food():
+    kept = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack")
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    return (kept and relief
+            and "keep[" not in kept
+            and "foreach (var owed in awaited)" not in kept
+            and ordered(kept, "Named(TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current), byId);",
+                        "awaited = Errands.Promised(out int anyLivestock);",
+                        "awaited[owed.Key] = had + owed.Value;")
+            and "heldBack" not in relief
+            and "if (promised.TryGetValue(item, out int owed) && owed > 0)" in relief
+            and "said.KeepCount += reserved;" in sell_rule()
+            and "A_good_a_quest_wants_and_the_larder_wants_is_held_back_for_both" in SELLTESTS)
+
+
+chk("1.90.10", "a good a quest is waiting on is held back once for the quest, and the food reserve holds back only the food it set aside, so a quest good is never kept a second time as food",
+    a_quest_good_is_held_back_once_and_not_again_as_food())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

@@ -271,11 +271,6 @@ namespace TradeLord
                 awaited.TryGetValue(owed.Key, out int had);
                 awaited[owed.Key] = had + owed.Value;
             }
-            foreach (var owed in awaited)
-            {
-                keep.TryGetValue(owed.Key, out int held);
-                if (owed.Value > held) keep[owed.Key] = owed.Value;
-            }
             return keep;
         }
 

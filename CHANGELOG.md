@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.90.10
+
+- Fixed a good a quest is waiting on being held back a second time as if it were part of your food reserve
+
 ## 1.90.9
 
 - Fixed TradeLord trusting its forecast less because of a market you reached long after the time that forecast was for
