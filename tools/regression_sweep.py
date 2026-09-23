@@ -5328,12 +5328,13 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
                 "internal int PaidOut(bool sim) => _paid + (sim ? _spent : 0);",
                 "internal int Purse(bool sim) => sim ? _gained - _spent : 0;",
                 "internal int TillDrawn(bool sim) => sim ? _drawn : 0;",
-                "internal float Weight(bool sim) => sim ? _weight : 0f;",
-                "internal int FoodHeld(bool sim) => sim ? _food : 0;",
-                "internal int Shed(bool sim) => sim ? _shed : 0;",
-                "internal int MountsShed(bool sim) => sim ? _mounts : 0;",
-                "internal int HaulsShed(bool sim) => sim ? _hauls : 0;",
-                "internal int HerdTaken(bool sim) => sim ? _herd : 0;"))
+                "private bool OnPaper(bool sim) => sim && !LaidOut;",
+                "internal float Weight(bool sim) => OnPaper(sim) ? _weight : 0f;",
+                "internal int FoodHeld(bool sim) => OnPaper(sim) ? _food : 0;",
+                "internal int Shed(bool sim) => OnPaper(sim) ? _shed : 0;",
+                "internal int MountsShed(bool sim) => OnPaper(sim) ? _mounts : 0;",
+                "internal int HaulsShed(bool sim) => OnPaper(sim) ? _hauls : 0;",
+                "internal int HerdTaken(bool sim) => OnPaper(sim) ? _herd : 0;"))
             and all(dry in ledger for dry in ("_drySold", "_dryBought"))
             and len(fields) == 16
             and "ForgetTheDryRun();" in forget
@@ -11461,6 +11462,96 @@ def a_check_says_so_when_everything_at_a_market_was_passed_over_or_set_aside():
 
 chk("1.90.17", "the forecast and promise checks write their line for a market even when every figure there was passed over or set aside, and say goods worth so many denars rather than denars you bought",
     a_check_says_so_when_everything_at_a_market_was_passed_over_or_set_aside())
+
+
+def staged_trading_sells_no_animal_as_you_leave():
+    left = method_body(S['Trading.cs'], "private void OnSettlementLeft")
+    held = left.find("if (Options.Current.AutoSellOnEntry && Counter.HoldsBack())")
+    sold = left.find("if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);")
+    return (left and held >= 0 and sold > held
+            and "return;" in left[held:sold]
+            and '"herd relief on the way out of "' in left[held:sold]
+            and ordered(left, "if (!_visitTradeAllowed)",
+                        "if (Options.Current.AutoSellOnEntry && Counter.HoldsBack())")
+            and "internal static bool HoldsBack() =>" in S['Counter.cs']
+            and "TradeRules.StagesTheDeal(Options.Current) &&" in S['Counter.cs'])
+
+
+chk("1.90.18", "herd relief on the way out waits while Staged Trading holds trading back, the way trading as you arrive already did, so no animal is sold without being laid out on the trade screen first",
+    staged_trading_sells_no_animal_as_you_leave())
+
+
+def a_deal_laid_out_on_the_trade_screen_counts_what_it_moved_once():
+    books = S['Books.cs']
+    held = method_body(S['Trading.cs'], "private sealed class Pass")
+    buy = method_body(S['Passes.cs'], "internal static Traded BuyThem")
+    larder = method_body(S['Trading.cs'], "public static void ExecuteResupply")
+    return (held and buy and larder
+            and "internal bool LaidOut;" in books
+            and "private bool OnPaper(bool sim) => sim && !LaidOut;" in books
+            and books.count("OnPaper(sim)") == 8
+            and "OnPaper(sim) && id != null && _held.TryGetValue(id, out int units) ? units : 0;" in books
+            and "OnPaper(sim) && id != null && _dryBought.TryGetValue(id, out var prior) ? prior.count : 0;"
+                in books
+            and "sim && id != null && _dryDrawn.TryGetValue(id, out int units) ? units : 0;" in books
+            and "internal int Purse(bool sim) => sim ? _gained - _spent : 0;" in books
+            and ordered(held, "Books = books;", "books.LaidOut = Counter.Staging;",
+                        "Sim = Options.Current.SimulationMode || Counter.Staging;")
+            and ordered_last(buy, "books.NotePurchase(good.Id, price, good.Weight, TradeRules.FoodValue(good));",
+                             "simWeight = books.Weight(sim);", "market.Staged(picked.At, price);")
+            and "simWeight +=" not in buy
+            and ordered_last(larder, "pass.Books.NotePurchase(item.StringId, price, good.Weight, fed);",
+                             "simWeight = pass.Books.Weight(pass.Sim);",
+                             "Counter.Stage(el, selling: false, price);")
+            and "simWeight +=" not in larder
+            and all(one in BOOKTESTS for one in
+                    ("ADealLaidOutOnTheTradeScreenLeavesWhatIsCarriedToTheGoodsItMoved",
+                     "ADealLaidOutOnTheTradeScreenStillCountsTheGoldAndWhatItTraded",
+                     "ADryRunThatIsNotLaidOutCarriesWhatItWouldHaveMoved"))
+            and all(one in BUYPASSTESTS for one in
+                    ("A_deal_laid_out_on_the_trade_screen_fills_all_the_room_the_screen_has",
+                     "A_deal_laid_out_on_the_trade_screen_counts_what_it_laid_out_once"))
+            and all(one in SELLPASSTESTS for one in
+                    ("A_dry_run_sells_every_quality_of_a_good",
+                     "A_deal_laid_out_on_the_trade_screen_sells_every_quality_of_a_good")))
+
+
+chk("1.90.18", "a deal Staged Trading lays out counts what it has already put on the trade screen once, since the screen moves the goods as they are laid out, while the gold, the caps and what was traded still come from the dry run's own books",
+    a_deal_laid_out_on_the_trade_screen_counts_what_it_moved_once())
+
+
+def an_animal_never_counts_against_the_hold():
+    describe = method_body(S['Policy.cs'], "internal static Good Describe")
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    return (describe and relief
+            and "good.Weight = item.HasHorseComponent ? 0f : item.Weight;" in describe
+            and describe.count("good.Weight =") == 1
+            and "pass.Books.NoteSale(item.StringId, price, 0f, TradePolicy.FoodValue(item));" in relief
+            and "item.Weight" not in relief
+            and "good.Weight > 0.01f && good.Weight > roomLeft;" in S['Rules.cs'])
+
+
+chk("1.90.18", "an animal weighs nothing in the hold, the way the game counts it, so livestock is held back by the herd penalty alone and never by the cargo room or the share of the hold",
+    an_animal_never_counts_against_the_hold())
+
+
+def a_purchase_made_away_from_a_market_is_written_down_at_what_it_cost():
+    body = method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange")
+    paid = method_body(S['Rules.cs'], "public static int PaidForWhatYouKept")
+    return (body and paid
+            and ordered(body, "int took = Math.Min(bought, InAll(carried, item));",
+                        "here == null", "? Deals.PaidForWhatYouKept(said, bought, took)",
+                        ": Bulk.PricePaid(here, element.EquipmentElement, took, unit)")
+            and "if (kept >= bought) return gold;" in paid
+            and "return (int)((long)gold * kept / bought);" in paid
+            and all(one in DEALTESTS for one in
+                    ("A_purchase_is_written_down_at_the_gold_it_cost",
+                     "Only_the_share_of_a_purchase_you_still_carry_is_written_down",
+                     "A_purchase_with_nothing_on_it_writes_nothing_down")))
+
+
+chk("1.90.18", "a good bought by hand from a caravan or villagers on the road is written down at the gold it cost, since there is no shelf to wind back and the good's own worth is not what you paid",
+    a_purchase_made_away_from_a_market_is_written_down_at_what_it_cost())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

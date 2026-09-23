@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.90.18
+
+- Fixed TradeLord selling animals as you left a town or village while Staged Trading was on
+- Fixed the deal Staged Trading lays out filling only part of the room left in your cargo
+- Fixed the deal Staged Trading lays out leaving part of a good unsold when you carried it in more than one quality
+- Fixed the deal Staged Trading lays out selling too few animals to get your party back up to speed
+- Fixed the deal Staged Trading lays out buying food you did not need after selling some of yours
+- Fixed TradeLord passing over livestock when your cargo was nearly full, though livestock takes no room in it
+- Fixed Share of the hold one good may fill holding back how much livestock TradeLord would buy
+- Fixed Simulation mode (dry run) counting the animals it would sell as cargo room freed for buying
+- Fixed TradeLord forgetting what you really paid for goods you bought by hand from a caravan or villagers on the road
+
 ## 1.90.17
 
 - Fixed a deal laid out by Staged Trading counting against TradeLord's forecast and Trust a market by what it has paid, taken or cancelled

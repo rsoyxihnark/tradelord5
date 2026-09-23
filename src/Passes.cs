@@ -296,8 +296,8 @@ namespace TradeLord
                         moved.Units++;
                         remaining--;
                         drawn = wouldDraw;
-                        simWeight += good.Weight;
                         books.NotePurchase(good.Id, price, good.Weight, TradeRules.FoodValue(good));
+                        simWeight = books.Weight(sim);
                         if (livestock) { herdRoom--; books.NoteHerdTaken(); }
                         market.Staged(picked.At, price);
                         continue;
