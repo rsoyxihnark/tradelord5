@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.90.12
+
+- Fixed TradeLord selling only part of your loot or animals when the same item sat in your bags in more than one quality
+- Fixed TradeLord buying fewer haul animals or livestock than a market had when it held them in more than one quality
+- Fixed Stop buying at this many held and Share of the hold one good may fill counting only one quality of a good you carry
+- Fixed TradeLord forgetting part of what you paid for goods bought by hand when you carried the same item in another quality
+- Fixed Stock in item tooltips and in the ledger counting only one quality of a good a market holds
+- Fixed TradeLord's forecast going unchecked at new markets after a long stretch of play without restarting the game
+- Fixed the hint under Pick where to sell on the whole load still saying only the five best markets are weighed
+- Fixed the Turkish name and hint of Minimum stock value for buy suggestions and the minimum stock tooltip lines missing Turkish letters
+- Fixed the Turkish, Russian and Chinese tooltip lines and hints about minimum stock misnaming Minimum stock for buy suggestions
+- Fixed the Turkish, Russian and Chinese hint under Enable extended debug logging misnaming Count what is on its way to a market
+
 ## 1.90.11
 
 - Fixed the ledger's Price, Qty and Profit letting what is on its way to a market move its price by more than half
