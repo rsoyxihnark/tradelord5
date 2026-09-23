@@ -4173,7 +4173,9 @@ chk("1.14.2", "the ladders are dropped when a scan starts, given back when it fi
             "Bulk.Forget();\n            return routes;") and
     method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes").count("Bulk.Forget();") == 2 and
     'Guard.Run("GameEnd.Bulk", Bulk.Forget);' in S['SubModule.cs'] and
-    "internal static void Forget() => _rungs.Clear();" in S['Market.cs'])
+    "_rungs.Clear();" in method_body(between(S['Market.cs'], "internal static class Bulk",
+                                             "internal static class Priced"),
+                                     "internal static void Forget()"))
 
 chk("1.14.3", "a market whose merchant has no gold is no destination in any list the mod ranks, not just the route scan",
     (lambda body: "if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold," in body
@@ -11000,6 +11002,80 @@ def a_quest_good_is_held_back_once_and_not_again_as_food():
 
 chk("1.90.10", "a good a quest is waiting on is held back once for the quest, and the food reserve holds back only the food it set aside, so a quest good is never kept a second time as food",
     a_quest_good_is_held_back_once_and_not_again_as_food())
+
+
+def what_is_on_its_way_moves_a_route_no_further_than_its_first_unit_may_move():
+    rung = method_body(S['Market.cs'], "private static Ladder Rung")
+    held = method_body(S['Market.cs'], "private static Ladder Held")
+    first = method_body(S['Market.cs'], "internal static int FirstUnit")
+    opening = method_body(S['Market.cs'], "internal static int Opening")
+    walk = method_body(S['Market.cs'], "internal static RouteQuote Walk")
+    reach = method_body(S['TradeMath.cs'], "public static int LandingWithinReach")
+    return (rung and held and first and opening and walk and reach
+            and "rung = Held(site, item, selling, quoted, landed, scanning: true);" in rung
+            and "new Ladder(" not in rung
+            and "Ladder rung = Held(site, item, selling, quoted, landed, scanning: false);" in first
+            and "new Ladder(" not in first
+            and "return rung.Walkable ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;" in first
+            and "int walked = Rung(site, item, selling, quoted, landed).At(0);" in opening
+            and ordered(held, "var rung = new Ladder(site, item, selling, quoted, landed);",
+                        "if (landed == 0 || !rung.Walkable) return rung;",
+                        "int first = rung.At(0);",
+                        "if (TradeMath.ForecastWithin(quoted, first) == first) return rung;",
+                        "held = TradeMath.LandingWithinReach(quoted, landed, first,",
+                        "shift => new Ladder(site, item, selling, quoted, shift).At(0));",
+                        "return new Ladder(site, item, selling, quoted, TradeMath.NoFurtherThan(landed, held));")
+            and held.count("new Ladder(") == 3
+            and "landed: landedAtBuyTown);" in walk and "landed: landedAtSellTown);" in walk
+            and "int buyPrice = buy.At(u);" in walk and "int sellPrice = sell.At(u);" in walk
+            and "if (landed == 0 || ForecastWithin(live, firstUnit) == firstUnit) return landed;" in reach
+            and "int held = MostThatHolds(most, shift =>" in reach
+            and "return ForecastWithin(live, price) == price;" in reach
+            and "return landed > 0 ? held : -held;" in reach
+            and all(one in MATHTESTS for one in
+                    ("A_price_the_forecast_did_not_move_is_left_exactly_where_it_was",
+                     "A_landing_that_keeps_the_first_unit_within_reach_is_left_whole",
+                     "A_landing_that_would_move_the_first_unit_too_far_is_held_to_the_most_that_keeps_it_within_reach")))
+
+
+chk("1.90.11", "what is still on its way to a market is held to the most that keeps that market's first unit within reach of what it pays now, so every unit the ledger walks, its price and its profit sit on the bound the tooltip already kept",
+    what_is_on_its_way_moves_a_route_no_further_than_its_first_unit_may_move())
+
+
+def the_halving_search_reaches_the_largest_whole_number_without_wrapping_round():
+    most = method_body(S['TradeMath.cs'], "public static int MostThatHolds")
+    return (most
+            and "int mid = lowest + (int)(((long)highest - lowest + 1) / 2);" in most
+            and "The_halving_search_reaches_the_largest_whole_number_there_is" in MATHTESTS)
+
+
+chk("1.90.11", "the halving search that holds back what is on its way reaches the largest landing there is without wrapping round, so a huge forecast can never freeze the route scan or the tooltip",
+    the_halving_search_reaches_the_largest_whole_number_without_wrapping_round())
+
+
+def how_far_a_landing_may_move_a_market_is_found_once_a_scan():
+    m = S['Market.cs']
+    held = method_body(m, "private static Ladder Held")
+    forget = method_body(between(m, "internal static class Bulk", "internal static class Priced"),
+                         "internal static void Forget()")
+    further = method_body(S['TradeMath.cs'], "public static int NoFurtherThan")
+    return (held and forget
+            and "private static readonly Dictionary<(string site, string item, bool selling, bool arriving), int> _reach =" in m
+            and ordered(held, "var way = (site.StringId, item.StringId, selling, landed > 0);",
+                        "if (!scanning || !_reach.TryGetValue(way, out int held))",
+                        "held = TradeMath.LandingWithinReach(",
+                        "if (scanning) _reach[way] = held;",
+                        "TradeMath.NoFurtherThan(landed, held)")
+            and "_rungs.Clear();" in forget and "_reach.Clear();" in forget
+            and "public static int NoFurtherThan(int landed, int shift) =>" in S['TradeMath.cs']
+            and "landed > 0 ? Math.Min(shift, landed) : Math.Max(shift, landed);" in S['TradeMath.cs']
+            and all(one in MATHTESTS for one in
+                    ("Every_landing_too_far_the_same_way_is_held_to_the_same_most",
+                     "A_held_landing_never_reaches_further_than_the_landing_itself")))
+
+
+chk("1.90.11", "how far what is on its way may move a market is searched for once per town, good, side and way in a scan and forgotten with the ladders, and never moves a route further than the landing itself, so holding the forecast back costs a scan one search per market rather than one per route",
+    how_far_a_landing_may_move_a_market_is_found_once_a_scan())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
