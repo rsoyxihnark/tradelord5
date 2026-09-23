@@ -47,13 +47,38 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_sitting_is_the_same_only_at_the_same_market_in_the_same_hour()
+        public void A_sitting_is_the_same_only_at_the_same_market_within_the_hour()
         {
             Assert.True(Arrivals.StillTheSameSitting("town_ES3", "town_ES3", 400, 400));
             Assert.False(Arrivals.StillTheSameSitting("town_ES3", "town_ES3", 401, 400));
             Assert.False(Arrivals.StillTheSameSitting("town_ES3", "town_V8", 400, 400));
             Assert.False(Arrivals.StillTheSameSitting(null, "town_ES3", 400, 400));
             Assert.False(Arrivals.StillTheSameSitting(null, null, 400, 400));
+        }
+
+        [Fact]
+        public void Straight_back_is_under_an_hour_after_the_last_time_whatever_the_clock_says()
+        {
+            Assert.True(Arrivals.StraightBack(401.05, 400.97));
+            Assert.True(Arrivals.StraightBack(400.97, 400.02));
+            Assert.True(Arrivals.StraightBack(400.5, 400.5));
+            Assert.False(Arrivals.StraightBack(401.0, 400.0));
+            Assert.False(Arrivals.StraightBack(401.5, 400.0));
+        }
+
+        [Fact]
+        public void Nothing_is_straight_back_before_it_happened_or_when_it_never_did()
+        {
+            Assert.False(Arrivals.StraightBack(400.0, 400.5));
+            Assert.False(Arrivals.StraightBack(0.5, -1d));
+        }
+
+        [Fact]
+        public void Stepping_back_in_across_the_turn_of_the_hour_is_the_same_sitting()
+        {
+            Assert.True(Arrivals.StillTheSameSitting("town_ES3", "town_ES3", 401.05, 400.97));
+            Assert.False(Arrivals.StillTheSameSitting("town_ES3", "town_V8", 401.05, 400.97));
+            Assert.False(Arrivals.StillTheSameSitting("town_ES3", "town_ES3", 402.05, 400.97));
         }
     }
 }

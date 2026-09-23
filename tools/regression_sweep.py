@@ -5366,7 +5366,7 @@ def meeting_the_same_party_again_keeps_the_books_it_already_wrote():
     t = S['Trading.cs']
     books = method_body(t, "private static Books BooksForTheMeeting")
     passes = S['Passes.cs']
-    return (ordered(books, "if (_meetingBooks != null && _meetingBooksFor == met && _meetingHour == hour)",
+    return (ordered(books, "if (_meetingBooks != null && _meetingBooksFor == met && Arrivals.StraightBack(hours, _meetingHours))",
                     "_meetingBooks.ForgetTheDryRun();", "return _meetingBooks;",
                     "_meetingBooks = new Books();", "_meetingBooksFor = met;")
             and "_meetingBooks = null;" in method_body(t, "internal static void ForgetTheMeeting")
@@ -6086,18 +6086,18 @@ def a_market_you_step_back_into_inside_the_hour_is_the_same_visit():
     reset = method_body(t, "private static void ResetVisit")
     entered = method_body(t, "private void OnSettlementEntered")
     forget = method_body(t, "internal static void ForgetVisit")
-    return ("int hour = (int)CampaignTime.Now.ToHours;" in sitting
+    return ("double hours = CampaignTime.Now.ToHours;" in sitting
             and "bool same = Arrivals.StillTheSameSitting(settlement?.StringId, _sittingAt," in sitting
-            and "here != null && here == sittingAt && hour == sittingHour;" in S['Rules.cs']
-            and "A_sitting_is_the_same_only_at_the_same_market_in_the_same_hour" in ARRIVALTESTS
+            and "here != null && here == sittingAt && StraightBack(hours, sittingHours);" in S['Rules.cs']
+            and "A_sitting_is_the_same_only_at_the_same_market_within_the_hour" in ARRIVALTESTS
             and ordered(sitting, "bool same =", "_sittingAt = settlement?.StringId;",
-                        "_sittingHour = hour;", "return same;")
+                        "_sittingHours = hours;", "return same;")
             and "private static void ResetVisit(bool sameSitting = false)" in t
             and "if (sameSitting) Visit.ForgetTheDryRun(); else Visit.Forget();" in reset
             and "ResetVisit(StillTheSameSitting(settlement));" in entered
             and t.count("StillTheSameSitting(") == 3
             and "_sittingAt = null;" in forget
-            and "_sittingHour = -1;" in forget)
+            and "_sittingHours = -1d;" in forget)
 
 def the_log_is_kept_from_one_launch_to_the_next():
     support = S['Support.cs']
@@ -6169,7 +6169,7 @@ chk("1.46.0", "TradeLord.log is emptied only once it has outgrown the size it is
 chk("1.46.0", "a line the log would not take costs the file for half a minute rather than for the rest of the session",
     one_line_the_log_would_not_take_never_slows_the_rest_of_the_session())
 
-chk("1.43.0", "stepping straight back into a market inside the same hour carries the same visit on, so neither what it has already spent nor what it has already traded starts again",
+chk("1.43.0", "stepping straight back into a market within the hour carries the same visit on, so neither what it has already spent nor what it has already traded starts again",
     a_market_you_step_back_into_inside_the_hour_is_the_same_visit())
 chk("1.43.0", "TradeLord.log is kept from one launch to the next, and the one thing that empties it is reached from the first line of a launch and nowhere else",
     the_log_is_kept_from_one_launch_to_the_next())
@@ -8227,7 +8227,7 @@ def what_counts_as_the_same_arrival_is_worked_out_where_a_test_can_ask_it():
                      "The_road_is_taken_once_you_are_further_from_the_gate_than_the_threshold",
                      "A_gate_nobody_wrote_down_never_starts_the_road",
                      "Once_the_road_is_taken_standing_still_does_not_untake_it",
-                     "A_sitting_is_the_same_only_at_the_same_market_in_the_same_hour")))
+                     "A_sitting_is_the_same_only_at_the_same_market_within_the_hour")))
 
 
 chk("1.71.1", "what counts as the same arrival, the same sitting and taking to the road is worked out where a test can ask it",
@@ -11706,15 +11706,16 @@ chk("1.91.1", "Hold cargo for the best market, the map marker and Color prices b
     every_best_market_comparison_prices_the_quality_you_carry())
 
 
-def a_meeting_on_the_road_lasts_the_hour_it_began_in():
+def a_later_meeting_on_the_road_starts_afresh():
     t = S['Trading.cs']
     books = method_body(t, "private static Books BooksForTheMeeting")
-    return ("private static int _meetingHour = -1;" in t
-            and ordered(books, "int hour = Freshness.Hour;",
-                        "if (_meetingBooks != null && _meetingBooksFor == met && _meetingHour == hour)",
-                        "return _meetingBooks;", "_meetingBooks = new Books();",
-                        "_meetingBooksFor = met;", "_meetingHour = hour;")
-            and "_meetingHour = -1;" in method_body(t, "internal static void ForgetTheMeeting")
+    fresh = between(books, "_meetingBooks = new Books();", "return _meetingBooks;")
+    return ("private static double _meetingHours = -1d;" in t
+            and ordered(books, "double hours = CampaignTime.Now.ToHours;",
+                        "if (_meetingBooks != null && _meetingBooksFor == met && Arrivals.StraightBack(hours, _meetingHours))",
+                        "return _meetingBooks;", "_meetingBooks = new Books();")
+            and ordered(fresh, "_meetingBooksFor = met;", "_meetingHours = hours;")
+            and "_meetingHours = -1d;" in method_body(t, "internal static void ForgetTheMeeting")
             and "Meeting that same party again straight away counts as the same meeting" in README
             and "while meeting them again later starts afresh" in README)
 
@@ -11726,8 +11727,8 @@ def a_market_the_game_cannot_answer_for_is_left_alone():
             and "if (s != Settlement.CurrentSettlement) return true;" in allows)
 
 
-chk("1.91.2", "meeting the same party on the road again keeps its books only within the hour the meeting began in, so what was spent and traded days ago no longer holds the next meeting back",
-    a_meeting_on_the_road_lasts_the_hour_it_began_in())
+chk("1.91.2", "meeting the same party on the road again keeps its books only when you meet them again straight away, so what was spent and traded days ago no longer holds the next meeting back",
+    a_later_meeting_on_the_road_starts_afresh())
 chk("1.91.2", "a town or village the game cannot say you may trade in is traded in not at all, and the log says why",
     a_market_the_game_cannot_answer_for_is_left_alone())
 
@@ -11780,6 +11781,37 @@ chk("1.91.3", "an item's tooltip prices every market it names, the market you st
     a_tooltip_prices_every_market_at_the_quality_you_hover())
 chk("1.91.3", "the feature list puts the promise tally and the gold reserve line in What this means, names Left's days and the Trade XP along the top, and says what a trade on the road is priced at, and the comparison says only a trade in a market goes through the game's own sale",
     the_feature_list_says_where_the_ledger_shows_what_it_shows())
+
+
+def straight_back_is_an_hour_from_the_last_time_whatever_the_clock_says():
+    r = S['Rules.cs']
+    t = S['Trading.cs']
+    books = method_body(t, "private static Books BooksForTheMeeting")
+    sitting = method_body(t, "private static bool StillTheSameSitting")
+    leaving = method_body(t, "private static void NoteLeavingTheSitting")
+    left = method_body(t, "private void OnSettlementLeft")
+    return ("internal const double StraightBackWithin = 1d;" in r
+            and "hours >= lastHours && hours - lastHours < StraightBackWithin;" in r
+            and ordered(books, "Arrivals.StraightBack(hours, _meetingHours))",
+                        "_meetingHours = hours;", "_meetingBooks.ForgetTheDryRun();",
+                        "return _meetingBooks;")
+            and "Freshness.Hour" not in books
+            and "(int)CampaignTime.Now.ToHours" not in sitting
+            and "hours, _sittingHours);" in sitting
+            and "_sittingAt = settlement?.StringId;\n            _sittingHours = hours;\n            return same;" in sitting
+            and ordered(leaving, "if (settlement != null && settlement.StringId == _sittingAt)",
+                        "_sittingHours = CampaignTime.Now.ToHours;")
+            and ordered(left, "if (party != MobileParty.MainParty) return;",
+                        "NoteLeavingTheSitting(settlement);")
+            and "_meetingHour " not in t and "_sittingHour " not in t
+            and all(one in ARRIVALTESTS for one in
+                    ("Straight_back_is_under_an_hour_after_the_last_time_whatever_the_clock_says",
+                     "Nothing_is_straight_back_before_it_happened_or_when_it_never_did",
+                     "Stepping_back_in_across_the_turn_of_the_hour_is_the_same_sitting")))
+
+
+chk("1.91.4", "meeting the same party again or walking back into the same market counts as the same meeting or visit for an hour after the last meeting or after you walked out, however the clock turns in between, and each meeting straight away carries that hour on",
+    straight_back_is_an_hour_from_the_last_time_whatever_the_clock_says())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
