@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.90.11
+
+- Fixed the ledger's Price, Qty and Profit letting what is on its way to a market move its price by more than half
+- Best buy prices and Best sell prices in an item's tooltip now count what is on its way to a market by the same rule as the ledger
+
 ## 1.90.10
 
 - Fixed a good a quest is waiting on being held back a second time as if it were part of your food reserve

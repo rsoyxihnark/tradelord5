@@ -403,6 +403,13 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_halving_search_reaches_the_largest_whole_number_there_is()
+        {
+            Assert.Equal(int.MaxValue, TradeMath.MostThatHolds(int.MaxValue, step => step > 0));
+            Assert.Equal(1000, TradeMath.MostThatHolds(int.MaxValue, step => step > 0 && step <= 1000));
+        }
+
+        [Fact]
         public void A_modifier_counts_as_unchanged_only_within_a_hair_of_the_neutral_one()
         {
             Assert.True(TradeMath.Unchanged(1f, 1f));
@@ -1065,6 +1072,65 @@ namespace TradeLord.Tests
             Assert.Equal(58, TradeMath.ForecastWithin(117, 15));
             Assert.Equal(80, TradeMath.ForecastWithin(100, 80));
             Assert.Equal(15, TradeMath.ForecastWithin(0, 15));
+        }
+
+        [Fact]
+        public void A_price_the_forecast_did_not_move_is_left_exactly_where_it_was()
+        {
+            foreach (int price in new[] { 1, 2, 3, 7, 99, 100, 101, 5000 })
+                Assert.Equal(price, TradeMath.ForecastWithin(price, price));
+            foreach (int forecast in new[] { 1, 20, 49, 50, 51, 149, 150, 151, 900 })
+            {
+                int held = TradeMath.ForecastWithin(100, forecast);
+                Assert.Equal(held, TradeMath.ForecastWithin(100, held));
+            }
+        }
+
+        private static int Flooded(int shift) => Math.Max(1, 100 - shift / 10);
+
+        private static int Drained(int shift) => Math.Max(1, 100 - shift / 5);
+
+        [Fact]
+        public void A_landing_that_keeps_the_first_unit_within_reach_is_left_whole()
+        {
+            Assert.Equal(300, TradeMath.LandingWithinReach(100, 300, Flooded(300), Flooded));
+            Assert.Equal(500, TradeMath.LandingWithinReach(100, 500, Flooded(500), Flooded));
+            Assert.Equal(-250, TradeMath.LandingWithinReach(100, -250, Drained(-250), Drained));
+            Assert.Equal(0, TradeMath.LandingWithinReach(100, 0, 900, Flooded));
+        }
+
+        [Fact]
+        public void A_landing_that_would_move_the_first_unit_too_far_is_held_to_the_most_that_keeps_it_within_reach()
+        {
+            int flood = TradeMath.LandingWithinReach(100, 5000, Flooded(5000), Flooded);
+            Assert.Equal(509, flood);
+            Assert.Equal(50, Flooded(flood));
+            Assert.Equal(49, Flooded(flood + 1));
+
+            int drain = TradeMath.LandingWithinReach(100, -4000, Drained(-4000), Drained);
+            Assert.Equal(-254, drain);
+            Assert.Equal(150, Drained(drain));
+            Assert.Equal(151, Drained(drain - 1));
+        }
+
+        [Fact]
+        public void Every_landing_too_far_the_same_way_is_held_to_the_same_most()
+        {
+            foreach (int landed in new[] { 510, 600, 1000, 5000, 100000, int.MaxValue })
+                Assert.Equal(509, TradeMath.LandingWithinReach(100, landed, Flooded(landed), Flooded));
+            foreach (int landed in new[] { -255, -300, -4000, -100000, int.MinValue })
+                Assert.Equal(-254, TradeMath.LandingWithinReach(100, landed, Drained(landed), Drained));
+        }
+
+        [Fact]
+        public void A_held_landing_never_reaches_further_than_the_landing_itself()
+        {
+            Assert.Equal(300, TradeMath.NoFurtherThan(300, 509));
+            Assert.Equal(509, TradeMath.NoFurtherThan(5000, 509));
+            Assert.Equal(-100, TradeMath.NoFurtherThan(-100, -254));
+            Assert.Equal(-254, TradeMath.NoFurtherThan(-4000, -254));
+            Assert.Equal(0, TradeMath.NoFurtherThan(700, 0));
+            Assert.Equal(0, TradeMath.NoFurtherThan(-700, 0));
         }
 
         [Fact]

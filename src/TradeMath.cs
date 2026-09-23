@@ -66,7 +66,7 @@ namespace TradeLord
             int lowest = 0;
             while (lowest < highest)
             {
-                int mid = lowest + (highest - lowest + 1) / 2;
+                int mid = lowest + (int)(((long)highest - lowest + 1) / 2);
                 if (holds(mid)) lowest = mid; else highest = mid - 1;
             }
             return lowest;
@@ -134,6 +134,21 @@ namespace TradeLord
             if (forecast > most) return most;
             return forecast < least ? least : forecast;
         }
+
+        public static int LandingWithinReach(int live, int landed, int firstUnit, Func<int, int> firstUnitAt)
+        {
+            if (landed == 0 || ForecastWithin(live, firstUnit) == firstUnit) return landed;
+            int most = landed > 0 ? landed : (int)Math.Min(-(long)landed, int.MaxValue);
+            int held = MostThatHolds(most, shift =>
+            {
+                int price = firstUnitAt(landed > 0 ? shift : -shift);
+                return ForecastWithin(live, price) == price;
+            });
+            return landed > 0 ? held : -held;
+        }
+
+        public static int NoFurtherThan(int landed, int shift) =>
+            landed > 0 ? Math.Min(shift, landed) : Math.Max(shift, landed);
 
         public const float NoTripCountsShorterThan = 0.5f;
 
