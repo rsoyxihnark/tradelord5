@@ -791,7 +791,12 @@ namespace TradeLord
                 return model == null || model.CanMainHeroDoSettlementAction(
                     s, SettlementAccessModel.SettlementAction.Trade, out _, out _);
             }
-            catch { return true; }
+            catch (Exception e)
+            {
+                Log.Error(e, "asking the game whether you may trade here (TradeLord trades nothing here " +
+                             "until the game can answer)");
+                return false;
+            }
         }
 
         private static bool CanTradeHere(Settlement s) =>
@@ -1465,16 +1470,19 @@ namespace TradeLord
 
         private static Books _meetingBooks;
         private static MobileParty _meetingBooksFor;
+        private static int _meetingHour = -1;
 
         internal static void ForgetTheMeeting()
         {
             _meetingBooks = null;
             _meetingBooksFor = null;
+            _meetingHour = -1;
         }
 
         private static Books BooksForTheMeeting(MobileParty met)
         {
-            if (_meetingBooks != null && _meetingBooksFor == met)
+            int hour = Freshness.Hour;
+            if (_meetingBooks != null && _meetingBooksFor == met && _meetingHour == hour)
             {
                 _meetingBooks.ForgetTheDryRun();
                 Log.Write("meeting " + met.Name + " again: what TradeLord already traded with them still " +
@@ -1483,6 +1491,7 @@ namespace TradeLord
             }
             _meetingBooks = new Books();
             _meetingBooksFor = met;
+            _meetingHour = hour;
             return _meetingBooks;
         }
 

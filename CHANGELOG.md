@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.91.2
+
+- Fixed meeting the same caravan or villagers again days later still counting what you spent the first time against Max spend per visit
+- Fixed TradeLord passing over goods it had traded with a caravan days earlier when meeting that caravan again
+- TradeLord no longer trades in a town or village when the game cannot say whether you may trade there
+- The feature list now says that meeting the same caravan or villagers again later starts afresh
+
 ## 1.91.1
 
 - Fixed Hold cargo for the best market weighing rusty or fine looted gear against what the best market pays for a plain piece
