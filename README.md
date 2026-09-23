@@ -88,7 +88,10 @@
 - ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good and the last coin in its purse, so its shop stays open
 - ✅ Puts 1000 denars back in every village left with an empty purse, once for a campaign, the first time you enter it, so a village an older version spent out can be traded with again, and it says on screen how many it refilled
 - ✅ Trade with towns and Trade with villages each switch their own kind of market off, so TradeLord can work villages alone, towns alone, or leave both markets to you
-- ✅ Trades with a caravan or a party of villagers the moment you meet them on the road, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of their own purse
+- ✅ Trades with a caravan the moment you meet it on the road, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of the caravan's own purse
+- ✅ Never sells to a party of villagers, and takes their whole offer the moment you meet them when it clears your margin, at the price the game's own "What kind of products do you have?" offer charges
+- ✅ Once TradeLord has taken the villagers' offer, the game's own offer is gone for the rest of that meeting, so the same goods can never be bought twice
+- ✅ An offer TradeLord leaves is still yours to take in the conversation, and what you pay for it is written down as what those goods cost you
 - ✅ A caravan is traded with at the prices of the town you are in, or else the nearest town, which is what the game's own trade screen charges you with a caravan
 - ✅ A party on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, your looted gear, Hold cargo for the best market, the herd speed penalty and the settling delay
 - ✅ Meeting that same party again keeps the books of what was already traded with them, so it never buys back what it has just sold them and what it spent still counts against its caps

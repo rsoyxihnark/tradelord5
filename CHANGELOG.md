@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.91.0
+
+- TradeLord no longer sells anything to a party of villagers you meet on the road
+- TradeLord now buys the villagers' whole offer when you meet them on the road, if the whole lot clears your margin
+- Once TradeLord has bought the villagers' offer, "I'm going to market too" no longer shows in that meeting, so nothing is bought twice
+- Fixed TradeLord forgetting what you paid when you take the villagers' offer yourself
+- The hint under Trade with caravans and villagers now says how TradeLord trades with villagers
+
 ## 1.90.19
 
 - Fixed TradeLord trading with a caravan on the road at each good's own worth instead of the nearest town's prices, as the trade screen does
@@ -14,7 +22,7 @@
 - Fixed TradeLord passing over livestock when your cargo was nearly full, though livestock takes no room in it
 - Fixed Share of the hold one good may fill holding back how much livestock TradeLord would buy
 - Fixed Simulation mode (dry run) counting the animals it would sell as cargo room freed for buying
-- Fixed TradeLord forgetting what you really paid for goods you bought by hand from a caravan or villagers on the road
+- Fixed TradeLord forgetting what you really paid for goods you bought by hand from a caravan on the road
 
 ## 1.90.17
 

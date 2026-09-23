@@ -75,6 +75,16 @@ namespace TradeLord
         internal int LedgerRank;
     }
 
+    internal struct Lot
+    {
+        internal int Units;
+        internal int Price;
+        internal float Resale;
+        internal float Weight;
+        internal int Herd;
+        internal bool Weighed;
+    }
+
     internal static class Picks
     {
         internal static void MostMoneyFirst(List<Pick> stock) =>
@@ -314,6 +324,93 @@ namespace TradeLord
                     remaining--;
                     drawn = wouldDraw;
                     if (livestock) herdRoom--;
+                }
+            }
+            return moved;
+        }
+
+        internal static Block WhatStopsTheLot(IBuyingMarket market, Books books, bool sim,
+                                              float shareCap, Options s, out Lot lot)
+        {
+            lot = default(Lot);
+            Block refused = Block.None;
+            var shelf = new List<Pick>();
+            for (int at = 0; at < market.Count; at++)
+            {
+                if (market.AmountAt(at) <= 0) continue;
+                int units = market.TheirsToSell(at);
+                if (units <= 0) continue;
+                Good good = market.GoodAt(at);
+                int unit = market.PriceToBuy(at);
+                lot.Units += units;
+                lot.Price = (int)Math.Min(int.MaxValue, (long)lot.Price + TradeMath.WorthOf(units, unit));
+                lot.Weight += units * good.Weight;
+                if (good.IsLivestock) lot.Herd += units;
+                if (refused != Block.None) continue;
+                if (unit <= 0) refused = Block.NoStock;
+                else if (!market.MayBuy(at, good, out Block whyBuy)) refused = whyBuy;
+                else if (!TradeRules.ResaleAllowed(good, s)) refused = Block.CategoryPolicy;
+                else shelf.Add(new Pick { At = at, Good = good });
+            }
+            if (lot.Units == 0) return Block.NoStock;
+            if (refused != Block.None) return refused;
+            market.PriceTheMarketsFor(shelf);
+
+            var inTheLot = new Dictionary<string, (int units, int cost)>();
+            foreach (Pick one in shelf)
+            {
+                Good good = one.Good;
+                int units = market.TheirsToSell(one.At);
+                int unit = market.PriceToBuy(one.At);
+                int cost = TradeMath.WorthOf(units, unit);
+                inTheLot.TryGetValue(good.Id, out var before);
+                int held = market.Carried(one.At) + books.Held(sim, good.Id);
+                Block capped = TradeRules.WhatCapsALot(good, before.cost + cost, before.units + units,
+                                                       books.Purchases(sim, good.Id), held, shareCap, s);
+                if (capped != Block.None) return capped;
+                inTheLot[good.Id] = (before.units + units, before.cost + cost);
+
+                int from = held + before.units;
+                if (market.ResaleMarket(one.At, unit, from + units, out _))
+                    lot.Resale += TradeMath.Realizable(
+                        TradeRules.WhatTheBuyerPays(market.ResaleUpTo(one.At, from),
+                                                    market.ResaleUpTo(one.At, from + units),
+                                                    market.ResaleTill(one.At)),
+                        s.ResaleSafetyFactor);
+            }
+            lot.Weighed = true;
+
+            if (!TradeMath.BuyAcceptable(lot.Price, lot.Resale, s.MinProfitMargin)) return Block.BelowMargin;
+            if (lot.Price > market.Spendable()) return Block.BudgetSpent;
+            if (lot.Herd > 0 && lot.Herd > market.HerdRoom() - books.HerdTaken(sim)) return Block.HerdFull;
+            if (lot.Weight > 0.01f && lot.Weight > market.Room() - books.Weight(sim)) return Block.CarryWeight;
+            return Block.None;
+        }
+
+        internal static Traded TakeTheLot(IBuyingMarket market, Books books, bool sim)
+        {
+            Traded moved = default(Traded);
+            for (int at = 0; at < market.Count; at++)
+            {
+                if (market.AmountAt(at) <= 0) continue;
+                Good good = market.GoodAt(at);
+                for (int left = market.TheirsToSell(at); left > 0; left--)
+                {
+                    if (market.Stopped) return moved;
+                    int price = market.PriceToBuy(at);
+                    if (sim)
+                    {
+                        moved.SimGold += price;
+                        moved.Units++;
+                        books.NotePurchase(good.Id, price, good.Weight, TradeRules.FoodValue(good));
+                        if (good.IsLivestock) books.NoteHerdTaken();
+                        market.Staged(at, price);
+                        continue;
+                    }
+
+                    if (!market.Take(at, price, out int cost) || cost == 0) return moved;
+                    books.NoteBought(good.Id, cost);
+                    moved.Units++;
                 }
             }
             return moved;
