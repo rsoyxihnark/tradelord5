@@ -89,6 +89,7 @@
 - ✅ Puts 1000 denars back in every village left with an empty purse, once for a campaign, the first time you enter it, so a village an older version spent out can be traded with again, and it says on screen how many it refilled
 - ✅ Trade with towns and Trade with villages each switch their own kind of market off, so TradeLord can work villages alone, towns alone, or leave both markets to you
 - ✅ Trades with a caravan or a party of villagers the moment you meet them on the road, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of their own purse
+- ✅ A caravan is traded with at the prices of the town you are in, or else the nearest town, which is what the game's own trade screen charges you with a caravan
 - ✅ A party on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, your looted gear, Hold cargo for the best market, the herd speed penalty and the settling delay
 - ✅ Meeting that same party again keeps the books of what was already traded with them, so it never buys back what it has just sold them and what it spent still counts against its caps
 - ✅ Once the goods have changed hands you can say so, and the trader answers
