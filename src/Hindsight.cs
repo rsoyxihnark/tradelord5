@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Helpers;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -18,6 +19,8 @@ namespace TradeLord
             internal int StockSaid;
             internal int WorthThen;
             internal int WorthSaid;
+            internal int StockYours;
+            internal int WorthYours;
         }
 
         private struct Promised
@@ -28,6 +31,7 @@ namespace TradeLord
             internal int SellPrice;
             internal int Units;
             internal float Confidence;
+            internal bool YourTradeMovedIt;
         }
 
         private static readonly Keeps<Said> _said = new Keeps<Said>();
@@ -35,6 +39,9 @@ namespace TradeLord
         private static readonly Keeps<Promised> _promised = new Keeps<Promised>();
 
         private static readonly BandTally _bands = new BandTally();
+
+        private static readonly Dictionary<string, Settlement> _nearestTown =
+            new Dictionary<string, Settlement>(StringComparer.Ordinal);
 
         internal static bool Writing => Options.Current.ExtendedDebugLogging;
 
@@ -45,6 +52,7 @@ namespace TradeLord
             _said.Forget();
             _promised.Forget();
             _bands.Forget();
+            _nearestTown.Clear();
         }
 
         internal static void Note(TradeRoute route)
@@ -65,6 +73,70 @@ namespace TradeLord
             Guard.Run("Hindsight.Kept", () => Kept(site));
             if (!On) return;
             Guard.Run("Hindsight.Score", () => Written(site));
+        }
+
+        internal static void YouTraded(Settlement site, List<(ItemObject item, int intoTheMarket)> moved)
+        {
+            if (site == null || moved == null || moved.Count == 0) return;
+            Guard.Run("Hindsight.YouTraded", () =>
+            {
+                LeftOutOfTheForecast(site, moved);
+                if (site.IsTown) SetAsideWhatYourTradeMoved(site, moved);
+            });
+        }
+
+        private static void LeftOutOfTheForecast(Settlement site, List<(ItemObject item, int intoTheMarket)> moved)
+        {
+            bool worthKept = site.IsTown;
+            _said.Rework(site.StringId, kept =>
+            {
+                if (kept.Item == null) return kept;
+                for (int i = 0; i < moved.Count; i++)
+                {
+                    var (item, into) = moved[i];
+                    if (item == null || into == 0) continue;
+                    if (item == kept.Item) kept.StockYours = TradeMath.AddedUp(kept.StockYours, into);
+                    if (worthKept && item.ItemCategory != null && item.ItemCategory == kept.Item.ItemCategory)
+                        kept.WorthYours = TradeMath.AddedUp(kept.WorthYours,
+                                                            TradeMath.YourOwnWorth(into, item.Value));
+                }
+                return kept;
+            });
+        }
+
+        private static void SetAsideWhatYourTradeMoved(Settlement town,
+                                                       List<(ItemObject item, int intoTheMarket)> moved)
+        {
+            var kinds = new HashSet<ItemCategory>();
+            for (int i = 0; i < moved.Count; i++)
+                if (moved[i].item?.ItemCategory != null && moved[i].intoTheMarket != 0)
+                    kinds.Add(moved[i].item.ItemCategory);
+            if (kinds.Count == 0) return;
+            foreach (string where in _promised.Sites())
+            {
+                Settlement at = where == town.StringId ? town : Settlement.Find(where);
+                if (at == null || PricedFrom(at) != town) continue;
+                _promised.Rework(where, said =>
+                {
+                    if (said.Item?.ItemCategory != null && kinds.Contains(said.Item.ItemCategory))
+                        said.YourTradeMovedIt = true;
+                    return said;
+                });
+            }
+        }
+
+        private static Settlement PricedFrom(Settlement site)
+        {
+            if (site.IsTown) return site;
+            Village village = site.Village;
+            if (village == null) return null;
+            if (village.TradeBound != null) return village.TradeBound;
+            if (_nearestTown.TryGetValue(site.StringId, out Settlement near)) return near;
+            MobileParty villagers = village.VillagerPartyComponent?.MobileParty;
+            near = SettlementHelper.FindNearestTownToSettlement(
+                site, villagers != null ? villagers.NavigationCapability : MobileParty.NavigationType.All)?.Settlement;
+            _nearestTown[site.StringId] = near;
+            return near;
         }
 
         private static void Promise(TradeRoute route)
@@ -95,7 +167,7 @@ namespace TradeLord
         {
             float now = (float)CampaignTime.Now.ToHours;
             return _promised.Prune(
-                one => !Scoring.TooOldToSay(one.WithinDays, one.AtHours, now, out _));
+                one => !one.YourTradeMovedIt && !Scoring.TooOldToSay(one.WithinDays, one.AtHours, now, out _));
         }
 
         private static bool RoomForOneMoreFigure()
@@ -113,7 +185,7 @@ namespace TradeLord
             if (market == null) return;
             float now = (float)CampaignTime.Now.ToHours;
             var lines = new List<string>();
-            int scored = 0, stale = 0, unpriced = 0;
+            int scored = 0, stale = 0, unpriced = 0, yours = 0;
             float heldTotal = 0f;
             foreach (Promised said in here.Values)
             {
@@ -121,6 +193,11 @@ namespace TradeLord
                 if (Scoring.TooOldToSay(said.WithinDays, said.AtHours, now, out float since))
                 {
                     stale++;
+                    continue;
+                }
+                if (said.YourTradeMovedIt)
+                {
+                    yours++;
                     continue;
                 }
                 int found = Priced.At(market, said.Item, MobileParty.MainParty, true);
@@ -145,6 +222,7 @@ namespace TradeLord
             if (!Writing || scored == 0) return;
             lines.Insert(0, "promise check at " + site.Name + ", " + scored + " promise(s) scored" +
                       (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") +
+                      (yours == 0 ? "" : ", " + yours + " set aside because your own trading moved that price") +
                       (unpriced == 0 ? "" : ", " + unpriced + " the market would put no price on"));
             lines.Add("  here: the price held at " + Share(TradeMath.MeanOf(heldTotal, scored)) +
                       " of what the panel promised");
@@ -198,7 +276,7 @@ namespace TradeLord
             if (here == null) return;
             float now = (float)CampaignTime.Now.ToHours;
             var lines = new List<string>();
-            int scored = 0, stale = 0, landingMiss = 0, shared = 0;
+            int scored = 0, stale = 0, early = 0, landingMiss = 0, shared = 0;
             float shareTotal = 0f;
             foreach (Said kept in here.Values)
             {
@@ -208,15 +286,21 @@ namespace TradeLord
                     stale++;
                     continue;
                 }
+                if (Scoring.TooSoonToSay(kept.WithinDays, since))
+                {
+                    early++;
+                    continue;
+                }
                 scored++;
                 Outcome how = Scoring.Weigh(kept.StockSaid, kept.StockThen,
                                             LedgerBehavior.StockOf(site, kept.Item),
                                             kept.WorthSaid, kept.WorthThen,
-                                            WorthOnTheShelf(site, kept.Item));
+                                            WorthOnTheShelf(site, kept.Item),
+                                            kept.StockYours, kept.WorthYours);
                 landingMiss += Math.Abs(how.LandingOff);
                 string line = "  " + Named(kept.Item) + ": said " + kept.StockSaid + " unit(s) of it would land within " +
                               Figure(kept.WithinDays) + " day(s) and " + Landing(how.Landed) + ", " +
-                              Counted(how.LandingOff) +
+                              Counted(how.LandingOff) + Yours(kept.StockYours, " unit(s)") +
                               "; you walked in " + Figure(since) +
                               " day(s) after it said so";
                 if (!how.WorthKept)
@@ -232,11 +316,12 @@ namespace TradeLord
                 }
                 lines.Add(line + "; said every good of that kind heading there was worth " +
                           kept.WorthSaid + " denars in all and " + Moving(how.Moved) + " denars, " +
-                          Counted(how.WorthOff) + Shared(how.Share));
+                          Counted(how.WorthOff) + Shared(how.Share) + Yours(kept.WorthYours, " denars"));
             }
             if (!Writing || scored == 0) return;
             lines.Insert(0, "forecast check at " + site.Name + ", " + scored + " good(s) it had a figure for" +
-                      (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") + ":");
+                      (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") +
+                      (early == 0 ? "" : ", " + early + " passed over as too soon to say anything") + ":");
             lines.Add("  in all: the landing figure was off by " +
                       Figure(TradeMath.MeanOf(landingMiss, scored)) + " unit(s) a good" +
                       (shared == 0
@@ -268,6 +353,8 @@ namespace TradeLord
         private static string Landing(int landed) => Scoring.Landing(landed);
 
         private static string Moving(int moved) => Scoring.Moving(moved);
+
+        private static string Yours(int yours, string counted) => Scoring.Yours(yours, counted);
 
         private static string Shared(float share) => Scoring.Shared(share);
 

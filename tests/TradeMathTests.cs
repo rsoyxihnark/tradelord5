@@ -884,6 +884,70 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_forecast_is_judged_only_once_half_its_time_has_passed()
+        {
+            Assert.True(TradeMath.TooSoonToJudge(1.8f, 0f));
+            Assert.True(TradeMath.TooSoonToJudge(1.8f, 0.2f));
+            Assert.True(TradeMath.TooSoonToJudge(1.8f, 0.89f));
+            Assert.False(TradeMath.TooSoonToJudge(1.8f, 0.9f));
+            Assert.False(TradeMath.TooSoonToJudge(1.8f, 1.8f));
+            Assert.False(TradeMath.TooSoonToJudge(1.8f, 4.6f));
+        }
+
+        [Fact]
+        public void A_forecast_for_no_time_at_all_is_never_too_soon_to_judge()
+        {
+            Assert.False(TradeMath.TooSoonToJudge(0f, 0f));
+            Assert.False(TradeMath.TooSoonToJudge(-2f, 0f));
+            Assert.False(TradeMath.TooSoonToJudge(float.NaN, 0f));
+            Assert.True(TradeMath.TooSoonToJudge(float.PositiveInfinity, 1000f));
+        }
+
+        [Fact]
+        public void The_time_a_forecast_must_wait_is_half_of_the_time_it_was_for()
+        {
+            Assert.Equal(0.5f, TradeMath.SoonestAForecastIsJudged);
+            for (float within = 0.1f; within < 6f; within += 0.37f)
+            {
+                Assert.True(TradeMath.TooSoonToJudge(within, within * 0.49f));
+                Assert.False(TradeMath.TooSoonToJudge(within, within * 0.51f));
+                Assert.True(TradeMath.WorthScoring(within, within * 0.51f));
+            }
+        }
+
+        [Fact]
+        public void What_you_put_into_a_market_is_worth_its_units_at_the_good_s_own_value()
+        {
+            Assert.Equal(960, TradeMath.YourOwnWorth(32, 30));
+            Assert.Equal(-960, TradeMath.YourOwnWorth(-32, 30));
+            Assert.Equal(0, TradeMath.YourOwnWorth(0, 30));
+            Assert.Equal(0, TradeMath.YourOwnWorth(5, 0));
+            Assert.Equal(0, TradeMath.YourOwnWorth(5, -10));
+            Assert.Equal(int.MaxValue, TradeMath.YourOwnWorth(int.MaxValue, 7));
+            Assert.Equal(int.MinValue, TradeMath.YourOwnWorth(int.MinValue, 7));
+        }
+
+        [Fact]
+        public void Your_own_trades_add_up_without_ever_wrapping_round()
+        {
+            Assert.Equal(-12, TradeMath.AddedUp(-32, 20));
+            Assert.Equal(int.MaxValue, TradeMath.AddedUp(int.MaxValue, 1));
+            Assert.Equal(int.MinValue, TradeMath.AddedUp(int.MinValue, -1));
+            Assert.Equal(0, TradeMath.AddedUp(0, 0));
+        }
+
+        [Fact]
+        public void What_moved_leaves_out_what_you_moved_yourself()
+        {
+            Assert.Equal(0, TradeMath.WithoutYours(-32, -32));
+            Assert.Equal(-6, TradeMath.WithoutYours(-38, -32));
+            Assert.Equal(10, TradeMath.WithoutYours(50, 40));
+            Assert.Equal(25, TradeMath.WithoutYours(25, 0));
+            Assert.Equal(int.MaxValue, TradeMath.WithoutYours(int.MaxValue, -5));
+            Assert.Equal(int.MinValue, TradeMath.WithoutYours(int.MinValue, 5));
+        }
+
+        [Fact]
         public void Every_confidence_falls_in_one_band_and_a_dearer_one_never_falls_lower()
         {
             var seen = new System.Collections.Generic.HashSet<int>();

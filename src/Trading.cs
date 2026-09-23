@@ -363,6 +363,8 @@ namespace TradeLord
 
             internal bool DirectionError;
 
+            internal bool OnTheScreen;
+
             private ISet<string> _locked;
             private bool _lockedRead;
             private float _capacity = -1f;
@@ -531,8 +533,18 @@ namespace TradeLord
                 Guard.Run("Pass.NoteTrade", () => NoteTrade(selling, gold));
                 CoinSound();
                 if (Site == null) return;
+                if (!OnTheScreen) Hindsight.YouTraded(Site, WhatMoved(selling));
                 LedgerBehavior.Instance?.CaptureSettlement(Site, force: true, KindsMoved());
                 Guard.Run("Pass.PinCleared", () => LedgerPanel.Unpin(Site));
+            }
+
+            private List<(ItemObject item, int intoTheMarket)> WhatMoved(bool selling)
+            {
+                var moved = new List<(ItemObject item, int intoTheMarket)>();
+                foreach (var kv in Detail)
+                    if (kv.Key != null && kv.Value.count > 0)
+                        moved.Add((kv.Key, selling ? kv.Value.count : -kv.Value.count));
+                return moved;
             }
 
             private void NoteTrade(bool selling, int gold)
@@ -850,6 +862,8 @@ namespace TradeLord
             Pass selling = Pass.Open(settlement, quiet);
             Pass buying = Pass.Open(settlement, quiet);
             if (selling == null || buying == null) return;
+            selling.OnTheScreen = true;
+            buying.OnTheScreen = true;
             Took got = Reckon(selling, sold, true);
             Took paid = Reckon(buying, bought, false);
             bool addsUp = Deals.AddsUp(got.Gold - paid.Gold, purseMoved);

@@ -66,6 +66,15 @@ namespace TradeLord
             if (_count < 0) _count = 0;
             return !Full;
         }
+
+        internal List<string> Sites() => new List<string>(_by.Keys);
+
+        internal void Rework(string site, Func<TRecord, TRecord> how)
+        {
+            if (site == null || how == null || !_by.TryGetValue(site, out Dictionary<string, TRecord> here))
+                return;
+            foreach (string what in new List<string>(here.Keys)) here[what] = how(here[what]);
+        }
     }
 
     internal struct Reading
@@ -145,6 +154,9 @@ namespace TradeLord
             return !TradeMath.WorthScoring(withinDays, since);
         }
 
+        internal static bool TooSoonToSay(float withinDays, float since) =>
+            TradeMath.TooSoonToJudge(withinDays, since);
+
         internal static Holding Weigh(int promised, int found, out float held)
         {
             held = TradeMath.NoShareToGive;
@@ -154,13 +166,16 @@ namespace TradeLord
         }
 
         internal static Outcome Weigh(int stockSaid, int stockThen, int stockNow,
-                                      int worthSaid, int worthThen, int worthNow)
+                                      int worthSaid, int worthThen, int worthNow,
+                                      int stockYours = 0, int worthYours = 0)
         {
             Outcome how;
-            how.Landed = TradeMath.MissedBy(stockThen, stockNow);
+            how.Landed = TradeMath.WithoutYours(TradeMath.MissedBy(stockThen, stockNow), stockYours);
             how.LandingOff = TradeMath.MissedBy(stockSaid, how.Landed);
             how.WorthKept = worthThen != NoWorth && worthNow != NoWorth;
-            how.Moved = how.WorthKept ? TradeMath.MissedBy(worthThen, worthNow) : 0;
+            how.Moved = how.WorthKept
+                ? TradeMath.WithoutYours(TradeMath.MissedBy(worthThen, worthNow), worthYours)
+                : 0;
             how.WorthOff = how.WorthKept ? TradeMath.MissedBy(worthSaid, how.Moved) : 0;
             how.Share = how.WorthKept ? TradeMath.OffByShare(worthSaid, how.Moved)
                                       : TradeMath.NoShareToGive;
@@ -183,6 +198,11 @@ namespace TradeLord
 
         internal static string Moving(int moved) =>
             moved < 0 ? -moved + " left instead" : "it moved " + moved;
+
+        internal static string Yours(int yours, string counted) =>
+            yours == 0 ? ""
+                       : " (leaving out the " + (yours < 0 ? -(long)yours : yours) + counted + " you " +
+                         (yours < 0 ? "bought" : "sold") + " there yourself)";
 
         internal static string Shared(float share) =>
             share == TradeMath.NoShareToGive ? "" : ", " + Share(share) + " off";
