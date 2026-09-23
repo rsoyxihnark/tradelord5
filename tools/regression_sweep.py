@@ -822,7 +822,7 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
                           "WhatYouCarryToSell")
     floor = method_body(S['Marker.cs'], "private static int BestMarketFloor")
     worth = method_body(S['Policy.cs'], "internal static int WorthToBeat(ItemObject item)")
-    return ("TradePolicy.WorthToBeat(item), BestMarketFloor(item)));" in carried
+    return ("TradePolicy.WorthToBeat(item), BestMarketFloor(el.EquipmentElement)));" in carried
             and "var cargo = WhatYouCarryToSell(party);" in marker
             and "int paid = CostBasis(item);" in worth
             and "TradeRules.WorthIsWhatYouPaid(good, paid)" in worth
@@ -837,8 +837,9 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
                         "took.Value += fetched;")
             and "if (took.Value <= 0L) { how.Refused++; continue; }" in marker
             and ordered(floor, "if (!Options.Current.PreferBestSellTown) return 0;",
-                        "LedgerBehavior.Instance?.BestSell(item)",
-                        "(int)(best.Item2 * Options.Current.BestSellTownTolerance)")
+                        "LedgerBehavior.Instance?.BestSell(held.Item)",
+                        "TradeRules.BestMarketFloor(",
+                        "Options.Current.BestSellTownTolerance);")
             and S['Trading.cs'].count("TradePolicy.WorthToBeat(") == 2
             and S['Marker.cs'].count("TradePolicy.WorthToBeat(") == 1)
 
@@ -2526,7 +2527,9 @@ chk("1.36.2", "the rewind prices the very thing that was bought, quality and all
         and "new Shelf(site, bought, selling: false, quoted: quotedUnitPrice, projecting: false)" in paid
         and "_element = stocked;" in shelf
         and "new EquipmentElement" not in shelf
-        and "new Shelf(site, new EquipmentElement(item), selling, quoted, projecting: true, landed: landed);" in ladder
+        and ": this(site, new EquipmentElement(item), selling, quoted, landed)" in ladder
+        and "new Shelf(site, stocked, selling, quoted, projecting: true, landed: landed);" in method_body(
+            S['Market.cs'], "internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)")
         and S['Market.cs'].count("new EquipmentElement(") == 2
         and "item == null ? 0 : At(market, new EquipmentElement(item), who, selling);" in S['Market.cs'])
     (method_body(S['Market.cs'], "internal static int PricePaid"),
@@ -2538,7 +2541,7 @@ chk("1.5.6", "only the purchase-price rewind reads a shelf outside a projection"
     "projecting: false" in method_body(S['Market.cs'], "internal static int PricePaid") and
     S['Market.cs'].count("projecting: true") == 1 and
     "projecting: true" in method_body(
-        S['Market.cs'], "internal Ladder(Settlement site, ItemObject item, bool selling, int quoted, int landed)"))
+        S['Market.cs'], "internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)"))
 chk("1.5.6", "panel setup is retried before being disabled",
     "private const int SetupAttempts = 3;" in S['Panel.cs'] and
     "if (_setupFailures >= SetupAttempts) return false;" in
@@ -10326,7 +10329,7 @@ def the_marker_walks_the_price_down_the_way_a_sale_really_would():
     asked = method_body(S['Marker.cs'], "internal int At(int taken)")
     fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
     step = method_body(S['Marker.cs'], "private int Next()")
-    return ("new Ladder(_site, good, true, _flat, 0);" in step
+    return ("new Ladder(_site, _el, true, _flat, 0);" in step
             and "_walk = walk != null && walk.Walkable ? walk : null;" in step
             and "return _walk != null ? _walk.At(_rungs.Count) : _flat;" in step
             and "while (_rungs.Count <= taken) _rungs.Add(Next());" in asked
@@ -11679,6 +11682,28 @@ chk("1.91.0", "once TradeLord has bought the villagers' offer the game's own off
     the_offer_is_gone_once_tradelord_took_it_and_moves_nothing_if_asked_for_again())
 chk("1.91.0", "the hint under Trade with caravans and villagers and the feature list say how TradeLord trades with villagers",
     the_hint_and_the_feature_list_say_how_villagers_are_traded_with())
+
+
+def every_best_market_comparison_prices_the_quality_you_carry():
+    scale = method_body(S['TradeMath.cs'], "public static int AtThisQuality")
+    resale = method_body(S['Trading.cs'], "public bool ResaleMarket(int at, out int price)")
+    floor = method_body(S['Marker.cs'], "private static int BestMarketFloor")
+    step = method_body(S['Marker.cs'], "private int Next()")
+    colour = method_body(S['TooltipPatches.cs'], "private static void Coloured")
+    return ("long priced = (long)plainPrice * qualityValue / plainValue;" in scale
+            and "price = TradeMath.AtThisQuality(best.Item2, held.Item.Value, held.ItemValue);" in resale
+            and "TradeMath.AtThisQuality(best.Item2, held.Item.Value, held.ItemValue)," in floor
+            and "new Ladder(_site, _el, true, _flat, 0);" in step
+            and colour.count("TradeMath.AtThisQuality(best.price, item.Value, held.ItemValue)") == 2
+            and all(one in FLOORTESTS for one in
+                    ("The_best_price_is_scaled_to_the_quality_you_carry",
+                     "A_worn_good_sells_wherever_a_plain_one_would",
+                     "A_price_with_nothing_to_scale_it_by_is_left_as_it_is",
+                     "A_scaled_price_stays_between_one_denar_and_what_an_int_holds")))
+
+
+chk("1.91.1", "Hold cargo for the best market, the map marker and Color prices by world market hold a good of any quality to what the best market pays for that same quality",
+    every_best_market_comparison_prices_the_quality_you_carry())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

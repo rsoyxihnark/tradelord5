@@ -262,6 +262,15 @@ namespace TradeLord
             return worth > int.MaxValue ? int.MaxValue : (int)worth;
         }
 
+        public static int AtThisQuality(int plainPrice, int plainValue, int qualityValue)
+        {
+            if (plainPrice <= 0 || plainValue <= 0 || qualityValue <= 0 || qualityValue == plainValue)
+                return plainPrice;
+            long priced = (long)plainPrice * qualityValue / plainValue;
+            if (priced < 1L) return 1;
+            return priced > int.MaxValue ? int.MaxValue : (int)priced;
+        }
+
         public const float ShelfTheForecastMayNotEmptyBelow = 0.5f;
 
         public static int ShelfAfterLanding(int inStoreValue, int landingWorth)

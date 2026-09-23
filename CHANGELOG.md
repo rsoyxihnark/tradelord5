@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.91.1
+
+- Fixed Hold cargo for the best market weighing rusty or fine looted gear against what the best market pays for a plain piece
+- Fixed the map marker pricing rusty or fine looted gear in your cargo as if it were plain
+- Fixed Color prices by world market judging a lame horse against the best price for a sound one
+
 ## 1.91.0
 
 - TradeLord no longer sells anything to a party of villagers you meet on the road

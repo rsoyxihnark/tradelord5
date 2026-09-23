@@ -40,9 +40,8 @@ namespace TradeLord
             {
                 _asked = true;
                 _flat = Priced.At(_market, _el, _party, true);
-                ItemObject good = _el.Item;
-                Ladder walk = good == null || _flat <= 0
-                    ? null : new Ladder(_site, good, true, _flat, 0);
+                Ladder walk = _el.Item == null || _flat <= 0
+                    ? null : new Ladder(_site, _el, true, _flat, 0);
                 _walk = walk != null && walk.Walkable ? walk : null;
             }
             return _walk != null ? _walk.At(_rungs.Count) : _flat;
@@ -391,7 +390,7 @@ namespace TradeLord
                 if (el.Amount - keep <= 0) continue;
                 ItemObject item = el.EquipmentElement.Item;
                 cargo.Add((el.EquipmentElement, el.Amount - keep,
-                           TradePolicy.WorthToBeat(item), BestMarketFloor(item)));
+                           TradePolicy.WorthToBeat(item), BestMarketFloor(el.EquipmentElement)));
             }
             _cargo = cargo;
             _cargoHeld = Held(cargo);
@@ -564,11 +563,13 @@ namespace TradeLord
             return how.Best;
         }
 
-        private static int BestMarketFloor(ItemObject item)
+        private static int BestMarketFloor(EquipmentElement held)
         {
             if (!Options.Current.PreferBestSellTown) return 0;
-            var best = LedgerBehavior.Instance?.BestSell(item) ?? (null, 0);
-            return best.Item1 == null ? 0 : (int)(best.Item2 * Options.Current.BestSellTownTolerance);
+            var best = LedgerBehavior.Instance?.BestSell(held.Item) ?? (null, 0);
+            return best.Item1 == null ? 0 : TradeRules.BestMarketFloor(
+                TradeMath.AtThisQuality(best.Item2, held.Item.Value, held.ItemValue),
+                Options.Current.BestSellTownTolerance);
         }
     }
 }
