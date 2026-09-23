@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.91.3
+
+- Fixed Best sell prices and Best buy prices in a lame horse's tooltip showing a sound horse's prices
+- The feature list now says What this means is where the ledger tallies how well its promised Sell price has held
+- The feature list now says What this means is where the ledger says your gold reserve is stopping you buying
+- The feature list now says Left shows days instead of hours once a shelf holds for two days or more
+- The feature list now names the Trade XP shown along the top of the ledger
+- The feature list now says TradeLord trades on the road at the prices the game's trade screen or the villagers' offer charges
+- The comparison with the other trade mods now says only a trade in a market goes through the game's own sale
+
 ## 1.91.2
 
 - Fixed meeting the same caravan or villagers again days later still counting what you spent the first time against Max spend per visit
