@@ -11142,5 +11142,23 @@ chk("1.90.12", "the lines about minimum stock and the debug logging hint name th
     a_line_that_names_a_setting_names_it_the_way_the_screen_shows_it())
 
 
+def the_panel_legend_names_its_columns_the_way_the_panel_heads_them():
+    shown = lambda said: re.sub(r'\s*[(（][^()（）]*[)）]\s*$', '', said)
+    named = (('TL397', 'TL54'), ('TL417', 'TL416'), ('TL417', 'TL54'), ('TL417', 'TL59'),
+             ('TL71', 'TL59'), ('TL396', 'TL201'))
+    for path in [ENGLISH] + list(TRANSLATIONS.values()):
+        said = spoken(path)
+        if not all(shown(said[head]) in said[line] for line, head in named):
+            return False
+    turkish = spoken(TRANSLATIONS['Türkçe'])
+    return (all('Öntanımlı' not in one for one in turkish.values())
+            and turkish['TL260'].split(' ')[0] == turkish['TL216'].split(' ')[0]
+            and turkish['TL260'].split(' ')[-1] == turkish['TL216'].split(' ')[-1])
+
+
+chk("1.90.13", "the panel legend names Qty, Left and Conf, and the forecast hint names Live world prices, in every language the way the panel and the settings screen show them, and the Turkish settings say default and menu entry one way throughout",
+    the_panel_legend_names_its_columns_the_way_the_panel_heads_them())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
