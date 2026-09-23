@@ -5366,7 +5366,7 @@ def meeting_the_same_party_again_keeps_the_books_it_already_wrote():
     t = S['Trading.cs']
     books = method_body(t, "private static Books BooksForTheMeeting")
     passes = S['Passes.cs']
-    return (ordered(books, "if (_meetingBooks != null && _meetingBooksFor == met)",
+    return (ordered(books, "if (_meetingBooks != null && _meetingBooksFor == met && _meetingHour == hour)",
                     "_meetingBooks.ForgetTheDryRun();", "return _meetingBooks;",
                     "_meetingBooks = new Books();", "_meetingBooksFor = met;")
             and "_meetingBooks = null;" in method_body(t, "internal static void ForgetTheMeeting")
@@ -11704,6 +11704,32 @@ def every_best_market_comparison_prices_the_quality_you_carry():
 
 chk("1.91.1", "Hold cargo for the best market, the map marker and Color prices by world market hold a good of any quality to what the best market pays for that same quality",
     every_best_market_comparison_prices_the_quality_you_carry())
+
+
+def a_meeting_on_the_road_lasts_the_hour_it_began_in():
+    t = S['Trading.cs']
+    books = method_body(t, "private static Books BooksForTheMeeting")
+    return ("private static int _meetingHour = -1;" in t
+            and ordered(books, "int hour = Freshness.Hour;",
+                        "if (_meetingBooks != null && _meetingBooksFor == met && _meetingHour == hour)",
+                        "return _meetingBooks;", "_meetingBooks = new Books();",
+                        "_meetingBooksFor = met;", "_meetingHour = hour;")
+            and "_meetingHour = -1;" in method_body(t, "internal static void ForgetTheMeeting")
+            and "Meeting that same party again straight away counts as the same meeting" in README
+            and "while meeting them again later starts afresh" in README)
+
+
+def a_market_the_game_cannot_answer_for_is_left_alone():
+    allows = method_body(S['Trading.cs'], "private static bool GameAllowsTrade")
+    return ("catch { return true; }" not in allows
+            and ordered(allows, "catch (Exception e)", "Log.Error(e,", "return false;")
+            and "if (s != Settlement.CurrentSettlement) return true;" in allows)
+
+
+chk("1.91.2", "meeting the same party on the road again keeps its books only within the hour the meeting began in, so what was spent and traded days ago no longer holds the next meeting back",
+    a_meeting_on_the_road_lasts_the_hour_it_began_in())
+chk("1.91.2", "a town or village the game cannot say you may trade in is traded in not at all, and the log says why",
+    a_market_the_game_cannot_answer_for_is_left_alone())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
