@@ -38,6 +38,28 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_purchase_is_written_down_at_the_gold_it_cost()
+        {
+            Assert.Equal(300, Deals.PaidForWhatYouKept(300, 10, 10));
+            Assert.Equal(300, Deals.PaidForWhatYouKept(300, 10, 12));
+        }
+
+        [Fact]
+        public void Only_the_share_of_a_purchase_you_still_carry_is_written_down()
+        {
+            Assert.Equal(150, Deals.PaidForWhatYouKept(300, 10, 5));
+            Assert.Equal(33, Deals.PaidForWhatYouKept(100, 3, 1));
+        }
+
+        [Fact]
+        public void A_purchase_with_nothing_on_it_writes_nothing_down()
+        {
+            Assert.Equal(0, Deals.PaidForWhatYouKept(300, 10, 0));
+            Assert.Equal(0, Deals.PaidForWhatYouKept(0, 10, 5));
+            Assert.Equal(0, Deals.PaidForWhatYouKept(300, 0, 5));
+        }
+
+        [Fact]
         public void The_deal_that_broke_the_ledger_no_longer_adds_up_and_says_so()
         {
             Assert.False(Deals.AddsUp(96403 - 297341, 1039));
