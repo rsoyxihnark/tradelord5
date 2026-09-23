@@ -479,7 +479,7 @@ namespace TradeLord.Mcm
         public bool StagedTrading { get => _o.StagedTrading; set { _o.StagedTrading = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL216}Trade entry in town menu", Order = 0, RequireRestart = false,
-            HintText = "{=TL316}Shows the single TradeLord trade entry in town and village menus, which sells and then buys in one go. Turn it off to leave the menu to trading done automatically as you arrive.")]
+            HintText = "{=TL316}Shows the single TradeLord trade entry in town and village menus, which sells and then buys in one go. Turn it off to leave the menu to trading done automatically as you arrive. While Staged Trading holds that trading back, the entry shows anyway.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool QuickSellMenu { get => _o.QuickSellMenu; set { _o.QuickSellMenu = value; Options.Bump(); } }
 

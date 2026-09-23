@@ -656,7 +656,7 @@ namespace TradeLord
                         {
                             args.optionLeaveType = GameMenuOption.LeaveType.Trade;
                             args.Text = Tongue.Text("{=TL26}Trade here now (TradeLord)");
-                            return Options.Current.QuickSellMenu && CanTradeHere(Settlement.CurrentSettlement);
+                            return (Options.Current.QuickSellMenu || Counter.HoldsBack()) && CanTradeHere(Settlement.CurrentSettlement);
                         },
                         args => Guard.Run("Action.QuickTradeMenu", () =>
                         {
@@ -726,7 +726,7 @@ namespace TradeLord
                 }
                 NoteThisArrival(settlement);
 
-                if (Counter.HoldsBack())
+                if (_visitTradeAllowed && Counter.HoldsBack())
                 {
                     Notices.Say(TheDealWaitsForYou(), Notices.Note);
                     Log.Write("trading on arrival at " + settlement.Name + " is held back: the deal is laid out " +
