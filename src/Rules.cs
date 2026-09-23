@@ -96,9 +96,14 @@ namespace TradeLord
                                             float squaredFromTheGate) =>
             already || (gateKnown && squaredFromTheGate > SetOffFromTheGate);
 
+        internal const double StraightBackWithin = 1d;
+
+        internal static bool StraightBack(double hours, double lastHours) =>
+            hours >= lastHours && hours - lastHours < StraightBackWithin;
+
         internal static bool StillTheSameSitting(string here, string sittingAt,
-                                                 int hour, int sittingHour) =>
-            here != null && here == sittingAt && hour == sittingHour;
+                                                 double hours, double sittingHours) =>
+            here != null && here == sittingAt && StraightBack(hours, sittingHours);
     }
 
     internal static class Marks

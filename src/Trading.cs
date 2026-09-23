@@ -183,7 +183,7 @@ namespace TradeLord
             _pendingXpMuted = true;
             AutomatedTradeInProgress = false;
             _sittingAt = null;
-            _sittingHour = -1;
+            _sittingHours = -1d;
             ForgetArrivals();
             Marker.Forget();
             Shops.ForgetWhoIsBuying();
@@ -244,6 +244,7 @@ namespace TradeLord
         {
             if (party != MobileParty.MainParty) return;
             NoteTheGateBehind(party);
+            NoteLeavingTheSitting(settlement);
             Marker.ForgetWhatYouCarry();
             Guard.Run("Action.HerdReliefOnLeaving", () =>
             {
@@ -269,7 +270,7 @@ namespace TradeLord
         private static bool _visitTradeAllowed;
 
         private static string _sittingAt;
-        private static int _sittingHour = -1;
+        private static double _sittingHours = -1d;
 
         private static string _lastArrivalAt;
         private static Vec2 _gateBehind;
@@ -307,12 +308,18 @@ namespace TradeLord
 
         private static bool StillTheSameSitting(Settlement settlement)
         {
-            int hour = (int)CampaignTime.Now.ToHours;
+            double hours = CampaignTime.Now.ToHours;
             bool same = Arrivals.StillTheSameSitting(settlement?.StringId, _sittingAt,
-                                                     hour, _sittingHour);
+                                                     hours, _sittingHours);
             _sittingAt = settlement?.StringId;
-            _sittingHour = hour;
+            _sittingHours = hours;
             return same;
+        }
+
+        private static void NoteLeavingTheSitting(Settlement settlement)
+        {
+            if (settlement != null && settlement.StringId == _sittingAt)
+                _sittingHours = CampaignTime.Now.ToHours;
         }
 
         internal static void StartAFreshDryRun() => Visit.ForgetTheDryRun();
@@ -1470,20 +1477,21 @@ namespace TradeLord
 
         private static Books _meetingBooks;
         private static MobileParty _meetingBooksFor;
-        private static int _meetingHour = -1;
+        private static double _meetingHours = -1d;
 
         internal static void ForgetTheMeeting()
         {
             _meetingBooks = null;
             _meetingBooksFor = null;
-            _meetingHour = -1;
+            _meetingHours = -1d;
         }
 
         private static Books BooksForTheMeeting(MobileParty met)
         {
-            int hour = Freshness.Hour;
-            if (_meetingBooks != null && _meetingBooksFor == met && _meetingHour == hour)
+            double hours = CampaignTime.Now.ToHours;
+            if (_meetingBooks != null && _meetingBooksFor == met && Arrivals.StraightBack(hours, _meetingHours))
             {
+                _meetingHours = hours;
                 _meetingBooks.ForgetTheDryRun();
                 Log.Write("meeting " + met.Name + " again: what TradeLord already traded with them still " +
                           "stands, so nothing it sold them is bought back and what it spent still counts");
@@ -1491,7 +1499,7 @@ namespace TradeLord
             }
             _meetingBooks = new Books();
             _meetingBooksFor = met;
-            _meetingHour = hour;
+            _meetingHours = hours;
             return _meetingBooks;
         }
 

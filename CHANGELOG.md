@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.91.4
+
+- Fixed meeting the same caravan or villagers again straight away counting as a new meeting when the hour turned in between
+- Fixed leaving a town or village and walking straight back in counting as a new visit when the hour had turned since you arrived
+
 ## 1.91.3
 
 - Fixed Best sell prices and Best buy prices in a lame horse's tooltip showing a sound horse's prices
