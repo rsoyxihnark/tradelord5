@@ -98,6 +98,13 @@ namespace TradeLord
                 one => !Scoring.TooOldToSay(one.WithinDays, one.AtHours, now, out _));
         }
 
+        private static bool RoomForOneMoreFigure()
+        {
+            float now = (float)CampaignTime.Now.ToHours;
+            return _said.Prune(
+                one => !Scoring.TooOldToSay(one.WithinDays, one.AtHours, now, out _));
+        }
+
         private static void Kept(Settlement site)
         {
             Dictionary<string, Promised> here = _promised.TakeAt(site.StringId);
@@ -166,7 +173,7 @@ namespace TradeLord
             int stockSaid = Forecast.UnitsLanding(site, item, withinDays);
             int worthSaid = Forecast.WorthShift(site, item, withinDays);
             if (stockSaid == 0 && worthSaid == 0) return;
-            if (!_said.Holds(site.StringId, item.StringId) && _said.Full)
+            if (!_said.Holds(site.StringId, item.StringId) && _said.Full && !RoomForOneMoreFigure())
             {
                 Log.Repeatable("forecast check", "full",
                                "forecast check is holding the " + Keeps<Said>.Most + " figures it keeps at once, " +
