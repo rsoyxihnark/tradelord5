@@ -199,10 +199,22 @@ namespace TradeLord
         internal static string Moving(int moved) =>
             moved < 0 ? -moved + " left instead" : "it moved " + moved;
 
-        internal static string Yours(int yours, string counted) =>
-            yours == 0 ? ""
-                       : " (leaving out the " + (yours < 0 ? -(long)yours : yours) + counted + " you " +
-                         (yours < 0 ? "bought" : "sold") + " there yourself)";
+        internal static string Yours(int yours, bool worth)
+        {
+            if (yours == 0) return "";
+            long size = yours < 0 ? -(long)yours : yours;
+            return " (not counting " + (worth ? "goods worth " + size + " denars" : "the " + size + " unit(s)") +
+                   " your own trading " + (yours < 0 ? "took off" : "put on") + " the shelf)";
+        }
+
+        internal static (int stock, int worth) YoursAdded(int stockYours, int worthYours, bool sameGood,
+                                                          bool sameKind, bool worthKept, int into, int value)
+        {
+            if (into == 0) return (stockYours, worthYours);
+            return (sameGood ? TradeMath.AddedUp(stockYours, into) : stockYours,
+                    worthKept && sameKind ? TradeMath.AddedUp(worthYours, TradeMath.YourOwnWorth(into, value))
+                                          : worthYours);
+        }
 
         internal static string Shared(float share) =>
             share == TradeMath.NoShareToGive ? "" : ", " + Share(share) + " off";

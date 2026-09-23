@@ -420,12 +420,57 @@ namespace TradeLord.Tests
         [Fact]
         public void The_log_says_what_it_left_out_of_your_own_trading()
         {
-            Assert.Equal("", Scoring.Yours(0, " unit(s)"));
-            Assert.Equal(" (leaving out the 32 unit(s) you bought there yourself)", Scoring.Yours(-32, " unit(s)"));
-            Assert.Equal(" (leaving out the 12 unit(s) you sold there yourself)", Scoring.Yours(12, " unit(s)"));
-            Assert.Equal(" (leaving out the 960 denars you bought there yourself)", Scoring.Yours(-960, " denars"));
-            Assert.Equal(" (leaving out the 2147483648 denars you bought there yourself)",
-                         Scoring.Yours(int.MinValue, " denars"));
+            Assert.Equal("", Scoring.Yours(0, false));
+            Assert.Equal("", Scoring.Yours(0, true));
+            Assert.Equal(" (not counting the 32 unit(s) your own trading took off the shelf)", Scoring.Yours(-32, false));
+            Assert.Equal(" (not counting the 12 unit(s) your own trading put on the shelf)", Scoring.Yours(12, false));
+            Assert.Equal(" (not counting goods worth 960 denars your own trading took off the shelf)",
+                         Scoring.Yours(-960, true));
+            Assert.Equal(" (not counting goods worth 2147483648 denars your own trading took off the shelf)",
+                         Scoring.Yours(int.MinValue, true));
+        }
+
+        [Fact]
+        public void A_trade_in_the_good_itself_counts_its_units_and_its_worth()
+        {
+            var (stock, worth) = Scoring.YoursAdded(0, 0, true, true, true, -32, 30);
+            Assert.Equal(-32, stock);
+            Assert.Equal(-960, worth);
+            (stock, worth) = Scoring.YoursAdded(stock, worth, true, true, true, 12, 30);
+            Assert.Equal(-20, stock);
+            Assert.Equal(-600, worth);
+        }
+
+        [Fact]
+        public void A_trade_in_another_good_of_the_kind_counts_only_its_worth()
+        {
+            var (stock, worth) = Scoring.YoursAdded(-5, -150, false, true, true, 4, 250);
+            Assert.Equal(-5, stock);
+            Assert.Equal(850, worth);
+        }
+
+        [Fact]
+        public void A_trade_in_a_good_of_another_kind_counts_nothing()
+        {
+            var (stock, worth) = Scoring.YoursAdded(-5, -150, false, false, true, 40, 12);
+            Assert.Equal(-5, stock);
+            Assert.Equal(-150, worth);
+        }
+
+        [Fact]
+        public void A_market_that_keeps_no_worth_counts_only_the_units_you_moved()
+        {
+            var (stock, worth) = Scoring.YoursAdded(0, 0, true, true, false, -6, 50);
+            Assert.Equal(-6, stock);
+            Assert.Equal(0, worth);
+        }
+
+        [Fact]
+        public void Nothing_moved_leaves_what_you_traded_where_it_was()
+        {
+            var (stock, worth) = Scoring.YoursAdded(-3, -90, true, true, true, 0, 30);
+            Assert.Equal(-3, stock);
+            Assert.Equal(-90, worth);
         }
 
         [Fact]
@@ -480,36 +525,64 @@ namespace TradeLord.Tests
             Assert.Single(keeps.Sites());
         }
 
+        private static List<(string good, int amount, bool food)> Cargo(params (string good, int amount, bool food)[] held) =>
+            new List<(string good, int amount, bool food)>(held);
+
         [Fact]
-        public void A_cargo_reads_the_same_whatever_order_it_is_packed_in()
+        public void The_same_cargo_packed_in_another_order_is_the_same_cargo()
         {
-            var one = new List<(string good, int amount)> { ("salt", 13), ("flax", 18), ("meat", 1) };
-            var other = new List<(string good, int amount)> { ("meat", 1), ("salt", 13), ("flax", 18) };
-            Assert.Equal(Marks.Carried(one), Marks.Carried(other));
-            Assert.Equal("flax x18;meat x1;salt x13;", Marks.Carried(one));
-            Assert.Equal("salt x13;", Marks.Carried(new List<(string good, int amount)> { ("salt", 13) }));
+            var then = Cargo(("salt", 13, false), ("flax", 18, false), ("meat", 4, true));
+            var now = Cargo(("meat", 4, true), ("salt", 13, false), ("flax", 18, false));
+            Assert.True(Marks.OnlyEatenFrom(then, now));
         }
 
         [Fact]
-        public void A_cargo_with_a_unit_more_or_a_good_less_reads_as_another_cargo()
+        public void Food_your_party_ate_on_the_road_leaves_the_cargo_the_same()
         {
-            var was = new List<(string good, int amount)> { ("salt", 13), ("flax", 18) };
-            var more = new List<(string good, int amount)> { ("salt", 14), ("flax", 18) };
-            var less = new List<(string good, int amount)> { ("salt", 13) };
-            Assert.NotEqual(Marks.Carried(was), Marks.Carried(more));
-            Assert.NotEqual(Marks.Carried(was), Marks.Carried(less));
-            Assert.Equal("", Marks.Carried(new List<(string good, int amount)>()));
-            Assert.Equal("", Marks.Carried(null));
+            var then = Cargo(("salt", 13, false), ("grain", 30, true), ("meat", 2, true));
+            Assert.True(Marks.OnlyEatenFrom(then, Cargo(("salt", 13, false), ("grain", 27, true), ("meat", 2, true))));
+            Assert.True(Marks.OnlyEatenFrom(then, Cargo(("salt", 13, false), ("grain", 30, true))));
         }
 
         [Fact]
-        public void The_marker_keeps_its_first_figure_while_it_points_at_the_same_town_for_the_same_cargo()
+        public void Anything_bought_or_found_since_makes_it_another_cargo()
         {
-            Assert.True(Marks.FirstLookStands("lageta", "lageta", "salt x13;", "salt x13;", 1997L));
-            Assert.False(Marks.FirstLookStands("lageta", "ortysia", "salt x13;", "salt x13;", 1997L));
-            Assert.False(Marks.FirstLookStands("lageta", "lageta", "salt x13;", "salt x12;", 1997L));
-            Assert.False(Marks.FirstLookStands("lageta", "lageta", "salt x13;", "salt x13;", 0L));
-            Assert.False(Marks.FirstLookStands(null, null, "salt x13;", "salt x13;", 1997L));
+            var then = Cargo(("salt", 13, false), ("grain", 30, true));
+            Assert.False(Marks.OnlyEatenFrom(then, Cargo(("salt", 14, false), ("grain", 30, true))));
+            Assert.False(Marks.OnlyEatenFrom(then, Cargo(("salt", 13, false), ("grain", 31, true))));
+            Assert.False(Marks.OnlyEatenFrom(then, Cargo(("salt", 13, false), ("grain", 30, true), ("flax", 1, false))));
+            Assert.False(Marks.OnlyEatenFrom(then, Cargo(("salt", 13, false), ("grain", 30, true), ("fish", 5, true))));
+        }
+
+        [Fact]
+        public void A_good_that_is_not_food_sold_off_on_the_way_makes_it_another_cargo()
+        {
+            var then = Cargo(("salt", 13, false), ("flax", 18, false));
+            Assert.False(Marks.OnlyEatenFrom(then, Cargo(("salt", 12, false), ("flax", 18, false))));
+            Assert.False(Marks.OnlyEatenFrom(then, Cargo(("salt", 13, false))));
+            Assert.False(Marks.OnlyEatenFrom(null, then));
+            Assert.False(Marks.OnlyEatenFrom(then, null));
+        }
+
+        [Fact]
+        public void The_same_good_split_across_two_lots_is_counted_as_one()
+        {
+            var then = Cargo(("salt", 10, false), ("salt", 3, false));
+            Assert.True(Marks.OnlyEatenFrom(then, Cargo(("salt", 13, false))));
+            Assert.False(Marks.OnlyEatenFrom(then, Cargo(("salt", 10, false))));
+        }
+
+        [Fact]
+        public void The_marker_keeps_its_first_figure_while_it_points_at_the_same_town_and_you_have_only_eaten()
+        {
+            var then = Cargo(("salt", 13, false), ("grain", 30, true));
+            var eaten = Cargo(("salt", 13, false), ("grain", 28, true));
+            var bought = Cargo(("salt", 20, false), ("grain", 30, true));
+            Assert.True(Marks.FirstLookStands("lageta", "lageta", then, eaten, 1997L));
+            Assert.False(Marks.FirstLookStands("lageta", "ortysia", then, eaten, 1997L));
+            Assert.False(Marks.FirstLookStands("lageta", "lageta", then, bought, 1997L));
+            Assert.False(Marks.FirstLookStands("lageta", "lageta", then, eaten, 0L));
+            Assert.False(Marks.FirstLookStands(null, null, then, eaten, 1997L));
             Assert.False(Marks.FirstLookStands("lageta", "lageta", null, null, 1997L));
         }
 

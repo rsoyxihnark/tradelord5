@@ -57,7 +57,7 @@ namespace TradeLord
 
         internal static void Note(TradeRoute route)
         {
-            if (route == null || route.Item == null) return;
+            if (route == null || route.Item == null || Counter.Staging) return;
             Guard.Run("Hindsight.Promise", () => Promise(route));
             if (!On) return;
             Guard.Run("Hindsight.Note", () =>
@@ -94,11 +94,11 @@ namespace TradeLord
                 for (int i = 0; i < moved.Count; i++)
                 {
                     var (item, into) = moved[i];
-                    if (item == null || into == 0) continue;
-                    if (item == kept.Item) kept.StockYours = TradeMath.AddedUp(kept.StockYours, into);
-                    if (worthKept && item.ItemCategory != null && item.ItemCategory == kept.Item.ItemCategory)
-                        kept.WorthYours = TradeMath.AddedUp(kept.WorthYours,
-                                                            TradeMath.YourOwnWorth(into, item.Value));
+                    if (item == null) continue;
+                    (kept.StockYours, kept.WorthYours) = Scoring.YoursAdded(
+                        kept.StockYours, kept.WorthYours, item == kept.Item,
+                        item.ItemCategory != null && item.ItemCategory == kept.Item.ItemCategory,
+                        worthKept, into, item.Value);
                 }
                 return kept;
             });
@@ -219,29 +219,32 @@ namespace TradeLord
             }
             if (scored > 0)
                 LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(heldTotal, scored));
-            if (!Writing || scored == 0) return;
+            if (!Writing || scored + stale + yours + unpriced == 0) return;
             lines.Insert(0, "promise check at " + site.Name + ", " + scored + " promise(s) scored" +
                       (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") +
-                      (yours == 0 ? "" : ", " + yours + " set aside because your own trading moved that price") +
+                      (yours == 0 ? "" : ", " + yours + " set aside because your own trading has moved the price since it was promised") +
                       (unpriced == 0 ? "" : ", " + unpriced + " the market would put no price on"));
-            lines.Add("  here: the price held at " + Share(TradeMath.MeanOf(heldTotal, scored)) +
-                      " of what the panel promised");
-            for (int band = TradeMath.Bands - 1; band >= 0; band--)
+            if (scored > 0)
             {
-                if (_bands.Scored(band) == 0) continue;
-                lines.Add("  " + Scoring.Banded(band) + ": held at " +
-                          Share(_bands.Held(band)) + " of promise over " +
-                          _bands.Scored(band) + " price(s) checked this session");
+                lines.Add("  here: the price held at " + Share(TradeMath.MeanOf(heldTotal, scored)) +
+                          " of what the panel promised");
+                for (int band = TradeMath.Bands - 1; band >= 0; band--)
+                {
+                    if (_bands.Scored(band) == 0) continue;
+                    lines.Add("  " + Scoring.Banded(band) + ": held at " +
+                              Share(_bands.Held(band)) + " of promise over " +
+                              _bands.Scored(band) + " price(s) checked this session");
+                }
+                if (LedgerBehavior.Instance != null &&
+                    LedgerBehavior.Instance.PromiseScore(out int kept, out float overall))
+                    lines.Add("  over this campaign: the price has held at " + Share(overall) +
+                              " of promise over " + kept + " price(s) checked");
+                if (LedgerBehavior.Instance != null &&
+                    LedgerBehavior.Instance.PromiseScoreAt(site.StringId, out int walkIns, out float hereOverall))
+                    lines.Add("  at " + site.Name + ": the price has held at " + Share(hereOverall) +
+                              " of promise over " + walkIns + " walk-in(s) here, which is what lowers " +
+                              "the score of a route selling here");
             }
-            if (LedgerBehavior.Instance != null &&
-                LedgerBehavior.Instance.PromiseScore(out int kept, out float overall))
-                lines.Add("  over this campaign: the price has held at " + Share(overall) +
-                          " of promise over " + kept + " price(s) checked");
-            if (LedgerBehavior.Instance != null &&
-                LedgerBehavior.Instance.PromiseScoreAt(site.StringId, out int walkIns, out float hereOverall))
-                lines.Add("  at " + site.Name + ": the price has held at " + Share(hereOverall) +
-                          " of promise over " + walkIns + " walk-in(s) here, which is what lowers " +
-                          "the score of a route selling here");
             Log.WriteMany(lines);
         }
 
@@ -300,7 +303,7 @@ namespace TradeLord
                 landingMiss += Math.Abs(how.LandingOff);
                 string line = "  " + Named(kept.Item) + ": said " + kept.StockSaid + " unit(s) of it would land within " +
                               Figure(kept.WithinDays) + " day(s) and " + Landing(how.Landed) + ", " +
-                              Counted(how.LandingOff) + Yours(kept.StockYours, " unit(s)") +
+                              Counted(how.LandingOff) + Yours(kept.StockYours, false) +
                               "; you walked in " + Figure(since) +
                               " day(s) after it said so";
                 if (!how.WorthKept)
@@ -316,23 +319,27 @@ namespace TradeLord
                 }
                 lines.Add(line + "; said every good of that kind heading there was worth " +
                           kept.WorthSaid + " denars in all and " + Moving(how.Moved) + " denars, " +
-                          Counted(how.WorthOff) + Shared(how.Share) + Yours(kept.WorthYours, " denars"));
+                          Counted(how.WorthOff) + Shared(how.Share) + Yours(kept.WorthYours, true));
             }
-            if (!Writing || scored == 0) return;
+            if (!Writing || scored + stale + early == 0) return;
             lines.Insert(0, "forecast check at " + site.Name + ", " + scored + " good(s) it had a figure for" +
                       (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") +
-                      (early == 0 ? "" : ", " + early + " passed over as too soon to say anything") + ":");
-            lines.Add("  in all: the landing figure was off by " +
-                      Figure(TradeMath.MeanOf(landingMiss, scored)) + " unit(s) a good" +
-                      (shared == 0
-                          ? ", and no worth figure could be held to anything here"
-                          : ", the worth figure by " + Share(TradeMath.MeanOf(shareTotal, shared)) +
-                            " of what it said would move, over " + shared + " good(s)"));
-            if (LedgerBehavior.Instance != null &&
-                LedgerBehavior.Instance.ForecastScore(out int figures, out float missed))
-                lines.Add("  over this campaign: the worth figure has been off by " + Share(missed) +
-                          " over " + figures + " figure(s) checked, so what is on its way is counted at " +
-                          Share(TradeMath.TrustInTheForecast(figures, missed)) + " of what it says");
+                      (early == 0 ? "" : ", " + early + " passed over as too soon to say anything") +
+                      (scored == 0 ? "" : ":"));
+            if (scored > 0)
+            {
+                lines.Add("  in all: the landing figure was off by " +
+                          Figure(TradeMath.MeanOf(landingMiss, scored)) + " unit(s) a good" +
+                          (shared == 0
+                              ? ", and no worth figure could be held to anything here"
+                              : ", the worth figure by " + Share(TradeMath.MeanOf(shareTotal, shared)) +
+                                " of what it said would move, over " + shared + " good(s)"));
+                if (LedgerBehavior.Instance != null &&
+                    LedgerBehavior.Instance.ForecastScore(out int figures, out float missed))
+                    lines.Add("  over this campaign: the worth figure has been off by " + Share(missed) +
+                              " over " + figures + " figure(s) checked, so what is on its way is counted at " +
+                              Share(TradeMath.TrustInTheForecast(figures, missed)) + " of what it says");
+            }
             Log.WriteMany(lines);
         }
 
@@ -354,7 +361,7 @@ namespace TradeLord
 
         private static string Moving(int moved) => Scoring.Moving(moved);
 
-        private static string Yours(int yours, string counted) => Scoring.Yours(yours, counted);
+        private static string Yours(int yours, bool worth) => Scoring.Yours(yours, worth);
 
         private static string Shared(float share) => Scoring.Shared(share);
 
