@@ -11160,5 +11160,20 @@ chk("1.90.13", "the panel legend names Qty, Left and Conf, and the forecast hint
     the_panel_legend_names_its_columns_the_way_the_panel_heads_them())
 
 
+def the_release_check_reads_and_writes_every_letter_the_same_on_every_machine():
+    read_gh = between(RELEASED, "def byGh():", "\ndef ")
+    read_git = between(RELEASED, "def thisCommit():", "\ndef ")
+    main = between(RELEASED, "def main(argv):", "said = {head: entries for head, entries in")
+    return (read_gh and read_git and main
+            and "capture_output=True, encoding='utf-8')" in read_gh
+            and "capture_output=True, encoding='utf-8')" in read_git
+            and "text=True" not in RELEASED
+            and "sys.stdout.reconfigure(encoding='utf-8')" in main)
+
+
+chk("1.90.13", "the release check reads the commit message and the published notes as UTF-8 and writes UTF-8, so a Turkish letter in a changelog entry can no longer stop a version going out on the Windows build",
+    the_release_check_reads_and_writes_every_letter_the_same_on_every_machine())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

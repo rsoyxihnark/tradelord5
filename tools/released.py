@@ -25,7 +25,7 @@ def byGh():
         run = subprocess.run(
             ['gh', 'api', 'repos/{owner}/{repo}/releases', '--paginate', '--jq',
              '.[] | {tag: .tag_name, draft: .draft, body: .body, files: (.assets | length)}'],
-            capture_output=True, text=True)
+            capture_output=True, encoding='utf-8')
     except OSError as missing:
         return None, str(missing)
     if run.returncode != 0:
@@ -77,7 +77,7 @@ def thisCommit():
     sha = os.environ.get('GITHUB_SHA') or 'HEAD'
     try:
         run = subprocess.run(['git', 'log', '-1', '--format=%s%x00%b', sha],
-                             capture_output=True, text=True)
+                             capture_output=True, encoding='utf-8')
     except OSError as missing:
         return None, None, str(missing)
     if run.returncode != 0:
@@ -118,6 +118,7 @@ def theMessageSaysWhatTheChangelogSays(shipping, said):
 
 
 def main(argv):
+    sys.stdout.reconfigure(encoding='utf-8')
     shipping = (argv[1] if len(argv) > 1 else '').lstrip('v')
     said = {head: entries for head, entries in
             sections(io.open('CHANGELOG.md', encoding='utf-8').read())}
