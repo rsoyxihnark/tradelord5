@@ -3469,7 +3469,7 @@ def the_town_menu_carries_one_trade_entry():
 
 def the_one_entry_still_shows_when_buying_is_off():
     body = method_body(S['Trading.cs'], "private void OnSessionLaunched")
-    return ("return Options.Current.QuickSellMenu && CanTradeHere(Settlement.CurrentSettlement);" in body
+    return ("return (Options.Current.QuickSellMenu || Counter.HoldsBack()) && CanTradeHere(Settlement.CurrentSettlement);" in body
             and "Options.Current.AutoTradeBoth" not in body)
 
 def the_rules_name_the_one_code_change_that_writes_no_entry():
@@ -7730,7 +7730,7 @@ def arriving_at_a_market_holds_its_trade_back_while_the_deal_is_laid_out():
     entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
     line = method_body(S['Trading.cs'], "private static TextObject TheDealWaitsForYou")
     holds = method_body(S['Counter.cs'], "internal static bool HoldsBack")
-    return (ordered(entered, "NoteThisArrival(settlement);", "if (Counter.HoldsBack())",
+    return (ordered(entered, "NoteThisArrival(settlement);", "if (_visitTradeAllowed && Counter.HoldsBack())",
                     "Notices.Say(TheDealWaitsForYou(), Notices.Note);",
                     "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);")
             and "TradeRules.StagesTheDeal(Options.Current)" in holds
@@ -11190,6 +11190,26 @@ def a_release_that_reads_back_with_no_file_is_asked_again_before_it_is_called_ba
 
 chk("1.90.13", "a published version that GitHub lists with no file is asked about again by its tag before the release check calls it bare, because GitHub sometimes lists a release's file and sometimes leaves it out",
     a_release_that_reads_back_with_no_file_is_asked_again_before_it_is_called_bare())
+
+
+def the_trade_entry_shows_while_staged_trading_holds_trading_back():
+    menu = between(S['Trading.cs'], '"tradelord_quicktrade"', 'args => Guard.Run("Action.QuickTradeMenu"')
+    entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
+    for path in [ENGLISH] + list(TRANSLATIONS.values()):
+        said = spoken(path)
+        if said['TL281'] not in said['TL316']:
+            return False
+    return (menu
+            and "return (Options.Current.QuickSellMenu || Counter.HoldsBack()) && CanTradeHere(Settlement.CurrentSettlement);" in menu
+            and ordered(entered, "_visitTradeAllowed = CanTradeHere(settlement);",
+                        "if (_visitTradeAllowed && Counter.HoldsBack())",
+                        "Notices.Say(TheDealWaitsForYou(), Notices.Note);")
+            and "While Staged Trading holds that trading back, the entry shows anyway." in M
+            and "While Staged Trading holds that trading back, the entry shows anyway." in spoken(ENGLISH)['TL316'])
+
+
+chk("1.90.14", "the trade entry shows while Staged Trading holds trading back as you arrive, even with Trade entry in town menu off, the notice that names the entry only shows where the entry does, and the hint under Trade entry in town menu says so in every language",
+    the_trade_entry_shows_while_staged_trading_holds_trading_back())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
