@@ -58,6 +58,41 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_best_price_is_scaled_to_the_quality_you_carry()
+        {
+            Assert.Equal(140, TradeMath.AtThisQuality(200, 50, 35));
+            Assert.Equal(240, TradeMath.AtThisQuality(200, 50, 60));
+            Assert.Equal(200, TradeMath.AtThisQuality(200, 50, 50));
+        }
+
+        [Fact]
+        public void A_worn_good_sells_wherever_a_plain_one_would()
+        {
+            int bestElsewhere = 200, here = 192, plainValue = 50, wornValue = 35;
+            int wornHere = TradeMath.AtThisQuality(here, plainValue, wornValue);
+            int wornFloor = TradeRules.BestMarketFloor(
+                TradeMath.AtThisQuality(bestElsewhere, plainValue, wornValue), 0.95f);
+            Assert.False(TradeRules.BelowTheBestMarket(here, TradeRules.BestMarketFloor(bestElsewhere, 0.95f)));
+            Assert.False(TradeRules.BelowTheBestMarket(wornHere, wornFloor));
+            Assert.True(TradeRules.BelowTheBestMarket(wornHere, TradeRules.BestMarketFloor(bestElsewhere, 0.95f)));
+        }
+
+        [Fact]
+        public void A_price_with_nothing_to_scale_it_by_is_left_as_it_is()
+        {
+            Assert.Equal(0, TradeMath.AtThisQuality(0, 50, 35));
+            Assert.Equal(200, TradeMath.AtThisQuality(200, 0, 35));
+            Assert.Equal(200, TradeMath.AtThisQuality(200, 50, 0));
+        }
+
+        [Fact]
+        public void A_scaled_price_stays_between_one_denar_and_what_an_int_holds()
+        {
+            Assert.Equal(1, TradeMath.AtThisQuality(1, 100, 1));
+            Assert.Equal(int.MaxValue, TradeMath.AtThisQuality(int.MaxValue, 1, 3));
+        }
+
+        [Fact]
         public void A_lower_tolerance_never_holds_back_more_than_a_higher_one()
         {
             var rng = new Random(5540);

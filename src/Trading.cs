@@ -1227,7 +1227,8 @@ namespace TradeLord
             public bool ResaleMarket(int at, out int price)
             {
                 var best = LedgerBehavior.Instance?.BestSell(Item(at)) ?? (null, 0);
-                price = best.Item2;
+                EquipmentElement held = _plan[at].EquipmentElement;
+                price = TradeMath.AtThisQuality(best.Item2, held.Item.Value, held.ItemValue);
                 return best.Item1 != null && best.Item1 != _pass.Site;
             }
 

@@ -249,7 +249,8 @@ namespace TradeLord
             if (!Options.Current.ProfitColoring || shown == null) return;
             var ledger = LedgerBehavior.Instance;
             if (ledger == null) return;
-            ItemObject item = shown.ItemRosterElement.EquipmentElement.Item;
+            EquipmentElement held = shown.ItemRosterElement.EquipmentElement;
+            ItemObject item = held.Item;
             if (!TradePolicy.Priced(item)) return;
             int cost = shown.ItemCost;
             if (cost <= 0) return;
@@ -259,14 +260,14 @@ namespace TradeLord
             {
                 var best = ledger.BestBuy(item);
                 if (best.town == null || best.price <= 0) return;
-                float r = (float)cost / best.price;
+                float r = (float)cost / TradeMath.AtThisQuality(best.price, item.Value, held.ItemValue);
                 shown.ProfitType = r <= 1.02f ? 2 : r <= 1.15f ? 1 : r <= 1.4f ? 0 : r <= 1.7f ? -1 : -2;
             }
             else if (shown.InventorySide == InventoryLogic.InventorySide.PlayerInventory)
             {
                 var best = ledger.BestSell(item);
                 if (best.town == null || best.price <= 0) return;
-                float r = (float)cost / best.price;
+                float r = (float)cost / TradeMath.AtThisQuality(best.price, item.Value, held.ItemValue);
                 shown.ProfitType = r >= 0.98f ? 2 : r >= 0.9f ? 1 : r >= 0.75f ? 0 : r >= 0.6f ? -1 : -2;
             }
         }
