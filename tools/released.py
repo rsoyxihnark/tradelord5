@@ -1,4 +1,4 @@
-import io, json, os, re, subprocess, sys, urllib.request
+import io, json, os, re, subprocess, sys, time, urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from nexus_changelog import sections
@@ -50,6 +50,32 @@ def byApi():
                           'body': one.get('body') or '', 'files': len(one.get('assets') or [])})
         page += 1
     return found, None
+
+
+def filesOn(tag):
+    try:
+        run = subprocess.run(
+            ['gh', 'api', 'repos/{owner}/{repo}/releases/tags/' + tag, '--jq', '.assets | length'],
+            capture_output=True, encoding='utf-8')
+        if run.returncode == 0 and run.stdout.strip().isdigit():
+            return int(run.stdout)
+    except OSError:
+        pass
+    ask = urllib.request.Request('https://api.github.com/repos/' + REPO + '/releases/tags/' + tag,
+                                 headers={'User-Agent': 'tradelord-released'})
+    try:
+        return len(json.load(urllib.request.urlopen(ask, timeout=30)).get('assets') or [])
+    except Exception:
+        return 0
+
+
+def bare(tag):
+    for attempt in range(10):
+        if attempt:
+            time.sleep(3)
+        if filesOn(tag):
+            return False
+    return True
 
 
 def asked():
@@ -144,7 +170,7 @@ def main(argv):
             continue
         if row['draft']:
             faults.append(version + ' is still a draft release')
-        if row['files'] == 0:
+        if row['files'] == 0 and bare(row['tag']):
             faults.append(version + ' was published with no file attached')
         if version not in said:
             faults.append(version + ' was published and the changelog carries no section for it')
