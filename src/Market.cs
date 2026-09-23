@@ -140,7 +140,14 @@ namespace TradeLord
         private static readonly Dictionary<(string site, string item, bool selling, int landed), Ladder> _rungs =
             new Dictionary<(string, string, bool, int), Ladder>();
 
-        internal static void Forget() => _rungs.Clear();
+        private static readonly Dictionary<(string site, string item, bool selling, bool arriving), int> _reach =
+            new Dictionary<(string, string, bool, bool), int>();
+
+        internal static void Forget()
+        {
+            _rungs.Clear();
+            _reach.Clear();
+        }
 
         private static Ladder Rung(Settlement site, ItemObject item, bool selling, int quoted,
                                    int landed)
@@ -148,10 +155,27 @@ namespace TradeLord
             var key = (site.StringId, item.StringId, selling, landed);
             if (!_rungs.TryGetValue(key, out Ladder rung))
             {
-                rung = new Ladder(site, item, selling, quoted, landed);
+                rung = Held(site, item, selling, quoted, landed, scanning: true);
                 _rungs[key] = rung;
             }
             return rung;
+        }
+
+        private static Ladder Held(Settlement site, ItemObject item, bool selling, int quoted, int landed,
+                                   bool scanning)
+        {
+            var rung = new Ladder(site, item, selling, quoted, landed);
+            if (landed == 0 || !rung.Walkable) return rung;
+            int first = rung.At(0);
+            if (TradeMath.ForecastWithin(quoted, first) == first) return rung;
+            var way = (site.StringId, item.StringId, selling, landed > 0);
+            if (!scanning || !_reach.TryGetValue(way, out int held))
+            {
+                held = TradeMath.LandingWithinReach(quoted, landed, first,
+                    shift => new Ladder(site, item, selling, quoted, shift).At(0));
+                if (scanning) _reach[way] = held;
+            }
+            return new Ladder(site, item, selling, quoted, TradeMath.NoFurtherThan(landed, held));
         }
 
         internal static int Opening(Settlement site, ItemObject item, bool selling, int quoted,
@@ -217,7 +241,7 @@ namespace TradeLord
                                      int landed)
         {
             if (landed == 0 || site == null || item == null) return quoted;
-            Ladder rung = new Ladder(site, item, selling, quoted, landed);
+            Ladder rung = Held(site, item, selling, quoted, landed, scanning: false);
             return rung.Walkable ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;
         }
 
