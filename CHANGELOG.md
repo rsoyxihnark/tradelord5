@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.90.13
+
+- Fixed What this means naming the Qty and Conf columns differently from the ledger in Turkish, Russian and Chinese
+- Fixed the hint under Auto-mark best sell market on map misnaming Minimum profit margin in Turkish and Russian
+- Fixed the Russian hint under Count what is on its way to a market not naming Live world prices the way the settings screen does
+- Fixed Nothing bought here misnaming Buy cap per item in Turkish, Russian and Chinese
+- Fixed the Turkish settings mixing Öntanımlı and Varsayılan for default
+- Fixed Ledger entry in town menu using other Turkish words for town and entry than Trade entry in town menu
+- Fixed the Turkish hint under Share of the profit your companions learn from calling Trade XP by another name
+- Fixed the Russian Trade XP line in the ledger writing the Trade skill in lower case
+
 ## 1.90.12
 
 - Fixed TradeLord selling only part of your loot or animals when the same item sat in your bags in more than one quality
