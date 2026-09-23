@@ -467,6 +467,7 @@ namespace TradeLord
                 Settlement here = Settlement.CurrentSettlement;
                 SettlementComponent market = here?.SettlementComponent;
                 ItemRoster carried = MobileParty.MainParty?.ItemRoster;
+                var moved = new List<(ItemObject item, int intoTheMarket)>();
                 foreach (var (element, said) in purchased)
                 {
                     ItemObject item = element.EquipmentElement.Item;
@@ -475,6 +476,7 @@ namespace TradeLord
                         ? Priced.At(market, element.EquipmentElement, MobileParty.MainParty, false)
                         : item.Value;
                     int bought = Deals.UnitsMoved(element.Amount, said, unit);
+                    moved.Add((item, -bought));
                     int took = Math.Min(bought, InAll(carried, item));
                     if (took <= 0) continue;
                     RecordPurchase(item.StringId, took,
@@ -487,8 +489,11 @@ namespace TradeLord
                     int unit = market != null
                         ? Priced.At(market, element.EquipmentElement, MobileParty.MainParty, true)
                         : item.Value;
-                    RecordSale(item.StringId, Deals.UnitsMoved(element.Amount, said, unit));
+                    int gone = Deals.UnitsMoved(element.Amount, said, unit);
+                    moved.Add((item, gone));
+                    RecordSale(item.StringId, gone);
                 }
+                Hindsight.YouTraded(here, moved);
                 CaptureSettlement(Settlement.CurrentSettlement, force: true);
                 PriceTrace.Say(Settlement.CurrentSettlement, "traded by hand");
             });

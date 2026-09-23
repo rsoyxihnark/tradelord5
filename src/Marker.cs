@@ -62,6 +62,7 @@ namespace TradeLord
         private static Stamp _cargoStamp;
         private static int _cargoVersion = -1;
         private static List<(EquipmentElement item, int amount, int worth, int floor)> _cargo;
+        private static string _cargoSignature;
 
         private static string _markedId;
         private static long _markedValue;
@@ -70,6 +71,9 @@ namespace TradeLord
         private static float _markedRate;
         private static float _markedDays;
         private static int _markedAt = -1;
+        private static string _markedCargo;
+        private static long _lastValue;
+        private static int _lastAt = -1;
 
         private static long _saidValue = -1L;
         private static float _saidRate = -1f;
@@ -98,6 +102,7 @@ namespace TradeLord
             _cargo = null;
             _cargoStamp.Stale();
             _cargoVersion = -1;
+            _cargoSignature = null;
         }
 
         internal static void ForgetTheRead()
@@ -118,6 +123,9 @@ namespace TradeLord
             _markedRate = 0f;
             _markedDays = 0f;
             _markedAt = -1;
+            _markedCargo = null;
+            _lastValue = 0L;
+            _lastAt = -1;
             _saidValue = -1L;
             _saidRate = -1f;
         }
@@ -230,7 +238,12 @@ namespace TradeLord
         {
             _saidValue = how.Value;
             _saidRate = how.Rate;
-            _markedId = target == null ? null : target.StringId;
+            string lookingAt = target == null ? null : target.StringId;
+            _lastValue = target == null ? 0L : how.Value;
+            _lastAt = Freshness.Hour;
+            if (Marks.FirstLookStands(_markedId, lookingAt, _markedCargo, _cargoSignature, _markedValue)) return;
+            _markedCargo = _cargoSignature;
+            _markedId = lookingAt;
             _markedValue = target == null ? 0L : how.Value;
             _markedEarned = target == null ? 0L : how.Value - how.Cost;
             _markedUnits = how.Units;
@@ -245,9 +258,13 @@ namespace TradeLord
             if (site == null || _markedId == null || site.StringId != _markedId) return;
             if (_markedValue <= 0L) return;
             long said = _markedValue;
+            long last = _lastValue;
+            int lastAt = _lastAt;
             _markedValue = 0L;
+            _lastValue = 0L;
             float since = TradeMath.DaysSince(_markedAt, Freshness.Hour);
             float held = TradeMath.HeldShare(said > int.MaxValue ? int.MaxValue : (int)said, gold);
+            float heldLast = TradeMath.HeldShare(last > int.MaxValue ? int.MaxValue : (int)last, gold);
             Log.Write("marker check at " + site.Name + ": it marked this market for " + _markedUnits +
                       " unit(s) worth " + said + " gold, " + _markedEarned + " of it profit, " +
                       _markedRate.ToString("0") +
@@ -255,7 +272,12 @@ namespace TradeLord
                       Scoring.Figure(since) + " day(s) later and sold " + units + " unit(s) for " + gold +
                       (held == TradeMath.NoShareToGive
                           ? ""
-                          : ", " + Scoring.Share(held) + " of what it marked on"));
+                          : ", " + Scoring.Share(held) + " of what it marked on") +
+                      (last == said || heldLast == TradeMath.NoShareToGive
+                          ? ""
+                          : "; its last look, " + Scoring.Figure(TradeMath.DaysSince(lastAt, Freshness.Hour)) +
+                            " day(s) before you walked in, came to " + last + " gold, and the sale was " +
+                            Scoring.Share(heldLast) + " of that"));
         }
 
         private static string Why(in Reckoning how)
@@ -372,7 +394,22 @@ namespace TradeLord
                            TradePolicy.WorthToBeat(item), BestMarketFloor(item)));
             }
             _cargo = cargo;
+            _cargoSignature = Marks.Carried(Signed(cargo));
             return cargo;
+        }
+
+        private static List<(string good, int amount)> Signed(
+            List<(EquipmentElement item, int amount, int worth, int floor)> cargo)
+        {
+            var held = new List<(string good, int amount)>(cargo.Count);
+            for (int i = 0; i < cargo.Count; i++)
+            {
+                EquipmentElement el = cargo[i].item;
+                if (el.Item == null) continue;
+                held.Add((el.ItemModifier == null ? el.Item.StringId : el.Item.StringId + "@" + el.ItemModifier.StringId,
+                          cargo[i].amount));
+            }
+            return held;
         }
 
         private static Paying WhatThatMarketPays(Settlement site, SettlementComponent market,

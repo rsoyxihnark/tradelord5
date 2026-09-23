@@ -101,6 +101,29 @@ namespace TradeLord
             here != null && here == sittingAt && hour == sittingHour;
     }
 
+    internal static class Marks
+    {
+        internal static string Carried(List<(string good, int amount)> cargo)
+        {
+            if (cargo == null || cargo.Count == 0) return "";
+            var held = new List<(string good, int amount)>(cargo);
+            held.Sort((x, y) =>
+            {
+                int byGood = string.CompareOrdinal(x.good, y.good);
+                return byGood != 0 ? byGood : x.amount.CompareTo(y.amount);
+            });
+            var said = new System.Text.StringBuilder();
+            for (int i = 0; i < held.Count; i++)
+                said.Append(held[i].good).Append(" x").Append(held[i].amount).Append(';');
+            return said.ToString();
+        }
+
+        internal static bool FirstLookStands(string markedAt, string lookingAt, string markedCargo,
+                                             string cargoNow, long markedValue) =>
+            markedValue > 0L && markedAt != null && markedAt == lookingAt &&
+            markedCargo != null && markedCargo == cargoNow;
+    }
+
     internal static class MapButton
     {
         internal const float Pad = 6f;

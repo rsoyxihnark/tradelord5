@@ -428,6 +428,28 @@ namespace TradeLord
         public static bool WorthScoring(float saidWithinDays, float daysSince) =>
             daysSince <= (saidWithinDays < 0f ? 0f : saidWithinDays) * 2f + GraceDays;
 
+        public const float SoonestAForecastIsJudged = 0.5f;
+
+        public static bool TooSoonToJudge(float saidWithinDays, float daysSince) =>
+            daysSince < (saidWithinDays > 0f ? saidWithinDays : 0f) * SoonestAForecastIsJudged;
+
+        public static int YourOwnWorth(int unitsIn, int unitValue)
+        {
+            if (unitsIn == 0 || unitValue <= 0) return 0;
+            long worth = (long)unitsIn * unitValue;
+            if (worth > int.MaxValue) return int.MaxValue;
+            return worth < int.MinValue ? int.MinValue : (int)worth;
+        }
+
+        public static int AddedUp(int kept, int more)
+        {
+            long sum = (long)kept + more;
+            if (sum > int.MaxValue) return int.MaxValue;
+            return sum < int.MinValue ? int.MinValue : (int)sum;
+        }
+
+        public static int WithoutYours(int moved, int yours) => MissedBy(yours, moved);
+
         public const int Bands = 4;
 
         public static int BandOf(float confidence)

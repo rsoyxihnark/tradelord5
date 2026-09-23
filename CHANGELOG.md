@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.90.16
+
+- Fixed TradeLord trusting its forecast less because of goods you bought or sold in a market yourself
+- Fixed TradeLord trusting its forecast less because of a market you reached well before the time that forecast was for
+- Fixed Trust a market by what it has paid scoring a market lower when your own trading had moved its price
+- Fixed the marker check in TradeLord.log always reading 100% instead of weighing a sale against what the map marker first said
+
 ## 1.90.15
 
 - Fixed the Turkish text calling you sen in some places and siz in others

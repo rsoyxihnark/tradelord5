@@ -374,5 +374,144 @@ namespace TradeLord.Tests
             Assert.Equal("it moved 580", Scoring.Moving(580));
         }
 
+        [Fact]
+        public void What_you_bought_there_yourself_is_not_counted_as_leaving()
+        {
+            Outcome how = Scoring.Weigh(0, 40, 8, 30, 1200, 240, -32, -960);
+            Assert.Equal(0, how.Landed);
+            Assert.Equal(0, how.LandingOff);
+            Assert.True(how.WorthKept);
+            Assert.Equal(0, how.Moved);
+            Assert.Equal(-30, how.WorthOff);
+            Assert.Equal(1f, how.Share, 4);
+        }
+
+        [Fact]
+        public void What_you_sold_there_yourself_is_not_counted_as_landing()
+        {
+            Outcome how = Scoring.Weigh(10, 5, 55, 400, 1000, 3000, 40, 1600);
+            Assert.Equal(10, how.Landed);
+            Assert.Equal(0, how.LandingOff);
+            Assert.Equal(400, how.Moved);
+            Assert.Equal(0, how.WorthOff);
+            Assert.Equal(0f, how.Share, 4);
+        }
+
+        [Fact]
+        public void A_figure_nobody_traded_against_is_weighed_exactly_as_before()
+        {
+            Outcome before = Scoring.Weigh(20, 10, 25, 100, 1000, 1080);
+            Outcome after = Scoring.Weigh(20, 10, 25, 100, 1000, 1080, 0, 0);
+            Assert.Equal(before.Landed, after.Landed);
+            Assert.Equal(before.Moved, after.Moved);
+            Assert.Equal(before.Share, after.Share);
+        }
+
+        [Fact]
+        public void A_market_that_keeps_no_worth_ignores_the_worth_you_moved()
+        {
+            Outcome how = Scoring.Weigh(0, 10, 4, 50, Scoring.NoWorth, Scoring.NoWorth, -6, -300);
+            Assert.False(how.WorthKept);
+            Assert.Equal(0, how.Landed);
+            Assert.Equal(0, how.Moved);
+            Assert.Equal(TradeMath.NoShareToGive, how.Share);
+        }
+
+        [Fact]
+        public void The_log_says_what_it_left_out_of_your_own_trading()
+        {
+            Assert.Equal("", Scoring.Yours(0, " unit(s)"));
+            Assert.Equal(" (leaving out the 32 unit(s) you bought there yourself)", Scoring.Yours(-32, " unit(s)"));
+            Assert.Equal(" (leaving out the 12 unit(s) you sold there yourself)", Scoring.Yours(12, " unit(s)"));
+            Assert.Equal(" (leaving out the 960 denars you bought there yourself)", Scoring.Yours(-960, " denars"));
+            Assert.Equal(" (leaving out the 2147483648 denars you bought there yourself)",
+                         Scoring.Yours(int.MinValue, " denars"));
+        }
+
+        [Fact]
+        public void A_forecast_walked_into_before_half_its_time_is_too_soon_to_say_anything()
+        {
+            Assert.True(Scoring.TooSoonToSay(1.8f, 0f));
+            Assert.False(Scoring.TooSoonToSay(1.8f, 1f));
+            Assert.False(Scoring.TooOldToSay(1.8f, 0f, 0f, out float since));
+            Assert.True(Scoring.TooSoonToSay(1.8f, since));
+        }
+
+        [Fact]
+        public void Reworking_a_market_changes_only_what_it_holds_for_that_market()
+        {
+            var keeps = new Keeps<Promise>();
+            keeps.Put("pravend", "grain", Made(0f, 3f));
+            keeps.Put("pravend", "wine", Made(0f, 3f));
+            keeps.Put("epicrotea", "grain", Made(0f, 3f));
+            keeps.Rework("pravend", one => Made(one.AtHours + 24f, one.WithinDays));
+            Assert.Equal(3, keeps.Count);
+            Dictionary<string, Promise> pravend = keeps.TakeAt("pravend");
+            Assert.Equal(24f, pravend["grain"].AtHours);
+            Assert.Equal(24f, pravend["wine"].AtHours);
+            Assert.Equal(0f, keeps.TakeAt("epicrotea")["grain"].AtHours);
+        }
+
+        [Fact]
+        public void Reworking_a_market_it_holds_nothing_for_changes_nothing()
+        {
+            var keeps = new Keeps<Promise>();
+            keeps.Put("pravend", "grain", Made(0f, 3f));
+            keeps.Rework("epicrotea", one => Made(99f, 99f));
+            keeps.Rework(null, one => Made(99f, 99f));
+            keeps.Rework("pravend", null);
+            Assert.Equal(1, keeps.Count);
+            Assert.Equal(0f, keeps.TakeAt("pravend")["grain"].AtHours);
+        }
+
+        [Fact]
+        public void It_names_every_market_it_holds_something_for()
+        {
+            var keeps = new Keeps<Promise>();
+            Assert.Empty(keeps.Sites());
+            keeps.Put("pravend", "grain", Made(0f, 3f));
+            keeps.Put("pravend", "wine", Made(0f, 3f));
+            keeps.Put("epicrotea", "grain", Made(0f, 3f));
+            List<string> sites = keeps.Sites();
+            Assert.Equal(2, sites.Count);
+            Assert.Contains("pravend", sites);
+            Assert.Contains("epicrotea", sites);
+            keeps.TakeAt("pravend");
+            Assert.Single(keeps.Sites());
+        }
+
+        [Fact]
+        public void A_cargo_reads_the_same_whatever_order_it_is_packed_in()
+        {
+            var one = new List<(string good, int amount)> { ("salt", 13), ("flax", 18), ("meat", 1) };
+            var other = new List<(string good, int amount)> { ("meat", 1), ("salt", 13), ("flax", 18) };
+            Assert.Equal(Marks.Carried(one), Marks.Carried(other));
+            Assert.Equal("flax x18;meat x1;salt x13;", Marks.Carried(one));
+            Assert.Equal("salt x13;", Marks.Carried(new List<(string good, int amount)> { ("salt", 13) }));
+        }
+
+        [Fact]
+        public void A_cargo_with_a_unit_more_or_a_good_less_reads_as_another_cargo()
+        {
+            var was = new List<(string good, int amount)> { ("salt", 13), ("flax", 18) };
+            var more = new List<(string good, int amount)> { ("salt", 14), ("flax", 18) };
+            var less = new List<(string good, int amount)> { ("salt", 13) };
+            Assert.NotEqual(Marks.Carried(was), Marks.Carried(more));
+            Assert.NotEqual(Marks.Carried(was), Marks.Carried(less));
+            Assert.Equal("", Marks.Carried(new List<(string good, int amount)>()));
+            Assert.Equal("", Marks.Carried(null));
+        }
+
+        [Fact]
+        public void The_marker_keeps_its_first_figure_while_it_points_at_the_same_town_for_the_same_cargo()
+        {
+            Assert.True(Marks.FirstLookStands("lageta", "lageta", "salt x13;", "salt x13;", 1997L));
+            Assert.False(Marks.FirstLookStands("lageta", "ortysia", "salt x13;", "salt x13;", 1997L));
+            Assert.False(Marks.FirstLookStands("lageta", "lageta", "salt x13;", "salt x12;", 1997L));
+            Assert.False(Marks.FirstLookStands("lageta", "lageta", "salt x13;", "salt x13;", 0L));
+            Assert.False(Marks.FirstLookStands(null, null, "salt x13;", "salt x13;", 1997L));
+            Assert.False(Marks.FirstLookStands("lageta", "lageta", null, null, 1997L));
+        }
+
     }
 }
