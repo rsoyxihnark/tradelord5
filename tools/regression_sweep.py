@@ -499,7 +499,7 @@ def a_good_you_bought_by_hand_is_never_counted_beyond_what_you_carry():
     body = method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange")
     return ("ItemRoster carried = MobileParty.MainParty?.ItemRoster;" in body
             and "int bought = Deals.UnitsMoved(element.Amount, said, unit);" in body
-            and "int took = Math.Min(bought, carried?.GetItemNumber(item) ?? 0);" in body
+            and "int took = Math.Min(bought, InAll(carried, item));" in body
             and "if (took <= 0) continue;" in body
             and ordered(body, "int bought = Deals.UnitsMoved(", "int took = Math.Min(",
                         "if (took <= 0) continue;",
@@ -4663,7 +4663,7 @@ def the_buying_pass_counts_what_you_hold_afresh_for_each_good():
     buy = buy_pass()
     return ("var stock = new List<Pick>();" in buy
             and "alreadyHeld" not in S['Trading.cs'] + S['Passes.cs']
-            and "public int Carried(int at) => _pass.Party.ItemRoster.GetItemNumber(Item(at));" in buy
+            and "public int Carried(int at) => LedgerBehavior.InAll(_pass.Party.ItemRoster, Item(at));" in buy
             and "int carried = market.Carried(one.At) + books.Held(sim, one.Good.Id);" in buy
             and "int held = market.Carried(picked.At) + books.Held(sim, good.Id);" in buy
             and "Carried" not in method_body(S['Passes.cs'], "internal struct Pick")
@@ -6466,17 +6466,17 @@ def one_stack_of_a_good_never_spends_what_another_stack_holds():
     return ("internal int YoursToSell(ItemRosterElement el)" in held
             and "internal int TheirsToSell(ItemRosterElement el)" in held
             and ("return Math.Min(el.Amount,\n"
-                 "                                Party.ItemRoster.GetItemNumber(item)"
+                 "                                LedgerBehavior.InAll(Party.ItemRoster, item)"
                  " + Books.Held(Sim, item.StringId));") in held
             and ("return Math.Min(el.Amount,\n"
-                 "                                Stock.GetItemNumber(item)"
+                 "                                LedgerBehavior.InAll(Stock, item)"
                  " - Books.Stocked(Sim, item.StringId));") in held
             and t.count("pass.YoursToSell(el)") == 2
             and t.count("pass.TheirsToSell(el)") == 3
             and "_pass.YoursToSell(_plan[at])" in t
             and "_pass.TheirsToSell(Shelf[at])" in t
             and len(counted) == 2
-            and all("GetItemNumber(" in one and "el.Amount" not in one for one in counted)
+            and all("LedgerBehavior.InAll(" in one and "el.Amount" not in one for one in counted)
             and len(held_afresh) == 3
             and all("market.Carried(" in one and "AmountAt(" not in one for one in held_afresh))
 
@@ -6524,8 +6524,8 @@ def the_lot_shape_the_counting_rests_on_is_held_against_the_game():
             and "CheckLotShape(versions);" in COMPAT
             and {"EquipmentElement.Item", "EquipmentElement.ItemModifier",
                  "EquipmentElement.IsQuestItem", "ItemRoster.FindIndexOfItem",
-                 "ItemRoster.FindIndexOfElement", "ItemRoster.GetItemNumber",
-                 "ItemRoster.GetElementCopyAtIndex"} <= held
+                 "ItemRoster.FindIndexOfElement", "ItemRoster.GetItemAtIndex",
+                 "ItemRoster.GetElementNumber", "ItemRoster.GetElementCopyAtIndex"} <= held
             and "at.TryGetValue(held.Good.Id, out int seen)" in S['Rules.cs']
             and S['Trading.cs'].count("Math.Min(el.Amount,") == 2)
 
@@ -7450,7 +7450,7 @@ def a_figure_is_read_once_it_is_walked_into_and_no_more_are_kept_than_it_says():
     written = method_body(h, "private static void Written")
     taken = method_body(S['Scoring.cs'], "internal Dictionary<string, TRecord> TakeAt")
     return ("internal const int Most = 600;" in S['Scoring.cs']
-            and "if (!_said.Holds(site.StringId, item.StringId) && _said.Full)" in noted
+            and "if (!_said.Holds(site.StringId, item.StringId) && _said.Full && !RoomForOneMoreFigure())" in noted
             and 'Log.Repeatable("forecast check", "full",' in noted
             and "Dictionary<string, Said> here = _said.TakeAt(site.StringId);" in written
             and ordered(taken, "_by.Remove(site);", "_count -= here.Count;", "if (_count < 0) _count = 0;")
@@ -9761,7 +9761,8 @@ def one_read_of_a_shelf_answers_both_what_it_holds_and_how_much():
     l = S['Ledger.cs']
     prime = method_body(l, "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
     stocks = method_body(l, "private static Dictionary<ItemObject, int> WhatItStocks")
-    return ("if (item != null && !held.ContainsKey(item)) held[item] = shelf.GetElementNumber(i);" in stocks
+    return (ordered(stocks, "if (item == null) continue;", "held.TryGetValue(item, out int had);",
+                    "held[item] = had + shelf.GetElementNumber(i);")
             and "var held = new Dictionary<ItemObject, int>();" in stocks
             and stocks.count("for (int i = 0; shelf != null && i < shelf.Count; i++)") == 1
             and "StockOf(town, item)" not in prime
@@ -11076,6 +11077,69 @@ def how_far_a_landing_may_move_a_market_is_found_once_a_scan():
 
 chk("1.90.11", "how far what is on its way may move a market is searched for once per town, good, side and way in a scan and forgotten with the ladders, and never moves a route further than the landing itself, so holding the forecast back costs a scan one search per market rather than one per route",
     how_far_a_landing_may_move_a_market_is_found_once_a_scan())
+
+
+def every_stack_of_a_good_is_counted_rather_than_the_first():
+    l = S['Ledger.cs']
+    counted = method_body(l, "internal static int InAll")
+    stocks = method_body(l, "private static Dictionary<ItemObject, int> WhatItStocks")
+    return (counted and stocks
+            and "for (int i = 0; roster != null && i < roster.Count; i++)" in counted
+            and "if (roster.GetItemAtIndex(i) == item) held += roster.GetElementNumber(i);" in counted
+            and "return InAll(s.ItemRoster, item);" in method_body(l, "internal static int StockOf")
+            and "held[item] = had + shelf.GetElementNumber(i);" in stocks
+            and "int took = Math.Min(bought, InAll(carried, item));" in l
+            and S['Trading.cs'].count("LedgerBehavior.InAll(") == 5
+            and "GetItemNumber(" not in ALL + "\n" + M)
+
+
+chk("1.90.12", "every stack of a good is counted, in your bags and on a market's shelves, since the game's own count stops at the first stack and loot or animals of another quality sit in stacks of their own",
+    every_stack_of_a_good_is_counted_rather_than_the_first())
+
+
+def a_forecast_figure_too_old_to_say_anything_makes_room_for_a_new_one():
+    h = S['Hindsight.cs']
+    noted = method_body(h, "private static void Noted")
+    room = method_body(h, "private static bool RoomForOneMoreFigure")
+    return (noted and room
+            and "if (!_said.Holds(site.StringId, item.StringId) && _said.Full && !RoomForOneMoreFigure())"
+                in noted
+            and "return _said.Prune(" in room
+            and "one => !Scoring.TooOldToSay(one.WithinDays, one.AtHours, now, out _));" in room
+            and 'Log.Repeatable("forecast check", "full",' in noted
+            and "Clearing_out_old_promises_drops_a_market_it_no_longer_holds_any_for" in SCORINGTESTS
+            and "A_full_store_that_can_free_nothing_says_there_is_no_room" in SCORINGTESTS)
+
+
+chk("1.90.12", "a forecast figure too old to say anything is cleared out once the store is full, the way an old promise already was, so a long session keeps checking the forecast at every market it reaches",
+    a_forecast_figure_too_old_to_say_anything_makes_room_for_a_new_one())
+
+
+def the_whole_load_switch_says_every_market_in_reach_is_weighed():
+    said = spoken(ENGLISH)['TL460']
+    return ("ON: every market in reach is weighed again on what it would pay for the whole load" in said
+            and "five" not in said
+            and said_in_every_language('TL460'))
+
+
+chk("1.90.12", "the hint under the whole load switch says every market in reach is weighed, as it has been since the five best stopped being the limit",
+    the_whole_load_switch_says_every_market_in_reach_is_weighed())
+
+
+def a_line_that_names_a_setting_names_it_the_way_the_screen_shows_it():
+    named = (('TL450', 'TL205'), ('TL451', 'TL205'), ('TL453', 'TL205'),
+             ('TL451', 'TL452'), ('TL458', 'TL279'))
+    for path in [ENGLISH] + list(TRANSLATIONS.values()):
+        said = spoken(path)
+        if not all(said[setting] in said[line] for line, setting in named):
+            return False
+    turkish = spoken(TRANSLATIONS['Türkçe'])
+    return all(any(letter in turkish[one] for letter in 'çğıöşü')
+               for one in ('TL450', 'TL451', 'TL452', 'TL453'))
+
+
+chk("1.90.12", "the lines about minimum stock and the debug logging hint name the setting they lean on in every language exactly as the settings screen shows it, and the Turkish stock lines are written with Turkish letters",
+    a_line_that_names_a_setting_names_it_the_way_the_screen_shows_it())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

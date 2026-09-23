@@ -475,7 +475,7 @@ namespace TradeLord
                         ? Priced.At(market, element.EquipmentElement, MobileParty.MainParty, false)
                         : item.Value;
                     int bought = Deals.UnitsMoved(element.Amount, said, unit);
-                    int took = Math.Min(bought, carried?.GetItemNumber(item) ?? 0);
+                    int took = Math.Min(bought, InAll(carried, item));
                     if (took <= 0) continue;
                     RecordPurchase(item.StringId, took,
                                    Bulk.PricePaid(here, element.EquipmentElement, took, unit));
@@ -708,9 +708,17 @@ namespace TradeLord
 
         private const int UncappedBuyProjection = 500;
 
+        internal static int InAll(ItemRoster roster, ItemObject item)
+        {
+            int held = 0;
+            for (int i = 0; roster != null && i < roster.Count; i++)
+                if (roster.GetItemAtIndex(i) == item) held += roster.GetElementNumber(i);
+            return held;
+        }
+
         internal static int StockOf(Settlement s, ItemObject item)
         {
-            try { return s.ItemRoster?.GetItemNumber(item) ?? 0; }
+            try { return InAll(s.ItemRoster, item); }
             catch { return 0; }
         }
 
@@ -721,7 +729,9 @@ namespace TradeLord
             for (int i = 0; shelf != null && i < shelf.Count; i++)
             {
                 ItemObject item = shelf.GetItemAtIndex(i);
-                if (item != null && !held.ContainsKey(item)) held[item] = shelf.GetElementNumber(i);
+                if (item == null) continue;
+                held.TryGetValue(item, out int had);
+                held[item] = had + shelf.GetElementNumber(i);
             }
             return held;
         }

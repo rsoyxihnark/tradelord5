@@ -291,14 +291,14 @@
 		<string id="TL447" text=" | stok, sen varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek; fiyatlar için Toplu fiyat benzetimi gerekir"/>
 		<string id="TL448" text="Ticaret TP: {AMOUNT}" />
 		<string id="TL449" text="TradeLord boş kalmış {COUNT} köy kesesini yeniden doldurdu, böylece o köy dükkanları tekrar alışveriş yapabiliyor."/>
-		<string id="TL450" text="Ulasilabilir hicbir pazarda bundan {COUNT} veya daha fazla yok. | Alim onerileri icin en az stok bunu istiyor. | Nereden alacaginizi gormek icin onu dusurun."/>
-		<string id="TL451" text="Ulasilabilir hicbir pazarda bunlardan {COUNT} tane yok, | {WORTH} dinarlik degerde de yok. | Alim onerileri icin en az stok | ya da Alim onerileri icin en az stok degeri ayarini dusurun."/>
-		<string id="TL452" text="Alim onerileri icin en az stok degeri"/>
-		<string id="TL453" text="Bir pazarin elindeki maldan en az bu kadar dinarlik deger varsa, Alim onerileri icin en az stok ayarinin istedigi adetten az tutsa bile o pazar stoklu sayilir. Deger, dukkanin istedigi fiyattan degil, malin kendi degerinden sayilir. Mal ne kadar pahaliysa, pazarin o kadar azini tutmasi yeter. 0 = kapali. Sadece canli fiyat kipinde."/>
+		<string id="TL450" text="Ulaşılabilir hiçbir pazarda bundan {COUNT} veya daha fazla yok. | Alış önerisi için en az stok bunu istiyor. | Nereden alacağınızı görmek için onu düşürün."/>
+		<string id="TL451" text="Ulaşılabilir hiçbir pazarda bunlardan {COUNT} tane yok, | {WORTH} dinarlık değerde de yok. | Alış önerisi için en az stok | ya da Alış önerisi için en az stok değeri ayarını düşürün."/>
+		<string id="TL452" text="Alış önerisi için en az stok değeri"/>
+		<string id="TL453" text="Bir pazarın elindeki maldan en az bu kadar dinarlık değer varsa, Alış önerisi için en az stok ayarının istediği adetten az tutsa bile o pazar stoklu sayılır. Değer, dükkanın istediği fiyattan değil, malın kendi değerinden sayılır. Mal ne kadar pahalıysa, pazarın o kadar azını tutması yeter. 0 = kapalı. Sadece canlı fiyat kipinde."/>
 		<string id="TL456" text="bunları satacağın pazarın daha fazlasını ödeyecek parası yok"/>
 		<string id="TL457" text="Genişletilmiş hata ayıklama günlüğünü aç"/>
-		<string id="TL458" text="TradeLord'un kendi işleyişini TradeLord.log dosyasına yazar: her pazarın taşıdığın mallara ne ödediğini ve ne istediğini, kapıdan girdiğinde tahminin ve panelin sözünün ne kadar tuttuğunu, ve harita imlecinin tarttığı her şeyi. Tahmin kısmı için Pazara yolda olanı say ayarı gerekir. Varsayılan olarak AÇIK; günlüğü kısa tutmak için kapatın."/>
+		<string id="TL458" text="TradeLord'un kendi işleyişini TradeLord.log dosyasına yazar: her pazarın taşıdığın mallara ne ödediğini ve ne istediğini, kapıdan girdiğinde tahminin ve panelin sözünün ne kadar tuttuğunu, ve harita imlecinin tarttığı her şeyi. Tahmin kısmı için Bir pazara doğru yolda olanları say ayarı gerekir. Varsayılan olarak AÇIK; günlüğü kısa tutmak için kapatın."/>
 		<string id="TL459" text="Nereye satacağını tüm yüke bakarak seç"/>
-		<string id="TL460" text="TradeLord aldığı her malı, satmayı düşündüğü bir pazar için alır. KAPALI: o pazar tek bir birime ne ödediğine bakılarak seçilir. AÇIK: en iyi beş pazar, tüm yüke ne ödeyeceklerine göre yeniden tartılır; sana gerçekte ödenecek olan budur. Girdiğin her pazarda biraz zaman alır. Denendiği sürece AÇIK."/>
+		<string id="TL460" text="TradeLord aldığı her malı, satmayı düşündüğü bir pazar için alır. KAPALI: o pazar tek bir birime ne ödediğine bakılarak seçilir. AÇIK: menzildeki her pazar, tüm yüke ne ödeyeceğine göre yeniden tartılır; sana gerçekte ödenecek olan budur. Girdiğin her pazarda biraz zaman alır. Denendiği sürece AÇIK."/>
 	</strings>
 </base>

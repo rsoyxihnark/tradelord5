@@ -431,14 +431,14 @@ namespace TradeLord
             {
                 ItemObject item = el.EquipmentElement.Item;
                 return Math.Min(el.Amount,
-                                Party.ItemRoster.GetItemNumber(item) + Books.Held(Sim, item.StringId));
+                                LedgerBehavior.InAll(Party.ItemRoster, item) + Books.Held(Sim, item.StringId));
             }
 
             internal int TheirsToSell(ItemRosterElement el)
             {
                 ItemObject item = el.EquipmentElement.Item;
                 return Math.Min(el.Amount,
-                                Stock.GetItemNumber(item) - Books.Stocked(Sim, item.StringId));
+                                LedgerBehavior.InAll(Stock, item) - Books.Stocked(Sim, item.StringId));
             }
 
             internal int TillNow => Site != null ? Market.Gold : Met.PartyTradeGold;
@@ -1307,7 +1307,7 @@ namespace TradeLord
                     int remaining = pass.TheirsToSell(el);
                     var prior = pass.Books.Purchases(pass.Sim, item.StringId);
                     int countThis = prior.count, spentThis = prior.spent;
-                    int held = pass.Party.ItemRoster.GetItemNumber(item) +
+                    int held = LedgerBehavior.InAll(pass.Party.ItemRoster, item) +
                                pass.Books.Held(pass.Sim, item.StringId);
 
                     while (shortfall > 0 && remaining > 0)
@@ -1606,7 +1606,7 @@ namespace TradeLord
                     int remaining = pass.TheirsToSell(el);
                     var prior = pass.Books.Purchases(pass.Sim, item.StringId);
                     int countThis = prior.count, spentThis = prior.spent;
-                    int held = pass.Party.ItemRoster.GetItemNumber(item) +
+                    int held = LedgerBehavior.InAll(pass.Party.ItemRoster, item) +
                                pass.Books.Held(pass.Sim, item.StringId);
 
                     while (remaining > 0 && herdRoom > 0)
@@ -1765,7 +1765,7 @@ namespace TradeLord
 
             public int TheirsToSell(int at) => _pass.TheirsToSell(Shelf[at]);
 
-            public int Carried(int at) => _pass.Party.ItemRoster.GetItemNumber(Item(at));
+            public int Carried(int at) => LedgerBehavior.InAll(_pass.Party.ItemRoster, Item(at));
 
             public void PriceTheMarketsFor(List<Pick> shelf)
             {
