@@ -315,6 +315,20 @@ namespace TradeLord
         }
     }
 
+    internal sealed class TheirOffer : IMarketData
+    {
+        private readonly Village _home;
+
+        internal TheirOffer(Village home) => _home = home;
+
+        public int GetPrice(ItemObject item, MobileParty tradingParty, bool isSelling, PartyBase merchantParty) =>
+            _home.GetItemPrice(item, tradingParty, isSelling: true);
+
+        public int GetPrice(EquipmentElement itemRosterElement, MobileParty tradingParty, bool isSelling,
+                            PartyBase merchantParty) =>
+            _home.GetItemPrice(itemRosterElement, tradingParty, isSelling: true);
+    }
+
     internal static class ScreenMarkets
     {
         private static string _primedAt;

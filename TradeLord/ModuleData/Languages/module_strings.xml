@@ -118,7 +118,7 @@
 		<string id="TL271" text="Keep every one" />
 		<string id="TL272" text="Keep the ones you have not learned" />
 		<string id="TL273" text="Trade with caravans and villagers" />
-		<string id="TL373" text="Meet a caravan or a party of villagers on the road and TradeLord trades with them the moment you meet, selling what clears your margin and buying what it can sell on for more. They pay from their own purse. ON by default." />
+		<string id="TL373" text="Meet a caravan or villagers on the road and TradeLord trades with them the moment you meet. It sells a caravan what clears your margin and buys what it can sell on for more, paid from the caravan's purse. Villagers are never sold to: TradeLord takes their whole offer when it clears your margin, and otherwise leaves it to you. ON by default." />
 		<string id="TL274" text="Share of the hold one good may fill (0 = off)" />
 		<string id="TL374" text="Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and haul animals. 0 turns it off. Selling is unaffected." />
 		<string id="TL275" text="Sell animals that slow you down" />
