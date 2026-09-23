@@ -11175,5 +11175,22 @@ chk("1.90.13", "the release check reads the commit message and the published not
     the_release_check_reads_and_writes_every_letter_the_same_on_every_machine())
 
 
+def a_release_that_reads_back_with_no_file_is_asked_again_before_it_is_called_bare():
+    fault = between(RELEASED, "for version in sorted(live, key=order):", "if version not in said:")
+    again = between(RELEASED, "def bare(tag):", "\ndef ")
+    one = between(RELEASED, "def filesOn(tag):", "\ndef ")
+    return (fault and again and one
+            and "if row['files'] == 0 and bare(row['tag']):" in fault
+            and "time.sleep(" in again
+            and "if filesOn(tag):" in again
+            and again.rstrip().endswith("return True")
+            and "'/releases/tags/' + tag" in one
+            and "capture_output=True, encoding='utf-8')" in one)
+
+
+chk("1.90.13", "a published version that GitHub lists with no file is asked about again by its tag before the release check calls it bare, because GitHub sometimes lists a release's file and sometimes leaves it out",
+    a_release_that_reads_back_with_no_file_is_asked_again_before_it_is_called_bare())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
