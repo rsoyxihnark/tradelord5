@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.90.14
+
+- Fixed TradeLord never trading in towns and villages when Staged Trading was on and Trade entry in town menu was off
+- Fixed the Staged Trading notice asking you to choose Trade here now (TradeLord) in castles and other places where that entry never shows
+- The hint under Trade entry in town menu now says the entry still shows while Staged Trading holds trading back as you arrive
+
 ## 1.90.13
 
 - Fixed What this means naming the Qty and Conf columns differently from the ledger in Turkish, Russian and Chinese
