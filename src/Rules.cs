@@ -494,6 +494,17 @@ namespace TradeLord
             return Block.None;
         }
 
+        internal static Block WhatCapsALot(in Good good, int cost, int units,
+                                           (int count, int spent) taken, int held, float shareCap,
+                                           Options s)
+        {
+            if (s.BuyCapPerItem > 0 && taken.count + units > s.BuyCapPerItem) return Block.ItemCountCap;
+            if (s.BuyValueCapPerItem > 0 && (long)taken.spent + cost > s.BuyValueCapPerItem) return Block.ItemValueCap;
+            if (s.MaxHeldPerItem > 0 && held + units > s.MaxHeldPerItem) return Block.HeldEnough;
+            if (shareCap > 0f && (held + units) * good.Weight > shareCap) return Block.HeldEnough;
+            return Block.None;
+        }
+
         internal static Block WhatStopsBuying(in Good good, int price, int budget,
                                               (int count, int spent) taken, int held, float shareCap,
                                               bool livestock, int herdRoom, bool lastInVillage, Options s)
@@ -524,6 +535,12 @@ namespace TradeLord
 
         internal static bool TheBuyerCouldNotPay(int drawnSoFar, int till) =>
             till > 0 && drawnSoFar > till;
+
+        internal static int WhatTheBuyerPays(int drawnBefore, int drawnAfter, int till)
+        {
+            int reach = till > 0 && drawnAfter > till ? till : drawnAfter;
+            return Math.Max(0, reach - drawnBefore);
+        }
 
         internal const int VillagePurse = 1000;
 

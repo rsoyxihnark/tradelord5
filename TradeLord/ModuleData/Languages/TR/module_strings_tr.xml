@@ -116,7 +116,7 @@
 		<string id="TL271" text="Hepsini sakla" />
 		<string id="TL272" text="Öğrenmediklerini sakla" />
 		<string id="TL273" text="Kervanlarla ve köylülerle ticaret yap" />
-		<string id="TL373" text="Yolda bir kervanla ya da bir köylü bölüğüyle karşılaşın, TradeLord karşılaştığınız anda onlarla ticaret yapar: kârınızı karşılayanı satar, daha pahalıya satabileceğini alır. Kendi keselerinden öderler. Varsayılan olarak AÇIK." />
+		<string id="TL373" text="Yolda bir kervanla ya da köylülerle karşılaşın, TradeLord karşılaştığınız anda onlarla ticaret yapar. Kervana kârınızı karşılayanı satar, ondan daha pahalıya satabileceğini alır; parayı kervan kendi kesesinden öder. Köylülere hiçbir şey satmaz: toplu teklifleri kârınızı karşılıyorsa hepsini alır, karşılamıyorsa teklifi size bırakır. Varsayılan olarak AÇIK." />
 		<string id="TL274" text="Tek bir malın doldurabileceği yük payı (0 = kapalı)" />
 		<string id="TL374" text="Bir mal, bölüğünüzün taşıyabildiğinin bu payından fazlasını dolduracaksa artık o maldan almaz. Gerçek taşıma kapasitenize göre ölçülür, yani tavan arabalarınız ve yük hayvanlarınızla birlikte büyür. 0 bunu kapatır. Satış etkilenmez." />
 		<string id="TL352" text="TradeLord'un her zaman aldığı mallar: kategori kurallarını ve tahıl alma yasağını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla listeleri ve envanter kilidi yine geçerlidir, ve yine ancak erişimdeki bir yerde daha pahalıya satabileceğini alır."/>
