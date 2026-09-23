@@ -293,7 +293,7 @@ namespace TradeLord
                 ItemRosterElement el = goods.GetElementCopyAtIndex(at);
                 ItemObject item = el.EquipmentElement.Item;
                 if (item == null || el.Amount <= 0 || item.ItemCategory == DefaultItemCategories.PackAnimal) continue;
-                offered.Add((item.StringId, el.Amount,
+                offered.Add((LedgerBehavior.PaidKey(el.EquipmentElement), el.Amount,
                              priced.GetPrice(el.EquipmentElement, MobileParty.MainParty, isSelling: true, met.Party)));
             }
             return offered;
