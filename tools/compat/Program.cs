@@ -30,6 +30,10 @@ namespace TradeLord.Compat
                 "get_MaximumWorkshopsPlayerCanHave", null),
             ("TaleWorlds.CampaignSystem.Settlements.TownMarketData", "GetPrice",
                 new[] { "EquipmentElement", "MobileParty", "Boolean", "PartyBase" }),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.VillagerCampaignBehavior",
+                "village_farmer_buy_products_on_condition", null),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.VillagerCampaignBehavior",
+                "conversation_player_decided_to_buy_on_consequence", null),
         };
 
         private static readonly (string type, string member)[] ReflectedMethods =

@@ -1403,8 +1403,31 @@ namespace TradeLord
             return _roadMarket;
         }
 
+        private static bool _saidTheOfferIsUnguarded;
+
+        private static IMarketData TheirOfferFrom(MobileParty villagers)
+        {
+            Village home = villagers.HomeSettlement?.Village;
+            if (home == null)
+            {
+                Log.Write(villagers.Name + " have no home village to price their offer at, " +
+                          "so TradeLord leaves their offer to you");
+                return null;
+            }
+            if (Meetings.TheirOfferIsGuarded()) return new TheirOffer(home);
+            if (!_saidTheOfferIsUnguarded)
+            {
+                _saidTheOfferIsUnguarded = true;
+                Log.Write("villagers: TradeLord could not take hold of the game's own offer on this game " +
+                          "version, so it could not stop the same goods being bought twice. It leaves every " +
+                          "villagers' offer to you until that is fixed.");
+            }
+            return null;
+        }
+
         private static IMarketData PricedOnTheRoad(MobileParty met)
         {
+            if (met != null && met.IsVillager) return TheirOfferFrom(met);
             if (met == null || !met.IsCaravan) return RoadMarket();
             MobileParty me = MobileParty.MainParty;
             Settlement near = me == null ? null : me.CurrentSettlement ??
@@ -1474,10 +1497,15 @@ namespace TradeLord
 
             Books books = BooksForTheMeeting(met);
             string why = "trading with a party on the road";
-            SellPass(Pass.Meet(met, road, books, party),
-                     "sale on the road", "selling on the road", "Road trading", why);
-            BuyPass(Pass.Meet(met, road, books, party),
-                    "purchase on the road", "buying on the road", "Road buying", why);
+            if (met.IsVillager)
+                LotPass(Pass.Meet(met, road, books, party), why);
+            else
+            {
+                SellPass(Pass.Meet(met, road, books, party),
+                         "sale on the road", "selling on the road", "Road trading", why);
+                BuyPass(Pass.Meet(met, road, books, party),
+                        "purchase on the road", "buying on the road", "Road buying", why);
+            }
             ReportStalledPasses();
         }
 
@@ -1743,21 +1771,70 @@ namespace TradeLord
             }
         }
 
+        private static void LotPass(Pass pass, string why)
+        {
+            const string label = "villagers' offer taken";
+            pass.CountFrom();
+            var tally = new BlockTally();
+            var market = new BuyingAt(pass, "buying the villagers' offer", "Taking the villagers' offer",
+                                      theirOffer: true);
+
+            LedgerBehavior.ForgetWhatPickingABuyerCost();
+            Block stops = TradePass.WhatStopsTheLot(market, pass.Books, pass.Sim, pass.ShareCap,
+                                                    Options.Current, out Lot lot);
+            SayWhatPickingABuyerCost();
+            if (lot.Units == 0) return;
+            Log.Write(pass.Met.Name + " offer " + lot.Units + " goods for " + lot.Price + " gold" +
+                      (lot.Weighed ? ", which TradeLord reckons it can sell on for " + (int)lot.Resale : "") +
+                      (stops == Block.None ? ": TradeLord takes the lot"
+                                           : ": TradeLord leaves the offer to you (" + stops + ")"));
+
+            Traded moved = default(Traded);
+            if (stops == Block.None)
+                InAPass(() => moved = TradePass.TakeTheLot(market, pass.Books, pass.Sim));
+            else tally.Note(stops);
+
+            int bought = moved.Units;
+            int spent = pass.Spent(moved.SimGold);
+            if (bought > 0)
+            {
+                if (!pass.Sim) Meetings.TookTheirOffer(pass.Met);
+                pass.Moved(gold: spent, selling: false);
+                Log.Write(pass.Headed(label) + bought + " items, -" + spent + " gold " + pass.Where);
+                pass.Logged(selling: false, why);
+                TextObject msg = pass.Said(
+                    "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
+                    "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.",
+                    bought, spent);
+                if (!pass.Muted) Notices.Say(msg, Notices.Spend);
+            }
+            else if (!pass.DirectionError)
+            {
+                Block stopped = tally.Dominant();
+                if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);
+            }
+        }
+
         private sealed class BuyingAt : IBuyingMarket
         {
             private readonly Pass _pass;
             private readonly string _what;
             private readonly string _named;
+            private readonly bool _theirOffer;
             private ItemRosterElement[] _shelf;
             private Dictionary<string, int> _asked;
             private Dictionary<int, (Settlement where, Ladder rungs, int till)> _resale;
 
-            internal BuyingAt(Pass pass, string what, string named)
+            internal BuyingAt(Pass pass, string what, string named, bool theirOffer = false)
             {
                 _pass = pass;
                 _what = what;
                 _named = named;
+                _theirOffer = theirOffer;
             }
+
+            private bool InTheOffer(int at) =>
+                !_theirOffer || Item(at)?.ItemCategory != DefaultItemCategories.PackAnimal;
 
             private ItemRosterElement[] Shelf
             {
@@ -1780,7 +1857,7 @@ namespace TradeLord
 
             public bool Village => _pass.Site != null && _pass.Site.IsVillage;
 
-            public int AmountAt(int at) => Shelf[at].Amount;
+            public int AmountAt(int at) => InTheOffer(at) ? Shelf[at].Amount : 0;
 
             public Good GoodAt(int at) => TradePolicy.Describe(Item(at));
 
@@ -1796,7 +1873,7 @@ namespace TradeLord
                 return item != null && _asked.TryGetValue(item.StringId, out int rank) ? rank : 0;
             }
 
-            public int TheirsToSell(int at) => _pass.TheirsToSell(Shelf[at]);
+            public int TheirsToSell(int at) => InTheOffer(at) ? _pass.TheirsToSell(Shelf[at]) : 0;
 
             public int Carried(int at) => LedgerBehavior.InAll(_pass.Party.ItemRoster, Item(at));
 

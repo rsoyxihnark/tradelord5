@@ -1,12 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using HarmonyLib;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.CampaignBehaviors;
 using TaleWorlds.CampaignSystem.Conversation;
 using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.Extensions;
 using TaleWorlds.CampaignSystem.Issues;
 using TaleWorlds.CampaignSystem.Party;
+using TaleWorlds.CampaignSystem.Roster;
+using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 
 namespace TradeLord
@@ -173,6 +177,8 @@ namespace TradeLord
         private static MobileParty _tradedWith;
         private static object _tradedIn;
         private static object _handledEncounter;
+        private static MobileParty _offerTakenFrom;
+        private static object _offerTakenIn;
 
         internal static void Lines(CampaignGameStarter starter)
         {
@@ -258,6 +264,56 @@ namespace TradeLord
         {
             _tradedWith = null;
             _tradedIn = null;
+            _offerTakenFrom = null;
+            _offerTakenIn = null;
+        }
+
+        internal static bool TheirOfferIsGuarded() =>
+            Patcher.Holds(nameof(Patch_VillagerOfferShown)) && Patcher.Holds(nameof(Patch_VillagerOfferTaken));
+
+        internal static void TookTheirOffer(MobileParty met)
+        {
+            _offerTakenFrom = met;
+            _offerTakenIn = PlayerEncounter.Current;
+        }
+
+        internal static bool TheirOfferIsTaken(MobileParty met) =>
+            met != null && met == _offerTakenFrom &&
+            _offerTakenIn != null && _offerTakenIn == PlayerEncounter.Current;
+
+        internal static List<(string id, int units, int price)> WhatTheyOffer(MobileParty met)
+        {
+            Village home = met != null && met.IsVillager ? met.HomeSettlement?.Village : null;
+            if (home == null || MobileParty.MainParty == null) return null;
+            var priced = new TheirOffer(home);
+            var offered = new List<(string id, int units, int price)>();
+            ItemRoster goods = met.ItemRoster;
+            for (int at = 0; at < goods.Count; at++)
+            {
+                ItemRosterElement el = goods.GetElementCopyAtIndex(at);
+                ItemObject item = el.EquipmentElement.Item;
+                if (item == null || el.Amount <= 0 || item.ItemCategory == DefaultItemCategories.PackAnimal) continue;
+                offered.Add((item.StringId, el.Amount,
+                             priced.GetPrice(el.EquipmentElement, MobileParty.MainParty, isSelling: true, met.Party)));
+            }
+            return offered;
+        }
+
+        internal static void YouTookTheirOffer(List<(string id, int units, int price)> offered, int paid)
+        {
+            if (offered == null || offered.Count == 0 || paid <= 0) return;
+            int asked = 0;
+            foreach (var line in offered) asked += TradeMath.WorthOf(line.units, line.price);
+            if (!Deals.AddsUp(asked, paid))
+            {
+                Log.Write("you took the villagers' offer yourself and paid " + paid + " gold where their " +
+                          "goods came to " + asked + ", so what you paid is not written down against them");
+                return;
+            }
+            foreach (var line in offered)
+                LedgerBehavior.Instance?.RecordPurchase(line.id, line.units, TradeMath.WorthOf(line.units, line.price));
+            Log.Write("you took the villagers' offer yourself: " + paid + " gold for " + offered.Count +
+                      " kind(s) of goods, written down as what you paid for them");
         }
 
         internal static void ConversationEnded() => _tradedWith = null;
@@ -275,6 +331,43 @@ namespace TradeLord
             }
             Log.Write("free passage held for " + GetawayHours + " hours: your party is passed over by other parties, " +
                       "and " + (band == null ? "that band" : band.StringId) + " is passed over by yours");
+        }
+    }
+
+    [HarmonyPatch(typeof(VillagerCampaignBehavior), "village_farmer_buy_products_on_condition")]
+    internal static class Patch_VillagerOfferShown
+    {
+        private static void Postfix(ref bool __result)
+        {
+            if (__result && Meetings.TheirOfferIsTaken(PlayerEncounter.EncounteredMobileParty)) __result = false;
+        }
+    }
+
+    [HarmonyPatch(typeof(VillagerCampaignBehavior), "conversation_player_decided_to_buy_on_consequence")]
+    internal static class Patch_VillagerOfferTaken
+    {
+        private static bool Prefix(out (List<(string id, int units, int price)> offered, int gold) __state)
+        {
+            __state = (null, 0);
+            MobileParty met = MobileParty.ConversationParty;
+            if (Meetings.TheirOfferIsTaken(met))
+            {
+                Log.Write(met.Name + " were asked for their offer again after TradeLord took it, " +
+                          "so nothing changed hands the second time");
+                if (PlayerEncounter.Current != null) PlayerEncounter.LeaveEncounter = true;
+                return false;
+            }
+            List<(string id, int units, int price)> offered = null;
+            Guard.Run("Villagers.Offer", () => offered = Meetings.WhatTheyOffer(met));
+            __state = (offered, Hero.MainHero?.Gold ?? 0);
+            return true;
+        }
+
+        private static void Postfix((List<(string id, int units, int price)> offered, int gold) __state)
+        {
+            if (__state.offered == null || Hero.MainHero == null) return;
+            int paid = __state.gold - Hero.MainHero.Gold;
+            Guard.Run("Villagers.Paid", () => Meetings.YouTookTheirOffer(__state.offered, paid));
         }
     }
 

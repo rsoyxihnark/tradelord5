@@ -499,7 +499,7 @@ namespace TradeLord.Mcm
         public bool TradeWithVillages { get => _o.TradeWithVillages; set { _o.TradeWithVillages = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL273}Trade with caravans and villagers", Order = 2, RequireRestart = false,
-            HintText = "{=TL373}Meet a caravan or a party of villagers on the road and TradeLord trades with them the moment you meet, selling what clears your margin and buying what it can sell on for more. They pay from their own purse. ON by default.")]
+            HintText = "{=TL373}Meet a caravan or villagers on the road and TradeLord trades with them the moment you meet. It sells a caravan what clears your margin and buys what it can sell on for more, paid from the caravan's purse. Villagers are never sold to: TradeLord takes their whole offer when it clears your margin, and otherwise leaves it to you. ON by default.")]
         [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
         public bool TradeWithCaravans { get => _o.TradeWithCaravans; set { _o.TradeWithCaravans = value; Options.Bump(); } }
 

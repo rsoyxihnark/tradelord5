@@ -45,6 +45,7 @@ SHELFORDERTESTS = io.open('tests/ShelfOrderTests.cs', encoding='utf-8').read()
 PROMISETESTS = io.open('tests/PromiseTests.cs', encoding='utf-8').read()
 STAMPTESTS = io.open('tests/StampTests.cs', encoding='utf-8').read()
 DEALTESTS = io.open('tests/DealTests.cs', encoding='utf-8').read()
+LOTTESTS = io.open('tests/LotTests.cs', encoding='utf-8').read()
 FLOORTESTS = io.open('tests/BestMarketFloorTests.cs', encoding='utf-8').read()
 TALLYTESTS = io.open('tests/TallyTests.cs', encoding='utf-8').read()
 HOLDINGTESTS = io.open('tests/HoldingsTests.cs', encoding='utf-8').read()
@@ -66,7 +67,8 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'StampTests.cs': STAMPTESTS,
      'PromiseTests.cs': PROMISETESTS,
      'BestMarketFloorTests.cs': FLOORTESTS,
-     'DealTests.cs': DEALTESTS}
+     'DealTests.cs': DEALTESTS,
+     'LotTests.cs': LOTTESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -1524,7 +1526,7 @@ chk("1.3.18", "neither pass trades before the settling delay is served, in a mar
     "MarketOpen(site, quiet)" not in S['Trading.cs'] and
     S['Trading.cs'].count("MarketOpen(") == 2 and
     S['Trading.cs'].count("Pass.Open(settlement, quiet)") == 7 and
-    S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 2)
+    S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 3)
 chk("1.3.2", "how far a scan reaches is the two travel ceilings alone, and the scan radius that used to narrow it is gone",
     "WithinRadius" not in S['Ledger.cs'] and "ScanRadius" not in S['Ledger.cs'] and
     "ScanRadius" not in S['Options.cs'] and "ScanRadius" not in M and
@@ -1971,7 +1973,7 @@ chk("1.3.29", "one buy-side margin rule, for the planner and the executor alike"
     S['Ledger.cs'].count("Options.Current.ResaleSafetyFactor") == 0 and
     "TradePolicy.BuyAcceptable" in S['Ledger.cs'] and
     "TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin)" in S['Policy.cs'] and
-    S['Passes.cs'].count("TradeMath.BuyAcceptable(") == 3 and
+    S['Passes.cs'].count("TradeMath.BuyAcceptable(") == 4 and
     S['Passes.cs'].count("Options.Current") == 0)
 chk("1.3.29", "both knowledge modes filter markets through one eligibility rule",
     S['Ledger.cs'].count("private static bool Eligible(Settlement s, out float lower)") == 1 and
@@ -2020,7 +2022,7 @@ chk("1.36.0", "a trade on the road moves one unit and its price itself, because 
     S['Trading.cs'].count("HandOver(") == 2 and S['Trading.cs'].count("TakeDelivery(") == 2)
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
-    S['Trading.cs'].count("[Simulated, best case]") == 7 and
+    S['Trading.cs'].count("[Simulated, best case]") == 8 and
     S['Trading.cs'].count("(simulated, best case): ") == 3 and
     'internal string Headed(string label) => label + (Sim ? Counter.Heading : ": ");'
         in S['Trading.cs'] and
@@ -2029,7 +2031,7 @@ chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log an
     'internal static string Aside => Staging ? " (laid out)" : " (simulated)";'
         in S['Counter.cs'] and
     S['Trading.cs'].count("(sim ? Counter.Aside : \"\")") == 2 and
-    S['Trading.cs'].count("Log.Write(pass.Headed(label)") == 2 and
+    S['Trading.cs'].count("Log.Write(pass.Headed(label)") == 3 and
     "best case" in M)
 
 chk("1.3.33", "a fully sold stack clears its cost basis",
@@ -2106,7 +2108,7 @@ chk("1.4.1", "quick-buy prices the shelf only when there is a budget to spend",
            and S['Trading.cs'].count("pass.Stock") == 2)
     (buy_pass()))
 chk("1.4.1", "a pass the gold-direction guard stopped does not blame the trade policy",
-    S['Trading.cs'].count("else if (!pass.DirectionError)") == 2 and
+    S['Trading.cs'].count("else if (!pass.DirectionError)") == 3 and
     S['Trading.cs'].count("else if (!quiet && !directionError)") == 0 and
     'Tongue.Text("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
     'Tongue.Text("{=TL33}Nothing bought here - {REASON}.")' in S['Trading.cs'])
@@ -2264,7 +2266,7 @@ chk("1.5.0", "the food reserve is not a trading policy and is not governed by on
 chk("1.5.0", "a pass that moves nothing names the rule that stopped it",
     'Tongue.Text("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
     'Tongue.Text("{=TL33}Nothing bought here - {REASON}.")' in S['Trading.cs'] and
-    S['Trading.cs'].count("NoteStalled(selling: ") == 2 and
+    S['Trading.cs'].count("NoteStalled(selling: ") == 3 and
     method_body(S['Trading.cs'],
                 "private static void ReportStalledPasses").count("BlockTally.Phrase(") == 4)
 chk("1.5.0", "the reason overloads carry the plain ones, so one rule set decides both",
@@ -4863,7 +4865,7 @@ def every_animal_that_moves_is_named_with_its_reason():
             and 'lines.Add("  animal " + (selling ? "out: " : "in: ")' in moved
             and "LogDetail(selling, Sim, Detail, Quoted, Aimed, why)" in
                 between(src, "internal void Logged(", ";")
-            and src.count("pass.Logged(selling:") == 7
+            and src.count("pass.Logged(selling:") == 8
             and src.count("LogDetail(selling:") == 0
             and all(r in src for r in reasons))
 
@@ -5301,12 +5303,12 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and t.count("pass.Books.NoteSale(") == 1
             and S['Passes.cs'].count("books.NoteSale(") == 1
             and t.count("pass.Books.NotePurchase(") == 2
-            and S['Passes.cs'].count("books.NotePurchase(") == 1
+            and S['Passes.cs'].count("books.NotePurchase(") == 2
             and "pass.Books.NoteShed(rank == RankHaulAnimal, rank != RankLivestock);" in relief
             and "books.NoteShed(herdRank == TradeRules.RankHaulAnimal,\n"
                 "                                           herdRank != TradeRules.RankLivestock);" in sell
             and t.count("pass.Books.NoteHerdTaken();") == 1
-            and S['Passes.cs'].count("books.NoteHerdTaken();") == 1
+            and S['Passes.cs'].count("books.NoteHerdTaken();") == 2
             and t.count("pass.Books.Sold(pass.Sim,") == 1
             and S['Passes.cs'].count("books.Sold(sim, good.Id)") == 1
             and "pass.Books.Sold(pass.Sim, it.StringId)" in method_body(t,
@@ -5314,7 +5316,7 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and "CheapestFirst(" in larder and "CheapestFirst(" in haul
             and S['Passes.cs'].count("books.Bought(sim, market.IdAt(at))") == 1
             and t.count("pass.Books.Purchases(pass.Sim,") == 2
-            and S['Passes.cs'].count("books.Purchases(sim, good.Id)") == 1)
+            and S['Passes.cs'].count("books.Purchases(sim, good.Id)") == 2)
 
 def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
     ledger = S['Books.cs']
@@ -5347,7 +5349,7 @@ def a_meeting_on_the_road_is_priced_as_one_meeting():
     t = S['Trading.cs']
     body = method_body(t, "public static void ExecuteRoadTrade")
     return ("Books books = BooksForTheMeeting(met);" in body
-            and body.count("books, party)") == 2
+            and body.count("books, party)") == 3
             and "new Books()" not in body
             and method_body(t, "private static Books BooksForTheMeeting").count("new Books()") == 1
             and t.count("new Books()") == 2
@@ -5397,7 +5399,7 @@ def every_pass_hands_one_place_the_trade_and_the_visits_books():
             and t.count("transaction direction changed on this game version") == 1
             and t.count("LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1,") == 3
             and t.count("pass.Books.NoteBought(item.StringId,") == 2
-            and S['Passes.cs'].count("books.NoteBought(good.Id, cost);") == 1
+            and S['Passes.cs'].count("books.NoteBought(good.Id, cost);") == 2
             and "_paid += price;" in books
             and S['Books.cs'].count("_paid +=") == 1
             and all(named in t for named in (
@@ -5955,7 +5957,7 @@ def a_market_and_a_meeting_on_the_road_run_the_same_two_passes():
             and 'BuyPass(Pass.Open(settlement, quiet), "quick-buy", "buying", "Buying", "the buying pass");' in t
             and 'SellPass(Pass.Meet(met, road, books, party),' in road
             and 'BuyPass(Pass.Meet(met, road, books, party),' in road
-            and len(road.splitlines()) < 20
+            and len(road.splitlines()) < 24
             and all(word not in road for word in
                     ("ItemRoster", "Basis", "TradePolicy.", "WhatStopsBuying", "InAPass",
                      "Notices.Say(", "Log.Write", "SwapOneUnit", "simWeight", "herdRoom"))
@@ -5977,7 +5979,7 @@ def the_venue_is_the_only_thing_a_pass_asks_where_it_is():
                 'internal string Where => Site != null ? "at " + Site.Name : "from " + Met.Name;',
                 "internal ItemRoster Stock => Site != null ? Site.ItemRoster : Met.ItemRoster;",
                 "internal int TillNow => Site != null ? Market.Gold : Met.PartyTradeGold;"))
-            and t.count("pass.Where") == 7)
+            and t.count("pass.Where") == 8)
 
 
 chk("1.40.4", "a market visit and a meeting on the road sell and buy through the same two passes",
@@ -6332,7 +6334,7 @@ def every_price_is_asked_the_way_the_trade_that_follows_is_charged():
                    if name != 'Market.cs' and "GetItemPrice(" in text)
     compared = between(market, "private static string Asked(", "private static string Read(")
     return (plain == []
-            and market.count("GetItemPrice(") == 3
+            and market.count("GetItemPrice(") == 5
             and compared.count("market.GetItemPrice(") == 2
             and ordered(at, "IMarketData held = Kept(site);",
                         "return held.GetPrice(el, who, selling, Merchant(site));",
@@ -6479,7 +6481,7 @@ def one_stack_of_a_good_never_spends_what_another_stack_holds():
             and "_pass.TheirsToSell(Shelf[at])" in t
             and len(counted) == 2
             and all("LedgerBehavior.InAll(" in one and "el.Amount" not in one for one in counted)
-            and len(held_afresh) == 3
+            and len(held_afresh) == 4
             and all("market.Carried(" in one and "AmountAt(" not in one for one in held_afresh))
 
 
@@ -9370,8 +9372,8 @@ def quiet_mode_names_the_warnings_it_still_shows():
                 if "Notices.Say(" in l or "Notices.SayAfterXp(" in l]
     asked = [l for l in onscreen if "Muted" in l or "muted" in l]
     said = spoken(ENGLISH)
-    return (len(onscreen) == 16
-            and len(asked) == 6
+    return (len(onscreen) == 17
+            and len(asked) == 7
             and all(("{=TL" + s + "}") in S['Trading.cs'] for s in ("82", "91", "92", "392"))
             and "Warnings still show on screen" in said['TL349']
             and "cargo full" in said['TL349']
@@ -11570,9 +11572,113 @@ def a_caravan_is_priced_where_the_game_prices_it():
             and "new Pass(null, met, road, books, party, quiet: true);" in t)
 
 
-chk("1.90.19", "a caravan met on the road is priced from the market the game's own trade screen prices a caravan from, the town you are in or else the nearest town, with the caravan as the merchant, and only a party of villagers keeps the price it had",
+chk("1.90.19", "a caravan met on the road is priced from the market the game's own trade screen prices a caravan from, the town you are in or else the nearest town, with the caravan as the merchant",
     a_caravan_is_priced_where_the_game_prices_it())
 
+
+def a_party_of_villagers_is_never_sold_to_and_its_offer_is_taken_whole_or_left():
+    t = S['Trading.cs']
+    road = method_body(t, "public static void ExecuteRoadTrade")
+    lot = method_body(t, "private static void LotPass")
+    offer = method_body(t, "private static IMarketData TheirOfferFrom")
+    priced = method_body(t, "private static IMarketData PricedOnTheRoad")
+    judged = method_body(S['Passes.cs'], "internal static Block WhatStopsTheLot")
+    taken = method_body(S['Passes.cs'], "internal static Traded TakeTheLot")
+    return (road and lot and offer and priced and judged and taken
+            and ordered(road, "if (met.IsVillager)", "LotPass(Pass.Meet(met, road, books, party), why);",
+                        "else", "SellPass(Pass.Meet(met, road, books, party),",
+                        "BuyPass(Pass.Meet(met, road, books, party),", "ReportStalledPasses();")
+            and t.count("LotPass(") == 2
+            and ordered(priced, "if (met != null && met.IsVillager) return TheirOfferFrom(met);",
+                        "if (met == null || !met.IsCaravan) return RoadMarket();")
+            and ordered_last(offer, "Village home = villagers.HomeSettlement?.Village;",
+                             "if (Meetings.TheirOfferIsGuarded()) return new TheirOffer(home);", "return null;")
+            and "_home.GetItemPrice(itemRosterElement, tradingParty, isSelling: true);" in S['Market.cs']
+            and "_home.GetItemPrice(item, tradingParty, isSelling: true);" in S['Market.cs']
+            and "!_theirOffer || Item(at)?.ItemCategory != DefaultItemCategories.PackAnimal;" in t
+            and "public int AmountAt(int at) => InTheOffer(at) ? Shelf[at].Amount : 0;" in t
+            and "public int TheirsToSell(int at) => InTheOffer(at) ? _pass.TheirsToSell(Shelf[at]) : 0;" in t
+            and "theirOffer: true" in lot
+            and ordered(lot, "TradePass.WhatStopsTheLot(market, pass.Books, pass.Sim, pass.ShareCap,",
+                        "if (lot.Units == 0) return;", "if (stops == Block.None)",
+                        "InAPass(() => moved = TradePass.TakeTheLot(market, pass.Books, pass.Sim));",
+                        "else tally.Note(stops);", "if (!pass.Sim) Meetings.TookTheirOffer(pass.Met);",
+                        "pass.Moved(gold: spent, selling: false);",
+                        "if (!pass.Muted) Notices.Say(msg, Notices.Spend);",
+                        "else if (!pass.DirectionError)",
+                        "if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);")
+            and ordered(judged, "if (!market.MayBuy(at, good, out Block whyBuy)) refused = whyBuy;",
+                        "else if (!TradeRules.ResaleAllowed(good, s)) refused = Block.CategoryPolicy;",
+                        "if (lot.Units == 0) return Block.NoStock;",
+                        "if (refused != Block.None) return refused;",
+                        "TradeRules.WhatCapsALot(good,", "if (capped != Block.None) return capped;",
+                        "TradeRules.WhatTheBuyerPays(", "s.ResaleSafetyFactor);",
+                        "if (!TradeMath.BuyAcceptable(lot.Price, lot.Resale, s.MinProfitMargin)) return Block.BelowMargin;",
+                        "if (lot.Price > market.Spendable()) return Block.BudgetSpent;",
+                        "return Block.HerdFull;", "return Block.CarryWeight;", "return Block.None;")
+            and ordered(taken, "if (market.Stopped) return moved;",
+                        "books.NotePurchase(good.Id, price, good.Weight, TradeRules.FoodValue(good));",
+                        "market.Staged(at, price);",
+                        "if (!market.Take(at, price, out int cost) || cost == 0) return moved;",
+                        "books.NoteBought(good.Id, cost);")
+            and all(name in LOTTESTS for name in (
+                "An_offer_that_sells_on_for_more_than_it_costs_is_taken_whole",
+                "One_good_that_loses_money_is_carried_by_the_rest_of_the_offer",
+                "An_offer_that_misses_your_margin_as_a_whole_is_left_for_you",
+                "One_good_you_never_buy_keeps_the_whole_offer_off",
+                "What_the_villagers_keep_out_of_their_offer_is_left_out_of_it_here_too",
+                "A_dry_run_writes_the_offer_into_its_own_books_and_takes_nothing",
+                "A_trade_the_game_turned_round_stops_the_offer_where_it_stood")))
+
+
+def the_offer_is_gone_once_tradelord_took_it_and_moves_nothing_if_asked_for_again():
+    enc = S['Encounters.cs']
+    shown = method_body(enc, "internal static class Patch_VillagerOfferShown")
+    taken = method_body(enc, "internal static class Patch_VillagerOfferTaken")
+    meetings = method_body(enc, "internal static class Meetings")
+    return (shown and taken and meetings
+            and '[HarmonyPatch(typeof(VillagerCampaignBehavior), "village_farmer_buy_products_on_condition")]' in enc
+            and '[HarmonyPatch(typeof(VillagerCampaignBehavior), '
+                '"conversation_player_decided_to_buy_on_consequence")]' in enc
+            and "if (__result && Meetings.TheirOfferIsTaken(PlayerEncounter.EncounteredMobileParty)) __result = false;"
+                in shown
+            and ordered(taken, "if (Meetings.TheirOfferIsTaken(met))",
+                        "if (PlayerEncounter.Current != null) PlayerEncounter.LeaveEncounter = true;",
+                        "return false;", "Meetings.WhatTheyOffer(met)", "return true;",
+                        "Meetings.YouTookTheirOffer(__state.offered, paid)")
+            and ordered(method_body(enc, "internal static void TookTheirOffer"),
+                        "_offerTakenFrom = met;", "_offerTakenIn = PlayerEncounter.Current;")
+            and "_offerTakenIn != null && _offerTakenIn == PlayerEncounter.Current" in meetings
+            and all(one in method_body(enc, "internal static void ForgetWhoYouTradedWith")
+                    for one in ("_offerTakenFrom = null;", "_offerTakenIn = null;"))
+            and "Patcher.Holds(nameof(Patch_VillagerOfferShown)) && Patcher.Holds(nameof(Patch_VillagerOfferTaken))"
+                in meetings
+            and "item.ItemCategory == DefaultItemCategories.PackAnimal" in meetings
+            and "priced.GetPrice(el.EquipmentElement, MobileParty.MainParty, isSelling: true, met.Party)" in meetings
+            and ordered_last(method_body(enc, "internal static void YouTookTheirOffer"),
+                             "if (!Deals.AddsUp(asked, paid))", "return;",
+                             "LedgerBehavior.Instance?.RecordPurchase(line.id, line.units, "
+                             "TradeMath.WorthOf(line.units, line.price));")
+            and "Patcher.TryPatch(harmony, typeof(Patch_VillagerOfferShown));" in S['SubModule.cs']
+            and "Patcher.TryPatch(harmony, typeof(Patch_VillagerOfferTaken));" in S['SubModule.cs'])
+
+
+def the_hint_and_the_feature_list_say_how_villagers_are_traded_with():
+    said = ("Villagers are never sold to: TradeLord takes their whole offer when it clears your margin, "
+            "and otherwise leaves it to you.")
+    return (said in spoken(ENGLISH)['TL373'] and said in M
+            and "Never sells to a party of villagers, and takes their whole offer" in README
+            and "so the same goods can never be bought twice" in README
+            and "An offer TradeLord leaves is still yours to take in the conversation" in README
+            and all(said not in spoken(path)['TL373'] for path in TRANSLATIONS.values()))
+
+
+chk("1.91.0", "a party of villagers on the road is never sold to, and its whole offer is bought at the game's own price when the lot as a whole clears your margin and every rule a purchase answers to, or else left to you",
+    a_party_of_villagers_is_never_sold_to_and_its_offer_is_taken_whole_or_left())
+chk("1.91.0", "once TradeLord has bought the villagers' offer the game's own offer is gone for that meeting and moves nothing if it is reached anyway, while an offer you take yourself is written down at what you paid",
+    the_offer_is_gone_once_tradelord_took_it_and_moves_nothing_if_asked_for_again())
+chk("1.91.0", "the hint under Trade with caravans and villagers and the feature list say how TradeLord trades with villagers",
+    the_hint_and_the_feature_list_say_how_villagers_are_traded_with())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
