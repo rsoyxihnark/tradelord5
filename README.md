@@ -94,7 +94,7 @@
 - ✅ An offer TradeLord leaves is still yours to take in the conversation, and what you pay for it is written down as what those goods cost you
 - ✅ A caravan is traded with at the prices of the town you are in, or else the nearest town, which is what the game's own trade screen charges you with a caravan
 - ✅ A party on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, your looted gear, Hold cargo for the best market, the herd speed penalty and the settling delay
-- ✅ Meeting that same party again keeps the books of what was already traded with them, so it never buys back what it has just sold them and what it spent still counts against its caps
+- ✅ Meeting that same party again straight away counts as the same meeting, so it never buys back what it has just sold them and what it spent still counts against its caps, while meeting them again later starts afresh
 - ✅ Once the goods have changed hands you can say so, and the trader answers
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
 - ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore
