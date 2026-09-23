@@ -429,12 +429,12 @@ namespace TradeLord
                    TradeRules.ResaleAllowed(good, Options.Current);
         }
 
-        private static bool HasCostBasis(ItemObject item) =>
+        private static bool HasCostBasis(EquipmentElement el) =>
             Options.Current.CostBasisMode == 2 ||
-            (LedgerBehavior.Instance?.HasPurchaseRecord(item) ?? false);
+            (LedgerBehavior.Instance?.HasPurchaseRecord(el) ?? false);
 
-        internal static int CostBasis(ItemObject item) =>
-            HasCostBasis(item) ? (LedgerBehavior.Instance?.GetCostBasis(item) ?? item.Value) : 0;
+        internal static int CostBasis(EquipmentElement el) =>
+            HasCostBasis(el) ? (LedgerBehavior.Instance?.GetCostBasis(el) ?? el.Item.Value) : 0;
 
         internal static int UnpaidWorth(ItemObject item)
         {
@@ -443,13 +443,13 @@ namespace TradeLord
             return best.Item2 > 0 ? best.Item2 : item.Value;
         }
 
-        internal static int WorthToBeat(ItemObject item)
+        internal static int WorthToBeat(EquipmentElement el)
         {
-            Good good = Describe(item);
-            int paid = CostBasis(item);
+            Good good = Describe(el.Item);
+            int paid = CostBasis(el);
             return TradeRules.WorthIsWhatYouPaid(good, paid)
                 ? paid
-                : TradeRules.WorthToBeat(good, paid, UnpaidWorth(item));
+                : TradeRules.WorthToBeat(good, paid, UnpaidWorth(el.Item));
         }
 
         internal static bool CouldBeSold(ItemRosterElement el, ISet<string> lockedKeys)

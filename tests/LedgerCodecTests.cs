@@ -25,6 +25,34 @@ namespace TradeLord.Tests
                 }
             };
 
+        [Fact]
+        public void A_good_of_a_quality_is_written_down_apart_from_a_plain_one()
+        {
+            Assert.Equal("sumpter_horse", LedgerCodec.PaidKey("sumpter_horse", null));
+            Assert.Equal("sumpter_horse", LedgerCodec.PaidKey("sumpter_horse", ""));
+            Assert.Equal("sumpter_horse@lame_horse", LedgerCodec.PaidKey("sumpter_horse", "lame_horse"));
+            Assert.NotEqual(LedgerCodec.PaidKey("sumpter_horse", "lame_horse"),
+                            LedgerCodec.PaidKey("sumpter_horse", null));
+        }
+
+        [Fact]
+        public void What_you_paid_for_each_quality_comes_back_from_the_save_apart()
+        {
+            var kept = new List<PurchaseRecord>
+            {
+                new PurchaseRecord { ItemId = LedgerCodec.PaidKey("sumpter_horse", "lame_horse"), TotalPaid = 90, Count = 1, LastUnitPaid = 90 },
+                new PurchaseRecord { ItemId = LedgerCodec.PaidKey("sumpter_horse", null), TotalPaid = 300, Count = 2, LastUnitPaid = 150 }
+            };
+
+            var back = LedgerCodec.ReadPurchases(LedgerCodec.WritePurchases(kept));
+
+            Assert.Equal(2, back.Count);
+            Assert.Equal("sumpter_horse@lame_horse", back[0].ItemId);
+            Assert.Equal(90, back[0].TotalPaid);
+            Assert.Equal("sumpter_horse", back[1].ItemId);
+            Assert.Equal(300, back[1].TotalPaid);
+        }
+
         private static List<PurchaseRecord> SamplePurchases() =>
             new List<PurchaseRecord>
             {

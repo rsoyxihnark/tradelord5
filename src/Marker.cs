@@ -390,7 +390,7 @@ namespace TradeLord
                 if (el.Amount - keep <= 0) continue;
                 ItemObject item = el.EquipmentElement.Item;
                 cargo.Add((el.EquipmentElement, el.Amount - keep,
-                           TradePolicy.WorthToBeat(item), BestMarketFloor(el.EquipmentElement)));
+                           TradePolicy.WorthToBeat(el.EquipmentElement), BestMarketFloor(el.EquipmentElement)));
             }
             _cargo = cargo;
             _cargoHeld = Held(cargo);
