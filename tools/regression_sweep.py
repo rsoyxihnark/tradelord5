@@ -11552,7 +11552,7 @@ def a_purchase_made_away_from_a_market_is_written_down_at_what_it_cost():
                      "A_purchase_with_nothing_on_it_writes_nothing_down")))
 
 
-chk("1.90.18", "a good bought by hand from a caravan or villagers on the road is written down at the gold it cost, since there is no shelf to wind back and the good's own worth is not what you paid",
+chk("1.90.18", "a good bought by hand from a caravan on the road is written down at the gold it cost, since there is no shelf to wind back and the good's own worth is not what you paid",
     a_purchase_made_away_from_a_market_is_written_down_at_what_it_cost())
 
 
