@@ -38,6 +38,7 @@ namespace TradeLord.Tests
             internal Options Rules = new Options();
             internal Books Ledger = new Books();
             internal bool Sim;
+            internal bool OnTheScreen;
             internal int Till = 100000;
             internal bool AtAVillage;
             internal bool Halted;
@@ -81,7 +82,15 @@ namespace TradeLord.Tests
 
             public int YoursToSell(int at) =>
                 System.Math.Min(Cargo[at].Amount,
-                                Cargo[at].Amount + Ledger.Held(Sim, Cargo[at].Good.Id));
+                                Carrying(Cargo[at].Good.Id) + Ledger.Held(Sim, Cargo[at].Good.Id));
+
+            private int Carrying(string id)
+            {
+                int held = 0;
+                foreach (Load load in Cargo)
+                    if (load.Good.Id == id) held += load.Amount;
+                return held;
+            }
 
             public int CostBasis(int at) => Cargo[at].Basis;
 
@@ -107,7 +116,11 @@ namespace TradeLord.Tests
 
             public int TillNow() => Till;
 
-            public void Staged(int at, int price) => LaidOut.Add(Cargo[at].Good.Id);
+            public void Staged(int at, int price)
+            {
+                LaidOut.Add(Cargo[at].Good.Id);
+                if (OnTheScreen) Cargo[at].Amount--;
+            }
 
             public bool Give(int at, int price, out int proceeds)
             {
@@ -431,6 +444,27 @@ namespace TradeLord.Tests
             Run run = Sell(market, sim: true);
             Assert.Equal(1, run.Units);
             Assert.Equal(200, run.SimGold);
+        }
+
+        [Fact]
+        public void A_dry_run_sells_every_quality_of_a_good()
+        {
+            var market = new FakeMarket();
+            market.Add(Cargo("iron"), amount: 3, price: 200).Worth = 50;
+            market.Add(Cargo("iron"), amount: 2, price: 200).Worth = 50;
+            Run run = Sell(market, sim: true);
+            Assert.Equal(5, run.Units);
+        }
+
+        [Fact]
+        public void A_deal_laid_out_on_the_trade_screen_sells_every_quality_of_a_good()
+        {
+            var market = new FakeMarket { OnTheScreen = true };
+            market.Add(Cargo("iron"), amount: 3, price: 200).Worth = 50;
+            market.Add(Cargo("iron"), amount: 2, price: 200).Worth = 50;
+            Run run = Sell(market, sim: true, books: new Books { LaidOut = true });
+            Assert.Equal(5, run.Units);
+            Assert.Equal(1000, run.SimGold);
         }
     }
 }

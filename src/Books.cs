@@ -24,6 +24,10 @@ namespace TradeLord
         private int _food;
         private float _weight;
 
+        internal bool LaidOut;
+
+        private bool OnPaper(bool sim) => sim && !LaidOut;
+
         internal void Forget()
         {
             ForgetTheDryRun();
@@ -55,27 +59,27 @@ namespace TradeLord
 
         internal int TillDrawn(bool sim) => sim ? _drawn : 0;
 
-        internal float Weight(bool sim) => sim ? _weight : 0f;
+        internal float Weight(bool sim) => OnPaper(sim) ? _weight : 0f;
 
-        internal int FoodHeld(bool sim) => sim ? _food : 0;
+        internal int FoodHeld(bool sim) => OnPaper(sim) ? _food : 0;
 
-        internal int Shed(bool sim) => sim ? _shed : 0;
+        internal int Shed(bool sim) => OnPaper(sim) ? _shed : 0;
 
-        internal int MountsShed(bool sim) => sim ? _mounts : 0;
+        internal int MountsShed(bool sim) => OnPaper(sim) ? _mounts : 0;
 
-        internal int HaulsShed(bool sim) => sim ? _hauls : 0;
+        internal int HaulsShed(bool sim) => OnPaper(sim) ? _hauls : 0;
 
-        internal int HerdTaken(bool sim) => sim ? _herd : 0;
+        internal int HerdTaken(bool sim) => OnPaper(sim) ? _herd : 0;
 
         internal bool Traded(bool sim) =>
             _sold.Count > 0 || _bought.Count > 0 ||
             (sim && (_drySold.Count > 0 || _dryBought.Count > 0));
 
         internal int Held(bool sim, string id) =>
-            sim && id != null && _held.TryGetValue(id, out int units) ? units : 0;
+            OnPaper(sim) && id != null && _held.TryGetValue(id, out int units) ? units : 0;
 
         internal int Stocked(bool sim, string id) =>
-            sim && id != null && _dryBought.TryGetValue(id, out var prior) ? prior.count : 0;
+            OnPaper(sim) && id != null && _dryBought.TryGetValue(id, out var prior) ? prior.count : 0;
 
         internal int PaidDrawn(bool sim, string id) =>
             sim && id != null && _dryDrawn.TryGetValue(id, out int units) ? units : 0;

@@ -605,6 +605,13 @@ namespace TradeLord
             if (profit <= 0 || gained <= 0) return 0;
             return profit > gained ? gained : profit;
         }
+
+        public static int PaidForWhatYouKept(int gold, int bought, int kept)
+        {
+            if (gold <= 0 || bought <= 0 || kept <= 0) return 0;
+            if (kept >= bought) return gold;
+            return (int)((long)gold * kept / bought);
+        }
     }
 
     public static class Holdings

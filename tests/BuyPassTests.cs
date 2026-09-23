@@ -36,6 +36,7 @@ namespace TradeLord.Tests
             internal Options Rules = new Options();
             internal Books Ledger = new Books();
             internal bool Sim;
+            internal bool OnTheScreen;
             internal int Purse = 100000;
             internal float Cargo = 1000f;
             internal int Herd = 100;
@@ -113,7 +114,14 @@ namespace TradeLord.Tests
 
             public int HerdRoom() => Herd;
 
-            public void Staged(int at, int price) => LaidOut.Add(Stalls[at].Good.Id);
+            public void Staged(int at, int price)
+            {
+                LaidOut.Add(Stalls[at].Good.Id);
+                if (!OnTheScreen) return;
+                Cargo -= Stalls[at].Good.Weight;
+                Stalls[at].Amount--;
+                Stalls[at].Carried++;
+            }
 
             public bool Take(int at, int price, out int cost)
             {
@@ -497,6 +505,31 @@ namespace TradeLord.Tests
             var books = new Books();
             Assert.Equal(3, Buy(market, sim: true, books: books).Units);
             Assert.Equal(0, Buy(market, sim: true, books: books).Units);
+        }
+
+        [Fact]
+        public void A_deal_laid_out_on_the_trade_screen_fills_all_the_room_the_screen_has()
+        {
+            var market = new FakeMarket { Cargo = 10.5f, OnTheScreen = true };
+            market.Add(Cargo("iron", weight: 1f), amount: 20);
+            Run run = Buy(market, sim: true, books: new Books { LaidOut = true });
+            Assert.Equal(10, run.Units);
+            Assert.True(run.Tally.Saw(Block.CarryWeight));
+            Assert.Equal(100000, market.Purse);
+        }
+
+        [Fact]
+        public void A_deal_laid_out_on_the_trade_screen_counts_what_it_laid_out_once()
+        {
+            var market = new FakeMarket { OnTheScreen = true };
+            market.Rules.MaxHeldPerItem = 4;
+            market.Rules.BuyCapPerItem = 2;
+            market.Add(Cargo("iron"), amount: 20);
+            var books = new Books { LaidOut = true };
+            Assert.Equal(2, Buy(market, sim: true, books: books).Units);
+            market.Rules.BuyCapPerItem = 0;
+            Assert.Equal(2, Buy(market, sim: true, books: books).Units);
+            Assert.Equal(4, market.Stalls[0].Carried);
         }
     }
 }
