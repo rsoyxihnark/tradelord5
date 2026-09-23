@@ -34,7 +34,8 @@ namespace TradeLord
                         List<(Settlement town, int price)> buys) Markets(ItemVM itemVm)
         {
             if (itemVm == null || !Options.Current.TooltipHints) return (null, null, null);
-            ItemObject item = itemVm.ItemRosterElement.EquipmentElement.Item;
+            EquipmentElement held = itemVm.ItemRosterElement.EquipmentElement;
+            ItemObject item = held.Item;
             if (!TradePolicy.Priced(item)) return (null, null, null);
             var ledger = LedgerBehavior.Instance;
             if (ledger == null) return (null, null, null);
@@ -46,12 +47,30 @@ namespace TradeLord
             AsTheyWillBe(item, buys, selling: false);
             KeepTheBest(sells);
             KeepTheBest(buys);
+            AtThisQuality(sells, held);
+            AtThisQuality(buys, held);
             return sells.Count == 0 && buys.Count == 0 ? (null, null, null) : (item, sells, buys);
         }
 
         private static void KeepTheBest(List<(Settlement town, int price)> markets)
         {
             if (markets.Count > TopN) markets.RemoveRange(TopN, markets.Count - TopN);
+        }
+
+        private static void AtThisQuality(List<(Settlement town, int price)> markets, EquipmentElement held)
+        {
+            for (int i = 0; i < markets.Count; i++)
+                markets[i] = (markets[i].town,
+                              TradeMath.AtThisQuality(markets[i].price, held.Item.Value, held.ItemValue));
+        }
+
+        private static int CostAtThisQuality(LedgerBehavior ledger, EquipmentElement held)
+        {
+            ItemObject item = held.Item;
+            int basis = ledger.GetCostBasis(item);
+            return ledger.HasPurchaseRecord(item) && Options.Current.CostBasisMode != 2
+                ? basis
+                : TradeMath.AtThisQuality(basis, item.Value, held.ItemValue);
         }
 
         private static bool Sectioned(ItemVM itemVm)
@@ -81,10 +100,11 @@ namespace TradeLord
 
             Settlement here = Settlement.CurrentSettlement;
             SettlementComponent market = here?.SettlementComponent;
+            EquipmentElement held = itemVm.ItemRosterElement.EquipmentElement;
 
             int basis = vm.IsPlayerItem || market == null
-                ? (ledger.GetCostBasis(item))
-                : Priced.At(market, item, MobileParty.MainParty, false);
+                ? CostAtThisQuality(ledger, held)
+                : Priced.At(market, held, MobileParty.MainParty, false);
 
             int paid = ledger.PaidPerUnit(item);
             if (paid > 0)
@@ -150,7 +170,7 @@ namespace TradeLord
             {
                 if (vm.IsPlayerItem && sells.Count > 0)
                 {
-                    int local = Priced.At(market, item, MobileParty.MainParty, true);
+                    int local = Priced.At(market, held, MobileParty.MainParty, true);
                     if (sells[0].town == here || local >= sells[0].price)
                         AddLine(vm, "", Tongue.Text("{=TL22}* Best market to sell this!").ToString(), Good);
                     else if (local > 0 && sells[0].price > local)
@@ -162,7 +182,7 @@ namespace TradeLord
                 }
                 else if (!vm.IsPlayerItem && buys.Count > 0)
                 {
-                    int local = Priced.At(market, item, MobileParty.MainParty, false);
+                    int local = Priced.At(market, held, MobileParty.MainParty, false);
                     if (buys[0].town == here || (local > 0 && local <= buys[0].price))
                         AddLine(vm, "", Tongue.Text("{=TL23}* Cheapest market to buy this!").ToString(), Good);
                     else if (local > buys[0].price)
