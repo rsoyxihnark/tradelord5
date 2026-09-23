@@ -4488,7 +4488,7 @@ def a_caravan_on_the_road_is_priced_by_the_game_not_by_the_mod():
             and "_roadMarketFailed = true;" in market
             and "if (!Options.Current.TradeWithCaravans) return;" in body
             and "if (!RoadPartyReachable(met)) return;" in body
-            and "IMarketData road = RoadMarket();" in body
+            and "IMarketData road = PricedOnTheRoad(met);" in body
             and "if (road == null) return;" in body
             and "Road.GetPrice(what, Party, selling, Shop)" in
                 between(S['Trading.cs'], "internal int Price(", ";")
@@ -11552,6 +11552,26 @@ def a_purchase_made_away_from_a_market_is_written_down_at_what_it_cost():
 
 chk("1.90.18", "a good bought by hand from a caravan or villagers on the road is written down at the gold it cost, since there is no shelf to wind back and the good's own worth is not what you paid",
     a_purchase_made_away_from_a_market_is_written_down_at_what_it_cost())
+
+
+def a_caravan_is_priced_where_the_game_prices_it():
+    t = S['Trading.cs']
+    priced = method_body(t, "private static IMarketData PricedOnTheRoad")
+    road = method_body(t, "public static void ExecuteRoadTrade")
+    return (priced and road
+            and "IMarketData road = PricedOnTheRoad(met);" in road
+            and "if (met == null || !met.IsCaravan) return RoadMarket();" in priced
+            and ordered(priced, "me.CurrentSettlement ??",
+                        "SettlementHelper.FindNearestTownToMobileParty(me, MobileParty.NavigationType.All)?.Settlement;",
+                        "IMarketData kept = Priced.Kept(near);",
+                        "if (kept == null) return RoadMarket();", "return kept;")
+            and "using Helpers;" in t
+            and "Road.GetPrice(what, Party, selling, Shop)" in between(t, "internal int Price(", ";")
+            and "new Pass(null, met, road, books, party, quiet: true);" in t)
+
+
+chk("1.90.19", "a caravan met on the road is priced from the market the game's own trade screen prices a caravan from, the town you are in or else the nearest town, with the caravan as the merchant, and only a party of villagers keeps the price it had",
+    a_caravan_is_priced_where_the_game_prices_it())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using HarmonyLib;
+using Helpers;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
@@ -1402,6 +1403,19 @@ namespace TradeLord
             return _roadMarket;
         }
 
+        private static IMarketData PricedOnTheRoad(MobileParty met)
+        {
+            if (met == null || !met.IsCaravan) return RoadMarket();
+            MobileParty me = MobileParty.MainParty;
+            Settlement near = me == null ? null : me.CurrentSettlement ??
+                SettlementHelper.FindNearestTownToMobileParty(me, MobileParty.NavigationType.All)?.Settlement;
+            IMarketData kept = Priced.Kept(near);
+            if (kept == null) return RoadMarket();
+            Log.Write("caravan " + met.Name + " is priced at " + near.Name + ", the market the game's own trade " +
+                      "screen prices a caravan from");
+            return kept;
+        }
+
         private static void HandOver(PartyBase me, PartyBase shop, EquipmentElement what, int price)
         {
             me.ItemRoster.AddToCounts(what, -1);
@@ -1453,7 +1467,7 @@ namespace TradeLord
             if (!Options.Current.TradeWithCaravans) return;
             if (!RoadPartyReachable(met)) return;
             if (StillSettling(Muted(automated: true))) return;
-            IMarketData road = RoadMarket();
+            IMarketData road = PricedOnTheRoad(met);
             if (road == null) return;
             MobileParty party = MobileParty.MainParty;
             if (party == null) return;
