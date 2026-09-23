@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.90.17
+
+- Fixed a deal laid out by Staged Trading counting against TradeLord's forecast and Trust a market by what it has paid, taken or cancelled
+- Fixed the marker check in TradeLord.log starting over every day as your party ate its food
+- The forecast and promise checks in TradeLord.log now write their line even when everything at a market was passed over or set aside
+- Fixed the forecast check in TradeLord.log saying you bought or sold denars when it meant goods worth that much
+- Fixed the promise check in TradeLord.log leaving unclear which price your own trading had moved
+
 ## 1.90.16
 
 - Fixed TradeLord trusting its forecast less because of goods you bought or sold in a market yourself
