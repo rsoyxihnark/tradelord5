@@ -94,6 +94,9 @@ namespace TradeLord.Tests
 
             public int CostBasis(int at) => Cargo[at].Basis;
 
+            public string PaidKeyAt(int at) =>
+                LedgerCodec.PaidKey(Cargo[at].Good.Id, Cargo[at].Modified ? "fine" : null);
+
             public int PurchasedUnits(int at) => Cargo[at].Purchased;
 
             public int UnpaidWorth(int at)
@@ -164,6 +167,26 @@ namespace TradeLord.Tests
             run.Earned = moved.Earned;
             run.SimGold = moved.SimGold;
             return run;
+        }
+
+        [Fact]
+        public void A_dry_run_keeps_what_you_paid_for_each_quality_of_a_good_apart()
+        {
+            foreach (bool sim in new[] { false, true })
+            {
+                var market = new FakeMarket();
+                Load plain = market.Add(Cargo("iron"), amount: 1, price: 200);
+                plain.Basis = 100;
+                plain.Purchased = 1;
+                Load fine = market.Add(Cargo("iron"), amount: 1, price: 200);
+                fine.Basis = 300;
+                fine.Purchased = 1;
+                fine.Modified = true;
+
+                Run run = Sell(market, sim);
+
+                Assert.Equal(1, run.Units);
+            }
         }
 
         [Fact]

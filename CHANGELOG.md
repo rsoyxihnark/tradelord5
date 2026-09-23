@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.91.5
+
+- Fixed goods of different qualities, like a lame horse and a sound one, sharing one record of what you paid for them
+
 ## 1.91.4
 
 - Fixed meeting the same caravan or villagers again straight away counting as a new meeting when the hour turned in between

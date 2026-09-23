@@ -58,6 +58,11 @@ namespace TradeLord
         private const char FieldMark = '|';
         private const char RecordMark = ';';
 
+        public const char QualityMark = '@';
+
+        public static string PaidKey(string itemId, string qualityId) =>
+            string.IsNullOrEmpty(qualityId) ? itemId : itemId + QualityMark + qualityId;
+
         private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
 
         private static string Number(float value) => value.ToString("0.###", CultureInfo.InvariantCulture);

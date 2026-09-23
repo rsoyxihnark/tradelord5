@@ -501,15 +501,15 @@ def a_good_you_bought_by_hand_is_never_counted_beyond_what_you_carry():
     body = method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange")
     return ("ItemRoster carried = MobileParty.MainParty?.ItemRoster;" in body
             and "int bought = Deals.UnitsMoved(element.Amount, said, unit);" in body
-            and "int took = Math.Min(bought, InAll(carried, item));" in body
+            and "int took = Math.Min(bought, InAll(carried, element.EquipmentElement));" in body
             and "if (took <= 0) continue;" in body
             and ordered(body, "int bought = Deals.UnitsMoved(", "int took = Math.Min(",
                         "if (took <= 0) continue;",
                         "Bulk.PricePaid(here, element.EquipmentElement, took, unit)")
             and ordered(body, "int gone = Deals.UnitsMoved(element.Amount, said, unit);",
-                        "RecordSale(item.StringId, gone);")
-            and "RecordSale(item.StringId, count);" not in body
-            and "RecordPurchase(item.StringId, count," not in body
+                        "RecordSale(PaidKey(element.EquipmentElement), gone);")
+            and "RecordSale(PaidKey(element.EquipmentElement), count);" not in body
+            and "RecordPurchase(PaidKey(element.EquipmentElement), count," not in body
             and "element.EquipmentElement, count, unit" not in body)
 
 def a_road_trade_that_moved_nothing_says_why():
@@ -821,14 +821,14 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
                           "private static List<(EquipmentElement item, int amount, int worth, int floor)> "
                           "WhatYouCarryToSell")
     floor = method_body(S['Marker.cs'], "private static int BestMarketFloor")
-    worth = method_body(S['Policy.cs'], "internal static int WorthToBeat(ItemObject item)")
-    return ("TradePolicy.WorthToBeat(item), BestMarketFloor(el.EquipmentElement)));" in carried
+    worth = method_body(S['Policy.cs'], "internal static int WorthToBeat(EquipmentElement el)")
+    return ("TradePolicy.WorthToBeat(el.EquipmentElement), BestMarketFloor(el.EquipmentElement)));" in carried
             and "var cargo = WhatYouCarryToSell(party);" in marker
-            and "int paid = CostBasis(item);" in worth
+            and "int paid = CostBasis(el);" in worth
             and "TradeRules.WorthIsWhatYouPaid(good, paid)" in worth
             and "? paid" in worth
-            and ": TradeRules.WorthToBeat(good, paid, UnpaidWorth(item));" in worth
-            and worth.count("UnpaidWorth(item)") == 1
+            and ": TradeRules.WorthToBeat(good, paid, UnpaidWorth(el.Item));" in worth
+            and worth.count("UnpaidWorth(el.Item)") == 1
             and ordered(method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch"),
                         "Paying pays = WhatThatMarketPays(site, market, item, party);",
                         "int price = pays.At(u);",
@@ -1285,7 +1285,7 @@ def the_ledger_keeps_no_second_copy_of_the_cost_basis_rules():
 def a_good_you_never_bought_still_falls_through_to_the_market():
     body = method_body(S['Ledger.cs'], "public int GetCostBasis")
     return (ordered(body,
-                    "Paid.TryGetValue(item.StringId, out var rec);",
+                    "Paid.TryGetValue(PaidKey(el), out var rec);",
                     "TradeMath.UnitBasis(rec, Options.Current.CostBasisMode);",
                     "if (unit != TradeMath.NoRecordedBasis) return unit;",
                     "BestBuy(item);")
@@ -1543,12 +1543,12 @@ chk("1.13.0", "no switch quietly writes another one, so what you set is what is 
         for body in [method_body(M, "public bool " + name)]))
 chk("1.3.2", "zero-gold purchase not recorded",
     all(re.search(r'if \((?:price|cost) == 0\) break;\s*'
-                  r'LedgerBehavior\.Instance\?\.RecordPurchase\(item\.StringId, 1, (?:price|cost)\);\s*'
+                  r'LedgerBehavior\.Instance\?\.RecordPurchase\(LedgerBehavior\.PaidKey\(el\.EquipmentElement\), 1, (?:price|cost)\);\s*'
                   r'pass\.Books\.NoteBought\(item\.StringId, (?:price|cost)\);',
                   method_body(S['Trading.cs'], one)) is not None
         for one in ("public static void ExecuteResupply", "public static void ExecuteHaulage")) and
     re.search(r'if \(cost == 0\) return true;\s*'
-              r'LedgerBehavior\.Instance\?\.RecordPurchase\(item\.StringId, 1, cost\);',
+              r'LedgerBehavior\.Instance\?\.RecordPurchase\(LedgerBehavior\.PaidKey\(Shelf\[at\]\.EquipmentElement\), 1, cost\);',
               method_body(S['Trading.cs'], "private sealed class BuyingAt")) is not None and
     re.search(r'if \(cost == 0\) break;\s*books\.NoteBought\(good\.Id, cost\);',
               method_body(S['Passes.cs'], "internal static Traded BuyThem")) is not None)
@@ -2144,7 +2144,7 @@ chk("1.4.3", "one definition of the livestock the mod trades",
 chk("1.4.3", "cost basis uses recorded purchase prices, not current market quotes",
     "Options.Current.CostBasisMode == 2 ||" in
     method_body(S['Policy.cs'], "private static bool HasCostBasis") and
-    "HasPurchaseRecord(item) ?? false)" in
+    "HasPurchaseRecord(el) ?? false)" in
     method_body(S['Policy.cs'], "private static bool HasCostBasis") and
     "item.IsTradeGood ||" not in method_body(S['Policy.cs'], "private static bool HasCostBasis"))
 chk("1.21.0", "the sell-side floor is the hold-for-the-best-market switch and nothing else, so it binds every unit alike or none",
@@ -2154,7 +2154,7 @@ chk("1.21.0", "the sell-side floor is the hold-for-the-best-market switch and no
     "holdFloor = bestMarketFloor;" in S['Passes.cs'] and
     "TradePolicy.Priced(item)" not in sell_pass())
 chk("1.5.5", "a stack pays its purchased basis only for the units that were purchased, and only those units drain the record",
-    "public int PurchasedUnits(int at) => LedgerBehavior.Instance?.PurchasedUnits(Item(at)) ?? 0;" in
+    "public int PurchasedUnits(int at) => LedgerBehavior.Instance?.PurchasedUnits(_plan[at].EquipmentElement) ?? 0;" in
         method_body(S['Trading.cs'], "private sealed class SellingFrom") and
     "basis.PaidLeft = Math.Max(0, purchased - books.PaidDrawn(sim, id));" in
         method_body(S['Passes.cs'], "internal static Basis For") and
@@ -2163,7 +2163,7 @@ chk("1.5.5", "a stack pays its purchased basis only for the units that were purc
     ordered(method_body(S['Passes.cs'], "internal bool SoldOne()"),
             "if (PaidLeft <= 0) return false;", "PaidLeft--;", "return true;") and
     S['Passes.cs'].count("if (basis.SoldOne()) market.RecordedSale(at);") == 1 and
-    "else LedgerBehavior.Instance?.RecordSale(item.StringId, 1);" in
+    "else LedgerBehavior.Instance?.RecordSale(paidKey, 1);" in
         method_body(S['Trading.cs'], "public static void ExecuteHerdRelief") and
     S['Passes.cs'].count("PaidLeft--;") == 1 and
     sell_pass().count("RecordSale") == 1)
@@ -5400,7 +5400,7 @@ def every_pass_hands_one_place_the_trade_and_the_visits_books():
     return ("int before = Hero.MainHero.Gold;" in swap
             and t.count("int before = Hero.MainHero.Gold;") == 1
             and t.count("transaction direction changed on this game version") == 1
-            and t.count("LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1,") == 3
+            and t.count("LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(") == 3
             and t.count("pass.Books.NoteBought(item.StringId,") == 2
             and S['Passes.cs'].count("books.NoteBought(good.Id, cost);") == 2
             and "_paid += price;" in books
@@ -5609,7 +5609,7 @@ def a_quest_animal_held_back_is_named_as_the_quest_not_the_food_reserve():
 
 def getting_back_up_to_speed_credits_what_it_makes():
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
-    return ("Basis basis = Basis.For(TradePolicy.CostBasis(item)," in relief
+    return ("Basis basis = Basis.For(TradePolicy.CostBasis(el.EquipmentElement)," in relief
             and "int worth = basis.Unit(out bool askTheMarket);" in relief
             and "int credited = TradePolicy.Credit(price, worth, basis.UnpaidWorth);" in relief
             and "profit += credited;" in relief
@@ -5618,7 +5618,7 @@ def getting_back_up_to_speed_credits_what_it_makes():
             and "if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);" in
                 method_body(S['Trading.cs'], "internal void Moved")
             and "if (!pass.Sim && earned > 0) AwardTradeXpForOurOwnTrade(earned, pass.Muted);" in relief
-            and relief.count("LedgerBehavior.Instance?.RecordSale(item.StringId, 1);") == 1)
+            and relief.count("LedgerBehavior.Instance?.RecordSale(paidKey, 1);") == 1)
 
 def the_rankings_are_dropped_when_the_party_moves_not_only_when_the_hour_turns():
     moved = method_body(S['Ledger.cs'], "private void DropRankingsIfThePartyMoved")
@@ -5849,8 +5849,8 @@ def what_a_good_cost_you_is_carried_by_one_value():
                         "basis.FromMarket = s.CostBasisMode == 2;",
                         "basis.PaidLeft = Math.Max(0, purchased - books.PaidDrawn(sim, id));",
                         "basis.UnpaidWorth = -1;")
-            and t.count("TradePolicy.CostBasis(item)") == 1
-            and t.count("LedgerBehavior.Instance?.PurchasedUnits(item)") == 1
+            and t.count("TradePolicy.CostBasis(el.EquipmentElement)") == 1
+            and t.count("LedgerBehavior.Instance?.PurchasedUnits(el.EquipmentElement)") == 1
             and t.count("Basis basis = Basis.For(") == 1
             and S['Passes.cs'].count("Basis basis = Basis.For(") == 1
             and all("Basis basis = Basis.For(" in one for one in sites)
@@ -6753,18 +6753,18 @@ def a_dry_run_draws_the_price_you_paid_down_the_way_a_real_pass_does():
     herd = method_body(t, "public static void ExecuteHerdRelief")
     return ("internal static Basis For(int costBasis, int purchased, string id, Books books, bool sim,"
                 in basis
-            and "LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0," in herd
+            and "LedgerBehavior.Instance?.PurchasedUnits(el.EquipmentElement) ?? 0," in herd
             and "basis.PaidLeft = Math.Max(0, purchased - books.PaidDrawn(sim, id));" in basis
             and t.count("Basis.For(") == 1
             and S['Passes.cs'].count("Basis.For(") == 1
             and "internal static Basis For(" in basis
             and t.count("Basis.For(item)") == 0
-            and "if (basis.SoldOne()) books.NotePaidDrawn(good.Id);" in sell
+            and "if (basis.SoldOne()) books.NotePaidDrawn(market.PaidKeyAt(at));" in sell
             and "if (basis.SoldOne()) market.RecordedSale(at);" in sell
-            and "LedgerBehavior.Instance?.RecordSale(Item(at).StringId, 1);" in sell
+            and "LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1);" in sell
             and ordered(herd, "if (basis.SoldOne())",
-                        "if (pass.Sim) pass.Books.NotePaidDrawn(item.StringId);",
-                        "else LedgerBehavior.Instance?.RecordSale(item.StringId, 1);")
+                        "if (pass.Sim) pass.Books.NotePaidDrawn(paidKey);",
+                        "else LedgerBehavior.Instance?.RecordSale(paidKey, 1);")
             and t.count("NotePaidDrawn(") == 1
             and S['Passes.cs'].count("NotePaidDrawn(") == 1
             and "internal int PaidDrawn(bool sim, string id) =>" in S['Books.cs']
@@ -6773,7 +6773,7 @@ def a_dry_run_draws_the_price_you_paid_down_the_way_a_real_pass_does():
             and "ARealRunReadsNoPriceYouPaidBackFromTheDryRunBooks" in BOOKTESTS)
 
 
-chk("1.52.2", "a dry run draws what you paid for a good down across every stack of it, the way a real pass does",
+chk("1.52.2", "a dry run draws what you paid for each quality of a good down across every stack of it, the way a real pass does",
     a_dry_run_draws_the_price_you_paid_down_the_way_a_real_pass_does())
 
 
@@ -8069,9 +8069,9 @@ def the_tooltip_says_what_you_paid_for_a_good_you_have_bought():
     add = method_body(S['TooltipPatches.cs'],
                       "internal static void Append(ItemMenuVM vm, ItemVM itemVm)")
     return ("return TradeMath.UnitBasis(rec, 0);" in paid
-            and "if (item == null) return TradeMath.NoRecordedBasis;" in paid
+            and "if (el.Item == null) return TradeMath.NoRecordedBasis;" in paid
             and ordered(add,
-                        "int paid = ledger.PaidPerUnit(item);",
+                        "int paid = ledger.PaidPerUnit(held);",
                         "if (paid > 0)",
                         'AddLine(vm, Tongue.Text("{=TL409}You paid").ToString(), paid + GoldIcon, Title);',
                         'Tongue.Text("{=TL20}Best sell prices")')
@@ -8763,7 +8763,7 @@ def the_deal_you_took_is_reported_and_credited_like_any_pass():
                     "ReportWhatYouBought(buying, paid, addsUp);")
             and ordered(reckon, "int count = Deals.UnitsMoved(el.Amount, said, price);",
                         "took.Gold += said;",
-                        "TradeMath.Credit(price, TradePolicy.WorthToBeat(item),",
+                        "TradeMath.Credit(price, TradePolicy.WorthToBeat(el.EquipmentElement),",
                         "pass.Tally(item, count, said);",
                         "took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);")
             and "gained += price * count;" not in t and "spent += price * count;" not in t
@@ -8874,12 +8874,12 @@ def nothing_the_game_hands_back_is_read_as_a_count_without_the_one_door():
             and 'var (el, said) = lines[i];' in t
             and both.count('Deals.UnitsMoved(') == 3
             and ordered(l, 'int gone = Deals.UnitsMoved(element.Amount, said, unit);',
-                        'moved.Add((item, gone));', 'RecordSale(item.StringId, gone);')
+                        'moved.Add((item, gone));', 'RecordSale(PaidKey(element.EquipmentElement), gone);')
             and 'int bought = Deals.UnitsMoved(element.Amount, said, unit);' in l
             and 'int count = Deals.UnitsMoved(el.Amount, said, price);' in t
-            and 'RecordSale(item.StringId, said)' not in l
-            and 'RecordSale(item.StringId, count)' not in l
-            and 'RecordPurchase(item.StringId, said' not in l
+            and 'RecordSale(PaidKey(element.EquipmentElement), said)' not in l
+            and 'RecordSale(PaidKey(element.EquipmentElement), count)' not in l
+            and 'RecordPurchase(PaidKey(element.EquipmentElement), said' not in l
             and all(one not in both for one in
                     ('foreach (var (element, count) in purchased)',
                      'foreach (var (element, count) in sold)',
@@ -10390,7 +10390,7 @@ def the_selling_pass_takes_what_makes_the_most_first():
             and ": x.at.CompareTo(y.at));" in plan
             and "for (int at = 0; at < order.Count; at++) _plan.Add(order[at].held);" in plan
             and "int price = pass.Price(held.EquipmentElement, selling: true);" in gain
-            and "long gain = ((long)price - TradePolicy.WorthToBeat(item)) * held.Amount;" in gain
+            and "long gain = ((long)price - TradePolicy.WorthToBeat(held.EquipmentElement)) * held.Amount;" in gain
             and "private ItemObject Item(int at) => _plan[at].EquipmentElement.Item;" in S['Trading.cs'])
 
 
@@ -10741,14 +10741,14 @@ chk("1.89.0", "the route scan counts the opening prices it asked for and the one
 
 
 def the_far_markets_are_asked_only_when_their_answer_is_used():
-    worth = method_body(S['Policy.cs'], "internal static int WorthToBeat(ItemObject item)")
+    worth = method_body(S['Policy.cs'], "internal static int WorthToBeat(EquipmentElement el)")
     rules = S['Rules.cs']
     return (worth
-            and "Good good = Describe(item);" in worth
-            and "int paid = CostBasis(item);" in worth
+            and "Good good = Describe(el.Item);" in worth
+            and "int paid = CostBasis(el);" in worth
             and ordered(worth, "TradeRules.WorthIsWhatYouPaid(good, paid)", "? paid",
-                        ": TradeRules.WorthToBeat(good, paid, UnpaidWorth(item));")
-            and worth.count("UnpaidWorth(item)") == 1
+                        ": TradeRules.WorthToBeat(good, paid, UnpaidWorth(el.Item));")
+            and worth.count("UnpaidWorth(el.Item)") == 1
             and "internal static bool WorthIsWhatYouPaid(in Good good, int paid) =>" in rules
             and rules.count("paid > 0 || !TradedAsMerchandise(good);") == 1
             and "WorthIsWhatYouPaid(good, paid) ? paid : unpaidWorth;" in rules)
@@ -11089,14 +11089,22 @@ chk("1.90.11", "how far what is on its way may move a market is searched for onc
 
 def every_stack_of_a_good_is_counted_rather_than_the_first():
     l = S['Ledger.cs']
-    counted = method_body(l, "internal static int InAll")
+    counted = method_body(l, "internal static int InAll(ItemRoster roster, ItemObject item)")
+    kept = method_body(l, "internal static int InAll(ItemRoster roster, EquipmentElement el)")
     stocks = method_body(l, "private static Dictionary<ItemObject, int> WhatItStocks")
-    return (counted and stocks
+    return (counted and kept and stocks
             and "for (int i = 0; roster != null && i < roster.Count; i++)" in counted
             and "if (roster.GetItemAtIndex(i) == item) held += roster.GetElementNumber(i);" in counted
+            and ("int held = 0;\n"
+                 "            for (int i = 0; roster != null && i < roster.Count; i++)\n"
+                 "            {\n"
+                 "                EquipmentElement at = roster.GetElementCopyAtIndex(i).EquipmentElement;\n"
+                 "                if (at.Item == el.Item && at.ItemModifier == el.ItemModifier) held += roster.GetElementNumber(i);\n"
+                 "            }\n"
+                 "            return held;") in kept
             and "return InAll(s.ItemRoster, item);" in method_body(l, "internal static int StockOf")
             and "held[item] = had + shelf.GetElementNumber(i);" in stocks
-            and "int took = Math.Min(bought, InAll(carried, item));" in l
+            and "int took = Math.Min(bought, InAll(carried, element.EquipmentElement));" in l
             and S['Trading.cs'].count("LedgerBehavior.InAll(") == 5
             and "GetItemNumber(" not in ALL + "\n" + M)
 
@@ -11339,7 +11347,7 @@ def every_trade_you_make_at_a_market_is_told_to_the_checks_once():
                         "var moved = new List<(ItemObject item, int intoTheMarket)>();",
                         "int bought = Deals.UnitsMoved(element.Amount, said, unit);",
                         "moved.Add((item, -bought));",
-                        "int took = Math.Min(bought, InAll(carried, item));",
+                        "int took = Math.Min(bought, InAll(carried, element.EquipmentElement));",
                         "int gone = Deals.UnitsMoved(element.Amount, said, unit);",
                         "moved.Add((item, gone));",
                         "Hindsight.YouTraded(here, moved);",
@@ -11544,7 +11552,7 @@ def a_purchase_made_away_from_a_market_is_written_down_at_what_it_cost():
     body = method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange")
     paid = method_body(S['Rules.cs'], "public static int PaidForWhatYouKept")
     return (body and paid
-            and ordered(body, "int took = Math.Min(bought, InAll(carried, item));",
+            and ordered(body, "int took = Math.Min(bought, InAll(carried, element.EquipmentElement));",
                         "here == null", "? Deals.PaidForWhatYouKept(said, bought, took)",
                         ": Bulk.PricePaid(here, element.EquipmentElement, took, unit)")
             and "if (kept >= bought) return gold;" in paid
@@ -11743,8 +11751,8 @@ def a_tooltip_prices_every_market_at_the_quality_you_hover():
                     "KeepTheBest(sells);", "KeepTheBest(buys);",
                     "AtThisQuality(sells, held);", "AtThisQuality(buys, held);")
             and "TradeMath.AtThisQuality(markets[i].price, held.Item.Value, held.ItemValue)" in scale
-            and ordered(cost, "int basis = ledger.GetCostBasis(item);",
-                        "ledger.HasPurchaseRecord(item) && Options.Current.CostBasisMode != 2",
+            and ordered(cost, "int basis = ledger.GetCostBasis(held);",
+                        "ledger.HasPurchaseRecord(held) && Options.Current.CostBasisMode != 2",
                         "? basis",
                         ": TradeMath.AtThisQuality(basis, item.Value, held.ItemValue);")
             and ordered(append, "EquipmentElement held = itemVm.ItemRosterElement.EquipmentElement;",
@@ -11812,6 +11820,68 @@ def straight_back_is_an_hour_from_the_last_time_whatever_the_clock_says():
 
 chk("1.91.4", "meeting the same party again or walking back into the same market counts as the same meeting or visit for an hour after the last meeting or after you walked out, however the clock turns in between, and each meeting straight away carries that hour on",
     straight_back_is_an_hour_from_the_last_time_whatever_the_clock_says())
+
+def what_you_paid_is_kept_for_each_quality_of_a_good():
+    codec = S['LedgerCodec.cs']
+    l = S['Ledger.cs']
+    t = S['Trading.cs']
+    passes = S['Passes.cs']
+    policy = S['Policy.cs']
+    tip = S['TooltipPatches.cs']
+    hand = method_body(l, "private void OnPlayerInventoryExchange")
+    match = method_body(l, "private void MatchPurchasesToWhatIsHeld")
+    herd = between(t, "string paidKey = LedgerBehavior.PaidKey(el.EquipmentElement);",
+                   "int credited = TradePolicy.Credit(price, worth, basis.UnpaidWorth);")
+    return ("public const char QualityMark = '@';" in codec
+            and "string.IsNullOrEmpty(qualityId) ? itemId : itemId + QualityMark + qualityId;" in codec
+            and "el.Item == null ? null : LedgerCodec.PaidKey(el.Item.StringId, el.ItemModifier?.StringId);" in l
+            and all(one in l for one in (
+                "public bool HasPurchaseRecord(EquipmentElement el) =>",
+                "public int PurchasedUnits(EquipmentElement el) =>",
+                "public int GetCostBasis(EquipmentElement el)",
+                "public int PaidPerUnit(EquipmentElement el)"))
+            and l.count("Paid.TryGetValue(PaidKey(el), out var rec)") == 4
+            and "Paid.TryGetValue(item.StringId" not in l
+            and "string key = PaidKey(el.EquipmentElement);" in match
+            and ordered(hand, "int took = Math.Min(bought, InAll(carried, element.EquipmentElement));",
+                        "RecordPurchase(PaidKey(element.EquipmentElement), took,",
+                        "RecordSale(PaidKey(element.EquipmentElement), gone);")
+            and "if (at.Item == el.Item && at.ItemModifier == el.ItemModifier)" in l
+            and "RecordPurchase(item.StringId" not in t + l
+            and "RecordSale(item.StringId" not in t + l
+            and "RecordSale(Item(at).StringId" not in t
+            and "offered.Add((LedgerBehavior.PaidKey(el.EquipmentElement), el.Amount," in S['Encounters.cs']
+            and "string PaidKeyAt(int at);" in passes
+            and "Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at)," in passes
+            and "if (basis.SoldOne()) books.NotePaidDrawn(market.PaidKeyAt(at));" in passes
+            and "NotePaidDrawn(good.Id)" not in passes
+            and "public string PaidKeyAt(int at) => LedgerBehavior.PaidKey(_plan[at].EquipmentElement);" in t
+            and "public int CostBasis(int at) => TradePolicy.CostBasis(_plan[at].EquipmentElement);" in t
+            and "public int PurchasedUnits(int at) => LedgerBehavior.Instance?.PurchasedUnits(_plan[at].EquipmentElement) ?? 0;" in t
+            and "LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1);" in t
+            and t.count("RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), 1, price);") == 2
+            and "RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), 1, cost);" in t
+            and ordered(herd, "Basis basis = Basis.For(TradePolicy.CostBasis(el.EquipmentElement),",
+                        "LedgerBehavior.Instance?.PurchasedUnits(el.EquipmentElement) ?? 0,",
+                        "paidKey, pass.Books, pass.Sim, Options.Current);",
+                        "if (pass.Sim) pass.Books.NotePaidDrawn(paidKey);",
+                        "else LedgerBehavior.Instance?.RecordSale(paidKey, 1);")
+            and "(LedgerBehavior.Instance?.HasPurchaseRecord(el) ?? false);" in policy
+            and "HasCostBasis(el) ? (LedgerBehavior.Instance?.GetCostBasis(el) ?? el.Item.Value) : 0;" in policy
+            and "int paid = CostBasis(el);" in method_body(policy, "internal static int WorthToBeat(EquipmentElement el)")
+            and "TradePolicy.WorthToBeat(el.EquipmentElement)" in S['Marker.cs']
+            and "TradePolicy.WorthToBeat(el.EquipmentElement)" in t
+            and "TradePolicy.WorthToBeat(held.EquipmentElement)" in t
+            and "int basis = ledger.GetCostBasis(held);" in tip
+            and "return ledger.HasPurchaseRecord(held) && Options.Current.CostBasisMode != 2" in tip
+            and "int paid = ledger.PaidPerUnit(held);" in tip
+            and "A_good_of_a_quality_is_written_down_apart_from_a_plain_one" in TESTS
+            and "What_you_paid_for_each_quality_comes_back_from_the_save_apart" in TESTS
+            and "A_dry_run_keeps_what_you_paid_for_each_quality_of_a_good_apart" in SELLPASSTESTS)
+
+
+chk("1.91.5", "what you paid is written down, drawn down and read back for each quality of a good on its own, on a real pass and a dry run alike, so a lame horse and a sound one never share one record",
+    what_you_paid_is_kept_for_each_quality_of_a_good())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

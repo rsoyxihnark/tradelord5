@@ -335,10 +335,10 @@ namespace TradeLord
             for (int i = 0; i < carried.Count; i++)
             {
                 ItemRosterElement el = carried.GetElementCopyAtIndex(i);
-                ItemObject item = el.EquipmentElement.Item;
-                if (item == null || el.Amount <= 0) continue;
-                held.TryGetValue(item.StringId, out int had);
-                held[item.StringId] = had + el.Amount;
+                string key = PaidKey(el.EquipmentElement);
+                if (key == null || el.Amount <= 0) continue;
+                held.TryGetValue(key, out int had);
+                held[key] = had + el.Amount;
             }
             int goods = 0, units = 0;
             var dropped = new List<string>();
@@ -477,9 +477,9 @@ namespace TradeLord
                         : item.Value;
                     int bought = Deals.UnitsMoved(element.Amount, said, unit);
                     moved.Add((item, -bought));
-                    int took = Math.Min(bought, InAll(carried, item));
+                    int took = Math.Min(bought, InAll(carried, element.EquipmentElement));
                     if (took <= 0) continue;
-                    RecordPurchase(item.StringId, took,
+                    RecordPurchase(PaidKey(element.EquipmentElement), took,
                                    here == null
                                        ? Deals.PaidForWhatYouKept(said, bought, took)
                                        : Bulk.PricePaid(here, element.EquipmentElement, took, unit));
@@ -493,7 +493,7 @@ namespace TradeLord
                         : item.Value;
                     int gone = Deals.UnitsMoved(element.Amount, said, unit);
                     moved.Add((item, gone));
-                    RecordSale(item.StringId, gone);
+                    RecordSale(PaidKey(element.EquipmentElement), gone);
                 }
                 Hindsight.YouTraded(here, moved);
                 CaptureSettlement(Settlement.CurrentSettlement, force: true);
@@ -581,26 +581,30 @@ namespace TradeLord
             if (Paid.TryGetValue(itemId, out var rec)) TradeMath.DrainSale(rec, count);
         }
 
-        public bool HasPurchaseRecord(ItemObject item) =>
-            item != null && Paid.TryGetValue(item.StringId, out var rec) && rec.Count > 0;
+        internal static string PaidKey(EquipmentElement el) =>
+            el.Item == null ? null : LedgerCodec.PaidKey(el.Item.StringId, el.ItemModifier?.StringId);
 
-        public int PurchasedUnits(ItemObject item) =>
-            item != null && Paid.TryGetValue(item.StringId, out var rec) && rec.Count > 0 ? rec.Count : 0;
+        public bool HasPurchaseRecord(EquipmentElement el) =>
+            el.Item != null && Paid.TryGetValue(PaidKey(el), out var rec) && rec.Count > 0;
 
-        public int GetCostBasis(ItemObject item)
+        public int PurchasedUnits(EquipmentElement el) =>
+            el.Item != null && Paid.TryGetValue(PaidKey(el), out var rec) && rec.Count > 0 ? rec.Count : 0;
+
+        public int GetCostBasis(EquipmentElement el)
         {
+            ItemObject item = el.Item;
             if (item == null) return 0;
-            Paid.TryGetValue(item.StringId, out var rec);
+            Paid.TryGetValue(PaidKey(el), out var rec);
             int unit = TradeMath.UnitBasis(rec, Options.Current.CostBasisMode);
             if (unit != TradeMath.NoRecordedBasis) return unit;
             var best = BestBuy(item);
             return best.price > 0 ? best.price : item.Value;
         }
 
-        public int PaidPerUnit(ItemObject item)
+        public int PaidPerUnit(EquipmentElement el)
         {
-            if (item == null) return TradeMath.NoRecordedBasis;
-            Paid.TryGetValue(item.StringId, out var rec);
+            if (el.Item == null) return TradeMath.NoRecordedBasis;
+            Paid.TryGetValue(PaidKey(el), out var rec);
             return TradeMath.UnitBasis(rec, 0);
         }
 
@@ -720,6 +724,17 @@ namespace TradeLord
             int held = 0;
             for (int i = 0; roster != null && i < roster.Count; i++)
                 if (roster.GetItemAtIndex(i) == item) held += roster.GetElementNumber(i);
+            return held;
+        }
+
+        internal static int InAll(ItemRoster roster, EquipmentElement el)
+        {
+            int held = 0;
+            for (int i = 0; roster != null && i < roster.Count; i++)
+            {
+                EquipmentElement at = roster.GetElementCopyAtIndex(i).EquipmentElement;
+                if (at.Item == el.Item && at.ItemModifier == el.ItemModifier) held += roster.GetElementNumber(i);
+            }
             return held;
         }
 

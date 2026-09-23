@@ -139,6 +139,7 @@ namespace TradeLord
         bool MaySell(int at, in Good good, out int keep, out Block why);
         int YoursToSell(int at);
         int CostBasis(int at);
+        string PaidKeyAt(int at);
         int PurchasedUnits(int at);
         int UnpaidWorth(int at);
         bool ResaleMarket(int at, out int price);
@@ -432,7 +433,7 @@ namespace TradeLord
                 int remaining = market.YoursToSell(at) - keep;
                 if (remaining <= 0) { tally.Note(Block.TradedHereAlready); continue; }
 
-                Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), good.Id,
+                Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),
                                         books, sim, s);
 
                 int bestMarketFloor = 0;
@@ -483,7 +484,7 @@ namespace TradeLord
                                            herdRank != TradeRules.RankLivestock);
                         moved.Units++;
                         remaining--;
-                        if (basis.SoldOne()) books.NotePaidDrawn(good.Id);
+                        if (basis.SoldOne()) books.NotePaidDrawn(market.PaidKeyAt(at));
                         market.Staged(at, price);
                         continue;
                     }
