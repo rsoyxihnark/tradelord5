@@ -11731,5 +11731,55 @@ chk("1.91.2", "meeting the same party on the road again keeps its books only wit
 chk("1.91.2", "a town or village the game cannot say you may trade in is traded in not at all, and the log says why",
     a_market_the_game_cannot_answer_for_is_left_alone())
 
+
+def a_tooltip_prices_every_market_at_the_quality_you_hover():
+    tip = S['TooltipPatches.cs']
+    markets = method_body(tip, "private static (ItemObject item, List<(Settlement town, int price)> sells,")
+    scale = method_body(tip, "private static void AtThisQuality")
+    cost = method_body(tip, "private static int CostAtThisQuality")
+    append = method_body(tip, "internal static void Append(ItemMenuVM vm, ItemVM itemVm)")
+    return (ordered(markets, "EquipmentElement held = itemVm.ItemRosterElement.EquipmentElement;",
+                    "KeepTheBest(sells);", "KeepTheBest(buys);",
+                    "AtThisQuality(sells, held);", "AtThisQuality(buys, held);")
+            and "TradeMath.AtThisQuality(markets[i].price, held.Item.Value, held.ItemValue)" in scale
+            and ordered(cost, "int basis = ledger.GetCostBasis(item);",
+                        "ledger.HasPurchaseRecord(item) && Options.Current.CostBasisMode != 2",
+                        "? basis",
+                        ": TradeMath.AtThisQuality(basis, item.Value, held.ItemValue);")
+            and ordered(append, "EquipmentElement held = itemVm.ItemRosterElement.EquipmentElement;",
+                        "? CostAtThisQuality(ledger, held)")
+            and append.count("Priced.At(market, held, MobileParty.MainParty,") == 3
+            and "Priced.At(market, item," not in append)
+
+
+def the_feature_list_says_where_the_ledger_shows_what_it_shows():
+    panel = S['Panel.cs']
+    refresh = method_body(panel, "private void Refresh()")
+    runs = method_body(panel, "public string RunsOut")
+    road = method_body(S['Trading.cs'], "private static IMarketData PricedOnTheRoad")
+    return (ordered(refresh, "LegendText = (empty", "+ HowThePromiseHasHeld()",
+                    "NothingHereYouCouldBuy(hero)", "LegendText = OneClauseToALine(LegendText);")
+            and "The line under the routes says" not in README
+            and "It says under the routes" not in README
+            and "What this means says how much of that promised Sell price has actually been there" in README
+            and "What this means says when your gold reserve is what is stopping you buying" in README
+            and ordered(runs, "hours < 48f", 'Tongue.Text("{=TL414}h")', 'Tongue.Text("{=TL415}d")')
+            and "in hours, or in days from two days on" in README
+            and 'Text="@TradeXpText"' in PREFAB
+            and "the running total of what TradeLord has made you and the Trade XP it has earned you" in README
+            and "return TheirOfferFrom(met);" in road
+            and "IMarketData kept = Priced.Kept(near);" in road
+            and "off-market" not in README
+            and "at the prices the game's own trade screen or the villagers' own offer would charge you" in README
+            and "GiveGoldAction.ApplyForCharacterToParty(Hero.MainHero, shop, price, true);" in S['Trading.cs']
+            and "Every TradeLord unit goes through the game's own sale." not in COMPARISON
+            and "Every TradeLord unit in a market goes through the game's own sale." in COMPARISON)
+
+
+chk("1.91.3", "an item's tooltip prices every market it names, the market you stand in and a cost read off a market at the quality of the good you hover, while a cost you paid stays what you paid",
+    a_tooltip_prices_every_market_at_the_quality_you_hover())
+chk("1.91.3", "the feature list puts the promise tally and the gold reserve line in What this means, names Left's days and the Trade XP along the top, and says what a trade on the road is priced at, and the comparison says only a trade in a market goes through the game's own sale",
+    the_feature_list_says_where_the_ledger_shows_what_it_shows())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

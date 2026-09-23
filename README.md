@@ -29,11 +29,11 @@
 - ✅ A confidence score on each route, which starts at profit per day and is marked down by everything that could eat it
 - ✅ What marks it down: how much of the margin survives unit by unit pricing, how much of the good the seller has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
 - ✅ The panel keeps its own score, writing down the Sell price it promised you and holding it against what that market really pays when you walk in near the time it said
-- ✅ The line under the routes says how much of that promised Sell price has actually been there, over how many prices it has checked, and the tally carries on across your campaign
+- ✅ What this means says how much of that promised Sell price has actually been there, over how many prices it has checked, and the tally carries on across your campaign
 - ✅ The panel learns from that, and a market that has paid less than it promised is scored lower, so routes selling there fall down the list
 - ✅ It keeps a record for each market on its own, written into your save, counts it only once you have walked into that market five times, and can never move a route's Score by more than a quarter
 - ✅ Trust a market by what it has paid turns that off
-- ✅ How long each route lasts, under Left, which says how many hours the shelf still holds the amount the route quotes before the caravans heading there buy it out
+- ✅ How long each route lasts, under Left, which says how long the shelf still holds the amount the route quotes before the caravans heading there buy it out, in hours, or in days from two days on
 - ✅ Left is blank when nobody TradeLord can see is coming for that good
 - ✅ Prices and stock that count what is still on its way: the cargo the caravans will unload, what that town's workshops will make next, and the purses those caravans are bringing to spend
 - ✅ That purse is spread over the goods that are cheap there, which is what a trader would really take off the shelf
@@ -44,7 +44,7 @@
 - ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
 - ✅ It reads that purse live, so with Live world prices off it plans on the stock alone
 - ✅ A route listed whether or not your purse could pay for it today, or your herd is already as large as your men can drive, so the panel always shows you where the profit is
-- ✅ It says under the routes when your gold reserve is what is stopping you buying
+- ✅ What this means says when your gold reserve is what is stopping you buying
 - ✅ Click any town to jump the camera there and pin a marker on it, and a pin comes off by itself once TradeLord has traded in that town
 - ✅ The best market for the cargo you are carrying, a town or a village, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement
 - ✅ It counts only the goods it would really sell there, the ones that clear Minimum profit margin, so it never sends you somewhere it will then refuse to sell
@@ -53,7 +53,7 @@
 - ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that town's purse, how far away it is and the market it beat
 - ✅ The five workshops in Calradia earning the most right now, with their town, what each will make next and their owner, on that same panel
 - ✅ With Live world prices turned off it shows yours instead
-- ✅ Your gold, your cargo against what your party can carry, your party's speed and the running total of what TradeLord has made you, along the top of that same panel
+- ✅ Your gold, your cargo against what your party can carry, your party's speed, the running total of what TradeLord has made you and the Trade XP it has earned you, along the top of that same panel
 - ✅ A warning on screen when your purse is under your gold reserve, or your cargo is too full to buy anything, so a market that trades nothing is never a mystery
 - ✅ A name on one of your item lists that matches no good in this game said on screen and named in the log, instead of quietly doing nothing
 
@@ -123,7 +123,7 @@
 - ✅ Any good you put on the never-sell or never-buy list, named by its item id or by the name on screen
 - ✅ More livestock than your party can drive, so a purchase never slows you down
 - ✅ Markets belonging to a faction you are at war with
-- ✅ The game's economy: it trades at the game's own prices, through the game's own buying and selling. On the road, where there is no market to sell to, it moves the goods and the gold itself, at the price the game quotes off-market
+- ✅ The game's economy: it trades at the game's own prices, through the game's own buying and selling. On the road, where there is no market to sell to, it moves the goods and the gold itself, at the prices the game's own trade screen or the villagers' own offer would charge you
 
 **Settings, when you want to change anything**
 
