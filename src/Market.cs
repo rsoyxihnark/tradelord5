@@ -94,9 +94,14 @@ namespace TradeLord
         private int _stopsAt = -1;
 
         internal Ladder(Settlement site, ItemObject item, bool selling, int quoted, int landed)
+            : this(site, new EquipmentElement(item), selling, quoted, landed)
+        {
+        }
+
+        internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)
         {
             _selling = selling;
-            _shelf = new Shelf(site, new EquipmentElement(item), selling, quoted, projecting: true, landed: landed);
+            _shelf = new Shelf(site, stocked, selling, quoted, projecting: true, landed: landed);
         }
 
         internal bool Walkable => _shelf.Walkable;
