@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.90.19
+
+- Fixed TradeLord trading with a caravan on the road at each good's own worth instead of the nearest town's prices, as the trade screen does
+
 ## 1.90.18
 
 - Fixed TradeLord selling animals as you left a town or village while Staged Trading was on
