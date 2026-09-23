@@ -7455,7 +7455,7 @@ def a_figure_is_read_once_it_is_walked_into_and_no_more_are_kept_than_it_says():
             and 'Log.Repeatable("forecast check", "full",' in noted
             and "Dictionary<string, Said> here = _said.TakeAt(site.StringId);" in written
             and ordered(taken, "_by.Remove(site);", "_count -= here.Count;", "if (_count < 0) _count = 0;")
-            and "if (!Writing || scored == 0) return;" in written
+            and "if (!Writing || scored + stale + early == 0) return;" in written
             and "no worth is kept for a kind of good here, which only a town does" in written
             and "It_fills_up_at_six_hundred" in SCORINGTESTS
             and "Walking_into_a_market_takes_every_promise_it_held_for_that_market" in SCORINGTESTS)
@@ -7520,7 +7520,7 @@ def a_promise_is_scored_against_the_price_the_market_actually_pays():
             and "TradeMath.BandOf(confidence)" in method_body(S['Scoring.cs'], "internal void Add")
             and ordered(kept, "LedgerBehavior.Instance?.KeepPromiseScore(held);",
                         "LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(heldTotal, scored));",
-                        "if (!Writing || scored == 0) return;")
+                        "if (!Writing || scored + stale + yours + unpriced == 0) return;")
             and kept.index("LedgerBehavior.Instance?.KeepArrival(") >
                 kept.rindex("heldTotal += held;")
             and "A_market_that_puts_no_price_on_a_good_scores_nothing" in SCORINGTESTS
@@ -8867,8 +8867,8 @@ def nothing_the_game_hands_back_is_read_as_a_count_without_the_one_door():
             and all(named == 'said' for _, named, _ in lists)
             and 'var (el, said) = lines[i];' in t
             and both.count('Deals.UnitsMoved(') == 3
-            and 'int gone = Deals.UnitsMoved(element.Amount, said, unit);' in l
-            and 'RecordSale(item.StringId, gone);' in l
+            and ordered(l, 'int gone = Deals.UnitsMoved(element.Amount, said, unit);',
+                        'moved.Add((item, gone));', 'RecordSale(item.StringId, gone);')
             and 'int bought = Deals.UnitsMoved(element.Amount, said, unit);' in l
             and 'int count = Deals.UnitsMoved(el.Amount, said, price);' in t
             and 'RecordSale(item.StringId, said)' not in l
@@ -9296,7 +9296,7 @@ def a_markets_record_counts_your_walk_ins_not_the_prices_it_checked():
             and kept.index("LedgerBehavior.Instance?.KeepArrival(") >
                 kept.rindex("heldTotal += held;")
             and kept.index("LedgerBehavior.Instance?.KeepArrival(") <
-                kept.index("if (!Writing || scored == 0) return;")
+                kept.index("if (!Writing || scored + stale + yours + unpriced == 0) return;")
             and "TradeMath.MeanOf(heldTotal, scored));" in kept
             and "if (scored > 0)" in kept
             and "TradeMath.AddPromise(rec, held);" in arrival
@@ -10961,9 +10961,9 @@ def the_forecast_is_scored_whatever_the_debug_switch_says():
             and "internal static bool On => Forecast.On;" in h
             and "Writing" not in note and "Writing" not in score
             and written.find("LedgerBehavior.Instance?.KeepForecastScore(") <
-                written.find("if (!Writing || scored == 0) return;")
-            and "if (!Writing || scored == 0) return;" in written
-            and "if (!Writing || scored == 0) return;" in method_body(h, "private static void Kept"))
+                written.find("if (!Writing || scored + stale + early == 0) return;")
+            and "if (!Writing || scored + stale + early == 0) return;" in written
+            and "if (!Writing || scored + stale + yours + unpriced == 0) return;" in method_body(h, "private static void Kept"))
 
 
 chk("1.90.6", "the forecast is held to what really moved whatever the debug switch says, so the share it is counted at is learned by every campaign and not only by one writing a log",
@@ -11243,21 +11243,30 @@ def your_own_buying_and_selling_is_left_out_of_a_forecast_figure():
             and "internal int StockYours;" in said and "internal int WorthYours;" in said
             and "_said.Rework(site.StringId, kept =>" in left
             and "bool worthKept = site.IsTown;" in left
-            and "if (item == kept.Item) kept.StockYours = TradeMath.AddedUp(kept.StockYours, into);" in left
-            and "if (worthKept && item.ItemCategory != null && item.ItemCategory == kept.Item.ItemCategory)" in left
-            and "TradeMath.YourOwnWorth(into, item.Value));" in left
+            and ordered(left, "(kept.StockYours, kept.WorthYours) = Scoring.YoursAdded(",
+                        "kept.StockYours, kept.WorthYours, item == kept.Item,",
+                        "item.ItemCategory != null && item.ItemCategory == kept.Item.ItemCategory,",
+                        "worthKept, into, item.Value);")
+            and "return (sameGood ? TradeMath.AddedUp(stockYours, into) : stockYours," in
+                method_body(S['Scoring.cs'], "internal static (int stock, int worth) YoursAdded")
+            and "worthKept && sameKind ? TradeMath.AddedUp(worthYours, TradeMath.YourOwnWorth(into, value))" in
+                method_body(S['Scoring.cs'], "internal static (int stock, int worth) YoursAdded")
             and "long worth = (long)unitsIn * unitValue;" in worth
             and "kept.StockYours, kept.WorthYours);" in written
             and "how.Landed = TradeMath.WithoutYours(TradeMath.MissedBy(stockThen, stockNow), stockYours);" in weighed
             and "? TradeMath.WithoutYours(TradeMath.MissedBy(worthThen, worthNow), worthYours)" in weighed
             and "int stockYours = 0, int worthYours = 0)" in weighed
-            and 'Counted(how.LandingOff) + Yours(kept.StockYours, " unit(s)") +' in written
-            and 'Counted(how.WorthOff) + Shared(how.Share) + Yours(kept.WorthYours, " denars"));' in written
+            and 'Counted(how.LandingOff) + Yours(kept.StockYours, false) +' in written
+            and 'Counted(how.WorthOff) + Shared(how.Share) + Yours(kept.WorthYours, true));' in written
             and all(one in SCORINGTESTS for one in
                     ("What_you_bought_there_yourself_is_not_counted_as_leaving",
                      "What_you_sold_there_yourself_is_not_counted_as_landing",
                      "A_figure_nobody_traded_against_is_weighed_exactly_as_before",
-                     "The_log_says_what_it_left_out_of_your_own_trading"))
+                     "The_log_says_what_it_left_out_of_your_own_trading",
+                     "A_trade_in_the_good_itself_counts_its_units_and_its_worth",
+                     "A_trade_in_another_good_of_the_kind_counts_only_its_worth",
+                     "A_trade_in_a_good_of_another_kind_counts_nothing",
+                     "A_market_that_keeps_no_worth_counts_only_the_units_you_moved"))
             and all(one in MATHTESTS for one in
                     ("What_you_put_into_a_market_is_worth_its_units_at_the_good_s_own_value",
                      "Your_own_trades_add_up_without_ever_wrapping_round",
@@ -11294,7 +11303,7 @@ def a_promise_your_own_trading_moved_is_set_aside_rather_than_scored():
             and ordered(kept, "if (Scoring.TooOldToSay(said.WithinDays, said.AtHours, now, out float since))",
                         "stale++;", "if (said.YourTradeMovedIt)", "yours++;",
                         "int found = Priced.At(market, said.Item, MobileParty.MainParty, true);")
-            and '" set aside because your own trading moved that price"' in kept
+            and '" set aside because your own trading has moved the price since it was promised"' in kept
             and "one => !one.YourTradeMovedIt && !Scoring.TooOldToSay(" in room
             and all(one in SCORINGTESTS for one in
                     ("Reworking_a_market_changes_only_what_it_holds_for_that_market",
@@ -11369,30 +11378,89 @@ def the_marker_check_weighs_a_sale_against_the_first_figure_for_what_you_carry()
     carried = method_body(m, "private static List<(EquipmentElement item, int amount, int worth, int floor)> "
                              "WhatYouCarryToSell")
     stands = method_body(S['Rules.cs'], "internal static bool FirstLookStands")
-    signed = method_body(S['Rules.cs'], "internal static string Carried")
-    return (remember and score and carry and carried and stands and signed
+    eaten = method_body(S['Rules.cs'], "internal static bool OnlyEatenFrom")
+    return (remember and score and carry and carried and stands and eaten
             and ordered(remember, "_saidValue = how.Value;", "_lastValue = target == null ? 0L : how.Value;",
                         "_lastAt = Freshness.Hour;",
-                        "if (Marks.FirstLookStands(_markedId, lookingAt, _markedCargo, _cargoSignature, _markedValue)) return;",
-                        "_markedCargo = _cargoSignature;", "_markedId = lookingAt;",
+                        "if (Marks.FirstLookStands(_markedId, lookingAt, _markedCargo, _cargoHeld, _markedValue)) return;",
+                        "_markedCargo = _cargoHeld;", "_markedId = lookingAt;",
                         "_markedAt = Freshness.Hour;")
-            and ordered(carried, "_cargo = cargo;", "_cargoSignature = Marks.Carried(Signed(cargo));", "return cargo;")
-            and ordered(carry, "_cargoVersion = -1;", "_cargoSignature = null;")
+            and ordered(carried, "_cargo = cargo;", "_cargoHeld = Held(cargo);", "return cargo;")
+            and ordered(carry, "_cargoVersion = -1;", "_cargoHeld = null;")
             and "markedValue > 0L && markedAt != null && markedAt == lookingAt &&" in stands
-            and "markedCargo != null && markedCargo == cargoNow;" in stands
-            and "held.Sort(" in signed
+            and "OnlyEatenFrom(markedCargo, cargoNow);" in stands
+            and "if (then == null || now == null) return false;" in eaten
             and ordered(score, "long said = _markedValue;", "long last = _lastValue;",
                         "_markedValue = 0L;", "_lastValue = 0L;",
                         'Log.Write("marker check at "', '" of what it marked on"',
                         '"; its last look, "', '" of that"')
             and all(one in SCORINGTESTS for one in
-                    ("A_cargo_reads_the_same_whatever_order_it_is_packed_in",
-                     "A_cargo_with_a_unit_more_or_a_good_less_reads_as_another_cargo",
-                     "The_marker_keeps_its_first_figure_while_it_points_at_the_same_town_for_the_same_cargo")))
+                    ("The_same_cargo_packed_in_another_order_is_the_same_cargo",
+                     "Anything_bought_or_found_since_makes_it_another_cargo",
+                     "The_marker_keeps_its_first_figure_while_it_points_at_the_same_town_and_you_have_only_eaten")))
 
 
 chk("1.90.16", "the marker check weighs a sale against the figure the marker first gave for the town it points at and the cargo you still carry, and names its last look beside it, so it says whether the pick held over the ride rather than reading its own last look back",
     the_marker_check_weighs_a_sale_against_the_first_figure_for_what_you_carry())
+
+
+def nothing_is_written_down_while_a_deal_is_laid_out_on_the_trade_screen():
+    note = method_body(S['Hindsight.cs'], "internal static void Note")
+    counter = S['Counter.cs']
+    return (note
+            and "if (route == null || route.Item == null || Counter.Staging) return;" in note
+            and ordered(note, "Counter.Staging) return;", 'Guard.Run("Hindsight.Promise", () => Promise(route));',
+                        'Guard.Run("Hindsight.Note", () =>')
+            and "internal static bool Staging => _logic != null;" in counter
+            and "_logic = logic;" in method_body(counter, "private static bool Opened")
+            and "_logic = null;" in method_body(counter, "private static void Drop")
+            and "Drop();" in method_body(counter, "internal static TextObject Settle"))
+
+
+chk("1.90.17", "no forecast figure or promise is written down while TradeLord lays a deal out on the trade screen, because the market it would read already holds goods that may never move, so a laid out deal counts against neither check whether you take it or cancel it",
+    nothing_is_written_down_while_a_deal_is_laid_out_on_the_trade_screen())
+
+
+def the_marker_keeps_its_first_figure_while_your_party_only_eats():
+    eaten = method_body(S['Rules.cs'], "internal static bool OnlyEatenFrom")
+    held = method_body(S['Marker.cs'], "private static List<(string good, int amount, bool food)> Held")
+    return (eaten and held
+            and "if (was.food ? one.Value > was.amount : one.Value != was.amount) return false;" in eaten
+            and "if (!had.TryGetValue(one.Key, out var was)) return false;" in eaten
+            and "if (!one.Value.food && !has.ContainsKey(one.Key)) return false;" in eaten
+            and "cargo[i].amount, el.Item.IsFood));" in held
+            and all(one in SCORINGTESTS for one in
+                    ("Food_your_party_ate_on_the_road_leaves_the_cargo_the_same",
+                     "A_good_that_is_not_food_sold_off_on_the_way_makes_it_another_cargo",
+                     "The_same_good_split_across_two_lots_is_counted_as_one")))
+
+
+chk("1.90.17", "the marker check keeps the first figure for the town it points at while your cargo only loses food your party eats, and starts again the moment anything is bought, found or sold off, so a ride of several days is weighed against where it began",
+    the_marker_keeps_its_first_figure_while_your_party_only_eats())
+
+
+def a_check_says_so_when_everything_at_a_market_was_passed_over_or_set_aside():
+    h = S['Hindsight.cs']
+    kept = method_body(h, "private static void Kept")
+    written = method_body(h, "private static void Written")
+    yours = method_body(S['Scoring.cs'], "internal static string Yours")
+    return (kept and written and yours
+            and ordered_last(kept, "if (!Writing || scored + stale + yours + unpriced == 0) return;",
+                             'lines.Insert(0, "promise check at "', "if (scored > 0)",
+                             '"  here: the price held at "', "Log.WriteMany(lines);")
+            and kept.count("if (scored > 0)") == 2
+            and ordered(written, "if (!Writing || scored + stale + early == 0) return;",
+                        'lines.Insert(0, "forecast check at "', '(scored == 0 ? "" : ":"));',
+                        "if (scored > 0)", '"  in all: the landing figure was off by "', "Log.WriteMany(lines);")
+            and '" set aside because your own trading has moved the price since it was promised"' in kept
+            and '" (not counting "' in yours and '"goods worth "' in yours
+            and '" your own trading "' in yours and '"took off"' in yours and '"put on"' in yours
+            and '" there yourself"' not in yours
+            and "The_log_says_what_it_left_out_of_your_own_trading" in SCORINGTESTS)
+
+
+chk("1.90.17", "the forecast and promise checks write their line for a market even when every figure there was passed over or set aside, and say goods worth so many denars rather than denars you bought",
+    a_check_says_so_when_everything_at_a_market_was_passed_over_or_set_aside())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

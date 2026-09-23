@@ -62,7 +62,7 @@ namespace TradeLord
         private static Stamp _cargoStamp;
         private static int _cargoVersion = -1;
         private static List<(EquipmentElement item, int amount, int worth, int floor)> _cargo;
-        private static string _cargoSignature;
+        private static List<(string good, int amount, bool food)> _cargoHeld;
 
         private static string _markedId;
         private static long _markedValue;
@@ -71,7 +71,7 @@ namespace TradeLord
         private static float _markedRate;
         private static float _markedDays;
         private static int _markedAt = -1;
-        private static string _markedCargo;
+        private static List<(string good, int amount, bool food)> _markedCargo;
         private static long _lastValue;
         private static int _lastAt = -1;
 
@@ -102,7 +102,7 @@ namespace TradeLord
             _cargo = null;
             _cargoStamp.Stale();
             _cargoVersion = -1;
-            _cargoSignature = null;
+            _cargoHeld = null;
         }
 
         internal static void ForgetTheRead()
@@ -241,8 +241,8 @@ namespace TradeLord
             string lookingAt = target == null ? null : target.StringId;
             _lastValue = target == null ? 0L : how.Value;
             _lastAt = Freshness.Hour;
-            if (Marks.FirstLookStands(_markedId, lookingAt, _markedCargo, _cargoSignature, _markedValue)) return;
-            _markedCargo = _cargoSignature;
+            if (Marks.FirstLookStands(_markedId, lookingAt, _markedCargo, _cargoHeld, _markedValue)) return;
+            _markedCargo = _cargoHeld;
             _markedId = lookingAt;
             _markedValue = target == null ? 0L : how.Value;
             _markedEarned = target == null ? 0L : how.Value - how.Cost;
@@ -394,20 +394,20 @@ namespace TradeLord
                            TradePolicy.WorthToBeat(item), BestMarketFloor(item)));
             }
             _cargo = cargo;
-            _cargoSignature = Marks.Carried(Signed(cargo));
+            _cargoHeld = Held(cargo);
             return cargo;
         }
 
-        private static List<(string good, int amount)> Signed(
+        private static List<(string good, int amount, bool food)> Held(
             List<(EquipmentElement item, int amount, int worth, int floor)> cargo)
         {
-            var held = new List<(string good, int amount)>(cargo.Count);
+            var held = new List<(string good, int amount, bool food)>(cargo.Count);
             for (int i = 0; i < cargo.Count; i++)
             {
                 EquipmentElement el = cargo[i].item;
                 if (el.Item == null) continue;
                 held.Add((el.ItemModifier == null ? el.Item.StringId : el.Item.StringId + "@" + el.ItemModifier.StringId,
-                          cargo[i].amount));
+                          cargo[i].amount, el.Item.IsFood));
             }
             return held;
         }
