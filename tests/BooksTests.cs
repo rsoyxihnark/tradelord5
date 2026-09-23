@@ -393,5 +393,65 @@ namespace TradeLord.Tests
             books.Forget();
             Assert.Equal(0, books.PaidDrawn(true, "mule"));
         }
+
+        [Fact]
+        public void ADealLaidOutOnTheTradeScreenLeavesWhatIsCarriedToTheGoodsItMoved()
+        {
+            Books books = Fresh();
+            books.LaidOut = true;
+            books.NotePurchase("grain", 40, 1.5f, 1);
+            books.NoteSale("wool", 30, 2f, 0);
+            books.NoteShed(haulAnimal: true, spareMount: false);
+            books.NoteShed(haulAnimal: false, spareMount: true);
+            books.NoteHerdTaken();
+
+            Assert.Equal(0f, books.Weight(true));
+            Assert.Equal(0, books.FoodHeld(true));
+            Assert.Equal(0, books.Shed(true));
+            Assert.Equal(0, books.MountsShed(true));
+            Assert.Equal(0, books.HaulsShed(true));
+            Assert.Equal(0, books.HerdTaken(true));
+            Assert.Equal(0, books.Held(true, "grain"));
+            Assert.Equal(0, books.Held(true, "wool"));
+            Assert.Equal(0, books.Stocked(true, "grain"));
+        }
+
+        [Fact]
+        public void ADealLaidOutOnTheTradeScreenStillCountsTheGoldAndWhatItTraded()
+        {
+            Books books = Fresh();
+            books.LaidOut = true;
+            books.NotePurchase("grain", 40, 1.5f, 1);
+            books.NoteSale("wool", 30, 2f, 0);
+            books.NotePaidDrawn("wool");
+
+            Assert.Equal(40, books.PaidOut(true));
+            Assert.Equal(-10, books.Purse(true));
+            Assert.Equal(-10, books.TillDrawn(true));
+            Assert.Equal((1, 40), books.Purchases(true, "grain"));
+            Assert.Equal(1, books.PaidDrawn(true, "wool"));
+            Assert.True(books.Bought(true, "grain"));
+            Assert.True(books.Sold(true, "wool"));
+            Assert.True(books.Traded(true));
+        }
+
+        [Fact]
+        public void ADryRunThatIsNotLaidOutCarriesWhatItWouldHaveMoved()
+        {
+            Books books = Fresh();
+            books.NotePurchase("grain", 40, 1.5f, 1);
+            books.NoteSale("wool", 30, 2f, 0);
+            books.NoteShed(haulAnimal: true, spareMount: false);
+            books.NoteHerdTaken();
+
+            Assert.Equal(-0.5f, books.Weight(true));
+            Assert.Equal(1, books.FoodHeld(true));
+            Assert.Equal(1, books.Shed(true));
+            Assert.Equal(1, books.HaulsShed(true));
+            Assert.Equal(1, books.HerdTaken(true));
+            Assert.Equal(1, books.Held(true, "grain"));
+            Assert.Equal(-1, books.Held(true, "wool"));
+            Assert.Equal(1, books.Stocked(true, "grain"));
+        }
     }
 }

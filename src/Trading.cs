@@ -254,6 +254,12 @@ namespace TradeLord
                                   settlement.Name + " when you arrived");
                     return;
                 }
+                if (Options.Current.AutoSellOnEntry && Counter.HoldsBack())
+                {
+                    Log.Write("herd relief on the way out of " + settlement.Name + " is held back: Staged Trading " +
+                              "lays the deal out on the trade screen from the menu entry instead, so nothing moved");
+                    return;
+                }
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
             });
             Guard.Run("Action.OnSettlementLeft", Marker.Update);
@@ -385,6 +391,7 @@ namespace TradeLord
                 Market = site?.SettlementComponent;
                 Shop = site != null ? site.Party : met.Party;
                 Books = books;
+                books.LaidOut = Counter.Staging;
                 Party = party;
                 Me = party.Party;
                 Sim = Options.Current.SimulationMode || Counter.Staging;
@@ -1336,8 +1343,8 @@ namespace TradeLord
                         if (pass.Sim)
                         {
                             simSpent += price;
-                            simWeight += item.Weight;
                             pass.Books.NotePurchase(item.StringId, price, good.Weight, fed);
+                            simWeight = pass.Books.Weight(pass.Sim);
                             Counter.Stage(el, selling: false, price);
                         }
                         else
@@ -1535,9 +1542,7 @@ namespace TradeLord
                         {
                             simTill -= price;
                             simGold += price;
-                            pass.Books.NoteSale(item.StringId, price,
-                                                rank == RankHaulAnimal ? 0f : item.Weight,
-                                                TradePolicy.FoodValue(item));
+                            pass.Books.NoteSale(item.StringId, price, 0f, TradePolicy.FoodValue(item));
                             pass.Books.NoteShed(rank == RankHaulAnimal, rank != RankLivestock);
                             Counter.Stage(el, selling: true, price);
                         }
