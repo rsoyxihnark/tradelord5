@@ -865,7 +865,7 @@ namespace TradeLord
                 took.Units += count;
                 took.Gold += said;
                 if (selling)
-                    took.Profit += TradeMath.Credit(price, TradePolicy.WorthToBeat(item),
+                    took.Profit += TradeMath.Credit(price, TradePolicy.WorthToBeat(el.EquipmentElement),
                                                     TradePolicy.UnpaidWorth(item)) * count;
                 pass.Tally(item, count, said);
             }
@@ -1201,7 +1201,7 @@ namespace TradeLord
                 if (item == null || held.Amount <= 0) return 0;
                 int price = pass.Price(held.EquipmentElement, selling: true);
                 if (price <= 0) return 0;
-                long gain = ((long)price - TradePolicy.WorthToBeat(item)) * held.Amount;
+                long gain = ((long)price - TradePolicy.WorthToBeat(held.EquipmentElement)) * held.Amount;
                 if (gain <= 0L) return 0;
                 return gain > int.MaxValue ? int.MaxValue : (int)gain;
             }
@@ -1230,9 +1230,11 @@ namespace TradeLord
 
             public int YoursToSell(int at) => _pass.YoursToSell(_plan[at]);
 
-            public int CostBasis(int at) => TradePolicy.CostBasis(Item(at));
+            public string PaidKeyAt(int at) => LedgerBehavior.PaidKey(_plan[at].EquipmentElement);
 
-            public int PurchasedUnits(int at) => LedgerBehavior.Instance?.PurchasedUnits(Item(at)) ?? 0;
+            public int CostBasis(int at) => TradePolicy.CostBasis(_plan[at].EquipmentElement);
+
+            public int PurchasedUnits(int at) => LedgerBehavior.Instance?.PurchasedUnits(_plan[at].EquipmentElement) ?? 0;
 
             public int UnpaidWorth(int at) => TradePolicy.UnpaidWorth(Item(at));
 
@@ -1267,7 +1269,7 @@ namespace TradeLord
             }
 
             public void RecordedSale(int at) =>
-                LedgerBehavior.Instance?.RecordSale(Item(at).StringId, 1);
+                LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1);
         }
 
         private const float HoldShareOff = 0f;
@@ -1365,7 +1367,7 @@ namespace TradeLord
                         {
                             if (!pass.BuyOne(el, price, "restocking", "Restocking", out price)) break;
                             if (price == 0) break;
-                            LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, price);
+                            LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), 1, price);
                             pass.Books.NoteBought(item.StringId, price);
                         }
                         stocked++;
@@ -1581,9 +1583,10 @@ namespace TradeLord
                         remaining -= spare;
                     }
 
-                    Basis basis = Basis.For(TradePolicy.CostBasis(item),
-                                            LedgerBehavior.Instance?.PurchasedUnits(item) ?? 0,
-                                            item.StringId, pass.Books, pass.Sim, Options.Current);
+                    string paidKey = LedgerBehavior.PaidKey(el.EquipmentElement);
+                    Basis basis = Basis.For(TradePolicy.CostBasis(el.EquipmentElement),
+                                            LedgerBehavior.Instance?.PurchasedUnits(el.EquipmentElement) ?? 0,
+                                            paidKey, pass.Books, pass.Sim, Options.Current);
 
                     while (remaining > 0 && shed > 0)
                     {
@@ -1614,8 +1617,8 @@ namespace TradeLord
                         }
                         if (basis.SoldOne())
                         {
-                            if (pass.Sim) pass.Books.NotePaidDrawn(item.StringId);
-                            else LedgerBehavior.Instance?.RecordSale(item.StringId, 1);
+                            if (pass.Sim) pass.Books.NotePaidDrawn(paidKey);
+                            else LedgerBehavior.Instance?.RecordSale(paidKey, 1);
                         }
                         int credited = TradePolicy.Credit(price, worth, basis.UnpaidWorth);
                         profit += credited;
@@ -1707,7 +1710,7 @@ namespace TradeLord
                         {
                             if (!pass.BuyOne(el, price, "buying a haul animal", "Haul animal buying", out price)) break;
                             if (price == 0) break;
-                            LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, price);
+                            LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), 1, price);
                             pass.Books.NoteBought(item.StringId, price);
                         }
                         hauled++;
@@ -1949,7 +1952,7 @@ namespace TradeLord
                 _pass.Quote(item, 1, price);
                 if (!_pass.BuyOne(Shelf[at], price, _what, _named, out cost)) return false;
                 if (cost == 0) return true;
-                LedgerBehavior.Instance?.RecordPurchase(item.StringId, 1, cost);
+                LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), 1, cost);
                 _pass.Tally(item, 1, cost);
                 return true;
             }

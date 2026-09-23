@@ -67,8 +67,8 @@ namespace TradeLord
         private static int CostAtThisQuality(LedgerBehavior ledger, EquipmentElement held)
         {
             ItemObject item = held.Item;
-            int basis = ledger.GetCostBasis(item);
-            return ledger.HasPurchaseRecord(item) && Options.Current.CostBasisMode != 2
+            int basis = ledger.GetCostBasis(held);
+            return ledger.HasPurchaseRecord(held) && Options.Current.CostBasisMode != 2
                 ? basis
                 : TradeMath.AtThisQuality(basis, item.Value, held.ItemValue);
         }
@@ -106,7 +106,7 @@ namespace TradeLord
                 ? CostAtThisQuality(ledger, held)
                 : Priced.At(market, held, MobileParty.MainParty, false);
 
-            int paid = ledger.PaidPerUnit(item);
+            int paid = ledger.PaidPerUnit(held);
             if (paid > 0)
                 AddLine(vm, Tongue.Text("{=TL409}You paid").ToString(), paid + GoldIcon, Title);
 
