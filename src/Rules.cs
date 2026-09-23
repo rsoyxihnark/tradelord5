@@ -103,25 +103,38 @@ namespace TradeLord
 
     internal static class Marks
     {
-        internal static string Carried(List<(string good, int amount)> cargo)
+        internal static bool OnlyEatenFrom(List<(string good, int amount, bool food)> then,
+                                           List<(string good, int amount, bool food)> now)
         {
-            if (cargo == null || cargo.Count == 0) return "";
-            var held = new List<(string good, int amount)>(cargo);
-            held.Sort((x, y) =>
+            if (then == null || now == null) return false;
+            var had = new Dictionary<string, (int amount, bool food)>(StringComparer.Ordinal);
+            foreach (var (good, amount, food) in then)
             {
-                int byGood = string.CompareOrdinal(x.good, y.good);
-                return byGood != 0 ? byGood : x.amount.CompareTo(y.amount);
-            });
-            var said = new System.Text.StringBuilder();
-            for (int i = 0; i < held.Count; i++)
-                said.Append(held[i].good).Append(" x").Append(held[i].amount).Append(';');
-            return said.ToString();
+                had.TryGetValue(good, out var was);
+                had[good] = (was.amount + amount, food);
+            }
+            var has = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var (good, amount, _) in now)
+            {
+                has.TryGetValue(good, out int was);
+                has[good] = was + amount;
+            }
+            foreach (var one in has)
+            {
+                if (!had.TryGetValue(one.Key, out var was)) return false;
+                if (was.food ? one.Value > was.amount : one.Value != was.amount) return false;
+            }
+            foreach (var one in had)
+                if (!one.Value.food && !has.ContainsKey(one.Key)) return false;
+            return true;
         }
 
-        internal static bool FirstLookStands(string markedAt, string lookingAt, string markedCargo,
-                                             string cargoNow, long markedValue) =>
+        internal static bool FirstLookStands(string markedAt, string lookingAt,
+                                             List<(string good, int amount, bool food)> markedCargo,
+                                             List<(string good, int amount, bool food)> cargoNow,
+                                             long markedValue) =>
             markedValue > 0L && markedAt != null && markedAt == lookingAt &&
-            markedCargo != null && markedCargo == cargoNow;
+            OnlyEatenFrom(markedCargo, cargoNow);
     }
 
     internal static class MapButton
