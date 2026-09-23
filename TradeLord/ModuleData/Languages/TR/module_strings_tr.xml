@@ -109,7 +109,7 @@
 		<string id="TL266" text="Kaç günlük ücret için altın tut" />
 		<string id="TL366" text="Yukarıdaki altın rezervinin üstüne, askerlerinizin bu kadar günlük ücretini de ayırır, böylece bir alışveriş turu maaşları yemez. TradeLord her ticaret yaptığında gerçek ücret yükünüzden hesaplanır, yani orduyla birlikte büyür. 0 yalnızca sabit rezervi tutar." />
 		<string id="TL267" text="Yük hayvanı satın al" />
-		<string id="TL367" text="Bir katır, yük atı, iş atı, binek atı ya da yük devesi; herhangi bir yük hayvanı al, böylece partin daha çok taşısın. Yavaşlamadan sürebileceğinden fazlasını asla almaz ve altının rezervine inmeden durur. Aşağıdaki iki ayar ne kadar altın beklediğini ve ne kadar ödeyeceğini söyler. Varsayılan AÇIK."/>
+		<string id="TL367" text="Bir katır, yük atı, iş atı, binek atı ya da yük devesi; herhangi bir yük hayvanı alır, böylece bölüğünüz daha çok taşır. Yavaşlamadan sürebileceğinizden fazlasını asla almaz ve altınınız rezervinize inmeden durur. Aşağıdaki iki ayar ne kadar altın beklediğini ve ne kadar ödeyeceğini söyler. Varsayılan AÇIK."/>
 		<string id="TL269" text="Haydutlardan serbest geçiş" />
 		<string id="TL369" text="Çapulcularla ya da haydutlarla karşılaştığınızda TradeLord, geçmenize izin vermelerini isteyen bir konuşma satırı ekler. Bunu söylemek karşılaşmayı dövüşsüz ve fidyesiz bitirir, birkaç saat sizi rahat bırakırlar. Varsayılan olarak AÇIK." />
 		<string id="TL270" text="Sat" />
@@ -170,7 +170,7 @@
 		<string id="TL248" text="Ayrıntılı ticaret özeti"/>
 		<string id="TL249" text="Ticaret iletilerini sustur" />
 		<string id="TL301" text="AÇIK (varsayılan): fiyatlar dünya ekonomisinden canlı okunur, gitmediğiniz pazarlar dâhil. KAPALI: yalnızca kendi gözünüzle gördüğünüz fiyatlar kullanılır."/>
-		<string id="TL303" text="Sizinle savaşta olan yerleşimleri asla tarama, önerme ve onlarla otomatik ticaret yapma."/>
+		<string id="TL303" text="Sizinle savaşta olan yerleşimleri asla taramaz, önermez ve onlarla otomatik ticaret yapmaz."/>
 		<string id="TL305" text="En iyi alış ipuçları için stokta en az bu kadar parça olmalı. 0 = kapalı. Yalnızca canlı fiyat kipinde: gözlem kipi fiyatları kaydeder, stok düzeylerini değil."/>
 		<string id="TL306" text="TradeLord'un bir şehri kaç günlük yol uzaklığa kadar aradığı. Bundan uzaktaki şehirler ipuçlarında gizlenir, rotalardan çıkarılır ve harita işaretinden uzak tutulur; önerilen hiçbir rota bunu aşamaz. 0 yapılırsa sınır kalkar, böylece Calradia'daki her şehir tartılır ve defterin hesaplanması çok daha uzun sürer. Varsayılan 2.4."/>
 		<string id="TL307" text="Köyler için aynı sınır, onları şehirlerden daha yakın tutabilmeniz için ayrı. Varsayılan 1."/>
@@ -190,19 +190,19 @@
 		<string id="TL322" text="Otomatik ticaretin yiyecekle ne yapabileceği. Günlük yiyecek rezervi ayrıdır ve yine geçerlidir."/>
 		<string id="TL323" text="Otomatik ticaretin kömür, sert odun, demir cevheri ve külçelerle ne yapabileceği. Demircilik stokunu otomatik ticaretin tümüyle dışında tutmak için Dokunma seçin."/>
 		<string id="TL324" text="Otomatik ticaretin koyun, sığır ve domuzla ne yapabileceği. Alış, oyunun kendi sürü hesabıyla sınırlanır, bu yüzden müfrezeyi sürü hız cezasına sokmaz. Yük hayvanlarının ve binek atlarının kendi ayarları vardır, bu ayar onlara işlemez."/>
-		<string id="TL325" text="Eşsiz ya da oyuncunun dövdüğü eşyaları asla otomatik satma. Bir yük hayvanı, burada ne ayarlarsanız ayarlayın, kural gereği asla satılmaz; onu ancak açık bir her zaman sat girdisi kımıldatabilir."/>
+		<string id="TL325" text="Eşsiz ya da oyuncunun dövdüğü eşyaları asla otomatik satmaz. Bir yük hayvanı, burada ne ayarlarsanız ayarlayın, kural gereği asla satılmaz; onu ancak açık bir her zaman sat girdisi kımıldatabilir."/>
 		<string id="TL326" text="Envanter ekranında kilitli eşyalar asla otomatik satılmaz. Satarken bir kilit, oyunun sakladığı gibi eşya ve niteliğiyle eşleştirilir. Alırken yalnızca eşyayla eşleştirilir, yani bir mala koyduğunuz kilit TradeLord'un o maldan hangi nitelikte olursa olsun daha fazla almasını durdurur."/>
 		<string id="TL327" text="Bir satışın ölçüldüğü fiyat: hem TradeLord'un bildirdiği kârı hem de satışın kazandırdığı Ticaret tecrübesini belirler. Hiç almadıklarınız, ganimet dâhil, hangisini seçerseniz seçin bildiğiniz en ucuz pazara göre değerlenir."/>
 		<string id="TL328" text="Bu kademeye kadar olan silah ve zırhları da satar. 1. kademeden başlar, yani çapulcuların ve haydutların düşürdüğü teçhizattan. Kilitler ve korumalar yine geçerlidir."/>
 		<string id="TL329" text="Bu pazar bilinen en iyi pazardan belirgin biçimde az ödüyorsa burada satmayı atlar, böylece kargonuz karşılığını veren şehri bekler. Aldığınızı da yağmaladığınızı da aynı şekilde elde tutar. Varsayılan olarak KAPALI; o durumda yağmalanmış teçhizat karşılığını ödeyebilen ilk pazara gider."/>
-		<string id="TL330" text="Bu pazar bilinen en iyi fiyatın en az bu oranını ödüyorsa yine de burada sat. Yukarıdaki ayar KAPALIYKEN hiçbir şey yapmaz."/>
+		<string id="TL330" text="Bu pazar bilinen en iyi fiyatın en az bu oranını ödüyorsa yine de burada satar. Yukarıdaki ayar KAPALIYKEN hiçbir şey yapmaz."/>
 		<string id="TL331" text="TradeLord'un asla satmaması gereken mallar. Her birini eşya kimliğiyle, TradeLord.log'un yazdığı grain ya da iron_ore gibi kısa adla, ya da oyunun gösterdiği adla, virgülle ayırarak yazın. Alırken de bunlara dokunmaz."/>
 		<string id="TL332" text="TradeLord'un kategori kurallarını, benzersiz ve el yapımı korumasını ve yiyecek rezervini aşarak her zaman sattığı mallar. Yukarıdaki gibi adlandırılır. Asla satma listesi, envanter kilidi ve bir görevin beklediği bir mal yine de geçerlidir. Bir yük hayvanını kârla satmanın tek yolu budur."/>
-		<string id="TL334" text="Bu altının altına asla harcama. Varsayılan 300; bu, iki düşman karşılaşmasından pazarlıkla çıkmaya ve alışveriş sonrası bir maaş ödemesini karşılamaya yeter."/>
+		<string id="TL334" text="Harcarken bu kadar altının altına asla inmez. Varsayılan 300; bu, iki düşman karşılaşmasından pazarlıkla çıkmaya ve alışveriş sonrası bir maaş ödemesini karşılamaya yeter."/>
 		<string id="TL335" text="TradeLord'un bir ziyarette bir maldan aldığı en fazla birim. 0 = sayıda sınır yok. Varsayılan 32."/>
-		<string id="TL336" text="Ziyaret başına mal başına harcamayı dinar olarak da sınırla."/>
+		<string id="TL336" text="Ziyaret başına mal başına harcamayı dinar olarak da sınırlar."/>
 		<string id="TL337" text="TradeLord'un yerleşim ziyareti başına harcayabileceği toplam dinar. Varsayılan 1000."/>
-		<string id="TL338" text="En iyi satış fiyatının yalnızca bu oranının siz varana kadar duracağını varsay."/>
+		<string id="TL338" text="En iyi satış fiyatının yalnızca bu oranının siz varana kadar duracağını varsayar."/>
 		<string id="TL339" text="Tahıl ağır ve kâr payı düşüktür, bu yüzden almak yükü az getiriyle doldurur. Satış ve yiyecek rezervi etkilenmez. Varsayılan AÇIK."/>
 		<string id="TL340" text="TradeLord'un asla almaması gereken mallar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Satışları etkilenmez."/>
 		<string id="TL341" text="TradeLord köy menülerinde ticaret yapar ve köyler fiyat taramalarına katılır."/>
@@ -210,8 +210,8 @@
 		<string id="TL343" text="Bu sefer gününden önce, menüden ya da girişte, TradeLord ticaret yapmaz. Yeni bir seferde fiyatlar henüz oturmamıştır."/>
 		<string id="TL344" text="Otomatik kâr için verilen Ticaret tecrübesini ölçekler. 0 tecrübeyi kapatır."/>
 		<string id="TL345" text="Harita izleyicisini, orada gerçekten satabileceği kargoya en çok ödeyen erişilebilir pazara taşır; yalnızca En az kâr payını geçenleri sayar ve siz at sürerken sizi takip eder. Bir köy yalnızca Köylerle ticaret yap açıkken işaretlenir. Yol süresi sınırlarına uyar. Varsayılan olarak AÇIK; defter panelinde bir şehre tıklamak yine elle işaret koyar."/>
-		<string id="TL347" text="Bir geçiş gerçekten bir şey taşıdığında bozuk para sesi çal. Hiçbir şey taşımayan geçiş sessiz kalır."/>
-		<string id="TL348" text="Tek satırlık ticaret özetinde malları adlandır, örneğin 'TradeLord 8 Zeytin, 3 Şarap sattı, 240 dinar', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
+		<string id="TL347" text="Bir geçiş gerçekten bir şey taşıdığında bozuk para sesi çalar. Hiçbir şey taşımayan geçiş sessiz kalır."/>
+		<string id="TL348" text="Tek satırlık ticaret özetinde malları adlandırır, örneğin 'TradeLord 8 Zeytin, 3 Şarap sattı, 240 dinar', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
 		<string id="TL349" text="Kendiliğinden yapılan ticaret, hem bir pazara girdiğinizde hem de yolda bir kervanla ya da bir köylü bölüğüyle karşılaştığınızda, ekranda satır olmadan yalnızca TradeLord.log dosyasına bildirir. Uyarılar yine de ekranda görünür: yükünüzün dolu olması, kesenizin Altın rezervinin altına düşmesi ve bir mal listesi girdinizin hiçbir mala uymaması. Menüdeki ticaret girdisi her zaman bildirir."/>
 		<string id="TL100" text="Dil"/>
 		<string id="TL101" text="Bilgi"/>
@@ -222,8 +222,8 @@
 		<string id="TL106" text="Genel"/>
 		<string id="TL107" text="Hata ayıklama"/>
 		<string id="TL108" text="Ticaret havuzu"/>
-		<string id="TL116" text="TradeLord {ITEMS} sattı, {GOLD} denar aldı, böylece müfrezeniz yeniden hızlanır."/>
-		<string id="TL117" text="[Benzetim, en iyi ihtimal] TradeLord {ITEMS} satıp {GOLD} denar alırdı, böylece müfrezeniz yeniden hızlanırdı."/>
+		<string id="TL116" text="TradeLord {ITEMS} sattı, {GOLD} dinar aldı, böylece müfrezeniz yeniden hızlanır."/>
+		<string id="TL117" text="[Benzetim, en iyi durum] TradeLord {ITEMS} satıp {GOLD} dinar alırdı, böylece müfrezeniz yeniden hızlanırdı."/>
 		<string id="TL275" text="Sizi yavaşlatan hayvanları sat"/>
 		<string id="TL375" text="Sürü hız cezasını kaldırmak için hayvan satar, yalnızca ceza üzerinizdeyken ve yalnızca gerektiği kadar. Önce çiftlik hayvanları, sonra binilmeyen bir binek, sonra yük hayvanlarınız, en son da savaş ve soylu atlarınız; taşıdığınızı taşıyacak kadar yük hayvanı elde tutulur. Koruduğunuz hiçbir şeye dokunulmaz. Varsayılan olarak AÇIK."/>
 		<string id="TL276" text="Her ayarı TradeLord'un geldiği haline geri al" />
@@ -235,26 +235,26 @@
 		<string id="TL393" text="Keseniz {GOLD} dinar, TradeLord bunun {RESERVE} kadarını tutuyor: Altın rezervi {FLAT}, Kaç günlük ücret için altın tut ayarı {WAGES}. Bu yüzden burada alabileceğiniz bir şey yok. Biraz yük satın ya da ayarlardan bu ikisinden birini düşürün."/>
 		<string id="TL390" text="TradeLord şehir menülerinde ticaret yapar ve şehirler fiyat taramalarına katılır. Varsayılan olarak AÇIK." />
 		<string id="TL279" text="Bir pazara doğru yolda olanları say"/>
-		<string id="TL396" text="Bir rota ya da ipuçlarındaki bir fiyat hesaplanmadan önce, o pazara senden önce ulaşanları sayar: kervanların boşaltacağı yük, atölyelerin sırada üreteceği mal ve kervanların getirdiği kese, ki kese orada ucuz olan mallara dağıtılıp ne alacaklarının tahmini çıkar. Canlı dünya fiyatları gerekir. KAPALI her pazarı bugünkü hâliyle fiyatlandırır."/>
-		<string id="TL394" text=" | fiyatlar ve stok, sen varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek"/>
+		<string id="TL396" text="Bir rota ya da ipuçlarındaki bir fiyat hesaplanmadan önce, o pazara sizden önce ulaşanları sayar: kervanların boşaltacağı yük, atölyelerin sırada üreteceği mal ve kervanların getirdiği kese, ki kese orada ucuz olan mallara dağıtılıp ne alacaklarının tahmini çıkar. Canlı dünya fiyatları gerekir. KAPALI her pazarı bugünkü hâliyle fiyatlandırır."/>
+		<string id="TL394" text=" | fiyatlar ve stok, siz varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek"/>
 		<string id="TL395" text=" ve her birinin sırada ne üreteceği"/>
-		<string id="TL397" text=" | Adet! = o miktarın bir kısmı hâlâ yolda ve senden önce varıyor"/>
+		<string id="TL397" text=" | Adet! = o miktarın bir kısmı hâlâ yolda ve sizden önce varıyor"/>
 		<string id="TL399" text=" | Satış fiyatı, bu panelin söz verdiğinin {HELD} kadarını tuttu, şimdiye dek denetlediği {COUNT} fiyat üzerinden"/>
-		<string id="TL400" text="Senin yerine ticaret yapmak yerine TradeLord ticaret ekranını açar ve bütün teklifini oraya koyar: satacağı her şey bir yanda, alacağı her şey öbür yanda. İstediğini değiştir, sonra ticaret için Tamam'a bas ya da bırakmak için İptal'e. Bu açıkken varışta hiçbir şey alınıp satılmaz, yolda karşılaşılan bir bölük ise eskisi gibi ticaret yapar. Varsayılan olarak KAPALI."/>
-		<string id="TL401" text="TradeLord satmak için {SOLD} adet ({GAINED} dinar) ve almak için {BOUGHT} adet ({SPENT} dinar) önüne koydu. İstediğini değiştir, sonra ticaret için Tamam'a bas, bırakmak için İptal'e."/>
-		<string id="TL402" text="TradeLord burada ticarete değer bir şey bulamadı, bu yüzden hiçbir şey koymadı. Pazarı olduğu gibi bırakmak için İptal'e bas."/>
-		<string id="TL403" text="TradeLord, sen görene kadar ticaretini bekletiyor. Ticaret ekranına koyması için bu menüden {ENTRY} seç."/>
+		<string id="TL400" text="Sizin yerinize ticaret yapmak yerine TradeLord ticaret ekranını açar ve bütün teklifini oraya koyar: satacağı her şey bir yanda, alacağı her şey öbür yanda. İstediğinizi değiştirin, sonra ticaret için Tamam'a basın ya da bırakmak için İptal'e. Bu açıkken varışta hiçbir şey alınıp satılmaz, yolda karşılaşılan bir bölük ise eskisi gibi ticaret yapar. Varsayılan olarak KAPALI."/>
+		<string id="TL401" text="TradeLord satmak için {SOLD} adet ({GAINED} dinar) ve almak için {BOUGHT} adet ({SPENT} dinar) önünüze koydu. İstediğinizi değiştirin, sonra ticaret için Tamam'a basın, bırakmak için İptal'e."/>
+		<string id="TL402" text="TradeLord burada ticarete değer bir şey bulamadı, bu yüzden hiçbir şey koymadı. Pazarı olduğu gibi bırakmak için İptal'e basın."/>
+		<string id="TL403" text="TradeLord, siz görene kadar ticaretini bekletiyor. Ticaret ekranına koyması için bu menüden {ENTRY} seçin."/>
 		<string id="TL404" text="yükseliyor"/>
 		<string id="TL405" text="düşüyor"/>
 		<string id="TL406" text="Pazarı yükseliyor ya da düşüyor diye işaretle"/>
-		<string id="TL407" text="Bir pazarın fiyatı oraya son baktığın günden bu yana %5 ya da daha fazla oynadıysa, ipucunda o pazarı yükseliyor ya da düşüyor diye işaretler. Bir şey söyleyebilmesi için aynı pazara iki ayrı günde iki kez bakman gerekir. Yalnızca Canlı dünya fiyatları kapalıyken bir işe yarar, çünkü TradeLord fiyatları ancak o zaman kaydeder. Varsayılan olarak KAPALI."/>
-		<string id="TL282" text="Kaydettiğin bir fiyatın saklanacağı gün sayısı"/>
-		<string id="TL408" text="Kendi yazdığın bir fiyat bu kadar gün saklanır, sonra unutulur: buradan daha uzun süre önce baktığın bir pazar artık önerilmez ve kayıttan düşer. 0, her fiyatı kampanyan sürdüğü sürece saklar. Yalnızca Canlı dünya fiyatları kapalıyken bir işe yarar, çünkü TradeLord fiyatları ancak o zaman kaydeder."/>
-		<string id="TL409" text="Ödediğin"/>
+		<string id="TL407" text="Bir pazarın fiyatı oraya son baktığınız günden bu yana %5 ya da daha fazla oynadıysa, ipucunda o pazarı yükseliyor ya da düşüyor diye işaretler. Bir şey söyleyebilmesi için aynı pazara iki ayrı günde iki kez bakmanız gerekir. Yalnızca Canlı dünya fiyatları kapalıyken bir işe yarar, çünkü TradeLord fiyatları ancak o zaman kaydeder. Varsayılan olarak KAPALI."/>
+		<string id="TL282" text="Kaydettiğiniz bir fiyatın saklanacağı gün sayısı"/>
+		<string id="TL408" text="Kendi yazdığınız bir fiyat bu kadar gün saklanır, sonra unutulur: buradan daha uzun süre önce baktığınız bir pazar artık önerilmez ve kayıttan düşer. 0, her fiyatı kampanyanız sürdüğü sürece saklar. Yalnızca Canlı dünya fiyatları kapalıyken bir işe yarar, çünkü TradeLord fiyatları ancak o zaman kaydeder."/>
+		<string id="TL409" text="Ödediğiniz"/>
 		<string id="TL410" text="TradeLord'un doldurabileceği yük payı"/>
-		<string id="TL411" text="Yükün, bölüğünün taşıyabileceğinin bu payına ulaştığında satın almayı bırakır, böylece bir savaşın veya bir görevin sana vereceğine yer kalır. %100 ambarı doldurmasına izin verir. Satış bundan etkilenmez."/>
-		<string id="TL412" text="Yoldaşlarının öğrendiği kâr payı"/>
-		<string id="TL413" text="Yanında giden her yoldaş da bir ticaretten Ticaret tecrübesi kazanır, her biri kârın bu payı kadar. 0, tecrübeyi yalnızca sana bırakır ve TradeLord bununla gelir."/>
+		<string id="TL411" text="Yükünüz, bölüğünüzün taşıyabileceğinin bu payına ulaştığında satın almayı bırakır, böylece bir savaşın veya bir görevin size vereceğine yer kalır. %100 ambarı doldurmasına izin verir. Satış bundan etkilenmez."/>
+		<string id="TL412" text="Yoldaşlarınızın öğrendiği kâr payı"/>
+		<string id="TL413" text="Yanınızda giden her yoldaş da bir ticaretten Ticaret tecrübesi kazanır, her biri kârın bu payı kadar. 0, tecrübeyi yalnızca size bırakır ve TradeLord bununla gelir."/>
 		<string id="TL414" text="s"/>
 		<string id="TL415" text="g"/>
 		<string id="TL416" text="Kalan"/>
@@ -262,25 +262,25 @@
 		<string id="TL418" text="Son ticaretler (son {COUNT})"/>
 		<string id="TL419" text="Son ticaretler: bu seferde henüz ticaret yapılmadı"/>
 		<string id="TL420" text="{DAYS} gün önce"/>
-		<string id="TL421" text="TradeLord'un önüne koyduğu ticaret kapandı: kesen {GOLD} dinar arttı."/>
-		<string id="TL422" text="TradeLord'un önüne koyduğu ticaret kapandı: kesen {GOLD} dinar azaldı."/>
-		<string id="TL423" text="TradeLord'un önüne koyduğu ticaret kapandı ve kesen olduğu yerde."/>
+		<string id="TL421" text="TradeLord'un önünüze koyduğu ticaret kapandı: keseniz {GOLD} dinar arttı."/>
+		<string id="TL422" text="TradeLord'un önünüze koyduğu ticaret kapandı: keseniz {GOLD} dinar azaldı."/>
+		<string id="TL423" text="TradeLord'un önünüze koyduğu ticaret kapandı ve keseniz olduğu yerde."/>
 		<string id="TL424" text="Son ticaretler"/>
 		<string id="TL425" text="Yük hayvanı almadan önce gereken altın (0 = kapalı)"/>
-		<string id="TL426" text="Keseniz bunun üzerine çıkana kadar hiç yük hayvanı alma. Altında kaldıkça TradeLord ne kadar ucuz olursa olsun onlara dokunmaz, böylece erken altın mala gider. 0 ilk dinardan itibaren almasına izin verir. Varsayılan 2000."/>
+		<string id="TL426" text="Keseniz bunun üzerine çıkana kadar hiç yük hayvanı almaz. Altında kaldıkça TradeLord ne kadar ucuz olursa olsun onlara dokunmaz, böylece erken altın mala gider. 0 ilk dinardan itibaren almasına izin verir. Varsayılan 2000."/>
 		<string id="TL427" text="Bir yük hayvanı için ödeyeceği en yüksek tutar"/>
 		<string id="TL428" text="O hayvan için gördüğünüz en ucuz fiyatın ne kadar üstüne kadar TradeLord yine de öder. %100 yalnızca gördüğünüz en ucuz fiyata demektir. Varsayılan 1.25, yani en ucuzun dörtte biri kadar üstüne kadar öder."/>
-		<string id="TL429" text="Sahip olabileceğin en fazla işyeri (0 = oyunun kendi sınırı)"/>
-		<string id="TL430" text="Oyunun kaç işyerine sahip olabileceğine koyduğu sınırı kaldırır. 200, hiç sınır yok demekle aynı kapıya çıkar. 0 kararı oyuna geri bırakır; oyun klan kademen yükseldikçe daha fazlasına izin verir. Varsayılan 200."/>
+		<string id="TL429" text="Sahip olabileceğiniz en fazla işyeri (0 = oyunun kendi sınırı)"/>
+		<string id="TL430" text="Oyunun kaç işyerine sahip olabileceğinize koyduğu sınırı kaldırır. 200, hiç sınır yok demekle aynı kapıya çıkar. 0 kararı oyuna geri bırakır; oyun klan kademeniz yükseldikçe daha fazlasına izin verir. Varsayılan 200."/>
 		<string id="TL431" text="İşyerlerini uzaktan satın al"/>
 		<string id="TL432" text="Bunlar ne demek"/>
 		<string id="TL433" text="Satın al"/>
 		<string id="TL434" text="TradeLord, {TOWN} şehrindeki {SHOP} işyerini {GOLD} dinara satın aldı."/>
-		<string id="TL435" text="Zaten {OWNED} işyerin var; Sahip olabileceğin en fazla işyeri bu kadarına izin veriyor. Bir tane daha almak için TradeLord ayarlarından yükselt."/>
-		<string id="TL436" text="O işyeri {GOLD} dinar ve kesende {PURSE} var."/>
+		<string id="TL435" text="Zaten {OWNED} işyeriniz var; Sahip olabileceğiniz en fazla işyeri bu kadarına izin veriyor. Bir tane daha almak için TradeLord ayarlarından yükseltin."/>
+		<string id="TL436" text="O işyeri {GOLD} dinar ve kesenizde {PURSE} var."/>
 		<string id="TL437" text="Oyun o işyerini devretmedi. Ne olduğunu TradeLord.log söylüyor."/>
 		<string id="TL438" text="{TOWN} şehrindeki {SHOP} işyeri {OWNER} adlı kişiden {GOLD} dinara alınsın mı?"/>
-		<string id="TL439" text="Satılık işyeri: {COUNT}, senin {MOST} hakkından {OWNED} tanesi var"/>
+		<string id="TL439" text="Satılık işyeri: {COUNT}, sizin {MOST} hakkınızdan {OWNED} tanesi var"/>
 		<string id="TL440" text="Erişilebilir hiçbir işyeri bir ileri gelenin satacağı işyeri değil"/>
 		<string id="TL441" text=" Bu alış, TradeLord’un altın rezerv ve asker ücreti karşılığı olarak ayırdığı, mala harcamadığı {HELD} dinarın altına düşmenize yol açar."/>
 		<string id="TL442" text="Bugün"/>
@@ -288,17 +288,17 @@
 		<string id="TL444" text="Bu panelin söz verdiğinden az ödeyen bir pazar daha düşük puan alır, böylece oraya satan rotalar listede aşağı iner. Yalnızca o pazara beş kez girdikten sonra sayılır ve bir rotanın Puanını asla dörtte birden fazla oynatamaz. Rotaları güvene göre sırala gerekir. Varsayılan olarak AÇIK."/>
 		<string id="TL445" text=" | Bu panelin söz verdiğinden az ödemiş bir pazar için Puan düşürülür"/>
 		<string id="TL446" text="?"/>
-		<string id="TL447" text=" | stok, sen varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek; fiyatlar için Toplu fiyat benzetimi gerekir"/>
+		<string id="TL447" text=" | stok, siz varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek; fiyatlar için Toplu fiyat benzetimi gerekir"/>
 		<string id="TL448" text="Ticaret TP: {AMOUNT}" />
 		<string id="TL449" text="TradeLord boş kalmış {COUNT} köy kesesini yeniden doldurdu, böylece o köy dükkanları tekrar alışveriş yapabiliyor."/>
 		<string id="TL450" text="Ulaşılabilir hiçbir pazarda bundan {COUNT} veya daha fazla yok. | Alış önerisi için en az stok bunu istiyor. | Nereden alacağınızı görmek için onu düşürün."/>
 		<string id="TL451" text="Ulaşılabilir hiçbir pazarda bunlardan {COUNT} tane yok, | {WORTH} dinarlık değerde de yok. | Alış önerisi için en az stok | ya da Alış önerisi için en az stok değeri ayarını düşürün."/>
 		<string id="TL452" text="Alış önerisi için en az stok değeri"/>
 		<string id="TL453" text="Bir pazarın elindeki maldan en az bu kadar dinarlık değer varsa, Alış önerisi için en az stok ayarının istediği adetten az tutsa bile o pazar stoklu sayılır. Değer, dükkanın istediği fiyattan değil, malın kendi değerinden sayılır. Mal ne kadar pahalıysa, pazarın o kadar azını tutması yeter. 0 = kapalı. Sadece canlı fiyat kipinde."/>
-		<string id="TL456" text="bunları satacağın pazarın daha fazlasını ödeyecek parası yok"/>
+		<string id="TL456" text="bunları satacağınız pazarın daha fazlasını ödeyecek parası yok"/>
 		<string id="TL457" text="Genişletilmiş hata ayıklama günlüğünü aç"/>
-		<string id="TL458" text="TradeLord'un kendi işleyişini TradeLord.log dosyasına yazar: her pazarın taşıdığın mallara ne ödediğini ve ne istediğini, kapıdan girdiğinde tahminin ve panelin sözünün ne kadar tuttuğunu, ve harita imlecinin tarttığı her şeyi. Tahmin kısmı için Bir pazara doğru yolda olanları say ayarı gerekir. Varsayılan olarak AÇIK; günlüğü kısa tutmak için kapatın."/>
+		<string id="TL458" text="TradeLord'un kendi işleyişini TradeLord.log dosyasına yazar: her pazarın taşıdığınız mallara ne ödediğini ve ne istediğini, kapıdan girdiğinizde tahminin ve panelin sözünün ne kadar tuttuğunu, ve harita imlecinin tarttığı her şeyi. Tahmin kısmı için Bir pazara doğru yolda olanları say ayarı gerekir. Varsayılan olarak AÇIK; günlüğü kısa tutmak için kapatın."/>
 		<string id="TL459" text="Nereye satacağını tüm yüke bakarak seç"/>
-		<string id="TL460" text="TradeLord aldığı her malı, satmayı düşündüğü bir pazar için alır. KAPALI: o pazar tek bir birime ne ödediğine bakılarak seçilir. AÇIK: menzildeki her pazar, tüm yüke ne ödeyeceğine göre yeniden tartılır; sana gerçekte ödenecek olan budur. Girdiğin her pazarda biraz zaman alır. Denendiği sürece AÇIK."/>
+		<string id="TL460" text="TradeLord aldığı her malı, satmayı düşündüğü bir pazar için alır. KAPALI: o pazar tek bir birime ne ödediğine bakılarak seçilir. AÇIK: menzildeki her pazar, tüm yüke ne ödeyeceğine göre yeniden tartılır; size gerçekte ödenecek olan budur. Girdiğiniz her pazarda biraz zaman alır. Denendiği sürece AÇIK."/>
 	</strings>
 </base>

@@ -11212,5 +11212,23 @@ chk("1.90.14", "the trade entry shows while Staged Trading holds trading back as
     the_trade_entry_shows_while_staged_trading_holds_trading_back())
 
 
+def the_turkish_text_speaks_to_you_as_siz_throughout():
+    turkish = spoken(TRANSLATIONS['Türkçe'])
+    letter = '[\\wçğıöşüÇĞİÖŞÜ]'
+    informal = re.compile('(?<!' + letter + ')(sen|senin|sana|seni|senden|sende|kesen|kesende|işyerin|kademen|'
+                          'kampanyan|partin|baktığın|yazdığın|girdiğin|taşıdığın|satacağın|olabileceğin|'
+                          'kaydettiğin|ödediğin|yoldaşlarının)(?!' + letter + ')', re.I)
+    dry = [one for one in turkish.values() if one.startswith('[Benzetim')]
+    return (not [one for one in turkish.values() if informal.search(one)]
+            and not [one for one in turkish.values() if 'denar' in one]
+            and len(dry) == 5 and all(one.startswith('[Benzetim, en iyi durum]') for one in dry)
+            and turkish['TL429'].split(' (')[0] in turkish['TL435']
+            and turkish['TL403'].endswith('{ENTRY} seçin.'))
+
+
+chk("1.90.15", "the Turkish text calls the player siz everywhere, writes dinar in every trade message and tags every dry run line the same way",
+    the_turkish_text_speaks_to_you_as_siz_throughout())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

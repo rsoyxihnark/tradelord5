@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.90.15
+
+- Fixed the Turkish text calling you sen in some places and siz in others
+- Fixed the Turkish messages for Sell animals that slow you down writing denar and best case differently from the other trade messages
+
 ## 1.90.14
 
 - Fixed TradeLord never trading in towns and villages when Staged Trading was on and Trade entry in town menu was off
