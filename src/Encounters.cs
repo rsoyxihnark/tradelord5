@@ -66,9 +66,10 @@ namespace TradeLord
         private static (Type quest, FieldInfo many)[] _readHerds;
         private static (Type quest, FieldInfo kind, FieldInfo many)[] _readWeapons;
         private static Dictionary<string, ItemObject> _goods;
-        private static bool _unreadable;
+        private static bool _allRead;
+        private static bool _animalsRead;
 
-        internal static void Forget() { _read = null; _readGoods = null; _readHerds = null; _readWeapons = null; _goods = null; _unreadable = false; }
+        internal static void Forget() { _read = null; _readGoods = null; _readHerds = null; _readWeapons = null; _goods = null; }
 
         private static ItemObject Good(string id)
         {
@@ -81,13 +82,15 @@ namespace TradeLord
             return _goods.TryGetValue(id, out ItemObject found) ? found : null;
         }
 
-        internal static bool Known => Readable();
+        internal static bool Known { get { Read(); return _allRead; } }
 
-        private static bool Readable()
+        internal static bool AnimalsKnown { get { Read(); return _animalsRead; } }
+
+        private static void Read()
         {
-            if (_unreadable) return false;
-            if (_read != null) return true;
-            var found = new (Type, FieldInfo, FieldInfo)[Named.Length];
+            if (_read != null) return;
+            bool allRead = true, animalsRead = true;
+            var found = new List<(Type, FieldInfo, FieldInfo)>();
             for (int i = 0; i < Named.Length; i++)
             {
                 FieldInfo wanted = Named[i].quest.GetField(
@@ -96,45 +99,45 @@ namespace TradeLord
                     Named[i].many, BindingFlags.Instance | BindingFlags.NonPublic);
                 if (wanted == null || many == null)
                 {
-                    _unreadable = true;
+                    allRead = animalsRead = false;
                     Log.Write("quest goods: " + Named[i].quest.Name + " does not say which good it wants " +
-                              "or how many on this game version - no animal is sold at all, so a " +
-                              "quest of yours cannot lose one");
-                    return false;
+                              "or how many on this game version - what it asks for is not held back, and no " +
+                              "animal is sold at all, so a quest of yours cannot lose one");
+                    continue;
                 }
-                found[i] = (Named[i].quest, wanted, many);
+                found.Add((Named[i].quest, wanted, many));
             }
-            var byGood = new (Type, string, FieldInfo)[NamedGoods.Length];
+            var byGood = new List<(Type, string, FieldInfo)>();
             for (int i = 0; i < NamedGoods.Length; i++)
             {
                 FieldInfo many = NamedGoods[i].quest.GetField(
                     NamedGoods[i].many, BindingFlags.Instance | BindingFlags.NonPublic);
                 if (many == null)
                 {
-                    _unreadable = true;
+                    allRead = false;
                     Log.Write("quest goods: " + NamedGoods[i].quest.Name + " does not say how much " +
-                              NamedGoods[i].goodId + " it wants on this game version - no animal is sold " +
-                              "at all, so a quest of yours cannot lose one");
-                    return false;
+                              NamedGoods[i].goodId + " it wants on this game version - that " +
+                              NamedGoods[i].goodId + " is not held back for it");
+                    continue;
                 }
-                byGood[i] = (NamedGoods[i].quest, NamedGoods[i].goodId, many);
+                byGood.Add((NamedGoods[i].quest, NamedGoods[i].goodId, many));
             }
-            var byHerd = new (Type, FieldInfo)[NamedHerds.Length];
+            var byHerd = new List<(Type, FieldInfo)>();
             for (int i = 0; i < NamedHerds.Length; i++)
             {
                 FieldInfo many = NamedHerds[i].quest.GetField(
                     NamedHerds[i].many, BindingFlags.Instance | BindingFlags.NonPublic);
                 if (many == null)
                 {
-                    _unreadable = true;
+                    allRead = animalsRead = false;
                     Log.Write("quest goods: " + NamedHerds[i].quest.Name + " does not say how much livestock " +
                               "it wants on this game version - no animal is sold at all, so a quest of yours " +
                               "cannot lose one");
-                    return false;
+                    continue;
                 }
-                byHerd[i] = (NamedHerds[i].quest, many);
+                byHerd.Add((NamedHerds[i].quest, many));
             }
-            var byWeapon = new (Type, FieldInfo, FieldInfo)[NamedWeapons.Length];
+            var byWeapon = new List<(Type, FieldInfo, FieldInfo)>();
             for (int i = 0; i < NamedWeapons.Length; i++)
             {
                 FieldInfo kind = NamedWeapons[i].quest.GetField(
@@ -143,19 +146,19 @@ namespace TradeLord
                     NamedWeapons[i].many, BindingFlags.Instance | BindingFlags.NonPublic);
                 if (kind == null || many == null)
                 {
-                    _unreadable = true;
+                    allRead = false;
                     Log.Write("quest goods: " + NamedWeapons[i].quest.Name + " does not say which kind of weapon " +
-                              "it wants or how many on this game version - no animal is sold at all, so a " +
-                              "quest of yours cannot lose one");
-                    return false;
+                              "it wants or how many on this game version - those weapons are not held back for it");
+                    continue;
                 }
-                byWeapon[i] = (NamedWeapons[i].quest, kind, many);
+                byWeapon.Add((NamedWeapons[i].quest, kind, many));
             }
-            _read = found;
-            _readGoods = byGood;
-            _readHerds = byHerd;
-            _readWeapons = byWeapon;
-            return true;
+            _readGoods = byGood.ToArray();
+            _readHerds = byHerd.ToArray();
+            _readWeapons = byWeapon.ToArray();
+            _allRead = allRead;
+            _animalsRead = animalsRead;
+            _read = found.ToArray();
         }
 
         internal static Dictionary<ItemObject, int> Promised(out int anyLivestock,
@@ -163,7 +166,7 @@ namespace TradeLord
         {
             anyLivestock = 0;
             weapons = new List<(WeaponClass kind, int many)>();
-            if (!Readable()) return null;
+            Read();
             var promised = new Dictionary<ItemObject, int>();
             var running = Campaign.Current?.QuestManager?.Quests;
             if (running == null) return promised;
