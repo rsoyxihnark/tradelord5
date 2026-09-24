@@ -262,6 +262,22 @@ namespace TradeLord
             return worth > int.MaxValue ? int.MaxValue : (int)worth;
         }
 
+        public const int RichAtThisManyLimits = 5;
+
+        public static int AdaptiveSpendCap(int baseCap, long purseBeforeBuying, bool adaptive)
+        {
+            if (!adaptive || baseCap <= 0) return baseCap;
+            long rich = (long)baseCap * RichAtThisManyLimits;
+            if (purseBeforeBuying <= rich) return baseCap;
+            double more = baseCap * Math.Log((double)purseBeforeBuying / rich, 2d);
+            if (double.IsNaN(more) || more <= 0d) return baseCap;
+            double cap = baseCap + Math.Floor(more);
+            return cap >= int.MaxValue ? int.MaxValue : (int)cap;
+        }
+
+        public static int PerUnit(int gold, int units) =>
+            units <= 0 ? 0 : (int)Math.Round((double)gold / units, MidpointRounding.AwayFromZero);
+
         public static int FewestThatLets(int most, Func<int, bool> lets)
         {
             if (lets == null) return 0;

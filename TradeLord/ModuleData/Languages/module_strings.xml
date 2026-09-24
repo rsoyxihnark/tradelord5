@@ -205,7 +205,7 @@
 		<string id="TL334" text="Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip."/>
 		<string id="TL335" text="Most units of one good TradeLord buys per visit. 0 = no limit on the count. Default 32."/>
 		<string id="TL336" text="Also cap spending per item per visit in denars."/>
-		<string id="TL337" text="Total denars TradeLord may spend per settlement visit. Default 1000."/>
+		<string id="TL337" text="Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows."/>
 		<string id="TL338" text="Assume only this fraction of the best sell price is still available by the time you arrive."/>
 		<string id="TL339" text="Grain is heavy and low margin, so buying it fills the cargo for little return. Selling and the food reserve are unaffected. ON by default."/>
 		<string id="TL340" text="Goods TradeLord must never buy. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected."/>
@@ -312,5 +312,7 @@
 		<string id="TL470" text="Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). {POINTS} more point(s) of {ATTRIBUTE} would let it learn again."/>
 		<string id="TL471" text="Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). Raise your focus in Trade and your {ATTRIBUTE} together to let it learn again."/>
 		<string id="TL472" text="You have {FOCUS} focus point(s) and {POINTS} attribute point(s) left to spend on the character screen."/>
+		<string id="TL473" text="Adaptive spend limit"/>
+		<string id="TL474" text="Lets TradeLord spend more per visit as your purse grows, always on top of Max spend per visit. Until your purse holds five times that limit, the limit stays as set. Past that, it grows by one more Max spend per visit for every doubling of the purse: with 1000 set, 10000 in the purse allows 2000 and 20000 allows 3000. ON by default."/>
 	</strings>
 </base>

@@ -38,6 +38,13 @@ namespace TradeLord
             here[what] = one;
         }
 
+        internal bool TryGet(string site, string what, out TRecord one)
+        {
+            one = default(TRecord);
+            return site != null && what != null && _by.TryGetValue(site, out Dictionary<string, TRecord> here) &&
+                   here.TryGetValue(what, out one);
+        }
+
         internal Dictionary<string, TRecord> TakeAt(string site)
         {
             if (site == null || !_by.TryGetValue(site, out Dictionary<string, TRecord> here)) return null;
@@ -156,6 +163,9 @@ namespace TradeLord
 
         internal static bool TooSoonToSay(float withinDays, float since) =>
             TradeMath.TooSoonToJudge(withinDays, since);
+
+        internal static bool StillToBeJudged(float withinDays, float atHours, float nowHours) =>
+            !TooOldToSay(withinDays, atHours, nowHours, out _);
 
         internal static Holding Weigh(int promised, int found, out float held)
         {

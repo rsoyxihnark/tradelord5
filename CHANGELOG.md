@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.93.0
+
+- Added Adaptive spend limit under Max spend per visit, on out of the box, which lets TradeLord spend more per visit as your purse grows
+- Adaptive spend limit keeps Max spend per visit until your purse is five times it, then adds that much again for every doubling
+- With 1000 as Max spend per visit, Adaptive spend limit lets TradeLord spend 2000 at a 10000 purse and 3000 at 20000
+- Fixed TradeLord's forecast going unchecked when you reach a market before the figure it gave for that market is due
+- TradeLord.log now gives the price a purchase is meant to fetch as the buyer's average over the units bought, not the first unit's price
+- The hint under Max spend per visit now names Adaptive spend limit
+- The feature list now names Adaptive spend limit and how it grows with your purse
+
 ## 1.92.0
 
 - TradeLord now takes the villagers' whole offer whenever it clears your margin, whatever Max spend per visit says

@@ -103,6 +103,10 @@ namespace TradeLord.Tests
 
             public void Staged(int at, int price) => LaidOut.Add(Stalls[at].Good.Id);
 
+            internal readonly List<(int at, int units, int gold)> ResoldFor = new List<(int at, int units, int gold)>();
+
+            public void Resold(int at, int units, int gold) => ResoldFor.Add((at, units, gold));
+
             public bool Take(int at, int price, out int cost)
             {
                 cost = 0;
@@ -141,6 +145,7 @@ namespace TradeLord.Tests
             Assert.Equal(10, lot.Units);
             Assert.Equal(6 * 40 + 4 * 20, lot.Price);
             Assert.True(lot.Weighed);
+            Assert.Equal(new[] { (0, 6, 6 * 90), (1, 4, 4 * 50) }, offer.ResoldFor.ToArray());
 
             Traded moved = TradePass.TakeTheLot(offer, offer.Ledger, sim: false);
             Assert.Equal(10, moved.Units);
