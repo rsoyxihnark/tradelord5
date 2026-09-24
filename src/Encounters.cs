@@ -29,8 +29,6 @@ namespace TradeLord
                 "_requestedTradeGood", "_requestedTradeGoodAmount"),
             (typeof(ArtisanCantSellProductsAtAFairPriceIssueBehavior.ArtisanCantSellProductsAtAFairPriceIssueQuest),
                 "_rawMaterialsToBeDelivered", "_amountOfRawGoodsToBeDelivered"),
-            (typeof(GangLeaderNeedsToOffloadStolenGoodsIssueBehavior.GangLeaderNeedsToOffloadStolenGoodsIssueQuest),
-                "_stolenTradeGood", "_stolenTradeGoodAmount"),
             (typeof(LandLordTheArtOfTheTradeIssueBehavior.LandLordTheArtOfTheTradeIssueQuest),
                 "_selectedItemObject", "_selectedItemObjectCount"),
             (typeof(VillageNeedsToolsIssueBehavior.VillageNeedsToolsIssueQuest),
