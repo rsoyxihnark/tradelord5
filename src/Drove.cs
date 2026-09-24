@@ -215,6 +215,7 @@ namespace TradeLord
                 InventoryCapacityModel model = Campaign.Current?.Models?.InventoryCapacityModel;
                 if (model == null) return 0;
                 bool atSea = Carry.Sailing();
+                if (atSea) return held;
                 ExplainedNumber capacity = model.CalculateInventoryCapacity(party, atSea, true);
                 float carried = model.CalculateTotalWeightCarried(party, atSea).ResultNumber;
                 int packAnimals = party.ItemRoster.NumberOfPackAnimals;
