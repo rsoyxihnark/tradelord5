@@ -441,7 +441,7 @@ namespace TradeLord
         }
 
         private static bool HasCostBasis(EquipmentElement el) =>
-            Options.Current.CostBasisMode == 2 ||
+            (Options.Current.CostBasisMode == 2 && TradeRules.TradedAsMerchandise(Describe(el.Item))) ||
             (LedgerBehavior.Instance?.HasPurchaseRecord(el) ?? false);
 
         internal static int CostBasis(EquipmentElement el) =>
