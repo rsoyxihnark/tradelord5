@@ -40,6 +40,8 @@ namespace TradeLord.Compat
         {
             ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "GetHerdingModifier"),
             ("TaleWorlds.CampaignSystem.Conversation.ConversationSentence", "set_InputToken"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.TradeSkillCampaignBehavior", "ProcessPurchases"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.TradeSkillCampaignBehavior", "ProcessSales"),
         };
 
         private static readonly (string type, string member, string why)[] LotShape =
@@ -108,6 +110,13 @@ namespace TradeLord.Compat
             (Issues + "ArmyNeedsSuppliesIssueBehavior+ArmyNeedsSuppliesIssueQuest", "_requestedWineAmount"),
             (Issues + "HeadmanNeedsGrainIssueBehavior+HeadmanNeedsGrainIssueQuest", "_neededGrainAmount"),
             (Issues + "ArmyNeedsSuppliesIssueBehavior+ArmyNeedsSuppliesIssueQuest", "_requestedLiveStockAmount"),
+            (Issues + "VillageNeedsToolsIssueBehavior+VillageNeedsToolsIssueQuest", "_requestedTradeGood"),
+            (Issues + "VillageNeedsToolsIssueBehavior+VillageNeedsToolsIssueQuest", "_numberOfRequestedGood"),
+            (Issues + "VillageNeedsCraftingMaterialsIssueBehavior+VillageNeedsCraftingMaterialsIssueQuest", "_requestedItem"),
+            (Issues + "VillageNeedsCraftingMaterialsIssueBehavior+VillageNeedsCraftingMaterialsIssueQuest", "_requestedItemAmount"),
+            (Issues + "GangLeaderNeedsWeaponsIssueQuestBehavior+GangLeaderNeedsWeaponsIssueQuest", "_requestedWeaponClass"),
+            (Issues + "GangLeaderNeedsWeaponsIssueQuestBehavior+GangLeaderNeedsWeaponsIssueQuest", "_requestedWeaponAmount"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultInventoryCapacityModel", "_textPackAnimals"),
             ("TaleWorlds.CampaignSystem.Conversation.ConversationManager", "_sentences"),
         };
 

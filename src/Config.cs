@@ -27,6 +27,11 @@ namespace TradeLord
         private static bool _applying;
         private static bool _unreadable;
         private static Dictionary<string, string> _lastSeen;
+        private static readonly List<KeyValuePair<string, string>> _newerLines =
+            new List<KeyValuePair<string, string>>();
+        private static int _newerShape;
+        private static readonly Dictionary<string, (string taken, string written)> _newerValues =
+            new Dictionary<string, (string taken, string written)>(StringComparer.OrdinalIgnoreCase);
 
         private static readonly string[] Header =
         {
@@ -50,6 +55,13 @@ namespace TradeLord
 
         private static FieldInfo[] Fields() =>
             typeof(Options).GetFields(BindingFlags.Public | BindingFlags.Instance);
+
+        private static bool IsASetting(string name)
+        {
+            foreach (FieldInfo field in Fields())
+                if (string.Equals(field.Name, name, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
 
         internal static void Follow()
         {
@@ -183,6 +195,13 @@ namespace TradeLord
 
             var notes = new List<string>();
             bool lifted = Migration.Lift(shape, written, notes);
+            bool newer = shape > Migration.Shape;
+            _newerLines.Clear();
+            _newerValues.Clear();
+            _newerShape = newer ? shape : 0;
+            if (newer)
+                foreach (var line in written)
+                    if (!IsASetting(line.Key)) _newerLines.Add(line);
             bool whipped = Whip.CracksOn(shape);
             if (!whipped)
                 foreach (string note in notes) Log.Write("settings file: " + note);
@@ -218,11 +237,18 @@ namespace TradeLord
                 {
                     if (!known.TryGetValue(line.Key, out FieldInfo field))
                     {
+                        if (newer)
+                        {
+                            Log.Write("settings file: '" + line.Key + "' is a setting from a newer TradeLord, so " +
+                                      "this one leaves it in the file for that version to read");
+                            continue;
+                        }
                         Log.Write("settings file: TradeLord has no setting called '" + line.Key + "', so that line does nothing");
                         continue;
                     }
                     seen.Add(field.Name);
                     if (Taken(field, line.Value)) taken++;
+                    if (newer && Shown(field) != line.Value) _newerValues[field.Name] = (Shown(field), line.Value);
                 }
             }
             finally { _applying = false; }
@@ -240,6 +266,9 @@ namespace TradeLord
                 Write(found, "made the settings screen match it");
             else if (whipped)
                 Write(found, "every setting put back to what TradeLord ships with");
+            else if (newer)
+                Log.Write("settings file: it was written by a newer TradeLord, in shape " + shape + " where this " +
+                          "one reads shape " + Migration.Shape + ", so it is left exactly as it is");
             else if (lifted || shape != Migration.Shape)
                 Write(found, "brought forward from shape " + shape + " to shape " + Migration.Shape);
             else if (seen.Count < known.Count)
@@ -337,14 +366,19 @@ namespace TradeLord
             var lines = new List<KeyValuePair<string, string>>
             {
                 new KeyValuePair<string, string>(Migration.ShapeKey,
-                    Migration.Shape.ToString(CultureInfo.InvariantCulture)),
+                    Math.Max(Migration.Shape, _newerShape).ToString(CultureInfo.InvariantCulture)),
                 new KeyValuePair<string, string>(ChangedKey,
                     DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)),
                 new KeyValuePair<string, string>(WrittenByKey,
                     McmLoader.SettingsInHand ? ByScreen : ByFile),
             };
             foreach (FieldInfo field in Fields())
-                lines.Add(new KeyValuePair<string, string>(field.Name, Shown(field)));
+            {
+                string shown = Shown(field);
+                if (_newerValues.TryGetValue(field.Name, out var kept) && kept.taken == shown) shown = kept.written;
+                lines.Add(new KeyValuePair<string, string>(field.Name, shown));
+            }
+            lines.AddRange(_newerLines);
             try
             {
                 File.WriteAllText(path, SettingsFile.Compose(Header, lines));

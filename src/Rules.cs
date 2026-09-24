@@ -201,6 +201,20 @@ namespace TradeLord
 
         internal static int DrivenInAll(int herd, int mounts, int menOnFoot) =>
             (herd < 0 ? 0 : herd) + MountsNobodyRides(mounts, menOnFoot);
+
+        internal static int HaulAnimalsToSpare(int held, int packAnimals, float packCapacity,
+                                               float addedUp, float capacity, float carried)
+        {
+            if (held <= 0) return 0;
+            float room = TradeMath.Finite(capacity - carried, 0f);
+            if (room <= 0f) return 0;
+            if (packAnimals <= 0 || packCapacity <= 0f) return held;
+            float each = packCapacity / packAnimals;
+            if (addedUp > 0f && capacity > addedUp) each *= capacity / addedUp;
+            double spare = Math.Floor(room / each);
+            if (double.IsNaN(spare) || spare <= 0d) return 0;
+            return spare >= held ? held : (int)spare;
+        }
     }
 
     internal static class Recent
@@ -458,7 +472,7 @@ namespace TradeLord
             bool always = Listed(s.AlwaysBuySet, good);
             if (!always && !toFeed && s.NeverBuyGrain && good.IsGrain)
             { why = Block.GrainSwitch; return false; }
-            if (!always && !TradeMath.PolicyAllows(PolicyFor(good, s), buying: true))
+            if (!always && !toFeed && !TradeMath.PolicyAllows(PolicyFor(good, s), buying: true))
             { why = Block.CategoryPolicy; return false; }
             if (good.HasHorse)
             {

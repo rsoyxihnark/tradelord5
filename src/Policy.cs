@@ -264,12 +264,27 @@ namespace TradeLord
             List<TradeRules.Ration> carried = Carried(roster, books, sim, byId);
             Dictionary<ItemObject, int> keep =
                 Named(TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current), byId);
-            awaited = Errands.Promised(out int anyLivestock);
+            awaited = Errands.Promised(out int anyLivestock, out List<(WeaponClass kind, int many)> weapons);
             if (awaited == null) return keep;
             foreach (var owed in Named(TradeRules.LivestockKeep(carried, anyLivestock), byId))
             {
                 awaited.TryGetValue(owed.Key, out int had);
                 awaited[owed.Key] = had + owed.Value;
+            }
+            foreach (var (kind, many) in weapons)
+            {
+                int left = many;
+                foreach (TradeRules.Ration held in carried)
+                {
+                    if (left <= 0) break;
+                    ItemObject item = byId[held.Good.Id];
+                    if (item.WeaponComponent?.PrimaryWeapon == null ||
+                        item.WeaponComponent.PrimaryWeapon.WeaponClass != kind) continue;
+                    int take = Math.Min(held.Amount, left);
+                    awaited.TryGetValue(item, out int had);
+                    awaited[item] = had + take;
+                    left -= take;
+                }
             }
             return keep;
         }
@@ -418,9 +433,6 @@ namespace TradeLord
                 new AskTheGame { Locks = lockedKeys, What = held });
         }
 
-        internal static bool ResaleAllowed(ItemObject item) =>
-            item != null && TradeRules.ResaleAllowed(Describe(item), Options.Current);
-
         internal static bool MayRoundTrip(ItemObject item, ISet<string> lockedKeys)
         {
             if (item == null) return false;
@@ -468,9 +480,6 @@ namespace TradeLord
 
         internal static int Credit(int proceeds, int basis, int unpaidWorth) =>
             TradeMath.Credit(proceeds, basis, unpaidWorth);
-
-        public static bool ProfitAcceptable(int costBasis, int townSellPrice) =>
-            TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);
 
         internal static float Realizable(int farSellPrice) =>
             TradeMath.Realizable(farSellPrice, Options.Current.ResaleSafetyFactor);
