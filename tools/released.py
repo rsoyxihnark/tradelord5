@@ -6,7 +6,6 @@ from nexus_changelog import sections
 REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
-    '1.55.0': 'the stolen goods quest was taken back out of what it says quests are read for',
 }
 
 
