@@ -6911,7 +6911,6 @@ def every_quest_that_waits_on_a_good_you_carry_is_read():
               ("ArtisanOverpricedGoodsIssueQuest", "_requestedTradeGood", "_requestedTradeGoodAmount"),
               ("ArtisanCantSellProductsAtAFairPriceIssueQuest", "_rawMaterialsToBeDelivered",
                "_amountOfRawGoodsToBeDelivered"),
-              ("GangLeaderNeedsToOffloadStolenGoodsIssueQuest", "_stolenTradeGood", "_stolenTradeGoodAmount"),
               ("LandLordTheArtOfTheTradeIssueQuest", "_selectedItemObject", "_selectedItemObjectCount"),
               ("VillageNeedsToolsIssueQuest", "_requestedTradeGood", "_numberOfRequestedGood"),
               ("VillageNeedsCraftingMaterialsIssueQuest", "_requestedItem", "_requestedItemAmount"))
@@ -6932,7 +6931,10 @@ def every_quest_that_waits_on_a_good_you_carry_is_read():
             and "ArmyNeedsSuppliesIssueQuest" in herds
             and "_requestedLiveStockAmount" in herds
             and herds.count("typeof(") == 1
-            and COMPAT.count('"_requestedLiveStockAmount"') == 1)
+            and COMPAT.count('"_requestedLiveStockAmount"') == 1
+            and "GangLeaderNeedsToOffloadStolenGoods" not in S['Encounters.cs']
+            and "_stolenTradeGood" not in S['Encounters.cs']
+            and "_stolenTradeGood" not in COMPAT)
 
 
 def a_quest_holds_back_any_good_it_waits_on_not_only_an_animal():
@@ -6980,7 +6982,7 @@ def a_herd_it_cannot_thin_says_what_it_will_not_give_up():
             and "Log.Repeatable(" in said)
 
 
-chk("1.55.0", "every quest that waits on a good you carry is read, the ones that name the good and the ones that only say how much of it, and the game version fit tool holds every field they are read from",
+chk("1.55.0", "every quest that waits on a good you carry is read, the ones that name the good and the ones that only say how much of it, and the game version fit tool holds every field they are read from, while the gang leader's stolen goods quest, which hands you nothing until it is over, is not read at all",
     every_quest_that_waits_on_a_good_you_carry_is_read())
 chk("1.55.0", "a good a quest is waiting on is held back whatever it is, past the always-sell list, not only where it is an animal",
     a_quest_holds_back_any_good_it_waits_on_not_only_an_animal())
@@ -10629,6 +10631,7 @@ WITHDRAWN_NEVER_WRITTEN = (
     "the auto trade switch",
     "untraded behind a warning",
     "spend down to your gold reserve",
+    "stolen goods",
 )
 
 
@@ -12406,6 +12409,18 @@ def loot_you_never_bought_costs_nothing_whichever_cost_you_pick():
 
 chk("1.93.3", "with What a good counts as having cost you on Cheapest market you know, looted gear you never bought still goes to the first market that can pay for it, and only a trade good, livestock or a good you bought is counted at the cheapest market",
     loot_you_never_bought_costs_nothing_whichever_cost_you_pick())
+
+def a_party_on_the_road_lands_its_load_only_at_a_town():
+    road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
+    return (road
+            and ordered(road, "Settlement bound = party.TargetSettlement;",
+                        "if (bound == null || !bound.IsTown) continue;",
+                        "if (caravan) NoteAPurse(bound, party.PartyTradeGold, days);",
+                        "int landing = caravan ? WhatACaravanLeavesHere(bound, item, amount) : amount;")
+            and "bound.IsVillage" not in road)
+
+chk("1.93.4", "a caravan or a party of villagers is counted as landing its load only where it is bound for a town, so what villagers carry back home to their village is never counted as reaching a market",
+    a_party_on_the_road_lands_its_load_only_at_a_town())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
