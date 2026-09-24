@@ -3933,7 +3933,7 @@ def which_way_a_price_moved_is_worked_out_where_a_test_can_ask_it():
             and "float moved = (float)(now - was) / was;" in rule
             and "if (moved >= DriftWorthSaying) return 1;" in rule
             and "return moved <= -DriftWorthSaying ? -1 : 0;" in rule
-            and "day - lastDay >= DaysBeforeAnotherReading" in
+            and "Math.Floor(day) > Math.Floor(lastDay)" in
                 between(S['TradeMath.cs'],
                         "public static bool ReadingIsNew(float day, float lastDay) =>", ";")
             and "DriftWorthSaying" not in S['Ledger.cs'] + S['TooltipPatches.cs']
@@ -12350,6 +12350,16 @@ chk("1.93.0", "the price a purchase is meant to fetch, and the price a whole-sta
     the_price_a_purchase_is_meant_to_fetch_is_the_average_over_what_was_bought())
 chk("1.93.0", "Adaptive spend limit sits under Max spend per visit, ships on, holds the limit as set until the free purse is five times it and adds one more limit for each doubling past that, and says so in every language and in the feature list",
     the_adaptive_spend_limit_grows_on_top_of_max_spend_per_visit())
+
+def a_look_on_a_later_day_is_a_second_reading_however_soon_after_the_last():
+    rule = between(S['TradeMath.cs'], "public static bool ReadingIsNew(float day, float lastDay) =>", ";")
+    return ("Math.Floor(day) > Math.Floor(lastDay)" in rule
+            and "DaysBeforeAnotherReading" not in S['TradeMath.cs'] + S['Ledger.cs']
+            and "A_look_on_the_next_day_is_a_second_reading_however_soon_after_the_last" in DRIFTTESTS
+            and "since the last day you looked there" in README)
+
+chk("1.93.1", "a look at a market on a later day than the last one is a second reading however few hours lie between them, so a market you keep coming back to is marked rising or falling against the day before",
+    a_look_on_a_later_day_is_a_second_reading_however_soon_after_the_last())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
