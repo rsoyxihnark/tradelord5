@@ -12142,5 +12142,17 @@ chk("1.91.8", "a deal Staged Trading laid out credits goods you never paid for t
 chk("1.91.8", "the map marker writes its days in TradeLord.log with a dot in every language, like every other number in the log",
     the_marker_writes_its_days_the_same_way_in_every_language())
 
+
+def with_the_ships_carrying_the_cargo_every_haul_animal_is_spare():
+    spared = method_body(S['Drove.cs'], "internal static int HaulAnimalsCargoCanSpare")
+    return ordered(spared, "int held = HaulAnimalsHeld(party);", "bool atSea = Carry.Sailing();",
+                   "if (atSea) return held;",
+                   "ExplainedNumber capacity = model.CalculateInventoryCapacity(party, atSea, true);",
+                   "return Herding.HaulAnimalsToSpare(")
+
+
+chk("1.91.9", "with Buy to fill the ships on, the ships carry the cargo and a haul animal adds nothing to them, so a full fleet no longer keeps every haul animal the herd could give up",
+    with_the_ships_carrying_the_cargo_every_haul_animal_is_spare())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
