@@ -1604,8 +1604,8 @@ namespace TradeLord
             if (shed <= 0) return;
 
             ItemRoster mine = pass.Party.ItemRoster;
+            if (!Errands.AnimalsKnown) return;
             TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);
-            if (promised == null) return;
 
             int mountsLeft = Drove.SpareMounts(pass.Party);
             mountsLeft -= pass.Books.MountsShed(pass.Sim);
