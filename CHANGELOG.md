@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.91.9
+
+- Fixed Sell animals that slow you down keeping every haul animal while your ships were full with Buy to fill the ships on
+
 ## 1.91.8
 
 - Fixed Sell animals that slow you down selling more animals than it needed when some of them were lame

@@ -6,13 +6,6 @@ from nexus_changelog import sections
 REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
-    '1.88.1': 'the published note is brought in line with the reworded changelog entries',
-    '1.88.0': 'the published note is brought in line with the reworded changelog entries',
-    '1.87.0': 'the published note is brought in line with the reworded changelog entries',
-    '1.42.1': 'the published note is brought in line with the reworded changelog entries',
-    '1.41.6': 'the published note is brought in line with the reworded changelog entries',
-    '1.11.0': 'the published note is brought in line with the reworded changelog entries',
-    '1.9.0': 'the published note is brought in line with the reworded changelog entries',
 }
 
 
