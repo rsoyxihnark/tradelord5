@@ -2147,7 +2147,7 @@ chk("1.4.3", "one rule for what the ledger will capture, and it tolerates no set
 chk("1.4.3", "one definition of the livestock the mod trades",
     S['Policy.cs'].count("&& item.HorseComponent.IsLiveStock") == 1)
 chk("1.4.3", "cost basis uses recorded purchase prices, not current market quotes",
-    "Options.Current.CostBasisMode == 2 ||" in
+    "(Options.Current.CostBasisMode == 2 && TradeRules.TradedAsMerchandise(Describe(el.Item))) ||" in
     method_body(S['Policy.cs'], "private static bool HasCostBasis") and
     "HasPurchaseRecord(el) ?? false)" in
     method_body(S['Policy.cs'], "private static bool HasCostBasis") and
@@ -12389,6 +12389,23 @@ chk("1.93.2", "a good bought by hand in a market is written down at the gold the
     a_good_bought_by_hand_is_written_down_at_what_the_trade_screen_charged())
 chk("1.93.2", "the profit on a deal Staged Trading laid out is worked out on what each good fetched on the trade screen on average, never on the lower price the market offers once the deal is done",
     the_deal_you_took_is_credited_at_what_each_good_fetched_on_the_screen())
+
+def loot_you_never_bought_costs_nothing_whichever_cost_you_pick():
+    has = method_body(S['Policy.cs'], "private static bool HasCostBasis")
+    basis = method_body(S['Policy.cs'], "internal static int CostBasis(EquipmentElement el)")
+    merchandise = between(S['Rules.cs'], "internal static bool TradedAsMerchandise(in Good good) =>", ";")
+    worth = between(S['Rules.cs'], "internal static bool WorthIsWhatYouPaid(in Good good, int paid) =>", ";")
+    return (has and basis
+            and ordered(has, "(Options.Current.CostBasisMode == 2 && TradeRules.TradedAsMerchandise(Describe(el.Item))) ||",
+                        "(LedgerBehavior.Instance?.HasPurchaseRecord(el) ?? false)")
+            and "HasCostBasis(el) ? (LedgerBehavior.Instance?.GetCostBasis(el) ?? el.Item.Value) : 0;" in basis
+            and "good.IsTradeGood || good.IsLivestock" in merchandise
+            and "paid > 0 || !TradedAsMerchandise(good)" in worth
+            and "int worth = FromMarket || PaidLeft > 0 ? Paid : 0;" in S['Passes.cs']
+            and "looted gear goes to the first market that can pay for it" in README)
+
+chk("1.93.3", "with What a good counts as having cost you on Cheapest market you know, looted gear you never bought still goes to the first market that can pay for it, and only a trade good, livestock or a good you bought is counted at the cheapest market",
+    loot_you_never_bought_costs_nothing_whichever_cost_you_pick())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
