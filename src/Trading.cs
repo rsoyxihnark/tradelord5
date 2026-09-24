@@ -909,7 +909,7 @@ namespace TradeLord
                 took.Units += count;
                 took.Gold += said;
                 if (selling)
-                    took.Profit += TradeMath.Credit(price, TradePolicy.WorthToBeat(el.EquipmentElement),
+                    took.Profit += TradeMath.Credit(price, TradePolicy.CostBasis(el.EquipmentElement),
                                                     TradePolicy.UnpaidWorth(item)) * count;
                 pass.Tally(item, count, said);
             }
@@ -1272,6 +1272,8 @@ namespace TradeLord
 
             public bool TheGameGivesTradeXpFor(int at) => _plan[at].EquipmentElement.ItemModifier == null;
 
+            public bool OfAQuality(int at) => _plan[at].EquipmentElement.ItemModifier != null;
+
             public bool MaySell(int at, in Good good, out int keep, out Block why) =>
                 TradePolicy.MaySell(good, _plan[at], _pass.Locked, _keepBack, _awaited,
                                     out keep, out why);
@@ -1619,6 +1621,7 @@ namespace TradeLord
                 if (el.Amount <= 0 || !TradePolicy.MayShedForHerd(el.EquipmentElement, pass.Locked)) continue;
                 int rank = Drove.ShedRank(it);
                 if (rank < 0) continue;
+                if (!Herding.TheGameCountsItAtOnce(rank == RankLivestock, el.EquipmentElement.ItemModifier != null)) continue;
                 if (pass.YoursToSell(el) <= 0) continue;
                 int price = pass.Price(el.EquipmentElement, selling: true);
                 if (price <= 0) continue;
@@ -1745,6 +1748,7 @@ namespace TradeLord
                 foreach (var (el, good, _, ceiling) in stable)
                 {
                     if (pass.DirectionError) break;
+                    if (!Herding.TheGameCountsItAtOnce(false, el.EquipmentElement.ItemModifier != null)) continue;
                     ItemObject item = el.EquipmentElement.Item;
                     int remaining = pass.TheirsToSell(el);
                     var prior = pass.Books.Purchases(pass.Sim, item.StringId);

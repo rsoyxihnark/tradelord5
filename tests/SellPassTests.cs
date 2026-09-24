@@ -115,6 +115,8 @@ namespace TradeLord.Tests
 
             public bool TheGameGivesTradeXpFor(int at) => !Cargo[at].Modified;
 
+            public bool OfAQuality(int at) => Cargo[at].Modified;
+
             int ISellingMarket.Till() => Till;
 
             public int TillNow() => Till;
@@ -467,6 +469,20 @@ namespace TradeLord.Tests
             Run run = Sell(market, sim: true);
             Assert.Equal(1, run.Units);
             Assert.Equal(200, run.SimGold);
+        }
+
+        [Fact]
+        public void A_dry_run_counts_only_the_sound_horses_it_would_sell_towards_the_herd()
+        {
+            var market = new FakeMarket();
+            market.Rules.AlwaysSellItems = "horse";
+            var horse = new Good { Id = "horse", Name = "horse", HasHorse = true, IsSpareMount = true, IsMountable = true };
+            market.Add(horse, amount: 1, price: 200);
+            market.Add(horse, amount: 1, price: 150).Modified = true;
+            Run run = Sell(market, sim: true);
+            Assert.Equal(2, run.Units);
+            Assert.Equal(1, run.Books.Shed(true));
+            Assert.Equal(1, run.Books.MountsShed(true));
         }
 
         [Fact]

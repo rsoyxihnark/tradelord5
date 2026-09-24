@@ -145,6 +145,7 @@ namespace TradeLord
         bool ResaleMarket(int at, out int price);
         int PriceToSell(int at);
         bool TheGameGivesTradeXpFor(int at);
+        bool OfAQuality(int at);
         int Till();
         int TillNow();
         void Staged(int at, int price);
@@ -477,7 +478,8 @@ namespace TradeLord
                         books.NoteSale(good.Id, price,
                                        herdRank == TradeRules.RankHaulAnimal ? 0f : good.Weight,
                                        TradeRules.FoodValue(good));
-                        if (herdRank >= 0)
+                        if (herdRank >= 0 &&
+                            Herding.TheGameCountsItAtOnce(herdRank == TradeRules.RankLivestock, market.OfAQuality(at)))
                             books.NoteShed(herdRank == TradeRules.RankHaulAnimal,
                                            herdRank != TradeRules.RankLivestock);
                         moved.Units++;
