@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.91.8
+
+- Fixed Sell animals that slow you down selling more animals than it needed when some of them were lame
+- Fixed Buy haul animals paying for a lame animal that adds no cargo room until you load the game again
+- Fixed Simulation mode (dry run) selling too few animals to get you back up to speed after it sold a lame horse on your always-sell list
+- TradeLord.log now names the lame animals Sell animals that slow you down leaves alone when it has nothing else it may sell
+- Fixed TradeLord profit dropping when you sold goods you never paid for cheaply in a deal Staged Trading laid out
+- Fixed TradeLord.log writing the map marker's days with a comma in some languages
+- The feature list now says a lame horse, mule or camel is never sold to get you back up to speed or bought to carry more
+
 ## 1.91.7
 
 - Fixed TradeLord selling goods your other quests were waiting on when a game update left it unable to read one kind of quest

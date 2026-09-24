@@ -21,6 +21,15 @@ namespace TradeLord.Tests
             new Good { Id = "iron", Name = "iron", IsTradeGood = true };
 
         [Fact]
+        public void A_lame_horse_mule_or_camel_is_not_counted_by_the_game_until_a_load_while_livestock_always_is()
+        {
+            Assert.True(Herding.TheGameCountsItAtOnce(livestock: false, ofAQuality: false));
+            Assert.False(Herding.TheGameCountsItAtOnce(livestock: false, ofAQuality: true));
+            Assert.True(Herding.TheGameCountsItAtOnce(livestock: true, ofAQuality: false));
+            Assert.True(Herding.TheGameCountsItAtOnce(livestock: true, ofAQuality: true));
+        }
+
+        [Fact]
         public void A_haul_animal_goes_only_while_what_is_left_still_carries_your_cargo()
         {
             Assert.Equal(2, Herding.HaulAnimalsToSpare(4, 4, 400f, 1000f, 1000f, 750f));
