@@ -182,6 +182,45 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_category_set_to_buy_only_is_bought_when_it_pays_and_kept()
+        {
+            var market = new FakeMarket();
+            market.Rules.CraftingPolicy = Options.PolicyBuyOnly;
+            var ore = new Good { Id = "ore", Name = "ore", IsTradeGood = true, IsSmithingMaterial = true,
+                                 Weight = 1f, Value = 100 };
+            market.Add(ore, amount: 3);
+            Run run = Buy(market);
+            Assert.Equal(3, run.Units);
+            Assert.False(TradeRules.ResaleAllowed(ore, market.Rules));
+        }
+
+        [Fact]
+        public void A_good_on_the_always_buy_list_is_bought_past_a_category_left_alone()
+        {
+            var market = new FakeMarket();
+            market.Rules.LivestockPolicy = Options.PolicyIgnore;
+            market.Add(Livestock("cow"), amount: 2);
+            Assert.Equal(0, Buy(market).Units);
+
+            market.Rules.AlwaysBuyItems = "cow";
+            Assert.Equal(2, Buy(market).Units);
+        }
+
+        [Fact]
+        public void A_category_left_alone_or_sold_only_is_still_never_bought()
+        {
+            foreach (int policy in new[] { Options.PolicyIgnore, Options.PolicySellOnly })
+            {
+                var market = new FakeMarket();
+                market.Rules.LivestockPolicy = policy;
+                market.Add(Livestock("cow"), amount: 2);
+                Run run = Buy(market);
+                Assert.Equal(0, run.Units);
+                Assert.Equal(Block.CategoryPolicy, run.Tally.Dominant());
+            }
+        }
+
+        [Fact]
         public void A_good_worth_reselling_is_bought_off_the_shelf()
         {
             var market = new FakeMarket();

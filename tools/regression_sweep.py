@@ -1302,7 +1302,6 @@ def the_policy_layer_keeps_no_second_copy_of_the_money_rules():
     body = S['Policy.cs']
     anywhere = S['Policy.cs'] + S['Trading.cs']
     forwards = ('TradeMath.Credit(proceeds, basis, unpaidWorth);',
-                'TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);',
                 'TradeMath.Realizable(farSellPrice, Options.Current.ResaleSafetyFactor);',
                 'TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin);')
     return (all(f in body for f in forwards)
@@ -1310,6 +1309,7 @@ def the_policy_layer_keeps_no_second_copy_of_the_money_rules():
             and 'TradeMath.PolicyAllows(PolicyFor(good, s), buying: false)' in S['Rules.cs']
             and 'PolicyAllows' not in anywhere
             and 'gain > 0 ? gain : 0' not in anywhere
+            and 'townSellPrice >= costBasis' not in anywhere
             and 'ResaleSafetyFactor;' not in anywhere.replace('Options.Current.ResaleSafetyFactor);', ''))
 
 def the_money_rules_are_covered_by_tests_the_build_runs():
@@ -1578,8 +1578,8 @@ chk("1.3.2", "a transaction that moves gold the wrong way stops the pass instead
     (method_body(S['Trading.cs'], "private static bool SwapOneUnit")) and
     S['Trading.cs'].count("SwapOneUnit(") == 2 and
     ordered(method_body(S['Trading.cs'], "private bool Swap(bool selling"),
-            "if (SwapOneUnit(selling, swap, Site == null ? null : Shop, what, named, out gold)) return true;",
-            "DirectionError = true;", "return false;") and
+            "if (SwapOneUnit(selling, swap, Site == null ? null : Shop, what, named, out gold))",
+            "return true;", "DirectionError = true;", "return false;") and
     S['Trading.cs'].count("DirectionError = true;") == 1 and
     all("if (pass.DirectionError" in method_body(S['Trading.cs'], one) for one in
         ("public static void ExecuteResupply",
@@ -1825,7 +1825,10 @@ chk("1.3.13", "the buy shelf is worked through most money first, and a test hold
              "An_empty_shelf_and_no_shelf_at_all_are_both_taken_in_their_stride",
              "Nothing_is_lost_or_invented_however_the_shelf_arrives",
              "new Random(2276)")))
-chk("1.3.13", "cost basis read once per stack", "ProfitAcceptable(int costBasis, int townSellPrice)" in S['Policy.cs'])
+chk("1.3.13", "cost basis read once per stack",
+    ordered(sell_pass(), "Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),",
+            "while (remaining > 0)")
+    and method_body(S['Passes.cs'], "internal static Traded SellThem").count("market.CostBasis(") == 1)
 chk("1.13.0", "the automation switches are plain switches like the rest, with nothing behind them",
     "if (value == _o.AutoBuyOnEntry) return;" not in M and
     M.count("set { _o.AutoBuyOnEntry = value; Options.Bump(); } }") == 1 and
@@ -2868,7 +2871,8 @@ chk("1.6.12", "what quick-sell agrees to sell runs through one margin rule, and 
     S['Trading.cs'].count("int worth = basis.Unit(out bool askTheMarket);") == 1 and
     "ProfitAcceptable(basis.UnpaidWorth" not in S['Trading.cs'] + S['Passes.cs'] and
     "TradePolicy.Credit(price, worth, basis.UnpaidWorth)" in S['Trading.cs'] and
-    "TradeMath.ProfitAcceptable(costBasis, townSellPrice, Options.Current.MinProfitMargin);" in S['Policy.cs'] and
+    "ProfitAcceptable(" not in S['Policy.cs'] and
+    "if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) break;" in S['Marker.cs'] and
     re.search(r'ProfitAcceptable\(int costBasis, int townSellPrice, float margin\) =>\s*costBasis > 0\s*\?\s*'
               r'townSellPrice >= costBasis \* \(1f \+ margin\)\s*:\s*'
               r'townSellPrice > 0;', S['TradeMath.cs']) is not None)
@@ -3765,7 +3769,7 @@ def a_good_you_always_buy_gets_past_the_policies_but_not_the_never_lists():
                     'game.Locked()',
                     'bool always = Listed(s.AlwaysBuySet, good);',
                     '!always && !toFeed && s.NeverBuyGrain',
-                    '!always && !TradeMath.PolicyAllows(PolicyFor(good, s), buying: true)')
+                    '!always && !toFeed && !TradeMath.PolicyAllows(PolicyFor(good, s), buying: true)')
             and 'AlwaysBuySet => Parsed(AlwaysBuyItems' in S['Options.cs']
             and 'Unmatched("always buy", s.AlwaysBuyItems, _knownIds, _knownNames);' in S['Policy.cs']
             and '_o.AlwaysBuyItems' in M)
@@ -4154,14 +4158,15 @@ def the_notes_are_the_changelog_section_for_the_version():
     wanted = section_entries(version)
     return (len(wanted) > 0 and said == ['- ' + line for line in wanted])
 
-chk("1.14.2", "quick-buy leaves a good its own sell policy would never let it sell again",
-    "if (!TradeRules.ResaleAllowed(good, s)) { tally.Note(Block.CategoryPolicy); continue; }" in
-        buy_pass() and
+chk("1.14.2", "a route is listed only for a good its own sell policy lets TradeLord sell again, while buying answers to the buy policy and the always-buy list",
+    "TradeRules.ResaleAllowed(" not in buy_pass() and
     "MayRoundTrip(it," not in S['Trading.cs'] and
     "TradePolicy.MayBuy(good, Item(at), _pass.Locked, out why)" in buy_pass() and
-    ordered(method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy"),
-            "market.MayBuy(at, good, out Block whyBuy)",
-            "TradeRules.ResaleAllowed(good, s)"))
+    "market.MayBuy(at, good, out Block whyBuy)" in method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy") and
+    ordered(method_body(S['Policy.cs'], "internal static bool MayRoundTrip"),
+            "MayBuy(good, item, lockedKeys, out _) &&",
+            "TradeRules.ResaleAllowed(good, Options.Current);") and
+    "if (!TradePolicy.MayRoundTrip(item, locked)) continue;" in S['Ledger.cs'])
 
 chk("1.14.2", "a route walk prices each town's ladder once and reads it back for every partner",
     "internal int At(int taken)" in S['Market.cs'] and
@@ -4368,8 +4373,9 @@ def the_getaway_ships_on_names_no_cheat_and_only_answers_bandits():
             and "Options.Current.BanditFreePassage && band != null && band.IsBandit;" in met
             and "{=TL113}" in asked
             and "band?.IgnoreForHours(GetawayHours);" in go
-            and "MobileParty.MainParty?.IgnoreByOtherPartiesTill(CampaignTime.HoursFromNow(GetawayHours));" in go
-            and "PlayerEncounter.ProtectPlayerSide(GetawayHours);" in go
+            and "band?.Ai?.SetDoNotAttackMainParty(GetawayHours);" in go
+            and "IgnoreByOtherPartiesTill" not in ALL
+            and "PlayerEncounter.ProtectPlayerSide();" in go
             and "PlayerEncounter.LeaveEncounter = true;" in go
             and no_shipped_line_calls_the_free_passage_a_cheat())
 
@@ -4534,7 +4540,7 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
                         "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;",
                         "remaining -= paidLeft;", "paidLeft = 0;")
             and "TradePolicy.MayBuy(good, Item(at), _pass.Locked, out why)" in buy
-            and "TradeRules.ResaleAllowed(good, s)" in buy
+            and "market.MayBuy(at, good, out Block whyBuy)" in buy
             and "int wouldDraw = market.ResaleUpTo(picked.At, held + 1);" in buy
             and "TradeRules.TheBuyerCouldNotPay(wouldDraw, till)" in buy
             and "s.ResaleSafetyFactor" in buy
@@ -4715,8 +4721,8 @@ def the_herd_gives_up_its_animals_in_the_order_the_player_set():
             and "TradePolicy.IsHaulAnimal(el.EquipmentElement.Item)" in held
             and "bool atSea = Carry.Sailing();" in spared
             and "model.CalculateTotalWeightCarried(party, atSea).ResultNumber" in spared
-            and "model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber >= carried);" in spared
-            and "return TradeMath.MostThatHolds(held, fewer => fewer == 0 ||" in spared)
+            and "model.CalculateInventoryCapacity(party, atSea, true);" in spared
+            and "return Herding.HaulAnimalsToSpare(held, packAnimals, carries, capacity.BaseNumber," in spared)
 
 chk("1.28.0", "the herd gives up its livestock, then a plain spare mount, then a haul animal, and a war or noble horse last of all",
     the_herd_gives_up_its_animals_in_the_order_the_player_set())
@@ -4760,7 +4766,7 @@ chk("1.37.0", "as many animals as a quest is waiting on are kept back, and only 
 
 def a_quest_animal_is_held_back_from_every_sale_not_just_the_herd():
     kept = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack")
-    return ("awaited = Errands.Promised(out int anyLivestock);" in kept
+    return ("awaited = Errands.Promised(out int anyLivestock, out List<(WeaponClass kind, int many)> weapons);" in kept
             and "TradeRules.LivestockKeep(carried, anyLivestock)" in kept
             and "if (awaited == null) return keep;" in kept
             and "facts.AwaitedHeld = HeldBack(awaited, item);" in
@@ -4880,8 +4886,10 @@ chk("1.28.0", "a horse a man on foot is riding is never sold to relieve the herd
     "if (rank != RankLivestock && rank != RankHaulAnimal && mountsLeft <= 0) break;" in
         method_body(S['Trading.cs'], "public static void ExecuteHerdRelief"))
 chk("1.28.0", "enough haul animals are kept to carry what the party already carries, asked of the game's own capacity model",
-    "model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber >= carried);" in
-        method_body(S['Drove.cs'], "internal static int HaulAnimalsCargoCanSpare") and
+    ordered(method_body(S['Drove.cs'], "internal static int HaulAnimalsCargoCanSpare"),
+            "ExplainedNumber capacity = model.CalculateInventoryCapacity(party, atSea, true);",
+            "if (!PackAnimalsLine(capacity, out float carries) && !atSea && packAnimals > 0)",
+            "every haul animal is kept", "return Herding.HaulAnimalsToSpare(") and
     'Log.Error(e, "haul animal cargo floor (every haul animal is kept)")' in
         method_body(S['Drove.cs'], "internal static int HaulAnimalsCargoCanSpare"))
 chk("1.28.0", "a name that means two animals the mod treats differently is named in the log, with the item id for each",
@@ -5499,7 +5507,7 @@ def the_free_passage_never_ends_an_encounter_a_band_is_still_talking_through():
     return ("PlayerEncounter.Finish" not in ALL
             and "InformationManager.ShowInquiry" not in go
             and ordered(go, "if (PlayerEncounter.Current != null)",
-                        "PlayerEncounter.ProtectPlayerSide(GetawayHours);",
+                        "PlayerEncounter.ProtectPlayerSide();",
                         "PlayerEncounter.LeaveEncounter = true;")
             and "_offeredPassageIn" not in ALL
             and "TL09" in strings_used())
@@ -6897,11 +6905,13 @@ def every_quest_that_waits_on_a_good_you_carry_is_read():
               ("ArtisanCantSellProductsAtAFairPriceIssueQuest", "_rawMaterialsToBeDelivered",
                "_amountOfRawGoodsToBeDelivered"),
               ("GangLeaderNeedsToOffloadStolenGoodsIssueQuest", "_stolenTradeGood", "_stolenTradeGoodAmount"),
-              ("LandLordTheArtOfTheTradeIssueQuest", "_selectedItemObject", "_selectedItemObjectCount"))
+              ("LandLordTheArtOfTheTradeIssueQuest", "_selectedItemObject", "_selectedItemObjectCount"),
+              ("VillageNeedsToolsIssueQuest", "_requestedTradeGood", "_numberOfRequestedGood"),
+              ("VillageNeedsCraftingMaterialsIssueQuest", "_requestedItem", "_requestedItemAmount"))
     goods = between(S['Encounters.cs'], "private static readonly (Type quest, string goodId, string many)[] NamedGoods",
                     "private static readonly (Type quest, string many)[] NamedHerds")
     herds = between(S['Encounters.cs'], "private static readonly (Type quest, string many)[] NamedHerds",
-                    "private static (Type quest, FieldInfo wanted, FieldInfo many)[] _read;")
+                    "private static readonly (Type quest, string kind, string many)[] NamedWeapons")
     byGood = (("ArmyNeedsSuppliesIssueQuest", '"grain"', "_requestedGrainAmount"),
               ("ArmyNeedsSuppliesIssueQuest", '"wine"', "_requestedWineAmount"),
               ("HeadmanNeedsGrainIssueQuest", '"grain"', "_neededGrainAmount"))
@@ -6909,7 +6919,8 @@ def every_quest_that_waits_on_a_good_you_carry_is_read():
             and named.count("typeof(") == len(wanted)
             and all(quest in goods and item in goods and count in goods for quest, item, count in byGood)
             and goods.count("typeof(") == len(byGood)
-            and all(COMPAT.count('"' + field + '"') == 1 for _, item, count in wanted for field in (item, count))
+            and all(COMPAT.count('"' + field + '"') == (2 if field == "_requestedTradeGood" else 1)
+                    for _, item, count in wanted for field in (item, count))
             and all(COMPAT.count('"' + count + '"') == 1 for _, _item, count in byGood)
             and "ArmyNeedsSuppliesIssueQuest" in herds
             and "_requestedLiveStockAmount" in herds
@@ -6980,7 +6991,7 @@ def an_army_waiting_on_livestock_holds_back_whatever_herd_you_carry():
                     "int take = Math.Min(held.Amount, wanted);",
                     "keep[held.Good.Id] = had + take;", "wanted -= take;")
             and "MobileParty" not in S['Rules.cs'] and "ItemRoster" not in S['Rules.cs']
-            and ordered(kept, "awaited = Errands.Promised(out int anyLivestock);",
+            and ordered(kept, "awaited = Errands.Promised(out int anyLivestock, out List<(WeaponClass kind, int many)> weapons);",
                         "if (awaited == null) return keep;",
                         "Named(TradeRules.LivestockKeep(carried, anyLivestock), byId)",
                         "awaited[owed.Key] = had + owed.Value;")
@@ -8055,7 +8066,7 @@ def a_companion_riding_with_you_earns_a_share_of_the_profit_and_nothing_by_defau
                         "float each = TradeMath.PartyShareOfProfit(xp, Options.Current.PartyTradeXpShare);",
                         "if (each <= 0f) return;",
                         "foreach (Hero companion in Hero.MainHero.CompanionsInParty)",
-                        "companion.AddSkillXp(DefaultSkills.Trade, each);")
+                        "companion.AddSkillXp(DefaultSkills.Trade, each * GameTradeXpPerDenarOfProfit);")
             and 'Guard.Run("TradeXp.Party", () => CreditTheCompanionsWithYou(xp));' in
                 method_body(S['Trading.cs'], "private static void CreditTradeSkill")
             and "SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);" in S['Trading.cs']
@@ -9157,7 +9168,9 @@ def a_whip_that_cracks_writes_the_file_back_so_it_never_cracks_twice():
                     "else if (whipped)",
                     'Write(found, "every setting put back to what TradeLord ships with");')
             and ordered(write, "new KeyValuePair<string, string>(Migration.ShapeKey,",
-                        "Migration.Shape.ToString(CultureInfo.InvariantCulture)),")
+                        "Math.Max(Migration.Shape, _newerShape).ToString(CultureInfo.InvariantCulture)),")
+            and "_newerShape = newer ? shape : 0;" in read
+            and "bool newer = shape > Migration.Shape;" in read
             and "AFileAlreadyAtTheShapeThisVersionShipsIsNeverResetBySecondTime" in MIGRATIONTESTS
             and "TheWhipIsWiredToTheShapeItWasArmedAtAndIsSpentOnceALaterShapeShips" in MIGRATIONTESTS)
 
@@ -9933,12 +9946,13 @@ def whoever_made_the_trade_credits_the_trade_skill_for_it():
             and "CampaignEventDispatcher.Instance.OnPlayerTradeProfit(profit)" in credit
             and "_tradeLordIsCreditingItsOwnTrade = true;" in credit
             and "internal static bool TradeLordIsCreditingItsOwnTrade => _tradeLordIsCreditingItsOwnTrade;" in t
-            and "LedgerBehavior.Instance?.AddTradeXp(xp);" in credit
+            and "float xpBefore = Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade);" in credit
+            and "LedgerBehavior.Instance?.AddTradeXp(" in credit
             and "CampaignEvents.OnPlayerTradeProfitEvent.AddNonSerializedListener(this, OnPlayerTradeProfit);" in ledger
             and "private static bool TheGameCreditedADealTradeLordLaidOut =>" in ledger
             and "!TradeActionBehavior.TradeLordIsCreditingItsOwnTrade && Counter.Awaiting;" in ledger
             and "if (!TheGameCreditedADealTradeLordLaidOut) return;" in heard
-            and "AddTradeXp(profit);" in heard)
+            and "AddTradeXp(Counter.TradeXpEarnedOnTheScreen());" in heard)
 
 
 def the_ledger_keeps_the_trade_xp_it_has_handed_over():
@@ -11001,7 +11015,7 @@ def a_quest_good_is_held_back_once_and_not_again_as_food():
             and "keep[" not in kept
             and "foreach (var owed in awaited)" not in kept
             and ordered(kept, "Named(TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current), byId);",
-                        "awaited = Errands.Promised(out int anyLivestock);",
+                        "awaited = Errands.Promised(out int anyLivestock, out List<(WeaponClass kind, int many)> weapons);",
                         "awaited[owed.Key] = had + owed.Value;")
             and "heldBack" not in relief
             and "if (promised.TryGetValue(item, out int owed) && owed > 0)" in relief
@@ -11619,7 +11633,7 @@ def a_party_of_villagers_is_never_sold_to_and_its_offer_is_taken_whole_or_left()
                         "else if (!pass.DirectionError)",
                         "if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);")
             and ordered(judged, "if (!market.MayBuy(at, good, out Block whyBuy)) refused = whyBuy;",
-                        "else if (!TradeRules.ResaleAllowed(good, s)) refused = Block.CategoryPolicy;",
+                        "else shelf.Add(new Pick { At = at, Good = good });",
                         "if (lot.Units == 0) return Block.NoStock;",
                         "if (refused != Block.None) return refused;",
                         "TradeRules.WhatCapsALot(good,", "if (capped != Block.None) return capped;",
@@ -11882,6 +11896,157 @@ def what_you_paid_is_kept_for_each_quality_of_a_good():
 
 chk("1.91.5", "what you paid is written down, drawn down and read back for each quality of a good on its own, on a real pass and a dry run alike, so a lame horse and a sound one never share one record",
     what_you_paid_is_kept_for_each_quality_of_a_good())
+
+
+def a_haul_animal_is_sold_only_while_the_rest_still_carry_your_cargo():
+    spared = method_body(S['Drove.cs'], "internal static int HaulAnimalsCargoCanSpare")
+    line = method_body(S['Drove.cs'], "private static bool PackAnimalsLine")
+    rule = method_body(S['Rules.cs'], "internal static int HaulAnimalsToSpare")
+    return (spared and line and rule
+            and "-fewer" not in spared
+            and ordered(line, "typeof(DefaultInventoryCapacityModel).GetField(", '"_textPackAnimals"',
+                        "foreach (var (name, number) in capacity.GetLines())",
+                        "if (name == named) carries += number;")
+            and ordered(rule, "if (held <= 0) return 0;", "if (room <= 0f) return 0;",
+                        "float each = packCapacity / packAnimals;",
+                        "if (addedUp > 0f && capacity > addedUp) each *= capacity / addedUp;")
+            and '"_textPackAnimals"' in COMPAT
+            and all(one in HERDTESTS for one in
+                    ("A_haul_animal_goes_only_while_what_is_left_still_carries_your_cargo",
+                     "A_party_already_carrying_all_it_can_keeps_every_haul_animal",
+                     "A_bonus_to_the_whole_capacity_counts_against_every_haul_animal_it_would_take_away")))
+
+
+def every_delivery_quest_holds_back_what_it_asks_for():
+    named = between(S['Encounters.cs'], "private static readonly (Type quest, string wanted, string many)[] Named",
+                    "private static readonly (Type quest, string goodId, string many)[] NamedGoods")
+    weapons = between(S['Encounters.cs'], "private static readonly (Type quest, string kind, string many)[] NamedWeapons",
+                      "private static (Type quest, FieldInfo wanted, FieldInfo many)[] _read;")
+    promised = method_body(S['Encounters.cs'], "internal static Dictionary<ItemObject, int> Promised")
+    kept = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack")
+    return (all(one in named for one in ("VillageNeedsToolsIssueQuest", '"_requestedTradeGood", "_numberOfRequestedGood"',
+                                         "VillageNeedsCraftingMaterialsIssueQuest",
+                                         '"_requestedItem", "_requestedItemAmount"'))
+            and "GangLeaderNeedsWeaponsIssueQuest" in weapons
+            and '"_requestedWeaponClass", "_requestedWeaponAmount"' in weapons
+            and ordered(promised, "if (_readWeapons[i].kind.GetValue(quest) is WeaponClass kind &&",
+                        "int at = weapons.FindIndex(owed => owed.kind == kind);",
+                        "if (at < 0) weapons.Add((kind, many));",
+                        "else weapons[at] = (kind, weapons[at].many + many);")
+            and ordered(kept, "foreach (var (kind, many) in weapons)",
+                        "item.WeaponComponent.PrimaryWeapon.WeaponClass != kind) continue;",
+                        "int take = Math.Min(held.Amount, left);", "awaited[item] = had + take;")
+            and all(COMPAT.count('"' + f + '"') == 1 for f in
+                    ("_numberOfRequestedGood", "_requestedItem", "_requestedItemAmount",
+                     "_requestedWeaponClass", "_requestedWeaponAmount")))
+
+
+def a_caravan_the_game_would_not_trade_with_is_left_alone():
+    reach = method_body(S['Trading.cs'], "private static bool RoadPartyReachable")
+    return (ordered(reach, "if (!Meetings.IsRoadTrader(met)) return false;",
+                    "if (met.IsCaravan && met.Party?.Owner == Hero.MainHero)",
+                    "if (met.IsCaravan && (met.IsInRaftState || !Meetings.CarriesGoods(met)))",
+                    "if (!Options.Current.ExcludeHostileTowns) return true;")
+            and reach.count("return false;") == 3
+            and "if (goods.GetElementNumber(at) > 0) return true;" in
+                method_body(S['Encounters.cs'], "internal static bool CarriesGoods"))
+
+
+def buying_answers_to_the_buy_policy_and_a_route_to_both():
+    want = method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
+    lot = method_body(S['Passes.cs'], "internal static Block WhatStopsTheLot")
+    return (want and lot
+            and "ResaleAllowed" not in want and "ResaleAllowed" not in lot
+            and "TradeRules.ResaleAllowed(good, Options.Current);" in
+                method_body(S['Policy.cs'], "internal static bool MayRoundTrip")
+            and "internal static bool ResaleAllowed(ItemObject" not in S['Policy.cs']
+            and all(one in BUYPASSTESTS for one in
+                    ("A_category_set_to_buy_only_is_bought_when_it_pays_and_kept",
+                     "A_good_on_the_always_buy_list_is_bought_past_a_category_left_alone",
+                     "A_category_left_alone_or_sold_only_is_still_never_bought"))
+            and "An_offer_of_a_good_you_buy_only_is_taken_when_it_clears_your_margin" in LOTTESTS)
+
+
+def the_larder_is_restocked_whatever_the_food_policy_says():
+    return ("if (!always && !toFeed && !TradeMath.PolicyAllows(PolicyFor(good, s), buying: true))" in buy_rule()
+            and ordered(buy_rule(), "Listed(s.NeverSet, good) || Listed(s.NeverBuySet, good)",
+                        "if (game.Locked())",
+                        "if (!always && !toFeed && !TradeMath.PolicyAllows(PolicyFor(good, s), buying: true))")
+            and "Restocking_the_larder_answers_to_the_days_of_supply_not_to_the_food_policy" in BUYRULETESTS)
+
+
+def free_passage_holds_off_the_band_and_nobody_else_for_longer_than_the_game_does():
+    go = method_body(S['Encounters.cs'], "private static void LetPlayerGo")
+    return ("private const int GetawayHours = 4;" in S['Encounters.cs']
+            and "band?.Ai?.SetDoNotAttackMainParty(GetawayHours);" in go
+            and "PlayerEncounter.ProtectPlayerSide();" in go
+            and "ProtectPlayerSide(GetawayHours)" not in ALL
+            and "IgnoreByOtherPartiesTill" not in ALL)
+
+
+def a_trade_tradelord_makes_is_written_into_the_games_own_trade_record():
+    swap = method_body(S['Trading.cs'], "private bool Swap(bool selling")
+    note = method_body(S['Trading.cs'], "internal static void Note(bool selling, EquipmentElement what, int gold)")
+    return (ordered(swap, "if (SwapOneUnit(", 'Guard.Run("GameTradeBook", () => GameTradeBook.Note(selling, _unit.EquipmentElement, paid));',
+                    "return true;")
+            and ordered(note, "if (gold <= 0 || what.Item == null) return;",
+                        '"ProcessPurchases", BindingFlags.Instance | BindingFlags.NonPublic);',
+                        '"ProcessSales", BindingFlags.Instance | BindingFlags.NonPublic);',
+                        "var one = new ItemRosterElement(what, 1);",
+                        "if (selling) _sold?.Invoke(book, new object[] { one, gold, true });",
+                        "else _bought?.Invoke(book, new object[] { one, gold });")
+            and "GameTradeBook.Forget();" in method_body(S['Trading.cs'], "internal static void ForgetVisit")
+            and all(('"' + m + '"') in COMPAT for m in ("ProcessPurchases", "ProcessSales")))
+
+
+def the_trade_xp_the_ledger_shows_is_the_xp_the_skill_really_took():
+    credit = method_body(S['Trading.cs'], "private static void CreditTradeSkill")
+    screen = method_body(S['Counter.cs'], "internal static int TradeXpEarnedOnTheScreen")
+    return (ordered(credit, "float xpBefore = Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade);",
+                    "SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);",
+                    "Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) - xpBefore));")
+            and "_tradeXpSeen = TradeXpNow();" in method_body(S['Counter.cs'], "private static bool Opened")
+            and ordered(screen, "float earned = now - _tradeXpSeen;", "_tradeXpSeen = now;")
+            and "AddTradeXp(Counter.TradeXpEarnedOnTheScreen());" in
+                method_body(S['Ledger.cs'], "private void OnPlayerTradeProfit")
+            and "companion.AddSkillXp(DefaultSkills.Trade, each * GameTradeXpPerDenarOfProfit);" in
+                method_body(S['Trading.cs'], "private static void CreditTheCompanionsWithYou")
+            and "private const float GameTradeXpPerDenarOfProfit = 0.5f;" in S['Trading.cs'])
+
+
+def a_settings_file_from_a_newer_tradelord_keeps_what_this_one_does_not_know():
+    read = method_body(S['Config.cs'], "private static void Read")
+    write = method_body(S['Config.cs'], "private static void Write(string path, string why)")
+    return (ordered(read, "bool newer = shape > Migration.Shape;", "_newerLines.Clear();",
+                    "if (!IsASetting(line.Key)) _newerLines.Add(line);",
+                    "Twins.ScreenWins(screen, screenWroteIt, handEdited)")
+            and ordered(read, "else if (newer)", "so it is left exactly as it is",
+                        "else if (lifted || shape != Migration.Shape)")
+            and "if (newer && Shown(field) != line.Value) _newerValues[field.Name] = (Shown(field), line.Value);" in read
+            and ordered(write, "string shown = Shown(field);",
+                        "if (_newerValues.TryGetValue(field.Name, out var kept) && kept.taken == shown) shown = kept.written;",
+                        "lines.Add(new KeyValuePair<string, string>(field.Name, shown));",
+                        "lines.AddRange(_newerLines);"))
+
+
+chk("1.91.6", "a haul animal is sold to lift the herd penalty only while the animals left still carry your cargo, read off what the game's own capacity says its pack animals carry",
+    a_haul_animal_is_sold_only_while_the_rest_still_carry_your_cargo())
+chk("1.91.6", "a village waiting on tools or ingots and a gang leader waiting on weapons of one kind hold back what they ask for, like every other delivery quest",
+    every_delivery_quest_holds_back_what_it_asks_for())
+chk("1.91.6", "your own caravan, a caravan on a raft and a caravan with no goods to show are left alone, since the game trades with none of them",
+    a_caravan_the_game_would_not_trade_with_is_left_alone())
+chk("1.91.6", "buying answers to the buy policy and the always-buy list, and only a listed route also needs the sell policy",
+    buying_answers_to_the_buy_policy_and_a_route_to_both())
+chk("1.91.6", "the larder is restocked to the days of supply whatever the food policy says, and never past a never list or a lock",
+    the_larder_is_restocked_whatever_the_food_policy_says())
+chk("1.91.6", "free passage keeps that band off you for four hours, while every other party passes you over only for the hour the game gives anyone leaving an encounter",
+    free_passage_holds_off_the_band_and_nobody_else_for_longer_than_the_game_does())
+chk("1.91.6", "a trade TradeLord makes for you is written into the game's own record of what you paid, so the game's Trade XP for a later sale by hand is counted right",
+    a_trade_tradelord_makes_is_written_into_the_games_own_trade_record())
+chk("1.91.6", "the Trade XP in the ledger is the XP the skill really took, and a companion learns from a share of the profit at the rate the game turns your profit into XP",
+    the_trade_xp_the_ledger_shows_is_the_xp_the_skill_really_took())
+chk("1.91.6", "a settings file written by a newer TradeLord is left as it is, and every setting or value this version does not know is kept in it",
+    a_settings_file_from_a_newer_tradelord_keeps_what_this_one_does_not_know())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

@@ -21,6 +21,36 @@ namespace TradeLord.Tests
             new Good { Id = "iron", Name = "iron", IsTradeGood = true };
 
         [Fact]
+        public void A_haul_animal_goes_only_while_what_is_left_still_carries_your_cargo()
+        {
+            Assert.Equal(2, Herding.HaulAnimalsToSpare(4, 4, 400f, 1000f, 1000f, 750f));
+            Assert.Equal(0, Herding.HaulAnimalsToSpare(4, 4, 400f, 1000f, 1000f, 950f));
+            Assert.Equal(4, Herding.HaulAnimalsToSpare(4, 4, 400f, 1000f, 1000f, 100f));
+        }
+
+        [Fact]
+        public void A_party_already_carrying_all_it_can_keeps_every_haul_animal()
+        {
+            Assert.Equal(0, Herding.HaulAnimalsToSpare(3, 3, 300f, 500f, 500f, 500f));
+            Assert.Equal(0, Herding.HaulAnimalsToSpare(3, 3, 300f, 500f, 500f, 700f));
+            Assert.Equal(0, Herding.HaulAnimalsToSpare(0, 3, 300f, 500f, 500f, 10f));
+        }
+
+        [Fact]
+        public void A_bonus_to_the_whole_capacity_counts_against_every_haul_animal_it_would_take_away()
+        {
+            Assert.Equal(2, Herding.HaulAnimalsToSpare(4, 4, 400f, 1000f, 1000f, 750f));
+            Assert.Equal(1, Herding.HaulAnimalsToSpare(4, 4, 400f, 1000f, 1500f, 1250f));
+        }
+
+        [Fact]
+        public void Haul_animals_that_add_nothing_to_the_capacity_can_all_go()
+        {
+            Assert.Equal(3, Herding.HaulAnimalsToSpare(3, 0, 0f, 500f, 500f, 100f));
+            Assert.Equal(3, Herding.HaulAnimalsToSpare(3, 3, 0f, 500f, 500f, 100f));
+        }
+
+        [Fact]
         public void The_herd_gives_up_its_animals_in_the_order_the_feature_list_promises()
         {
             Assert.Equal(TradeRules.RankLivestock, TradeRules.HerdShedRank(Livestock()));

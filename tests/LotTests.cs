@@ -156,6 +156,19 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void An_offer_of_a_good_you_buy_only_is_taken_when_it_clears_your_margin()
+        {
+            var offer = Villagers();
+            offer.Rules.LivestockPolicy = Options.PolicyBuyOnly;
+            offer.Add(Livestock("cow"), amount: 3, price: 40, resale: 90);
+            Assert.Equal(Block.None, Judge(offer, out Lot lot));
+            Assert.Equal(3, lot.Units);
+
+            offer.Rules.LivestockPolicy = Options.PolicyIgnore;
+            Assert.Equal(Block.CategoryPolicy, Judge(offer, out _));
+        }
+
+        [Fact]
         public void One_good_that_loses_money_is_carried_by_the_rest_of_the_offer()
         {
             var offer = Villagers();

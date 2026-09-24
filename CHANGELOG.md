@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.91.6
+
+- Fixed Sell animals that slow you down selling haul animals your cargo still needed
+- Fixed goods asked for in Needs Tools, Needs Crafting Materials and Gang Leader Needs Weapons quests being sold before you handed them over
+- Fixed TradeLord trading with your own caravans, and with caravans on a raft or carrying no goods, which the game never lets you do
+- Fixed Food policy, Smithing material policy and Livestock policy set to Buy only never buying those goods to trade
+- Fixed goods on the Always buy list not being bought when their policy was set to Leave alone or Buy only
+- Fixed Restock and keep food (days of supply) buying no food when the Food policy was set to Leave alone or Sell only
+- Fixed Free passage from bandits making every party on the map leave you alone for hours, not just the bandits who let you go
+- Fixed goods TradeLord bought for you earning no Trade XP when you later sold them by hand
+- Fixed Trade XP along the top of the ledger counting the profit rather than the XP your Trade skill actually gained
+- Fixed companions riding with you gaining twice the Trade XP their share of the profit should give them
+- Fixed TradeLord throwing away the settings in TradeLord.ini that a later version of TradeLord had saved there
+
 ## 1.91.5
 
 - Fixed goods of different qualities, like a lame horse and a sound one, sharing one record of what you paid for them

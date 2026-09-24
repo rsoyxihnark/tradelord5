@@ -93,6 +93,23 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Restocking_the_larder_answers_to_the_days_of_supply_not_to_the_food_policy()
+        {
+            var bread = new Good { Id = "bread", Name = "bread", IsTradeGood = true, IsFood = true, Weight = 1f };
+            foreach (int policy in new[] { Options.PolicyIgnore, Options.PolicySellOnly })
+            {
+                var s = new Options { FoodPolicy = policy };
+                Assert.Equal(Block.CategoryPolicy, WhyNot(bread, s));
+                Assert.True(Buy(bread, s, toFeed: true));
+            }
+            Assert.Equal(Block.NeverList,
+                WhyNot(bread, new Options { FoodPolicy = Options.PolicyIgnore, NeverBuyItems = "bread" }, toFeed: true));
+            Assert.Equal(Block.Locked,
+                WhyNot(bread, new Options { FoodPolicy = Options.PolicyIgnore }, toFeed: true,
+                       says: new Says { IsLocked = true }));
+        }
+
+        [Fact]
         public void A_category_set_to_sell_only_is_never_bought_from()
         {
             var ore = new Good { Id = "ore", Name = "ore", IsTradeGood = true, IsSmithingMaterial = true };
@@ -151,7 +168,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_good_is_only_bought_where_your_own_rules_would_let_it_go_again()
+        public void A_route_is_only_listed_where_your_own_rules_would_let_the_good_go_again()
         {
             Assert.True(TradeRules.ResaleAllowed(Cargo(), new Options()));
             Assert.False(TradeRules.ResaleAllowed(

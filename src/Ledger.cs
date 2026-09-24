@@ -450,7 +450,7 @@ namespace TradeLord
             Guard.Run("Ledger.OnPlayerTradeProfit", () =>
             {
                 if (!TheGameCreditedADealTradeLordLaidOut) return;
-                AddTradeXp(profit);
+                AddTradeXp(Counter.TradeXpEarnedOnTheScreen());
             });
         }
 

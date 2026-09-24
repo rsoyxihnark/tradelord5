@@ -200,7 +200,6 @@ namespace TradeLord
                 if (market.AmountAt(at) <= 0) { tally.Note(Block.NoStock); continue; }
                 Good good = market.GoodAt(at);
                 if (!market.MayBuy(at, good, out Block whyBuy)) { tally.Note(whyBuy); continue; }
-                if (!TradeRules.ResaleAllowed(good, s)) { tally.Note(Block.CategoryPolicy); continue; }
                 if (books.Sold(sim, good.Id)) { tally.Note(Block.TradedHereAlready); continue; }
                 if (market.TheirsToSell(at) <= 0) { tally.Note(Block.NoStock); continue; }
                 int held = market.Carried(at) + books.Held(sim, good.Id);
@@ -350,7 +349,6 @@ namespace TradeLord
                 if (refused != Block.None) continue;
                 if (unit <= 0) refused = Block.NoStock;
                 else if (!market.MayBuy(at, good, out Block whyBuy)) refused = whyBuy;
-                else if (!TradeRules.ResaleAllowed(good, s)) refused = Block.CategoryPolicy;
                 else shelf.Add(new Pick { At = at, Good = good });
             }
             if (lot.Units == 0) return Block.NoStock;
