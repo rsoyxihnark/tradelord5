@@ -463,7 +463,7 @@ namespace TradeLord
             Listed(s.AlwaysSet, good) || TradeMath.PolicyAllows(PolicyFor(good, s), buying: false);
 
         internal static bool MayBuy<TGame>(in Good good, bool toFeed, Options s, TGame game,
-                                           out Block why)
+                                           out Block why, bool wholeOffer = false)
             where TGame : struct, IWhatTheGameSays
         {
             why = Block.None;
@@ -473,7 +473,7 @@ namespace TradeLord
             if (game.Locked()) { why = Block.Locked; return false; }
 
             bool always = Listed(s.AlwaysBuySet, good);
-            if (!always && !toFeed && s.NeverBuyGrain && good.IsGrain)
+            if (!always && !toFeed && s.NeverBuyGrain && good.IsGrain && !wholeOffer)
             { why = Block.GrainSwitch; return false; }
             if (!always && !toFeed && !TradeMath.PolicyAllows(PolicyFor(good, s), buying: true))
             { why = Block.CategoryPolicy; return false; }
@@ -513,17 +513,6 @@ namespace TradeLord
             if (s.BuyValueCapPerItem > 0 && taken.spent + price > s.BuyValueCapPerItem) return Block.ItemValueCap;
             if (s.MaxHeldPerItem > 0 && held >= s.MaxHeldPerItem) return Block.HeldEnough;
             if (shareCap > 0f && (held + 1) * good.Weight > shareCap) return Block.HeldEnough;
-            return Block.None;
-        }
-
-        internal static Block WhatCapsALot(in Good good, int cost, int units,
-                                           (int count, int spent) taken, int held, float shareCap,
-                                           Options s)
-        {
-            if (s.BuyCapPerItem > 0 && taken.count + units > s.BuyCapPerItem) return Block.ItemCountCap;
-            if (s.BuyValueCapPerItem > 0 && (long)taken.spent + cost > s.BuyValueCapPerItem) return Block.ItemValueCap;
-            if (s.MaxHeldPerItem > 0 && held + units > s.MaxHeldPerItem) return Block.HeldEnough;
-            if (shareCap > 0f && (held + units) * good.Weight > shareCap) return Block.HeldEnough;
             return Block.None;
         }
 

@@ -60,7 +60,7 @@ namespace TradeLord.Tests
             public Good GoodAt(int at) => Stalls[at].Good;
 
             public bool MayBuy(int at, in Good good, out Block why) =>
-                TradeRules.MayBuy(good, false, Rules, default(Says), out why);
+                TradeRules.MayBuy(good, false, Rules, default(Says), out why, wholeOffer: true);
 
             public int TheLedgerAsksFor(int at) => 0;
 
@@ -126,15 +126,10 @@ namespace TradeLord.Tests
         private static Good Mount(string id) =>
             new Good { Id = id, Name = id, HasHorse = true, IsMountable = true, IsAnimal = true, Value = 300 };
 
-        private static Offer Villagers()
-        {
-            var offer = new Offer();
-            offer.Rules.BuyCapPerItem = 0;
-            return offer;
-        }
+        private static Offer Villagers() => new Offer();
 
-        private static Block Judge(Offer offer, out Lot lot, float shareCap = 0f) =>
-            TradePass.WhatStopsTheLot(offer, offer.Ledger, offer.Sim, shareCap, offer.Rules, out lot);
+        private static Block Judge(Offer offer, out Lot lot) =>
+            TradePass.WhatStopsTheLot(offer, offer.Ledger, offer.Sim, offer.Rules, out lot);
 
         [Fact]
         public void An_offer_that_sells_on_for_more_than_it_costs_is_taken_whole()
@@ -290,20 +285,36 @@ namespace TradeLord.Tests
             Assert.Equal(12, lot.Units);
             Assert.Equal(10 * 40 + 2 * 20, lot.Price);
             Assert.False(lot.Weighed);
+            Assert.Equal(1, lot.Stopper);
             Assert.Empty(offer.Taken);
         }
 
         [Fact]
-        public void Grain_in_the_offer_keeps_it_off_while_grain_is_left_alone()
+        public void An_offer_turned_down_as_a_whole_names_no_good_in_it()
+        {
+            var offer = Villagers();
+            offer.Add(Cargo("hides"), amount: 5, price: 40, resale: 50);
+            Assert.Equal(Block.BelowMargin, Judge(offer, out Lot lot));
+            Assert.Equal(-1, lot.Stopper);
+            offer.Stalls[0].Resale = 200;
+            offer.Purse = 10;
+            Assert.Equal(Block.BudgetSpent, Judge(offer, out lot));
+            Assert.Equal(-1, lot.Stopper);
+        }
+
+        [Fact]
+        public void Grain_in_the_offer_is_taken_with_the_rest_even_while_grain_is_left_alone()
         {
             var offer = Villagers();
             offer.Add(Cargo("hides"), amount: 10, price: 40, resale: 100);
-            Stall grain = offer.Add(Cargo("grain"), amount: 5, price: 10, resale: 30);
-            grain.Good.IsGrain = true;
+            Stall grain = offer.Add(new Good { Id = "grain", Name = "grain", IsTradeGood = true, IsFood = true,
+                                               IsGrain = true, Weight = 1f, Value = 10 },
+                                    amount: 5, price: 10, resale: 30);
             offer.Rules.NeverBuyGrain = true;
-            Assert.Equal(Block.GrainSwitch, Judge(offer, out _));
-            offer.Rules.NeverBuyGrain = false;
-            Assert.Equal(Block.None, Judge(offer, out _));
+            Assert.Equal(Block.None, Judge(offer, out Lot lot));
+            Assert.Equal(15, lot.Units);
+            TradePass.TakeTheLot(offer, offer.Ledger, sim: false);
+            Assert.Equal(0, grain.Amount);
         }
 
         [Fact]
@@ -312,7 +323,8 @@ namespace TradeLord.Tests
             var offer = Villagers();
             offer.Add(Cargo("hides"), amount: 10, price: 40, resale: 100);
             offer.Add(Mount("steppe_horse"), amount: 1, price: 200, resale: 400);
-            Assert.Equal(Block.MountOrHaulAnimal, Judge(offer, out _));
+            Assert.Equal(Block.MountOrHaulAnimal, Judge(offer, out Lot lot));
+            Assert.Equal(1, lot.Stopper);
         }
 
         [Fact]
@@ -330,56 +342,65 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_buy_cap_per_item_counts_the_whole_offer_of_one_good()
+        public void The_buy_cap_per_item_never_splits_the_offer_of_one_good()
         {
             var offer = Villagers();
             offer.Rules.BuyCapPerItem = 8;
-            offer.Add(Cargo("hides"), amount: 9, price: 40, resale: 100);
-            Assert.Equal(Block.ItemCountCap, Judge(offer, out _));
-            offer.Stalls[0].Amount = 8;
-            Assert.Equal(Block.None, Judge(offer, out _));
+            offer.Add(Cargo("hides"), amount: 40, price: 40, resale: 100);
+            Assert.Equal(Block.None, Judge(offer, out Lot lot));
+            Assert.Equal(40, lot.Units);
+            Assert.Equal(40, TradePass.TakeTheLot(offer, offer.Ledger, sim: false).Units);
         }
 
         [Fact]
-        public void The_value_cap_per_item_counts_the_whole_offer_of_one_good()
+        public void The_value_cap_per_item_never_holds_the_offer_back()
         {
             var offer = Villagers();
             offer.Rules.BuyValueCapPerItem = 300;
             offer.Add(Cargo("hides"), amount: 8, price: 40, resale: 100);
-            Assert.Equal(Block.ItemValueCap, Judge(offer, out _));
-            offer.Rules.BuyValueCapPerItem = 320;
             Assert.Equal(Block.None, Judge(offer, out _));
         }
 
         [Fact]
-        public void The_most_you_hold_of_one_good_counts_what_you_already_carry()
+        public void The_most_you_hold_of_one_good_never_holds_the_offer_back()
         {
             var offer = Villagers();
             offer.Rules.MaxHeldPerItem = 10;
             Stall hides = offer.Add(Cargo("hides"), amount: 8, price: 40, resale: 100);
-            hides.Carried = 3;
-            Assert.Equal(Block.HeldEnough, Judge(offer, out _));
-            hides.Carried = 2;
+            hides.Carried = 9;
             Assert.Equal(Block.None, Judge(offer, out _));
         }
 
         [Fact]
-        public void The_share_of_the_hold_one_good_may_fill_counts_the_whole_offer()
+        public void The_share_of_the_hold_one_good_may_fill_never_holds_the_offer_back()
         {
             var offer = Villagers();
+            offer.Rules.MaxHeldShare = 0.01f;
             offer.Add(Cargo("hides", weight: 2f), amount: 10, price: 40, resale: 100);
-            Assert.Equal(Block.HeldEnough, Judge(offer, out _, shareCap: 19f));
-            Assert.Equal(Block.None, Judge(offer, out _, shareCap: 20f));
+            Assert.Equal(Block.None, Judge(offer, out _));
         }
 
         [Fact]
-        public void The_same_good_in_two_lots_is_counted_together_against_the_caps()
+        public void The_same_good_in_two_lots_runs_on_down_the_buyers_prices()
         {
             var offer = Villagers();
-            offer.Rules.BuyCapPerItem = 10;
-            offer.Add(Cargo("hides"), amount: 6, price: 40, resale: 100);
-            offer.Add(Cargo("hides"), amount: 6, price: 40, resale: 100);
-            Assert.Equal(Block.ItemCountCap, Judge(offer, out _));
+            Stall first = offer.Add(Cargo("hides"), amount: 5, price: 10, resale: 100);
+            Stall second = offer.Add(Cargo("hides"), amount: 5, price: 10, resale: 100);
+            first.ResaleStep = 10;
+            second.ResaleStep = 10;
+            Assert.Equal(Block.None, Judge(offer, out Lot lot));
+            Assert.Equal((100 + 90 + 80 + 70 + 60 + 50 + 40 + 30 + 20 + 10) * 0.85f, lot.Resale, 3);
+        }
+
+        [Fact]
+        public void Max_spend_per_visit_never_holds_the_offer_back_while_the_purse_can_pay()
+        {
+            var offer = Villagers();
+            offer.Rules.MaxSpendPerVisit = 100;
+            offer.Add(Cargo("fur"), amount: 4, price: 400, resale: 1300);
+            offer.Purse = 1600;
+            Assert.Equal(Block.None, Judge(offer, out Lot lot));
+            Assert.Equal(1600, lot.Price);
         }
 
         [Fact]

@@ -77,6 +77,21 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Grain_in_the_villagers_offer_gets_past_Never_buy_grain_but_not_the_food_policy()
+        {
+            var s = new Options { NeverBuyGrain = true };
+            Assert.True(TradeRules.MayBuy(Grain(), false, s, default(Says), out _, wholeOffer: true));
+            Assert.Equal(Block.GrainSwitch, WhyNot(Grain(), s));
+            s.FoodPolicy = Options.PolicyIgnore;
+            TradeRules.MayBuy(Grain(), false, s, default(Says), out Block why, wholeOffer: true);
+            Assert.Equal(Block.CategoryPolicy, why);
+            s.FoodPolicy = Options.PolicyBuySell;
+            s.NeverBuyItems = "grain";
+            TradeRules.MayBuy(Grain(), false, s, default(Says), out why, wholeOffer: true);
+            Assert.Equal(Block.NeverList, why);
+        }
+
+        [Fact]
         public void The_always_buy_list_clears_a_category_policy_but_never_a_never_list_or_a_lock()
         {
             var leftAlone = new Options { LivestockPolicy = Options.PolicyIgnore };

@@ -414,9 +414,9 @@ namespace TradeLord
         }
 
         internal static bool MayBuy(in Good good, ItemObject item, ISet<string> lockedKeys,
-                                    out Block why, bool toFeed = false) =>
+                                    out Block why, bool toFeed = false, bool wholeOffer = false) =>
             TradeRules.MayBuy(good, toFeed, Options.Current,
-                new AskTheGame { Locks = lockedKeys, What = new EquipmentElement(item) }, out why);
+                new AskTheGame { Locks = lockedKeys, What = new EquipmentElement(item) }, out why, wholeOffer);
 
         internal static bool MayHaul(ItemObject item, ISet<string> lockedKeys)
         {
