@@ -381,8 +381,6 @@
 - Fixed a failed trade leaving TradeLord's hold on prices in place, which could change what caravans and villagers paid for their own goods
 - A good whose trade screen price cannot be read is now left alone, instead of traded at a price you would never be charged
 
-## 1.80.13
-
 ## 1.80.12
 
 - TradeLord now buys and sells at the price the trade screen would charge you, so what it earns is what you would earn by hand
@@ -438,8 +436,6 @@
 ## 1.80.1
 
 - Fixed food restocking, haul animal buying and Minimum profit margin moving with caravans heading somewhere you are not going
-
-## 1.80.0
 
 ## 1.79.3
 
@@ -1049,13 +1045,9 @@
 - The Always sell hint now says an animal a quest is waiting on is still held back, alongside your never sell list and an inventory lock
 - Trading in a market no longer works out which markets are in reach after each pass, so a busy town settles faster
 
-## 1.39.3
-
 ## 1.39.2
 
 - An animal a quest is waiting on is now kept back even where your always sell list names it
-
-## 1.39.1
 
 ## 1.39.0
 
@@ -1273,8 +1265,6 @@
 - The hint under the Language setting now says only that a language change needs the game restarted
 - TradeLord.log now names both animals, with the item id for each, when an item list entry means two of them, such as Saddle Horse
 
-## 1.27.5
-
 ## 1.27.4
 
 - The language you pick now reaches the settings screen itself, every setting name, hint, heading and the Reset button
@@ -1295,8 +1285,6 @@
 - Picking a new language on the settings screen now takes hold as you set it, so the choices under each setting are spoken in it straight away
 - The names, hints and headings on the settings screen now change language the moment you pick a new one
 - The hint under the language setting no longer says the screen changes language the next time you open it, because that was not what happened
-
-## 1.27.0
 
 ## 1.26.1
 
@@ -1427,10 +1415,6 @@
 
 - TradeLord now speaks Simplified Chinese, chosen from the same Language setting that already offered English, Turkish and Russian
 
-## 1.13.3
-
-## 1.13.2
-
 ## 1.13.1
 
 - Fixed the best market marker pointing at a town whose merchant has no gold left to pay for your cargo
@@ -1474,8 +1458,6 @@
 
 - The settings screen now reads in TradeLord's own Language setting, not the language the game is set to
 - The screen takes a new language the next time you open it, and the note under the Language setting now says so
-
-## 1.9.1
 
 ## 1.9.0
 
@@ -1538,8 +1520,6 @@
 
 - The message shown when the ledger has no routes now points at your travel ceilings
 
-## 1.6.24
-
 ## 1.6.23
 
 - TradeLord is now built against Bannerlord 1.4.8.119303, and still runs on 1.4.7 and the 1.5.1 beta
@@ -1566,8 +1546,6 @@
 
 - A campaign saved by this version still opens after you remove TradeLord from it
 - The price ledger and your purchase records carry over from a campaign that was saved by an earlier version
-
-## 1.6.18
 
 ## 1.6.17
 
