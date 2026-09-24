@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.93.4
+
+- Fixed Count what is on its way to a market counting what villagers carry back home as goods landing in their village
+
 ## 1.93.3
 
 - Fixed looted gear never being sold with What a good counts as having cost you set to Cheapest market you know
@@ -828,7 +832,7 @@
 ## 1.55.0
 
 - TradeLord now holds back any good an active quest of yours is waiting on, a trade good or a raw material as well as an animal
-- Four more quests are read for what they are waiting on, among them the artisan deliveries and the gang leader's stolen goods
+- Three more quests are read for what they are waiting on, among them the artisan deliveries
 - Nothing bought here now says when it was your Buy cap per item that stopped a good, rather than blaming your purse
 - Fixed the warning that your purse is under your gold reserve being swallowed by a visit that sold something
 - The town marked on your map is never one TradeLord would walk into and then leave alone

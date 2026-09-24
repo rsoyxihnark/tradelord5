@@ -199,7 +199,7 @@ namespace TradeLord
                 if (!caravan && !party.IsVillager) continue;
                 if (party.CurrentSettlement != null) continue;
                 Settlement bound = party.TargetSettlement;
-                if (bound == null || !(bound.IsTown || bound.IsVillage)) continue;
+                if (bound == null || !bound.IsTown) continue;
                 ItemRoster carried = party.ItemRoster;
                 if (carried == null) continue;
                 float days = TradeMath.EtaDays(
