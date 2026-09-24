@@ -10,7 +10,7 @@ namespace TradeLord
         internal static void Say() => Guard.Run("SelfCheck", () =>
             Log.Write("self-check: " + Patcher.Tally() +
                       " | " + Drove.PenaltyRead() +
-                      " | " + (Errands.Known ? "quest goods read" : "quest goods not read") +
+                      " | " + (Errands.Known ? "quest goods read" : "quest goods not all read") +
                       " | " + Tongue.StringsRead() +
                       " | " + Priced.ModelInForce()));
     }

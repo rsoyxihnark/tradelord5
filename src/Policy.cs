@@ -265,7 +265,6 @@ namespace TradeLord
             Dictionary<ItemObject, int> keep =
                 Named(TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current), byId);
             awaited = Errands.Promised(out int anyLivestock, out List<(WeaponClass kind, int many)> weapons);
-            if (awaited == null) return keep;
             foreach (var owed in Named(TradeRules.LivestockKeep(carried, anyLivestock), byId))
             {
                 awaited.TryGetValue(owed.Key, out int had);
@@ -388,7 +387,7 @@ namespace TradeLord
             facts.QuestItem = el.EquipmentElement.IsQuestItem;
             facts.AwaitedHeld = HeldBack(awaited, item);
             facts.FoodHeld = HeldBack(foodKeep, item);
-            facts.QuestsReadable = Errands.Known;
+            facts.QuestsReadable = Errands.AnimalsKnown;
 
             SellVerdict said = TradeRules.MaySell(good, el.Amount, facts, Options.Current,
                 new AskTheGame { Locks = lockedKeys, What = el.EquipmentElement });
@@ -472,7 +471,7 @@ namespace TradeLord
             facts.QuestItem = el.EquipmentElement.IsQuestItem;
             facts.AwaitedHeld = 0;
             facts.FoodHeld = 0;
-            facts.QuestsReadable = Errands.Known;
+            facts.QuestsReadable = Errands.AnimalsKnown;
             return TradeRules.MaySell(Describe(item), el.Amount, facts, Options.Current,
                                       new AskTheGame { Locks = lockedKeys, What = el.EquipmentElement })
                               .Allowed;

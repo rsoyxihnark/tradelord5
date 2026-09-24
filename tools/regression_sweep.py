@@ -4661,13 +4661,13 @@ def the_herd_guard_keeps_a_cushion_below_the_speed_penalty():
 def an_animal_is_held_back_when_the_quests_cannot_be_read():
     sell = sell_rule()
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
-    return ("internal static bool Known => Readable();" in S['Encounters.cs']
-            and "facts.QuestsReadable = Errands.Known;" in
+    return ("internal static bool AnimalsKnown { get { Read(); return _animalsRead; } }" in S['Encounters.cs']
+            and "facts.QuestsReadable = Errands.AnimalsKnown;" in
                 method_body(S['Policy.cs'], "internal static bool MaySell(ItemRosterElement el")
             and "if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestGoods; return said; }" in sell
             and ordered(sell, "if (Listed(s.AlwaysSet, good)) { said.Allowed = true; return said; }",
                         "if (livestock && !facts.QuestsReadable) { said.Why = Block.QuestGoods; return said; }")
-            and "if (promised == null) return;" in relief
+            and "if (!Errands.AnimalsKnown) return;" in relief
             and "no animal is sold at all" in S['Encounters.cs']
             and "no animal is sold to relieve the herd" not in S['Trading.cs'])
 
@@ -4752,9 +4752,9 @@ def an_animal_a_quest_is_waiting_on_is_counted_out_of_the_herd():
             and all('"' + f + '"' in errands for f in named)
             and "Campaign.Current?.QuestManager?.Quests" in promised
             and "if (quest == null || quest.IsFinalized) continue;" in promised
-            and "if (!Readable()) return null;" in promised
+            and ordered(promised, "Read();", "for (int i = 0; i < _read.Length; i++)")
             and "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);" in relief
-            and "if (promised == null) return;" in relief
+            and "if (!Errands.AnimalsKnown) return;" in relief
             and "if (promised.TryGetValue(item, out int owed) && owed > 0)" in relief
             and "int spare = Math.Min(remaining, owed);" in relief
             and "promised[item] = owed - spare;" in relief
@@ -4768,7 +4768,7 @@ def a_quest_animal_is_held_back_from_every_sale_not_just_the_herd():
     kept = method_body(S['Policy.cs'], "internal static Dictionary<ItemObject, int> KeptBack")
     return ("awaited = Errands.Promised(out int anyLivestock, out List<(WeaponClass kind, int many)> weapons);" in kept
             and "TradeRules.LivestockKeep(carried, anyLivestock)" in kept
-            and "if (awaited == null) return keep;" in kept
+            and "return null;" not in method_body(S['Encounters.cs'], "internal static Dictionary<ItemObject, int> Promised")
             and "facts.AwaitedHeld = HeldBack(awaited, item);" in
                 method_body(S['Policy.cs'], "internal static bool MaySell(in Good good, ItemRosterElement el")
             and "TradePolicy.MaySell(good, _plan[at], _pass.Locked, _keepBack, _awaited," in S['Trading.cs']
@@ -6608,8 +6608,8 @@ def the_food_reserve_holds_against_thinning_the_herd_too():
             and "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);" in relief
             and ordered(relief,
                         "ItemRoster mine = pass.Party.ItemRoster;",
+                        "if (!Errands.AnimalsKnown) return;",
                         "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);",
-                        "if (promised == null) return;",
                         "if (promised.TryGetValue(item, out int owed) && owed > 0)")
             and "Named(TradeRules.FoodKeep(carried, AppetitePerDay(), Options.Current), byId);" in kept
             and "awaited[owed.Key] = had + owed.Value;" in kept
@@ -6992,10 +6992,10 @@ def an_army_waiting_on_livestock_holds_back_whatever_herd_you_carry():
                     "keep[held.Good.Id] = had + take;", "wanted -= take;")
             and "MobileParty" not in S['Rules.cs'] and "ItemRoster" not in S['Rules.cs']
             and ordered(kept, "awaited = Errands.Promised(out int anyLivestock, out List<(WeaponClass kind, int many)> weapons);",
-                        "if (awaited == null) return keep;",
                         "Named(TradeRules.LivestockKeep(carried, anyLivestock), byId)",
                         "awaited[owed.Key] = had + owed.Value;")
             and "if (_readHerds[i].many.GetValue(quest) is int owed && owed > 0) anyLivestock += owed;" in promised
+            and "return null;" not in promised
             and "An_army_waiting_on_livestock_reserves_it_across_whatever_herd_you_carry" in FOODTESTS
             and "A_livestock_reserve_never_claims_more_than_the_herd_you_are_carrying" in FOODTESTS
             and "One_good_in_two_lots_gives_the_livestock_reserve_both_lots" in FOODTESTS)
@@ -12047,6 +12047,35 @@ chk("1.91.6", "the Trade XP in the ledger is the XP the skill really took, and a
     the_trade_xp_the_ledger_shows_is_the_xp_the_skill_really_took())
 chk("1.91.6", "a settings file written by a newer TradeLord is left as it is, and every setting or value this version does not know is kept in it",
     a_settings_file_from_a_newer_tradelord_keeps_what_this_one_does_not_know())
+
+
+def a_quest_the_game_moved_loses_only_its_own_hold():
+    read = method_body(S['Encounters.cs'], "private static void Read()")
+    named = between(read, "for (int i = 0; i < Named.Length; i++)", "for (int i = 0; i < NamedGoods.Length; i++)")
+    goods = between(read, "for (int i = 0; i < NamedGoods.Length; i++)", "for (int i = 0; i < NamedHerds.Length; i++)")
+    herds = between(read, "for (int i = 0; i < NamedHerds.Length; i++)", "for (int i = 0; i < NamedWeapons.Length; i++)")
+    weapons = between(read, "for (int i = 0; i < NamedWeapons.Length; i++)", "_readGoods = byGood.ToArray();")
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    promised = method_body(S['Encounters.cs'], "internal static Dictionary<ItemObject, int> Promised")
+    return (read and named and goods and herds and weapons
+            and re.findall(r'\breturn\b[^;]*;', promised) == ['return promised;', 'return promised;']
+            and ordered(promised, "Read();", "var promised = new Dictionary<ItemObject, int>();")
+            and all("continue;" in one and "return" not in one for one in (named, goods, herds, weapons))
+            and all("allRead = animalsRead = false;" in one for one in (named, herds))
+            and all("allRead = false;" in one and "animalsRead" not in one for one in (goods, weapons))
+            and ordered(read, "if (_read != null) return;", "_allRead = allRead;",
+                        "_animalsRead = animalsRead;", "_read = found.ToArray();")
+            and "_unreadable" not in S['Encounters.cs']
+            and "internal static bool Known { get { Read(); return _allRead; } }" in S['Encounters.cs']
+            and S['Policy.cs'].count("facts.QuestsReadable = Errands.AnimalsKnown;") == 2
+            and "Errands.Known" not in S['Policy.cs']
+            and ordered(relief, "if (!Errands.AnimalsKnown) return;",
+                        "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);")
+            and '"quest goods not all read"' in S['SubModule.cs'])
+
+
+chk("1.91.7", "a quest the game no longer lets TradeLord read loses only its own hold, every other quest keeps what it waits on, and animals stay unsold only while a quest that could want one is unread",
+    a_quest_the_game_moved_loses_only_its_own_hold())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
