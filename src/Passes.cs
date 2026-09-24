@@ -128,6 +128,7 @@ namespace TradeLord
         int HerdRoom();
         void Staged(int at, int price);
         bool Take(int at, int price, out int cost);
+        void Resold(int at, int units, int gold);
     }
 
     internal interface ISellingMarket
@@ -280,6 +281,8 @@ namespace TradeLord
                 int held = market.Carried(picked.At) + books.Held(sim, good.Id);
                 int till = market.ResaleTill(picked.At);
                 int drawn = market.ResaleUpTo(picked.At, held);
+                int unitsBefore = moved.Units;
+                int drawnBefore = drawn;
 
                 while (remaining > 0)
                 {
@@ -327,6 +330,8 @@ namespace TradeLord
                     drawn = wouldDraw;
                     if (livestock) herdRoom--;
                 }
+                if (moved.Units > unitsBefore)
+                    market.Resold(picked.At, moved.Units - unitsBefore, drawn - drawnBefore);
             }
             return moved;
         }
@@ -373,12 +378,12 @@ namespace TradeLord
                 inTheLot[good.Id] = before + units;
 
                 int from = market.Carried(one.At) + books.Held(sim, good.Id) + before;
-                if (market.ResaleMarket(one.At, unit, from + units, out _))
-                    lot.Resale += TradeMath.Realizable(
-                        TradeRules.WhatTheBuyerPays(market.ResaleUpTo(one.At, from),
-                                                    market.ResaleUpTo(one.At, from + units),
-                                                    market.ResaleTill(one.At)),
-                        s.ResaleSafetyFactor);
+                if (!market.ResaleMarket(one.At, unit, from + units, out _)) continue;
+                int pays = TradeRules.WhatTheBuyerPays(market.ResaleUpTo(one.At, from),
+                                                       market.ResaleUpTo(one.At, from + units),
+                                                       market.ResaleTill(one.At));
+                lot.Resale += TradeMath.Realizable(pays, s.ResaleSafetyFactor);
+                market.Resold(one.At, units, pays);
             }
             lot.Weighed = true;
 

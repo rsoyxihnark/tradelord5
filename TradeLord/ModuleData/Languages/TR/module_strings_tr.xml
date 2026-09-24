@@ -201,7 +201,7 @@
 		<string id="TL334" text="Harcarken bu kadar altının altına asla inmez. Varsayılan 300; bu, iki düşman karşılaşmasından pazarlıkla çıkmaya ve alışveriş sonrası bir maaş ödemesini karşılamaya yeter."/>
 		<string id="TL335" text="TradeLord'un bir ziyarette bir maldan aldığı en fazla birim. 0 = sayıda sınır yok. Varsayılan 32."/>
 		<string id="TL336" text="Ziyaret başına mal başına harcamayı dinar olarak da sınırlar."/>
-		<string id="TL337" text="TradeLord'un yerleşim ziyareti başına harcayabileceği toplam dinar. Varsayılan 1000."/>
+		<string id="TL337" text="TradeLord'un yerleşim ziyareti başına harcayabileceği toplam dinar. Varsayılan 1000. Aşağıdaki Uyarlanan harcama sınırı keseniz büyüdükçe bunu yükseltir."/>
 		<string id="TL338" text="En iyi satış fiyatının yalnızca bu oranının siz varana kadar duracağını varsayar."/>
 		<string id="TL339" text="Tahıl ağır ve kâr payı düşüktür, bu yüzden almak yükü az getiriyle doldurur. Satış ve yiyecek rezervi etkilenmez. Varsayılan AÇIK."/>
 		<string id="TL340" text="TradeLord'un asla almaması gereken mallar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Satışları etkilenmez."/>
@@ -312,5 +312,7 @@
 		<string id="TL470" text="Ticaret tecrübesi eklenemedi: Ticaret yeteneğiniz ({SKILL}) öğrenme sınırını ({LIMIT}) aştı. {ATTRIBUTE} için {POINTS} puan daha verirseniz yeniden öğrenmeye başlar."/>
 		<string id="TL471" text="Ticaret tecrübesi eklenemedi: Ticaret yeteneğiniz ({SKILL}) öğrenme sınırını ({LIMIT}) aştı. Yeniden öğrenmesi için Ticaret'teki odağınızı ve {ATTRIBUTE} değerinizi birlikte yükseltin."/>
 		<string id="TL472" text="Karakter ekranında harcanmayı bekleyen {FOCUS} odak puanınız ve {POINTS} nitelik puanınız var."/>
+		<string id="TL473" text="Uyarlanan harcama sınırı"/>
+		<string id="TL474" text="Keseniz büyüdükçe TradeLord'un ziyaret başına daha çok harcamasına izin verir ve her zaman Ziyaret başına en çok harcama'nın üstüne ekler. Kesenizde bu sınırın beş katı birikene kadar sınır ayarladığınız gibi kalır. Ondan sonra kesenin her ikiye katlanışı için sınır bir Ziyaret başına en çok harcama kadar büyür: 1000 ayarlıyken kesede 10000 varsa 2000, 20000 varsa 3000 harcanabilir. Varsayılan olarak AÇIK."/>
 	</strings>
 </base>

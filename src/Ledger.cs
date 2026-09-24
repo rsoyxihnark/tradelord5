@@ -646,6 +646,7 @@ namespace TradeLord
             long started = System.DateTime.UtcNow.Ticks;
             var deep = flat;
             Ladder deepRungs = null;
+            Fetched deepGot = default(Fetched);
             float bestRate = float.MinValue;
             for (int i = 0; i < shortlist.Count; i++)
             {
@@ -658,12 +659,15 @@ namespace TradeLord
                 bestRate = rate;
                 deep = one;
                 deepRungs = got.Rungs;
+                deepGot = got;
             }
             BuyerTicks += System.DateTime.UtcNow.Ticks - started;
             if (deep.town != flat.town && Options.Current.ExtendedDebugLogging)
                 Log.Write("buyer for " + Tongue.Named(item.Name, item.StringId) + ": all " + units +
-                          " unit(s) weighed picked " + deep.town.Name + " at " + deep.price +
-                          " a unit, where the first unit alone would have picked " +
+                          " unit(s) weighed picked " + deep.town.Name + ", which pays " +
+                          TradeMath.PerUnit(deepGot.Total, deepGot.Units) + " a unit on average for the " +
+                          deepGot.Units + " unit(s) that clear your margin there, " + deep.price +
+                          " for the first, where the first unit alone would have picked " +
                           flat.town.Name + " at " + flat.price);
             return (deep.town, deep.price, deepRungs);
         }

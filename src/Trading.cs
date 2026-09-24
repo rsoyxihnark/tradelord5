@@ -642,16 +642,27 @@ namespace TradeLord
             return TradeMath.Reserve(Options.Current.GoldReserve, Options.Current.KeepWageDays, wage);
         }
 
-        internal static int Spendable(Books books, bool sim) =>
-            TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(),
-                             Options.Current.MaxSpendPerVisit, books.PaidOut(sim));
+        internal static int Spendable(Books books, bool sim)
+        {
+            int purse = Hero.MainHero.Gold + books.Purse(sim);
+            int held = GoldHeldBack();
+            int paid = books.PaidOut(sim);
+            return TradeMath.Budget(purse, held, SpendCap((long)purse + paid), paid);
+        }
+
+        internal static int SpendCap(long purseBeforeBuying) =>
+            TradeMath.AdaptiveSpendCap(Options.Current.MaxSpendPerVisit, purseBeforeBuying,
+                                       Options.Current.AdaptiveSpendLimit);
 
         internal static int PurseForTheirOffer(Books books, bool sim) =>
             TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(), 0, 0);
 
-        internal static int PurseForAVisit() =>
-            TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
-                             Options.Current.MaxSpendPerVisit, 0);
+        internal static int PurseForAVisit()
+        {
+            int purse = Hero.MainHero.Gold;
+            int held = GoldHeldBack();
+            return TradeMath.Budget(purse, held, SpendCap(purse), 0);
+        }
 
         private static int GoldGained(bool sim, int simGold, int goldBefore) =>
             sim ? simGold : Hero.MainHero.Gold - goldBefore;
@@ -663,14 +674,18 @@ namespace TradeLord
         {
             int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);
             int held = GoldHeldBack(), flat = Options.Current.GoldReserve;
-            int cap = Options.Current.MaxSpendPerVisit;
+            int cap = SpendCap((long)purse + pass.Books.PaidOut(pass.Sim));
+            int set = Options.Current.MaxSpendPerVisit;
             Log.Repeatable("purse " + pass.Key, purse + "/" + held + "/" + pass.Spendable(),
                            "nothing is bought " + pass.Where + ": your purse is " + purse +
                            " and TradeLord holds " + held + " of it back, " + flat +
                            " as your gold reserve and " + (held - flat) + " as " +
                            Options.Current.KeepWageDays + " day(s) of your wage bill" +
                            (cap > 0 ? ", with " + (cap - pass.Books.PaidOut(pass.Sim)) +
-                                      " left of the " + cap + " you allow per visit" : ""));
+                                      " left of the " + cap + " you allow per visit" +
+                                      (cap > set ? " (Max spend per visit " + set + ", raised by Adaptive spend " +
+                                                   "limit as your purse grew)" : "")
+                                    : ""));
         }
 
         private static bool WarnPurseBelowReserve()
@@ -2044,6 +2059,7 @@ namespace TradeLord
             private ItemRosterElement[] _shelf;
             private Dictionary<string, int> _asked;
             private Dictionary<int, (Settlement where, Ladder rungs, int till)> _resale;
+            private Dictionary<ItemObject, (int units, int gold)> _resold;
 
             internal BuyingAt(Pass pass, string what, string named, bool theirOffer = false)
             {
@@ -2131,6 +2147,17 @@ namespace TradeLord
             public int ResaleUpTo(int at, int units) =>
                 units <= 0 || _resale == null || !_resale.TryGetValue(at, out var far)
                     ? 0 : far.rungs.Through(units);
+
+            public void Resold(int at, int units, int gold)
+            {
+                ItemObject good = Item(at);
+                if (good == null || units <= 0 || !_pass.Aimed.TryGetValue(good, out var aimed)) return;
+                if (_resold == null) _resold = new Dictionary<ItemObject, (int units, int gold)>();
+                _resold.TryGetValue(good, out var was);
+                was = (was.units + units, was.gold + gold);
+                _resold[good] = was;
+                _pass.Aimed[good] = (aimed.where, TradeMath.PerUnit(was.gold, was.units));
+            }
 
             public int ResaleTill(int at) =>
                 _resale != null && _resale.TryGetValue(at, out var far) ? far.till : 0;

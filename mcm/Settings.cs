@@ -701,11 +701,16 @@ namespace TradeLord.Mcm
         public int MaxHeldPerItem { get => _o.MaxHeldPerItem; set { _o.MaxHeldPerItem = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL237}Max spend per visit (0 = unlimited)", 0, 100000, Order = 5, RequireRestart = false,
-            HintText = "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000.")]
+            HintText = "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int MaxSpendPerVisit { get => _o.MaxSpendPerVisit; set { _o.MaxSpendPerVisit = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL238}Resale safety factor", 0.5f, 1f, "#0%", Order = 6, RequireRestart = false,
+        [SettingPropertyBool("{=TL473}Adaptive spend limit", Order = 6, RequireRestart = false,
+            HintText = "{=TL474}Lets TradeLord spend more per visit as your purse grows, always on top of Max spend per visit. Until your purse holds five times that limit, the limit stays as set. Past that, it grows by one more Max spend per visit for every doubling of the purse: with 1000 set, 10000 in the purse allows 2000 and 20000 allows 3000. ON by default.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
+        public bool AdaptiveSpendLimit { get => _o.AdaptiveSpendLimit; set { _o.AdaptiveSpendLimit = value; Options.Bump(); } }
+
+        [SettingPropertyFloatingInteger("{=TL238}Resale safety factor", 0.5f, 1f, "#0%", Order = 7, RequireRestart = false,
             HintText = "{=TL338}Assume only this fraction of the best sell price is still available by the time you arrive.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }

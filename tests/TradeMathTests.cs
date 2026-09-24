@@ -1397,6 +1397,42 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_adaptive_spend_limit_holds_the_base_until_the_purse_is_five_times_it()
+        {
+            Assert.Equal(1000, TradeMath.AdaptiveSpendCap(1000, 0, true));
+            Assert.Equal(1000, TradeMath.AdaptiveSpendCap(1000, 1000, true));
+            Assert.Equal(1000, TradeMath.AdaptiveSpendCap(1000, 5000, true));
+            Assert.Equal(1000, TradeMath.AdaptiveSpendCap(1000, -500, true));
+        }
+
+        [Fact]
+        public void The_adaptive_spend_limit_adds_one_base_each_time_the_purse_doubles_past_that()
+        {
+            Assert.Equal(2000, TradeMath.AdaptiveSpendCap(1000, 10000, true));
+            Assert.Equal(3000, TradeMath.AdaptiveSpendCap(1000, 20000, true));
+            Assert.Equal(4000, TradeMath.AdaptiveSpendCap(1000, 40000, true));
+            Assert.Equal(1584, TradeMath.AdaptiveSpendCap(1000, 7500, true));
+            Assert.Equal(4380, TradeMath.AdaptiveSpendCap(1000, 52068, true));
+            Assert.Equal(4000, TradeMath.AdaptiveSpendCap(2000, 20000, true));
+            Assert.True(TradeMath.AdaptiveSpendCap(1000, 100000000L, true) < 20000);
+            int before = 1000;
+            for (long purse = 5000; purse <= 1000000; purse += 2500)
+            {
+                int now = TradeMath.AdaptiveSpendCap(1000, purse, true);
+                Assert.True(now >= before);
+                before = now;
+            }
+        }
+
+        [Fact]
+        public void With_the_adaptive_spend_limit_off_or_no_base_the_setting_stands_as_it_is()
+        {
+            Assert.Equal(1000, TradeMath.AdaptiveSpendCap(1000, 50000, false));
+            Assert.Equal(0, TradeMath.AdaptiveSpendCap(0, 50000, true));
+            Assert.Equal(int.MaxValue, TradeMath.AdaptiveSpendCap(int.MaxValue, long.MaxValue, true));
+        }
+
+        [Fact]
         public void The_fewest_points_that_let_a_skill_learn_again_are_counted_up_from_one()
         {
             Assert.Equal(1, TradeMath.FewestThatLets(5, more => more >= 1));

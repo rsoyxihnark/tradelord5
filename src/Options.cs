@@ -123,6 +123,8 @@ namespace TradeLord
 
         public int MaxSpendPerVisit = 1000;
 
+        public bool AdaptiveSpendLimit = true;
+
         public bool UseFleetCapacity = false;
 
         public bool SellSpareMounts = true;
