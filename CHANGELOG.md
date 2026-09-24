@@ -219,19 +219,19 @@
 
 ## 1.88.1
 
-- The setting that was called Pick the market a buy is aimed at on the whole stack is now called Pick where to sell on the whole load, and says in plainer words what it does
+- Pick the market a buy is aimed at on the whole stack is now called Pick where to sell on the whole load, and its hint is plainer
 
 ## 1.88.0
 
-- Pick the market a buy is aimed at on the whole stack, a new setting that ships on: the best markets for a good are weighed on what they would pay for the whole lot rather than for one unit
-- With Enable extended debug logging on, TradeLord.log names the market that weighing the whole stack picked where the price of one unit alone would have picked another
-- With Enable extended debug logging on, TradeLord.log says after every buying pass how many price ladders picking a market to sell in walked, and how long they took
+- Added Pick the market a buy is aimed at on the whole stack, on out of the box, which weighs markets on the whole lot, not one unit
+- With Enable extended debug logging on, TradeLord.log names the market the whole stack picked when one unit would have picked another
+- With Enable extended debug logging on, TradeLord.log says after every buying pass how many price ladders it walked and how long they took
 - The mod description now names Pick the market a buy is aimed at on the whole stack
 
 ## 1.87.0
 
 - The three switches under Debug are one setting now, Enable extended debug logging, and it ships on
-- A settings file that carried Write a price trace to the log, Score the forecast in the log or Ultralog is brought forward to Enable extended debug logging
+- Write a price trace to the log, Score the forecast in the log and Ultralog in your settings file carry over to Enable extended debug logging
 - The mod description now names Enable extended debug logging and says what it writes
 
 ## 1.86.0
@@ -953,7 +953,7 @@
 ## 1.42.1
 
 - Walking into a market now works the best markets out for the whole shelf in one go, so a busy market costs your game less
-- Restocking your food and buying a haul animal work the best markets out in one go too
+- Restocking your food and buying a haul animal now work the best markets out for the whole shelf in one go
 - The ledger now lets go of what it worked the routes out with as soon as it has finished
 
 ## 1.42.0
@@ -980,7 +980,7 @@
 ## 1.41.6
 
 - Walking into a market no longer has TradeLord work the best markets out all over again, since walking in moves no prices
-- After it trades, it only works out again the goods whose price its own trading moved, instead of every good on the map
+- After TradeLord trades, it works out again only the goods whose price its own trading moved, instead of every good on the map
 
 ## 1.41.5
 
@@ -1452,7 +1452,7 @@
 - Selling looted gear now starts switched on at tier 1, which is what looters and bandits drop, and you can still raise it or switch it off
 - Added an always buy list to match the always sell one, so a good named on it is bought past every other rule
 - Your never sell and never buy lists and anything you locked in the inventory still hold
-- Switching those four settings over to lists keeps whatever you had already picked, so nothing resets
+- Switching the food, smithing material, livestock and cost settings over to lists keeps whatever you had already picked
 
 ## 1.10.0
 
@@ -1462,7 +1462,7 @@
 ## 1.9.0
 
 - The switches that decide when TradeLord sells and buys now say plainly what they do
-- Every other setting that still talked about quick sell and quick buy now names selling and buying instead, in English and in Turkish
+- Every setting that still talked about quick sell and quick buy now names selling and buying, in English and in Turkish
 
 ## 1.8.0
 
@@ -1631,7 +1631,6 @@
 - The buying settings are now written in the order they appear on screen
 - A fault while showing a trade message, or while closing a campaign, is now logged and stepped over instead of reaching the game
 - Asking the ledger what a good cost when it has never seen that good now answers instead of faulting
-- Tidied the layout of the two trading passes, which behave exactly as before
 
 ## 1.6.1
 
