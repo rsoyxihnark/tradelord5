@@ -26,6 +26,7 @@ namespace TradeLord
         private static bool _totalHandedOver;
         private static int _waited;
         private static int _goldAtOpen;
+        private static float _tradeXpSeen;
 
         internal static bool Staging => _logic != null;
 
@@ -124,10 +125,22 @@ namespace TradeLord
             _totalHandedOver = false;
             _waited = 0;
             _goldAtOpen = Hero.MainHero?.Gold ?? 0;
+            _tradeXpSeen = TradeXpNow();
             TradeActionBehavior.StartAFreshDryRun();
             Log.Write("the trade screen is open at " + site.Name +
                       " and TradeLord is laying its deal out on it rather than trading");
             return true;
+        }
+
+        private static float TradeXpNow() =>
+            Hero.MainHero?.HeroDeveloper?.GetSkillXp(DefaultSkills.Trade) ?? 0f;
+
+        internal static int TradeXpEarnedOnTheScreen()
+        {
+            float now = TradeXpNow();
+            float earned = now - _tradeXpSeen;
+            _tradeXpSeen = now;
+            return earned > 0f ? (int)Math.Round(earned) : 0;
         }
 
         internal static int PurseMovedOnTheScreen() =>
@@ -179,6 +192,7 @@ namespace TradeLord
             _totalHandedOver = false;
             _waited = 0;
             _goldAtOpen = 0;
+            _tradeXpSeen = 0f;
         }
 
         private static void Drop()

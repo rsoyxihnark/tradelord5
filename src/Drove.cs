@@ -8,6 +8,7 @@ using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
+using TaleWorlds.Localization;
 
 namespace TradeLord
 {
@@ -16,7 +17,11 @@ namespace TradeLord
         private static MethodInfo _modifier;
         private static bool _lookupFailed;
 
-        internal static void Forget() => _lookupFailed = false;
+        internal static void Forget()
+        {
+            _lookupFailed = false;
+            _packLineUnread = false;
+        }
 
         private static bool Tally(MobileParty party, out int men, out int herd,
                                   out int mounts, out int foot)
@@ -187,6 +192,20 @@ namespace TradeLord
             return held;
         }
 
+        private static bool _packLineUnread;
+
+        private static bool PackAnimalsLine(ExplainedNumber capacity, out float carries)
+        {
+            carries = 0f;
+            string named = (typeof(DefaultInventoryCapacityModel).GetField(
+                                "_textPackAnimals", BindingFlags.Static | BindingFlags.NonPublic)
+                                ?.GetValue(null) as TextObject)?.ToString();
+            if (string.IsNullOrEmpty(named)) return false;
+            foreach (var (name, number) in capacity.GetLines())
+                if (name == named) carries += number;
+            return carries > 0f;
+        }
+
         internal static int HaulAnimalsCargoCanSpare(MobileParty party)
         {
             int held = HaulAnimalsHeld(party);
@@ -196,9 +215,21 @@ namespace TradeLord
                 InventoryCapacityModel model = Campaign.Current?.Models?.InventoryCapacityModel;
                 if (model == null) return 0;
                 bool atSea = Carry.Sailing();
+                ExplainedNumber capacity = model.CalculateInventoryCapacity(party, atSea, true);
                 float carried = model.CalculateTotalWeightCarried(party, atSea).ResultNumber;
-                return TradeMath.MostThatHolds(held, fewer => fewer == 0 ||
-                    model.CalculateInventoryCapacity(party, atSea, false, 0, 0, -fewer).ResultNumber >= carried);
+                int packAnimals = party.ItemRoster.NumberOfPackAnimals;
+                if (!PackAnimalsLine(capacity, out float carries) && !atSea && packAnimals > 0)
+                {
+                    if (!_packLineUnread)
+                    {
+                        _packLineUnread = true;
+                        Log.Write("haul animal cargo floor: the game did not say how much its pack animals carry, " +
+                                  "so every haul animal is kept");
+                    }
+                    return 0;
+                }
+                return Herding.HaulAnimalsToSpare(held, packAnimals, carries, capacity.BaseNumber,
+                                                  capacity.ResultNumber, carried);
             }
             catch (Exception e)
             {

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using HarmonyLib;
 using Helpers;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
+using TaleWorlds.CampaignSystem.CampaignBehaviors;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ComponentInterfaces;
 using TaleWorlds.CampaignSystem.GameMenus;
@@ -57,6 +59,42 @@ namespace TradeLord
 
         internal static float Room(MobileParty party) =>
             TradeMath.RoomToFill(Capacity(party), Carried(party), Options.Current.MaxCargoShare);
+    }
+
+    internal static class GameTradeBook
+    {
+        private static bool _read;
+        private static MethodInfo _bought;
+        private static MethodInfo _sold;
+
+        internal static void Forget()
+        {
+            _read = false;
+            _bought = null;
+            _sold = null;
+        }
+
+        internal static void Note(bool selling, EquipmentElement what, int gold)
+        {
+            if (gold <= 0 || what.Item == null) return;
+            TradeSkillCampaignBehavior book = Campaign.Current?.GetCampaignBehavior<TradeSkillCampaignBehavior>();
+            if (book == null) return;
+            if (!_read)
+            {
+                _read = true;
+                _bought = typeof(TradeSkillCampaignBehavior).GetMethod(
+                    "ProcessPurchases", BindingFlags.Instance | BindingFlags.NonPublic);
+                _sold = typeof(TradeSkillCampaignBehavior).GetMethod(
+                    "ProcessSales", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (_bought == null || _sold == null)
+                    Log.Write("the game's own record of what you paid for your goods could not be reached on " +
+                              "this game version, so what TradeLord trades for you is left out of it and the " +
+                              "Trade XP the game gives for goods you sell by hand may be off");
+            }
+            var one = new ItemRosterElement(what, 1);
+            if (selling) _sold?.Invoke(book, new object[] { one, gold, true });
+            else _bought?.Invoke(book, new object[] { one, gold });
+        }
     }
 
     public class TradeActionBehavior : CampaignBehaviorBase
@@ -193,6 +231,7 @@ namespace TradeLord
             TradePolicy.ForgetCraftingLookup();
             Errands.Forget();
             Priced.Forget();
+            GameTradeBook.Forget();
             ForgetRoadMarket();
             ForgetTheMeeting();
             Meetings.ForgetWhoYouTradedWith();
@@ -524,7 +563,12 @@ namespace TradeLord
 
             private bool Swap(bool selling, Action swap, string what, string named, out int gold)
             {
-                if (SwapOneUnit(selling, swap, Site == null ? null : Shop, what, named, out gold)) return true;
+                if (SwapOneUnit(selling, swap, Site == null ? null : Shop, what, named, out gold))
+                {
+                    int paid = gold;
+                    Guard.Run("GameTradeBook", () => GameTradeBook.Note(selling, _unit.EquipmentElement, paid));
+                    return true;
+                }
                 DirectionError = true;
                 return false;
             }
@@ -941,6 +985,8 @@ namespace TradeLord
             Notices.Drain();
         }
 
+        private const float GameTradeXpPerDenarOfProfit = 0.5f;
+
         private static void CreditTheCompanionsWithYou(int xp)
         {
             float each = TradeMath.PartyShareOfProfit(xp, Options.Current.PartyTradeXpShare);
@@ -949,7 +995,7 @@ namespace TradeLord
             foreach (Hero companion in Hero.MainHero.CompanionsInParty)
             {
                 if (companion == null) continue;
-                companion.AddSkillXp(DefaultSkills.Trade, each);
+                companion.AddSkillXp(DefaultSkills.Trade, each * GameTradeXpPerDenarOfProfit);
                 credited++;
             }
             if (credited > 0)
@@ -961,10 +1007,12 @@ namespace TradeLord
         {
             if (Campaign.Current == null || Hero.MainHero == null) return;
             int before = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
+            float xpBefore = Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade);
             OpenTransaction();
             try { SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp); }
             finally { CloseTransaction(); ReportSilenced(); }
-            LedgerBehavior.Instance?.AddTradeXp(xp);
+            LedgerBehavior.Instance?.AddTradeXp(
+                (int)Math.Round(Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) - xpBefore));
             if (profit > 0)
                 Guard.Run("TradeXp.Event", () =>
                 {
@@ -1471,6 +1519,19 @@ namespace TradeLord
         private static bool RoadPartyReachable(MobileParty met)
         {
             if (!Meetings.IsRoadTrader(met)) return false;
+            if (met.IsCaravan && met.Party?.Owner == Hero.MainHero)
+            {
+                Log.Write(met.Name + " is your own caravan, and the game never lets you trade with one of " +
+                          "your own, so TradeLord leaves it alone");
+                return false;
+            }
+            if (met.IsCaravan && (met.IsInRaftState || !Meetings.CarriesGoods(met)))
+            {
+                Log.Write(met.Name + (met.IsInRaftState ? " are on a raft" : " carry no goods") +
+                          ", and the game only trades with a caravan that is off its raft and has goods to show, " +
+                          "so TradeLord leaves it alone");
+                return false;
+            }
             if (!Options.Current.ExcludeHostileTowns) return true;
             IFaction mine = Hero.MainHero?.MapFaction;
             return mine == null || met.MapFaction == null ||
