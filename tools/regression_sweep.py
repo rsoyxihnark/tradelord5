@@ -10612,6 +10612,14 @@ WITHDRAWN_NEVER_WRITTEN = (
     "buy what the ledger sent you for first",
     "what to buy first",
     "what the ledger scores highest",
+    "scan radius",
+    "roll call",
+    "observation shelf life",
+    "data column",
+    "when your bags are full",
+    "the auto trade switch",
+    "untraded behind a warning",
+    "spend down to your gold reserve",
 )
 
 
