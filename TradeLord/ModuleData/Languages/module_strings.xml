@@ -118,7 +118,7 @@
 		<string id="TL271" text="Keep every one" />
 		<string id="TL272" text="Keep the ones you have not learned" />
 		<string id="TL273" text="Trade with caravans and villagers" />
-		<string id="TL373" text="Meet a caravan or villagers on the road and TradeLord trades with them the moment you meet. It sells a caravan what clears your margin and buys what it can sell on for more, paid from the caravan's purse. Villagers are never sold to: TradeLord takes their whole offer when it clears your margin, and otherwise leaves it to you. ON by default." />
+		<string id="TL373" text="Meet a caravan or villagers on the road and TradeLord trades at once. It sells a caravan what clears your margin and buys what sells on for more. Villagers are never sold to: their whole offer is taken when it clears your margin, past Max spend per visit, Never buy grain and the caps on one good, or left to you with the reason why. ON by default." />
 		<string id="TL274" text="Share of the hold one good may fill (0 = off)" />
 		<string id="TL374" text="Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and haul animals. 0 turns it off. Selling is unaffected." />
 		<string id="TL275" text="Sell animals that slow you down" />
@@ -300,5 +300,17 @@
 		<string id="TL458" text="Writes TradeLord's own workings to TradeLord.log: what every market pays and charges for the goods you carry, how well the forecast and the panel's promises held up when you walked in, and everything the map marker weighed. Needs Count what is on its way to a market for the forecast half. ON by default; turn it off to keep the log short."/>
 		<string id="TL459" text="Pick where to sell on the whole load"/>
 		<string id="TL460" text="Every good TradeLord buys is bought for a market it means to sell it in. OFF: that market is picked on what it pays for one unit. ON: every market in reach is weighed again on what it would pay for the whole load, which is what you will really be paid. It costs a little time at every market you walk into. ON while it is being tried out."/>
+		<string id="TL461" text="TradeLord left the villagers' offer to you: {GOLD} denars for goods it reckons it can sell on for {RESALE}, short of your Minimum profit margin."/>
+		<string id="TL462" text="TradeLord left the villagers' offer to you: they ask {GOLD} denars, and {SPEND} of your purse is free to spend."/>
+		<string id="TL463" text="TradeLord left the villagers' offer to you because of the {GOOD} in it: {REASON}."/>
+		<string id="TL464" text="TradeLord left the villagers' offer to you: {REASON}."/>
+		<string id="TL465" text="TradeLord never buys a horse to trade"/>
+		<string id="TL466" text="it is not a good TradeLord trades"/>
+		<string id="TL467" text="the game puts no price on it"/>
+		<string id="TL468" text="Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). {FOCUS} more focus point(s) in Trade or {POINTS} more point(s) of {ATTRIBUTE} would let it learn again."/>
+		<string id="TL469" text="Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). {FOCUS} more focus point(s) in Trade would let it learn again."/>
+		<string id="TL470" text="Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). {POINTS} more point(s) of {ATTRIBUTE} would let it learn again."/>
+		<string id="TL471" text="Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). Raise your focus in Trade and your {ATTRIBUTE} together to let it learn again."/>
+		<string id="TL472" text="You have {FOCUS} focus point(s) and {POINTS} attribute point(s) left to spend on the character screen."/>
 	</strings>
 </base>

@@ -262,6 +262,14 @@ namespace TradeLord
             return worth > int.MaxValue ? int.MaxValue : (int)worth;
         }
 
+        public static int FewestThatLets(int most, Func<int, bool> lets)
+        {
+            if (lets == null) return 0;
+            for (int more = 1; more <= most; more++)
+                if (lets(more)) return more;
+            return 0;
+        }
+
         public static int AtThisQuality(int plainPrice, int plainValue, int qualityValue)
         {
             if (plainPrice <= 0 || plainValue <= 0 || qualityValue <= 0 || qualityValue == plainValue)
