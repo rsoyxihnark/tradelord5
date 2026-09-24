@@ -84,11 +84,12 @@
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, once you switch it on. Off out of the box, so looted gear goes to the first market that can pay for it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
-- ✅ Credits every companion riding with you a share of that same profit as Trade XP, at a share you set, so a trading clan learns from the run as well as its lord. Off out of the box, so the XP is yours alone until you ask for it
+- ✅ Credits every companion riding with you a share of that same profit, which the game turns into Trade XP the same way it does yours, at a share you set, so a trading clan learns from the run as well as its lord. Off out of the box, so the XP is yours alone until you ask for it
 - ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good and the last coin in its purse, so its shop stays open
 - ✅ Puts 1000 denars back in every village left with an empty purse, once for a campaign, the first time you enter it, so a village an older version spent out can be traded with again, and it says on screen how many it refilled
 - ✅ Trade with towns and Trade with villages each switch their own kind of market off, so TradeLord can work villages alone, towns alone, or leave both markets to you
 - ✅ Trades with a caravan the moment you meet it on the road, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of the caravan's own purse
+- ✅ Leaves your own caravans alone, and any caravan on a raft or with no goods to show, since the game trades with none of them
 - ✅ Never sells to a party of villagers, and takes their whole offer the moment you meet them when it clears your margin, at the price the game's own "What kind of products do you have?" offer charges
 - ✅ Once TradeLord has taken the villagers' offer, the game's own offer is gone for the rest of that meeting, so the same goods can never be bought twice
 - ✅ An offer TradeLord leaves is still yours to take in the conversation, and what you pay for it is written down as what those goods cost you
@@ -109,7 +110,7 @@
 **What it doesn't touch**
 
 - ✅ Anything you locked in the inventory screen
-- ✅ Anything an active quest of yours is waiting on, whether it is an animal, a trade good or a raw material, held back from every pass that sells until the quest is done with it
+- ✅ Anything an active quest of yours is waiting on, whether it is an animal, a trade good, a raw material or the weapons a gang leader asked for, held back from every pass that sells until the quest is done with it
 - ✅ Unique and player-crafted gear, and quest items
 - ✅ Your haul animals are never sold for profit either, though it will buy them for you, and naming one on your always-sell list is the only way to move one by hand
 - ✅ An animal that carries nothing for you and is not livestock is no haul animal, so it is sold like any other cargo rather than sitting in your bags for good

@@ -33,6 +33,10 @@ namespace TradeLord
                 "_stolenTradeGood", "_stolenTradeGoodAmount"),
             (typeof(LandLordTheArtOfTheTradeIssueBehavior.LandLordTheArtOfTheTradeIssueQuest),
                 "_selectedItemObject", "_selectedItemObjectCount"),
+            (typeof(VillageNeedsToolsIssueBehavior.VillageNeedsToolsIssueQuest),
+                "_requestedTradeGood", "_numberOfRequestedGood"),
+            (typeof(VillageNeedsCraftingMaterialsIssueBehavior.VillageNeedsCraftingMaterialsIssueQuest),
+                "_requestedItem", "_requestedItemAmount"),
         };
 
         private static readonly (Type quest, string goodId, string many)[] NamedGoods =
@@ -51,13 +55,20 @@ namespace TradeLord
                 "_requestedLiveStockAmount"),
         };
 
+        private static readonly (Type quest, string kind, string many)[] NamedWeapons =
+        {
+            (typeof(GangLeaderNeedsWeaponsIssueQuestBehavior.GangLeaderNeedsWeaponsIssueQuest),
+                "_requestedWeaponClass", "_requestedWeaponAmount"),
+        };
+
         private static (Type quest, FieldInfo wanted, FieldInfo many)[] _read;
         private static (Type quest, string goodId, FieldInfo many)[] _readGoods;
         private static (Type quest, FieldInfo many)[] _readHerds;
+        private static (Type quest, FieldInfo kind, FieldInfo many)[] _readWeapons;
         private static Dictionary<string, ItemObject> _goods;
         private static bool _unreadable;
 
-        internal static void Forget() { _read = null; _readGoods = null; _readHerds = null; _goods = null; _unreadable = false; }
+        internal static void Forget() { _read = null; _readGoods = null; _readHerds = null; _readWeapons = null; _goods = null; _unreadable = false; }
 
         private static ItemObject Good(string id)
         {
@@ -123,15 +134,35 @@ namespace TradeLord
                 }
                 byHerd[i] = (NamedHerds[i].quest, many);
             }
+            var byWeapon = new (Type, FieldInfo, FieldInfo)[NamedWeapons.Length];
+            for (int i = 0; i < NamedWeapons.Length; i++)
+            {
+                FieldInfo kind = NamedWeapons[i].quest.GetField(
+                    NamedWeapons[i].kind, BindingFlags.Instance | BindingFlags.NonPublic);
+                FieldInfo many = NamedWeapons[i].quest.GetField(
+                    NamedWeapons[i].many, BindingFlags.Instance | BindingFlags.NonPublic);
+                if (kind == null || many == null)
+                {
+                    _unreadable = true;
+                    Log.Write("quest goods: " + NamedWeapons[i].quest.Name + " does not say which kind of weapon " +
+                              "it wants or how many on this game version - no animal is sold at all, so a " +
+                              "quest of yours cannot lose one");
+                    return false;
+                }
+                byWeapon[i] = (NamedWeapons[i].quest, kind, many);
+            }
             _read = found;
             _readGoods = byGood;
             _readHerds = byHerd;
+            _readWeapons = byWeapon;
             return true;
         }
 
-        internal static Dictionary<ItemObject, int> Promised(out int anyLivestock)
+        internal static Dictionary<ItemObject, int> Promised(out int anyLivestock,
+                                                            out List<(WeaponClass kind, int many)> weapons)
         {
             anyLivestock = 0;
+            weapons = new List<(WeaponClass kind, int many)>();
             if (!Readable()) return null;
             var promised = new Dictionary<ItemObject, int>();
             var running = Campaign.Current?.QuestManager?.Quests;
@@ -164,6 +195,17 @@ namespace TradeLord
                     if (!_readHerds[i].quest.IsInstanceOfType(quest)) continue;
                     if (_readHerds[i].many.GetValue(quest) is int owed && owed > 0) anyLivestock += owed;
                 }
+                for (int i = 0; i < _readWeapons.Length; i++)
+                {
+                    if (!_readWeapons[i].quest.IsInstanceOfType(quest)) continue;
+                    if (_readWeapons[i].kind.GetValue(quest) is WeaponClass kind &&
+                        _readWeapons[i].many.GetValue(quest) is int many && many > 0)
+                    {
+                        int at = weapons.FindIndex(owed => owed.kind == kind);
+                        if (at < 0) weapons.Add((kind, many));
+                        else weapons[at] = (kind, weapons[at].many + many);
+                    }
+                }
             }
             return promised;
         }
@@ -172,7 +214,7 @@ namespace TradeLord
 
     internal static class Meetings
     {
-        private const float GetawayHours = 4f;
+        private const int GetawayHours = 4;
 
         private static MobileParty _tradedWith;
         private static object _tradedIn;
@@ -240,6 +282,14 @@ namespace TradeLord
 
         internal static bool IsRoadTrader(MobileParty party) =>
             party != null && (party.IsCaravan || party.IsVillager);
+
+        internal static bool CarriesGoods(MobileParty party)
+        {
+            ItemRoster goods = party?.ItemRoster;
+            for (int at = 0; goods != null && at < goods.Count; at++)
+                if (goods.GetElementNumber(at) > 0) return true;
+            return false;
+        }
 
         internal static void Watch()
         {
@@ -323,14 +373,15 @@ namespace TradeLord
             MobileParty band = MobileParty.ConversationParty;
             Log.Write("free passage taken against " + (band == null ? "an unnamed party" : band.StringId));
             band?.IgnoreForHours(GetawayHours);
-            MobileParty.MainParty?.IgnoreByOtherPartiesTill(CampaignTime.HoursFromNow(GetawayHours));
+            band?.Ai?.SetDoNotAttackMainParty(GetawayHours);
             if (PlayerEncounter.Current != null)
             {
-                PlayerEncounter.ProtectPlayerSide(GetawayHours);
+                PlayerEncounter.ProtectPlayerSide();
                 PlayerEncounter.LeaveEncounter = true;
             }
-            Log.Write("free passage held for " + GetawayHours + " hours: your party is passed over by other parties, " +
-                      "and " + (band == null ? "that band" : band.StringId) + " is passed over by yours");
+            Log.Write("free passage held for " + GetawayHours + " hours: " +
+                      (band == null ? "that band" : band.StringId) + " leaves your party alone, while every " +
+                      "other party passes you over only for the hour the game gives anyone leaving an encounter");
         }
     }
 
