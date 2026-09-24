@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.93.2
+
+- Fixed TradeLord writing down the wrong price for goods you bought by hand when you traded others of the same kind at the same time
+- Fixed the deal Staged Trading lays out counting less profit than you really made once you press Done
+- TradeLord.log now gives the gold from the deal Staged Trading lays out as the trade screen's own figure, not an estimate
+
 ## 1.93.1
 
 - Fixed Mark a market rising or falling comparing a market you look at less than a day apart against a price from long ago, or not at all

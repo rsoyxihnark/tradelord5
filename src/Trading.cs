@@ -927,7 +927,8 @@ namespace TradeLord
                 took.Units += count;
                 took.Gold += said;
                 if (selling)
-                    took.Profit += TradeMath.Credit(price, TradePolicy.CostBasis(el.EquipmentElement),
+                    took.Profit += TradeMath.Credit(TradeMath.PerUnit(said, count),
+                                                    TradePolicy.CostBasis(el.EquipmentElement),
                                                     TradePolicy.UnpaidWorth(item)) * count;
                 pass.Tally(item, count, said);
             }
@@ -962,9 +963,9 @@ namespace TradeLord
         {
             if (got.Units <= 0) return;
             pass.Moved(addsUp ? (int?)got.Profit : null, got.Gold, selling: true);
-            Log.Write("the deal you took sold " + got.Units + " item(s) for about +" + got.Gold +
+            Log.Write("the deal you took sold " + got.Units + " item(s) for +" + got.Gold +
                       " gold, profit about " + got.Profit + " " + pass.Where +
-                      " (priced from the market once the deal was done, so both are close rather than exact)");
+                      " (the gold is what the trade screen paid, and the profit is worked out on what each good fetched on average)");
             pass.Logged(selling: true, "the deal you took on the trade screen");
             TextObject msg = pass.Said(
                 "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
@@ -977,9 +978,8 @@ namespace TradeLord
         {
             if (paid.Units <= 0) return;
             pass.Moved(gold: paid.Gold, selling: false);
-            Log.Write("the deal you took bought " + paid.Units + " item(s) for about -" + paid.Gold +
-                      " gold " + pass.Where +
-                      " (priced from the market once the deal was done, so it is close rather than exact)");
+            Log.Write("the deal you took bought " + paid.Units + " item(s) for -" + paid.Gold +
+                      " gold " + pass.Where + " (what the trade screen charged)");
             pass.Logged(selling: false, "the deal you took on the trade screen");
             Notices.Say(pass.Said("{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
                             "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.", paid.Units, paid.Gold), Notices.Spend);

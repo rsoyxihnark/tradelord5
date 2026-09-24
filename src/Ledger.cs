@@ -480,9 +480,7 @@ namespace TradeLord
                     int took = Math.Min(bought, InAll(carried, element.EquipmentElement));
                     if (took <= 0) continue;
                     RecordPurchase(PaidKey(element.EquipmentElement), took,
-                                   here == null
-                                       ? Deals.PaidForWhatYouKept(said, bought, took)
-                                       : Bulk.PricePaid(here, element.EquipmentElement, took, unit));
+                                   Deals.PaidForWhatYouKept(said, bought, took));
                 }
                 foreach (var (element, said) in sold)
                 {
