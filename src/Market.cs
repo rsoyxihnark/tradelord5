@@ -43,7 +43,7 @@ namespace TradeLord
 
         internal bool Walkable => _walkable;
 
-        internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting, int landed = 0)
+        internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)
         {
             ItemObject item = stocked.Item;
             _item = item;
@@ -51,7 +51,7 @@ namespace TradeLord
             _party = Priced.Merchant(site);
             _selling = selling;
             _quoted = quoted;
-            if (projecting && (!Options.Current.Omniscient || !Options.Current.BulkSimulation)) return;
+            if (!Options.Current.Omniscient || !Options.Current.BulkSimulation) return;
             Town town = site != null && site.IsTown ? site.Town : null;
             if (town == null || item == null || item.ItemCategory == null) return;
             try
@@ -101,7 +101,7 @@ namespace TradeLord
         internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)
         {
             _selling = selling;
-            _shelf = new Shelf(site, stocked, selling, quoted, projecting: true, landed: landed);
+            _shelf = new Shelf(site, stocked, selling, quoted, landed);
         }
 
         internal bool Walkable => _shelf.Walkable;
@@ -248,27 +248,6 @@ namespace TradeLord
             if (landed == 0 || site == null || item == null) return quoted;
             Ladder rung = Held(site, item, selling, quoted, landed, scanning: false);
             return rung.Walkable ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;
-        }
-
-        internal static int PricePaid(Settlement site, EquipmentElement bought, int units, int quotedUnitPrice)
-        {
-            if (units <= 0) return 0;
-            int flat = quotedUnitPrice * units;
-            if (site == null || bought.Item == null) return flat;
-
-            Shelf shelf = new Shelf(site, bought, selling: false, quoted: quotedUnitPrice, projecting: false);
-            if (!shelf.Walkable) return flat;
-
-            shelf.Restock(units);
-            int total = 0;
-            for (int u = 0; u < units; u++)
-            {
-                int price = shelf.Price();
-                if (price <= 0) return flat;
-                total += price;
-                shelf.Restock(-1);
-            }
-            return total;
         }
     }
     internal static class Priced

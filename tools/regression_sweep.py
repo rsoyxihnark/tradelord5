@@ -505,7 +505,7 @@ def a_good_you_bought_by_hand_is_never_counted_beyond_what_you_carry():
             and "if (took <= 0) continue;" in body
             and ordered(body, "int bought = Deals.UnitsMoved(", "int took = Math.Min(",
                         "if (took <= 0) continue;",
-                        "Bulk.PricePaid(here, element.EquipmentElement, took, unit)")
+                        "Deals.PaidForWhatYouKept(said, bought, took)")
             and ordered(body, "int gone = Deals.UnitsMoved(element.Amount, said, unit);",
                         "RecordSale(PaidKey(element.EquipmentElement), gone);")
             and "RecordSale(PaidKey(element.EquipmentElement), count);" not in body
@@ -2184,9 +2184,9 @@ chk("1.5.0", "one definition of the resale haircut, walk and planner alike",
     S['Policy.cs'].count("Options.Current.ResaleSafetyFactor") == 1 and
     "(int)TradePolicy.Realizable(q.SellTotal)" in S['Ledger.cs'])
 chk("1.5.0", "observed mode does not read live market supply/demand for projections",
-    "if (projecting && (!Options.Current.Omniscient || !Options.Current.BulkSimulation)) return;" in
+    "if (!Options.Current.Omniscient || !Options.Current.BulkSimulation) return;" in
     method_body(S['Market.cs'],
-                "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting, int landed = 0)"))
+                "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)"))
 chk("1.5.0", "only a town shelf can be advanced, because only a town publishes the inputs",
     "Town town = site != null && site.IsTown ? site.Town : null;" in S['Market.cs'] and
     "if (town == null" in S['Market.cs'] and
@@ -2522,33 +2522,29 @@ chk("1.6.0", "ending a campaign clears the message filter and per-visit state",
     all(f in method_body(S['Trading.cs'], "internal static void ForgetVisit")
         for f in ("ResetVisit();", "_transactionDepth = 0;", "AutomatedTradeInProgress = false;")))
 chk("1.5.6", "a manual purchase is recorded at the price the shelf charged at the time",
-    "Bulk.PricePaid(here, element.EquipmentElement, took, unit)" in
+    "Deals.PaidForWhatYouKept(said, bought, took)" in
         method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange") and
-    "shelf.Restock(units);" in method_body(S['Market.cs'], "internal static int PricePaid") and
-    "shelf.Restock(-1);" in method_body(S['Market.cs'], "internal static int PricePaid"))
-chk("1.36.2", "the rewind prices the very thing that was bought, quality and all, and a route walk still prices the plain good",
-    (lambda paid, shelf, ladder:
-        "internal static int PricePaid(Settlement site, EquipmentElement bought, int units, int quotedUnitPrice)"
-            in S['Market.cs']
-        and "if (site == null || bought.Item == null) return flat;" in paid
-        and "new Shelf(site, bought, selling: false, quoted: quotedUnitPrice, projecting: false)" in paid
+    "PricePaid" not in S['Market.cs'] + S['Ledger.cs'])
+chk("1.36.2", "a purchase is written down at what the very thing that was bought cost, quality and all, and a route walk still prices the plain good",
+    (lambda hand, shelf, ladder:
+        "RecordPurchase(PaidKey(element.EquipmentElement), took," in hand
+        and "Deals.PaidForWhatYouKept(said, bought, took)" in hand
         and "_element = stocked;" in shelf
         and "new EquipmentElement" not in shelf
         and ": this(site, new EquipmentElement(item), selling, quoted, landed)" in ladder
-        and "new Shelf(site, stocked, selling, quoted, projecting: true, landed: landed);" in method_body(
+        and "new Shelf(site, stocked, selling, quoted, landed);" in method_body(
             S['Market.cs'], "internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)")
         and S['Market.cs'].count("new EquipmentElement(") == 2
         and "item == null ? 0 : At(market, new EquipmentElement(item), who, selling);" in S['Market.cs'])
-    (method_body(S['Market.cs'], "internal static int PricePaid"),
+    (method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange"),
      method_body(S['Market.cs'],
-                 "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting, int landed = 0)"),
+                 "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)"),
      method_body(S['Market.cs'], "internal Ladder(Settlement site, ItemObject item, bool selling, int quoted, int landed)")))
-chk("1.5.6", "only the purchase-price rewind reads a shelf outside a projection",
-    S['Market.cs'].count("projecting: false") == 1 and
-    "projecting: false" in method_body(S['Market.cs'], "internal static int PricePaid") and
-    S['Market.cs'].count("projecting: true") == 1 and
-    "projecting: true" in method_body(
-        S['Market.cs'], "internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)"))
+chk("1.5.6", "no shelf is read outside a projection",
+    S['Market.cs'].count("new Shelf(") == 1 and
+    "new Shelf(" in method_body(
+        S['Market.cs'], "internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)") and
+    "projecting" not in S['Market.cs'])
 chk("1.5.6", "panel setup is retried before being disabled",
     "private const int SetupAttempts = 3;" in S['Panel.cs'] and
     "if (_setupFailures >= SetupAttempts) return false;" in
@@ -7189,7 +7185,7 @@ def a_workshop_run_moves_the_price_of_its_kind_and_never_the_stock_of_one_good()
 
 def the_walk_starts_from_what_the_market_will_hold_when_you_get_there():
     shelf = method_body(S['Market.cs'],
-        "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, bool projecting, int landed = 0)")
+        "internal Shelf(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)")
     rung = method_body(S['Market.cs'], "private static Ladder Rung")
     return ("_inStoreValue = TradeMath.ShelfAfterLanding(data.InStoreValue, landed);" in shelf
             and "var key = (site.StringId, item.StringId, selling, landed);" in rung
@@ -8787,7 +8783,8 @@ def the_deal_you_took_is_reported_and_credited_like_any_pass():
                     "ReportWhatYouBought(buying, paid, addsUp);")
             and ordered(reckon, "int count = Deals.UnitsMoved(el.Amount, said, price);",
                         "took.Gold += said;",
-                        "TradeMath.Credit(price, TradePolicy.CostBasis(el.EquipmentElement),",
+                        "TradeMath.Credit(TradeMath.PerUnit(said, count),",
+                        "TradePolicy.CostBasis(el.EquipmentElement),",
                         "pass.Tally(item, count, said);",
                         "took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);")
             and "gained += price * count;" not in t and "spent += price * count;" not in t
@@ -9891,9 +9888,9 @@ chk("1.80.5", "the panel says a market's Score is lowered for paying less than i
 def a_setting_that_leans_on_another_names_it_in_every_language():
     refresh = method_body(S['Panel.cs'], "private void Refresh")
     shelf = method_body(S['Market.cs'], "internal Shelf(Settlement site, EquipmentElement stocked, "
-                                        "bool selling, int quoted, bool projecting, int landed = 0)")
+                                        "bool selling, int quoted, int landed)")
     everywhere = [ENGLISH] + list(TRANSLATIONS.values())
-    return ("if (projecting && (!Options.Current.Omniscient || !Options.Current.BulkSimulation)) return;"
+    return ("if (!Options.Current.Omniscient || !Options.Current.BulkSimulation) return;"
                 in shelf
             and "(Options.Current.BulkSimulation" in refresh
             and "{=TL394}" in refresh and "{=TL447}" in refresh
@@ -11589,8 +11586,8 @@ def a_purchase_made_away_from_a_market_is_written_down_at_what_it_cost():
     paid = method_body(S['Rules.cs'], "public static int PaidForWhatYouKept")
     return (body and paid
             and ordered(body, "int took = Math.Min(bought, InAll(carried, element.EquipmentElement));",
-                        "here == null", "? Deals.PaidForWhatYouKept(said, bought, took)",
-                        ": Bulk.PricePaid(here, element.EquipmentElement, took, unit)")
+                        "if (took <= 0) continue;", "Deals.PaidForWhatYouKept(said, bought, took)")
+            and "Bulk." not in body
             and "if (kept >= bought) return gold;" in paid
             and "return (int)((long)gold * kept / bought);" in paid
             and all(one in DEALTESTS for one in
@@ -11599,7 +11596,7 @@ def a_purchase_made_away_from_a_market_is_written_down_at_what_it_cost():
                      "A_purchase_with_nothing_on_it_writes_nothing_down")))
 
 
-chk("1.90.18", "a good bought by hand from a caravan on the road is written down at the gold it cost, since there is no shelf to wind back and the good's own worth is not what you paid",
+chk("1.90.18", "a good bought by hand from a caravan on the road is written down at the gold it cost, since the good's own worth is not what you paid",
     a_purchase_made_away_from_a_market_is_written_down_at_what_it_cost())
 
 
@@ -11904,7 +11901,8 @@ def what_you_paid_is_kept_for_each_quality_of_a_good():
             and "HasCostBasis(el) ? (LedgerBehavior.Instance?.GetCostBasis(el) ?? el.Item.Value) : 0;" in policy
             and "int paid = CostBasis(el);" in method_body(policy, "internal static int WorthToBeat(EquipmentElement el)")
             and "TradePolicy.WorthToBeat(el.EquipmentElement)" in S['Marker.cs']
-            and "TradeMath.Credit(price, TradePolicy.CostBasis(el.EquipmentElement)," in method_body(t, "private static Took Reckon")
+            and ordered(method_body(t, "private static Took Reckon"), "TradeMath.Credit(TradeMath.PerUnit(said, count),",
+                        "TradePolicy.CostBasis(el.EquipmentElement),")
             and "TradePolicy.WorthToBeat(held.EquipmentElement)" in t
             and "int basis = ledger.GetCostBasis(held);" in tip
             and "return ledger.HasPurchaseRecord(held) && Options.Current.CostBasisMode != 2" in tip
@@ -12130,7 +12128,8 @@ def the_deal_you_took_credits_goods_you_never_paid_for_as_a_pass_does():
     basis = method_body(S['Policy.cs'], "internal static int CostBasis(EquipmentElement el)")
     credit = method_body(S['TradeMath.cs'], "public static int Credit")
     return (ordered(reckon, "int price = pass.Price(el.EquipmentElement, selling: selling);",
-                    "TradeMath.Credit(price, TradePolicy.CostBasis(el.EquipmentElement),",
+                    "TradeMath.Credit(TradeMath.PerUnit(said, count),",
+                    "TradePolicy.CostBasis(el.EquipmentElement),",
                     "TradePolicy.UnpaidWorth(item)) * count;")
             and "WorthToBeat" not in reckon
             and "HasCostBasis(el) ? (LedgerBehavior.Instance?.GetCostBasis(el) ?? el.Item.Value) : 0;" in basis
@@ -12360,6 +12359,36 @@ def a_look_on_a_later_day_is_a_second_reading_however_soon_after_the_last():
 
 chk("1.93.1", "a look at a market on a later day than the last one is a second reading however few hours lie between them, so a market you keep coming back to is marked rising or falling against the day before",
     a_look_on_a_later_day_is_a_second_reading_however_soon_after_the_last())
+
+def a_good_bought_by_hand_is_written_down_at_what_the_trade_screen_charged():
+    body = method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange")
+    return (body
+            and ordered(body, "foreach (var (element, said) in purchased)",
+                        "RecordPurchase(PaidKey(element.EquipmentElement), took,",
+                        "Deals.PaidForWhatYouKept(said, bought, took));",
+                        "foreach (var (element, said) in sold)")
+            and body.count("RecordPurchase(") == 1
+            and "? Deals.PaidForWhatYouKept" not in body
+            and all("PricePaid" not in S[f] for f in S))
+
+def the_deal_you_took_is_credited_at_what_each_good_fetched_on_the_screen():
+    reckon = method_body(S['Trading.cs'], "private static Took Reckon")
+    sold = method_body(S['Trading.cs'], "private static void ReportWhatYouSold")
+    bought = method_body(S['Trading.cs'], "private static void ReportWhatYouBought")
+    return (reckon and sold and bought
+            and ordered(reckon, "int count = Deals.UnitsMoved(el.Amount, said, price);",
+                        "if (selling)",
+                        "took.Profit += TradeMath.Credit(TradeMath.PerUnit(said, count),",
+                        "TradePolicy.UnpaidWorth(item)) * count;")
+            and "TradeMath.Credit(price," not in reckon
+            and "the profit is worked out on what each good fetched on average" in sold
+            and "(what the trade screen charged)" in bought
+            and "once the deal was done" not in S['Trading.cs'])
+
+chk("1.93.2", "a good bought by hand in a market is written down at the gold the trade screen charged for it, so buying several goods of one kind at once never writes one down dearer than it cost",
+    a_good_bought_by_hand_is_written_down_at_what_the_trade_screen_charged())
+chk("1.93.2", "the profit on a deal Staged Trading laid out is worked out on what each good fetched on the trade screen on average, never on the lower price the market offers once the deal is done",
+    the_deal_you_took_is_credited_at_what_each_good_fetched_on_the_screen())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
