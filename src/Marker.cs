@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
@@ -267,7 +268,7 @@ namespace TradeLord
             Log.Write("marker check at " + site.Name + ": it marked this market for " + _markedUnits +
                       " unit(s) worth " + said + " gold, " + _markedEarned + " of it profit, " +
                       _markedRate.ToString("0") +
-                      " gold a day, about " + _markedDays.ToString("0.#") + " day(s) away; you walked in " +
+                      " gold a day, about " + _markedDays.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away; you walked in " +
                       Scoring.Figure(since) + " day(s) later and sold " + units + " unit(s) for " + gold +
                       (held == TradeMath.NoShareToGive
                           ? ""
@@ -293,7 +294,7 @@ namespace TradeLord
                    (how.PurseCapped
                        ? ", which is all that town's purse of " + how.Purse + " can take"
                        : " against a town purse of " + how.Purse) +
-                   ", about " + how.Days.ToString("0.#") + " day(s) away, so " +
+                   ", about " + how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away, so " +
                    how.Rate.ToString("0") + " gold a day" + TheNextBest(how);
         }
 
@@ -349,7 +350,7 @@ namespace TradeLord
                 {
                     Weighing one = how.Board[i];
                     said.Add("    " + Tongue.Named(one.Where.Name, one.Where.StringId).PadRight(18) +
-                             one.Days.ToString("0.00").PadLeft(6) + " day(s) " +
+                             one.Days.ToString("0.00", CultureInfo.InvariantCulture).PadLeft(6) + " day(s) " +
                              one.Units.ToString().PadLeft(5) + " unit(s) " +
                              one.Value.ToString().PadLeft(9) + " gold " +
                              one.Earned.ToString().PadLeft(9) + " profit " +
