@@ -586,5 +586,32 @@ namespace TradeLord.Tests
             Assert.False(Marks.FirstLookStands("lageta", "lageta", null, null, 1997L));
         }
 
+        [Fact]
+        public void A_figure_reached_too_soon_is_put_back_and_judged_at_a_later_walk_in()
+        {
+            var keeps = new Keeps<Promise>();
+            keeps.Put("lageta", "fish", Made(0f, 1f));
+            Dictionary<string, Promise> here = keeps.TakeAt("lageta");
+            Promise early = here["fish"];
+            Assert.False(Scoring.TooOldToSay(early.WithinDays, early.AtHours, 2f, out float since));
+            Assert.True(Scoring.TooSoonToSay(early.WithinDays, since));
+            keeps.Put("lageta", "fish", early);
+            Assert.True(keeps.TryGet("lageta", "fish", out Promise back));
+            Assert.Equal(0f, back.AtHours);
+            Assert.False(Scoring.TooOldToSay(back.WithinDays, back.AtHours, 13f, out since));
+            Assert.False(Scoring.TooSoonToSay(back.WithinDays, since));
+        }
+
+        [Fact]
+        public void A_figure_still_to_be_judged_is_not_replaced_by_a_fresher_one()
+        {
+            Assert.True(Scoring.StillToBeJudged(1f, 0f, 12f));
+            Assert.True(Scoring.StillToBeJudged(1f, 0f, 72f));
+            Assert.False(Scoring.StillToBeJudged(1f, 0f, 73f));
+            var keeps = new Keeps<Promise>();
+            Assert.False(keeps.TryGet("lageta", "fish", out _));
+            Assert.False(keeps.TryGet(null, "fish", out _));
+        }
+
     }
 }

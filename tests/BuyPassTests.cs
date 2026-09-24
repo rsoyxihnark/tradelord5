@@ -123,6 +123,10 @@ namespace TradeLord.Tests
                 Stalls[at].Carried++;
             }
 
+            internal readonly List<(int at, int units, int gold)> ResoldFor = new List<(int at, int units, int gold)>();
+
+            public void Resold(int at, int units, int gold) => ResoldFor.Add((at, units, gold));
+
             public bool Take(int at, int price, out int cost)
             {
                 cost = 0;
@@ -168,6 +172,32 @@ namespace TradeLord.Tests
             run.Units = TradePass.BuyThem(stock, market, run.Books, sim, shareCap, market.Rules,
                                           run.Tally).Units;
             return run;
+        }
+
+        [Fact]
+        public void What_a_purchase_is_meant_to_fetch_is_the_buyers_prices_walked_over_the_units_bought()
+        {
+            var market = new FakeMarket();
+            Stall iron = market.Add(Cargo("iron"), amount: 3, price: 100, resale: 300);
+            iron.ResaleStep = 20;
+            iron.Carried = 2;
+            Run run = Buy(market);
+            Assert.Equal(3, run.Units);
+            Assert.Single(market.ResoldFor);
+            Assert.Equal((0, 3, 260 + 240 + 220), market.ResoldFor[0]);
+            Assert.Equal(240, TradeMath.PerUnit(market.ResoldFor[0].gold, market.ResoldFor[0].units));
+        }
+
+        [Fact]
+        public void A_good_nothing_was_bought_of_writes_no_resale()
+        {
+            var market = new FakeMarket();
+            market.Add(Cargo("iron"), amount: 3, price: 100, resale: 100);
+            Run run = Buy(market);
+            Assert.Equal(0, run.Units);
+            Assert.Empty(market.ResoldFor);
+            Assert.Equal(0, TradeMath.PerUnit(500, 0));
+            Assert.Equal(167, TradeMath.PerUnit(500, 3));
         }
 
         [Fact]

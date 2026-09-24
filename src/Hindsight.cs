@@ -251,6 +251,9 @@ namespace TradeLord
         private static void Noted(Settlement site, ItemObject item, float withinDays)
         {
             if (site == null) return;
+            if (_said.TryGet(site.StringId, item.StringId, out Said waiting) && waiting.Item != null &&
+                Scoring.StillToBeJudged(waiting.WithinDays, waiting.AtHours, (float)CampaignTime.Now.ToHours))
+                return;
             int stockSaid = Forecast.UnitsLanding(site, item, withinDays);
             int worthSaid = Forecast.WorthShift(site, item, withinDays);
             if (stockSaid == 0 && worthSaid == 0) return;
@@ -258,7 +261,7 @@ namespace TradeLord
             {
                 Log.Repeatable("forecast check", "full",
                                "forecast check is holding the " + Keeps<Said>.Most + " figures it keeps at once, " +
-                               "so newer ones are passed over until a market it has a figure for is walked into");
+                               "so newer ones are passed over until one it holds is judged or grows too old to judge");
                 return;
             }
             _said.Put(site.StringId, item.StringId, new Said
@@ -281,8 +284,10 @@ namespace TradeLord
             var lines = new List<string>();
             int scored = 0, stale = 0, early = 0, landingMiss = 0, shared = 0;
             float shareTotal = 0f;
-            foreach (Said kept in here.Values)
+            var stillToCome = new List<KeyValuePair<string, Said>>();
+            foreach (KeyValuePair<string, Said> one in here)
             {
+                Said kept = one.Value;
                 if (kept.Item == null) continue;
                 if (Scoring.TooOldToSay(kept.WithinDays, kept.AtHours, now, out float since))
                 {
@@ -292,6 +297,7 @@ namespace TradeLord
                 if (Scoring.TooSoonToSay(kept.WithinDays, since))
                 {
                     early++;
+                    stillToCome.Add(one);
                     continue;
                 }
                 scored++;
@@ -321,10 +327,11 @@ namespace TradeLord
                           kept.WorthSaid + " denars in all and " + Moving(how.Moved) + " denars, " +
                           Counted(how.WorthOff) + Shared(how.Share) + Yours(kept.WorthYours, true));
             }
+            foreach (KeyValuePair<string, Said> one in stillToCome) _said.Put(site.StringId, one.Key, one.Value);
             if (!Writing || scored + stale + early == 0) return;
             lines.Insert(0, "forecast check at " + site.Name + ", " + scored + " good(s) it had a figure for" +
                       (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") +
-                      (early == 0 ? "" : ", " + early + " passed over as too soon to say anything") +
+                      (early == 0 ? "" : ", " + early + " kept for a later walk-in as too soon to say anything") +
                       (scored == 0 ? "" : ":"));
             if (scored > 0)
             {
@@ -339,6 +346,11 @@ namespace TradeLord
                     lines.Add("  over this campaign: the worth figure has been off by " + Share(missed) +
                               " over " + figures + " figure(s) checked, so what is on its way is counted at " +
                               Share(TradeMath.TrustInTheForecast(figures, missed)) + " of what it says");
+            }
+            if (scored + stale == 0)
+            {
+                Log.Repeatable("forecast check " + site.StringId, early.ToString(), lines[0]);
+                return;
             }
             Log.WriteMany(lines);
         }

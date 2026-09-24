@@ -1324,7 +1324,8 @@ def the_route_rules_need_nothing_from_the_game():
             and 'Confidence' not in S['Market.cs']
             and ('public static int Budget(int gold, int goldReserve, int maxSpendPerVisit,\n'
                  '                                 int spentThisVisit)') in S['TradeMath.cs']
-            and "TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack()," in S['Trading.cs']
+            and "return TradeMath.Budget(purse, held, SpendCap(purse), 0);" in S['Trading.cs']
+            and "public static int AdaptiveSpendCap(int baseCap, long purseBeforeBuying, bool adaptive)" in S['TradeMath.cs']
             and 'Options.Current.MaxSpendPerVisit > 0' not in
                 buy_pass())
 
@@ -1918,7 +1919,8 @@ chk("1.3.25", "routes pair every top buy market against every top sell market",
 chk("1.42.0", "your purse never reaches route quantities, deliberately, so the ledger quotes a route the same whether you are rich or broke",
     "PurseForAVisit()" not in S['Ledger.cs'] and
     "purse" not in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes") and
-    "Options.Current.MaxSpendPerVisit, 0);" in S['Trading.cs'] and
+    "return TradeMath.Budget(purse, held, SpendCap(purse), 0);" in
+        method_body(S['Trading.cs'], "internal static int PurseForAVisit") and
     "private static int MostWorthShowing(int buyPrice)" in S['Ledger.cs'])
 chk("1.42.0", "a purse with nothing spendable in it still quotes every route, deliberately, so being broke never hides where the profit is",
     "if (purse <= 0) return routes;" not in S['Ledger.cs'] and
@@ -3142,14 +3144,17 @@ def an_empty_purse_is_reported_on_the_way_into_a_market():
                         "WarnPurseBelowReserve()"))
 
 def what_is_left_to_spend_is_worked_out_in_one_place():
-    return ("internal static int Spendable(Books books, bool sim) =>\n"
-            "            TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(),\n"
-            "                             Options.Current.MaxSpendPerVisit, books.PaidOut(sim));"
-                in S['Trading.cs']
-            and "internal static int PurseForAVisit() =>\n"
-                "            TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),\n"
-                "                             Options.Current.MaxSpendPerVisit, 0);"
-                in S['Trading.cs']
+    spend = method_body(S['Trading.cs'], "internal static int Spendable(Books books, bool sim)")
+    visit = method_body(S['Trading.cs'], "internal static int PurseForAVisit()")
+    return (ordered(spend, "int purse = Hero.MainHero.Gold + books.Purse(sim);", "int held = GoldHeldBack();",
+                    "int paid = books.PaidOut(sim);",
+                    "return TradeMath.Budget(purse, held, SpendCap((long)purse + paid), paid);")
+            and ordered(visit, "int purse = Hero.MainHero.Gold;", "int held = GoldHeldBack();",
+                        "return TradeMath.Budget(purse, held, SpendCap(purse), 0);")
+            and "internal static int SpendCap(long purseBeforeBuying) =>\n"
+                "            TradeMath.AdaptiveSpendCap(Options.Current.MaxSpendPerVisit, purseBeforeBuying,\n"
+                "                                       Options.Current.AdaptiveSpendLimit);" in S['Trading.cs']
+            and S['Trading.cs'].count("Options.Current.MaxSpendPerVisit") == 2
             and "internal int Spendable() => TradeActionBehavior.Spendable(Books, Sim);"
                 in S['Trading.cs']
             and "internal static int PurseForTheirOffer(Books books, bool sim) =>\n"
@@ -4993,7 +4998,7 @@ EVER_SHIPPED = {
     "KeepWageDays": "int", "Language": "int", "LedgerMenuEntry": "bool", "LivestockPolicy": "int",
     "HaulAnimalGoldFloor": "int", "HaulAnimalPriceTolerance": "float",
     "MarkBestSellTownOnMap": "bool", "MarketForecast": "bool", "MarkerMaxTravelDays": "float", "MaxHeldPerItem": "int",
-    "MaxHeldShare": "float", "MaxLootTier": "int", "MaxSpendPerVisit": "int",
+    "MaxHeldShare": "float", "MaxLootTier": "int", "MaxSpendPerVisit": "int", "AdaptiveSpendLimit": "bool",
     "MaxTravelDays": "float", "MaxTravelDaysTown": "float", "MaxTravelDaysVillage": "float",
     "MaxVillageTravelDays": "float", "MinProfitMargin": "float",
     "MinTownStock": "int", "MinTownStockWorth": "int",
@@ -5293,9 +5298,9 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
     haul = method_body(t, "public static void ExecuteHaulage")
     buy = buy_pass()
     return ("Visit.Forget();" in method_body(t, "private static void ResetVisit")
-            and ("TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(),\n"
-                 "                             Options.Current.MaxSpendPerVisit, "
-                 "books.PaidOut(sim));") in t
+            and ordered(method_body(t, "internal static int Spendable(Books books, bool sim)"),
+                        "int purse = Hero.MainHero.Gold + books.Purse(sim);", "int paid = books.PaidOut(sim);",
+                        "return TradeMath.Budget(purse, held, SpendCap((long)purse + paid), paid);")
             and "private static bool Simulating => Options.Current.SimulationMode;" in t
             and all("pass.WouldReachYourReserve(price)" in b for b in (larder, haul))
             and "pass.Spendable()" in buy
@@ -5432,7 +5437,8 @@ chk("1.37.7", "every pass hands one place the swap of goods for gold, the guard 
 def a_meeting_on_the_road_counts_what_it_spends_against_the_cap():
     t = S['Trading.cs']
     buy = buy_pass()
-    return ("Options.Current.MaxSpendPerVisit, books.PaidOut(sim));" in t
+    return ("return TradeMath.Budget(purse, held, SpendCap((long)purse + paid), paid);" in t
+            and "int paid = books.PaidOut(sim);" in t
             and "internal int PaidOut(bool sim) => _paid + (sim ? _spent : 0);" in S['Books.cs']
             and buy.count("pass.Spendable()") == 2
             and buy.count("market.Spendable()") == 3
@@ -11401,7 +11407,7 @@ def a_forecast_is_not_judged_before_half_its_time_has_passed():
             and written.count("scored++;") == 1
             and "daysSince < (saidWithinDays > 0f ? saidWithinDays : 0f) * SoonestAForecastIsJudged;" in soon
             and "TradeMath.TooSoonToJudge(withinDays, since);" in S['Scoring.cs']
-            and '" passed over as too soon to say anything"' in written
+            and '" kept for a later walk-in as too soon to say anything"' in written
             and "TooSoonToSay" not in method_body(S['Hindsight.cs'], "private static void Kept")
             and all(one in MATHTESTS for one in
                     ("A_forecast_is_judged_only_once_half_its_time_has_passed",
@@ -12261,6 +12267,89 @@ chk("1.92.0", "profit that could add no Trade XP because Trade is past the game'
     trade_xp_the_learning_limit_holds_back_says_so_and_what_lifts_it())
 chk("1.92.0", "the hint under Trade with caravans and villagers and the feature list say the villagers' offer is one deal and why an offer is left, and the feature list names the learning limit line",
     the_hint_and_the_feature_list_say_the_villagers_offer_is_one_deal())
+
+
+def a_forecast_reached_early_waits_for_a_later_walk_in_and_is_not_replaced_meanwhile():
+    written = method_body(S['Hindsight.cs'], "private static void Written")
+    noted = method_body(S['Hindsight.cs'], "private static void Noted")
+    return (written and noted
+            and ordered(written, "var stillToCome = new List<KeyValuePair<string, Said>>();",
+                        "if (Scoring.TooSoonToSay(kept.WithinDays, since))", "early++;", "stillToCome.Add(one);",
+                        "scored++;",
+                        "foreach (KeyValuePair<string, Said> one in stillToCome) _said.Put(site.StringId, one.Key, one.Value);",
+                        "if (!Writing || scored + stale + early == 0) return;")
+            and ordered(noted, "if (site == null) return;",
+                        "if (_said.TryGet(site.StringId, item.StringId, out Said waiting) && waiting.Item != null &&",
+                        "Scoring.StillToBeJudged(waiting.WithinDays, waiting.AtHours, (float)CampaignTime.Now.ToHours))\n"
+                        "                return;", "int stockSaid = Forecast.UnitsLanding(site, item, withinDays);",
+                        "if (stockSaid == 0 && worthSaid == 0) return;", "_said.Put(site.StringId, item.StringId, new Said")
+            and ordered(written, "if (scored + stale == 0)",
+                        'Log.Repeatable("forecast check " + site.StringId, early.ToString(), lines[0]);',
+                        "Log.WriteMany(lines);")
+            and '"so newer ones are passed over until one it holds is judged or grows too old to judge"' in noted
+            and "internal static bool StillToBeJudged(float withinDays, float atHours, float nowHours) =>\n"
+                "            !TooOldToSay(withinDays, atHours, nowHours, out _);" in S['Scoring.cs']
+            and "internal bool TryGet(string site, string what, out TRecord one)" in S['Scoring.cs']
+            and all(name in SCORINGTESTS for name in (
+                "A_figure_reached_too_soon_is_put_back_and_judged_at_a_later_walk_in",
+                "A_figure_still_to_be_judged_is_not_replaced_by_a_fresher_one")))
+
+
+def the_price_a_purchase_is_meant_to_fetch_is_the_average_over_what_was_bought():
+    t = S['Trading.cs']
+    buy = method_body(S['Passes.cs'], "internal static Traded BuyThem")
+    lot = method_body(S['Passes.cs'], "internal static Block WhatStopsTheLot")
+    resold = method_body(t, "public void Resold(int at, int units, int gold)")
+    fastest = method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
+    return (buy and lot and resold and fastest
+            and "void Resold(int at, int units, int gold);" in S['Passes.cs']
+            and ordered(buy, "int unitsBefore = moved.Units;", "int drawnBefore = drawn;", "while (remaining > 0)",
+                        "if (moved.Units > unitsBefore)",
+                        "market.Resold(picked.At, moved.Units - unitsBefore, drawn - drawnBefore);")
+            and ordered(lot, "int pays = TradeRules.WhatTheBuyerPays(", "market.Resold(one.At, units, pays);")
+            and ordered(resold, "_resold[good] = was;",
+                        "_pass.Aimed[good] = (aimed.where, TradeMath.PerUnit(was.gold, was.units));")
+            and "TradeMath.PerUnit(deepGot.Total, deepGot.Units)" in fastest
+            and '" a unit on average for the "' in fastest
+            and "public static int PerUnit(int gold, int units) =>" in S['TradeMath.cs']
+            and "What_a_purchase_is_meant_to_fetch_is_the_buyers_prices_walked_over_the_units_bought" in T['BuyPassTests.cs'])
+
+
+def the_adaptive_spend_limit_grows_on_top_of_max_spend_per_visit():
+    said = spoken(ENGLISH)
+    cap = method_body(S['TradeMath.cs'], "public static int AdaptiveSpendCap")
+    return (cap
+            and "public bool AdaptiveSpendLimit = true;" in S['Options.cs']
+            and "public const int RichAtThisManyLimits = 5;" in S['TradeMath.cs']
+            and ordered(cap, "if (!adaptive || baseCap <= 0) return baseCap;",
+                        "long rich = (long)baseCap * RichAtThisManyLimits;",
+                        "if (purseBeforeBuying <= rich) return baseCap;",
+                        "double more = baseCap * Math.Log((double)purseBeforeBuying / rich, 2d);",
+                        "double cap = baseCap + Math.Floor(more);")
+            and '[SettingPropertyBool("{=TL473}Adaptive spend limit", Order = 6,' in M
+            and '{=TL237}Max spend per visit (0 = unlimited)", 0, 100000, Order = 5,' in M
+            and '{=TL238}Resale safety factor", 0.5f, 1f, "#0%", Order = 7,' in M
+            and "public bool AdaptiveSpendLimit { get => _o.AdaptiveSpendLimit; set { _o.AdaptiveSpendLimit = value; Options.Bump(); } }" in M
+            and said.get('TL473') == "Adaptive spend limit"
+            and "ON by default." in said.get('TL474', '')
+            and "Max spend per visit" in said.get('TL474', '')
+            and "Adaptive spend limit" in said.get('TL337', '')
+            and all({'TL473', 'TL474'} <= set(spoken(f)) for f in TRANSLATIONS.values())
+            and all(spoken(f)['TL474'] != said['TL474'] for f in TRANSLATIONS.values())
+            and "Adaptive spend limit lets your spending cap for the visit grow with your purse" in README
+            and README.index("Adaptive spend limit lets your spending cap") < README.index("**What it doesn't touch**")
+            and all(one in MATHTESTS for one in (
+                "The_adaptive_spend_limit_holds_the_base_until_the_purse_is_five_times_it",
+                "The_adaptive_spend_limit_adds_one_base_each_time_the_purse_doubles_past_that",
+                "With_the_adaptive_spend_limit_off_or_no_base_the_setting_stands_as_it_is")))
+
+
+chk("1.93.0", "a forecast figure walked in on before half its time is kept for a later walk-in, and a fresher figure never replaces one still waiting to be judged, so the forecast is held to account in play that moves fast",
+    a_forecast_reached_early_waits_for_a_later_walk_in_and_is_not_replaced_meanwhile())
+chk("1.93.0", "the price a purchase is meant to fetch, and the price a whole-stack buyer pick names, is what the buyer pays on average for those units, not the first unit's price",
+    the_price_a_purchase_is_meant_to_fetch_is_the_average_over_what_was_bought())
+chk("1.93.0", "Adaptive spend limit sits under Max spend per visit, ships on, holds the limit as set until the free purse is five times it and adds one more limit for each doubling past that, and says so in every language and in the feature list",
+    the_adaptive_spend_limit_grows_on_top_of_max_spend_per_visit())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
