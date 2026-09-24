@@ -30,15 +30,13 @@ namespace TradeLord
 
         public const float DriftWorthSaying = 0.05f;
 
-        public const float DaysBeforeAnotherReading = 1f;
-
         public const int KeptForever = 0;
 
         public static bool WorthKeeping(float capturedDay, float now, int shelfLifeDays) =>
             shelfLifeDays <= KeptForever || now - capturedDay <= shelfLifeDays;
 
         public static bool ReadingIsNew(float day, float lastDay) =>
-            day - lastDay >= DaysBeforeAnotherReading;
+            Math.Floor(day) > Math.Floor(lastDay);
 
         public static int Drift(int now, int was)
         {

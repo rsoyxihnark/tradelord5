@@ -74,6 +74,14 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_look_on_the_next_day_is_a_second_reading_however_soon_after_the_last()
+        {
+            Assert.True(TradeMath.ReadingIsNew(135.1f, 134.9f));
+            Assert.True(TradeMath.ReadingIsNew(135.6f, 134.9f));
+            Assert.False(TradeMath.ReadingIsNew(135.9f, 135.1f));
+        }
+
+        [Fact]
         public void A_market_you_have_seen_only_once_carries_no_earlier_reading()
         {
             var fresh = new PriceObservation { ItemId = "grain", TownId = "town_S5" };

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.93.1
+
+- Fixed Mark a market rising or falling comparing a market you look at less than a day apart against a price from long ago, or not at all
+
 ## 1.93.0
 
 - Added Adaptive spend limit under Max spend per visit, on out of the box, which lets TradeLord spend more per visit as your purse grows
