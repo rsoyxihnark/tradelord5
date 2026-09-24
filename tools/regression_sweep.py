@@ -840,7 +840,7 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
                         "LedgerBehavior.Instance?.BestSell(held.Item)",
                         "TradeRules.BestMarketFloor(",
                         "Options.Current.BestSellTownTolerance);")
-            and S['Trading.cs'].count("TradePolicy.WorthToBeat(") == 2
+            and S['Trading.cs'].count("TradePolicy.WorthToBeat(") == 1
             and S['Marker.cs'].count("TradePolicy.WorthToBeat(") == 1)
 
 
@@ -5857,7 +5857,7 @@ def what_a_good_cost_you_is_carried_by_one_value():
                         "basis.FromMarket = s.CostBasisMode == 2;",
                         "basis.PaidLeft = Math.Max(0, purchased - books.PaidDrawn(sim, id));",
                         "basis.UnpaidWorth = -1;")
-            and t.count("TradePolicy.CostBasis(el.EquipmentElement)") == 1
+            and t.count("TradePolicy.CostBasis(el.EquipmentElement)") == 2
             and t.count("LedgerBehavior.Instance?.PurchasedUnits(el.EquipmentElement)") == 1
             and t.count("Basis basis = Basis.For(") == 1
             and S['Passes.cs'].count("Basis basis = Basis.For(") == 1
@@ -6966,7 +6966,9 @@ def a_herd_it_cannot_thin_says_what_it_will_not_give_up():
     return ("if (stable.Count == 0) { Drove.SayWhatItWillNotGiveUp(mine, shed, settlement); return; }" in relief
             and S['Trading.cs'].count("Drove.SayWhatItWillNotGiveUp(") == 1
             and S['Drove.cs'].count("internal static void SayWhatItWillNotGiveUp(") == 1
-            and "if (ShedRank(it) >= 0) continue;" in said
+            and ordered(said, "int rank = ShedRank(it);", "if (rank >= 0)",
+                        "marked.Add(LedgerBehavior.PaidKey(el.EquipmentElement) + \" x\" + el.Amount);",
+                        "kinds.Add(it.StringId + \" x\" + el.Amount);")
             and "ordinary cargo" in said
             and "Log.Repeatable(" in said)
 
@@ -8774,7 +8776,7 @@ def the_deal_you_took_is_reported_and_credited_like_any_pass():
                     "ReportWhatYouBought(buying, paid, addsUp);")
             and ordered(reckon, "int count = Deals.UnitsMoved(el.Amount, said, price);",
                         "took.Gold += said;",
-                        "TradeMath.Credit(price, TradePolicy.WorthToBeat(el.EquipmentElement),",
+                        "TradeMath.Credit(price, TradePolicy.CostBasis(el.EquipmentElement),",
                         "pass.Tally(item, count, said);",
                         "took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);")
             and "gained += price * count;" not in t and "spent += price * count;" not in t
@@ -10276,7 +10278,7 @@ def the_marker_picks_the_market_that_earns_fastest_not_the_one_paying_most():
             and "how.Days = ride;" in marker
             and "DearestPurseFirst" not in S['Marker.cs']
             and "Travel.EstimateDaysFromParty(how.Best)" not in why
-            and 'how.Days.ToString("0.#") + " day(s) away, so " +' in why
+            and 'how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away, so " +' in why
             and 'how.Rate.ToString("0") + " gold a day"' in why
             and 'how.RunnerUpRate.ToString("0") + " gold a day for " +' in why
             and all(one in MATHTESTS for one in
@@ -11884,7 +11886,7 @@ def what_you_paid_is_kept_for_each_quality_of_a_good():
             and "HasCostBasis(el) ? (LedgerBehavior.Instance?.GetCostBasis(el) ?? el.Item.Value) : 0;" in policy
             and "int paid = CostBasis(el);" in method_body(policy, "internal static int WorthToBeat(EquipmentElement el)")
             and "TradePolicy.WorthToBeat(el.EquipmentElement)" in S['Marker.cs']
-            and "TradePolicy.WorthToBeat(el.EquipmentElement)" in t
+            and "TradeMath.Credit(price, TradePolicy.CostBasis(el.EquipmentElement)," in method_body(t, "private static Took Reckon")
             and "TradePolicy.WorthToBeat(held.EquipmentElement)" in t
             and "int basis = ledger.GetCostBasis(held);" in tip
             and "return ledger.HasPurchaseRecord(held) && Options.Current.CostBasisMode != 2" in tip
@@ -12076,6 +12078,61 @@ def a_quest_the_game_moved_loses_only_its_own_hold():
 
 chk("1.91.7", "a quest the game no longer lets TradeLord read loses only its own hold, every other quest keeps what it waits on, and animals stay unsold only while a quest that could want one is unread",
     a_quest_the_game_moved_loses_only_its_own_hold())
+
+def a_lame_animal_is_never_sold_for_the_herd_nor_bought_to_carry_more():
+    rule = method_body(S['Rules.cs'], "internal static bool TheGameCountsItAtOnce")
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    haul = method_body(S['Trading.cs'], "public static void ExecuteHaulage")
+    sell = method_body(S['Passes.cs'], "internal static Traded SellThem")
+    said = method_body(S['Drove.cs'], "internal static void SayWhatItWillNotGiveUp")
+    return ("livestock || !ofAQuality;" in rule
+            and ordered(relief, "int rank = Drove.ShedRank(it);", "if (rank < 0) continue;",
+                        "if (!Herding.TheGameCountsItAtOnce(rank == RankLivestock, "
+                        "el.EquipmentElement.ItemModifier != null)) continue;",
+                        "stable.Add((el, rank, price));")
+            and ordered(haul, "foreach (var (el, good, _, ceiling) in stable)",
+                        "if (!Herding.TheGameCountsItAtOnce(false, el.EquipmentElement.ItemModifier != null)) continue;",
+                        "while (remaining > 0 && herdRoom > 0)")
+            and ordered(sell, "int herdRank = TradeRules.HerdShedRank(good);",
+                        "Herding.TheGameCountsItAtOnce(herdRank == TradeRules.RankLivestock, market.OfAQuality(at)))",
+                        "books.NoteShed(herdRank == TradeRules.RankHaulAnimal,")
+            and "bool OfAQuality(int at);" in S['Passes.cs']
+            and "public bool OfAQuality(int at) => _plan[at].EquipmentElement.ItemModifier != null;" in S['Trading.cs']
+            and ordered(said, "if (!Herding.TheGameCountsItAtOnce(rank == TradeRules.RankLivestock,",
+                        "these are lame or of another quality")
+            and "the quality that keeps one good in lots of its own" in COMPAT
+            and "A_lame_horse_mule_or_camel_is_not_counted_by_the_game_until_a_load_while_livestock_always_is" in HERDTESTS
+            and "A_dry_run_counts_only_the_sound_horses_it_would_sell_towards_the_herd" in SELLPASSTESTS
+            and "A lame horse, mule or camel, or one of any other quality, is never sold to get you back up to "
+                "speed or bought to carry more" in README)
+
+
+def the_deal_you_took_credits_goods_you_never_paid_for_as_a_pass_does():
+    reckon = method_body(S['Trading.cs'], "private static Took Reckon")
+    basis = method_body(S['Policy.cs'], "internal static int CostBasis(EquipmentElement el)")
+    credit = method_body(S['TradeMath.cs'], "public static int Credit")
+    return (ordered(reckon, "int price = pass.Price(el.EquipmentElement, selling: selling);",
+                    "TradeMath.Credit(price, TradePolicy.CostBasis(el.EquipmentElement),",
+                    "TradePolicy.UnpaidWorth(item)) * count;")
+            and "WorthToBeat" not in reckon
+            and "HasCostBasis(el) ? (LedgerBehavior.Instance?.GetCostBasis(el) ?? el.Item.Value) : 0;" in basis
+            and ordered(credit, "if (basis > 0) return proceeds - basis;", "return gain > 0 ? gain : 0;"))
+
+
+def the_marker_writes_its_days_the_same_way_in_every_language():
+    marker = S['Marker.cs']
+    return ("using System.Globalization;" in marker
+            and re.search(r'ToString\("0\.[#0]+"\)', marker) is None
+            and marker.count('Days.ToString("0.#", CultureInfo.InvariantCulture)') == 2
+            and 'one.Days.ToString("0.00", CultureInfo.InvariantCulture)' in marker)
+
+
+chk("1.91.8", "a lame horse, mule or camel is never sold to lift the herd penalty nor bought to carry more, since the game counts it neither gone nor come until a load, and the dry run and the log say the same",
+    a_lame_animal_is_never_sold_for_the_herd_nor_bought_to_carry_more())
+chk("1.91.8", "a deal Staged Trading laid out credits goods you never paid for the way every selling pass does, so a cheap sale of one takes nothing off TradeLord profit",
+    the_deal_you_took_credits_goods_you_never_paid_for_as_a_pass_does())
+chk("1.91.8", "the map marker writes its days in TradeLord.log with a dot in every language, like every other number in the log",
+    the_marker_writes_its_days_the_same_way_in_every_language())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

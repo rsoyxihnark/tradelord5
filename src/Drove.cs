@@ -245,21 +245,37 @@ namespace TradeLord
         internal static void SayWhatItWillNotGiveUp(ItemRoster mine, int shed, Settlement settlement)
         {
             var kinds = new List<string>();
+            var marked = new List<string>();
             for (int i = 0; i < mine.Count; i++)
             {
                 ItemRosterElement el = mine.GetElementCopyAtIndex(i);
                 ItemObject it = el.EquipmentElement.Item;
                 if (el.Amount <= 0 || it == null || !it.HasHorseComponent) continue;
-                if (ShedRank(it) >= 0) continue;
+                int rank = ShedRank(it);
+                if (rank >= 0)
+                {
+                    if (!Herding.TheGameCountsItAtOnce(rank == TradeRules.RankLivestock,
+                                                       el.EquipmentElement.ItemModifier != null))
+                        marked.Add(LedgerBehavior.PaidKey(el.EquipmentElement) + " x" + el.Amount);
+                    continue;
+                }
                 kinds.Add(it.StringId + " x" + el.Amount);
             }
-            Log.Repeatable("herd-stuck " + settlement.StringId, shed + "/" + kinds.Count,
+            Log.Repeatable("herd-stuck " + settlement.StringId, shed + "/" + kinds.Count + "/" + marked.Count,
                            "herd relief at " + settlement.Name + " has " + shed +
                            " animal(s) to shed and nothing it may sell" +
-                           (kinds.Count == 0
+                           (kinds.Count == 0 && marked.Count == 0
                                ? ", because every animal you drive is held back by your own rules"
+                               : "") +
+                           (kinds.Count == 0
+                               ? ""
                                : "; these are driven but TradeLord counts them as ordinary cargo, so it never sells them: " +
-                                 string.Join(", ", kinds.ToArray())));
+                                 string.Join(", ", kinds.ToArray())) +
+                           (marked.Count == 0
+                               ? ""
+                               : "; these are lame or of another quality, and the game does not count one gone until " +
+                                 "you load again, so selling it would not get you back up to speed: " +
+                                 string.Join(", ", marked.ToArray())));
         }
     }
 }

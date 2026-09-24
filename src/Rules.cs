@@ -202,6 +202,9 @@ namespace TradeLord
         internal static int DrivenInAll(int herd, int mounts, int menOnFoot) =>
             (herd < 0 ? 0 : herd) + MountsNobodyRides(mounts, menOnFoot);
 
+        internal static bool TheGameCountsItAtOnce(bool livestock, bool ofAQuality) =>
+            livestock || !ofAQuality;
+
         internal static int HaulAnimalsToSpare(int held, int packAnimals, float packCapacity,
                                                float addedUp, float capacity, float carried)
         {
