@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.93.3
+
+- Fixed looted gear never being sold with What a good counts as having cost you set to Cheapest market you know
+- Fixed the map marker leaving looted gear out with What a good counts as having cost you set to Cheapest market you know
+- Fixed TradeLord profit counting a loss on looted gear or a horse you never bought with What a good counts as having cost you set to Cheapest market you know
+
 ## 1.93.2
 
 - Fixed TradeLord writing down the wrong price for goods you bought by hand when you traded others of the same kind at the same time
