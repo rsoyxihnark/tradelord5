@@ -2112,7 +2112,7 @@ chk("1.4.1", "quick-buy prices the shelf only when there is a budget to spend",
            and S['Trading.cs'].count("pass.Stock") == 2)
     (buy_pass()))
 chk("1.4.1", "a pass the gold-direction guard stopped does not blame the trade policy",
-    S['Trading.cs'].count("else if (!pass.DirectionError)") == 3 and
+    S['Trading.cs'].count("else if (!pass.DirectionError)") == 2 and
     S['Trading.cs'].count("else if (!quiet && !directionError)") == 0 and
     'Tongue.Text("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
     'Tongue.Text("{=TL33}Nothing bought here - {REASON}.")' in S['Trading.cs'])
@@ -2270,7 +2270,9 @@ chk("1.5.0", "the food reserve is not a trading policy and is not governed by on
 chk("1.5.0", "a pass that moves nothing names the rule that stopped it",
     'Tongue.Text("{=TL32}Nothing sold here - {REASON}.")' in S['Trading.cs'] and
     'Tongue.Text("{=TL33}Nothing bought here - {REASON}.")' in S['Trading.cs'] and
-    S['Trading.cs'].count("NoteStalled(selling: ") == 3 and
+    S['Trading.cs'].count("NoteStalled(selling: ") == 2 and
+    "if (!pass.Muted) Notices.Say(WhyTheOfferIsLeft(market, stops, lot), Notices.Note);" in
+        method_body(S['Trading.cs'], "private static void LotPass") and
     method_body(S['Trading.cs'],
                 "private static void ReportStalledPasses").count("BlockTally.Phrase(") == 4)
 chk("1.5.0", "the reason overloads carry the plain ones, so one rule set decides both",
@@ -3150,8 +3152,11 @@ def what_is_left_to_spend_is_worked_out_in_one_place():
                 in S['Trading.cs']
             and "internal int Spendable() => TradeActionBehavior.Spendable(Books, Sim);"
                 in S['Trading.cs']
-            and S['Trading.cs'].count("TradeMath.Budget(") == 2
-            and S['Trading.cs'].count("GoldHeldBack()") == 5
+            and "internal static int PurseForTheirOffer(Books books, bool sim) =>\n"
+                "            TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(), 0, 0);"
+                in S['Trading.cs']
+            and S['Trading.cs'].count("TradeMath.Budget(") == 3
+            and S['Trading.cs'].count("GoldHeldBack()") == 6
             and S['Trading.cs'].count("int Budget() =>") == 0
             and "Hero.MainHero.Gold" not in S['Ledger.cs']
             and "GoldReserve" not in S['Ledger.cs']
@@ -4161,7 +4166,7 @@ def the_notes_are_the_changelog_section_for_the_version():
 chk("1.14.2", "a route is listed only for a good its own sell policy lets TradeLord sell again, while buying answers to the buy policy and the always-buy list",
     "TradeRules.ResaleAllowed(" not in buy_pass() and
     "MayRoundTrip(it," not in S['Trading.cs'] and
-    "TradePolicy.MayBuy(good, Item(at), _pass.Locked, out why)" in buy_pass() and
+    "TradePolicy.MayBuy(good, Item(at), _pass.Locked, out why, wholeOffer: _theirOffer)" in buy_pass() and
     "market.MayBuy(at, good, out Block whyBuy)" in method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy") and
     ordered(method_body(S['Policy.cs'], "internal static bool MayRoundTrip"),
             "MayBuy(good, item, lockedKeys, out _) &&",
@@ -4539,7 +4544,7 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
                         "TradeMath.SkipTheUnitsYouPaidFor(FromMarket, ref remaining, ref PaidLeft)",
                         "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;",
                         "remaining -= paidLeft;", "paidLeft = 0;")
-            and "TradePolicy.MayBuy(good, Item(at), _pass.Locked, out why)" in buy
+            and "TradePolicy.MayBuy(good, Item(at), _pass.Locked, out why, wholeOffer: _theirOffer)" in buy
             and "market.MayBuy(at, good, out Block whyBuy)" in buy
             and "int wouldDraw = market.ResaleUpTo(picked.At, held + 1);" in buy
             and "TradeRules.TheBuyerCouldNotPay(wouldDraw, till)" in buy
@@ -5327,7 +5332,7 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and "CheapestFirst(" in larder and "CheapestFirst(" in haul
             and S['Passes.cs'].count("books.Bought(sim, market.IdAt(at))") == 1
             and t.count("pass.Books.Purchases(pass.Sim,") == 2
-            and S['Passes.cs'].count("books.Purchases(sim, good.Id)") == 2)
+            and S['Passes.cs'].count("books.Purchases(sim, good.Id)") == 1)
 
 def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
     ledger = S['Books.cs']
@@ -6002,7 +6007,7 @@ def the_grain_switch_owns_the_reason_it_holds_a_good_back():
     t = S['Trading.cs']
     buy = buy_rule()
     phrase = method_body(S['Reasons.cs'], "internal static TextObject Phrase")
-    return ("if (!always && !toFeed && s.NeverBuyGrain && good.IsGrain)\n"
+    return ("if (!always && !toFeed && s.NeverBuyGrain && good.IsGrain && !wholeOffer)\n"
             "            { why = Block.GrainSwitch; return false; }" in buy
             and S['Reasons.cs'].count("Block.NeverList") + S['Passes.cs'].count("Block.NeverList") == 2
             and S['Rules.cs'].count("Block.NeverList") == 2
@@ -9390,8 +9395,8 @@ def quiet_mode_names_the_warnings_it_still_shows():
                 if "Notices.Say(" in l or "Notices.SayAfterXp(" in l]
     asked = [l for l in onscreen if "Muted" in l or "muted" in l]
     said = spoken(ENGLISH)
-    return (len(onscreen) == 17
-            and len(asked) == 7
+    return (len(onscreen) == 20
+            and len(asked) == 10
             and all(("{=TL" + s + "}") in S['Trading.cs'] for s in ("82", "91", "92", "392"))
             and "Warnings still show on screen" in said['TL349']
             and "cargo full" in said['TL349']
@@ -10201,6 +10206,7 @@ NAMES_A_GOOD_ON_PURPOSE = {
     "TL331": "it shows the shape of an item id",
     "TL348": "it shows the shape of the trade summary line",
     "TL323": "it says what the crafting category holds",
+    "TL373": "it names the never-buy-grain switch the villagers' offer is taken past",
 }
 
 def a_hint_says_what_it_does_for_every_good_rather_than_naming_a_few():
@@ -10219,7 +10225,7 @@ def a_hint_says_what_it_does_for_every_good_rather_than_naming_a_few():
     return (astray == []
             and "The dearer a good is, the fewer of it a market need hold." in worth
             and all("dearer" not in NAMES_A_GOOD_ON_PURPOSE.get(sid, "x") for sid in named)
-            and len(NAMES_A_GOOD_ON_PURPOSE) == 7
+            and len(NAMES_A_GOOD_ON_PURPOSE) == 8
             and all(sid in en for sid in NAMES_A_GOOD_ON_PURPOSE))
 
 
@@ -11634,19 +11640,17 @@ def a_party_of_villagers_is_never_sold_to_and_its_offer_is_taken_whole_or_left()
             and "public int AmountAt(int at) => InTheOffer(at) ? Shelf[at].Amount : 0;" in t
             and "public int TheirsToSell(int at) => InTheOffer(at) ? _pass.TheirsToSell(Shelf[at]) : 0;" in t
             and "theirOffer: true" in lot
-            and ordered(lot, "TradePass.WhatStopsTheLot(market, pass.Books, pass.Sim, pass.ShareCap,",
-                        "if (lot.Units == 0) return;", "if (stops == Block.None)",
+            and ordered(lot, "TradePass.WhatStopsTheLot(market, pass.Books, pass.Sim, Options.Current, out Lot lot);",
+                        "if (lot.Units == 0) return;", "if (stops != Block.None)",
+                        "Notices.Note);\n                return;\n            }",
                         "InAPass(() => moved = TradePass.TakeTheLot(market, pass.Books, pass.Sim));",
-                        "else tally.Note(stops);", "if (!pass.Sim) Meetings.TookTheirOffer(pass.Met);",
+                        "if (bought <= 0) return;", "if (!pass.Sim) Meetings.TookTheirOffer(pass.Met);",
                         "pass.Moved(gold: spent, selling: false);",
-                        "if (!pass.Muted) Notices.Say(msg, Notices.Spend);",
-                        "else if (!pass.DirectionError)",
-                        "if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);")
+                        "if (!pass.Muted) Notices.Say(msg, Notices.Spend);")
             and ordered(judged, "if (!market.MayBuy(at, good, out Block whyBuy)) refused = whyBuy;",
-                        "else shelf.Add(new Pick { At = at, Good = good });",
+                        "shelf.Add(new Pick { At = at, Good = good });",
                         "if (lot.Units == 0) return Block.NoStock;",
                         "if (refused != Block.None) return refused;",
-                        "TradeRules.WhatCapsALot(good,", "if (capped != Block.None) return capped;",
                         "TradeRules.WhatTheBuyerPays(", "s.ResaleSafetyFactor);",
                         "if (!TradeMath.BuyAcceptable(lot.Price, lot.Resale, s.MinProfitMargin)) return Block.BelowMargin;",
                         "if (lot.Price > market.Spendable()) return Block.BudgetSpent;",
@@ -11699,8 +11703,8 @@ def the_offer_is_gone_once_tradelord_took_it_and_moves_nothing_if_asked_for_agai
 
 
 def the_hint_and_the_feature_list_say_how_villagers_are_traded_with():
-    said = ("Villagers are never sold to: TradeLord takes their whole offer when it clears your margin, "
-            "and otherwise leaves it to you.")
+    said = ("Villagers are never sold to: their whole offer is taken when it clears your margin, "
+            "past Max spend per visit, Never buy grain and the caps on one good, or left to you with the reason why.")
     return (said in spoken(ENGLISH)['TL373'] and said in M
             and "Never sells to a party of villagers, and takes their whole offer" in README
             and "so the same goods can never be bought twice" in README
@@ -12153,6 +12157,111 @@ def with_the_ships_carrying_the_cargo_every_haul_animal_is_spare():
 
 chk("1.91.9", "with Buy to fill the ships on, the ships carry the cargo and a haul animal adds nothing to them, so a full fleet no longer keeps every haul animal the herd could give up",
     with_the_ships_carrying_the_cargo_every_haul_animal_is_spare())
+
+def the_villagers_offer_is_one_deal_that_no_cap_and_no_grain_switch_splits():
+    t = S['Trading.cs']
+    judged = method_body(S['Passes.cs'], "internal static Block WhatStopsTheLot")
+    buy = buy_rule()
+    return (judged
+            and "internal static Block WhatStopsTheLot(IBuyingMarket market, Books books, bool sim, Options s," in S['Passes.cs']
+            and all(cap not in judged for cap in ("WhatCapsALot", "shareCap", "BuyCapPerItem", "BuyValueCapPerItem",
+                                                  "MaxHeldPerItem", "MaxHeldShare", "MaxSpendPerVisit",
+                                                  "NeverBuyGrain", "books.Purchases("))
+            and "WhatCapsALot" not in ALL
+            and ordered(judged, "if (!TradeMath.BuyAcceptable(lot.Price, lot.Resale, s.MinProfitMargin)) return Block.BelowMargin;",
+                        "if (lot.Price > market.Spendable()) return Block.BudgetSpent;")
+            and "public int Spendable() =>\n"
+                "                _theirOffer ? TradeActionBehavior.PurseForTheirOffer(_pass.Books, _pass.Sim) : _pass.Spendable();" in t
+            and "MaxSpendPerVisit" not in between(t, "internal static int PurseForTheirOffer", ";")
+            and "out Block why, bool wholeOffer = false)" in buy
+            and "if (!always && !toFeed && s.NeverBuyGrain && good.IsGrain && !wholeOffer)" in buy
+            and S['Rules.cs'].count("wholeOffer") == 2
+            and "out why, wholeOffer);" in S['Policy.cs']
+            and t.count("wholeOffer: _theirOffer") == 1
+            and t.count("theirOffer: true") == 1
+            and "theirOffer: true" in method_body(t, "private static void LotPass")
+            and all(name in LOTTESTS for name in (
+                "Grain_in_the_offer_is_taken_with_the_rest_even_while_grain_is_left_alone",
+                "The_buy_cap_per_item_never_splits_the_offer_of_one_good",
+                "The_value_cap_per_item_never_holds_the_offer_back",
+                "The_most_you_hold_of_one_good_never_holds_the_offer_back",
+                "The_share_of_the_hold_one_good_may_fill_never_holds_the_offer_back",
+                "Max_spend_per_visit_never_holds_the_offer_back_while_the_purse_can_pay",
+                "An_offer_you_cannot_pay_for_whole_is_left_for_you"))
+            and "Grain_in_the_villagers_offer_gets_past_Never_buy_grain_but_not_the_food_policy" in BUYRULETESTS)
+
+
+def the_villagers_offer_left_to_you_says_why_on_screen():
+    t = S['Trading.cs']
+    lot = method_body(t, "private static void LotPass")
+    why = method_body(t, "private static TextObject WhyTheOfferIsLeft")
+    one = method_body(t, "private static TextObject WhyOneGoodKeepsTheOfferOff")
+    judged = method_body(S['Passes.cs'], "internal static Block WhatStopsTheLot")
+    ids = ["TL" + str(n) for n in range(461, 468)]
+    return (lot and why and one and judged
+            and ordered(lot, "if (stops != Block.None)",
+                        "if (!pass.Muted) Notices.Say(WhyTheOfferIsLeft(market, stops, lot), Notices.Note);\n"
+                        "                return;\n            }",
+                        "InAPass(() => moved = TradePass.TakeTheLot(market, pass.Books, pass.Sim));")
+            and ordered(why, "if (stops == Block.BelowMargin)", "{=TL461}", "else if (stops == Block.BudgetSpent)",
+                        "{=TL462}", "else if (lot.Stopper >= 0)", "{=TL463}", "{=TL464}")
+            and "BlockTally.Phrase(stops)" in one
+            and all(("{=" + sid + "}") in t for sid in ids)
+            and "lot.Stopper = -1;" in judged and "lot.Stopper = at;" in judged
+            and all(sid in spoken(f) for sid in ids for f in [ENGLISH] + list(TRANSLATIONS.values()))
+            and "An_offer_turned_down_as_a_whole_names_no_good_in_it" in LOTTESTS
+            and "Assert.Equal(1, lot.Stopper);" in LOTTESTS)
+
+
+def trade_xp_the_learning_limit_holds_back_says_so_and_what_lifts_it():
+    t = S['Trading.cs']
+    credit = method_body(t, "private static void CreditTradeSkill")
+    limit = method_body(t, "private static bool SayTheLearningLimit")
+    ids = ["TL" + str(n) for n in range(468, 473)]
+    return (credit and limit
+            and ordered(credit, "SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);",
+                        "bool learned = Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) > xpBefore;",
+                        'if (!learned && xp > 0 && Guard.Read("TradeXp.Limit", muted, SayTheLearningLimit, false))\n'
+                        "                return;", "if (!muted) Notices.Say(earned, Notices.Xp);")
+            and ordered(limit, "Campaign.Current?.Models?.CharacterDevelopmentModel",
+                        "if (model.CalculateLearningRate(attributes, focus, skill, trade).ResultNumber > 0f) return false;",
+                        "model.CalculateLearningLimit(attributes, focus, trade)",
+                        "if (skill <= limit) return false;",
+                        "TradeMath.FewestThatLets(model.MaxFocusPerSkill - focus,",
+                        "foreach (CharacterAttribute attribute in trade.Attributes)",
+                        "TradeMath.FewestThatLets(model.MaxAttribute - attributes.GetPropertyValue(attribute),",
+                        "new Raised(attributes, attribute, more)",
+                        "if (!muted) Notices.Say(said, Notices.Alert);",
+                        "if (!muted) Notices.Say(spend, Notices.Alert);")
+            and "Log.Repeatable(\"trade-xp-limit\"" in limit
+            and all(("{=" + sid + "}") in t for sid in ids)
+            and all(sid in spoken(f) for sid in ids for f in [ENGLISH] + list(TRANSLATIONS.values()))
+            and "public static int FewestThatLets(int most, Func<int, bool> lets)" in S['TradeMath.cs']
+            and "The_fewest_points_that_let_a_skill_learn_again_are_counted_up_from_one" in MATHTESTS
+            and "A_learning_rate_the_game_floors_at_nothing_is_lifted_by_one_social_point_or_one_focus_point" in MATHTESTS)
+
+
+def the_hint_and_the_feature_list_say_the_villagers_offer_is_one_deal():
+    return ("Villagers are never sold to: their whole offer is taken when it clears your margin, "
+            "past Max spend per visit, Never buy grain and the caps on one good, or left to you with the reason why."
+            in spoken(ENGLISH)['TL373']
+            and "The villagers' offer is one deal: Max spend per visit, Never buy grain and the caps on one good "
+                "never hold it back" in README
+            and "When TradeLord leaves the villagers' offer to you, a message on screen says why" in README
+            and "A caravan on the road is held to every rule a market visit is" in README
+            and "Says on screen when the profit could add no Trade XP because your Trade skill is past the game's "
+                "learning limit" in README)
+
+
+chk("1.92.0", "the villagers' offer is one deal: it is taken whole whenever it clears your margin and your purse can pay, whatever Max spend per visit, Never buy grain or the caps on one good say",
+    the_villagers_offer_is_one_deal_that_no_cap_and_no_grain_switch_splits())
+chk("1.92.0", "an offer TradeLord leaves to you is named on screen with the reason, the margin, the purse or the good in it that kept it off",
+    the_villagers_offer_left_to_you_says_why_on_screen())
+chk("1.92.0", "profit that could add no Trade XP because Trade is past the game's learning limit says so on screen, with the focus points or attribute points the game's own model says would let it learn again",
+    trade_xp_the_learning_limit_holds_back_says_so_and_what_lifts_it())
+chk("1.92.0", "the hint under Trade with caravans and villagers and the feature list say the villagers' offer is one deal and why an offer is left, and the feature list names the learning limit line",
+    the_hint_and_the_feature_list_say_the_villagers_offer_is_one_deal())
+
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

@@ -116,7 +116,7 @@
 		<string id="TL271" text="Hepsini sakla" />
 		<string id="TL272" text="Öğrenmediklerini sakla" />
 		<string id="TL273" text="Kervanlarla ve köylülerle ticaret yap" />
-		<string id="TL373" text="Yolda bir kervanla ya da köylülerle karşılaşın, TradeLord karşılaştığınız anda onlarla ticaret yapar. Kervana kârınızı karşılayanı satar, ondan daha pahalıya satabileceğini alır; parayı kervan kendi kesesinden öder. Köylülere hiçbir şey satmaz: toplu teklifleri kârınızı karşılıyorsa hepsini alır, karşılamıyorsa teklifi size bırakır. Varsayılan olarak AÇIK." />
+		<string id="TL373" text="Yolda bir kervanla ya da köylülerle karşılaşın, TradeLord onlarla hemen ticaret yapar. Kervana kârınızı karşılayanı satar, ondan daha pahalıya satabileceğini alır. Köylülere hiçbir şey satmaz: toplu teklifleri kârınızı karşılıyorsa Ziyaret başına en çok harcama, Asla tahıl alma ve tek bir mala koyduğunuz sınırlar ne derse desin hepsini alır, karşılamıyorsa nedenini söyleyip teklifi size bırakır. Varsayılan olarak AÇIK." />
 		<string id="TL274" text="Tek bir malın doldurabileceği yük payı (0 = kapalı)" />
 		<string id="TL374" text="Bir mal, bölüğünüzün taşıyabildiğinin bu payından fazlasını dolduracaksa artık o maldan almaz. Gerçek taşıma kapasitenize göre ölçülür, yani tavan arabalarınız ve yük hayvanlarınızla birlikte büyür. 0 bunu kapatır. Satış etkilenmez." />
 		<string id="TL352" text="TradeLord'un her zaman aldığı mallar: kategori kurallarını ve tahıl alma yasağını aşar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Yukarıdaki asla listeleri ve envanter kilidi yine geçerlidir, ve yine ancak erişimdeki bir yerde daha pahalıya satabileceğini alır."/>
@@ -300,5 +300,17 @@
 		<string id="TL458" text="TradeLord'un kendi işleyişini TradeLord.log dosyasına yazar: her pazarın taşıdığınız mallara ne ödediğini ve ne istediğini, kapıdan girdiğinizde tahminin ve panelin sözünün ne kadar tuttuğunu, ve harita imlecinin tarttığı her şeyi. Tahmin kısmı için Bir pazara doğru yolda olanları say ayarı gerekir. Varsayılan olarak AÇIK; günlüğü kısa tutmak için kapatın."/>
 		<string id="TL459" text="Nereye satacağını tüm yüke bakarak seç"/>
 		<string id="TL460" text="TradeLord aldığı her malı, satmayı düşündüğü bir pazar için alır. KAPALI: o pazar tek bir birime ne ödediğine bakılarak seçilir. AÇIK: menzildeki her pazar, tüm yüke ne ödeyeceğine göre yeniden tartılır; size gerçekte ödenecek olan budur. Girdiğiniz her pazarda biraz zaman alır. Denendiği sürece AÇIK."/>
+		<string id="TL461" text="TradeLord köylülerin teklifini size bıraktı: {GOLD} dinar istenen malları ancak {RESALE} dinara satabileceğini hesaplıyor, bu da En az kâr payını karşılamıyor."/>
+		<string id="TL462" text="TradeLord köylülerin teklifini size bıraktı: {GOLD} dinar istiyorlar, kesenizde ise harcanabilecek {SPEND} dinar var."/>
+		<string id="TL463" text="TradeLord köylülerin teklifini içindeki {GOOD} yüzünden size bıraktı: {REASON}."/>
+		<string id="TL464" text="TradeLord köylülerin teklifini size bıraktı: {REASON}."/>
+		<string id="TL465" text="TradeLord ticaret için asla at almaz"/>
+		<string id="TL466" text="TradeLord'un ticaretini yaptığı bir mal değil"/>
+		<string id="TL467" text="oyun buna bir fiyat biçmiyor"/>
+		<string id="TL468" text="Ticaret tecrübesi eklenemedi: Ticaret yeteneğiniz ({SKILL}) öğrenme sınırını ({LIMIT}) aştı. Ticaret'e {FOCUS} odak puanı daha ya da {ATTRIBUTE} için {POINTS} puan daha verirseniz yeniden öğrenmeye başlar."/>
+		<string id="TL469" text="Ticaret tecrübesi eklenemedi: Ticaret yeteneğiniz ({SKILL}) öğrenme sınırını ({LIMIT}) aştı. Ticaret'e {FOCUS} odak puanı daha verirseniz yeniden öğrenmeye başlar."/>
+		<string id="TL470" text="Ticaret tecrübesi eklenemedi: Ticaret yeteneğiniz ({SKILL}) öğrenme sınırını ({LIMIT}) aştı. {ATTRIBUTE} için {POINTS} puan daha verirseniz yeniden öğrenmeye başlar."/>
+		<string id="TL471" text="Ticaret tecrübesi eklenemedi: Ticaret yeteneğiniz ({SKILL}) öğrenme sınırını ({LIMIT}) aştı. Yeniden öğrenmesi için Ticaret'teki odağınızı ve {ATTRIBUTE} değerinizi birlikte yükseltin."/>
+		<string id="TL472" text="Karakter ekranında harcanmayı bekleyen {FOCUS} odak puanınız ve {POINTS} nitelik puanınız var."/>
 	</strings>
 </base>

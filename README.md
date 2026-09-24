@@ -85,6 +85,7 @@
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, once you switch it on. Off out of the box, so looted gear goes to the first market that can pay for it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
+- ✅ Says on screen when the profit could add no Trade XP because your Trade skill is past the game's learning limit, and how many focus points in Trade or points of Social would let it learn again
 - ✅ Credits every companion riding with you a share of that same profit, which the game turns into Trade XP the same way it does yours, at a share you set, so a trading clan learns from the run as well as its lord. Off out of the box, so the XP is yours alone until you ask for it
 - ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good and the last coin in its purse, so its shop stays open
 - ✅ Puts 1000 denars back in every village left with an empty purse, once for a campaign, the first time you enter it, so a village an older version spent out can be traded with again, and it says on screen how many it refilled
@@ -92,10 +93,12 @@
 - ✅ Trades with a caravan the moment you meet it on the road, before anyone says a word, selling what clears your margin and buying what it can sell on for more somewhere in reach, out of the caravan's own purse
 - ✅ Leaves your own caravans alone, and any caravan on a raft or with no goods to show, since the game trades with none of them
 - ✅ Never sells to a party of villagers, and takes their whole offer the moment you meet them when it clears your margin, at the price the game's own "What kind of products do you have?" offer charges
+- ✅ The villagers' offer is one deal: Max spend per visit, Never buy grain and the caps on one good never hold it back, so it is taken whole whenever it clears your margin and your purse can pay
 - ✅ Once TradeLord has taken the villagers' offer, the game's own offer is gone for the rest of that meeting, so the same goods can never be bought twice
 - ✅ An offer TradeLord leaves is still yours to take in the conversation, and what you pay for it is written down as what those goods cost you
+- ✅ When TradeLord leaves the villagers' offer to you, a message on screen says why: your margin, your purse, your cargo room, your herd or the good in it that kept it off
 - ✅ A caravan is traded with at the prices of the town you are in, or else the nearest town, which is what the game's own trade screen charges you with a caravan
-- ✅ A party on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, your looted gear, Hold cargo for the best market, the herd speed penalty and the settling delay
+- ✅ A caravan on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, your looted gear, Hold cargo for the best market, the herd speed penalty and the settling delay
 - ✅ Meeting that same party again straight away counts as the same meeting, so it never buys back what it has just sold them and what it spent still counts against its caps, while meeting them again later starts afresh
 - ✅ Once the goods have changed hands you can say so, and the trader answers
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC

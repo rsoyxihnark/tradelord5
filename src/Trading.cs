@@ -646,6 +646,9 @@ namespace TradeLord
             TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(),
                              Options.Current.MaxSpendPerVisit, books.PaidOut(sim));
 
+        internal static int PurseForTheirOffer(Books books, bool sim) =>
+            TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(), 0, 0);
+
         internal static int PurseForAVisit() =>
             TradeMath.Budget(Hero.MainHero.Gold, GoldHeldBack(),
                              Options.Current.MaxSpendPerVisit, 0);
@@ -1013,6 +1016,7 @@ namespace TradeLord
             finally { CloseTransaction(); ReportSilenced(); }
             LedgerBehavior.Instance?.AddTradeXp(
                 (int)Math.Round(Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) - xpBefore));
+            bool learned = Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) > xpBefore;
             if (profit > 0)
                 Guard.Run("TradeXp.Event", () =>
                 {
@@ -1023,6 +1027,8 @@ namespace TradeLord
             Guard.Run("TradeXp.Party", () => CreditTheCompanionsWithYou(xp));
             int now = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
             bool rose = now > before;
+            if (!learned && xp > 0 && Guard.Read("TradeXp.Limit", muted, SayTheLearningLimit, false))
+                return;
             TextObject earned = Tongue.Text(rose
                 ? "{=TL88}TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."
                 : "{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.");
@@ -1030,6 +1036,90 @@ namespace TradeLord
             if (rose) earned.SetTextVariable("LEVEL", now);
             if (!muted) Notices.Say(earned, Notices.Xp);
             if (rose) Log.Write("trade skill rose to " + now + " - named in TradeLord's own line");
+        }
+
+        private static bool SayTheLearningLimit(bool muted)
+        {
+            Hero hero = Hero.MainHero;
+            CharacterDevelopmentModel model = Campaign.Current?.Models?.CharacterDevelopmentModel;
+            SkillObject trade = DefaultSkills.Trade;
+            if (model == null || hero?.HeroDeveloper == null || trade == null) return false;
+            IReadOnlyPropertyOwner<CharacterAttribute> attributes = hero.CharacterAttributes;
+            int focus = hero.HeroDeveloper.GetFocus(trade);
+            int skill = hero.GetSkillValue(trade);
+            if (model.CalculateLearningRate(attributes, focus, skill, trade).ResultNumber > 0f) return false;
+            int limit = MathF.Round(model.CalculateLearningLimit(attributes, focus, trade).ResultNumber);
+            if (skill <= limit) return false;
+
+            int focusNeeded = TradeMath.FewestThatLets(model.MaxFocusPerSkill - focus,
+                more => model.CalculateLearningRate(attributes, focus + more, skill, trade).ResultNumber > 0f);
+            CharacterAttribute named = null;
+            int pointsNeeded = 0;
+            foreach (CharacterAttribute attribute in trade.Attributes)
+            {
+                if (attribute == null) continue;
+                if (named == null) named = attribute;
+                int needed = TradeMath.FewestThatLets(model.MaxAttribute - attributes.GetPropertyValue(attribute),
+                    more => model.CalculateLearningRate(new Raised(attributes, attribute, more), focus, skill, trade)
+                                 .ResultNumber > 0f);
+                if (needed > 0 && (pointsNeeded == 0 || needed < pointsNeeded))
+                {
+                    named = attribute;
+                    pointsNeeded = needed;
+                }
+            }
+
+            TextObject said = Tongue.Text(focusNeeded > 0 && pointsNeeded > 0
+                ? "{=TL468}Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). {FOCUS} more focus point(s) in Trade or {POINTS} more point(s) of {ATTRIBUTE} would let it learn again."
+                : focusNeeded > 0
+                    ? "{=TL469}Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). {FOCUS} more focus point(s) in Trade would let it learn again."
+                    : pointsNeeded > 0
+                        ? "{=TL470}Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). {POINTS} more point(s) of {ATTRIBUTE} would let it learn again."
+                        : "{=TL471}Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). Raise your focus in Trade and your {ATTRIBUTE} together to let it learn again.");
+            said.SetTextVariable("SKILL", skill);
+            said.SetTextVariable("LIMIT", limit);
+            said.SetTextVariable("FOCUS", focusNeeded);
+            said.SetTextVariable("POINTS", pointsNeeded);
+            said.SetTextVariable("ATTRIBUTE", named?.Name?.ToString() ?? "");
+
+            int focusToSpend = hero.HeroDeveloper.UnspentFocusPoints;
+            int pointsToSpend = hero.HeroDeveloper.UnspentAttributePoints;
+            Log.Repeatable("trade-xp-limit", skill + "/" + limit + "/" + focus + "/" + focusNeeded + "/" + pointsNeeded,
+                           "Trade XP could not be added: Trade is at " + skill + ", past its learning limit of " +
+                           limit + " with " + focus + " focus point(s) in it, so the game's learning rate for it " +
+                           "is 0; " + (focusNeeded > 0 ? focusNeeded + " more focus point(s)" : "no focus alone") +
+                           " or " + (pointsNeeded > 0 ? pointsNeeded + " more point(s) of " + named?.StringId
+                                                      : "no attribute alone") +
+                           " would let it learn again, with " + focusToSpend + " focus and " + pointsToSpend +
+                           " attribute point(s) unspent");
+
+            if (!muted) Notices.Say(said, Notices.Alert);
+            if (focusToSpend <= 0 && pointsToSpend <= 0) return true;
+            TextObject spend = Tongue.Text("{=TL472}You have {FOCUS} focus point(s) and {POINTS} attribute point(s) left to spend on the character screen.");
+            spend.SetTextVariable("FOCUS", focusToSpend);
+            spend.SetTextVariable("POINTS", pointsToSpend);
+            if (!muted) Notices.Say(spend, Notices.Alert);
+            return true;
+        }
+
+        private sealed class Raised : IReadOnlyPropertyOwner<CharacterAttribute>
+        {
+            private readonly IReadOnlyPropertyOwner<CharacterAttribute> _had;
+            private readonly CharacterAttribute _raised;
+            private readonly int _by;
+
+            internal Raised(IReadOnlyPropertyOwner<CharacterAttribute> had, CharacterAttribute raised, int by)
+            {
+                _had = had;
+                _raised = raised;
+                _by = by;
+            }
+
+            public int GetPropertyValue(CharacterAttribute attribute) =>
+                _had.GetPropertyValue(attribute) + (attribute == _raised ? _by : 0);
+
+            public bool HasProperty(CharacterAttribute attribute) =>
+                attribute == _raised || _had.HasProperty(attribute);
         }
 
         private const int NamedItemCap = 6;
@@ -1861,43 +1951,87 @@ namespace TradeLord
         {
             const string label = "villagers' offer taken";
             pass.CountFrom();
-            var tally = new BlockTally();
             var market = new BuyingAt(pass, "buying the villagers' offer", "Taking the villagers' offer",
                                       theirOffer: true);
 
             LedgerBehavior.ForgetWhatPickingABuyerCost();
-            Block stops = TradePass.WhatStopsTheLot(market, pass.Books, pass.Sim, pass.ShareCap,
-                                                    Options.Current, out Lot lot);
+            Block stops = TradePass.WhatStopsTheLot(market, pass.Books, pass.Sim, Options.Current, out Lot lot);
             SayWhatPickingABuyerCost();
             if (lot.Units == 0) return;
             Log.Write(pass.Met.Name + " offer " + lot.Units + " goods for " + lot.Price + " gold" +
                       (lot.Weighed ? ", which TradeLord reckons it can sell on for " + (int)lot.Resale : "") +
-                      (stops == Block.None ? ": TradeLord takes the lot"
-                                           : ": TradeLord leaves the offer to you (" + stops + ")"));
+                      (stops == Block.None
+                          ? ": TradeLord takes the lot"
+                          : ": TradeLord leaves the offer to you (" + stops +
+                            (lot.Stopper >= 0 ? ", over " + market.IdAt(lot.Stopper) : "") +
+                            (stops == Block.BudgetSpent ? ", " + market.Spendable() + " of your purse free to spend" : "") +
+                            ")"));
+
+            if (stops != Block.None)
+            {
+                if (!pass.Muted) Notices.Say(WhyTheOfferIsLeft(market, stops, lot), Notices.Note);
+                return;
+            }
 
             Traded moved = default(Traded);
-            if (stops == Block.None)
-                InAPass(() => moved = TradePass.TakeTheLot(market, pass.Books, pass.Sim));
-            else tally.Note(stops);
+            InAPass(() => moved = TradePass.TakeTheLot(market, pass.Books, pass.Sim));
 
             int bought = moved.Units;
             int spent = pass.Spent(moved.SimGold);
-            if (bought > 0)
+            if (bought <= 0) return;
+            if (!pass.Sim) Meetings.TookTheirOffer(pass.Met);
+            pass.Moved(gold: spent, selling: false);
+            Log.Write(pass.Headed(label) + bought + " items, -" + spent + " gold " + pass.Where);
+            pass.Logged(selling: false, why);
+            TextObject msg = pass.Said(
+                "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
+                "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.",
+                bought, spent);
+            if (!pass.Muted) Notices.Say(msg, Notices.Spend);
+        }
+
+        private static TextObject WhyTheOfferIsLeft(BuyingAt market, Block stops, in Lot lot)
+        {
+            TextObject said;
+            if (stops == Block.BelowMargin)
             {
-                if (!pass.Sim) Meetings.TookTheirOffer(pass.Met);
-                pass.Moved(gold: spent, selling: false);
-                Log.Write(pass.Headed(label) + bought + " items, -" + spent + " gold " + pass.Where);
-                pass.Logged(selling: false, why);
-                TextObject msg = pass.Said(
-                    "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
-                    "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.",
-                    bought, spent);
-                if (!pass.Muted) Notices.Say(msg, Notices.Spend);
+                said = Tongue.Text("{=TL461}TradeLord left the villagers' offer to you: {GOLD} denars for goods it reckons it can sell on for {RESALE}, short of your Minimum profit margin.");
+                said.SetTextVariable("GOLD", lot.Price);
+                said.SetTextVariable("RESALE", (int)lot.Resale);
             }
-            else if (!pass.DirectionError)
+            else if (stops == Block.BudgetSpent)
             {
-                Block stopped = tally.Dominant();
-                if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);
+                said = Tongue.Text("{=TL462}TradeLord left the villagers' offer to you: they ask {GOLD} denars, and {SPEND} of your purse is free to spend.");
+                said.SetTextVariable("GOLD", lot.Price);
+                said.SetTextVariable("SPEND", Math.Max(0, market.Spendable()));
+            }
+            else if (lot.Stopper >= 0)
+            {
+                said = Tongue.Text("{=TL463}TradeLord left the villagers' offer to you because of the {GOOD} in it: {REASON}.");
+                said.SetTextVariable("GOOD", market.NameAt(lot.Stopper));
+                said.SetTextVariable("REASON", WhyOneGoodKeepsTheOfferOff(stops));
+            }
+            else
+            {
+                said = Tongue.Text("{=TL464}TradeLord left the villagers' offer to you: {REASON}.");
+                said.SetTextVariable("REASON", BlockTally.Phrase(stops));
+            }
+            return said;
+        }
+
+        private static TextObject WhyOneGoodKeepsTheOfferOff(Block stops)
+        {
+            switch (stops)
+            {
+                case Block.MountOrHaulAnimal:
+                    return Tongue.Text("{=TL465}TradeLord never buys a horse to trade");
+                case Block.NotMerchandise:
+                case Block.NotTradable:
+                    return Tongue.Text("{=TL466}it is not a good TradeLord trades");
+                case Block.NoStock:
+                    return Tongue.Text("{=TL467}the game puts no price on it");
+                default:
+                    return BlockTally.Phrase(stops);
             }
         }
 
@@ -1948,7 +2082,11 @@ namespace TradeLord
             public Good GoodAt(int at) => TradePolicy.Describe(Item(at));
 
             public bool MayBuy(int at, in Good good, out Block why) =>
-                TradePolicy.MayBuy(good, Item(at), _pass.Locked, out why);
+                TradePolicy.MayBuy(good, Item(at), _pass.Locked, out why, wholeOffer: _theirOffer);
+
+            public string IdAt(int at) => Item(at)?.StringId ?? "";
+
+            public string NameAt(int at) => Item(at)?.Name?.ToString() ?? IdAt(at);
 
             public int TheLedgerAsksFor(int at)
             {
@@ -1999,7 +2137,8 @@ namespace TradeLord
 
             public int PriceToBuy(int at) => _pass.Price(Shelf[at].EquipmentElement, selling: false);
 
-            public int Spendable() => _pass.Spendable();
+            public int Spendable() =>
+                _theirOffer ? TradeActionBehavior.PurseForTheirOffer(_pass.Books, _pass.Sim) : _pass.Spendable();
 
             public float Room() => _pass.Room();
 

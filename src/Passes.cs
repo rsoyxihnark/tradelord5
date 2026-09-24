@@ -83,6 +83,7 @@ namespace TradeLord
         internal float Weight;
         internal int Herd;
         internal bool Weighed;
+        internal int Stopper;
     }
 
     internal static class Picks
@@ -330,10 +331,11 @@ namespace TradeLord
             return moved;
         }
 
-        internal static Block WhatStopsTheLot(IBuyingMarket market, Books books, bool sim,
-                                              float shareCap, Options s, out Lot lot)
+        internal static Block WhatStopsTheLot(IBuyingMarket market, Books books, bool sim, Options s,
+                                              out Lot lot)
         {
             lot = default(Lot);
+            lot.Stopper = -1;
             Block refused = Block.None;
             var shelf = new List<Pick>();
             for (int at = 0; at < market.Count; at++)
@@ -350,27 +352,27 @@ namespace TradeLord
                 if (refused != Block.None) continue;
                 if (unit <= 0) refused = Block.NoStock;
                 else if (!market.MayBuy(at, good, out Block whyBuy)) refused = whyBuy;
-                else shelf.Add(new Pick { At = at, Good = good });
+                else
+                {
+                    shelf.Add(new Pick { At = at, Good = good });
+                    continue;
+                }
+                lot.Stopper = at;
             }
             if (lot.Units == 0) return Block.NoStock;
             if (refused != Block.None) return refused;
             market.PriceTheMarketsFor(shelf);
 
-            var inTheLot = new Dictionary<string, (int units, int cost)>();
+            var inTheLot = new Dictionary<string, int>();
             foreach (Pick one in shelf)
             {
                 Good good = one.Good;
                 int units = market.TheirsToSell(one.At);
                 int unit = market.PriceToBuy(one.At);
-                int cost = TradeMath.WorthOf(units, unit);
-                inTheLot.TryGetValue(good.Id, out var before);
-                int held = market.Carried(one.At) + books.Held(sim, good.Id);
-                Block capped = TradeRules.WhatCapsALot(good, before.cost + cost, before.units + units,
-                                                       books.Purchases(sim, good.Id), held, shareCap, s);
-                if (capped != Block.None) return capped;
-                inTheLot[good.Id] = (before.units + units, before.cost + cost);
+                inTheLot.TryGetValue(good.Id, out int before);
+                inTheLot[good.Id] = before + units;
 
-                int from = held + before.units;
+                int from = market.Carried(one.At) + books.Held(sim, good.Id) + before;
                 if (market.ResaleMarket(one.At, unit, from + units, out _))
                     lot.Resale += TradeMath.Realizable(
                         TradeRules.WhatTheBuyerPays(market.ResaleUpTo(one.At, from),

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.92.0
+
+- TradeLord now takes the villagers' whole offer whenever it clears your margin, whatever Max spend per visit says
+- Grain in the villagers' offer no longer stops TradeLord taking it while Never buy grain is on
+- Buy cap per item, Stop buying at this many held and Share of the hold one good may fill no longer hold back the villagers' offer
+- A message now says why TradeLord left the villagers' offer to you
+- A message now says when your profit could add no Trade XP because your Trade skill is past its learning limit, and what would lift it
+- The hint under Trade with caravans and villagers now says the villagers' offer is taken whatever your caps and Never buy grain say
+- The feature list now says the villagers' offer is taken whole whatever Max spend per visit, Never buy grain and the caps on one good say
+- The feature list now says a message tells you why TradeLord left the villagers' offer to you
+- The feature list now says TradeLord tells you when your Trade skill is past its learning limit
+- The feature list now says only a caravan on the road is held to every rule a market visit is
+
 ## 1.91.9
 
 - Fixed Sell animals that slow you down keeping every haul animal while your ships were full with Buy to fill the ships on

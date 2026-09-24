@@ -1395,5 +1395,33 @@ namespace TradeLord.Tests
             Assert.Equal(TradeMath.PerDay(100f, 0f),
                          TradeMath.PerDay(100f, TradeMath.NoTripCountsShorterThan));
         }
+
+        [Fact]
+        public void The_fewest_points_that_let_a_skill_learn_again_are_counted_up_from_one()
+        {
+            Assert.Equal(1, TradeMath.FewestThatLets(5, more => more >= 1));
+            Assert.Equal(3, TradeMath.FewestThatLets(5, more => more >= 3));
+            Assert.Equal(5, TradeMath.FewestThatLets(5, more => more >= 5));
+            Assert.Equal(0, TradeMath.FewestThatLets(5, more => more >= 6));
+            Assert.Equal(0, TradeMath.FewestThatLets(0, more => true));
+            Assert.Equal(0, TradeMath.FewestThatLets(-2, more => true));
+            Assert.Equal(0, TradeMath.FewestThatLets(5, null));
+        }
+
+        [Fact]
+        public void A_learning_rate_the_game_floors_at_nothing_is_lifted_by_one_social_point_or_one_focus_point()
+        {
+            System.Func<int, int, int, bool> learns = (social, focus, skill) =>
+            {
+                int limit = System.Math.Max(0, (social - 1) * 10) + focus * 30;
+                float factor = 1f + 0.4f * social + focus;
+                if (skill > limit) factor -= 1f + 0.1f * (skill - limit);
+                return 1.25f * factor > 0.0001f;
+            };
+            Assert.False(learns(2, 0, 18));
+            Assert.Equal(1, TradeMath.FewestThatLets(5, more => learns(2, more, 18)));
+            Assert.Equal(1, TradeMath.FewestThatLets(8, more => learns(2 + more, 0, 18)));
+            Assert.True(learns(2, 0, 17));
+        }
     }
 }
