@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.91.7
+
+- Fixed TradeLord selling goods your other quests were waiting on when a game update left it unable to read one kind of quest
+- Fixed TradeLord refusing to sell any animal when a game update left it unable to read a quest that never asks for animals
+
 ## 1.91.6
 
 - Fixed Sell animals that slow you down selling haul animals your cargo still needed
