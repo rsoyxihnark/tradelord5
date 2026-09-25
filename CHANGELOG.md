@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.93.14
+
+- Fixed the map marker pointing back at the market TradeLord made its last trade at when Auto sell is off or Staged Trading is on
+- A deal you take from Staged Trading now counts as TradeLord's last trade at that market
+- The map marker now weighs your cargo again as soon as the deal TradeLord laid out is closed
+- Returning to where TradeLord made its last trade now counts as the first time back under Staged Trading or with Auto sell and Auto buy off
+- Fixed TradeLord.log leaving out the map marker's weighing when only the units or whether it holds the mark changed
+- TradeLord.log now names each other market whose gold or units changed when the map marker weighs your cargo again and stays put
+- TradeLord.log now says when the map marker newly prices a market, stops pricing one or finds a new next best market
+- TradeLord.log now shows today's price next to what the map marker expects a market to pay once what is on its way lands
+- TradeLord.log now says when coming back to the market TradeLord made its last trade at lets the map marker mark it again
+- Fixed TradeLord.log saying trading on arrival leaves a market alone when nothing trades as you arrive
+- Fixed TradeLord.log calling the daily herd check "on the road" while you were in a town, a village or a castle
+- The feature list now says the map marker leaves out the market TradeLord made its last trade at until you come back to it
+- The feature list now says a deal you take from Staged Trading counts as TradeLord's last trade at that market
+- The feature list now says TradeLord.log shows today's price beside the price the map marker expects once what is on its way lands
+- The feature list now says TradeLord.log names each other market whose gold or units changed while the map marker stays put
+- The feature list now says the map marker's whole weighing is written down when only the units or whether it holds the mark change too
+
 ## 1.93.13
 
 - Fixed the map marker staying on a market that pays less after you used Trade here now (TradeLord) in the town you are in
@@ -21,7 +40,7 @@
 - Fixed TradeLord.log saying TradeLord had traded at a market you had only walked into
 - Fixed TradeLord.log writing "1 men" in the herd check
 - TradeLord.log now writes the map marker's weighing again only when what your cargo would fetch there changes
-- TradeLord.log no longer writes a price trace or a herd check at a castle or the training field
+- TradeLord.log no longer writes a price trace, or a herd check as you come and go, at a castle or the training field
 - TradeLord.log now names the band that gives you free passage, not only its number
 - TradeLord.log now writes down the Trade profit the game credits and your Trade skill rising when you take a deal Staged Trading laid out
 - TradeLord.log now says how long the map marker took each time it writes down what it weighed

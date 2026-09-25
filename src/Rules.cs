@@ -113,9 +113,6 @@ namespace TradeLord
 
         internal static string AfterTheRoad(bool tradedOnTheRoad, string lastTradedAt) =>
             tradedOnTheRoad ? null : lastTradedAt;
-
-        internal static bool LeftOutOfTheMark(string there, string lastTradedAt, bool autoSell, bool staged) =>
-            autoSell && !staged && FirstTimeBack(there, lastTradedAt);
     }
 
     internal static class Marks
@@ -123,6 +120,28 @@ namespace TradeLord
         internal static bool WorthSayingAgain(long value, int units, bool held,
                                               long saidValue, int saidUnits, bool saidHeld) =>
             value != saidValue || units != saidUnits || held != saidHeld;
+
+        internal static (List<string> joined, List<string> changed, List<string> gone) WhatMovedOnTheBoard(
+            List<(string where, int units, long value)> now,
+            IDictionary<string, (string name, int units, long value)> told)
+        {
+            var joined = new List<string>();
+            var changed = new List<string>();
+            var gone = new List<string>();
+            var still = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; now != null && i < now.Count; i++)
+            {
+                var (where, units, value) = now[i];
+                if (where == null || !still.Add(where)) continue;
+                if (told == null || !told.TryGetValue(where, out var was)) joined.Add(where);
+                else if (was.units != units || was.value != value) changed.Add(where);
+            }
+            if (told != null)
+                foreach (string where in told.Keys)
+                    if (!still.Contains(where)) gone.Add(where);
+            gone.Sort(StringComparer.Ordinal);
+            return (joined, changed, gone);
+        }
 
         internal static bool OnlyEatenFrom(List<(string good, int amount, bool food)> then,
                                            List<(string good, int amount, bool food)> now)
