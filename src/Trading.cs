@@ -352,6 +352,8 @@ namespace TradeLord
         internal static bool MarkerLeavesItOut(Settlement settlement) =>
             settlement != null && Arrivals.FirstTimeBack(settlement.StringId, LastTradedAtOnceYouLeave());
 
+        internal static string MarketTheMarkerLeavesOut() => LastTradedAtOnceYouLeave();
+
         private static string LastTradedAtOnceYouLeave() =>
             Arrivals.LastTradedAt(MobileParty.MainParty?.CurrentSettlement?.StringId,
                                   Visit.Moves(Simulating) > _movesAtArrival, _lastTradedAt);
@@ -1532,7 +1534,7 @@ namespace TradeLord
 
             public bool ResaleMarket(int at, out int price)
             {
-                var best = LedgerBehavior.Instance?.BestSell(Item(at)) ?? (null, 0);
+                var best = LedgerBehavior.Instance?.BestSellAsItLands(Item(at)) ?? (null, 0);
                 EquipmentElement held = _plan[at].EquipmentElement;
                 price = TradeMath.AtThisQuality(best.Item2, held.Item.Value, held.ItemValue);
                 return best.Item1 != null && best.Item1 != _pass.Site;

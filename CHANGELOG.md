@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.93.15
+
+- Fixed Hold cargo for the best market ignoring Count what is on its way to a market when it weighs the best market
+- Fixed the map marker holding on to a worse market once the market TradeLord made its last trade at was no longer left out
+- TradeLord.log now says when the map marker moves because the market TradeLord last traded at is back and earns more a day
+- The hint for Count what is on its way to a market now says what uses it, and which prices need Bulk price simulation
+- The hint for Auto-mark best sell market on map now says it skips the market TradeLord last traded at until you return
+- The hint for Hold cargo for the best market now says it counts what is on its way to that market
+- The feature list now says Count what is on its way to a market also steers Hold cargo for the best market
+- The feature list now says the last market traded at gets one look once it is back and takes the mark if it earns more a day
+
 ## 1.93.14
 
 - Fixed the map marker pointing back at the market TradeLord made its last trade at when Auto sell is off or Staged Trading is on
