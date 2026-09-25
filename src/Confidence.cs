@@ -37,6 +37,20 @@ namespace TradeLord
             return score * (factor > 1f ? 1f : factor);
         }
 
+        internal enum RecordAtAMarket
+        {
+            Unused, NotYet, TakesNothingOff, Lowers
+        }
+
+        internal static RecordAtAMarket WhatAMarketsRecordDoes(bool counted, int arrivals, float held)
+        {
+            if (!counted) return RecordAtAMarket.Unused;
+            if (arrivals < EnoughArrivals) return RecordAtAMarket.NotYet;
+            return AsPromisesHaveHeld(1f, arrivals, held) < 1f
+                ? RecordAtAMarket.Lowers
+                : RecordAtAMarket.TakesNothingOff;
+        }
+
         public static float Of(bool simulated, int flatProfit, int simulatedProfit,
                                  int stock, int units, float travelDays,
                                  int caravans, float dataAgeDays,
