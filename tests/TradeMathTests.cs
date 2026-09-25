@@ -754,6 +754,20 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_marked_town_keeps_its_mark_a_little_past_your_travel_ceiling_and_no_other_town_does()
+        {
+            float held = TradeMath.CeilingTheMarkHolds(2.4f, true);
+            Assert.True(held > 2.4f);
+            Assert.True(2.45f <= held);
+            Assert.False(2.9f <= held);
+            Assert.Equal(2.4f, TradeMath.CeilingTheMarkHolds(2.4f, false));
+            Assert.Equal(0f, TradeMath.CeilingTheMarkHolds(0f, true));
+            Assert.Equal(-1f, TradeMath.CeilingTheMarkHolds(-1f, true));
+            Assert.Equal(float.MaxValue, TradeMath.CeilingTheMarkHolds(float.MaxValue, true));
+            Assert.True(float.IsNaN(TradeMath.CeilingTheMarkHolds(float.NaN, true)));
+        }
+
+        [Fact]
         public void A_marked_town_that_pays_nothing_holds_on_to_nothing()
         {
             Assert.Equal(0f, TradeMath.RateTheMarkHolds(0f, true));
@@ -1470,17 +1484,34 @@ namespace TradeLord.Tests
         [Fact]
         public void A_learning_rate_the_game_floors_at_nothing_is_lifted_by_one_social_point_or_one_focus_point()
         {
-            System.Func<int, int, int, bool> learns = (social, focus, skill) =>
+            System.Func<int, int, int, float> rate = (social, focus, skill) =>
             {
-                int limit = System.Math.Max(0, (social - 1) * 10) + focus * 30;
-                float factor = 1f + 0.4f * social + focus;
-                if (skill > limit) factor -= 1f + 0.1f * (skill - limit);
-                return 1.25f * factor > 0.0001f;
+                int limit = (int)System.Math.Round(System.Math.Max(0f, (social - 1f) * 10f) + focus * 30f);
+                float factors = 0.4f * social;
+                if (focus != 0) factors += focus * 1f;
+                if (skill > limit) factors += -1f - 0.1f * (skill - limit);
+                float result = 1.25f + 1.25f * factors;
+                return result < 0f ? 0f : result;
             };
-            Assert.False(learns(2, 0, 18));
-            Assert.Equal(1, TradeMath.FewestThatLets(5, more => learns(2, more, 18)));
-            Assert.Equal(1, TradeMath.FewestThatLets(8, more => learns(2 + more, 0, 18)));
-            Assert.True(learns(2, 0, 17));
+            Assert.True(rate(2, 0, 18) > 0f);
+            Assert.False(TradeMath.StillLearns(rate(2, 0, 18)));
+            Assert.Equal(1, TradeMath.FewestThatLets(5, more => TradeMath.StillLearns(rate(2, more, 18))));
+            Assert.Equal(1, TradeMath.FewestThatLets(8, more => TradeMath.StillLearns(rate(2 + more, 0, 18))));
+            Assert.True(TradeMath.StillLearns(rate(2, 0, 17)));
+            Assert.Equal(0f, rate(2, 0, 19));
+        }
+
+        [Fact]
+        public void A_learning_rate_left_over_from_rounding_teaches_nothing_and_the_smallest_real_one_still_does()
+        {
+            Assert.False(TradeMath.StillLearns(0f));
+            Assert.False(TradeMath.StillLearns(1.1920929e-7f));
+            Assert.False(TradeMath.StillLearns(5.9604645e-7f));
+            Assert.False(TradeMath.StillLearns(-0.5f));
+            Assert.False(TradeMath.StillLearns(float.NaN));
+            Assert.True(TradeMath.StillLearns(0.125f));
+            Assert.True(TradeMath.StillLearns(TradeMath.SmallestLearningRateThatTeaches));
+            Assert.True(TradeMath.StillLearns(1.25f));
         }
     }
 }

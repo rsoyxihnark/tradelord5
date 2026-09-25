@@ -1050,9 +1050,9 @@ namespace TradeLord
             OpenTransaction();
             try { SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp); }
             finally { CloseTransaction(); ReportSilenced(); }
-            LedgerBehavior.Instance?.AddTradeXp(
-                (int)Math.Round(Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) - xpBefore));
-            bool learned = Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) > xpBefore;
+            int gained = (int)Math.Round(Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) - xpBefore);
+            LedgerBehavior.Instance?.AddTradeXp(gained);
+            bool learned = gained > 0;
             if (profit > 0)
                 Guard.Run("TradeXp.Event", () =>
                 {
@@ -1083,12 +1083,12 @@ namespace TradeLord
             IReadOnlyPropertyOwner<CharacterAttribute> attributes = hero.CharacterAttributes;
             int focus = hero.HeroDeveloper.GetFocus(trade);
             int skill = hero.GetSkillValue(trade);
-            if (model.CalculateLearningRate(attributes, focus, skill, trade).ResultNumber > 0f) return false;
+            if (TradeMath.StillLearns(model.CalculateLearningRate(attributes, focus, skill, trade).ResultNumber)) return false;
             int limit = MathF.Round(model.CalculateLearningLimit(attributes, focus, trade).ResultNumber);
             if (skill <= limit) return false;
 
             int focusNeeded = TradeMath.FewestThatLets(model.MaxFocusPerSkill - focus,
-                more => model.CalculateLearningRate(attributes, focus + more, skill, trade).ResultNumber > 0f);
+                more => TradeMath.StillLearns(model.CalculateLearningRate(attributes, focus + more, skill, trade).ResultNumber));
             CharacterAttribute named = null;
             int pointsNeeded = 0;
             foreach (CharacterAttribute attribute in trade.Attributes)
@@ -1096,8 +1096,8 @@ namespace TradeLord
                 if (attribute == null) continue;
                 if (named == null) named = attribute;
                 int needed = TradeMath.FewestThatLets(model.MaxAttribute - attributes.GetPropertyValue(attribute),
-                    more => model.CalculateLearningRate(new Raised(attributes, attribute, more), focus, skill, trade)
-                                 .ResultNumber > 0f);
+                    more => TradeMath.StillLearns(
+                        model.CalculateLearningRate(new Raised(attributes, attribute, more), focus, skill, trade).ResultNumber));
                 if (needed > 0 && (pointsNeeded == 0 || needed < pointsNeeded))
                 {
                     named = attribute;

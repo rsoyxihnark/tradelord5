@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.93.6
+
+- Fixed TradeLord saying it credited profit to your Trade skill once the skill had stopped learning, instead of naming its learning limit
+- Fixed Trust a market by what it has paid scoring a price you walked in on well before the time the ledger panel promised it for
+- Trust a market by what it has paid starts learning afresh, counting only walk-ins that came near the time the ledger panel promised
+- What this means starts afresh on how much of the promised Sell price has held, counting only walk-ins near the time promised
+- Trust a market by what it has paid now holds a market to the first Sell price the ledger panel promised for a good, not a later one
+- TradeLord.log's promise check now keeps a promise for a later walk-in when you walked in too soon to say anything
+- Fixed TradeLord.log's marker check scoring a market you reached too soon to say anything, such as after the map's teleport cheat
+- Fixed the map marker flicking to another market and back when a slow stretch of road briefly put the marked one past your travel ceiling
+- The hint under Town travel ceiling now says a town already marked on the map may pass it by a fifth
+- The feature list now says the market already marked keeps its mark until it is a fifth past your travel ceiling
+- TradeLord.log now says when the map marker keeps a market a little past your travel ceiling
+
 ## 1.93.5
 
 - Fixed Buy haul animals buying animals before your goods, even when your cargo had room to spare

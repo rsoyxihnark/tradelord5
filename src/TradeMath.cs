@@ -172,6 +172,13 @@ namespace TradeLord
             return float.IsInfinity(held) ? rate : held;
         }
 
+        public static float CeilingTheMarkHolds(float cap, bool marked)
+        {
+            if (!marked || cap <= 0f || float.IsNaN(cap)) return cap;
+            float held = cap * TheMarkedTownHoldsBy;
+            return float.IsInfinity(held) ? cap : held;
+        }
+
         public static int MostYouCouldTake(int unitPrice, float unitWeight, int stocked,
                                            int spendable, float room, int cap)
         {
@@ -289,6 +296,10 @@ namespace TradeLord
 
         public static int PerUnit(int gold, int units) =>
             units <= 0 ? 0 : (int)Math.Round((double)gold / units, MidpointRounding.AwayFromZero);
+
+        public const float SmallestLearningRateThatTeaches = 0.001f;
+
+        public static bool StillLearns(float learningRate) => learningRate >= SmallestLearningRateThatTeaches;
 
         public static int FewestThatLets(int most, Func<int, bool> lets)
         {
