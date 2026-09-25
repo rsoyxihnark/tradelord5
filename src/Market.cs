@@ -52,6 +52,11 @@ namespace TradeLord
             _selling = selling;
             _quoted = quoted;
             if (!Options.Current.Omniscient || !Options.Current.BulkSimulation) return;
+            if (site != null && site.IsVillage)
+            {
+                _quoted = VillageAfterLanding(site, quoted, landed);
+                return;
+            }
             Town town = site != null && site.IsTown ? site.Town : null;
             if (town == null || item == null || item.ItemCategory == null) return;
             try
@@ -63,6 +68,33 @@ namespace TradeLord
                 _walkable = true;
             }
             catch (Exception e) { Log.Error(e, "bulk price walk setup"); }
+        }
+
+        private int VillageAfterLanding(Settlement village, int quoted, int landed)
+        {
+            if (landed == 0 || quoted <= 0 || _item == null || _item.ItemCategory == null) return quoted;
+            Town town = Hindsight.PricedFrom(village)?.Town;
+            IMarketData held = Priced.Kept(village);
+            if (town == null || held == null) return quoted;
+            try
+            {
+                ItemData data = town.MarketData.GetCategoryData(_item.ItemCategory);
+                var model = Campaign.Current.Models.TradeItemPriceFactorModel;
+                if (!Bulk.PricedAsTheGame(village, _item.ItemCategory, _selling, () =>
+                        model.GetPrice(_element, MobileParty.MainParty, _party, _selling,
+                                       data.InStoreValue, data.Supply, data.Demand) ==
+                        held.GetPrice(_element, MobileParty.MainParty, _selling, _party)))
+                    return quoted;
+                int after = model.GetPrice(_element, MobileParty.MainParty, _party, _selling,
+                                           TradeMath.ShelfAfterLanding(data.InStoreValue, landed),
+                                           data.Supply, data.Demand);
+                return after > 0 ? TradeMath.ForecastWithin(quoted, after) : quoted;
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "village price after a landing (the village is priced as it stands)");
+                return quoted;
+            }
         }
 
         internal int Price()
@@ -148,10 +180,21 @@ namespace TradeLord
         private static readonly Dictionary<(string site, string item, bool selling, bool arriving), int> _reach =
             new Dictionary<(string, string, bool, bool), int>();
 
+        private static readonly Dictionary<(string site, string kind, bool selling), bool> _pricedAsTheGame =
+            new Dictionary<(string, string, bool), bool>();
+
         internal static void Forget()
         {
             _rungs.Clear();
             _reach.Clear();
+            _pricedAsTheGame.Clear();
+        }
+
+        internal static bool PricedAsTheGame(Settlement village, ItemCategory kind, bool selling, Func<bool> check)
+        {
+            var key = (village.StringId, kind.StringId, selling);
+            if (!_pricedAsTheGame.TryGetValue(key, out bool same)) _pricedAsTheGame[key] = same = check();
+            return same;
         }
 
         private static Ladder Rung(Settlement site, ItemObject item, bool selling, int quoted,
@@ -223,7 +266,7 @@ namespace TradeLord
         }
 
         internal static Fetched SellWalk(Settlement site, ItemObject item, int units, int quoted,
-                                         int paid)
+                                         int paid, int purse)
         {
             Fetched got = default(Fetched);
             if (site == null || item == null || units <= 0) return got;
@@ -235,6 +278,7 @@ namespace TradeLord
                 got.Walked++;
                 if (price <= 0) break;
                 if (paid > 0 && !TradePolicy.BuyAcceptable(paid, TradePolicy.Realizable(price))) break;
+                if (TradeRules.TheBuyerCouldNotPay((int)Math.Min(int.MaxValue, total + price), purse)) break;
                 total += price;
                 got.Units++;
             }
@@ -247,7 +291,7 @@ namespace TradeLord
         {
             if (landed == 0 || site == null || item == null) return quoted;
             Ladder rung = Held(site, item, selling, quoted, landed, scanning: false);
-            return rung.Walkable ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;
+            return rung.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;
         }
     }
     internal static class Priced

@@ -253,6 +253,20 @@ namespace TradeLord
             return OutOfReach(days) ? FurthestThereIs : days;
         }
 
+        public static int WorthUsedUpADay(float budget, int price, int unitValue)
+        {
+            if (float.IsNaN(budget) || float.IsInfinity(budget) || budget <= 0f || price <= 0 || unitValue <= 0)
+                return 0;
+            double worth = (double)budget / price * unitValue;
+            return worth >= int.MaxValue ? int.MaxValue : (int)worth;
+        }
+
+        public static float WeightTheBudgetCanStillBuy(float weight, int cost, int budget)
+        {
+            if (weight <= 0f || float.IsNaN(weight) || cost <= 0 || budget <= 0) return 0f;
+            return budget >= cost ? weight : weight * ((float)budget / cost);
+        }
+
         public static int WorthOf(int units, int unitValue)
         {
             if (units <= 0 || unitValue <= 0) return 0;

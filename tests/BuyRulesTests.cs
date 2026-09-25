@@ -40,6 +40,23 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_units_a_good_is_weighed_on_stop_at_every_cap_you_set()
+        {
+            var s = new Options { BuyCapPerItem = 0, BuyValueCapPerItem = 0, MaxHeldPerItem = 0 };
+            Assert.Equal(int.MaxValue, TradeRules.UnitsTheCapsAllow(Cargo(), 100, (0, 0), 0, 0f, s));
+            s.BuyCapPerItem = 32;
+            Assert.Equal(20, TradeRules.UnitsTheCapsAllow(Cargo(), 100, (12, 1200), 0, 0f, s));
+            s.BuyValueCapPerItem = 1500;
+            Assert.Equal(3, TradeRules.UnitsTheCapsAllow(Cargo(), 100, (12, 1200), 0, 0f, s));
+            s.MaxHeldPerItem = 5;
+            Assert.Equal(1, TradeRules.UnitsTheCapsAllow(Cargo(), 100, (12, 1200), 4, 0f, s));
+            s.MaxHeldPerItem = 0;
+            Assert.Equal(2, TradeRules.UnitsTheCapsAllow(Cargo(), 100, (12, 1200), 3, 10f, s));
+            Assert.Equal(0, TradeRules.UnitsTheCapsAllow(Cargo(), 100, (32, 1200), 0, 0f, s));
+            Assert.Equal(0, TradeRules.UnitsTheCapsAllow(Cargo(), 100, (12, 1500), 0, 0f, s));
+        }
+
+        [Fact]
         public void A_plain_trade_good_and_livestock_are_bought()
         {
             Assert.True(Buy(Cargo()));

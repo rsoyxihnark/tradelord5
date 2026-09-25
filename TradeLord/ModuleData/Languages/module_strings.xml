@@ -111,7 +111,7 @@
 		<string id="TL266" text="Keep gold for days of wages" />
 		<string id="TL366" text="Also hold back this many days of your troops' wages on top of the gold reserve above, so a shopping trip never eats the payroll. It is worked out from your real wage bill every time TradeLord trades, so it grows with the army. 0 holds back the flat reserve only." />
 		<string id="TL267" text="Buy haul animals" />
-		<string id="TL367" text="Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, so your party carries more. It never buys more than you can drive without slowing down, and it stops before your gold reaches your reserve. The two settings below say how much gold it waits for and how much it will pay. ON by default."/>
+		<string id="TL367" text="Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, only to carry goods or food a full cargo left behind. It never buys more than you can drive without slowing down, and it stops before your gold reaches your reserve. The two settings below say how much gold it waits for and what it will pay. ON by default."/>
 		<string id="TL269" text="Free passage from bandits" />
 		<string id="TL369" text="When you run into looters or bandits, TradeLord adds a line asking to be let past. Saying it ends the encounter with no fight and no ransom, and they leave you alone for a few hours. It is ON by default." />
 		<string id="TL270" text="Sell them" />
@@ -235,8 +235,8 @@
 		<string id="TL393" text="Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages, so there is nothing here you could buy. Sell some cargo, or lower either of those in its settings."/>
 		<string id="TL390" text="TradeLord trades in town menus and towns join the price scans. ON by default." />
 		<string id="TL279" text="Count what is on its way to a market"/>
-		<string id="TL396" text="Before a route or a price in a tooltip is worked out, count what reaches that market before you do: the cargo the caravans will unload, what the workshops will make next, and the purses those caravans bring, spread over the goods that are cheap there as an estimate of what they will buy. Needs Live world prices. OFF prices each market as it stands."/>
-		<string id="TL394" text=" | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there"/>
+		<string id="TL396" text="Before a route or a price in a tooltip is worked out, count what reaches or leaves that market before you do: what caravans will unload and buy, what workshops will make and use up, and what the town itself uses up. A village follows the town it trades with. Needs Live world prices. OFF prices each market as it stands."/>
+		<string id="TL394" text=" | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there and what the town and its workshops use up"/>
 		<string id="TL395" text=" and what each will make next"/>
 		<string id="TL397" text=" | Qty! = part of that amount is still on the road and lands before you would"/>
 		<string id="TL399" text=" | the Sell price has held at {HELD} of what this panel promised, over {COUNT} price(s) it has checked"/>
@@ -288,7 +288,7 @@
 		<string id="TL444" text="A market that has paid less than this panel promised is scored lower, so routes that sell there fall down the list. It counts only once you have walked into that market five times, and it can never move a route's Score by more than a quarter. Needs Rank routes by confidence. ON by default."/>
 		<string id="TL445" text=" | Score is lowered for a market that has paid less than this panel promised"/>
 		<string id="TL446" text="?"/>
-		<string id="TL447" text=" | stock counts what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there; prices need Bulk price simulation"/>
+		<string id="TL447" text=" | stock counts what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there and what the town and its workshops use up; prices need Bulk price simulation"/>
 		<string id="TL448" text="Trade XP: {AMOUNT}" />
 		<string id="TL449" text="TradeLord has refilled {COUNT} empty village purse(s), so those village shops can trade again."/>
 		<string id="TL450" text="No market in reach stocks {COUNT} or more. | Minimum stock for buy suggestions asks for that. | Lower it to see where to buy this."/>

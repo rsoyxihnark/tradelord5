@@ -95,6 +95,8 @@ namespace TradeLord.Tests
 
             public int PriceToBuy(int at) => Stalls[at].Price;
 
+            public System.Func<int, int> PricesAhead(int at) => taken => Stalls[at].Price;
+
             public int Spendable() => Purse;
 
             public float Room() => Cargo;
@@ -211,6 +213,19 @@ namespace TradeLord.Tests
             Assert.Equal(850f, lot.Resale, 3);
             dead.Amount = 30;
             Assert.Equal(Block.BelowMargin, Judge(offer, out _));
+        }
+
+        [Fact]
+        public void An_offer_with_nowhere_to_sell_any_of_it_says_so_rather_than_blaming_your_margin()
+        {
+            var offer = Villagers();
+            offer.Add(Cargo("hides"), amount: 5, price: 40, resale: 200).Elsewhere = false;
+            offer.Add(Cargo("clay"), amount: 5, price: 40, resale: 200).Elsewhere = false;
+            Assert.Equal(Block.NoResaleMarket, Judge(offer, out Lot lot));
+            Assert.Equal(0f, lot.Resale, 3);
+            Assert.Equal(-1, lot.Stopper);
+            offer.Stalls[1].Elsewhere = true;
+            Assert.Equal(Block.None, Judge(offer, out _));
         }
 
         [Fact]

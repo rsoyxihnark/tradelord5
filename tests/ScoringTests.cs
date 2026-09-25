@@ -177,7 +177,7 @@ namespace TradeLord.Tests
             Outcome how = Scoring.Weigh(20, 10, 25, 0, Scoring.NoWorth, Scoring.NoWorth);
             Assert.Equal(15, how.Landed);
             Assert.Equal(-5, how.LandingOff);
-            Assert.Equal("5 fewer than it said", Scoring.Counted(how.LandingOff));
+            Assert.EndsWith("5 fewer on the shelf than it said", Scoring.UnitsShifted(20, how.Landed));
         }
 
         [Fact]
@@ -186,7 +186,7 @@ namespace TradeLord.Tests
             Outcome how = Scoring.Weigh(20, 10, 40, 0, Scoring.NoWorth, Scoring.NoWorth);
             Assert.Equal(30, how.Landed);
             Assert.Equal(10, how.LandingOff);
-            Assert.Equal("10 more than it said", Scoring.Counted(how.LandingOff));
+            Assert.EndsWith("10 more on the shelf than it said", Scoring.UnitsShifted(20, how.Landed));
         }
 
         [Fact]
@@ -226,7 +226,7 @@ namespace TradeLord.Tests
         {
             Outcome how = Scoring.Weigh(20, 10, 30, 100, 1000, 1100);
             Assert.Equal(0, how.LandingOff);
-            Assert.Equal("exactly what it said", Scoring.Counted(how.LandingOff));
+            Assert.EndsWith("exactly what it said", Scoring.UnitsShifted(20, how.Landed));
             Assert.Equal(0, how.WorthOff);
             Assert.Equal(0f, how.Share);
         }
@@ -366,12 +366,66 @@ namespace TradeLord.Tests
         [Fact]
         public void A_market_that_lost_stock_is_said_in_words_rather_than_as_a_figure_below_zero()
         {
-            Assert.Equal("8 left instead", Scoring.Landing(-8));
-            Assert.Equal("0 did", Scoring.Landing(0));
-            Assert.Equal("5 did", Scoring.Landing(5));
-            Assert.Equal("2320 left instead", Scoring.Moving(-2320));
-            Assert.Equal("it moved 0", Scoring.Moving(0));
-            Assert.Equal("it moved 580", Scoring.Moving(580));
+            Assert.Equal("said the shelf would lose 48 unit(s) of it and it lost 48, exactly what it said",
+                         Scoring.UnitsShifted(-48, -48));
+            Assert.Equal("said the shelf would gain 39 unit(s) of it and it lost 10, 49 fewer on the shelf than it said",
+                         Scoring.UnitsShifted(39, -10));
+            Assert.Equal("said the shelf would lose 5 unit(s) of it and it gained 3, 8 more on the shelf than it said",
+                         Scoring.UnitsShifted(-5, 3));
+            Assert.Equal("said the shelf would hold as many of it and it held as many, exactly what it said",
+                         Scoring.UnitsShifted(0, 0));
+            Assert.Equal("said the shelf would gain 7 unit(s) of it and it gained 6, 1 fewer on the shelf than it said",
+                         Scoring.UnitsShifted(7, 6));
+        }
+
+        [Fact]
+        public void A_town_s_own_use_is_carried_to_the_day_you_walked_in()
+        {
+            Assert.Equal((-10, -500), Scoring.ToTheWalkIn(-5, -250, 250, 50, 1f, 2f, 40, 2000));
+            Assert.Equal((-3, -125), Scoring.ToTheWalkIn(-5, -250, 250, 50, 1f, 0.5f, 40, 2000));
+            Assert.Equal((-5, -250), Scoring.ToTheWalkIn(-5, -250, 250, 50, 1f, 1.1f, 40, 2000));
+            Assert.Equal((-5, -250), Scoring.ToTheWalkIn(-5, -250, 0, 50, 1f, 3f, 40, 2000));
+        }
+
+        [Fact]
+        public void A_town_s_own_use_carried_to_your_walk_in_never_takes_more_than_the_shelf_held()
+        {
+            Assert.Equal((-8, -400), Scoring.ToTheWalkIn(-5, -250, 250, 50, 1f, 3f, 8, 400));
+            Assert.Equal((-11, -550), Scoring.ToTheWalkIn(-5, -250, 300, 50, 1f, 2f, 40, Scoring.NoWorth));
+        }
+
+        [Fact]
+        public void A_forecast_worth_and_what_the_shelf_did_read_the_right_way_round_whichever_way_each_went()
+        {
+            Assert.Equal("said the shelf would lose goods of that kind worth 1058 denars and it lost goods worth " +
+                         "1056 denars, 2 denars more on the shelf than it said",
+                         Scoring.WorthShifted(-1058, -1056));
+            Assert.Equal("said the shelf would lose goods of that kind worth 418 denars and it lost goods worth " +
+                         "3220 denars, 2802 denars less on the shelf than it said",
+                         Scoring.WorthShifted(-418, -3220));
+            Assert.Equal("said the shelf would lose goods of that kind worth 300 denars and it gained goods worth " +
+                         "200 denars, 500 denars more on the shelf than it said",
+                         Scoring.WorthShifted(-300, 200));
+            Assert.Equal("said the shelf would gain goods of that kind worth 460 denars and it lost goods worth " +
+                         "120 denars, 580 denars less on the shelf than it said",
+                         Scoring.WorthShifted(460, -120));
+            Assert.Equal("said the shelf would gain goods of that kind worth 460 denars and it gained goods worth " +
+                         "700 denars, 240 denars more on the shelf than it said",
+                         Scoring.WorthShifted(460, 700));
+        }
+
+        [Fact]
+        public void A_forecast_worth_that_held_or_a_shelf_that_did_not_move_is_said_so_in_words()
+        {
+            Assert.Equal("said the shelf would gain goods of that kind worth 460 denars and it gained goods worth " +
+                         "460 denars, exactly what it said",
+                         Scoring.WorthShifted(460, 460));
+            Assert.Equal("said the shelf would hold the same worth of goods of that kind and it held the same worth, " +
+                         "exactly what it said",
+                         Scoring.WorthShifted(0, 0));
+            Assert.Equal("said the shelf would lose goods of that kind worth 2147483648 denars and it gained goods " +
+                         "worth 2147483647 denars, 4294967295 denars more on the shelf than it said",
+                         Scoring.WorthShifted(int.MinValue, int.MaxValue));
         }
 
         [Fact]

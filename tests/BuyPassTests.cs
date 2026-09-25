@@ -84,9 +84,12 @@ namespace TradeLord.Tests
 
             public void PriceTheMarketsFor(List<Pick> shelf) => Ranked = shelf.Count;
 
+            internal readonly List<(int at, int units)> Asked = new List<(int at, int units)>();
+
             public bool ResaleMarket(int at, int paid, int units, out int price)
             {
                 Weighed = units;
+                Asked.Add((at, units));
                 price = Stalls[at].Resale;
                 return Stalls[at].Elsewhere;
             }
@@ -107,6 +110,9 @@ namespace TradeLord.Tests
             public int ResaleTill(int at) => Stalls[at].BuyerTill;
 
             public int PriceToBuy(int at) => Stalls[at].Price + Stalls[at].Step * Stalls[at].Carried;
+
+            public System.Func<int, int> PricesAhead(int at) =>
+                taken => Stalls[at].Price + Stalls[at].Step * (Stalls[at].Carried + taken);
 
             public int Spendable() => Purse;
 
@@ -271,6 +277,59 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_good_is_weighed_on_no_more_than_its_buy_cap_in_denars_lets_you_take()
+        {
+            var market = new FakeMarket();
+            market.Rules.BuyValueCapPerItem = 300;
+            Stall stall = market.Add(Cargo("iron"), amount: 10, price: 100, resale: 200);
+            stall.Carried = 4;
+            Buy(market);
+            Assert.Equal((0, 7), market.Asked[0]);
+        }
+
+        [Fact]
+        public void Livestock_is_weighed_on_no_more_head_than_your_herd_has_room_for()
+        {
+            var market = new FakeMarket { Herd = 3 };
+            market.Add(Livestock("sheep", weight: 0f), amount: 20, price: 100, resale: 200);
+            Run run = Buy(market);
+            Assert.Equal((0, 3), market.Asked[0]);
+            Assert.Equal(3, run.Units);
+        }
+
+        [Fact]
+        public void A_good_left_less_of_the_purse_by_an_earlier_one_is_weighed_again_on_what_it_can_still_take()
+        {
+            var market = new FakeMarket { Purse = 1300 };
+            market.Add(Cargo("iron"), amount: 10, price: 100, resale: 200);
+            market.Add(Cargo("silver"), amount: 10, price: 100, resale: 400).BuyerTill = 800;
+            Run run = Buy(market);
+            Assert.Equal(new[] { (0, 10), (1, 10), (1, 3) }, market.Asked.ToArray());
+            Assert.Equal(12, run.Units);
+        }
+
+        [Fact]
+        public void A_good_that_can_still_take_all_it_was_weighed_on_is_not_weighed_again()
+        {
+            var market = new FakeMarket { Purse = 5000 };
+            market.Add(Cargo("iron"), amount: 10, price: 100, resale: 200);
+            market.Add(Cargo("silver"), amount: 10, price: 100, resale: 400).BuyerTill = 800;
+            Buy(market);
+            Assert.Equal(2, market.Asked.Count);
+        }
+
+        [Fact]
+        public void With_the_whole_load_switch_off_a_good_is_never_weighed_again()
+        {
+            var market = new FakeMarket { Purse = 1300 };
+            market.Rules.PickTheBuyerOnTheWholeStack = false;
+            market.Add(Cargo("iron"), amount: 10, price: 100, resale: 200);
+            market.Add(Cargo("silver"), amount: 10, price: 100, resale: 400).BuyerTill = 800;
+            Buy(market);
+            Assert.Equal(2, market.Asked.Count);
+        }
+
+        [Fact]
         public void A_good_with_nowhere_to_resell_it_is_left_on_the_shelf()
         {
             var market = new FakeMarket();
@@ -383,6 +442,70 @@ namespace TradeLord.Tests
             Run run = Buy(market);
             Assert.Equal(3, run.Units);
             Assert.True(run.Tally.Saw(Block.CarryWeight));
+        }
+
+        private static Traded BuyAll(FakeMarket market)
+        {
+            var books = new Books();
+            var tally = new BlockTally();
+            market.Ledger = books;
+            List<Pick> stock = TradePass.WhatToBuy(market, books, false, 0f, market.Rules, tally);
+            return TradePass.BuyThem(stock, market, books, false, 0f, market.Rules, tally);
+        }
+
+        [Fact]
+        public void A_full_cargo_counts_the_weight_and_gold_of_what_it_left_on_the_shelf()
+        {
+            var market = new FakeMarket { Cargo = 3.5f };
+            market.Add(Cargo("iron", weight: 2f), amount: 10);
+            Traded moved = BuyAll(market);
+            Assert.Equal(1, moved.Units);
+            Assert.Equal(18f, moved.Unfitted, 3);
+            Assert.Equal(900, moved.UnfittedCost);
+        }
+
+        [Fact]
+        public void What_a_full_cargo_left_behind_stops_where_the_far_market_stops_paying()
+        {
+            var market = new FakeMarket { Cargo = 1.5f };
+            market.Add(Cargo("iron", weight: 1f), amount: 10).ResaleStep = 20;
+            Traded moved = BuyAll(market);
+            Assert.Equal(1, moved.Units);
+            Assert.Equal(3f, moved.Unfitted, 3);
+            Assert.Equal(300, moved.UnfittedCost);
+        }
+
+        [Fact]
+        public void What_a_full_cargo_left_behind_stops_where_the_purse_runs_out()
+        {
+            var market = new FakeMarket { Cargo = 1.5f, Purse = 350 };
+            market.Add(Cargo("iron", weight: 1f), amount: 10);
+            Traded moved = BuyAll(market);
+            Assert.Equal(1, moved.Units);
+            Assert.Equal(2f, moved.Unfitted, 3);
+            Assert.Equal(200, moved.UnfittedCost);
+        }
+
+        [Fact]
+        public void What_a_full_cargo_left_behind_is_counted_at_the_price_each_unit_would_climb_to()
+        {
+            var market = new FakeMarket { Cargo = 1.5f };
+            market.Add(Cargo("iron", weight: 1f), amount: 10).Step = 10;
+            Traded moved = BuyAll(market);
+            Assert.Equal(1, moved.Units);
+            Assert.Equal(4f, moved.Unfitted, 3);
+            Assert.Equal(500, moved.UnfittedCost);
+        }
+
+        [Fact]
+        public void A_pass_the_cargo_never_stopped_leaves_nothing_behind_for_want_of_room()
+        {
+            var market = new FakeMarket { Purse = 250 };
+            market.Add(Cargo("iron", weight: 1f), amount: 10);
+            Traded moved = BuyAll(market);
+            Assert.Equal(2, moved.Units);
+            Assert.Equal(0f, moved.Unfitted, 3);
+            Assert.Equal(0, moved.UnfittedCost);
         }
 
         [Fact]

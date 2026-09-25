@@ -12,6 +12,74 @@ namespace TradeLord.Tests
         private static Spending Purse(int gold, float days) =>
             new Spending { Gold = gold, Days = days };
 
+        private static Draw Taken(string category, int worth, float days) =>
+            new Draw { Category = category, Worth = worth, Days = days };
+
+        [Fact]
+        public void What_a_town_uses_up_each_day_leaves_its_shelf_for_every_day_of_the_window()
+        {
+            Assert.Equal(600, Projection.WorthUsedUp(null, "wool", 2f, 300, 10000));
+            Assert.Equal(300, Projection.WorthUsedUp(null, "wool", 1.1f, 300, 10000));
+            Assert.Equal(0, Projection.WorthUsedUp(null, "wool", 0f, 300, 10000));
+        }
+
+        [Fact]
+        public void What_a_workshop_takes_leaves_only_the_kind_it_takes_and_only_once_it_runs_in_time()
+        {
+            var drawn = new List<Draw> { Taken("wool", 200, 0.5f), Taken("wool", 200, 1.5f), Taken("iron", 500, 0.2f) };
+            Assert.Equal(200, Projection.WorthUsedUp(drawn, "wool", 1f, 0, 10000));
+            Assert.Equal(400, Projection.WorthUsedUp(drawn, "wool", 2f, 0, 10000));
+            Assert.Equal(500, Projection.WorthUsedUp(drawn, "iron", 1f, 0, 10000));
+            Assert.Equal(0, Projection.WorthUsedUp(drawn, "grain", 1f, 0, 10000));
+            Assert.Equal(700, Projection.WorthUsedUp(drawn, "wool", 2f, 150, 10000));
+        }
+
+        [Fact]
+        public void A_town_never_uses_up_more_than_its_shelf_and_what_lands_on_it_can_give()
+        {
+            var drawn = new List<Draw> { Taken("wool", 200, 0.5f) };
+            Assert.Equal(1000, Projection.WorthUsedUp(null, "wool", 5f, 300, 1000));
+            Assert.Equal(150, Projection.WorthUsedUp(drawn, "wool", 2f, 300, 150));
+            Assert.Equal(0, Projection.WorthUsedUp(drawn, "wool", 2f, 300, 0));
+            Assert.Equal(0, Projection.WorthUsedUp(drawn, null, 2f, 300, 1000));
+        }
+
+        [Fact]
+        public void A_shelf_read_ahead_takes_off_what_the_town_uses_up_and_what_its_workshops_take()
+        {
+            var drawn = new List<Draw> { Taken("grain", 100, 1f) };
+            var curve = Projection.ShelfAhead(null, null, OnePull("grain"), 1f,
+                                              "grain", "grain", 10, 40, 0.5f, drawn, 50);
+            Assert.Equal(new[] { (1f, 25), (2f, 20), (3f, 15), (4f, 10), (5f, 5), (6f, 0) },
+                         curve.GetRange(0, 6).ToArray());
+            Assert.Equal(new[] { 1f }, Projection.Moments(null, null, 0.5f, drawn).ToArray());
+            Assert.Equal(3f, Projection.RunsOutOf(curve, 20));
+        }
+
+        [Fact]
+        public void A_town_that_uses_a_good_up_is_read_a_day_at_a_time_from_the_day_you_arrive()
+        {
+            Assert.Equal(new[] { 1f, 2f, 3f }, Projection.Moments(null, null, 0.5f, null, 100).GetRange(0, 3).ToArray());
+            Assert.Equal(new[] { 6f, 7f }, Projection.Moments(null, null, 5.5f, null, 100).GetRange(0, 2).ToArray());
+            Assert.Equal(Projection.DaysUseIsReadFor, Projection.Moments(null, null, 0.5f, null, 100).Count);
+            Assert.Equal(Projection.DaysUseIsReadFor, Projection.Moments(null, null, 2f, null, 1).Count);
+            Assert.Equal(3f, Projection.Moments(null, null, 2f, null, 1)[0]);
+            Assert.Empty(Projection.Moments(null, null, 0.5f, null, 0));
+            Assert.Empty(Projection.Moments(null, null, float.NaN, null, 100));
+        }
+
+        [Fact]
+        public void A_shelf_a_landing_keeps_up_still_runs_out_on_the_day_the_town_has_used_it_up()
+        {
+            var listed = new List<Landing> { Coming("grain", "grain", 30, 300, 1f) };
+            var curve = Projection.ShelfAhead(listed, null, OnePull("grain"), 1f,
+                                              "grain", "grain", 10, 40, 0.5f, null, 100);
+            Assert.Equal(6f, Projection.RunsOutOf(curve, 20));
+            var late = Projection.ShelfAhead(listed, null, OnePull("grain"), 1f,
+                                             "grain", "grain", 10, 40, 5.5f, null, 100);
+            Assert.Equal(6f, Projection.RunsOutOf(late, 20));
+        }
+
         [Fact]
         public void Units_landing_add_up_only_for_the_good_asked_about()
         {

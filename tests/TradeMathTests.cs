@@ -575,6 +575,29 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_town_uses_up_as_many_goods_a_day_as_its_budget_for_the_kind_buys_at_its_own_price()
+        {
+            Assert.Equal(400, TradeMath.WorthUsedUpADay(500f, 50, 40));
+            Assert.Equal(0, TradeMath.WorthUsedUpADay(0f, 50, 40));
+            Assert.Equal(0, TradeMath.WorthUsedUpADay(float.NaN, 50, 40));
+            Assert.Equal(0, TradeMath.WorthUsedUpADay(500f, 0, 40));
+            Assert.Equal(0, TradeMath.WorthUsedUpADay(500f, 50, 0));
+            Assert.Equal(int.MaxValue, TradeMath.WorthUsedUpADay(float.MaxValue, 1, 1000));
+        }
+
+        [Fact]
+        public void Goods_left_behind_for_want_of_room_count_only_as_far_as_the_gold_left_would_buy_them()
+        {
+            Assert.Equal(90f, TradeMath.WeightTheBudgetCanStillBuy(90f, 600, 600), 3);
+            Assert.Equal(90f, TradeMath.WeightTheBudgetCanStillBuy(90f, 600, 5000), 3);
+            Assert.Equal(30f, TradeMath.WeightTheBudgetCanStillBuy(90f, 600, 200), 3);
+            Assert.Equal(0f, TradeMath.WeightTheBudgetCanStillBuy(90f, 600, 0), 3);
+            Assert.Equal(0f, TradeMath.WeightTheBudgetCanStillBuy(0f, 600, 600), 3);
+            Assert.Equal(0f, TradeMath.WeightTheBudgetCanStillBuy(90f, 0, 600), 3);
+            Assert.Equal(0f, TradeMath.WeightTheBudgetCanStillBuy(float.NaN, 600, 600), 3);
+        }
+
+        [Fact]
         public void A_companion_learns_from_a_share_of_the_profit_and_from_nothing_when_it_is_off()
         {
             Assert.Equal(50f, TradeMath.PartyShareOfProfit(200, 0.25f));

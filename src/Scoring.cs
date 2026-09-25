@@ -199,15 +199,52 @@ namespace TradeLord
             return band == 2 ? "Conf 50% to 74%" : "Conf 75% and over";
         }
 
-        internal static string Counted(int off) =>
-            off == 0 ? "exactly what it said"
-                     : (off > 0 ? off + " more than it said" : -off + " fewer than it said");
+        internal static string UnitsShifted(int said, int landed)
+        {
+            string forecast = said == 0
+                ? "said the shelf would hold as many of it"
+                : "said the shelf would " + (said < 0 ? "lose " : "gain ") + Size(said) + " unit(s) of it";
+            string outcome = landed == 0 ? "it held as many" : "it " + (landed < 0 ? "lost " : "gained ") + Size(landed);
+            long off = (long)landed - said;
+            string gap = off == 0
+                ? "exactly what it said"
+                : Size(off) + (off > 0 ? " more" : " fewer") + " on the shelf than it said";
+            return forecast + " and " + outcome + ", " + gap;
+        }
 
-        internal static string Landing(int landed) =>
-            landed < 0 ? -landed + " left instead" : landed + " did";
+        internal static (int stock, int worth) ToTheWalkIn(int stockSaid, int worthSaid, int usedADay, int unitValue,
+                                                           float withinDays, float since, int stockThen, int worthThen)
+        {
+            if (usedADay <= 0) return (stockSaid, worthSaid);
+            double more = (double)usedADay *
+                          (TradeMath.ToTheQuarterDay(since) - TradeMath.ToTheQuarterDay(withinDays));
+            double worth = worthSaid - more;
+            if (worthThen >= 0 && worth < -worthThen) worth = -worthThen;
+            double stock = unitValue > 0 ? stockSaid - Math.Truncate(more / unitValue) : stockSaid;
+            if (stockThen >= 0 && stock < -stockThen) stock = -stockThen;
+            return (Whole(stock), Whole(worth));
+        }
 
-        internal static string Moving(int moved) =>
-            moved < 0 ? -moved + " left instead" : "it moved " + moved;
+        private static int Whole(double figure) =>
+            figure >= int.MaxValue ? int.MaxValue : figure <= int.MinValue ? int.MinValue : (int)Math.Round(figure);
+
+        internal static string WorthShifted(int said, int moved)
+        {
+            string forecast = said == 0
+                ? "said the shelf would hold the same worth of goods of that kind"
+                : "said the shelf would " + (said < 0 ? "lose" : "gain") + " goods of that kind worth " +
+                  Size(said) + " denars";
+            string outcome = moved == 0
+                ? "it held the same worth"
+                : "it " + (moved < 0 ? "lost" : "gained") + " goods worth " + Size(moved) + " denars";
+            long off = (long)moved - said;
+            string gap = off == 0
+                ? "exactly what it said"
+                : Size(off) + " denars " + (off > 0 ? "more" : "less") + " on the shelf than it said";
+            return forecast + " and " + outcome + ", " + gap;
+        }
+
+        private static long Size(long figure) => figure < 0 ? -figure : figure;
 
         internal static string Yours(int yours, bool worth)
         {

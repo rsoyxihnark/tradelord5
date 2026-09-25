@@ -30,6 +30,66 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void One_haul_animal_carries_its_share_of_what_the_game_says_your_pack_animals_carry()
+        {
+            Assert.Equal(100f, Herding.CargoAHaulAnimalAdds(200f, 2, 10, 1000f, 1000f), 3);
+            Assert.Equal(115f, Herding.CargoAHaulAnimalAdds(230f, 2, 10, 1000f, 1000f), 3);
+            Assert.Equal(110f, Herding.CargoAHaulAnimalAdds(200f, 2, 10, 1000f, 1100f), 3);
+        }
+
+        [Fact]
+        public void With_no_pack_animal_to_read_one_haul_animal_carries_what_the_game_gives_one_before_perks()
+        {
+            Assert.Equal(100f, Herding.CargoAHaulAnimalAdds(0f, 0, 10, 500f, 500f), 3);
+            Assert.Equal(110f, Herding.CargoAHaulAnimalAdds(0f, 0, 10, 500f, 550f), 3);
+            Assert.Equal(100f, Herding.CargoAHaulAnimalAdds(0f, 3, 10, 800f, 800f), 3);
+            Assert.Equal(100f, Herding.CargoAHaulAnimalAdds(float.NaN, 2, 10, 0f, 0f), 3);
+            Assert.Equal(0f, Herding.CargoAHaulAnimalAdds(0f, 0, 0, 500f, 500f), 3);
+        }
+
+        private static int HaulAnimalsBought(int budget, int price, float each, float share, float roomLeft,
+                                             float weightLeft, int costLeft)
+        {
+            int hauled = 0;
+            while (price < budget &&
+                   Herding.AnotherHaulAnimalIsWanted(hauled, each, share, roomLeft,
+                       TradeMath.WeightTheBudgetCanStillBuy(weightLeft, costLeft, budget - price)))
+            {
+                hauled++;
+                budget -= price;
+            }
+            return hauled;
+        }
+
+        [Fact]
+        public void Haul_animals_are_bought_only_for_the_goods_the_gold_left_after_them_can_still_buy()
+        {
+            Assert.Equal(1, HaulAnimalsBought(400, 150, 100f, 1f, 0f, 300f, 800));
+            Assert.Equal(3, HaulAnimalsBought(5000, 150, 100f, 1f, 0f, 300f, 800));
+            Assert.Equal(6, HaulAnimalsBought(5000, 150, 100f, 0.5f, 0f, 300f, 800));
+            Assert.Equal(0, HaulAnimalsBought(150, 150, 100f, 1f, 0f, 300f, 800));
+            Assert.Equal(0, HaulAnimalsBought(5000, 150, 100f, 1f, 0f, 0f, 800));
+        }
+
+        [Fact]
+        public void The_room_your_cargo_still_has_counts_before_any_haul_animal_is_bought()
+        {
+            Assert.Equal(2, HaulAnimalsBought(5000, 150, 100f, 1f, 150f, 300f, 800));
+            Assert.Equal(0, HaulAnimalsBought(5000, 150, 100f, 1f, 300f, 300f, 800));
+            Assert.Equal(4, HaulAnimalsBought(5000, 150, 100f, 1f, -50f, 300f, 800));
+        }
+
+        [Fact]
+        public void No_haul_animal_is_wanted_for_nothing_or_by_an_animal_that_carries_nothing()
+        {
+            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 0f, 0f));
+            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 0f, float.NaN));
+            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 0f, 1f, 0f, 300f));
+            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, float.NaN, 1f, 0f, 300f));
+            Assert.True(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, float.NaN, 300f));
+        }
+
+        [Fact]
         public void A_haul_animal_goes_only_while_what_is_left_still_carries_your_cargo()
         {
             Assert.Equal(2, Herding.HaulAnimalsToSpare(4, 4, 400f, 1000f, 1000f, 750f));

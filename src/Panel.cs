@@ -464,8 +464,8 @@ namespace TradeLord
                         ? Tongue.Text("{=TL73} | resale safety factor applied").ToString() : "")
                   + (Forecast.On
                         ? (Options.Current.BulkSimulation
-                              ? Tongue.Text("{=TL394} | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there").ToString()
-                              : Tongue.Text("{=TL447} | stock counts what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there; prices need Bulk price simulation").ToString())
+                              ? Tongue.Text("{=TL394} | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there and what the town and its workshops use up").ToString()
+                              : Tongue.Text("{=TL447} | stock counts what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there and what the town and its workshops use up; prices need Bulk price simulation").ToString())
                           + Tongue.Text("{=TL397} | Qty! = part of that amount is still on the road and lands before you would").ToString()
                           + Tongue.Text("{=TL417} | Left = how long that shelf still holds this Qty once you arrive, and a shelf that empties first lowers Conf").ToString()
                         : ""))
