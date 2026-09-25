@@ -195,7 +195,7 @@ namespace TradeLord
             internal int Shut;
             internal int AtWar;
             internal Settlement CameBackTo;
-            internal long Ticks;
+            internal double Took;
             internal List<Share> Bill;
             internal List<Weighing> Board;
         }
@@ -207,9 +207,10 @@ namespace TradeLord
             Settlement target = null;
             Reckoning how = default(Reckoning);
             bool on = Options.Current.MarkBestSellTownOnMap;
-            long started = System.DateTime.UtcNow.Ticks;
+            long started = System.Diagnostics.Stopwatch.GetTimestamp();
             if (on) target = BestSellTownForCargo(out how);
-            how.Ticks = System.DateTime.UtcNow.Ticks - started;
+            how.Took = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /
+                       System.Diagnostics.Stopwatch.Frequency;
 
             if (target == _picked)
             {
@@ -403,7 +404,7 @@ namespace TradeLord
                          " priced, " + how.Refused + " would pay too little for anything you carry, " +
                          how.Left + " left unpriced once no purse left could beat " +
                          how.Rate.ToString("0") + " gold a day, in " +
-                         (how.Ticks / 10000d).ToString("0.0", CultureInfo.InvariantCulture) + " ms");
+                         how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms");
                 said.Add("  ultralog: left out before pricing, " + how.NoTill +
                          " with nothing in the till, " + how.PastCeiling + " past your travel ceilings, " +
                          how.NoRoad + " with no road it could find, " + how.Shut +

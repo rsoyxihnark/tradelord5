@@ -144,6 +144,15 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_trade_where_you_stand_frees_the_market_traded_at_before_for_the_map_marker()
+        {
+            string last = Arrivals.LastTradedAt("town_B", true, null);
+            Assert.False(Arrivals.LeftOutOfTheMark("town_B", Arrivals.LastTradedAt("town_A", true, last), true, false));
+            Assert.True(Arrivals.LeftOutOfTheMark("town_B", Arrivals.LastTradedAt("town_A", false, last), true, false));
+            Assert.True(Arrivals.LeftOutOfTheMark("town_B", Arrivals.LastTradedAt(null, true, last), true, false));
+        }
+
+        [Fact]
         public void Meeting_a_party_on_the_road_without_a_trade_keeps_the_market_it_last_traded_at()
         {
             string last = Arrivals.LastTradedAt("town_ES3", true, null);

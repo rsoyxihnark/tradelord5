@@ -675,7 +675,7 @@ namespace TradeLord
                           deepGot.Units + " unit(s) that clear your margin and its purse there, " + deep.price +
                           " for the first, where the first unit alone would have picked " +
                           flat.town.Name + " at " + flat.price +
-                          (deep.rungs != null || flat.rungs != null
+                          (deep.price != deep.quoted || flat.price != flat.quoted
                               ? ", counting what is on its way to each market by the time you get there"
                               : ""));
             return (deep.town, deep.price, deepRungs);

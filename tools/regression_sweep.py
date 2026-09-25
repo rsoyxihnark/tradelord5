@@ -13246,7 +13246,7 @@ def the_first_time_back_at_the_last_market_traded_is_left_alone():
             and "_lastTradedAt = null;" in forget
             and "_movesAtArrival = Visit.Moves(Simulating);" in forget
             and t.count("_lastTradedAt") == 10
-            and t.count("_movesAtArrival") == 4
+            and t.count("_movesAtArrival") == 5
             and "internal static bool FirstTimeBack(string here, string lastTradedAt) =>\n"
                 "            here != null && here == lastTradedAt;" in rules
             and "internal static string LastTradedAt(string leaving, bool traded, string lastTradedAt) =>\n"
@@ -13301,7 +13301,7 @@ chk("1.93.10", "Esc on the ledger or on Recent trades closes that window through
 
 def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
     far = method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
-    lands = method_body(S['Market.cs'], "internal static Ladder AsItLands")
+    lands = between(S['Market.cs'], "internal static Ladder AsItLands", "internal static int OpeningOn")
     walk = method_body(S['Market.cs'], "internal static Fetched SellWalk")
     step = method_body(S['Marker.cs'], "private int Next()")
     fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
@@ -13319,9 +13319,9 @@ def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
                         "deepRungs = got.Rungs;")
             and far.count("Bulk.AsItLands(") == 1
             and ": Held(site, stocked, selling, quoted, landed, scanning: false);" in lands
-            and "landing == null ? quoted" in method_body(S['Market.cs'], "internal static int OpeningOn")
+            and "landing == null ? quoted" in between(S['Market.cs'], "internal static int OpeningOn", ";")
             and ": landing.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, landing.At(0)) : quoted;"
-                in method_body(S['Market.cs'], "internal static int OpeningOn")
+                in between(S['Market.cs'], "internal static int OpeningOn", "internal static int Opening(")
             and "got.Rungs = landing ?? new Ladder(site, item, true, quoted, 0);" in walk
             and "elsewhere.rungs ?? new Ladder(buyer, Item(at), true, price, 0)," in buy_pass()
             and "!On ? 0" in between(S['Forecast.cs'], "internal static int WorthShiftAsItHasHeld", "private static int PriceShift")
@@ -13351,7 +13351,7 @@ def the_marker_leaves_out_the_market_arrival_trading_leaves_alone():
     noted = method_body(t, "private static void NoteARoadTrade")
     rules = S['Rules.cs']
     return (marker and road and noted and alone
-            and "Arrivals.LeftOutOfTheMark(settlement.StringId, _lastTradedAt, Options.Current.AutoSellOnEntry," in alone
+            and "Arrivals.LeftOutOfTheMark(settlement.StringId, LastTradedAtOnceYouLeave(), Options.Current.AutoSellOnEntry," in alone
             and alone.rstrip().endswith("Counter.HoldsBack())")
             and "internal static bool LeftOutOfTheMark(string there, string lastTradedAt, bool autoSell, bool staged) =>\n"
                 "            autoSell && !staged && FirstTimeBack(there, lastTradedAt);" in rules
@@ -13435,7 +13435,7 @@ chk("1.93.11", "a price trace and the herd checks on the way in and out are writ
 
 def the_log_names_things_the_way_a_player_reads_them():
     shown = method_body(S['Counter.cs'], "private static void HandTheTotalOver")
-    purse = method_body(S['Rules.cs'], "public static string ToYourPurse")
+    purse = between(S['Rules.cs'], "public static string ToYourPurse", "public static bool AddsUp")
     passage = method_body(S['Encounters.cs'], "private static void LetPlayerGo")
     credited = method_body(S['Counter.cs'], "internal static void SayWhatTheScreenCredited")
     profit = method_body(S['Ledger.cs'], "private void OnPlayerTradeProfit")
@@ -13467,6 +13467,45 @@ def the_log_names_things_the_way_a_player_reads_them():
 
 chk("1.93.11", "TradeLord.log says which way a laid out deal moves your purse, names the band that let you pass, counts one man as a man, and writes down the Trade profit the game credits and the skill rising under Staged Trading",
     the_log_names_things_the_way_a_player_reads_them())
+
+def the_marker_counts_a_trade_where_you_stand_before_it_leaves_a_market_out():
+    t = S['Trading.cs']
+    alone = between(t, "internal static bool ArrivalLeavesItAlone(Settlement settlement) =>", ";")
+    leave = between(t, "private static string LastTradedAtOnceYouLeave() =>", ";")
+    noted = method_body(t, "private static void NoteWhereItTraded(Settlement settlement)")
+    return (alone and leave and noted
+            and "LastTradedAtOnceYouLeave()" in alone
+            and "_lastTradedAt," not in alone
+            and ordered(leave, "Arrivals.LastTradedAt(MobileParty.MainParty?.CurrentSettlement?.StringId,",
+                        "Visit.Moves(Simulating) > _movesAtArrival, _lastTradedAt)")
+            and "bool traded = Visit.Moves(Simulating) > _movesAtArrival;" in noted
+            and "A_trade_where_you_stand_frees_the_market_traded_at_before_for_the_map_marker" in ARRIVALTESTS)
+
+
+chk("1.93.12", "while you stand in a market TradeLord has just traded in, the map marker already counts that trade as the last one, so the market TradeLord traded at before is no longer left out and passed over once you ride on",
+    the_marker_counts_a_trade_where_you_stand_before_it_leaves_a_market_out())
+
+
+def the_marker_and_the_buyer_say_in_the_log_what_their_numbers_rest_on():
+    update = method_body(S['Marker.cs'], "internal static void Update")
+    ultra = method_body(S['Marker.cs'], "private static void Ultra")
+    far = method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
+    return (update and ultra and far
+            and ordered(update, "long started = System.Diagnostics.Stopwatch.GetTimestamp();",
+                        "if (on) target = BestSellTownForCargo(out how);",
+                        "how.Took = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /",
+                        "System.Diagnostics.Stopwatch.Frequency;")
+            and "DateTime" not in update
+            and ordered(ultra, '" gold a day, in " +',
+                        'how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms");',
+                        '"  ultralog: left out before pricing, "')
+            and ordered(far, '"buyer for "', "(deep.price != deep.quoted || flat.price != flat.quoted",
+                        '", counting what is on its way to each market by the time you get there"')
+            and "rungs != null ||" not in far)
+
+
+chk("1.93.12", "the map marker's weighing is timed with the fine clock and the time is written on its summary line, and the buyer line says it counted what is on its way only when that moved the price it names",
+    the_marker_and_the_buyer_say_in_the_log_what_their_numbers_rest_on())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
