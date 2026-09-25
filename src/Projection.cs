@@ -27,8 +27,6 @@ namespace TradeLord
 
     internal static class Projection
     {
-        internal const float WorkshopRunDays = 1f;
-
         internal static int UnitsLanding(IList<Landing> listed, string item, float withinDays)
         {
             if (listed == null || item == null) return 0;
@@ -190,6 +188,198 @@ namespace TradeLord
             var said = new List<string>(made.Count);
             for (int i = 0; i < made.Count; i++) said.Add(made[i].name + " x" + made[i].count);
             return string.Join(", ", said.ToArray());
+        }
+    }
+
+    internal sealed class ShopLine
+    {
+        internal int Shop;
+        internal float Progress;
+        internal float Speed;
+        internal float Pace;
+        internal bool Hidden;
+        internal bool Yours;
+        internal bool TradeGoodsOnly = true;
+        internal bool FromWarehouse;
+        internal float ToTown = 1f;
+        internal readonly List<(string category, int count)> Inputs = new List<(string, int)>();
+        internal readonly List<(string category, int count)> Outputs = new List<(string, int)>();
+    }
+
+    internal sealed class TownBook
+    {
+        internal readonly Dictionary<string, int> Units = new Dictionary<string, int>(StringComparer.Ordinal);
+        internal readonly Dictionary<string, int> InStore = new Dictionary<string, int>(StringComparer.Ordinal);
+        internal readonly Dictionary<string, int> UnitValue = new Dictionary<string, int>(StringComparer.Ordinal);
+        internal readonly Dictionary<string, int> UsedADay = new Dictionary<string, int>(StringComparer.Ordinal);
+        internal int Gold;
+        internal int[] Capital = new int[0];
+        internal int[] Expense = new int[0];
+        internal int[] Warehouse = new int[0];
+    }
+
+    internal static class WorkshopRuns
+    {
+        internal const float PayOverInputsPerPace = 200f;
+
+        internal const int MostPaidForAnOutput = 1000;
+
+        internal const float LongestWatch = 10f;
+
+        internal const float ShortestWatch = 2f;
+
+        internal static float Watch(float travelCeiling)
+        {
+            float ceiling = TradeMath.Finite(travelCeiling, 0f);
+            if (ceiling <= 0f) return LongestWatch;
+            float watch = (float)Math.Ceiling(ceiling * 2f) + 1f;
+            return watch < ShortestWatch ? ShortestWatch : watch > LongestWatch ? LongestWatch : watch;
+        }
+
+        internal static void Follow(IList<ShopLine> lines, TownBook town, float firstTick, float watch,
+                                    IList<Landing> arriving, IList<(float days, string category, int units)> bought,
+                                    Func<string, int, bool, int> price, List<Landing> made, List<Draw> taken)
+        {
+            if (lines == null || lines.Count == 0 || town == null || price == null || made == null || taken == null)
+                return;
+            var kinds = new List<string>();
+            foreach (ShopLine line in lines)
+            {
+                foreach (var (kind, _) in line.Inputs) if (kind != null && !kinds.Contains(kind)) kinds.Add(kind);
+                foreach (var (kind, _) in line.Outputs) if (kind != null && !kinds.Contains(kind)) kinds.Add(kind);
+            }
+            var landing = new List<(float days, string kind, int units)>();
+            for (int i = 0; arriving != null && i < arriving.Count; i++)
+                if (arriving[i].Units > 0 && kinds.Contains(arriving[i].Category))
+                    landing.Add((arriving[i].Days, arriving[i].Category, arriving[i].Units));
+            for (int i = 0; bought != null && i < bought.Count; i++)
+                if (bought[i].units > 0 && kinds.Contains(bought[i].category))
+                    landing.Add((bought[i].days, bought[i].category, -bought[i].units));
+            landing.Sort((x, y) => x.days.CompareTo(y.days));
+
+            var buy = new Dictionary<string, int>(StringComparer.Ordinal);
+            var sell = new Dictionary<string, int>(StringComparer.Ordinal);
+            var madeNow = new Dictionary<string, int>(StringComparer.Ordinal);
+            var takenNow = new Dictionary<string, int>(StringComparer.Ordinal);
+            var toTown = new float[town.Capital.Length];
+            float first = TradeMath.Finite(firstTick, 1f);
+            if (first <= 0f) first = 1f;
+            int landed = 0;
+            for (float at = first; at <= watch; at += 1f)
+            {
+                for (; landed < landing.Count && landing[landed].days <= at; landed++)
+                    Stock(town, landing[landed].kind, landing[landed].units);
+                foreach (string kind in kinds)
+                {
+                    town.InStore.TryGetValue(kind, out int store);
+                    buy[kind] = price(kind, store, false);
+                    sell[kind] = price(kind, store, true);
+                }
+                madeNow.Clear();
+                takenNow.Clear();
+                foreach (ShopLine line in lines)
+                {
+                    if (!(line.Speed > 0f)) continue;
+                    float progress = TradeMath.Finite(line.Progress, 0f);
+                    line.Progress = (progress > 1f ? 1f : progress) + line.Speed;
+                    while (line.Progress >= 1f)
+                    {
+                        bool ran = RunOnce(line, town, buy, sell, toTown, madeNow, takenNow);
+                        line.Progress -= 1f;
+                        if (!ran) break;
+                    }
+                }
+                for (int k = 0; k < town.Capital.Length && k < town.Expense.Length; k++)
+                    if (town.Expense[k] > 0 && town.Capital[k] >= town.Expense[k]) town.Capital[k] -= town.Expense[k];
+                foreach (string kind in kinds)
+                    if (town.UsedADay.TryGetValue(kind, out int worth) && worth > 0 &&
+                        town.UnitValue.TryGetValue(kind, out int value) && value > 0)
+                        Stock(town, kind, -(int)Math.Round((double)worth / value, MidpointRounding.AwayFromZero));
+                foreach (var one in madeNow)
+                {
+                    town.UnitValue.TryGetValue(one.Key, out int value);
+                    made.Add(new Landing
+                    {
+                        Category = one.Key, Units = one.Value, Worth = TradeMath.WorthOf(one.Value, value), Days = at
+                    });
+                }
+                foreach (var one in takenNow)
+                {
+                    town.UnitValue.TryGetValue(one.Key, out int value);
+                    taken.Add(new Draw { Category = one.Key, Worth = TradeMath.WorthOf(one.Value, value), Days = at });
+                }
+            }
+        }
+
+        private static void Stock(TownBook town, string kind, int units)
+        {
+            town.Units.TryGetValue(kind, out int have);
+            if (have + units < 0) units = -have;
+            town.Units[kind] = have + units;
+            town.UnitValue.TryGetValue(kind, out int value);
+            town.InStore.TryGetValue(kind, out int store);
+            long after = (long)store + (long)units * value;
+            town.InStore[kind] = after < 0L ? 0 : after > int.MaxValue ? int.MaxValue : (int)after;
+        }
+
+        private static void Tally(Dictionary<string, int> tally, string kind, int units)
+        {
+            tally.TryGetValue(kind, out int had);
+            tally[kind] = had + units;
+        }
+
+        private static bool RunOnce(ShopLine line, TownBook town, Dictionary<string, int> buy,
+                                    Dictionary<string, int> sell, float[] toTown,
+                                    Dictionary<string, int> made, Dictionary<string, int> taken)
+        {
+            int k = line.Shop;
+            bool owned = k >= 0 && k < town.Capital.Length;
+            int need = 0;
+            foreach (var (_, count) in line.Inputs) need += count;
+            bool fromWarehouse = line.Yours && line.FromWarehouse && owned && k < town.Warehouse.Length &&
+                                 town.Warehouse[k] >= need;
+            long cost = 0;
+            if (!fromWarehouse)
+                foreach (var (kind, count) in line.Inputs)
+                {
+                    town.Units.TryGetValue(kind, out int have);
+                    if (have < count) return false;
+                    cost += (long)buy[kind] * count;
+                }
+            long income = 0;
+            foreach (var (kind, count) in line.Outputs) income += (long)sell[kind] * count;
+            double bar = line.Hidden || !(line.Pace > 0f) ? cost : cost + PayOverInputsPerPace / line.Pace;
+            if (income <= bar) return false;
+            if (line.TradeGoodsOnly && town.Gold < income) return false;
+            if (owned && town.Capital[k] < cost) return false;
+
+            if (fromWarehouse) town.Warehouse[k] -= need;
+            else
+                foreach (var (kind, count) in line.Inputs)
+                {
+                    Stock(town, kind, -count);
+                    Tally(taken, kind, count);
+                    if (!line.TradeGoodsOnly) continue;
+                    if (owned) town.Capital[k] -= buy[kind];
+                    town.Gold += buy[kind];
+                }
+            foreach (var (kind, count) in line.Outputs)
+                for (int unit = 0; unit < count; unit++)
+                {
+                    if (line.Yours && owned)
+                    {
+                        toTown[k] += line.ToTown;
+                        if (toTown[k] < 1f) continue;
+                        toTown[k] -= 1f;
+                    }
+                    Stock(town, kind, 1);
+                    Tally(made, kind, 1);
+                    if (!line.TradeGoodsOnly) continue;
+                    int paid = Math.Min(MostPaidForAnOutput, buy[kind]);
+                    if (owned) town.Capital[k] += paid;
+                    town.Gold -= paid;
+                }
+            return true;
         }
     }
 }

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.CampaignBehaviors;
+using TaleWorlds.CampaignSystem.ComponentInterfaces;
 using TaleWorlds.CampaignSystem.Extensions;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
@@ -314,36 +316,135 @@ namespace TradeLord
         {
             MBReadOnlyList<Town> towns = Town.AllTowns;
             if (towns == null) return;
+            float watch = WorkshopRuns.Watch(MarketRank.Ceiling(false, Options.Current));
+            IWorkshopWarehouseCampaignBehavior warehouse =
+                Campaign.Current?.GetCampaignBehavior<IWorkshopWarehouseCampaignBehavior>();
             for (int i = 0; i < towns.Count; i++)
             {
                 Town town = towns[i];
-                Workshop[] shops = town?.Workshops;
-                if (shops == null) continue;
-                Settlement site = town.Settlement;
-                if (site == null) continue;
-                Dictionary<string, int> held = WhatTheMarketHolds(site);
-                for (int k = 0; k < shops.Length; k++)
+                if (town?.Workshops == null || town.Settlement == null || town.InRebelliousState) continue;
+                Guard.Run("Forecast.Workshops", town, one => FollowTheShops(one, watch, warehouse));
+            }
+        }
+
+        private static void FollowTheShops(Town town, float watch, IWorkshopWarehouseCampaignBehavior warehouse)
+        {
+            Settlement site = town.Settlement;
+            Workshop[] shops = town.Workshops;
+            var lines = new List<ShopLine>();
+            var kinds = new Dictionary<string, ItemCategory>(StringComparer.Ordinal);
+            var book = new TownBook
+            {
+                Gold = town.Gold,
+                Capital = new int[shops.Length],
+                Expense = new int[shops.Length],
+                Warehouse = new int[shops.Length]
+            };
+            WorkshopModel pace = Campaign.Current.Models.WorkshopModel;
+            double lastRun = double.MinValue;
+            for (int k = 0; k < shops.Length; k++)
+            {
+                Workshop shop = shops[k];
+                WorkshopType type = shop?.WorkshopType;
+                if (type?.Productions == null) continue;
+                bool yours = shop.Owner == Hero.MainHero;
+                book.Capital[k] = shop.Capital;
+                book.Expense[k] = type.IsHidden ? 0 : shop.Expense;
+                bool fromWarehouse = yours && warehouse != null && warehouse.IsGettingInputsFromWarehouse(shop);
+                if (fromWarehouse) book.Warehouse[k] = warehouse.GetInputCount(shop);
+                float toTown = yours && warehouse != null
+                    ? 1f - MathF.Clamp(TradeMath.Finite(warehouse.GetStockProductionInWarehouseRatio(shop), 0f), 0f, 1f)
+                    : 1f;
+                if (shop.LastRunCampaignTime.ToDays > lastRun) lastRun = shop.LastRunCampaignTime.ToDays;
+                for (int p = 0; p < type.Productions.Count; p++)
                 {
-                    List<(ItemCategory category, int count)> made = Output(shops[k], held, out float progress,
-                                                                           out List<(ItemCategory, int)> used);
-                    float lands = TradeMath.RunLandsIn(progress, Projection.WorkshopRunDays);
-                    for (int at = 0; at < made.Count; at++)
+                    WorkshopType.Production production = type.Productions[p];
+                    var line = new ShopLine
                     {
-                        var (category, count) = made[at];
-                        ItemObject stands = StandsForAt(site, category);
-                        Note(site, null, category, count,
-                             TradeMath.WorthOf(count, stands == null ? 0 : stands.Value),
-                             lands);
-                    }
-                    for (int at = 0; at < used.Count; at++)
-                    {
-                        var (category, count) = used[at];
-                        ItemObject stands = StandsForAt(site, category);
-                        NoteADraw(site, category, TradeMath.WorthOf(count, stands == null ? 0 : stands.Value),
-                                  lands);
-                    }
+                        Shop = k,
+                        Progress = shop.GetProductionProgress(p),
+                        Speed = pace.GetEffectiveConversionSpeedOfProduction(shop, production.ConversionSpeed, false)
+                                    .ResultNumber,
+                        Pace = production.ConversionSpeed,
+                        Hidden = type.IsHidden,
+                        Yours = yours,
+                        FromWarehouse = fromWarehouse,
+                        ToTown = toTown
+                    };
+                    if (Listed(production.Inputs, line.Inputs, line, kinds) &&
+                        Listed(production.Outputs, line.Outputs, line, kinds))
+                        lines.Add(line);
                 }
             }
+            if (lines.Count == 0) return;
+
+            Dictionary<string, int> held = WhatTheMarketHolds(site);
+            var standing = new Dictionary<string, (ItemObject stands, float supply, float demand)>(StringComparer.Ordinal);
+            foreach (var one in kinds)
+            {
+                ItemObject stands = StandsForAt(site, one.Value);
+                if (stands == null) continue;
+                ItemData data = town.MarketData.GetCategoryData(one.Value);
+                held.TryGetValue(one.Key, out int units);
+                book.Units[one.Key] = units;
+                book.InStore[one.Key] = (int)Math.Min(int.MaxValue, Math.Max(0f, data.InStoreValue));
+                book.UnitValue[one.Key] = stands.Value;
+                book.UsedADay[one.Key] = UsedUpADay(site, one.Value);
+                standing[one.Key] = (stands, data.Supply, data.Demand);
+            }
+            lines.RemoveAll(line => !EveryKindPriced(line.Inputs, standing) ||
+                                    !EveryKindPriced(line.Outputs, standing));
+            if (lines.Count == 0) return;
+
+            TradeItemPriceFactorModel priced = Campaign.Current.Models.TradeItemPriceFactorModel;
+            Func<string, int, bool, int> price = (kind, store, selling) =>
+            {
+                var at = standing[kind];
+                return priced.GetPrice(new EquipmentElement(at.stands), null, null, selling, store,
+                                       at.supply, at.demand);
+            };
+
+            _landing.TryGetValue(site.StringId, out List<Landing> arriving);
+            var bought = new List<(float days, string category, int units)>();
+            if (_spending.TryGetValue(site.StringId, out List<Spending> coming) &&
+                PullAt(site, out Dictionary<string, float> pull, out float across))
+                foreach (Spending purse in coming)
+                    foreach (var one in standing)
+                        if (pull.TryGetValue(one.Key, out float share))
+                            bought.Add((purse.Days, one.Key,
+                                        Projection.UnitsLeaving(TradeMath.ShareOfAPurse(purse.Gold, share, across),
+                                                                book.UnitValue[one.Key])));
+
+            var made = new List<Landing>();
+            var taken = new List<Draw>();
+            WorkshopRuns.Follow(lines, book, TradeMath.NextDailyTickIn(CampaignTime.Now.ToDays - lastRun), watch,
+                                arriving, bought, price, made, taken);
+            foreach (Landing one in made)
+                Note(site, null, kinds[one.Category], one.Units, one.Worth, one.Days);
+            foreach (Draw one in taken)
+                NoteADraw(site, kinds[one.Category], one.Worth, one.Days);
+        }
+
+        private static bool Listed(MBReadOnlyList<(ItemCategory, int)> said, List<(string category, int count)> into,
+                                   ShopLine line, Dictionary<string, ItemCategory> kinds)
+        {
+            for (int k = 0; said != null && k < said.Count; k++)
+            {
+                var (category, count) = said[k];
+                if (category == null || count <= 0) return false;
+                into.Add((category.StringId, count));
+                kinds[category.StringId] = category;
+                if (!category.IsTradeGood) line.TradeGoodsOnly = false;
+            }
+            return true;
+        }
+
+        private static bool EveryKindPriced(List<(string category, int count)> said,
+                                   Dictionary<string, (ItemObject stands, float supply, float demand)> standing)
+        {
+            foreach (var (category, _) in said)
+                if (!standing.ContainsKey(category)) return false;
+            return true;
         }
 
         private static List<(ItemCategory category, int count)> Output(Workshop shop,

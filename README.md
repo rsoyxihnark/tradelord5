@@ -35,9 +35,11 @@
 - ✅ Trust a market by what it has paid turns that off
 - ✅ How long each route lasts, under Left, which says how long the shelf still holds the amount the route quotes before the caravans heading there buy it out or the town and its workshops use it up, in hours, or in days from two days on
 - ✅ Left is blank when the shelf holds that amount through everything TradeLord can see taking from it, up to 30 days after you arrive
-- ✅ Prices and stock that count what is still on its way: the cargo the caravans will unload, what that town's workshops will make next, and the purses those caravans are bringing to spend
+- ✅ Prices and stock that count what is still on its way: the cargo the caravans will unload, what that town's workshops will make, and the purses those caravans are bringing to spend
 - ✅ That purse is spread over the goods that are cheap there, which is what a trader would really take off the shelf
 - ✅ What leaves the shelf is counted too: what the town uses up every day and what its workshops take to make their goods
+- ✅ Every workshop is followed day by day, every line of it at the game's own pace, and a run counts only while the town holds its inputs and the run pays
+- ✅ Your own workshops draw on their warehouse first, and only the share of what they make that you send to the market is counted as landing there
 - ✅ A village is priced through the town it trades with, so what lands in that town moves the village's price as well
 - ✅ It keeps score of that forecast as well, against what really moved, and counts what is on its way at the share the forecast has actually been right by, so it leans less and less on one that keeps missing
 - ✅ Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into
