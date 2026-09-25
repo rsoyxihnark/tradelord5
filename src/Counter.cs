@@ -27,6 +27,7 @@ namespace TradeLord
         private static int _waited;
         private static int _goldAtOpen;
         private static float _tradeXpSeen;
+        private static int _tradeLevelSeen;
 
         internal static bool Staging => _logic != null;
 
@@ -126,6 +127,7 @@ namespace TradeLord
             _waited = 0;
             _goldAtOpen = Hero.MainHero?.Gold ?? 0;
             _tradeXpSeen = TradeXpNow();
+            _tradeLevelSeen = TradeLevelNow();
             TradeActionBehavior.StartAFreshDryRun();
             Log.Write("the trade screen is open at " + site.Name +
                       " and TradeLord is laying its deal out on it rather than trading");
@@ -134,6 +136,20 @@ namespace TradeLord
 
         private static float TradeXpNow() =>
             Hero.MainHero?.HeroDeveloper?.GetSkillXp(DefaultSkills.Trade) ?? 0f;
+
+        private static int TradeLevelNow() =>
+            Hero.MainHero?.GetSkillValue(DefaultSkills.Trade) ?? 0;
+
+        internal static void SayWhatTheScreenCredited(int profit)
+        {
+            int now = TradeLevelNow();
+            bool rose = now > _tradeLevelSeen;
+            _tradeLevelSeen = now;
+            if (profit > 0)
+                Log.Write("trade profit the game credited for the deal you took on the trade screen: " + profit +
+                          " denars");
+            if (rose) Log.Write("trade skill rose to " + now + " on the trade screen");
+        }
 
         internal static int TradeXpEarnedOnTheScreen()
         {
@@ -176,8 +192,8 @@ namespace TradeLord
             {
                 _totalHandedOver = true;
                 reading(_shown.TotalAmount);
-                Log.Write("the trade screen was handed the " + _shown.TotalAmount +
-                          " gold the laid out deal comes to, so its own running total shows it");
+                Log.Write("the trade screen was handed the laid out deal, which " +
+                          Deals.ToYourPurse(-(long)_shown.TotalAmount) + ", so its own running total shows it");
                 return;
             }
             if (++_waited < TicksToWaitForTheScreen) return;
@@ -193,6 +209,7 @@ namespace TradeLord
             _waited = 0;
             _goldAtOpen = 0;
             _tradeXpSeen = 0f;
+            _tradeLevelSeen = 0;
         }
 
         private static void Drop()

@@ -369,10 +369,17 @@ namespace TradeLord
 
         internal static void ConversationEnded() => _tradedWith = null;
 
+        private static string Named(MobileParty band)
+        {
+            string name = Tongue.Named(band.Name, null);
+            return string.IsNullOrEmpty(name) ? band.StringId : name + " (" + band.StringId + ")";
+        }
+
         private static void LetPlayerGo()
         {
             MobileParty band = MobileParty.ConversationParty;
-            Log.Write("free passage taken against " + (band == null ? "an unnamed party" : band.StringId));
+            string named = band == null ? null : Guard.Read("FreePassage.Name", band, Named, band.StringId);
+            Log.Write("free passage taken against " + (named ?? "an unnamed party"));
             band?.IgnoreForHours(GetawayHours);
             band?.Ai?.SetDoNotAttackMainParty(GetawayHours);
             if (PlayerEncounter.Current != null)
@@ -381,7 +388,7 @@ namespace TradeLord
                 PlayerEncounter.LeaveEncounter = true;
             }
             Log.Write("free passage held for " + GetawayHours + " hours: " +
-                      (band == null ? "that band" : band.StringId) + " leaves your party alone, while every " +
+                      (named ?? "that band") + " leaves your party alone, while every " +
                       "other party passes you over only for the hour the game gives anyone leaving an encounter");
         }
     }

@@ -7,6 +7,15 @@ namespace TradeLord.Tests
     public class DealTests
     {
         [Fact]
+        public void The_laid_out_deal_is_told_the_way_your_purse_moves()
+        {
+            Assert.Equal("puts 5269 gold into your purse", Deals.ToYourPurse(5269));
+            Assert.Equal("takes 1090 gold out of your purse", Deals.ToYourPurse(-1090));
+            Assert.Equal("leaves your purse where it is", Deals.ToYourPurse(0));
+            Assert.Equal("takes 2147483648 gold out of your purse", Deals.ToYourPurse(int.MinValue));
+        }
+
+        [Fact]
         public void The_count_the_game_hands_over_is_taken_when_it_has_one()
         {
             Assert.Equal(29, Deals.UnitsMoved(29, 1742, 60));

@@ -451,6 +451,7 @@ namespace TradeLord
             {
                 if (!TheGameCreditedADealTradeLordLaidOut) return;
                 AddTradeXp(Counter.TradeXpEarnedOnTheScreen());
+                Counter.SayWhatTheScreenCredited(profit);
             });
         }
 
@@ -623,23 +624,27 @@ namespace TradeLord
         internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest(ItemObject item, int paid,
                                                                  int units, Settlement notHere)
         {
-            var shortlist = new List<(Settlement town, int price, float days, float rate)>();
+            var shortlist = new List<(Settlement town, int price, float days, float rate, int quoted, Ladder rungs)>();
             var markets = EverySell(item);
             for (int i = 0; i < markets.Count; i++)
             {
-                var (town, price) = markets[i];
-                if (town == null || price <= 0 || town == notHere) continue;
+                var (town, quoted) = markets[i];
+                if (town == null || quoted <= 0 || town == notHere) continue;
                 float days = Travel.EstimateDaysFromParty(town);
                 if (TradeMath.OutOfReach(days)) continue;
+                int landed = Forecast.WorthShiftAsItHasHeld(town, item, days);
+                Ladder rungs = landed == 0 ? null : Bulk.AsItLands(town, new EquipmentElement(item), true, quoted, landed);
+                int price = Bulk.OpeningOn(rungs, town, quoted);
+                if (price <= 0) continue;
                 float rate = TradeMath.EarnedPerDay(price, paid, days);
                 int at = shortlist.Count;
                 while (at > 0 && rate > shortlist[at - 1].rate) at--;
-                shortlist.Insert(at, (town, price, days, rate));
+                shortlist.Insert(at, (town, price, days, rate, quoted, rungs));
             }
             if (shortlist.Count == 0) return (null, 0, null);
             var flat = shortlist[0];
             if (!Options.Current.PickTheBuyerOnTheWholeStack || units <= 1 || shortlist.Count == 1)
-                return (flat.town, flat.price, null);
+                return (flat.town, flat.price, flat.rungs);
 
             long started = System.DateTime.UtcNow.Ticks;
             var deep = flat;
@@ -652,7 +657,7 @@ namespace TradeLord
                 int purse = Options.Current.Omniscient
                     ? TradeRules.WhatTheTillCanPay(one.town.SettlementComponent?.Gold ?? 0, one.town.IsVillage)
                     : 0;
-                Fetched got = Bulk.SellWalk(one.town, item, units, one.price, paid, purse);
+                Fetched got = Bulk.SellWalk(one.town, item, units, one.quoted, one.rungs, paid, purse);
                 BuyerWalks++;
                 BuyerRungs += got.Walked;
                 float rate = TradeMath.PerDay(got.Total - (long)paid * got.Units, one.days);
@@ -669,7 +674,10 @@ namespace TradeLord
                           TradeMath.PerUnit(deepGot.Total, deepGot.Units) + " a unit on average for the " +
                           deepGot.Units + " unit(s) that clear your margin and its purse there, " + deep.price +
                           " for the first, where the first unit alone would have picked " +
-                          flat.town.Name + " at " + flat.price);
+                          flat.town.Name + " at " + flat.price +
+                          (deep.rungs != null || flat.rungs != null
+                              ? ", counting what is on its way to each market by the time you get there"
+                              : ""));
             return (deep.town, deep.price, deepRungs);
         }
 

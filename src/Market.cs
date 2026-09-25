@@ -210,21 +210,35 @@ namespace TradeLord
         }
 
         private static Ladder Held(Settlement site, ItemObject item, bool selling, int quoted, int landed,
+                                   bool scanning) =>
+            Held(site, new EquipmentElement(item), selling, quoted, landed, scanning);
+
+        private static Ladder Held(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed,
                                    bool scanning)
         {
-            var rung = new Ladder(site, item, selling, quoted, landed);
+            var rung = new Ladder(site, stocked, selling, quoted, landed);
             if (landed == 0 || !rung.Walkable) return rung;
             int first = rung.At(0);
             if (TradeMath.ForecastWithin(quoted, first) == first) return rung;
-            var way = (site.StringId, item.StringId, selling, landed > 0);
+            var way = (site.StringId, stocked.Item.StringId, selling, landed > 0);
             if (!scanning || !_reach.TryGetValue(way, out int held))
             {
                 held = TradeMath.LandingWithinReach(quoted, landed, first,
-                    shift => new Ladder(site, item, selling, quoted, shift).At(0));
+                    shift => new Ladder(site, stocked, selling, quoted, shift).At(0));
                 if (scanning) _reach[way] = held;
             }
-            return new Ladder(site, item, selling, quoted, TradeMath.NoFurtherThan(landed, held));
+            return new Ladder(site, stocked, selling, quoted, TradeMath.NoFurtherThan(landed, held));
         }
+
+        internal static Ladder AsItLands(Settlement site, EquipmentElement stocked, bool selling, int quoted,
+                                         int landed) =>
+            site == null || stocked.Item == null
+                ? null
+                : Held(site, stocked, selling, quoted, landed, scanning: false);
+
+        internal static int OpeningOn(Ladder landing, Settlement site, int quoted) =>
+            landing == null ? quoted
+            : landing.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, landing.At(0)) : quoted;
 
         internal static int Opening(Settlement site, ItemObject item, bool selling, int quoted,
                                    int landed)
@@ -265,12 +279,12 @@ namespace TradeLord
             return q;
         }
 
-        internal static Fetched SellWalk(Settlement site, ItemObject item, int units, int quoted,
+        internal static Fetched SellWalk(Settlement site, ItemObject item, int units, int quoted, Ladder landing,
                                          int paid, int purse)
         {
             Fetched got = default(Fetched);
             if (site == null || item == null || units <= 0) return got;
-            got.Rungs = new Ladder(site, item, true, quoted, 0);
+            got.Rungs = landing ?? new Ladder(site, item, true, quoted, 0);
             long total = 0;
             for (int u = 0; u < units; u++)
             {
@@ -399,6 +413,7 @@ namespace TradeLord
         internal static void Say(Settlement site, string when)
         {
             if (!Options.Current.ExtendedDebugLogging || site == null) return;
+            if (!TradeActionBehavior.HasAMarket(site)) return;
             Guard.Run("PriceTrace", () => Written(site, when));
         }
 
@@ -441,7 +456,7 @@ namespace TradeLord
         }
 
         private static string Named(Settlement site) =>
-            (site.IsTown ? "a town" : site.IsVillage ? "a village" : "neither a town nor a village") +
+            (site.IsTown ? "a town" : "a village") +
             " the game holds as " + site.SettlementComponent.GetType().Name;
 
         private static string LeansOn(Settlement site)
