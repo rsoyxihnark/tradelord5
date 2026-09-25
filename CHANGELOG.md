@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.93.12
+
+- Fixed the map marker passing over the market TradeLord traded at before this town, once TradeLord has traded in this town
+- Fixed TradeLord.log saying the market a good is bought for counted what is on its way there when that changed nothing
+- Fixed TradeLord.log timing the map marker's weighing no finer than the system clock ticks
+- The feature list now says the map marker counts what is on its way to a market only with Bulk price simulation on
+
 ## 1.93.11
 
 - Fixed TradeLord ignoring Count what is on its way to a market when it picks the market it buys a good to sell at

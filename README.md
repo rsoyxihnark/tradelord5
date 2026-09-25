@@ -55,7 +55,7 @@
 - ✅ It counts only the goods it would really sell there, the ones that clear Minimum profit margin, so it never sends you somewhere it will then refuse to sell
 - ✅ It works through the richest markets first and stops as soon as none of the rest could outpay the one it has found, so riding across Calradia costs it very little
 - ✅ It reads every market's price live each time it weighs one, so the marker is never pointing at a town on a price it read hours ago
-- ✅ With Count what is on its way to a market on, it prices each market as it will be when you get there, the same way the ledger does
+- ✅ With Count what is on its way to a market and Bulk price simulation on, it prices each market as it will be when you get there, the same way the ledger does
 - ✅ It leaves out the market TradeLord made its last trade at while Auto sell would leave that market alone the first time you come back
 - ✅ The market already marked keeps its mark until it is a fifth past your travel ceiling, so a brief slow stretch of road does not flick the marker to another market and back
 - ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that town's purse, how far away it is and the market it beat
