@@ -4823,8 +4823,12 @@ def the_herd_is_looked_at_three_times_a_visit():
                 method_body(S['Trading.cs'], "private void OnSettlementEntered")
             and "_visitTradeAllowed = false;" in method_body(S['Trading.cs'], "private static void ResetVisit")
             and 'Guard.Run("Action.HerdReliefOnLeaving"' in left
-            and 'if (shed > 0) Drove.LogState("on the road, no market in reach", shed);' in
+            and 'if (shed > 0 && here == null) Drove.LogState("on the road, no market in reach", shed);' in
                 method_body(S['Trading.cs'], "private void OnDailyTick")
+            and ordered(method_body(S['Trading.cs'], "private void OnDailyTick"),
+                        "Settlement here = MobileParty.MainParty?.CurrentSettlement;",
+                        "else if (shed > 0)",
+                        'Drove.LogState("at " + here.Name + (HasAMarket(here) ? "" : ", which has no market"), shed);')
             and "int shed = Drove.AnimalsToShed(MobileParty.MainParty);" in
                 method_body(S['Trading.cs'], "private void OnDailyTick")
             and method_body(S['Trading.cs'], "private void OnDailyTick").count(
@@ -9581,7 +9585,9 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 17
+            and ALL.count("Tongue.Named(") == 19
+            and "(Tongue.Named(one.Where.Name, one.Where.StringId), one.Units, one.Value)" in S['Marker.cs']
+            and "string row = Tongue.Named(one.Where.Name, id)" in S['Marker.cs']
             and '_route.Item == null ? "" : Tongue.Named(_route.Item.Name, _route.Item.StringId)'
                 in S['Panel.cs']
             and '_route.From == null ? "" : Tongue.Named(_route.From.Name, _route.From.StringId)'
@@ -13225,11 +13231,15 @@ def the_first_time_back_at_the_last_market_traded_is_left_alone():
                         "NoteThisArrival(settlement);",
                         "if (_visitTradeAllowed && Counter.HoldsBack())",
                         "(Options.Current.AutoSellOnEntry || Options.Current.AutoBuyOnEntry) &&",
+                        "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);")
+            and ordered(between(entered, "(Options.Current.AutoSellOnEntry || Options.Current.AutoBuyOnEntry) &&",
+                                "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);"),
                         "Arrivals.FirstTimeBack(settlement.StringId, _lastTradedAt))",
                         "_lastTradedAt = null;",
+                        "_heldBackAt = settlement.StringId;",
                         "if (Options.Current.QuickSellMenu && !Muted(true)) Notices.Say(FirstTimeBackNote(), Notices.Note);",
-                        '"trades here this visit");\n                    Marker.Update();\n                    return;\n                }',
-                        "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);")
+                        '"trades here this visit, and the map marker no longer leaves it out");\n'
+                        '                    Marker.Update();\n                    return;\n                }')
             and ordered(left, "if (Options.Current.AutoSellOnEntry && Counter.HoldsBack())",
                         "if (Options.Current.AutoSellOnEntry && Arrivals.FirstTimeBack(settlement.StringId, _heldBackAt))",
                         '"(TradeLord) trades here this visit");\n                    return;\n                }',
@@ -13245,7 +13255,7 @@ def the_first_time_back_at_the_last_market_traded_is_left_alone():
                         "_lastTradedAt = Arrivals.LastTradedAt(settlement?.StringId, traded, _lastTradedAt);")
             and "_lastTradedAt = null;" in forget
             and "_movesAtArrival = Visit.Moves(Simulating);" in forget
-            and t.count("_lastTradedAt") == 10
+            and t.count("_lastTradedAt") == 14
             and t.count("_movesAtArrival") == 5
             and "internal static bool FirstTimeBack(string here, string lastTradedAt) =>\n"
                 "            here != null && here == lastTradedAt;" in rules
@@ -13346,22 +13356,19 @@ def the_marker_leaves_out_the_market_arrival_trading_leaves_alone():
     t = S['Trading.cs']
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     ultra = method_body(S['Marker.cs'], "private static void Ultra")
-    alone = between(t, "internal static bool ArrivalLeavesItAlone(Settlement settlement) =>", ";")
+    alone = between(t, "internal static bool MarkerLeavesItOut(Settlement settlement) =>", ";")
     road = method_body(t, "public static void ExecuteRoadTrade")
     noted = method_body(t, "private static void NoteARoadTrade")
     rules = S['Rules.cs']
     return (marker and road and noted and alone
-            and "Arrivals.LeftOutOfTheMark(settlement.StringId, LastTradedAtOnceYouLeave(), Options.Current.AutoSellOnEntry," in alone
-            and alone.rstrip().endswith("Counter.HoldsBack())")
-            and "internal static bool LeftOutOfTheMark(string there, string lastTradedAt, bool autoSell, bool staged) =>\n"
-                "            autoSell && !staged && FirstTimeBack(there, lastTradedAt);" in rules
+            and "Arrivals.FirstTimeBack(settlement.StringId, LastTradedAtOnceYouLeave())" in alone
             and ordered(marker, "if (!TradeActionBehavior.IsMarket(s)) continue;",
-                        "if (TradeActionBehavior.ArrivalLeavesItAlone(s)) { how.CameBackTo = s; continue; }",
+                        "if (TradeActionBehavior.MarkerLeavesItOut(s)) { how.CameBackTo = s; continue; }",
                         "how.Weighed++;")
             and '", and " + how.CameBackTo.Name + ", " + TheMarketLeftAlone' in ultra
-            and '", and " + how.CameBackTo.Name + " is left out as " + TheMarketLeftAlone' in
+            and '", and it leaves out " + how.CameBackTo.Name + ", " + TheMarketLeftAlone' in
                 method_body(S['Marker.cs'], "private static string Why")
-            and "which trading on arrival leaves alone the first time you come back" in S['Marker.cs']
+            and '"the market TradeLord last traded at, until you come back to it";' in S['Marker.cs']
             and ordered(road, "Books books = BooksForTheMeeting(met);",
                         "int movesBefore = books.Moves(Simulating);",
                         "LotPass(", "SellPass(", "BuyPass(",
@@ -13376,32 +13383,40 @@ def the_marker_leaves_out_the_market_arrival_trading_leaves_alone():
             and all(one in ARRIVALTESTS for one in
                     ("A_trade_on_the_road_frees_the_market_it_last_traded_at",
                      "Meeting_a_party_on_the_road_without_a_trade_keeps_the_market_it_last_traded_at",
-                     "The_map_marker_leaves_out_the_market_auto_sell_leaves_alone_the_first_time_back",
-                     "The_map_marker_keeps_that_market_when_arrival_would_trade_there_or_never_sells_on_arrival")))
+                     "The_map_marker_leaves_out_the_market_TradeLord_last_traded_at_until_you_come_back_to_it")))
 
 
-chk("1.93.11", "the map marker leaves out the market TradeLord last traded at while Auto sell on arrival would leave it alone the first time back, says so in the ultralog, and a TradeLord trade with caravans or villagers on the road frees that market",
+chk("1.93.11", "the map marker leaves out the market TradeLord last traded at until you come back to it, says so in the ultralog, and a TradeLord trade with caravans or villagers on the road frees that market",
     the_marker_leaves_out_the_market_arrival_trading_leaves_alone())
 
 
 def the_marker_writes_its_weighing_again_only_when_the_reckoning_moved():
     again = method_body(S['Marker.cs'], "private static void SayItWeighedAgain")
     remember = method_body(S['Marker.cs'], "private static void Remember")
+    told = method_body(S['Marker.cs'], "private static void Told")
+    update = method_body(S['Marker.cs'], "internal static void Update")
     forget = method_body(S['Marker.cs'], "internal static void Forget()")
-    return (again and remember and forget
+    return (again and remember and told and update and forget
             and ordered(again, "if (!Options.Current.ExtendedDebugLogging) return;",
+                        "if (Marks.WorthSayingAgain(how.Value, how.Units, how.Held, _toldValue, _toldUnits, _toldHeld))",
+                        '"map marker weighed your cargo again and stayed on " + target.Name + ": " + Why(how)',
+                        "Ultra(how);\n                Told(how);\n            }",
+                        "else if (SayWhatElseMoved(target, how)) Told(how);",
                         "if (how.Value == _saidValue && how.Rate == _saidRate) return;",
-                        "if (Marks.WorthSayingAgain(how.Value, how.Units, how.Held, _saidValue, _saidUnits, _saidHeld))",
-                        '"map marker weighed your cargo again and stayed on "',
-                        "Ultra(how);",
                         "Remember(target, how);")
             and again.count("Remember(target, how);") == 1
+            and again.count("Ultra(how);") == 1
             and "value != saidValue || units != saidUnits || held != saidHeld;" in S['Rules.cs']
             and "The_marker_says_it_weighed_again_only_when_the_gold_the_units_or_its_hold_moved" in SCORINGTESTS
+            and ordered(update, '"map marker moved to "', "Ultra(how);", "Told(how);", "Remember(target, how);")
+            and ordered(told, "_toldValue = how.Board == null ? -1L : how.Value;", "_toldUnits = how.Units;",
+                        "_toldHeld = how.Held;", "_toldNext = how.RunnerUp?.StringId;")
+            and "_saidUnits" not in S['Marker.cs'] and "_saidHeld" not in S['Marker.cs']
             and ordered(remember, "_saidValue = how.Value;", "_saidRate = how.Rate;",
-                        "_saidUnits = how.Units;", "_saidHeld = how.Held;")
+                        "string lookingAt = target == null ? null : target.StringId;")
             and all(one in forget for one in
-                    ("_saidValue = -1L;", "_saidRate = -1f;", "_saidUnits = -1;", "_saidHeld = false;")))
+                    ("_saidValue = -1L;", "_saidRate = -1f;", "_toldValue = -1L;", "_toldUnits = -1;",
+                     "_toldHeld = false;", "_toldNext = null;")))
 
 
 chk("1.93.11", "the map marker writes that it weighed your cargo again only when what it would fetch, the units or its hold on the mark changed, not each time the gold a day moves as you ride closer, and it keeps its own record of the last look exactly as before",
@@ -13470,7 +13485,7 @@ chk("1.93.11", "TradeLord.log says which way a laid out deal moves your purse, n
 
 def the_marker_counts_a_trade_where_you_stand_before_it_leaves_a_market_out():
     t = S['Trading.cs']
-    alone = between(t, "internal static bool ArrivalLeavesItAlone(Settlement settlement) =>", ";")
+    alone = between(t, "internal static bool MarkerLeavesItOut(Settlement settlement) =>", ";")
     leave = between(t, "private static string LastTradedAtOnceYouLeave() =>", ";")
     noted = method_body(t, "private static void NoteWhereItTraded(Settlement settlement)")
     return (alone and leave and noted
@@ -13521,6 +13536,131 @@ def trading_by_hand_moves_the_map_marker_on_at_once():
 
 chk("1.93.13", "Trade here now (TradeLord) weighs the map marker again as soon as it has traded, so a trade in the town you stand in frees the market TradeLord traded at before without waiting for you to ride out",
     trading_by_hand_moves_the_map_marker_on_at_once())
+
+def a_staged_deal_counts_as_the_trade_it_is_and_the_marker_follows_it():
+    t = S['Trading.cs']
+    took = method_body(t, "internal static void TookTheDeal")
+    watch = method_body(t, "internal static void WatchTheTradeScreen()")
+    entered = method_body(t, "private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)")
+    books = method_body(S['Books.cs'], "internal void NoteADealTaken(int units)")
+    out = between(t, "internal static bool MarkerLeavesItOut(Settlement settlement) =>", ";")
+    staged = between(entered, "if (_visitTradeAllowed && Counter.HoldsBack())", "return;")
+    back = between(entered, '"trades here this visit, and the map marker no longer leaves it out");',
+                   "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);")
+    noted = method_body(t, "private static void NoteWhereItTraded(Settlement settlement)")
+    road = method_body(t, "private static void NoteARoadTrade")
+    trades = between(t, "private static bool ArrivalTrades() =>", ";")
+    return (took and watch and entered and books and out and staged and back and noted and road and trades
+            and ordered(took, "Took got = Reckon(selling, sold, true);", "Took paid = Reckon(buying, bought, false);",
+                        "Visit.NoteADealTaken(got.Units + paid.Units);", "bool addsUp = Deals.AddsUp(")
+            and "if (units > 0) _moves++;" in books
+            and ordered(watch, "TextObject closed = Counter.Watch();", "if (closed == null) return;",
+                        "Notices.Say(closed, Notices.Note);",
+                        'Guard.Run("Action.MarkerAfterTheDeal", Marker.Update);')
+            and out.strip() == "settlement != null && Arrivals.FirstTimeBack(settlement.StringId, LastTradedAtOnceYouLeave())"
+            and "LeftOutOfTheMark" not in ALL and "ArrivalLeavesItAlone" not in ALL
+            and ordered(staged, "bool back = Arrivals.FirstTimeBack(settlement.StringId, _lastTradedAt);",
+                        "if (back) _lastTradedAt = null;",
+                        "Notices.Say(TheDealWaitsForYou(), Notices.Note);",
+                        '"on the trade screen from the menu entry instead, so nothing moved" +\n'
+                        '                              (back\n'
+                        '                                  ? ", and this is your first time back since TradeLord last traded here, so the " +\n'
+                        '                                    "map marker no longer leaves it out"\n'
+                        '                                  : ""));',
+                        "Marker.Update();")
+            and ordered(back, "Marker.Update();", "return;",
+                        "if (_visitTradeAllowed && Arrivals.FirstTimeBack(settlement.StringId, _lastTradedAt))",
+                        "_lastTradedAt = null;",
+                        'Log.Write("this is your first time back at " + settlement.Name + " since TradeLord last traded " +\n'
+                        '                              "here, so the map marker no longer leaves it out");')
+            and trades.strip() == "(Options.Current.AutoSellOnEntry || Options.Current.AutoBuyOnEntry) && !Counter.HoldsBack()"
+            and ordered(noted, "if (traded)", "(ArrivalTrades()", '"marker leaves it out until then"',
+                        '"the map marker leaves it out until you come back to it"',
+                        '", unless TradeLord trades somewhere else first"')
+            and ordered(road, "if (was != null && _lastTradedAt == null)", "(ArrivalTrades()",
+                        '"map marker no longer leaves it out"',
+                        '"the map marker no longer leaves out the market it last traded at"')
+            and "A_deal_you_took_on_the_trade_screen_counts_as_a_trade_and_an_empty_one_does_not" in BOOKTESTS
+            and all(one in ARRIVALTESTS for one in
+                    ("The_map_marker_leaves_out_the_market_TradeLord_last_traded_at_until_you_come_back_to_it",
+                     "A_trade_where_you_stand_frees_the_market_traded_at_before_for_the_map_marker"))
+            and "It leaves out the market TradeLord made its last trade at until you come back to it" in README
+            and "A deal you take from Staged Trading counts as TradeLord's last trade at that market" in README)
+
+
+chk("1.93.14", "a deal taken from Staged Trading counts as a trade TradeLord made at that market, the map marker leaves out the market TradeLord last traded at until you come back to it whatever trades on arrival, coming back there uses that up and the log says so, and the marker weighs again as the trade screen closes",
+    a_staged_deal_counts_as_the_trade_it_is_and_the_marker_follows_it())
+
+
+def the_marker_log_keeps_every_market_change_and_shows_todays_price():
+    again = method_body(S['Marker.cs'], "private static void SayItWeighedAgain")
+    told = method_body(S['Marker.cs'], "private static void Told")
+    moved = method_body(S['Marker.cs'], "private static bool SayWhatElseMoved")
+    board = method_body(S['Marker.cs'], "private static List<(string where, int units, long value)> OnTheBoard")
+    step = method_body(S['Marker.cs'], "private int Next()")
+    ultra = method_body(S['Marker.cs'], "private static void Ultra")
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    rule = method_body(S['Rules.cs'],
+                       "internal static (List<string> joined, List<string> changed, List<string> gone) WhatMovedOnTheBoard(")
+    daily = method_body(S['Trading.cs'], "private void OnDailyTick")
+    return (again and told and moved and board and step and ultra and fetch and rule and daily
+            and "else if (SayWhatElseMoved(target, how)) Told(how);" in again
+            and ordered(moved, "if (how.Board == null) return false;", "how.Board.Sort(FastestFirst);",
+                        "var (joined, changed, gone) = Marks.WhatMovedOnTheBoard(OnTheBoard(how), _toldBoard);",
+                        "bool nextMoved = !string.Equals(how.RunnerUp?.StringId, _toldNext, System.StringComparison.Ordinal);",
+                        "if (joined.Count == 0 && changed.Count == 0 && gone.Count == 0 && !nextMoved) return false;",
+                        "for (int i = 0; i < how.Board.Count; i++)",
+                        "bool fresh = joined.Contains(id);",
+                        "if (!fresh && !changed.Contains(id)) continue;",
+                        'string row = Tongue.Named(one.Where.Name, id) + (fresh ? " newly priced, " : " now ") + one.Units +\n'
+                        '                             " unit(s) for " + one.Value + " gold at " + one.Rate.ToString("0") + " gold a day";',
+                        'if (!fresh) row += ", was " + _toldBoard[id].units + " unit(s) for " + _toldBoard[id].value + " gold";',
+                        "said.Add(row);",
+                        "for (int i = 0; i < gone.Count; i++)\n"
+                        '                said.Add(_toldBoard[gone[i]].name + " no longer priced, was " + _toldBoard[gone[i]].units +\n'
+                        '                         " unit(s) for " + _toldBoard[gone[i]].value + " gold");',
+                        "if (nextMoved)\n"
+                        "                said.Add(how.RunnerUp == null\n"
+                        '                    ? "no other market it priced would take any of it now"\n'
+                        '                    : "the next best is now " + how.RunnerUp.Name + " at " + how.RunnerUpRate.ToString("0") +\n'
+                        '                      " gold a day for " + how.RunnerUpValue + " gold");',
+                        'Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ", still " + how.Units +\n'
+                        '                      " unit(s) for " + how.Value + " gold, now " + how.Rate.ToString("0") +\n'
+                        '                      " gold a day, and only other markets moved: " + string.Join("; ", said));',
+                        "return true;")
+            and moved.count("Log.Write(") == 1
+            and ordered(told, "_toldValue = how.Board == null ? -1L : how.Value;", "_toldBoard.Clear();",
+                        "for (int i = 0; how.Board != null && i < how.Board.Count; i++)",
+                        "if (one.Where != null)", "_toldBoard[one.Where.StringId] =")
+            and ordered(board, "for (int i = 0; i < how.Board.Count; i++)",
+                        "board.Add((one.Where.StringId, one.Units, one.Value));", "return board;")
+            and "_toldBoard.Clear();" in method_body(S['Marker.cs'], "internal static void Forget()")
+            and "new Dictionary<string, (string name, int units, long value)>(System.StringComparer.Ordinal);" in S['Marker.cs']
+            and ordered(rule, "if (where == null || !still.Add(where)) continue;",
+                        "if (told == null || !told.TryGetValue(where, out var was)) joined.Add(where);",
+                        "else if (was.units != units || was.value != value) changed.Add(where);",
+                        "if (!still.Contains(where)) gone.Add(where);",
+                        "gone.Sort(StringComparer.Ordinal);",
+                        "return (joined, changed, gone);")
+            and all(one in SCORINGTESTS for one in
+                    ("Nothing_moved_on_the_board_when_every_market_shows_the_same_units_and_gold",
+                     "A_market_whose_gold_or_units_changed_is_named_as_changed",
+                     "A_market_newly_priced_joins_the_board_and_one_no_longer_priced_is_gone_from_it",
+                     "With_nothing_told_before_every_market_is_new_and_with_nothing_priced_now_every_market_is_gone"))
+            and "_landed = landed;" in step
+            and "internal int Today => _flat;" in S['Marker.cs']
+            and "internal bool OnItsWay => _landed != 0;" in S['Marker.cs']
+            and "Today = pays.OnItsWay ? pays.Today : 0," in fetch
+            and '(share.Today > 0 && share.Today != share.Price\n'
+                '                                     ? ", " + share.Today + " a unit today before what is on its way lands"'
+                in ultra
+            and 'if (shed > 0 && here == null) Drove.LogState("on the road, no market in reach", shed);' in daily
+            and 'Drove.LogState("at " + here.Name + (HasAMarket(here) ? "" : ", which has no market"), shed);' in daily
+            and "a day at" not in daily)
+
+
+chk("1.93.14", "the map marker writes its whole weighing again when what it would fetch, the units or its hold changed, and otherwise one line naming each other market whose gold or units changed, that is newly priced or no longer priced, and a new next best, and each good it marked on shows today's price beside the price it expects once what is on its way lands, and the daily herd check says where you are",
+    the_marker_log_keeps_every_market_change_and_shows_todays_price())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

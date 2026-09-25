@@ -19,6 +19,7 @@ namespace TradeLord
         private readonly float _ride;
         private Ladder _walk;
         private int _flat;
+        private int _landed;
         private bool _asked;
 
         internal Paying(Settlement site, SettlementComponent market, EquipmentElement el,
@@ -30,6 +31,10 @@ namespace TradeLord
             _party = party;
             _ride = ride;
         }
+
+        internal int Today => _flat;
+
+        internal bool OnItsWay => _landed != 0;
 
         internal int At(int taken)
         {
@@ -45,6 +50,7 @@ namespace TradeLord
                 _flat = Priced.At(_market, _el, _party, true);
                 int landed = _el.Item == null || _flat <= 0
                     ? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);
+                _landed = landed;
                 Ladder walk = _el.Item == null || _flat <= 0
                     ? null : Bulk.AsItLands(_site, _el, true, _flat, landed);
                 _walk = walk != null && (walk.Walkable || landed != 0) ? walk : null;
@@ -81,8 +87,12 @@ namespace TradeLord
 
         private static long _saidValue = -1L;
         private static float _saidRate = -1f;
-        private static int _saidUnits = -1;
-        private static bool _saidHeld;
+        private static long _toldValue = -1L;
+        private static int _toldUnits = -1;
+        private static bool _toldHeld;
+        private static string _toldNext;
+        private static readonly Dictionary<string, (string name, int units, long value)> _toldBoard =
+            new Dictionary<string, (string name, int units, long value)>(System.StringComparer.Ordinal);
 
         internal static Settlement Tracked
         {
@@ -134,8 +144,11 @@ namespace TradeLord
             _lastAt = -1;
             _saidValue = -1L;
             _saidRate = -1f;
-            _saidUnits = -1;
-            _saidHeld = false;
+            _toldValue = -1L;
+            _toldUnits = -1;
+            _toldHeld = false;
+            _toldNext = null;
+            _toldBoard.Clear();
         }
 
         private struct Share
@@ -145,6 +158,7 @@ namespace TradeLord
             internal int Moved;
             internal int Price;
             internal int Last;
+            internal int Today;
             internal int Paid;
             internal long Fetched;
         }
@@ -236,27 +250,90 @@ namespace TradeLord
                 ? "map marker moved to " + target.Name + ": " + why
                 : "map marker taken off the map: " + why);
             Ultra(how);
+            Told(how);
             Remember(target, how);
+        }
+
+        private static List<(string where, int units, long value)> OnTheBoard(in Reckoning how)
+        {
+            if (how.Board == null) return null;
+            var board = new List<(string where, int units, long value)>(how.Board.Count);
+            for (int i = 0; i < how.Board.Count; i++)
+            {
+                Weighing one = how.Board[i];
+                if (one.Where != null) board.Add((one.Where.StringId, one.Units, one.Value));
+            }
+            return board;
+        }
+
+        private static void Told(in Reckoning how)
+        {
+            _toldValue = how.Board == null ? -1L : how.Value;
+            _toldUnits = how.Units;
+            _toldHeld = how.Held;
+            _toldNext = how.RunnerUp?.StringId;
+            _toldBoard.Clear();
+            for (int i = 0; how.Board != null && i < how.Board.Count; i++)
+            {
+                Weighing one = how.Board[i];
+                if (one.Where != null)
+                    _toldBoard[one.Where.StringId] =
+                        (Tongue.Named(one.Where.Name, one.Where.StringId), one.Units, one.Value);
+            }
         }
 
         private static void SayItWeighedAgain(Settlement target, in Reckoning how)
         {
             if (!Options.Current.ExtendedDebugLogging) return;
-            if (how.Value == _saidValue && how.Rate == _saidRate) return;
-            if (Marks.WorthSayingAgain(how.Value, how.Units, how.Held, _saidValue, _saidUnits, _saidHeld))
+            if (Marks.WorthSayingAgain(how.Value, how.Units, how.Held, _toldValue, _toldUnits, _toldHeld))
             {
                 Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ": " + Why(how));
                 Ultra(how);
+                Told(how);
             }
+            else if (SayWhatElseMoved(target, how)) Told(how);
+            if (how.Value == _saidValue && how.Rate == _saidRate) return;
             Remember(target, how);
+        }
+
+        private static bool SayWhatElseMoved(Settlement target, in Reckoning how)
+        {
+            if (how.Board == null) return false;
+            how.Board.Sort(FastestFirst);
+            var (joined, changed, gone) = Marks.WhatMovedOnTheBoard(OnTheBoard(how), _toldBoard);
+            bool nextMoved = !string.Equals(how.RunnerUp?.StringId, _toldNext, System.StringComparison.Ordinal);
+            if (joined.Count == 0 && changed.Count == 0 && gone.Count == 0 && !nextMoved) return false;
+            var said = new List<string>();
+            for (int i = 0; i < how.Board.Count; i++)
+            {
+                Weighing one = how.Board[i];
+                if (one.Where == null) continue;
+                string id = one.Where.StringId;
+                bool fresh = joined.Contains(id);
+                if (!fresh && !changed.Contains(id)) continue;
+                string row = Tongue.Named(one.Where.Name, id) + (fresh ? " newly priced, " : " now ") + one.Units +
+                             " unit(s) for " + one.Value + " gold at " + one.Rate.ToString("0") + " gold a day";
+                if (!fresh) row += ", was " + _toldBoard[id].units + " unit(s) for " + _toldBoard[id].value + " gold";
+                said.Add(row);
+            }
+            for (int i = 0; i < gone.Count; i++)
+                said.Add(_toldBoard[gone[i]].name + " no longer priced, was " + _toldBoard[gone[i]].units +
+                         " unit(s) for " + _toldBoard[gone[i]].value + " gold");
+            if (nextMoved)
+                said.Add(how.RunnerUp == null
+                    ? "no other market it priced would take any of it now"
+                    : "the next best is now " + how.RunnerUp.Name + " at " + how.RunnerUpRate.ToString("0") +
+                      " gold a day for " + how.RunnerUpValue + " gold");
+            Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ", still " + how.Units +
+                      " unit(s) for " + how.Value + " gold, now " + how.Rate.ToString("0") +
+                      " gold a day, and only other markets moved: " + string.Join("; ", said));
+            return true;
         }
 
         private static void Remember(Settlement target, in Reckoning how)
         {
             _saidValue = how.Value;
             _saidRate = how.Rate;
-            _saidUnits = how.Units;
-            _saidHeld = how.Held;
             string lookingAt = target == null ? null : target.StringId;
             _lastValue = target == null ? 0L : how.Value;
             _lastAt = Freshness.Hour;
@@ -307,7 +384,7 @@ namespace TradeLord
         }
 
         private const string TheMarketLeftAlone =
-            "the market TradeLord last traded at, which trading on arrival leaves alone the first time you come back";
+            "the market TradeLord last traded at, until you come back to it";
 
         private static string Why(in Reckoning how)
         {
@@ -319,7 +396,7 @@ namespace TradeLord
                        how.PastCeiling + " are past your travel ceilings and " + how.NoTill +
                        " have no gold at all" +
                        (how.CameBackTo != null
-                           ? ", and " + how.CameBackTo.Name + " is left out as " + TheMarketLeftAlone
+                           ? ", and it leaves out " + how.CameBackTo.Name + ", " + TheMarketLeftAlone
                            : "");
             return how.Kinds + " of the " + how.Carried + " good(s) you carry clear Minimum profit " +
                    "margin there, " + how.Units + " unit(s) for " + how.Value + " gold, " +
@@ -371,6 +448,9 @@ namespace TradeLord
                                      : share.Price + (share.Last < share.Price ? " a unit down to "
                                                                                : " a unit up to ") +
                                        share.Last) +
+                                 (share.Today > 0 && share.Today != share.Price
+                                     ? ", " + share.Today + " a unit today before what is on its way lands"
+                                     : "") +
                                  ", " + share.Fetched + " gold, cost " + share.Paid + " a unit = " +
                                  (long)share.Paid * share.Moved + " gold, profit " +
                                  (share.Fetched - (long)share.Paid * share.Moved));
@@ -495,6 +575,7 @@ namespace TradeLord
                     Moved = moved,
                     Price = opening,
                     Last = last,
+                    Today = pays.OnItsWay ? pays.Today : 0,
                     Paid = worth,
                     Fetched = fetched
                 });
@@ -545,7 +626,7 @@ namespace TradeLord
                 if (s == party.CurrentSettlement) continue;
                 if (TradeActionBehavior.StillTheSameArrival(s)) continue;
                 if (!TradeActionBehavior.IsMarket(s)) continue;
-                if (TradeActionBehavior.ArrivalLeavesItAlone(s)) { how.CameBackTo = s; continue; }
+                if (TradeActionBehavior.MarkerLeavesItOut(s)) { how.CameBackTo = s; continue; }
                 if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) { how.Shut++; continue; }
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s))
                 { how.AtWar++; continue; }

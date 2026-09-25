@@ -128,28 +128,22 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_map_marker_leaves_out_the_market_auto_sell_leaves_alone_the_first_time_back()
+        public void The_map_marker_leaves_out_the_market_TradeLord_last_traded_at_until_you_come_back_to_it()
         {
-            Assert.True(Arrivals.LeftOutOfTheMark("town_ES3", "town_ES3", true, false));
-        }
-
-        [Fact]
-        public void The_map_marker_keeps_that_market_when_arrival_would_trade_there_or_never_sells_on_arrival()
-        {
-            Assert.False(Arrivals.LeftOutOfTheMark("town_ES3", "town_ES3", false, false));
-            Assert.False(Arrivals.LeftOutOfTheMark("town_ES3", "town_ES3", true, true));
-            Assert.False(Arrivals.LeftOutOfTheMark("town_V8", "town_ES3", true, false));
-            Assert.False(Arrivals.LeftOutOfTheMark("town_ES3", null, true, false));
-            Assert.False(Arrivals.LeftOutOfTheMark(null, null, true, false));
+            string last = Arrivals.LastTradedAt("town_ES3", true, null);
+            Assert.True(Arrivals.FirstTimeBack("town_ES3", Arrivals.LastTradedAt(null, false, last)));
+            Assert.False(Arrivals.FirstTimeBack("town_V8", Arrivals.LastTradedAt(null, false, last)));
+            Assert.False(Arrivals.FirstTimeBack("town_ES3", Arrivals.LastTradedAt(null, false, null)));
+            Assert.False(Arrivals.FirstTimeBack(null, Arrivals.LastTradedAt(null, false, last)));
         }
 
         [Fact]
         public void A_trade_where_you_stand_frees_the_market_traded_at_before_for_the_map_marker()
         {
             string last = Arrivals.LastTradedAt("town_B", true, null);
-            Assert.False(Arrivals.LeftOutOfTheMark("town_B", Arrivals.LastTradedAt("town_A", true, last), true, false));
-            Assert.True(Arrivals.LeftOutOfTheMark("town_B", Arrivals.LastTradedAt("town_A", false, last), true, false));
-            Assert.True(Arrivals.LeftOutOfTheMark("town_B", Arrivals.LastTradedAt(null, true, last), true, false));
+            Assert.False(Arrivals.FirstTimeBack("town_B", Arrivals.LastTradedAt("town_A", true, last)));
+            Assert.True(Arrivals.FirstTimeBack("town_B", Arrivals.LastTradedAt("town_A", false, last)));
+            Assert.True(Arrivals.FirstTimeBack("town_B", Arrivals.LastTradedAt(null, true, last)));
         }
 
         [Fact]

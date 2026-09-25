@@ -592,6 +592,70 @@ namespace TradeLord.Tests
             Assert.True(Marks.WorthSayingAgain(874, 2, false, -1, -1, false));
         }
 
+        private static Dictionary<string, (string name, int units, long value)> Told(
+            params (string where, string name, int units, long value)[] rows)
+        {
+            var told = new Dictionary<string, (string name, int units, long value)>();
+            foreach (var (where, name, units, value) in rows) told[where] = (name, units, value);
+            return told;
+        }
+
+        private static List<(string where, int units, long value)> Board(
+            params (string where, int units, long value)[] rows) =>
+            new List<(string where, int units, long value)>(rows);
+
+        [Fact]
+        public void Nothing_moved_on_the_board_when_every_market_shows_the_same_units_and_gold()
+        {
+            var told = Told(("town_V8", "Vostrum", 8, 1781), ("town_ES3", "Epicrotea", 13, 1946));
+            var (joined, changed, gone) = Marks.WhatMovedOnTheBoard(
+                Board(("town_ES3", 13, 1946), ("town_V8", 8, 1781)), told);
+            Assert.Empty(joined);
+            Assert.Empty(changed);
+            Assert.Empty(gone);
+        }
+
+        [Fact]
+        public void A_market_whose_gold_or_units_changed_is_named_as_changed()
+        {
+            var told = Told(("town_V8", "Vostrum", 8, 1781), ("town_ES3", "Epicrotea", 13, 1946),
+                            ("town_M1", "Makeb", 4, 700));
+            var (joined, changed, gone) = Marks.WhatMovedOnTheBoard(
+                Board(("town_V8", 3, 363), ("town_ES3", 12, 1946), ("town_M1", 4, 690)), told);
+            Assert.Empty(joined);
+            Assert.Equal(new[] { "town_V8", "town_ES3", "town_M1" }, changed);
+            Assert.Empty(gone);
+        }
+
+        [Fact]
+        public void A_market_newly_priced_joins_the_board_and_one_no_longer_priced_is_gone_from_it()
+        {
+            var told = Told(("town_V8", "Vostrum", 8, 1781), ("town_ES3", "Epicrotea", 13, 1946),
+                            ("town_M1", "Makeb", 4, 700));
+            var (joined, changed, gone) = Marks.WhatMovedOnTheBoard(
+                Board(("town_R1", 5, 900), ("town_ES3", 13, 1946)), told);
+            Assert.Equal(new[] { "town_R1" }, joined);
+            Assert.Empty(changed);
+            Assert.Equal(new[] { "town_M1", "town_V8" }, gone);
+        }
+
+        [Fact]
+        public void With_nothing_told_before_every_market_is_new_and_with_nothing_priced_now_every_market_is_gone()
+        {
+            var (joined, changed, gone) = Marks.WhatMovedOnTheBoard(Board(("town_V8", 8, 1781)), null);
+            Assert.Equal(new[] { "town_V8" }, joined);
+            Assert.Empty(changed);
+            Assert.Empty(gone);
+            (joined, changed, gone) = Marks.WhatMovedOnTheBoard(null, Told(("town_V8", "Vostrum", 8, 1781)));
+            Assert.Empty(joined);
+            Assert.Empty(changed);
+            Assert.Equal(new[] { "town_V8" }, gone);
+            (joined, changed, gone) = Marks.WhatMovedOnTheBoard(null, null);
+            Assert.Empty(joined);
+            Assert.Empty(changed);
+            Assert.Empty(gone);
+        }
+
         [Fact]
         public void The_same_cargo_packed_in_another_order_is_the_same_cargo()
         {

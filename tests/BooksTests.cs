@@ -492,6 +492,19 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_deal_you_took_on_the_trade_screen_counts_as_a_trade_and_an_empty_one_does_not()
+        {
+            Books books = Fresh();
+            books.NoteADealTaken(0);
+            Assert.Equal(0, books.Moves(false));
+            books.NoteADealTaken(47);
+            Assert.Equal(1, books.Moves(false));
+            Assert.Equal(1, books.Moves(true));
+            books.Forget();
+            Assert.Equal(0, books.Moves(false));
+        }
+
+        [Fact]
         public void ForgettingTheDryRunEmptiesItsOwnCountAndForgettingTheVisitEmptiesBoth()
         {
             Books books = Fresh();
