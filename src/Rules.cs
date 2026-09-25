@@ -104,6 +104,12 @@ namespace TradeLord
         internal static bool StillTheSameSitting(string here, string sittingAt,
                                                  double hours, double sittingHours) =>
             here != null && here == sittingAt && StraightBack(hours, sittingHours);
+
+        internal static bool FirstTimeBack(string here, string lastTradedAt) =>
+            here != null && here == lastTradedAt;
+
+        internal static string LastTradedAt(string leaving, bool traded, string lastTradedAt) =>
+            traded && leaving != null ? leaving : lastTradedAt;
     }
 
     internal static class Marks

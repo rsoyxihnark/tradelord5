@@ -24,6 +24,8 @@ namespace TradeLord
         private int _food;
         private float _weight;
         private float _capacity;
+        private int _moves;
+        private int _dryMoves;
 
         internal bool LaidOut;
 
@@ -35,6 +37,7 @@ namespace TradeLord
             _bought.Clear();
             _sold.Clear();
             _paid = 0;
+            _moves = 0;
         }
 
         internal void ForgetTheDryRun()
@@ -53,6 +56,7 @@ namespace TradeLord
             _food = 0;
             _weight = 0f;
             _capacity = 0f;
+            _dryMoves = 0;
         }
 
         internal int PaidOut(bool sim) => _paid + (sim ? _spent : 0);
@@ -74,6 +78,8 @@ namespace TradeLord
         internal int HaulsShed(bool sim) => OnPaper(sim) ? _hauls : 0;
 
         internal int HerdTaken(bool sim) => OnPaper(sim) ? _herd : 0;
+
+        internal int Moves(bool sim) => _moves + (sim ? _dryMoves : 0);
 
         internal bool Traded(bool sim) =>
             _sold.Count > 0 || _bought.Count > 0 ||
@@ -104,7 +110,9 @@ namespace TradeLord
 
         internal void NoteSold(string id)
         {
-            if (id != null) _sold.Add(id);
+            if (id == null) return;
+            _sold.Add(id);
+            _moves++;
         }
 
         internal void NotePaidDrawn(string id)
@@ -117,6 +125,7 @@ namespace TradeLord
         internal void NoteBought(string id, int price)
         {
             if (id == null) return;
+            _moves++;
             _paid += price;
             _bought.TryGetValue(id, out var prior);
             _bought[id] = (prior.count + 1, prior.spent + price);
@@ -125,6 +134,7 @@ namespace TradeLord
         internal void NoteSale(string id, int price, float weight, int foodValue)
         {
             if (id == null) return;
+            _dryMoves++;
             _drySold.Add(id);
             _gained += price;
             _drawn += price;
@@ -137,6 +147,7 @@ namespace TradeLord
         internal void NotePurchase(string id, int price, float weight, int foodValue)
         {
             if (id == null) return;
+            _dryMoves++;
             _spent += price;
             _drawn -= price;
             _weight += weight;

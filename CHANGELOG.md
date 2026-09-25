@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.93.10
+
+- Fixed Esc opening the game's own menu as well as closing the TradeLord ledger or Recent trades
+- Auto sell and Auto buy now leave the market TradeLord made its last trade at alone the first time you come back to it
+- Coming back to the market TradeLord made its last trade at now shows a note pointing you to Trade here now (TradeLord)
+- TradeLord.log now says when trading on arrival left a market alone because TradeLord made its last trade there
+- TradeLord.log now says when selling animals on the way out of a market waits because TradeLord made its last trade there
+- TradeLord.log now notes each market TradeLord traded at as you leave it
+- The feature list now says the first time you come back to the market TradeLord made its last trade at, it leaves that market alone
+- The feature list now says Esc closes the ledger or Recent trades and leaves the game's own menu shut
+
 ## 1.93.9
 
 - Fixed Count what is on its way to a market counting only the next run of one line of each workshop, however long your ride

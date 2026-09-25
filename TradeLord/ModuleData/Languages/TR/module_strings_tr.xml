@@ -314,5 +314,6 @@
 		<string id="TL472" text="Karakter ekranında harcanmayı bekleyen {FOCUS} odak puanınız ve {POINTS} nitelik puanınız var."/>
 		<string id="TL473" text="Uyarlanan harcama sınırı"/>
 		<string id="TL474" text="Keseniz büyüdükçe TradeLord'un ziyaret başına daha çok harcamasına izin verir ve her zaman Ziyaret başına en çok harcama'nın üstüne ekler. Kesenizde bu sınırın beş katı birikene kadar sınır ayarladığınız gibi kalır. Ondan sonra kesenin her ikiye katlanışı için sınır bir Ziyaret başına en çok harcama kadar büyür: 1000 ayarlıyken kesede 10000 varsa 2000, 20000 varsa 3000 harcanabilir. Varsayılan olarak AÇIK."/>
+		<string id="TL475" text="TradeLord son ticaretini burada yaptı, bu yüzden buraya ilk dönüşünüzde bu pazara dokunmuyor. Şimdi burada ticaret yapmak için bu menüden {ENTRY} seçin."/>
 	</strings>
 </base>

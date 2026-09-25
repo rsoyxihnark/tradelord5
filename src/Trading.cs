@@ -302,9 +302,26 @@ namespace TradeLord
                               "lays the deal out on the trade screen from the menu entry instead, so nothing moved");
                     return;
                 }
+                if (Options.Current.AutoSellOnEntry && Arrivals.FirstTimeBack(settlement.StringId, _heldBackAt))
+                {
+                    Log.Write("herd relief on the way out of " + settlement.Name + " is held back: this is your " +
+                              "first time back since TradeLord made its last trade here, so only Trade here now " +
+                              "(TradeLord) trades here this visit");
+                    return;
+                }
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
             });
+            Guard.Run("Action.NoteWhereItTraded", () => NoteWhereItTraded(settlement));
             Guard.Run("Action.OnSettlementLeft", Marker.Update);
+        }
+
+        private static void NoteWhereItTraded(Settlement settlement)
+        {
+            bool traded = Visit.Moves(Simulating) > _movesAtArrival;
+            _lastTradedAt = Arrivals.LastTradedAt(settlement?.StringId, traded, _lastTradedAt);
+            if (traded)
+                Log.Write("TradeLord traded at " + settlement?.Name + " this visit, so trading on arrival leaves " +
+                          "it alone the first time you come back, unless it trades somewhere else first");
         }
 
         private static bool _visitTradeAllowed;
@@ -313,6 +330,9 @@ namespace TradeLord
         private static double _sittingHours = -1d;
 
         private static string _lastArrivalAt;
+        private static string _lastTradedAt;
+        private static string _heldBackAt;
+        private static int _movesAtArrival;
         private static Vec2 _gateBehind;
         private static bool _gateBehindKnown;
         private static bool _tookToTheRoad;
@@ -322,6 +342,7 @@ namespace TradeLord
         private static void NoteThisArrival(Settlement settlement)
         {
             _lastArrivalAt = settlement?.StringId;
+            _heldBackAt = null;
             _gateBehindKnown = false;
             _tookToTheRoad = false;
         }
@@ -342,6 +363,9 @@ namespace TradeLord
         private static void ForgetArrivals()
         {
             _lastArrivalAt = null;
+            _lastTradedAt = null;
+            _heldBackAt = null;
+            _movesAtArrival = Visit.Moves(Simulating);
             _gateBehindKnown = false;
             _tookToTheRoad = false;
         }
@@ -841,6 +865,7 @@ namespace TradeLord
                 PriceTrace.Say(settlement, "walked in, before anything was traded");
                 Hindsight.Score(settlement);
                 ResetVisit(StillTheSameSitting(settlement));
+                _movesAtArrival = Visit.Moves(Simulating);
                 _visitTradeAllowed = CanTradeHere(settlement);
                 WarnUnmatchedItemLists();
                 Drove.LogState("entering " + settlement.Name);
@@ -859,6 +884,20 @@ namespace TradeLord
                     Notices.Say(TheDealWaitsForYou(), Notices.Note);
                     Log.Write("trading on arrival at " + settlement.Name + " is held back: the deal is laid out " +
                               "on the trade screen from the menu entry instead, so nothing moved");
+                    Marker.Update();
+                    return;
+                }
+
+                if (_visitTradeAllowed &&
+                    (Options.Current.AutoSellOnEntry || Options.Current.AutoBuyOnEntry) &&
+                    Arrivals.FirstTimeBack(settlement.StringId, _lastTradedAt))
+                {
+                    _lastTradedAt = null;
+                    _heldBackAt = settlement.StringId;
+                    if (Options.Current.QuickSellMenu && !Muted(true)) Notices.Say(FirstTimeBackNote(), Notices.Note);
+                    Log.Write("trading on arrival at " + settlement.Name + " is left alone: TradeLord made its last " +
+                              "trade here and this is your first time back, so only Trade here now (TradeLord) " +
+                              "trades here this visit");
                     Marker.Update();
                     return;
                 }
@@ -913,6 +952,13 @@ namespace TradeLord
         private static bool CanTradeHere(Settlement s) =>
             IsMarket(s) && !LedgerBehavior.VillageShut(s) && GameAllowsTrade(s) &&
             !(Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s));
+
+        private static TextObject FirstTimeBackNote()
+        {
+            TextObject line = Tongue.Text("{=TL475}TradeLord made its last trade here, so it leaves this market alone the first time you come back. Choose {ENTRY} in this menu to trade here now.");
+            line.SetTextVariable("ENTRY", Tongue.Text("{=TL26}Trade here now (TradeLord)"));
+            return line;
+        }
 
         private static TextObject TheDealWaitsForYou()
         {
