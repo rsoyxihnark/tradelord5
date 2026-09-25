@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.93.16
+
+- Fixed TradeLord.log timing picking a buyer and the route scan no finer than the system clock ticks
+- Fixed TradeLord.log's promise check saying a market's record lowers route scores when it lowers nothing
+
 ## 1.93.15
 
 - Fixed Hold cargo for the best market ignoring Count what is on its way to a market when it weighs the best market

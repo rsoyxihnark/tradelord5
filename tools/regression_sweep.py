@@ -10813,7 +10813,7 @@ def the_route_scan_says_what_it_cost():
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
     say = method_body(S['Ledger.cs'], "private static void SayWhatTheScanCost")
     return (scan and say
-            and "long started = System.DateTime.UtcNow.Ticks;" in scan
+            and "long started = System.Diagnostics.Stopwatch.GetTimestamp();" in scan
             and "int opened = 0, thrownAway = 0;" in scan
             and scan.count("opened++;") == 1
             and scan.count("thrownAway++;") == 3
@@ -13744,6 +13744,59 @@ def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
 
 chk("1.93.15", "a market left out as the last one traded at while the mark stood gets one fair look when it is back, or when you come back to it: if it earns more a day than the marked market, the marker chooses afresh and the log says why, and otherwise the mark keeps its usual hold",
     a_market_back_in_the_running_gets_one_fair_look_against_the_mark())
+
+def picking_a_buyer_and_the_route_scan_are_timed_with_the_fine_clock():
+    far = method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes()")
+    cost = method_body(S['Ledger.cs'], "private static void SayWhatTheScanCost")
+    said = method_body(S['Trading.cs'], "private static void SayWhatPickingABuyerCost")
+    return (far and scan and cost and said
+            and ordered(far, "long started = System.Diagnostics.Stopwatch.GetTimestamp();",
+                        "Fetched got = Bulk.SellWalk(",
+                        "BuyerTicks += System.Diagnostics.Stopwatch.GetTimestamp() - started;")
+            and ordered(scan, "long started = System.Diagnostics.Stopwatch.GetTimestamp();",
+                        "SayWhatTheScanCost(routes.Count, opened, thrownAway,",
+                        "System.Diagnostics.Stopwatch.GetTimestamp() - started);")
+            and "(ticks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString(\"0.0\"," in cost
+            and "(LedgerBehavior.BuyerTicks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString(\"0.0\"," in said
+            and "DateTime" not in far + scan + cost + said
+            and "10000d" not in cost + said)
+
+
+chk("1.93.16", "picking a buyer and the route scan are timed with the fine clock, the same as the map marker's weighing, so TradeLord.log never gives a long walk as no time at all",
+    picking_a_buyer_and_the_route_scan_are_timed_with_the_fine_clock())
+
+
+def the_promise_check_says_what_a_markets_record_does_to_a_score():
+    kept = method_body(S['Hindsight.cs'], "private static void Kept")
+    does = method_body(S['Hindsight.cs'], "private static string WhatTheRecordDoes")
+    rule = method_body(S['Confidence.cs'], "internal static RecordAtAMarket WhatAMarketsRecordDoes")
+    held = method_body(S['Confidence.cs'], "public static float AsPromisesHaveHeld")
+    return (kept and does and rule and held
+            and ordered(kept, '" of promise over " + walkIns + " walk-in(s) here" +',
+                        "WhatTheRecordDoes(walkIns, hereOverall));")
+            and "which is what lowers" not in kept
+            and "Confidence.WhatAMarketsRecordDoes(s.TrustWhatAMarketPaid && s.ConfidenceRanking, walkIns, held)" in does
+            and ordered(does, "case Confidence.RecordAtAMarket.NotYet:",
+                        '"walked in " + Confidence.EnoughArrivals + " times";',
+                        "case Confidence.RecordAtAMarket.TakesNothingOff:",
+                        '", which takes nothing off the score of a route selling here";',
+                        "case Confidence.RecordAtAMarket.Lowers:",
+                        '", which is what lowers the score of a route selling here";',
+                        "default:", 'return "";')
+            and ordered(rule, "if (!counted) return RecordAtAMarket.Unused;",
+                        "if (arrivals < EnoughArrivals) return RecordAtAMarket.NotYet;",
+                        "return AsPromisesHaveHeld(1f, arrivals, held) < 1f",
+                        "? RecordAtAMarket.Lowers", ": RecordAtAMarket.TakesNothingOff;")
+            and "if (score <= 0f || arrivals < EnoughArrivals) return score;" in held
+            and all(one in PROMISETESTS for one in
+                    ("A_market_record_counts_toward_a_score_only_once_enough_walk_ins_are_in",
+                     "A_market_that_has_paid_what_it_promised_or_more_takes_nothing_off_a_score",
+                     "A_market_record_the_ranking_leaves_unused_says_nothing_about_a_score")))
+
+
+chk("1.93.16", "the promise check says a market's record lowers the score of a route selling there only when it does: not before enough walk-ins, not once the market has paid what it promised, and not at all when routes are not ranked by that record",
+    the_promise_check_says_what_a_markets_record_does_to_a_score())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

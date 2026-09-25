@@ -138,5 +138,36 @@ namespace TradeLord.Tests
             };
             Assert.Equal("", LedgerCodec.WritePromises(written));
         }
+
+        [Fact]
+        public void A_market_record_counts_toward_a_score_only_once_enough_walk_ins_are_in()
+        {
+            Assert.Equal(Confidence.RecordAtAMarket.NotYet,
+                         Confidence.WhatAMarketsRecordDoes(true, 1, 0.5f));
+            Assert.Equal(Confidence.RecordAtAMarket.NotYet,
+                         Confidence.WhatAMarketsRecordDoes(true, Confidence.EnoughArrivals - 1, 0.5f));
+            Assert.Equal(Confidence.RecordAtAMarket.Lowers,
+                         Confidence.WhatAMarketsRecordDoes(true, Confidence.EnoughArrivals, 0.5f));
+        }
+
+        [Fact]
+        public void A_market_that_has_paid_what_it_promised_or_more_takes_nothing_off_a_score()
+        {
+            Assert.Equal(Confidence.RecordAtAMarket.TakesNothingOff,
+                         Confidence.WhatAMarketsRecordDoes(true, 40, 1f));
+            Assert.Equal(Confidence.RecordAtAMarket.TakesNothingOff,
+                         Confidence.WhatAMarketsRecordDoes(true, 40, 1.8f));
+            Assert.Equal(Confidence.RecordAtAMarket.Lowers,
+                         Confidence.WhatAMarketsRecordDoes(true, 40, 0.99f));
+        }
+
+        [Fact]
+        public void A_market_record_the_ranking_leaves_unused_says_nothing_about_a_score()
+        {
+            Assert.Equal(Confidence.RecordAtAMarket.Unused,
+                         Confidence.WhatAMarketsRecordDoes(false, 40, 0.5f));
+            Assert.Equal(Confidence.RecordAtAMarket.Unused,
+                         Confidence.WhatAMarketsRecordDoes(false, 1, 0.5f));
+        }
     }
 }
