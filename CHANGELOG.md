@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.93.13
+
+- Fixed the map marker staying on a market that pays less after you used Trade here now (TradeLord) in the town you are in
+
 ## 1.93.12
 
 - Fixed the map marker passing over the market TradeLord traded at before this town, once TradeLord has traded in this town
