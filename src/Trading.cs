@@ -341,8 +341,12 @@ namespace TradeLord
 
         internal static bool ArrivalLeavesItAlone(Settlement settlement) =>
             settlement != null &&
-            Arrivals.LeftOutOfTheMark(settlement.StringId, _lastTradedAt, Options.Current.AutoSellOnEntry,
+            Arrivals.LeftOutOfTheMark(settlement.StringId, LastTradedAtOnceYouLeave(), Options.Current.AutoSellOnEntry,
                                       Counter.HoldsBack());
+
+        private static string LastTradedAtOnceYouLeave() =>
+            Arrivals.LastTradedAt(MobileParty.MainParty?.CurrentSettlement?.StringId,
+                                  Visit.Moves(Simulating) > _movesAtArrival, _lastTradedAt);
 
         private static void NoteARoadTrade(MobileParty met, Books books, int movesBefore)
         {
