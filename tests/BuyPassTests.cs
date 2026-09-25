@@ -462,6 +462,7 @@ namespace TradeLord.Tests
             Assert.Equal(1, moved.Units);
             Assert.Equal(18f, moved.Unfitted, 3);
             Assert.Equal(900, moved.UnfittedCost);
+            Assert.Equal(9 * (TradeMath.Realizable(200, market.Rules.ResaleSafetyFactor) - 100), moved.UnfittedProfit, 2);
         }
 
         [Fact]
@@ -506,6 +507,7 @@ namespace TradeLord.Tests
             Assert.Equal(2, moved.Units);
             Assert.Equal(0f, moved.Unfitted, 3);
             Assert.Equal(0, moved.UnfittedCost);
+            Assert.Equal(0f, moved.UnfittedProfit, 3);
         }
 
         [Fact]
