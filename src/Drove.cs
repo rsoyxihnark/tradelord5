@@ -234,6 +234,24 @@ namespace TradeLord
             }
         }
 
+        internal static float CargoASpareMountAdds(MobileParty party)
+        {
+            if (party == null || Carry.Sailing()) return 0f;
+            try
+            {
+                InventoryCapacityModel model = Campaign.Current?.Models?.InventoryCapacityModel;
+                if (model == null) return 0f;
+                ExplainedNumber capacity = model.CalculateInventoryCapacity(party, false);
+                return Herding.CargoASpareMountAdds(model.GetItemAverageWeight(), capacity.BaseNumber,
+                                                    capacity.ResultNumber);
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "cargo a spare mount adds (a dry run counts no room lost to a mount it would sell)");
+                return 0f;
+            }
+        }
+
         internal static int HaulAnimalsCargoCanSpare(MobileParty party)
         {
             int held = HaulAnimalsHeld(party);

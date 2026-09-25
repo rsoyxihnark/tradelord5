@@ -274,6 +274,9 @@ namespace TradeLord
             return budget >= cost ? weight : weight * ((float)budget / cost);
         }
 
+        public static float ProfitTheBudgetCanStillBuy(float profit, int cost, int budget) =>
+            WeightTheBudgetCanStillBuy(profit, cost, budget);
+
         public static int WorthOf(int units, int unitValue)
         {
             if (units <= 0 || unitValue <= 0) return 0;

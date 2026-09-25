@@ -267,7 +267,7 @@
 		<string id="TL423" text="The deal TradeLord laid out is closed and your purse is where it was."/>
 		<string id="TL424" text="Recent trades"/>
 		<string id="TL425" text="Gold before it buys a haul animal (0 = off)"/>
-		<string id="TL426" text="Buy no haul animal at all until your purse is above this. Below it TradeLord leaves them alone however cheap they are, so early gold goes on goods instead. 0 lets it buy from the first denar. Default 2000."/>
+		<string id="TL426" text="Buy a haul animal only while your purse stays above this once the animal is paid for. Below it TradeLord leaves them alone however cheap they are, so early gold goes on goods instead. 0 lets it buy from the first denar. Default 2000."/>
 		<string id="TL427" text="Most it will pay for a haul animal"/>
 		<string id="TL428" text="How far above the cheapest price you have ever seen for that animal TradeLord will still pay. 100% means only at the cheapest you have seen. Default 1.25, so it pays up to a quarter more than the cheapest."/>
 		<string id="TL429" text="Most workshops you may own (0 = the game's own limit)"/>

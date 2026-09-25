@@ -104,7 +104,7 @@ namespace TradeLord
 
         internal static Books TheVisit => Visit;
         private static bool _cargoWasFull;
-        private static (float weight, int cost, bool food) _unfitted;
+        private static (float weight, int cost, float profit, bool food) _unfitted;
         private static Block? _sellStalled;
         private static Block? _buyStalled;
 
@@ -423,6 +423,8 @@ namespace TradeLord
             private ISet<string> _locked;
             private bool _lockedRead;
             private float _capacity = -1f;
+            private float _eachHaul = -1f;
+            private float _eachMount = -1f;
             private float _carried = -1f;
             private int _carriedAt = -1;
             private int _goldBefore;
@@ -508,7 +510,25 @@ namespace TradeLord
             internal bool WouldReachYourReserve(int price) => price >= Spendable();
 
             internal float Capacity =>
-                (_capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity) + Books.CapacityAdded(Sim);
+                (_capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity) + Books.CapacityAdded(Sim) -
+                CapacitySoldOnPaper();
+
+            private float CapacitySoldOnPaper()
+            {
+                int hauls = Books.HaulsShed(Sim), mounts = Books.MountsShed(Sim);
+                float sold = 0f;
+                if (hauls > 0)
+                {
+                    if (_eachHaul < 0f) _eachHaul = Drove.CargoAHaulAnimalAdds(Party);
+                    sold += hauls * _eachHaul;
+                }
+                if (mounts > 0)
+                {
+                    if (_eachMount < 0f) _eachMount = Drove.CargoASpareMountAdds(Party);
+                    sold += mounts * _eachMount;
+                }
+                return sold;
+            }
 
             internal float Carried()
             {
@@ -1572,7 +1592,7 @@ namespace TradeLord
                 var food = FoodTheHoldLeftBehind(pass, left.el, left.good, left.fed, left.ceiling, shortfall,
                                                  left.remaining, left.taken, left.held, shareCap,
                                                  settlement.IsVillage);
-                _unfitted = (food.weight, food.cost, true);
+                _unfitted = (food.weight, food.cost, 0f, true);
             }
             if (stocked <= 0) return;
 
@@ -1922,8 +1942,10 @@ namespace TradeLord
 
             int hauled = 0, simSpent = 0;
             bool enough = false, tooLittle = false, floored = false;
-            int floor = Options.Current.HaulAnimalGoldFloor, purseAtTheFloor = 0;
-            float leastFilled = unfitted.food ? 0f : Herding.LeastAHaulAnimalIsFilled;
+            int floor = Options.Current.HaulAnimalGoldFloor, purseAtTheFloor = 0, priceAtTheFloor = 0;
+            float leastFilled = Herding.LeastFilledFor(unfitted.food,
+                TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),
+                TradePolicy.FoodForADay());
 
             var stable = CheapestFirst(pass, it => TradePolicy.MayHaul(it, pass.Locked),
                                        Options.Current.HaulAnimalPriceTolerance);
@@ -1945,23 +1967,27 @@ namespace TradeLord
 
                     while (remaining > 0 && herdRoom > 0)
                     {
+                        int price = pass.Price(el.EquipmentElement, selling: false);
+                        if (price <= 0 || price > ceiling) break;
                         int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);
-                        if (!Herding.PurseClearsTheFloor(purse, floor))
+                        if (!Herding.PurseClearsTheFloor(purse - price, floor))
                         {
                             floored = true;
                             purseAtTheFloor = purse;
+                            priceAtTheFloor = price;
                             enough = true;
                             break;
                         }
-                        int price = pass.Price(el.EquipmentElement, selling: false);
-                        if (price <= 0 || price > ceiling) break;
                         if (pass.WouldReachYourReserve(price)) break;
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, HoldShareOff) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
                         float stillToCarry = TradeMath.WeightTheBudgetCanStillBuy(unfitted.weight, unfitted.cost,
                                                                                    pass.Spendable() - price);
+                        float profitToCarry = TradeMath.ProfitTheBudgetCanStillBuy(unfitted.profit, unfitted.cost,
+                                                                                    pass.Spendable() - price);
                         if (!Herding.AnotherHaulAnimalIsWanted(hauled, each, Options.Current.MaxCargoShare,
-                                                               roomLeft, stillToCarry, leastFilled))
+                                                               roomLeft, stillToCarry, leastFilled,
+                                                               profitToCarry, price))
                         {
                             tooLittle = hauled == 0 &&
                                         Herding.AnotherHaulAnimalIsWanted(hauled, each, Options.Current.MaxCargoShare,
@@ -1998,10 +2024,18 @@ namespace TradeLord
 
             if (hauled <= 0)
             {
-                if (tooLittle)
+                if (floored)
+                    Log.Repeatable("haul animal floor after paying", settlement.StringId,
+                                   "haul animals are left alone at " + settlement.Name + ": the cheapest, at " +
+                                   priceAtTheFloor + ", would leave your purse at " + (purseAtTheFloor - priceAtTheFloor) +
+                                   ", not above the " + floor + " set in Gold before it buys a haul animal");
+                else if (tooLittle)
                     Log.Repeatable("haul animal too little", settlement.StringId,
-                                   "haul animals are left alone at " + settlement.Name + ": the goods your full " +
-                                   "cargo left behind that the gold left can buy would fill less than half of one");
+                                   "haul animals are left alone at " + settlement.Name + (unfitted.food
+                                       ? ": the food your full cargo left behind would fill less than half of one, " +
+                                         "and your party still has a day of food or more"
+                                       : ": the goods your full cargo left behind that the gold left can buy would " +
+                                         "fill less than half of one and make less than it costs"));
                 return false;
             }
 
@@ -2014,8 +2048,9 @@ namespace TradeLord
                       carrying.ToString("0", System.Globalization.CultureInfo.InvariantCulture) +
                       " that your full cargo left behind and the gold left can still buy" +
                       (floored
-                          ? ", stopping there as your purse is down to " + purseAtTheFloor +
-                            ", no longer above the " + floor + " set in Gold before it buys a haul animal"
+                          ? ", stopping there as the next, at " + priceAtTheFloor + ", would leave your purse at " +
+                            (purseAtTheFloor - priceAtTheFloor) + ", not above the " + floor +
+                            " set in Gold before it buys a haul animal"
                           : ""));
             pass.Logged(selling: false, "stocking the baggage train");
             TextObject msg = pass.Said(
@@ -2063,7 +2098,9 @@ namespace TradeLord
 
             if (pass.Reports && tally.Saw(Block.CarryWeight)) _cargoWasFull = true;
             if (pass.Reports)
-                _unfitted = pass.DirectionError ? default : (moved.Unfitted, moved.UnfittedCost, false);
+                _unfitted = pass.DirectionError
+                    ? default
+                    : (moved.Unfitted, moved.UnfittedCost, moved.UnfittedProfit, false);
 
             int spent = pass.Spent(moved.SimGold);
             if (bought > 0)

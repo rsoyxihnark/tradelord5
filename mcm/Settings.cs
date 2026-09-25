@@ -742,7 +742,7 @@ namespace TradeLord.Mcm
         public bool BuyHaulAnimals { get => _o.BuyHaulAnimals; set { _o.BuyHaulAnimals = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL425}Gold before it buys a haul animal (0 = off)", 0, 100000, Order = 13, RequireRestart = false,
-            HintText = "{=TL426}Buy no haul animal at all until your purse is above this. Below it TradeLord leaves them alone however cheap they are, so early gold goes on goods instead. 0 lets it buy from the first denar. Default 2000.")]
+            HintText = "{=TL426}Buy a haul animal only while your purse stays above this once the animal is paid for. Below it TradeLord leaves them alone however cheap they are, so early gold goes on goods instead. 0 lets it buy from the first denar. Default 2000.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int HaulAnimalGoldFloor { get => _o.HaulAnimalGoldFloor; set { _o.HaulAnimalGoldFloor = value; Options.Bump(); } }
 

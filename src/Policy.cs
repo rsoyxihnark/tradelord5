@@ -303,6 +303,8 @@ namespace TradeLord
             return held;
         }
 
+        internal static int FoodForADay() => (int)Math.Ceiling(AppetitePerDay());
+
         internal static int FoodWanted()
         {
             int days = Options.Current.KeepFoodDays;
