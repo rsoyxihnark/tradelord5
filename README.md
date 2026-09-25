@@ -24,6 +24,7 @@
 - ✅ One clean set of price hints, bypassing the vanilla rumour system, which is usually out of date by the time you get there
 - ✅ A ledger panel on the campaign map, ranking the best route it can find for each good, thirty rows of them
 - ✅ Open it on hotkey **T**, on the map button, or from its own entry in the town menu, which falls back to the six best routes written out as text if the panel cannot open
+- ✅ Esc closes the ledger or Recent trades and leaves the game's own menu shut
 - ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get
 - ✅ A route whose prices could not be walked that way is marked on its confidence figure
 - ✅ A confidence score on each route, which starts at profit per day and is marked down by everything that could eat it
@@ -67,6 +68,7 @@
 - ✅ One trade entry in the town menu, selling then buying in one go, whenever you want it
 - ✅ Sells and buys the moment you enter a market by default, once for each arrival
 - ✅ Wait here for some time, a walk through the lands, or anything else that drops you back at the town or village menu does not set it trading again, and it leaves that market alone until your party has taken to the road
+- ✅ The first time you come back to the market TradeLord made its last trade at, it leaves that market alone as you arrive and as you leave
 - ✅ Trade here now (TradeLord) still trades whenever you ask
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
 - ✅ Tops your food back up to three days of supply, buying the cheapest food the market has and never paying more than the cheapest price it knows of for it

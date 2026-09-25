@@ -473,5 +473,52 @@ namespace TradeLord.Tests
             Assert.Equal(-1, books.Held(true, "wool"));
             Assert.Equal(1, books.Stocked(true, "grain"));
         }
+
+        [Fact]
+        public void EveryTradeIsCountedAndADryRunsOnlyWhileTheRunIsDry()
+        {
+            Books books = Fresh();
+            Assert.Equal(0, books.Moves(false));
+            Assert.Equal(0, books.Moves(true));
+
+            books.NoteSold("wool");
+            books.NoteBought("grain", 40);
+            books.NoteBought("grain", 40);
+            books.NoteSale("wool", 10, 1f, 0);
+            books.NotePurchase("grain", 10, 1f, 1);
+
+            Assert.Equal(3, books.Moves(false));
+            Assert.Equal(5, books.Moves(true));
+        }
+
+        [Fact]
+        public void ForgettingTheDryRunEmptiesItsOwnCountAndForgettingTheVisitEmptiesBoth()
+        {
+            Books books = Fresh();
+            books.NoteSold("wool");
+            books.NoteSale("wool", 10, 1f, 0);
+
+            books.ForgetTheDryRun();
+            Assert.Equal(1, books.Moves(true));
+            Assert.Equal(1, books.Moves(false));
+
+            books.NoteSale("wool", 10, 1f, 0);
+            books.Forget();
+            Assert.Equal(0, books.Moves(true));
+            Assert.Equal(0, books.Moves(false));
+        }
+
+        [Fact]
+        public void AGoodWithNoNameIsNotCountedAsATrade()
+        {
+            Books books = Fresh();
+            books.NoteSold(null);
+            books.NoteBought(null, 40);
+            books.NoteSale(null, 10, 1f, 0);
+            books.NotePurchase(null, 10, 1f, 1);
+
+            Assert.Equal(0, books.Moves(true));
+            Assert.Equal(0, books.PaidOut(false));
+        }
     }
 }
