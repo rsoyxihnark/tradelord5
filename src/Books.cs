@@ -108,6 +108,11 @@ namespace TradeLord
             return (real.count + dry.count, real.spent + dry.spent);
         }
 
+        internal void NoteADealTaken(int units)
+        {
+            if (units > 0) _moves++;
+        }
+
         internal void NoteSold(string id)
         {
             if (id == null) return;

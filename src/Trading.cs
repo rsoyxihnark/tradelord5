@@ -275,7 +275,10 @@ namespace TradeLord
             Guard.Run("Action.DailyHerdCheck", () =>
             {
                 int shed = Drove.AnimalsToShed(MobileParty.MainParty);
-                if (shed > 0) Drove.LogState("on the road, no market in reach", shed);
+                Settlement here = MobileParty.MainParty?.CurrentSettlement;
+                if (shed > 0 && here == null) Drove.LogState("on the road, no market in reach", shed);
+                else if (shed > 0)
+                    Drove.LogState("at " + here.Name + (HasAMarket(here) ? "" : ", which has no market"), shed);
             });
             Guard.Run("Action.DailyTick", Marker.Update);
         }
@@ -320,9 +323,16 @@ namespace TradeLord
             bool traded = Visit.Moves(Simulating) > _movesAtArrival;
             _lastTradedAt = Arrivals.LastTradedAt(settlement?.StringId, traded, _lastTradedAt);
             if (traded)
-                Log.Write("TradeLord traded at " + settlement?.Name + " this visit, so trading on arrival leaves " +
-                          "it alone the first time you come back, unless it trades somewhere else first");
+                Log.Write("TradeLord traded at " + settlement?.Name + " this visit, so " +
+                          (ArrivalTrades()
+                              ? "trading on arrival leaves it alone the first time you come back and the map " +
+                                "marker leaves it out until then"
+                              : "the map marker leaves it out until you come back to it") +
+                          ", unless TradeLord trades somewhere else first");
         }
+
+        private static bool ArrivalTrades() =>
+            (Options.Current.AutoSellOnEntry || Options.Current.AutoBuyOnEntry) && !Counter.HoldsBack();
 
         private static bool _visitTradeAllowed;
 
@@ -339,10 +349,8 @@ namespace TradeLord
         internal static bool StillTheSameArrival(Settlement settlement) =>
             Arrivals.StillTheSame(settlement?.StringId, _lastArrivalAt, _tookToTheRoad);
 
-        internal static bool ArrivalLeavesItAlone(Settlement settlement) =>
-            settlement != null &&
-            Arrivals.LeftOutOfTheMark(settlement.StringId, LastTradedAtOnceYouLeave(), Options.Current.AutoSellOnEntry,
-                                      Counter.HoldsBack());
+        internal static bool MarkerLeavesItOut(Settlement settlement) =>
+            settlement != null && Arrivals.FirstTimeBack(settlement.StringId, LastTradedAtOnceYouLeave());
 
         private static string LastTradedAtOnceYouLeave() =>
             Arrivals.LastTradedAt(MobileParty.MainParty?.CurrentSettlement?.StringId,
@@ -353,8 +361,11 @@ namespace TradeLord
             string was = _lastTradedAt;
             _lastTradedAt = Arrivals.AfterTheRoad(books.Moves(Simulating) > movesBefore, was);
             if (was != null && _lastTradedAt == null)
-                Log.Write("TradeLord traded with " + met.Name + " on the road, so trading on arrival no longer " +
-                          "leaves the market it last traded at alone");
+                Log.Write("TradeLord traded with " + met.Name + " on the road, so " +
+                          (ArrivalTrades()
+                              ? "trading on arrival no longer leaves the market it last traded at alone and the " +
+                                "map marker no longer leaves it out"
+                              : "the map marker no longer leaves out the market it last traded at"));
         }
 
         private static void NoteThisArrival(Settlement settlement)
@@ -901,9 +912,15 @@ namespace TradeLord
 
                 if (_visitTradeAllowed && Counter.HoldsBack())
                 {
+                    bool back = Arrivals.FirstTimeBack(settlement.StringId, _lastTradedAt);
+                    if (back) _lastTradedAt = null;
                     Notices.Say(TheDealWaitsForYou(), Notices.Note);
                     Log.Write("trading on arrival at " + settlement.Name + " is held back: the deal is laid out " +
-                              "on the trade screen from the menu entry instead, so nothing moved");
+                              "on the trade screen from the menu entry instead, so nothing moved" +
+                              (back
+                                  ? ", and this is your first time back since TradeLord last traded here, so the " +
+                                    "map marker no longer leaves it out"
+                                  : ""));
                     Marker.Update();
                     return;
                 }
@@ -917,9 +934,16 @@ namespace TradeLord
                     if (Options.Current.QuickSellMenu && !Muted(true)) Notices.Say(FirstTimeBackNote(), Notices.Note);
                     Log.Write("trading on arrival at " + settlement.Name + " is left alone: TradeLord made its last " +
                               "trade here and this is your first time back, so only Trade here now (TradeLord) " +
-                              "trades here this visit");
+                              "trades here this visit, and the map marker no longer leaves it out");
                     Marker.Update();
                     return;
+                }
+
+                if (_visitTradeAllowed && Arrivals.FirstTimeBack(settlement.StringId, _lastTradedAt))
+                {
+                    _lastTradedAt = null;
+                    Log.Write("this is your first time back at " + settlement.Name + " since TradeLord last traded " +
+                              "here, so the map marker no longer leaves it out");
                 }
 
                 if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
@@ -1059,6 +1083,7 @@ namespace TradeLord
             buying.OnTheScreen = true;
             Took got = Reckon(selling, sold, true);
             Took paid = Reckon(buying, bought, false);
+            Visit.NoteADealTaken(got.Units + paid.Units);
             bool addsUp = Deals.AddsUp(got.Gold - paid.Gold, purseMoved);
             if (!addsUp)
                 Log.Write("ERROR: the deal you took reckons as " + got.Gold + " gold in and " + paid.Gold +
@@ -1098,7 +1123,9 @@ namespace TradeLord
         internal static void WatchTheTradeScreen()
         {
             TextObject closed = Counter.Watch();
-            if (closed != null) Notices.Say(closed, Notices.Note);
+            if (closed == null) return;
+            Notices.Say(closed, Notices.Note);
+            Guard.Run("Action.MarkerAfterTheDeal", Marker.Update);
         }
 
         internal static void FlushToasts()
