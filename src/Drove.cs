@@ -153,7 +153,7 @@ namespace TradeLord
                 Split(party, out int packs, out int stock);
                 int spare = Herding.MountsNobodyRides(mounts, foot);
                 int shed = counted >= 0 ? counted : AnimalsToShed(party);
-                Log.Write("herd check (" + when + "): " + men + " men of whom " + foot + " on foot, " +
+                Log.Write("herd check (" + when + "): " + Herding.Men(men) + " of whom " + foot + " on foot, " +
                           mounts + " loose mount(s) with " + spare + " nobody rides, " +
                           packs + " pack animal(s), " + stock + " livestock, " +
                           Herding.DrivenInAll(herd, mounts, foot) + " driven in all, " +

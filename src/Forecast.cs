@@ -123,9 +123,10 @@ namespace TradeLord
         }
 
         internal static int WorthShiftAsItHasHeld(Settlement site, ItemObject item, float withinDays) =>
-            TradeMath.WorthShiftTrusted(PriceShift(site != null && site.IsVillage ? Hindsight.PricedFrom(site) : site,
-                                                   item, withinDays),
-                                        TrustEarned());
+            !On ? 0
+            : TradeMath.WorthShiftTrusted(PriceShift(site != null && site.IsVillage ? Hindsight.PricedFrom(site) : site,
+                                                     item, withinDays),
+                                          TrustEarned());
 
         private static int PriceShift(Settlement site, ItemObject item, float withinDays)
         {

@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.93.11
+
+- Fixed TradeLord ignoring Count what is on its way to a market when it picks the market it buys a good to sell at
+- Fixed the map marker ignoring Count what is on its way to a market when it picks where to sell your cargo
+- Fixed the map marker pointing at the market TradeLord made its last trade at, which Auto sell leaves alone the first time you come back
+- A trade with caravans or villagers on the road now frees the market TradeLord made its last trade at, so arriving there trades as usual
+- Fixed TradeLord.log giving the wrong sign for the gold of a deal Staged Trading laid out on the trade screen
+- Fixed TradeLord.log saying TradeLord had traded at a market you had only walked into
+- Fixed TradeLord.log writing "1 men" in the herd check
+- TradeLord.log now writes the map marker's weighing again only when what your cargo would fetch there changes
+- TradeLord.log no longer writes a price trace or a herd check at a castle or the training field
+- TradeLord.log now names the band that gives you free passage, not only its number
+- TradeLord.log now writes down the Trade profit the game credits and your Trade skill rising when you take a deal Staged Trading laid out
+- TradeLord.log now says how long the map marker took each time it writes down what it weighed
+- TradeLord.log now names the market the map marker leaves out because TradeLord made its last trade there
+- TradeLord.log now says when the market TradeLord buys a good for is priced with what is on its way there
+- The feature list now says the map marker prices each market as it will be when you get there, with Count what is on its way to a market on
+- The feature list now says the map marker leaves out the market TradeLord made its last trade at while Auto sell would leave it alone
+- The feature list now says a trade with caravans or villagers on the road frees the market TradeLord made its last trade at
+- The feature list now says Count what is on its way to a market also steers where TradeLord means to sell and the map marker
+- The feature list now says the map marker's weighing is written down each time what your cargo would fetch there changes
+- The feature list now says TradeLord.log says how long each weighing of the map marker took
+
 ## 1.93.10
 
 - Fixed Esc opening the game's own menu as well as closing the TradeLord ledger or Recent trades

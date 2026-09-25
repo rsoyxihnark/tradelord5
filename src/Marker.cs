@@ -16,17 +16,19 @@ namespace TradeLord
         private readonly SettlementComponent _market;
         private readonly EquipmentElement _el;
         private readonly MobileParty _party;
+        private readonly float _ride;
         private Ladder _walk;
         private int _flat;
         private bool _asked;
 
         internal Paying(Settlement site, SettlementComponent market, EquipmentElement el,
-                        MobileParty party)
+                        MobileParty party, float ride)
         {
             _site = site;
             _market = market;
             _el = el;
             _party = party;
+            _ride = ride;
         }
 
         internal int At(int taken)
@@ -41,9 +43,11 @@ namespace TradeLord
             {
                 _asked = true;
                 _flat = Priced.At(_market, _el, _party, true);
+                int landed = _el.Item == null || _flat <= 0
+                    ? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);
                 Ladder walk = _el.Item == null || _flat <= 0
-                    ? null : new Ladder(_site, _el, true, _flat, 0);
-                _walk = walk != null && walk.Walkable ? walk : null;
+                    ? null : Bulk.AsItLands(_site, _el, true, _flat, landed);
+                _walk = walk != null && (walk.Walkable || landed != 0) ? walk : null;
             }
             return _walk != null ? _walk.At(_rungs.Count) : _flat;
         }
@@ -77,6 +81,8 @@ namespace TradeLord
 
         private static long _saidValue = -1L;
         private static float _saidRate = -1f;
+        private static int _saidUnits = -1;
+        private static bool _saidHeld;
 
         internal static Settlement Tracked
         {
@@ -128,6 +134,8 @@ namespace TradeLord
             _lastAt = -1;
             _saidValue = -1L;
             _saidRate = -1f;
+            _saidUnits = -1;
+            _saidHeld = false;
         }
 
         private struct Share
@@ -186,6 +194,8 @@ namespace TradeLord
             internal int NoRoad;
             internal int Shut;
             internal int AtWar;
+            internal Settlement CameBackTo;
+            internal long Ticks;
             internal List<Share> Bill;
             internal List<Weighing> Board;
         }
@@ -197,7 +207,9 @@ namespace TradeLord
             Settlement target = null;
             Reckoning how = default(Reckoning);
             bool on = Options.Current.MarkBestSellTownOnMap;
+            long started = System.DateTime.UtcNow.Ticks;
             if (on) target = BestSellTownForCargo(out how);
+            how.Ticks = System.DateTime.UtcNow.Ticks - started;
 
             if (target == _picked)
             {
@@ -230,8 +242,11 @@ namespace TradeLord
         {
             if (!Options.Current.ExtendedDebugLogging) return;
             if (how.Value == _saidValue && how.Rate == _saidRate) return;
-            Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ": " + Why(how));
-            Ultra(how);
+            if (Marks.WorthSayingAgain(how.Value, how.Units, how.Held, _saidValue, _saidUnits, _saidHeld))
+            {
+                Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ": " + Why(how));
+                Ultra(how);
+            }
             Remember(target, how);
         }
 
@@ -239,6 +254,8 @@ namespace TradeLord
         {
             _saidValue = how.Value;
             _saidRate = how.Rate;
+            _saidUnits = how.Units;
+            _saidHeld = how.Held;
             string lookingAt = target == null ? null : target.StringId;
             _lastValue = target == null ? 0L : how.Value;
             _lastAt = Freshness.Hour;
@@ -288,6 +305,9 @@ namespace TradeLord
                             Scoring.Share(heldLast) + " of that"));
         }
 
+        private const string TheMarketLeftAlone =
+            "the market TradeLord last traded at, which trading on arrival leaves alone the first time you come back";
+
         private static string Why(in Reckoning how)
         {
             if (how.Carried == 0) return "nothing in your cargo is yours to sell";
@@ -296,7 +316,10 @@ namespace TradeLord
                        " would pay too little for any of the " + how.Carried + " good(s) you carry to " +
                        "clear Minimum profit margin, " + how.NoRoad + " have no road it could find, " +
                        how.PastCeiling + " are past your travel ceilings and " + how.NoTill +
-                       " have no gold at all";
+                       " have no gold at all" +
+                       (how.CameBackTo != null
+                           ? ", and " + how.CameBackTo.Name + " is left out as " + TheMarketLeftAlone
+                           : "");
             return how.Kinds + " of the " + how.Carried + " good(s) you carry clear Minimum profit " +
                    "margin there, " + how.Units + " unit(s) for " + how.Value + " gold, " +
                    (how.Value - how.Cost) + " of it profit" +
@@ -379,11 +402,15 @@ namespace TradeLord
                 said.Add("  ultralog: " + how.Weighed + " market(s) weighed, " + how.Told +
                          " priced, " + how.Refused + " would pay too little for anything you carry, " +
                          how.Left + " left unpriced once no purse left could beat " +
-                         how.Rate.ToString("0") + " gold a day");
+                         how.Rate.ToString("0") + " gold a day, in " +
+                         (how.Ticks / 10000d).ToString("0.0", CultureInfo.InvariantCulture) + " ms");
                 said.Add("  ultralog: left out before pricing, " + how.NoTill +
                          " with nothing in the till, " + how.PastCeiling + " past your travel ceilings, " +
                          how.NoRoad + " with no road it could find, " + how.Shut +
-                         " under siege, raided or shut, " + how.AtWar + " at war with you");
+                         " under siege, raided or shut, " + how.AtWar + " at war with you" +
+                         (how.CameBackTo != null
+                             ? ", and " + how.CameBackTo.Name + ", " + TheMarketLeftAlone
+                             : ""));
             }
             if (said.Count > 0) Log.WriteMany(said);
         }
@@ -429,18 +456,18 @@ namespace TradeLord
         }
 
         private static Paying WhatThatMarketPays(Settlement site, SettlementComponent market,
-                                                 EquipmentElement el, MobileParty party) =>
-            new Paying(site, market, el, party);
+                                                 EquipmentElement el, MobileParty party, float ride) =>
+            new Paying(site, market, el, party, ride);
 
         private static Takings WhatItWouldFetch(
-            Settlement site, SettlementComponent market, MobileParty party,
+            Settlement site, SettlementComponent market, MobileParty party, float ride,
             List<(EquipmentElement item, int amount, int worth, int floor)> cargo,
             int gold, List<Share> bill)
         {
             Takings took = default(Takings);
             foreach (var (item, amount, worth, floor) in cargo)
             {
-                Paying pays = WhatThatMarketPays(site, market, item, party);
+                Paying pays = WhatThatMarketPays(site, market, item, party, ride);
                 long fetched = 0L;
                 int moved = 0, opening = 0, last = 0;
                 for (int u = 0; u < amount; u++)
@@ -517,6 +544,7 @@ namespace TradeLord
                 if (s == party.CurrentSettlement) continue;
                 if (TradeActionBehavior.StillTheSameArrival(s)) continue;
                 if (!TradeActionBehavior.IsMarket(s)) continue;
+                if (TradeActionBehavior.ArrivalLeavesItAlone(s)) { how.CameBackTo = s; continue; }
                 if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) { how.Shut++; continue; }
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s))
                 { how.AtWar++; continue; }
@@ -540,7 +568,7 @@ namespace TradeLord
                 var (s, market, gold, ride) = reachable[at];
                 if (TradeMath.PerDay(gold, ride) <= bar) break;
                 how.Told++;
-                Takings took = WhatItWouldFetch(s, market, party, cargo, gold, null);
+                Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);
                 if (took.Value <= 0L) { how.Refused++; continue; }
                 long total = took.Value > gold ? gold : took.Value;
                 long earned = total - took.Cost;
@@ -577,7 +605,7 @@ namespace TradeLord
             if (ultra && how.Best != null)
             {
                 how.Bill = new List<Share>();
-                WhatItWouldFetch(how.Best, how.Best.SettlementComponent, party, cargo, how.Purse, how.Bill);
+                WhatItWouldFetch(how.Best, how.Best.SettlementComponent, party, how.Days, cargo, how.Purse, how.Bill);
             }
             return how.Best;
         }

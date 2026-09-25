@@ -288,7 +288,7 @@ namespace TradeLord
             Marker.ForgetWhatYouCarry();
             Guard.Run("Action.HerdReliefOnLeaving", () =>
             {
-                Drove.LogState("leaving " + settlement.Name);
+                if (HasAMarket(settlement)) Drove.LogState("leaving " + settlement.Name);
                 if (!_visitTradeAllowed)
                 {
                     if (IsMarket(settlement))
@@ -338,6 +338,20 @@ namespace TradeLord
         private static bool _tookToTheRoad;
         internal static bool StillTheSameArrival(Settlement settlement) =>
             Arrivals.StillTheSame(settlement?.StringId, _lastArrivalAt, _tookToTheRoad);
+
+        internal static bool ArrivalLeavesItAlone(Settlement settlement) =>
+            settlement != null &&
+            Arrivals.LeftOutOfTheMark(settlement.StringId, _lastTradedAt, Options.Current.AutoSellOnEntry,
+                                      Counter.HoldsBack());
+
+        private static void NoteARoadTrade(MobileParty met, Books books, int movesBefore)
+        {
+            string was = _lastTradedAt;
+            _lastTradedAt = Arrivals.AfterTheRoad(books.Moves(Simulating) > movesBefore, was);
+            if (was != null && _lastTradedAt == null)
+                Log.Write("TradeLord traded with " + met.Name + " on the road, so trading on arrival no longer " +
+                          "leaves the market it last traded at alone");
+        }
 
         private static void NoteThisArrival(Settlement settlement)
         {
@@ -868,12 +882,13 @@ namespace TradeLord
                 _movesAtArrival = Visit.Moves(Simulating);
                 _visitTradeAllowed = CanTradeHere(settlement);
                 WarnUnmatchedItemLists();
-                Drove.LogState("entering " + settlement.Name);
+                if (HasAMarket(settlement)) Drove.LogState("entering " + settlement.Name);
 
                 if (StillTheSameArrival(settlement))
                 {
-                    Log.Write("trading on arrival at " + settlement.Name + " is left alone: your party has " +
-                              "not taken to the road since it last traded here, so this is the same arrival");
+                    if (HasAMarket(settlement))
+                        Log.Write("trading on arrival at " + settlement.Name + " is left alone: your party has " +
+                                  "not taken to the road since it last came in here, so this is the same arrival");
                     Marker.Update();
                     return;
                 }
@@ -911,7 +926,7 @@ namespace TradeLord
                 if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))
                     ExecuteResupply(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
-                Drove.LogState("after trading at " + settlement.Name);
+                if (HasAMarket(settlement)) Drove.LogState("after trading at " + settlement.Name);
                 ReportStalledPasses();
                 if (CanTradeHere(settlement) &&
                     (Options.Current.AutoBuyOnEntry || Options.Current.QuickSellMenu))
@@ -927,6 +942,8 @@ namespace TradeLord
             try { return TaleWorlds.ModuleManager.ModuleHelper.GetModuleInfo("NavalDLC") != null; }
             catch { return false; }
         }
+
+        internal static bool HasAMarket(Settlement s) => s != null && (s.IsTown || s.IsVillage);
 
         internal static bool IsMarket(Settlement s) =>
             s != null && ((s.IsTown && Options.Current.TradeWithTowns) ||
@@ -1815,6 +1832,7 @@ namespace TradeLord
             if (party == null) return;
 
             Books books = BooksForTheMeeting(met);
+            int movesBefore = books.Moves(Simulating);
             string why = "trading with a party on the road";
             if (met.IsVillager)
                 LotPass(Pass.Meet(met, road, books, party), why);
@@ -1825,6 +1843,7 @@ namespace TradeLord
                 BuyPass(Pass.Meet(met, road, books, party),
                         "purchase on the road", "buying on the road", "Road buying", why);
             }
+            NoteARoadTrade(met, books, movesBefore);
             ReportStalledPasses();
         }
 

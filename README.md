@@ -55,6 +55,8 @@
 - ✅ It counts only the goods it would really sell there, the ones that clear Minimum profit margin, so it never sends you somewhere it will then refuse to sell
 - ✅ It works through the richest markets first and stops as soon as none of the rest could outpay the one it has found, so riding across Calradia costs it very little
 - ✅ It reads every market's price live each time it weighs one, so the marker is never pointing at a town on a price it read hours ago
+- ✅ With Count what is on its way to a market on, it prices each market as it will be when you get there, the same way the ledger does
+- ✅ It leaves out the market TradeLord made its last trade at while Auto sell would leave that market alone the first time you come back
 - ✅ The market already marked keeps its mark until it is a fifth past your travel ceiling, so a brief slow stretch of road does not flick the marker to another market and back
 - ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that town's purse, how far away it is and the market it beat
 - ✅ The five workshops in Calradia earning the most right now, with their town, what each will make next and their owner, on that same panel
@@ -70,6 +72,7 @@
 - ✅ Wait here for some time, a walk through the lands, or anything else that drops you back at the town or village menu does not set it trading again, and it leaves that market alone until your party has taken to the road
 - ✅ The first time you come back to the market TradeLord made its last trade at, it leaves that market alone as you arrive and as you leave
 - ✅ Trade here now (TradeLord) still trades whenever you ask
+- ✅ A trade with caravans or villagers on the road frees the market TradeLord made its last trade at, so arriving there trades as usual
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
 - ✅ Tops your food back up to three days of supply, buying the cheapest food the market has and never paying more than the cheapest price it knows of for it
 - ✅ The larder is filled after it has traded for profit, so your gold and your cargo room go to the goods you came to trade first
@@ -151,7 +154,7 @@
 - ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, newly marks on your map or holds your cargo for is further than you care to ride
 - ✅ Either ceiling set to 0 takes that limit off, and the Town travel ceiling at 0 weighs every town in Calradia, which is the slowest TradeLord runs
 - ✅ A minimum stock before it calls something worth buying
-- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the workshops and what the town uses up into a route's price; it follows Live world prices, so turning those off turns this off too
+- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the workshops and what the town uses up into a route's price, into where TradeLord means to sell what it buys and into the market marked on your map; it follows Live world prices, so turning those off turns this off too
 - ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ A share of the whole hold TradeLord may fill, so it stops buying with room left for what a battle or a quest hands you. It ships at the full hold, and selling is unaffected
@@ -174,7 +177,7 @@
 - ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting. Its trade messages, ledger panel, price tooltips, town menu entries, the lines it adds when you meet a caravan or a band of bandits, and the settings screen itself all take the new language the moment you pick it, with no restart and no reload
 - ✅ Built on Bannerlord 1.4.8.119303. The mod is supported on 1.4.8.119303 and 1.5.3.122374
 - ✅ Enable extended debug logging, on out of the box, one switch for everything TradeLord writes about its own working in `TradeLord.log`: what the market you are standing in pays and charges for every good you carry, read four ways before anything is traded, named alongside the price model the game is running and any other mod changing it, then what it quoted for every good it traded next to what the market actually paid, and after every route scan how many prices it opened and how long it took
-- ✅ The same switch writes down what it expected a market to hold by the time you got there and what it really held when you walked in, good by good, and everything the map marker weighed: every market it priced with the days, the units, the gold and the profit a day, the marked market broken down good by good, and how the mark held up against what that market paid you
+- ✅ The same switch writes down what it expected a market to hold by the time you got there and what it really held when you walked in, good by good, and everything the map marker weighed, each time what your cargo would fetch there changes: every market it priced with the days, the units, the gold and the profit a day, the marked market broken down good by good, how long each weighing took, and how the mark held up against what that market paid you
 - ✅ What this means, behind a ? beside the TradeLord ledger title: the line that used to run under the routes, one clause to a line in a window of its own, so the ledger itself stays clean
 - ✅ Recent trades, on its own button on the campaign map under the TradeLord one, so it opens without the ledger: the last twenty buys and sells it made for you, newest first, each with the day, the town, the gold it gained or cost, and what moved. Gold gained reads green and gold spent amber. It is kept in your save, so the list is still there when you load the campaign again
 - ✅ One self-check line at the top of every campaign in `TradeLord.log`, saying which of its patches applied and whether it could read the herd penalty, the quest goods, your language file and the game's price model, so a bug report is one line to paste
