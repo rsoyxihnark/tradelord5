@@ -4463,7 +4463,7 @@ def a_share_of_the_hold_caps_one_good_and_ships_off():
             and buy.count("shareCap > 0f") == 2
             and buy.count("(held + 1) * good.Weight > shareCap") == 2
             and "MaxHeldShare" not in sell_pass()
-            and (lambda src: "internal float Capacity => _capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity;" in src
+            and (lambda src: "internal float Capacity =>\n                (_capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity) + Books.CapacityAdded(Sim);" in src
                          and "TradeMath.RoomToFill(Capacity, Carried(), Options.Current.MaxCargoShare);" in src
                          and "Options.Current.MaxHeldShare > 0f ? Capacity * Options.Current.MaxHeldShare : 0f;" in src
                          and src.count("Options.Current.MaxHeldShare") == 2
@@ -5359,9 +5359,10 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
                 "internal int Shed(bool sim) => OnPaper(sim) ? _shed : 0;",
                 "internal int MountsShed(bool sim) => OnPaper(sim) ? _mounts : 0;",
                 "internal int HaulsShed(bool sim) => OnPaper(sim) ? _hauls : 0;",
-                "internal int HerdTaken(bool sim) => OnPaper(sim) ? _herd : 0;"))
+                "internal int HerdTaken(bool sim) => OnPaper(sim) ? _herd : 0;",
+                "internal float CapacityAdded(bool sim) => OnPaper(sim) ? _capacity : 0f;"))
             and all(dry in ledger for dry in ("_drySold", "_dryBought"))
-            and len(fields) == 16
+            and len(fields) == 17
             and "ForgetTheDryRun();" in forget
             and cleared(forget) == live
             and cleared(dry) == fields - live
@@ -8069,7 +8070,7 @@ def the_share_of_the_hold_it_may_fill_ships_at_the_whole_hold_and_binds_buying_o
             and "_o.MaxCargoShare" in M
             and EVER_SHIPPED.get('MaxCargoShare') == 'float'
             and held_inside_a_range('MaxCargoShare')
-            and src.count("Options.Current.MaxCargoShare") == 3
+            and src.count("Options.Current.MaxCargoShare") == 4
             and "Herding.AnotherHaulAnimalIsWanted(hauled, each, Options.Current.MaxCargoShare," in src
             and "TradeMath.RoomToFill(Capacity(party), Carried(party), Options.Current.MaxCargoShare);"
                 in src
@@ -11581,7 +11582,7 @@ def a_deal_laid_out_on_the_trade_screen_counts_what_it_moved_once():
     return (held and buy and larder
             and "internal bool LaidOut;" in books
             and "private bool OnPaper(bool sim) => sim && !LaidOut;" in books
-            and books.count("OnPaper(sim)") == 8
+            and books.count("OnPaper(sim)") == 9
             and "OnPaper(sim) && id != null && _held.TryGetValue(id, out int units) ? units : 0;" in books
             and "OnPaper(sim) && id != null && _dryBought.TryGetValue(id, out var prior) ? prior.count : 0;"
                 in books
@@ -12493,7 +12494,8 @@ def a_haul_animal_is_bought_only_for_what_a_full_cargo_left_behind_and_the_gold_
                         "float stillToCarry = TradeMath.WeightTheBudgetCanStillBuy(unfitted.weight, unfitted.cost,",
                         "pass.Spendable() - price);",
                         "if (!Herding.AnotherHaulAnimalIsWanted(hauled, each, Options.Current.MaxCargoShare,",
-                        "roomLeft, stillToCarry))", "enough = true;")
+                        "roomLeft, stillToCarry, leastFilled))",
+                        "roomLeft, stillToCarry);\n                            enough = true;")
             and ordered(haul, "if (!unfitted.food)", "_buyStalled = null;", "_cargoWasFull = false;", "return true;")
             and "additionalPackAnimals" not in ALL
             and ordered(each, "if (party == null || Carry.Sailing()) return 0f;",
@@ -12507,7 +12509,7 @@ def a_haul_animal_is_bought_only_for_what_a_full_cargo_left_behind_and_the_gold_
                         "if (addedUp > 0f && capacity > addedUp) each *= capacity / addedUp;")
             and ordered(wanted, "float each = cargoShare > 0f && cargoShare < 1f ? eachAdds * cargoShare : eachAdds;",
                         "double room = (double)Math.Max(0, hauled) * each + TradeMath.Finite(roomLeft, 0f);",
-                        "return weightToCarry > room;")
+                        "return weightToCarry > room &&")
             and "return budget >= cost ? weight : weight * ((float)budget / cost);" in
                 method_body(S['TradeMath.cs'], "public static float WeightTheBudgetCanStillBuy")
             and all(one in HERDTESTS for one in
@@ -12916,6 +12918,83 @@ def the_marked_market_keeps_its_mark_a_fifth_past_the_travel_ceiling():
 
 chk("1.93.6", "the market already marked on your map keeps its mark until it is a fifth past your travel ceiling, the same margin a better market has to beat it by, so a brief slow stretch of road does not flick the marker away and back, while no market is newly marked past the ceiling",
     the_marked_market_keeps_its_mark_a_fifth_past_the_travel_ceiling())
+
+def a_haul_animal_is_bought_only_while_your_purse_is_above_its_floor_before_every_animal():
+    haul = method_body(S['Trading.cs'], "public static bool ExecuteHaulage")
+    floor = method_body(S['Trading.cs'], "private static bool PurseBelowTheHaulAnimalFloor")
+    return (haul and floor
+            and "internal static bool PurseClearsTheFloor(int purse, int floor) => floor <= 0 || purse > floor;"
+                in S['Rules.cs']
+            and "int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);" in floor
+            and ordered(haul, "if (PurseBelowTheHaulAnimalFloor(pass)) return false;",
+                        "int floor = Options.Current.HaulAnimalGoldFloor, purseAtTheFloor = 0;",
+                        "while (remaining > 0 && herdRoom > 0)",
+                        "int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);",
+                        "if (!Herding.PurseClearsTheFloor(purse, floor))",
+                        "floored = true;",
+                        "purseAtTheFloor = purse;\n                            enough = true;\n                            break;",
+                        "int price = pass.Price(el.EquipmentElement, selling: false);",
+                        "if (pass.Sim)",
+                        '", stopping there as your purse is down to " + purseAtTheFloor +',
+                        '" set in Gold before it buys a haul animal"')
+            and haul.count("Herding.PurseClearsTheFloor(") == 1
+            and all(one in HERDTESTS for one in
+                    ("A_haul_animal_is_bought_only_while_your_purse_is_above_the_floor_you_set",
+                     "Haul_animals_stop_once_the_ones_bought_bring_your_purse_down_to_the_floor"))
+            and "and it checks that again before every animal" in README)
+
+
+chk("1.93.7", "a haul animal is bought only while your purse is still above Gold before it buys a haul animal, looked at again before every animal rather than the first alone, and TradeLord.log says when the purse stopped it",
+    a_haul_animal_is_bought_only_while_your_purse_is_above_its_floor_before_every_animal())
+
+
+def no_haul_animal_is_bought_for_goods_that_would_fill_less_than_half_of_it():
+    haul = method_body(S['Trading.cs'], "public static bool ExecuteHaulage")
+    wanted = method_body(S['Rules.cs'], "internal static bool AnotherHaulAnimalIsWanted")
+    return (haul and wanted
+            and "internal const float LeastAHaulAnimalIsFilled = 0.5f;" in S['Rules.cs']
+            and ordered(wanted, "float weightToCarry, float leastFilled = 0f)",
+                        "float each = cargoShare > 0f && cargoShare < 1f ? eachAdds * cargoShare : eachAdds;",
+                        "double room = (double)Math.Max(0, hauled) * each + TradeMath.Finite(roomLeft, 0f);",
+                        "float least = TradeMath.Finite(leastFilled, 0f);",
+                        "return weightToCarry > room && weightToCarry - room >= (double)each * (least > 0f ? least : 0f);")
+            and "float leastFilled = unfitted.food ? 0f : Herding.LeastAHaulAnimalIsFilled;" in haul
+            and ordered(haul, "roomLeft, stillToCarry, leastFilled))",
+                        "tooLittle = hauled == 0 &&",
+                        "roomLeft, stillToCarry);\n                            enough = true;",
+                        "if (hauled <= 0)", "if (tooLittle)",
+                        'Log.Repeatable("haul animal too little", settlement.StringId,',
+                        '"cargo left behind that the gold left can buy would fill less than half of one");\n'
+                        '                return false;')
+            and all(one in HERDTESTS for one in
+                    ("No_haul_animal_is_bought_for_goods_that_would_fill_less_than_half_of_it",
+                     "Food_the_party_needs_gets_a_haul_animal_however_little_of_it_the_cargo_left_behind"))
+            and "It buys no haul animal for goods that would fill less than half of one" in README)
+
+
+chk("1.93.7", "a haul animal is bought for goods only when the goods the gold left can buy fill at least half of it beyond the room already there, while food the party needs gets one however little of it a full cargo left behind, and TradeLord.log says when the goods were too few",
+    no_haul_animal_is_bought_for_goods_that_would_fill_less_than_half_of_it())
+
+
+def a_dry_run_counts_the_cargo_room_of_the_haul_animals_it_would_buy():
+    books = S['Books.cs']
+    haul = method_body(S['Trading.cs'], "public static bool ExecuteHaulage")
+    held = method_body(S['Trading.cs'], "private sealed class Pass")
+    noted = method_body(books, "internal void NoteCapacityAdded")
+    return (haul and held and noted
+            and "internal float CapacityAdded(bool sim) => OnPaper(sim) ? _capacity : 0f;" in books
+            and "if (TradeMath.Finite(carries, 0f) > 0f) _capacity += carries;" in noted
+            and "internal float Capacity =>\n                (_capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity) + Books.CapacityAdded(Sim);" in held
+            and "TradeMath.RoomToFill(Capacity, Carried(), Options.Current.MaxCargoShare);" in held
+            and ordered(haul, "if (pass.Sim)", "pass.Books.NoteHerdTaken();",
+                        "pass.Books.NoteCapacityAdded(each);", "Counter.Stage(el, selling: false, price);")
+            and S['Trading.cs'].count("NoteCapacityAdded(") == 1
+            and "HaulAnimalsBoughtOnPaperAddTheirCargoRoomToTheDryRunAlone" in BOOKTESTS
+            and "counts the cargo room of the haul animals it would buy" in README)
+
+
+chk("1.93.7", "a dry run counts the cargo room of the haul animals it would buy, so the goods and food it would buy after them are counted too, while a real run and a deal laid out on the trade screen read the room from the party itself",
+    a_dry_run_counts_the_cargo_room_of_the_haul_animals_it_would_buy())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

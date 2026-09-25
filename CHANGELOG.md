@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.93.7
+
+- Fixed Buy haul animals buying more animals after they had taken your purse down to Gold before it buys a haul animal
+- Fixed Buy haul animals buying an animal for goods that would fill less than half of it
+- Fixed Simulation mode (dry run) leaving out the goods and food the haul animals it would buy could carry
+- TradeLord.log now says when Gold before it buys a haul animal stopped Buy haul animals partway through
+- TradeLord.log now says when the goods your full cargo left behind would fill less than half a haul animal
+- The feature list now says Buy haul animals checks Gold before it buys a haul animal again before every animal
+- The feature list now says Buy haul animals buys no animal for goods that would fill less than half of one
+- The feature list now says a dry run counts the cargo room of the haul animals it would buy
+
 ## 1.93.6
 
 - Fixed TradeLord saying it credited profit to your Trade skill once the skill had stopped learning, instead of naming its learning limit
