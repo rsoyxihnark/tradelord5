@@ -799,7 +799,7 @@ namespace TradeLord
             if (!Options.Current.ExtendedDebugLogging || LedgerBehavior.BuyerWalks <= 0) return;
             Log.Write("  picking a buyer walked " + LedgerBehavior.BuyerWalks + " price ladder(s), " +
                       LedgerBehavior.BuyerRungs + " rung(s) in all, in " +
-                      (LedgerBehavior.BuyerTicks / 10000d).ToString("0.0",
+                      (LedgerBehavior.BuyerTicks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString("0.0",
                           System.Globalization.CultureInfo.InvariantCulture) + " ms");
             LedgerBehavior.ForgetWhatPickingABuyerCost();
         }

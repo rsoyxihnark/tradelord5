@@ -667,7 +667,7 @@ namespace TradeLord
             if (!Options.Current.PickTheBuyerOnTheWholeStack || units <= 1 || shortlist.Count == 1)
                 return (flat.town, flat.price, flat.rungs);
 
-            long started = System.DateTime.UtcNow.Ticks;
+            long started = System.Diagnostics.Stopwatch.GetTimestamp();
             var deep = flat;
             Ladder deepRungs = null;
             Fetched deepGot = default(Fetched);
@@ -688,7 +688,7 @@ namespace TradeLord
                 deepRungs = got.Rungs;
                 deepGot = got;
             }
-            BuyerTicks += System.DateTime.UtcNow.Ticks - started;
+            BuyerTicks += System.Diagnostics.Stopwatch.GetTimestamp() - started;
             if (deep.town != flat.town && Options.Current.ExtendedDebugLogging)
                 Log.Write("buyer for " + Tongue.Named(item.Name, item.StringId) + ": all " + units +
                           " unit(s) weighed picked " + deep.town.Name + ", which pays " +
@@ -1103,7 +1103,7 @@ namespace TradeLord
         private List<TradeRoute> ScanRoutes()
         {
             Bulk.Forget();
-            long started = System.DateTime.UtcNow.Ticks;
+            long started = System.Diagnostics.Stopwatch.GetTimestamp();
             int opened = 0, thrownAway = 0;
             var routes = new List<TradeRoute>();
             ISet<string> locked = TradePolicy.LockedKeys();
@@ -1233,7 +1233,7 @@ namespace TradeLord
                 ? y.Score.CompareTo(x.Score)
                 : y.ProfitPerDay.CompareTo(x.ProfitPerDay));
             SayWhatTheScanCost(routes.Count, opened, thrownAway,
-                               System.DateTime.UtcNow.Ticks - started);
+                               System.Diagnostics.Stopwatch.GetTimestamp() - started);
             Bulk.Forget();
             return routes;
         }
@@ -1243,7 +1243,7 @@ namespace TradeLord
             if (!Options.Current.ExtendedDebugLogging) return;
             Log.Write("route scan: " + found + " route(s) off " + opened +
                       " opening price(s), " + thrownAway + " of them thrown away by a later test, in " +
-                      (ticks / 10000d).ToString("0.0",
+                      (ticks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString("0.0",
                           System.Globalization.CultureInfo.InvariantCulture) + " ms");
         }
 

@@ -262,10 +262,27 @@ namespace TradeLord
                 if (LedgerBehavior.Instance != null &&
                     LedgerBehavior.Instance.PromiseScoreAt(site.StringId, out int walkIns, out float hereOverall))
                     lines.Add("  at " + site.Name + ": the price has held at " + Share(hereOverall) +
-                              " of promise over " + walkIns + " walk-in(s) here, which is what lowers " +
-                              "the score of a route selling here");
+                              " of promise over " + walkIns + " walk-in(s) here" +
+                              WhatTheRecordDoes(walkIns, hereOverall));
             }
             Log.WriteMany(lines);
+        }
+
+        private static string WhatTheRecordDoes(int walkIns, float held)
+        {
+            Options s = Options.Current;
+            switch (Confidence.WhatAMarketsRecordDoes(s.TrustWhatAMarketPaid && s.ConfidenceRanking, walkIns, held))
+            {
+                case Confidence.RecordAtAMarket.NotYet:
+                    return ", which starts to count toward the score of a route selling here once you have " +
+                           "walked in " + Confidence.EnoughArrivals + " times";
+                case Confidence.RecordAtAMarket.TakesNothingOff:
+                    return ", which takes nothing off the score of a route selling here";
+                case Confidence.RecordAtAMarket.Lowers:
+                    return ", which is what lowers the score of a route selling here";
+                default:
+                    return "";
+            }
         }
 
         private static void Noted(Settlement site, ItemObject item, float withinDays)
