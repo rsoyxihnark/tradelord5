@@ -575,6 +575,18 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_next_daily_tick_is_read_off_the_last_run_and_falls_back_to_half_a_day()
+        {
+            Assert.Equal(0.7f, TradeMath.NextDailyTickIn(0.3d), 4);
+            Assert.Equal(0.7f, TradeMath.NextDailyTickIn(1.3d), 4);
+            Assert.Equal(1f, TradeMath.NextDailyTickIn(0d), 4);
+            Assert.Equal(1f, TradeMath.NextDailyTickIn(1d), 4);
+            Assert.Equal(TradeMath.TickTimeUnknown, TradeMath.NextDailyTickIn(2.5d), 4);
+            Assert.Equal(TradeMath.TickTimeUnknown, TradeMath.NextDailyTickIn(-0.1d), 4);
+            Assert.Equal(TradeMath.TickTimeUnknown, TradeMath.NextDailyTickIn(double.NaN), 4);
+        }
+
+        [Fact]
         public void A_town_uses_up_as_many_goods_a_day_as_its_budget_for_the_kind_buys_at_its_own_price()
         {
             Assert.Equal(400, TradeMath.WorthUsedUpADay(500f, 50, 40));
@@ -856,25 +868,6 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_workshop_run_lands_sooner_the_further_along_it_already_is()
-        {
-            Assert.Equal(1f, TradeMath.RunLandsIn(0f, 1f), 4);
-            Assert.Equal(0.25f, TradeMath.RunLandsIn(0.75f, 1f), 4);
-            Assert.Equal(0f, TradeMath.RunLandsIn(1f, 1f), 4);
-        }
-
-        [Fact]
-        public void A_run_never_lands_outside_the_length_of_one_run_whatever_the_progress_reads()
-        {
-            Assert.Equal(0f, TradeMath.RunLandsIn(4f, 1f), 4);
-            Assert.Equal(1f, TradeMath.RunLandsIn(-2f, 1f), 4);
-            Assert.Equal(0f, TradeMath.RunLandsIn(0.5f, 0f), 4);
-            Assert.Equal(0f, TradeMath.RunLandsIn(0.5f, -1f), 4);
-            for (int step = 0; step <= 100; step++)
-                Assert.InRange(TradeMath.RunLandsIn(step / 100f, 1f), 0f, 1f);
-        }
-
-        [Fact]
         public void The_good_a_town_stocks_most_of_stands_for_what_a_workshop_of_that_kind_makes()
         {
             Assert.True(TradeMath.StandsBetter(5, 100, 0, 0));
@@ -1049,22 +1042,13 @@ namespace TradeLord.Tests
         {
             Assert.Equal(0f, TradeMath.ToTheQuarterDay(float.NaN));
             Assert.Equal(0f, TradeMath.ToTheQuarterDay(float.PositiveInfinity));
-            Assert.Equal(1f, TradeMath.RunLandsIn(float.NaN, 1f));
-            Assert.Equal(0f, TradeMath.RunLandsIn(0f, float.NaN));
+            Assert.Equal(TradeMath.TickTimeUnknown, TradeMath.NextDailyTickIn(double.NaN));
+            Assert.Equal(TradeMath.TickTimeUnknown, TradeMath.NextDailyTickIn(double.PositiveInfinity));
             Assert.Equal(0f, TradeMath.PullOfAPrice(float.NaN));
             Assert.Equal(0f, TradeMath.MeanOf(float.NaN, 4));
             Assert.Equal(0f, TradeMath.DaysSince(float.PositiveInfinity, float.PositiveInfinity));
             Assert.Equal(0f, TradeMath.Realizable(100, float.NaN));
             Assert.Equal(0f, TradeMath.FleetSpeed(float.NaN, 2, 5f));
-        }
-
-        [Fact]
-        public void A_workshop_whose_progress_cannot_be_read_is_taken_as_not_started_yet()
-        {
-            Assert.Equal(1f, TradeMath.RunLandsIn(float.NaN, 1f));
-            Assert.Equal(1f, TradeMath.RunLandsIn(0f, 1f));
-            Assert.Equal(0.25f, TradeMath.RunLandsIn(0.75f, 1f), 5);
-            Assert.Equal(0f, TradeMath.RunLandsIn(1f, 1f));
         }
 
         [Fact]
@@ -1083,7 +1067,7 @@ namespace TradeLord.Tests
                     Assert.False(float.IsInfinity(TradeMath.EtaDays(a, b)));
                     Assert.False(float.IsNaN(TradeMath.ToTheQuarterDay(a)));
                     Assert.False(float.IsInfinity(TradeMath.ToTheQuarterDay(a)));
-                    Assert.False(float.IsNaN(TradeMath.RunLandsIn(a, b)));
+                    Assert.False(float.IsNaN(TradeMath.NextDailyTickIn(a)));
                     Assert.False(float.IsNaN(TradeMath.DaysSince(a, b)));
                     Assert.False(float.IsNaN(TradeMath.PullOfAPrice(a)));
                     Assert.False(float.IsNaN(TradeMath.MeanOf(a, 3)));

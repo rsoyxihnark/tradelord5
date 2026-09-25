@@ -7188,8 +7188,8 @@ def what_lands_after_you_arrive_is_not_counted():
             and "The_purse_on_the_road_adds_up_within_the_window" in PROJECTIONTESTS)
 
 def a_workshop_run_moves_the_price_of_its_kind_and_never_the_stock_of_one_good():
-    shops = method_body(S['Forecast.cs'], "private static void ReadWhatTheShopsWillMake")
-    return ("Note(site, null, category, count," in shops
+    shops = method_body(S['Forecast.cs'], "private static void FollowTheShops")
+    return ("Note(site, null, kinds[one.Category], one.Units, one.Worth, one.Days);" in shops
             and "if (landing.Item != item) continue;" in
                 method_body(S['Projection.cs'], "internal static int UnitsLanding")
             and "if (landing.Category != category) continue;" in
@@ -7670,22 +7670,32 @@ def two_routes_that_land_within_a_few_hours_share_one_price_ladder():
 
 def a_workshop_run_lands_by_how_far_along_it_already_is():
     f = S['Forecast.cs']
-    shops = method_body(f, "private static void ReadWhatTheShopsWillMake")
-    made = method_body(f, "private static List<(ItemCategory category, int count)> Output")
-    return ("internal const float WorkshopRunDays = 1f;" in S['Projection.cs']
-            and "float lands = TradeMath.RunLandsIn(progress, Projection.WorkshopRunDays);" in shops
-            and f.count("WorkshopRunDays") == 1
-            and ordered(made, "shop.GetProductionProgress(i)",
-                        "int pick = TradeRules.RunsSoonest(ready);",
-                        "progress = ready[pick].progress;")
-            and "TradeMath.RunLandsIn" in MATHTESTS
-            and "A_workshop_run_is_measured_over_one_day" in PROJECTIONTESTS)
+    shops = method_body(f, "private static void FollowTheShops")
+    follow = method_body(S['Projection.cs'], "internal static void Follow")
+    tick = method_body(S['TradeMath.cs'], "public static float NextDailyTickIn")
+    return (shops and follow and tick
+            and "Progress = shop.GetProductionProgress(p)," in shops
+            and "if (shop.LastRunCampaignTime.ToDays > lastRun) lastRun = shop.LastRunCampaignTime.ToDays;" in shops
+            and "TradeMath.NextDailyTickIn(CampaignTime.Now.ToDays - lastRun)" in shops
+            and ordered(follow, "for (float at = first; at <= watch; at += 1f)",
+                        "float progress = TradeMath.Finite(line.Progress, 0f);",
+                        "line.Progress = (progress > 1f ? 1f : progress) + line.Speed;",
+                        "while (line.Progress >= 1f)",
+                        "bool ran = RunOnce(line, town, buy, sell, toTown, madeNow, takenNow);",
+                        "line.Progress -= 1f;", "if (!ran) break;")
+            and ordered(tick, "daysSinceTheLastRun > DaysARunTellsTheTickFor) return TickTimeUnknown;",
+                        "double gone = daysSinceTheLastRun - Math.Floor(daysSinceTheLastRun);")
+            and "WorkshopRunDays" not in ALL
+            and "RunLandsIn" not in ALL
+            and "The_next_daily_tick_is_read_off_the_last_run_and_falls_back_to_half_a_day" in MATHTESTS
+            and "A_workshop_line_runs_at_every_daily_tick_its_pace_reaches_while_the_town_feeds_it" in PROJECTIONTESTS)
 
 def what_a_workshop_makes_is_valued_at_the_good_that_town_stocks():
     f = S['Forecast.cs']
     stands = method_body(f, "private static ItemObject StandsForAt")
-    shops = method_body(f, "private static void ReadWhatTheShopsWillMake")
-    return ("ItemObject stands = StandsForAt(site, category);" in shops
+    shops = method_body(f, "private static void FollowTheShops")
+    return ("ItemObject stands = StandsForAt(site, one.Value);" in shops
+            and "book.UnitValue[one.Key] = stands.Value;" in shops
             and "if (item == null || item.ItemCategory != category || !TradePolicy.Priced(item)) continue;"
                 in stands
             and "TradeMath.StandsBetter(count, item.Value, most," in stands
@@ -7716,7 +7726,7 @@ chk("1.64.1", "how much a market pulls in all is added up once an hour rather th
     the_pull_across_a_market_is_added_up_once_an_hour())
 chk("1.64.1", "the days to a market are read to the nearest quarter day, so two routes that land together share one price ladder",
     two_routes_that_land_within_a_few_hours_share_one_price_ladder())
-chk("1.64.1", "a workshop run lands by how far along the game says it already is, within the length of one run",
+chk("1.64.1", "a workshop run lands at the town's daily tick once the progress the game reports and the line's own pace make a whole run, the tick read off the last time a workshop there ran",
     a_workshop_run_lands_by_how_far_along_it_already_is())
 chk("1.64.1", "what a workshop will make is valued at the good that town actually stocks, and the cheapest of its kind only when it stocks none",
     what_a_workshop_makes_is_valued_at_the_good_that_town_stocks())
@@ -7989,7 +7999,8 @@ def no_travel_or_price_rule_hands_back_a_number_that_is_not_one():
             and "Finite(distance / (Math.Max(landSpeed, seaSpeed) * 24f), FurthestThereIs)" in t
             and "Finite(distance / (pace * 24f), FurthestThereIs)" in t
             and "days = Finite(days, 0f);" in method_body(t, "public static float ToTheQuarterDay")
-            and "progress = Finite(progress, 0f);" in method_body(t, "public static float RunLandsIn")
+            and "float progress = TradeMath.Finite(line.Progress, 0f);" in method_body(S['Projection.cs'], "internal static void Follow")
+            and "if (double.IsNaN(daysSinceTheLastRun) || daysSinceTheLastRun < 0d ||" in method_body(t, "public static float NextDailyTickIn")
             and "float days = Finite((nowHours - thenHours) / 24f, 0f);" in t
             and "Finite(total / counted, 0f)" in t
             and "Finite(farSellPrice * safetyFactor, 0f)" in t
@@ -7999,8 +8010,8 @@ def no_travel_or_price_rule_hands_back_a_number_that_is_not_one():
             and all(one in MATHTESTS for one in
                     ("Every_travel_rule_hands_back_a_real_number_whatever_it_is_handed",
                      "A_distance_the_game_cannot_work_out_reads_as_far_away_rather_than_next_door",
-                     "A_travel_time_the_game_can_work_out_is_left_exactly_as_it_was",
-                     "A_workshop_whose_progress_cannot_be_read_is_taken_as_not_started_yet"))
+                     "A_travel_time_the_game_can_work_out_is_left_exactly_as_it_was"))
+            and "A_workshop_whose_progress_cannot_be_read_is_taken_as_not_started_yet" in PROJECTIONTESTS
             and "A_travel_ceiling_that_is_not_a_number_looks_as_far_as_it_likes" in RANKTESTS)
 
 def a_good_worth_showing_is_counted_without_dividing_by_a_price_of_nothing():
@@ -10993,8 +11004,8 @@ def what_is_on_its_way_is_counted_at_the_trust_it_has_earned():
                              "return shift;")
             and "_forecastsScored++;" in kept and "_forecastMissed += missed;" in kept
             and "missed = TradeMath.MeanOf(_forecastMissed, _forecastsScored);" in read
-            and 'dataStore.SyncData("TradeLord_ForecastsScoredWithLeaving", ref _forecastsScored);' in S['Ledger.cs']
-            and 'dataStore.SyncData("TradeLord_ForecastMissedWithLeaving", ref _forecastMissed);' in S['Ledger.cs']
+            and 'dataStore.SyncData("TradeLord_ForecastsScoredEveryRun", ref _forecastsScored);' in S['Ledger.cs']
+            and 'dataStore.SyncData("TradeLord_ForecastMissedEveryRun", ref _forecastMissed);' in S['Ledger.cs']
             and "LedgerBehavior.Instance?.KeepForecastScore(TradeMath.MissThatCounts(how.Share));"
                 in written
             and "Forecast.WorthShift(site, item, withinDays)" in noted
@@ -12644,13 +12655,14 @@ def what_a_town_uses_up_and_its_workshops_take_leave_its_shelf_in_the_forecast()
             and "double worth = (double)budget / price * unitValue;" in rate
             and all("_drawing.Clear();" in method_body(f, sig) and "_usedUp.Clear();" in method_body(f, sig)
                     for sig in ("internal static void Forget", "private static void Build"))
-            and ordered(shops, "out List<(ItemCategory, int)> used);",
-                        "float lands = TradeMath.RunLandsIn(progress, Projection.WorkshopRunDays);",
-                        "NoteADraw(site, category, TradeMath.WorthOf(count, stands == null ? 0 : stands.Value),\n"
-                        "                                  lands);")
-            and ordered(made, "int pick = TradeRules.RunsSoonest(ready);",
-                        "MBReadOnlyList<(ItemCategory, int)> taken = type.Productions[pick].Inputs;",
-                        "if (category != null && count > 0) used.Add((category, count));")
+            and ordered(method_body(f, "private static void FollowTheShops"),
+                        "if (Listed(production.Inputs, line.Inputs, line, kinds) &&",
+                        "WorkshopRuns.Follow(lines, book,",
+                        "foreach (Draw one in taken)",
+                        "NoteADraw(site, kinds[one.Category], one.Worth, one.Days);")
+            and ordered(method_body(p, "private static bool RunOnce"),
+                        "town.Units.TryGetValue(kind, out int have);", "if (have < count) return false;",
+                        "Stock(town, kind, -count);", "Tally(taken, kind, count);")
             and ordered(worth, "withinDays = TradeMath.ToTheQuarterDay(withinDays);",
                         "double used = usedADay > 0 ? (double)usedADay * withinDays : 0d;",
                         "if (!TradeMath.LandsInTime(draw.Days, withinDays)) continue;",
@@ -13104,6 +13116,96 @@ def a_dry_run_takes_away_the_room_of_the_animals_it_would_sell():
 
 chk("1.93.8", "a dry run takes away the cargo room of every haul animal and spare mount it sells on paper, at what the game gives one, while a real run and a deal laid out on the trade screen read the room from the party itself",
     a_dry_run_takes_away_the_room_of_the_animals_it_would_sell())
+
+def every_workshop_line_is_followed_at_the_towns_daily_tick():
+    f = S['Forecast.cs']
+    read = method_body(f, "private static void ReadWhatTheShopsWillMake")
+    shops = method_body(f, "private static void FollowTheShops")
+    listed = method_body(f, "private static bool Listed")
+    watch = method_body(S['Projection.cs'], "internal static float Watch")
+    return (read and shops and listed and watch
+            and ordered(read, "float watch = WorkshopRuns.Watch(MarketRank.Ceiling(false, Options.Current));",
+                        "Campaign.Current?.GetCampaignBehavior<IWorkshopWarehouseCampaignBehavior>();",
+                        "if (town?.Workshops == null || town.Settlement == null || town.InRebelliousState) continue;",
+                        'Guard.Run("Forecast.Workshops", town, one => FollowTheShops(one, watch, warehouse));')
+            and ordered(shops, "for (int k = 0; k < shops.Length; k++)",
+                        "for (int p = 0; p < type.Productions.Count; p++)",
+                        "Speed = pace.GetEffectiveConversionSpeedOfProduction(shop, production.ConversionSpeed, false)",
+                        "Pace = production.ConversionSpeed,", "Hidden = type.IsHidden,")
+            and "Output(" not in shops and "RunsSoonest" not in shops
+            and ordered(listed, "if (category == null || count <= 0) return false;",
+                        "into.Add((category.StringId, count));",
+                        "if (!category.IsTradeGood) line.TradeGoodsOnly = false;")
+            and ordered(watch, "if (ceiling <= 0f) return LongestWatch;",
+                        "float watch = (float)Math.Ceiling(ceiling * 2f) + 1f;")
+            and "internal const float LongestWatch = 10f;" in S['Projection.cs']
+            and all(one in PROJECTIONTESTS for one in
+                    ("A_workshop_line_runs_at_every_daily_tick_its_pace_reaches_while_the_town_feeds_it",
+                     "A_faster_line_runs_more_than_once_a_day_and_a_slower_one_skips_days",
+                     "A_line_stops_for_the_day_at_the_first_run_it_cannot_feed_and_loses_that_progress",
+                     "The_workshops_are_followed_for_twice_your_travel_ceiling_and_a_day_within_bounds"))
+            and "Every workshop is followed day by day, every line of it at the game's own pace" in README)
+
+
+chk("1.93.9", "every production line of every workshop in a town that is not in revolt is followed at the town's daily tick at the game's own pace, for twice your Town travel ceiling and a day and ten days at most",
+    every_workshop_line_is_followed_at_the_towns_daily_tick())
+
+
+def a_workshop_run_counts_only_while_the_town_feeds_it_and_it_pays():
+    run = method_body(S['Projection.cs'], "private static bool RunOnce")
+    follow = method_body(S['Projection.cs'], "internal static void Follow")
+    return (run and follow
+            and "internal const float PayOverInputsPerPace = 200f;" in S['Projection.cs']
+            and "internal const int MostPaidForAnOutput = 1000;" in S['Projection.cs']
+            and ordered(run, "if (have < count) return false;",
+                        "cost += (long)buy[kind] * count;",
+                        "income += (long)sell[kind] * count;",
+                        "double bar = line.Hidden || !(line.Pace > 0f) ? cost : cost + PayOverInputsPerPace / line.Pace;",
+                        "if (income <= bar) return false;",
+                        "if (line.TradeGoodsOnly && town.Gold < income) return false;",
+                        "if (owned && town.Capital[k] < cost) return false;")
+            and ordered(run, "town.Gold += buy[kind];", "int paid = Math.Min(MostPaidForAnOutput, buy[kind]);",
+                        "town.Gold -= paid;", "return true;")
+            and ordered(follow, "landing.Add((arriving[i].Days, arriving[i].Category, arriving[i].Units));",
+                        "landing.Add((bought[i].days, bought[i].category, -bought[i].units));",
+                        "buy[kind] = price(kind, store, false);", "sell[kind] = price(kind, store, true);",
+                        "if (town.Expense[k] > 0 && town.Capital[k] >= town.Expense[k]) town.Capital[k] -= town.Expense[k];",
+                        "Stock(town, kind, -(int)Math.Round((double)worth / value, MidpointRounding.AwayFromZero));",
+                        "made.Add(new Landing", "taken.Add(new Draw")
+            and all(one in PROJECTIONTESTS for one in
+                    ("A_run_that_would_not_pay_the_game_its_margin_never_happens",
+                     "A_town_short_of_gold_or_a_workshop_short_of_capital_runs_nothing_of_trade_goods",
+                     "The_first_workshop_in_the_town_gets_the_last_of_an_input_and_what_one_makes_feeds_the_next",
+                     "Goods_on_their_way_in_feed_a_workshop_and_what_caravans_buy_and_the_town_uses_starve_it",
+                     "The_daily_expense_comes_off_a_workshop_until_its_capital_cannot_meet_it"))
+            and "a run counts only while the town holds its inputs and the run pays" in README)
+
+
+chk("1.93.9", "a workshop run counts only while the town's shelf holds its inputs, its outputs sell for more than its inputs cost plus the game's own margin, the town can pay for them and the workshop can pay for its inputs, the shelf moving with what lands, what caravans buy and what the town uses",
+    a_workshop_run_counts_only_while_the_town_feeds_it_and_it_pays())
+
+
+def your_own_workshops_draw_on_their_warehouse_and_land_only_their_market_share():
+    shops = method_body(S['Forecast.cs'], "private static void FollowTheShops")
+    run = method_body(S['Projection.cs'], "private static bool RunOnce")
+    ledger = S['Ledger.cs']
+    return (shops and run
+            and ordered(shops, "bool yours = shop.Owner == Hero.MainHero;",
+                        "bool fromWarehouse = yours && warehouse != null && warehouse.IsGettingInputsFromWarehouse(shop);",
+                        "if (fromWarehouse) book.Warehouse[k] = warehouse.GetInputCount(shop);",
+                        "warehouse.GetStockProductionInWarehouseRatio(shop)")
+            and ordered(run, "bool fromWarehouse = line.Yours && line.FromWarehouse && owned && k < town.Warehouse.Length &&",
+                        "if (!fromWarehouse)", "if (fromWarehouse) town.Warehouse[k] -= need;",
+                        "toTown[k] += line.ToTown;", "if (toTown[k] < 1f) continue;")
+            and 'dataStore.SyncData("TradeLord_ForecastsScoredEveryRun", ref _forecastsScored);' in ledger
+            and 'dataStore.SyncData("TradeLord_ForecastMissedEveryRun", ref _forecastMissed);' in ledger
+            and "WithLeaving" not in ledger
+            and "Your_own_workshop_draws_on_its_warehouse_first_and_leaves_its_share_of_output_in_the_town" in PROJECTIONTESTS
+            and "Your own workshops draw on their warehouse first" in README)
+
+
+chk("1.93.9", "your own workshops draw on their warehouse first and land in the market only the share you send there, and the forecast learns afresh how far to trust itself now that it follows every run",
+    your_own_workshops_draw_on_their_warehouse_and_land_only_their_market_share())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

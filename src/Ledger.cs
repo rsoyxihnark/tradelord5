@@ -169,8 +169,8 @@ namespace TradeLord
             dataStore.SyncData("TradeLord_PromisesScoredWhenDue", ref _promisesScored);
             dataStore.SyncData("TradeLord_PromiseHeldWhenDue", ref _promiseHeld);
             dataStore.SyncData("TradeLord_PromiseTextWhenDue", ref _promiseText);
-            dataStore.SyncData("TradeLord_ForecastsScoredWithLeaving", ref _forecastsScored);
-            dataStore.SyncData("TradeLord_ForecastMissedWithLeaving", ref _forecastMissed);
+            dataStore.SyncData("TradeLord_ForecastsScoredEveryRun", ref _forecastsScored);
+            dataStore.SyncData("TradeLord_ForecastMissedEveryRun", ref _forecastMissed);
             dataStore.SyncData("TradeLord_LatelyText", ref _latelyText);
             dataStore.SyncData("TradeLord_VillagePursesPutBack", ref _villagePursesPutBack);
             if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;

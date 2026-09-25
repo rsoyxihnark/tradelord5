@@ -407,13 +407,17 @@ namespace TradeLord
         public static float HoursOf(float days) =>
             days <= 0f ? 0f : Finite(days * 24f, 0f);
 
-        public static float RunLandsIn(float progress, float runDays)
+        public const float TickTimeUnknown = 0.5f;
+
+        public const double DaysARunTellsTheTickFor = 2d;
+
+        public static float NextDailyTickIn(double daysSinceTheLastRun)
         {
-            progress = Finite(progress, 0f);
-            runDays = Finite(runDays, 0f);
-            float left = 1f - (progress < 0f ? 0f : (progress > 1f ? 1f : progress));
-            float days = left * (runDays < 0f ? 0f : runDays);
-            return days < 0f ? 0f : days;
+            if (double.IsNaN(daysSinceTheLastRun) || daysSinceTheLastRun < 0d ||
+                daysSinceTheLastRun > DaysARunTellsTheTickFor) return TickTimeUnknown;
+            double gone = daysSinceTheLastRun - Math.Floor(daysSinceTheLastRun);
+            float next = (float)(1d - gone);
+            return next > 0f && next <= 1f ? next : 1f;
         }
 
         public static bool StandsBetter(int count, int value, int bestCount, int bestValue) =>
