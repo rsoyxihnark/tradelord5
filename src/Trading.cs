@@ -507,7 +507,8 @@ namespace TradeLord
 
             internal bool WouldReachYourReserve(int price) => price >= Spendable();
 
-            internal float Capacity => _capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity;
+            internal float Capacity =>
+                (_capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity) + Books.CapacityAdded(Sim);
 
             internal float Carried()
             {
@@ -1920,7 +1921,9 @@ namespace TradeLord
             }
 
             int hauled = 0, simSpent = 0;
-            bool enough = false;
+            bool enough = false, tooLittle = false, floored = false;
+            int floor = Options.Current.HaulAnimalGoldFloor, purseAtTheFloor = 0;
+            float leastFilled = unfitted.food ? 0f : Herding.LeastAHaulAnimalIsFilled;
 
             var stable = CheapestFirst(pass, it => TradePolicy.MayHaul(it, pass.Locked),
                                        Options.Current.HaulAnimalPriceTolerance);
@@ -1942,6 +1945,14 @@ namespace TradeLord
 
                     while (remaining > 0 && herdRoom > 0)
                     {
+                        int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);
+                        if (!Herding.PurseClearsTheFloor(purse, floor))
+                        {
+                            floored = true;
+                            purseAtTheFloor = purse;
+                            enough = true;
+                            break;
+                        }
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (price <= 0 || price > ceiling) break;
                         if (pass.WouldReachYourReserve(price)) break;
@@ -1950,8 +1961,11 @@ namespace TradeLord
                         float stillToCarry = TradeMath.WeightTheBudgetCanStillBuy(unfitted.weight, unfitted.cost,
                                                                                    pass.Spendable() - price);
                         if (!Herding.AnotherHaulAnimalIsWanted(hauled, each, Options.Current.MaxCargoShare,
-                                                               roomLeft, stillToCarry))
+                                                               roomLeft, stillToCarry, leastFilled))
                         {
+                            tooLittle = hauled == 0 &&
+                                        Herding.AnotherHaulAnimalIsWanted(hauled, each, Options.Current.MaxCargoShare,
+                                                                          roomLeft, stillToCarry);
                             enough = true;
                             break;
                         }
@@ -1961,6 +1975,7 @@ namespace TradeLord
                             simSpent += price;
                             pass.Books.NotePurchase(item.StringId, price, 0f, TradeRules.FoodValue(good));
                             pass.Books.NoteHerdTaken();
+                            pass.Books.NoteCapacityAdded(each);
                             Counter.Stage(el, selling: false, price);
                         }
                         else
@@ -1981,7 +1996,14 @@ namespace TradeLord
                 }
             });
 
-            if (hauled <= 0) return false;
+            if (hauled <= 0)
+            {
+                if (tooLittle)
+                    Log.Repeatable("haul animal too little", settlement.StringId,
+                                   "haul animals are left alone at " + settlement.Name + ": the goods your full " +
+                                   "cargo left behind that the gold left can buy would fill less than half of one");
+                return false;
+            }
 
             int spent = pass.Spent(simSpent);
             pass.Moved(gold: spent, selling: false);
@@ -1990,7 +2012,11 @@ namespace TradeLord
                       " bought, -" + spent + " gold at " + settlement.Name + ", for " +
                       (unfitted.food ? "food" : "goods") + " weighing " +
                       carrying.ToString("0", System.Globalization.CultureInfo.InvariantCulture) +
-                      " that your full cargo left behind and the gold left can still buy");
+                      " that your full cargo left behind and the gold left can still buy" +
+                      (floored
+                          ? ", stopping there as your purse is down to " + purseAtTheFloor +
+                            ", no longer above the " + floor + " set in Gold before it buys a haul animal"
+                          : ""));
             pass.Logged(selling: false, "stocking the baggage train");
             TextObject msg = pass.Said(
                 "{=TL111}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more.",

@@ -436,6 +436,26 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void HaulAnimalsBoughtOnPaperAddTheirCargoRoomToTheDryRunAlone()
+        {
+            Books books = Fresh();
+            books.NoteCapacityAdded(100f);
+            books.NoteCapacityAdded(115f);
+            books.NoteCapacityAdded(float.NaN);
+            books.NoteCapacityAdded(-20f);
+
+            Assert.Equal(215f, books.CapacityAdded(true));
+            Assert.Equal(0f, books.CapacityAdded(false));
+
+            books.LaidOut = true;
+            Assert.Equal(0f, books.CapacityAdded(true));
+
+            books.LaidOut = false;
+            books.ForgetTheDryRun();
+            Assert.Equal(0f, books.CapacityAdded(true));
+        }
+
+        [Fact]
         public void ADryRunThatIsNotLaidOutCarriesWhatItWouldHaveMoved()
         {
             Books books = Fresh();

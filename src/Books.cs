@@ -23,6 +23,7 @@ namespace TradeLord
         private int _herd;
         private int _food;
         private float _weight;
+        private float _capacity;
 
         internal bool LaidOut;
 
@@ -51,6 +52,7 @@ namespace TradeLord
             _herd = 0;
             _food = 0;
             _weight = 0f;
+            _capacity = 0f;
         }
 
         internal int PaidOut(bool sim) => _paid + (sim ? _spent : 0);
@@ -60,6 +62,8 @@ namespace TradeLord
         internal int TillDrawn(bool sim) => sim ? _drawn : 0;
 
         internal float Weight(bool sim) => OnPaper(sim) ? _weight : 0f;
+
+        internal float CapacityAdded(bool sim) => OnPaper(sim) ? _capacity : 0f;
 
         internal int FoodHeld(bool sim) => OnPaper(sim) ? _food : 0;
 
@@ -151,5 +155,10 @@ namespace TradeLord
         }
 
         internal void NoteHerdTaken() => _herd++;
+
+        internal void NoteCapacityAdded(float carries)
+        {
+            if (TradeMath.Finite(carries, 0f) > 0f) _capacity += carries;
+        }
     }
 }

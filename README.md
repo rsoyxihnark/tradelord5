@@ -73,8 +73,9 @@
 - ✅ A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
 - ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to a quarter more than the cheapest price it knows of for one, which you can set anywhere from the cheapest to three times it
 - ✅ It buys them only when your cargo is full and leaves behind goods worth buying or the food Restock and keep food (days of supply) asks for, only as many as the gold left after them can fill, and then buys what now fits
+- ✅ It buys no haul animal for goods that would fill less than half of one, while the food your party needs gets one however little of that food is left behind
 - ✅ It buys none while your cargo is already fuller than Share of the hold TradeLord may fill allows, since the first animals would only carry what you already have
-- ✅ It buys none at all until your purse is above 2000 denars, which you can set too, so early gold goes on goods instead
+- ✅ It buys none at all until your purse is above 2000 denars, which you can set too, and it checks that again before every animal, so early gold goes on goods instead
 - ✅ It buys no riding horses or camels at all, and it stops before your gold reaches your reserve
 - ✅ It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
 - ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it
@@ -116,6 +117,7 @@
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen, apart from three warnings: cargo full, a purse below your Gold reserve, and an item list entry that matches no good
 - ✅ A dry run that simulates every trade it would have made and shows you the estimate, marked a best case in the message and in the log, moving nothing
+- ✅ The dry run counts the cargo room of the haul animals it would buy, so it also shows the goods and food those animals would carry
 - ✅ Free passage past bandits, on out of the box and one switch to turn off: run into looters, sea raiders or any other bandits and TradeLord adds a line to what you can say to them, asking to be let past
 - ✅ They let you go with no fight and no ransom, then leave you be for the next few hours instead of turning round and hitting you again
 
