@@ -65,6 +65,8 @@ namespace TradeLord
 
         private static Settlement _picked;
 
+        private static readonly HashSet<string> _owedAFairLook = new HashSet<string>(System.StringComparer.Ordinal);
+
         private static int _hour = -1;
         private static Vec2 _at;
         private const float MovedFar = 100f;
@@ -131,6 +133,7 @@ namespace TradeLord
             ForgetTheRead();
             _tracked = null;
             _picked = null;
+            _owedAFairLook.Clear();
             _hour = -1;
             _markedId = null;
             _markedValue = 0L;
@@ -209,6 +212,9 @@ namespace TradeLord
             internal int Shut;
             internal int AtWar;
             internal Settlement CameBackTo;
+            internal Settlement Afresh;
+            internal Settlement Unheld;
+            internal List<string> Compared;
             internal double Took;
             internal List<Share> Bill;
             internal List<Weighing> Board;
@@ -222,7 +228,7 @@ namespace TradeLord
             Reckoning how = default(Reckoning);
             bool on = Options.Current.MarkBestSellTownOnMap;
             long started = System.Diagnostics.Stopwatch.GetTimestamp();
-            if (on) target = BestSellTownForCargo(out how);
+            if (on) target = TheMarkFairlyWeighed(out how);
             how.Took = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /
                        System.Diagnostics.Stopwatch.Frequency;
 
@@ -233,6 +239,8 @@ namespace TradeLord
                     tracker.RegisterObject(target);
                     _tracked = target;
                 }
+                Marks.OweAFairLook(_owedAFairLook, how.Compared, MobileParty.MainParty?.CurrentSettlement?.StringId,
+                                   target == null ? null : TradeActionBehavior.MarketTheMarkerLeavesOut(), target == null);
                 if (target != null) SayItWeighedAgain(target, how);
                 return;
             }
@@ -240,6 +248,8 @@ namespace TradeLord
                 tracker.RemoveTrackedObject(_tracked);
             _tracked = null;
             _picked = target;
+            Marks.OweAFairLook(_owedAFairLook, how.Compared, MobileParty.MainParty?.CurrentSettlement?.StringId,
+                               target == null ? null : TradeActionBehavior.MarketTheMarkerLeavesOut(), true);
             if (target != null && !tracker.CheckTracked(target))
             {
                 tracker.RegisterObject(target);
@@ -412,7 +422,11 @@ namespace TradeLord
                          ((TradeMath.TheMarkedTownHoldsBy - 1f) * 100f).ToString("0", CultureInfo.InvariantCulture) +
                          "%)"
                        : "") +
-                   ", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how);
+                   ", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how) +
+                   (how.Afresh != null && how.Unheld != null
+                       ? ", marked afresh because " + how.Afresh.Name + ", left out while " + how.Unheld.Name +
+                         " was marked, now earns more a day than it"
+                       : "");
         }
 
         private static string TheNextBest(in Reckoning how)
@@ -595,12 +609,12 @@ namespace TradeLord
             };
 
         private static void TheMarkedTownFirst(
-            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable)
+            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, Settlement holder)
         {
-            if (_picked == null) return;
+            if (holder == null) return;
             for (int at = 1; at < reachable.Count; at++)
             {
-                if (reachable[at].s != _picked) continue;
+                if (reachable[at].s != holder) continue;
                 var held = reachable[at];
                 reachable.RemoveAt(at);
                 reachable.Insert(0, held);
@@ -608,7 +622,61 @@ namespace TradeLord
             }
         }
 
-        private static Settlement BestSellTownForCargo(out Reckoning how)
+        private static Settlement TheMarkFairlyWeighed(out Reckoning how)
+        {
+            Settlement best = BestSellTownForCargo(out how, _picked);
+            if (how.Afresh == null || best == null || best != _picked)
+            {
+                how.Afresh = null;
+                return best;
+            }
+            Settlement back = how.Afresh;
+            List<string> compared = how.Compared;
+            best = BestSellTownForCargo(out how, null);
+            how.Afresh = back;
+            how.Unheld = _picked;
+            how.Compared = compared;
+            return best;
+        }
+
+        private static float RateThere((Settlement s, SettlementComponent market, int gold, float days) one,
+                                       MobileParty party,
+                                       List<(EquipmentElement item, int amount, int worth, int floor)> cargo)
+        {
+            Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null);
+            if (took.Value <= 0L) return 0f;
+            long total = took.Value > one.gold ? one.gold : took.Value;
+            return TradeMath.PerDay(total - took.Cost, one.days);
+        }
+
+        private static Settlement OutEarnsTheMark(
+            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, Settlement holder,
+            MobileParty party, List<(EquipmentElement item, int amount, int worth, int floor)> cargo,
+            List<string> compared)
+        {
+            int mine = -1;
+            for (int at = 0; at < reachable.Count; at++)
+                if (reachable[at].s == holder) { mine = at; break; }
+            Settlement back = null;
+            float marked = 0f;
+            float best = 0f;
+            bool priced = false;
+            for (int at = 0; at < reachable.Count; at++)
+            {
+                Settlement s = reachable[at].s;
+                if (!_owedAFairLook.Contains(s.StringId)) continue;
+                compared.Add(s.StringId);
+                if (mine < 0) continue;
+                if (!priced) { marked = RateThere(reachable[mine], party, cargo); priced = true; }
+                float rate = RateThere(reachable[at], party, cargo);
+                if (!Marks.OutEarns(rate, marked) || (back != null && rate <= best)) continue;
+                best = rate;
+                back = s;
+            }
+            return back;
+        }
+
+        private static Settlement BestSellTownForCargo(out Reckoning how, Settlement holder)
         {
             how = default(Reckoning);
             MobileParty party = MobileParty.MainParty;
@@ -633,7 +701,7 @@ namespace TradeLord
                 how.Weighed++;
                 int purse = TradeRules.WhatTheTillCanPay(market.Gold, s.IsVillage);
                 if (purse <= 0) { how.NoTill++; continue; }
-                float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == _picked);
+                float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == holder);
                 if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) { how.PastCeiling++; continue; }
                 float ride = Travel.EstimateDaysFromParty(s);
                 if (TradeMath.OutOfReach(ride)) { how.NoRoad++; continue; }
@@ -641,7 +709,12 @@ namespace TradeLord
                 reachable.Add((s, market, purse, ride));
             }
             reachable.Sort(FastestPurseFirst);
-            TheMarkedTownFirst(reachable);
+            if (holder != null && _owedAFairLook.Count > 0)
+            {
+                how.Compared = new List<string>();
+                how.Afresh = OutEarnsTheMark(reachable, holder, party, cargo, how.Compared);
+            }
+            TheMarkedTownFirst(reachable, holder);
             if (ultra) how.Board = new List<Weighing>();
 
             float bar = 0f;
@@ -655,7 +728,7 @@ namespace TradeLord
                 long total = took.Value > gold ? gold : took.Value;
                 long earned = total - took.Cost;
                 float rate = TradeMath.PerDay(earned, ride);
-                float weighed = TradeMath.RateTheMarkHolds(rate, s == _picked);
+                float weighed = TradeMath.RateTheMarkHolds(rate, s == holder);
                 how.Board?.Add(new Weighing
                 {
                     Where = s, Days = ride, Units = took.Units, Value = total,
@@ -682,7 +755,7 @@ namespace TradeLord
                 else if (rate > how.RunnerUpRate)
                 { how.RunnerUpRate = rate; how.RunnerUpValue = total; how.RunnerUp = s; }
             }
-            how.Held = how.Best != null && how.Best == _picked && how.RunnerUpRate > how.Rate;
+            how.Held = how.Best != null && how.Best == holder && how.RunnerUpRate > how.Rate;
             how.Left = reachable.Count - how.Told;
             if (ultra && how.Best != null)
             {
@@ -695,7 +768,7 @@ namespace TradeLord
         private static int BestMarketFloor(EquipmentElement held)
         {
             if (!Options.Current.PreferBestSellTown) return 0;
-            var best = LedgerBehavior.Instance?.BestSell(held.Item) ?? (null, 0);
+            var best = LedgerBehavior.Instance?.BestSellAsItLands(held.Item) ?? (null, 0);
             return best.Item1 == null ? 0 : TradeRules.BestMarketFloor(
                 TradeMath.AtThisQuality(best.Item2, held.Item.Value, held.ItemValue),
                 Options.Current.BestSellTownTolerance);

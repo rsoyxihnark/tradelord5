@@ -608,6 +608,27 @@ namespace TradeLord
         }
 
         public (Settlement town, int price) BestSell(ItemObject item) => First(TopMarkets(item, selling: true));
+
+        public (Settlement town, int price) BestSellAsItLands(ItemObject item)
+        {
+            var markets = EverySell(item);
+            Settlement best = null;
+            int top = 0;
+            for (int i = 0; i < markets.Count; i++)
+            {
+                var (town, quoted) = markets[i];
+                if (town == null || quoted <= 0) continue;
+                float days = Travel.EstimateDaysFromParty(town);
+                int landed = TradeMath.OutOfReach(days) ? 0 : Forecast.WorthShiftAsItHasHeld(town, item, days);
+                int price = landed == 0
+                    ? quoted
+                    : Bulk.OpeningOn(Bulk.AsItLands(town, new EquipmentElement(item), true, quoted, landed), town, quoted);
+                if (price <= top) continue;
+                top = price;
+                best = town;
+            }
+            return (best, top);
+        }
         public (Settlement town, int price) BestBuy(ItemObject item) => First(TopMarkets(item, selling: false));
 
         internal static int BuyerWalks;

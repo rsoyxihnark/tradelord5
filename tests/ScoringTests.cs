@@ -657,6 +657,47 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_market_back_in_the_running_takes_the_mark_only_when_it_earns_more_a_day()
+        {
+            Assert.True(Marks.OutEarns(110f, 100f));
+            Assert.False(Marks.OutEarns(100f, 100f));
+            Assert.False(Marks.OutEarns(60f, 100f));
+            Assert.False(Marks.OutEarns(0f, -5f));
+            Assert.True(Marks.OutEarns(5f, -5f));
+        }
+
+        [Fact]
+        public void A_market_left_out_while_the_mark_stands_is_owed_a_fair_look_until_it_gets_one()
+        {
+            var owed = new HashSet<string>();
+            Marks.OweAFairLook(owed, null, "town_B", "town_B", true);
+            Assert.Equal(new[] { "town_B" }, owed);
+            Marks.OweAFairLook(owed, null, null, "town_B", false);
+            Assert.Equal(new[] { "town_B" }, owed);
+            Marks.OweAFairLook(owed, new List<string>(), "town_A", "town_A", false);
+            Assert.Equal(2, owed.Count);
+            Assert.Contains("town_B", owed);
+            Assert.Contains("town_A", owed);
+            Marks.OweAFairLook(owed, new List<string> { "town_B" }, null, null, false);
+            Assert.Equal(new[] { "town_A" }, owed);
+            Marks.OweAFairLook(owed, new List<string> { "town_A" }, null, "town_C", true);
+            Assert.Equal(new[] { "town_C" }, owed);
+            Marks.OweAFairLook(owed, null, null, null, true);
+            Assert.Empty(owed);
+        }
+
+        [Fact]
+        public void Coming_back_to_a_market_owed_a_fair_look_counts_as_its_look_unless_TradeLord_trades_there_again()
+        {
+            var owed = new HashSet<string> { "town_B" };
+            Marks.OweAFairLook(owed, null, "town_B", null, false);
+            Assert.Empty(owed);
+            owed.Add("town_B");
+            Marks.OweAFairLook(owed, null, "town_B", "town_B", false);
+            Assert.Equal(new[] { "town_B" }, owed);
+        }
+
+        [Fact]
         public void The_same_cargo_packed_in_another_order_is_the_same_cargo()
         {
             var then = Cargo(("salt", 13, false), ("flax", 18, false), ("meat", 4, true));
