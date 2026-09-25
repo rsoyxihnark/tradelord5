@@ -107,12 +107,45 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Food_the_party_needs_gets_a_haul_animal_however_little_of_it_the_cargo_left_behind()
+        public void A_haul_animal_asked_to_be_filled_by_nothing_in_particular_is_bought_however_little_it_carries()
         {
             Assert.Equal(1, HaulAnimalsBought(1000, 150, 100f, 1f, 2f, 10f, 60));
             Assert.True(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 10f));
             Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 10f, Herding.LeastAHaulAnimalIsFilled));
             Assert.True(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 10f, float.NaN));
+        }
+
+        [Fact]
+        public void A_haul_animal_is_bought_for_light_goods_that_would_make_more_than_it_costs()
+        {
+            float half = Herding.LeastAHaulAnimalIsFilled;
+            Assert.True(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 47f, half, 2000f, 150));
+            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 47f, half, 100f, 150));
+            Assert.True(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 47f, half, 160f, 150));
+            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 47f, half, 2000f, 0));
+            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 2f, 47f, half, float.NaN, 150));
+            Assert.False(Herding.AnotherHaulAnimalIsWanted(0, 100f, 1f, 47f, 47f, half, 2000f, 150));
+            Assert.False(Herding.AnotherHaulAnimalIsWanted(1, 100f, 1f, 2f, 130f, half, 600f, 150));
+            Assert.True(Herding.AnotherHaulAnimalIsWanted(1, 100f, 1f, 2f, 130f, half, 700f, 150));
+        }
+
+        [Fact]
+        public void Food_gets_a_haul_animal_it_would_fill_less_than_half_of_only_once_the_party_is_down_to_its_last_day()
+        {
+            Assert.Equal(0f, Herding.LeastFilledFor(true, 5, 10), 3);
+            Assert.Equal(0f, Herding.LeastFilledFor(true, 0, 1), 3);
+            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(true, 10, 10), 3);
+            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(true, 25, 10), 3);
+            Assert.Equal(Herding.LeastAHaulAnimalIsFilled, Herding.LeastFilledFor(false, 0, 10), 3);
+        }
+
+        [Fact]
+        public void A_spare_mount_carries_what_the_game_gives_one_and_its_share_of_a_bonus_on_the_whole_hold()
+        {
+            Assert.Equal(20f, Herding.CargoASpareMountAdds(10, 500f, 500f), 3);
+            Assert.Equal(22f, Herding.CargoASpareMountAdds(10, 500f, 550f), 3);
+            Assert.Equal(20f, Herding.CargoASpareMountAdds(10, 0f, 0f), 3);
+            Assert.Equal(0f, Herding.CargoASpareMountAdds(0, 500f, 500f), 3);
         }
 
         [Fact]
@@ -129,7 +162,7 @@ namespace TradeLord.Tests
                                                                               int wanted)
         {
             int hauled = 0;
-            while (hauled < wanted && Herding.PurseClearsTheFloor(purse, floor))
+            while (hauled < wanted && Herding.PurseClearsTheFloor(purse - price, floor))
             {
                 hauled++;
                 purse -= price;
@@ -138,10 +171,11 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Haul_animals_stop_once_the_ones_bought_bring_your_purse_down_to_the_floor()
+        public void A_haul_animal_is_bought_only_while_your_purse_stays_above_the_floor_once_it_is_paid_for()
         {
-            Assert.Equal((1, 1800), HaulAnimalsBoughtAboveTheFloor(2100, 2000, 300, 3));
-            Assert.Equal((2, 2000), HaulAnimalsBoughtAboveTheFloor(2600, 2000, 300, 3));
+            Assert.Equal((0, 2100), HaulAnimalsBoughtAboveTheFloor(2100, 2000, 300, 3));
+            Assert.Equal((1, 2300), HaulAnimalsBoughtAboveTheFloor(2600, 2000, 300, 3));
+            Assert.Equal((2, 2001), HaulAnimalsBoughtAboveTheFloor(2601, 2000, 300, 3));
             Assert.Equal((0, 2000), HaulAnimalsBoughtAboveTheFloor(2000, 2000, 300, 3));
             Assert.Equal((3, 1200), HaulAnimalsBoughtAboveTheFloor(2100, 0, 300, 3));
         }

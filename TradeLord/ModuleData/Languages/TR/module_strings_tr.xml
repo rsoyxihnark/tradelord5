@@ -267,7 +267,7 @@
 		<string id="TL423" text="TradeLord'un önünüze koyduğu ticaret kapandı ve keseniz olduğu yerde."/>
 		<string id="TL424" text="Son ticaretler"/>
 		<string id="TL425" text="Yük hayvanı almadan önce gereken altın (0 = kapalı)"/>
-		<string id="TL426" text="Keseniz bunun üzerine çıkana kadar hiç yük hayvanı almaz. Altında kaldıkça TradeLord ne kadar ucuz olursa olsun onlara dokunmaz, böylece erken altın mala gider. 0 ilk dinardan itibaren almasına izin verir. Varsayılan 2000."/>
+		<string id="TL426" text="Yük hayvanını ancak parası ödendikten sonra keseniz bunun üzerinde kalıyorsa alır. Altında kaldıkça TradeLord ne kadar ucuz olursa olsun onlara dokunmaz, böylece erken altın mala gider. 0 ilk dinardan itibaren almasına izin verir. Varsayılan 2000."/>
 		<string id="TL427" text="Bir yük hayvanı için ödeyeceği en yüksek tutar"/>
 		<string id="TL428" text="O hayvan için gördüğünüz en ucuz fiyatın ne kadar üstüne kadar TradeLord yine de öder. %100 yalnızca gördüğünüz en ucuz fiyata demektir. Varsayılan 1.25, yani en ucuzun dörtte biri kadar üstüne kadar öder."/>
 		<string id="TL429" text="Sahip olabileceğiniz en fazla işyeri (0 = oyunun kendi sınırı)"/>
