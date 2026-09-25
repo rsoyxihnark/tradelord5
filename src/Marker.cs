@@ -171,6 +171,7 @@ namespace TradeLord
             internal float Rate;
             internal float RunnerUpRate;
             internal float Days;
+            internal float CeilingPassed;
             internal int Units;
             internal int Kinds;
             internal int Purse;
@@ -263,6 +264,13 @@ namespace TradeLord
             _markedValue = 0L;
             _lastValue = 0L;
             float since = TradeMath.DaysSince(_markedAt, Freshness.Hour);
+            if (Scoring.TooSoonToSay(_markedDays, since))
+            {
+                Log.Write("marker check at " + site.Name + ": it marked this market about " +
+                          _markedDays.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away and you walked in " +
+                          Scoring.Figure(since) + " day(s) later, too soon to say anything about what it marked on");
+                return;
+            }
             float held = TradeMath.HeldShare(said > int.MaxValue ? int.MaxValue : (int)said, gold);
             float heldLast = TradeMath.HeldShare(last > int.MaxValue ? int.MaxValue : (int)last, gold);
             Log.Write("marker check at " + site.Name + ": it marked this market for " + _markedUnits +
@@ -295,8 +303,15 @@ namespace TradeLord
                    (how.PurseCapped
                        ? ", which is all that town's purse of " + how.Purse + " can take"
                        : " against a town purse of " + how.Purse) +
-                   ", about " + how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away, so " +
-                   how.Rate.ToString("0") + " gold a day" + TheNextBest(how);
+                   ", about " + how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away" +
+                   (how.CeilingPassed > 0f
+                       ? ", past your travel ceiling of " +
+                         how.CeilingPassed.ToString("0.#", CultureInfo.InvariantCulture) +
+                         " day(s) (the market already marked may pass it by " +
+                         ((TradeMath.TheMarkedTownHoldsBy - 1f) * 100f).ToString("0", CultureInfo.InvariantCulture) +
+                         "%)"
+                       : "") +
+                   ", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how);
         }
 
         private static string TheNextBest(in Reckoning how)
@@ -508,7 +523,7 @@ namespace TradeLord
                 how.Weighed++;
                 int purse = TradeRules.WhatTheTillCanPay(market.Gold, s.IsVillage);
                 if (purse <= 0) { how.NoTill++; continue; }
-                float cap = LedgerBehavior.TravelCeiling(s);
+                float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == _picked);
                 if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) { how.PastCeiling++; continue; }
                 float ride = Travel.EstimateDaysFromParty(s);
                 if (TradeMath.OutOfReach(ride)) { how.NoRoad++; continue; }
@@ -546,6 +561,8 @@ namespace TradeLord
                     how.Value = total;
                     how.Best = s;
                     how.Days = ride;
+                    float plain = LedgerBehavior.TravelCeiling(s);
+                    how.CeilingPassed = plain > 0f && ride > plain ? plain : 0f;
                     how.Units = took.Units;
                     how.Kinds = took.Kinds;
                     how.Purse = gold;
