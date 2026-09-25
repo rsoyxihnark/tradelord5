@@ -21,6 +21,7 @@ namespace TradeLord
             internal int WorthSaid;
             internal int StockYours;
             internal int WorthYours;
+            internal int UsedADay;
         }
 
         private struct Promised
@@ -125,7 +126,7 @@ namespace TradeLord
             }
         }
 
-        private static Settlement PricedFrom(Settlement site)
+        internal static Settlement PricedFrom(Settlement site)
         {
             if (site.IsTown) return site;
             Village village = site.Village;
@@ -254,7 +255,8 @@ namespace TradeLord
             if (_said.TryGet(site.StringId, item.StringId, out Said waiting) && waiting.Item != null &&
                 Scoring.StillToBeJudged(waiting.WithinDays, waiting.AtHours, (float)CampaignTime.Now.ToHours))
                 return;
-            int stockSaid = Forecast.UnitsLanding(site, item, withinDays);
+            int stockSaid = TradeMath.MissedBy(Forecast.UnitsLeaving(site, item, withinDays),
+                                               Forecast.UnitsLanding(site, item, withinDays));
             int worthSaid = Forecast.WorthShift(site, item, withinDays);
             if (stockSaid == 0 && worthSaid == 0) return;
             if (!_said.Holds(site.StringId, item.StringId) && _said.Full && !RoomForOneMoreFigure())
@@ -272,7 +274,8 @@ namespace TradeLord
                 StockThen = LedgerBehavior.StockOf(site, item),
                 StockSaid = stockSaid,
                 WorthThen = WorthOnTheShelf(site, item),
-                WorthSaid = worthSaid
+                WorthSaid = worthSaid,
+                UsedADay = Forecast.UsedUpADay(site, item)
             });
         }
 
@@ -301,17 +304,18 @@ namespace TradeLord
                     continue;
                 }
                 scored++;
-                Outcome how = Scoring.Weigh(kept.StockSaid, kept.StockThen,
+                var said = Scoring.ToTheWalkIn(kept.StockSaid, kept.WorthSaid, kept.UsedADay, kept.Item.Value,
+                                               kept.WithinDays, since, kept.StockThen, kept.WorthThen);
+                Outcome how = Scoring.Weigh(said.stock, kept.StockThen,
                                             LedgerBehavior.StockOf(site, kept.Item),
-                                            kept.WorthSaid, kept.WorthThen,
+                                            said.worth, kept.WorthThen,
                                             WorthOnTheShelf(site, kept.Item),
                                             kept.StockYours, kept.WorthYours);
                 landingMiss += Math.Abs(how.LandingOff);
-                string line = "  " + Named(kept.Item) + ": said " + kept.StockSaid + " unit(s) of it would land within " +
-                              Figure(kept.WithinDays) + " day(s) and " + Landing(how.Landed) + ", " +
-                              Counted(how.LandingOff) + Yours(kept.StockYours, false) +
-                              "; you walked in " + Figure(since) +
-                              " day(s) after it said so";
+                string line = "  " + Named(kept.Item) + ": " + UnitsShifted(said.stock, how.Landed) +
+                              Yours(kept.StockYours, false) + "; you walked in " + Figure(since) +
+                              " day(s) after it said so, for a ride it put at " + Figure(kept.WithinDays) + " day(s)" +
+                              (kept.UsedADay > 0 ? ", with what the town uses up counted to the day you walked in" : "");
                 if (!how.WorthKept)
                 {
                     lines.Add(line + "; no worth is kept for a kind of good here, which only a town does");
@@ -323,9 +327,8 @@ namespace TradeLord
                     shareTotal += how.Share;
                     LedgerBehavior.Instance?.KeepForecastScore(TradeMath.MissThatCounts(how.Share));
                 }
-                lines.Add(line + "; said every good of that kind heading there was worth " +
-                          kept.WorthSaid + " denars in all and " + Moving(how.Moved) + " denars, " +
-                          Counted(how.WorthOff) + Shared(how.Share) + Yours(kept.WorthYours, true));
+                lines.Add(line + "; " + WorthShifted(said.worth, how.Moved) + Shared(how.Share) +
+                          Yours(kept.WorthYours, true));
             }
             foreach (KeyValuePair<string, Said> one in stillToCome) _said.Put(site.StringId, one.Key, one.Value);
             if (!Writing || scored + stale + early == 0) return;
@@ -335,7 +338,7 @@ namespace TradeLord
                       (scored == 0 ? "" : ":"));
             if (scored > 0)
             {
-                lines.Add("  in all: the landing figure was off by " +
+                lines.Add("  in all: the unit figure was off by " +
                           Figure(TradeMath.MeanOf(landingMiss, scored)) + " unit(s) a good" +
                           (shared == 0
                               ? ", and no worth figure could be held to anything here"
@@ -367,11 +370,9 @@ namespace TradeLord
         private static string Named(ItemObject item) =>
             item.Name == null ? item.StringId : item.Name.ToString();
 
-        private static string Counted(int off) => Scoring.Counted(off);
+        private static string UnitsShifted(int said, int landed) => Scoring.UnitsShifted(said, landed);
 
-        private static string Landing(int landed) => Scoring.Landing(landed);
-
-        private static string Moving(int moved) => Scoring.Moving(moved);
+        private static string WorthShifted(int said, int moved) => Scoring.WorthShifted(said, moved);
 
         private static string Yours(int yours, bool worth) => Scoring.Yours(yours, worth);
 

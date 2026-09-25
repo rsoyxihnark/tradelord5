@@ -424,7 +424,7 @@ namespace TradeLord.Mcm
         public bool ConfidenceRanking { get => _o.ConfidenceRanking; set { _o.ConfidenceRanking = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL279}Count what is on its way to a market", Order = 10, RequireRestart = false,
-            HintText = "{=TL396}Before a route or a price in a tooltip is worked out, count what reaches that market before you do: the cargo the caravans will unload, what the workshops will make next, and the purses those caravans bring, spread over the goods that are cheap there as an estimate of what they will buy. Needs Live world prices. OFF prices each market as it stands.")]
+            HintText = "{=TL396}Before a route or a price in a tooltip is worked out, count what reaches or leaves that market before you do: what caravans will unload and buy, what workshops will make and use up, and what the town itself uses up. A village follows the town it trades with. Needs Live world prices. OFF prices each market as it stands.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool MarketForecast { get => _o.MarketForecast; set { _o.MarketForecast = value; Options.Bump(); } }
 
@@ -737,7 +737,7 @@ namespace TradeLord.Mcm
         public string AlwaysBuyItems { get => _o.AlwaysBuyItems; set { _o.AlwaysBuyItems = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL267}Buy haul animals", Order = 12, RequireRestart = false,
-            HintText = "{=TL367}Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, so your party carries more. It never buys more than you can drive without slowing down, and it stops before your gold reaches your reserve. The two settings below say how much gold it waits for and how much it will pay. ON by default.")]
+            HintText = "{=TL367}Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, only to carry goods or food a full cargo left behind. It never buys more than you can drive without slowing down, and it stops before your gold reaches your reserve. The two settings below say how much gold it waits for and what it will pay. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool BuyHaulAnimals { get => _o.BuyHaulAnimals; set { _o.BuyHaulAnimals = value; Options.Bump(); } }
 

@@ -21,6 +21,12 @@ namespace TradeLord
         private static readonly Dictionary<string, List<Spending>> _spending =
             new Dictionary<string, List<Spending>>(StringComparer.Ordinal);
 
+        private static readonly Dictionary<string, List<Draw>> _drawing =
+            new Dictionary<string, List<Draw>>(StringComparer.Ordinal);
+
+        private static readonly Dictionary<(string site, string kind), int> _usedUp =
+            new Dictionary<(string, string), int>();
+
         private static readonly Dictionary<string, Dictionary<string, float>> _pull =
             new Dictionary<string, Dictionary<string, float>>(StringComparer.Ordinal);
 
@@ -35,6 +41,9 @@ namespace TradeLord
 
         private static readonly List<(string, int)> _needs = new List<(string, int)>();
 
+        private static readonly Dictionary<(string site, string kind, float days), int> _shifts =
+            new Dictionary<(string, string, float), int>();
+
         private static readonly Dictionary<(string site, string item, int stockNow, float afterDays),
                                            List<(float days, int shelf)>> _shelfAhead =
             new Dictionary<(string, string, int, float), List<(float, int)>>();
@@ -48,11 +57,14 @@ namespace TradeLord
             _readStamp.Stale();
             _landing.Clear();
             _spending.Clear();
+            _drawing.Clear();
+            _usedUp.Clear();
             _pull.Clear();
             _across.Clear();
             _standsFor.Clear();
             _standsForAt.Clear();
             _shelfAhead.Clear();
+            _shifts.Clear();
             _saidItCouldNotRead = false;
         }
 
@@ -84,12 +96,14 @@ namespace TradeLord
             if (_shelfAhead.TryGetValue(key, out List<(float days, int shelf)> curve)) return curve;
             _landing.TryGetValue(site.StringId, out List<Landing> listed);
             _spending.TryGetValue(site.StringId, out List<Spending> coming);
-            if (listed != null || coming != null)
+            _drawing.TryGetValue(site.StringId, out List<Draw> drawn);
+            int usedADay = UsedUpADay(site, item.ItemCategory);
+            if (listed != null || coming != null || drawn != null || usedADay > 0)
             {
                 PullAt(site, out Dictionary<string, float> pull, out float across);
                 curve = Projection.ShelfAhead(listed, coming, pull, across, item.StringId,
                                               item.ItemCategory.StringId, item.Value,
-                                              stockNow, afterDays);
+                                              stockNow, afterDays, drawn, usedADay);
             }
             _shelfAhead[key] = curve;
             return curve;
@@ -107,7 +121,20 @@ namespace TradeLord
         }
 
         internal static int WorthShiftAsItHasHeld(Settlement site, ItemObject item, float withinDays) =>
-            TradeMath.WorthShiftTrusted(WorthShift(site, item, withinDays), TrustEarned());
+            TradeMath.WorthShiftTrusted(PriceShift(site != null && site.IsVillage ? Hindsight.PricedFrom(site) : site,
+                                                   item, withinDays),
+                                        TrustEarned());
+
+        private static int PriceShift(Settlement site, ItemObject item, float withinDays)
+        {
+            if (!On || site == null || item == null || item.ItemCategory == null) return 0;
+            Build();
+            var key = (site.StringId, item.ItemCategory.StringId, TradeMath.ToTheQuarterDay(withinDays));
+            if (_shifts.TryGetValue(key, out int shift)) return shift;
+            shift = WorthShift(site, item, withinDays);
+            _shifts[key] = shift;
+            return shift;
+        }
 
         internal static int WorthLanding(Settlement site, ItemObject item, float withinDays)
         {
@@ -119,11 +146,56 @@ namespace TradeLord
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
             Build();
+            int bought = WorthBought(site, item, withinDays);
+            Town town = site.IsTown ? site.Town : null;
+            if (town == null) return bought;
+            int shelf = Guard.Read("Forecast.Shelf", town,
+                                   where => where.MarketData.GetCategoryData(item.ItemCategory).InStoreValue, 0);
+            int most = TradeMath.AddedUp(shelf, WorthLanding(site, item, withinDays));
+            int leaving = TradeMath.AddedUp(bought, WorthUsedUp(site, item, withinDays, most));
+            return leaving > most ? most : leaving;
+        }
+
+        internal static int UsedUpADay(Settlement site, ItemObject item)
+        {
+            if (!On || site == null || item == null || item.ItemCategory == null) return 0;
+            Build();
+            return UsedUpADay(site, item.ItemCategory);
+        }
+
+        private static int WorthBought(Settlement site, ItemObject item, float withinDays)
+        {
             if (!_spending.TryGetValue(site.StringId, out List<Spending> coming)) return 0;
             int purse = Projection.PurseLanding(coming, withinDays);
             if (purse <= 0) return 0;
             if (!PullAt(site, out Dictionary<string, float> pull, out float across)) return 0;
             return Projection.WorthLeaving(purse, pull, across, item.ItemCategory.StringId);
+        }
+
+        private static int WorthUsedUp(Settlement site, ItemObject item, float withinDays, int most)
+        {
+            _drawing.TryGetValue(site.StringId, out List<Draw> drawn);
+            int usedADay = UsedUpADay(site, item.ItemCategory);
+            if (drawn == null && usedADay <= 0) return 0;
+            return Projection.WorthUsedUp(drawn, item.ItemCategory.StringId, withinDays, usedADay, most);
+        }
+
+        private static int UsedUpADay(Settlement site, ItemCategory category)
+        {
+            Town town = site != null && site.IsTown ? site.Town : null;
+            if (town == null || category == null) return 0;
+            var key = (site.StringId, category.StringId);
+            if (_usedUp.TryGetValue(key, out int worth)) return worth;
+            ItemObject stands = StandsForAt(site, category);
+            worth = stands == null ? 0 : Guard.Read("Forecast.UsedUp", town, where =>
+            {
+                var economy = Campaign.Current.Models.SettlementEconomyModel;
+                float budget = economy.CalculateDailySettlementBudgetForItemCategory(
+                    where, economy.GetDailyDemandForCategory(where, category), category);
+                return TradeMath.WorthUsedUpADay(budget, where.MarketData.GetPrice(stands), stands.Value);
+            }, 0);
+            _usedUp[key] = worth;
+            return worth;
         }
 
         private static bool PullAt(Settlement site, out Dictionary<string, float> pull, out float across)
@@ -163,7 +235,7 @@ namespace TradeLord
             if (!On || shop == null) return "";
             string made = "";
             Guard.Run("Forecast.WillMake",
-                      () => made = Named(Output(shop, WhatTheMarketHolds(shop.Settlement), out _)));
+                      () => made = Named(Output(shop, WhatTheMarketHolds(shop.Settlement), out _, out _)));
             return made;
         }
 
@@ -179,10 +251,13 @@ namespace TradeLord
             Freshness.Taken(ref _readStamp);
             _landing.Clear();
             _spending.Clear();
+            _drawing.Clear();
+            _usedUp.Clear();
             _pull.Clear();
             _across.Clear();
             _standsForAt.Clear();
             _shelfAhead.Clear();
+            _shifts.Clear();
             Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);
             Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
         }
@@ -249,7 +324,8 @@ namespace TradeLord
                 Dictionary<string, int> held = WhatTheMarketHolds(site);
                 for (int k = 0; k < shops.Length; k++)
                 {
-                    List<(ItemCategory category, int count)> made = Output(shops[k], held, out float progress);
+                    List<(ItemCategory category, int count)> made = Output(shops[k], held, out float progress,
+                                                                           out List<(ItemCategory, int)> used);
                     float lands = TradeMath.RunLandsIn(progress, Projection.WorkshopRunDays);
                     for (int at = 0; at < made.Count; at++)
                     {
@@ -259,15 +335,24 @@ namespace TradeLord
                              TradeMath.WorthOf(count, stands == null ? 0 : stands.Value),
                              lands);
                     }
+                    for (int at = 0; at < used.Count; at++)
+                    {
+                        var (category, count) = used[at];
+                        ItemObject stands = StandsForAt(site, category);
+                        NoteADraw(site, category, TradeMath.WorthOf(count, stands == null ? 0 : stands.Value),
+                                  lands);
+                    }
                 }
             }
         }
 
         private static List<(ItemCategory category, int count)> Output(Workshop shop,
                                                                       Dictionary<string, int> held,
-                                                                      out float progress)
+                                                                      out float progress,
+                                                                      out List<(ItemCategory, int)> used)
         {
             progress = 0f;
+            used = new List<(ItemCategory, int)>();
             var made = new List<(ItemCategory, int)>();
             WorkshopType type = shop?.WorkshopType;
             Settlement site = shop?.Settlement;
@@ -290,6 +375,12 @@ namespace TradeLord
             int pick = TradeRules.RunsSoonest(ready);
             if (pick < 0) return made;
             progress = ready[pick].progress;
+            MBReadOnlyList<(ItemCategory, int)> taken = type.Productions[pick].Inputs;
+            for (int k = 0; taken != null && k < taken.Count; k++)
+            {
+                var (category, count) = taken[k];
+                if (category != null && count > 0) used.Add((category, count));
+            }
             MBReadOnlyList<(ItemCategory, int)> outputs = type.Productions[pick].Outputs;
             for (int k = 0; outputs != null && k < outputs.Count; k++)
             {
@@ -377,6 +468,17 @@ namespace TradeLord
             if (!string.IsNullOrEmpty(name)) return name;
             ItemObject stands = StandsFor(category);
             return stands?.Name == null ? category.StringId : stands.Name.ToString();
+        }
+
+        private static void NoteADraw(Settlement site, ItemCategory category, int worth, float days)
+        {
+            if (site == null || category == null || worth <= 0) return;
+            if (!_drawing.TryGetValue(site.StringId, out List<Draw> drawn))
+            {
+                drawn = new List<Draw>();
+                _drawing[site.StringId] = drawn;
+            }
+            drawn.Add(new Draw { Category = category.StringId, Worth = worth, Days = days });
         }
 
         private static void NoteAPurse(Settlement site, int gold, float days)

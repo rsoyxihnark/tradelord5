@@ -205,6 +205,27 @@ namespace TradeLord
         internal static bool TheGameCountsItAtOnce(bool livestock, bool ofAQuality) =>
             livestock || !ofAQuality;
 
+        internal const int ItemsAPackAnimalCarries = 10;
+
+        internal static float CargoAHaulAnimalAdds(float packLine, int packAnimals, int averageWeight,
+                                                   float addedUp, float capacity)
+        {
+            float each = packAnimals > 0 && packLine > 0f
+                ? packLine / packAnimals
+                : (float)ItemsAPackAnimalCarries * averageWeight;
+            if (addedUp > 0f && capacity > addedUp) each *= capacity / addedUp;
+            return TradeMath.Finite(each, 0f) > 0f ? each : 0f;
+        }
+
+        internal static bool AnotherHaulAnimalIsWanted(int hauled, float eachAdds, float cargoShare, float roomLeft,
+                                                       float weightToCarry)
+        {
+            float each = cargoShare > 0f && cargoShare < 1f ? eachAdds * cargoShare : eachAdds;
+            if (TradeMath.Finite(each, 0f) <= 0f || TradeMath.Finite(weightToCarry, 0f) <= 0f) return false;
+            double room = (double)Math.Max(0, hauled) * each + TradeMath.Finite(roomLeft, 0f);
+            return weightToCarry > room;
+        }
+
         internal static int HaulAnimalsToSpare(int held, int packAnimals, float packCapacity,
                                                float addedUp, float capacity, float carried)
         {
@@ -514,6 +535,19 @@ namespace TradeLord
             if (s.MaxHeldPerItem > 0 && held >= s.MaxHeldPerItem) return Block.HeldEnough;
             if (shareCap > 0f && (held + 1) * good.Weight > shareCap) return Block.HeldEnough;
             return Block.None;
+        }
+
+        internal static int UnitsTheCapsAllow(in Good good, int price, (int count, int spent) taken, int held,
+                                              float shareCap, Options s)
+        {
+            long most = int.MaxValue;
+            if (s.BuyCapPerItem > 0) most = Math.Min(most, (long)s.BuyCapPerItem - taken.count);
+            if (s.BuyValueCapPerItem > 0 && price > 0)
+                most = Math.Min(most, ((long)s.BuyValueCapPerItem - taken.spent) / price);
+            if (s.MaxHeldPerItem > 0) most = Math.Min(most, (long)s.MaxHeldPerItem - held);
+            if (shareCap > 0f && good.Weight > 0f)
+                most = Math.Min(most, (long)Math.Floor(shareCap / good.Weight) - held);
+            return most <= 0 ? 0 : (int)most;
         }
 
         internal static Block WhatStopsBuying(in Good good, int price, int budget,
