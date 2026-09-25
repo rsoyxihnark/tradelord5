@@ -13507,5 +13507,20 @@ def the_marker_and_the_buyer_say_in_the_log_what_their_numbers_rest_on():
 chk("1.93.12", "the map marker's weighing is timed with the fine clock and the time is written on its summary line, and the buyer line says it counted what is on its way only when that moved the price it names",
     the_marker_and_the_buyer_say_in_the_log_what_their_numbers_rest_on())
 
+def trading_by_hand_moves_the_map_marker_on_at_once():
+    t = S['Trading.cs']
+    menu = between(t, "Guard.Run(\"Action.QuickTradeMenu\"", "false, 6);")
+    return (menu
+            and ordered(menu, "if (!Counter.Ready(Settlement.CurrentSettlement)) return;",
+                        "ExecuteQuickSell(Settlement.CurrentSettlement);",
+                        "finally",
+                        "TextObject laid = Counter.Settle();",
+                        'Guard.Run("Action.MarkerAfterTradingByHand", Marker.Update);')
+            and t.count('Guard.Run("Action.MarkerAfterTradingByHand", Marker.Update);') == 1)
+
+
+chk("1.93.13", "Trade here now (TradeLord) weighs the map marker again as soon as it has traded, so a trade in the town you stand in frees the market TradeLord traded at before without waiting for you to ride out",
+    trading_by_hand_moves_the_map_marker_on_at_once())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

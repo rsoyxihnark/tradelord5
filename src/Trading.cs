@@ -847,6 +847,7 @@ namespace TradeLord
                             {
                                 TextObject laid = Counter.Settle();
                                 if (laid != null) Notices.Say(laid, Notices.Note);
+                                Guard.Run("Action.MarkerAfterTradingByHand", Marker.Update);
                             }
                         }),
                         false, 6);
