@@ -5346,7 +5346,7 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
     forget = method_body(ledger, "internal void Forget")
     dry = method_body(ledger, "internal void ForgetTheDryRun")
     fields = set(re.findall(r'^\s*private (?:readonly )?.*?(_\w+)(?: =|;)', ledger, re.M))
-    live = {"_bought", "_sold", "_paid"}
+    live = {"_bought", "_sold", "_paid", "_moves"}
     cleared = lambda body: set(re.findall(r'(_\w+)(?:\.Clear\(\)| = 0f?);', body))
     return ("static" not in ledger
             and all(reader in ledger for reader in (
@@ -5362,7 +5362,7 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
                 "internal int HerdTaken(bool sim) => OnPaper(sim) ? _herd : 0;",
                 "internal float CapacityAdded(bool sim) => OnPaper(sim) ? _capacity : 0f;"))
             and all(dry in ledger for dry in ("_drySold", "_dryBought"))
-            and len(fields) == 17
+            and len(fields) == 19
             and "ForgetTheDryRun();" in forget
             and cleared(forget) == live
             and cleared(dry) == fields - live
@@ -9433,8 +9433,8 @@ def quiet_mode_names_the_warnings_it_still_shows():
                 if "Notices.Say(" in l or "Notices.SayAfterXp(" in l]
     asked = [l for l in onscreen if "Muted" in l or "muted" in l]
     said = spoken(ENGLISH)
-    return (len(onscreen) == 20
-            and len(asked) == 10
+    return (len(onscreen) == 21
+            and len(asked) == 11
             and all(("{=TL" + s + "}") in S['Trading.cs'] for s in ("82", "91", "92", "392"))
             and "Warnings still show on screen" in said['TL349']
             and "cargo full" in said['TL349']
@@ -13206,6 +13206,96 @@ def your_own_workshops_draw_on_their_warehouse_and_land_only_their_market_share(
 
 chk("1.93.9", "your own workshops draw on their warehouse first and land in the market only the share you send there, and the forecast learns afresh how far to trust itself now that it follows every run",
     your_own_workshops_draw_on_their_warehouse_and_land_only_their_market_share())
+
+
+def the_first_time_back_at_the_last_market_traded_is_left_alone():
+    t = S['Trading.cs']
+    entered = method_body(t, "private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)")
+    left = method_body(t, "private void OnSettlementLeft(MobileParty party, Settlement settlement)")
+    noted = method_body(t, "private static void NoteWhereItTraded(Settlement settlement)")
+    forget = method_body(t, "private static void ForgetArrivals()")
+    rules = S['Rules.cs']
+    everyone = list(TRANSLATIONS.values()) + [ENGLISH]
+    return (entered and left and noted and forget
+            and ordered(entered, "ResetVisit(StillTheSameSitting(settlement));",
+                        "_movesAtArrival = Visit.Moves(Simulating);",
+                        "if (StillTheSameArrival(settlement))",
+                        "NoteThisArrival(settlement);",
+                        "if (_visitTradeAllowed && Counter.HoldsBack())",
+                        "(Options.Current.AutoSellOnEntry || Options.Current.AutoBuyOnEntry) &&",
+                        "Arrivals.FirstTimeBack(settlement.StringId, _lastTradedAt))",
+                        "_lastTradedAt = null;",
+                        "if (Options.Current.QuickSellMenu && !Muted(true)) Notices.Say(FirstTimeBackNote(), Notices.Note);",
+                        '"trades here this visit");\n                    Marker.Update();\n                    return;\n                }',
+                        "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);")
+            and ordered(left, "if (Options.Current.AutoSellOnEntry && Counter.HoldsBack())",
+                        "if (Options.Current.AutoSellOnEntry && Arrivals.FirstTimeBack(settlement.StringId, _heldBackAt))",
+                        '"(TradeLord) trades here this visit");\n                    return;\n                }',
+                        "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);",
+                        'Guard.Run("Action.NoteWhereItTraded", () => NoteWhereItTraded(settlement));',
+                        'Guard.Run("Action.OnSettlementLeft", Marker.Update);')
+            and ordered(entered, "_lastTradedAt = null;", "_heldBackAt = settlement.StringId;",
+                        "Notices.Say(FirstTimeBackNote(), Notices.Note);")
+            and "_heldBackAt = null;" in method_body(t, "private static void NoteThisArrival(Settlement settlement)")
+            and "_heldBackAt = null;" in forget
+            and t.count("_heldBackAt") == 5
+            and ordered(noted, "bool traded = Visit.Moves(Simulating) > _movesAtArrival;",
+                        "_lastTradedAt = Arrivals.LastTradedAt(settlement?.StringId, traded, _lastTradedAt);")
+            and "_lastTradedAt = null;" in forget
+            and "_movesAtArrival = Visit.Moves(Simulating);" in forget
+            and t.count("_lastTradedAt") == 6
+            and t.count("_movesAtArrival") == 4
+            and "internal static bool FirstTimeBack(string here, string lastTradedAt) =>\n"
+                "            here != null && here == lastTradedAt;" in rules
+            and "internal static string LastTradedAt(string leaving, bool traded, string lastTradedAt) =>\n"
+                "            traded && leaving != null ? leaving : lastTradedAt;" in rules
+            and "internal int Moves(bool sim) => _moves + (sim ? _dryMoves : 0);" in S['Books.cs']
+            and all(one in ARRIVALTESTS for one in
+                    ("Coming_back_to_the_market_it_last_traded_at_is_the_first_time_back",
+                     "Any_other_market_or_none_at_all_is_not_the_first_time_back",
+                     "Leaving_a_market_it_traded_at_makes_that_market_the_last_one_traded_at",
+                     "Leaving_without_a_trade_keeps_the_last_market_traded_at",
+                     "A_trade_somewhere_else_lets_the_next_arrival_trade_but_a_visit_that_traded_nothing_does_not"))
+            and all(one in BOOKTESTS for one in
+                    ("EveryTradeIsCountedAndADryRunsOnlyWhileTheRunIsDry",
+                     "ForgettingTheDryRunEmptiesItsOwnCountAndForgettingTheVisitEmptiesBoth",
+                     "AGoodWithNoNameIsNotCountedAsATrade"))
+            and "{=TL475}" in t
+            and all("{ENTRY}" in (spoken(f).get('TL475') or "") for f in everyone)
+            and "The first time you come back to the market TradeLord made its last trade at, it leaves that market alone as you arrive and as you leave" in README
+            and "Trade here now (TradeLord) still trades whenever you ask" in README)
+
+
+chk("1.93.10", "trading on arrival, and selling animals on the way out, leave the market TradeLord made its last trade at alone the first time you come back, a trade anywhere else frees it, Trade here now (TradeLord) still trades there, and a note in every language says so while the menu entry shows and automated messages are not silenced",
+    the_first_time_back_at_the_last_market_traded_is_left_alone())
+
+
+def esc_closes_the_ledger_or_recent_trades_and_leaves_the_games_menu_shut():
+    p = S['Panel.cs']
+    close = method_body(p, "internal static bool CloseOnEscape()")
+    hear = method_body(p, "private static MapView HearEscape(MapScreen map)")
+    setup = method_body(p, "private static void Setup(MapScreen map)")
+    cleanup = method_body(p, "internal static void Cleanup")
+    return (close and hear and setup and cleanup
+            and "internal sealed class LedgerPanelEscape : MapView\n    {\n"
+                "        protected override bool IsEscaped() => LedgerPanel.CloseOnEscape();\n    }" in p
+            and "try { return map.AddMapView<LedgerPanelEscape>(); }" in hear
+            and ordered(hear, "catch (Exception e)", "return null;")
+            and ordered(setup, "_mapScreen.AddLayer(_layer);", "_escape = HearEscape(map);")
+            and ordered(close, "if (_dead || _vm == null || _layer == null) return false;",
+                        "if (_vm.IsVisible) { Hide(); return true; }",
+                        "if (_vm.IsTradesVisible) { _vm.IsTradesVisible = false; return true; }",
+                        "catch (Exception e)",
+                        "closing the ledger panel on Esc (the game's own menu opens instead)")
+            and ordered(cleanup, "MapView escape = _escape;", "_escape = null;",
+                        "if (map != null && escape != null) { try { map.RemoveMapView(escape); } catch { } }")
+            and p.count("AddMapView<") == 1
+            and "else if (map.IsEscapeMenuOpened || (HotkeyReleased() && !TypingOnScreen(map)))" in p
+            and "Esc closes the ledger or Recent trades and leaves the game's own menu shut" in README)
+
+
+chk("1.93.10", "Esc on the ledger or on Recent trades closes that window through the map's own Esc hook and leaves the game's own menu shut, the hook is handed back with the panel, and a panel that failed leaves Esc to the game",
+    esc_closes_the_ledger_or_recent_trades_and_leaves_the_games_menu_shut())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

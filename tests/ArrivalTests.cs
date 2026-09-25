@@ -80,5 +80,43 @@ namespace TradeLord.Tests
             Assert.False(Arrivals.StillTheSameSitting("town_ES3", "town_V8", 401.05, 400.97));
             Assert.False(Arrivals.StillTheSameSitting("town_ES3", "town_ES3", 402.05, 400.97));
         }
+
+        [Fact]
+        public void Coming_back_to_the_market_it_last_traded_at_is_the_first_time_back()
+        {
+            Assert.True(Arrivals.FirstTimeBack("town_ES3", "town_ES3"));
+        }
+
+        [Fact]
+        public void Any_other_market_or_none_at_all_is_not_the_first_time_back()
+        {
+            Assert.False(Arrivals.FirstTimeBack("town_ES3", "town_V8"));
+            Assert.False(Arrivals.FirstTimeBack("town_ES3", null));
+            Assert.False(Arrivals.FirstTimeBack(null, "town_ES3"));
+            Assert.False(Arrivals.FirstTimeBack(null, null));
+        }
+
+        [Fact]
+        public void Leaving_a_market_it_traded_at_makes_that_market_the_last_one_traded_at()
+        {
+            Assert.Equal("town_V8", Arrivals.LastTradedAt("town_V8", true, "town_ES3"));
+            Assert.Equal("town_V8", Arrivals.LastTradedAt("town_V8", true, null));
+        }
+
+        [Fact]
+        public void Leaving_without_a_trade_keeps_the_last_market_traded_at()
+        {
+            Assert.Equal("town_ES3", Arrivals.LastTradedAt("town_V8", false, "town_ES3"));
+            Assert.Null(Arrivals.LastTradedAt("town_V8", false, null));
+            Assert.Equal("town_ES3", Arrivals.LastTradedAt(null, true, "town_ES3"));
+        }
+
+        [Fact]
+        public void A_trade_somewhere_else_lets_the_next_arrival_trade_but_a_visit_that_traded_nothing_does_not()
+        {
+            string last = Arrivals.LastTradedAt("town_ES3", true, null);
+            Assert.False(Arrivals.FirstTimeBack("town_ES3", Arrivals.LastTradedAt("town_V8", true, last)));
+            Assert.True(Arrivals.FirstTimeBack("town_ES3", Arrivals.LastTradedAt("town_V8", false, last)));
+        }
     }
 }

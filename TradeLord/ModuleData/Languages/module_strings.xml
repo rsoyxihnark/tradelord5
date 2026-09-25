@@ -314,5 +314,6 @@
 		<string id="TL472" text="You have {FOCUS} focus point(s) and {POINTS} attribute point(s) left to spend on the character screen."/>
 		<string id="TL473" text="Adaptive spend limit"/>
 		<string id="TL474" text="Lets TradeLord spend more per visit as your purse grows, always on top of Max spend per visit. Until your purse holds five times that limit, the limit stays as set. Past that, it grows by one more Max spend per visit for every doubling of the purse: with 1000 set, 10000 in the purse allows 2000 and 20000 allows 3000. ON by default."/>
+		<string id="TL475" text="TradeLord made its last trade here, so it leaves this market alone the first time you come back. Choose {ENTRY} in this menu to trade here now."/>
 	</strings>
 </base>

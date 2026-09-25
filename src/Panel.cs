@@ -594,10 +594,16 @@ namespace TradeLord
         }
     }
 
+    internal sealed class LedgerPanelEscape : MapView
+    {
+        protected override bool IsEscaped() => LedgerPanel.CloseOnEscape();
+    }
+
     internal static class LedgerPanel
     {
         private static MapScreen _mapScreen;
         private static GauntletLayer _layer;
+        private static MapView _escape;
         private static GauntletMovieIdentifier _movie;
         private static LedgerPanelVM _vm;
         private static int _setupFailures;
@@ -814,6 +820,7 @@ namespace TradeLord
             _layer = new GauntletLayer("TradeLordPanel", 250);
             _movie = _layer.LoadMovie("TradeLordPanel", _vm);
             _mapScreen.AddLayer(_layer);
+            _escape = HearEscape(map);
             _vm.IsVisible = false;
             ApplyIdleInput();
             if (!_loggedArmed)
@@ -822,6 +829,32 @@ namespace TradeLord
                 PanelKey();
                 Log.Write("ledger panel armed on map screen (hotkey " + _keyLabel +
                           (Options.Current.ShowMapButton ? ", map button on)" : ")"));
+            }
+        }
+
+        private static MapView HearEscape(MapScreen map)
+        {
+            try { return map.AddMapView<LedgerPanelEscape>(); }
+            catch (Exception e)
+            {
+                Log.Error(e, "ledger panel Esc (Esc opens the game's own menu over the panel as it did before)");
+                return null;
+            }
+        }
+
+        internal static bool CloseOnEscape()
+        {
+            try
+            {
+                if (_dead || _vm == null || _layer == null) return false;
+                if (_vm.IsVisible) { Hide(); return true; }
+                if (_vm.IsTradesVisible) { _vm.IsTradesVisible = false; return true; }
+                return false;
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "closing the ledger panel on Esc (the game's own menu opens instead)");
+                return false;
             }
         }
 
@@ -929,7 +962,10 @@ namespace TradeLord
             GauntletLayer layer = _layer;
             GauntletMovieIdentifier movie = _movie;
             LedgerPanelVM vm = _vm;
+            MapView escape = _escape;
             _mapScreen = null; _layer = null; _movie = null; _vm = null; _mapButton = null; _huntIn = 0;
+            _escape = null;
+            if (map != null && escape != null) { try { map.RemoveMapView(escape); } catch { } }
             if (layer != null)
             {
                 try
