@@ -6,7 +6,6 @@ from nexus_changelog import sections
 REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
-    '1.93.11': 'its herd check entry is reworded in CHANGELOG.md and Sync release notes brings the published note in line',
 }
 
 
