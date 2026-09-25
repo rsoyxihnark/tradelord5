@@ -144,6 +144,10 @@ namespace TradeLord
         {
             Settlement site = route.To;
             if (site == null || route.SellPrice <= 0) return;
+            if (_promised.TryGet(site.StringId, route.Item.StringId, out Promised waiting) && waiting.Item != null &&
+                !waiting.YourTradeMovedIt &&
+                Scoring.StillToBeJudged(waiting.WithinDays, waiting.AtHours, (float)CampaignTime.Now.ToHours))
+                return;
             if (!_promised.Holds(site.StringId, route.Item.StringId) &&
                 _promised.Full && !RoomForOneMore())
             {
@@ -186,10 +190,12 @@ namespace TradeLord
             if (market == null) return;
             float now = (float)CampaignTime.Now.ToHours;
             var lines = new List<string>();
-            int scored = 0, stale = 0, unpriced = 0, yours = 0;
+            int scored = 0, stale = 0, unpriced = 0, yours = 0, early = 0;
             float heldTotal = 0f;
-            foreach (Promised said in here.Values)
+            var stillToCome = new List<KeyValuePair<string, Promised>>();
+            foreach (KeyValuePair<string, Promised> one in here)
             {
+                Promised said = one.Value;
                 if (said.Item == null) continue;
                 if (Scoring.TooOldToSay(said.WithinDays, said.AtHours, now, out float since))
                 {
@@ -199,6 +205,12 @@ namespace TradeLord
                 if (said.YourTradeMovedIt)
                 {
                     yours++;
+                    continue;
+                }
+                if (Scoring.TooSoonToSay(said.WithinDays, since))
+                {
+                    early++;
+                    stillToCome.Add(one);
                     continue;
                 }
                 int found = Priced.At(market, said.Item, MobileParty.MainParty, true);
@@ -218,13 +230,20 @@ namespace TradeLord
                           " day(s) at Conf " + Share(said.Confidence) + "; you walked in " + Figure(since) +
                           " day(s) later and it pays " + found + ", " + Share(held) + " of what it promised");
             }
+            foreach (KeyValuePair<string, Promised> one in stillToCome) _promised.Put(site.StringId, one.Key, one.Value);
             if (scored > 0)
                 LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(heldTotal, scored));
-            if (!Writing || scored + stale + yours + unpriced == 0) return;
+            if (!Writing || scored + stale + yours + unpriced + early == 0) return;
             lines.Insert(0, "promise check at " + site.Name + ", " + scored + " promise(s) scored" +
                       (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") +
                       (yours == 0 ? "" : ", " + yours + " set aside because your own trading has moved the price since it was promised") +
-                      (unpriced == 0 ? "" : ", " + unpriced + " the market would put no price on"));
+                      (unpriced == 0 ? "" : ", " + unpriced + " the market would put no price on") +
+                      (early == 0 ? "" : ", " + early + " kept for a later walk-in as too soon to say anything"));
+            if (scored + stale + yours + unpriced == 0)
+            {
+                Log.Repeatable("promise check " + site.StringId, early.ToString(), lines[0]);
+                return;
+            }
             if (scored > 0)
             {
                 lines.Add("  here: the price held at " + Share(TradeMath.MeanOf(heldTotal, scored)) +

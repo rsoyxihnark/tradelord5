@@ -52,6 +52,7 @@
 - ✅ It counts only the goods it would really sell there, the ones that clear Minimum profit margin, so it never sends you somewhere it will then refuse to sell
 - ✅ It works through the richest markets first and stops as soon as none of the rest could outpay the one it has found, so riding across Calradia costs it very little
 - ✅ It reads every market's price live each time it weighs one, so the marker is never pointing at a town on a price it read hours ago
+- ✅ The market already marked keeps its mark until it is a fifth past your travel ceiling, so a brief slow stretch of road does not flick the marker to another market and back
 - ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that town's purse, how far away it is and the market it beat
 - ✅ The five workshops in Calradia earning the most right now, with their town, what each will make next and their owner, on that same panel
 - ✅ With Live world prices turned off it shows yours instead
@@ -139,7 +140,7 @@
 
 **Settings, when you want to change anything**
 
-- ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, marks on your map or holds your cargo for is further than you care to ride
+- ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, newly marks on your map or holds your cargo for is further than you care to ride
 - ✅ Either ceiling set to 0 takes that limit off, and the Town travel ceiling at 0 weighs every town in Calradia, which is the slowest TradeLord runs
 - ✅ A minimum stock before it calls something worth buying
 - ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the workshops and what the town uses up into a route's price; it follows Live world prices, so turning those off turns this off too

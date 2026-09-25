@@ -1873,9 +1873,9 @@ chk("1.3.16", "food branch falls through to the sell rules",
             "            said.Allowed = true;\n            return said;") and
     "reserve[item] = held - drawn;" in
         method_body(S['Policy.cs'], "private static void TakeBack"))
-chk("1.3.17", "the marker picks its town through the same ceiling as everything else, with nothing of its own",
+chk("1.3.17", "the marker picks its town through the same ceiling as everything else, which only the market already marked may pass, and by a fifth at most",
     "WithinRadius" not in S['Trading.cs'] and
-    "float cap = LedgerBehavior.TravelCeiling(s);" in
+    "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == _picked);" in
         method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo"))
 chk("1.3.17", "the haircut filters every route pair, on the prices that pair would really open at",
     "float realizable = TradePolicy.Realizable(openingSell);" in S['Ledger.cs'] and
@@ -7106,7 +7106,7 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
                      "if (market == null) continue;",
                      "if (!TradeActionBehavior.IsMarket(s)) continue;",
                      "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) { how.Shut++; continue; }",
-                     "float cap = LedgerBehavior.TravelCeiling(s);",
+                     "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == _picked);",
                      "if (TradeMath.PerDay(gold, ride) <= bar) break;",
                      "WhatItWouldFetch(s, market, party, cargo, gold, null)")
              and "Town.AllTowns" not in marker
@@ -7563,7 +7563,7 @@ def a_promise_is_scored_against_the_price_the_market_actually_pays():
             and "TradeMath.BandOf(confidence)" in method_body(S['Scoring.cs'], "internal void Add")
             and ordered(kept, "LedgerBehavior.Instance?.KeepPromiseScore(held);",
                         "LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(heldTotal, scored));",
-                        "if (!Writing || scored + stale + yours + unpriced == 0) return;")
+                        "if (!Writing || scored + stale + yours + unpriced + early == 0) return;")
             and kept.index("LedgerBehavior.Instance?.KeepArrival(") >
                 kept.rindex("heldTotal += held;")
             and "A_market_that_puts_no_price_on_a_good_scores_nothing" in SCORINGTESTS
@@ -7573,8 +7573,8 @@ def how_the_promise_has_held_is_kept_in_the_save_and_shown_on_the_panel():
     ledger = S['Ledger.cs']
     sync = method_body(ledger, "public override void SyncData")
     panel = method_body(S['Panel.cs'], "private static string HowThePromiseHasHeld")
-    return ('dataStore.SyncData("TradeLord_PromisesScored", ref _promisesScored);' in sync
-            and 'dataStore.SyncData("TradeLord_PromiseHeld", ref _promiseHeld);' in sync
+    return ('dataStore.SyncData("TradeLord_PromisesScoredWhenDue", ref _promisesScored);' in sync
+            and 'dataStore.SyncData("TradeLord_PromiseHeldWhenDue", ref _promiseHeld);' in sync
             and "if (held < 0f) return;" in method_body(ledger, "internal void KeepPromiseScore")
             and "TradeMath.AddPromise(" not in method_body(ledger, "internal void KeepPromiseScore")
             and "_promises[" not in method_body(ledger, "internal void KeepPromiseScore")
@@ -9313,7 +9313,7 @@ def a_market_is_trusted_by_what_it_has_really_paid():
             and "public const int EnoughArrivals = 5;" in S['Confidence.cs']
             and "public const float MostItDiscounts = 0.25f;" in S['Confidence.cs']
             and "TaleWorlds" not in S['Confidence.cs']
-            and 'dataStore.SyncData("TradeLord_PromiseText", ref _promiseText);' in
+            and 'dataStore.SyncData("TradeLord_PromiseTextWhenDue", ref _promiseText);' in
                 method_body(ledger, "public override void SyncData")
             and "_promises = KeyedByTownId(LedgerCodec.ReadPromises(_promiseText));" in
                 method_body(ledger, "private void RestoreSaved")
@@ -9347,7 +9347,7 @@ def a_markets_record_counts_your_walk_ins_not_the_prices_it_checked():
             and kept.index("LedgerBehavior.Instance?.KeepArrival(") >
                 kept.rindex("heldTotal += held;")
             and kept.index("LedgerBehavior.Instance?.KeepArrival(") <
-                kept.index("if (!Writing || scored + stale + yours + unpriced == 0) return;")
+                kept.index("if (!Writing || scored + stale + yours + unpriced + early == 0) return;")
             and "TradeMath.MeanOf(heldTotal, scored));" in kept
             and "if (scored > 0)" in kept
             and "TradeMath.AddPromise(rec, held);" in arrival
@@ -10319,7 +10319,8 @@ def the_marker_picks_the_market_that_earns_fastest_not_the_one_paying_most():
             and "how.Days = ride;" in marker
             and "DearestPurseFirst" not in S['Marker.cs']
             and "Travel.EstimateDaysFromParty(how.Best)" not in why
-            and 'how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away, so " +' in why
+            and 'how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away" +' in why
+            and '", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how);' in why
             and 'how.Rate.ToString("0") + " gold a day"' in why
             and 'how.RunnerUpRate.ToString("0") + " gold a day for " +' in why
             and all(one in MATHTESTS for one in
@@ -10580,7 +10581,9 @@ def the_mark_is_scored_against_what_that_market_really_paid():
     sell = method_body(S['Trading.cs'], "private static void SellPass")
     return (ordered(score, "site.StringId != _markedId", "if (_markedValue <= 0L) return;",
                     "_markedValue = 0L;", "TradeMath.DaysSince(_markedAt, Freshness.Hour)",
-                    "TradeMath.HeldShare(", 'Log.Write("marker check at "')
+                    "if (Scoring.TooSoonToSay(_markedDays, since))",
+                    '" day(s) later, too soon to say anything about what it marked on");\n                return;',
+                    "TradeMath.HeldShare(", '": it marked this market for " + _markedUnits +')
             and "Scoring.Share(held)" in score
             and '" of what it marked on"' in score
             and "if (pass.Site != null && !pass.Sim)" in sell
@@ -11038,7 +11041,7 @@ def the_forecast_is_scored_whatever_the_debug_switch_says():
             and written.find("LedgerBehavior.Instance?.KeepForecastScore(") <
                 written.find("if (!Writing || scored + stale + early == 0) return;")
             and "if (!Writing || scored + stale + early == 0) return;" in written
-            and "if (!Writing || scored + stale + yours + unpriced == 0) return;" in method_body(h, "private static void Kept"))
+            and "if (!Writing || scored + stale + yours + unpriced + early == 0) return;" in method_body(h, "private static void Kept"))
 
 
 chk("1.90.6", "the forecast is held to what really moved whatever the debug switch says, so the share it is counted at is learned by every campaign and not only by one writing a log",
@@ -11443,7 +11446,12 @@ def a_forecast_is_not_judged_before_half_its_time_has_passed():
             and "daysSince < (saidWithinDays > 0f ? saidWithinDays : 0f) * SoonestAForecastIsJudged;" in soon
             and "TradeMath.TooSoonToJudge(withinDays, since);" in S['Scoring.cs']
             and '" kept for a later walk-in as too soon to say anything"' in written
-            and "TooSoonToSay" not in method_body(S['Hindsight.cs'], "private static void Kept")
+            and ordered(method_body(S['Hindsight.cs'], "private static void Kept"),
+                        "if (Scoring.TooOldToSay(said.WithinDays, said.AtHours, now, out float since))",
+                        "stale++;", "if (said.YourTradeMovedIt)", "yours++;",
+                        "if (Scoring.TooSoonToSay(said.WithinDays, since))", "early++;",
+                        "int found = Priced.At(market, said.Item, MobileParty.MainParty, true);",
+                        "scored++;", "LedgerBehavior.Instance?.KeepPromiseScore(held);")
             and all(one in MATHTESTS for one in
                     ("A_forecast_is_judged_only_once_half_its_time_has_passed",
                      "A_forecast_for_no_time_at_all_is_never_too_soon_to_judge",
@@ -11530,7 +11538,7 @@ def a_check_says_so_when_everything_at_a_market_was_passed_over_or_set_aside():
     written = method_body(h, "private static void Written")
     yours = method_body(S['Scoring.cs'], "internal static string Yours")
     return (kept and written and yours
-            and ordered_last(kept, "if (!Writing || scored + stale + yours + unpriced == 0) return;",
+            and ordered_last(kept, "if (!Writing || scored + stale + yours + unpriced + early == 0) return;",
                              'lines.Insert(0, "promise check at "', "if (scored > 0)",
                              '"  here: the price held at "', "Log.WriteMany(lines);")
             and kept.count("if (scored > 0)") == 2
@@ -12060,7 +12068,8 @@ def the_trade_xp_the_ledger_shows_is_the_xp_the_skill_really_took():
     screen = method_body(S['Counter.cs'], "internal static int TradeXpEarnedOnTheScreen")
     return (ordered(credit, "float xpBefore = Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade);",
                     "SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);",
-                    "Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) - xpBefore));")
+                    "int gained = (int)Math.Round(Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) - xpBefore);",
+                    "LedgerBehavior.Instance?.AddTradeXp(gained);")
             and "_tradeXpSeen = TradeXpNow();" in method_body(S['Counter.cs'], "private static bool Opened")
             and ordered(screen, "float earned = now - _tradeXpSeen;", "_tradeXpSeen = now;")
             and "AddTradeXp(Counter.TradeXpEarnedOnTheScreen());" in
@@ -12178,7 +12187,8 @@ def the_marker_writes_its_days_the_same_way_in_every_language():
     marker = S['Marker.cs']
     return ("using System.Globalization;" in marker
             and re.search(r'ToString\("0\.[#0]+"\)', marker) is None
-            and marker.count('Days.ToString("0.#", CultureInfo.InvariantCulture)') == 2
+            and marker.count('Days.ToString("0.#", CultureInfo.InvariantCulture)') == 3
+            and 'how.CeilingPassed.ToString("0.#", CultureInfo.InvariantCulture)' in marker
             and 'one.Days.ToString("0.00", CultureInfo.InvariantCulture)' in marker)
 
 
@@ -12263,11 +12273,12 @@ def trade_xp_the_learning_limit_holds_back_says_so_and_what_lifts_it():
     ids = ["TL" + str(n) for n in range(468, 473)]
     return (credit and limit
             and ordered(credit, "SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);",
-                        "bool learned = Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) > xpBefore;",
+                        "int gained = (int)Math.Round(Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) - xpBefore);",
+                        "bool learned = gained > 0;",
                         'if (!learned && xp > 0 && Guard.Read("TradeXp.Limit", muted, SayTheLearningLimit, false))\n'
                         "                return;", "if (!muted) Notices.Say(earned, Notices.Xp);")
             and ordered(limit, "Campaign.Current?.Models?.CharacterDevelopmentModel",
-                        "if (model.CalculateLearningRate(attributes, focus, skill, trade).ResultNumber > 0f) return false;",
+                        "if (TradeMath.StillLearns(model.CalculateLearningRate(attributes, focus, skill, trade).ResultNumber)) return false;",
                         "model.CalculateLearningLimit(attributes, focus, trade)",
                         "if (skill <= limit) return false;",
                         "TradeMath.FewestThatLets(model.MaxFocusPerSkill - focus,",
@@ -12794,6 +12805,117 @@ def the_forecast_check_says_what_the_shelf_did_the_right_way_round():
 
 chk("1.93.5", "the forecast check says whether the shelf was to gain or lose, whether it did and by how much it missed, the right way round whichever way each went, and a villagers' offer with nowhere in reach to resell any of it says so rather than blaming your margin",
     the_forecast_check_says_what_the_shelf_did_the_right_way_round())
+
+
+def a_learning_rate_left_over_from_rounding_teaches_nothing():
+    t = S['Trading.cs']
+    credit = method_body(t, "private static void CreditTradeSkill")
+    limit = method_body(t, "private static bool SayTheLearningLimit")
+    math = S['TradeMath.cs']
+    return (credit and limit
+            and "public const float SmallestLearningRateThatTeaches = 0.001f;" in math
+            and "public static bool StillLearns(float learningRate) => learningRate >= SmallestLearningRateThatTeaches;"
+                in math
+            and limit.count("TradeMath.StillLearns(") == 3
+            and limit.count("CalculateLearningRate(") == 3
+            and "ResultNumber > 0f" not in limit
+            and ordered(credit, "SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);",
+                        "int gained = (int)Math.Round(Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) - xpBefore);",
+                        "LedgerBehavior.Instance?.AddTradeXp(gained);", "bool learned = gained > 0;",
+                        'if (!learned && xp > 0 && Guard.Read("TradeXp.Limit", muted, SayTheLearningLimit, false))')
+            and "> xpBefore" not in credit
+            and all(one in MATHTESTS for one in
+                    ("A_learning_rate_left_over_from_rounding_teaches_nothing_and_the_smallest_real_one_still_does",
+                     "Assert.True(rate(2, 0, 18) > 0f);",
+                     "Assert.False(TradeMath.StillLearns(rate(2, 0, 18)));",
+                     "Assert.True(TradeMath.StillLearns(rate(2, 0, 17)));")))
+
+
+chk("1.93.6", "a learning rate the game's rounding leaves a hair above nothing counts as nothing, so a Trade skill past its learning limit is named as such, and an XP tick left over from that rounding no longer counts as learning",
+    a_learning_rate_left_over_from_rounding_teaches_nothing())
+
+
+def a_promise_walked_in_on_too_soon_waits_for_a_later_walk_in():
+    kept = method_body(S['Hindsight.cs'], "private static void Kept")
+    promise = method_body(S['Hindsight.cs'], "private static void Promise")
+    sync = method_body(S['Ledger.cs'], "public override void SyncData")
+    ledger = S['Ledger.cs']
+    return (kept and promise and sync
+            and ordered(promise, "if (site == null || route.SellPrice <= 0) return;",
+                        "if (_promised.TryGet(site.StringId, route.Item.StringId, out Promised waiting) && waiting.Item != null &&",
+                        "!waiting.YourTradeMovedIt &&",
+                        "Scoring.StillToBeJudged(waiting.WithinDays, waiting.AtHours, (float)CampaignTime.Now.ToHours))\n                return;",
+                        "_promised.Put(site.StringId, route.Item.StringId, new Promised")
+            and ordered(kept, "var stillToCome = new List<KeyValuePair<string, Promised>>();",
+                        "if (said.YourTradeMovedIt)",
+                        "if (Scoring.TooSoonToSay(said.WithinDays, since))", "early++;", "stillToCome.Add(one);",
+                        "int found = Priced.At(market, said.Item, MobileParty.MainParty, true);",
+                        "foreach (KeyValuePair<string, Promised> one in stillToCome) _promised.Put(site.StringId, one.Key, one.Value);",
+                        "LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(heldTotal, scored));",
+                        '" kept for a later walk-in as too soon to say anything"',
+                        'Log.Repeatable("promise check " + site.StringId, early.ToString(), lines[0]);')
+            and kept.count("_bands.Add(") == 1
+            and 'dataStore.SyncData("TradeLord_PromisesScoredWhenDue", ref _promisesScored);' in sync
+            and 'dataStore.SyncData("TradeLord_PromiseHeldWhenDue", ref _promiseHeld);' in sync
+            and 'dataStore.SyncData("TradeLord_PromiseTextWhenDue", ref _promiseText);' in sync
+            and '"TradeLord_PromisesScored"' not in ledger
+            and '"TradeLord_PromiseHeld"' not in ledger
+            and '"TradeLord_PromiseText"' not in ledger
+            and "when you walk in near the time it said" in README)
+
+
+chk("1.93.6", "a promise walked in on before half the time it was for is kept for a later walk-in rather than scored, the same as a forecast figure, a promise still to be judged is never stamped over by a later route scan, and how far a market's price has held is learned afresh from walk-ins that came near the time promised",
+    a_promise_walked_in_on_too_soon_waits_for_a_later_walk_in())
+
+
+def the_marker_check_says_nothing_of_a_walk_in_made_too_soon():
+    score = method_body(S['Marker.cs'], "internal static void ScoreTheMark")
+    return (score
+            and ordered(score, "_markedValue = 0L;",
+                        "float since = TradeMath.DaysSince(_markedAt, Freshness.Hour);",
+                        "if (Scoring.TooSoonToSay(_markedDays, since))",
+                        '" day(s) later, too soon to say anything about what it marked on");\n                return;',
+                        "float held = TradeMath.HeldShare(",
+                        '" of what it marked on"')
+            and score.count("Log.Write(") == 2)
+
+
+chk("1.93.6", "the marker check says a walk-in came too soon to say anything when it came before half the ride the marker reckoned, as after the map's teleport cheat, rather than scoring it against what the marker said",
+    the_marker_check_says_nothing_of_a_walk_in_made_too_soon())
+
+
+def the_marked_market_keeps_its_mark_a_fifth_past_the_travel_ceiling():
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    hold = method_body(S['TradeMath.cs'], "public static float CeilingTheMarkHolds")
+    why = method_body(S['Marker.cs'], "private static string Why")
+    en = spoken(ENGLISH)
+    return (marker and hold and why
+            and "if (!marked || cap <= 0f || float.IsNaN(cap)) return cap;" in hold
+            and "float held = cap * TheMarkedTownHoldsBy;" in hold
+            and "public const float TheMarkedTownHoldsBy = 1.2f;" in S['TradeMath.cs']
+            and ordered(marker,
+                        "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == _picked);",
+                        "if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) { how.PastCeiling++; continue; }",
+                        "float ride = Travel.EstimateDaysFromParty(s);",
+                        "if (cap > 0f && ride > cap) { how.PastCeiling++; continue; }",
+                        "float plain = LedgerBehavior.TravelCeiling(s);",
+                        "how.CeilingPassed = plain > 0f && ride > plain ? plain : 0f;")
+            and marker.count("LedgerBehavior.TravelCeiling(s)") == 2
+            and ordered(why, '", past your travel ceiling of "', '" day(s) (the market already marked may pass it by "',
+                        "(TradeMath.TheMarkedTownHoldsBy - 1f) * 100f", '"%)"',
+                        '", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how);')
+            and "(TradeMath.TheMarkedTownHoldsBy - 1f) * 100f" in why
+            and "(a town already marked may pass it by a fifth)" in en['TL306']
+            and "(a town already marked may pass it by a fifth)" in M
+            and "be\u015fte bir" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL306']
+            and "\u043f\u044f\u0442\u0443\u044e \u0447\u0430\u0441\u0442\u044c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL306']
+            and "\u4e94\u5206\u4e4b\u4e00" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL306']
+            and "The market already marked keeps its mark until it is a fifth past your travel ceiling" in README
+            and "The_marked_town_keeps_its_mark_a_little_past_your_travel_ceiling_and_no_other_town_does" in MATHTESTS)
+
+
+chk("1.93.6", "the market already marked on your map keeps its mark until it is a fifth past your travel ceiling, the same margin a better market has to beat it by, so a brief slow stretch of road does not flick the marker away and back, while no market is newly marked past the ceiling",
+    the_marked_market_keeps_its_mark_a_fifth_past_the_travel_ceiling())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
