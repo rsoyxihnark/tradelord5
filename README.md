@@ -58,6 +58,7 @@
 - ✅ With Count what is on its way to a market and Bulk price simulation on, it prices each market as it will be when you get there, the same way the ledger does
 - ✅ It leaves out the market TradeLord made its last trade at until you come back to it
 - ✅ The market already marked keeps its mark until it is a fifth past your travel ceiling, so a brief slow stretch of road does not flick the marker to another market and back
+- ✅ Once the market TradeLord made its last trade at is back, it gets one look on the day's gold alone and takes the mark if it earns more a day than the market already marked
 - ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that town's purse, how far away it is and the market it beat
 - ✅ The five workshops in Calradia earning the most right now, with their town, what each will make next and their owner, on that same panel
 - ✅ With Live world prices turned off it shows yours instead
@@ -155,7 +156,7 @@
 - ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, newly marks on your map or holds your cargo for is further than you care to ride
 - ✅ Either ceiling set to 0 takes that limit off, and the Town travel ceiling at 0 weighs every town in Calradia, which is the slowest TradeLord runs
 - ✅ A minimum stock before it calls something worth buying
-- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the workshops and what the town uses up into a route's price, into where TradeLord means to sell what it buys and into the market marked on your map; it follows Live world prices, so turning those off turns this off too
+- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the workshops and what the town uses up into a route's price, into where TradeLord means to sell what it buys, into the market marked on your map and into Hold cargo for the best market; it follows Live world prices, so turning those off turns this off too
 - ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ A share of the whole hold TradeLord may fill, so it stops buying with room left for what a battle or a quest hands you. It ships at the full hold, and selling is unaffected

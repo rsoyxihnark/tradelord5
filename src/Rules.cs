@@ -117,6 +117,19 @@ namespace TradeLord
 
     internal static class Marks
     {
+        internal static bool OutEarns(float back, float marked) => back > 0f && back > marked;
+
+        internal static void OweAFairLook(ISet<string> owed, IList<string> compared, string here, string leftOutNow,
+                                          bool markMoved)
+        {
+            if (markMoved) owed.Clear();
+            else
+                for (int i = 0; compared != null && i < compared.Count; i++)
+                    owed.Remove(compared[i]);
+            if (here != null) owed.Remove(here);
+            if (leftOutNow != null) owed.Add(leftOutNow);
+        }
+
         internal static bool WorthSayingAgain(long value, int units, bool held,
                                               long saidValue, int saidUnits, bool saidHeld) =>
             value != saidValue || units != saidUnits || held != saidHeld;

@@ -790,14 +790,14 @@ def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
     return (ordered(marker, "reachable.Sort(FastestPurseFirst);",
-                    "TheMarkedTownFirst(reachable);",
+                    "TheMarkedTownFirst(reachable, holder);",
                     "float bar = 0f;",
                     "if (TradeMath.PerDay(gold, ride) <= bar) break;",
                     "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);",
                     "long total = took.Value > gold ? gold : took.Value;",
                     "long earned = total - took.Cost;",
                     "float rate = TradeMath.PerDay(earned, ride);",
-                    "float weighed = TradeMath.RateTheMarkHolds(rate, s == _picked);",
+                    "float weighed = TradeMath.RateTheMarkHolds(rate, s == holder);",
                     "if (weighed > bar)")
             and ordered(fetch, "foreach (var (item, amount, worth, floor) in cargo)",
                         "Paying pays = WhatThatMarketPays(site, market, item, party, ride);",
@@ -837,7 +837,7 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
                         "took.Value += fetched;")
             and "if (took.Value <= 0L) { how.Refused++; continue; }" in marker
             and ordered(floor, "if (!Options.Current.PreferBestSellTown) return 0;",
-                        "LedgerBehavior.Instance?.BestSell(held.Item)",
+                        "LedgerBehavior.Instance?.BestSellAsItLands(held.Item)",
                         "TradeRules.BestMarketFloor(",
                         "Options.Current.BestSellTownTolerance);")
             and S['Trading.cs'].count("TradePolicy.WorthToBeat(") == 1
@@ -849,7 +849,7 @@ def the_marker_says_in_the_log_which_town_it_picked_and_why():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     said = (method_body(S['Marker.cs'], "private static string Why") + "\n" +
             method_body(S['Marker.cs'], "private static string TheNextBest"))
-    return (ordered(track, "if (on) target = BestSellTownForCargo(out how);",
+    return (ordered(track, "if (on) target = TheMarkFairlyWeighed(out how);",
                     "if (target == _picked)",
                     'string why = on ? Why(how) : "the map marker is switched off";',
                     'Log.Write(target != null')
@@ -1875,7 +1875,7 @@ chk("1.3.16", "food branch falls through to the sell rules",
         method_body(S['Policy.cs'], "private static void TakeBack"))
 chk("1.3.17", "the marker picks its town through the same ceiling as everything else, which only the market already marked may pass, and by a fifth at most",
     "WithinRadius" not in S['Trading.cs'] and
-    "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == _picked);" in
+    "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == holder);" in
         method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo"))
 chk("1.3.17", "the haircut filters every route pair, on the prices that pair would really open at",
     "float realizable = TradePolicy.Realizable(openingSell);" in S['Ledger.cs'] and
@@ -4206,7 +4206,7 @@ chk("1.14.3", "a market whose merchant has no gold is no destination in any list
         buy_pass() and
     "var markets = EverySell(item);" in
         method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest") and
-    "LedgerBehavior.Instance?.BestSell(Item(at)) ?? (null, 0)" in
+    "LedgerBehavior.Instance?.BestSellAsItLands(Item(at)) ?? (null, 0)" in
         sell_pass())
 
 chk("1.14.4", "the sell pass names a stopping rule only when one fired, so a cargo it may not sell never reads as a market with nothing to trade",
@@ -7113,7 +7113,7 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
                      "if (market == null) continue;",
                      "if (!TradeActionBehavior.IsMarket(s)) continue;",
                      "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) { how.Shut++; continue; }",
-                     "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == _picked);",
+                     "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == holder);",
                      "if (TradeMath.PerDay(gold, ride) <= bar) break;",
                      "WhatItWouldFetch(s, market, party, ride, cargo, gold, null)")
              and "Town.AllTowns" not in marker
@@ -10334,13 +10334,13 @@ def the_marker_picks_the_market_that_earns_fastest_not_the_one_paying_most():
             and "internal float RunnerUpRate;" in S['Marker.cs']
             and "internal float Days;" in S['Marker.cs']
             and "float rate = TradeMath.PerDay(earned, ride);" in marker
-            and "float weighed = TradeMath.RateTheMarkHolds(rate, s == _picked);" in marker
+            and "float weighed = TradeMath.RateTheMarkHolds(rate, s == holder);" in marker
             and "if (weighed > bar)" in marker
             and "how.Days = ride;" in marker
             and "DearestPurseFirst" not in S['Marker.cs']
             and "Travel.EstimateDaysFromParty(how.Best)" not in why
             and 'how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away" +' in why
-            and '", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how);' in why
+            and '", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how) +' in why
             and 'how.Rate.ToString("0") + " gold a day"' in why
             and 'how.RunnerUpRate.ToString("0") + " gold a day for " +' in why
             and all(one in MATHTESTS for one in
@@ -10936,16 +10936,18 @@ def the_marked_town_is_only_given_up_for_a_clear_gain():
             and "if (!marked || rate <= 0f || float.IsNaN(rate)) return rate;" in hold
             and "float held = rate * TheMarkedTownHoldsBy;" in hold
             and "return float.IsInfinity(held) ? rate : held;" in hold
-            and ordered(first, "if (_picked == null) return;",
-                        "if (reachable[at].s != _picked) continue;",
+            and ordered(first, "if (holder == null) return;",
+                        "if (reachable[at].s != holder) continue;",
                         "reachable.RemoveAt(at);", "reachable.Insert(0, held);")
             and "for (int at = 1; at < reachable.Count; at++)" in first
-            and ordered(marker, "TheMarkedTownFirst(reachable);", "float bar = 0f;",
+            and ordered(marker, "TheMarkedTownFirst(reachable, holder);", "float bar = 0f;",
                         "if (TradeMath.PerDay(gold, ride) <= bar) break;",
-                        "float weighed = TradeMath.RateTheMarkHolds(rate, s == _picked);",
+                        "float weighed = TradeMath.RateTheMarkHolds(rate, s == holder);",
                         "if (weighed > bar)", "bar = weighed;")
-            and "how.Held = how.Best != null && how.Best == _picked && how.RunnerUpRate > how.Rate;"
+            and "how.Held = how.Best != null && how.Best == holder && how.RunnerUpRate > how.Rate;"
                 in marker
+            and "Settlement best = BestSellTownForCargo(out how, _picked);" in S['Marker.cs']
+            and "private static Settlement BestSellTownForCargo(out Reckoning how, Settlement holder)" in S['Marker.cs']
             and "internal bool Held;" in S['Marker.cs']
             and '", and it holds the mark against " + next' in said
             and '", because the marker only moves for a clear gain"' in said
@@ -12918,7 +12920,7 @@ def the_marked_market_keeps_its_mark_a_fifth_past_the_travel_ceiling():
             and "float held = cap * TheMarkedTownHoldsBy;" in hold
             and "public const float TheMarkedTownHoldsBy = 1.2f;" in S['TradeMath.cs']
             and ordered(marker,
-                        "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == _picked);",
+                        "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == holder);",
                         "if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) { how.PastCeiling++; continue; }",
                         "float ride = Travel.EstimateDaysFromParty(s);",
                         "if (cap > 0f && ride > cap) { how.PastCeiling++; continue; }",
@@ -12927,7 +12929,7 @@ def the_marked_market_keeps_its_mark_a_fifth_past_the_travel_ceiling():
             and marker.count("LedgerBehavior.TravelCeiling(s)") == 2
             and ordered(why, '", past your travel ceiling of "', '" day(s) (the market already marked may pass it by "',
                         "(TradeMath.TheMarkedTownHoldsBy - 1f) * 100f", '"%)"',
-                        '", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how);')
+                        '", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how) +')
             and "(TradeMath.TheMarkedTownHoldsBy - 1f) * 100f" in why
             and "(a town already marked may pass it by a fifth)" in en['TL306']
             and "(a town already marked may pass it by a fifth)" in M
@@ -13507,7 +13509,7 @@ def the_marker_and_the_buyer_say_in_the_log_what_their_numbers_rest_on():
     far = method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
     return (update and ultra and far
             and ordered(update, "long started = System.Diagnostics.Stopwatch.GetTimestamp();",
-                        "if (on) target = BestSellTownForCargo(out how);",
+                        "if (on) target = TheMarkFairlyWeighed(out how);",
                         "how.Took = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /",
                         "System.Diagnostics.Stopwatch.Frequency;")
             and "DateTime" not in update
@@ -13661,6 +13663,87 @@ def the_marker_log_keeps_every_market_change_and_shows_todays_price():
 
 chk("1.93.14", "the map marker writes its whole weighing again when what it would fetch, the units or its hold changed, and otherwise one line naming each other market whose gold or units changed, that is newly priced or no longer priced, and a new next best, and each good it marked on shows today's price beside the price it expects once what is on its way lands, and the daily herd check says where you are",
     the_marker_log_keeps_every_market_change_and_shows_todays_price())
+
+def hold_cargo_and_the_marker_floor_count_what_is_on_its_way():
+    lands = method_body(S['Ledger.cs'], "public (Settlement town, int price) BestSellAsItLands(ItemObject item)")
+    resale = method_body(S['Trading.cs'], "public bool ResaleMarket(int at, out int price)")
+    floor = method_body(S['Marker.cs'], "private static int BestMarketFloor")
+    en = spoken(ENGLISH)
+    tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
+    return (lands == 'public (Settlement town, int price) BestSellAsItLands(ItemObject item)\n        {\n            var markets = EverySell(item);\n            Settlement best = null;\n            int top = 0;\n            for (int i = 0; i < markets.Count; i++)\n            {\n                var (town, quoted) = markets[i];\n                if (town == null || quoted <= 0) continue;\n                float days = Travel.EstimateDaysFromParty(town);\n                int landed = TradeMath.OutOfReach(days) ? 0 : Forecast.WorthShiftAsItHasHeld(town, item, days);\n                int price = landed == 0\n                    ? quoted\n                    : Bulk.OpeningOn(Bulk.AsItLands(town, new EquipmentElement(item), true, quoted, landed), town, quoted);\n                if (price <= top) continue;\n                top = price;\n                best = town;\n            }\n            return (best, top);\n        }'
+            and "var best = LedgerBehavior.Instance?.BestSellAsItLands(Item(at)) ?? (null, 0);" in resale
+            and "return best.Item1 != null && best.Item1 != _pass.Site;" in resale
+            and "var best = LedgerBehavior.Instance?.BestSellAsItLands(held.Item) ?? (null, 0);" in floor
+            and "BestSell(held.Item)" not in S['Marker.cs'] and "BestSell(Item(at))" not in S['Trading.cs']
+            and "counting what is on its way there as the ledger does" in en['TL329']
+            and "Route stock uses it; with Bulk price simulation on, so do route prices, a price in a tooltip, Auto buy, the map marker and Hold cargo for the best market." in en['TL396']
+            and "the cargo it would really sell there" in en['TL345']
+            and "skips the market TradeLord last traded at until you return" in en['TL345']
+            and "still pins one by hand" in en['TL345']
+            and all(en[one] in M for one in ('TL329', 'TL396', 'TL345'))
+            and all(said_in_every_language(one) for one in ('TL329', 'TL396', 'TL345'))
+            and "siz varmadan bir pazara getirdiklerini ya da oradan götürdüklerini" in tr['TL396']
+            and "Toplu fiyat benzetimi açıkken rota fiyatları" in tr['TL396'] and "Yükü en iyi pazar için tut" in tr['TL396']
+            and "привезут на рынок или увезут с него до вашего приезда" in ru['TL396']
+            and "在你到达之前给市场带来或带走的东西" in cn['TL396']
+            and "siz oraya dönene kadar atlar" in tr['TL345'] and "Orada gerçekten satacağı kargoya" in tr['TL345']
+            and "en iyi pazara yolda olanları da defterin yaptığı gibi sayar" in tr['TL329']
+            and "«Расчёт цены по единицам», ещё и цены маршрутов" in ru['TL396'] and "«Придерживать груз до лучшего рынка»" in ru['TL396']
+            and "пока вы туда не вернётесь" in ru['TL345'] and "что там действительно будет продан" in ru['TL345']
+            and "учитывая, как и книга, то, что едет туда" in ru['TL329']
+            and "开启“整批价格模拟”时，路线价格" in cn['TL396'] and "“为最好的市场留住货物”" in cn['TL396']
+            and "直到你回到那里" in cn['TL345'] and "对它在那里真能卖掉的货物" in cn['TL345']
+            and "像账簿一样算上正在赶往那里的东西" in cn['TL329']
+            and "into the market marked on your map and into Hold cargo for the best market" in README)
+
+
+chk("1.93.15", "Hold cargo for the best market and the map marker's floor price the best market as it will be when you get there, counting what is on its way the way Auto buy does, and the hints say so in every language, route and tooltip prices needing Bulk price simulation as they do",
+    hold_cargo_and_the_marker_floor_count_what_is_on_its_way())
+
+
+def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    update = method_body(S['Marker.cs'], "internal static void Update")
+    forget = method_body(S['Marker.cs'], "internal static void Forget()")
+    why = method_body(S['Marker.cs'], "private static string Why")
+    return (marker and update and forget and why
+            and method_body(S['Marker.cs'], "private static Settlement TheMarkFairlyWeighed(out Reckoning how)") == 'private static Settlement TheMarkFairlyWeighed(out Reckoning how)\n        {\n            Settlement best = BestSellTownForCargo(out how, _picked);\n            if (how.Afresh == null || best == null || best != _picked)\n            {\n                how.Afresh = null;\n                return best;\n            }\n            Settlement back = how.Afresh;\n            List<string> compared = how.Compared;\n            best = BestSellTownForCargo(out how, null);\n            how.Afresh = back;\n            how.Unheld = _picked;\n            how.Compared = compared;\n            return best;\n        }'
+            and method_body(S['Marker.cs'], "private static Settlement OutEarnsTheMark(") == 'private static Settlement OutEarnsTheMark(\n            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, Settlement holder,\n            MobileParty party, List<(EquipmentElement item, int amount, int worth, int floor)> cargo,\n            List<string> compared)\n        {\n            int mine = -1;\n            for (int at = 0; at < reachable.Count; at++)\n                if (reachable[at].s == holder) { mine = at; break; }\n            Settlement back = null;\n            float marked = 0f;\n            float best = 0f;\n            bool priced = false;\n            for (int at = 0; at < reachable.Count; at++)\n            {\n                Settlement s = reachable[at].s;\n                if (!_owedAFairLook.Contains(s.StringId)) continue;\n                compared.Add(s.StringId);\n                if (mine < 0) continue;\n                if (!priced) { marked = RateThere(reachable[mine], party, cargo); priced = true; }\n                float rate = RateThere(reachable[at], party, cargo);\n                if (!Marks.OutEarns(rate, marked) || (back != null && rate <= best)) continue;\n                best = rate;\n                back = s;\n            }\n            return back;\n        }'
+            and method_body(S['Marker.cs'], "private static float RateThere(") == 'private static float RateThere((Settlement s, SettlementComponent market, int gold, float days) one,\n                                       MobileParty party,\n                                       List<(EquipmentElement item, int amount, int worth, int floor)> cargo)\n        {\n            Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null);\n            if (took.Value <= 0L) return 0f;\n            long total = took.Value > one.gold ? one.gold : took.Value;\n            return TradeMath.PerDay(total - took.Cost, one.days);\n        }'
+            and method_body(S['Rules.cs'], "internal static void OweAFairLook(") == 'internal static void OweAFairLook(ISet<string> owed, IList<string> compared, string here, string leftOutNow,\n                                          bool markMoved)\n        {\n            if (markMoved) owed.Clear();\n            else\n                for (int i = 0; compared != null && i < compared.Count; i++)\n                    owed.Remove(compared[i]);\n            if (here != null) owed.Remove(here);\n            if (leftOutNow != null) owed.Add(leftOutNow);\n        }'
+            and "internal static bool OutEarns(float back, float marked) => back > 0f && back > marked;" in S['Rules.cs']
+            and "private static readonly HashSet<string> _owedAFairLook = new HashSet<string>(System.StringComparer.Ordinal);" in S['Marker.cs']
+            and "_owedAFairLook.Clear();" in forget
+            and S['Marker.cs'].count("_owedAFairLook") == 6
+            and ordered(marker, "reachable.Sort(FastestPurseFirst);",
+                        "if (holder != null && _owedAFairLook.Count > 0)\n            {\n"
+                        "                how.Compared = new List<string>();\n"
+                        "                how.Afresh = OutEarnsTheMark(reachable, holder, party, cargo, how.Compared);\n            }",
+                        "TheMarkedTownFirst(reachable, holder);")
+            and marker.count("how.Afresh") == 1 and marker.count("how.Compared") == 2
+            and "if (on) target = TheMarkFairlyWeighed(out how);" in update
+            and ordered(update, "if (target == _picked)",
+                        "Marks.OweAFairLook(_owedAFairLook, how.Compared, MobileParty.MainParty?.CurrentSettlement?.StringId,\n"
+                        "                                   target == null ? null : TradeActionBehavior.MarketTheMarkerLeavesOut(), target == null);",
+                        "if (target != null) SayItWeighedAgain(target, how);\n                return;\n            }",
+                        "_picked = target;\n            Marks.OweAFairLook(_owedAFairLook, how.Compared, MobileParty.MainParty?.CurrentSettlement?.StringId,\n"
+                        "                               target == null ? null : TradeActionBehavior.MarketTheMarkerLeavesOut(), true);")
+            and update.count("Marks.OweAFairLook(") == 2 and update.count("_owedAFairLook") == 2
+            and "internal static string MarketTheMarkerLeavesOut() => LastTradedAtOnceYouLeave();" in S['Trading.cs']
+            and "TheNextBest(how) +\n                   (how.Afresh != null && how.Unheld != null\n"
+                "                       ? \", marked afresh because \" + how.Afresh.Name + \", left out while \" + how.Unheld.Name +\n"
+                "                         \" was marked, now earns more a day than it\"\n"
+                "                       : \"\");" in why
+            and why.count("how.Afresh") == 2
+            and all(one in SCORINGTESTS for one in
+                    ("A_market_back_in_the_running_takes_the_mark_only_when_it_earns_more_a_day",
+                     "A_market_left_out_while_the_mark_stands_is_owed_a_fair_look_until_it_gets_one",
+                     "Coming_back_to_a_market_owed_a_fair_look_counts_as_its_look_unless_TradeLord_trades_there_again"))
+            and "Once the market TradeLord made its last trade at is back, it gets one look on the day's gold alone and takes the mark if it earns more a day than the market already marked" in README)
+
+
+chk("1.93.15", "a market left out as the last one traded at while the mark stood gets one fair look when it is back, or when you come back to it: if it earns more a day than the marked market, the marker chooses afresh and the log says why, and otherwise the mark keeps its usual hold",
+    a_market_back_in_the_running_gets_one_fair_look_against_the_mark())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

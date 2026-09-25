@@ -424,7 +424,7 @@ namespace TradeLord.Mcm
         public bool ConfidenceRanking { get => _o.ConfidenceRanking; set { _o.ConfidenceRanking = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL279}Count what is on its way to a market", Order = 10, RequireRestart = false,
-            HintText = "{=TL396}Before a route or a price in a tooltip is worked out, count what reaches or leaves that market before you do: what caravans will unload and buy, what workshops will make and use up, and what the town itself uses up. A village follows the town it trades with. Needs Live world prices. OFF prices each market as it stands.")]
+            HintText = "{=TL396}Counts what caravans and workshops bring to or take from a market before you arrive, and what the town itself uses up. Route stock uses it; with Bulk price simulation on, so do route prices, a price in a tooltip, Auto buy, the map marker and Hold cargo for the best market. A village follows the town it trades with. Needs Live world prices.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool MarketForecast { get => _o.MarketForecast; set { _o.MarketForecast = value; Options.Bump(); } }
 
@@ -580,7 +580,7 @@ namespace TradeLord.Mcm
         public float TradeXpMultiplier { get => _o.TradeXpMultiplier; set { _o.TradeXpMultiplier = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL245}Auto-mark best sell market on map", Order = 13, RequireRestart = false,
-            HintText = "{=TL345}Moves a map tracker to the market in reach paying most for the cargo it would really sell there, counting only what clears Minimum profit margin, following you as you ride. A village is only ever marked while Trade with villages is on. It keeps to the travel ceilings. ON by default; clicking a town in the ledger panel still pins a marker by hand.")]
+            HintText = "{=TL345}Marks the market in reach that pays most for the cargo it would really sell there, following you as you ride. A village is only ever marked while Trade with villages is on. It keeps to the travel ceilings and skips the market TradeLord last traded at until you return. ON by default; clicking a town in the ledger panel still pins one by hand.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool MarkBestSellTownOnMap { get => _o.MarkBestSellTownOnMap; set { _o.MarkBestSellTownOnMap = value; Options.Bump(); } }
 
@@ -651,7 +651,7 @@ namespace TradeLord.Mcm
         public int MaxLootTier { get => _o.MaxLootTier; set { _o.MaxLootTier = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL229}Hold cargo for the best market", Order = 6, RequireRestart = false,
-            HintText = "{=TL329}Skip selling here when this market pays clearly less than the best known market, so your cargo waits for the town that pays for it. It holds back what you bought and what you looted alike. OFF by default, in which case looted gear goes to the first market that can pay for it.")]
+            HintText = "{=TL329}Skip selling here when this market pays clearly less than the best known market, counting what is on its way there as the ledger does, so your cargo waits for the town that pays for it. It holds back what you bought and what you looted alike. OFF by default, in which case looted gear goes to the first market that can pay for it.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public bool PreferBestSellTown { get => _o.PreferBestSellTown; set { _o.PreferBestSellTown = value; Options.Bump(); } }
 
