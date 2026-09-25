@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.93.9
+
+- Fixed Count what is on its way to a market counting only the next run of one line of each workshop, however long your ride
+- Count what is on its way to a market now follows every workshop line daily, for twice your Town travel ceiling and a day, ten days at most
+- Count what is on its way to a market now counts a workshop run only while the town holds its inputs and the run pays
+- Count what is on its way to a market now counts your own workshops drawing on their warehouse and landing only what you send to the market
+- Count what is on its way to a market starts learning afresh how far to trust itself, now that it follows every workshop run
+- The feature list now says every workshop is followed day by day and a run counts only while the town can feed it and it pays
+- The feature list now says your own workshops draw on their warehouse first and land only what you send to the market
+
 ## 1.93.8
 
 - Buy haul animals no longer buys an animal that would leave your purse at or below Gold before it buys a haul animal

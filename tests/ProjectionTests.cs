@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TradeLord;
 using Xunit;
@@ -229,13 +230,6 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_workshop_run_is_measured_over_one_day()
-        {
-            Assert.Equal(1f, Projection.WorkshopRunDays);
-            Assert.Equal(0.25f, TradeMath.RunLandsIn(0.75f, Projection.WorkshopRunDays), 4);
-        }
-
-        [Fact]
         public void A_purse_takes_whole_units_off_the_shelf_and_never_part_of_one()
         {
             Assert.Equal(4, Projection.UnitsLeaving(400, 100));
@@ -428,6 +422,220 @@ namespace TradeLord.Tests
 
                 Assert.True(handed <= purse + kinds);
             }
+        }
+
+        private static TownBook Town(int shops, int gold = 50000, int capital = 10000)
+        {
+            var town = new TownBook
+            {
+                Gold = gold, Capital = new int[shops], Expense = new int[shops], Warehouse = new int[shops]
+            };
+            for (int k = 0; k < shops; k++) town.Capital[k] = capital;
+            return town;
+        }
+
+        private static void Shelve(TownBook town, string kind, int units, int value, int usedADay = 0)
+        {
+            town.Units[kind] = units;
+            town.UnitValue[kind] = value;
+            town.InStore[kind] = units * value;
+            town.UsedADay[kind] = usedADay;
+        }
+
+        private static ShopLine Line(int shop, float progress, float speed, string input, string output,
+                                     float pace = 5f)
+        {
+            var line = new ShopLine { Shop = shop, Progress = progress, Speed = speed, Pace = pace };
+            line.Inputs.Add((input, 1));
+            line.Outputs.Add((output, 1));
+            return line;
+        }
+
+        private static int Flat(string kind, int store, bool selling) => kind == "wool" ? 20 : 150;
+
+        private static (List<Landing> made, List<Draw> taken) Follow(List<ShopLine> lines, TownBook town,
+                                                                     float first = 0.5f, float watch = 10f,
+                                                                     Func<string, int, bool, int> price = null,
+                                                                     List<Landing> arriving = null,
+                                                                     List<(float, string, int)> bought = null)
+        {
+            var made = new List<Landing>();
+            var taken = new List<Draw>();
+            WorkshopRuns.Follow(lines, town, first, watch, arriving, bought, price ?? Flat, made, taken);
+            return (made, taken);
+        }
+
+        private static int Drawn(List<Draw> taken)
+        {
+            int worth = 0;
+            foreach (Draw one in taken) worth += one.Worth;
+            return worth;
+        }
+
+        private static int Made(List<Landing> made, string kind)
+        {
+            int units = 0;
+            foreach (Landing one in made) if (one.Category == kind) units += one.Units;
+            return units;
+        }
+
+        [Fact]
+        public void A_workshop_line_runs_at_every_daily_tick_its_pace_reaches_while_the_town_feeds_it()
+        {
+            TownBook town = Town(1);
+            Shelve(town, "wool", 100, 20);
+            Shelve(town, "cloth", 0, 150);
+            var (made, taken) = Follow(new List<ShopLine> { Line(0, 0.5f, 1f, "wool", "cloth") }, town, 0.5f, 3.5f);
+            Assert.Equal(4, Made(made, "cloth"));
+            Assert.Equal(new[] { 0.5f, 1.5f, 2.5f, 3.5f }, made.ConvertAll(one => one.Days).ToArray());
+            Assert.Equal(4 * 20, Drawn(taken));
+        }
+
+        [Fact]
+        public void A_faster_line_runs_more_than_once_a_day_and_a_slower_one_skips_days()
+        {
+            TownBook town = Town(2);
+            Shelve(town, "wool", 100, 20);
+            Shelve(town, "cloth", 0, 150);
+            var lines = new List<ShopLine> { Line(0, 0f, 2f, "wool", "cloth"), Line(1, 0f, 0.5f, "wool", "cloth") };
+            var (made, _) = Follow(lines, town, 1f, 4f);
+            Assert.Equal(4 * 2 + 2, Made(made, "cloth"));
+        }
+
+        [Fact]
+        public void A_line_stops_for_the_day_at_the_first_run_it_cannot_feed_and_loses_that_progress()
+        {
+            TownBook town = Town(1);
+            Shelve(town, "wool", 3, 20);
+            Shelve(town, "cloth", 0, 150);
+            var lines = new List<ShopLine> { Line(0, 0f, 2f, "wool", "cloth") };
+            var (made, _) = Follow(lines, town, 1f, 3f);
+            Assert.Equal(3, Made(made, "cloth"));
+            Assert.Equal(0, town.Units["wool"]);
+            Assert.Equal(1f, lines[0].Progress, 3);
+        }
+
+        [Fact]
+        public void A_run_that_would_not_pay_the_game_its_margin_never_happens()
+        {
+            TownBook town = Town(1);
+            Shelve(town, "wool", 100, 20);
+            Shelve(town, "cloth", 0, 150);
+            var slow = new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth", pace: 1f) };
+            Assert.Equal(0, Made(Follow(slow, town, 1f, 3f).made, "cloth"));
+            var hidden = new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth", pace: 1f) };
+            hidden[0].Hidden = true;
+            Assert.Equal(3, Made(Follow(hidden, town, 1f, 3f).made, "cloth"));
+        }
+
+        [Fact]
+        public void A_town_short_of_gold_or_a_workshop_short_of_capital_runs_nothing_of_trade_goods()
+        {
+            TownBook poor = Town(1, gold: 100);
+            Shelve(poor, "wool", 100, 20);
+            Shelve(poor, "cloth", 0, 150);
+            Assert.Equal(0, Made(Follow(new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth") }, poor, 1f, 3f).made, "cloth"));
+            TownBook broke = Town(1, capital: 10);
+            Shelve(broke, "wool", 100, 20);
+            Shelve(broke, "cloth", 0, 150);
+            Assert.Equal(0, Made(Follow(new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth") }, broke, 1f, 3f).made, "cloth"));
+        }
+
+        [Fact]
+        public void The_first_workshop_in_the_town_gets_the_last_of_an_input_and_what_one_makes_feeds_the_next()
+        {
+            TownBook town = Town(3);
+            Shelve(town, "wool", 1, 20);
+            Shelve(town, "cloth", 0, 150);
+            Shelve(town, "tunic", 0, 400);
+            var lines = new List<ShopLine>
+            {
+                Line(0, 0f, 1f, "wool", "cloth"), Line(1, 0f, 1f, "wool", "cloth"), Line(2, 0f, 1f, "cloth", "tunic")
+            };
+            var (made, taken) = Follow(lines, town, 1f, 1f, (kind, store, selling) => kind == "wool" ? 20 : kind == "cloth" ? 150 : 400);
+            Assert.Equal(1, Made(made, "cloth"));
+            Assert.Equal(1, Made(made, "tunic"));
+            Assert.Equal(0, town.Units["cloth"]);
+        }
+
+        [Fact]
+        public void Goods_on_their_way_in_feed_a_workshop_and_what_caravans_buy_and_the_town_uses_starve_it()
+        {
+            TownBook fed = Town(1);
+            Shelve(fed, "wool", 0, 20);
+            Shelve(fed, "cloth", 0, 150);
+            var arriving = new List<Landing> { new Landing { Category = "wool", Units = 2, Worth = 40, Days = 1.2f } };
+            Assert.Equal(2, Made(Follow(new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth") }, fed, 1f, 4f,
+                                        arriving: arriving).made, "cloth"));
+            TownBook starved = Town(1);
+            Shelve(starved, "wool", 4, 20, usedADay: 40);
+            Shelve(starved, "cloth", 0, 150);
+            var bought = new List<(float, string, int)> { (0.5f, "wool", 1) };
+            Assert.Equal(1, Made(Follow(new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth") }, starved, 1f, 4f,
+                                        bought: bought).made, "cloth"));
+        }
+
+        [Fact]
+        public void Your_own_workshop_draws_on_its_warehouse_first_and_leaves_its_share_of_output_in_the_town()
+        {
+            TownBook town = Town(1);
+            Shelve(town, "wool", 10, 20);
+            Shelve(town, "cloth", 0, 150);
+            town.Warehouse[0] = 2;
+            ShopLine line = Line(0, 0f, 1f, "wool", "cloth");
+            line.Yours = true;
+            line.FromWarehouse = true;
+            line.ToTown = 0.5f;
+            var (made, taken) = Follow(new List<ShopLine> { line }, town, 1f, 4f);
+            Assert.Equal(0, town.Warehouse[0]);
+            Assert.Equal(2 * 20, Drawn(taken));
+            Assert.Equal(2, Made(made, "cloth"));
+        }
+
+        [Fact]
+        public void The_daily_expense_comes_off_a_workshop_until_its_capital_cannot_meet_it()
+        {
+            TownBook town = Town(1, capital: 25);
+            town.Expense[0] = 10;
+            Shelve(town, "wool", 0, 20);
+            Shelve(town, "cloth", 0, 150);
+            Follow(new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth") }, town, 1f, 4f);
+            Assert.Equal(5, town.Capital[0]);
+        }
+
+        [Fact]
+        public void The_workshops_are_followed_for_twice_your_travel_ceiling_and_a_day_within_bounds()
+        {
+            Assert.Equal(6f, WorkshopRuns.Watch(2.4f), 3);
+            Assert.Equal(WorkshopRuns.LongestWatch, WorkshopRuns.Watch(0f), 3);
+            Assert.Equal(WorkshopRuns.LongestWatch, WorkshopRuns.Watch(8f), 3);
+            Assert.Equal(WorkshopRuns.ShortestWatch, WorkshopRuns.Watch(0.2f), 3);
+            Assert.Equal(WorkshopRuns.LongestWatch, WorkshopRuns.Watch(float.NaN), 3);
+        }
+
+        [Fact]
+        public void Nothing_is_followed_for_a_town_with_no_line_or_no_way_to_price()
+        {
+            TownBook town = Town(1);
+            var (made, taken) = Follow(new List<ShopLine>(), town);
+            Assert.Empty(made);
+            Assert.Empty(taken);
+            var none = new List<Landing>();
+            WorkshopRuns.Follow(new List<ShopLine> { Line(0, 0f, 1f, "wool", "cloth") }, town, 1f, 3f, null, null, null,
+                                none, new List<Draw>());
+            Assert.Empty(none);
+        }
+
+        [Fact]
+        public void A_workshop_whose_progress_cannot_be_read_is_taken_as_not_started_yet()
+        {
+            TownBook town = Town(1);
+            Shelve(town, "wool", 100, 20);
+            Shelve(town, "cloth", 0, 150);
+            var lines = new List<ShopLine> { Line(0, float.NaN, 0.5f, "wool", "cloth") };
+            var (made, _) = Follow(lines, town, 1f, 2f);
+            Assert.Equal(1, Made(made, "cloth"));
+            Assert.Equal(2f, made[0].Days, 3);
         }
     }
 }
