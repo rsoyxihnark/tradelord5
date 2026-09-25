@@ -110,10 +110,20 @@ namespace TradeLord
 
         internal static string LastTradedAt(string leaving, bool traded, string lastTradedAt) =>
             traded && leaving != null ? leaving : lastTradedAt;
+
+        internal static string AfterTheRoad(bool tradedOnTheRoad, string lastTradedAt) =>
+            tradedOnTheRoad ? null : lastTradedAt;
+
+        internal static bool LeftOutOfTheMark(string there, string lastTradedAt, bool autoSell, bool staged) =>
+            autoSell && !staged && FirstTimeBack(there, lastTradedAt);
     }
 
     internal static class Marks
     {
+        internal static bool WorthSayingAgain(long value, int units, bool held,
+                                              long saidValue, int saidUnits, bool saidHeld) =>
+            value != saidValue || units != saidUnits || held != saidHeld;
+
         internal static bool OnlyEatenFrom(List<(string good, int amount, bool food)> then,
                                            List<(string good, int amount, bool food)> now)
         {
@@ -201,6 +211,8 @@ namespace TradeLord
     internal static class Herding
     {
         internal const int Cushion = 2;
+
+        internal static string Men(int men) => men + (men == 1 ? " man" : " men");
 
         internal static int MountsNobodyRides(int mounts, int menOnFoot) =>
             Math.Max(0, (mounts < 0 ? 0 : mounts) - (menOnFoot < 0 ? 0 : menOnFoot));
@@ -686,6 +698,11 @@ namespace TradeLord
             if (price > 0 && gold > 0) return Math.Max(1, gold / price);
             return gold > 0 ? 1 : 0;
         }
+
+        public static string ToYourPurse(long purse) =>
+            purse > 0L ? "puts " + purse + " gold into your purse"
+            : purse < 0L ? "takes " + (-purse) + " gold out of your purse"
+            : "leaves your purse where it is";
 
         public static bool AddsUp(int reckonedNet, int purseMoved) =>
             Math.Abs((long)reckonedNet - purseMoved) <= Slack + Math.Abs((long)purseMoved) / 100L;

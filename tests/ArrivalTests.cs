@@ -118,5 +118,38 @@ namespace TradeLord.Tests
             Assert.False(Arrivals.FirstTimeBack("town_ES3", Arrivals.LastTradedAt("town_V8", true, last)));
             Assert.True(Arrivals.FirstTimeBack("town_ES3", Arrivals.LastTradedAt("town_V8", false, last)));
         }
+
+        [Fact]
+        public void A_trade_on_the_road_frees_the_market_it_last_traded_at()
+        {
+            string last = Arrivals.LastTradedAt("town_ES3", true, null);
+            Assert.Null(Arrivals.AfterTheRoad(true, last));
+            Assert.False(Arrivals.FirstTimeBack("town_ES3", Arrivals.AfterTheRoad(true, last)));
+        }
+
+        [Fact]
+        public void The_map_marker_leaves_out_the_market_auto_sell_leaves_alone_the_first_time_back()
+        {
+            Assert.True(Arrivals.LeftOutOfTheMark("town_ES3", "town_ES3", true, false));
+        }
+
+        [Fact]
+        public void The_map_marker_keeps_that_market_when_arrival_would_trade_there_or_never_sells_on_arrival()
+        {
+            Assert.False(Arrivals.LeftOutOfTheMark("town_ES3", "town_ES3", false, false));
+            Assert.False(Arrivals.LeftOutOfTheMark("town_ES3", "town_ES3", true, true));
+            Assert.False(Arrivals.LeftOutOfTheMark("town_V8", "town_ES3", true, false));
+            Assert.False(Arrivals.LeftOutOfTheMark("town_ES3", null, true, false));
+            Assert.False(Arrivals.LeftOutOfTheMark(null, null, true, false));
+        }
+
+        [Fact]
+        public void Meeting_a_party_on_the_road_without_a_trade_keeps_the_market_it_last_traded_at()
+        {
+            string last = Arrivals.LastTradedAt("town_ES3", true, null);
+            Assert.Equal("town_ES3", Arrivals.AfterTheRoad(false, last));
+            Assert.True(Arrivals.FirstTimeBack("town_ES3", Arrivals.AfterTheRoad(false, last)));
+            Assert.Null(Arrivals.AfterTheRoad(false, null));
+        }
     }
 }

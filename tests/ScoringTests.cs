@@ -583,6 +583,16 @@ namespace TradeLord.Tests
             new List<(string good, int amount, bool food)>(held);
 
         [Fact]
+        public void The_marker_says_it_weighed_again_only_when_the_gold_the_units_or_its_hold_moved()
+        {
+            Assert.False(Marks.WorthSayingAgain(874, 2, false, 874, 2, false));
+            Assert.True(Marks.WorthSayingAgain(834, 2, false, 874, 2, false));
+            Assert.True(Marks.WorthSayingAgain(874, 3, false, 874, 2, false));
+            Assert.True(Marks.WorthSayingAgain(874, 2, true, 874, 2, false));
+            Assert.True(Marks.WorthSayingAgain(874, 2, false, -1, -1, false));
+        }
+
+        [Fact]
         public void The_same_cargo_packed_in_another_order_is_the_same_cargo()
         {
             var then = Cargo(("salt", 13, false), ("flax", 18, false), ("meat", 4, true));

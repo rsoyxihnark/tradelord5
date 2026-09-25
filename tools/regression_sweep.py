@@ -793,14 +793,14 @@ def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
                     "TheMarkedTownFirst(reachable);",
                     "float bar = 0f;",
                     "if (TradeMath.PerDay(gold, ride) <= bar) break;",
-                    "Takings took = WhatItWouldFetch(s, market, party, cargo, gold, null);",
+                    "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);",
                     "long total = took.Value > gold ? gold : took.Value;",
                     "long earned = total - took.Cost;",
                     "float rate = TradeMath.PerDay(earned, ride);",
                     "float weighed = TradeMath.RateTheMarkHolds(rate, s == _picked);",
                     "if (weighed > bar)")
             and ordered(fetch, "foreach (var (item, amount, worth, floor) in cargo)",
-                        "Paying pays = WhatThatMarketPays(site, market, item, party);",
+                        "Paying pays = WhatThatMarketPays(site, market, item, party, ride);",
                         "for (int u = 0; u < amount; u++)",
                         "int price = pays.At(u);",
                         "if (took.Value + fetched >= gold) { took.PurseCapped = true; break; }")
@@ -830,7 +830,7 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
             and ": TradeRules.WorthToBeat(good, paid, UnpaidWorth(el.Item));" in worth
             and worth.count("UnpaidWorth(el.Item)") == 1
             and ordered(method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch"),
-                        "Paying pays = WhatThatMarketPays(site, market, item, party);",
+                        "Paying pays = WhatThatMarketPays(site, market, item, party, ride);",
                         "int price = pays.At(u);",
                         "if (price < floor) break;",
                         "if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) break;",
@@ -1655,7 +1655,7 @@ chk("1.3.8", "the buying pass takes only what a market in reach pays more for, a
                and "if (buyer == null) return false;" in b
                and "if (!TradeMath.BuyAcceptable(price, TradeMath.Realizable(wouldDraw - drawn," in b
                and "{ tally.Note(Block.BelowMargin); break; }" in b
-               and "if (town == null || price <= 0 || town == notHere) continue;" in far
+               and "if (town == null || quoted <= 0 || town == notHere) continue;" in far
                and "if (TradeMath.OutOfReach(days)) continue;" in far)
     (buy_pass(),
      method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")))
@@ -2535,7 +2535,8 @@ chk("1.36.2", "a purchase is written down at what the very thing that was bought
         and ": this(site, new EquipmentElement(item), selling, quoted, landed)" in ladder
         and "new Shelf(site, stocked, selling, quoted, landed);" in method_body(
             S['Market.cs'], "internal Ladder(Settlement site, EquipmentElement stocked, bool selling, int quoted, int landed)")
-        and S['Market.cs'].count("new EquipmentElement(") == 2
+        and S['Market.cs'].count("new EquipmentElement(") == 3
+        and "Held(site, new EquipmentElement(item), selling, quoted, landed, scanning);" in S['Market.cs']
         and "item == null ? 0 : At(market, new EquipmentElement(item), who, selling);" in S['Market.cs'])
     (method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange"),
      method_body(S['Market.cs'],
@@ -4861,7 +4862,7 @@ def what_the_herd_check_writes_down():
                  "Split(party, out int packs, out int stock)",
                  "int spare = Herding.MountsNobodyRides(mounts, foot);",
                  "int shed = counted >= 0 ? counted : AnimalsToShed(party);",
-                 '" men of whom "', '" on foot, "', '" loose mount(s) with "',
+                 'Herding.Men(men) + " of whom "', '" on foot, "', '" loose mount(s) with "',
                  '" pack animal(s), "', '" livestock, "', '" driven in all, "',
                  '"no herd penalty"'))
             and "roster.NumberOfPackAnimals" in split
@@ -5988,7 +5989,7 @@ def a_market_and_a_meeting_on_the_road_run_the_same_two_passes():
             and 'BuyPass(Pass.Open(settlement, quiet), "quick-buy", "buying", "Buying", "the buying pass");' in t
             and 'SellPass(Pass.Meet(met, road, books, party),' in road
             and 'BuyPass(Pass.Meet(met, road, books, party),' in road
-            and len(road.splitlines()) < 24
+            and len(road.splitlines()) < 26
             and all(word not in road for word in
                     ("ItemRoster", "Basis", "TradePolicy.", "WhatStopsBuying", "InAPass",
                      "Notices.Say(", "Log.Write", "SwapOneUnit", "simWeight", "herdRoom"))
@@ -7110,7 +7111,7 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
                      "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) { how.Shut++; continue; }",
                      "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == _picked);",
                      "if (TradeMath.PerDay(gold, ride) <= bar) break;",
-                     "WhatItWouldFetch(s, market, party, cargo, gold, null)")
+                     "WhatItWouldFetch(s, market, party, ride, cargo, gold, null)")
              and "Town.AllTowns" not in marker
              and "town.Gold" not in marker)
     gated = ("s.IsVillage && Options.Current.TradeWithVillages" in pool
@@ -9580,7 +9581,7 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 16
+            and ALL.count("Tongue.Named(") == 17
             and '_route.Item == null ? "" : Tongue.Named(_route.Item.Name, _route.Item.StringId)'
                 in S['Panel.cs']
             and '_route.From == null ? "" : Tongue.Named(_route.From.Name, _route.From.StringId)'
@@ -10400,8 +10401,9 @@ def the_marker_walks_the_price_down_the_way_a_sale_really_would():
     asked = method_body(S['Marker.cs'], "internal int At(int taken)")
     fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
     step = method_body(S['Marker.cs'], "private int Next()")
-    return ("new Ladder(_site, _el, true, _flat, 0);" in step
-            and "_walk = walk != null && walk.Walkable ? walk : null;" in step
+    return ("? null : Bulk.AsItLands(_site, _el, true, _flat, landed);" in step
+            and "? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);" in step
+            and "_walk = walk != null && (walk.Walkable || landed != 0) ? walk : null;" in step
             and "return _walk != null ? _walk.At(_rungs.Count) : _flat;" in step
             and "while (_rungs.Count <= taken) _rungs.Add(Next());" in asked
             and ordered(fetch, "for (int u = 0; u < amount; u++)",
@@ -10761,17 +10763,17 @@ def the_far_market_ladder_is_walked_once_and_handed_on():
     walk = method_body(S['Market.cs'], "internal static Fetched SellWalk")
     buy = buy_pass()
     return (far and walk
-            and "internal static Fetched SellWalk(Settlement site, ItemObject item, int units, int quoted,"
+            and "internal static Fetched SellWalk(Settlement site, ItemObject item, int units, int quoted, Ladder landing,"
                 in S['Market.cs']
             and "int paid, int purse)" in S['Market.cs']
-            and "got.Rungs = new Ladder(site, item, true, quoted, 0);" in walk
+            and "got.Rungs = landing ?? new Ladder(site, item, true, quoted, 0);" in walk
             and "int price = got.Rungs.At(u);" in walk
             and S['Market.cs'].count("new Ladder(site, item, true, quoted, 0);") == 1
             and "Ladder deepRungs = null;" in far
             and "deepRungs = got.Rungs;" in far
             and "return (deep.town, deep.price, deepRungs);" in far
             and "return (null, 0, null);" in far
-            and "return (flat.town, flat.price, null);" in far
+            and "return (flat.town, flat.price, flat.rungs);" in far
             and "elsewhere.rungs ?? new Ladder(buyer, Item(at), true, price, 0)," in buy
             and buy.count("new Ladder(") == 1)
 
@@ -10873,14 +10875,14 @@ def every_market_in_reach_is_weighed_for_the_whole_load():
             and "BuyersWeighedOnTheStack" not in S['Ledger.cs']
             and ordered(far,
                         "var markets = EverySell(item);",
-                        "if (town == null || price <= 0 || town == notHere) continue;",
+                        "if (town == null || quoted <= 0 || town == notHere) continue;",
                         "if (TradeMath.OutOfReach(days)) continue;",
                         "float rate = TradeMath.EarnedPerDay(price, paid, days);",
                         "while (at > 0 && rate > shortlist[at - 1].rate) at--;",
-                        "shortlist.Insert(at, (town, price, days, rate));")
+                        "shortlist.Insert(at, (town, price, days, rate, quoted, rungs));")
             and "shortlist.RemoveAt(" not in far
             and far.count("shortlist.Insert(") == 1
-            and "Fetched got = Bulk.SellWalk(one.town, item, units, one.price, paid, purse);" in far
+            and "Fetched got = Bulk.SellWalk(one.town, item, units, one.quoted, one.rungs, paid, purse);" in far
             and "if (paid > 0 && !TradePolicy.BuyAcceptable(paid, TradePolicy.Realizable(price))) break;"
                 in method_body(S['Market.cs'], "internal static Fetched SellWalk")
             and "float rate = TradeMath.PerDay(got.Total - (long)paid * got.Units, one.days);" in far)
@@ -11100,7 +11102,7 @@ chk("1.90.10", "a good a quest is waiting on is held back once for the quest, an
 
 def what_is_on_its_way_moves_a_route_no_further_than_its_first_unit_may_move():
     rung = method_body(S['Market.cs'], "private static Ladder Rung")
-    held = method_body(S['Market.cs'], "private static Ladder Held")
+    held = method_body(S['Market.cs'], "private static Ladder Held(Settlement site, EquipmentElement stocked")
     first = method_body(S['Market.cs'], "internal static int FirstUnit")
     opening = method_body(S['Market.cs'], "internal static int Opening")
     walk = method_body(S['Market.cs'], "internal static RouteQuote Walk")
@@ -11112,13 +11114,13 @@ def what_is_on_its_way_moves_a_route_no_further_than_its_first_unit_may_move():
             and "new Ladder(" not in first
             and "return rung.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;" in first
             and "int walked = Rung(site, item, selling, quoted, landed).At(0);" in opening
-            and ordered(held, "var rung = new Ladder(site, item, selling, quoted, landed);",
+            and ordered(held, "var rung = new Ladder(site, stocked, selling, quoted, landed);",
                         "if (landed == 0 || !rung.Walkable) return rung;",
                         "int first = rung.At(0);",
                         "if (TradeMath.ForecastWithin(quoted, first) == first) return rung;",
                         "held = TradeMath.LandingWithinReach(quoted, landed, first,",
-                        "shift => new Ladder(site, item, selling, quoted, shift).At(0));",
-                        "return new Ladder(site, item, selling, quoted, TradeMath.NoFurtherThan(landed, held));")
+                        "shift => new Ladder(site, stocked, selling, quoted, shift).At(0));",
+                        "return new Ladder(site, stocked, selling, quoted, TradeMath.NoFurtherThan(landed, held));")
             and held.count("new Ladder(") == 3
             and "landed: landedAtBuyTown);" in walk and "landed: landedAtSellTown);" in walk
             and "int buyPrice = buy.At(u);" in walk and "int sellPrice = sell.At(u);" in walk
@@ -11149,13 +11151,13 @@ chk("1.90.11", "the halving search that holds back what is on its way reaches th
 
 def how_far_a_landing_may_move_a_market_is_found_once_a_scan():
     m = S['Market.cs']
-    held = method_body(m, "private static Ladder Held")
+    held = method_body(m, "private static Ladder Held(Settlement site, EquipmentElement stocked")
     forget = method_body(between(m, "internal static class Bulk", "internal static class Priced"),
                          "internal static void Forget()")
     further = method_body(S['TradeMath.cs'], "public static int NoFurtherThan")
     return (held and forget
             and "private static readonly Dictionary<(string site, string item, bool selling, bool arriving), int> _reach =" in m
-            and ordered(held, "var way = (site.StringId, item.StringId, selling, landed > 0);",
+            and ordered(held, "var way = (site.StringId, stocked.Item.StringId, selling, landed > 0);",
                         "if (!scanning || !_reach.TryGetValue(way, out int held))",
                         "held = TradeMath.LandingWithinReach(",
                         "if (scanning) _reach[way] = held;",
@@ -11791,7 +11793,7 @@ def every_best_market_comparison_prices_the_quality_you_carry():
     return ("long priced = (long)plainPrice * qualityValue / plainValue;" in scale
             and "price = TradeMath.AtThisQuality(best.Item2, held.Item.Value, held.ItemValue);" in resale
             and "TradeMath.AtThisQuality(best.Item2, held.Item.Value, held.ItemValue)," in floor
-            and "new Ladder(_site, _el, true, _flat, 0);" in step
+            and "Bulk.AsItLands(_site, _el, true, _flat, landed);" in step
             and colour.count("TradeMath.AtThisQuality(best.price, item.Value, held.ItemValue)") == 2
             and all(one in FLOORTESTS for one in
                     ("The_best_price_is_scaled_to_the_quality_you_carry",
@@ -12754,7 +12756,7 @@ def the_whole_load_is_what_you_could_really_buy_and_what_the_buyer_can_pay_for()
             and "if (TradeRules.TheBuyerCouldNotPay((int)Math.Min(int.MaxValue, total + price), purse)) break;" in walk
             and ordered(far, "int purse = Options.Current.Omniscient",
                         "? TradeRules.WhatTheTillCanPay(one.town.SettlementComponent?.Gold ?? 0, one.town.IsVillage)",
-                        "Fetched got = Bulk.SellWalk(one.town, item, units, one.price, paid, purse);")
+                        "Fetched got = Bulk.SellWalk(one.town, item, units, one.quoted, one.rungs, paid, purse);")
             and all(one in BUYPASSTESTS for one in
                     ("A_good_is_weighed_on_no_more_than_its_buy_cap_in_denars_lets_you_take",
                      "Livestock_is_weighed_on_no_more_head_than_your_herd_has_room_for",
@@ -13243,7 +13245,7 @@ def the_first_time_back_at_the_last_market_traded_is_left_alone():
                         "_lastTradedAt = Arrivals.LastTradedAt(settlement?.StringId, traded, _lastTradedAt);")
             and "_lastTradedAt = null;" in forget
             and "_movesAtArrival = Visit.Moves(Simulating);" in forget
-            and t.count("_lastTradedAt") == 6
+            and t.count("_lastTradedAt") == 10
             and t.count("_movesAtArrival") == 4
             and "internal static bool FirstTimeBack(string here, string lastTradedAt) =>\n"
                 "            here != null && here == lastTradedAt;" in rules
@@ -13296,6 +13298,175 @@ def esc_closes_the_ledger_or_recent_trades_and_leaves_the_games_menu_shut():
 
 chk("1.93.10", "Esc on the ledger or on Recent trades closes that window through the map's own Esc hook and leaves the game's own menu shut, the hook is handed back with the panel, and a panel that failed leaves Esc to the game",
     esc_closes_the_ledger_or_recent_trades_and_leaves_the_games_menu_shut())
+
+def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
+    far = method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
+    lands = method_body(S['Market.cs'], "internal static Ladder AsItLands")
+    walk = method_body(S['Market.cs'], "internal static Fetched SellWalk")
+    step = method_body(S['Marker.cs'], "private int Next()")
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    return (far and lands and walk and step and fetch and marker
+            and ordered(far, "float days = Travel.EstimateDaysFromParty(town);",
+                        "int landed = Forecast.WorthShiftAsItHasHeld(town, item, days);",
+                        "Ladder rungs = landed == 0 ? null : Bulk.AsItLands(town, new EquipmentElement(item), true, quoted, landed);",
+                        "int price = Bulk.OpeningOn(rungs, town, quoted);",
+                        "if (price <= 0) continue;",
+                        "float rate = TradeMath.EarnedPerDay(price, paid, days);",
+                        "shortlist.Insert(at, (town, price, days, rate, quoted, rungs));",
+                        "return (flat.town, flat.price, flat.rungs);",
+                        "Fetched got = Bulk.SellWalk(one.town, item, units, one.quoted, one.rungs, paid, purse);",
+                        "deepRungs = got.Rungs;")
+            and far.count("Bulk.AsItLands(") == 1
+            and ": Held(site, stocked, selling, quoted, landed, scanning: false);" in lands
+            and "landing == null ? quoted" in method_body(S['Market.cs'], "internal static int OpeningOn")
+            and ": landing.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, landing.At(0)) : quoted;"
+                in method_body(S['Market.cs'], "internal static int OpeningOn")
+            and "got.Rungs = landing ?? new Ladder(site, item, true, quoted, 0);" in walk
+            and "elsewhere.rungs ?? new Ladder(buyer, Item(at), true, price, 0)," in buy_pass()
+            and "!On ? 0" in between(S['Forecast.cs'], "internal static int WorthShiftAsItHasHeld", "private static int PriceShift")
+            and ordered(step, "_flat = Priced.At(_market, _el, _party, true);",
+                        "? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);",
+                        "? null : Bulk.AsItLands(_site, _el, true, _flat, landed);")
+            and "Paying pays = WhatThatMarketPays(site, market, item, party, ride);" in fetch
+            and "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);" in marker
+            and "WhatItWouldFetch(how.Best, how.Best.SettlementComponent, party, how.Days, cargo, how.Purse, how.Bill);"
+                in marker
+            and "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);" in S['Ledger.cs']
+            and "if (landed == 0 || !rung.Walkable) return rung;" in S['Market.cs']
+            and "if (landed == 0 || site == null || item == null) return quoted;" in
+                method_body(S['Market.cs'], "internal static int FirstUnit"))
+
+
+chk("1.93.11", "Auto buy's choice of where a good will sell and the map marker count what is on its way to that market the way the ledger panel does, held by the same trust and the same reach, and price today's shelf exactly as before whenever the forecast says nothing moves",
+    the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel())
+
+
+def the_marker_leaves_out_the_market_arrival_trading_leaves_alone():
+    t = S['Trading.cs']
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    ultra = method_body(S['Marker.cs'], "private static void Ultra")
+    alone = between(t, "internal static bool ArrivalLeavesItAlone(Settlement settlement) =>", ";")
+    road = method_body(t, "public static void ExecuteRoadTrade")
+    noted = method_body(t, "private static void NoteARoadTrade")
+    rules = S['Rules.cs']
+    return (marker and road and noted and alone
+            and "Arrivals.LeftOutOfTheMark(settlement.StringId, _lastTradedAt, Options.Current.AutoSellOnEntry," in alone
+            and alone.rstrip().endswith("Counter.HoldsBack())")
+            and "internal static bool LeftOutOfTheMark(string there, string lastTradedAt, bool autoSell, bool staged) =>\n"
+                "            autoSell && !staged && FirstTimeBack(there, lastTradedAt);" in rules
+            and ordered(marker, "if (!TradeActionBehavior.IsMarket(s)) continue;",
+                        "if (TradeActionBehavior.ArrivalLeavesItAlone(s)) { how.CameBackTo = s; continue; }",
+                        "how.Weighed++;")
+            and '", and " + how.CameBackTo.Name + ", " + TheMarketLeftAlone' in ultra
+            and '", and " + how.CameBackTo.Name + " is left out as " + TheMarketLeftAlone' in
+                method_body(S['Marker.cs'], "private static string Why")
+            and "which trading on arrival leaves alone the first time you come back" in S['Marker.cs']
+            and ordered(road, "Books books = BooksForTheMeeting(met);",
+                        "int movesBefore = books.Moves(Simulating);",
+                        "LotPass(", "SellPass(", "BuyPass(",
+                        "NoteARoadTrade(met, books, movesBefore);",
+                        "ReportStalledPasses();")
+            and ordered(noted, "string was = _lastTradedAt;",
+                        "_lastTradedAt = Arrivals.AfterTheRoad(books.Moves(Simulating) > movesBefore, was);",
+                        "if (was != null && _lastTradedAt == null)",
+                        '"TradeLord traded with " + met.Name + " on the road')
+            and "internal static string AfterTheRoad(bool tradedOnTheRoad, string lastTradedAt) =>\n"
+                "            tradedOnTheRoad ? null : lastTradedAt;" in rules
+            and all(one in ARRIVALTESTS for one in
+                    ("A_trade_on_the_road_frees_the_market_it_last_traded_at",
+                     "Meeting_a_party_on_the_road_without_a_trade_keeps_the_market_it_last_traded_at",
+                     "The_map_marker_leaves_out_the_market_auto_sell_leaves_alone_the_first_time_back",
+                     "The_map_marker_keeps_that_market_when_arrival_would_trade_there_or_never_sells_on_arrival")))
+
+
+chk("1.93.11", "the map marker leaves out the market TradeLord last traded at while Auto sell on arrival would leave it alone the first time back, says so in the ultralog, and a TradeLord trade with caravans or villagers on the road frees that market",
+    the_marker_leaves_out_the_market_arrival_trading_leaves_alone())
+
+
+def the_marker_writes_its_weighing_again_only_when_the_reckoning_moved():
+    again = method_body(S['Marker.cs'], "private static void SayItWeighedAgain")
+    remember = method_body(S['Marker.cs'], "private static void Remember")
+    forget = method_body(S['Marker.cs'], "internal static void Forget()")
+    return (again and remember and forget
+            and ordered(again, "if (!Options.Current.ExtendedDebugLogging) return;",
+                        "if (how.Value == _saidValue && how.Rate == _saidRate) return;",
+                        "if (Marks.WorthSayingAgain(how.Value, how.Units, how.Held, _saidValue, _saidUnits, _saidHeld))",
+                        '"map marker weighed your cargo again and stayed on "',
+                        "Ultra(how);",
+                        "Remember(target, how);")
+            and again.count("Remember(target, how);") == 1
+            and "value != saidValue || units != saidUnits || held != saidHeld;" in S['Rules.cs']
+            and "The_marker_says_it_weighed_again_only_when_the_gold_the_units_or_its_hold_moved" in SCORINGTESTS
+            and ordered(remember, "_saidValue = how.Value;", "_saidRate = how.Rate;",
+                        "_saidUnits = how.Units;", "_saidHeld = how.Held;")
+            and all(one in forget for one in
+                    ("_saidValue = -1L;", "_saidRate = -1f;", "_saidUnits = -1;", "_saidHeld = false;")))
+
+
+chk("1.93.11", "the map marker writes that it weighed your cargo again only when what it would fetch, the units or its hold on the mark changed, not each time the gold a day moves as you ride closer, and it keeps its own record of the last look exactly as before",
+    the_marker_writes_its_weighing_again_only_when_the_reckoning_moved())
+
+
+def only_a_town_or_a_village_gets_a_price_trace_or_a_herd_check_on_the_way_in_and_out():
+    t = S['Trading.cs']
+    entered = method_body(t, "private void OnSettlementEntered")
+    left = method_body(t, "private void OnSettlementLeft")
+    say = method_body(S['Market.cs'], "internal static void Say(Settlement site, string when)")
+    return (entered and left and say
+            and "internal static bool HasAMarket(Settlement s) => s != null && (s.IsTown || s.IsVillage);" in t
+            and ordered(say, "if (!Options.Current.ExtendedDebugLogging || site == null) return;",
+                        "if (!TradeActionBehavior.HasAMarket(site)) return;",
+                        'Guard.Run("PriceTrace"')
+            and 'if (HasAMarket(settlement)) Drove.LogState("entering " + settlement.Name);' in entered
+            and 'if (HasAMarket(settlement)) Drove.LogState("after trading at " + settlement.Name);' in entered
+            and 'if (HasAMarket(settlement)) Drove.LogState("leaving " + settlement.Name);' in left
+            and ordered(between(entered, "if (StillTheSameArrival(settlement))", "NoteThisArrival(settlement);"),
+                        "if (HasAMarket(settlement))",
+                        'Log.Write("trading on arrival at " + settlement.Name + " is left alone: your party has " +',
+                        '"not taken to the road since it last came in here, so this is the same arrival");',
+                        "Marker.Update();", "return;")
+            and "since it last traded here" not in t)
+
+
+chk("1.93.11", "a price trace and the herd checks on the way in and out are written only at a town or a village, never at a castle or the training field, and the same arrival line no longer says TradeLord traded where it never did",
+    only_a_town_or_a_village_gets_a_price_trace_or_a_herd_check_on_the_way_in_and_out())
+
+
+def the_log_names_things_the_way_a_player_reads_them():
+    shown = method_body(S['Counter.cs'], "private static void HandTheTotalOver")
+    purse = method_body(S['Rules.cs'], "public static string ToYourPurse")
+    passage = method_body(S['Encounters.cs'], "private static void LetPlayerGo")
+    credited = method_body(S['Counter.cs'], "internal static void SayWhatTheScreenCredited")
+    profit = method_body(S['Ledger.cs'], "private void OnPlayerTradeProfit")
+    return (shown and purse and passage and credited and profit
+            and "Deals.ToYourPurse(-(long)_shown.TotalAmount)" in shown
+            and "_shown.TotalAmount +" not in shown
+            and all(one in purse for one in
+                    ('"puts " + purse + " gold into your purse"', '"takes " + (-purse) + " gold out of your purse"',
+                     '"leaves your purse where it is"'))
+            and "The_laid_out_deal_is_told_the_way_your_purse_moves" in DEALTESTS
+            and 'string named = band == null ? null : Guard.Read("FreePassage.Name", band, Named, band.StringId);' in passage
+            and passage.count("named ??") == 2
+            and ordered(method_body(S['Encounters.cs'], "private static string Named(MobileParty band)"),
+                        "string name = Tongue.Named(band.Name, null);",
+                        'return string.IsNullOrEmpty(name) ? band.StringId : name + " (" + band.StringId + ")";')
+            and 'Herding.Men(men) + " of whom "' in S['Drove.cs']
+            and 'internal static string Men(int men) => men + (men == 1 ? " man" : " men");' in S['Rules.cs']
+            and "One_man_is_a_man_and_any_other_count_is_men" in HERDTESTS
+            and ordered(profit, "if (!TheGameCreditedADealTradeLordLaidOut) return;",
+                        "AddTradeXp(Counter.TradeXpEarnedOnTheScreen());",
+                        "Counter.SayWhatTheScreenCredited(profit);")
+            and ordered(credited, "int now = TradeLevelNow();", "bool rose = now > _tradeLevelSeen;",
+                        "_tradeLevelSeen = now;", "if (profit > 0)",
+                        '"trade profit the game credited for the deal you took on the trade screen: "',
+                        'if (rose) Log.Write("trade skill rose to " + now + " on the trade screen");')
+            and "_tradeLevelSeen = TradeLevelNow();" in method_body(S['Counter.cs'], "private static bool Opened")
+            and "_tradeLevelSeen = 0;" in method_body(S['Counter.cs'], "private static void Unwatch"))
+
+
+chk("1.93.11", "TradeLord.log says which way a laid out deal moves your purse, names the band that let you pass, counts one man as a man, and writes down the Trade profit the game credits and the skill rising under Staged Trading",
+    the_log_names_things_the_way_a_player_reads_them())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

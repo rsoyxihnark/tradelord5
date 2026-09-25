@@ -5,6 +5,14 @@ namespace TradeLord.Tests
 {
     public class HerdRulesTests
     {
+        [Fact]
+        public void One_man_is_a_man_and_any_other_count_is_men()
+        {
+            Assert.Equal("1 man", Herding.Men(1));
+            Assert.Equal("22 men", Herding.Men(22));
+            Assert.Equal("0 men", Herding.Men(0));
+        }
+
         private static Good Livestock() =>
             new Good { Id = "cow", Name = "cow", HasHorse = true, IsLivestock = true, IsAnimal = true };
 
