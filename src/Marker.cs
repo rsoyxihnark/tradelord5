@@ -286,8 +286,9 @@ namespace TradeLord
             if (how.Best == null)
                 return "of the " + how.Weighed + " market(s) it looked at, " + how.Refused +
                        " would pay too little for any of the " + how.Carried + " good(s) you carry to " +
-                       "clear Minimum profit margin, and the rest are past your travel ceilings or " +
-                       "have no gold at all";
+                       "clear Minimum profit margin, " + how.NoRoad + " have no road it could find, " +
+                       how.PastCeiling + " are past your travel ceilings and " + how.NoTill +
+                       " have no gold at all";
             return how.Kinds + " of the " + how.Carried + " good(s) you carry clear Minimum profit " +
                    "margin there, " + how.Units + " unit(s) for " + how.Value + " gold, " +
                    (how.Value - how.Cost) + " of it profit" +

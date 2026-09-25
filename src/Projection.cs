@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace TradeLord
@@ -13,6 +14,13 @@ namespace TradeLord
         internal string Item;
         internal string Category;
         internal int Units;
+        internal int Worth;
+        internal float Days;
+    }
+
+    internal struct Draw
+    {
+        internal string Category;
         internal int Worth;
         internal float Days;
     }
@@ -73,6 +81,22 @@ namespace TradeLord
             return TradeMath.ShareOfAPurse(purse, mine, across);
         }
 
+        internal static int WorthUsedUp(IList<Draw> drawn, string category, float withinDays, int usedADay,
+                                        int most)
+        {
+            if (category == null || most <= 0) return 0;
+            withinDays = TradeMath.ToTheQuarterDay(withinDays);
+            double used = usedADay > 0 ? (double)usedADay * withinDays : 0d;
+            for (int i = 0; drawn != null && i < drawn.Count; i++)
+            {
+                Draw draw = drawn[i];
+                if (draw.Category != category || draw.Worth <= 0) continue;
+                if (!TradeMath.LandsInTime(draw.Days, withinDays)) continue;
+                used += draw.Worth;
+            }
+            return used >= most ? most : (int)used;
+        }
+
         internal static int UnitsLeaving(int worthLeaving, int unitValue)
         {
             if (worthLeaving <= 0 || unitValue <= 0) return 0;
@@ -81,13 +105,21 @@ namespace TradeLord
 
         internal const float NeverRunsOut = -1f;
 
+        internal const int DaysUseIsReadFor = 30;
+
         internal static List<float> Moments(IList<Landing> listed, IList<Spending> coming,
-                                            float afterDays)
+                                            float afterDays, IList<Draw> drawn = null, int usedADay = 0)
         {
             var when = new List<float>();
             var already = new HashSet<float>();
             for (int i = 0; listed != null && i < listed.Count; i++) Note(when, already, listed[i].Days, afterDays);
             for (int i = 0; coming != null && i < coming.Count; i++) Note(when, already, coming[i].Days, afterDays);
+            for (int i = 0; drawn != null && i < drawn.Count; i++) Note(when, already, drawn[i].Days, afterDays);
+            if (usedADay > 0 && !float.IsNaN(afterDays) && afterDays < TradeMath.LongerThanAnyRide)
+            {
+                int first = afterDays < 0f ? 1 : (int)Math.Floor(afterDays) + 1;
+                for (int day = first; day < first + DaysUseIsReadFor; day++) Note(when, already, day, afterDays);
+            }
             when.Sort();
             return when;
         }
@@ -102,16 +134,21 @@ namespace TradeLord
         internal static List<(float days, int shelf)> ShelfAhead(
             IList<Landing> listed, IList<Spending> coming,
             IDictionary<string, float> pull, float across,
-            string item, string category, int unitValue, int stockNow, float afterDays)
+            string item, string category, int unitValue, int stockNow, float afterDays,
+            IList<Draw> drawn = null, int usedADay = 0)
         {
             var curve = new List<(float, int)>();
             if (item == null || unitValue <= 0) return curve;
-            List<float> when = Moments(listed, coming, afterDays);
+            List<float> when = Moments(listed, coming, afterDays, drawn, usedADay);
+            int most = TradeMath.WorthOf(stockNow, unitValue);
             for (int i = 0; i < when.Count; i++)
             {
                 float days = when[i];
+                int used = WorthUsedUp(drawn, category, days, usedADay,
+                                       TradeMath.AddedUp(most, WorthLanding(listed, category, days)));
                 int taken = UnitsLeaving(
-                    WorthLeaving(PurseLanding(coming, days), pull, across, category), unitValue);
+                    TradeMath.AddedUp(WorthLeaving(PurseLanding(coming, days), pull, across, category), used),
+                    unitValue);
                 curve.Add((days, TradeMath.StockAfterShift(stockNow,
                                UnitsLanding(listed, item, days), taken)));
             }

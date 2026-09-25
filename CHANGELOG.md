@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.93.5
+
+- Fixed Buy haul animals buying animals before your goods, even when your cargo had room to spare
+- Buy haul animals now buys only as many animals as the gold left after them can fill with goods
+- Buy haul animals now also buys for the food Restock and keep food (days of supply) asks for when your cargo is too full for it
+- Buy haul animals no longer buys while your cargo is fuller than Share of the hold TradeLord may fill allows, and TradeLord.log says so
+- The hint under Buy haul animals now says it buys only to carry goods or food a full cargo left behind
+- Fixed the Chinese hint under Buy haul animals giving the Mule the wrong name
+- The feature list now says Buy haul animals buys only for what a full cargo left behind and never for a cargo already too full
+- TradeLord.log now names the weight of goods or food your full cargo left behind whenever it buys haul animals
+- Fixed Count what is on its way to a market never moving a village's price in the ledger panel and item tooltips
+- The feature list now says a village is priced through the town it trades with
+- Fixed Count what is on its way to a market ignoring what a town uses up each day and what its workshops take
+- The ledger panel's Qty, Left and Conf now count what a town and its workshops use up
+- Count what is on its way to a market starts learning afresh how far to trust itself, now that it counts what leaves a market
+- The hint under Count what is on its way to a market now names what the town and its workshops use up, and says a village follows its town
+- The ledger panel's legend now says its prices and stock count what the town and its workshops use up
+- The feature list now says what a town and its workshops use up is counted in prices, stock and Left
+- TradeLord.log now judges the forecast with what the town uses up counted to the day you walked in
+- TradeLord.log now gives the forecast's unit figure as what lands less what leaves, rather than what lands alone
+- Fixed Pick where to sell on the whole load weighing units you would never buy
+- Fixed Pick where to sell on the whole load choosing a market without the gold to pay for the load
+- Fixed Pick where to sell on the whole load weighing more livestock than your herd has room for
+- Pick where to sell on the whole load now picks the market again when the gold left buys fewer units than it weighed
+- The feature list now says Pick where to sell on the whole load weighs only what you could buy and what each market can pay for
+- TradeLord.log now says the whole-load pick counts only the units that clear your margin and the market's purse
+- Fixed every market dropping out of reach for an hour after the map's teleport cheat, which took the map marker off and stopped buying
+- Fixed every market counting as out of reach while you stood in a village after the map's teleport cheat
+- Fixed TradeLord.log blaming your travel ceilings or empty purses when the map marker had found no road at all
+- Fixed TradeLord.log putting denars in the wrong place in the forecast check, as in 950 left instead denars
+- Fixed TradeLord.log's forecast check reading backwards when it had said goods would leave a market
+- Fixed the villagers' offer message blaming your margin when there was nowhere in reach to resell the goods
+- The feature list now says the villagers' offer message can say there is nowhere in reach to resell it
+
 ## 1.93.4
 
 - Fixed Count what is on its way to a market counting what villagers carry back home as goods landing in their village

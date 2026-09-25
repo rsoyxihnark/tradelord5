@@ -104,6 +104,7 @@ namespace TradeLord
 
         internal static Books TheVisit => Visit;
         private static bool _cargoWasFull;
+        private static (float weight, int cost, bool food) _unfitted;
         private static Block? _sellStalled;
         private static Block? _buyStalled;
 
@@ -369,6 +370,7 @@ namespace TradeLord
             Marker.ForgetWhatYouCarry();
             if (sameSitting) Visit.ForgetTheDryRun(); else Visit.Forget();
             _cargoWasFull = false;
+            _unfitted = default;
             _sellStalled = null;
             _buyStalled = null;
         }
@@ -530,6 +532,19 @@ namespace TradeLord
             internal int Price(EquipmentElement what, bool selling) =>
                 Site != null ? Priced.At(Market, what, Party, selling)
                              : Road.GetPrice(what, Party, selling, Shop);
+
+            internal Func<int, int> PricesAhead(EquipmentElement what)
+            {
+                int now = Price(what, selling: false);
+                if (Site == null || now <= 0) return taken => now;
+                var rungs = new Ladder(Site, what, false, now, 0);
+                int first = rungs.At(0);
+                return taken =>
+                {
+                    int at = rungs.At(taken);
+                    return at <= 0 || first <= 0 ? at : now + at - first;
+                };
+            }
 
             internal void Tally(ItemObject item, int count, int gold) =>
                 TradeActionBehavior.Tally(Detail, item, count, gold);
@@ -755,9 +770,12 @@ namespace TradeLord
                                 Drove.LogState("trading by hand at " + Settlement.CurrentSettlement.Name);
                                 ExecuteQuickSell(Settlement.CurrentSettlement);
                                 ExecuteHerdRelief(Settlement.CurrentSettlement);
-                                ExecuteHaulage(Settlement.CurrentSettlement);
                                 ExecuteQuickBuy(Settlement.CurrentSettlement);
+                                if (ExecuteHaulage(Settlement.CurrentSettlement))
+                                    ExecuteQuickBuy(Settlement.CurrentSettlement);
                                 ExecuteResupply(Settlement.CurrentSettlement);
+                                if (ExecuteHaulage(Settlement.CurrentSettlement))
+                                    ExecuteResupply(Settlement.CurrentSettlement);
                                 ExecuteHerdRelief(Settlement.CurrentSettlement);
                                 Drove.LogState("after trading by hand at " + Settlement.CurrentSettlement.Name);
                                 ReportStalledPasses();
@@ -826,9 +844,12 @@ namespace TradeLord
 
                 if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
-                if (Options.Current.AutoBuyOnEntry) ExecuteHaulage(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
+                if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))
+                    ExecuteQuickBuy(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);
+                if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))
+                    ExecuteResupply(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
                 Drove.LogState("after trading at " + settlement.Name);
                 ReportStalledPasses();
@@ -1471,6 +1492,7 @@ namespace TradeLord
 
         public static void ExecuteResupply(Settlement settlement, bool quiet = false)
         {
+            _unfitted = default;
             if (Options.Current.KeepFoodDays <= 0) return;
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
@@ -1482,6 +1504,8 @@ namespace TradeLord
             int stocked = 0, simSpent = 0;
             float simWeight = pass.Books.Weight(pass.Sim);
             float shareCap = pass.ShareCap;
+            (ItemRosterElement el, Good good, int fed, int ceiling, int remaining, (int, int) taken, int held)?
+                firstLeft = null;
 
             var larder = CheapestFirst(pass,
                 it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true));
@@ -1509,7 +1533,12 @@ namespace TradeLord
                         if (pass.WouldReachYourReserve(price)) break;
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
-                        if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;
+                        if (NoRoomForOneMore(good, pass.Room() - simWeight))
+                        {
+                            if (firstLeft == null)
+                                firstLeft = (el, good, fed, ceiling, remaining, (countThis, spentThis), held);
+                            break;
+                        }
 
                         if (pass.Sim)
                         {
@@ -1536,6 +1565,14 @@ namespace TradeLord
                 }
             });
 
+            if (shortfall > 0 && firstLeft.HasValue && !pass.DirectionError)
+            {
+                var left = firstLeft.Value;
+                var food = FoodTheHoldLeftBehind(pass, left.el, left.good, left.fed, left.ceiling, shortfall,
+                                                 left.remaining, left.taken, left.held, shareCap,
+                                                 settlement.IsVillage);
+                _unfitted = (food.weight, food.cost, true);
+            }
             if (stocked <= 0) return;
 
             int spent = pass.Spent(simSpent);
@@ -1549,6 +1586,33 @@ namespace TradeLord
                 "{=TL97}TradeLord restocked {ITEMS} for {GOLD} denars.",
                 stocked, spent);
             if (!pass.Muted) Notices.Say(msg, Notices.Spend);
+        }
+
+        private static (float weight, int cost) FoodTheHoldLeftBehind(Pass pass, ItemRosterElement el, in Good good,
+                                                                      int fed, int ceiling, int shortfall,
+                                                                      int remaining, (int count, int spent) taken,
+                                                                      int held, float shareCap, bool village)
+        {
+            Func<int, int> ahead = pass.PricesAhead(el.EquipmentElement);
+            int budget = pass.Spendable();
+            float weight = 0f;
+            int cost = 0, units = 0;
+            while (shortfall > 0 && remaining > 0)
+            {
+                int price = ahead(units);
+                if (price <= 0 || price > ceiling || price >= budget) break;
+                if (WhatCapsAGood(good, price, taken, held, shareCap) != Block.None) break;
+                if (village && remaining <= 1) break;
+                units++;
+                remaining--;
+                held++;
+                shortfall -= fed;
+                budget -= price;
+                weight += good.Weight;
+                cost = TradeMath.AddedUp(cost, price);
+                taken = (taken.count + 1, taken.spent + price);
+            }
+            return (weight, cost);
         }
 
         private static IMarketData _roadMarket;
@@ -1830,29 +1894,44 @@ namespace TradeLord
             return true;
         }
 
-        public static void ExecuteHaulage(Settlement settlement, bool quiet = false)
+        public static bool ExecuteHaulage(Settlement settlement, bool quiet = false)
         {
-            if (!Options.Current.BuyHaulAnimals) return;
+            var unfitted = _unfitted;
+            _unfitted = default;
+            if (!Options.Current.BuyHaulAnimals || unfitted.weight <= 0f || unfitted.cost <= 0) return false;
             Pass pass = Pass.Open(settlement, quiet);
-            if (pass == null) return;
-            if (PurseBelowTheHaulAnimalFloor(pass)) return;
+            if (pass == null) return false;
+            if (PurseBelowTheHaulAnimalFloor(pass)) return false;
 
             int herdRoom = Drove.RoomForLivestock(pass.Party);
             herdRoom -= pass.Books.HerdTaken(pass.Sim);
-            if (herdRoom <= 0) return;
+            if (herdRoom <= 0) return false;
+
+            float each = Drove.CargoAHaulAnimalAdds(pass.Party);
+            if (each <= 0f) return false;
+            float roomLeft = pass.Room() - pass.Books.Weight(pass.Sim);
+            if (roomLeft < 0f)
+            {
+                Log.Repeatable("haul animal overload", settlement.StringId,
+                               "haul animals are left alone at " + settlement.Name + ": your cargo is already " +
+                               (-roomLeft).ToString("0", System.Globalization.CultureInfo.InvariantCulture) +
+                               " over what TradeLord may fill, so none is bought to carry what it left behind");
+                return false;
+            }
 
             int hauled = 0, simSpent = 0;
+            bool enough = false;
 
             var stable = CheapestFirst(pass, it => TradePolicy.MayHaul(it, pass.Locked),
                                        Options.Current.HaulAnimalPriceTolerance);
-            if (stable.Count == 0) return;
+            if (stable.Count == 0) return false;
 
             pass.CountFrom();
             InAPass(() =>
             {
                 foreach (var (el, good, _, ceiling) in stable)
                 {
-                    if (pass.DirectionError) break;
+                    if (pass.DirectionError || enough) break;
                     if (!Herding.TheGameCountsItAtOnce(false, el.EquipmentElement.ItemModifier != null)) continue;
                     ItemObject item = el.EquipmentElement.Item;
                     int remaining = pass.TheirsToSell(el);
@@ -1868,6 +1947,14 @@ namespace TradeLord
                         if (pass.WouldReachYourReserve(price)) break;
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, HoldShareOff) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
+                        float stillToCarry = TradeMath.WeightTheBudgetCanStillBuy(unfitted.weight, unfitted.cost,
+                                                                                   pass.Spendable() - price);
+                        if (!Herding.AnotherHaulAnimalIsWanted(hauled, each, Options.Current.MaxCargoShare,
+                                                               roomLeft, stillToCarry))
+                        {
+                            enough = true;
+                            break;
+                        }
 
                         if (pass.Sim)
                         {
@@ -1894,18 +1981,28 @@ namespace TradeLord
                 }
             });
 
-            if (hauled <= 0) return;
+            if (hauled <= 0) return false;
 
             int spent = pass.Spent(simSpent);
             pass.Moved(gold: spent, selling: false);
+            float carrying = TradeMath.WeightTheBudgetCanStillBuy(unfitted.weight, unfitted.cost, pass.Spendable());
             Log.Write((pass.Sim ? "haul animals (simulated, best case): " : "haul animals: ") + hauled +
-                      " bought, -" + spent + " gold at " + settlement.Name);
+                      " bought, -" + spent + " gold at " + settlement.Name + ", for " +
+                      (unfitted.food ? "food" : "goods") + " weighing " +
+                      carrying.ToString("0", System.Globalization.CultureInfo.InvariantCulture) +
+                      " that your full cargo left behind and the gold left can still buy");
             pass.Logged(selling: false, "stocking the baggage train");
             TextObject msg = pass.Said(
                 "{=TL111}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more.",
                 "{=TL110}TradeLord bought {ITEMS} for {GOLD} denars to carry more.",
                 hauled, spent);
             if (!pass.Muted) Notices.SayAfterXp(msg, Notices.Spend);
+            if (!unfitted.food)
+            {
+                _buyStalled = null;
+                _cargoWasFull = false;
+            }
+            return true;
         }
 
         public static void ExecuteQuickBuy(Settlement settlement, bool quiet = false) =>
@@ -1913,6 +2010,7 @@ namespace TradeLord
 
         private static void BuyPass(Pass pass, string label, string what, string named, string why)
         {
+            _unfitted = default;
             if (pass == null) return;
 
             pass.Capture();
@@ -1938,6 +2036,8 @@ namespace TradeLord
             SayWhatPickingABuyerCost();
 
             if (pass.Reports && tally.Saw(Block.CarryWeight)) _cargoWasFull = true;
+            if (pass.Reports)
+                _unfitted = pass.DirectionError ? default : (moved.Unfitted, moved.UnfittedCost, false);
 
             int spent = pass.Spent(moved.SimGold);
             if (bought > 0)
@@ -2163,6 +2263,8 @@ namespace TradeLord
                 _resale != null && _resale.TryGetValue(at, out var far) ? far.till : 0;
 
             public int PriceToBuy(int at) => _pass.Price(Shelf[at].EquipmentElement, selling: false);
+
+            public Func<int, int> PricesAhead(int at) => _pass.PricesAhead(Shelf[at].EquipmentElement);
 
             public int Spendable() =>
                 _theirOffer ? TradeActionBehavior.PurseForTheirOffer(_pass.Books, _pass.Sim) : _pass.Spendable();

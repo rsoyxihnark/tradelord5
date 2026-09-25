@@ -106,6 +106,9 @@ namespace TradeLord
         private static readonly Dictionary<(string, string), (float dist, float landRatio)> _pairDist
             = new Dictionary<(string, string), (float, float)>();
         private static bool _cachedNaval;
+        private static int _roadsFound, _roadsLost;
+
+        internal static bool LostTheRoad => _roadsLost > 0 && _roadsFound == 0;
 
         private static void DropIfNavalChanged()
         {
@@ -115,6 +118,8 @@ namespace TradeLord
             _speedHour = -1;
             _partyDist.Clear();
             _pairDist.Clear();
+            _roadsFound = 0;
+            _roadsLost = 0;
         }
 
         internal static void Forget()
@@ -124,6 +129,8 @@ namespace TradeLord
             _pairDist.Clear();
             _cachedNaval = false;
             _speedHour = -1;
+            _roadsFound = 0;
+            _roadsLost = 0;
         }
 
         internal static float StraightDaysFromParty(Settlement target)
@@ -155,14 +162,36 @@ namespace TradeLord
                 _partyDist.Clear();
                 _partyHour = hour;
                 _partyAt = at;
+                _roadsFound = 0;
+                _roadsLost = 0;
             }
             if (!_partyDist.TryGetValue(target.StringId, out var hit))
             {
                 float dist = FromParty(target, out float landRatio);
                 hit = (dist, landRatio);
-                _partyDist[target.StringId] = hit;
+                if (TradeMath.OutOfReach(Days(dist, landRatio)))
+                {
+                    float fromHere = FromWhereYouStand(party, target);
+                    if (!TradeMath.OutOfReach(fromHere))
+                    {
+                        _roadsFound++;
+                        return fromHere;
+                    }
+                    _roadsLost++;
+                }
+                else
+                {
+                    _roadsFound++;
+                    _partyDist[target.StringId] = hit;
+                }
             }
             return Days(hit.dist, hit.landRatio);
+        }
+
+        private static float FromWhereYouStand(MobileParty party, Settlement target)
+        {
+            Settlement inside = party.CurrentSettlement;
+            return inside == null ? TradeMath.FurthestThereIs : EstimateDaysBetween(inside, target);
         }
 
         internal static float EstimateDaysBetween(Settlement a, Settlement b)

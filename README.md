@@ -33,10 +33,12 @@
 - ✅ The panel learns from that, and a market that has paid less than it promised is scored lower, so routes selling there fall down the list
 - ✅ It keeps a record for each market on its own, written into your save, counts it only once you have walked into that market five times, and can never move a route's Score by more than a quarter
 - ✅ Trust a market by what it has paid turns that off
-- ✅ How long each route lasts, under Left, which says how long the shelf still holds the amount the route quotes before the caravans heading there buy it out, in hours, or in days from two days on
-- ✅ Left is blank when nobody TradeLord can see is coming for that good
+- ✅ How long each route lasts, under Left, which says how long the shelf still holds the amount the route quotes before the caravans heading there buy it out or the town and its workshops use it up, in hours, or in days from two days on
+- ✅ Left is blank when the shelf holds that amount through everything TradeLord can see taking from it, up to 30 days after you arrive
 - ✅ Prices and stock that count what is still on its way: the cargo the caravans will unload, what that town's workshops will make next, and the purses those caravans are bringing to spend
 - ✅ That purse is spread over the goods that are cheap there, which is what a trader would really take off the shelf
+- ✅ What leaves the shelf is counted too: what the town uses up every day and what its workshops take to make their goods
+- ✅ A village is priced through the town it trades with, so what lands in that town moves the village's price as well
 - ✅ It keeps score of that forecast as well, against what really moved, and counts what is on its way at the share the forecast has actually been right by, so it leans less and less on one that keeps missing
 - ✅ Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into
 - ✅ Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
@@ -69,6 +71,8 @@
 - ✅ Buys and sells livestock as ordinary goods, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
 - ✅ A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
 - ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to a quarter more than the cheapest price it knows of for one, which you can set anywhere from the cheapest to three times it
+- ✅ It buys them only when your cargo is full and leaves behind goods worth buying or the food Restock and keep food (days of supply) asks for, only as many as the gold left after them can fill, and then buys what now fits
+- ✅ It buys none while your cargo is already fuller than Share of the hold TradeLord may fill allows, since the first animals would only carry what you already have
 - ✅ It buys none at all until your purse is above 2000 denars, which you can set too, so early gold goes on goods instead
 - ✅ It buys no riding horses or camels at all, and it stops before your gold reaches your reserve
 - ✅ It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
@@ -82,6 +86,8 @@
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it: it holds at Max spend per visit until your purse is five times that, then grows by one more Max spend per visit for every doubling of the purse, so 10000 in the purse allows 2000 and 20000 allows 3000. On out of the box
 - ✅ Pick where to sell on the whole load, on while it is being tried out: every market in reach is weighed on what it would pay for the whole load rather than on what it pays for one unit
+- ✅ The whole load is only what your caps, your gold, your cargo and your herd let it buy, and a market is weighed only on what its own purse can pay for
+- ✅ When the gold left after the goods before it buys fewer units than a good was weighed on, the market is picked again for what it can still buy
 - ✅ Holds trade goods and livestock you never paid for, the ones a town event hands you or a quest leaves in your bags, until a market beats what the cheapest market it knows would have charged for them by your margin, so they are never given away at the first stall that will take them
 - ✅ Holds cargo back for the market that pays best rather than dumping it one town short, once you switch it on. Off out of the box, so looted gear goes to the first market that can pay for it
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
@@ -97,7 +103,7 @@
 - ✅ The villagers' offer is one deal: Max spend per visit, Never buy grain and the caps on one good never hold it back, so it is taken whole whenever it clears your margin and your purse can pay
 - ✅ Once TradeLord has taken the villagers' offer, the game's own offer is gone for the rest of that meeting, so the same goods can never be bought twice
 - ✅ An offer TradeLord leaves is still yours to take in the conversation, and what you pay for it is written down as what those goods cost you
-- ✅ When TradeLord leaves the villagers' offer to you, a message on screen says why: your margin, your purse, your cargo room, your herd or the good in it that kept it off
+- ✅ When TradeLord leaves the villagers' offer to you, a message on screen says why: your margin, your purse, your cargo room, your herd, the good in it that kept it off or nowhere in reach to resell it
 - ✅ A caravan is traded with at the prices of the town you are in, or else the nearest town, which is what the game's own trade screen charges you with a caravan
 - ✅ A caravan on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, your looted gear, Hold cargo for the best market, the herd speed penalty and the settling delay
 - ✅ Meeting that same party again straight away counts as the same meeting, so it never buys back what it has just sold them and what it spent still counts against its caps, while meeting them again later starts afresh
@@ -136,7 +142,7 @@
 - ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, marks on your map or holds your cargo for is further than you care to ride
 - ✅ Either ceiling set to 0 takes that limit off, and the Town travel ceiling at 0 weighs every town in Calradia, which is the slowest TradeLord runs
 - ✅ A minimum stock before it calls something worth buying
-- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses and the workshops into a route's price; it follows Live world prices, so turning those off turns this off too
+- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the workshops and what the town uses up into a route's price; it follows Live world prices, so turning those off turns this off too
 - ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ A share of the whole hold TradeLord may fill, so it stops buying with room left for what a battle or a quest hands you. It ships at the full hold, and selling is unaffected

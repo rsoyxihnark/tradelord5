@@ -21,6 +21,7 @@ namespace TradeLord
         {
             _lookupFailed = false;
             _packLineUnread = false;
+            _eachUnread = false;
         }
 
         private static bool Tally(MobileParty party, out int men, out int herd,
@@ -193,6 +194,7 @@ namespace TradeLord
         }
 
         private static bool _packLineUnread;
+        private static bool _eachUnread;
 
         private static bool PackAnimalsLine(ExplainedNumber capacity, out float carries)
         {
@@ -204,6 +206,32 @@ namespace TradeLord
             foreach (var (name, number) in capacity.GetLines())
                 if (name == named) carries += number;
             return carries > 0f;
+        }
+
+        internal static float CargoAHaulAnimalAdds(MobileParty party)
+        {
+            if (party == null || Carry.Sailing()) return 0f;
+            try
+            {
+                InventoryCapacityModel model = Campaign.Current?.Models?.InventoryCapacityModel;
+                if (model == null) return 0f;
+                ExplainedNumber capacity = model.CalculateInventoryCapacity(party, false, true);
+                int packAnimals = party.ItemRoster.NumberOfPackAnimals;
+                float carries = 0f;
+                if (packAnimals > 0 && !PackAnimalsLine(capacity, out carries) && !_eachUnread)
+                {
+                    _eachUnread = true;
+                    Log.Write("haul animal cargo: the game did not say how much its pack animals carry, " +
+                              "so one is counted as carrying what the game gives a pack animal before perks");
+                }
+                return Herding.CargoAHaulAnimalAdds(carries, packAnimals, model.GetItemAverageWeight(),
+                                                    capacity.BaseNumber, capacity.ResultNumber);
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "cargo a haul animal adds (no haul animal is bought)");
+                return 0f;
+            }
         }
 
         internal static int HaulAnimalsCargoCanSpare(MobileParty party)

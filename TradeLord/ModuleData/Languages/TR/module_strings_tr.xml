@@ -109,7 +109,7 @@
 		<string id="TL266" text="Kaç günlük ücret için altın tut" />
 		<string id="TL366" text="Yukarıdaki altın rezervinin üstüne, askerlerinizin bu kadar günlük ücretini de ayırır, böylece bir alışveriş turu maaşları yemez. TradeLord her ticaret yaptığında gerçek ücret yükünüzden hesaplanır, yani orduyla birlikte büyür. 0 yalnızca sabit rezervi tutar." />
 		<string id="TL267" text="Yük hayvanı satın al" />
-		<string id="TL367" text="Bir katır, yük atı, iş atı, binek atı ya da yük devesi; herhangi bir yük hayvanı alır, böylece bölüğünüz daha çok taşır. Yavaşlamadan sürebileceğinizden fazlasını asla almaz ve altınınız rezervinize inmeden durur. Aşağıdaki iki ayar ne kadar altın beklediğini ve ne kadar ödeyeceğini söyler. Varsayılan AÇIK."/>
+		<string id="TL367" text="Bir katır, yük atı, iş atı, binek atı ya da yük devesi; herhangi bir yük hayvanı alır, ama yalnızca dolu bir kargonun geride bıraktığı malları ya da yiyeceği taşımak için. Yavaşlamadan sürebileceğinizden fazlasını asla almaz ve altınınız rezervinize inmeden durur. Aşağıdaki iki ayar ne kadar altın beklediğini ve ne kadar ödeyeceğini söyler. Varsayılan AÇIK."/>
 		<string id="TL269" text="Haydutlardan serbest geçiş" />
 		<string id="TL369" text="Çapulcularla ya da haydutlarla karşılaştığınızda TradeLord, geçmenize izin vermelerini isteyen bir konuşma satırı ekler. Bunu söylemek karşılaşmayı dövüşsüz ve fidyesiz bitirir, birkaç saat sizi rahat bırakırlar. Varsayılan olarak AÇIK." />
 		<string id="TL270" text="Sat" />
@@ -235,8 +235,8 @@
 		<string id="TL393" text="Keseniz {GOLD} dinar, TradeLord bunun {RESERVE} kadarını tutuyor: Altın rezervi {FLAT}, Kaç günlük ücret için altın tut ayarı {WAGES}. Bu yüzden burada alabileceğiniz bir şey yok. Biraz yük satın ya da ayarlardan bu ikisinden birini düşürün."/>
 		<string id="TL390" text="TradeLord şehir menülerinde ticaret yapar ve şehirler fiyat taramalarına katılır. Varsayılan olarak AÇIK." />
 		<string id="TL279" text="Bir pazara doğru yolda olanları say"/>
-		<string id="TL396" text="Bir rota ya da ipuçlarındaki bir fiyat hesaplanmadan önce, o pazara sizden önce ulaşanları sayar: kervanların boşaltacağı yük, atölyelerin sırada üreteceği mal ve kervanların getirdiği kese, ki kese orada ucuz olan mallara dağıtılıp ne alacaklarının tahmini çıkar. Canlı dünya fiyatları gerekir. KAPALI her pazarı bugünkü hâliyle fiyatlandırır."/>
-		<string id="TL394" text=" | fiyatlar ve stok, siz varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek"/>
+		<string id="TL396" text="Bir rota ya da ipuçlarındaki bir fiyat hesaplanmadan önce, o pazara sizden önce ulaşanları ve oradan çıkacakları sayar: kervanların boşaltacağı ve alacağı mallar, atölyelerin üreteceği ve harcayacağı mallar ve kasabanın kendi tükettikleri. Bir köy, ticaret yaptığı kasabayı izler. Canlı dünya fiyatları gerekir. KAPALI her pazarı bugünkü hâliyle fiyatlandırır."/>
+		<string id="TL394" text=" | fiyatlar ve stok, siz varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini ile kasabanın ve atölyelerinin tükettiği düşülerek"/>
 		<string id="TL395" text=" ve her birinin sırada ne üreteceği"/>
 		<string id="TL397" text=" | Adet! = o miktarın bir kısmı hâlâ yolda ve sizden önce varıyor"/>
 		<string id="TL399" text=" | Satış fiyatı, bu panelin söz verdiğinin {HELD} kadarını tuttu, şimdiye dek denetlediği {COUNT} fiyat üzerinden"/>
@@ -288,7 +288,7 @@
 		<string id="TL444" text="Bu panelin söz verdiğinden az ödeyen bir pazar daha düşük puan alır, böylece oraya satan rotalar listede aşağı iner. Yalnızca o pazara beş kez girdikten sonra sayılır ve bir rotanın Puanını asla dörtte birden fazla oynatamaz. Rotaları güvene göre sırala gerekir. Varsayılan olarak AÇIK."/>
 		<string id="TL445" text=" | Bu panelin söz verdiğinden az ödemiş bir pazar için Puan düşürülür"/>
 		<string id="TL446" text="?"/>
-		<string id="TL447" text=" | stok, siz varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini düşülerek; fiyatlar için Toplu fiyat benzetimi gerekir"/>
+		<string id="TL447" text=" | stok, siz varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini ile kasabanın ve atölyelerinin tükettiği düşülerek; fiyatlar için Toplu fiyat benzetimi gerekir"/>
 		<string id="TL448" text="Ticaret TP: {AMOUNT}" />
 		<string id="TL449" text="TradeLord boş kalmış {COUNT} köy kesesini yeniden doldurdu, böylece o köy dükkanları tekrar alışveriş yapabiliyor."/>
 		<string id="TL450" text="Ulaşılabilir hiçbir pazarda bundan {COUNT} veya daha fazla yok. | Alış önerisi için en az stok bunu istiyor. | Nereden alacağınızı görmek için onu düşürün."/>

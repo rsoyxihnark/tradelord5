@@ -169,8 +169,8 @@ namespace TradeLord
             dataStore.SyncData("TradeLord_PromisesScored", ref _promisesScored);
             dataStore.SyncData("TradeLord_PromiseHeld", ref _promiseHeld);
             dataStore.SyncData("TradeLord_PromiseText", ref _promiseText);
-            dataStore.SyncData("TradeLord_ForecastsScored", ref _forecastsScored);
-            dataStore.SyncData("TradeLord_ForecastMissed", ref _forecastMissed);
+            dataStore.SyncData("TradeLord_ForecastsScoredWithLeaving", ref _forecastsScored);
+            dataStore.SyncData("TradeLord_ForecastMissedWithLeaving", ref _forecastMissed);
             dataStore.SyncData("TradeLord_LatelyText", ref _latelyText);
             dataStore.SyncData("TradeLord_VillagePursesPutBack", ref _villagePursesPutBack);
             if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;
@@ -649,7 +649,10 @@ namespace TradeLord
             for (int i = 0; i < shortlist.Count; i++)
             {
                 var one = shortlist[i];
-                Fetched got = Bulk.SellWalk(one.town, item, units, one.price, paid);
+                int purse = Options.Current.Omniscient
+                    ? TradeRules.WhatTheTillCanPay(one.town.SettlementComponent?.Gold ?? 0, one.town.IsVillage)
+                    : 0;
+                Fetched got = Bulk.SellWalk(one.town, item, units, one.price, paid, purse);
                 BuyerWalks++;
                 BuyerRungs += got.Walked;
                 float rate = TradeMath.PerDay(got.Total - (long)paid * got.Units, one.days);
@@ -664,7 +667,7 @@ namespace TradeLord
                 Log.Write("buyer for " + Tongue.Named(item.Name, item.StringId) + ": all " + units +
                           " unit(s) weighed picked " + deep.town.Name + ", which pays " +
                           TradeMath.PerUnit(deepGot.Total, deepGot.Units) + " a unit on average for the " +
-                          deepGot.Units + " unit(s) that clear your margin there, " + deep.price +
+                          deepGot.Units + " unit(s) that clear your margin and its purse there, " + deep.price +
                           " for the first, where the first unit alone would have picked " +
                           flat.town.Name + " at " + flat.price);
             return (deep.town, deep.price, deepRungs);
@@ -700,7 +703,7 @@ namespace TradeLord
             var result = Options.Current.Omniscient
                 ? TopLive(item, selling, hour)
                 : TopObserved(item, selling);
-            _marketCache[key] = (Freshness.At(hour), KindOf(item), result);
+            if (!Travel.LostTheRoad) _marketCache[key] = (Freshness.At(hour), KindOf(item), result);
             return result;
         }
 
@@ -927,6 +930,7 @@ namespace TradeLord
                     }
                 }
             }
+            if (Travel.LostTheRoad) return;
             for (int i = 0; i < n; i++)
             {
                 ItemObject item = wanted[i];
@@ -1038,7 +1042,8 @@ namespace TradeLord
             if (_routes == null || !Freshness.Fresh(ref _routeStamp, hour))
             {
                 _routes = ScanRoutes();
-                Freshness.Taken(ref _routeStamp, hour);
+                if (Travel.LostTheRoad) _routeStamp.Stale();
+                else Freshness.Taken(ref _routeStamp, hour);
             }
             return _routes.Count <= top ? _routes : _routes.GetRange(0, top);
         }

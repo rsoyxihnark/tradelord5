@@ -65,6 +65,8 @@ namespace TradeLord
         internal int SimGold;
         internal int Profit;
         internal int Earned;
+        internal float Unfitted;
+        internal int UnfittedCost;
     }
 
     internal struct Pick
@@ -73,6 +75,7 @@ namespace TradeLord
         internal Good Good;
         internal float Worth;
         internal int LedgerRank;
+        internal int Weighed;
     }
 
     internal struct Lot
@@ -123,6 +126,7 @@ namespace TradeLord
         int ResaleUpTo(int at, int units);
         int ResaleTill(int at);
         int PriceToBuy(int at);
+        Func<int, int> PricesAhead(int at);
         int Spendable();
         float Room();
         int HerdRoom();
@@ -213,15 +217,16 @@ namespace TradeLord
             market.PriceTheMarketsFor(shelf);
 
             var stock = new List<Pick>();
+            int herdRoom = -1;
             foreach (Pick one in shelf)
             {
                 int here = market.PriceToBuy(one.At);
                 if (here <= 0) { tally.Note(Block.NoStock); continue; }
                 int carried = market.Carried(one.At) + books.Held(sim, one.Good.Id);
-                int take = TradeMath.MostYouCouldTake(here, one.Good.Weight,
-                                                      market.TheirsToSell(one.At),
-                                                      market.Spendable(), market.Room(),
-                                                      s.BuyCapPerItem);
+                if (one.Good.IsLivestock && herdRoom < 0)
+                    herdRoom = Math.Max(0, market.HerdRoom() - books.HerdTaken(sim));
+                int take = UnitsItCouldTake(market, one.At, one.Good, here, books.Purchases(sim, one.Good.Id),
+                                            carried, market.Room() - books.Weight(sim), herdRoom, shareCap, s);
                 if (!market.ResaleMarket(one.At, here, carried + take, out int elsewhere))
                 { tally.Note(Block.NoResaleMarket); continue; }
                 float realizable = TradeMath.Realizable(
@@ -230,11 +235,24 @@ namespace TradeLord
                 if (!TradeMath.BuyAcceptable(here, realizable, s.MinProfitMargin)) { tally.Note(Block.BelowMargin); continue; }
                 Pick picked = one;
                 picked.Worth = WhatThisPickWouldReallyMake(market, one.At, carried, here, take, s);
+                picked.Weighed = take;
                 stock.Add(picked);
             }
             Picks.MostMoneyFirst(stock);
             Picks.WhatTheLedgerAskedForFirst(stock);
             return stock;
+        }
+
+        private static int UnitsItCouldTake(IBuyingMarket market, int at, in Good good, int price,
+                                            (int count, int spent) taken, int held, float room, int herdRoom,
+                                            float shareCap, Options s)
+        {
+            int allowed = TradeRules.UnitsTheCapsAllow(good, price, taken, held, shareCap, s);
+            if (good.IsLivestock && herdRoom < allowed) allowed = herdRoom;
+            return allowed <= 0
+                ? 0
+                : TradeMath.MostYouCouldTake(price, good.Weight, market.TheirsToSell(at), market.Spendable(),
+                                             room, allowed);
         }
 
         private static float WhatThisPickWouldReallyMake(IBuyingMarket market, int at, int carried,
@@ -279,6 +297,15 @@ namespace TradeLord
                 int remaining = market.TheirsToSell(picked.At);
                 int countThis = prior.count, spentThis = prior.spent;
                 int held = market.Carried(picked.At) + books.Held(sim, good.Id);
+                if (s.PickTheBuyerOnTheWholeStack && picked.Weighed > 0)
+                {
+                    int now = market.PriceToBuy(picked.At);
+                    int take = UnitsItCouldTake(market, picked.At, good, now, prior, held,
+                                                market.Room() - simWeight, herdRoom, shareCap, s);
+                    if (take > 0 && take < picked.Weighed &&
+                        !market.ResaleMarket(picked.At, now, held + take, out _))
+                    { tally.Note(Block.NoResaleMarket); continue; }
+                }
                 int till = market.ResaleTill(picked.At);
                 int drawn = market.ResaleUpTo(picked.At, held);
                 int unitsBefore = moved.Units;
@@ -300,7 +327,14 @@ namespace TradeLord
                                                               market.Village && remaining <= 1, s);
                     if (capped != Block.None) { tally.Note(capped); break; }
                     if (TradeRules.NoRoomForOneMore(good, market.Room() - simWeight))
-                    { tally.Note(Block.CarryWeight); break; }
+                    {
+                        tally.Note(Block.CarryWeight);
+                        var left = UnitsTheHoldLeftBehind(market, picked.At, good, remaining, held, drawn,
+                                                          till, (countThis, spentThis), shareCap, s);
+                        moved.Unfitted += left.units * good.Weight;
+                        moved.UnfittedCost = TradeMath.AddedUp(moved.UnfittedCost, left.cost);
+                        break;
+                    }
 
                     if (sim)
                     {
@@ -336,6 +370,35 @@ namespace TradeLord
             return moved;
         }
 
+        private static (int units, int cost) UnitsTheHoldLeftBehind(IBuyingMarket market, int at, in Good good,
+                                                                    int remaining, int held, int drawn, int till,
+                                                                    (int count, int spent) taken, float shareCap,
+                                                                    Options s)
+        {
+            Func<int, int> ahead = market.PricesAhead(at);
+            int budget = market.Spendable();
+            int units = 0, cost = 0;
+            while (remaining > 0)
+            {
+                int price = ahead(units);
+                if (price <= 0) break;
+                int wouldDraw = market.ResaleUpTo(at, held + 1);
+                if (TradeRules.TheBuyerCouldNotPay(wouldDraw, till)) break;
+                if (!TradeMath.BuyAcceptable(price, TradeMath.Realizable(wouldDraw - drawn, s.ResaleSafetyFactor),
+                                             s.MinProfitMargin)) break;
+                if (TradeRules.WhatStopsBuying(good, price, budget, taken, held, shareCap, false, 0,
+                                               market.Village && remaining <= 1, s) != Block.None) break;
+                units++;
+                remaining--;
+                held++;
+                drawn = wouldDraw;
+                budget -= price;
+                cost = TradeMath.AddedUp(cost, price);
+                taken = (taken.count + 1, taken.spent + price);
+            }
+            return (units, cost);
+        }
+
         internal static Block WhatStopsTheLot(IBuyingMarket market, Books books, bool sim, Options s,
                                               out Lot lot)
         {
@@ -369,6 +432,7 @@ namespace TradeLord
             market.PriceTheMarketsFor(shelf);
 
             var inTheLot = new Dictionary<string, int>();
+            int sellable = 0;
             foreach (Pick one in shelf)
             {
                 Good good = one.Good;
@@ -379,6 +443,7 @@ namespace TradeLord
 
                 int from = market.Carried(one.At) + books.Held(sim, good.Id) + before;
                 if (!market.ResaleMarket(one.At, unit, from + units, out _)) continue;
+                sellable++;
                 int pays = TradeRules.WhatTheBuyerPays(market.ResaleUpTo(one.At, from),
                                                        market.ResaleUpTo(one.At, from + units),
                                                        market.ResaleTill(one.At));
@@ -387,6 +452,7 @@ namespace TradeLord
             }
             lot.Weighed = true;
 
+            if (sellable == 0) return Block.NoResaleMarket;
             if (!TradeMath.BuyAcceptable(lot.Price, lot.Resale, s.MinProfitMargin)) return Block.BelowMargin;
             if (lot.Price > market.Spendable()) return Block.BudgetSpent;
             if (lot.Herd > 0 && lot.Herd > market.HerdRoom() - books.HerdTaken(sim)) return Block.HerdFull;
