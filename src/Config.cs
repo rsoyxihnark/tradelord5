@@ -203,14 +203,15 @@ namespace TradeLord
                 foreach (var line in written)
                     if (!IsASetting(line.Key)) _newerLines.Add(line);
             bool whipped = Whip.CracksOn(shape);
-            if (!whipped)
-                foreach (string note in notes) Log.Write("settings file: " + note);
+            if (whipped && notes.Count > 0)
+                Log.Write("settings file: this is how your older file was read, before the reset below puts it back");
+            foreach (string note in notes) Log.Write("settings file: " + note);
             if (whipped)
             {
                 SayWhatYouHadSet(written);
                 Whip.Crack(shape, written);
                 BackToWhatItShipsWith();
-                Log.Write("settings file: this version puts every setting back to the value TradeLord ships with, " +
+                Log.Write("settings file: this version puts every setting but your language back to the value TradeLord ships with, " +
                           "because the settings it ships with trade better than they used to. Anything you had " +
                           "set is listed above so you can put it back. While TradeLord's trading is settling, " +
                           "an update may do this again.");
@@ -265,7 +266,7 @@ namespace TradeLord
             if (screen)
                 Write(found, "made the settings screen match it");
             else if (whipped)
-                Write(found, "every setting put back to what TradeLord ships with");
+                Write(found, "every setting but your language put back to what TradeLord ships with");
             else if (newer)
                 Log.Write("settings file: it was written by a newer TradeLord, in shape " + shape + " where this " +
                           "one reads shape " + Migration.Shape + ", so it is left exactly as it is");
@@ -283,7 +284,7 @@ namespace TradeLord
             int away = 0;
             foreach (var line in written)
             {
-                if (!known.TryGetValue(line.Key, out FieldInfo field)) continue;
+                if (!known.TryGetValue(line.Key, out FieldInfo field) || Whip.Spares(field.Name)) continue;
                 string ships = Shown(field, stock);
                 if (line.Value == ships) continue;
                 away++;
@@ -298,7 +299,8 @@ namespace TradeLord
         private static void BackToWhatItShipsWith()
         {
             var stock = new Options();
-            foreach (FieldInfo field in Fields()) field.SetValue(Options.Current, field.GetValue(stock));
+            foreach (FieldInfo field in Fields())
+                if (!Whip.Spares(field.Name)) field.SetValue(Options.Current, field.GetValue(stock));
         }
 
         private static bool Taken(FieldInfo field, string written)

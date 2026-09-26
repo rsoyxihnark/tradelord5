@@ -145,6 +145,12 @@ namespace TradeLord.Tests
                 return Cargo[at].Elsewhere && rungs.Length > 0;
             }
 
+            public Func<int, int> PricesHere(int at)
+            {
+                int price = Cargo[at].Price, falls = Cargo[at].Falls;
+                return u => price - falls * u;
+            }
+
             public void HeldBack(int at, int units, int there, int here) =>
                 Held.Add((Cargo[at].Good.Id, units, there, here));
 
@@ -507,6 +513,46 @@ namespace TradeLord.Tests
             Bought(market, 3, price: 200, paid: 100, there: 300);
             Assert.Equal(3, Sell(market).Units);
             Assert.Empty(market.Held);
+        }
+
+        [Fact]
+        public void Units_this_market_cannot_take_count_against_the_gold_of_the_marked_market()
+        {
+            var market = new FakeMarket { MarkPurse = 2500 };
+            BoughtAs(market, "iron", 10, price: 200, paid: 100, there: 250).Falls = 20;
+            BoughtAs(market, "tools", 10, price: 150, paid: 100, there: 250);
+            Run run = Sell(market);
+            Assert.Equal(10, run.Units);
+            Assert.Contains(("iron", 7, 250, 140), market.Held);
+            Assert.Contains(("tools", 3, 250, 150), market.Held);
+        }
+
+        [Fact]
+        public void Goods_bought_here_this_visit_count_against_the_gold_of_the_marked_market()
+        {
+            var books = new Books();
+            books.NoteBought("velvet", 100);
+            var market = new FakeMarket { MarkPurse = 3000 };
+            BoughtAs(market, "velvet", 10, price: 120, paid: 100, there: 300);
+            BoughtAs(market, "iron", 10, price: 150, paid: 100, there: 250);
+            Run run = Sell(market, books: books);
+            Assert.Equal(10, run.Units);
+            Assert.Empty(market.Held);
+        }
+
+        [Fact]
+        public void Two_qualities_of_one_good_share_what_the_marked_market_would_buy()
+        {
+            var market = new FakeMarket();
+            int[] ladder = { 300, 300, 300, 300, 300, 100, 100, 100, 100, 100 };
+            Load plain = market.Add(Cargo("iron"), 5, 160);
+            plain.Basis = 100; plain.Purchased = 5; plain.Elsewhere = true; plain.Ladder = ladder;
+            Load fine = market.Add(Cargo("iron"), 5, 160);
+            fine.Basis = 100; fine.Purchased = 5; fine.Elsewhere = true; fine.Ladder = ladder; fine.Modified = true;
+            Run run = Sell(market);
+            Assert.Equal(5, run.Units);
+            Assert.Single(market.Held);
+            Assert.Equal(("iron", 5, 300, 160), market.Held[0]);
         }
 
         [Fact]

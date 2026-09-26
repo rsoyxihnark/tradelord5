@@ -272,10 +272,14 @@ namespace TradeLord
         public static bool Crack(int shape, IDictionary<string, string> written) =>
             Crack(CracksOn(shape), written);
 
+        public static bool Spares(string name) =>
+            string.Equals(name, "Language", StringComparison.OrdinalIgnoreCase);
+
         public static bool Crack(bool cracks, IDictionary<string, string> written)
         {
             if (!cracks || written == null) return false;
-            written.Clear();
+            foreach (string name in new List<string>(written.Keys))
+                if (!Spares(name)) written.Remove(name);
             return true;
         }
     }

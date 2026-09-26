@@ -2157,10 +2157,10 @@ chk("1.4.3", "cost basis uses recorded purchase prices, not current market quote
     "HasPurchaseRecord(el) ?? false)" in
     method_body(S['Policy.cs'], "private static bool HasCostBasis") and
     "item.IsTradeGood ||" not in method_body(S['Policy.cs'], "private static bool HasCostBasis"))
-chk("1.21.0", "the sell-side floor is Hold cargo for the best market and nothing else, so it binds every unit you bought alike, up to as many as the marked market would buy, or none",
+chk("1.21.0", "the sell-side floor is Hold cargo for the best market and nothing else, so it binds every unit you bought against what the marked market pays for it, up to as many as that market would buy, or none",
     "ForTheMark[] holding = s.HoldCargoForBestMarket > 0f ? WhatTheMarkKeeps(market, books, sim, s) : null;" in
         sell_pass() and
-    "if (bought <= 0 || basis.Paid <= 0) continue;" in sell_pass() and
+    "if (units <= 0 || basis.Paid <= 0) continue;" in sell_pass() and
     "basis == 0)" not in sell_pass() and
     sell_pass().count("TradeRules.HeldForTheMark(") == 1 and
     "TradeRules.BelowTheBestMarket(" not in sell_pass() and
@@ -2887,7 +2887,7 @@ chk("1.6.12", "what quick-sell agrees to sell runs through one margin rule, and 
               r'townSellPrice > 0;', S['TradeMath.cs']) is not None)
 chk("1.21.0", "loot goes to the first market that can pay, since nothing but Hold cargo for the best market raises the floor and it never holds a unit you did not buy",
     S['Passes.cs'].count("ForTheMark[] holding = s.HoldCargoForBestMarket > 0f ?") == 1 and
-    "int bought = Math.Min(yours, basis.PaidLeft);" in
+    "int units = Math.Min(yours, basis.PaidLeft);" in
         sell_pass() and
     "int boughtLeft = Math.Min(remaining, basis.PaidLeft);" in sell_pass() and
     "s.HoldCargoForBestMarket" in
@@ -4113,7 +4113,7 @@ def the_hold_hint_says_what_the_share_holds_and_when_it_holds_nothing():
     said = [spoken(path).get('TL329', '') for path in TRANSLATIONS.values()]
     shipped = str(round(float(option_default('HoldCargoForBestMarket').rstrip('f')) * 100))
     return ("On the way, sell a good you bought only for at least this share of what the market" in hold
-            and "and only as many as it would buy." in hold
+            and "holding only as many as it would buy." in hold
             and "Loot is never held, nor anything in the marked market or while that marker is off." in hold
             and "0% holds nothing." in hold
             and hold.endswith(shipped + "% by default.")
@@ -5363,7 +5363,8 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and "pass.Books.Sold(pass.Sim, it.StringId)" in method_body(t,
                     "private static List<(ItemRosterElement el, Good good, int price, int ceiling)> CheapestFirst")
             and "CheapestFirst(" in larder and "CheapestFirst(" in haul
-            and S['Passes.cs'].count("books.Bought(sim, market.IdAt(at))") == 2
+            and S['Passes.cs'].count("books.Bought(sim, market.IdAt(at))") == 1
+            and S['Passes.cs'].count("bool boughtHere = books.Bought(sim, id);") == 1
             and t.count("pass.Books.Purchases(pass.Sim,") == 2
             and S['Passes.cs'].count("books.Purchases(sim, good.Id)") == 1)
 
@@ -6470,11 +6471,12 @@ def the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off():
                  "            armed && cracksAt > 0 && cracksAt == shipped && shape < cracksAt;") in whip
             and "public static bool CracksOn(int shape) => Cracks(Armed, CracksAt, Migration.Shape, shape);" in whip
             and "if (!cracks || written == null) return false;" in crack
-            and "written.Clear();" in crack
+            and "if (!Spares(name)) written.Remove(name);" in crack
+            and 'string.Equals(name, "Language", StringComparison.OrdinalIgnoreCase);' in whip
+            and "if (spareLanguage && Whip.Spares(field.Name)) continue;" in method_body(M, "private static void Reset(bool spareLanguage)")
             and "Whip" not in method_body(S['Migrate.cs'], "public static bool Lift")
             and ordered(read, "bool lifted = Migration.Lift(shape, written, notes);",
                         "bool whipped = Whip.CracksOn(shape);",
-                        "if (!whipped)",
                         "foreach (string note in notes) Log.Write",
                         "SayWhatYouHadSet(written);",
                         "Whip.Crack(shape, written);",
@@ -6483,8 +6485,9 @@ def the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off():
                         "if (Taken(field, line.Value)) taken++;",
                         "else if (whipped)")
             and "var stock = new Options();" in back
-            and "foreach (FieldInfo field in Fields()) field.SetValue(Options.Current, field.GetValue(stock));"
+            and "if (!Whip.Spares(field.Name)) field.SetValue(Options.Current, field.GetValue(stock));"
                 in back
+            and "|| Whip.Spares(field.Name)) continue;" in said
             and '"  you had " + field.Name + " = " + line.Value' in said
             and all(t in MIGRATIONTESTS for t in
                     ("AnArmedWhipCracksOnAFileOlderThanTheShapeItIsArmedAt",
@@ -6497,7 +6500,8 @@ def the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off():
                      "ThisVersionShipsTheWhipArmedSoAFileOlderThanItIsResetOnce",
                      "AFileAlreadyAtTheShapeThisVersionShipsIsNeverResetBySecondTime",
                      "TheWhipIsStillWiredToTheShapeThisVersionShips",
-                     "TheWhipLeavesTheLiftItselfAlone")))
+                     "TheWhipLeavesTheLiftItselfAlone",
+                     "TheResetKeepsTheLanguageYouChose")))
 
 
 chk("1.46.2", "a mount or a haul animal is never named as the reason a pass moved nothing, since another pass handles it",
@@ -6712,7 +6716,9 @@ def a_reset_reaches_the_copy_the_settings_screen_keeps():
                         "_owedAPutBack = true;")
             and ordered(back, "_owedAPutBack = false;", 'Guard.Run("Mcm.PutBack", PutBackWhatItShipsWith);')
             and ordered(handover, "SettingsInHand = true;", "if (_owedAPutBack) PutBack();")
-            and "McmLoader.PutBackWhatItShipsWith = Settings.Reset;" in M
+            and "McmLoader.PutBackWhatItShipsWith = Settings.ResetButTheLanguage;" in M
+            and "public Action ResetEverything { get; set; } = Reset;" in M
+            and "internal static void Reset() => Reset(spareLanguage: false);" in M
             and ordered(reset, "field.SetValue(Options.Current, now);", "Reseat();", "Options.Bump();")
             and "BaseSettingsProvider.Instance?.SaveSettings(held);" in reseat)
 
@@ -6720,7 +6726,7 @@ def a_reset_reaches_the_copy_the_settings_screen_keeps():
 chk("1.50.2", "a reset reaches the copy the settings screen keeps, so a screen that loads late cannot hand the old settings back",
     a_reset_reaches_the_copy_the_settings_screen_keeps())
 
-chk("1.50.2", "the one-time settings reset is one switch, is armed at the shape this version ships, cannot be set off by the lift and wipes everything the lift carried",
+chk("1.50.2", "the one-time settings reset is one switch, is armed at the shape this version ships, cannot be set off by the lift and wipes everything the lift carried but your language",
     the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off())
 
 
@@ -9237,7 +9243,7 @@ def a_whip_that_cracks_writes_the_file_back_so_it_never_cracks_twice():
     write = method_body(S['Config.cs'], "private static void Write(string path, string why)")
     return (ordered(read, "Whip.Crack(shape, written);",
                     "else if (whipped)",
-                    'Write(found, "every setting put back to what TradeLord ships with");')
+                    'Write(found, "every setting but your language put back to what TradeLord ships with");')
             and ordered(write, "new KeyValuePair<string, string>(Migration.ShapeKey,",
                         "Math.Max(Migration.Shape, _newerShape).ToString(CultureInfo.InvariantCulture)),")
             and "_newerShape = newer ? shape : 0;" in read
@@ -13924,7 +13930,7 @@ def the_hold_counts_only_what_the_mark_would_buy_of_what_you_bought():
                     "if (TradeRules.WhatTheTillCanPay(")
             and "market.ResaleMarket(" not in sell
             and keeps.count("market.ResaleMarket(") == 1
-            and "if (!market.ResaleMarket(at, bought, basis.Paid, out rungs[at])) { rungs[at] = null; continue; }" in keeps
+            and "if (!market.ResaleMarket(at, before + units, basis.Paid, out int[] ladder)) continue;" in keeps
             and ordered(takes, "if (rungAt == null || carried <= 0) return new int[0];",
                         "for (int u = 0; u < carried; u++)",
                         "int price = rungAt(u);",
@@ -13967,22 +13973,28 @@ chk("1.94.0", "the reason given when cargo is held names Hold cargo for the best
 def the_marked_market_s_gold_is_shared_across_every_good_you_carry():
     keeps = method_body(S['Passes.cs'], "internal static ForTheMark[] WhatTheMarkKeeps")
     share = method_body(S['Rules.cs'], "internal static int[] SharePurse")
-    return (ordered(keeps, "if (books.Bought(sim, market.IdAt(at))) continue;",
+    return (ordered(keeps, "int till = TradeRules.WhatTheTillCanPay(sim ? market.Till() : market.TillNow(), market.Village);",
+                    "bool boughtHere = books.Bought(sim, id);",
                     "int yours = market.HoldableUnits(at);",
                     "Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),",
-                    "int bought = Math.Min(yours, basis.PaidLeft);",
-                    "if (bought <= 0 || basis.Paid <= 0) continue;",
-                    "if (!market.ResaleMarket(at, bought, basis.Paid, out rungs[at])) { rungs[at] = null; continue; }",
-                    "any = true;",
-                    "int price = market.PriceToSell(at);",
-                    "here[at] = TradeMath.ProfitAcceptable(basis.Paid, price, s.MinProfitMargin) ? price : 0;",
+                    "int units = Math.Min(yours, basis.PaidLeft);",
+                    "if (units <= 0 || basis.Paid <= 0) continue;",
+                    "asked.TryGetValue(id, out int before);",
+                    "if (!market.ResaleMarket(at, before + units, basis.Paid, out int[] ladder)) continue;",
+                    "rungs[at] = TradeRules.PastTheFirst(ladder, before);",
+                    "asked[id] = before + rungs[at].Length;",
+                    "bought[at] = units;",
+                    "? new int[0]",
+                    ": TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);",
                     "int purse = any ? market.ResalePurse() : 0;", "if (purse <= 0) return null;",
-                    "int[] kept = TradeRules.SharePurse(purse, rungs, here, s.HoldCargoForBestMarket);",
+                    "int[] kept = TradeRules.SharePurse(purse, rungs, here, bought, s.HoldCargoForBestMarket);",
                     "holding[at].Rungs = rungs[at];", "holding[at].Units = kept[at];")
             and "market.MaySell(" not in keeps and "market.GoodAt(" not in keeps
             and "market.UnpaidWorth(" not in keeps
             and ordered(share, "if (purse <= 0 || share <= 0f) return kept;",
                         "if (ladder[u] <= 0) break;",
+                        "int last = units - u - 1;",
+                        "int price = sells != null && last >= 0 && last < sells.Length ? sells[last] : 0;",
                         "asks.Add(((double)price / ladder[u], g, u));",
                         "asks.Sort((x, y) => x.ratio != y.ratio ? x.ratio.CompareTo(y.ratio)",
                         "if (shut[g] || u != kept[g]) continue;",
@@ -13995,14 +14007,23 @@ def the_marked_market_s_gold_is_shared_across_every_good_you_carry():
                      "A_unit_this_market_pays_your_share_for_is_the_last_to_draw_on_the_purse",
                      "Goods_that_ride_to_the_marked_market_anyway_are_paid_for_first",
                      "A_unit_too_dear_for_what_is_left_shuts_its_good_and_cheaper_ones_still_fit",
-                     "No_purse_or_no_share_holds_nothing"))
+                     "No_purse_or_no_share_holds_nothing",
+                     "Units_this_market_cannot_take_ride_first_and_the_ones_it_pays_least_for_come_next",
+                     "This_market_is_walked_until_your_margin_or_its_gold_runs_out",
+                     "The_marked_market_is_asked_past_the_units_another_quality_already_took"))
             and all(one in SELLPASSTESTS for one in
                     ("The_marked_market_spends_its_gold_first_on_the_good_it_pays_most_for_over_this_market",
                      "Goods_that_miss_your_margin_here_draw_first_on_the_gold_of_the_marked_market",
                      "No_more_is_held_than_the_marked_market_has_the_gold_to_buy",
-                     "A_marked_market_with_no_gold_holds_nothing")))
+                     "A_marked_market_with_no_gold_holds_nothing",
+                     "Units_this_market_cannot_take_count_against_the_gold_of_the_marked_market",
+                     "Goods_bought_here_this_visit_count_against_the_gold_of_the_marked_market",
+                     "Two_qualities_of_one_good_share_what_the_marked_market_would_buy"))
+            and "public Func<int, int> PricesHere(int at) => _pass.SellingPricesAhead(_plan[at].EquipmentElement);" in S['Trading.cs']
+            and ordered(method_body(S['Trading.cs'], "internal Func<int, int> SellingPricesAhead(EquipmentElement what)"),
+                        "int now = Price(what, selling: true);", "var rungs = new Ladder(Site, what, true, now, 0);"))
 
-chk("1.94.1", "Hold cargo for the best market shares the gold of the marked market across every good you bought, first to the goods that ride there anyway and then to the units this market pays least for against it, so a unit this market pays your share for draws on it last",
+chk("1.94.1", "Hold cargo for the best market shares the gold of the marked market across every good you bought, first to the goods that ride there anyway, the ones bought here this visit and the units this market cannot take, then to the units this market pays least for against it, walking this market's own prices, its gold and your margin, so a unit this market pays your share for draws on it last, and two qualities of one good share what the marked market would buy",
     the_marked_market_s_gold_is_shared_across_every_good_you_carry())
 
 
@@ -14053,7 +14074,7 @@ def the_log_names_what_the_hold_kept():
             and ordered(said, "foreach (var kv in Held)",
                         'said.Add("held " + kv.Value.units + " " + kv.Key.StringId + " for " + kv.Value.where +',
                         '", which pays at least " + kv.Value.there + " each for them, against " + kv.Value.here +',
-                        '" here (Hold cargo for the best market)");')
+                        '" here (Hold cargo for the best market)" + (Sim ? Counter.Aside : ""));')
             and ordered(sell, 'if (tally.Any) Log.Write("  stopped on: " + tally.Summary());',
                         'foreach (string held in pass.HeldFor()) Log.Write("  " + held);')
             and 'string held = string.Join("", pass.HeldFor().ConvertAll(one => "; " + one));' in sell
