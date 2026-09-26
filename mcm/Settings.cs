@@ -397,7 +397,6 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public int ObservationShelfLifeDays { get => _o.ObservationShelfLifeDays; set { _o.ObservationShelfLifeDays = value; Options.Bump(); } }
 
-
         [SettingPropertyInteger("{=TL205}Minimum stock for buy suggestions", 0, 100, Order = 3, RequireRestart = false,
             HintText = "{=TL305}Best-buy hints require at least this many units in stock. 0 = off. Live-price mode only, because observed mode records prices, not stock levels.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
@@ -589,7 +588,6 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public float PartyTradeXpShare { get => _o.PartyTradeXpShare; set { _o.PartyTradeXpShare = value; Options.Bump(); } }
 
-
         [SettingPropertyBool("{=TL247}Coin sound on trade", Order = 15, RequireRestart = false,
             HintText = "{=TL347}Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
@@ -614,7 +612,6 @@ namespace TradeLord.Mcm
             HintText = "{=TL430}Lifts the limit the game puts on how many workshops you may own. 200 is as good as no limit at all. 0 hands the decision back to the game, which allows more as your clan tier rises. Default 200.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public int MaxWorkshopsOwned { get => _o.MaxWorkshopsOwned; set { _o.MaxWorkshopsOwned = value; Options.Bump(); } }
-
 
         [SettingPropertyInteger("{=TL221}Restock and keep food (days of supply)", 0, 30, Order = 0, RequireRestart = false,
             HintText = "{=TL321}The days of food TradeLord keeps you stocked to. It holds this much back before selling food and tops you back up as it trades, buying the cheapest a market has. Your never-buy list still holds, and it stops before your gold reaches your reserve. 0 turns both off. Default 3.")]
@@ -715,7 +712,6 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }
 
-
         [SettingPropertyBool("{=TL265}Buy to fill the ships", Order = 8, RequireRestart = false,
             HintText = "{=TL365}Size purchases to what your ships can hold rather than what your carts can, so you can load the fleet while you are ashore. Your party has to be able to sail; without a fleet TradeLord counts the carts instead and says so in its log. OFF by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
@@ -760,7 +756,6 @@ namespace TradeLord.Mcm
             HintText = "{=TL411}Stop buying once your cargo reaches this share of what your party can carry, so there is room left for what a battle or a quest hands you. 100% lets it fill the hold. Selling is unaffected.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float MaxCargoShare { get => _o.MaxCargoShare; set { _o.MaxCargoShare = value; Options.Bump(); } }
-
 
         [SettingPropertyBool("{=TL459}Pick where to sell on the whole load", Order = 17, RequireRestart = false,
             HintText = "{=TL460}Every good TradeLord buys is bought for a market it means to sell it in. OFF: that market is picked on what it pays for one unit. ON: every market in reach is weighed again on what it would pay for the whole load, which is what you will really be paid. It costs a little time at every market you walk into. ON while it is being tried out.")]

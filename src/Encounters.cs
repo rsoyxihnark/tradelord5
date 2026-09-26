@@ -212,7 +212,6 @@ namespace TradeLord
         }
     }
 
-
     internal static class Meetings
     {
         private const int GetawayHours = 4;
@@ -502,5 +501,4 @@ namespace TradeLord
                       + " - a band is met exactly as the game means it to be");
         }
     }
-
 }

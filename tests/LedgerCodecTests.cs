@@ -435,7 +435,7 @@ namespace TradeLord.Tests
             Assert.Equal(24000, back.Values.Sum(v => v.Count));
             Assert.Equal(written, LedgerCodec.WriteLedger(back));
         }
-    
+
         [Fact]
         public void A_trade_written_out_comes_back_the_same()
         {

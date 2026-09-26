@@ -67,7 +67,6 @@ namespace TradeLord
         public bool TrustWhatAMarketPaid = true;
         public bool MarketForecast = true;
 
-
         public bool TooltipHints = true;
 
         public bool MarkPriceDirection = false;
@@ -195,5 +194,4 @@ namespace TradeLord
         public ItemList NeverBuySet => Parsed(NeverBuyItems, ref _nbSrc, ref _neverBuy);
         public ItemList AlwaysBuySet => Parsed(AlwaysBuyItems, ref _abSrc, ref _alwaysBuy);
     }
-
 }

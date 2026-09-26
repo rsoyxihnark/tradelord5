@@ -781,6 +781,5 @@ namespace TradeLord.Tests
             Assert.False(keeps.TryGet("lageta", "fish", out _));
             Assert.False(keeps.TryGet(null, "fish", out _));
         }
-
     }
 }

@@ -204,7 +204,7 @@ namespace TradeLord.Tests
             string twice = LedgerCodec.WriteLedger(LedgerCodec.ReadLedger(once));
             Assert.Equal(once, twice);
         }
-    
+
         [Fact]
         public void A_price_you_recorded_today_is_kept()
         {
