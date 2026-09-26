@@ -1361,7 +1361,7 @@ namespace TradeLord
         {
             if (!Options.Current.CoinSound) return;
             try { TaleWorlds.Engine.SoundEvent.PlaySound2D("event:/ui/multiplayer/coin_add"); }
-            catch {  }
+            catch { }
         }
 
         private static void NoteStalled(bool selling, Block why)
@@ -2492,7 +2492,6 @@ namespace TradeLord
                 Tongue.Text("{=TL07}TradeLord ledger").ToString(), body,
                 true, false, Tongue.Text("{=TL09}Close").ToString(), "", null, null));
         }
-
 
         private static void AwardTradeXpForOurOwnTrade(int profit, bool muted)
         {

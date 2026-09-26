@@ -329,6 +329,5 @@ namespace TradeLord.Tests
         {
             Assert.True(Herding.Cushion > 0);
         }
-
     }
 }
