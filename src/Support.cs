@@ -27,7 +27,7 @@ namespace TradeLord
             if (SettingsInHand) { PutBack(); return; }
             _owedAPutBack = true;
             Log.Write("settings file: MCM has not handed its settings over yet, and it keeps a copy of its own, " +
-                      "so putting every setting back waits until it does");
+                      "so putting every setting but your language back waits until it does");
         }
 
         private static void PutBack()

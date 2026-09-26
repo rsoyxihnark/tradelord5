@@ -152,6 +152,7 @@ namespace TradeLord
         int HoldableUnits(int at);
         int ResalePurse();
         bool ResaleMarket(int at, int units, int worth, out int[] rungs);
+        Func<int, int> PricesHere(int at);
         void HeldBack(int at, int units, int there, int here);
         int PriceToSell(int at);
         bool TheGameGivesTradeXpFor(int at);
@@ -509,25 +510,35 @@ namespace TradeLord
         internal static ForTheMark[] WhatTheMarkKeeps(ISellingMarket market, Books books, bool sim, Options s)
         {
             var rungs = new int[market.Count][];
-            var here = new int[market.Count];
+            var here = new int[market.Count][];
+            var bought = new int[market.Count];
+            var asked = new Dictionary<string, int>(StringComparer.Ordinal);
+            int till = TradeRules.WhatTheTillCanPay(sim ? market.Till() : market.TillNow(), market.Village);
             bool any = false;
             for (int at = 0; at < market.Count; at++)
             {
-                if (books.Bought(sim, market.IdAt(at))) continue;
+                string id = market.IdAt(at) ?? "";
+                bool boughtHere = books.Bought(sim, id);
                 int yours = market.HoldableUnits(at);
                 if (yours <= 0) continue;
                 Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),
                                         books, sim, s);
-                int bought = Math.Min(yours, basis.PaidLeft);
-                if (bought <= 0 || basis.Paid <= 0) continue;
-                if (!market.ResaleMarket(at, bought, basis.Paid, out rungs[at])) { rungs[at] = null; continue; }
+                int units = Math.Min(yours, basis.PaidLeft);
+                if (units <= 0 || basis.Paid <= 0) continue;
+                asked.TryGetValue(id, out int before);
+                if (!market.ResaleMarket(at, before + units, basis.Paid, out int[] ladder)) continue;
+                rungs[at] = TradeRules.PastTheFirst(ladder, before);
+                if (rungs[at].Length == 0) { rungs[at] = null; continue; }
+                asked[id] = before + rungs[at].Length;
+                bought[at] = units;
                 any = true;
-                int price = market.PriceToSell(at);
-                here[at] = TradeMath.ProfitAcceptable(basis.Paid, price, s.MinProfitMargin) ? price : 0;
+                here[at] = boughtHere
+                    ? new int[0]
+                    : TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);
             }
             int purse = any ? market.ResalePurse() : 0;
             if (purse <= 0) return null;
-            int[] kept = TradeRules.SharePurse(purse, rungs, here, s.HoldCargoForBestMarket);
+            int[] kept = TradeRules.SharePurse(purse, rungs, here, bought, s.HoldCargoForBestMarket);
             var holding = new ForTheMark[market.Count];
             for (int at = 0; at < holding.Length; at++)
             {

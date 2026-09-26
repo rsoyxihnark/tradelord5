@@ -18,7 +18,7 @@ namespace TradeLord.Mcm
         {
             Guard.Run("Mcm.ScreenTongue", ScreenTongue.Follow);
             McmLoader.Reseat = Settings.Reseat;
-            McmLoader.PutBackWhatItShipsWith = Settings.Reset;
+            McmLoader.PutBackWhatItShipsWith = Settings.ResetButTheLanguage;
             if (Settings.Instance == null) return false;
             Settings.Reseat();
             return true;
@@ -250,7 +250,11 @@ namespace TradeLord.Mcm
             }
         }
 
-        internal static void Reset()
+        internal static void Reset() => Reset(spareLanguage: false);
+
+        internal static void ResetButTheLanguage() => Reset(spareLanguage: true);
+
+        private static void Reset(bool spareLanguage)
         {
             Guard.Run("Mcm.Reset", () =>
             {
@@ -258,11 +262,13 @@ namespace TradeLord.Mcm
                 var moved = new List<string>();
                 foreach (FieldInfo field in typeof(Options).GetFields(BindingFlags.Public | BindingFlags.Instance))
                 {
+                    if (spareLanguage && Whip.Spares(field.Name)) continue;
                     object now = field.GetValue(stock);
                     if (!Equals(field.GetValue(Options.Current), now)) moved.Add(field.Name);
                     field.SetValue(Options.Current, now);
                 }
-                Log.Write("settings screen: every setting was put back to the value TradeLord ships with, " +
+                Log.Write("settings screen: every setting" + (spareLanguage ? " but your language" : "") +
+                          " was put back to the value TradeLord ships with, " +
                           moved.Count + " of them had been changed");
                 Reseat();
                 Options.Bump();
@@ -648,7 +654,7 @@ namespace TradeLord.Mcm
         public int MaxLootTier { get => _o.MaxLootTier; set { _o.MaxLootTier = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL229}Hold cargo for the best market", 0f, 1f, "#0%", Order = 6, RequireRestart = false,
-            HintText = "{=TL329}On the way, sell a good you bought only for at least this share of what the market marked by Auto-mark best sell market on map pays for it, counting what is on its way there as the ledger does, and only as many as it would buy. Loot is never held, nor anything in the marked market or while that marker is off. 0% holds nothing. 75% by default.")]
+            HintText = "{=TL329}On the way, sell a good you bought only for at least this share of what the market marked by Auto-mark best sell market on map pays for it, counting what is on its way there as the ledger does, holding only as many as it would buy. Loot is never held, nor anything in the marked market or while that marker is off. 0% holds nothing. 75% by default.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public float HoldCargoForBestMarket { get => _o.HoldCargoForBestMarket; set { _o.HoldCargoForBestMarket = value; Options.Bump(); } }
 
