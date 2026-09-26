@@ -119,6 +119,56 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_floor_for_the_units_left_is_your_share_of_what_the_mark_pays_for_the_last_of_them()
+        {
+            int[] rungs = { 300, 280, 260 };
+            Assert.Equal(195, TradeRules.FloorForTheLast(rungs, 3, 0.75f));
+            Assert.Equal(225, TradeRules.FloorForTheLast(rungs, 1, 0.75f));
+            Assert.Equal(0, TradeRules.FloorForTheLast(rungs, 4, 0.75f));
+            Assert.Equal(0, TradeRules.FloorForTheLast(rungs, 0, 0.75f));
+            Assert.Equal(0, TradeRules.FloorForTheLast(null, 1, 0.75f));
+        }
+
+        [Fact]
+        public void The_purse_of_the_marked_market_goes_to_the_units_this_market_pays_least_for_against_it()
+        {
+            var rungs = new[] { new[] { 250, 250, 250, 250 }, new[] { 400, 400 }, null };
+            var kept = TradeRules.SharePurse(1300, rungs, new[] { 180, 120, 0 }, 0.75f);
+            Assert.Equal(new[] { 2, 2, 0 }, kept);
+        }
+
+        [Fact]
+        public void A_unit_this_market_pays_your_share_for_is_the_last_to_draw_on_the_purse()
+        {
+            var rungs = new[] { new[] { 200 }, new[] { 400 } };
+            Assert.Equal(new[] { 0, 1 }, TradeRules.SharePurse(400, rungs, new[] { 180, 120 }, 0.75f));
+            Assert.Equal(new[] { 1, 1 }, TradeRules.SharePurse(600, rungs, new[] { 180, 120 }, 0.75f));
+        }
+
+        [Fact]
+        public void Goods_that_ride_to_the_marked_market_anyway_are_paid_for_first()
+        {
+            var rungs = new[] { new[] { 250, 250, 250 }, new[] { 400, 400 } };
+            Assert.Equal(new[] { 1, 2 }, TradeRules.SharePurse(1050, rungs, new[] { 180, 0 }, 0.75f));
+        }
+
+        [Fact]
+        public void A_unit_too_dear_for_what_is_left_shuts_its_good_and_cheaper_ones_still_fit()
+        {
+            var rungs = new[] { new[] { 400, 400 }, new[] { 100, 100 } };
+            Assert.Equal(new[] { 1, 2 }, TradeRules.SharePurse(650, rungs, new[] { 100, 60 }, 0.75f));
+        }
+
+        [Fact]
+        public void No_purse_or_no_share_holds_nothing()
+        {
+            var rungs = new[] { new[] { 300 } };
+            Assert.Equal(new[] { 0 }, TradeRules.SharePurse(0, rungs, new[] { 100 }, 0.75f));
+            Assert.Equal(new[] { 0 }, TradeRules.SharePurse(1000, rungs, new[] { 100 }, 0f));
+            Assert.Empty(TradeRules.SharePurse(1000, null, null, 0.75f));
+        }
+
+        [Fact]
         public void Setting_the_bought_units_aside_leaves_the_looted_ones_to_sell()
         {
             int remaining = 10, paidLeft = 4;

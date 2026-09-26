@@ -784,17 +784,18 @@ namespace TradeLord
         {
             Settlement mark = _picked;
             if (!Options.Current.MarkBestSellTownOnMap || mark?.SettlementComponent == null) return null;
+            if (!TradeActionBehavior.IsMarket(mark)) return null;
             if (!Marks.HoldsFor(mark.StringId, here?.StringId, _walkedInto, _markedOnTheWayIn)) return null;
             if (LedgerBehavior.UnderAttack(mark) || LedgerBehavior.VillageShut(mark)) return null;
             if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(mark)) return null;
             return mark;
         }
 
-        internal static (int units, int average) WhatTheMarkTakes(Settlement mark, EquipmentElement el, int carried,
-                                                                  int worth, float ride, int purse)
+        internal static int[] WhatTheMarkTakes(Settlement mark, EquipmentElement el, int carried,
+                                               int worth, float ride, int purse)
         {
             MobileParty party = MobileParty.MainParty;
-            if (mark?.SettlementComponent == null || party == null || el.Item == null) return (0, 0);
+            if (mark?.SettlementComponent == null || party == null || el.Item == null) return new int[0];
             Paying pays = WhatThatMarketPays(mark, mark.SettlementComponent, el, party, ride);
             return TradeMath.WhatTheMarkTakes(pays.At, carried, worth, Options.Current.MinProfitMargin, purse);
         }

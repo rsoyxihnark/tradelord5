@@ -1499,33 +1499,28 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_marked_market_takes_the_units_that_clear_your_margin_at_their_average()
+        public void The_marked_market_takes_the_units_that_clear_your_margin_at_what_it_pays_for_each()
         {
             int[] rungs = { 415, 400, 380, 300, 110 };
-            var took = TradeMath.WhatTheMarkTakes(u => rungs[u], 5, 100, 0.15f, -1);
-            Assert.Equal(4, took.units);
-            Assert.Equal((415 + 400 + 380 + 300) / 4, took.average);
+            Assert.Equal(new[] { 415, 400, 380, 300 }, TradeMath.WhatTheMarkTakes(u => rungs[u], 5, 100, 0.15f, -1));
         }
 
         [Fact]
         public void The_marked_market_takes_no_more_than_its_purse_or_than_you_carry()
         {
             int[] rungs = { 415, 400, 380, 300 };
-            var purse = TradeMath.WhatTheMarkTakes(u => rungs[u], 4, 100, 0.15f, 1000);
-            Assert.Equal(2, purse.units);
-            Assert.Equal((415 + 400) / 2, purse.average);
-            var carried = TradeMath.WhatTheMarkTakes(u => rungs[u], 1, 100, 0.15f, -1);
-            Assert.Equal((1, 415), carried);
+            Assert.Equal(new[] { 415, 400 }, TradeMath.WhatTheMarkTakes(u => rungs[u], 4, 100, 0.15f, 1000));
+            Assert.Equal(new[] { 415 }, TradeMath.WhatTheMarkTakes(u => rungs[u], 1, 100, 0.15f, -1));
         }
 
         [Fact]
         public void A_marked_market_that_pays_nothing_or_misses_your_margin_takes_nothing()
         {
-            Assert.Equal((0, 0), TradeMath.WhatTheMarkTakes(u => 0, 3, 100, 0.15f, -1));
-            Assert.Equal((0, 0), TradeMath.WhatTheMarkTakes(u => 114, 3, 100, 0.15f, -1));
-            Assert.Equal((0, 0), TradeMath.WhatTheMarkTakes(u => 500, 0, 100, 0.15f, -1));
-            Assert.Equal((0, 0), TradeMath.WhatTheMarkTakes(null, 3, 100, 0.15f, -1));
-            Assert.Equal((0, 0), TradeMath.WhatTheMarkTakes(u => 500, 3, 100, 0.15f, 0));
+            Assert.Empty(TradeMath.WhatTheMarkTakes(u => 0, 3, 100, 0.15f, -1));
+            Assert.Empty(TradeMath.WhatTheMarkTakes(u => 114, 3, 100, 0.15f, -1));
+            Assert.Empty(TradeMath.WhatTheMarkTakes(u => 500, 0, 100, 0.15f, -1));
+            Assert.Empty(TradeMath.WhatTheMarkTakes(null, 3, 100, 0.15f, -1));
+            Assert.Empty(TradeMath.WhatTheMarkTakes(u => 500, 3, 100, 0.15f, 0));
         }
     }
 }

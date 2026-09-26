@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.94.1
+
+- Fixed Hold cargo for the best market keeping back more goods than the market marked on your map has the gold to buy
+- Fixed Hold cargo for the best market selling a whole stack on the way when the marked market pays far more for the first few
+- Fixed Hold cargo for the best market keeping a whole stack when the marked market pays little for the last few
+- Fixed Hold cargo for the best market keeping goods for a marked market after you turned off Trade with towns or Trade with villages
+- TradeLord.log now says which goods Hold cargo for the best market kept, how many, and for which market
+- The reason shown when TradeLord holds cargo back is now shorter
+- The hint for Hold cargo for the best market no longer reads as if it only holds goods you bought on the way
+- Fixed a stray comma in the Turkish hint for Hold cargo for the best market
+
 ## 1.94.0
 
 - Hold cargo for the best market is one slider now, on at 75% out of the box, and 0% holds nothing
@@ -10,7 +21,7 @@
 - Hold cargo for the best market holds nothing in a market you load a save in, until you ride out
 - The map marker weighs every market on what it pays, whatever Hold cargo for the best market is set to
 - The reason shown when TradeLord holds cargo back now names Hold cargo for the best market
-- When a good misses both Minimum profit margin and Hold cargo for the best market, the reason shown now names Minimum profit margin
+- When a good misses both Minimum profit margin and Hold cargo for the best market, the reason shown now says prices here miss your margin
 - The hint for Hold cargo for the best market now says what the slider holds back and when it holds nothing
 - The feature list now says Hold cargo for the best market holds a good you bought for the market marked on your map, at 75%
 - The feature list now says Hold cargo for the best market holds only as many as the marked market would buy, and never looted gear
