@@ -648,7 +648,7 @@ namespace TradeLord.Mcm
         public int MaxLootTier { get => _o.MaxLootTier; set { _o.MaxLootTier = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL229}Hold cargo for the best market", 0f, 1f, "#0%", Order = 6, RequireRestart = false,
-            HintText = "{=TL329}Sell a good you bought on the way only for at least this share of what the market marked by Auto-mark best sell market on map pays for it, counting what is on its way there as the ledger does, and only as many as it would buy. Loot is never held, nor anything in the marked market or while that marker is off. 0% holds nothing. 75% by default.")]
+            HintText = "{=TL329}On the way, sell a good you bought only for at least this share of what the market marked by Auto-mark best sell market on map pays for it, counting what is on its way there as the ledger does, and only as many as it would buy. Loot is never held, nor anything in the marked market or while that marker is off. 0% holds nothing. 75% by default.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public float HoldCargoForBestMarket { get => _o.HoldCargoForBestMarket; set { _o.HoldCargoForBestMarket = value; Options.Bump(); } }
 
