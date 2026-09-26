@@ -103,8 +103,7 @@ namespace TradeLord
 
         public int MaxLootTier = 1;
 
-        public bool PreferBestSellTown = false;
-        public float BestSellTownTolerance = 0.95f;
+        public float HoldCargoForBestMarket = 0.75f;
 
         public int GoldReserve = 300;
         public int KeepWageDays = 0;

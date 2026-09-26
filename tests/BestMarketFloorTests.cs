@@ -107,5 +107,30 @@ namespace TradeLord.Tests
                 if (heldLoosely) Assert.True(heldTightly);
             }
         }
+
+        [Fact]
+        public void Only_the_units_the_marked_market_would_buy_are_held_and_only_below_the_floor()
+        {
+            Assert.False(TradeRules.HeldForTheMark(price: 150, floor: 0, boughtLeft: 3, holdFor: 3));
+            Assert.False(TradeRules.HeldForTheMark(price: 150, floor: 187, boughtLeft: 5, holdFor: 3));
+            Assert.True(TradeRules.HeldForTheMark(price: 150, floor: 187, boughtLeft: 3, holdFor: 3));
+            Assert.False(TradeRules.HeldForTheMark(price: 187, floor: 187, boughtLeft: 3, holdFor: 3));
+            Assert.False(TradeRules.HeldForTheMark(price: 150, floor: 187, boughtLeft: 0, holdFor: 3));
+        }
+
+        [Fact]
+        public void Setting_the_bought_units_aside_leaves_the_looted_ones_to_sell()
+        {
+            int remaining = 10, paidLeft = 4;
+            Assert.True(TradeMath.SetTheBoughtUnitsAside(ref remaining, ref paidLeft));
+            Assert.Equal(6, remaining);
+            Assert.Equal(0, paidLeft);
+            remaining = 4; paidLeft = 4;
+            Assert.False(TradeMath.SetTheBoughtUnitsAside(ref remaining, ref paidLeft));
+            Assert.Equal(4, remaining);
+            remaining = 5; paidLeft = 0;
+            Assert.False(TradeMath.SetTheBoughtUnitsAside(ref remaining, ref paidLeft));
+            Assert.Equal(5, remaining);
+        }
     }
 }

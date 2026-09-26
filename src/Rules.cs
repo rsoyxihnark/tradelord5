@@ -130,6 +130,10 @@ namespace TradeLord
             if (leftOutNow != null) owed.Add(leftOutNow);
         }
 
+        internal static bool HoldsFor(string markId, string hereId, string walkedIntoId, string markedOnTheWayInId) =>
+            markId != null && markId != hereId &&
+            !(hereId != null && hereId == walkedIntoId && markedOnTheWayInId == hereId);
+
         internal static bool WorthSayingAgain(long value, int units, bool held,
                                               long saidValue, int saidUnits, bool saidHeld) =>
             value != saidValue || units != saidUnits || held != saidHeld;
@@ -644,6 +648,9 @@ namespace TradeLord
             (int)(elsewhere * tolerance);
 
         internal static bool BelowTheBestMarket(int price, int holdFloor) => price < holdFloor;
+
+        internal static bool HeldForTheMark(int price, int floor, int boughtLeft, int holdFor) =>
+            floor > 0 && boughtLeft > 0 && boughtLeft <= holdFor && BelowTheBestMarket(price, floor);
 
         internal const int VillageLastCoin = 1;
 

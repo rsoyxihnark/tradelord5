@@ -647,15 +647,10 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public int MaxLootTier { get => _o.MaxLootTier; set { _o.MaxLootTier = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL229}Hold cargo for the best market", Order = 6, RequireRestart = false,
-            HintText = "{=TL329}Skip selling here when this market pays clearly less than the best known market, counting what is on its way there as the ledger does, so your cargo waits for the town that pays for it. It holds back what you bought and what you looted alike. OFF by default, in which case looted gear goes to the first market that can pay for it.")]
+        [SettingPropertyFloatingInteger("{=TL229}Hold cargo for the best market", 0f, 1f, "#0%", Order = 6, RequireRestart = false,
+            HintText = "{=TL329}Sell a good you bought on the way only for at least this share of what the market marked by Auto-mark best sell market on map pays for it, counting what is on its way there as the ledger does, and only as many as it would buy. Loot is never held, nor anything in the marked market or while that marker is off. 0% holds nothing. 75% by default.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
-        public bool PreferBestSellTown { get => _o.PreferBestSellTown; set { _o.PreferBestSellTown = value; Options.Bump(); } }
-
-        [SettingPropertyFloatingInteger("{=TL230}Best-market tolerance", 0.5f, 1f, "#0%", Order = 7, RequireRestart = false,
-            HintText = "{=TL330}Sell here anyway if this market pays at least this fraction of the best known price. It does nothing while the setting above is OFF.")]
-        [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
-        public float BestSellTownTolerance { get => _o.BestSellTownTolerance; set { _o.BestSellTownTolerance = value; Options.Bump(); } }
+        public float HoldCargoForBestMarket { get => _o.HoldCargoForBestMarket; set { _o.HoldCargoForBestMarket = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL275}Sell animals that slow you down", Order = 8, RequireRestart = false,
             HintText = "{=TL375}Sells animals to lift the herd speed penalty, only while it is on you and only as many as it takes. Livestock goes first, then a spare mount, then your haul animals, and your war horses and noble horses last of all, and it keeps enough haul animals to carry what you are already carrying. Anything you protected is left alone. ON by default.")]

@@ -13,7 +13,7 @@ namespace TradeLord
                 case Block.BelowMargin:
                     return Tongue.Text("{=TL42}prices here miss your margin");
                 case Block.BelowBestMarket:
-                    return Tongue.Text("{=TL85}you are holding this cargo for a better market");
+                    return Tongue.Text("{=TL85}Hold cargo for the best market is keeping your cargo for the market marked on your map");
                 case Block.BudgetSpent:
                     return Tongue.Text("{=TL43}your purse or spending caps are spent");
                 case Block.ItemCountCap:

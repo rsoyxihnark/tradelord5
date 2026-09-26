@@ -7,7 +7,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 17;
+        public const int Shape = 18;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -35,6 +35,7 @@ namespace TradeLord
             if (from < 8) changed |= KeepingAndRestockingFoodBecameOneSetting(written, notes);
             if (from < 15) changed |= WhatToBuyFirstIsOneRuleNow(written, notes);
             if (from < 16) changed |= ThreeLogSwitchesBecameOne(written, notes);
+            if (from < 18) changed |= HoldCargoBecameOneShare(written, notes);
             if (changed && notes != null)
                 notes.Add("your settings were written by an older TradeLord, so they have been brought forward from shape " +
                           from + " to shape " + Shape);
@@ -89,6 +90,22 @@ namespace TradeLord
             notes?.Add("smeltable weapons are a choice of three now, so your setting of " + held +
                        " became " + (kept ? "keep every one" : "sell them"));
             return true;
+        }
+
+        private static bool HoldCargoBecameOneShare(IDictionary<string, string> written, ICollection<string> notes)
+        {
+            bool changed = false;
+            foreach (string was in new[] { "PreferBestSellTown", "BestSellTownTolerance" })
+            {
+                if (!written.TryGetValue(was, out string held)) continue;
+                written.Remove(was);
+                changed = true;
+                notes?.Add("Hold cargo for the best market is one share now, held against the market marked on your " +
+                           "map, so your setting of " + was + " = " + held + " is no longer read and the share " +
+                           "starts at " + Math.Round(new Options().HoldCargoForBestMarket * 100f)
+                                                  .ToString(CultureInfo.InvariantCulture) + "%");
+            }
+            return changed;
         }
 
         private const string LogSwitch = "ExtendedDebugLogging";
@@ -245,7 +262,7 @@ namespace TradeLord
     {
         public const bool Armed = true;
 
-        public const int CracksAt = 15;
+        public const int CracksAt = 18;
 
         public static bool Cracks(bool armed, int cracksAt, int shipped, int shape) =>
             armed && cracksAt > 0 && cracksAt == shipped && shape < cracksAt;
@@ -279,7 +296,7 @@ namespace TradeLord
                 { "KeepFoodDays", new double[] { 0, 30 } },
                 { "KeepPerFoodKind", new double[] { 1, 50 } },
                 { "MaxLootTier", new double[] { 0, 6 } },
-                { "BestSellTownTolerance", new double[] { 0.5, 1 } },
+                { "HoldCargoForBestMarket", new double[] { 0, 1 } },
                 { "GoldReserve", new double[] { 0, 100000 } },
                 { "KeepWageDays", new double[] { 0, 30 } },
                 { "BuyCapPerItem", new double[] { 0, 500 } },
