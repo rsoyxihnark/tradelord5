@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.94.2
+
+- Fixed Hold cargo for the best market leaving out the goods this market cannot take when it shares out the gold of the marked market
+- Fixed Hold cargo for the best market leaving out the goods you bought in the same visit when it shares out the gold of the marked market
+- Fixed Hold cargo for the best market counting two qualities of one good as if the marked market would buy each on its own
+- Fixed Hold cargo for the best market keeping too little of a good whose price here falls fast when the marked market is short of gold
+- The hint for Hold cargo for the best market now says it holds only as many as the marked market would buy
+- The lines TradeLord.log writes for goods Hold cargo for the best market kept are now marked as simulated in a dry run
+
 ## 1.94.1
 
 - Fixed Hold cargo for the best market keeping back more goods than the market marked on your map has the gold to buy

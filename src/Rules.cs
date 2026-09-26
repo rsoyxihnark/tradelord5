@@ -656,7 +656,32 @@ namespace TradeLord
             rungs == null || boughtLeft <= 0 || boughtLeft > rungs.Length
                 ? 0 : BestMarketFloor(rungs[boughtLeft - 1], share);
 
-        internal static int[] SharePurse(int purse, int[][] rungs, int[] here, float share)
+        internal static int[] PastTheFirst(int[] ladder, int skipped)
+        {
+            if (ladder == null || skipped >= ladder.Length) return new int[0];
+            if (skipped <= 0) return ladder;
+            var rest = new int[ladder.Length - skipped];
+            Array.Copy(ladder, skipped, rest, 0, rest.Length);
+            return rest;
+        }
+
+        internal static int[] WhatSellsHere(Func<int, int> priceAt, int units, int paid, float margin, ref int till)
+        {
+            if (priceAt == null || units <= 0) return new int[0];
+            var sold = new int[units];
+            int count = 0;
+            for (int u = 0; u < units; u++)
+            {
+                int price = priceAt(u);
+                if (price <= 0 || !TradeMath.ProfitAcceptable(paid, price, margin) || price > till) break;
+                till -= price;
+                sold[count++] = price;
+            }
+            Array.Resize(ref sold, count);
+            return sold;
+        }
+
+        internal static int[] SharePurse(int purse, int[][] rungs, int[][] here, int[] bought, float share)
         {
             int goods = rungs == null ? 0 : rungs.Length;
             var kept = new int[goods];
@@ -666,10 +691,13 @@ namespace TradeLord
             {
                 int[] ladder = rungs[g];
                 if (ladder == null) continue;
-                int price = here != null && g < here.Length ? here[g] : 0;
+                int[] sells = here != null && g < here.Length ? here[g] : null;
+                int units = bought != null && g < bought.Length ? bought[g] : 0;
                 for (int u = 0; u < ladder.Length; u++)
                 {
                     if (ladder[u] <= 0) break;
+                    int last = units - u - 1;
+                    int price = sells != null && last >= 0 && last < sells.Length ? sells[last] : 0;
                     asks.Add(((double)price / ladder[u], g, u));
                 }
             }

@@ -624,6 +624,19 @@ namespace TradeLord
                 };
             }
 
+            internal Func<int, int> SellingPricesAhead(EquipmentElement what)
+            {
+                int now = Price(what, selling: true);
+                if (Site == null || now <= 0) return taken => now;
+                var rungs = new Ladder(Site, what, true, now, 0);
+                int first = rungs.At(0);
+                return taken =>
+                {
+                    int at = rungs.At(taken);
+                    return at <= 0 || first <= 0 ? at : now + at - first;
+                };
+            }
+
             internal void Tally(ItemObject item, int count, int gold) =>
                 TradeActionBehavior.Tally(Detail, item, count, gold);
 
@@ -725,7 +738,7 @@ namespace TradeLord
                 foreach (var kv in Held)
                     said.Add("held " + kv.Value.units + " " + kv.Key.StringId + " for " + kv.Value.where +
                              ", which pays at least " + kv.Value.there + " each for them, against " + kv.Value.here +
-                             " here (Hold cargo for the best market)");
+                             " here (Hold cargo for the best market)" + (Sim ? Counter.Aside : ""));
                 return said;
             }
         }
@@ -1601,6 +1614,8 @@ namespace TradeLord
                                                 _markRide, _markPurse);
                 return rungs.Length > 0;
             }
+
+            public Func<int, int> PricesHere(int at) => _pass.SellingPricesAhead(_plan[at].EquipmentElement);
 
             public void HeldBack(int at, int units, int there, int here)
             {

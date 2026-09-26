@@ -602,6 +602,17 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void TheResetKeepsTheLanguageYouChose()
+        {
+            var written = File("Language", "1", "GoldReserve", "800");
+            Assert.True(Whip.Crack(true, written));
+            Assert.Equal("1", written["Language"]);
+            Assert.False(written.ContainsKey("GoldReserve"));
+            Assert.True(Whip.Spares("language"));
+            Assert.False(Whip.Spares("GoldReserve"));
+        }
+
+        [Fact]
         public void AFileAlreadyInTheOneShareShapeIsLeftAlone()
         {
             var written = File("HoldCargoForBestMarket", "0.6", "GoldReserve", "800");
