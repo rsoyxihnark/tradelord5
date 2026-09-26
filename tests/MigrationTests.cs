@@ -323,12 +323,12 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void ThisVersionShipsTheWhipSpentSoAnOlderFileIsLiftedRatherThanReset()
+        public void ThisVersionShipsTheWhipArmedSoAFileOlderThanItIsResetOnce()
         {
             Assert.True(Whip.Armed);
             var written = File("GoldReserve", "800");
-            Assert.False(Whip.Crack(1, written));
-            Assert.Equal("800", written["GoldReserve"]);
+            Assert.True(Whip.Crack(Migration.Shape - 1, written));
+            Assert.Empty(written);
         }
 
         [Fact]
@@ -340,14 +340,12 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void TheWhipIsWiredToTheShapeItWasArmedAtAndIsSpentOnceALaterShapeShips()
+        public void TheWhipIsStillWiredToTheShapeThisVersionShips()
         {
-            Assert.True(Whip.CracksAt > 0 && Whip.CracksAt < Migration.Shape);
-            Assert.False(Whip.CracksOn(Migration.Shape - 1));
+            Assert.Equal(Migration.Shape, Whip.CracksAt);
+            Assert.True(Whip.CracksOn(Migration.Shape - 1));
             Assert.False(Whip.CracksOn(Migration.Shape));
             Assert.False(Whip.CracksOn(Migration.Shape + 1));
-            Assert.True(Whip.Cracks(armed: true, cracksAt: Whip.CracksAt, shipped: Whip.CracksAt,
-                                    shape: Whip.CracksAt - 1));
         }
 
         [Fact]
@@ -493,7 +491,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(17, Migration.Shape);
+            Assert.Equal(18, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));
@@ -584,6 +582,40 @@ namespace TradeLord.Tests
             Assert.False(Migration.Lift(1, new Dictionary<string, string>(), new List<string>()));
             Assert.False(Migration.Lift(1, null, new List<string>()));
             Assert.True(Migration.Lift(1, File("KeepFoodVariety", "2"), null));
+        }
+
+        [Theory]
+        [InlineData("true", "0.9")]
+        [InlineData("false", "0.95")]
+        public void HoldCargoForTheBestMarketIsOneShareThatStartsAtWhatTradeLordShipsWith(string held, string share)
+        {
+            var written = File("PreferBestSellTown", held, "BestSellTownTolerance", share, "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(17, written, notes));
+            Assert.False(written.ContainsKey("PreferBestSellTown"));
+            Assert.False(written.ContainsKey("BestSellTownTolerance"));
+            Assert.False(written.ContainsKey("HoldCargoForBestMarket"));
+            Assert.Equal("800", written["GoldReserve"]);
+            Assert.Equal(3, notes.Count);
+            Assert.Contains(notes, one => one.Contains("PreferBestSellTown = " + held) && one.Contains("75%"));
+            Assert.Contains(notes, one => one.Contains("BestSellTownTolerance = " + share));
+        }
+
+        [Fact]
+        public void AFileAlreadyInTheOneShareShapeIsLeftAlone()
+        {
+            var written = File("HoldCargoForBestMarket", "0.6", "GoldReserve", "800");
+            Assert.False(Migration.Lift(18, written, new List<string>()));
+            Assert.Equal("0.6", written["HoldCargoForBestMarket"]);
+        }
+
+        [Fact]
+        public void TheShareIsHeldBetweenNothingAndAll()
+        {
+            Assert.Equal(0d, Limits.Kept("HoldCargoForBestMarket", -0.5));
+            Assert.Equal(1d, Limits.Kept("HoldCargoForBestMarket", 1.5));
+            Assert.Equal(0.75d, Limits.Kept("HoldCargoForBestMarket", 0.75));
+            Assert.False(Limits.Knows("BestSellTownTolerance"));
         }
     }
 }

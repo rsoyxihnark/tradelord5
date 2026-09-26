@@ -820,6 +820,7 @@ namespace TradeLord
                 Marker.ForgetTheRead();
                 Settlement inside = MobileParty.MainParty?.CurrentSettlement;
                 if (inside != null) _visitTradeAllowed = CanTradeHere(inside);
+                if (inside != null) Marker.NoteALoadInside(inside);
                 Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));
                 Guard.Run("Action.RestoreMarker", Marker.Update);
                 Log.Write(Travel.NavalActive
@@ -893,6 +894,7 @@ namespace TradeLord
             if (party != MobileParty.MainParty) return;
             Guard.Run("Action.OnSettlementEntered", () =>
             {
+                if (!StillTheSameArrival(settlement)) Marker.NoteTheWalkIn(settlement);
                 Counter.Forget();
                 PriceTrace.Say(settlement, "walked in, before anything was traded");
                 Hindsight.Score(settlement);
@@ -1532,12 +1534,35 @@ namespace TradeLord
 
             public int UnpaidWorth(int at) => TradePolicy.UnpaidWorth(Item(at));
 
-            public bool ResaleMarket(int at, out int price)
+            private bool _markRead;
+            private Settlement _mark;
+            private float _markRide;
+            private int _markPurse;
+
+            public bool ResaleMarket(int at, int units, int worth, out int price, out int takes)
             {
-                var best = LedgerBehavior.Instance?.BestSellAsItLands(Item(at)) ?? (null, 0);
-                EquipmentElement held = _plan[at].EquipmentElement;
-                price = TradeMath.AtThisQuality(best.Item2, held.Item.Value, held.ItemValue);
-                return best.Item1 != null && best.Item1 != _pass.Site;
+                price = 0;
+                takes = 0;
+                if (!_markRead)
+                {
+                    _markRead = true;
+                    Settlement mark = Marker.TheMarkToHoldFor(_pass.Site);
+                    if (mark != null)
+                    {
+                        float ride = Travel.EstimateDaysFromParty(mark);
+                        int purse = TradeRules.WhatTheTillCanPay(mark.SettlementComponent.Gold, mark.IsVillage);
+                        if (!TradeMath.OutOfReach(ride) && purse > 0)
+                        {
+                            _mark = mark;
+                            _markRide = ride;
+                            _markPurse = purse;
+                        }
+                    }
+                }
+                if (_mark == null) return false;
+                (takes, price) = Marker.WhatTheMarkTakes(_mark, _plan[at].EquipmentElement, units, worth,
+                                                         _markRide, _markPurse);
+                return takes > 0;
             }
 
             public int PriceToSell(int at) => _pass.Price(_plan[at].EquipmentElement, selling: true);

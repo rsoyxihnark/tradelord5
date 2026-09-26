@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.94.0
+
+- Hold cargo for the best market is one slider now, on at 75% out of the box, and 0% holds nothing
+- Hold cargo for the best market now holds a good for the market marked on your map, not the priciest market in reach
+- Hold cargo for the best market holds only goods you bought, so looted gear still goes to the first market that can pay for it
+- Hold cargo for the best market keeps back only as many of a good as the market marked on your map would buy
+- Hold cargo for the best market holds nothing in the marked market itself, or while Auto-mark best sell market on map is off
+- Hold cargo for the best market holds nothing in a market you load a save in, until you ride out
+- The map marker weighs every market on what it pays, whatever Hold cargo for the best market is set to
+- The reason shown when TradeLord holds cargo back now names Hold cargo for the best market
+- When a good misses both Minimum profit margin and Hold cargo for the best market, the reason shown now names Minimum profit margin
+- The hint for Hold cargo for the best market now says what the slider holds back and when it holds nothing
+- The feature list now says Hold cargo for the best market holds a good you bought for the market marked on your map, at 75%
+- The feature list now says Hold cargo for the best market holds only as many as the marked market would buy, and never looted gear
+- The feature list now says Hold cargo for the best market holds nothing in the marked market, or with Auto-mark best sell market on map off
+
 ## 1.93.16
 
 - Fixed TradeLord.log timing picking a buyer and the route scan no finer than the system clock ticks

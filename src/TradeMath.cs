@@ -20,6 +20,23 @@ namespace TradeLord
                 ? townSellPrice >= costBasis * (1f + margin)
                 : townSellPrice > 0;
 
+        public static (int units, int average) WhatTheMarkTakes(Func<int, int> rungAt, int carried, int worth,
+                                                                float margin, int purse)
+        {
+            if (rungAt == null || carried <= 0) return (0, 0);
+            long fetched = 0L;
+            int taken = 0;
+            for (int u = 0; u < carried; u++)
+            {
+                int price = rungAt(u);
+                if (price <= 0 || !ProfitAcceptable(worth, price, margin)) break;
+                if (purse >= 0 && fetched + price > purse) break;
+                fetched += price;
+                taken++;
+            }
+            return taken == 0 ? (0, 0) : (taken, (int)(fetched / taken));
+        }
+
         public static int MostToPayOverTheCheapest(int cheapest, float tolerance)
         {
             if (cheapest <= 0) return 0;
@@ -92,6 +109,14 @@ namespace TradeLord
         public static bool SkipTheUnitsYouPaidFor(bool basisIsMarket, ref int remaining, ref int paidLeft)
         {
             if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;
+            remaining -= paidLeft;
+            paidLeft = 0;
+            return true;
+        }
+
+        public static bool SetTheBoughtUnitsAside(ref int remaining, ref int paidLeft)
+        {
+            if (paidLeft <= 0 || remaining <= paidLeft) return false;
             remaining -= paidLeft;
             paidLeft = 0;
             return true;

@@ -781,5 +781,30 @@ namespace TradeLord.Tests
             Assert.False(keeps.TryGet("lageta", "fish", out _));
             Assert.False(keeps.TryGet(null, "fish", out _));
         }
+
+        [Fact]
+        public void Cargo_is_held_for_a_marked_market_you_are_not_standing_in()
+        {
+            Assert.True(Marks.HoldsFor("town_M", "town_A", "town_A", "town_M"));
+            Assert.True(Marks.HoldsFor("town_M", null, "town_A", "town_M"));
+            Assert.False(Marks.HoldsFor(null, "town_A", "town_A", "town_M"));
+            Assert.False(Marks.HoldsFor("town_M", "town_M", "town_A", "town_M"));
+        }
+
+        [Fact]
+        public void Walking_into_the_marked_market_frees_the_whole_visit_even_once_the_mark_moves_on()
+        {
+            Assert.False(Marks.HoldsFor("town_N", "town_M", "town_M", "town_M"));
+            Assert.False(Marks.HoldsFor("town_M", "town_M", "town_M", "town_M"));
+            Assert.True(Marks.HoldsFor("town_N", "town_M", "town_M", "town_A"));
+            Assert.True(Marks.HoldsFor("town_N", "town_M", "town_A", "town_M"));
+        }
+
+        [Fact]
+        public void A_save_loaded_inside_a_market_holds_nothing_there_for_that_visit()
+        {
+            Assert.False(Marks.HoldsFor("town_N", "town_A", "town_A", "town_A"));
+            Assert.True(Marks.HoldsFor("town_N", "town_B", "town_A", "town_A"));
+        }
     }
 }

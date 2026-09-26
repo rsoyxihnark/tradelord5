@@ -71,7 +71,7 @@
 		<string id="TL95" text="Burada bir şey satılmadı: {REASON}, bir şey de alınmadı: {SECOND}."/>
 		<string id="TL83" text="köyün her maldan son parçası kaldı"/>
 		<string id="TL84" text="{ITEM}: {FROM} şehrinden al ({BUY} dinar) -&gt; {TO} şehrinde sat ({SELL})  x{QTY} = +{PROFIT} dinar, buradan ~{DAYS} gün"/>
-		<string id="TL85" text="bu yükü daha iyi bir pazar için tutuyorsunuz"/>
+		<string id="TL85" text="Yükü en iyi pazar için tut ayarı kargonuzu haritada işaretli pazar için saklıyor"/>
 		<string id="TL86" text="müfrezeniz daha fazla hayvan güdemez"/>
 		<string id="TL88" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}."/>
 		<string id="TL89" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde kârlı rota yok. Daha çok pazar gezin ya da Bilgi ayarlarından sınırları yükseltin."/>
@@ -150,7 +150,6 @@
 		<string id="TL227" text="Bir malın size neye mal olduğu"/>
 		<string id="TL228" text="Ganimeti şu seviyeye kadar sat (0 = kapalı)"/>
 		<string id="TL229" text="Yükü en iyi pazar için tut"/>
-		<string id="TL230" text="En iyi pazar toleransı"/>
 		<string id="TL231" text="Asla satma (mal kimlikleri ya da adları, virgülle ayrılmış)"/>
 		<string id="TL232" text="Her zaman sat (mal kimlikleri ya da adları, virgülle ayrılmış)"/>
 		<string id="TL234" text="Altın rezervi"/>
@@ -194,8 +193,7 @@
 		<string id="TL326" text="Envanter ekranında kilitli eşyalar asla otomatik satılmaz. Satarken bir kilit, oyunun sakladığı gibi eşya ve niteliğiyle eşleştirilir. Alırken yalnızca eşyayla eşleştirilir, yani bir mala koyduğunuz kilit TradeLord'un o maldan hangi nitelikte olursa olsun daha fazla almasını durdurur."/>
 		<string id="TL327" text="Bir satışın ölçüldüğü fiyat: hem TradeLord'un bildirdiği kârı hem de satışın kazandırdığı Ticaret tecrübesini belirler. Hiç almadıklarınız, ganimet dâhil, hangisini seçerseniz seçin bildiğiniz en ucuz pazara göre değerlenir."/>
 		<string id="TL328" text="Bu kademeye kadar olan silah ve zırhları da satar. 1. kademeden başlar, yani çapulcuların ve haydutların düşürdüğü teçhizattan. Kilitler ve korumalar yine geçerlidir."/>
-		<string id="TL329" text="Bu pazar bilinen en iyi pazardan belirgin biçimde az ödüyorsa burada satmayı atlar; en iyi pazara yolda olanları da defterin yaptığı gibi sayar, böylece kargonuz karşılığını veren şehri bekler. Aldığınızı da yağmaladığınızı da aynı şekilde elde tutar. Varsayılan olarak KAPALI; o durumda yağmalanmış teçhizat karşılığını ödeyebilen ilk pazara gider."/>
-		<string id="TL330" text="Bu pazar bilinen en iyi fiyatın en az bu oranını ödüyorsa yine de burada satar. Yukarıdaki ayar KAPALIYKEN hiçbir şey yapmaz."/>
+		<string id="TL329" text="Satın aldığınız bir malı yolda ancak, En iyi satış pazarını haritada işaretle ayarının işaretlediği pazarın ona ödediğinin en az bu oranına satar; o pazara yolda olanları da defterin yaptığı gibi sayar ve yalnızca o pazarın alacağı kadarını tutar. Ganimet asla tutulmaz; işaretli pazarda ya da o işaret kapalıyken de hiçbir şey tutulmaz. %0 hiçbir şey tutmaz. Varsayılan %75."/>
 		<string id="TL331" text="TradeLord'un asla satmaması gereken mallar. Her birini eşya kimliğiyle, TradeLord.log'un yazdığı grain ya da iron_ore gibi kısa adla, ya da oyunun gösterdiği adla, virgülle ayırarak yazın. Alırken de bunlara dokunmaz."/>
 		<string id="TL332" text="TradeLord'un kategori kurallarını, benzersiz ve el yapımı korumasını ve yiyecek rezervini aşarak her zaman sattığı mallar. Yukarıdaki gibi adlandırılır. Asla satma listesi, envanter kilidi ve bir görevin beklediği bir mal yine de geçerlidir. Bir yük hayvanını kârla satmanın tek yolu budur."/>
 		<string id="TL334" text="Harcarken bu kadar altının altına asla inmez. Varsayılan 300; bu, iki düşman karşılaşmasından pazarlıkla çıkmaya ve alışveriş sonrası bir maaş ödemesini karşılamaya yeter."/>

@@ -71,7 +71,7 @@
 		<string id="TL95" text="Nothing sold here - {REASON}, and nothing bought - {SECOND}."/>
 		<string id="TL83" text="the village is down to its last of each good"/>
 		<string id="TL84" text="{ITEM}: buy {FROM} ({BUY} denars) -&gt; sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} days from here"/>
-		<string id="TL85" text="you are holding this cargo for a better market"/>
+		<string id="TL85" text="Hold cargo for the best market is keeping your cargo for the market marked on your map"/>
 		<string id="TL86" text="your party cannot drive any more livestock"/>
 		<string id="TL88" text="TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."/>
 		<string id="TL89" text="No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
@@ -154,7 +154,6 @@
 		<string id="TL227" text="What a good counts as having cost you"/>
 		<string id="TL228" text="Sell loot up to tier (0 = off)"/>
 		<string id="TL229" text="Hold cargo for the best market"/>
-		<string id="TL230" text="Best-market tolerance"/>
 		<string id="TL231" text="Never sell (item ids or names, comma separated)"/>
 		<string id="TL232" text="Always sell (item ids or names, comma separated)"/>
 		<string id="TL234" text="Gold reserve"/>
@@ -198,8 +197,7 @@
 		<string id="TL326" text="Locked items in the inventory screen are never auto-traded. Selling matches a lock the way the game stores it, by item and quality. Buying matches by item alone, so a lock on a good stops TradeLord buying more of it whatever its quality."/>
 		<string id="TL327" text="The price a sale is measured against, so it sets both the profit TradeLord reports and the Trade XP the sale earns. Anything you never bought, loot included, is valued at the cheapest market you know of whichever one you pick."/>
 		<string id="TL328" text="Also sells weapons and armor of this tier and below. Starts at tier 1, which is the gear looters and bandits drop. Locks and protections still apply."/>
-		<string id="TL329" text="Skip selling here when this market pays clearly less than the best known market, counting what is on its way there as the ledger does, so your cargo waits for the town that pays for it. It holds back what you bought and what you looted alike. OFF by default, in which case looted gear goes to the first market that can pay for it."/>
-		<string id="TL330" text="Sell here anyway if this market pays at least this fraction of the best known price. It does nothing while the setting above is OFF."/>
+		<string id="TL329" text="Sell a good you bought on the way only for at least this share of what the market marked by Auto-mark best sell market on map pays for it, counting what is on its way there as the ledger does, and only as many as it would buy. Loot is never held, nor anything in the marked market or while that marker is off. 0% holds nothing. 75% by default."/>
 		<string id="TL331" text="Goods TradeLord must never sell. Name each by item id, by the short name TradeLord.log prints such as grain or iron_ore, or by the name the game shows, comma separated. It leaves these alone when buying too."/>
 		<string id="TL332" text="Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named as above. The never-sell list, an inventory lock and a good a quest is waiting on still hold. This is the only way to sell a haul animal for profit."/>
 		<string id="TL334" text="Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip."/>

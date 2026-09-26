@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using TradeLord;
 using Xunit;
@@ -24,6 +25,7 @@ namespace TradeLord.Tests
             internal int Purchased;
             internal int Worth = 100;
             internal int Resale;
+            internal int Takes = 1000;
             internal bool Elsewhere;
             internal bool Modified;
             internal int Reserved;
@@ -46,6 +48,8 @@ namespace TradeLord.Tests
             internal int PayNothingAfter = -1;
             internal int Described;
             internal int WorthAsked;
+            internal int AskedFor;
+            internal int AskedWorth;
 
             internal Load Add(Good good, int amount = 1, int price = 200)
             {
@@ -105,9 +109,12 @@ namespace TradeLord.Tests
                 return Cargo[at].Worth;
             }
 
-            public bool ResaleMarket(int at, out int price)
+            public bool ResaleMarket(int at, int units, int worth, out int price, out int takes)
             {
+                AskedFor = units;
+                AskedWorth = worth;
                 price = Cargo[at].Resale;
+                takes = Math.Min(Cargo[at].Takes, units);
                 return Cargo[at].Elsewhere;
             }
 
@@ -268,28 +275,140 @@ namespace TradeLord.Tests
             Assert.True(run.Tally.Saw(Block.MerchantTillEmpty));
         }
 
+        private static Load Bought(FakeMarket market, int amount, int price, int paid, int there)
+        {
+            Load load = market.Add(Cargo("iron"), amount, price);
+            load.Basis = paid;
+            load.Purchased = amount;
+            load.Elsewhere = true;
+            load.Resale = there;
+            return load;
+        }
+
         [Fact]
-        public void Holding_out_for_a_better_market_keeps_the_cargo()
+        public void Holding_out_for_the_marked_market_keeps_the_cargo_you_bought()
         {
             var market = new FakeMarket();
-            market.Rules.PreferBestSellTown = true;
-            Load load = market.Add(Cargo("iron"), amount: 3, price: 200);
-            load.Elsewhere = true;
-            load.Resale = 300;
+            Bought(market, 3, price: 200, paid: 100, there: 300);
             Run run = Sell(market);
             Assert.Equal(0, run.Units);
             Assert.True(run.Tally.Saw(Block.BelowBestMarket));
         }
 
         [Fact]
-        public void A_market_that_pays_within_your_tolerance_is_sold_to()
+        public void A_market_that_pays_within_your_share_is_sold_to()
         {
             var market = new FakeMarket();
-            market.Rules.PreferBestSellTown = true;
-            Load load = market.Add(Cargo("iron"), amount: 3, price: 290);
+            Bought(market, 3, price: 290, paid: 100, there: 300);
+            Assert.Equal(3, Sell(market).Units);
+        }
+
+        [Fact]
+        public void Three_quarters_of_what_the_marked_market_pays_is_where_the_hold_lets_go()
+        {
+            Assert.Equal(0.75f, new Options().HoldCargoForBestMarket);
+            var at = new FakeMarket();
+            Bought(at, 1, price: 187, paid: 100, there: 250);
+            Assert.Equal(1, Sell(at).Units);
+            var under = new FakeMarket();
+            Bought(under, 1, price: 186, paid: 100, there: 250);
+            Assert.Equal(0, Sell(under).Units);
+        }
+
+        [Fact]
+        public void A_share_of_nothing_holds_nothing()
+        {
+            var market = new FakeMarket();
+            market.Rules.HoldCargoForBestMarket = 0f;
+            Bought(market, 3, price: 200, paid: 100, there: 1000);
+            Assert.Equal(3, Sell(market).Units);
+        }
+
+        [Fact]
+        public void Loot_is_never_held_for_the_marked_market()
+        {
+            var market = new FakeMarket();
+            Load load = market.Add(Cargo("iron"), amount: 3, price: 200);
+            load.Worth = 100;
+            load.Elsewhere = true;
+            load.Resale = 1000;
+            Assert.Equal(3, Sell(market).Units);
+        }
+
+        [Fact]
+        public void Only_as_many_as_the_marked_market_would_buy_are_held()
+        {
+            var market = new FakeMarket();
+            Bought(market, 5, price: 200, paid: 100, there: 300).Takes = 2;
+            Run run = Sell(market);
+            Assert.Equal(3, run.Units);
+            Assert.True(run.Tally.Saw(Block.BelowBestMarket));
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(2)]
+        public void In_a_stack_of_bought_and_looted_units_the_bought_ones_are_held_and_the_loot_goes(int costBasisMode)
+        {
+            var market = new FakeMarket();
+            market.Rules.CostBasisMode = costBasisMode;
+            Load load = Bought(market, 10, price: 200, paid: 100, there: 300);
+            load.Purchased = 4;
+            load.Takes = 8;
+            load.Worth = 100;
+            Run run = Sell(market);
+            Assert.Equal(6, run.Units);
+            Assert.Equal(4, market.AskedFor);
+            Assert.True(run.Tally.Saw(Block.BelowBestMarket));
+        }
+
+        [Fact]
+        public void Units_kept_back_from_a_bought_stack_never_let_the_rest_go_under_the_floor()
+        {
+            var market = new FakeMarket();
+            Load load = market.Add(Ration("grain"), amount: 10, price: 200);
+            load.Basis = 100;
+            load.Purchased = 10;
             load.Elsewhere = true;
             load.Resale = 300;
-            Assert.Equal(3, Sell(market).Units);
+            load.Reserved = 3;
+            Run run = Sell(market);
+            Assert.Equal(0, run.Units);
+            Assert.Equal(7, market.AskedFor);
+            Assert.True(run.Tally.Saw(Block.BelowBestMarket));
+        }
+
+        [Fact]
+        public void The_marked_market_is_asked_about_the_bought_units_at_the_margin_they_are_sold_against()
+        {
+            var market = new FakeMarket();
+            Bought(market, 10, price: 200, paid: 100, there: 300).Takes = 6;
+            Run run = Sell(market);
+            Assert.Equal(4, run.Units);
+            Assert.Equal(10, market.AskedFor);
+            Assert.Equal(100, market.AskedWorth);
+        }
+
+        [Fact]
+        public void Your_margin_still_binds_where_the_hold_would_let_a_sale_through()
+        {
+            var market = new FakeMarket();
+            Bought(market, 3, price: 110, paid: 100, there: 120);
+            Run run = Sell(market);
+            Assert.Equal(0, run.Units);
+            Assert.True(run.Tally.Saw(Block.BelowMargin));
+            Assert.False(run.Tally.Saw(Block.BelowBestMarket));
+        }
+
+        [Fact]
+        public void A_unit_that_misses_both_is_named_as_missing_your_margin()
+        {
+            var market = new FakeMarket();
+            Bought(market, 3, price: 110, paid: 100, there: 300);
+            Run run = Sell(market);
+            Assert.Equal(0, run.Units);
+            Assert.True(run.Tally.Saw(Block.BelowMargin));
+            Assert.False(run.Tally.Saw(Block.BelowBestMarket));
         }
 
         [Fact]

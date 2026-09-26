@@ -149,7 +149,7 @@ namespace TradeLord
         string PaidKeyAt(int at);
         int PurchasedUnits(int at);
         int UnpaidWorth(int at);
-        bool ResaleMarket(int at, out int price);
+        bool ResaleMarket(int at, int units, int worth, out int price, out int takes);
         int PriceToSell(int at);
         bool TheGameGivesTradeXpFor(int at);
         bool OfAQuality(int at);
@@ -194,6 +194,9 @@ namespace TradeLord
 
         internal bool SkipTheUnitsYouPaidFor(ref int remaining) =>
             TradeMath.SkipTheUnitsYouPaidFor(FromMarket, ref remaining, ref PaidLeft);
+
+        internal bool SetTheBoughtUnitsAside(ref int remaining) =>
+            TradeMath.SetTheBoughtUnitsAside(ref remaining, ref PaidLeft);
     }
 
     internal static class TradePass
@@ -513,7 +516,7 @@ namespace TradeLord
                 Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),
                                         books, sim, s);
 
-                int bestMarketFloor = 0;
+                int bestMarketFloor = 0, holdFor = 0;
                 bool floorKnown = false;
 
                 while (remaining > 0)
@@ -521,24 +524,28 @@ namespace TradeLord
                     int worth = basis.Unit(out bool askTheMarket);
                     if (askTheMarket) basis.UnpaidWorth = market.UnpaidWorth(at);
                     int mustBeat = TradeRules.WorthToBeat(good, worth, basis.UnpaidWorth);
-                    int holdFloor = 0;
-                    if (s.PreferBestSellTown)
-                    {
-                        if (!floorKnown)
-                        {
-                            floorKnown = true;
-                            if (market.ResaleMarket(at, out int elsewhere))
-                                bestMarketFloor = TradeRules.BestMarketFloor(elsewhere, s.BestSellTownTolerance);
-                        }
-                        holdFloor = bestMarketFloor;
-                    }
                     int price = market.PriceToSell(at);
-                    if (TradeRules.BelowTheBestMarket(price, holdFloor))
-                    { tally.Note(Block.BelowBestMarket); break; }
                     if (!TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))
                     {
                         tally.Note(Block.BelowMargin);
                         if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;
+                        continue;
+                    }
+                    if (!floorKnown)
+                    {
+                        floorKnown = true;
+                        int bought = Math.Min(remaining, basis.PaidLeft);
+                        if (s.HoldCargoForBestMarket > 0f && bought > 0 &&
+                            market.ResaleMarket(at, bought, mustBeat, out int there, out int theyTake))
+                        {
+                            bestMarketFloor = TradeRules.BestMarketFloor(there, s.HoldCargoForBestMarket);
+                            holdFor = Math.Min(theyTake, bought);
+                        }
+                    }
+                    if (TradeRules.HeldForTheMark(price, bestMarketFloor, Math.Min(remaining, basis.PaidLeft), holdFor))
+                    {
+                        tally.Note(Block.BelowBestMarket);
+                        if (!basis.SetTheBoughtUnitsAside(ref remaining)) break;
                         continue;
                     }
                     if (TradeRules.WhatTheTillCanPay(sim ? simTill : market.TillNow(),

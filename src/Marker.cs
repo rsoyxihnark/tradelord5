@@ -67,13 +67,16 @@ namespace TradeLord
 
         private static readonly HashSet<string> _owedAFairLook = new HashSet<string>(System.StringComparer.Ordinal);
 
+        private static string _walkedInto;
+        private static string _markedOnTheWayIn;
+
         private static int _hour = -1;
         private static Vec2 _at;
         private const float MovedFar = 100f;
 
         private static Stamp _cargoStamp;
         private static int _cargoVersion = -1;
-        private static List<(EquipmentElement item, int amount, int worth, int floor)> _cargo;
+        private static List<(EquipmentElement item, int amount, int worth)> _cargo;
         private static List<(string good, int amount, bool food)> _cargoHeld;
 
         private static string _markedId;
@@ -134,6 +137,8 @@ namespace TradeLord
             _tracked = null;
             _picked = null;
             _owedAFairLook.Clear();
+            _walkedInto = null;
+            _markedOnTheWayIn = null;
             _hour = -1;
             _markedId = null;
             _markedValue = 0L;
@@ -510,7 +515,7 @@ namespace TradeLord
             if (said.Count > 0) Log.WriteMany(said);
         }
 
-        private static List<(EquipmentElement item, int amount, int worth, int floor)> WhatYouCarryToSell(
+        private static List<(EquipmentElement item, int amount, int worth)> WhatYouCarryToSell(
             MobileParty party)
         {
             int version = party.ItemRoster.VersionNo;
@@ -521,15 +526,14 @@ namespace TradeLord
             ISet<string> locked = TradePolicy.LockedKeys();
             var keepBack = TradePolicy.KeptBack(party.ItemRoster, TradeActionBehavior.TheVisit,
                                                 sim: false, out var awaited);
-            var cargo = new List<(EquipmentElement item, int amount, int worth, int floor)>();
+            var cargo = new List<(EquipmentElement item, int amount, int worth)>();
             for (int i = 0; i < party.ItemRoster.Count; i++)
             {
                 ItemRosterElement el = party.ItemRoster.GetElementCopyAtIndex(i);
                 if (!TradePolicy.MaySell(el, locked, keepBack, awaited, out int keep)) continue;
                 if (el.Amount - keep <= 0) continue;
                 ItemObject item = el.EquipmentElement.Item;
-                cargo.Add((el.EquipmentElement, el.Amount - keep,
-                           TradePolicy.WorthToBeat(el.EquipmentElement), BestMarketFloor(el.EquipmentElement)));
+                cargo.Add((el.EquipmentElement, el.Amount - keep, TradePolicy.WorthToBeat(el.EquipmentElement)));
             }
             _cargo = cargo;
             _cargoHeld = Held(cargo);
@@ -537,7 +541,7 @@ namespace TradeLord
         }
 
         private static List<(string good, int amount, bool food)> Held(
-            List<(EquipmentElement item, int amount, int worth, int floor)> cargo)
+            List<(EquipmentElement item, int amount, int worth)> cargo)
         {
             var held = new List<(string good, int amount, bool food)>(cargo.Count);
             for (int i = 0; i < cargo.Count; i++)
@@ -556,11 +560,11 @@ namespace TradeLord
 
         private static Takings WhatItWouldFetch(
             Settlement site, SettlementComponent market, MobileParty party, float ride,
-            List<(EquipmentElement item, int amount, int worth, int floor)> cargo,
+            List<(EquipmentElement item, int amount, int worth)> cargo,
             int gold, List<Share> bill)
         {
             Takings took = default(Takings);
-            foreach (var (item, amount, worth, floor) in cargo)
+            foreach (var (item, amount, worth) in cargo)
             {
                 Paying pays = WhatThatMarketPays(site, market, item, party, ride);
                 long fetched = 0L;
@@ -569,7 +573,6 @@ namespace TradeLord
                 {
                     int price = pays.At(u);
                     if (price <= 0) break;
-                    if (price < floor) break;
                     if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) break;
                     if (moved == 0) opening = price;
                     last = price;
@@ -641,7 +644,7 @@ namespace TradeLord
 
         private static float RateThere((Settlement s, SettlementComponent market, int gold, float days) one,
                                        MobileParty party,
-                                       List<(EquipmentElement item, int amount, int worth, int floor)> cargo)
+                                       List<(EquipmentElement item, int amount, int worth)> cargo)
         {
             Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null);
             if (took.Value <= 0L) return 0f;
@@ -651,7 +654,7 @@ namespace TradeLord
 
         private static Settlement OutEarnsTheMark(
             List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, Settlement holder,
-            MobileParty party, List<(EquipmentElement item, int amount, int worth, int floor)> cargo,
+            MobileParty party, List<(EquipmentElement item, int amount, int worth)> cargo,
             List<string> compared)
         {
             int mine = -1;
@@ -765,13 +768,35 @@ namespace TradeLord
             return how.Best;
         }
 
-        private static int BestMarketFloor(EquipmentElement held)
+        internal static void NoteTheWalkIn(Settlement at)
         {
-            if (!Options.Current.PreferBestSellTown) return 0;
-            var best = LedgerBehavior.Instance?.BestSellAsItLands(held.Item) ?? (null, 0);
-            return best.Item1 == null ? 0 : TradeRules.BestMarketFloor(
-                TradeMath.AtThisQuality(best.Item2, held.Item.Value, held.ItemValue),
-                Options.Current.BestSellTownTolerance);
+            _walkedInto = at?.StringId;
+            _markedOnTheWayIn = _picked?.StringId;
+        }
+
+        internal static void NoteALoadInside(Settlement at)
+        {
+            _walkedInto = at?.StringId;
+            _markedOnTheWayIn = at?.StringId;
+        }
+
+        internal static Settlement TheMarkToHoldFor(Settlement here)
+        {
+            Settlement mark = _picked;
+            if (!Options.Current.MarkBestSellTownOnMap || mark?.SettlementComponent == null) return null;
+            if (!Marks.HoldsFor(mark.StringId, here?.StringId, _walkedInto, _markedOnTheWayIn)) return null;
+            if (LedgerBehavior.UnderAttack(mark) || LedgerBehavior.VillageShut(mark)) return null;
+            if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(mark)) return null;
+            return mark;
+        }
+
+        internal static (int units, int average) WhatTheMarkTakes(Settlement mark, EquipmentElement el, int carried,
+                                                                  int worth, float ride, int purse)
+        {
+            MobileParty party = MobileParty.MainParty;
+            if (mark?.SettlementComponent == null || party == null || el.Item == null) return (0, 0);
+            Paying pays = WhatThatMarketPays(mark, mark.SettlementComponent, el, party, ride);
+            return TradeMath.WhatTheMarkTakes(pays.At, carried, worth, Options.Current.MinProfitMargin, purse);
         }
     }
 }
