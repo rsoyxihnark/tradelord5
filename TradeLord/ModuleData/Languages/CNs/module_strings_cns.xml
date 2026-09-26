@@ -71,7 +71,7 @@
 		<string id="TL95" text="此处未卖出任何货物：{REASON}，也未买入任何货物：{SECOND}。"/>
 		<string id="TL83" text="这座村庄每种货物都只剩最后一点"/>
 		<string id="TL84" text="{ITEM}：在 {FROM} 买入（{BUY} 第纳尔）-&gt; 在 {TO} 卖出（{SELL}）  x{QTY} = +{PROFIT} 第纳尔，从这里约 {DAYS} 天"/>
-		<string id="TL85" text="“为最好的市场留住货物”正把你的货物留给地图上标出的市场"/>
+		<string id="TL85" text="“为最好的市场留住货物”正把货物留给标出的市场"/>
 		<string id="TL86" text="你的队伍再也赶不动更多牲畜了"/>
 		<string id="TL88" text="TradeLord 把 {GOLD} 第纳尔的利润记进了你的交易技能，现在是 {LEVEL} 级。"/>
 		<string id="TL89" text="以你目前记下的价格来看，行程上限之内没有可盈利的路线。多走几个市场，或者在“情报”设置中提高上限。"/>

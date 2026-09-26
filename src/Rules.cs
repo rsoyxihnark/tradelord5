@@ -652,6 +652,42 @@ namespace TradeLord
         internal static bool HeldForTheMark(int price, int floor, int boughtLeft, int holdFor) =>
             floor > 0 && boughtLeft > 0 && boughtLeft <= holdFor && BelowTheBestMarket(price, floor);
 
+        internal static int FloorForTheLast(int[] rungs, int boughtLeft, float share) =>
+            rungs == null || boughtLeft <= 0 || boughtLeft > rungs.Length
+                ? 0 : BestMarketFloor(rungs[boughtLeft - 1], share);
+
+        internal static int[] SharePurse(int purse, int[][] rungs, int[] here, float share)
+        {
+            int goods = rungs == null ? 0 : rungs.Length;
+            var kept = new int[goods];
+            if (purse <= 0 || share <= 0f) return kept;
+            var asks = new List<(double ratio, int good, int unit)>();
+            for (int g = 0; g < goods; g++)
+            {
+                int[] ladder = rungs[g];
+                if (ladder == null) continue;
+                int price = here != null && g < here.Length ? here[g] : 0;
+                for (int u = 0; u < ladder.Length; u++)
+                {
+                    if (ladder[u] <= 0) break;
+                    asks.Add(((double)price / ladder[u], g, u));
+                }
+            }
+            asks.Sort((x, y) => x.ratio != y.ratio ? x.ratio.CompareTo(y.ratio)
+                              : x.good != y.good ? x.good.CompareTo(y.good)
+                              : x.unit.CompareTo(y.unit));
+            long left = purse;
+            var shut = new bool[goods];
+            foreach (var (_, g, u) in asks)
+            {
+                if (shut[g] || u != kept[g]) continue;
+                if (rungs[g][u] > left) { shut[g] = true; continue; }
+                left -= rungs[g][u];
+                kept[g]++;
+            }
+            return kept;
+        }
+
         internal const int VillageLastCoin = 1;
 
         internal static int WhatTheTillCanPay(int till, bool village) =>

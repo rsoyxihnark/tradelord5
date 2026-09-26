@@ -470,6 +470,8 @@ namespace TradeLord
                 new Dictionary<ItemObject, (int count, int gold)>();
             internal readonly Dictionary<ItemObject, (string where, int price)> Aimed =
                 new Dictionary<ItemObject, (string where, int price)>();
+            internal readonly Dictionary<ItemObject, (string where, int units, int there, int here)> Held =
+                new Dictionary<ItemObject, (string where, int units, int there, int here)>();
 
             internal bool DirectionError;
 
@@ -716,6 +718,16 @@ namespace TradeLord
 
             internal void Logged(bool selling, string why) =>
                 LogDetail(selling, Sim, Detail, Quoted, Aimed, why);
+
+            internal List<string> HeldFor()
+            {
+                var said = new List<string>(Held.Count);
+                foreach (var kv in Held)
+                    said.Add("held " + kv.Value.units + " " + kv.Key.StringId + " for " + kv.Value.where +
+                             ", which pays at least " + kv.Value.there + " each for them, against " + kv.Value.here +
+                             " here (Hold cargo for the best market)");
+                return said;
+            }
         }
 
         private static void WarnUnmatchedItemLists()
@@ -1441,6 +1453,7 @@ namespace TradeLord
                           " items, +" + goldGained + " gold, profit " + profit + " " + pass.Where);
                 pass.Logged(selling: true, why);
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
+                foreach (string held in pass.HeldFor()) Log.Write("  " + held);
                 TextObject msg = pass.Said(
                     "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
                     "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).",
@@ -1451,8 +1464,9 @@ namespace TradeLord
             }
             else if (!pass.DirectionError)
             {
-                if (tally.Any) Log.Repeatable(label + "-empty " + pass.Key, tally.Summary(),
-                    label + " moved nothing " + pass.Where + ": " + tally.Summary());
+                string held = string.Join("", pass.HeldFor().ConvertAll(one => "; " + one));
+                if (tally.Any) Log.Repeatable(label + "-empty " + pass.Key, tally.Summary() + held,
+                    label + " moved nothing " + pass.Where + ": " + tally.Summary() + held);
                 Block stopped = tally.Dominant();
                 if (stopped != Block.None && !pass.Muted) NoteStalled(selling: true, stopped);
             }
@@ -1538,11 +1552,26 @@ namespace TradeLord
             private Settlement _mark;
             private float _markRide;
             private int _markPurse;
+            private bool _aheadCopied;
+            private Dictionary<ItemObject, int> _keepBackAhead;
+            private Dictionary<ItemObject, int> _awaitedAhead;
 
-            public bool ResaleMarket(int at, int units, int worth, out int price, out int takes)
+            public int HoldableUnits(int at)
             {
-                price = 0;
-                takes = 0;
+                if (!_aheadCopied)
+                {
+                    _aheadCopied = true;
+                    _keepBackAhead = _keepBack == null ? null : new Dictionary<ItemObject, int>(_keepBack);
+                    _awaitedAhead = _awaited == null ? null : new Dictionary<ItemObject, int>(_awaited);
+                }
+                if (!TradePolicy.MaySell(_plan[at], _pass.Locked, _keepBackAhead, _awaitedAhead,
+                                         out int keep, out _))
+                    return 0;
+                return Math.Max(0, YoursToSell(at) - keep);
+            }
+
+            private Settlement TheMark()
+            {
                 if (!_markRead)
                 {
                     _markRead = true;
@@ -1559,10 +1588,30 @@ namespace TradeLord
                         }
                     }
                 }
-                if (_mark == null) return false;
-                (takes, price) = Marker.WhatTheMarkTakes(_mark, _plan[at].EquipmentElement, units, worth,
-                                                         _markRide, _markPurse);
-                return takes > 0;
+                return _mark;
+            }
+
+            public int ResalePurse() => TheMark() == null ? 0 : _markPurse;
+
+            public bool ResaleMarket(int at, int units, int worth, out int[] rungs)
+            {
+                rungs = null;
+                if (TheMark() == null) return false;
+                rungs = Marker.WhatTheMarkTakes(_mark, _plan[at].EquipmentElement, units, worth,
+                                                _markRide, _markPurse);
+                return rungs.Length > 0;
+            }
+
+            public void HeldBack(int at, int units, int there, int here)
+            {
+                ItemObject item = Item(at);
+                if (item == null || _mark == null || units <= 0) return;
+                if (_pass.Held.TryGetValue(item, out var was))
+                {
+                    units += was.units;
+                    there = Math.Min(there, was.there);
+                }
+                _pass.Held[item] = (Tongue.Named(_mark.Name, _mark.StringId), units, there, here);
             }
 
             public int PriceToSell(int at) => _pass.Price(_plan[at].EquipmentElement, selling: true);

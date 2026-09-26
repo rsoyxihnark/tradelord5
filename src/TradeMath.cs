@@ -20,21 +20,23 @@ namespace TradeLord
                 ? townSellPrice >= costBasis * (1f + margin)
                 : townSellPrice > 0;
 
-        public static (int units, int average) WhatTheMarkTakes(Func<int, int> rungAt, int carried, int worth,
-                                                                float margin, int purse)
+        public static int[] WhatTheMarkTakes(Func<int, int> rungAt, int carried, int worth,
+                                             float margin, int purse)
         {
-            if (rungAt == null || carried <= 0) return (0, 0);
+            if (rungAt == null || carried <= 0) return new int[0];
             long fetched = 0L;
-            int taken = 0;
+            var taken = new int[carried];
+            int count = 0;
             for (int u = 0; u < carried; u++)
             {
                 int price = rungAt(u);
                 if (price <= 0 || !ProfitAcceptable(worth, price, margin)) break;
                 if (purse >= 0 && fetched + price > purse) break;
                 fetched += price;
-                taken++;
+                taken[count++] = price;
             }
-            return taken == 0 ? (0, 0) : (taken, (int)(fetched / taken));
+            Array.Resize(ref taken, count);
+            return taken;
         }
 
         public static int MostToPayOverTheCheapest(int cheapest, float tolerance)
