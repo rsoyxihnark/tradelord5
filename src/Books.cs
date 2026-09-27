@@ -9,6 +9,7 @@ namespace TradeLord
             new Dictionary<string, (int, int)>();
         private readonly HashSet<string> _drySold = new HashSet<string>();
         private readonly Dictionary<string, int> _dryDrawn = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> _drySoldFrom = new Dictionary<string, int>();
         private readonly Dictionary<string, (int count, int spent)> _bought =
             new Dictionary<string, (int, int)>();
         private readonly HashSet<string> _sold = new HashSet<string>();
@@ -46,6 +47,7 @@ namespace TradeLord
             _dryBought.Clear();
             _drySold.Clear();
             _dryDrawn.Clear();
+            _drySoldFrom.Clear();
             _spent = 0;
             _gained = 0;
             _drawn = 0;
@@ -94,6 +96,9 @@ namespace TradeLord
         internal int PaidDrawn(bool sim, string id) =>
             sim && id != null && _dryDrawn.TryGetValue(id, out int units) ? units : 0;
 
+        internal int SoldFrom(bool sim, string key) =>
+            OnPaper(sim) && key != null && _drySoldFrom.TryGetValue(key, out int units) ? units : 0;
+
         internal bool Sold(bool sim, string id) =>
             id != null && (_sold.Contains(id) || (sim && _drySold.Contains(id)));
 
@@ -125,6 +130,13 @@ namespace TradeLord
             if (id == null) return;
             _dryDrawn.TryGetValue(id, out int units);
             _dryDrawn[id] = units + 1;
+        }
+
+        internal void NoteSoldFrom(string key)
+        {
+            if (key == null) return;
+            _drySoldFrom.TryGetValue(key, out int units);
+            _drySoldFrom[key] = units + 1;
         }
 
         internal void NoteBought(string id, int price)
