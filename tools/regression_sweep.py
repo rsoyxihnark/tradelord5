@@ -14106,5 +14106,19 @@ def the_hold_texts_read_plainly_in_every_language():
 chk("1.94.1", "the hint for Hold cargo for the best market says it is on the way that a good you bought is held, the Turkish hint has no stray comma, and the reason shown when cargo is held is short in every language",
     the_hold_texts_read_plainly_in_every_language())
 
+
+def the_hold_hint_names_the_marker_setting_and_calls_loot_what_sell_loot_up_to_tier_does():
+    _, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
+    return ("отмеченный настройкой «" + ru['TL245'] + "»" in ru['TL329']
+            and ru['TL228'].startswith("Продавать трофеи ")
+            and "Трофеи не придерживаются никогда" in ru['TL329']
+            and "Добыча" not in ru['TL329']
+            and cn['TL228'].startswith("卖出战利品")
+            and cn['TL329'].count("战利品从不留着") == 1
+            and "缴获" not in cn['TL329'])
+
+chk("1.94.3", "the Russian hint for Hold cargo for the best market names the setting that marks the market, and the Russian and Chinese hints call loot what Sell loot up to tier calls it",
+    the_hold_hint_names_the_marker_setting_and_calls_loot_what_sell_loot_up_to_tier_does())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

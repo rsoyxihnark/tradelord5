@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.94.3
+
+- Fixed the Russian hint for Hold cargo for the best market not naming Auto-mark best sell market on map as a setting
+- Fixed the Russian and Chinese hints for Hold cargo for the best market using a different word for loot than Sell loot up to tier
+
 ## 1.94.2
 
 - Fixed Hold cargo for the best market leaving out the goods this market cannot take when it shares out the gold of the marked market
