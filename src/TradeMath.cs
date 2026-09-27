@@ -124,6 +124,13 @@ namespace TradeLord
             return true;
         }
 
+        public static bool KeepToTheBoughtUnits(ref int remaining, int paidLeft)
+        {
+            if (paidLeft <= 0 || remaining <= 0) return false;
+            if (remaining > paidLeft) remaining = paidLeft;
+            return true;
+        }
+
         public static int UnitBasis(PurchaseRecord rec, int mode)
         {
             if (mode == 2 || rec == null || rec.Count <= 0) return NoRecordedBasis;

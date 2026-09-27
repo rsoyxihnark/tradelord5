@@ -90,7 +90,7 @@ namespace TradeLord.Tests
             }
 
             public int YoursToSell(int at) =>
-                System.Math.Min(Cargo[at].Amount,
+                System.Math.Min(Cargo[at].Amount - Ledger.SoldFrom(Sim, PaidKeyAt(at)),
                                 Carrying(Cargo[at].Good.Id) + Ledger.Held(Sim, Cargo[at].Good.Id));
 
             private int Carrying(string id)
@@ -160,7 +160,7 @@ namespace TradeLord.Tests
 
             public bool OfAQuality(int at) => Cargo[at].Modified;
 
-            int ISellingMarket.Till() => Till;
+            int ISellingMarket.Till() => Till - Ledger.TillDrawn(Sim);
 
             public int TillNow() => Till;
 
@@ -183,7 +183,11 @@ namespace TradeLord.Tests
                 return true;
             }
 
-            public void RecordedSale(int at) => Recorded.Add(Cargo[at].Good.Id);
+            public void RecordedSale(int at)
+            {
+                Recorded.Add(Cargo[at].Good.Id);
+                Cargo[at].Purchased--;
+            }
         }
 
         private static Good Cargo(string id, float weight = 1f, int value = 100) =>
@@ -207,11 +211,25 @@ namespace TradeLord.Tests
             var run = new Run { Tally = new BlockTally(), Books = books ?? new Books() };
             market.Ledger = run.Books;
             market.Sim = sim;
-            Traded moved = TradePass.SellThem(market, run.Books, sim, market.Rules, run.Tally);
-            run.Units = moved.Units;
-            run.Profit = moved.Profit;
-            run.Earned = moved.Earned;
-            run.SimGold = moved.SimGold;
+            foreach (bool loot in new[] { false, true }) OnePass(market, run, sim, loot);
+            return run;
+        }
+
+        private static Run OnePass(FakeMarket market, bool loot, bool sim = false, Books books = null)
+        {
+            var run = new Run { Tally = new BlockTally(), Books = books ?? new Books() };
+            market.Ledger = run.Books;
+            market.Sim = sim;
+            return OnePass(market, run, sim, loot);
+        }
+
+        private static Run OnePass(FakeMarket market, Run run, bool sim, bool loot)
+        {
+            Traded moved = TradePass.SellThem(market, run.Books, sim, market.Rules, run.Tally, loot);
+            run.Units += moved.Units;
+            run.Profit += moved.Profit;
+            run.Earned += moved.Earned;
+            run.SimGold += moved.SimGold;
             return run;
         }
 
@@ -556,6 +574,79 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Selling_what_you_bought_leaves_what_you_did_not_buy_for_the_loot_sale()
+        {
+            var market = new FakeMarket();
+            Load load = market.Add(Cargo("iron"), amount: 5, price: 200);
+            load.Basis = 100;
+            load.Purchased = 3;
+            load.Worth = 50;
+            var books = new Books();
+            Run bought = OnePass(market, loot: false, books: books);
+            Assert.Equal(3, bought.Units);
+            Assert.Equal(300, bought.Profit);
+            Assert.Equal(2, load.Amount);
+            Run looted = OnePass(market, loot: true, books: books);
+            Assert.Equal(2, looted.Units);
+            Assert.Equal(300, looted.Profit);
+            Assert.Equal(0, load.Amount);
+        }
+
+        [Fact]
+        public void The_loot_sale_leaves_the_units_you_bought_where_they_are()
+        {
+            var market = new FakeMarket();
+            Load load = market.Add(Cargo("iron"), amount: 5, price: 110);
+            load.Basis = 100;
+            load.Purchased = 3;
+            load.Worth = 50;
+            Run looted = OnePass(market, loot: true);
+            Assert.Equal(2, looted.Units);
+            Assert.Equal(3, load.Amount);
+        }
+
+        [Fact]
+        public void Loot_is_sold_only_with_the_gold_this_market_has_left_after_what_you_bought()
+        {
+            var market = new FakeMarket { MarkPurse = 1250, Till = 2190 };
+            Load loot = market.Add(Cargo("sword"), 10, 200);
+            loot.Worth = 100;
+            BoughtAs(market, "iron", 10, price: 200, paid: 100, there: 250);
+            BoughtAs(market, "tools", 5, price: 150, paid: 100, there: 250);
+            Run run = Sell(market);
+            Assert.Equal(10, run.Units);
+            Assert.Equal(10, loot.Amount);
+            Assert.Equal(("tools", 5, 250, 150), Assert.Single(market.Held));
+            Assert.True(run.Tally.Saw(Block.MerchantTillEmpty));
+        }
+
+        [Fact]
+        public void A_good_you_bought_that_the_marked_market_does_not_want_counts_against_this_market_s_gold()
+        {
+            var market = new FakeMarket { MarkPurse = 1250, Till = 2190 };
+            BoughtAs(market, "grain", 10, price: 200, paid: 100, there: 250).Elsewhere = false;
+            BoughtAs(market, "iron", 10, price: 200, paid: 100, there: 250);
+            Load tools = BoughtAs(market, "tools", 5, price: 150, paid: 100, there: 250);
+            Run run = Sell(market);
+            Assert.Empty(market.Held);
+            Assert.Equal(11, run.Units);
+            Assert.Equal(4, tools.Amount);
+        }
+
+        [Fact]
+        public void A_dry_run_leaves_the_loot_sale_only_the_gold_the_first_sale_left()
+        {
+            var market = new FakeMarket { Till = 500 };
+            Load iron = market.Add(Cargo("iron"), amount: 2, price: 200);
+            iron.Basis = 100;
+            iron.Purchased = 2;
+            market.Add(Cargo("sword"), amount: 1, price: 200).Worth = 100;
+            Run run = Sell(market, sim: true);
+            Assert.Equal(2, run.Units);
+            Assert.Equal(400, run.SimGold);
+        }
+
+        [Fact]
         public void Your_margin_still_binds_where_the_hold_would_let_a_sale_through()
         {
             var market = new FakeMarket();
@@ -585,7 +676,7 @@ namespace TradeLord.Tests
             Run run = Sell(market);
             Assert.Equal(6, run.Units);
             Assert.Equal(1, market.WorthAsked);
-            Assert.Equal(1, market.Described);
+            Assert.Equal(2, market.Described);
         }
 
         [Fact]
@@ -775,7 +866,9 @@ namespace TradeLord.Tests
         {
             var market = new FakeMarket();
             market.Add(Cargo("iron"), amount: 3, price: 200).Worth = 50;
-            market.Add(Cargo("iron"), amount: 2, price: 200).Worth = 50;
+            Load fine = market.Add(Cargo("iron"), amount: 2, price: 200);
+            fine.Worth = 50;
+            fine.Modified = true;
             Run run = Sell(market, sim: true);
             Assert.Equal(5, run.Units);
         }
@@ -785,7 +878,9 @@ namespace TradeLord.Tests
         {
             var market = new FakeMarket { OnTheScreen = true };
             market.Add(Cargo("iron"), amount: 3, price: 200).Worth = 50;
-            market.Add(Cargo("iron"), amount: 2, price: 200).Worth = 50;
+            Load fine = market.Add(Cargo("iron"), amount: 2, price: 200);
+            fine.Worth = 50;
+            fine.Modified = true;
             Run run = Sell(market, sim: true, books: new Books { LaidOut = true });
             Assert.Equal(5, run.Units);
             Assert.Equal(1000, run.SimGold);

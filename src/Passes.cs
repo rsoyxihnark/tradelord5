@@ -201,6 +201,10 @@ namespace TradeLord
 
         internal bool SetTheBoughtUnitsAside(ref int remaining) =>
             TradeMath.SetTheBoughtUnitsAside(ref remaining, ref PaidLeft);
+
+        internal bool LeftToThisSale(ref int remaining, bool loot) =>
+            loot ? PaidLeft <= 0 || SetTheBoughtUnitsAside(ref remaining)
+                 : TradeMath.KeepToTheBoughtUnits(ref remaining, PaidLeft);
     }
 
     internal struct ForTheMark
@@ -509,6 +513,8 @@ namespace TradeLord
 
         internal static ForTheMark[] WhatTheMarkKeeps(ISellingMarket market, Books books, bool sim, Options s)
         {
+            int purse = market.ResalePurse();
+            if (purse <= 0) return null;
             var rungs = new int[market.Count][];
             var here = new int[market.Count][];
             var bought = new int[market.Count];
@@ -525,19 +531,19 @@ namespace TradeLord
                                         books, sim, s);
                 int units = Math.Min(yours, basis.PaidLeft);
                 if (units <= 0 || basis.Paid <= 0) continue;
+                int[] sells = boughtHere
+                    ? new int[0]
+                    : TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);
                 asked.TryGetValue(id, out int before);
                 if (!market.ResaleMarket(at, before + units, basis.Paid, out int[] ladder)) continue;
                 rungs[at] = TradeRules.PastTheFirst(ladder, before);
                 if (rungs[at].Length == 0) { rungs[at] = null; continue; }
                 asked[id] = before + rungs[at].Length;
                 bought[at] = units;
+                here[at] = sells;
                 any = true;
-                here[at] = boughtHere
-                    ? new int[0]
-                    : TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);
             }
-            int purse = any ? market.ResalePurse() : 0;
-            if (purse <= 0) return null;
+            if (!any) return null;
             int[] kept = TradeRules.SharePurse(purse, rungs, here, bought, s.HoldCargoForBestMarket);
             var holding = new ForTheMark[market.Count];
             for (int at = 0; at < holding.Length; at++)
@@ -549,11 +555,11 @@ namespace TradeLord
         }
 
         internal static Traded SellThem(ISellingMarket market, Books books, bool sim, Options s,
-                                        BlockTally tally)
+                                        BlockTally tally, bool loot)
         {
             Traded moved = default(Traded);
             int simTill = market.Till();
-            ForTheMark[] holding = s.HoldCargoForBestMarket > 0f ? WhatTheMarkKeeps(market, books, sim, s) : null;
+            ForTheMark[] holding = !loot && s.HoldCargoForBestMarket > 0f ? WhatTheMarkKeeps(market, books, sim, s) : null;
 
             for (int at = 0; at < market.Count; at++)
             {
@@ -567,6 +573,7 @@ namespace TradeLord
 
                 Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),
                                         books, sim, s);
+                if (!basis.LeftToThisSale(ref remaining, loot)) continue;
 
                 int[] there = holding?[at].Rungs;
                 int holdFor = holding?[at].Units ?? 0;
@@ -607,6 +614,7 @@ namespace TradeLord
                         books.NoteSale(good.Id, price,
                                        herdRank == TradeRules.RankHaulAnimal ? 0f : good.Weight,
                                        TradeRules.FoodValue(good));
+                        books.NoteSoldFrom(market.PaidKeyAt(at));
                         if (herdRank >= 0 &&
                             Herding.TheGameCountsItAtOnce(herdRank == TradeRules.RankLivestock, market.OfAQuality(at)))
                             books.NoteShed(herdRank == TradeRules.RankHaulAnimal,

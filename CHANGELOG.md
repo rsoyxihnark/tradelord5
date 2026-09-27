@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.95.0
+
+- TradeLord now sells what you bought and buys before it sells what you never bought, loot included, with the gold the merchant has left
+- Selling animals to get your party back up to speed now waits until the buying and the sale of what you never bought are done
+- Fixed Hold cargo for the best market not counting the gold this market pays for goods you bought that the marked market does not want
+- The hint for Trade entry in town menu now says it sells what you bought, buys, then sells what you never bought
+- The hint for Auto buy now says it buys after selling what you bought and before selling what you never bought
+- The feature list now says the trade entry sells what you bought, buys, then sells what you never bought
+- The feature list now says what you never bought, loot included, is sold once the buying is done, with the gold the merchant has left
+
 ## 1.94.3
 
 - Fixed the Russian hint for Hold cargo for the best market not naming Auto-mark best sell market on map as a setting

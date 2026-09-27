@@ -475,6 +475,24 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void ADryRunCountsWhatEachStackSoldSoALaterSaleNeverSellsItAgain()
+        {
+            Books books = Fresh();
+            books.NoteSoldFrom("iron");
+            books.NoteSoldFrom("iron");
+            books.NoteSoldFrom("iron@fine");
+            Assert.Equal(2, books.SoldFrom(true, "iron"));
+            Assert.Equal(1, books.SoldFrom(true, "iron@fine"));
+            Assert.Equal(0, books.SoldFrom(false, "iron"));
+            Assert.Equal(0, books.SoldFrom(true, null));
+            books.LaidOut = true;
+            Assert.Equal(0, books.SoldFrom(true, "iron"));
+            books.LaidOut = false;
+            books.ForgetTheDryRun();
+            Assert.Equal(0, books.SoldFrom(true, "iron"));
+        }
+
+        [Fact]
         public void EveryTradeIsCountedAndADryRunsOnlyWhileTheRunIsDry()
         {
             Books books = Fresh();

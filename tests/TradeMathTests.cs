@@ -91,6 +91,22 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Selling_what_you_bought_takes_only_the_units_you_bought()
+        {
+            int remaining = 10;
+            Assert.True(TradeMath.KeepToTheBoughtUnits(ref remaining, 4));
+            Assert.Equal(4, remaining);
+            remaining = 3;
+            Assert.True(TradeMath.KeepToTheBoughtUnits(ref remaining, 4));
+            Assert.Equal(3, remaining);
+            remaining = 10;
+            Assert.False(TradeMath.KeepToTheBoughtUnits(ref remaining, 0));
+            Assert.Equal(10, remaining);
+            remaining = 0;
+            Assert.False(TradeMath.KeepToTheBoughtUnits(ref remaining, 4));
+        }
+
+        [Fact]
         public void What_a_lot_cost_per_unit_is_what_you_paid_for_it()
         {
             Assert.Equal(12, TradeMath.UnitBasis(Bought(10, 120), AveragePaid));

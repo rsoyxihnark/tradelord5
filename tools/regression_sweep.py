@@ -1220,10 +1220,14 @@ def a_market_that_traded_something_drops_the_empty_lines():
             and sell.count("NoteStalled(") == 1 and buy.count("NoteStalled(") == 1
             and all(one.index("NoteStalled(") > one.index("else if (!pass.DirectionError)")
                     for one in (sell, buy))
-            and "if (stopped != Block.None && !pass.Muted) NoteStalled(selling: true, stopped);" in sell
+            and "if (stopped != Block.None && !pass.Muted && first) NoteStalled(selling: true, stopped);" in sell
+            and "bool first = !loot || (sold.units == 0 && !_sellStalled.HasValue);" in sell
+            and ordered(sell, "if (soldItems > 0)", "_sellStalled = null;",
+                        "pass.Moved(profit, goldGained, selling: true);")
             and "if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);" in buy
             and "{=TL32}" not in sell and "{=TL33}" not in buy
-            and all(field in reset for field in ("_sellStalled = null;", "_buyStalled = null;")))
+            and all(field in reset for field in ("_sellStalled = null;", "_buyStalled = null;",
+                                                 "_soldThisRound = default;")))
 
 def the_item_tooltip_does_not_announce_the_mod():
     body = method_body(S['TooltipPatches.cs'], "internal static void Append")
@@ -1527,8 +1531,8 @@ chk("1.3.18", "neither pass trades before the settling delay is served, in a mar
         method_body(S['Trading.cs'], "internal static Pass Open") and
     "MarketOpen(site, quiet)" not in S['Trading.cs'] and
     S['Trading.cs'].count("MarketOpen(") == 2 and
-    S['Trading.cs'].count("Pass.Open(settlement, quiet)") == 7 and
-    S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 3)
+    S['Trading.cs'].count("Pass.Open(settlement, quiet)") == 8 and
+    S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 4)
 chk("1.3.2", "how far a scan reaches is the two travel ceilings alone, and the scan radius that used to narrow it is gone",
     "WithinRadius" not in S['Ledger.cs'] and "ScanRadius" not in S['Ledger.cs'] and
     "ScanRadius" not in S['Options.cs'] and "ScanRadius" not in M and
@@ -2158,7 +2162,7 @@ chk("1.4.3", "cost basis uses recorded purchase prices, not current market quote
     method_body(S['Policy.cs'], "private static bool HasCostBasis") and
     "item.IsTradeGood ||" not in method_body(S['Policy.cs'], "private static bool HasCostBasis"))
 chk("1.21.0", "the sell-side floor is Hold cargo for the best market and nothing else, so it binds every unit you bought against what the marked market pays for it, up to as many as that market would buy, or none",
-    "ForTheMark[] holding = s.HoldCargoForBestMarket > 0f ? WhatTheMarkKeeps(market, books, sim, s) : null;" in
+    "ForTheMark[] holding = !loot && s.HoldCargoForBestMarket > 0f ? WhatTheMarkKeeps(market, books, sim, s) : null;" in
         sell_pass() and
     "if (units <= 0 || basis.Paid <= 0) continue;" in sell_pass() and
     "basis == 0)" not in sell_pass() and
@@ -2886,7 +2890,7 @@ chk("1.6.12", "what quick-sell agrees to sell runs through one margin rule, and 
               r'townSellPrice >= costBasis \* \(1f \+ margin\)\s*:\s*'
               r'townSellPrice > 0;', S['TradeMath.cs']) is not None)
 chk("1.21.0", "loot goes to the first market that can pay, since nothing but Hold cargo for the best market raises the floor and it never holds a unit you did not buy",
-    S['Passes.cs'].count("ForTheMark[] holding = s.HoldCargoForBestMarket > 0f ?") == 1 and
+    S['Passes.cs'].count("ForTheMark[] holding = !loot && s.HoldCargoForBestMarket > 0f ?") == 1 and
     "int units = Math.Min(yours, basis.PaidLeft);" in
         sell_pass() and
     "int boughtLeft = Math.Min(remaining, basis.PaidLeft);" in sell_pass() and
@@ -4229,9 +4233,9 @@ chk("1.14.3", "a market whose merchant has no gold is no destination in any list
 
 chk("1.14.4", "the sell pass names a stopping rule only when one fired, so a cargo it may not sell never reads as a market with nothing to trade",
     (lambda sell: "Block stopped = tally.Dominant();" in sell
-              and "if (stopped != Block.None && !pass.Muted) NoteStalled(selling: true, stopped);" in sell
+              and "if (stopped != Block.None && !pass.Muted && first) NoteStalled(selling: true, stopped);" in sell
               and ordered(sell, "Block stopped = tally.Dominant();",
-                          "if (stopped != Block.None && !pass.Muted)"))
+                          "if (stopped != Block.None && !pass.Muted && first)"))
     (sell_pass()) and
     "if (!Structural(kv.Key) &&" in method_body(S['Passes.cs'], "internal Block Dominant") and
     (lambda buy: "Block stopped = tally.Dominant();" in buy
@@ -4674,9 +4678,10 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
             and "pass.Books.NoteSold(item.StringId);" in relief
             and "while (remaining > 0 && shed > 0)" in relief
             and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
-                        "ExecuteHerdRelief(settlement, quiet: true)",
                         "ExecuteQuickBuy(settlement, quiet: true)",
-                        "ExecuteHaulage(settlement, quiet: true)")
+                        "ExecuteHaulage(settlement, quiet: true)",
+                        "ExecuteLootSale(settlement, quiet: true)",
+                        "ExecuteHerdRelief(settlement, quiet: true)")
             and "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);" in entered)
 
 def the_herd_guard_keeps_a_cushion_below_the_speed_penalty():
@@ -4825,9 +4830,10 @@ def the_herd_is_looked_at_three_times_a_visit():
             and 'Drove.LogState("after trading at " + settlement.Name);' in entered
             and entered.count("ExecuteHerdRelief(settlement, quiet: true)") == 2
             and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
-                        "ExecuteHerdRelief(settlement, quiet: true)",
                         "ExecuteQuickBuy(settlement, quiet: true)",
                         "ExecuteHaulage(settlement, quiet: true)",
+                        "ExecuteLootSale(settlement, quiet: true)",
+                        "ExecuteHerdRelief(settlement, quiet: true)",
                         "ExecuteResupply(settlement, quiet: true)")
             and ordered_last(entered, "ExecuteQuickBuy(settlement, quiet: true)",
                              "ExecuteHerdRelief(settlement, quiet: true)",
@@ -4853,8 +4859,9 @@ def the_herd_is_looked_at_three_times_a_visit():
                 "Drove.AnimalsToShed(") == 1
             and launched.count("ExecuteHerdRelief(Settlement.CurrentSettlement);") == 2
             and ordered(launched, "ExecuteQuickSell(Settlement.CurrentSettlement);",
-                        "ExecuteHerdRelief(Settlement.CurrentSettlement);",
-                        "ExecuteQuickBuy(Settlement.CurrentSettlement);")
+                        "ExecuteQuickBuy(Settlement.CurrentSettlement);",
+                        "ExecuteLootSale(Settlement.CurrentSettlement);",
+                        "ExecuteHerdRelief(Settlement.CurrentSettlement);")
             and ordered_last(launched, "ExecuteQuickBuy(Settlement.CurrentSettlement);",
                              "ExecuteHerdRelief(Settlement.CurrentSettlement);",
                              'Drove.LogState("after trading by hand at "'))
@@ -5387,9 +5394,10 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
                 "internal int MountsShed(bool sim) => OnPaper(sim) ? _mounts : 0;",
                 "internal int HaulsShed(bool sim) => OnPaper(sim) ? _hauls : 0;",
                 "internal int HerdTaken(bool sim) => OnPaper(sim) ? _herd : 0;",
-                "internal float CapacityAdded(bool sim) => OnPaper(sim) ? _capacity : 0f;"))
+                "internal float CapacityAdded(bool sim) => OnPaper(sim) ? _capacity : 0f;",
+                "OnPaper(sim) && key != null && _drySoldFrom.TryGetValue(key, out int units) ? units : 0;"))
             and all(dry in ledger for dry in ("_drySold", "_dryBought"))
-            and len(fields) == 19
+            and len(fields) == 20
             and "ForgetTheDryRun();" in forget
             and cleared(forget) == live
             and cleared(dry) == fields - live
@@ -5400,7 +5408,7 @@ def a_meeting_on_the_road_is_priced_as_one_meeting():
     t = S['Trading.cs']
     body = method_body(t, "public static void ExecuteRoadTrade")
     return ("Books books = BooksForTheMeeting(met);" in body
-            and body.count("books, party)") == 3
+            and body.count("books, party)") == 4
             and "new Books()" not in body
             and method_body(t, "private static Books BooksForTheMeeting").count("new Books()") == 1
             and t.count("new Books()") == 2
@@ -5866,7 +5874,7 @@ def every_market_pass_is_opened_and_carried_by_one_object():
             and ordered(opened, "if (!MarketOpen(site, TradeActionBehavior.Muted(quiet))) return null;",
                         "MobileParty party = MobileParty.MainParty;",
                         "return party == null ? null : new Pass(site, null, null, Visit, party, quiet);")
-            and t.count("Pass.Open(settlement, quiet)") == 7
+            and t.count("Pass.Open(settlement, quiet)") == 8
             and t.count("if (pass == null) return;") == 4
             and t.count("if (pass == null) return false;") == 1
             and all("if (pass == null) return" in method_body(t, one) for one in passes)
@@ -6008,14 +6016,15 @@ def a_market_and_a_meeting_on_the_road_run_the_same_two_passes():
     road = method_body(t, "public static void ExecuteRoadTrade")
     sell = sell_pass()
     buy = buy_pass()
-    return (t.count("private static void SellPass(Pass pass, string label, string what, string named, string why)") == 1
+    return (t.count("private static void SellPass(Pass pass, string label, string what, string named, string why, bool loot)") == 1
             and t.count("private static void BuyPass(Pass pass, string label, string what, string named, string why)") == 1
-            and t.count("SellPass(") == 3 and t.count("BuyPass(") == 3
-            and 'SellPass(Pass.Open(settlement, quiet), "quick-sell", "selling", "Selling", "the selling pass");' in t
+            and t.count("SellPass(") == 5 and t.count("BuyPass(") == 3
+            and 'SellPass(Pass.Open(settlement, quiet), "quick-sell", "selling", "Selling", "the selling pass", loot: false);' in t
+            and 'SellPass(Pass.Open(settlement, quiet), "loot-sell", "selling loot", "Selling loot", "the loot sale", loot: true);' in t
             and 'BuyPass(Pass.Open(settlement, quiet), "quick-buy", "buying", "Buying", "the buying pass");' in t
-            and 'SellPass(Pass.Meet(met, road, books, party),' in road
+            and road.count('SellPass(Pass.Meet(met, road, books, party),') == 2
             and 'BuyPass(Pass.Meet(met, road, books, party),' in road
-            and len(road.splitlines()) < 26
+            and len(road.splitlines()) < 28
             and all(word not in road for word in
                     ("ItemRoster", "Basis", "TradePolicy.", "WhatStopsBuying", "InAPass",
                      "Notices.Say(", "Log.Write", "SwapOneUnit", "simWeight", "herdRoom"))
@@ -6530,7 +6539,7 @@ def one_stack_of_a_good_never_spends_what_another_stack_holds():
     held_afresh = re.findall(r'[^;{}]*books\.(?:Held|Stocked)\(sim,[^;]*;', S['Passes.cs'], re.S)
     return ("internal int YoursToSell(ItemRosterElement el)" in held
             and "internal int TheirsToSell(ItemRosterElement el)" in held
-            and ("return Math.Min(el.Amount,\n"
+            and ("return Math.Min(el.Amount - Books.SoldFrom(Sim, LedgerBehavior.PaidKey(el.EquipmentElement)),\n"
                  "                                LedgerBehavior.InAll(Party.ItemRoster, item)"
                  " + Books.Held(Sim, item.StringId));") in held
             and ("return Math.Min(el.Amount,\n"
@@ -6592,7 +6601,9 @@ def the_lot_shape_the_counting_rests_on_is_held_against_the_game():
                  "ItemRoster.FindIndexOfElement", "ItemRoster.GetItemAtIndex",
                  "ItemRoster.GetElementNumber", "ItemRoster.GetElementCopyAtIndex"} <= held
             and "at.TryGetValue(held.Good.Id, out int seen)" in S['Rules.cs']
-            and S['Trading.cs'].count("Math.Min(el.Amount,") == 2)
+            and S['Trading.cs'].count("Math.Min(el.Amount,") == 1
+            and S['Trading.cs'].count(
+                "Math.Min(el.Amount - Books.SoldFrom(Sim, LedgerBehavior.PaidKey(el.EquipmentElement)),") == 1)
 
 
 chk("1.47.4", "the game is asked, every version, whether one good still sits in more than one lot of the bags, since the food reserve and the per-lot caps are counted on it",
@@ -10636,9 +10647,12 @@ def the_mark_is_scored_against_what_that_market_really_paid():
                     "TradeMath.HeldShare(", '": it marked this market for " + _markedUnits +')
             and "Scoring.Share(held)" in score
             and '" of what it marked on"' in score
-            and "if (pass.Site != null && !pass.Sim)" in sell
-            and 'Guard.Run("Marker.Check", () => Marker.ScoreTheMark(pass.Site, soldItems, '
-                'goldGained));' in sell)
+            and ordered(sell, "if (!loot) _soldThisRound = default;",
+                        "var sold = (units: _soldThisRound.units + soldItems, gold: _soldThisRound.gold + goldGained);",
+                        "_soldThisRound = sold;",
+                        "if (loot && pass.Site != null && !pass.Sim)",
+                        'Guard.Run("Marker.Check", () => Marker.ScoreTheMark(pass.Site, sold.units, sold.gold));')
+            and sell.count("Marker.ScoreTheMark(") == 1)
 
 
 chk("1.84.0", "the ultralog scores the marked market on arrival, once, against what it really paid you",
@@ -11633,7 +11647,7 @@ def a_deal_laid_out_on_the_trade_screen_counts_what_it_moved_once():
     return (held and buy and larder
             and "internal bool LaidOut;" in books
             and "private bool OnPaper(bool sim) => sim && !LaidOut;" in books
-            and books.count("OnPaper(sim)") == 9
+            and books.count("OnPaper(sim)") == 10
             and "OnPaper(sim) && id != null && _held.TryGetValue(id, out int units) ? units : 0;" in books
             and "OnPaper(sim) && id != null && _dryBought.TryGetValue(id, out var prior) ? prior.count : 0;"
                 in books
@@ -13917,7 +13931,7 @@ def the_hold_counts_only_what_the_mark_would_buy_of_what_you_bought():
     sell = method_body(S['Passes.cs'], "internal static Traded SellThem")
     keeps = method_body(S['Passes.cs'], "internal static ForTheMark[] WhatTheMarkKeeps")
     takes = method_body(S['TradeMath.cs'], "public static int[] WhatTheMarkTakes")
-    return (ordered(sell, "ForTheMark[] holding = s.HoldCargoForBestMarket > 0f ? WhatTheMarkKeeps(market, books, sim, s) : null;",
+    return (ordered(sell, "ForTheMark[] holding = !loot && s.HoldCargoForBestMarket > 0f ? WhatTheMarkKeeps(market, books, sim, s) : null;",
                     "int[] there = holding?[at].Rungs;",
                     "int holdFor = holding?[at].Units ?? 0;",
                     "if (!TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))",
@@ -13973,20 +13987,23 @@ chk("1.94.0", "the reason given when cargo is held names Hold cargo for the best
 def the_marked_market_s_gold_is_shared_across_every_good_you_carry():
     keeps = method_body(S['Passes.cs'], "internal static ForTheMark[] WhatTheMarkKeeps")
     share = method_body(S['Rules.cs'], "internal static int[] SharePurse")
-    return (ordered(keeps, "int till = TradeRules.WhatTheTillCanPay(sim ? market.Till() : market.TillNow(), market.Village);",
+    return (ordered(keeps, "int purse = market.ResalePurse();", "if (purse <= 0) return null;",
+                    "int till = TradeRules.WhatTheTillCanPay(sim ? market.Till() : market.TillNow(), market.Village);",
                     "bool boughtHere = books.Bought(sim, id);",
                     "int yours = market.HoldableUnits(at);",
                     "Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),",
                     "int units = Math.Min(yours, basis.PaidLeft);",
                     "if (units <= 0 || basis.Paid <= 0) continue;",
+                    "int[] sells = boughtHere",
+                    "? new int[0]",
+                    ": TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);",
                     "asked.TryGetValue(id, out int before);",
                     "if (!market.ResaleMarket(at, before + units, basis.Paid, out int[] ladder)) continue;",
                     "rungs[at] = TradeRules.PastTheFirst(ladder, before);",
                     "asked[id] = before + rungs[at].Length;",
                     "bought[at] = units;",
-                    "? new int[0]",
-                    ": TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);",
-                    "int purse = any ? market.ResalePurse() : 0;", "if (purse <= 0) return null;",
+                    "here[at] = sells;",
+                    "if (!any) return null;",
                     "int[] kept = TradeRules.SharePurse(purse, rungs, here, bought, s.HoldCargoForBestMarket);",
                     "holding[at].Rungs = rungs[at];", "holding[at].Units = kept[at];")
             and "market.MaySell(" not in keeps and "market.GoodAt(" not in keeps
@@ -14119,6 +14136,123 @@ def the_hold_hint_names_the_marker_setting_and_calls_loot_what_sell_loot_up_to_t
 
 chk("1.94.3", "the Russian hint for Hold cargo for the best market names the setting that marks the market, and the Russian and Chinese hints call loot what Sell loot up to tier calls it",
     the_hold_hint_names_the_marker_setting_and_calls_loot_what_sell_loot_up_to_tier_does())
+
+
+def what_you_never_bought_is_sold_after_what_you_bought_and_the_buying():
+    t = S['Trading.cs']
+    entered = method_body(t, "private void OnSettlementEntered")
+    menu = between(t, '"tradelord_quicktrade"', '"tradelord_report"')
+    road = method_body(t, "public static void ExecuteRoadTrade")
+    sell = method_body(t, "private static void SellPass")
+    them = method_body(S['Passes.cs'], "internal static Traded SellThem")
+    basis = method_body(S['Passes.cs'], "internal struct Basis")
+    keep = method_body(S['TradeMath.cs'], "public static bool KeepToTheBoughtUnits")
+    return (ordered(entered, "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);",
+                    "if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);",
+                    "if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))",
+                    "if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);",
+                    "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);")
+            and ordered(menu, "ExecuteQuickSell(Settlement.CurrentSettlement);",
+                        "ExecuteQuickBuy(Settlement.CurrentSettlement);",
+                        "if (ExecuteHaulage(Settlement.CurrentSettlement))",
+                        "ExecuteLootSale(Settlement.CurrentSettlement);",
+                        "ExecuteResupply(Settlement.CurrentSettlement);")
+            and ordered(road, '"sale on the road", "selling on the road", "Road trading", why, loot: false);',
+                        "BuyPass(Pass.Meet(met, road, books, party),",
+                        '"loot sale on the road", "selling loot on the road", "Road loot selling", why, loot: true);')
+            and t.count("ExecuteLootSale(") == 3
+            and "TradePass.SellThem(market, pass.Books, pass.Sim, Options.Current, tally, loot));" in sell
+            and ordered(them, "Basis basis = Basis.For(",
+                        "if (!basis.LeftToThisSale(ref remaining, loot)) continue;",
+                        "int[] there = holding?[at].Rungs;")
+            and "loot ? PaidLeft <= 0 || SetTheBoughtUnitsAside(ref remaining)" in basis
+            and ": TradeMath.KeepToTheBoughtUnits(ref remaining, PaidLeft);" in basis
+            and ordered(keep, "if (paidLeft <= 0 || remaining <= 0) return false;",
+                        "if (remaining > paidLeft) remaining = paidLeft;", "return true;")
+            and all(one in SELLPASSTESTS for one in
+                    ("Selling_what_you_bought_leaves_what_you_did_not_buy_for_the_loot_sale",
+                     "The_loot_sale_leaves_the_units_you_bought_where_they_are",
+                     "Loot_is_sold_only_with_the_gold_this_market_has_left_after_what_you_bought",
+                     "A_dry_run_leaves_the_loot_sale_only_the_gold_the_first_sale_left"))
+            and "Selling_what_you_bought_takes_only_the_units_you_bought" in MATHTESTS)
+
+chk("1.95.0", "in a market and with a caravan on the road TradeLord sells what you bought, then buys, and only then sells what you never bought, loot included, with the gold left",
+    what_you_never_bought_is_sold_after_what_you_bought_and_the_buying())
+
+
+def the_herd_is_relieved_once_everything_that_sells_here_has_sold():
+    t = S['Trading.cs']
+    entered = method_body(t, "private void OnSettlementEntered")
+    menu = between(t, '"tradelord_quicktrade"', '"tradelord_report"')
+    return (ordered(entered, "if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);",
+                    "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);",
+                    "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);")
+            and entered.find("ExecuteHerdRelief(") > entered.find("ExecuteQuickBuy(")
+            and ordered(menu, "ExecuteLootSale(Settlement.CurrentSettlement);",
+                        "ExecuteHerdRelief(Settlement.CurrentSettlement);",
+                        "ExecuteResupply(Settlement.CurrentSettlement);")
+            and menu.find("ExecuteHerdRelief(") > menu.find("ExecuteQuickBuy("))
+
+chk("1.95.0", "the herd is first looked at once the buying and the sale of what you never bought are done, so an animal you bought is never sold for speed while one you never bought still waits to be sold",
+    the_herd_is_relieved_once_everything_that_sells_here_has_sold())
+
+
+def the_look_ahead_counts_every_good_you_bought_that_this_market_takes():
+    keeps = method_body(S['Passes.cs'], "internal static ForTheMark[] WhatTheMarkKeeps")
+    return (ordered(keeps, "if (units <= 0 || basis.Paid <= 0) continue;",
+                    ": TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);",
+                    "if (!market.ResaleMarket(at, before + units, basis.Paid, out int[] ladder)) continue;",
+                    "here[at] = sells;")
+            and keeps.count("TradeRules.WhatSellsHere(") == 1
+            and "A_good_you_bought_that_the_marked_market_does_not_want_counts_against_this_market_s_gold"
+                in SELLPASSTESTS)
+
+chk("1.95.0", "Hold cargo for the best market counts the gold this market pays for every good you bought, the ones the marked market does not want included, before it shares out the marked market's gold",
+    the_look_ahead_counts_every_good_you_bought_that_this_market_takes())
+
+
+def a_dry_run_never_sells_a_unit_of_a_stack_twice():
+    t = S['Trading.cs']
+    passes = S['Passes.cs']
+    books = S['Books.cs']
+    relief = method_body(t, "public static void ExecuteHerdRelief")
+    return ("internal int SoldFrom(bool sim, string key) =>" in books
+            and "OnPaper(sim) && key != null && _drySoldFrom.TryGetValue(key, out int units) ? units : 0;" in books
+            and "_drySoldFrom.Clear();" in method_body(books, "internal void ForgetTheDryRun")
+            and passes.count("books.NoteSale(") == 1
+            and ordered(method_body(passes, "internal static Traded SellThem"),
+                        "books.NoteSale(good.Id, price,", "books.NoteSoldFrom(market.PaidKeyAt(at));")
+            and t.count("pass.Books.NoteSale(") == 1
+            and ordered(relief, "pass.Books.NoteSale(item.StringId, price, 0f, TradePolicy.FoodValue(item));",
+                        "pass.Books.NoteSoldFrom(paidKey);")
+            and "ADryRunCountsWhatEachStackSoldSoALaterSaleNeverSellsItAgain" in BOOKTESTS
+            and "A_dry_run_keeps_what_you_paid_for_each_quality_of_a_good_apart" in SELLPASSTESTS)
+
+chk("1.95.0", "a dry run counts what it has sold from each lot of a good, so the sale of what you never bought never sells again a unit the sale of what you bought already sold",
+    a_dry_run_never_sells_a_unit_of_a_stack_twice())
+
+
+def the_trade_entry_and_auto_buy_say_what_is_sold_before_and_after_the_buying():
+    en = spoken(ENGLISH)
+    tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
+    return ("which sells what you bought, buys, then sells what you never bought, loot included, with the gold "
+            "the merchant has left, all in one go." in en['TL316']
+            and "after selling what you bought and before selling what you never bought." in en['TL318']
+            and "after any selling" not in en['TL318']
+            and all(en[one] in M for one in ('TL316', 'TL318'))
+            and all(said_in_every_language(one) for one in ('TL316', 'TL318'))
+            and len(en['TL316']) <= 350
+            and "ganimet dâhil" in tr['TL316'] and "hiç almadıklarınızı satmadan önce alır" in tr['TL318']
+            and "трофеи в том числе" in ru['TL316'] and "до продажи того, что вы не покупали" in ru['TL318']
+            and "战利品也算在内" in cn['TL316'] and "卖你没买过的东西之前" in cn['TL318']
+            and "One trade entry in the town menu, selling what you bought, buying, then selling what you never "
+                "bought, loot included, in one go, whenever you want it" in README
+            and "What you never bought, loot included, is sold only once it has sold what you bought and done its "
+                "buying, with the gold the merchant has left" in README
+            and "selling then buying in one go" not in README)
+
+chk("1.95.0", "the hints under Trade entry in town menu and Auto buy and the feature list say what is sold before the buying and what after it, in every language",
+    the_trade_entry_and_auto_buy_say_what_is_sold_before_and_after_the_buying())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

@@ -107,6 +107,7 @@ namespace TradeLord
         private static (float weight, int cost, float profit, bool food) _unfitted;
         private static Block? _sellStalled;
         private static Block? _buyStalled;
+        private static (int units, int gold) _soldThisRound;
 
         internal static bool AutomatedTradeInProgress { get; private set; }
 
@@ -428,6 +429,7 @@ namespace TradeLord
             _unfitted = default;
             _sellStalled = null;
             _buyStalled = null;
+            _soldThisRound = default;
         }
 
         private static bool NoRoomToCarry()
@@ -547,7 +549,7 @@ namespace TradeLord
             internal int YoursToSell(ItemRosterElement el)
             {
                 ItemObject item = el.EquipmentElement.Item;
-                return Math.Min(el.Amount,
+                return Math.Min(el.Amount - Books.SoldFrom(Sim, LedgerBehavior.PaidKey(el.EquipmentElement)),
                                 LedgerBehavior.InAll(Party.ItemRoster, item) + Books.Held(Sim, item.StringId));
             }
 
@@ -871,10 +873,11 @@ namespace TradeLord
                             {
                                 Drove.LogState("trading by hand at " + Settlement.CurrentSettlement.Name);
                                 ExecuteQuickSell(Settlement.CurrentSettlement);
-                                ExecuteHerdRelief(Settlement.CurrentSettlement);
                                 ExecuteQuickBuy(Settlement.CurrentSettlement);
                                 if (ExecuteHaulage(Settlement.CurrentSettlement))
                                     ExecuteQuickBuy(Settlement.CurrentSettlement);
+                                ExecuteLootSale(Settlement.CurrentSettlement);
+                                ExecuteHerdRelief(Settlement.CurrentSettlement);
                                 ExecuteResupply(Settlement.CurrentSettlement);
                                 if (ExecuteHaulage(Settlement.CurrentSettlement))
                                     ExecuteResupply(Settlement.CurrentSettlement);
@@ -976,10 +979,11 @@ namespace TradeLord
                 }
 
                 if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
-                if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))
                     ExecuteQuickBuy(settlement, quiet: true);
+                if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);
+                if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))
                     ExecuteResupply(settlement, quiet: true);
@@ -1435,10 +1439,14 @@ namespace TradeLord
         }
 
         public static void ExecuteQuickSell(Settlement settlement, bool quiet = false) =>
-            SellPass(Pass.Open(settlement, quiet), "quick-sell", "selling", "Selling", "the selling pass");
+            SellPass(Pass.Open(settlement, quiet), "quick-sell", "selling", "Selling", "the selling pass", loot: false);
 
-        private static void SellPass(Pass pass, string label, string what, string named, string why)
+        public static void ExecuteLootSale(Settlement settlement, bool quiet = false) =>
+            SellPass(Pass.Open(settlement, quiet), "loot-sell", "selling loot", "Selling loot", "the loot sale", loot: true);
+
+        private static void SellPass(Pass pass, string label, string what, string named, string why, bool loot)
         {
+            if (!loot) _soldThisRound = default;
             if (pass == null) return;
 
             pass.Capture();
@@ -1450,17 +1458,20 @@ namespace TradeLord
 
             Traded moved = default(Traded);
             InAPass(() => moved =
-                TradePass.SellThem(market, pass.Books, pass.Sim, Options.Current, tally));
+                TradePass.SellThem(market, pass.Books, pass.Sim, Options.Current, tally, loot));
 
             int soldItems = moved.Units;
             int profit = moved.Profit;
             int goldGained = pass.Gained(moved.SimGold);
+            var sold = (units: _soldThisRound.units + soldItems, gold: _soldThisRound.gold + goldGained);
+            _soldThisRound = sold;
 
-            if (pass.Site != null && !pass.Sim)
-                Guard.Run("Marker.Check", () => Marker.ScoreTheMark(pass.Site, soldItems, goldGained));
+            if (loot && pass.Site != null && !pass.Sim)
+                Guard.Run("Marker.Check", () => Marker.ScoreTheMark(pass.Site, sold.units, sold.gold));
 
             if (soldItems > 0)
             {
+                _sellStalled = null;
                 pass.Moved(profit, goldGained, selling: true);
                 Log.Write(pass.Headed(label) + soldItems +
                           " items, +" + goldGained + " gold, profit " + profit + " " + pass.Where);
@@ -1481,7 +1492,8 @@ namespace TradeLord
                 if (tally.Any) Log.Repeatable(label + "-empty " + pass.Key, tally.Summary() + held,
                     label + " moved nothing " + pass.Where + ": " + tally.Summary() + held);
                 Block stopped = tally.Dominant();
-                if (stopped != Block.None && !pass.Muted) NoteStalled(selling: true, stopped);
+                bool first = !loot || (sold.units == 0 && !_sellStalled.HasValue);
+                if (stopped != Block.None && !pass.Muted && first) NoteStalled(selling: true, stopped);
             }
         }
 
@@ -1962,9 +1974,11 @@ namespace TradeLord
             else
             {
                 SellPass(Pass.Meet(met, road, books, party),
-                         "sale on the road", "selling on the road", "Road trading", why);
+                         "sale on the road", "selling on the road", "Road trading", why, loot: false);
                 BuyPass(Pass.Meet(met, road, books, party),
                         "purchase on the road", "buying on the road", "Road buying", why);
+                SellPass(Pass.Meet(met, road, books, party),
+                         "loot sale on the road", "selling loot on the road", "Road loot selling", why, loot: true);
             }
             NoteARoadTrade(met, books, movesBefore);
             ReportStalledPasses();
@@ -2048,6 +2062,7 @@ namespace TradeLord
                             simTill -= price;
                             simGold += price;
                             pass.Books.NoteSale(item.StringId, price, 0f, TradePolicy.FoodValue(item));
+                            pass.Books.NoteSoldFrom(paidKey);
                             pass.Books.NoteShed(rank == RankHaulAnimal, rank != RankLivestock);
                             Counter.Stage(el, selling: true, price);
                         }

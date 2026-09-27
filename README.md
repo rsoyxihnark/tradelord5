@@ -68,7 +68,7 @@
 
 **What it does for you**
 
-- ✅ One trade entry in the town menu, selling then buying in one go, whenever you want it
+- ✅ One trade entry in the town menu, selling what you bought, buying, then selling what you never bought, loot included, in one go, whenever you want it
 - ✅ Sells and buys the moment you enter a market by default, once for each arrival
 - ✅ Wait here for some time, a walk through the lands, or anything else that drops you back at the town or village menu does not set it trading again, and it leaves that market alone until your party has taken to the road
 - ✅ The first time you come back to the market TradeLord made its last trade at, it leaves that market alone as you arrive and as you leave
@@ -105,6 +105,7 @@
 - ✅ Hold cargo for the best market holds only as many as the marked market would buy, 0% holds nothing, and looted gear goes to the first market that can pay for it
 - ✅ Hold cargo for the best market holds nothing in the marked market itself, or while Auto-mark best sell market on map is off
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
+- ✅ What you never bought, loot included, is sold only once it has sold what you bought and done its buying, with the gold the merchant has left, so the goods you trade get that gold first
 - ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
 - ✅ Says on screen when the profit could add no Trade XP because your Trade skill is past the game's learning limit, and how many focus points in Trade or points of Social would let it learn again
 - ✅ Credits every companion riding with you a share of that same profit, which the game turns into Trade XP the same way it does yours, at a share you set, so a trading clan learns from the run as well as its lord. Off out of the box, so the XP is yours alone until you ask for it
