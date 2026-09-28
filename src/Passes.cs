@@ -611,9 +611,7 @@ namespace TradeLord
                         moved.Profit += credited;
                         if (market.TheGameGivesTradeXpFor(at)) moved.Earned += credited;
                         int herdRank = TradeRules.HerdShedRank(good);
-                        books.NoteSale(good.Id, price,
-                                       herdRank == TradeRules.RankHaulAnimal ? 0f : good.Weight,
-                                       TradeRules.FoodValue(good));
+                        books.NoteSale(good.Id, price, good.Weight, TradeRules.FoodValue(good));
                         books.NoteSoldFrom(market.PaidKeyAt(at));
                         if (herdRank >= 0 &&
                             Herding.TheGameCountsItAtOnce(herdRank == TradeRules.RankLivestock, market.OfAQuality(at)))

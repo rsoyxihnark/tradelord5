@@ -1,8 +1,23 @@
 # Changelog
 
+## 1.95.2
+
+- Fixed changes you make in TradeLord.ini being overwritten by the MCM settings screen when you start the game
+- Fixed Most workshops you may own not lifting the limit when you buy a workshop from its owner in town
+- Fixed Buy to fill the ships buying livestock as if it took no room in the ships' hold
+- Buy to fill the ships now counts every good at the weight the ships' hold gives it, Boatswain perks included
+- Fixed the note that Staged Trading is holding its trade back showing on arrival with Silence trade messages on
+- Fixed the TradeLord ledger sending you to Knowledge for Town travel ceiling and Village travel ceiling, which are under Trade Pool
+- Fixed the hint for Most it will pay for a haul animal saying it goes by the cheapest price you ever saw, not the cheapest TradeLord knows
+- The hint for Most it will pay for a haul animal now gives its default as 125%, the way the slider shows it
+- The feature list now says every good, livestock included, takes its room in the ships' hold with Buy to fill the ships on
+- The feature list now says the share of the hold is left off an animal only while Buy to fill the ships is off
+
 ## 1.95.1
 
-- Entire codebase no longer has any UI String longer than 249 characters
+- The longest hints on the settings screen are shorter
+- The longest lines of the feature list are shorter
+- The longest lines of the comparison with the other trade mods are shorter
 
 ## 1.95.0
 

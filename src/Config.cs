@@ -27,6 +27,9 @@ namespace TradeLord
         private static bool _applying;
         private static bool _unreadable;
         private static Dictionary<string, string> _lastSeen;
+        private static Options _fileHeld;
+        private static bool _fileOutranks;
+        private static bool _fileScreenWrote;
         private static readonly List<KeyValuePair<string, string>> _newerLines =
             new List<KeyValuePair<string, string>>();
         private static int _newerShape;
@@ -117,8 +120,30 @@ namespace TradeLord
         private static void Noted()
         {
             if (_applying) return;
+            if (McmLoader.Awaiting) return;
             _dirty = true;
             _stillMoving = DateTime.UtcNow;
+        }
+
+        internal static void ScreenArrived()
+        {
+            Options held = _fileHeld;
+            _fileHeld = null;
+            if (held == null || !_fileOutranks)
+            {
+                if (held != null)
+                    Log.Write("settings file: the settings screen was saved more recently, so this file is written to match it");
+                _dirty = true;
+                return;
+            }
+            foreach (FieldInfo field in Fields()) field.SetValue(Options.Current, field.GetValue(held));
+            Options.Bump();
+            Log.Write(_fileScreenWrote
+                ? "settings file: this file was saved more recently than the settings screen, so the screen is set from it"
+                : "settings file: this file was last written with no settings screen to write it, so the screen is set from it");
+            McmLoader.Reseat?.Invoke();
+            _lastSeen = Snapshot();
+            if (_newerShape == 0) Write(_path, "made the settings screen match it");
         }
 
         internal static void Flush()
@@ -253,6 +278,14 @@ namespace TradeLord
                 }
             }
             finally { _applying = false; }
+
+            if (!screen && !whipped)
+            {
+                _fileHeld = new Options();
+                foreach (FieldInfo field in Fields()) field.SetValue(_fileHeld, field.GetValue(Options.Current));
+                _fileScreenWrote = screenWroteIt;
+                _fileOutranks = Twins.FileOutranksTheScreen(_fileScreenWrote, ChangedByHand(found, stamped));
+            }
 
             Options.Bump();
             Log.Write("settings file read from " + found + ": " + taken + " of " + known.Count + " settings set");

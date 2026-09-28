@@ -15,6 +15,8 @@ namespace TradeLord
 
         internal static bool SettingsInHand { get; private set; }
 
+        internal static bool Awaiting => _handover != null && !SettingsInHand;
+
         internal static Action Reseat;
 
         internal static Action PutBackWhatItShipsWith;
@@ -107,7 +109,7 @@ namespace TradeLord
             SettingsInHand = answered is bool taken && taken;
             Log.Write(SettingsInHand
                 ? "MCM detected - settings menu registered"
-                : "MCM detected, but it has not handed over its settings yet - TradeLord.ini is read as it stands, and the settings screen takes over once MCM has loaded");
+                : "MCM detected, but it has not handed over its settings yet - TradeLord.ini is read as it stands, and whichever of the file and the settings screen was saved last wins once MCM has loaded");
         }
 
         internal static void TryHandover()
@@ -118,6 +120,7 @@ namespace TradeLord
             if (!(_handover.Invoke(null, null) is bool taken) || !taken) return;
             SettingsInHand = true;
             Log.Write("MCM has handed its settings over - the settings screen is in charge from here, and what you pick on it takes hold as you pick it");
+            Guard.Run("Config.ScreenArrived", Config.ScreenArrived);
             if (_owedAPutBack) PutBack();
         }
     }

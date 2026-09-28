@@ -256,6 +256,9 @@ namespace TradeLord
 
         public static bool ScreenWins(bool screenInHand, bool screenWroteIt, bool changedByHand) =>
             screenInHand && screenWroteIt && !changedByHand;
+
+        public static bool FileOutranksTheScreen(bool screenWroteIt, bool changedByHand) =>
+            !screenWroteIt || changedByHand;
     }
 
     public static class Whip

@@ -10,7 +10,7 @@
 		<string id="TL24" text="{TOWN} şehrinde daha ucuz: {PRICE}{GOLD}"/>
 		<string id="TL06" text="TradeLord {ITEMS} aldı, {GOLD} dinar."/>
 		<string id="TL07" text="TradeLord defteri"/>
-		<string id="TL08" text="Yol süresi sınırlarınız içinde kârlı bir rota yok. Bilgi ayarlarından sınırları yükseltin ya da daha çok pazarın yakınına gidin."/>
+		<string id="TL08" text="Yol süresi sınırlarınız içinde kârlı bir rota yok. Ticaret havuzu ayarlarından sınırları yükseltin ya da daha çok pazarın yakınına gidin."/>
 		<string id="TL09" text="Kapat"/>
 		<string id="TL11" text="TradeLord defterine bak"/>
 		<string id="TL26" text="Burada hemen ticaret yap (TradeLord)"/>
@@ -56,7 +56,7 @@
 		<string id="TL66" text="TradeLord kârı: {AMOUNT}"/>
 		<string id="TL67" text="Menzilde kârlı rota yok"/>
 		<string id="TL68" text="{COUNT} kârlı rota, en iyisi başta"/>
-		<string id="TL69" text="Yol süresi sınırlarınız içinde rota yok. Bilgi ayarlarından sınırları yükseltin ya da daha çok pazarın yakınına gidin."/>
+		<string id="TL69" text="Yol süresi sınırlarınız içinde rota yok. Ticaret havuzu ayarlarından sınırları yükseltin ya da daha çok pazarın yakınına gidin."/>
 		<string id="TL70" text="Bir şehir adına tıklayarak oraya gidin ve işaretini koyun ya da kaldırın | Gün = siz -&gt; alış şehri -&gt; satış şehri | Kerv. = o şehirlerdeki kervanlar"/>
 		<string id="TL71" text=" | Puan = Güven değerine göre indirilmiş günlük kâr"/>
 		<string id="TL72" text=" | Puan = günlük kâr"/>
@@ -74,8 +74,8 @@
 		<string id="TL85" text="Yükü en iyi pazar için tut ayarı kargonuzu işaretli pazar için saklıyor"/>
 		<string id="TL86" text="müfrezeniz daha fazla hayvan güdemez"/>
 		<string id="TL88" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}."/>
-		<string id="TL89" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde kârlı rota yok. Daha çok pazar gezin ya da Bilgi ayarlarından sınırları yükseltin."/>
-		<string id="TL90" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde rota yok. Daha çok pazar gezin ya da Bilgi ayarlarından sınırları yükseltin."/>
+		<string id="TL89" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde kârlı rota yok. Daha çok pazar gezin ya da Ticaret havuzu ayarlarından sınırları yükseltin."/>
+		<string id="TL90" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde rota yok. Daha çok pazar gezin ya da Ticaret havuzu ayarlarından sınırları yükseltin."/>
 		<string id="TL91" text="TradeLord mal listelerinizden birindeki bir girdi bu oyundaki hiçbir mala uymuyor ve hiçbir işe yaramıyor. Hangisi olduğunu TradeLord.log yazıyor."/>
 		<string id="TL92" text="Keseniz {GOLD} dinar, altın rezerviniz {RESERVE}, bu yüzden TradeLord burada bir şey almayacak. Biraz yük satın ya da ayarlardan Altın rezervi değerini düşürün."/>
 		<string id="TL97" text="TradeLord {ITEMS} ikmal etti, {GOLD} dinar."/>
@@ -267,7 +267,7 @@
 		<string id="TL425" text="Yük hayvanı almadan önce gereken altın (0 = kapalı)"/>
 		<string id="TL426" text="Yük hayvanını ancak parası ödendikten sonra keseniz bunun üzerinde kalıyorsa alır. Altında kaldıkça TradeLord ne kadar ucuz olursa olsun onlara dokunmaz, böylece erken altın mala gider. 0 ilk dinardan itibaren almasına izin verir. Varsayılan 2000."/>
 		<string id="TL427" text="Bir yük hayvanı için ödeyeceği en yüksek tutar"/>
-		<string id="TL428" text="O hayvan için gördüğünüz en ucuz fiyatın ne kadar üstüne kadar TradeLord yine de öder. %100 yalnızca gördüğünüz en ucuz fiyata demektir. Varsayılan 1.25, yani en ucuzun dörtte biri kadar üstüne kadar öder."/>
+		<string id="TL428" text="O hayvan için bildiği en ucuz fiyatın ne kadar üstüne kadar TradeLord yine de öder. %100 yalnızca en ucuz fiyata demektir. Varsayılan %125, yani en ucuzun dörtte biri kadar üstüne kadar öder."/>
 		<string id="TL429" text="Sahip olabileceğiniz en fazla işyeri (0 = oyunun kendi sınırı)"/>
 		<string id="TL430" text="Oyunun kaç işyerine sahip olabileceğinize koyduğu sınırı kaldırır. 200, hiç sınır yok demekle aynı kapıya çıkar. 0 kararı oyuna geri bırakır; oyun klan kademeniz yükseldikçe daha fazlasına izin verir. Varsayılan 200."/>
 		<string id="TL431" text="İşyerlerini uzaktan satın al"/>

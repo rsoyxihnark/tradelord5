@@ -130,6 +130,7 @@
 - ✅ Once the goods have changed hands you can say so, and the trader answers
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
 - ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore
+- ✅ With Buy to fill the ships on, every good, livestock included, takes the room it takes in the ships' hold
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
 - ✅ A coin sound on a trade that lands, silence on one that does not
@@ -176,7 +177,7 @@
 - ✅ Caps on one good by count, which ships at 32 units a visit, or by denars, and on how many of it you will carry
 - ✅ A cap on the share of the hold one good may fill, which ships at 45% so one cheap good cannot take your whole cargo
 - ✅ A cap on the whole visit, which ships at 1000 denars so a full purse is never spent in one town
-- ✅ They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off an animal, since the game never counts an animal as cargo
+- ✅ They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off an animal, unless Buy to fill the ships is on, since only a ship's hold counts one as cargo
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know
 - ✅ What a good counts as having cost you sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells

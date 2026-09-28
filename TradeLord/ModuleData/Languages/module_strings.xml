@@ -10,7 +10,7 @@
 		<string id="TL24" text="Cheaper in {TOWN}: {PRICE}{GOLD}"/>
 		<string id="TL06" text="TradeLord bought {ITEMS} for {GOLD} denars."/>
 		<string id="TL07" text="TradeLord ledger"/>
-		<string id="TL08" text="No profitable routes within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."/>
+		<string id="TL08" text="No profitable routes within your travel ceilings. Raise the ceilings in the Trade Pool settings, or move nearer to more markets."/>
 		<string id="TL09" text="Close"/>
 		<string id="TL11" text="Consult the TradeLord ledger"/>
 		<string id="TL26" text="Trade here now (TradeLord)"/>
@@ -56,7 +56,7 @@
 		<string id="TL66" text="TradeLord profit: {AMOUNT}"/>
 		<string id="TL67" text="No profitable routes in reach"/>
 		<string id="TL68" text="{COUNT} profitable routes, best first"/>
-		<string id="TL69" text="No routes are within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."/>
+		<string id="TL69" text="No routes are within your travel ceilings. Raise the ceilings in the Trade Pool settings, or move nearer to more markets."/>
 		<string id="TL70" text="Click a town name to jump to it and pin or unpin it | Days = you -&gt; buy town -&gt; sell town | Carv. = caravans at those towns"/>
 		<string id="TL71" text=" | Score = profit per day discounted by Conf"/>
 		<string id="TL72" text=" | Score = profit per day"/>
@@ -74,8 +74,8 @@
 		<string id="TL85" text="Hold cargo for the best market keeps your cargo for the marked market"/>
 		<string id="TL86" text="your party cannot drive any more livestock"/>
 		<string id="TL88" text="TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."/>
-		<string id="TL89" text="No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
-		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings."/>
+		<string id="TL89" text="No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Trade Pool settings."/>
+		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Trade Pool settings."/>
 		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
 		<string id="TL92" text="Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower Gold reserve in its settings."/>
 		<string id="TL97" text="TradeLord restocked {ITEMS} for {GOLD} denars."/>
@@ -267,7 +267,7 @@
 		<string id="TL425" text="Gold before it buys a haul animal (0 = off)"/>
 		<string id="TL426" text="Buy a haul animal only while your purse stays above this once the animal is paid for. Below it TradeLord leaves them alone however cheap they are, so early gold goes on goods instead. 0 lets it buy from the first denar. Default 2000."/>
 		<string id="TL427" text="Most it will pay for a haul animal"/>
-		<string id="TL428" text="How far above the cheapest price you have ever seen for that animal TradeLord will still pay. 100% means only at the cheapest you have seen. Default 1.25, so it pays up to a quarter more than the cheapest."/>
+		<string id="TL428" text="How far above the cheapest price TradeLord knows for that animal it will still pay. 100% means only at the cheapest. 125% by default, so it pays up to a quarter more than the cheapest."/>
 		<string id="TL429" text="Most workshops you may own (0 = the game's own limit)"/>
 		<string id="TL430" text="Lifts the limit the game puts on how many workshops you may own. 200 is as good as no limit at all. 0 hands the decision back to the game, which allows more as your clan tier rises. Default 200."/>
 		<string id="TL431" text="Buy Workshops Remotely"/>
