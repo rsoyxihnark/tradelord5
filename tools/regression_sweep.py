@@ -3666,7 +3666,12 @@ def only_main_may_be_pushed():
     return ('main|refs/heads/main' in GUARD
             and 'would create the remote branch' in GUARD
             and 'main is the only place it may go' in GUARD
-            and '--delete|-d) DELETING=1' in GUARD)
+            and '--delete|-d) DELETING=1' in GUARD
+            and ':*|+:*)' in GUARD
+            and GUARD.count('refuse "that push would delete main from the remote"') == 2
+            and ('[ "$DELETING" = 1 ] && [ "$TOMAIN" = 1 ] &&\n'
+                 '        refuse "that push would delete main from the remote"\n'
+                 '      if [ "$DELETING" = 0 ]; then') in GUARD)
 
 chk("1.6.32", "a commit that changes what a user gets is refused when it leaves the changelog untouched",
     the_workflow_gates_the_changelog())
@@ -3692,7 +3697,7 @@ chk("1.7.0", "the working rules name no program of their own, so they carry to a
     the_rules_name_no_program_of_their_own())
 chk("1.7.0", "a git command that would start a branch is refused before it runs",
     a_git_command_that_would_start_a_branch_is_refused())
-chk("1.7.0", "a push may name main and nothing else, and deleting a branch is still allowed",
+chk("1.7.0", "a push may name main and nothing else, and deleting a branch is still allowed, save main itself",
     only_main_may_be_pushed())
 chk("1.7.0", "the cost-basis arithmetic lives beside the other money rules and needs nothing from the game",
     the_ledger_keeps_no_second_copy_of_the_cost_basis_rules())
@@ -14689,6 +14694,26 @@ def a_newer_file_is_never_restamped_as_the_screens_when_the_screen_is_ready_at_s
 
 chk("1.95.3", "a settings file a newer TradeLord wrote is set on the settings screen and left exactly as it is, whether the screen is ready at startup or hands its settings over late",
     a_newer_file_is_never_restamped_as_the_screens_when_the_screen_is_ready_at_startup())
+
+
+
+def the_branch_guard_hears_every_command():
+    hooked = between(SETTINGS, '"PreToolUse"', ']\n  }')
+    return ('"matcher": "Bash"' in hooked
+            and 'no-new-branch.sh' in hooked
+            and '"if"' not in hooked
+            and 'Bash(git' not in SETTINGS.replace('"Bash(git fetch:*)"', '')
+                                          .replace('"Bash(git checkout main)"', '')
+                                          .replace('"Bash(git checkout --detach origin/main)"', '')
+                                          .replace('"Bash(git reset --hard origin/main)"', '')
+                                          .replace('"Bash(git push -u origin HEAD:main)"', '')
+            and all(one in SETTINGS for one in
+                    ('"Bash(git fetch:*)"', '"Bash(git checkout main)"',
+                     '"Bash(git checkout --detach origin/main)"', '"Bash(git reset --hard origin/main)"',
+                     '"Bash(git push -u origin HEAD:main)"')))
+
+chk("1.95.3", "the branch guard hears every command a session runs, not only those that start with git, and the permission rules that put a checkout on origin/main stay as they were",
+    the_branch_guard_hears_every_command())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
