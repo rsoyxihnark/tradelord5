@@ -138,6 +138,12 @@ while IFS= read -r segment; do
             if [ "$REMOTE" = 0 ]; then
               REMOTE=1
             else
+              case "$token" in
+                :*|+:*)
+                  case "${token##*:}" in
+                    main|refs/heads/main) refuse "that push would delete main from the remote" ;;
+                  esac ;;
+              esac
               case "${token##*:}" in
                 main|refs/heads/main) TOMAIN=1 ;;
                 *) WRONG=${token##*:} ;;
@@ -145,6 +151,8 @@ while IFS= read -r segment; do
             fi ;;
         esac
       done
+      [ "$DELETING" = 1 ] && [ "$TOMAIN" = 1 ] &&
+        refuse "that push would delete main from the remote"
       if [ "$DELETING" = 0 ]; then
         [ -n "$WRONG" ] && refuse "that push would create the remote branch $WRONG"
         [ "$TOMAIN" = 0 ] && [ "$TAGS" = 0 ] &&
