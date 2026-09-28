@@ -85,7 +85,7 @@ def asked():
     rows, alsoWhy = byApi()
     if rows is not None:
         return rows, 'the public API'
-    print('  skipped  the releases could not be read, so the changelog was not held against them')
+    print('  BROKEN   the releases could not be read, so the changelog was not held against them')
     print('           gh said: ' + (why or 'nothing'))
     print('           the API said: ' + (alsoWhy or 'nothing'))
     return None, None
@@ -151,7 +151,7 @@ def main(argv):
     agreed = theMessageSaysWhatTheChangelogSays(shipping, said)
     rows, how = asked()
     if rows is None:
-        return 0 if agreed else 1
+        return 1
 
     live = {row['tag'].lstrip('v'): row for row in rows}
     versions = sorted([head for head in said if numbered(head)], key=order)

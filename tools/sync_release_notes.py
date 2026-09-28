@@ -97,6 +97,8 @@ def main(argv):
             return stopped
         if apply:
             rows = releases(tok)
+        else:
+            rows = [r for r in rows if r['tag_name'].lstrip('v') not in wanted]
     absent = sorted(r['tag_name'] for r in rows if r['tag_name'].lstrip('v') not in book)
     if absent:
         sys.stderr.write('CHANGELOG.md carries no section for: ' + ', '.join(absent) + '\n')

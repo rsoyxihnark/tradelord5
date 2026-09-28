@@ -3530,7 +3530,7 @@ def the_language_files_reach_the_download():
 def the_workflow_gates_the_changelog():
     return ("this commit changes what a user gets and leaves CHANGELOG.md untouched" in WORKFLOW
             and "grep -qx 'CHANGELOG.md'" in WORKFLOW
-            and "fetch-depth: 2" in WORKFLOW)
+            and "fetch-depth: 0" in WORKFLOW)
 
 def the_gate_lets_a_checks_only_commit_through():
     return (r"grep -Ev '^(tests/|tools/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$)'" in WORKFLOW
@@ -3541,10 +3541,13 @@ def the_gate_lets_a_behaviour_neutral_change_through_but_never_a_version():
             and "a [no release] commit may not ship a version" in WORKFLOW
             and "grep -qx 'TradeLord/SubModule.xml'" in WORKFLOW
             and ordered(WORKFLOW,
+                        "- name: Changelog gate",
+                        'SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")',
+                        "a [no release] commit may not ship a version",
                         "the changelog carries this commit's entries",
                         "so it writes no changelog entry",
-                        'SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")',
-                        "a [no release] commit may not ship a version"))
+                        "- name: Shape gate")
+            and WORKFLOW.count("a [no release] commit may not ship a version") == 1)
 
 def a_good_you_already_hold_enough_of_is_not_bought_again():
     body = pass_body("public static void ExecuteQuickBuy")
@@ -7497,7 +7500,9 @@ def the_changelog_is_held_against_what_was_actually_published():
             and "says one thing in the changelog and another in its release notes" in RELEASED
             and "was published with no file attached" in RELEASED
             and "is still a draft release" in RELEASED
-            and "  skipped  the releases could not be read" in RELEASED
+            and "  BROKEN   the releases could not be read" in RELEASED
+            and "  skipped  the releases could not be read" not in RELEASED
+            and "    if rows is None:\n        return 1\n" in between(RELEASED, "def main(argv):", "\n    first = min(live")
             and "version == shipping" in RELEASED)
 
 def an_outstanding_disagreement_is_named_and_cannot_linger_once_settled():
@@ -9992,8 +9997,10 @@ def a_version_commit_says_in_its_message_what_the_changelog_says():
                         "said = {head: entries for head, entries in",
                         "agreed = theMessageSaysWhatTheChangelogSays(shipping, said)",
                         "rows, how = asked()",
-                        "return 0 if agreed else 1")
-            and RELEASED.count("return 0 if agreed else 1") == 2
+                        "    if rows is None:\n        return 1\n")
+            and ordered(RELEASED, "\n    first = min(live",
+                        "if not faults:", "return 0 if agreed else 1")
+            and RELEASED.count("return 0 if agreed else 1") == 1
             and "The entries in a version section and the bullet points in that version's commit body say "
                 "the same thing in the same words" in RULES)
 
@@ -14564,6 +14571,66 @@ def the_workshop_limit_you_set_reaches_the_owner_in_town():
 
 chk("1.95.2", "Most workshops you may own lifts the limit when a workshop's owner in town offers to sell, through a finalizer that always lowers it again, while the limit stays the game's for every other clan",
     the_workshop_limit_you_set_reaches_the_owner_in_town())
+
+
+
+def every_commit_of_a_push_passes_the_gates_not_only_the_last():
+    loop = ('BEFORE="${{ github.event.before }}"\n'
+            '          PUSHED=""\n'
+            '          if [ -n "$BEFORE" ] && [ -n "${BEFORE//0/}" ] && git merge-base --is-ancestor "$BEFORE" "$GITHUB_SHA" 2>/dev/null; then\n'
+            '            PUSHED=$(git rev-list --reverse "$BEFORE..$GITHUB_SHA")\n'
+            '          fi\n'
+            '          [ -n "$PUSHED" ] || PUSHED="$GITHUB_SHA"\n'
+            '          for GITHUB_SHA in $PUSHED; do\n')
+    changelog = between(WORKFLOW, "- name: Changelog gate", "- name: Shape gate")
+    shape = between(WORKFLOW, "- name: Shape gate", "- name: Resolve version from SubModule.xml")
+    return ("fetch-depth: 0" in WORKFLOW and "fetch-depth: 2" not in WORKFLOW
+            and all(loop in one and one.count("          ) || exit 1\n          done\n") == 1
+                    and ordered(one, loop, "          (\n", "          ) || exit 1\n          done\n")
+                    for one in (changelog, shape))
+            and ordered(changelog, "(\n", "this commit changes what a user gets and leaves CHANGELOG.md untouched",
+                        ") || exit 1")
+            and ordered(shape, "(\n", "this commit ships a version and takes a source file away", ") || exit 1"))
+
+chk("1.95.2", "every commit a push carries is held to the changelog gate and the shape gate, not only the last one, so a commit pushed beneath another cannot slip past them",
+    every_commit_of_a_push_passes_the_gates_not_only_the_last())
+
+
+def a_release_is_published_from_main_and_nowhere_else():
+    step = between(WORKFLOW, "- name: Publish release", "run: |")
+    return ("        if: github.ref == 'refs/heads/main'\n" in step
+            and "workflow_dispatch" not in step)
+
+chk("1.95.2", "a release is only ever published from main, whether the run came from a push or was started by hand",
+    a_release_is_published_from_main_and_nowhere_else())
+
+
+def a_dry_run_that_drops_a_version_still_says_what_it_would_rewrite():
+    body = between(SYNC, "def main(argv):", "\nif __name__")
+    return ordered(body, "stopped = drop(rows, book, wanted, tok, apply)",
+                   "        if apply:\n            rows = releases(tok)\n",
+                   "        else:\n            rows = [r for r in rows if r['tag_name'].lstrip('v') not in wanted]\n",
+                   "absent = sorted(")
+
+chk("1.95.2", "a dry run of the release note sync that names versions to drop leaves those out and goes on to say what it would rewrite",
+    a_dry_run_that_drops_a_version_still_says_what_it_would_rewrite())
+
+
+def the_branch_guard_sees_through_the_ways_a_branch_can_be_started():
+    return ('[A-Za-z_]*=*) shift ;;' in GUARD
+            and 'env|command|exec|nohup|time|sudo|-*) shift ;;' in GUARD
+            and 'git|*/git) ;;' in GUARD
+            and '-C|-c|--git-dir|--work-tree|--namespace|--config-env) shift; shift ;;' in GUARD
+            and '--create=*|--force-create=*|--orphan=*|-t|--track|--track=*)' in GUARD
+            and "-*[bBcCt]*) refuse \"that command starts a new branch\" ;;" in GUARD
+            and 'refuse "that command starts a local branch $FIRST from the remote one"' in GUARD
+            and '[ "${1:-}" = "branch" ] && refuse "git stash branch starts a new branch"' in GUARD
+            and 'refs/heads/*) refuse "that command starts a new branch" ;;' in GUARD
+            and 'refuse "that fetch would start the local branch ${token##*:}"' in GUARD
+            and '[ "$FIRST" != main ]' in GUARD)
+
+chk("1.95.2", "the branch guard refuses a branch started through a prefixed or pathed git, an attached or clustered flag, a tracking checkout, a stash, a ref update or a fetch",
+    the_branch_guard_sees_through_the_ways_a_branch_can_be_started())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
