@@ -14715,5 +14715,32 @@ def the_branch_guard_hears_every_command():
 chk("1.95.3", "the branch guard hears every command a session runs, not only those that start with git, and the permission rules that put a checkout on origin/main stay as they were",
     the_branch_guard_hears_every_command())
 
+
+
+def a_workshop_the_game_kept_no_record_of_is_given_one_when_the_game_loads():
+    mend = method_body(S['Workshops.cs'], "internal static void MendTheGamesRecords")
+    launched = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    return (mend
+            and "var owned = Hero.MainHero?.OwnedWorkshops;" in mend
+            and "Campaign.Current?.GetCampaignBehavior<WorkshopsCampaignBehavior>();" in mend
+            and all(('typeof(WorkshopsCampaignBehavior).GetMethod(\n                "' + one +
+                     '", BindingFlags.Instance | BindingFlags.NonPublic);') in mend
+                    for one in ("GetDataOfWorkshop", "AddNewWorkshopData", "GetWarehouseRoster",
+                                "AddNewWarehouseDataIfNeeded"))
+            and "if (record == null || addRecord == null || store == null || addStore == null)" in mend
+            and ordered(mend, "if (store.Invoke(keeper, new object[] { town }) == null)",
+                        "addStore.Invoke(keeper, new object[] { town });",
+                        "if (record.Invoke(keeper, new object[] { shop }) != null) continue;",
+                        "addRecord.Invoke(keeper, new object[] { shop });")
+            and 'Guard.Run("Shops.MendTheGamesRecords", Shops.MendTheGamesRecords);' in launched
+            and all(('"WorkshopsCampaignBehavior", "' + one + '"') in COMPAT.replace(
+                        '"TaleWorlds.CampaignSystem.CampaignBehaviors.WorkshopsCampaignBehavior"',
+                        '"WorkshopsCampaignBehavior"')
+                    for one in ("GetDataOfWorkshop", "AddNewWorkshopData", "GetWarehouseRoster",
+                                "AddNewWarehouseDataIfNeeded")))
+
+chk("1.95.4", "a workshop you own that the game kept no record or warehouse for is given one when the game loads, so a save that crashed over it plays again",
+    a_workshop_the_game_kept_no_record_of_is_given_one_when_the_game_loads())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

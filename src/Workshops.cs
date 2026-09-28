@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using HarmonyLib;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
@@ -179,6 +180,49 @@ namespace TradeLord
             shop?.Settlement == null || shop.WorkshopType == null
                 ? "an unnamed workshop"
                 : shop.WorkshopType.Name + " in " + shop.Settlement.Name;
+
+        internal static void MendTheGamesRecords()
+        {
+            var owned = Hero.MainHero?.OwnedWorkshops;
+            if (owned == null || owned.Count == 0) return;
+            WorkshopsCampaignBehavior keeper = Campaign.Current?.GetCampaignBehavior<WorkshopsCampaignBehavior>();
+            if (keeper == null) return;
+            MethodInfo record = typeof(WorkshopsCampaignBehavior).GetMethod(
+                "GetDataOfWorkshop", BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo addRecord = typeof(WorkshopsCampaignBehavior).GetMethod(
+                "AddNewWorkshopData", BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo store = typeof(WorkshopsCampaignBehavior).GetMethod(
+                "GetWarehouseRoster", BindingFlags.Instance | BindingFlags.NonPublic);
+            MethodInfo addStore = typeof(WorkshopsCampaignBehavior).GetMethod(
+                "AddNewWarehouseDataIfNeeded", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (record == null || addRecord == null || store == null || addStore == null)
+            {
+                Log.Write("workshop records: the game's own records of your workshops cannot be reached on this " +
+                          "game version, so they are not checked");
+                return;
+            }
+            for (int i = 0; i < owned.Count; i++)
+            {
+                Workshop shop = owned[i];
+                Settlement town = shop?.Settlement;
+                if (town == null) continue;
+                if (store.Invoke(keeper, new object[] { town }) == null)
+                {
+                    addStore.Invoke(keeper, new object[] { town });
+                    Log.Write(store.Invoke(keeper, new object[] { town }) != null
+                        ? "workshop records: the game kept no warehouse for your workshops in " + town.Name +
+                          ", so TradeLord gave it one"
+                        : "ERROR: the game kept no warehouse for your workshops in " + town.Name +
+                          " and would not take one");
+                }
+                if (record.Invoke(keeper, new object[] { shop }) != null) continue;
+                addRecord.Invoke(keeper, new object[] { shop });
+                Log.Write(record.Invoke(keeper, new object[] { shop }) != null
+                    ? "workshop records: the game kept no record of " + Named(shop) +
+                      ", so TradeLord gave it one and it works again"
+                    : "ERROR: the game kept no record of " + Named(shop) + " and would not take one");
+            }
+        }
     }
 
     [HarmonyPatch(typeof(DefaultWorkshopModel), "GetMaxWorkshopCountForClanTier")]

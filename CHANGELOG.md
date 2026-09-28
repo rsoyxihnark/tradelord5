@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.95.4
+
+- Fixed a saved game crashing soon after loading because of a workshop bought after raising Most workshops you may own
+
 ## 1.95.3
 
 - Fixed the game crashing after raising Most workshops you may own and buying a workshop past its old value without reloading

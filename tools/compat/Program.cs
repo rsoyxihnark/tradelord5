@@ -44,6 +44,10 @@ namespace TradeLord.Compat
             ("TaleWorlds.CampaignSystem.Conversation.ConversationSentence", "set_InputToken"),
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.TradeSkillCampaignBehavior", "ProcessPurchases"),
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.TradeSkillCampaignBehavior", "ProcessSales"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.WorkshopsCampaignBehavior", "GetDataOfWorkshop"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.WorkshopsCampaignBehavior", "AddNewWorkshopData"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.WorkshopsCampaignBehavior", "GetWarehouseRoster"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.WorkshopsCampaignBehavior", "AddNewWarehouseDataIfNeeded"),
         };
 
         private static readonly (string type, string member, string why)[] LotShape =
