@@ -92,15 +92,18 @@
 - ✅ Your herd is looked at three times a visit, as you enter a settlement, again once it has finished trading, and once more as you leave, so a penalty that arrives while you are in town is caught before you ride out
 - ✅ Losing men in a battle or to desertion is noticed the same way as picking up an animal
 - ✅ Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all, cheapest first at every step
-- ✅ It never sells a horse one of your men on foot is riding, because that horse is not slowing you down, it keeps enough haul animals to carry what you are already carrying, and it keeps back as many animals as a quest of yours is waiting on. One switch turns it off
+- ✅ It never sells a horse one of your men on foot is riding, because that horse is not slowing you down
+- ✅ It keeps enough haul animals to carry what you are already carrying, and it keeps back as many animals as a quest of yours is waiting on. One switch turns it off
 - ✅ A lame horse, mule or camel, or one of any other quality, is never sold to get you back up to speed or bought to carry more, because the game does not count it gone or come until you load again
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
-- ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it: it holds at Max spend per visit until your purse is five times that, then grows by one more Max spend per visit for every doubling of the purse, so 10000 in the purse allows 2000 and 20000 allows 3000. On out of the box
+- ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it. On out of the box
+- ✅ Adaptive spend limit holds at Max spend per visit until your purse is five times that, then grows by one more Max spend per visit for every doubling of the purse, so 10000 in the purse allows 2000 and 20000 allows 3000
 - ✅ Pick where to sell on the whole load, on while it is being tried out: every market in reach is weighed on what it would pay for the whole load rather than on what it pays for one unit
 - ✅ The whole load is only what your caps, your gold, your cargo and your herd let it buy, and a market is weighed only on what its own purse can pay for
 - ✅ When the gold left after the goods before it buys fewer units than a good was weighed on, the market is picked again for what it can still buy
-- ✅ Holds trade goods and livestock you never paid for, the ones a town event hands you or a quest leaves in your bags, until a market beats what the cheapest market it knows would have charged for them by your margin, so they are never given away at the first stall that will take them
+- ✅ Holds trade goods and livestock you never paid for, the ones a town event hands you or a quest leaves in your bags, until a market beats what the cheapest market it knows would have charged for them by your margin
+- ✅ Goods you never paid for are never given away at the first stall that will take them
 - ✅ Holds a good you bought for the market marked on your map rather than selling it one town short for much less: Hold cargo for the best market sells it on the way only for at least 75% of what that market pays
 - ✅ Hold cargo for the best market holds only as many as the marked market would buy, 0% holds nothing, and looted gear goes to the first market that can pay for it
 - ✅ Hold cargo for the best market holds nothing in the marked market itself, or while Auto-mark best sell market on map is off
@@ -108,7 +111,8 @@
 - ✅ What you never bought, loot included, is sold only once it has sold what you bought and done its buying, with the gold the merchant has left, so the goods you trade get that gold first
 - ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
 - ✅ Says on screen when the profit could add no Trade XP because your Trade skill is past the game's learning limit, and how many focus points in Trade or points of Social would let it learn again
-- ✅ Credits every companion riding with you a share of that same profit, which the game turns into Trade XP the same way it does yours, at a share you set, so a trading clan learns from the run as well as its lord. Off out of the box, so the XP is yours alone until you ask for it
+- ✅ Credits every companion riding with you a share of that same profit, which the game turns into Trade XP the same way it does yours, at a share you set, so a trading clan learns from the run as well as its lord
+- ✅ Share of the profit your companions learn from is off out of the box, so the XP is yours alone until you ask for it
 - ✅ Trades in villages as well, under their own stricter travel limit, and leaves a village its last of each good and the last coin in its purse, so its shop stays open
 - ✅ Puts 1000 denars back in every village left with an empty purse, once for a campaign, the first time you enter it, so a village an older version spent out can be traded with again, and it says on screen how many it refilled
 - ✅ Trade with towns and Trade with villages each switch their own kind of market off, so TradeLord can work villages alone, towns alone, or leave both markets to you
@@ -120,7 +124,8 @@
 - ✅ An offer TradeLord leaves is still yours to take in the conversation, and what you pay for it is written down as what those goods cost you
 - ✅ When TradeLord leaves the villagers' offer to you, a message on screen says why: your margin, your purse, your cargo room, your herd, the good in it that kept it off or nowhere in reach to resell it
 - ✅ A caravan is traded with at the prices of the town you are in, or else the nearest town, which is what the game's own trade screen charges you with a caravan
-- ✅ A caravan on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, your looted gear, Hold cargo for the best market, the herd speed penalty and the settling delay
+- ✅ A caravan on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, and your looted gear
+- ✅ Hold cargo for the best market, the herd speed penalty and the settling delay hold for a caravan on the road as they do in a market
 - ✅ Meeting that same party again straight away counts as the same meeting, so it never buys back what it has just sold them and what it spent still counts against its caps, while meeting them again later starts afresh
 - ✅ Once the goods have changed hands you can say so, and the trader answers
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
@@ -142,7 +147,9 @@
 - ✅ Unique and player-crafted gear, and quest items
 - ✅ Your haul animals are never sold for profit either, though it will buy them for you, and naming one on your always-sell list is the only way to move one by hand
 - ✅ An animal that carries nothing for you and is not livestock is no haul animal, so it is sold like any other cargo rather than sitting in your bags for good
-- ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it: sell them, which is what it does out of the box; keep every one, which holds anything built from smithing parts, forged or looted off a bandit alike; or **keep the ones you have not learned**, which holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know
+- ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it, and it sells them out of the box
+- ✅ Keep every one holds anything built from smithing parts, forged or looted off a bandit alike
+- ✅ **Keep the ones you have not learned** holds a weapon while a part of it is still locked in your smithy and sells it once it can teach you nothing, so your bags stop filling with junk you already know
 - ✅ Armour, shields, bows and crossbows carry no smithing design and are sold as usual, and a good on your always-sell list still goes
 - ✅ Your food reserve (accounted for the men in your party)
 - ✅ A share of every kind of food you carry, if you ask for it, so your party keeps its food variety morale bonus. It follows Restock and keep food (days of supply): set that to 0 and TradeLord keeps no food back at all
@@ -152,49 +159,72 @@
 - ✅ Any good you put on the never-sell or never-buy list, named by its item id or by the name on screen
 - ✅ More livestock than your party can drive, so a purchase never slows you down
 - ✅ Markets belonging to a faction you are at war with
-- ✅ The game's economy: it trades at the game's own prices, through the game's own buying and selling. On the road, where there is no market to sell to, it moves the goods and the gold itself, at the prices the game's own trade screen or the villagers' own offer would charge you
+- ✅ The game's economy: it trades at the game's own prices, through the game's own buying and selling
+- ✅ On the road, where there is no market to sell to, it moves the goods and the gold itself, at the prices the game's own trade screen or the villagers' own offer would charge you
 
 **Settings, when you want to change anything**
 
 - ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, newly marks on your map or holds your cargo for is further than you care to ride
 - ✅ Either ceiling set to 0 takes that limit off, and the Town travel ceiling at 0 weighs every town in Calradia, which is the slowest TradeLord runs
 - ✅ A minimum stock before it calls something worth buying
-- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the workshops and what the town uses up into a route's price, into where TradeLord means to sell what it buys, into the market marked on your map and into Hold cargo for the best market; it follows Live world prices, so turning those off turns this off too
+- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the workshops and what the town uses up into a route's price
+- ✅ Count what is on its way to a market also goes into where TradeLord means to sell what it buys, into the market marked on your map and into Hold cargo for the best market
+- ✅ Count what is on its way to a market follows Live world prices, so turning those off turns this off too
 - ✅ The margin every trade has to clear, on the way in and on the way out
 - ✅ Separate rules for food, smithing materials and livestock
 - ✅ A share of the whole hold TradeLord may fill, so it stops buying with room left for what a battle or a quest hands you. It ships at the full hold, and selling is unaffected
-- ✅ Caps on one good by count, which ships at 32 units a visit, or by denars, on how many of it you will carry, on the share of the hold it may fill, which ships at 45% so one cheap good cannot take your whole cargo, and on the whole visit, which ships at 1000 denars so a full purse is never spent in one town
+- ✅ Caps on one good by count, which ships at 32 units a visit, or by denars, and on how many of it you will carry
+- ✅ A cap on the share of the hold one good may fill, which ships at 45% so one cheap good cannot take your whole cargo
+- ✅ A cap on the whole visit, which ships at 1000 denars so a full purse is never spent in one town
 - ✅ They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off an animal, since the game never counts an animal as cargo
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
-- ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know. It sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells
+- ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know
+- ✅ What a good counts as having cost you sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay, off out of the box, that keeps it out of a brand new campaign until prices calm down
-- ✅ Staged Trading, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other, one unit to a transfer at the price each unit really fetches
-- ✅ Change what you like, then press Done to trade or Cancel to leave it. While it is on, nothing is traded as you arrive or as you leave: Trade here now (TradeLord) in the town menu is what lays the deal out, and a party met on the road still trades as before
-- ✅ The trade screen's own running total shows what the deal comes to, and once you close it TradeLord says what your purse did. Press Done and it reports what moved the same way it reports a trade of its own, and credits the profit to your Trade skill
-- ✅ Buy Workshops Remotely, on its own button below the TradeLord ledger: every workshop in Calradia a notable would sell you, with its town, what it makes, who owns it, what it has earned lately and what it would cost, most profitable first. Buy any of them from there, wherever you are standing, and it asks you to confirm before it spends a denar
+- ✅ Staged Trading, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other
+- ✅ Staged Trading lays the deal out one unit to a transfer, at the price each unit really fetches
+- ✅ Change what you like, then press Done to trade or Cancel to leave it
+- ✅ While Staged Trading is on, nothing is traded as you arrive or as you leave: Trade here now (TradeLord) in the town menu is what lays the deal out, and a party met on the road still trades as before
+- ✅ The trade screen's own running total shows what the deal comes to, and once you close it TradeLord says what your purse did
+- ✅ Press Done and it reports what moved the same way it reports a trade of its own, and credits the profit to your Trade skill
+- ✅ Buy Workshops Remotely, on its own button below the TradeLord ledger: every workshop in Calradia a notable would sell you, with its town, what it makes, who owns it, what it has earned lately and what it would cost, most profitable first
+- ✅ Buy any workshop from there, wherever you are standing, and it asks you to confirm before it spends a denar
 - ✅ The most workshops you may own, raised to 200 out of the box, so your clan tier no longer decides how many you can hold. Set it to whatever number you like, and put it back to the game's own limit with a 0
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
 
 **And**
 
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM, with a Reset button at the top of it that puts every setting back to the value TradeLord ships with and empties your four item lists
-- ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting. Its trade messages, ledger panel, price tooltips, town menu entries, the lines it adds when you meet a caravan or a band of bandits, and the settings screen itself all take the new language the moment you pick it, with no restart and no reload
+- ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting
+- ✅ Its trade messages, ledger panel, price tooltips, town menu entries, the lines it adds when you meet a caravan or a band of bandits, and the settings screen itself all take the new language the moment you pick it, with no restart and no reload
 - ✅ Built on Bannerlord 1.4.8.119303. The mod is supported on 1.4.8.119303 and 1.5.3.122374
-- ✅ Enable extended debug logging, on out of the box, one switch for everything TradeLord writes about its own working in `TradeLord.log`: what the market you are standing in pays and charges for every good you carry, read four ways before anything is traded, named alongside the price model the game is running and any other mod changing it, then what it quoted for every good it traded next to what the market actually paid, and after every route scan how many prices it opened and how long it took
-- ✅ The same switch writes down what it expected a market to hold by the time you got there and what it really held when you walked in, good by good, and everything the map marker weighed, each time the units or the gold your cargo would fetch there change, or whether it holds the mark: every market it priced with the days, the units, the gold and the profit a day, the marked market broken down good by good with today's price beside the price it expects once what is on its way lands, how long each weighing took, and how the mark held up against what that market paid you
+- ✅ Enable extended debug logging, on out of the box, one switch for everything TradeLord writes about its own working in `TradeLord.log`
+- ✅ The same switch writes what the market you are standing in pays and charges for every good you carry, read four ways before anything is traded, named alongside the price model the game is running and any other mod changing it
+- ✅ The same switch writes what it quoted for every good it traded next to what the market actually paid, and after every route scan how many prices it opened and how long it took
+- ✅ The same switch writes down what it expected a market to hold by the time you got there and what it really held when you walked in, good by good
+- ✅ The same switch writes down everything the map marker weighed, each time the units or the gold your cargo would fetch there change, or whether it holds the mark: every market it priced with the days, the units, the gold and the profit a day
+- ✅ The same switch writes down the marked market broken down good by good with today's price beside the price it expects once what is on its way lands, how long each weighing took, and how the mark held up against what that market paid you
 - ✅ When only other markets change, the same switch writes one line naming each market whose gold or units changed, any market newly priced or no longer priced, and a new next best
 - ✅ What this means, behind a ? beside the TradeLord ledger title: the line that used to run under the routes, one clause to a line in a window of its own, so the ledger itself stays clean
-- ✅ Recent trades, on its own button on the campaign map under the TradeLord one, so it opens without the ledger: the last twenty buys and sells it made for you, newest first, each with the day, the town, the gold it gained or cost, and what moved. Gold gained reads green and gold spent amber. It is kept in your save, so the list is still there when you load the campaign again
-- ✅ One self-check line at the top of every campaign in `TradeLord.log`, saying which of its patches applied and whether it could read the herd penalty, the quest goods, your language file and the game's price model, so a bug report is one line to paste
-- ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it. It is kept from one session to the next, and the one thing that ever empties it is starting the game with it already past 999 KB, which it says in the log itself
+- ✅ Recent trades, on its own button on the campaign map under the TradeLord one, so it opens without the ledger: the last twenty buys and sells it made for you, newest first, each with the day, the town, the gold it gained or cost, and what moved
+- ✅ In Recent trades, gold gained reads green and gold spent amber. It is kept in your save, so the list is still there when you load the campaign again
+- ✅ A self-check line at the top of every campaign in `TradeLord.log` says which of its patches applied and whether it could read the herd penalty, the quest goods, your language file and the game's price model, so a bug report is one line to paste
+- ✅ Everything it did goes to `TradeLord.log`, which you can read yourself or send to me if something happens so I can debug it
+- ✅ `TradeLord.log` is kept from one session to the next, and the one thing that ever empties it is starting the game with it already past 999 KB, which it says in the log itself
 
 **All of it is yours to change.** Every feature above is a switch or a number on the settings screen,
 which TradeLord puts there through MCM. Install MCM alongside it and you can turn any one of them off,
-or set it to whatever you like. The same switches and numbers are also in `TradeLord.ini`, written beside
-`TradeLord.log` the first time TradeLord loads. The file and the settings screen are twins: each records when it
-was last saved, whichever was saved last wins, and the other is written to match, so you can install or remove
-MCM whenever you like and edit the file by hand either way without losing what you set.
+or set it to whatever you like.
+
+The same switches and numbers are also in `TradeLord.ini`, written beside `TradeLord.log` the first time
+TradeLord loads.
+
+The file and the settings screen are twins: each records when it was last saved, whichever was saved last
+wins, and the other is written to match.
+
+So you can install or remove MCM whenever you like, and edit the file by hand either way, without losing
+what you set.
 
 **Answers to what people ask**
 
@@ -203,7 +233,8 @@ MCM whenever you like and edit the file by hand either way without losing what y
 - ✅ Will it sell something I wanted to keep? Not what you locked in the inventory screen, not what a quest of yours is waiting on, not unique or player-crafted gear, and not what you name on the never-sell list
 - ✅ Does it change prices or the economy? No. It buys and sells at the game's own prices, through the game's own buying and selling, so every other party in Calradia sees the Calradia it always saw
 - ✅ Do I need the War Sails DLC? No. With it TradeLord counts sea legs and appears in port menus, and without it everything else works the same
-- ✅ It traded nothing, why? It says so on screen and names what stopped it, with the longer answer in `TradeLord.log`. The usual reasons are your gold reserve holding your purse back, your cargo being too full to buy, and Max spend per visit or Buy cap per item being spent for that town
+- ✅ It traded nothing, why? It says so on screen and names what stopped it, with the longer answer in `TradeLord.log`
+- ✅ What usually stops it trading? Your gold reserve holding your purse back, your cargo being too full to buy, and Max spend per visit or Buy cap per item being spent for that town
 - ✅ Can I run another trade mod alongside it? Run only one mod that trades, or the two of them fight over the same cargo and the same purse
 
 ## What it needs

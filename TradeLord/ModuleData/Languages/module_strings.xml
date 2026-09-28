@@ -57,7 +57,7 @@
 		<string id="TL67" text="No profitable routes in reach"/>
 		<string id="TL68" text="{COUNT} profitable routes, best first"/>
 		<string id="TL69" text="No routes are within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."/>
-		<string id="TL70" text="Click a town name to jump to it and pin or unpin it | Days = you -&gt; buy town -&gt; sell town | Carv. = caravans at those towns | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit"/>
+		<string id="TL70" text="Click a town name to jump to it and pin or unpin it | Days = you -&gt; buy town -&gt; sell town | Carv. = caravans at those towns"/>
 		<string id="TL71" text=" | Score = profit per day discounted by Conf"/>
 		<string id="TL72" text=" | Score = profit per day"/>
 		<string id="TL73" text=" | resale safety factor applied"/>
@@ -101,29 +101,29 @@
 		<string id="TL259" text="Cheapest market you know"/>
 		<string id="TL260" text="Ledger entry in town menu"/>
 		<string id="TL261" text="Keep some of every kind of food" />
-		<string id="TL361" text="Hold back a few of every kind of food you carry, so the party keeps its food variety morale bonus. It needs Restock and keep food (days of supply) above turned on to do anything, and what it holds back counts towards those days. Livestock is left out, since TradeLord trades a herd as goods and never as food. OFF by default." />
+		<string id="TL361" text="Keeps a few of each food for the food variety morale bonus, out of your days of food. It needs Restock and keep food (days of supply) above turned on to do anything. No livestock: it trades a herd as goods and never as food. OFF by default." />
 		<string id="TL262" text="How many of each kind of food to keep" />
 		<string id="TL362" text="How many of each kind of food the switch above holds back. This is a count of the food itself, not a number of days: Restock and keep food (days of supply) above is the one that works in days. Two is usually enough." />
 		<string id="TL264" text="Smeltable weapons" />
-		<string id="TL364" text="What to do with a weapon the smithy can break down for parts. Sell them is the default. Keep every one holds anything built from smithing parts, forged or looted off a bandit alike. Keep the ones you have not learned holds a weapon only while one of its parts is still locked in your smithy." />
+		<string id="TL364" text="Weapons the smithy can break down. Default: Sell them. Keep every one holds anything built from smithing parts, forged or looted off a bandit. Keep the ones you have not learned holds one only while a part is still locked in your smithy." />
 		<string id="TL265" text="Buy to fill the ships" />
-		<string id="TL365" text="Size purchases to what your ships can hold rather than what your carts can, so you can load the fleet while you are ashore. Your party has to be able to sail; without a fleet TradeLord counts the carts instead and says so in its log. OFF by default." />
+		<string id="TL365" text="Size purchases to what your ships can hold rather than your carts, so you can load the fleet while you are ashore. Your party has to be able to sail; without a fleet TradeLord counts the carts instead and says so in its log. OFF by default." />
 		<string id="TL266" text="Keep gold for days of wages" />
-		<string id="TL366" text="Also hold back this many days of your troops' wages on top of the gold reserve above, so a shopping trip never eats the payroll. It is worked out from your real wage bill every time TradeLord trades, so it grows with the army. 0 holds back the flat reserve only." />
+		<string id="TL366" text="Also hold back this many days of your troops' wages on top of the gold reserve, so a shopping trip never eats the payroll. It follows your real wage bill as TradeLord trades, growing with the army. 0 holds back the flat reserve only." />
 		<string id="TL267" text="Buy haul animals" />
-		<string id="TL367" text="Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, only to carry goods or food a full cargo left behind. It never buys more than you can drive without slowing down, and it stops before your gold reaches your reserve. The two settings below say how much gold it waits for and what it will pay. ON by default."/>
+		<string id="TL367" text="Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, only to carry goods or food a full cargo left behind. Never enough to slow you, and it stops before your gold reaches your reserve. ON by default."/>
 		<string id="TL269" text="Free passage from bandits" />
 		<string id="TL369" text="When you run into looters or bandits, TradeLord adds a line asking to be let past. Saying it ends the encounter with no fight and no ransom, and they leave you alone for a few hours. It is ON by default." />
 		<string id="TL270" text="Sell them" />
 		<string id="TL271" text="Keep every one" />
 		<string id="TL272" text="Keep the ones you have not learned" />
 		<string id="TL273" text="Trade with caravans and villagers" />
-		<string id="TL373" text="Meet a caravan or villagers on the road and TradeLord trades at once. It sells a caravan what clears your margin and buys what sells on for more. Villagers are never sold to: their whole offer is taken when it clears your margin, past Max spend per visit, Never buy grain and the caps on one good, or left to you with the reason why. ON by default." />
+		<string id="TL373" text="Trades at once with a caravan on the road: sells what clears your margin, buys what resells higher. Villagers are never sold to; their whole offer is taken if it clears your margin, whatever your caps and Never buy grain say. ON by default." />
 		<string id="TL274" text="Share of the hold one good may fill (0 = off)" />
 		<string id="TL374" text="Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and haul animals. 0 turns it off. Selling is unaffected." />
 		<string id="TL275" text="Sell animals that slow you down" />
-		<string id="TL375" text="Sells animals to lift the herd speed penalty, only while it is on you and only as many as it takes. Livestock goes first, then a spare mount, then your haul animals, and your war horses and noble horses last of all, and it keeps enough haul animals to carry what you are already carrying. Anything you protected is left alone. ON by default." />
-		<string id="TL352" text="Goods TradeLord always buys, past the category policies and the never-buy-grain switch. Named by item id or by the name the game shows, comma separated, as above. The never lists above and an inventory lock still hold, and it still buys only what it can sell on for more somewhere in reach."/>
+		<string id="TL375" text="Sells animals until the herd speed penalty lifts: livestock, then a spare mount, then your haul animals, and your war horses and noble horses last of all. It keeps enough haul animals to carry what you are already carrying. ON by default." />
+		<string id="TL352" text="Goods TradeLord always buys, past the category policies and the never-buy-grain switch, named as above. The never lists and an inventory lock still hold, and it buys only what it can sell on for more somewhere in reach."/>
 		<string id="TL250" text="Language"/>
 		<string id="TL351" text="Once your party already carries this many of a good, TradeLord leaves it alone and spends on something else. Counts what you are carrying now plus anything bought this visit. Selling is unaffected. 0 = no limit."/>
 		<string id="TL350" text="The language TradeLord speaks in the game: its trade messages, the ledger panel, the price tooltips and its town menu entries. English by default. It takes hold as you pick it, with no restart and no reload." />
@@ -175,9 +175,9 @@
 		<string id="TL301" text="ON (default): prices are read live from the world economy, including markets you have not visited. OFF: only prices you have seen in person are used."/>
 		<string id="TL303" text="Never scan, suggest or auto-trade with settlements at war with you."/>
 		<string id="TL305" text="Best-buy hints require at least this many units in stock. 0 = off. Live-price mode only, because observed mode records prices, not stock levels."/>
-		<string id="TL306" text="How far TradeLord looks for a town, in travel days. Towns farther than this are hidden from tooltips, held out of the routes and kept off the map marker (a town already marked may pass it by a fifth), and no suggested route may exceed it. Set it to 0 and the limit comes off, so every town in Calradia is weighed, which is far slower. Default 2.4."/>
+		<string id="TL306" text="How far TradeLord looks for a town, in travel days. Farther towns stay out of tooltips, routes and the map marker (a town already marked may pass it by a fifth). 0 lifts the limit: every town in Calradia is weighed, far slower. Default 2.4."/>
 		<string id="TL307" text="The same limit for villages, kept separate so you can hold them closer than towns. Default 1."/>
-		<string id="TL308" text="Apply the resale safety factor to the sell side when ranking and totalling routes, so listed profit allows for prices drifting before you arrive. OFF shows raw margins. Routes must clear the safety factor to be listed either way, since that is the same test a buying pass applies on arrival."/>
+		<string id="TL308" text="Apply the resale safety factor to the sell side when ranking and totalling routes, so listed profit allows for prices drifting before you arrive. OFF shows raw margins. Either way a route must clear it to be listed, as a buying pass does."/>
 		<string id="TL309" text="Price a lot unit by unit through the game's own price model, so quantity and profit account for your own buying moving the price. OFF prices every unit at the first unit's price. Towns and live-price mode only."/>
 		<string id="TL310" text="Order the panel by profit per day, discounted by how likely that profit is to survive the trip: margin, stock depth, trip length, caravan traffic and price age. OFF ranks on raw profit per day."/>
 		<string id="TL311" text="Adds the best known buy and sell markets, with stock and travel time, to item tooltips."/>
@@ -185,21 +185,21 @@
 		<string id="TL313" text="Colors trade-good and livestock rows in the inventory by how this market's price compares with the best known market."/>
 		<string id="TL314" text="Key that opens the ledger panel on the campaign map. One key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, such as Ctrl+T. A bare key the game also uses triggers both actions. Anything unknown falls back to T." />
 		<string id="TL315" text="Two clickable buttons on the right edge of the campaign map: TradeLord opens the ledger panel, and Recent trades below it opens the last twenty buys and sells. Turn OFF if they interfere with map clicks."/>
-		<string id="TL316" text="Shows the single TradeLord trade entry in town and village menus, which sells what you bought, buys, then sells what you never bought, loot included, with the gold the merchant has left, all in one go. Turn it off to leave the menu to trading done automatically as you arrive. While Staged Trading holds that trading back, the entry shows anyway."/>
+		<string id="TL316" text="TradeLord's trade entry in town and village menus: it sells what you bought, buys, then sells what you never bought, loot included. Turn it off to trade only on arrival. While Staged Trading holds that trading back, the entry shows anyway."/>
 		<string id="TL317" text="Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu."/>
 		<string id="TL318" text="Buys the moment you walk into a market, after selling what you bought and before selling what you never bought. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
-		<string id="TL320" text="The margin every trade must clear, in both directions. Sell only if the price exceeds your cost basis by at least this much. Buy, or list a route, only if the far market exceeds the local price by this much after the resale safety factor. Raising it trades less."/>
-		<string id="TL321" text="The days of food TradeLord keeps you stocked to. It holds this much back before selling food and tops you back up as it trades, buying the cheapest a market has. Your never-buy list still holds, and it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
+		<string id="TL320" text="The margin every trade must clear, both ways. Sell only if the price beats your cost basis by this much. Buy or list a route only if the far market beats the local price by this much after the resale safety factor. Raising it trades less."/>
+		<string id="TL321" text="The days of food TradeLord keeps you stocked to: it holds that much back from selling and tops you up as it trades, cheapest first. Your never-buy list holds, and it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
 		<string id="TL322" text="What automated trading may do with food. The days-of-supply food reserve is separate and still applies."/>
 		<string id="TL323" text="What automated trading may do with charcoal, hardwood, iron ore and ingots. Pick Leave alone to keep smithing stock out of automated trading entirely."/>
-		<string id="TL324" text="What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Haul animals and riding mounts have their own settings and this one does not affect them."/>
+		<string id="TL324" text="What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Haul animals and riding mounts have their own settings."/>
 		<string id="TL325" text="Never auto-trade unique or player-crafted items. A haul animal is never sold by policy whatever you set here, and only an explicit always-sell entry can move one."/>
 		<string id="TL326" text="Locked items in the inventory screen are never auto-traded. Selling matches a lock the way the game stores it, by item and quality. Buying matches by item alone, so a lock on a good stops TradeLord buying more of it whatever its quality."/>
 		<string id="TL327" text="The price a sale is measured against, so it sets both the profit TradeLord reports and the Trade XP the sale earns. Anything you never bought, loot included, is valued at the cheapest market you know of whichever one you pick."/>
 		<string id="TL328" text="Also sells weapons and armor of this tier and below. Starts at tier 1, which is the gear looters and bandits drop. Locks and protections still apply."/>
-		<string id="TL329" text="On the way, sell a good you bought only for at least this share of what the market marked by Auto-mark best sell market on map pays for it, counting what is on its way there as the ledger does, holding only as many as it would buy. Loot is never held, nor anything in the marked market or while that marker is off. 0% holds nothing. 75% by default."/>
+		<string id="TL329" text="On the way, sell a good you bought for at least this share of the marked market's price, counting what is on its way there, holding only what it would buy. No loot is held, nor anything in it or with no marker. 0% is off. 75% by default."/>
 		<string id="TL331" text="Goods TradeLord must never sell. Name each by item id, by the short name TradeLord.log prints such as grain or iron_ore, or by the name the game shows, comma separated. It leaves these alone when buying too."/>
-		<string id="TL332" text="Goods TradeLord always sells, past the category policies, the unique and crafted protection and the food reserve. Named as above. The never-sell list, an inventory lock and a good a quest is waiting on still hold. This is the only way to sell a haul animal for profit."/>
+		<string id="TL332" text="Goods it always sells past category policies, unique and crafted protection and the food reserve, named as above. The never-sell list, an inventory lock and a good a quest waits on still hold. The only way to sell a haul animal for profit."/>
 		<string id="TL334" text="Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip."/>
 		<string id="TL335" text="Most units of one good TradeLord buys per visit. 0 = no limit on the count. Default 32."/>
 		<string id="TL336" text="Also cap spending per item per visit in denars."/>
@@ -208,13 +208,13 @@
 		<string id="TL339" text="Grain is heavy and low margin, so buying it fills the cargo for little return. Selling and the food reserve are unaffected. ON by default."/>
 		<string id="TL340" text="Goods TradeLord must never buy. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected."/>
 		<string id="TL341" text="TradeLord trades in village menus and villages join the price scans."/>
-		<string id="TL342" text="Reports what TradeLord would sell and buy, without trading. Treat it as a best case: nothing moves, so every unit is priced at today's opening price and a real pass usually trades less. Every cap and the merchant's gold are modelled exactly."/>
+		<string id="TL342" text="Reports what TradeLord would sell and buy without trading. Treat it as a best case: nothing moves, so every unit is priced at today's opening price and a real pass usually trades less. Every cap and the merchant's gold are modelled exactly."/>
 		<string id="TL343" text="No TradeLord trading before this campaign day, from the menu or on entry. Prices in a new campaign have not settled yet."/>
 		<string id="TL344" text="Scales the Trade XP awarded for automated profit. 0 disables XP."/>
-		<string id="TL345" text="Marks the market in reach that pays most for the cargo it would really sell there, following you as you ride. A village is only ever marked while Trade with villages is on. It keeps to the travel ceilings and skips the market TradeLord last traded at until you return. ON by default; clicking a town in the ledger panel still pins one by hand."/>
+		<string id="TL345" text="Marks the market paying most for the cargo it would really sell there, within the travel ceilings; a village only while Trade with villages is on. It skips the market TradeLord last traded at until you return. ON by default."/>
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
-		<string id="TL349" text="Trading done automatically, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports to TradeLord.log only, with no lines on screen. Warnings still show on screen: cargo full, a purse below your Gold reserve, and an item list entry that matches no good. The trade entry in the menu always reports."/>
+		<string id="TL349" text="Auto trading, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports only to TradeLord.log. Warnings still show on screen: cargo full, purse below Gold reserve, a list entry that matches no good."/>
 		<string id="TL100" text="Language"/>
 		<string id="TL101" text="Knowledge"/>
 		<string id="TL102" text="Insight"/>
@@ -227,27 +227,27 @@
 		<string id="TL276" text="Put every setting back to how TradeLord ships" />
 		<string id="TL277" text="Reset" />
 		<string id="TL278" text="Trade with towns" />
-		<string id="TL376" text="Puts every TradeLord setting back to the value it ships with, in one go. It takes hold at once and is written to TradeLord.ini as well, so nothing is left half changed. Your never sell, always sell, never buy and always buy lists are emptied too, and what changed is written to TradeLord.log." />
+		<string id="TL376" text="Puts every TradeLord setting back to its shipped value at once, writing it to TradeLord.ini so nothing is left half changed. Your never sell, always sell, never buy and always buy lists are emptied too, and TradeLord.log says what changed." />
 		<string id="TL377" text="Your purse is at {GOLD} denars and your gold reserve holds {RESERVE} of it back, so there is nothing here you could buy. Sell some cargo, or lower Gold reserve in its settings." />
 		<string id="TL392" text="Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages, so it will not buy anything here. Sell some cargo, or lower either of those in its settings."/>
 		<string id="TL393" text="Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages, so there is nothing here you could buy. Sell some cargo, or lower either of those in its settings."/>
 		<string id="TL390" text="TradeLord trades in town menus and towns join the price scans. ON by default." />
 		<string id="TL279" text="Count what is on its way to a market"/>
-		<string id="TL396" text="Counts what caravans and workshops bring to or take from a market before you arrive, and what the town itself uses up. Route stock uses it; with Bulk price simulation on, so do route prices, a price in a tooltip, Auto buy, the map marker and Hold cargo for the best market. A village follows the town it trades with. Needs Live world prices."/>
+		<string id="TL396" text="Counts what caravans and workshops bring or take and the town uses up before you arrive; a village follows its town. It sets route stock and, with Bulk price simulation on, route and tooltip prices and where to sell. Live world prices only."/>
 		<string id="TL394" text=" | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there and what the town and its workshops use up"/>
 		<string id="TL395" text=" and what each will make next"/>
 		<string id="TL397" text=" | Qty! = part of that amount is still on the road and lands before you would"/>
 		<string id="TL399" text=" | the Sell price has held at {HELD} of what this panel promised, over {COUNT} price(s) it has checked"/>
-		<string id="TL400" text="Rather than trading for you, TradeLord opens the trade screen and lays its whole deal on it: all it would sell on one side, all it would buy on the other. Change what you like, then press Done to trade or Cancel to leave it. Nothing is traded as you arrive while this is on, and a party met on the road still trades as before. OFF by default."/>
+		<string id="TL400" text="Instead of trading, TradeLord lays its whole deal on the trade screen: sales on one side, buys on the other. Change what you like and press Done or Cancel. Nothing is traded on arrival; a party met on the road still trades. OFF by default."/>
 		<string id="TL401" text="TradeLord has laid out {SOLD} unit(s) to sell for {GAINED} denars and {BOUGHT} to buy for {SPENT}. Change anything you like, then press Done to trade, or Cancel to leave it."/>
 		<string id="TL402" text="TradeLord found nothing here worth trading, so it has laid out nothing. Press Cancel to leave the market as it is."/>
 		<string id="TL403" text="TradeLord is holding its trade back until you have seen it. Choose {ENTRY} in this menu to have it laid out on the trade screen."/>
 		<string id="TL404" text="rising"/>
 		<string id="TL405" text="falling"/>
 		<string id="TL406" text="Mark a market rising or falling"/>
-		<string id="TL407" text="Marks a market in the tooltip rising or falling when its price has moved 5% or more since the last day you looked there. It needs two looks at the same market on two different days before it can say anything. Only does anything with Live world prices off, since that is when TradeLord records prices at all. OFF by default."/>
+		<string id="TL407" text="Marks a market in the tooltip rising or falling when its price moved 5% or more since you last looked there, after two looks on different days. Only does anything with Live world prices off, when TradeLord records prices. OFF by default."/>
 		<string id="TL282" text="Days to keep a price you recorded"/>
-		<string id="TL408" text="A price you wrote down yourself is kept this many days, then forgotten: a market you last looked at longer ago than this stops being suggested and drops out of your save. 0 keeps every price for as long as your campaign lasts. Only does anything with Live world prices off, since that is when TradeLord records prices at all."/>
+		<string id="TL408" text="A price you wrote down is kept this many days, then forgotten: a market last seen longer ago is no longer suggested and leaves your save. 0 keeps every price. Only does anything with Live world prices off, when TradeLord records prices."/>
 		<string id="TL409" text="You paid"/>
 		<string id="TL410" text="Share of the hold TradeLord may fill"/>
 		<string id="TL411" text="Stop buying once your cargo reaches this share of what your party can carry, so there is room left for what a battle or a quest hands you. 100% lets it fill the hold. Selling is unaffected."/>
@@ -283,7 +283,7 @@
 		<string id="TL441" text=" This takes you below the {HELD} denars TradeLord holds back as your gold reserve and wage cover, which it will not spend on goods."/>
 		<string id="TL442" text="Today"/>
 		<string id="TL443" text="Trust a market by what it has paid"/>
-		<string id="TL444" text="A market that has paid less than this panel promised is scored lower, so routes that sell there fall down the list. It counts only once you have walked into that market five times, and it can never move a route's Score by more than a quarter. Needs Rank routes by confidence. ON by default."/>
+		<string id="TL444" text="A market paying less than this panel promised scores lower, so its routes fall in the list: only once you have walked into that market five times, and by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default."/>
 		<string id="TL445" text=" | Score is lowered for a market that has paid less than this panel promised"/>
 		<string id="TL446" text="?"/>
 		<string id="TL447" text=" | stock counts what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there and what the town and its workshops use up; prices need Bulk price simulation"/>
@@ -292,12 +292,12 @@
 		<string id="TL450" text="No market in reach stocks {COUNT} or more. | Minimum stock for buy suggestions asks for that. | Lower it to see where to buy this."/>
 		<string id="TL451" text="No market in reach holds {COUNT} of these, | nor {WORTH} denars' worth of them. | Lower Minimum stock for buy suggestions | or Minimum stock value for buy suggestions."/>
 		<string id="TL452" text="Minimum stock value for buy suggestions"/>
-		<string id="TL453" text="A market also counts as stocked when what it holds of a good is worth at least this many denars, even where it holds fewer units than Minimum stock for buy suggestions asks for. Worth is counted at the good's own worth, not at what the shop charges. The dearer a good is, the fewer of it a market need hold. 0 = off. Live-price mode only."/>
+		<string id="TL453" text="Counts a market as stocked when its stock of a good is worth at least this many denars at the good's worth, even under Minimum stock for buy suggestions. The dearer a good is, the fewer of it a market need hold. 0 = off. Live prices only."/>
 		<string id="TL456" text="the market you would sell them in cannot pay for more"/>
 		<string id="TL457" text="Enable extended debug logging"/>
-		<string id="TL458" text="Writes TradeLord's own workings to TradeLord.log: what every market pays and charges for the goods you carry, how well the forecast and the panel's promises held up when you walked in, and everything the map marker weighed. Needs Count what is on its way to a market for the forecast half. ON by default; turn it off to keep the log short."/>
+		<string id="TL458" text="Writes its workings to TradeLord.log: what markets pay and charge for your goods, how the forecast and the panel's promises held up, and all the map marker weighed. Needs Count what is on its way to a market for the forecast. ON by default."/>
 		<string id="TL459" text="Pick where to sell on the whole load"/>
-		<string id="TL460" text="Every good TradeLord buys is bought for a market it means to sell it in. OFF: that market is picked on what it pays for one unit. ON: every market in reach is weighed again on what it would pay for the whole load, which is what you will really be paid. It costs a little time at every market you walk into. ON while it is being tried out."/>
+		<string id="TL460" text="TradeLord buys each good for a market it means to sell in. OFF: that market is picked on one unit's price. ON: every market in reach is weighed again on what it would pay for the whole load. Takes a little time. ON while it is tried out."/>
 		<string id="TL461" text="TradeLord left the villagers' offer to you: {GOLD} denars for goods it reckons it can sell on for {RESALE}, short of your Minimum profit margin."/>
 		<string id="TL462" text="TradeLord left the villagers' offer to you: they ask {GOLD} denars, and {SPEND} of your purse is free to spend."/>
 		<string id="TL463" text="TradeLord left the villagers' offer to you because of the {GOOD} in it: {REASON}."/>
@@ -311,7 +311,8 @@
 		<string id="TL471" text="Trade XP could not be added: your Trade skill ({SKILL}) is past its learning limit ({LIMIT}). Raise your focus in Trade and your {ATTRIBUTE} together to let it learn again."/>
 		<string id="TL472" text="You have {FOCUS} focus point(s) and {POINTS} attribute point(s) left to spend on the character screen."/>
 		<string id="TL473" text="Adaptive spend limit"/>
-		<string id="TL474" text="Lets TradeLord spend more per visit as your purse grows, always on top of Max spend per visit. Until your purse holds five times that limit, the limit stays as set. Past that, it grows by one more Max spend per visit for every doubling of the purse: with 1000 set, 10000 in the purse allows 2000 and 20000 allows 3000. ON by default."/>
+		<string id="TL474" text="Lets TradeLord spend more as your purse grows, on top of Max spend per visit: it holds until your purse is five times that, then grows by one more for every doubling. With 1000 set, 10000 allows 2000 and 20000 allows 3000. ON by default."/>
 		<string id="TL475" text="TradeLord made its last trade here, so it leaves this market alone the first time you come back. Choose {ENTRY} in this menu to trade here now."/>
+		<string id="TL476" text=" | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit"/>
 	</strings>
 </base>

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.95.1
+
+- Entire codebase no longer has any UI String longer than 249 characters
+
 ## 1.95.0
 
 - TradeLord now sells what you bought and buys before it sells what you never bought, loot included, with the gold the merchant has left

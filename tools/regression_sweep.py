@@ -2445,6 +2445,74 @@ def csharp_comment_spans(src):
         i += 1
     return out
 
+def csharp_texts(src, lists=()):
+    out, calls, i, n, name, dot = [], [], 0, len(src), '', False
+    word = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
+    def logged():
+        for one in calls:
+            last = one.rsplit(".", 1)[-1]
+            if one.startswith("Log.") or re.match(r'Log[A-Z]', last):
+                return True
+            if "." in one and one.split(".")[0] in lists and last in ("Add", "Insert", "AddRange"):
+                return True
+        return False
+    while i < n:
+        c = src[i]
+        if src.startswith("//", i) or src.startswith("/*", i):
+            j = src.find("\n", i) if src[i + 1] == "/" else src.find("*/", i + 2)
+            j = n if j < 0 else (j if src[i + 1] == "/" else j + 2)
+            out.append(("comment", src[i:j], False))
+            i, name, dot = j, '', False
+            continue
+        lead = re.match(r'(?:\$@|@\$|\$|@)?"', src[i:i + 3])
+        if lead:
+            verbatim, spliced = "@" in lead.group(0), "$" in lead.group(0)
+            j, depth = i + len(lead.group(0)), 0
+            while j < n:
+                ch = src[j]
+                if spliced and src.startswith("{{", j):
+                    j += 2; continue
+                if spliced and ch == "{":
+                    depth += 1
+                elif spliced and ch == "}" and depth:
+                    depth -= 1
+                elif ch == '"' and not depth:
+                    if verbatim and src.startswith('""', j):
+                        j += 2; continue
+                    break
+                elif ch == "\\" and not verbatim:
+                    j += 2; continue
+                j += 1
+            out.append(("string", src[i + len(lead.group(0)):j], logged()))
+            i, name, dot = j + 1, '', False
+            continue
+        if c == "'":
+            j = i + 1
+            while j < n and src[j] != "'":
+                j += 2 if src[j] == "\\" else 1
+            i, name, dot = j + 1, '', False
+            continue
+        found = word.match(src, i)
+        if found:
+            said = found.group(0)
+            out.append(("name", said, False))
+            name, dot = (name + "." + said if dot and name else said), False
+            i = found.end()
+            continue
+        if c == ".":
+            dot = True
+        elif c == "(":
+            calls.append(name)
+            name, dot = '', False
+        elif c == ")":
+            if calls:
+                calls.pop()
+            name, dot = '', False
+        elif not c.isspace():
+            name, dot = '', False
+        i += 1
+    return out
+
 def tracked_files():
     import subprocess
     listed = subprocess.run(["git", "ls-files", "-z"], capture_output=True)
@@ -4035,7 +4103,7 @@ def the_page_leaves_no_markdown_behind_and_closes_every_tag():
     if out is None or version is None:
         return False
     bullets = len([one for one in (README + '\n' + COMPARISON).split('\n')
-                   if one.startswith('- ')])
+                   if one.lstrip().startswith('- ')])
     return ('**' not in out and '`' not in out
             and not [one for one in out.split('\n')
                      if one.startswith('#') or one.startswith('- ')]
@@ -4116,10 +4184,10 @@ def the_hold_hint_says_what_the_share_holds_and_when_it_holds_nothing():
     hold = en.get('TL329', '')
     said = [spoken(path).get('TL329', '') for path in TRANSLATIONS.values()]
     shipped = str(round(float(option_default('HoldCargoForBestMarket').rstrip('f')) * 100))
-    return ("On the way, sell a good you bought only for at least this share of what the market" in hold
-            and "holding only as many as it would buy." in hold
-            and "Loot is never held, nor anything in the marked market or while that marker is off." in hold
-            and "0% holds nothing." in hold
+    return ("On the way, sell a good you bought for at least this share of the marked market's price" in hold
+            and "holding only what it would buy." in hold
+            and "No loot is held, nor anything in it or with no marker." in hold
+            and "0% is off." in hold
             and hold.endswith(shipped + "% by default.")
             and "OFF by default" not in hold
             and all('TL330' not in spoken(path) for path in [ENGLISH] + list(TRANSLATIONS.values()))
@@ -4140,7 +4208,7 @@ def a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till():
             and 'Buys any haul animal' in README
             and all(said in en.get('TL375', '') and said in README for said in
                     ('then your haul animals, and your war horses and noble horses last of all',
-                     'it keeps enough haul animals to carry what you are already carrying'))
+                     'keeps enough haul animals to carry what you are already carrying'))
             and 'How much gold the town you would sell to actually has' in README)
 
 chk("1.23.0", "nothing a player reads calls a haul animal a beast, a town's gold a till, or an overpayment a premium",
@@ -5822,7 +5890,7 @@ def the_keep_back_is_drawn_down_in_one_place():
             and "foodKeep[item] =" not in t)
 
 def the_always_sell_hint_names_the_good_a_quest_is_waiting_on():
-    named = "a good a quest is waiting on still hold"
+    named = "a good a quest waits on still hold"
     words = {
         'TradeLord/ModuleData/Languages/TR/module_strings_tr.xml':
             ('g\u00f6rev', 'mal'),
@@ -6769,8 +6837,10 @@ def the_trade_pool_leads_with_the_three_switches():
 
 def no_hint_runs_past_what_the_screen_can_hold():
     en = spoken(ENGLISH)
-    long = [h for h in re.findall(r'HintText = "\{=(TL\d+)\}', M) if len(en.get(h, '')) > 350]
-    return not long and len(re.findall(r'HintText = "\{=TL\d+\}', M)) > 40
+    hints = re.findall(r'HintText = "\{=(TL\d+)\}', M)
+    long = [h for path in [ENGLISH] + list(TRANSLATIONS.values()) for h in hints
+            if len(spoken(path).get(h, '')) > 248]
+    return not long and len(hints) > 40 and all(h in en for h in hints)
 
 
 chk("1.51.0", "trading in towns answers to its own switch, the same as villages",
@@ -7038,7 +7108,7 @@ def a_herd_it_cannot_thin_says_what_it_will_not_give_up():
             and "Log.Repeatable(" in said)
 
 
-chk("1.55.0", "every quest that waits on a good you carry is read, the ones that name the good and the ones that only say how much of it, and the game version fit tool holds every field they are read from, while the gang leader's stolen goods quest, which hands you nothing until it is over, is not read at all",
+chk("1.55.0", "every quest waiting on a good you carry is read, whether it names the good or only how much of it, the game version fit tool holds every field read, and the gang leader's stolen goods quest, which hands you nothing until it is over, is not read",
     every_quest_that_waits_on_a_good_you_carry_is_read())
 chk("1.55.0", "a good a quest is waiting on is held back whatever it is, past the always-sell list, not only where it is an animal",
     a_quest_holds_back_any_good_it_waits_on_not_only_an_animal())
@@ -7162,7 +7232,7 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
                method_body(S['Ranking.cs'], "internal static float Ceiling")
                and "MarketRank.Ceiling(s.IsVillage, Options.Current)" in
                    between(S['Ledger.cs'], "internal static float TravelCeiling(Settlement s) =>", ";"))
-    said = "A village is only ever marked while Trade with villages is on." in en['TL345']
+    said = "within the travel ceilings; a village only while Trade with villages is on." in en['TL345']
     swept = "Town.AllTowns" not in S['Trading.cs']
     return walks and gated and ceiling and said and swept
 
@@ -7348,7 +7418,7 @@ def a_tooltip_prices_a_market_as_it_will_be_when_you_get_there():
             and "AsTheyWillBe(item, buys, selling: false);" in picked
             and "if (landed == 0 || site == null || item == null) return quoted;" in first
             and "return rung.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;" in first
-            and "a price in a tooltip" in spoken(ENGLISH)['TL396'])
+            and "route and tooltip prices" in spoken(ENGLISH)['TL396'])
 
 
 def the_tooltip_picks_its_five_after_the_forecast_has_priced_them():
@@ -8266,7 +8336,7 @@ def the_comparison_is_one_entry_a_mod_naming_and_linking_to_each():
         if not said.group(2).strip() or not said.group(4).strip():
             return False
     out = made_page()
-    return (len(COMPARISON) <= 5000
+    return (len(COMPARISON) <= 5050
             and out is not None
             and all('[url=https://www.nexusmods.com/mountandblade2bannerlord/mods/'
                     + mod + ']' in out for mod in wanted))
@@ -9336,7 +9406,7 @@ def the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till():
             and "Why(how)" not in between(update, "bool on =", "if (target == _picked)"))
 
 
-chk("1.77.2", "the map marker walks the purses that would earn fastest first and stops as soon as no market left can beat the best it found, stops pricing a town once its own purse is the ceiling, and works out what to write in the log only when the marker actually moves",
+chk("1.77.2", "the map marker walks the purses that would earn fastest first and stops once no market left can beat the best it found, stops pricing a town once its own purse is the ceiling, and works out its log line only when the marker actually moves",
     the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till())
 
 
@@ -10832,7 +10902,7 @@ chk("1.89.0", "the market a buy is aimed at has its price ladder walked once and
 
 
 def the_town_ceiling_says_what_turning_it_off_costs():
-    off = "Set it to 0 and the limit comes off, so every town in Calradia is weighed"
+    off = "0 lifts the limit: every town in Calradia is weighed"
     said = spoken(ENGLISH)
     if off not in said['TL306'] or off not in M:
         return False
@@ -11221,7 +11291,7 @@ def how_far_a_landing_may_move_a_market_is_found_once_a_scan():
                      "A_held_landing_never_reaches_further_than_the_landing_itself")))
 
 
-chk("1.90.11", "how far what is on its way may move a market is searched for once per town, good, side and way in a scan and forgotten with the ladders, and never moves a route further than the landing itself, so holding the forecast back costs a scan one search per market rather than one per route",
+chk("1.90.11", "how far what is on its way may move a market is searched once per town, good, side and way in a scan, forgotten with the ladders, and never moves a route past the landing itself, so a scan pays one search per market rather than one per route",
     how_far_a_landing_may_move_a_market_is_found_once_a_scan())
 
 
@@ -11362,7 +11432,7 @@ def the_trade_entry_shows_while_staged_trading_holds_trading_back():
             and "While Staged Trading holds that trading back, the entry shows anyway." in spoken(ENGLISH)['TL316'])
 
 
-chk("1.90.14", "the trade entry shows while Staged Trading holds trading back as you arrive, even with Trade entry in town menu off, the notice that names the entry only shows where the entry does, and the hint under Trade entry in town menu says so in every language",
+chk("1.90.14", "the trade entry shows while Staged Trading holds trading back as you arrive, even with Trade entry in town menu off, the notice naming the entry shows only where the entry does, and the hint under Trade entry in town menu says so in every language",
     the_trade_entry_shows_while_staged_trading_holds_trading_back())
 
 
@@ -11559,7 +11629,7 @@ def the_marker_check_weighs_a_sale_against_the_first_figure_for_what_you_carry()
                      "The_marker_keeps_its_first_figure_while_it_points_at_the_same_town_and_you_have_only_eaten")))
 
 
-chk("1.90.16", "the marker check weighs a sale against the figure the marker first gave for the town it points at and the cargo you still carry, and names its last look beside it, so it says whether the pick held over the ride rather than reading its own last look back",
+chk("1.90.16", "the marker check weighs a sale against the figure the marker first gave for its town and the cargo you still carry, naming its last look beside it, so it says whether the pick held over the ride rather than reading its own last look back",
     the_marker_check_weighs_a_sale_against_the_first_figure_for_what_you_carry())
 
 
@@ -11576,7 +11646,7 @@ def nothing_is_written_down_while_a_deal_is_laid_out_on_the_trade_screen():
             and "Drop();" in method_body(counter, "internal static TextObject Settle"))
 
 
-chk("1.90.17", "no forecast figure or promise is written down while TradeLord lays a deal out on the trade screen, because the market it would read already holds goods that may never move, so a laid out deal counts against neither check whether you take it or cancel it",
+chk("1.90.17", "no forecast figure or promise is written down while TradeLord lays a deal out on the trade screen, since that market already holds goods that may never move, so a laid out deal counts against neither check, whether taken or cancelled",
     nothing_is_written_down_while_a_deal_is_laid_out_on_the_trade_screen())
 
 
@@ -11818,8 +11888,8 @@ def the_offer_is_gone_once_tradelord_took_it_and_moves_nothing_if_asked_for_agai
 
 
 def the_hint_and_the_feature_list_say_how_villagers_are_traded_with():
-    said = ("Villagers are never sold to: their whole offer is taken when it clears your margin, "
-            "past Max spend per visit, Never buy grain and the caps on one good, or left to you with the reason why.")
+    said = ("Villagers are never sold to; their whole offer is taken if it clears your margin, "
+            "whatever your caps and Never buy grain say.")
     return (said in spoken(ENGLISH)['TL373'] and said in M
             and "Never sells to a party of villagers, and takes their whole offer" in README
             and "so the same goods can never be bought twice" in README
@@ -11930,7 +12000,7 @@ def the_feature_list_says_where_the_ledger_shows_what_it_shows():
 
 chk("1.91.3", "an item's tooltip prices every market it names, the market you stand in and a cost read off a market at the quality of the good you hover, while a cost you paid stays what you paid",
     a_tooltip_prices_every_market_at_the_quality_you_hover())
-chk("1.91.3", "the feature list puts the promise tally and the gold reserve line in What this means, names Left's days and the Trade XP along the top, and says what a trade on the road is priced at, and the comparison says only a trade in a market goes through the game's own sale",
+chk("1.91.3", "the feature list puts the promise tally and the gold reserve line in What this means, names Left's days and the Trade XP along the top and what a road trade is priced at, and the comparison says only a market trade goes through the game's own sale",
     the_feature_list_says_where_the_ledger_shows_what_it_shows())
 
 
@@ -11961,7 +12031,7 @@ def straight_back_is_an_hour_from_the_last_time_whatever_the_clock_says():
                      "Stepping_back_in_across_the_turn_of_the_hour_is_the_same_sitting")))
 
 
-chk("1.91.4", "meeting the same party again or walking back into the same market counts as the same meeting or visit for an hour after the last meeting or after you walked out, however the clock turns in between, and each meeting straight away carries that hour on",
+chk("1.91.4", "meeting the same party again or walking back into the same market counts as the same meeting or visit for an hour after the last meeting or after you walked out, however the clock turns, and each meeting straight away carries that hour on",
     straight_back_is_an_hour_from_the_last_time_whatever_the_clock_says())
 
 def what_you_paid_is_kept_for_each_quality_of_a_good():
@@ -12362,8 +12432,8 @@ def trade_xp_the_learning_limit_holds_back_says_so_and_what_lifts_it():
 
 
 def the_hint_and_the_feature_list_say_the_villagers_offer_is_one_deal():
-    return ("Villagers are never sold to: their whole offer is taken when it clears your margin, "
-            "past Max spend per visit, Never buy grain and the caps on one good, or left to you with the reason why."
+    return ("Villagers are never sold to; their whole offer is taken if it clears your margin, "
+            "whatever your caps and Never buy grain say."
             in spoken(ENGLISH)['TL373']
             and "The villagers' offer is one deal: Max spend per visit, Never buy grain and the caps on one good "
                 "never hold it back" in README
@@ -12625,9 +12695,9 @@ def what_a_full_cargo_left_behind_is_counted_at_the_price_it_would_climb_to_good
             and "What_a_full_cargo_left_behind_is_counted_at_the_price_each_unit_would_climb_to" in BUYPASSTESTS)
 
 
-chk("1.93.5", "haul animals are bought only after the goods, only when a full cargo left goods or food behind, one at a time while the gold left after that animal still buys more than the room already there holds, never to carry an overload you already have, and one animal's cargo is read off the game's own pack animal line",
+chk("1.93.5", "haul animals are bought after the goods, only for goods or food a full cargo left behind, one at a time while the gold left buys more than the room there holds, never for an overload you carry, their cargo read off the game's pack animal line",
     a_haul_animal_is_bought_only_for_what_a_full_cargo_left_behind_and_the_gold_left_can_fill())
-chk("1.93.5", "what a full cargo left behind, goods or food, is counted at the price each unit would climb to and only while the gold, the caps, the margin and the shortfall still want it, and food is counted once at the shortfall left after every food that fitted",
+chk("1.93.5", "what a full cargo left behind, goods or food, is counted at the price each unit would climb to, only while the gold, the caps, the margin and the shortfall still want it, and food once, at the shortfall left after every food that fitted",
     what_a_full_cargo_left_behind_is_counted_at_the_price_it_would_climb_to_goods_and_food_alike())
 
 
@@ -12670,12 +12740,12 @@ def a_village_is_priced_through_the_town_it_trades_with_when_the_forecast_moves_
             and "internal static Settlement PricedFrom(Settlement site)" in S['Hindsight.cs']
             and "int worthSaid = Forecast.WorthShift(site, item, withinDays);" in
                 method_body(S['Hindsight.cs'], "private static void Noted")
-            and "A village follows the town it trades with." in spoken(ENGLISH)['TL396']
+            and "a village follows its town." in spoken(ENGLISH)['TL396']
             and said_in_every_language('TL396')
             and "A village is priced through the town it trades with" in README)
 
 
-chk("1.93.5", "a village's price in a route or a tooltip moves with what lands in the town it trades with, priced the way the game prices that village and only where TradeLord can match the game's own price for it, while the forecast check still scores towns alone",
+chk("1.93.5", "a village's price in a route or a tooltip moves with what lands in the town it trades with, priced the way the game prices that village and only where TradeLord can match the game's price for it, while the forecast check scores towns alone",
     a_village_is_priced_through_the_town_it_trades_with_when_the_forecast_moves_it())
 
 
@@ -12736,14 +12806,14 @@ def what_a_town_uses_up_and_its_workshops_take_leave_its_shelf_in_the_forecast()
                      "A_town_that_uses_a_good_up_is_read_a_day_at_a_time_from_the_day_you_arrive",
                      "A_shelf_a_landing_keeps_up_still_runs_out_on_the_day_the_town_has_used_it_up"))
             and "A_town_uses_up_as_many_goods_a_day_as_its_budget_for_the_kind_buys_at_its_own_price" in MATHTESTS
-            and "what the town itself uses up" in spoken(ENGLISH)['TL396']
+            and "and the town uses up before you arrive" in spoken(ENGLISH)['TL396']
             and "what the town and its workshops use up" in spoken(ENGLISH)['TL447']
             and "what the town and its workshops use up" in spoken(ENGLISH)['TL394']
             and said_in_every_language('TL447') and said_in_every_language('TL394')
             and "What leaves the shelf is counted too: what the town uses up every day and what its workshops take" in README)
 
 
-chk("1.93.5", "the forecast counts what leaves a town's shelf as well as what lands on it: what the town uses up each day at the game's own budget and price, never more than its shelf and what lands can give, and what its workshops take for the run it counts them making, and the unit figure it is held to is what lands less what leaves",
+chk("1.93.5", "the forecast counts what leaves a town's shelf as well as what lands: the town's daily use at the game's budget and price, never more than the shelf and landings give, and what its workshops take for their counted run, netted against what lands",
     what_a_town_uses_up_and_its_workshops_take_leave_its_shelf_in_the_forecast())
 
 
@@ -12846,7 +12916,7 @@ def a_market_the_road_was_lost_to_is_asked_again_rather_than_kept_out_of_reach()
                         '" have no gold at all"'))
 
 
-chk("1.93.5", "a market the game found no road to is asked again at the next look instead of being kept out of reach for the hour, a party standing in a settlement is timed from it when its own lookup fails, nothing is ranked or scanned for the hour while every road is lost, and the map marker names the markets with no road apart from those past your ceilings or with no gold",
+chk("1.93.5", "a roadless market is asked again next look, a party in a settlement is timed from it if its lookup fails, no scan runs while every road is lost, and the marker lists roadless markets apart from those past your ceilings or out of gold",
     a_market_the_road_was_lost_to_is_asked_again_rather_than_kept_out_of_reach())
 
 
@@ -12872,7 +12942,7 @@ def the_forecast_check_says_what_the_shelf_did_the_right_way_round():
             and "the good in it that kept it off or nowhere in reach to resell it" in README)
 
 
-chk("1.93.5", "the forecast check says whether the shelf was to gain or lose, whether it did and by how much it missed, the right way round whichever way each went, and a villagers' offer with nowhere in reach to resell any of it says so rather than blaming your margin",
+chk("1.93.5", "the forecast check says whether the shelf was to gain or lose, whether it did and by how much it missed, the right way round either way, and a villagers' offer with nowhere in reach to resell any of it says so rather than blaming your margin",
     the_forecast_check_says_what_the_shelf_did_the_right_way_round())
 
 
@@ -12933,7 +13003,7 @@ def a_promise_walked_in_on_too_soon_waits_for_a_later_walk_in():
             and "when you walk in near the time it said" in README)
 
 
-chk("1.93.6", "a promise walked in on before half the time it was for is kept for a later walk-in rather than scored, the same as a forecast figure, a promise still to be judged is never stamped over by a later route scan, and how far a market's price has held is learned afresh from walk-ins that came near the time promised",
+chk("1.93.6", "a promise walked in on before half its time waits for a later walk-in, like a forecast figure, one still to be judged is never stamped over by a later scan, and how far a market's price held is learned from walk-ins near the time promised",
     a_promise_walked_in_on_too_soon_waits_for_a_later_walk_in())
 
 
@@ -12983,7 +13053,7 @@ def the_marked_market_keeps_its_mark_a_fifth_past_the_travel_ceiling():
             and "The_marked_town_keeps_its_mark_a_little_past_your_travel_ceiling_and_no_other_town_does" in MATHTESTS)
 
 
-chk("1.93.6", "the market already marked on your map keeps its mark until it is a fifth past your travel ceiling, the same margin a better market has to beat it by, so a brief slow stretch of road does not flick the marker away and back, while no market is newly marked past the ceiling",
+chk("1.93.6", "the market marked on your map keeps its mark until a fifth past your travel ceiling, the margin a better market must beat it by, so a slow stretch of road does not flick the marker away and back, while no market is newly marked past the ceiling",
     the_marked_market_keeps_its_mark_a_fifth_past_the_travel_ceiling())
 
 def a_haul_animal_is_bought_only_while_your_purse_is_above_its_floor_before_every_animal():
@@ -13234,7 +13304,7 @@ def a_workshop_run_counts_only_while_the_town_feeds_it_and_it_pays():
             and "a run counts only while the town holds its inputs and the run pays" in README)
 
 
-chk("1.93.9", "a workshop run counts only while the town's shelf holds its inputs, its outputs sell for more than its inputs cost plus the game's own margin, the town can pay for them and the workshop can pay for its inputs, the shelf moving with what lands, what caravans buy and what the town uses",
+chk("1.93.9", "a workshop run counts only while the shelf holds its inputs, its outputs beat the inputs' cost plus the game's margin, the town can pay for them and the workshop for its inputs, the shelf moving with landings, caravan buys and the town's use",
     a_workshop_run_counts_only_while_the_town_feeds_it_and_it_pays())
 
 
@@ -13323,7 +13393,7 @@ def the_first_time_back_at_the_last_market_traded_is_left_alone():
             and "Trade here now (TradeLord) still trades whenever you ask" in README)
 
 
-chk("1.93.10", "trading on arrival, and selling animals on the way out, leave the market TradeLord made its last trade at alone the first time you come back, a trade anywhere else frees it, Trade here now (TradeLord) still trades there, and a note in every language says so while the menu entry shows and automated messages are not silenced",
+chk("1.93.10", "arrival trading and selling animals on the way out leave the last market traded at alone on your first return, a trade elsewhere frees it, Trade here now still trades there, and a note says so in every language with the entry, unless silenced",
     the_first_time_back_at_the_last_market_traded_is_left_alone())
 
 
@@ -13393,7 +13463,7 @@ def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
                 method_body(S['Market.cs'], "internal static int FirstUnit"))
 
 
-chk("1.93.11", "Auto buy's choice of where a good will sell and the map marker count what is on its way to that market the way the ledger panel does, held by the same trust and the same reach, and price today's shelf exactly as before whenever the forecast says nothing moves",
+chk("1.93.11", "Auto buy's choice of where a good will sell and the map marker count what is on its way to that market as the ledger panel does, with the same trust and reach, and price today's shelf exactly as before whenever the forecast says nothing moves",
     the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel())
 
 
@@ -13633,7 +13703,7 @@ def a_staged_deal_counts_as_the_trade_it_is_and_the_marker_follows_it():
             and "A deal you take from Staged Trading counts as TradeLord's last trade at that market" in README)
 
 
-chk("1.93.14", "a deal taken from Staged Trading counts as a trade TradeLord made at that market, the map marker leaves out the market TradeLord last traded at until you come back to it whatever trades on arrival, coming back there uses that up and the log says so, and the marker weighs again as the trade screen closes",
+chk("1.93.14", "a deal taken from Staged Trading counts as TradeLord's trade there, the marker leaves out the last market traded at until you come back whatever trades on arrival and weighs again as the trade screen closes, and coming back uses that up, logged",
     a_staged_deal_counts_as_the_trade_it_is_and_the_marker_follows_it())
 
 
@@ -13704,7 +13774,7 @@ def the_marker_log_keeps_every_market_change_and_shows_todays_price():
             and "a day at" not in daily)
 
 
-chk("1.93.14", "the map marker writes its whole weighing again when what it would fetch, the units or its hold changed, and otherwise one line naming each other market whose gold or units changed, that is newly priced or no longer priced, and a new next best, and each good it marked on shows today's price beside the price it expects once what is on its way lands, and the daily herd check says where you are",
+chk("1.93.14", "the map marker rewrites its weighing when its fetch, units or hold changed, else one line of what changed elsewhere and any new next best; each marked good shows today's and its expected price, and the daily herd check says where you are",
     the_marker_log_keeps_every_market_change_and_shows_todays_price())
 
 def hold_cargo_and_the_marker_floor_count_what_is_on_its_way():
@@ -13719,29 +13789,29 @@ def hold_cargo_and_the_marker_floor_count_what_is_on_its_way():
             and ordered(takes, "Paying pays = WhatThatMarketPays(mark, mark.SettlementComponent, el, party, ride);",
                         "return TradeMath.WhatTheMarkTakes(pays.At, carried, worth, Options.Current.MinProfitMargin, purse);")
             and "BestSell(held.Item)" not in S['Marker.cs'] and "BestSell(Item(at))" not in S['Trading.cs']
-            and "counting what is on its way there as the ledger does" in en['TL329']
-            and "Route stock uses it; with Bulk price simulation on, so do route prices, a price in a tooltip, Auto buy, the map marker and Hold cargo for the best market." in en['TL396']
+            and "counting what is on its way there," in en['TL329']
+            and "It sets route stock and, with Bulk price simulation on, route and tooltip prices and where to sell." in en['TL396']
             and "the cargo it would really sell there" in en['TL345']
             and "skips the market TradeLord last traded at until you return" in en['TL345']
-            and "still pins one by hand" in en['TL345']
+            and en['TL345'].endswith("until you return. ON by default.")
             and all(en[one] in M for one in ('TL329', 'TL396', 'TL345'))
             and all(said_in_every_language(one) for one in ('TL329', 'TL396', 'TL345'))
-            and "siz varmadan bir pazara getirdiklerini ya da oradan götürdüklerini" in tr['TL396']
-            and "Toplu fiyat benzetimi açıkken rota fiyatları" in tr['TL396'] and "Yükü en iyi pazar için tut" in tr['TL396']
-            and "привезут на рынок или увезут с него до вашего приезда" in ru['TL396']
+            and "Varışınıza dek kervan ve atölyelerin getirip götürdüğünü" in tr['TL396']
+            and "Toplu fiyat benzetimi açıkken de rota ve ipucu fiyatlarını" in tr['TL396'] and "ve nerede satacağını belirler" in tr['TL396']
+            and "до приезда привезут или увезут караваны и мастерские" in ru['TL396']
             and "在你到达之前给市场带来或带走的东西" in cn['TL396']
             and "siz oraya dönene kadar atlar" in tr['TL345'] and "Orada gerçekten satacağı kargoya" in tr['TL345']
-            and "o pazara yolda olanları da defterin yaptığı gibi sayar" in tr['TL329']
-            and "«Расчёт цены по единицам», ещё и цены маршрутов" in ru['TL396'] and "«Придерживать груз до лучшего рынка»" in ru['TL396']
+            and "oraya yoldakileri de sayar" in tr['TL329']
+            and "«Расчёт цены по единицам» и цены маршрутов, подсказок" in ru['TL396'] and "и где продавать" in ru['TL396']
             and "пока вы туда не вернётесь" in ru['TL345'] and "что там действительно будет продан" in ru['TL345']
-            and "учитывая, как и книга, то, что едет туда" in ru['TL329']
+            and "с учётом едущего" in ru['TL329']
             and "开启“整批价格模拟”时，路线价格" in cn['TL396'] and "“为最好的市场留住货物”" in cn['TL396']
             and "直到你回到那里" in cn['TL345'] and "对它在那里真能卖掉的货物" in cn['TL345']
             and "像账簿一样算上正在赶往那里的东西" in cn['TL329']
             and "into the market marked on your map and into Hold cargo for the best market" in README)
 
 
-chk("1.93.15", "Hold cargo for the best market prices the market marked on your map as it will be when you get there, counting what is on its way the way the map marker does, and the hints say so in every language, route and tooltip prices needing Bulk price simulation as they do",
+chk("1.93.15", "Hold cargo for the best market prices the marked market as it will be when you get there, counting what is on its way as the map marker does, and the hints say so in every language, route and tooltip prices needing Bulk price simulation",
     hold_cargo_and_the_marker_floor_count_what_is_on_its_way())
 
 
@@ -13751,10 +13821,67 @@ def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
     forget = method_body(S['Marker.cs'], "internal static void Forget()")
     why = method_body(S['Marker.cs'], "private static string Why")
     return (marker and update and forget and why
-            and method_body(S['Marker.cs'], "private static Settlement TheMarkFairlyWeighed(out Reckoning how)") == 'private static Settlement TheMarkFairlyWeighed(out Reckoning how)\n        {\n            Settlement best = BestSellTownForCargo(out how, _picked);\n            if (how.Afresh == null || best == null || best != _picked)\n            {\n                how.Afresh = null;\n                return best;\n            }\n            Settlement back = how.Afresh;\n            List<string> compared = how.Compared;\n            best = BestSellTownForCargo(out how, null);\n            how.Afresh = back;\n            how.Unheld = _picked;\n            how.Compared = compared;\n            return best;\n        }'
-            and method_body(S['Marker.cs'], "private static Settlement OutEarnsTheMark(") == 'private static Settlement OutEarnsTheMark(\n            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, Settlement holder,\n            MobileParty party, List<(EquipmentElement item, int amount, int worth)> cargo,\n            List<string> compared)\n        {\n            int mine = -1;\n            for (int at = 0; at < reachable.Count; at++)\n                if (reachable[at].s == holder) { mine = at; break; }\n            Settlement back = null;\n            float marked = 0f;\n            float best = 0f;\n            bool priced = false;\n            for (int at = 0; at < reachable.Count; at++)\n            {\n                Settlement s = reachable[at].s;\n                if (!_owedAFairLook.Contains(s.StringId)) continue;\n                compared.Add(s.StringId);\n                if (mine < 0) continue;\n                if (!priced) { marked = RateThere(reachable[mine], party, cargo); priced = true; }\n                float rate = RateThere(reachable[at], party, cargo);\n                if (!Marks.OutEarns(rate, marked) || (back != null && rate <= best)) continue;\n                best = rate;\n                back = s;\n            }\n            return back;\n        }'
-            and method_body(S['Marker.cs'], "private static float RateThere(") == 'private static float RateThere((Settlement s, SettlementComponent market, int gold, float days) one,\n                                       MobileParty party,\n                                       List<(EquipmentElement item, int amount, int worth)> cargo)\n        {\n            Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null);\n            if (took.Value <= 0L) return 0f;\n            long total = took.Value > one.gold ? one.gold : took.Value;\n            return TradeMath.PerDay(total - took.Cost, one.days);\n        }'
-            and method_body(S['Rules.cs'], "internal static void OweAFairLook(") == 'internal static void OweAFairLook(ISet<string> owed, IList<string> compared, string here, string leftOutNow,\n                                          bool markMoved)\n        {\n            if (markMoved) owed.Clear();\n            else\n                for (int i = 0; compared != null && i < compared.Count; i++)\n                    owed.Remove(compared[i]);\n            if (here != null) owed.Remove(here);\n            if (leftOutNow != null) owed.Add(leftOutNow);\n        }'
+            and method_body(S['Marker.cs'], "private static Settlement TheMarkFairlyWeighed(out Reckoning how)") == ('private static Settlement TheMarkFairlyWeighed(out Reckoning how)\n'
+                '        {\n'
+                '            Settlement best = BestSellTownForCargo(out how, _picked);\n'
+                '            if (how.Afresh == null || best == null || best != _picked)\n'
+                '            {\n'
+                '                how.Afresh = null;\n'
+                '                return best;\n'
+                '            }\n'
+                '            Settlement back = how.Afresh;\n'
+                '            List<string> compared = how.Compared;\n'
+                '            best = BestSellTownForCargo(out how, null);\n'
+                '            how.Afresh = back;\n'
+                '            how.Unheld = _picked;\n'
+                '            how.Compared = compared;\n'
+                '            return best;\n'
+                '        }')
+            and method_body(S['Marker.cs'], "private static Settlement OutEarnsTheMark(") == ('private static Settlement OutEarnsTheMark(\n'
+                '            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, Settlement holder,\n'
+                '            MobileParty party, List<(EquipmentElement item, int amount, int worth)> cargo,\n'
+                '            List<string> compared)\n'
+                '        {\n'
+                '            int mine = -1;\n'
+                '            for (int at = 0; at < reachable.Count; at++)\n'
+                '                if (reachable[at].s == holder) { mine = at; break; }\n'
+                '            Settlement back = null;\n'
+                '            float marked = 0f;\n'
+                '            float best = 0f;\n'
+                '            bool priced = false;\n'
+                '            for (int at = 0; at < reachable.Count; at++)\n'
+                '            {\n'
+                '                Settlement s = reachable[at].s;\n'
+                '                if (!_owedAFairLook.Contains(s.StringId)) continue;\n'
+                '                compared.Add(s.StringId);\n'
+                '                if (mine < 0) continue;\n'
+                '                if (!priced) { marked = RateThere(reachable[mine], party, cargo); priced = true; }\n'
+                '                float rate = RateThere(reachable[at], party, cargo);\n'
+                '                if (!Marks.OutEarns(rate, marked) || (back != null && rate <= best)) continue;\n'
+                '                best = rate;\n'
+                '                back = s;\n'
+                '            }\n'
+                '            return back;\n'
+                '        }')
+            and method_body(S['Marker.cs'], "private static float RateThere(") == ('private static float RateThere((Settlement s, SettlementComponent market, int gold, float days) one,\n'
+                '                                       MobileParty party,\n'
+                '                                       List<(EquipmentElement item, int amount, int worth)> cargo)\n'
+                '        {\n'
+                '            Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null);\n'
+                '            if (took.Value <= 0L) return 0f;\n'
+                '            long total = took.Value > one.gold ? one.gold : took.Value;\n'
+                '            return TradeMath.PerDay(total - took.Cost, one.days);\n'
+                '        }')
+            and method_body(S['Rules.cs'], "internal static void OweAFairLook(") == ('internal static void OweAFairLook(ISet<string> owed, IList<string> compared, string here, string leftOutNow,\n'
+                '                                          bool markMoved)\n'
+                '        {\n'
+                '            if (markMoved) owed.Clear();\n'
+                '            else\n'
+                '                for (int i = 0; compared != null && i < compared.Count; i++)\n'
+                '                    owed.Remove(compared[i]);\n'
+                '            if (here != null) owed.Remove(here);\n'
+                '            if (leftOutNow != null) owed.Add(leftOutNow);\n'
+                '        }')
             and "internal static bool OutEarns(float back, float marked) => back > 0f && back > marked;" in S['Rules.cs']
             and "private static readonly HashSet<string> _owedAFairLook = new HashSet<string>(System.StringComparer.Ordinal);" in S['Marker.cs']
             and "_owedAFairLook.Clear();" in forget
@@ -13786,7 +13913,7 @@ def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
             and "Once the market TradeLord made its last trade at is back, it gets one look on the day's gold alone and takes the mark if it earns more a day than the market already marked" in README)
 
 
-chk("1.93.15", "a market left out as the last one traded at while the mark stood gets one fair look when it is back, or when you come back to it: if it earns more a day than the marked market, the marker chooses afresh and the log says why, and otherwise the mark keeps its usual hold",
+chk("1.93.15", "a market left out as the last one traded at while the mark stood gets one fair look once back or when you return to it: if it earns more a day than the mark, the marker chooses afresh and the log says why, else the mark keeps its usual hold",
     a_market_back_in_the_running_gets_one_fair_look_against_the_mark())
 
 def picking_a_buyer_and_the_route_scan_are_timed_with_the_fine_clock():
@@ -13923,7 +14050,7 @@ def the_hold_is_asked_only_of_the_mark_and_never_inside_it():
                      "Walking_into_the_marked_market_frees_the_whole_visit_even_once_the_mark_moves_on",
                      "A_save_loaded_inside_a_market_holds_nothing_there_for_that_visit")))
 
-chk("1.94.0", "Hold cargo for the best market holds a good only for the market marked on your map, never in it, never for the rest of a visit that walked into it, never on a save loaded inside a market, and never while that market is off the map, raided, shut, hostile, out of reach, out of gold or one TradeLord no longer trades with",
+chk("1.94.0", "Hold cargo for the best market holds only for the marked market: never in it, for the rest of a visit into it, on a save loaded in a market, or while that market is unmarked, raided, shut, hostile, out of reach, out of gold or no longer traded with",
     the_hold_is_asked_only_of_the_mark_and_never_inside_it())
 
 
@@ -13974,7 +14101,7 @@ def the_hold_is_named_and_described_as_it_now_works():
             and 'Tongue.Text("{=TL85}' + en['TL85'] + '")' in S['Reasons.cs']
             and said_in_every_language('TL85')
             and all(spoken(path).get('TL85') != en['TL85'] for path in TRANSLATIONS.values())
-            and len(en.get('TL329', '')) <= 350
+            and len(en.get('TL329', '')) <= 248
             and "Holds a good you bought for the market marked on your map rather than selling it one town short for much less" in README
             and "Hold cargo for the best market holds only as many as the marked market would buy, 0% holds nothing, and looted gear goes to the first market that can pay for it" in README
             and "Hold cargo for the best market holds nothing in the marked market itself, or while Auto-mark best sell market on map is off" in README
@@ -14040,7 +14167,7 @@ def the_marked_market_s_gold_is_shared_across_every_good_you_carry():
             and ordered(method_body(S['Trading.cs'], "internal Func<int, int> SellingPricesAhead(EquipmentElement what)"),
                         "int now = Price(what, selling: true);", "var rungs = new Ladder(Site, what, true, now, 0);"))
 
-chk("1.94.1", "Hold cargo for the best market shares the gold of the marked market across every good you bought, first to the goods that ride there anyway, the ones bought here this visit and the units this market cannot take, then to the units this market pays least for against it, walking this market's own prices, its gold and your margin, so a unit this market pays your share for draws on it last, and two qualities of one good share what the marked market would buy",
+chk("1.94.1", "Hold cargo for the best market shares the marked market's gold first to what rides there anyway, was bought here or cannot sell here, then to what this market pays least for, walking its prices, gold and margin, two qualities sharing one count",
     the_marked_market_s_gold_is_shared_across_every_good_you_carry())
 
 
@@ -14111,9 +14238,9 @@ chk("1.94.1", "TradeLord.log names each good Hold cargo for the best market kept
 def the_hold_texts_read_plainly_in_every_language():
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    return (en['TL329'].startswith("On the way, sell a good you bought only for at least this share")
-            and ru['TL329'].startswith("По пути продаёт купленный товар только не дешевле")
-            and "yolda ancak En iyi satış pazarını" in tr['TL329'] and "ancak," not in tr['TL329']
+    return (en['TL329'].startswith("On the way, sell a good you bought for at least this share")
+            and ru['TL329'].startswith("В пути продаёт купленное не ниже этой доли")
+            and "yolda ancak işaretli pazarın" in tr['TL329'] and "ancak," not in tr['TL329']
             and tr['TL85'] == "Yükü en iyi pazar için tut ayarı kargonuzu işaretli pazar için saklıyor"
             and ru['TL85'] == "«Придерживать груз до лучшего рынка» бережёт груз для отмеченного рынка"
             and cn['TL85'] == "“为最好的市场留住货物”正把货物留给标出的市场"
@@ -14126,9 +14253,9 @@ chk("1.94.1", "the hint for Hold cargo for the best market says it is on the way
 
 def the_hold_hint_names_the_marker_setting_and_calls_loot_what_sell_loot_up_to_tier_does():
     _, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    return ("отмеченный настройкой «" + ru['TL245'] + "»" in ru['TL329']
+    return ("под меткой настройки «" + ru['TL245'] + "»" in ru['TL329']
             and ru['TL228'].startswith("Продавать трофеи ")
-            and "Трофеи не придерживаются никогда" in ru['TL329']
+            and "Трофеи не держит" in ru['TL329']
             and "Добыча" not in ru['TL329']
             and cn['TL228'].startswith("卖出战利品")
             and cn['TL329'].count("战利品从不留着") == 1
@@ -14235,15 +14362,14 @@ chk("1.95.0", "a dry run counts what it has sold from each lot of a good, so the
 def the_trade_entry_and_auto_buy_say_what_is_sold_before_and_after_the_buying():
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    return ("which sells what you bought, buys, then sells what you never bought, loot included, with the gold "
-            "the merchant has left, all in one go." in en['TL316']
+    return ("it sells what you bought, buys, then sells what you never bought, loot included." in en['TL316']
             and "after selling what you bought and before selling what you never bought." in en['TL318']
             and "after any selling" not in en['TL318']
             and all(en[one] in M for one in ('TL316', 'TL318'))
             and all(said_in_every_language(one) for one in ('TL316', 'TL318'))
-            and len(en['TL316']) <= 350
+            and len(en['TL316']) <= 248
             and "ganimet dâhil" in tr['TL316'] and "hiç almadıklarınızı satmadan önce alır" in tr['TL318']
-            and "трофеи в том числе" in ru['TL316'] and "до продажи того, что вы не покупали" in ru['TL318']
+            and "включая трофеи" in ru['TL316'] and "до продажи того, что вы не покупали" in ru['TL318']
             and "战利品也算在内" in cn['TL316'] and "卖你没买过的东西之前" in cn['TL318']
             and "One trade entry in the town menu, selling what you bought, buying, then selling what you never "
                 "bought, loot included, in one go, whenever you want it" in README
@@ -14253,6 +14379,100 @@ def the_trade_entry_and_auto_buy_say_what_is_sold_before_and_after_the_buying():
 
 chk("1.95.0", "the hints under Trade entry in town menu and Auto buy and the feature list say what is sold before the buying and what after it, in every language",
     the_trade_entry_and_auto_buy_say_what_is_sold_before_and_after_the_buying())
+
+def no_text_runs_past_248_characters():
+    import tokenize
+    import xml.etree.ElementTree as ET
+    from xml.sax.saxutils import escape
+    listed = tracked_files()
+    if not listed:
+        return False
+    kept = [one for one in listed
+            if not one.startswith(("archive/", ".claude/")) and one != "CLAUDE.md"]
+    lined = (".yml", ".yaml", ".sh", ".json", ".csproj", ".gitignore")
+    bullet = re.compile(r'(?:[-*+]|\d+\.) ')
+    long, seen = [], {"cs": 0, "py": 0, "xml": 0, "md": 0, "lines": 0}
+    def spanned(rows, start, end):
+        (r1, c1), (r2, c2) = start, end
+        if r1 == r2:
+            return rows[r1 - 1][c1:c2]
+        return rows[r1 - 1][c1:] + "".join(rows[r1:r2 - 1]) + rows[r2 - 1][:c2]
+    for name in kept:
+        if not name.endswith((".cs", ".py", ".xml", ".md") + lined):
+            continue
+        try:
+            body = io.open(name, encoding="utf-8").read()
+        except (IOError, OSError, UnicodeDecodeError):
+            return False
+        if name.endswith(".cs"):
+            texts = csharp_texts(body, set(re.findall(r'Log\.WriteMany\((\w+)\)', body)))
+            seen["cs"] += len(texts)
+            long += [(name, said[:60]) for kind, said, logged in texts if len(said) > 248 and not logged]
+        elif name.endswith(".py"):
+            try:
+                with io.open(name, "rb") as fh:
+                    tokens = list(tokenize.tokenize(fh.readline))
+            except (tokenize.TokenError, IndentationError, SyntaxError):
+                return False
+            rows, depth, opened = [one + "\n" for one in body.split("\n")], 0, None
+            for t in tokens:
+                kind = tokenize.tok_name.get(t.type, "")
+                if kind == "FSTRING_START":
+                    opened = t.end if depth == 0 else opened
+                    depth += 1
+                    continue
+                if kind == "FSTRING_END":
+                    depth -= 1
+                    if depth == 0:
+                        said = spanned(rows, opened, t.start)
+                        seen["py"] += 1
+                        if len(said) > 248:
+                            long.append((name, said[:60]))
+                    continue
+                if depth:
+                    continue
+                said = t.string
+                if t.type == tokenize.STRING:
+                    quoted = re.match(r'(?i)[rbuf]*("""|\'\'\'|"|\')', said)
+                    said = said[quoted.end():len(said) - len(quoted.group(1))] if quoted else said
+                elif t.type not in (tokenize.NAME, tokenize.COMMENT):
+                    continue
+                seen["py"] += 1
+                if len(said) > 248:
+                    long.append((name, said[:60]))
+        elif name.endswith(".xml"):
+            try:
+                root = ET.parse(name).getroot()
+            except ET.ParseError:
+                return False
+            for el in root.iter():
+                said = list(el.attrib.values()) + ([el.text.strip()] if el.text and el.text.strip() else [])
+                said = [escape(one, {'"': "&quot;"}) for one in said]
+                seen["xml"] += len(said)
+                long += [(name, one[:60]) for one in said if len(one) > 248]
+        elif name.endswith(lined):
+            for line in body.split("\n"):
+                seen["lines"] += 1
+                if len(line) > 248:
+                    long.append((name, line[:60]))
+        else:
+            held = []
+            for line in body.split("\n") + [""]:
+                seen["md"] += 1
+                if len(line) > 248:
+                    long.append((name, line[:60]))
+                bare = line.strip()
+                if bare and not bare.startswith("#") and not bullet.match(bare):
+                    held.append(bare)
+                    continue
+                if len(" ".join(held)) > 248:
+                    long.append((name, " ".join(held)[:60]))
+                held = [bare] if bare and bullet.match(bare) else []
+    return (long == [] and seen["cs"] > 20000 and seen["py"] > 20000
+            and seen["xml"] > 1200 and seen["md"] > 2000 and seen["lines"] > 300)
+
+chk("1.95.1", "no string, name or comment in the code, no line the mod shows in any language, and no line or paragraph of the feature list, the comparison or the changelog runs past 248 characters, log lines aside",
+    no_text_runs_past_248_characters())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
