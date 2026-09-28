@@ -393,6 +393,23 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_pick_is_worth_what_you_could_actually_take_of_it_not_its_percentage()
+        {
+            var few = new FakeMarket();
+            few.Add(Cargo("wool"), amount: 3, price: 50, resale: 100);
+            few.Add(Cargo("silver"), amount: 2, price: 500, resale: 700);
+            Buy(few);
+            Assert.Equal(new[] { "silver", "silver", "wool", "wool", "wool" }, few.Taken);
+
+            var many = new FakeMarket();
+            many.Add(Cargo("wool"), amount: 10, price: 50, resale: 100);
+            many.Add(Cargo("silver"), amount: 2, price: 500, resale: 700);
+            Buy(many);
+            Assert.Equal("wool", many.Taken[0]);
+            Assert.Equal(12, many.Taken.Count);
+        }
+
+        [Fact]
         public void The_shelf_is_priced_once_for_every_good_that_survives_it()
         {
             var market = new FakeMarket();

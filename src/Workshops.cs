@@ -196,7 +196,7 @@ namespace TradeLord
     {
         private static void Postfix(ref int __result)
         {
-            __result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);
+            __result = Holdings.WorkshopRecordsToKeep(__result);
         }
     }
 

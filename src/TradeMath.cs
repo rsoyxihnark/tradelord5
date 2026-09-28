@@ -231,14 +231,6 @@ namespace TradeLord
             return take > int.MaxValue ? int.MaxValue : (int)take;
         }
 
-        public static float WhatThisPickWouldMake(float profitPerUnit, int unitPrice, float unitWeight,
-                                                  int stocked, int spendable, float room)
-        {
-            if (profitPerUnit <= 0f) return 0f;
-            int take = MostYouCouldTake(unitPrice, unitWeight, stocked, spendable, room, 0);
-            return take <= 0 ? 0f : take * profitPerUnit;
-        }
-
         public static bool EnoughOnTheShelf(int stocked, int unitWorth, int minUnits, int minWorth)
         {
             if (minUnits <= 0) return true;
