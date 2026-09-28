@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0.x'
@@ -24,12 +24,29 @@ jobs:
       - name: Changelog gate
         shell: bash
         run: |
+          BEFORE="${{ github.event.before }}"
+          PUSHED=""
+          if [ -n "$BEFORE" ] && [ -n "${BEFORE//0/}" ] && git merge-base --is-ancestor "$BEFORE" "$GITHUB_SHA" 2>/dev/null; then
+            PUSHED=$(git rev-list --reverse "$BEFORE..$GITHUB_SHA")
+          fi
+          [ -n "$PUSHED" ] || PUSHED="$GITHUB_SHA"
+          for GITHUB_SHA in $PUSHED; do
+          echo "commit $(git log -1 --format='%h %s' "$GITHUB_SHA")"
+          (
           CHANGED=$(git diff --name-only "$GITHUB_SHA^" "$GITHUB_SHA" 2>/dev/null || git show --pretty=format: --name-only "$GITHUB_SHA")
           CHANGED=$(printf '%s\n' "$CHANGED" | sed '/^$/d')
           if [ -z "$CHANGED" ]; then
             echo "this commit changes no file at all"
             exit 1
           fi
+          SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")
+          case "$SUBJECT" in
+            "[no release]"*)
+              if printf '%s\n' "$CHANGED" | grep -qx 'TradeLord/SubModule.xml'; then
+                echo "a [no release] commit may not ship a version, and this one changes TradeLord/SubModule.xml"
+                exit 1
+              fi ;;
+          esac
           if printf '%s\n' "$CHANGED" | grep -qx 'README.md'; then
             NOTES=$(git diff "$GITHUB_SHA^" "$GITHUB_SHA" -- CHANGELOG.md 2>/dev/null \
                     || git show --pretty=format: "$GITHUB_SHA" -- CHANGELOG.md)
@@ -48,7 +65,6 @@ jobs:
             echo "this commit touches only the project's own checks, workflow and working rules, so it writes no changelog entry"
             exit 0
           fi
-          SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")
           case "$SUBJECT" in
             "[no release]"*) ;;
             *)
@@ -56,16 +72,23 @@ jobs:
               printf '  %s\n' $OUTSIDE
               exit 1 ;;
           esac
-          if printf '%s\n' "$CHANGED" | grep -qx 'TradeLord/SubModule.xml'; then
-            echo "a [no release] commit may not ship a version, and this one changes TradeLord/SubModule.xml"
-            exit 1
-          fi
           echo "this commit is marked [no release] and ships no version, so it writes no changelog entry:"
           printf '  %s\n' $OUTSIDE
+          ) || exit 1
+          done
 
       - name: Shape gate
         shell: bash
         run: |
+          BEFORE="${{ github.event.before }}"
+          PUSHED=""
+          if [ -n "$BEFORE" ] && [ -n "${BEFORE//0/}" ] && git merge-base --is-ancestor "$BEFORE" "$GITHUB_SHA" 2>/dev/null; then
+            PUSHED=$(git rev-list --reverse "$BEFORE..$GITHUB_SHA")
+          fi
+          [ -n "$PUSHED" ] || PUSHED="$GITHUB_SHA"
+          for GITHUB_SHA in $PUSHED; do
+          echo "commit $(git log -1 --format='%h %s' "$GITHUB_SHA")"
+          (
           SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")
           case "$SUBJECT" in
             "[no release]"*)
@@ -84,6 +107,8 @@ jobs:
             exit 1
           fi
           echo "this commit ships a version and takes no source file away"
+          ) || exit 1
+          done
 
       - name: Resolve version from SubModule.xml
         id: ver
@@ -171,7 +196,7 @@ jobs:
           path: dist/*.zip
 
       - name: Publish release
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
