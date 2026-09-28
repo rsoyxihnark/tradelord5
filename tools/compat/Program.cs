@@ -28,6 +28,8 @@ namespace TradeLord.Compat
                 "GetMaxWorkshopCountForClanTier", null),
             ("TaleWorlds.CampaignSystem.GameComponents.DefaultWorkshopModel",
                 "get_MaximumWorkshopsPlayerCanHave", null),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.WorkshopsCharactersCampaignBehavior",
+                "can_player_buy_workshop_clickable_condition", null),
             ("TaleWorlds.CampaignSystem.Settlements.TownMarketData", "GetPrice",
                 new[] { "EquipmentElement", "MobileParty", "Boolean", "PartyBase" }),
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.VillagerCampaignBehavior",

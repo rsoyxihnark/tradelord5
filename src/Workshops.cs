@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using HarmonyLib;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Actions;
+using TaleWorlds.CampaignSystem.CampaignBehaviors;
 using TaleWorlds.CampaignSystem.GameComponents;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.CampaignSystem.Settlements.Workshops;
@@ -48,6 +49,10 @@ namespace TradeLord
         }
 
         internal static void ForgetWhoIsBuying() => _youBuying = 0;
+
+        internal static void YouStartBuying() => _youBuying++;
+
+        internal static void YouStopBuying() => _youBuying--;
 
         internal static int Owned()
         {
@@ -193,5 +198,13 @@ namespace TradeLord
         {
             __result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);
         }
+    }
+
+    [HarmonyPatch(typeof(WorkshopsCharactersCampaignBehavior), "can_player_buy_workshop_clickable_condition")]
+    internal static class Patch_WorkshopOwnerConversation
+    {
+        private static void Prefix() => Shops.YouStartBuying();
+
+        private static void Finalizer() => Shops.YouStopBuying();
     }
 }

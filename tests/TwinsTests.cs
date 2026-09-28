@@ -69,5 +69,34 @@ namespace TradeLord.Tests
                 Assert.False(Twins.ScreenWins(inHand, false, changed));
             }
         }
+
+        [Fact]
+        public void A_file_edited_by_hand_outranks_a_settings_screen_that_loads_late()
+        {
+            Assert.True(Twins.FileOutranksTheScreen(true, true));
+            Assert.True(Twins.FileOutranksTheScreen(false, true));
+        }
+
+        [Fact]
+        public void A_file_written_with_no_settings_screen_outranks_one_that_loads_late()
+        {
+            Assert.True(Twins.FileOutranksTheScreen(false, false));
+        }
+
+        [Fact]
+        public void An_untouched_file_the_settings_screen_wrote_gives_way_to_it()
+        {
+            Assert.False(Twins.FileOutranksTheScreen(true, false));
+        }
+
+        [Fact]
+        public void A_late_screen_is_weighed_exactly_as_one_already_there()
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                bool wrote = (i & 1) != 0, hand = (i & 2) != 0;
+                Assert.Equal(!Twins.ScreenWins(true, wrote, hand), Twins.FileOutranksTheScreen(wrote, hand));
+            }
+        }
     }
 }

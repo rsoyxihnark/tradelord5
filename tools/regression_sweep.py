@@ -5222,7 +5222,7 @@ def a_file_no_settings_screen_wrote_is_never_written_over_by_one():
                         "Log.Write(screenWroteIt")
             and "screenInHand && screenWroteIt && !changedByHand;" in S['Migrate.cs']
             and "Nothing_the_screen_never_wrote_is_ever_overwritten_by_it" in TWINSTESTS
-            and read.count("screenWroteIt") == 4)
+            and read.count("screenWroteIt") == 5)
 
 chk("1.30.3", "a settings file no settings screen ever wrote is read rather than written over, however old its stamp looks",
     a_file_no_settings_screen_wrote_is_never_written_over_by_one())
@@ -9547,7 +9547,7 @@ def quiet_mode_names_the_warnings_it_still_shows():
     asked = [l for l in onscreen if "Muted" in l or "muted" in l]
     said = spoken(ENGLISH)
     return (len(onscreen) == 21
-            and len(asked) == 11
+            and len(asked) == 12
             and all(("{=TL" + s + "}") in S['Trading.cs'] for s in ("82", "91", "92", "392"))
             and "Warnings still show on screen" in said['TL349']
             and "cargo full" in said['TL349']
@@ -11751,15 +11751,22 @@ chk("1.90.18", "a deal Staged Trading lays out counts what it has already put on
 def an_animal_never_counts_against_the_hold():
     describe = method_body(S['Policy.cs'], "internal static Good Describe")
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
-    return (describe and relief
-            and "good.Weight = item.HasHorseComponent ? 0f : item.Weight;" in describe
+    weighs = method_body(S['Trading.cs'], "internal static float Weighs")
+    return (describe and relief and weighs
+            and "good.Weight = Carry.Weighs(item);" in describe
             and describe.count("good.Weight =") == 1
-            and "pass.Books.NoteSale(item.StringId, price, 0f, TradePolicy.FoodValue(item));" in relief
+            and ordered(weighs, "float onLand = item.HasHorseComponent ? 0f : item.Weight;",
+                        "if (!Sailing()) return onLand;",
+                        "model.GetItemEffectiveWeight(new EquipmentElement(item), party, true, out _)",
+                        "catch (Exception e)")
+            and weighs.count("return onLand;") == 2
+            and "pass.Books.NoteSale(item.StringId, price, Carry.Weighs(item), TradePolicy.FoodValue(item));" in relief
             and "item.Weight" not in relief
+            and "books.NoteSale(good.Id, price, good.Weight, TradeRules.FoodValue(good));" in S['Passes.cs']
             and "good.Weight > 0.01f && good.Weight > roomLeft;" in S['Rules.cs'])
 
 
-chk("1.90.18", "an animal weighs nothing in the hold, the way the game counts it, so livestock is held back by the herd penalty alone and never by the cargo room or the share of the hold",
+chk("1.95.2", "an animal weighs nothing in the hold while Buy to fill the ships is off, the way the game counts it on land, and with it on every good, livestock included, weighs what the ships' hold gives it, in a real pass and a dry run alike",
     an_animal_never_counts_against_the_hold())
 
 
@@ -14350,7 +14357,7 @@ def a_dry_run_never_sells_a_unit_of_a_stack_twice():
             and ordered(method_body(passes, "internal static Traded SellThem"),
                         "books.NoteSale(good.Id, price,", "books.NoteSoldFrom(market.PaidKeyAt(at));")
             and t.count("pass.Books.NoteSale(") == 1
-            and ordered(relief, "pass.Books.NoteSale(item.StringId, price, 0f, TradePolicy.FoodValue(item));",
+            and ordered(relief, "pass.Books.NoteSale(item.StringId, price, Carry.Weighs(item), TradePolicy.FoodValue(item));",
                         "pass.Books.NoteSoldFrom(paidKey);")
             and "ADryRunCountsWhatEachStackSoldSoALaterSaleNeverSellsItAgain" in BOOKTESTS
             and "A_dry_run_keeps_what_you_paid_for_each_quality_of_a_good_apart" in SELLPASSTESTS)
@@ -14473,6 +14480,90 @@ def no_text_runs_past_248_characters():
 
 chk("1.95.1", "no string, name or comment in the code, no line the mod shows in any language, and no line or paragraph of the feature list, the comparison or the changelog runs past 248 characters, log lines aside",
     no_text_runs_past_248_characters())
+
+
+def the_twins_are_weighed_again_when_the_screen_hands_its_settings_over_late():
+    read = method_body(S['Config.cs'], "private static void Read")
+    noted = method_body(S['Config.cs'], "private static void Noted")
+    arrived = method_body(S['Config.cs'], "internal static void ScreenArrived")
+    handover = method_body(S['Support.cs'], "internal static void TryHandover")
+    return (read and noted and arrived and handover
+            and "internal static bool Awaiting => _handover != null && !SettingsInHand;" in S['Support.cs']
+            and ordered(noted, "if (_applying) return;", "if (McmLoader.Awaiting) return;", "_dirty = true;")
+            and ordered(read, "finally { _applying = false; }", "if (!screen && !whipped)",
+                        "_fileHeld = new Options();",
+                        "_fileOutranks = Twins.FileOutranksTheScreen(_fileScreenWrote, ChangedByHand(found, stamped));",
+                        "Options.Bump();", 'Log.Write("settings file read from "', "Write(found, \"brought forward")
+            and ordered(handover, "SettingsInHand = true;", 'Guard.Run("Config.ScreenArrived", Config.ScreenArrived);',
+                        "if (_owedAPutBack) PutBack();")
+            and ordered(arrived, "if (held == null || !_fileOutranks)", "_dirty = true;", "return;",
+                        "field.SetValue(Options.Current, field.GetValue(held));", "Options.Bump();",
+                        "McmLoader.Reseat?.Invoke();", "_lastSeen = Snapshot();",
+                        'if (_newerShape == 0) Write(_path, "made the settings screen match it");')
+            and "!screenWroteIt || changedByHand;" in S['Migrate.cs']
+            and "A_file_edited_by_hand_outranks_a_settings_screen_that_loads_late" in TWINSTESTS
+            and "A_file_written_with_no_settings_screen_outranks_one_that_loads_late" in TWINSTESTS
+            and "An_untouched_file_the_settings_screen_wrote_gives_way_to_it" in TWINSTESTS)
+
+chk("1.95.2", "a settings file saved after the settings screen, or edited by hand, still wins when MCM hands its settings over late, and a file from a newer TradeLord is never restamped as the screen's",
+    the_twins_are_weighed_again_when_the_screen_hands_its_settings_over_late())
+
+
+def the_empty_ledger_names_the_group_the_travel_ceilings_sit_in():
+    ceiling = M.find('public float MaxTravelDaysTown')
+    grouped = re.findall(r'SettingPropertyGroup\("\{=(TL\d+)\}', M[:ceiling])
+    if ceiling < 0 or not grouped:
+        return False
+    group = grouped[-1]
+    for path in [ENGLISH] + list(TRANSLATIONS.values()):
+        said = spoken(path)
+        stems = [word[:max(3, len(word) - 2)] for word in said[group].split()]
+        for one in ('TL08', 'TL69', 'TL89', 'TL90'):
+            if said['TL101'] in said[one] or any(stem not in said[one] for stem in stems):
+                return False
+    return group == 'TL108'
+
+chk("1.95.2", "the ledger with no routes in reach names the settings group the two travel ceilings are really in, in every language",
+    the_empty_ledger_names_the_group_the_travel_ceilings_sit_in())
+
+
+def the_haul_animal_price_hint_reads_the_way_its_slider_does():
+    en, tr, ru, cn = (spoken(p) for p in [ENGLISH] + list(TRANSLATIONS.values()))
+    return (option_default('HaulAnimalPriceTolerance') == '1.25f'
+            and '"#0%", Order = 14' in M
+            and "125% by default" in en['TL428'] and "knows" in en['TL428']
+            and "%125" in tr['TL428'] and "125%" in ru['TL428'] and "125%" in cn['TL428']
+            and all("1.25" not in one['TL428'] for one in (en, tr, ru, cn)))
+
+chk("1.95.2", "the hint for Most it will pay for a haul animal gives its default the way the slider shows it, and says it goes by the cheapest price TradeLord knows, in every language",
+    the_haul_animal_price_hint_reads_the_way_its_slider_does())
+
+
+def silencing_trade_messages_also_silences_the_note_that_the_deal_waits():
+    entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
+    return ("if (!Muted(true)) Notices.Say(TheDealWaitsForYou(), Notices.Note);" in entered
+            and "if (Options.Current.QuickSellMenu && !Muted(true)) Notices.Say(FirstTimeBackNote(), Notices.Note);" in entered)
+
+chk("1.95.2", "Silence trade messages keeps the note that Staged Trading is holding its trade back off the screen, as it does the note for your first time back",
+    silencing_trade_messages_also_silences_the_note_that_the_deal_waits())
+
+
+def the_workshop_limit_you_set_reaches_the_owner_in_town():
+    shops = S['Workshops.cs']
+    patch = method_body(shops, "internal static class Patch_WorkshopOwnerConversation")
+    limit = method_body(shops, "internal static class Patch_WorkshopLimit")
+    return (patch and limit
+            and '[HarmonyPatch(typeof(WorkshopsCharactersCampaignBehavior), "can_player_buy_workshop_clickable_condition")]' in shops
+            and "private static void Prefix() => Shops.YouStartBuying();" in patch
+            and "private static void Finalizer() => Shops.YouStopBuying();" in patch
+            and "internal static void YouStartBuying() => _youBuying++;" in shops
+            and "internal static void YouStopBuying() => _youBuying--;" in shops
+            and "Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier(), Shops.ItIsYouBuying)" in limit
+            and "Patcher.TryPatch(harmony, typeof(Patch_WorkshopOwnerConversation));" in S['SubModule.cs']
+            and '"can_player_buy_workshop_clickable_condition"' in COMPAT)
+
+chk("1.95.2", "Most workshops you may own lifts the limit when a workshop's owner in town offers to sell, through a finalizer that always lowers it again, while the limit stays the game's for every other clan",
+    the_workshop_limit_you_set_reaches_the_owner_in_town())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

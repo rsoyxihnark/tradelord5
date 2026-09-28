@@ -59,6 +59,22 @@ namespace TradeLord
 
         internal static float Room(MobileParty party) =>
             TradeMath.RoomToFill(Capacity(party), Carried(party), Options.Current.MaxCargoShare);
+
+        internal static float Weighs(ItemObject item)
+        {
+            if (item == null) return 0f;
+            float onLand = item.HasHorseComponent ? 0f : item.Weight;
+            if (!Sailing()) return onLand;
+            try
+            {
+                InventoryCapacityModel model = Campaign.Current?.Models?.InventoryCapacityModel;
+                MobileParty party = MobileParty.MainParty;
+                if (model != null && party != null)
+                    return model.GetItemEffectiveWeight(new EquipmentElement(item), party, true, out _);
+            }
+            catch (Exception e) { Log.Error(e, "a good's weight in the ships' hold (its weight on land is used instead)"); }
+            return onLand;
+        }
     }
 
     internal static class GameTradeBook
@@ -946,7 +962,7 @@ namespace TradeLord
                 {
                     bool back = Arrivals.FirstTimeBack(settlement.StringId, _lastTradedAt);
                     if (back) _lastTradedAt = null;
-                    Notices.Say(TheDealWaitsForYou(), Notices.Note);
+                    if (!Muted(true)) Notices.Say(TheDealWaitsForYou(), Notices.Note);
                     Log.Write("trading on arrival at " + settlement.Name + " is held back: the deal is laid out " +
                               "on the trade screen from the menu entry instead, so nothing moved" +
                               (back
@@ -2061,7 +2077,7 @@ namespace TradeLord
                         {
                             simTill -= price;
                             simGold += price;
-                            pass.Books.NoteSale(item.StringId, price, 0f, TradePolicy.FoodValue(item));
+                            pass.Books.NoteSale(item.StringId, price, Carry.Weighs(item), TradePolicy.FoodValue(item));
                             pass.Books.NoteSoldFrom(paidKey);
                             pass.Books.NoteShed(rank == RankHaulAnimal, rank != RankLivestock);
                             Counter.Stage(el, selling: true, price);
@@ -2566,8 +2582,8 @@ namespace TradeLord
             string body;
             if (routes == null || routes.Count == 0)
                 body = Tongue.Text(Options.Current.Omniscient
-                    ? "{=TL08}No profitable routes within your travel ceilings. Raise the ceilings in the Knowledge settings, or move nearer to more markets."
-                    : "{=TL89}No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Knowledge settings.").ToString();
+                    ? "{=TL08}No profitable routes within your travel ceilings. Raise the ceilings in the Trade Pool settings, or move nearer to more markets."
+                    : "{=TL89}No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Trade Pool settings.").ToString();
             else
             {
                 var sb = new StringBuilder();

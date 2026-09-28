@@ -342,7 +342,7 @@ namespace TradeLord
                 ReadTheGoodsInThisGame();
                 good.Name = SpokenName(item);
             }
-            good.Weight = item.HasHorseComponent ? 0f : item.Weight;
+            good.Weight = Carry.Weighs(item);
             good.Value = item.Value;
             good.Tier = (int)item.Tier;
             good.NotMerchandise = item.NotMerchandise;
