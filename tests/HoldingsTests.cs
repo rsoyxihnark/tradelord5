@@ -21,6 +21,28 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_game_keeps_a_record_for_every_workshop_the_setting_could_ever_let_you_own()
+        {
+            Assert.Equal(200, Holdings.MostWorkshopsYouMayAskFor);
+            Assert.Equal(200, Holdings.WorkshopRecordsToKeep(7));
+            Assert.Equal(200, Holdings.WorkshopRecordsToKeep(0));
+            Assert.Equal(200, Holdings.WorkshopRecordsToKeep(-3));
+            Assert.Equal(250, Holdings.WorkshopRecordsToKeep(250));
+        }
+
+        [Fact]
+        public void No_limit_you_set_lets_you_own_more_workshops_than_the_game_keeps_records_for()
+        {
+            var roll = new System.Random(5129);
+            for (int i = 0; i < 20000; i++)
+            {
+                int gameSays = roll.Next(0, 12);
+                int asked = roll.Next(-5, Holdings.MostWorkshopsYouMayAskFor + 1);
+                Assert.True(Holdings.WorkshopsYouMayOwn(gameSays, asked) <= Holdings.WorkshopRecordsToKeep(gameSays));
+            }
+        }
+
+        [Fact]
         public void There_is_room_for_one_more_until_you_are_at_the_ceiling()
         {
             Assert.True(Holdings.RoomForOneMore(0, 1));

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.95.3
+
+- Fixed the game crashing after raising Most workshops you may own and buying a workshop past its old value without reloading
+- Fixed Left in the TradeLord ledger counting from now instead of from when you reach the buy town
+- Fixed TradeLord.ini losing settings from a newer TradeLord after you start an older one with MCM
+
 ## 1.95.2
 
 - Fixed changes you make in TradeLord.ini being overwritten by the MCM settings screen when you start the game

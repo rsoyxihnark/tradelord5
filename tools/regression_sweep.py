@@ -6545,7 +6545,7 @@ def the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off():
     read = method_body(S['Config.cs'], "private static void Read")
     back = method_body(S['Config.cs'], "private static void BackToWhatItShipsWith")
     said = method_body(S['Config.cs'], "private static void SayWhatYouHadSet")
-    return ("public const bool Armed = true;" in whip
+    return ("public const bool Armed = false;" in whip
             and "public const int CracksAt = " in whip
             and ("public static bool Cracks(bool armed, int cracksAt, int shipped, int shape) =>\n"
                  "            armed && cracksAt > 0 && cracksAt == shipped && shape < cracksAt;") in whip
@@ -6577,7 +6577,7 @@ def the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off():
                      "AWhipArmedAtNoShapeAtAllNeverCracks",
                      "NothingTheLiftCarriedForwardSurvivesAWhipThatCracks",
                      "AWhipThatDoesNotCrackLeavesTheLiftsWorkExactlyAsItFoundIt",
-                     "ThisVersionShipsTheWhipArmedSoAFileOlderThanItIsResetOnce",
+                     "ThisVersionShipsTheWhipDisarmedSoAnOlderFileKeepsEverySetting",
                      "AFileAlreadyAtTheShapeThisVersionShipsIsNeverResetBySecondTime",
                      "TheWhipIsStillWiredToTheShapeThisVersionShips",
                      "TheWhipLeavesTheLiftItselfAlone",
@@ -6808,7 +6808,7 @@ def a_reset_reaches_the_copy_the_settings_screen_keeps():
 chk("1.50.2", "a reset reaches the copy the settings screen keeps, so a screen that loads late cannot hand the old settings back",
     a_reset_reaches_the_copy_the_settings_screen_keeps())
 
-chk("1.50.2", "the one-time settings reset is one switch, is armed at the shape this version ships, cannot be set off by the lift and wipes everything the lift carried but your language",
+chk("1.50.2", "the one-time settings reset is one switch, ships disarmed while staying wired to the shape this version ships, cannot be set off by the lift and wipes everything the lift carried but your language",
     the_reset_whip_is_one_switch_the_lift_can_never_outlive_or_set_off())
 
 
@@ -8260,15 +8260,18 @@ chk("1.70.0", "the tooltip says what you paid for a good you have bought, in eve
 
 def how_long_a_shelf_holds_a_deal_is_worked_out_where_a_test_can_ask_it():
     p = S['Projection.cs']
-    runs = method_body(p, "internal static float RunsOutAt")
+    ask = method_body(S['Forecast.cs'], "internal static float RunsOutIn")
     curve = method_body(p, "internal static List<(float days, int shelf)> ShelfAhead")
     reads = method_body(p, "internal static float RunsOutOf")
     moments = method_body(p, "internal static List<float> Moments")
     note = method_body(p, "private static void Note")
     return ("TaleWorlds" not in p and "Settlement" not in p and "ItemObject" not in p
             and "internal const float NeverRunsOut = -1f;" in p
-            and "if (item == null || wanted <= 0 || unitValue <= 0) return NeverRunsOut;" in runs
-            and "return RunsOutOf(ShelfAhead(listed, coming, pull, across, item, category," in runs
+            and "RunsOutAt" not in p
+            and "return Projection.RunsOutOf(ShelfAhead(site, item, stockNow, afterDays), wanted);" in ask
+            and ("Projection.RunsOutOf(Projection.ShelfAhead(listed, coming, pull, across, item, category,\n"
+                 "                                                       unitValue, stockNow, afterDays), wanted);")
+                in PROJECTIONTESTS
             and "if (item == null || unitValue <= 0) return curve;" in curve
             and ordered(curve, "int used = WorthUsedUp(drawn, category, days, usedADay,",
                         "int taken = UnitsLeaving(\n"
@@ -8310,7 +8313,7 @@ def a_route_says_how_long_its_buy_market_holds_that_quantity():
             and "_shelfAhead.Clear();" in method_body(S['Forecast.cs'], "private static void Build")
             and "public float RunsOutInDays = Projection.NeverRunsOut;" in S['Ledger.cs']
             and "float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);" in scan
-            and "RunsOutInDays = runsOut" in scan
+            and "RunsOutInDays = Projection.LeftOnceYouArrive(runsOut, toBuy)" in scan
             and "float days = _route.RunsOutInDays;" in S['Panel.cs']
             and 'if (days <= 0f) return "";' in S['Panel.cs']
             and '"HeadDays", "HeadRunsOut",' in S['Panel.cs']
@@ -8715,7 +8718,7 @@ def how_long_a_shelf_lasts_now_counts_towards_the_route_score():
                         ": 1f / (1f + Math.Max(caravans, 0) * 0.15f);")
             and "float c = resilience * depth * haste * quiet * fresh;" in of
             and ordered(scan, "float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);",
-                        "runsOut, toBuy);", "RunsOutInDays = runsOut")
+                        "runsOut, toBuy);", "RunsOutInDays = Projection.LeftOnceYouArrive(runsOut, toBuy)")
             and scan.count("Forecast.RunsOutIn(") == 1
             and '{=TL417}' in S['Panel.cs']
             and 'lowers Conf' in english_string('TL417')
@@ -10323,8 +10326,8 @@ def the_shelf_is_ranked_by_what_a_pick_would_really_make():
             and "long fits = (long)(room / unitWeight);" in rule
             and "if (unitWeight > 0.01f)" in rule
             and "if (unitPrice <= 0 || stocked <= 0 || spendable <= 0) return 0;" in rule
-            and "return take <= 0 ? 0f : take * profitPerUnit;" in
-                method_body(S['TradeMath.cs'], "public static float WhatThisPickWouldMake")
+            and "WhatThisPickWouldMake" not in S['TradeMath.cs']
+            and "if (take <= 0 || here <= 0) return 0f;" in made
             and ordered(want, "int take = UnitsItCouldTake(market, one.At, one.Good, here, books.Purchases(sim, one.Good.Id),",
                         "carried, market.Room() - books.Weight(sim), herdRoom, shareCap, s);")
             and ordered(method_body(S['Passes.cs'], "private static int UnitsItCouldTake"),
@@ -10337,6 +10340,7 @@ def the_shelf_is_ranked_by_what_a_pick_would_really_make():
                 in want
             and "if (cap > 0 && cap < take) take = cap;" in rule
             and "The_buy_cap_per_item_holds_the_take_down_to_what_it_allows" in MATHTESTS
+            and "A_pick_is_worth_what_you_could_actually_take_of_it_not_its_percentage" in BUYPASSTESTS
             and ordered(made, "int wouldDraw = market.ResaleUpTo(at, carried + u + 1);",
                         "if (TradeRules.TheBuyerCouldNotPay(wouldDraw, till)) break;",
                         "TradeMath.Realizable(wouldDraw - drawn, s.ResaleSafetyFactor)",
@@ -10344,8 +10348,7 @@ def the_shelf_is_ranked_by_what_a_pick_would_really_make():
             and "internal float Worth;" in S['Passes.cs']
             and "Margin" not in method_body(S['Passes.cs'], "internal struct Pick")
             and all(one in MATHTESTS for one in
-                    ("A_pick_is_worth_what_you_could_actually_take_of_it_not_its_percentage",
-                     "A_thin_purse_holds_the_take_down_to_what_it_can_pay_for",
+                    ("A_thin_purse_holds_the_take_down_to_what_it_can_pay_for",
                      "A_full_cargo_holds_the_take_down_to_what_still_fits",
                      "A_good_that_weighs_nothing_is_held_back_by_the_purse_alone")))
 
@@ -14631,6 +14634,61 @@ def the_branch_guard_sees_through_the_ways_a_branch_can_be_started():
 
 chk("1.95.2", "the branch guard refuses a branch started through a prefixed or pathed git, an attached or clustered flag, a tracking checkout, a stash, a ref update or a fetch",
     the_branch_guard_sees_through_the_ways_a_branch_can_be_started())
+
+
+def the_game_keeps_a_record_for_every_workshop_you_may_ever_own():
+    shops = S['Workshops.cs']
+    table = method_body(shops, "internal static class Patch_WorkshopsYouMayHave")
+    slider = re.search(r'SettingPropertyInteger\("\{=TL429\}[^"]*", 0, (\d+),', M)
+    bound = re.search(r'\{ "MaxWorkshopsOwned", new double\[\] \{ 0, (\d+) \} \},', S['Migrate.cs'])
+    return (table and slider and bound
+            and "__result = Holdings.WorkshopRecordsToKeep(__result);" in table
+            and "MaxWorkshopsOwned" not in table
+            and "public const int MostWorkshopsYouMayAskFor = 200;" in S['Rules.cs']
+            and ("gameSays > MostWorkshopsYouMayAskFor ? gameSays : MostWorkshopsYouMayAskFor;"
+                 in method_body(S['Rules.cs'], "public static class Holdings"))
+            and slider.group(1) == '200' and bound.group(1) == '200'
+            and shops.count("Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);") == 1
+            and "Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);" in
+                method_body(shops, "internal static class Patch_WorkshopLimit")
+            and all(one in HOLDINGTESTS for one in
+                    ("The_game_keeps_a_record_for_every_workshop_the_setting_could_ever_let_you_own",
+                     "No_limit_you_set_lets_you_own_more_workshops_than_the_game_keeps_records_for",
+                     "new System.Random(5129)")))
+
+chk("1.95.3", "the game keeps a record for as many workshops as Most workshops you may own could ever allow, so a workshop bought after raising it mid-game always gets one",
+    the_game_keeps_a_record_for_every_workshop_you_may_ever_own())
+
+
+def left_counts_from_the_moment_you_arrive():
+    left = method_body(S['Projection.cs'], "internal static float LeftOnceYouArrive")
+    return (left
+            and "if (runsOut < 0f || float.IsNaN(runsOut)) return NeverRunsOut;" in left
+            and "float waited = daysToTheBuyTown > 0f && !float.IsNaN(daysToTheBuyTown) ? daysToTheBuyTown : 0f;" in left
+            and "return runsOut - waited;" in left
+            and "RunsOutInDays = Projection.LeftOnceYouArrive(runsOut, toBuy)" in
+                method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+            and "once you arrive" in english_string('TL417')
+            and all(one in PROJECTIONTESTS for one in
+                    ("Left_counts_from_the_moment_you_arrive_not_from_now",
+                     "A_shelf_that_runs_out_always_has_some_time_left_once_you_arrive",
+                     "new System.Random(6203)")))
+
+chk("1.95.3", "Left in the ledger counts how long the shelf holds from the moment you arrive, the way its legend says, not from now",
+    left_counts_from_the_moment_you_arrive())
+
+
+def a_newer_file_is_never_restamped_as_the_screens_when_the_screen_is_ready_at_startup():
+    read = method_body(S['Config.cs'], "private static void Read")
+    return (read.count('Write(found, "made the settings screen match it");') == 1
+            and ('if (screen && !newer)\n                Write(found, "made the settings screen match it");') in read
+            and ordered(read, "if (screen && !newer)", "else if (whipped)", "else if (newer)",
+                        '"one reads shape " + Migration.Shape + ", so it is left exactly as it is");')
+            and 'if (_newerShape == 0) Write(_path, "made the settings screen match it");' in
+                method_body(S['Config.cs'], "internal static void ScreenArrived"))
+
+chk("1.95.3", "a settings file a newer TradeLord wrote is set on the settings screen and left exactly as it is, whether the screen is ready at startup or hands its settings over late",
+    a_newer_file_is_never_restamped_as_the_screens_when_the_screen_is_ready_at_startup())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

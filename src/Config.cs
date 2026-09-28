@@ -296,7 +296,7 @@ namespace TradeLord
                     : "settings file: this file was last written with no settings screen to write it, so the screen is set from it");
                 McmLoader.Reseat?.Invoke();
             }
-            if (screen)
+            if (screen && !newer)
                 Write(found, "made the settings screen match it");
             else if (whipped)
                 Write(found, "every setting but your language put back to what TradeLord ships with");

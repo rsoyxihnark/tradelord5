@@ -263,7 +263,7 @@ namespace TradeLord
 
     public static class Whip
     {
-        public const bool Armed = true;
+        public const bool Armed = false;
 
         public const int CracksAt = 18;
 
@@ -324,8 +324,6 @@ namespace TradeLord
                 { "CostBasisMode", new double[] { 0, 2 } },
                 { "KeepSmeltableWeapons", new double[] { 0, 2 } },
             };
-
-        public static bool Knows(string name) => name != null && Bounds.ContainsKey(name);
 
         public static double Kept(string name, double asked)
         {

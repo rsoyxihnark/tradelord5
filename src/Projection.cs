@@ -161,14 +161,11 @@ namespace TradeLord
             return NeverRunsOut;
         }
 
-        internal static float RunsOutAt(IList<Landing> listed, IList<Spending> coming,
-                                        IDictionary<string, float> pull, float across,
-                                        string item, string category, int unitValue,
-                                        int stockNow, int wanted, float afterDays)
+        internal static float LeftOnceYouArrive(float runsOut, float daysToTheBuyTown)
         {
-            if (item == null || wanted <= 0 || unitValue <= 0) return NeverRunsOut;
-            return RunsOutOf(ShelfAhead(listed, coming, pull, across, item, category,
-                                        unitValue, stockNow, afterDays), wanted);
+            if (runsOut < 0f || float.IsNaN(runsOut)) return NeverRunsOut;
+            float waited = daysToTheBuyTown > 0f && !float.IsNaN(daysToTheBuyTown) ? daysToTheBuyTown : 0f;
+            return runsOut - waited;
         }
 
         internal static float PullAcross(IDictionary<string, float> pull)

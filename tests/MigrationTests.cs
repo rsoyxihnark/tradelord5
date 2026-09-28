@@ -13,6 +13,9 @@ namespace TradeLord.Tests
             return written;
         }
 
+        private static bool Bounded(string name) =>
+            !double.IsPositiveInfinity(Limits.Kept(name, double.PositiveInfinity));
+
         [Fact]
         public void AFileFromTheVersionOnNexusIsCarriedForwardWholesale()
         {
@@ -147,7 +150,7 @@ namespace TradeLord.Tests
         [Fact]
         public void TheObservationShelfLifeIsHeldInsideItsRange()
         {
-            Assert.True(Limits.Knows("ObservationShelfLifeDays"));
+            Assert.True(Bounded("ObservationShelfLifeDays"));
             Assert.Equal("0 and 60", Limits.Range("ObservationShelfLifeDays"));
             Assert.Equal(0.0, Limits.Kept("ObservationShelfLifeDays", -5.0));
             Assert.Equal(60.0, Limits.Kept("ObservationShelfLifeDays", 900.0));
@@ -173,8 +176,8 @@ namespace TradeLord.Tests
         [Fact]
         public void ASettingIsHeldInsideItsRangeHoweverItWasCapitalisedInTheFile()
         {
-            Assert.True(Limits.Knows("maxtraveldaystown"));
-            Assert.True(Limits.Knows("MAXTRAVELDAYSTOWN"));
+            Assert.True(Bounded("maxtraveldaystown"));
+            Assert.True(Bounded("MAXTRAVELDAYSTOWN"));
             Assert.Equal("0 and 20", Limits.Range("maxtraveldaystown"));
             Assert.Equal(20.0, Limits.Kept("MAXTRAVELDAYSTOWN", 99.0));
             Assert.Equal(0.0, Limits.Kept("MinProfitMargin", -5.0));
@@ -184,12 +187,12 @@ namespace TradeLord.Tests
         [Fact]
         public void TheAutoMarkerCeilingHasNoRangeLeftToKeepItInside()
         {
-            Assert.False(Limits.Knows("MarkerMaxTravelDays"));
-            Assert.False(Limits.Knows("ScanRadius"));
-            Assert.False(Limits.Knows("MaxTravelDays"));
-            Assert.False(Limits.Knows("MaxVillageTravelDays"));
-            Assert.True(Limits.Knows("MaxTravelDaysTown"));
-            Assert.True(Limits.Knows("MaxTravelDaysVillage"));
+            Assert.False(Bounded("MarkerMaxTravelDays"));
+            Assert.False(Bounded("ScanRadius"));
+            Assert.False(Bounded("MaxTravelDays"));
+            Assert.False(Bounded("MaxVillageTravelDays"));
+            Assert.True(Bounded("MaxTravelDaysTown"));
+            Assert.True(Bounded("MaxTravelDaysVillage"));
             Assert.Equal("0 and 20", Limits.Range("MaxTravelDaysTown"));
             Assert.Equal("0 and 10", Limits.Range("MaxTravelDaysVillage"));
         }
@@ -323,12 +326,13 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void ThisVersionShipsTheWhipArmedSoAFileOlderThanItIsResetOnce()
+        public void ThisVersionShipsTheWhipDisarmedSoAnOlderFileKeepsEverySetting()
         {
-            Assert.True(Whip.Armed);
-            var written = File("GoldReserve", "800");
-            Assert.True(Whip.Crack(Migration.Shape - 1, written));
-            Assert.Empty(written);
+            Assert.False(Whip.Armed);
+            var written = File("GoldReserve", "800", "Language", "1");
+            Assert.False(Whip.Crack(Migration.Shape - 1, written));
+            Assert.Equal("800", written["GoldReserve"]);
+            Assert.Equal("1", written["Language"]);
         }
 
         [Fact]
@@ -343,9 +347,10 @@ namespace TradeLord.Tests
         public void TheWhipIsStillWiredToTheShapeThisVersionShips()
         {
             Assert.Equal(Migration.Shape, Whip.CracksAt);
-            Assert.True(Whip.CracksOn(Migration.Shape - 1));
-            Assert.False(Whip.CracksOn(Migration.Shape));
-            Assert.False(Whip.CracksOn(Migration.Shape + 1));
+            Assert.True(Whip.Cracks(armed: true, cracksAt: Whip.CracksAt, shipped: Migration.Shape, shape: Migration.Shape - 1));
+            Assert.False(Whip.Cracks(armed: true, cracksAt: Whip.CracksAt, shipped: Migration.Shape, shape: Migration.Shape));
+            for (int shape = 0; shape <= Migration.Shape + 1; shape++)
+                Assert.False(Whip.CracksOn(shape));
         }
 
         [Fact]
@@ -549,9 +554,9 @@ namespace TradeLord.Tests
         [Fact]
         public void ASettingWithNoLimitsIsLeftExactlyAsItIs()
         {
-            Assert.False(Limits.Knows("PanelKey"));
-            Assert.False(Limits.Knows("NeverSellItems"));
-            Assert.False(Limits.Knows(null));
+            Assert.False(Bounded("PanelKey"));
+            Assert.False(Bounded("NeverSellItems"));
+            Assert.False(Bounded(null));
             Assert.Equal(12345.0, Limits.Kept("PanelKey", 12345.0));
             Assert.Equal(12345.0, Limits.Kept(null, 12345.0));
         }
@@ -571,7 +576,7 @@ namespace TradeLord.Tests
             foreach (System.Reflection.FieldInfo field in typeof(Options).GetFields(
                          System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
                 if ((field.FieldType == typeof(int) || field.FieldType == typeof(float)) &&
-                    !Limits.Knows(field.Name))
+                    !Bounded(field.Name))
                     loose.Add(field.Name);
             Assert.Equal("", string.Join(", ", loose.ToArray()));
         }
@@ -626,7 +631,7 @@ namespace TradeLord.Tests
             Assert.Equal(0d, Limits.Kept("HoldCargoForBestMarket", -0.5));
             Assert.Equal(1d, Limits.Kept("HoldCargoForBestMarket", 1.5));
             Assert.Equal(0.75d, Limits.Kept("HoldCargoForBestMarket", 0.75));
-            Assert.False(Limits.Knows("BestSellTownTolerance"));
+            Assert.False(Bounded("BestSellTownTolerance"));
         }
     }
 }

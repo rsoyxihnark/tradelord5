@@ -262,12 +262,52 @@ namespace TradeLord.Tests
         private static IDictionary<string, float> OnePull(string category) =>
             new Dictionary<string, float> { { category, 1f } };
 
+        private static float RunsOut(IList<Landing> listed, IList<Spending> coming,
+                                     IDictionary<string, float> pull, float across,
+                                     string item, string category, int unitValue,
+                                     int stockNow, int wanted, float afterDays) =>
+            Projection.RunsOutOf(Projection.ShelfAhead(listed, coming, pull, across, item, category,
+                                                       unitValue, stockNow, afterDays), wanted);
+
+        [Fact]
+        public void Left_counts_from_the_moment_you_arrive_not_from_now()
+        {
+            var coming = new List<Spending> { Purse(150, 1f), Purse(150, 2f) };
+            float runsOut = RunsOut(new List<Landing>(), coming,
+                                    OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f);
+            Assert.Equal(2f, runsOut);
+            Assert.Equal(1.5f, Projection.LeftOnceYouArrive(runsOut, 0.5f));
+            Assert.Equal(2f, Projection.LeftOnceYouArrive(runsOut, 0f));
+            Assert.Equal(2f, Projection.LeftOnceYouArrive(runsOut, float.NaN));
+            Assert.Equal(Projection.NeverRunsOut, Projection.LeftOnceYouArrive(Projection.NeverRunsOut, 0.5f));
+            Assert.Equal(Projection.NeverRunsOut, Projection.LeftOnceYouArrive(float.NaN, 0.5f));
+        }
+
+        [Fact]
+        public void A_shelf_that_runs_out_always_has_some_time_left_once_you_arrive()
+        {
+            var rng = new System.Random(6203);
+            for (int round = 0; round < 20000; round++)
+            {
+                float after = (float)(rng.NextDouble() * 3d);
+                var coming = new List<Spending>();
+                int purses = rng.Next(0, 5);
+                for (int i = 0; i < purses; i++)
+                    coming.Add(Purse(rng.Next(1, 4000), (float)(rng.NextDouble() * 6d)));
+                float at = RunsOut(null, coming, OnePull("grain"), 1f,
+                                   "grain", "grain", rng.Next(1, 200),
+                                   rng.Next(0, 200), rng.Next(1, 60), after);
+                float left = Projection.LeftOnceYouArrive(at, after);
+                Assert.True(at == Projection.NeverRunsOut ? left == Projection.NeverRunsOut : left > 0f && left == at - after);
+            }
+        }
+
         [Fact]
         public void A_shelf_nobody_is_coming_for_never_runs_out()
         {
             Assert.Equal(Projection.NeverRunsOut,
-                Projection.RunsOutAt(new List<Landing>(), new List<Spending>(),
-                                     OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+                RunsOut(new List<Landing>(), new List<Spending>(),
+                        OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
         }
 
         [Fact]
@@ -275,8 +315,8 @@ namespace TradeLord.Tests
         {
             var coming = new List<Spending> { Purse(150, 1f), Purse(150, 2f) };
             Assert.Equal(2f,
-                Projection.RunsOutAt(new List<Landing>(), coming,
-                                     OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+                RunsOut(new List<Landing>(), coming,
+                        OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
         }
 
         [Fact]
@@ -285,8 +325,8 @@ namespace TradeLord.Tests
             var listed = new List<Landing> { Coming("grain", "grain", 30, 300, 0.75f) };
             var coming = new List<Spending> { Purse(300, 1f) };
             Assert.Equal(Projection.NeverRunsOut,
-                Projection.RunsOutAt(listed, coming,
-                                     OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+                RunsOut(listed, coming,
+                        OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
         }
 
         [Fact]
@@ -294,8 +334,8 @@ namespace TradeLord.Tests
         {
             var coming = new List<Spending> { Purse(5000, 0.25f) };
             Assert.Equal(Projection.NeverRunsOut,
-                Projection.RunsOutAt(new List<Landing>(), coming,
-                                     OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+                RunsOut(new List<Landing>(), coming,
+                        OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
         }
 
         [Fact]
@@ -303,11 +343,11 @@ namespace TradeLord.Tests
         {
             var coming = new List<Spending> { Purse(5000, 2f) };
             Assert.Equal(Projection.NeverRunsOut,
-                Projection.RunsOutAt(null, coming, OnePull("grain"), 1f, "grain", "grain", 10, 40, 0, 0.5f));
+                RunsOut(null, coming, OnePull("grain"), 1f, "grain", "grain", 10, 40, 0, 0.5f));
             Assert.Equal(Projection.NeverRunsOut,
-                Projection.RunsOutAt(null, coming, OnePull("grain"), 1f, "grain", "grain", 0, 40, 20, 0.5f));
+                RunsOut(null, coming, OnePull("grain"), 1f, "grain", "grain", 0, 40, 20, 0.5f));
             Assert.Equal(Projection.NeverRunsOut,
-                Projection.RunsOutAt(null, coming, OnePull("grain"), 1f, null, "grain", 10, 40, 20, 0.5f));
+                RunsOut(null, coming, OnePull("grain"), 1f, null, "grain", 10, 40, 20, 0.5f));
         }
 
         [Fact]
@@ -319,8 +359,8 @@ namespace TradeLord.Tests
                                              "grain", "grain", 10, 40, 0.5f);
             for (int wanted = 1; wanted <= 60; wanted++)
                 Assert.Equal(
-                    Projection.RunsOutAt(listed, coming, OnePull("grain"), 1f,
-                                         "grain", "grain", 10, 40, wanted, 0.5f),
+                    RunsOut(listed, coming, OnePull("grain"), 1f,
+                            "grain", "grain", 10, 40, wanted, 0.5f),
                     Projection.RunsOutOf(once, wanted));
         }
 
@@ -398,9 +438,9 @@ namespace TradeLord.Tests
                 int purses = rng.Next(0, 5);
                 for (int i = 0; i < purses; i++)
                     coming.Add(Purse(rng.Next(1, 4000), (float)(rng.NextDouble() * 6d)));
-                float at = Projection.RunsOutAt(null, coming, OnePull("grain"), 1f,
-                                                "grain", "grain", rng.Next(1, 200),
-                                                rng.Next(0, 200), rng.Next(1, 60), after);
+                float at = RunsOut(null, coming, OnePull("grain"), 1f,
+                                   "grain", "grain", rng.Next(1, 200),
+                                   rng.Next(0, 200), rng.Next(1, 60), after);
                 Assert.True(at == Projection.NeverRunsOut || at > after);
             }
         }
