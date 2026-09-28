@@ -67,7 +67,7 @@ The release workflow publishes the commit body as the release notes, so a commit
 
 - Changelog entries, release notes and commit messages: one sentence per entry, matching the style already in the file.
 - Every entry stands on its own. It is read alone, out of order, months later, with nothing above it, so it never points at a neighbouring entry: no `that deal`, no `that reset`, no `It keeps a record`, no `The feature list says so too`. Name the thing the entry is about, every time.
-- Keep an entry under 140 characters wherever the sense survives it, and never write one longer than 249. A line the reader has to go back over is a line that was too long.
+- Keep an entry under 140 characters wherever the sense survives it, and never write one longer than 248. A line the reader has to go back over is a line that was too long.
 - Plain language that person understands. No internal mechanism, no asides, no restating the same point twice.
 - Use the words the program itself uses. Where it names a thing on screen, a setting, a panel, a button, write that name rather than a paraphrase of it, and write the entry the way one user would tell another what changed. A reader should never have to translate it back into the program's own terms. Where the program is a mod, the words belong to the thing it is a mod for, so use those.
 - Never drop a changelog bullet-point entry for being minor, internal or cosmetic.
@@ -86,6 +86,15 @@ The release workflow publishes the commit body as the release notes, so a commit
   - `Fixed TradeLord valuing a purchase against a buyer days away instead of a nearby one paying almost the same`
   - `Fixed the map marker pointing at the town paying the most in total instead of the one paying the most per day`
   - `Food is now restocked after trading, so your gold and cargo space go to trade goods first`
+
+## Text length
+
+- No text in the program or about it is longer than 248 characters, counted as it is written, spaces and markup included.
+- That covers every name, string and comment in the code, and every setting name, hint, tooltip and panel line the program shows, in every language.
+- It covers every line and paragraph of the README, the changelog and any other page written for the people who use the project.
+- Lines the program writes to its own log are exempt, and so are `CLAUDE.md`, the files in `archive/` and what the `.claude/` hooks print.
+- A text over the limit is rephrased until it fits, or split into entries of its own where it is a list, and every fact it carried stays said somewhere.
+- Where the project keeps a source check, it refuses the build while any text runs past 248, so a text is measured before it is pushed, not after.
 
 ## Changelog
 

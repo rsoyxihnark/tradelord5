@@ -46,7 +46,7 @@ def blocks(text):
             yield kind, held
             held = []
         kind = wanted
-        held.append(entry.group(1) if entry else bare)
+        held.append(('\t' if entry and line[:1].isspace() else '') + (entry.group(1) if entry else bare))
     if held:
         yield kind, held
 
@@ -54,7 +54,17 @@ def marked(line):
     return LINK.sub(r'[url=\2]\1[/url]', BOLD.sub(r'[b]\1[/b]', CODE.sub(r'\1', line)))
 
 def listed(lines):
-    return '[list]\n' + '\n'.join('[*]' + marked(one) for one in lines) + '\n[/list]'
+    out = []
+    for one in lines:
+        if not one.startswith('\t'):
+            out.append('[*]' + marked(one))
+            continue
+        if out and out[-1] == '[/list]':
+            out.pop()
+        else:
+            out.append('[list]')
+        out += ['[*]' + marked(one[1:]), '[/list]']
+    return '[list]\n' + '\n'.join(out) + '\n[/list]'
 
 def folded(title, lines):
     return '[b]' + marked(title) + '[/b]\n[spoiler]\n' + listed(lines) + '\n[/spoiler]'
