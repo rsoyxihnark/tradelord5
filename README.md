@@ -192,6 +192,7 @@
 - ✅ Buy Workshops Remotely, on its own button below the TradeLord ledger: every workshop in Calradia a notable would sell you, with its town, what it makes, who owns it, what it has earned lately and what it would cost, most profitable first
 - ✅ Buy any workshop from there, wherever you are standing, and it asks you to confirm before it spends a denar
 - ✅ The most workshops you may own, raised to 200 out of the box, so your clan tier no longer decides how many you can hold. Set it to whatever number you like, and put it back to the game's own limit with a 0
+- ✅ The clan screen's Workshops count and its renown tooltip follow Most workshops you may own, not your clan tier
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
 
 **And**

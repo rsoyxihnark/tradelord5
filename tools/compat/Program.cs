@@ -32,6 +32,7 @@ namespace TradeLord.Compat
                 "can_player_buy_workshop_clickable_condition", null),
             ("TaleWorlds.CampaignSystem.ViewModelCollection.ClanManagement.Categories.ClanIncomeVM",
                 "RefreshList", null),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultClanTierModel", "HasUpcomingTier", null),
             ("TaleWorlds.CampaignSystem.Settlements.TownMarketData", "GetPrice",
                 new[] { "EquipmentElement", "MobileParty", "Boolean", "PartyBase" }),
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.VillagerCampaignBehavior",

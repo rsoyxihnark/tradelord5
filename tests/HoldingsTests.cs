@@ -81,6 +81,32 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Weighing_your_next_tier_lifts_your_tier_and_the_one_above_it_and_nothing_else()
+        {
+            Assert.True(Holdings.TheGameIsWeighingYourNextTier(3, 3, whileYouLookAhead: true));
+            Assert.True(Holdings.TheGameIsWeighingYourNextTier(4, 3, whileYouLookAhead: true));
+            Assert.False(Holdings.TheGameIsWeighingYourNextTier(2, 3, whileYouLookAhead: true));
+            Assert.False(Holdings.TheGameIsWeighingYourNextTier(5, 3, whileYouLookAhead: true));
+            Assert.False(Holdings.TheGameIsWeighingYourNextTier(4, 3, whileYouLookAhead: false));
+            Assert.False(Holdings.TheGameIsWeighingYourNextTier(0, -1, whileYouLookAhead: true));
+        }
+
+        [Fact]
+        public void A_limit_you_set_adds_no_workshop_at_your_next_tier()
+        {
+            var roll = new System.Random(6071);
+            for (int i = 0; i < 20000; i++)
+            {
+                int tier = roll.Next(0, 6);
+                int asked = roll.Next(-5, Holdings.MostWorkshopsYouMayAskFor + 1);
+                int now = tier + 1, next = tier + 2;
+                if (Holdings.TheGameIsWeighingYourNextTier(tier, tier, true)) now = Holdings.WorkshopsYouMayOwn(now, asked);
+                if (Holdings.TheGameIsWeighingYourNextTier(tier + 1, tier, true)) next = Holdings.WorkshopsYouMayOwn(next, asked);
+                Assert.Equal(asked > 0 ? 0 : 1, next - now);
+            }
+        }
+
+        [Fact]
         public void A_clan_the_game_cannot_place_never_has_the_limit_lifted_for_it()
         {
             Assert.False(Holdings.TheGameIsAskingAboutYou(3, -1, whileYouBuy: true));

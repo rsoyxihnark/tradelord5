@@ -846,6 +846,11 @@ namespace TradeLord
                                                    bool whileYouBuy) =>
             whileYouBuy && yourTier >= 0 && askedAboutTier == yourTier;
 
+        public static bool TheGameIsWeighingYourNextTier(int askedAboutTier, int yourTier,
+                                                         bool whileYouLookAhead) =>
+            whileYouLookAhead && yourTier >= 0 &&
+            (askedAboutTier == yourTier || askedAboutTier == yourTier + 1);
+
         public static bool DipsIntoWhatYouHoldBack(int cost, int purse, int heldBack) =>
             cost > 0 && heldBack > 0 && purse - cost < heldBack;
     }
