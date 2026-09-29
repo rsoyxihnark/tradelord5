@@ -314,5 +314,6 @@
 		<string id="TL474" text="Lets TradeLord spend more as your purse grows, on top of Max spend per visit: it holds until your purse is five times that, then grows by one more for every doubling. With 1000 set, 10000 allows 2000 and 20000 allows 3000. ON by default."/>
 		<string id="TL475" text="TradeLord made its last trade here, so it leaves this market alone the first time you come back. Choose {ENTRY} in this menu to trade here now."/>
 		<string id="TL476" text=" | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit"/>
+		<string id="TL477" text="You cannot own a workshop in {TOWN} while it is at war with you."/>
 	</strings>
 </base>

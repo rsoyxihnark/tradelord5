@@ -72,6 +72,45 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void With_room_kept_for_more_workshops_the_number_you_ask_for_holds()
+        {
+            Assert.Equal(200, Holdings.WorkshopsYouMayOwn(3, 200, true));
+            Assert.Equal(1, Holdings.WorkshopsYouMayOwn(3, 1, true));
+            Assert.Equal(3, Holdings.WorkshopsYouMayOwn(3, 0, true));
+        }
+
+        [Fact]
+        public void Without_room_kept_for_more_workshops_the_games_own_limit_is_never_passed()
+        {
+            Assert.Equal(3, Holdings.WorkshopsYouMayOwn(3, 200, false));
+            Assert.Equal(3, Holdings.WorkshopsYouMayOwn(3, 4, false));
+            Assert.Equal(3, Holdings.WorkshopsYouMayOwn(3, 0, false));
+            Assert.Equal(0, Holdings.WorkshopsYouMayOwn(0, 5, false));
+        }
+
+        [Fact]
+        public void Without_room_kept_a_lower_limit_you_set_still_holds()
+        {
+            Assert.Equal(1, Holdings.WorkshopsYouMayOwn(3, 1, false));
+            Assert.Equal(2, Holdings.WorkshopsYouMayOwn(3, 2, false));
+        }
+
+        [Fact]
+        public void Room_kept_or_not_you_never_own_more_than_the_game_keeps_records_for()
+        {
+            var roll = new System.Random(7240);
+            for (int i = 0; i < 20000; i++)
+            {
+                int gameSays = roll.Next(0, 12);
+                int asked = roll.Next(-5, Holdings.MostWorkshopsYouMayAskFor + 1);
+                Assert.Equal(Holdings.WorkshopsYouMayOwn(gameSays, asked), Holdings.WorkshopsYouMayOwn(gameSays, asked, true));
+                int held = Holdings.WorkshopsYouMayOwn(gameSays, asked, false);
+                Assert.True(held <= gameSays);
+                Assert.Equal(System.Math.Min(Holdings.WorkshopsYouMayOwn(gameSays, asked), gameSays), held);
+            }
+        }
+
+        [Fact]
         public void The_limit_is_only_lifted_where_the_game_is_asking_about_your_own_clan()
         {
             Assert.True(Holdings.TheGameIsAskingAboutYou(3, 3, whileYouBuy: true));

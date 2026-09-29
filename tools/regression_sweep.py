@@ -8856,7 +8856,7 @@ def the_workshop_limit_is_lifted_by_one_patch_and_one_setting():
     w = S['Workshops.cs']
     rule = method_body(S['Rules.cs'], "public static int WorkshopsYouMayOwn")
     return ('[HarmonyPatch(typeof(DefaultWorkshopModel), "GetMaxWorkshopCountForClanTier")]' in w
-            and "__result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);" in w
+            and "__result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned, Shops.RoomIsKept);" in w
             and ordered(rule, "if (youAsked <= 0) return gameSays;", "return youAsked;")
             and "TaleWorlds" not in method_body(S['Rules.cs'], "public static class Holdings")
             and option_default('MaxWorkshopsOwned') == '200'
@@ -14657,8 +14657,8 @@ def the_game_keeps_a_record_for_every_workshop_you_may_ever_own():
             and ("gameSays > MostWorkshopsYouMayAskFor ? gameSays : MostWorkshopsYouMayAskFor;"
                  in method_body(S['Rules.cs'], "public static class Holdings"))
             and slider.group(1) == '200' and bound.group(1) == '200'
-            and shops.count("Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);") == 1
-            and "Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);" in
+            and shops.count("Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned, Shops.RoomIsKept);") == 1
+            and "Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned, Shops.RoomIsKept);" in
                 method_body(shops, "internal static class Patch_WorkshopLimit")
             and all(one in HOLDINGTESTS for one in
                     ("The_game_keeps_a_record_for_every_workshop_the_setting_could_ever_let_you_own",
@@ -14823,6 +14823,85 @@ def the_next_tier_adds_no_workshop_past_the_limit_you_set():
 
 chk("1.95.6", "the renown tooltip on the clan screen adds no workshop at the next tier while Most workshops you may own sets the limit, and keeps the game's own steps at 0",
     the_next_tier_adds_no_workshop_past_the_limit_you_set())
+
+
+def no_workshop_in_a_town_at_war_with_you_is_offered_or_bought():
+    shops = S['Workshops.cs']
+    offer = method_body(shops, "internal static List<Workshop> OnOffer")
+    stops = method_body(shops, "internal static Block WhatStopsBuying")
+    why = method_body(shops, "private static TextObject WhyNot")
+    buy = method_body(shops, "internal static bool Buy")
+    return (offer and stops and why and buy
+            and "if (LedgerBehavior.IsHostile(town.Settlement)) continue;" in offer
+            and "ExcludeHostileTowns" not in offer
+            and ("internal static bool InAnEnemyTown(Workshop shop) =>\n"
+                 "            shop?.Settlement != null && LedgerBehavior.IsHostile(shop.Settlement);") in shops
+            and ordered(stops, "if (shop == null || !OnTheMarket(shop)) return Block.NotTradable;",
+                        "if (InAnEnemyTown(shop)) return Block.NotTradable;",
+                        "if (!Holdings.RoomForOneMore(owned, mayOwn)) return Block.HeldEnough;")
+            and ordered(why, "if (why == Block.NotTradable && InAnEnemyTown(shop))", "{=TL477}",
+                        'enemy.SetTextVariable("TOWN", shop.Settlement.Name);', "return enemy;",
+                        "if (why == Block.HeldEnough)")
+            and '(InAnEnemyTown(shop) ? ", its town at war with you" : "")' in buy
+            and said_in_every_language("TL477"))
+
+chk("1.95.7", "Buy Workshops Remotely never lists or buys a workshop in a town at war with you, whatever Exclude hostile markets says, and tells you why in every language",
+    no_workshop_in_a_town_at_war_with_you_is_offered_or_bought())
+
+
+def a_hidden_workshop_is_never_on_the_market():
+    shops = S['Workshops.cs']
+    market = between(shops, "internal static bool OnTheMarket", "\n        }")
+    return ("if (shop?.Settlement == null || shop.WorkshopType == null || shop.WorkshopType.IsHidden) return false;" in market
+            and "if (OnTheMarket(shops[i])) found.Add(shops[i]);" in method_body(shops, "internal static List<Workshop> OnOffer")
+            and "if (shop == null || !OnTheMarket(shop)) return Block.NotTradable;" in
+                method_body(shops, "internal static Block WhatStopsBuying"))
+
+chk("1.95.7", "Buy Workshops Remotely never lists or buys a hidden workshop, such as each town's Artisans, which the game never sells",
+    a_hidden_workshop_is_never_on_the_market())
+
+
+def the_limit_is_lifted_only_while_room_is_kept_for_more_workshops():
+    shops = S['Workshops.cs']
+    rule = method_body(S['Rules.cs'], "public static int WorkshopsYouMayOwn(int gameSays, int youAsked, bool roomKept)")
+    return (rule
+            and "internal static bool RoomIsKept => Patcher.Holds(nameof(Patch_WorkshopsYouMayHave));" in shops
+            and "return Holdings.WorkshopsYouMayOwn(gameSays, asked, RoomIsKept);" in method_body(shops, "internal static int MayOwn")
+            and "Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned, Shops.RoomIsKept);" in
+                method_body(shops, "internal static class Patch_WorkshopLimit")
+            and ordered(rule, "int mayOwn = WorkshopsYouMayOwn(gameSays, youAsked);",
+                        "return roomKept || mayOwn <= gameSays ? mayOwn : gameSays;")
+            and "internal static bool Holds(string patchClass) => Applied.Contains(patchClass);" in S['Support.cs']
+            and all(one in HOLDINGTESTS for one in
+                    ("With_room_kept_for_more_workshops_the_number_you_ask_for_holds",
+                     "Without_room_kept_for_more_workshops_the_games_own_limit_is_never_passed",
+                     "Without_room_kept_a_lower_limit_you_set_still_holds",
+                     "Room_kept_or_not_you_never_own_more_than_the_game_keeps_records_for",
+                     "new System.Random(7240)")))
+
+chk("1.95.7", "Most workshops you may own lifts the limit only while the patch keeping the game's records of your workshops holds, and stays within the game's own limit otherwise",
+    the_limit_is_lifted_only_while_room_is_kept_for_more_workshops())
+
+
+def the_log_names_every_other_mod_that_changes_the_workshop_limit():
+    shops = S['Workshops.cs']
+    say = method_body(shops, "internal static void SayWhoSetsTheLimit")
+    others = method_body(shops, "private static void OthersChanging")
+    launched = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    return (say and others
+            and 'OthersChanging(AccessTools.Method(typeof(DefaultWorkshopModel), "GetMaxWorkshopCountForClanTier"), others);' in say
+            and 'OthersChanging(AccessTools.PropertyGetter(typeof(DefaultWorkshopModel), "MaximumWorkshopsPlayerCanHave"), others);' in say
+            and "Campaign.Current?.Models?.WorkshopModel;" in say
+            and 'Log.Write("workshop limit: ' in say
+            and "RoomIsKept" in say
+            and "Patches found = method == null ? null : Harmony.GetPatchInfo(method);" in others
+            and "if (owner != SubModule.HarmonyId && !others.Contains(owner)) others.Add(owner);" in others
+            and ordered(launched, 'Guard.Run("Shops.MendTheGamesRecords", Shops.MendTheGamesRecords);',
+                        'Guard.Run("Shops.SayWhoSetsTheLimit", Shops.SayWhoSetsTheLimit);')
+            and S['Trading.cs'].count("Shops.SayWhoSetsTheLimit") == 2)
+
+chk("1.95.7", "TradeLord.log says, once your campaign opens, which workshop model the game asks, every other mod changing the workshop limit, and when the limit is held back",
+    the_log_names_every_other_mod_that_changes_the_workshop_limit())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

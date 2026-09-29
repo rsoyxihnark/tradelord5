@@ -314,5 +314,6 @@
 		<string id="TL474" text="Keseniz büyüdükçe TradeLord, Ziyaret başına en çok harcama'nın üstüne harcayabilir: keseniz bunun beş katına varana dek sınır aynı kalır, sonra her ikiye katlanışta bir sınır kadar daha büyür. 1000 ile 10000'de 2000, 20000'de 3000. Varsayılan AÇIK."/>
 		<string id="TL475" text="TradeLord son ticaretini burada yaptı, bu yüzden buraya ilk dönüşünüzde bu pazara dokunmuyor. Şimdi burada ticaret yapmak için bu menüden {ENTRY} seçin."/>
 		<string id="TL476" text=" | Fiyat ilk parçanındır; Kâr her parçayı sırayla fiyatlar, bu yüzden fiyat x adetten azdır | Güven* = düz fiyat, parça parça hesaplanmadı"/>
+		<string id="TL477" text="{TOWN} sizinle savaştayken orada işyeri sahibi olamazsınız."/>
 	</strings>
 </base>
