@@ -838,6 +838,15 @@ namespace TradeLord
             return roomKept || mayOwn <= gameSays ? mayOwn : gameSays;
         }
 
+        public const int TradeSkillPerWorkshop = 25;
+
+        public static int WorkshopsYouEarn(int gameSays, int youAsked, int tradeSkill)
+        {
+            int ceiling = WorkshopsYouMayOwn(gameSays, youAsked);
+            int earned = gameSays + (tradeSkill > 0 ? tradeSkill / TradeSkillPerWorkshop : 0);
+            return earned < ceiling ? earned : ceiling;
+        }
+
         public const int MostWorkshopsYouMayAskFor = 200;
 
         public static int WorkshopRecordsToKeep(int gameSays) =>

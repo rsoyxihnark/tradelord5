@@ -193,6 +193,7 @@
 - ✅ Buy any workshop from there, wherever you are standing, and it asks you to confirm before it spends a denar
 - ✅ The most workshops you may own, raised to 200 out of the box, so your clan tier no longer decides how many you can hold. Set it to whatever number you like, and put it back to the game's own limit with a 0
 - ✅ The clan screen's Workshops count and its renown tooltip follow Most workshops you may own, not your clan tier
+- ✅ Earn workshops with Trade skill, off out of the box: you may own the game's own limit plus one workshop for every 25 points of Trade, up to Most workshops you may own
 - ✅ A rebindable panel hotkey, and a map button and two town menu entries you can hide
 
 **And**

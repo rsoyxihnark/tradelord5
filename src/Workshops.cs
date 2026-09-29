@@ -9,6 +9,7 @@ using TaleWorlds.CampaignSystem.GameComponents;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.CampaignSystem.Settlements.Workshops;
 using TaleWorlds.CampaignSystem.ViewModelCollection.ClanManagement.Categories;
+using TaleWorlds.Core;
 using TaleWorlds.Localization;
 
 namespace TradeLord
@@ -17,9 +18,19 @@ namespace TradeLord
     {
         internal static int MayOwn()
         {
-            int asked = Options.Current.MaxWorkshopsOwned;
             int gameSays = FromTheGame();
-            return Holdings.WorkshopsYouMayOwn(gameSays, asked, RoomIsKept);
+            return Holdings.WorkshopsYouMayOwn(gameSays, Asked(gameSays), RoomIsKept);
+        }
+
+        internal static int Asked(int gameSays) =>
+            Options.Current.EarnWorkshopsWithTrade
+                ? Holdings.WorkshopsYouEarn(gameSays, Options.Current.MaxWorkshopsOwned, YourTrade())
+                : Options.Current.MaxWorkshopsOwned;
+
+        private static int YourTrade()
+        {
+            try { return Hero.MainHero?.GetSkillValue(DefaultSkills.Trade) ?? 0; }
+            catch { return 0; }
         }
 
         internal static bool RoomIsKept => Patcher.Holds(nameof(Patch_WorkshopsYouMayHave));
@@ -282,7 +293,7 @@ namespace TradeLord
         {
             if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier(), Shops.ItIsYouBuying) &&
                 !Holdings.TheGameIsWeighingYourNextTier(tier, Shops.YourTier(), Shops.ItIsYourNextTier)) return;
-            __result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned, Shops.RoomIsKept);
+            __result = Holdings.WorkshopsYouMayOwn(__result, Shops.Asked(__result), Shops.RoomIsKept);
         }
     }
 

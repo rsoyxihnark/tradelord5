@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.96.0
+
+- Added Earn workshops with Trade skill under General, off out of the box, which makes you earn workshops up to Most workshops you may own
+- Earn workshops with Trade skill lets you own the game's own limit plus one workshop for every 25 points of your Trade skill
+- With Earn workshops with Trade skill on, the renown tooltip on the clan screen shows the workshop your next clan tier adds
+- The feature list now names Earn workshops with Trade skill
+
 ## 1.95.7
 
 - Fixed Buy Workshops Remotely offering workshops in towns at war with you when Exclude hostile markets is off

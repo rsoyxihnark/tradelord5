@@ -5128,6 +5128,7 @@ EVER_SHIPPED = {
     "MaxWorkshopsOwned": "int", "Ultralog": "bool", "ExtendedDebugLogging": "bool",
     "PickTheBuyerOnTheWholeStack": "bool",
     "HoldCargoForBestMarket": "float",
+    "EarnWorkshopsWithTrade": "bool",
 }
 
 def settings_now():
@@ -8856,7 +8857,8 @@ def the_workshop_limit_is_lifted_by_one_patch_and_one_setting():
     w = S['Workshops.cs']
     rule = method_body(S['Rules.cs'], "public static int WorkshopsYouMayOwn")
     return ('[HarmonyPatch(typeof(DefaultWorkshopModel), "GetMaxWorkshopCountForClanTier")]' in w
-            and "__result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned, Shops.RoomIsKept);" in w
+            and "__result = Holdings.WorkshopsYouMayOwn(__result, Shops.Asked(__result), Shops.RoomIsKept);" in w
+            and ": Options.Current.MaxWorkshopsOwned;" in between(w, "internal static int Asked(int gameSays) =>", "\n\n")
             and ordered(rule, "if (youAsked <= 0) return gameSays;", "return youAsked;")
             and "TaleWorlds" not in method_body(S['Rules.cs'], "public static class Holdings")
             and option_default('MaxWorkshopsOwned') == '200'
@@ -14657,8 +14659,8 @@ def the_game_keeps_a_record_for_every_workshop_you_may_ever_own():
             and ("gameSays > MostWorkshopsYouMayAskFor ? gameSays : MostWorkshopsYouMayAskFor;"
                  in method_body(S['Rules.cs'], "public static class Holdings"))
             and slider.group(1) == '200' and bound.group(1) == '200'
-            and shops.count("Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned, Shops.RoomIsKept);") == 1
-            and "Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned, Shops.RoomIsKept);" in
+            and shops.count("Holdings.WorkshopsYouMayOwn(__result, Shops.Asked(__result), Shops.RoomIsKept);") == 1
+            and "Holdings.WorkshopsYouMayOwn(__result, Shops.Asked(__result), Shops.RoomIsKept);" in
                 method_body(shops, "internal static class Patch_WorkshopLimit")
             and all(one in HOLDINGTESTS for one in
                     ("The_game_keeps_a_record_for_every_workshop_the_setting_could_ever_let_you_own",
@@ -14866,8 +14868,8 @@ def the_limit_is_lifted_only_while_room_is_kept_for_more_workshops():
     rule = method_body(S['Rules.cs'], "public static int WorkshopsYouMayOwn(int gameSays, int youAsked, bool roomKept)")
     return (rule
             and "internal static bool RoomIsKept => Patcher.Holds(nameof(Patch_WorkshopsYouMayHave));" in shops
-            and "return Holdings.WorkshopsYouMayOwn(gameSays, asked, RoomIsKept);" in method_body(shops, "internal static int MayOwn")
-            and "Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned, Shops.RoomIsKept);" in
+            and "return Holdings.WorkshopsYouMayOwn(gameSays, Asked(gameSays), RoomIsKept);" in method_body(shops, "internal static int MayOwn")
+            and "Holdings.WorkshopsYouMayOwn(__result, Shops.Asked(__result), Shops.RoomIsKept);" in
                 method_body(shops, "internal static class Patch_WorkshopLimit")
             and ordered(rule, "int mayOwn = WorkshopsYouMayOwn(gameSays, youAsked);",
                         "return roomKept || mayOwn <= gameSays ? mayOwn : gameSays;")
@@ -14902,6 +14904,42 @@ def the_log_names_every_other_mod_that_changes_the_workshop_limit():
 
 chk("1.95.7", "TradeLord.log says, once your campaign opens, which workshop model the game asks, every other mod changing the workshop limit, and when the limit is held back",
     the_log_names_every_other_mod_that_changes_the_workshop_limit())
+
+
+def workshops_can_be_earned_with_trade_skill_and_that_ships_off():
+    shops = S['Workshops.cs']
+    asked = between(shops, "internal static int Asked(int gameSays) =>", "\n\n")
+    rule = method_body(S['Rules.cs'], "public static int WorkshopsYouEarn")
+    en = spoken(ENGLISH)
+    return (asked and rule
+            and option_default('EarnWorkshopsWithTrade') == 'false'
+            and ordered(asked, "Options.Current.EarnWorkshopsWithTrade",
+                        "? Holdings.WorkshopsYouEarn(gameSays, Options.Current.MaxWorkshopsOwned, YourTrade())",
+                        ": Options.Current.MaxWorkshopsOwned;")
+            and "Hero.MainHero?.GetSkillValue(DefaultSkills.Trade) ?? 0" in method_body(shops, "private static int YourTrade")
+            and "public const int TradeSkillPerWorkshop = 25;" in S['Rules.cs']
+            and ordered(rule, "int ceiling = WorkshopsYouMayOwn(gameSays, youAsked);",
+                        "int earned = gameSays + (tradeSkill > 0 ? tradeSkill / TradeSkillPerWorkshop : 0);",
+                        "return earned < ceiling ? earned : ceiling;")
+            and "return Holdings.WorkshopsYouMayOwn(gameSays, Asked(gameSays), RoomIsKept);" in method_body(shops, "internal static int MayOwn")
+            and "Holdings.WorkshopsYouMayOwn(__result, Shops.Asked(__result), Shops.RoomIsKept);" in
+                method_body(shops, "internal static class Patch_WorkshopLimit")
+            and '[SettingPropertyBool("{=TL478}Earn workshops with Trade skill", Order = 20,' in M
+            and "public bool EarnWorkshopsWithTrade { get => _o.EarnWorkshopsWithTrade;" in M
+            and all(said_in_every_language(one) for one in ("TL478", "TL479"))
+            and "every 25 points of your Trade skill" in en['TL479'] and "OFF by default." in en['TL479']
+            and "Earn workshops with Trade skill" in README
+            and all(one in HOLDINGTESTS for one in
+                    ("Every_25_points_of_Trade_earn_one_workshop_on_top_of_the_games_own_limit",
+                     "What_you_earn_never_passes_Most_workshops_you_may_own",
+                     "With_Most_workshops_you_may_own_at_0_you_earn_the_games_own_limit_and_no_more",
+                     "A_Trade_skill_the_game_cannot_read_earns_nothing",
+                     "What_you_earn_grows_with_Trade_and_stays_between_the_games_limit_and_your_ceiling",
+                     "While_you_earn_workshops_the_next_tier_adds_one_until_your_ceiling",
+                     "new System.Random(8812)", "new System.Random(9034)")))
+
+chk("1.96.0", "Earn workshops with Trade skill ships off; on, you may own the game's own limit plus one workshop for every 25 points of Trade, never past Most workshops you may own",
+    workshops_can_be_earned_with_trade_skill_and_that_ships_off())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

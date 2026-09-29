@@ -315,5 +315,7 @@
 		<string id="TL475" text="TradeLord son ticaretini burada yaptı, bu yüzden buraya ilk dönüşünüzde bu pazara dokunmuyor. Şimdi burada ticaret yapmak için bu menüden {ENTRY} seçin."/>
 		<string id="TL476" text=" | Fiyat ilk parçanındır; Kâr her parçayı sırayla fiyatlar, bu yüzden fiyat x adetten azdır | Güven* = düz fiyat, parça parça hesaplanmadı"/>
 		<string id="TL477" text="{TOWN} sizinle savaştayken orada işyeri sahibi olamazsınız."/>
+		<string id="TL478" text="İşyerlerini Ticaret yeteneğiyle kazan"/>
+		<string id="TL479" text="İşyerlerini Sahip olabileceğiniz en fazla işyeri sınırına kadar kazanırsınız: oyunun klan kademenizle yükselen kendi sınırı, artı Ticaret yeteneğinizin her 25 puanı için bir işyeri daha. Varsayılan KAPALI."/>
 	</strings>
 </base>

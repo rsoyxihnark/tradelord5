@@ -315,5 +315,7 @@
 		<string id="TL475" text="TradeLord made its last trade here, so it leaves this market alone the first time you come back. Choose {ENTRY} in this menu to trade here now."/>
 		<string id="TL476" text=" | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit"/>
 		<string id="TL477" text="You cannot own a workshop in {TOWN} while it is at war with you."/>
+		<string id="TL478" text="Earn workshops with Trade skill"/>
+		<string id="TL479" text="You earn workshops up to Most workshops you may own: the game's own limit, which rises with your clan tier, plus one more for every 25 points of your Trade skill. OFF by default."/>
 	</strings>
 </base>
