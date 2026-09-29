@@ -51,8 +51,12 @@ namespace TradeLord
         private int _lifetimeProfitCapped;
         private int _promisesScored;
         private float _promiseHeld;
-        private int _forecastsScored;
-        private float _forecastMissed;
+        private int _forecastsJudged;
+        private float _forecastSaid;
+        private float _forecastCameTrue;
+        private int _resalesJudged;
+        private long _resaleMeant;
+        private long _resaleFetched;
         private string _promiseText = "";
         private Dictionary<string, PromiseRecord> _promises =
             new Dictionary<string, PromiseRecord>(StringComparer.Ordinal);
@@ -117,18 +121,36 @@ namespace TradeLord
             return scored > 0;
         }
 
-        internal void KeepForecastScore(float missed)
+        internal void KeepForecastScore(int said, int moved)
         {
-            if (missed < 0f || float.IsNaN(missed) || float.IsInfinity(missed)) return;
-            _forecastsScored++;
-            _forecastMissed += missed;
+            if (!TradeMath.HowMuchCameTrue(said, moved, out float share)) return;
+            float size = Math.Abs((float)said);
+            _forecastsJudged++;
+            _forecastSaid += size;
+            _forecastCameTrue += size * share;
         }
 
-        internal bool ForecastScore(out int scored, out float missed)
+        internal bool ForecastScore(out int scored, out float cameTrue)
         {
-            scored = _forecastsScored;
-            missed = TradeMath.MeanOf(_forecastMissed, _forecastsScored);
+            scored = _forecastsJudged;
+            cameTrue = TradeMath.ShareThatCameTrue(_forecastSaid, _forecastCameTrue);
             return scored > 0;
+        }
+
+        internal void KeepResale(int units, long meant, int fetched)
+        {
+            if (units <= 0 || meant <= 0L || fetched <= 0) return;
+            _resalesJudged += units;
+            _resaleMeant += meant;
+            _resaleFetched += TradeMath.FetchedUpTo(fetched, meant);
+            TradeMath.ForgetHalfWhenFull(ref _resalesJudged, ref _resaleMeant, ref _resaleFetched);
+        }
+
+        internal float ResaleSafety(float setting, out int judged, out float fetched)
+        {
+            judged = _resalesJudged;
+            fetched = TradeMath.ShareFetched(_resaleMeant, _resaleFetched);
+            return TradeMath.ResaleSafetyAsSalesWent(setting, judged, fetched);
         }
 
         private static int Capped(long total) =>
@@ -169,8 +191,12 @@ namespace TradeLord
             dataStore.SyncData("TradeLord_PromisesScoredWhenDue", ref _promisesScored);
             dataStore.SyncData("TradeLord_PromiseHeldWhenDue", ref _promiseHeld);
             dataStore.SyncData("TradeLord_PromiseTextWhenDue", ref _promiseText);
-            dataStore.SyncData("TradeLord_ForecastsScoredEveryRun", ref _forecastsScored);
-            dataStore.SyncData("TradeLord_ForecastMissedEveryRun", ref _forecastMissed);
+            dataStore.SyncData("TradeLord_ForecastsJudgedOnTheDay", ref _forecastsJudged);
+            dataStore.SyncData("TradeLord_ForecastSaidOnTheDay", ref _forecastSaid);
+            dataStore.SyncData("TradeLord_ForecastCameTrueOnTheDay", ref _forecastCameTrue);
+            dataStore.SyncData("TradeLord_ResalesJudged", ref _resalesJudged);
+            dataStore.SyncData("TradeLord_ResaleMeant", ref _resaleMeant);
+            dataStore.SyncData("TradeLord_ResaleFetched", ref _resaleFetched);
             dataStore.SyncData("TradeLord_LatelyText", ref _latelyText);
             dataStore.SyncData("TradeLord_VillagePursesPutBack", ref _villagePursesPutBack);
             if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;
@@ -385,7 +411,23 @@ namespace TradeLord
         {
             MatchPurchasesToWhatIsHeld();
             PruneObservations();
+            SayTheResaleSafety();
         });
+
+        private int _resaleSafetySaid = -1;
+
+        private void SayTheResaleSafety()
+        {
+            if (!Options.Current.ExtendedDebugLogging) return;
+            float used = TradePolicy.ResaleSafety(out float setting, out int judged, out float fetched);
+            int percent = (int)Math.Round(used * 100f);
+            if (judged <= 0 || percent == _resaleSafetySaid) return;
+            _resaleSafetySaid = percent;
+            Log.Write("resale safety: TradeLord's own sales have fetched " + Scoring.Share(fetched) +
+                      " of what it meant to sell them for, over " + judged + " unit(s) it bought to sell on, " +
+                      "so a price elsewhere counts at " + percent + "% when it buys, where Resale safety factor " +
+                      "starts it at " + (int)Math.Round(setting * 100f) + "%");
+        }
 
         private void OnSessionLaunched(CampaignGameStarter starter)
         {
@@ -564,7 +606,7 @@ namespace TradeLord
             };
         }
 
-        public void RecordPurchase(string itemId, int count, int totalPaid)
+        public void RecordPurchase(string itemId, int count, int totalPaid, int meantEach = 0)
         {
             if (!Paid.TryGetValue(itemId, out var rec))
             {
@@ -572,12 +614,20 @@ namespace TradeLord
                 Paid[itemId] = rec;
                 _purchases.Add(rec);
             }
-            TradeMath.AddPurchase(rec, count, totalPaid);
+            TradeMath.AddPurchase(rec, count, totalPaid, meantEach);
         }
 
         public void RecordSale(string itemId, int count)
         {
             if (Paid.TryGetValue(itemId, out var rec)) TradeMath.DrainSale(rec, count);
+        }
+
+        public void RecordSale(string itemId, int count, int fetched, int unitPaid)
+        {
+            if (!Paid.TryGetValue(itemId, out var rec)) return;
+            TradeMath.DrainSale(rec, count, unitPaid, out int planned, out long meant);
+            if (planned <= 0 || count <= 0) return;
+            KeepResale(planned, meant, (int)Math.Min(int.MaxValue, (long)fetched * planned / count));
         }
 
         internal static string PaidKey(EquipmentElement el) =>
@@ -598,6 +648,13 @@ namespace TradeLord
             if (unit != TradeMath.NoRecordedBasis) return unit;
             var best = BestBuy(item);
             return best.price > 0 ? best.price : item.Value;
+        }
+
+        public int[] DearerUnits(EquipmentElement el, float margin)
+        {
+            int mode = Options.Current.CostBasisMode;
+            if (el.Item == null || mode == 2 || !Paid.TryGetValue(PaidKey(el), out var rec)) return null;
+            return TradeMath.DearerThan(rec, TradeMath.WhatTheAverageCovers(TradeMath.UnitBasis(rec, mode), margin));
         }
 
         public int PaidPerUnit(EquipmentElement el)

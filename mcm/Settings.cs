@@ -714,7 +714,7 @@ namespace TradeLord.Mcm
         public bool AdaptiveSpendLimit { get => _o.AdaptiveSpendLimit; set { _o.AdaptiveSpendLimit = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL238}Resale safety factor", 0.5f, 1f, "#0%", Order = 7, RequireRestart = false,
-            HintText = "{=TL338}Assume only this fraction of the best sell price is still available by the time you arrive.")]
+            HintText = "{=TL338}Assume only this share of the best sell price elsewhere is still there when you arrive. TradeLord starts here, then moves it toward the share of its planned sale price that its own sales really fetch.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }
 

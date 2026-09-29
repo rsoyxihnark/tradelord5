@@ -16,12 +16,11 @@ namespace TradeLord
             internal float AtHours;
             internal float WithinDays;
             internal int StockThen;
-            internal int StockSaid;
             internal int WorthThen;
-            internal int WorthSaid;
+            internal int[] StockAhead;
+            internal int[] WorthAhead;
             internal int StockYours;
             internal int WorthYours;
-            internal int UsedADay;
         }
 
         private struct Promised
@@ -191,7 +190,7 @@ namespace TradeLord
             float now = (float)CampaignTime.Now.ToHours;
             var lines = new List<string>();
             int scored = 0, stale = 0, unpriced = 0, yours = 0, early = 0;
-            float heldTotal = 0f;
+            float heldTotal = 0f, keptTotal = 0f;
             var stillToCome = new List<KeyValuePair<string, Promised>>();
             foreach (KeyValuePair<string, Promised> one in here)
             {
@@ -223,6 +222,7 @@ namespace TradeLord
                 if (holding != Holding.Scored) continue;
                 scored++;
                 heldTotal += held;
+                keptTotal += TradeMath.UpToThePromise(held);
                 _bands.Add(said.Confidence, held);
                 LedgerBehavior.Instance?.KeepPromiseScore(held);
                 lines.Add("  " + Named(said.Item) + ": the panel promised " + said.SellPrice +
@@ -232,7 +232,7 @@ namespace TradeLord
             }
             foreach (KeyValuePair<string, Promised> one in stillToCome) _promised.Put(site.StringId, one.Key, one.Value);
             if (scored > 0)
-                LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(heldTotal, scored));
+                LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(keptTotal, scored));
             if (!Writing || scored + stale + yours + unpriced + early == 0) return;
             lines.Insert(0, "promise check at " + site.Name + ", " + scored + " promise(s) scored" +
                       (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") +
@@ -262,8 +262,8 @@ namespace TradeLord
                 if (LedgerBehavior.Instance != null &&
                     LedgerBehavior.Instance.PromiseScoreAt(site.StringId, out int walkIns, out float hereOverall))
                     lines.Add("  at " + site.Name + ": the price has held at " + Share(hereOverall) +
-                              " of promise over " + walkIns + " walk-in(s) here" +
-                              WhatTheRecordDoes(walkIns, hereOverall));
+                              " of promise over " + walkIns + " walk-in(s) here, counting a price above " +
+                              "its promise as the promise" + WhatTheRecordDoes(walkIns, hereOverall));
             }
             Log.WriteMany(lines);
         }
@@ -291,10 +291,19 @@ namespace TradeLord
             if (_said.TryGet(site.StringId, item.StringId, out Said waiting) && waiting.Item != null &&
                 Scoring.StillToBeJudged(waiting.WithinDays, waiting.AtHours, (float)CampaignTime.Now.ToHours))
                 return;
-            int stockSaid = TradeMath.MissedBy(Forecast.UnitsLeaving(site, item, withinDays),
-                                               Forecast.UnitsLanding(site, item, withinDays));
-            int worthSaid = Forecast.WorthShift(site, item, withinDays);
-            if (stockSaid == 0 && worthSaid == 0) return;
+            int steps = Scoring.StepsItIsReadOver(withinDays);
+            var stockAhead = new int[steps];
+            var worthAhead = new int[steps];
+            bool moves = false;
+            for (int step = Scoring.FirstStepJudged(withinDays); step < steps; step++)
+            {
+                float days = Scoring.DaysAtStep(step);
+                stockAhead[step] = TradeMath.MissedBy(Forecast.UnitsLeaving(site, item, days),
+                                                      Forecast.UnitsLanding(site, item, days));
+                worthAhead[step] = Forecast.WorthShift(site, item, days);
+                if (stockAhead[step] != 0 || worthAhead[step] != 0) moves = true;
+            }
+            if (!moves) return;
             if (!_said.Holds(site.StringId, item.StringId) && _said.Full && !RoomForOneMoreFigure())
             {
                 Log.Repeatable("forecast check", "full",
@@ -308,10 +317,9 @@ namespace TradeLord
                 AtHours = (float)CampaignTime.Now.ToHours,
                 WithinDays = withinDays,
                 StockThen = LedgerBehavior.StockOf(site, item),
-                StockSaid = stockSaid,
                 WorthThen = WorthOnTheShelf(site, item),
-                WorthSaid = worthSaid,
-                UsedADay = Forecast.UsedUpADay(site, item)
+                StockAhead = stockAhead,
+                WorthAhead = worthAhead
             });
         }
 
@@ -322,7 +330,7 @@ namespace TradeLord
             float now = (float)CampaignTime.Now.ToHours;
             var lines = new List<string>();
             int scored = 0, stale = 0, early = 0, landingMiss = 0, shared = 0;
-            float shareTotal = 0f;
+            float weighed = 0f, cameTrue = 0f;
             var stillToCome = new List<KeyValuePair<string, Said>>();
             foreach (KeyValuePair<string, Said> one in here)
             {
@@ -340,8 +348,8 @@ namespace TradeLord
                     continue;
                 }
                 scored++;
-                var said = Scoring.ToTheWalkIn(kept.StockSaid, kept.WorthSaid, kept.UsedADay, kept.Item.Value,
-                                               kept.WithinDays, since, kept.StockThen, kept.WorthThen);
+                var said = Scoring.AtTheWalkIn(kept.StockAhead, kept.WorthAhead, since,
+                                               kept.StockThen, kept.WorthThen);
                 Outcome how = Scoring.Weigh(said.stock, kept.StockThen,
                                             LedgerBehavior.StockOf(site, kept.Item),
                                             said.worth, kept.WorthThen,
@@ -351,17 +359,19 @@ namespace TradeLord
                 string line = "  " + Named(kept.Item) + ": " + UnitsShifted(said.stock, how.Landed) +
                               Yours(kept.StockYours, false) + "; you walked in " + Figure(since) +
                               " day(s) after it said so, for a ride it put at " + Figure(kept.WithinDays) + " day(s)" +
-                              (kept.UsedADay > 0 ? ", with what the town uses up counted to the day you walked in" : "");
+                              ", held to what it said would move by the day you walked in";
                 if (!how.WorthKept)
                 {
                     lines.Add(line + "; no worth is kept for a kind of good here, which only a town does");
                     continue;
                 }
-                if (how.Share != TradeMath.NoShareToGive)
+                if (TradeMath.HowMuchCameTrue(said.worth, how.Moved, out float share))
                 {
                     shared++;
-                    shareTotal += how.Share;
-                    LedgerBehavior.Instance?.KeepForecastScore(TradeMath.MissThatCounts(how.Share));
+                    float size = Math.Abs((float)said.worth);
+                    weighed += size;
+                    cameTrue += size * share;
+                    LedgerBehavior.Instance?.KeepForecastScore(said.worth, how.Moved);
                 }
                 lines.Add(line + "; " + WorthShifted(said.worth, how.Moved) + Shared(how.Share) +
                           Yours(kept.WorthYours, true));
@@ -378,13 +388,14 @@ namespace TradeLord
                           Figure(TradeMath.MeanOf(landingMiss, scored)) + " unit(s) a good" +
                           (shared == 0
                               ? ", and no worth figure could be held to anything here"
-                              : ", the worth figure by " + Share(TradeMath.MeanOf(shareTotal, shared)) +
-                                " of what it said would move, over " + shared + " good(s)"));
+                              : ", and of the worth it said would move, " +
+                                Share(TradeMath.ShareThatCameTrue(weighed, cameTrue)) + " came true, over " +
+                                shared + " good(s)"));
                 if (LedgerBehavior.Instance != null &&
-                    LedgerBehavior.Instance.ForecastScore(out int figures, out float missed))
-                    lines.Add("  over this campaign: the worth figure has been off by " + Share(missed) +
-                              " over " + figures + " figure(s) checked, so what is on its way is counted at " +
-                              Share(TradeMath.TrustInTheForecast(figures, missed)) + " of what it says");
+                    LedgerBehavior.Instance.ForecastScore(out int figures, out float held))
+                    lines.Add("  over this campaign: of the worth it said would move, " + Share(held) +
+                              " came true over " + figures + " figure(s) checked, so what is on its way is counted at " +
+                              Share(TradeMath.TrustInTheForecast(figures, held)) + " of what it says");
             }
             if (scored + stale == 0)
             {

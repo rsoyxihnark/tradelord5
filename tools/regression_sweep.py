@@ -800,7 +800,7 @@ def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
                     "float rate = TradeMath.PerDay(earned, ride);",
                     "float weighed = TradeMath.RateTheMarkHolds(rate, s == holder);",
                     "if (weighed > bar)")
-            and ordered(fetch, "foreach (var (item, amount, worth) in cargo)",
+            and ordered(fetch, "foreach (var (item, amount, worth, floors) in cargo)",
                         "Paying pays = WhatThatMarketPays(site, market, item, party, ride);",
                         "for (int u = 0; u < amount; u++)",
                         "int price = pays.At(u);",
@@ -819,10 +819,13 @@ def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
 def the_marker_counts_only_what_the_selling_rules_would_really_move():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     carried = method_body(S['Marker.cs'],
-                          "private static List<(EquipmentElement item, int amount, int worth)> "
+                          "private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> "
                           "WhatYouCarryToSell")
     worth = method_body(S['Policy.cs'], "internal static int WorthToBeat(EquipmentElement el)")
-    return ("cargo.Add((el.EquipmentElement, el.Amount - keep, TradePolicy.WorthToBeat(el.EquipmentElement)));" in carried
+    return (ordered(carried, "int worth = TradePolicy.WorthToBeat(el.EquipmentElement);",
+                    "int[] dearer = LedgerBehavior.Instance?.DearerUnits(el.EquipmentElement, Options.Current.MinProfitMargin);",
+                    "cargo.Add((el.EquipmentElement, el.Amount - keep, worth,",
+                    "new TradeMath.DearFirst(dearer, el.Amount - (dearer == null ? 0 : dearer.Length), worth)));")
             and "var cargo = WhatYouCarryToSell(party);" in marker
             and "int paid = CostBasis(el);" in worth
             and "TradeRules.WorthIsWhatYouPaid(good, paid)" in worth
@@ -832,7 +835,8 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
             and ordered(method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch"),
                         "Paying pays = WhatThatMarketPays(site, market, item, party, ride);",
                         "int price = pays.At(u);",
-                        "if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) break;",
+                        "if (!TradeMath.ProfitAcceptable(walk.Floor(price, Options.Current.MinProfitMargin), price,\n"
+                        "                                                    Options.Current.MinProfitMargin)) break;",
                         "took.Value += fetched;")
             and "if (took.Value <= 0L) { how.Refused++; continue; }" in marker
             and "BestMarketFloor" not in S['Marker.cs']
@@ -1041,14 +1045,14 @@ def the_readme_counts_the_saved_values_right():
         for field in re.findall(r'dataStore\.SyncData\("[^"]+",\s*ref\s+(\w+)\)', body):
             tally[types.get(field)] = tally.get(types.get(field), 0) + 1
     words = {1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six',
-             7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten'}
+             7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten', 11: 'eleven', 12: 'twelve'}
     numbers = tally.get('int', 0) + tally.get('long', 0) + tally.get('float', 0)
     counted = 'a number' if numbers == 1 else words.get(numbers, 'no') + ' numbers'
     switches = tally.get('bool', 0)
     marked = 'a switch' if switches == 1 else words.get(switches, 'no') + ' switches'
     said = ('All it puts in a save is ' + words.get(tally.get('string'), 'no') +
             ' strings, ' + counted + ', ' + marked + ' and a settlement reference')
-    return (said in README and numbers == 7
+    return (said in README and numbers == 11
             and tally.get('Settlement') == 1 and switches == 1)
 
 def readme_defaults_match_the_shipped_ones():
@@ -1278,12 +1282,15 @@ def the_money_rules_need_nothing_from_the_game():
 
 def the_ledger_keeps_no_second_copy_of_the_cost_basis_rules():
     body = S['Ledger.cs']
-    forwards = ('TradeMath.AddPurchase(rec, count, totalPaid);',
+    forwards = ('TradeMath.AddPurchase(rec, count, totalPaid, meantEach);',
                 'TradeMath.DrainSale(rec, count);',
+                'TradeMath.DrainSale(rec, count, unitPaid, out int planned, out long meant);',
+                'return TradeMath.DearerThan(rec, TradeMath.WhatTheAverageCovers(TradeMath.UnitBasis(rec, mode), margin));',
                 'TradeMath.UnitBasis(rec, Options.Current.CostBasisMode);')
     return (all(f in body for f in forwards)
             and 'rec.LastUnitPaid > 0' not in body
             and 'rec.TotalPaid / rec.Count' not in body
+            and 'rec.Batches' not in body
             and 'TradeMath.NoRecordedBasis' in body)
 
 def a_good_you_never_bought_still_falls_through_to_the_market():
@@ -1306,7 +1313,9 @@ def the_policy_layer_keeps_no_second_copy_of_the_money_rules():
     body = S['Policy.cs']
     anywhere = S['Policy.cs'] + S['Trading.cs']
     forwards = ('TradeMath.Credit(proceeds, basis, unpaidWorth);',
-                'TradeMath.Realizable(farSellPrice, Options.Current.ResaleSafetyFactor);',
+                'TradeMath.Realizable(farSellPrice, ResaleSafety());',
+                'if (ledger != null) return ledger.ResaleSafety(setting, out judged, out fetched);',
+                'return TradeMath.ResaleSafetyAsSalesWent(setting, judged, fetched);',
                 'TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin);')
     return (all(f in body for f in forwards)
             and 'TradeMath.PolicyAllows(PolicyFor(good, s), buying: true)' in S['Rules.cs']
@@ -1314,7 +1323,8 @@ def the_policy_layer_keeps_no_second_copy_of_the_money_rules():
             and 'PolicyAllows' not in anywhere
             and 'gain > 0 ? gain : 0' not in anywhere
             and 'townSellPrice >= costBasis' not in anywhere
-            and 'ResaleSafetyFactor;' not in anywhere.replace('Options.Current.ResaleSafetyFactor);', ''))
+            and anywhere.count('ResaleSafetyFactor') == 1
+            and 'setting = Options.Current.ResaleSafetyFactor;' in body)
 
 def the_money_rules_are_covered_by_tests_the_build_runs():
     return ('TradeMath.cs' in TESTPROJ and 'Options.cs' in TESTPROJ
@@ -1553,7 +1563,8 @@ chk("1.3.2", "zero-gold purchase not recorded",
                   method_body(S['Trading.cs'], one)) is not None
         for one in ("public static void ExecuteResupply", "public static bool ExecuteHaulage")) and
     re.search(r'if \(cost == 0\) return true;\s*'
-              r'LedgerBehavior\.Instance\?\.RecordPurchase\(LedgerBehavior\.PaidKey\(Shelf\[at\]\.EquipmentElement\), 1, cost\);',
+              r'LedgerBehavior\.Instance\?\.RecordPurchase\(LedgerBehavior\.PaidKey\(Shelf\[at\]\.EquipmentElement\), 1, cost,\s*'
+              r'meant\);',
               method_body(S['Trading.cs'], "private sealed class BuyingAt")) is not None and
     re.search(r'if \(cost == 0\) break;\s*books\.NoteBought\(good\.Id, cost\);',
               method_body(S['Passes.cs'], "internal static Traded BuyThem")) is not None)
@@ -1640,7 +1651,7 @@ chk("1.3.6", "the smithing-material rule still binds buying as well as selling",
         method_body(S['Policy.cs'], "internal static Good Describe"))
 chk("1.3.6", "vanilla suppression asks the ledger", "TooltipHelper.HasSection(____targetItem)" in S['TooltipPatches.cs'])
 chk("1.3.6", "marker respects the sell policy",
-    "TradePolicy.MaySell(el, locked, keepBack" in method_body(S['Marker.cs'], "private static List<(EquipmentElement item, int amount, int worth)> WhatYouCarryToSell"))
+    "TradePolicy.MaySell(el, locked, keepBack" in method_body(S['Marker.cs'], "private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> WhatYouCarryToSell"))
 chk("1.3.6", "chunked trade lines silenced",
     "AutomatedTradeInProgress" in S['Trading.cs'] and "Patch_SilenceChunkedTradeLines" in S['Trading.cs'])
 chk("1.3.6", "smithing materials still ship tradable, as the old switch shipped off",
@@ -1820,9 +1831,12 @@ chk("1.3.12", "sieges/raids excluded from scans",
     "if (UnderAttack(s) || VillageShut(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible") and
     "LedgerBehavior.UnderAttack(s)" in S['Marker.cs'])
 chk("1.3.13", "the buy shelf is worked through most money first, and a test holds it to that rather than a line of source",
-    "Picks.MostMoneyFirst(stock);" in method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
+    "Picks.MostForWhatRunsShortFirst(stock, market.Room() - books.Weight(sim), market.Spendable());" in
+        method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
     and "stock?.Sort((x, y) => y.Worth.CompareTo(x.Worth));" in
         method_body(S['Passes.cs'], "internal static void MostMoneyFirst")
+    and ordered(method_body(S['Passes.cs'], "internal static void MostForWhatRunsShortFirst"),
+                "if (roomShort <= 0f && purseShort <= 0)", "MostMoneyFirst(stock);\n                return;")
     and 'Passes.cs' in TESTPROJ
     and all(one in SHELFORDERTESTS for one in
             ("The_pick_that_would_make_the_most_is_bought_first",
@@ -2179,7 +2193,7 @@ chk("1.5.5", "a stack pays its purchased basis only for the units that were purc
         method_body(S['Passes.cs'], "internal int Unit(out bool askTheMarket)") and
     ordered(method_body(S['Passes.cs'], "internal bool SoldOne()"),
             "if (PaidLeft <= 0) return false;", "PaidLeft--;", "return true;") and
-    S['Passes.cs'].count("if (basis.SoldOne()) market.RecordedSale(at);") == 1 and
+    S['Passes.cs'].count("if (basis.SoldOne()) market.RecordedSale(at, proceeds, basis.SoldAt);") == 1 and
     "else LedgerBehavior.Instance?.RecordSale(paidKey, 1);" in
         method_body(S['Trading.cs'], "public static void ExecuteHerdRelief") and
     S['Passes.cs'].count("PaidLeft--;") == 1 and
@@ -2954,7 +2968,10 @@ chk("1.6.12", "what quick-sell agrees to sell runs through one margin rule, and 
     "ProfitAcceptable(basis.UnpaidWorth" not in S['Trading.cs'] + S['Passes.cs'] and
     "TradePolicy.Credit(price, worth, basis.UnpaidWorth)" in S['Trading.cs'] and
     "ProfitAcceptable(" not in S['Policy.cs'] and
-    "if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) break;" in S['Marker.cs'] and
+    S['Passes.cs'].count("int mustBeat = TradeRules.WorthToBeat(good, basis.Floor(worth, price, s.MinProfitMargin),") == 1 and
+    S['Passes.cs'].count("TradeMath.Credit(price, worth, basis.UnpaidWorth)") == 1 and
+    ("if (!TradeMath.ProfitAcceptable(walk.Floor(price, Options.Current.MinProfitMargin), price,\n"
+     "                                                    Options.Current.MinProfitMargin)) break;") in S['Marker.cs'] and
     re.search(r'ProfitAcceptable\(int costBasis, int townSellPrice, float margin\) =>\s*costBasis > 0\s*\?\s*'
               r'townSellPrice >= costBasis \* \(1f \+ margin\)\s*:\s*'
               r'townSellPrice > 0;', S['TradeMath.cs']) is not None)
@@ -4655,7 +4672,10 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
             and "market.MayBuy(at, good, out Block whyBuy)" in buy
             and "int wouldDraw = market.ResaleUpTo(picked.At, held + 1);" in buy
             and "TradeRules.TheBuyerCouldNotPay(wouldDraw, till)" in buy
-            and "s.ResaleSafetyFactor" in buy
+            and "float safety = market.ResaleSafety();" in buy
+            and "TradeMath.Realizable(wouldDraw - drawn, safety)" in buy
+            and "public float ResaleSafety() => TradePolicy.ResaleSafety();" in buy
+            and "s.ResaleSafetyFactor" not in buy
             and "s.MinProfitMargin" in buy
             and "TradeRules.WhatStopsBuying(good, price, market.Spendable()," in buy
             and "TradeRules.NoRoomForOneMore(good, market.Room() - simWeight)" in buy
@@ -4893,7 +4913,7 @@ def a_quest_animal_is_held_back_from_every_sale_not_just_the_herd():
                     for where in ("private sealed class SellingFrom",
                                   "public static void ExecuteHerdRelief"))
             and "TradePolicy.KeptBack(" in method_body(S['Marker.cs'],
-                    "private static List<(EquipmentElement item, int amount, int worth)> "
+                    "private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> "
                     "WhatYouCarryToSell"))
 
 chk("1.37.5", "an animal a quest is waiting on is held back from every sale, not only from thinning the herd",
@@ -5475,7 +5495,7 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
                 "internal float CapacityAdded(bool sim) => OnPaper(sim) ? _capacity : 0f;",
                 "OnPaper(sim) && key != null && _drySoldFrom.TryGetValue(key, out int units) ? units : 0;"))
             and all(dry in ledger for dry in ("_drySold", "_dryBought"))
-            and len(fields) == 20
+            and len(fields) == 21
             and "ForgetTheDryRun();" in forget
             and cleared(forget) == live
             and cleared(dry) == fields - live
@@ -5557,7 +5577,7 @@ def a_meeting_on_the_road_counts_what_it_spends_against_the_cap():
             and "int paid = books.PaidOut(sim);" in t
             and "internal int PaidOut(bool sim) => _paid + (sim ? _spent : 0);" in S['Books.cs']
             and buy.count("pass.Spendable()") == 2
-            and buy.count("market.Spendable()") == 2
+            and buy.count("market.Spendable()") == 3
             and "market.Spendable()" in method_body(S['Passes.cs'], "private static int UnitsItCouldTake")
             and ordered(method_body(S['Passes.cs'], "internal static Traded BuyThem"),
                         "if (market.Stopped || market.Spendable() <= 0) break;",
@@ -5704,7 +5724,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
                         "LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));",
                         'dataStore.SyncData("TradeLord_LedgerText"')
             and trade.count("dataStore.SyncData(") == 2
-            and ledger.count("dataStore.SyncData(") == 12)
+            and ledger.count("dataStore.SyncData(") == 16)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
     arrays = dict(re.findall(r'private static readonly string\[\] (\w+) =\s*\{(.*?)\};', M, re.S))
@@ -5803,7 +5823,7 @@ def an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on():
     t = S['Trading.cs']
     sell = method_body(S['Policy.cs'], "internal static bool MaySell(ItemRosterElement el")
     quick = sell_pass()
-    carried = method_body(S['Marker.cs'], "private static List<(EquipmentElement item, int amount, int worth)> WhatYouCarryToSell")
+    carried = method_body(S['Marker.cs'], "private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> WhatYouCarryToSell")
     return (ordered(sell_rule(),
                     "int promised = DrawKeepBack(amount, facts.AwaitedHeld, out bool owed);",
                     "said.KeepCount = promised;",
@@ -6408,7 +6428,7 @@ def goods_you_were_given_are_held_to_your_margin_like_the_ones_you_bought():
             and "internal static int WorthToBeat(in Good good, int paid, int unpaidWorth) =>" in rules
             and "WorthIsWhatYouPaid(good, paid) ? paid : unpaidWorth;" in rules
             and ordered(sell, "int worth = basis.Unit(out bool askTheMarket);",
-                        "int mustBeat = TradeRules.WorthToBeat(good, worth, basis.UnpaidWorth);",
+                        "int mustBeat = TradeRules.WorthToBeat(good, basis.Floor(worth, price, s.MinProfitMargin),",
                         "if (!TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))")
             and "WorthToBeat" not in relief
             and 'Rules.cs' in TESTPROJ
@@ -6910,11 +6930,11 @@ def a_dry_run_draws_the_price_you_paid_down_the_way_a_real_pass_does():
             and S['Passes.cs'].count("Basis.For(") == 2
             and "internal static Basis For(" in basis
             and t.count("Basis.For(item)") == 0
-            and "if (basis.SoldOne()) books.NotePaidDrawn(market.PaidKeyAt(at));" in sell
-            and "if (basis.SoldOne()) market.RecordedSale(at);" in sell
-            and "LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1);" in sell
+            and "if (basis.SoldOne()) books.NotePaidDrawn(market.PaidKeyAt(at), basis.SoldAt);" in sell
+            and "if (basis.SoldOne()) market.RecordedSale(at, proceeds, basis.SoldAt);" in sell
+            and "LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, proceeds, unitPaid);" in sell
             and ordered(herd, "if (basis.SoldOne())",
-                        "if (pass.Sim) pass.Books.NotePaidDrawn(paidKey);",
+                        "if (pass.Sim) pass.Books.NotePaidDrawn(paidKey, basis.SoldAt);",
                         "else LedgerBehavior.Instance?.RecordSale(paidKey, 1);")
             and t.count("NotePaidDrawn(") == 1
             and S['Passes.cs'].count("NotePaidDrawn(") == 1
@@ -6949,7 +6969,7 @@ def the_food_reserve_carries_a_dry_run_from_one_pass_to_the_next():
             and "TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);"
                 in method_body(t, "public static void ExecuteHerdRelief")
             and "TradePolicy.KeptBack(party.ItemRoster, TradeActionBehavior.TheVisit," in
-                method_body(S['Marker.cs'], "private static List<(EquipmentElement item, int amount, int worth)> WhatYouCarryToSell")
+                method_body(S['Marker.cs'], "private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> WhatYouCarryToSell")
             and "What_a_dry_run_sold_is_taken_off_one_stack_after_another_and_never_twice" in FOODTESTS
             and "A_real_pass_leaves_every_stack_exactly_as_the_party_holds_it" in FOODTESTS
             and "A_reserve_worked_out_after_a_dry_run_reaches_past_what_it_already_sold" in FOODTESTS)
@@ -7592,8 +7612,8 @@ def the_forecast_is_scored_against_the_market_it_predicted():
             and "Hindsight.Note(best);" in method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
             and "Hindsight.Score(settlement);" in method_body(S['Trading.cs'], "private void OnSettlementEntered")
             and 'Guard.Run("GameEnd.Hindsight", Hindsight.Forget);' in S['SubModule.cs']
-            and "Forecast.UnitsLanding(site, item, withinDays)" in noted
-            and "Forecast.WorthShift(site, item, withinDays)" in noted
+            and "Forecast.UnitsLanding(site, item, days)" in noted
+            and "Forecast.WorthShift(site, item, days)" in noted
             and "LedgerBehavior.StockOf(site, item)" in noted
             and "WorthOnTheShelf(site, item)" in noted)
 
@@ -7606,7 +7626,7 @@ def the_score_works_out_how_far_off_it_was_in_the_layer_the_tests_reach():
             and 'TradeMath.MeanOf(' in written
             and 'Scoring.TooOldToSay(kept.WithinDays, kept.AtHours, now, out float since)' in written
             and 'TradeMath.DaysSince(' in method_body(S['Scoring.cs'], "internal static bool TooOldToSay")
-            and 'var said = Scoring.ToTheWalkIn(kept.StockSaid, kept.WorthSaid, kept.UsedADay, kept.Item.Value,' in written
+            and 'var said = Scoring.AtTheWalkIn(kept.StockAhead, kept.WorthAhead, since,' in written
             and 'Outcome how = Scoring.Weigh(said.stock, kept.StockThen,' in written
             and 'A_town_s_own_use_is_carried_to_the_day_you_walked_in' in SCORINGTESTS
             and 'TradeMath.NoShareToGive' in MATHTESTS
@@ -7689,10 +7709,10 @@ def a_promise_is_scored_against_the_price_the_market_actually_pays():
             and "_bands.Add(said.Confidence, held);" in kept
             and "TradeMath.BandOf(confidence)" in method_body(S['Scoring.cs'], "internal void Add")
             and ordered(kept, "LedgerBehavior.Instance?.KeepPromiseScore(held);",
-                        "LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(heldTotal, scored));",
+                        "LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(keptTotal, scored));",
                         "if (!Writing || scored + stale + yours + unpriced + early == 0) return;")
             and kept.index("LedgerBehavior.Instance?.KeepArrival(") >
-                kept.rindex("heldTotal += held;")
+                kept.rindex("keptTotal += TradeMath.UpToThePromise(held);")
             and "A_market_that_puts_no_price_on_a_good_scores_nothing" in SCORINGTESTS
             and "What_the_market_pays_is_scored_as_a_share_of_what_was_promised" in SCORINGTESTS)
 
@@ -9192,7 +9212,7 @@ chk("1.76.6", "the workshop limit is lifted only while it is you buying one, so 
 def the_marker_reads_your_cargo_once_and_prices_each_market_once():
     t = S['Trading.cs']
     carried = method_body(S['Marker.cs'],
-                          "private static List<(EquipmentElement item, int amount, int worth)> "
+                          "private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> "
                           "WhatYouCarryToSell")
     asked = method_body(S['Marker.cs'], "internal int At(int taken)")
     forget = method_body(S['Marker.cs'], "internal static void ForgetTheRead")
@@ -9489,10 +9509,10 @@ def a_markets_record_counts_your_walk_ins_not_the_prices_it_checked():
             and kept.count("LedgerBehavior.Instance?.KeepArrival(") == 1
             and kept.count("LedgerBehavior.Instance?.KeepPromiseScore(") == 1
             and kept.index("LedgerBehavior.Instance?.KeepArrival(") >
-                kept.rindex("heldTotal += held;")
+                kept.rindex("keptTotal += TradeMath.UpToThePromise(held);")
             and kept.index("LedgerBehavior.Instance?.KeepArrival(") <
                 kept.index("if (!Writing || scored + stale + yours + unpriced + early == 0) return;")
-            and "TradeMath.MeanOf(heldTotal, scored));" in kept
+            and "TradeMath.MeanOf(keptTotal, scored));" in kept
             and "if (scored > 0)" in kept
             and "TradeMath.AddPromise(rec, held);" in arrival
             and "TradeMath.AddPromise(" not in tally
@@ -10308,7 +10328,7 @@ def the_pass_buys_what_the_ledger_sent_you_for_first():
     return ("internal int LedgerRank;" in S['Passes.cs']
             and "int TheLedgerAsksFor(int at);" in S['Passes.cs']
             and "LedgerRank = market.TheLedgerAsksFor(at)" in want
-            and ordered(want, "Picks.MostMoneyFirst(stock);",
+            and ordered(want, "Picks.MostForWhatRunsShortFirst(stock,",
                         "Picks.WhatTheLedgerAskedForFirst(stock);")
             and "foreach (Pick one in stock) (one.LedgerRank > 0 ? asked : rest).Add(one);" in order
             and "if (asked.Count == 0) return;" in order
@@ -10346,14 +10366,15 @@ def the_shelf_is_ranked_by_what_a_pick_would_really_make():
                         "room, allowed);")
             and "if (s.BuyCapPerItem > 0) most = Math.Min(most, (long)s.BuyCapPerItem - taken.count);" in
                 method_body(S['Rules.cs'], "internal static int UnitsTheCapsAllow")
-            and "picked.Worth = WhatThisPickWouldReallyMake(market, one.At, carried, here, take, s);"
+            and "picked.Worth = WhatThisPickWouldReallyMake(market, one.At, carried, here, take, s, out int counted);"
                 in want
             and "if (cap > 0 && cap < take) take = cap;" in rule
             and "The_buy_cap_per_item_holds_the_take_down_to_what_it_allows" in MATHTESTS
             and "A_pick_is_worth_what_you_could_actually_take_of_it_not_its_percentage" in BUYPASSTESTS
-            and ordered(made, "int wouldDraw = market.ResaleUpTo(at, carried + u + 1);",
+            and ordered(made, "float safety = market.ResaleSafety();",
+                        "int wouldDraw = market.ResaleUpTo(at, carried + u + 1);",
                         "if (TradeRules.TheBuyerCouldNotPay(wouldDraw, till)) break;",
-                        "TradeMath.Realizable(wouldDraw - drawn, s.ResaleSafetyFactor)",
+                        "TradeMath.Realizable(wouldDraw - drawn, safety)",
                         "made += realizable - here;")
             and "internal float Worth;" in S['Passes.cs']
             and "Margin" not in method_body(S['Passes.cs'], "internal struct Pick")
@@ -10543,7 +10564,8 @@ def the_marker_walks_the_price_down_the_way_a_sale_really_would():
             and "while (_rungs.Count <= taken) _rungs.Add(Next());" in asked
             and ordered(fetch, "for (int u = 0; u < amount; u++)",
                         "int price = pays.At(u);", "if (price <= 0) break;",
-                        "if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) break;",
+                        "if (!TradeMath.ProfitAcceptable(walk.Floor(price, Options.Current.MinProfitMargin), price,\n"
+                        "                                                    Options.Current.MinProfitMargin)) break;",
                         "fetched += price;", "moved++;",
                         "if (moved == 0) continue;", "took.Value += fetched;",
                         "took.Units += moved;")
@@ -10719,8 +10741,8 @@ def the_marker_says_so_when_it_weighs_again_and_stays_put():
     return ("if (target != null) SayItWeighedAgain(target, how);" in stayed
             and "if (how.Value == _saidValue && how.Rate == _saidRate) return;" in again
             and '"map marker weighed your cargo again and stayed on "' in again
-            and ordered(again, "Log.Write(", "Ultra(how);", "Remember(target, how);")
-            and ordered(update, "map marker moved to ", "Ultra(how);", "Remember(target, how);"))
+            and ordered(again, "Log.Write(", "Ultra(how, board: false);", "Remember(target, how);")
+            and ordered(update, "map marker moved to ", "Ultra(how, board: true);", "Remember(target, how);"))
 
 
 chk("1.84.0", "the ultralog writes a line when the marker weighs your cargo again and stays where it is, and only when the reckoning moved",
@@ -11050,7 +11072,8 @@ def a_ladder_stops_where_the_margin_goes():
             and "while (_rungs.Count <= taken) _rungs.Add(Next());" in paid
             and "_asked = true;" in step
             and ordered(fetch, "for (int u = 0; u < amount; u++)", "int price = pays.At(u);",
-                        "if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) break;")
+                        "if (!TradeMath.ProfitAcceptable(walk.Floor(price, Options.Current.MinProfitMargin), price,\n"
+                        "                                                    Options.Current.MinProfitMargin)) break;")
             and "upTo" not in S['Marker.cs'])
 
 
@@ -11118,7 +11141,8 @@ chk("1.90.4", "what is still on its way to a market can only move that market's 
 
 
 def what_is_on_its_way_is_counted_at_the_trust_it_has_earned():
-    miss = method_body(S['TradeMath.cs'], "public static float MissThatCounts")
+    miss = method_body(S['TradeMath.cs'], "public static bool HowMuchCameTrue")
+    share = method_body(S['TradeMath.cs'], "public static float ShareThatCameTrue")
     trust = method_body(S['TradeMath.cs'], "public static float TrustInTheForecast")
     held = method_body(S['TradeMath.cs'], "public static int WorthShiftTrusted")
     earned = method_body(S['Forecast.cs'], "internal static float TrustEarned")
@@ -11129,29 +11153,38 @@ def what_is_on_its_way_is_counted_at_the_trust_it_has_earned():
     written = method_body(S['Hindsight.cs'], "private static void Written")
     noted = method_body(S['Hindsight.cs'], "private static void Noted")
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes()")
-    cap = re.search(r'public const float MostAForecastMissCounts = ([\d.]+)f;', S['TradeMath.cs'])
+    cap = re.search(r'public const float MostOfAMoveThatCounts = ([\d.]+)f;', S['TradeMath.cs'])
+    floor = re.search(r'public const float LeastOfAMoveThatCounts = (-[\d.]+)f;', S['TradeMath.cs'])
     enough = re.search(r'public const int EnoughForecasts = (\d+);', S['TradeMath.cs'])
-    return (miss and trust and held and earned and shift and priced and kept and read and written and scan
+    return (miss and share and trust and held and earned and shift and priced and kept and read and written and scan
             and cap is not None and float(cap.group(1)) > 0
+            and floor is not None and float(floor.group(1)) < 0
             and enough is not None and int(enough.group(1)) > 0
-            and "return missed > MostAForecastMissCounts ? MostAForecastMissCounts : missed;" in miss
-            and "float earned = 1f / (1f + missed);" in trust
+            and ordered(miss, "if (said == 0) return false;", "double came = (double)moved / said;",
+                        "share = came > MostOfAMoveThatCounts ? MostOfAMoveThatCounts",
+                        ": came < LeastOfAMoveThatCounts ? LeastOfAMoveThatCounts")
+            and "if (!(weighed > 0f) || float.IsNaN(cameTrue) || float.IsInfinity(cameTrue)) return NoShareToGive;" in share
+            and "return share < 0f ? 0f : share;" in share
+            and "float earned = cameTrue > 1f ? 1f : cameTrue;" in trust
             and "float weight = (float)scored / (scored + EnoughForecasts);" in trust
             and "float trust = 1f - (1f - earned) * weight;" in trust
-            and "if (scored <= 0 || missed < 0f || float.IsNaN(missed) || float.IsInfinity(missed)) return 1f;"
+            and "if (scored <= 0 || cameTrue < 0f || float.IsNaN(cameTrue) || float.IsInfinity(cameTrue)) return 1f;"
                 in trust
             and "long held = (long)((double)shift * trust);" in held
-            and "return TradeMath.TrustInTheForecast(scored, missed);" in earned
+            and "return TradeMath.TrustInTheForecast(scored, cameTrue);" in earned
             and ordered(shift, "TradeMath.WorthShiftTrusted(PriceShift(", "item, withinDays),", "TrustEarned())")
             and ordered_last(priced, "shift = WorthShift(site, item, withinDays);", "_shifts[key] = shift;",
                              "return shift;")
-            and "_forecastsScored++;" in kept and "_forecastMissed += missed;" in kept
-            and "missed = TradeMath.MeanOf(_forecastMissed, _forecastsScored);" in read
-            and 'dataStore.SyncData("TradeLord_ForecastsScoredEveryRun", ref _forecastsScored);' in S['Ledger.cs']
-            and 'dataStore.SyncData("TradeLord_ForecastMissedEveryRun", ref _forecastMissed);' in S['Ledger.cs']
-            and "LedgerBehavior.Instance?.KeepForecastScore(TradeMath.MissThatCounts(how.Share));"
+            and ordered(kept, "if (!TradeMath.HowMuchCameTrue(said, moved, out float share)) return;",
+                        "float size = Math.Abs((float)said);", "_forecastsJudged++;",
+                        "_forecastSaid += size;", "_forecastCameTrue += size * share;")
+            and "cameTrue = TradeMath.ShareThatCameTrue(_forecastSaid, _forecastCameTrue);" in read
+            and 'dataStore.SyncData("TradeLord_ForecastsJudgedOnTheDay", ref _forecastsJudged);' in S['Ledger.cs']
+            and 'dataStore.SyncData("TradeLord_ForecastSaidOnTheDay", ref _forecastSaid);' in S['Ledger.cs']
+            and 'dataStore.SyncData("TradeLord_ForecastCameTrueOnTheDay", ref _forecastCameTrue);' in S['Ledger.cs']
+            and "LedgerBehavior.Instance?.KeepForecastScore(said.worth, how.Moved);"
                 in written
-            and "Forecast.WorthShift(site, item, withinDays)" in noted
+            and "Forecast.WorthShift(site, item, days)" in noted
             and "WorthShiftAsItHasHeld" not in noted
             and scan.count("Forecast.WorthShiftAsItHasHeld(") == 2
             and scan.count("Forecast.WorthShift(") == 0
@@ -11159,6 +11192,7 @@ def what_is_on_its_way_is_counted_at_the_trust_it_has_earned():
             and "Forecast.WorthShift(" not in S['TooltipPatches.cs']
             and all(one in MATHTESTS for one in
                     ("One_wild_miss_cannot_speak_for_the_whole_forecast",
+                     "What_came_true_counts_each_figure_by_the_size_of_what_it_said",
                      "A_forecast_that_has_never_been_checked_is_taken_at_its_word",
                      "A_forecast_that_keeps_missing_is_believed_less_and_less",
                      "What_is_on_its_way_is_counted_at_the_trust_it_has_earned",
@@ -11212,7 +11246,7 @@ def a_forecast_too_old_to_say_anything_is_passed_over_rather_than_scored():
             and ordered(written, "if (kept.Item == null) continue;",
                         "if (Scoring.TooOldToSay(kept.WithinDays, kept.AtHours, now, out float since))",
                         "stale++;", "scored++;",
-                        "LedgerBehavior.Instance?.KeepForecastScore(TradeMath.MissThatCounts(how.Share));")
+                        "LedgerBehavior.Instance?.KeepForecastScore(said.worth, how.Moved);")
             and written.count("scored++;") == 1
             and '" passed over as too old to say anything"' in written
             and '" passed over as too old to say anything"' in kept)
@@ -11597,7 +11631,7 @@ def a_forecast_is_not_judged_before_half_its_time_has_passed():
             and ordered(written, "if (Scoring.TooOldToSay(kept.WithinDays, kept.AtHours, now, out float since))",
                         "stale++;", "if (Scoring.TooSoonToSay(kept.WithinDays, since))", "early++;",
                         "scored++;",
-                        "LedgerBehavior.Instance?.KeepForecastScore(TradeMath.MissThatCounts(how.Share));")
+                        "LedgerBehavior.Instance?.KeepForecastScore(said.worth, how.Moved);")
             and written.count("scored++;") == 1
             and "daysSince < (saidWithinDays > 0f ? saidWithinDays : 0f) * SoonestAForecastIsJudged;" in soon
             and "TradeMath.TooSoonToJudge(withinDays, since);" in S['Scoring.cs']
@@ -11624,7 +11658,7 @@ def the_marker_check_weighs_a_sale_against_the_first_figure_for_what_you_carry()
     remember = method_body(m, "private static void Remember")
     score = method_body(m, "internal static void ScoreTheMark")
     carry = method_body(m, "internal static void ForgetWhatYouCarry")
-    carried = method_body(m, "private static List<(EquipmentElement item, int amount, int worth)> "
+    carried = method_body(m, "private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> "
                              "WhatYouCarryToSell")
     stands = method_body(S['Rules.cs'], "internal static bool FirstLookStands")
     eaten = method_body(S['Rules.cs'], "internal static bool OnlyEatenFrom")
@@ -11863,14 +11897,14 @@ def a_party_of_villagers_is_never_sold_to_and_its_offer_is_taken_whole_or_left()
                         "shelf.Add(new Pick { At = at, Good = good });",
                         "if (lot.Units == 0) return Block.NoStock;",
                         "if (refused != Block.None) return refused;",
-                        "TradeRules.WhatTheBuyerPays(", "s.ResaleSafetyFactor);",
+                        "TradeRules.WhatTheBuyerPays(", "lot.Resale += TradeMath.Realizable(pays, safety);",
                         "if (!TradeMath.BuyAcceptable(lot.Price, lot.Resale, s.MinProfitMargin)) return Block.BelowMargin;",
                         "if (lot.Price > market.Spendable()) return Block.BudgetSpent;",
                         "return Block.HerdFull;", "return Block.CarryWeight;", "return Block.None;")
             and ordered(taken, "if (market.Stopped) return moved;",
                         "books.NotePurchase(good.Id, price, good.Weight, TradeRules.FoodValue(good));",
                         "market.Staged(at, price);",
-                        "if (!market.Take(at, price, out int cost) || cost == 0) return moved;",
+                        "if (!market.Take(at, price, 0, out int cost) || cost == 0) return moved;",
                         "books.NoteBought(good.Id, cost);")
             and all(name in LOTTESTS for name in (
                 "An_offer_that_sells_on_for_more_than_it_costs_is_taken_whole",
@@ -12079,8 +12113,9 @@ def what_you_paid_is_kept_for_each_quality_of_a_good():
                 "public bool HasPurchaseRecord(EquipmentElement el) =>",
                 "public int PurchasedUnits(EquipmentElement el) =>",
                 "public int GetCostBasis(EquipmentElement el)",
+                "public int[] DearerUnits(EquipmentElement el, float margin)",
                 "public int PaidPerUnit(EquipmentElement el)"))
-            and l.count("Paid.TryGetValue(PaidKey(el), out var rec)") == 4
+            and l.count("Paid.TryGetValue(PaidKey(el), out var rec)") == 5
             and "Paid.TryGetValue(item.StringId" not in l
             and "string key = PaidKey(el.EquipmentElement);" in match
             and ordered(hand, "int took = Math.Min(bought, InAll(carried, element.EquipmentElement));",
@@ -12093,18 +12128,19 @@ def what_you_paid_is_kept_for_each_quality_of_a_good():
             and "offered.Add((LedgerBehavior.PaidKey(el.EquipmentElement), el.Amount," in S['Encounters.cs']
             and "string PaidKeyAt(int at);" in passes
             and "Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at)," in passes
-            and "if (basis.SoldOne()) books.NotePaidDrawn(market.PaidKeyAt(at));" in passes
+            and "if (basis.SoldOne()) books.NotePaidDrawn(market.PaidKeyAt(at), basis.SoldAt);" in passes
             and "NotePaidDrawn(good.Id)" not in passes
             and "public string PaidKeyAt(int at) => LedgerBehavior.PaidKey(_plan[at].EquipmentElement);" in t
             and "public int CostBasis(int at) => TradePolicy.CostBasis(_plan[at].EquipmentElement);" in t
             and "public int PurchasedUnits(int at) => LedgerBehavior.Instance?.PurchasedUnits(_plan[at].EquipmentElement) ?? 0;" in t
-            and "LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1);" in t
+            and "LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, proceeds, unitPaid);" in t
             and t.count("RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), 1, price);") == 2
-            and "RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), 1, cost);" in t
+            and ("RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), 1, cost,\n"
+                 "                                                        meant);") in t
             and ordered(herd, "Basis basis = Basis.For(TradePolicy.CostBasis(el.EquipmentElement),",
                         "LedgerBehavior.Instance?.PurchasedUnits(el.EquipmentElement) ?? 0,",
                         "paidKey, pass.Books, pass.Sim, Options.Current);",
-                        "if (pass.Sim) pass.Books.NotePaidDrawn(paidKey);",
+                        "if (pass.Sim) pass.Books.NotePaidDrawn(paidKey, basis.SoldAt);",
                         "else LedgerBehavior.Instance?.RecordSale(paidKey, 1);")
             and "(LedgerBehavior.Instance?.HasPurchaseRecord(el) ?? false);" in policy
             and "HasCostBasis(el) ? (LedgerBehavior.Instance?.GetCostBasis(el) ?? el.Item.Value) : 0;" in policy
@@ -12492,9 +12528,9 @@ def a_forecast_reached_early_waits_for_a_later_walk_in_and_is_not_replaced_meanw
             and ordered(noted, "if (site == null) return;",
                         "if (_said.TryGet(site.StringId, item.StringId, out Said waiting) && waiting.Item != null &&",
                         "Scoring.StillToBeJudged(waiting.WithinDays, waiting.AtHours, (float)CampaignTime.Now.ToHours))\n"
-                        "                return;", "int stockSaid = TradeMath.MissedBy(Forecast.UnitsLeaving(site, item, withinDays),",
-                        "Forecast.UnitsLanding(site, item, withinDays));",
-                        "if (stockSaid == 0 && worthSaid == 0) return;", "_said.Put(site.StringId, item.StringId, new Said")
+                        "                return;", "stockAhead[step] = TradeMath.MissedBy(Forecast.UnitsLeaving(site, item, days),",
+                        "Forecast.UnitsLanding(site, item, days));",
+                        "if (!moves) return;", "_said.Put(site.StringId, item.StringId, new Said")
             and ordered(written, "if (scored + stale == 0)",
                         'Log.Repeatable("forecast check " + site.StringId, early.ToString(), lines[0]);',
                         "Log.WriteMany(lines);")
@@ -12765,7 +12801,7 @@ def a_village_is_priced_through_the_town_it_trades_with_when_the_forecast_moves_
             and "_pricedAsTheGame.Clear();" in method_body(m, "internal static void Forget")
             and "return rung.Walkable || site.IsVillage ? TradeMath.ForecastWithin(quoted, rung.At(0)) : quoted;" in first
             and "internal static Settlement PricedFrom(Settlement site)" in S['Hindsight.cs']
-            and "int worthSaid = Forecast.WorthShift(site, item, withinDays);" in
+            and "worthAhead[step] = Forecast.WorthShift(site, item, days);" in
                 method_body(S['Hindsight.cs'], "private static void Noted")
             and "a village follows its town." in spoken(ENGLISH)['TL396']
             and said_in_every_language('TL396')
@@ -12823,8 +12859,8 @@ def what_a_town_uses_up_and_its_workshops_take_leave_its_shelf_in_the_forecast()
                         "int first = afterDays < 0f ? 1 : (int)Math.Floor(afterDays) + 1;",
                         "for (int day = first; day < first + DaysUseIsReadFor; day++) Note(when, already, day, afterDays);",
                         "when.Sort();")
-            and ordered(noted, "int stockSaid = TradeMath.MissedBy(Forecast.UnitsLeaving(site, item, withinDays),",
-                        "Forecast.UnitsLanding(site, item, withinDays));")
+            and ordered(noted, "stockAhead[step] = TradeMath.MissedBy(Forecast.UnitsLeaving(site, item, days),",
+                        "Forecast.UnitsLanding(site, item, days));")
             and all(one in PROJECTIONTESTS for one in
                     ("What_a_town_uses_up_each_day_leaves_its_shelf_for_every_day_of_the_window",
                      "What_a_workshop_takes_leaves_only_the_kind_it_takes_and_only_once_it_runs_in_time",
@@ -12849,26 +12885,40 @@ def a_forecast_figure_is_judged_with_the_town_s_own_use_carried_to_your_walk_in(
     said = method_body(h, "private struct Said")
     noted = method_body(h, "private static void Noted")
     written = method_body(h, "private static void Written")
-    walk = method_body(S['Scoring.cs'], "internal static (int stock, int worth) ToTheWalkIn")
-    return (said and noted and written and walk
-            and "internal int UsedADay;" in said
-            and "UsedADay = Forecast.UsedUpADay(site, item)" in noted
+    walk = method_body(S['Scoring.cs'], "internal static (int stock, int worth) AtTheWalkIn")
+    steps = method_body(S['Scoring.cs'], "internal static int StepsItIsReadOver")
+    return (said and noted and written and walk and steps
+            and "internal int[] StockAhead;" in said and "internal int[] WorthAhead;" in said
+            and "UsedADay" not in said
+            and ordered(noted, "int steps = Scoring.StepsItIsReadOver(withinDays);",
+                        "for (int step = Scoring.FirstStepJudged(withinDays); step < steps; step++)",
+                        "float days = Scoring.DaysAtStep(step);",
+                        "worthAhead[step] = Forecast.WorthShift(site, item, days);",
+                        "StockAhead = stockAhead,", "WorthAhead = worthAhead")
+            and "float upTo = (within > 0f ? within : 0f) * 2f + TradeMath.GraceDays;" in steps
+            and "TradeMath.WorthScoring(withinDays, since)" in
+                method_body(S['Scoring.cs'], "internal static bool TooOldToSay")
+            and "daysSince <= (saidWithinDays < 0f ? 0f : saidWithinDays) * 2f + GraceDays;" in S['TradeMath.cs']
             and ordered(written, "scored++;",
-                        "var said = Scoring.ToTheWalkIn(kept.StockSaid, kept.WorthSaid, kept.UsedADay, kept.Item.Value,",
-                        "kept.WithinDays, since, kept.StockThen, kept.WorthThen);",
+                        "var said = Scoring.AtTheWalkIn(kept.StockAhead, kept.WorthAhead, since,",
+                        "kept.StockThen, kept.WorthThen);",
                         "Outcome how = Scoring.Weigh(said.stock, kept.StockThen,",
                         '" day(s) after it said so, for a ride it put at "',
-                        '", with what the town uses up counted to the day you walked in"',
-                        "LedgerBehavior.Instance?.KeepForecastScore(TradeMath.MissThatCounts(how.Share));")
-            and ordered(walk, "if (usedADay <= 0) return (stockSaid, worthSaid);",
-                        "(TradeMath.ToTheQuarterDay(since) - TradeMath.ToTheQuarterDay(withinDays));",
+                        '", held to what it said would move by the day you walked in"',
+                        "LedgerBehavior.Instance?.KeepForecastScore(said.worth, how.Moved);")
+            and ordered(walk, "int step = (int)Math.Round(TradeMath.ToTheQuarterDay(since) / TradeMath.HorizonStep) - 1;",
                         "if (worthThen >= 0 && worth < -worthThen) worth = -worthThen;",
                         "if (stockThen >= 0 && stock < -stockThen) stock = -stockThen;")
+            and "int leaving = TradeMath.AddedUp(bought, WorthUsedUp(site, item, withinDays, most));" in
+                method_body(S['Forecast.cs'], "internal static int WorthLeaving")
             and "TradeLord_ForecastsScored\"" not in S['Ledger.cs']
             and "TradeLord_ForecastMissed\"" not in S['Ledger.cs']
             and all(one in SCORINGTESTS for one in
                     ("A_town_s_own_use_is_carried_to_the_day_you_walked_in",
-                     "A_town_s_own_use_carried_to_your_walk_in_never_takes_more_than_the_shelf_held")))
+                     "A_town_s_own_use_carried_to_your_walk_in_never_takes_more_than_the_shelf_held",
+                     "A_figure_is_held_to_what_it_said_would_have_moved_by_the_day_you_walked_in",
+                     "A_walk_in_before_the_first_quarter_day_is_held_to_nothing_moving",
+                     "A_figure_is_kept_for_every_day_it_can_still_be_judged_on")))
 
 
 chk("1.93.5", "a forecast figure is judged with what the town uses up carried to the day you walked in, early or late, never past what the shelf held, and the share it is trusted at is learned afresh for the forecast that counts what leaves a market",
@@ -13017,7 +13067,7 @@ def a_promise_walked_in_on_too_soon_waits_for_a_later_walk_in():
                         "if (Scoring.TooSoonToSay(said.WithinDays, since))", "early++;", "stillToCome.Add(one);",
                         "int found = Priced.At(market, said.Item, MobileParty.MainParty, true);",
                         "foreach (KeyValuePair<string, Promised> one in stillToCome) _promised.Put(site.StringId, one.Key, one.Value);",
-                        "LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(heldTotal, scored));",
+                        "LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(keptTotal, scored));",
                         '" kept for a later walk-in as too soon to say anything"',
                         'Log.Repeatable("promise check " + site.StringId, early.ToString(), lines[0]);')
             and kept.count("_bands.Add(") == 1
@@ -13200,7 +13250,8 @@ def light_goods_that_would_pay_for_a_haul_animal_still_get_one():
                         "if (beyond >= (double)each * (least > 0f ? least : 0f)) return true;",
                         "double profit = TradeMath.Finite(profitToCarry, 0f);",
                         "return price > 0 && profit > 0d && profit * Math.Min(beyond, each) / weightToCarry >= price;")
-            and ordered(left, "float realizable = TradeMath.Realizable(wouldDraw - drawn, s.ResaleSafetyFactor);",
+            and ordered(left, "float safety = market.ResaleSafety();",
+                        "float realizable = TradeMath.Realizable(wouldDraw - drawn, safety);",
                         "if (!TradeMath.BuyAcceptable(price, realizable, s.MinProfitMargin)) break;",
                         "profit += realizable - price;", "return (units, cost, profit);")
             and "internal float UnfittedProfit;" in S['Passes.cs']
@@ -13347,8 +13398,9 @@ def your_own_workshops_draw_on_their_warehouse_and_land_only_their_market_share(
             and ordered(run, "bool fromWarehouse = line.Yours && line.FromWarehouse && owned && k < town.Warehouse.Length &&",
                         "if (!fromWarehouse)", "if (fromWarehouse) town.Warehouse[k] -= need;",
                         "toTown[k] += line.ToTown;", "if (toTown[k] < 1f) continue;")
-            and 'dataStore.SyncData("TradeLord_ForecastsScoredEveryRun", ref _forecastsScored);' in ledger
-            and 'dataStore.SyncData("TradeLord_ForecastMissedEveryRun", ref _forecastMissed);' in ledger
+            and 'dataStore.SyncData("TradeLord_ForecastsJudgedOnTheDay", ref _forecastsJudged);' in ledger
+            and '"TradeLord_ForecastsScoredEveryRun"' not in ledger
+            and '"TradeLord_ForecastMissedEveryRun"' not in ledger
             and "WithLeaving" not in ledger
             and "Your_own_workshop_draws_on_its_warehouse_first_and_leaves_its_share_of_output_in_the_town" in PROJECTIONTESTS
             and "Your own workshops draw on their warehouse first" in README)
@@ -13542,15 +13594,15 @@ def the_marker_writes_its_weighing_again_only_when_the_reckoning_moved():
             and ordered(again, "if (!Options.Current.ExtendedDebugLogging) return;",
                         "if (Marks.WorthSayingAgain(how.Value, how.Units, how.Held, _toldValue, _toldUnits, _toldHeld))",
                         '"map marker weighed your cargo again and stayed on " + target.Name + ": " + Why(how)',
-                        "Ultra(how);\n                Told(how);\n            }",
-                        "else if (SayWhatElseMoved(target, how)) Told(how);",
+                        "Ultra(how, board: false);\n                SayWhatElseMoved(target, how, alongside: true);\n                Told(how);\n            }",
+                        "else if (SayWhatElseMoved(target, how, alongside: false)) Told(how);",
                         "if (how.Value == _saidValue && how.Rate == _saidRate) return;",
                         "Remember(target, how);")
             and again.count("Remember(target, how);") == 1
-            and again.count("Ultra(how);") == 1
+            and again.count("Ultra(how, board: false);") == 1
             and "value != saidValue || units != saidUnits || held != saidHeld;" in S['Rules.cs']
             and "The_marker_says_it_weighed_again_only_when_the_gold_the_units_or_its_hold_moved" in SCORINGTESTS
-            and ordered(update, '"map marker moved to "', "Ultra(how);", "Told(how);", "Remember(target, how);")
+            and ordered(update, '"map marker moved to "', "Ultra(how, board: true);", "Told(how);", "Remember(target, how);")
             and ordered(told, "_toldValue = how.Board == null ? -1L : how.Value;", "_toldUnits = how.Units;",
                         "_toldHeld = how.Held;", "_toldNext = how.RunnerUp?.StringId;")
             and "_saidUnits" not in S['Marker.cs'] and "_saidHeld" not in S['Marker.cs']
@@ -13746,7 +13798,8 @@ def the_marker_log_keeps_every_market_change_and_shows_todays_price():
                        "internal static (List<string> joined, List<string> changed, List<string> gone) WhatMovedOnTheBoard(")
     daily = method_body(S['Trading.cs'], "private void OnDailyTick")
     return (again and told and moved and board and step and ultra and fetch and rule and daily
-            and "else if (SayWhatElseMoved(target, how)) Told(how);" in again
+            and "else if (SayWhatElseMoved(target, how, alongside: false)) Told(how);" in again
+            and "SayWhatElseMoved(target, how, alongside: true);" in again
             and ordered(moved, "if (how.Board == null) return false;", "how.Board.Sort(FastestFirst);",
                         "var (joined, changed, gone) = Marks.WhatMovedOnTheBoard(OnTheBoard(how), _toldBoard);",
                         "bool nextMoved = !string.Equals(how.RunnerUp?.StringId, _toldNext, System.StringComparison.Ordinal);",
@@ -13766,9 +13819,11 @@ def the_marker_log_keeps_every_market_change_and_shows_todays_price():
                         '                    ? "no other market it priced would take any of it now"\n'
                         '                    : "the next best is now " + how.RunnerUp.Name + " at " + how.RunnerUpRate.ToString("0") +\n'
                         '                      " gold a day for " + how.RunnerUpValue + " gold");',
-                        'Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ", still " + how.Units +\n'
-                        '                      " unit(s) for " + how.Value + " gold, now " + how.Rate.ToString("0") +\n'
-                        '                      " gold a day, and only other markets moved: " + string.Join("; ", said));',
+                        'Log.Write(alongside\n'
+                        '                ? "  and of the other markets it priced, " + string.Join("; ", said)\n'
+                        '                : "map marker weighed your cargo again and stayed on " + target.Name + ", still " + how.Units +\n'
+                        '                  " unit(s) for " + how.Value + " gold, now " + how.Rate.ToString("0") +\n'
+                        '                  " gold a day, and only other markets moved: " + string.Join("; ", said));',
                         "return true;")
             and moved.count("Log.Write(") == 1
             and ordered(told, "_toldValue = how.Board == null ? -1L : how.Value;", "_toldBoard.Clear();",
@@ -13866,7 +13921,7 @@ def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
                 '        }')
             and method_body(S['Marker.cs'], "private static Settlement OutEarnsTheMark(") == ('private static Settlement OutEarnsTheMark(\n'
                 '            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, Settlement holder,\n'
-                '            MobileParty party, List<(EquipmentElement item, int amount, int worth)> cargo,\n'
+                '            MobileParty party, List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,\n'
                 '            List<string> compared)\n'
                 '        {\n'
                 '            int mine = -1;\n'
@@ -13892,7 +13947,7 @@ def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
                 '        }')
             and method_body(S['Marker.cs'], "private static float RateThere(") == ('private static float RateThere((Settlement s, SettlementComponent market, int gold, float days) one,\n'
                 '                                       MobileParty party,\n'
-                '                                       List<(EquipmentElement item, int amount, int worth)> cargo)\n'
+                '                                       List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)\n'
                 '        {\n'
                 '            Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null);\n'
                 '            if (took.Value <= 0L) return 0f;\n'
@@ -13971,7 +14026,7 @@ def the_promise_check_says_what_a_markets_record_does_to_a_score():
     rule = method_body(S['Confidence.cs'], "internal static RecordAtAMarket WhatAMarketsRecordDoes")
     held = method_body(S['Confidence.cs'], "public static float AsPromisesHaveHeld")
     return (kept and does and rule and held
-            and ordered(kept, '" of promise over " + walkIns + " walk-in(s) here" +',
+            and ordered(kept, '" of promise over " + walkIns + " walk-in(s) here, counting a price above " +',
                         "WhatTheRecordDoes(walkIns, hereOverall));")
             and "which is what lowers" not in kept
             and "Confidence.WhatAMarketsRecordDoes(s.TrustWhatAMarketPaid && s.ConfidenceRanking, walkIns, held)" in does
@@ -14829,7 +14884,7 @@ chk("1.95.6", "the renown tooltip on the clan screen adds no workshop at the nex
 
 def no_workshop_in_a_town_at_war_with_you_is_offered_or_bought():
     shops = S['Workshops.cs']
-    offer = method_body(shops, "internal static List<Workshop> OnOffer")
+    offer = method_body(shops, "internal static List<(Workshop shop, int cost, int aDay)> OnOffer")
     stops = method_body(shops, "internal static Block WhatStopsBuying")
     why = method_body(shops, "private static TextObject WhyNot")
     buy = method_body(shops, "internal static bool Buy")
@@ -14855,7 +14910,8 @@ def a_hidden_workshop_is_never_on_the_market():
     shops = S['Workshops.cs']
     market = between(shops, "internal static bool OnTheMarket", "\n        }")
     return ("if (shop?.Settlement == null || shop.WorkshopType == null || shop.WorkshopType.IsHidden) return false;" in market
-            and "if (OnTheMarket(shops[i])) found.Add(shops[i]);" in method_body(shops, "internal static List<Workshop> OnOffer")
+            and "if (OnTheMarket(shops[i])) found.Add((shops[i], CostOf(shops[i]), PaysADay(shops[i])));" in
+                method_body(shops, "internal static List<(Workshop shop, int cost, int aDay)> OnOffer")
             and "if (shop == null || !OnTheMarket(shop)) return Block.NotTradable;" in
                 method_body(shops, "internal static Block WhatStopsBuying"))
 
@@ -14940,6 +14996,277 @@ def workshops_can_be_earned_with_trade_skill_and_that_ships_off():
 
 chk("1.96.0", "Earn workshops with Trade skill ships off; on, you may own the game's own limit plus one workshop for every 25 points of Trade, never past Most workshops you may own",
     workshops_can_be_earned_with_trade_skill_and_that_ships_off())
+
+
+def a_price_over_its_promise_never_hides_one_under_it():
+    kept = method_body(S['Hindsight.cs'], "private static void Kept")
+    read = method_body(S['LedgerCodec.cs'], "public static List<PromiseRecord> ReadPromises")
+    return (kept and read
+            and "float heldTotal = 0f, keptTotal = 0f;" in kept
+            and ordered(kept, "heldTotal += held;", "keptTotal += TradeMath.UpToThePromise(held);",
+                        "LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(keptTotal, scored));")
+            and "counting a price above \" +\n                              \"its promise as the promise\"" in kept
+            and "public static float UpToThePromise(float held) => held > 1f ? 1f : held;" in S['TradeMath.cs']
+            and "Held = held > scored ? scored : held" in read
+            and all(one in PROMISETESTS for one in
+                    ("A_price_above_the_promise_counts_as_the_promise_and_no_more",
+                     "Paying_over_the_promise_for_one_good_never_hides_paying_under_it_for_another",
+                     "A_record_an_older_TradeLord_kept_above_its_promises_is_read_as_kept_in_full")))
+
+chk("1.97.0", "a market's record counts a price above what the ledger promised as the promise and no more, so paying over for one good never hides paying under for another, and a record an older version kept above its promises is read as kept in full",
+    a_price_over_its_promise_never_hides_one_under_it())
+
+def a_forecast_is_held_to_what_it_said_by_the_day_you_walked_in():
+    h = S['Hindsight.cs']
+    noted = method_body(h, "private static void Noted")
+    written = method_body(h, "private static void Written")
+    ledger = S['Ledger.cs']
+    return (noted and written
+            and "Scoring.ToTheWalkIn" not in written
+            and "stockSaid" not in noted and "worthSaid" not in noted
+            and ordered(noted, "var stockAhead = new int[steps];", "var worthAhead = new int[steps];",
+                        "if (stockAhead[step] != 0 || worthAhead[step] != 0) moves = true;", "if (!moves) return;")
+            and ordered(written, "if (TradeMath.HowMuchCameTrue(said.worth, how.Moved, out float share))",
+                        "float size = Math.Abs((float)said.worth);", "weighed += size;", "cameTrue += size * share;",
+                        "LedgerBehavior.Instance?.KeepForecastScore(said.worth, how.Moved);",
+                        '", and of the worth it said would move, "',
+                        "Share(TradeMath.ShareThatCameTrue(weighed, cameTrue))",
+                        '"  over this campaign: of the worth it said would move, "',
+                        "Share(TradeMath.TrustInTheForecast(figures, held))")
+            and "TradeMath.MeanOf(shareTotal, shared)" not in written
+            and "MissThatCounts" not in S['TradeMath.cs'] and "MissThatCounts" not in written
+            and all(key not in ledger for key in ('"TradeLord_ForecastsScoredEveryRun"',
+                                                  '"TradeLord_ForecastMissedEveryRun"'))
+            and all(one in SCORINGTESTS for one in
+                    ("A_figure_is_held_to_what_it_said_would_have_moved_by_the_day_you_walked_in",
+                     "A_walk_in_before_the_first_quarter_day_is_held_to_nothing_moving",
+                     "A_figure_is_kept_for_every_day_it_can_still_be_judged_on"))
+            and "What_came_true_counts_each_figure_by_the_size_of_what_it_said" in MATHTESTS)
+
+chk("1.97.0", "the forecast check holds a figure to what it said would move by the day you walked in rather than by the end of the ride it put, and trusts it for the share of that move that came true, each figure counted by how much it said would move",
+    a_forecast_is_held_to_what_it_said_by_the_day_you_walked_in())
+
+def the_marker_writes_its_table_of_markets_only_when_it_moves_the_mark():
+    update = method_body(S['Marker.cs'], "internal static void Update")
+    again = method_body(S['Marker.cs'], "private static void SayItWeighedAgain")
+    ultra = method_body(S['Marker.cs'], "private static void Ultra")
+    moved = method_body(S['Marker.cs'], "private static bool SayWhatElseMoved")
+    return (update and again and ultra and moved
+            and "private static void Ultra(in Reckoning how, bool board)" in S['Marker.cs']
+            and ordered(ultra, '"  ultralog: what it marked "',
+                        "if (board && how.Board != null && how.Board.Count > 0)",
+                        '" market(s) it priced, best first"', "if (how.Carried > 0)",
+                        '" market(s) weighed, "')
+            and update.count("Ultra(how, board: true);") == 1 and "board: false" not in update
+            and again.count("Ultra(how, board: false);") == 1 and "board: true" not in again
+            and ordered(again, "Ultra(how, board: false);", "SayWhatElseMoved(target, how, alongside: true);",
+                        "Told(how);")
+            and '"  and of the other markets it priced, "' in moved
+            and S['Marker.cs'].count("Ultra(how") == 2
+            and "MostMarketsShown" not in S['Marker.cs'])
+
+chk("1.97.0", "the map marker writes its table of every market it priced only when it moves the mark, and when it weighs again and stays it writes the marked market good by good and one line of the other markets that changed",
+    the_marker_writes_its_table_of_markets_only_when_it_moves_the_mark())
+
+def the_buy_shelf_puts_first_what_makes_the_most_for_whatever_runs_short():
+    want = method_body(S['Passes.cs'], "internal static List<Pick> WhatToBuy")
+    order = method_body(S['Passes.cs'], "internal static void MostForWhatRunsShortFirst")
+    share = method_body(S['Passes.cs'], "private static float ForWhatRunsShort")
+    return (want and order and share
+            and "internal float Hauls;" in S['Passes.cs'] and "internal int Costs;" in S['Passes.cs']
+            and ordered(want, "picked.Weighed = take;", "picked.Hauls = counted * one.Good.Weight;",
+                        "picked.Costs = TradeMath.WorthOf(counted, here);", "stock.Add(picked);",
+                        "Picks.MostForWhatRunsShortFirst(stock, market.Room() - books.Weight(sim), market.Spendable());",
+                        "Picks.WhatTheLedgerAskedForFirst(stock);")
+            and ordered(order, "if (!(one.Worth > 0f)) continue;", "hauls += one.Hauls;", "costs += one.Costs;",
+                        "float roomShort = room > 0f && hauls > room ? room : 0f;",
+                        "int purseShort = purse > 0 && costs > purse ? purse : 0;",
+                        "if (xPays != yPays) return xPays ? -1 : 1;",
+                        "return xEarns != yEarns ? yEarns.CompareTo(xEarns) : y.Worth.CompareTo(x.Worth);")
+            and ordered(share, "if (room > 0f && one.Hauls > 0f) share = one.Hauls / room;",
+                        "if (purse > 0 && one.Costs > 0) share = Math.Max(share, (float)one.Costs / purse);",
+                        "return share > 0f ? one.Worth / share : float.MaxValue;")
+            and all(one in SHELFORDERTESTS for one in
+                    ("When_the_hold_runs_short_the_most_for_each_unit_of_room_goes_first",
+                     "When_the_purse_runs_short_the_most_for_each_denar_goes_first",
+                     "When_both_run_short_each_pick_is_held_to_whichever_it_takes_more_of",
+                     "When_everything_fits_the_pick_that_makes_the_most_goes_first",
+                     "A_good_that_takes_no_room_goes_first_when_only_the_hold_runs_short",
+                     "Nothing_is_lost_or_invented_whatever_runs_short"))
+            and all(one in BUYPASSTESTS for one in
+                    ("When_the_hold_runs_short_the_good_that_makes_the_most_for_its_room_goes_first",
+                     "When_the_purse_runs_short_the_good_that_makes_the_most_for_its_gold_goes_first",
+                     "When_everything_fits_the_pick_that_makes_the_most_still_goes_first")))
+
+chk("1.97.0", "when the shelf holds more than your cargo or your purse can take, the good that makes the most for each unit of room or each denar it uses is bought first, and when everything fits the good that makes the most still goes first",
+    the_buy_shelf_puts_first_what_makes_the_most_for_whatever_runs_short())
+
+def the_workshops_for_sale_come_soonest_to_pay_for_themselves_first():
+    rules = S['Rules.cs']
+    offer = method_body(S['Workshops.cs'], "internal static List<(Workshop shop, int cost, int aDay)> OnOffer")
+    pays = method_body(S['Workshops.cs'], "internal static int PaysADay")
+    row = method_body(S['Panel.cs'], "public ShopOfferRowVM")
+    buy = method_body(S['Panel.cs'], "public void ExecuteBuy")
+    shown = method_body(S['Panel.cs'], "private void RefreshShops")
+    return ("found.Sort((x, y) => Holdings.SoonestToPayBackFirst((x.cost, x.aDay), (y.cost, y.aDay)));" in offer
+            and "ProfitMade" not in offer + row
+            and "found.Add((shops[i], CostOf(shops[i]), PaysADay(shops[i])));" in offer
+            and "model.CalculateOwnerIncomeFromWorkshop(shop)" in pays
+            and "public static int DaysToPayBack(int cost, int aDay)" in rules
+            and "public static int SoonestToPayBackFirst((int cost, int aDay) x, (int cost, int aDay) y)" in rules
+            and ordered(method_body(rules, "public static int SoonestToPayBackFirst"),
+                        "if (xPays != yPays) return xPays ? -1 : 1;",
+                        "if (!xPays) return x.cost.CompareTo(y.cost);",
+                        "((double)x.cost / x.aDay).CompareTo((double)y.cost / y.aDay);")
+            and "var (shop, cost, aDay) = offers[i];" in shown
+            and '{=TL480}' in row and 'aDayLine.SetTextVariable("GOLD", aDay.ToString("N0"));' in row
+            and ordered(buy, "int days = Holdings.DaysToPayBack(_cost, _aDay);",
+                        "if (days == Holdings.NeverPaysBack)", "{=TL482}", "{=TL481}",
+                        'payback.SetTextVariable("DAYS", days.ToString("N0"));',
+                        "int heldBack = TradeActionBehavior.GoldHeldBack();")
+            and all(said_in_every_language(t) for t in ("TL480", "TL481", "TL482"))
+            and all(one in HOLDINGTESTS for one in
+                    ("A_workshop_pays_for_itself_in_its_cost_over_what_it_pays_a_day_rounded_up",
+                     "A_workshop_that_pays_nothing_a_day_never_pays_for_itself",
+                     "The_workshop_that_pays_for_itself_soonest_comes_first_not_the_one_that_earns_most",
+                     "Of_two_workshops_that_pay_for_themselves_as_soon_the_one_paying_more_a_day_comes_first")))
+
+chk("1.97.0", "Buy Workshops Remotely lists first the workshop that pays for itself soonest, shows what each pays its owner a day, and says before buying about how many days it takes to pay for itself",
+    the_workshops_for_sale_come_soonest_to_pay_for_themselves_first())
+
+def a_unit_bought_dear_is_held_to_its_own_price_not_the_average():
+    math = S['TradeMath.cs']
+    codec = S['LedgerCodec.cs']
+    ledger = S['Ledger.cs']
+    basis = method_body(S['Passes.cs'], "internal struct Basis")
+    sell = method_body(S['Passes.cs'], "internal static Traded SellThem")
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    take = method_body(math, "private static void TakeFromTheBatches")
+    walk = method_body(math, "public struct DearFirst")
+    return (basis and sell and fetch and take and walk
+            and "public List<Batch> Batches = new List<Batch>();" in codec
+            and "Batches = parts.Length > FieldsAPurchaseNeeds" in codec
+            and "if (units != count) return new List<Batch>();" in method_body(codec, "public static List<Batch> ReadBatches")
+            and "if (rec.Batches == null || rec.Batches.Count == 0 || !TradeMath.BatchesAddUp(rec)) continue;"
+                in method_body(codec, "public static string WritePurchases")
+            and "public const int FieldsAPurchaseNeeds = 4;" in codec
+            and ordered(method_body(math, "public static void DrainSale(PurchaseRecord rec, int count, int unitPaid,"),
+                        "if (rec == null || rec.Count <= 0 || count <= 0) return;",
+                        "TakeFromTheBatches(BatchesOf(rec), drain, unitPaid, ref planned, ref meant);",
+                        "int left = rec.Count - drain;")
+            and ordered(take, "int at = unitPaid > 0 ? batches.FindIndex(one => one.Unit == unitPaid) : 0;",
+                        "if (taken.Meant > 0)",
+                        "if (taken.Count <= 0) batches.RemoveAt(at); else batches[at] = taken;")
+            and "while (batches.Count > MostBatchesKept) MergeTheClosest(batches);" in method_body(math, "private static void AddBatch")
+            and ordered(method_body(math, "private static void MergeTheClosest"),
+                        "int closest = ClosestPair(batches, alike: false);",
+                        "int alike = ClosestPair(batches, alike: true);",
+                        "if (alike >= 0 && Apart(batches, alike) <= 2L * Apart(batches, closest)) closest = alike;")
+            and ordered(basis, "int drawnDear = TradeMath.LeaveOut(ref dearer, books.DearDrawn(sim, id));",
+                        "int drawnCheap = Math.Min(Math.Max(0, drawn - drawnDear), cheap);")
+            and "ADryRunRemembersWhichDearUnitsItDrewUntilTheDryRunIsForgotten" in BOOKTESTS
+            and "A_second_dry_run_pass_knows_the_dear_unit_already_went_in_the_first" in SELLPASSTESTS
+            and "double covered = Math.Floor(basis * (1d + (over > 0f ? over : 0f)));" in
+                method_body(math, "public static int WhatTheAverageCovers")
+            and "if (rec.Batches[i].Unit > basis) units += rec.Batches[i].Count;" in method_body(math, "public static int[] DearerThan")
+            and ordered(walk, "while (_top >= _lowest && !ProfitAcceptable(_dearer[_top], price, margin)) _top--;",
+                        "_picked = _top;", "return _others > 0 ? _worth : NoUnitThisPriceSells;",
+                        "if (dear) return _dearer[_top--];", "_others--;",
+                        "return _dearer != null && _lowest <= _top ? _dearer[_lowest++] : 0;")
+            and "return TradeMath.DearerThan(rec, TradeMath.WhatTheAverageCovers(TradeMath.UnitBasis(rec, mode), margin));"
+                in method_body(ledger, "public int[] DearerUnits(EquipmentElement el, float margin)")
+            and ("basis.Walk = new TradeMath.DearFirst(dearer, cheap - drawnCheap, costBasis,\n"
+                 "                                                 Math.Max(0, drawn - drawnDear - drawnCheap));") in basis
+            and "PaidLeft <= 0 || FromMarket ? worth : Walk.Floor(price, margin);" in basis
+            and ordered(method_body(basis, "internal bool SoldOne()"), "PaidLeft--;", "SoldAt = Walk.Took();")
+            and ordered(sell, "books, sim, s, market.DearerUnits(at, s.MinProfitMargin));",
+                        "int worth = basis.Unit(out bool askTheMarket);",
+                        "int price = market.PriceToSell(at);",
+                        "int mustBeat = TradeRules.WorthToBeat(good, basis.Floor(worth, price, s.MinProfitMargin),",
+                        "int credited = TradeMath.Credit(price, worth, basis.UnpaidWorth);",
+                        "if (basis.SoldOne()) market.RecordedSale(at, proceeds, basis.SoldAt);",
+                        "int earned = TradeMath.Credit(proceeds, worth, basis.UnpaidWorth);")
+            and ordered(fetch, "TradeMath.DearFirst walk = floors;", "walk.Floor(price, Options.Current.MinProfitMargin)",
+                        "walk.Took();", "took.Cost += (long)worth * moved;")
+            and all(one in MATHTESTS for one in
+                    ("A_unit_the_average_would_sell_at_a_loss_keeps_its_own_price",
+                     "Units_bought_up_one_rising_price_are_all_held_to_the_average_as_before",
+                     "The_dear_unit_takes_the_best_price_rather_than_the_one_left_after_the_cheap_ones",
+                     "A_price_under_the_dear_units_margin_sells_only_the_cheap_ones",
+                     "Of_several_dear_units_the_dearest_the_price_clears_goes_first",
+                     "With_no_dear_unit_the_walk_is_the_average_it_always_was",
+                     "A_sale_of_a_dear_unit_is_taken_from_its_own_batch",
+                     "Merging_batches_keeps_what_they_were_meant_to_fetch_where_it_costs_little",
+                     "A_dear_batch_is_never_merged_far_away_just_to_keep_what_it_was_meant_to_fetch",
+                     "Dear_units_a_dry_run_already_drew_are_left_out_one_for_one",
+                     "A_record_never_keeps_more_batches_than_its_limit_and_the_odd_one_out_stays_apart",
+                     "The_batches_always_add_up_to_what_the_record_holds_however_goods_come_and_go",
+                     "A_record_kept_before_batches_were_written_down_counts_as_one_batch_at_its_average",
+                     "Selling_nothing_leaves_the_record_exactly_as_it_was"))
+            and all(one in SELLPASSTESTS for one in
+                    ("A_unit_bought_dear_is_not_sold_cheap_because_cheaper_ones_pulled_the_average_down",
+                     "A_unit_bought_dear_is_sold_once_a_market_pays_enough_over_what_it_cost",
+                     "A_unit_bought_dear_takes_the_best_price_before_the_cheap_ones_pull_it_down",
+                     "Goods_with_no_unit_the_average_would_sell_at_a_loss_sell_as_they_always_did",
+                     "A_dry_run_that_already_drew_the_cheap_units_holds_the_dear_one_to_its_own_price",
+                     "The_price_you_set_for_the_market_basis_is_never_raised_by_what_you_paid"))
+            and all(one in TESTS for one in
+                    ("What_each_batch_of_a_good_cost_and_was_meant_to_fetch_survives_a_save_and_a_load",
+                     "A_purchase_saved_before_batches_were_kept_reads_back_with_none",
+                     "Batches_that_do_not_add_up_to_the_record_are_dropped_and_the_record_is_kept"))
+            and "the average cost would sell it at a loss is held to your margin over what it cost" in README)
+
+chk("1.97.0", "a unit the average cost would sell at a loss is held to your margin over what it cost and takes the best price a market offers first, the sell pass and the map marker alike, while the profit reported still reads the average",
+    a_unit_bought_dear_is_held_to_its_own_price_not_the_average())
+
+
+def the_resale_safety_is_learned_from_what_sales_really_fetched():
+    math = S['TradeMath.cs']
+    ledger = S['Ledger.cs']
+    policy = S['Policy.cs']
+    passes = S['Passes.cs']
+    t = S['Trading.cs']
+    learned = method_body(math, "public static float ResaleSafetyAsSalesWent")
+    kept = method_body(ledger, "internal void KeepResale")
+    sold = method_body(ledger, "public void RecordSale(string itemId, int count, int fetched, int unitPaid)")
+    return (learned and kept and sold
+            and ordered(learned, "float learned = fetched < LeastResaleSafety ? LeastResaleSafety",
+                        "float weight = (float)judged / ((float)judged + EnoughResales);",
+                        "return start + (learned - start) * weight;")
+            and ordered(kept, "_resaleFetched += TradeMath.FetchedUpTo(fetched, meant);",
+                        "TradeMath.ForgetHalfWhenFull(ref _resalesJudged, ref _resaleMeant, ref _resaleFetched);")
+            and "private long _resaleMeant;" in ledger and "private long _resaleFetched;" in ledger
+            and "public const int EnoughResales = 250;" in math
+            and "public const int MostResalesKept = 2000;" in math
+            and ordered(sold, "TradeMath.DrainSale(rec, count, unitPaid, out int planned, out long meant);",
+                        "if (planned <= 0 || count <= 0) return;", "KeepResale(planned, meant,")
+            and all(key in ledger for key in ('dataStore.SyncData("TradeLord_ResalesJudged", ref _resalesJudged);',
+                                               'dataStore.SyncData("TradeLord_ResaleMeant", ref _resaleMeant);',
+                                               'dataStore.SyncData("TradeLord_ResaleFetched", ref _resaleFetched);'))
+            and "public void RecordedSale(int at, int proceeds, int unitPaid) =>" in t
+            and "LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, proceeds, unitPaid);" in t
+            and "if (!market.Take(picked.At, price, wouldDraw - drawn, out int cost)) break;" in passes
+            and passes.count("float safety = market.ResaleSafety();") == 5
+            and "ResaleSafetyFactor" not in passes
+            and "TradeMath.Realizable(farSellPrice, ResaleSafety());" in policy
+            and "SayTheResaleSafety();" in method_body(ledger, "private void OnDailyTick")
+            and "if (!Options.Current.ExtendedDebugLogging) return;" in method_body(ledger, "private void SayTheResaleSafety")
+            and said_in_every_language("TL338")
+            and "TradeLord starts here, then moves it toward the share of its planned sale price that its own sales really fetch." in spoken(ENGLISH)["TL338"]
+            and all(one in MATHTESTS for one in
+                    ("With_no_sale_judged_yet_the_resale_safety_factor_you_set_is_the_one_used",
+                     "Sales_that_fetch_what_was_meant_move_the_safety_toward_all_of_the_price",
+                     "Sales_that_fall_short_move_the_safety_down_but_never_under_half",
+                     "One_sale_far_over_what_it_was_meant_to_fetch_counts_for_twice_that_and_no_more",
+                     "One_big_sale_that_falls_short_moves_the_safety_only_a_little",
+                     "A_long_record_of_sales_halves_itself_so_the_newer_sales_still_count",
+                     "A_sale_says_how_many_of_its_units_were_bought_to_be_sold_on_and_for_how_much"))
+            and "Every_unit_bought_is_written_down_with_what_it_was_meant_to_fetch_where_it_is_going" in BUYPASSTESTS
+            and "Each_sale_passes_on_what_it_fetched_to_the_purchase_record" in SELLPASSTESTS
+            and "it starts at Resale safety factor and moves toward the share of the planned price its sales really fetched" in README)
+
+chk("1.97.0", "how much of a price elsewhere buying counts on starts at Resale safety factor and moves toward the share of what TradeLord meant to sell for that its own sales really fetched",
+    the_resale_safety_is_learned_from_what_sales_really_fetched())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

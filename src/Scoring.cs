@@ -212,21 +212,41 @@ namespace TradeLord
             return forecast + " and " + outcome + ", " + gap;
         }
 
-        internal static (int stock, int worth) ToTheWalkIn(int stockSaid, int worthSaid, int usedADay, int unitValue,
-                                                           float withinDays, float since, int stockThen, int worthThen)
+        internal const float LongestAFigureIsRead = 20f;
+
+        internal static int StepsItIsReadOver(float withinDays)
         {
-            if (usedADay <= 0) return (stockSaid, worthSaid);
-            double more = (double)usedADay *
-                          (TradeMath.ToTheQuarterDay(since) - TradeMath.ToTheQuarterDay(withinDays));
-            double worth = worthSaid - more;
-            if (worthThen >= 0 && worth < -worthThen) worth = -worthThen;
-            double stock = unitValue > 0 ? stockSaid - Math.Truncate(more / unitValue) : stockSaid;
-            if (stockThen >= 0 && stock < -stockThen) stock = -stockThen;
-            return (Whole(stock), Whole(worth));
+            float within = TradeMath.Finite(withinDays, 0f);
+            float upTo = (within > 0f ? within : 0f) * 2f + TradeMath.GraceDays;
+            if (upTo > LongestAFigureIsRead) upTo = LongestAFigureIsRead;
+            return (int)Math.Ceiling(upTo / TradeMath.HorizonStep);
         }
 
-        private static int Whole(double figure) =>
-            figure >= int.MaxValue ? int.MaxValue : figure <= int.MinValue ? int.MinValue : (int)Math.Round(figure);
+        internal static float DaysAtStep(int step) => (step + 1) * TradeMath.HorizonStep;
+
+        internal static int FirstStepJudged(float withinDays)
+        {
+            float within = TradeMath.Finite(withinDays, 0f);
+            float soonest = TradeMath.ToTheQuarterDay((within > 0f ? within : 0f) * TradeMath.SoonestAForecastIsJudged);
+            int step = (int)Math.Round(soonest / TradeMath.HorizonStep) - 1;
+            return step > 0 ? step : 0;
+        }
+
+        internal static (int stock, int worth) AtTheWalkIn(int[] stockAhead, int[] worthAhead, float since,
+                                                           int stockThen, int worthThen)
+        {
+            int step = (int)Math.Round(TradeMath.ToTheQuarterDay(since) / TradeMath.HorizonStep) - 1;
+            int stock = ReadAt(stockAhead, step), worth = ReadAt(worthAhead, step);
+            if (worthThen >= 0 && worth < -worthThen) worth = -worthThen;
+            if (stockThen >= 0 && stock < -stockThen) stock = -stockThen;
+            return (stock, worth);
+        }
+
+        private static int ReadAt(int[] ahead, int step)
+        {
+            if (ahead == null || ahead.Length == 0 || step < 0) return 0;
+            return ahead[step < ahead.Length ? step : ahead.Length - 1];
+        }
 
         internal static string WorthShifted(int said, int moved)
         {

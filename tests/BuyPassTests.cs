@@ -133,7 +133,11 @@ namespace TradeLord.Tests
 
             public void Resold(int at, int units, int gold) => ResoldFor.Add((at, units, gold));
 
-            public bool Take(int at, int price, out int cost)
+            internal readonly List<int> Meant = new List<int>();
+
+            public float ResaleSafety() => Rules.ResaleSafetyFactor;
+
+            public bool Take(int at, int price, int meant, out int cost)
             {
                 cost = 0;
                 if (RefuseAfter >= 0 && Taken.Count >= RefuseAfter) { Halted = true; return false; }
@@ -144,6 +148,7 @@ namespace TradeLord.Tests
                 Stalls[at].Amount--;
                 Stalls[at].Carried++;
                 Taken.Add(Stalls[at].Good.Id);
+                Meant.Add(meant);
                 return true;
             }
         }
@@ -407,6 +412,42 @@ namespace TradeLord.Tests
             Buy(many);
             Assert.Equal("wool", many.Taken[0]);
             Assert.Equal(12, many.Taken.Count);
+        }
+
+        [Fact]
+        public void When_the_hold_runs_short_the_good_that_makes_the_most_for_its_room_goes_first()
+        {
+            var market = new FakeMarket { Cargo = 20f };
+            market.Add(Cargo("clay", weight: 2f), amount: 10, price: 20, resale: 40);
+            market.Add(Cargo("jewelry", weight: 0.5f), amount: 2, price: 100, resale: 160);
+            Buy(market);
+            Assert.Equal("jewelry", market.Taken[0]);
+            Assert.Equal("jewelry", market.Taken[1]);
+            Assert.Equal(11, market.Taken.Count);
+        }
+
+        [Fact]
+        public void When_the_purse_runs_short_the_good_that_makes_the_most_for_its_gold_goes_first()
+        {
+            var market = new FakeMarket { Purse = 300 };
+            market.Add(Cargo("velvet"), amount: 3, price: 100, resale: 170);
+            market.Add(Cargo("wool"), amount: 15, price: 10, resale: 20);
+            Run run = Buy(market);
+            Assert.Equal("wool", market.Taken[0]);
+            Assert.Equal(16, run.Units);
+            Assert.Equal("velvet", market.Taken[15]);
+            Assert.True(run.Tally.Saw(Block.BudgetSpent));
+        }
+
+        [Fact]
+        public void When_everything_fits_the_pick_that_makes_the_most_still_goes_first()
+        {
+            var market = new FakeMarket();
+            market.Add(Cargo("clay", weight: 2f), amount: 10, price: 20, resale: 40);
+            market.Add(Cargo("jewelry", weight: 0.5f), amount: 2, price: 100, resale: 160);
+            Buy(market);
+            Assert.Equal("clay", market.Taken[0]);
+            Assert.Equal(12, market.Taken.Count);
         }
 
         [Fact]
@@ -741,6 +782,46 @@ namespace TradeLord.Tests
             market.Rules.BuyCapPerItem = 0;
             Assert.Equal(2, Buy(market, sim: true, books: books).Units);
             Assert.Equal(4, market.Stalls[0].Carried);
+        }
+
+        [Fact]
+        public void Every_unit_bought_is_written_down_with_what_it_was_meant_to_fetch_where_it_is_going()
+        {
+            var market = new FakeMarket();
+            Stall wool = market.Add(Cargo("wool"), amount: 3, price: 100, resale: 200);
+            wool.ResaleStep = 10;
+
+            Buy(market);
+
+            Assert.Equal(new[] { 200, 190, 180 }, market.Meant.ToArray());
+        }
+
+        [Fact]
+        public void Buying_weighs_a_price_elsewhere_at_the_resale_safety_the_market_hands_it()
+        {
+            var careful = new FakeMarket();
+            careful.Rules.ResaleSafetyFactor = 0.85f;
+            careful.Add(Cargo("wool"), amount: 1, price: 100, resale: 120);
+            Assert.Equal(0, Buy(careful).Units);
+
+            var trusting = new FakeMarket();
+            trusting.Rules.ResaleSafetyFactor = 1f;
+            trusting.Add(Cargo("wool"), amount: 1, price: 100, resale: 120);
+            Assert.Equal(1, Buy(trusting).Units);
+        }
+
+        [Fact]
+        public void A_good_whose_buyer_takes_only_a_few_is_weighed_on_those_few_when_the_hold_runs_short()
+        {
+            var market = new FakeMarket { Cargo = 6f };
+            market.Rules.ResaleSafetyFactor = 1f;
+            Stall silk = market.Add(Cargo("silk"), amount: 50, price: 100, resale: 131);
+            silk.BuyerTill = 655;
+            market.Add(Cargo("wool"), amount: 5, price: 100, resale: 127);
+
+            Buy(market);
+
+            Assert.Equal(new[] { "silk", "silk", "silk", "silk", "silk", "wool" }, market.Taken.ToArray());
         }
     }
 }

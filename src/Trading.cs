@@ -1589,6 +1589,9 @@ namespace TradeLord
 
             public int PurchasedUnits(int at) => LedgerBehavior.Instance?.PurchasedUnits(_plan[at].EquipmentElement) ?? 0;
 
+            public int[] DearerUnits(int at, float margin) =>
+                LedgerBehavior.Instance?.DearerUnits(_plan[at].EquipmentElement, margin);
+
             public int UnpaidWorth(int at) => TradePolicy.UnpaidWorth(Item(at));
 
             private bool _markRead;
@@ -1681,8 +1684,8 @@ namespace TradeLord
                 return true;
             }
 
-            public void RecordedSale(int at) =>
-                LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1);
+            public void RecordedSale(int at, int proceeds, int unitPaid) =>
+                LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, proceeds, unitPaid);
         }
 
         private const float HoldShareOff = 0f;
@@ -2092,7 +2095,7 @@ namespace TradeLord
                         }
                         if (basis.SoldOne())
                         {
-                            if (pass.Sim) pass.Books.NotePaidDrawn(paidKey);
+                            if (pass.Sim) pass.Books.NotePaidDrawn(paidKey, basis.SoldAt);
                             else LedgerBehavior.Instance?.RecordSale(paidKey, 1);
                         }
                         int credited = TradePolicy.Credit(price, worth, basis.UnpaidWorth);
@@ -2563,16 +2566,19 @@ namespace TradeLord
                 _pass.Tally(Item(at), 1, price);
             }
 
-            public bool Take(int at, int price, out int cost)
+            public bool Take(int at, int price, int meant, out int cost)
             {
                 ItemObject item = Item(at);
                 _pass.Quote(item, 1, price);
                 if (!_pass.BuyOne(Shelf[at], price, _what, _named, out cost)) return false;
                 if (cost == 0) return true;
-                LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), 1, cost);
+                LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), 1, cost,
+                                                        meant);
                 _pass.Tally(item, 1, cost);
                 return true;
             }
+
+            public float ResaleSafety() => TradePolicy.ResaleSafety();
         }
 
         public static void ShowLedgerReport()

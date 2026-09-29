@@ -7,7 +7,7 @@
 ## Everything it does
 
 - ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
-- ✅ It declares no save types of its own. All it puts in a save is five strings, seven numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
+- ✅ It declares no save types of its own. All it puts in a save is five strings, eleven numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
@@ -32,6 +32,7 @@
 - ✅ The panel keeps its own score, writing down the Sell price it promised you and holding it against what that market really pays when you walk in near the time it said
 - ✅ What this means says how much of that promised Sell price has actually been there, over how many prices it has checked, and the tally carries on across your campaign
 - ✅ The panel learns from that, and a market that has paid less than it promised is scored lower, so routes selling there fall down the list
+- ✅ A price above what it promised counts as the promise and no more, so a market paying over for one good never hides paying under for another
 - ✅ It keeps a record for each market on its own, written into your save, counts it only once you have walked into that market five times, and can never move a route's Score by more than a quarter
 - ✅ Trust a market by what it has paid turns that off
 - ✅ How long each route lasts, under Left, which says how long the shelf still holds the amount the route quotes before the caravans heading there buy it out or the town and its workshops use it up, in hours, or in days from two days on
@@ -42,7 +43,7 @@
 - ✅ Every workshop is followed day by day, every line of it at the game's own pace, and a run counts only while the town holds its inputs and the run pays
 - ✅ Your own workshops draw on their warehouse first, and only the share of what they make that you send to the market is counted as landing there
 - ✅ A village is priced through the town it trades with, so what lands in that town moves the village's price as well
-- ✅ It keeps score of that forecast as well, against what really moved, and counts what is on its way at the share the forecast has actually been right by, so it leans less and less on one that keeps missing
+- ✅ It keeps score of that forecast as well, against what really moved by the day you walked in, and counts what is on its way at the share of it that came true, so it leans less and less on one that keeps missing
 - ✅ Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into
 - ✅ Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
@@ -97,6 +98,8 @@
 - ✅ A lame horse, mule or camel, or one of any other quality, is never sold to get you back up to speed or bought to carry more, because the game does not count it gone or come until you load again
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
+- ✅ How much of a price elsewhere it counts on is learned from its own sales: it starts at Resale safety factor and moves toward the share of the planned price its sales really fetched
+- ✅ When your cargo room or your gold runs short, it buys first the good that makes the most for each unit of room or each denar it uses
 - ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it. On out of the box
 - ✅ Adaptive spend limit holds at Max spend per visit until your purse is five times that, then grows by one more Max spend per visit for every doubling of the purse, so 10000 in the purse allows 2000 and 20000 allows 3000
 - ✅ Pick where to sell on the whole load, on while it is being tried out: every market in reach is weighed on what it would pay for the whole load rather than on what it pays for one unit
@@ -181,6 +184,7 @@
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know
 - ✅ What a good counts as having cost you sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells
+- ✅ A unit you paid so much for that the average cost would sell it at a loss is held to your margin over what it cost, and is sold first wherever a market pays that
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay, off out of the box, that keeps it out of a brand new campaign until prices calm down
 - ✅ Staged Trading, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other
@@ -189,8 +193,9 @@
 - ✅ While Staged Trading is on, nothing is traded as you arrive or as you leave: Trade here now (TradeLord) in the town menu is what lays the deal out, and a party met on the road still trades as before
 - ✅ The trade screen's own running total shows what the deal comes to, and once you close it TradeLord says what your purse did
 - ✅ Press Done and it reports what moved the same way it reports a trade of its own, and credits the profit to your Trade skill
-- ✅ Buy Workshops Remotely, on its own button below the TradeLord ledger: every workshop in Calradia a notable would sell you, with its town, what it makes, who owns it, what it has earned lately and what it would cost, most profitable first
-- ✅ Buy any workshop from there, wherever you are standing, and it asks you to confirm before it spends a denar
+- ✅ Buy Workshops Remotely, on its own button below the TradeLord ledger: every workshop in Calradia a notable would sell you, with its town, what it makes, who owns it, what it pays a day and what it costs
+- ✅ Buy Workshops Remotely lists first the workshop that pays for itself soonest, not the one earning the most
+- ✅ Buy any workshop from there, wherever you are standing, and it asks you to confirm before it spends a denar, saying about how many days it takes to pay for itself
 - ✅ The most workshops you may own, raised to 200 out of the box, so your clan tier no longer decides how many you can hold. Set it to whatever number you like, and put it back to the game's own limit with a 0
 - ✅ The clan screen's Workshops count and its renown tooltip follow Most workshops you may own, not your clan tier
 - ✅ Earn workshops with Trade skill, off out of the box: you may own the game's own limit plus one workshop for every 25 points of Trade, up to Most workshops you may own
@@ -206,9 +211,11 @@
 - ✅ The same switch writes what the market you are standing in pays and charges for every good you carry, read four ways before anything is traded, named alongside the price model the game is running and any other mod changing it
 - ✅ The same switch writes what it quoted for every good it traded next to what the market actually paid, and after every route scan how many prices it opened and how long it took
 - ✅ The same switch writes down what it expected a market to hold by the time you got there and what it really held when you walked in, good by good
-- ✅ The same switch writes down everything the map marker weighed, each time the units or the gold your cargo would fetch there change, or whether it holds the mark: every market it priced with the days, the units, the gold and the profit a day
+- ✅ The same switch writes down everything the map marker weighed each time it moves the mark: every market it priced with the days, the units, the gold and the profit a day
 - ✅ The same switch writes down the marked market broken down good by good with today's price beside the price it expects once what is on its way lands, how long each weighing took, and how the mark held up against what that market paid you
 - ✅ When only other markets change, the same switch writes one line naming each market whose gold or units changed, any market newly priced or no longer priced, and a new next best
+- ✅ When the mark stays but what your cargo would fetch there changes, the same switch writes that market good by good and one line naming the other markets that changed
+- ✅ The same switch writes down, whenever it changes, what share of a price elsewhere TradeLord counts on when it buys and what its own sales have fetched of what it meant to sell them for
 - ✅ What this means, behind a ? beside the TradeLord ledger title: the line that used to run under the routes, one clause to a line in a window of its own, so the ledger itself stays clean
 - ✅ Recent trades, on its own button on the campaign map under the TradeLord one, so it opens without the ledger: the last twenty buys and sells it made for you, newest first, each with the day, the town, the gold it gained or cost, and what moved
 - ✅ In Recent trades, gold gained reads green and gold spent amber. It is kept in your save, so the list is still there when you load the campaign again

@@ -97,6 +97,16 @@ namespace TradeLord
             catch { return 0; }
         }
 
+        internal static int PaysADay(Workshop shop)
+        {
+            try
+            {
+                var model = Campaign.Current?.Models?.ClanFinanceModel;
+                return model == null || shop == null ? 0 : Math.Max(0, model.CalculateOwnerIncomeFromWorkshop(shop));
+            }
+            catch { return 0; }
+        }
+
         internal static bool OnTheMarket(Workshop shop)
         {
             if (shop?.Settlement == null || shop.WorkshopType == null || shop.WorkshopType.IsHidden) return false;
@@ -117,9 +127,9 @@ namespace TradeLord
             return Block.None;
         }
 
-        internal static List<Workshop> OnOffer()
+        internal static List<(Workshop shop, int cost, int aDay)> OnOffer()
         {
-            var found = new List<Workshop>();
+            var found = new List<(Workshop shop, int cost, int aDay)>();
             Guard.Run("Shops.OnOffer", () =>
             {
                 foreach (Town town in Town.AllTowns)
@@ -129,9 +139,9 @@ namespace TradeLord
                     if (LedgerBehavior.UnderAttack(town.Settlement)) continue;
                     if (LedgerBehavior.IsHostile(town.Settlement)) continue;
                     for (int i = 0; i < shops.Length; i++)
-                        if (OnTheMarket(shops[i])) found.Add(shops[i]);
+                        if (OnTheMarket(shops[i])) found.Add((shops[i], CostOf(shops[i]), PaysADay(shops[i])));
                 }
-                found.Sort((x, y) => y.ProfitMade.CompareTo(x.ProfitMade));
+                found.Sort((x, y) => Holdings.SoonestToPayBackFirst((x.cost, x.aDay), (y.cost, y.aDay)));
             });
             return found;
         }

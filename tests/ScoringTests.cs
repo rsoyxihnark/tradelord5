@@ -378,20 +378,61 @@ namespace TradeLord.Tests
                          Scoring.UnitsShifted(7, 6));
         }
 
+        private static int[] UsedUpAQuarterDayAtATime(int steps, int each)
+        {
+            var ahead = new int[steps];
+            for (int step = 0; step < steps; step++) ahead[step] = -(step + 1) * each;
+            return ahead;
+        }
+
         [Fact]
         public void A_town_s_own_use_is_carried_to_the_day_you_walked_in()
         {
-            Assert.Equal((-10, -500), Scoring.ToTheWalkIn(-5, -250, 250, 50, 1f, 2f, 40, 2000));
-            Assert.Equal((-3, -125), Scoring.ToTheWalkIn(-5, -250, 250, 50, 1f, 0.5f, 40, 2000));
-            Assert.Equal((-5, -250), Scoring.ToTheWalkIn(-5, -250, 250, 50, 1f, 1.1f, 40, 2000));
-            Assert.Equal((-5, -250), Scoring.ToTheWalkIn(-5, -250, 0, 50, 1f, 3f, 40, 2000));
+            int[] stock = UsedUpAQuarterDayAtATime(12, 1), worth = UsedUpAQuarterDayAtATime(12, 50);
+            Assert.Equal((-8, -400), Scoring.AtTheWalkIn(stock, worth, 2f, 40, 2000));
+            Assert.Equal((-2, -100), Scoring.AtTheWalkIn(stock, worth, 0.5f, 40, 2000));
+            Assert.Equal((-4, -200), Scoring.AtTheWalkIn(stock, worth, 1.1f, 40, 2000));
+            Assert.Equal((-12, -600), Scoring.AtTheWalkIn(stock, worth, 9f, 40, 2000));
         }
 
         [Fact]
         public void A_town_s_own_use_carried_to_your_walk_in_never_takes_more_than_the_shelf_held()
         {
-            Assert.Equal((-8, -400), Scoring.ToTheWalkIn(-5, -250, 250, 50, 1f, 3f, 8, 400));
-            Assert.Equal((-11, -550), Scoring.ToTheWalkIn(-5, -250, 300, 50, 1f, 2f, 40, Scoring.NoWorth));
+            int[] stock = UsedUpAQuarterDayAtATime(12, 1), worth = UsedUpAQuarterDayAtATime(12, 50);
+            Assert.Equal((-8, -400), Scoring.AtTheWalkIn(stock, worth, 3f, 8, 400));
+            Assert.Equal((-8, -400), Scoring.AtTheWalkIn(stock, worth, 2f, 40, Scoring.NoWorth));
+        }
+
+        [Fact]
+        public void A_figure_is_held_to_what_it_said_would_have_moved_by_the_day_you_walked_in()
+        {
+            int[] worth = { 0, 0, 0, -900, -900, -900, -900, -900 };
+            int[] stock = { 0, 0, 0, -18, -18, -18, -18, -18 };
+            Assert.Equal((0, 0), Scoring.AtTheWalkIn(stock, worth, 0.6f, 40, 2000));
+            Assert.Equal((-18, -900), Scoring.AtTheWalkIn(stock, worth, 1f, 40, 2000));
+            Assert.Equal((-18, -900), Scoring.AtTheWalkIn(stock, worth, 1.9f, 40, 2000));
+        }
+
+        [Fact]
+        public void A_walk_in_before_the_first_quarter_day_is_held_to_nothing_moving()
+        {
+            int[] worth = UsedUpAQuarterDayAtATime(4, 50), stock = UsedUpAQuarterDayAtATime(4, 1);
+            Assert.Equal((0, 0), Scoring.AtTheWalkIn(stock, worth, 0.1f, 40, 2000));
+            Assert.Equal((0, 0), Scoring.AtTheWalkIn(null, null, 1f, 40, 2000));
+            Assert.Equal((0, 0), Scoring.AtTheWalkIn(new int[0], new int[0], 1f, 40, 2000));
+        }
+
+        [Fact]
+        public void A_figure_is_kept_for_every_day_it_can_still_be_judged_on()
+        {
+            Assert.Equal(12, Scoring.StepsItIsReadOver(1f));
+            Assert.Equal(4, Scoring.StepsItIsReadOver(0f));
+            Assert.Equal(4, Scoring.StepsItIsReadOver(float.NaN));
+            Assert.Equal((int)(Scoring.LongestAFigureIsRead / TradeMath.HorizonStep), Scoring.StepsItIsReadOver(40f));
+            Assert.Equal(0.25f, Scoring.DaysAtStep(0));
+            Assert.Equal(3f, Scoring.DaysAtStep(11));
+            for (float within = 0.25f; within < 9f; within += 0.25f)
+                Assert.True(Scoring.DaysAtStep(Scoring.StepsItIsReadOver(within) - 1) >= within * 2f + TradeMath.GraceDays);
         }
 
         [Fact]
@@ -805,6 +846,22 @@ namespace TradeLord.Tests
         {
             Assert.False(Marks.HoldsFor("town_N", "town_A", "town_A", "town_A"));
             Assert.True(Marks.HoldsFor("town_N", "town_B", "town_A", "town_A"));
+        }
+
+        [Fact]
+        public void A_forecast_is_worked_out_only_from_the_first_day_it_can_be_judged_on()
+        {
+            Assert.Equal(7, Scoring.FirstStepJudged(4f));
+            Assert.Equal(0, Scoring.FirstStepJudged(0f));
+            Assert.Equal(0, Scoring.FirstStepJudged(0.3f));
+            Assert.Equal(0, Scoring.FirstStepJudged(float.NaN));
+            for (float within = 0.1f; within < 12f; within += 0.37f)
+                for (float since = 0f; since < within * 2f + TradeMath.GraceDays; since += 0.05f)
+                {
+                    if (Scoring.TooSoonToSay(within, since)) continue;
+                    int read = (int)System.Math.Round(TradeMath.ToTheQuarterDay(since) / TradeMath.HorizonStep) - 1;
+                    Assert.True(read < 0 || read >= Scoring.FirstStepJudged(within));
+                }
         }
     }
 }

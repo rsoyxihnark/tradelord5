@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.97.0
+
+- Buy Workshops Remotely now lists first the workshop that pays for itself soonest, not the one that has earned the most lately
+- Buy Workshops Remotely now shows what each workshop pays its owner a day
+- Buying a workshop from Buy Workshops Remotely now says about how many days it takes to pay for itself
+- Fixed TradeLord selling a unit at a loss because cheaper units bought after it pulled the average cost down
+- A unit that cost well over the average is now sold first wherever a market pays your margin over what it cost
+- Fixed the map marker weighing a market on a unit TradeLord would not sell there because it cost well over the average
+- How much of a price elsewhere TradeLord counts on when buying is now learned from what its own sales really fetched
+- The hint for Resale safety factor now says TradeLord starts there and moves toward what its own sales really fetch
+- When your cargo room or your gold runs short, TradeLord now buys first the good that makes the most for each unit of room or each denar
+- Fixed a market paying well over the ledger's promise for one good hiding that it paid under the promise for another
+- Fixed the forecast of what is on its way to a market being judged at the end of the ride it expected, not on the day you walked in
+- Fixed small forecasts of what is on its way to a market counting as much as large ones when TradeLord judges how far to trust them
+- Enable extended debug logging now writes the map marker's table of every market it priced only when the marker moves
+- Enable extended debug logging now writes what share of a price elsewhere TradeLord counts on when buying, whenever it changes
+- Fixed the Chinese warning about your gold reserve when buying a workshop writing troop wages with the wrong character
+- Fixed the Russian warning about your gold reserve when buying a workshop spelling denars differently from every other message
+- The feature list now says a price above what the ledger promised counts as the promise and no more
+- The feature list now says the forecast is judged against what moved by the day you walked in
+- The feature list now says how much of a price elsewhere TradeLord counts on is learned from its own sales
+- The feature list now says TradeLord buys first what makes the most for the cargo room or gold that runs short
+- The feature list now says a unit the average cost would sell at a loss is held to your margin over what it cost
+- The feature list now says Buy Workshops Remotely lists first the workshop that pays for itself soonest, and what each pays a day
+- The feature list now says TradeLord.log writes the map marker's table of every market only when the marker moves
+- The feature list now says TradeLord.log writes the marked market good by good when the mark stays but its gold changes
+- The feature list now says TradeLord.log writes what share of a price elsewhere TradeLord counts on when buying
+- The feature list now counts eleven numbers in what TradeLord puts in a save
+
 ## 1.96.0
 
 - Added Earn workshops with Trade skill under General, off out of the box, which makes you earn workshops up to Most workshops you may own

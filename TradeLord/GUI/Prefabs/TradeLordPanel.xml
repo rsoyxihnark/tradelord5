@@ -659,7 +659,7 @@
                                                         Brush="Popup.Button.Text" Brush.FontSize="17"
                                                         Brush.FontColor="#BBBBBBFF"
                                                         Text="@Owner" />
-                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="90"
+                                            <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="140"
                                                         HeightSizePolicy="StretchToParent"
                                                         Brush="Popup.Button.Text" Brush.FontSize="17"
                                                         Brush.FontColor="#7FD633FF"

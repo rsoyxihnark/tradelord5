@@ -76,7 +76,7 @@ namespace TradeLord
 
         private static Stamp _cargoStamp;
         private static int _cargoVersion = -1;
-        private static List<(EquipmentElement item, int amount, int worth)> _cargo;
+        private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> _cargo;
         private static List<(string good, int amount, bool food)> _cargoHeld;
 
         private static string _markedId;
@@ -271,7 +271,7 @@ namespace TradeLord
             Log.Write(target != null
                 ? "map marker moved to " + target.Name + ": " + why
                 : "map marker taken off the map: " + why);
-            Ultra(how);
+            Ultra(how, board: true);
             Told(how);
             Remember(target, how);
         }
@@ -310,15 +310,16 @@ namespace TradeLord
             if (Marks.WorthSayingAgain(how.Value, how.Units, how.Held, _toldValue, _toldUnits, _toldHeld))
             {
                 Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ": " + Why(how));
-                Ultra(how);
+                Ultra(how, board: false);
+                SayWhatElseMoved(target, how, alongside: true);
                 Told(how);
             }
-            else if (SayWhatElseMoved(target, how)) Told(how);
+            else if (SayWhatElseMoved(target, how, alongside: false)) Told(how);
             if (how.Value == _saidValue && how.Rate == _saidRate) return;
             Remember(target, how);
         }
 
-        private static bool SayWhatElseMoved(Settlement target, in Reckoning how)
+        private static bool SayWhatElseMoved(Settlement target, in Reckoning how, bool alongside)
         {
             if (how.Board == null) return false;
             how.Board.Sort(FastestFirst);
@@ -329,7 +330,7 @@ namespace TradeLord
             for (int i = 0; i < how.Board.Count; i++)
             {
                 Weighing one = how.Board[i];
-                if (one.Where == null) continue;
+                if (one.Where == null || one.Where == target) continue;
                 string id = one.Where.StringId;
                 bool fresh = joined.Contains(id);
                 if (!fresh && !changed.Contains(id)) continue;
@@ -346,9 +347,12 @@ namespace TradeLord
                     ? "no other market it priced would take any of it now"
                     : "the next best is now " + how.RunnerUp.Name + " at " + how.RunnerUpRate.ToString("0") +
                       " gold a day for " + how.RunnerUpValue + " gold");
-            Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ", still " + how.Units +
-                      " unit(s) for " + how.Value + " gold, now " + how.Rate.ToString("0") +
-                      " gold a day, and only other markets moved: " + string.Join("; ", said));
+            if (said.Count == 0) return false;
+            Log.Write(alongside
+                ? "  and of the other markets it priced, " + string.Join("; ", said)
+                : "map marker weighed your cargo again and stayed on " + target.Name + ", still " + how.Units +
+                  " unit(s) for " + how.Value + " gold, now " + how.Rate.ToString("0") +
+                  " gold a day, and only other markets moved: " + string.Join("; ", said));
             return true;
         }
 
@@ -457,7 +461,7 @@ namespace TradeLord
             (x, y) => x.Rate != y.Rate ? y.Rate.CompareTo(x.Rate)
                                        : string.CompareOrdinal(x.Where.StringId, y.Where.StringId);
 
-        private static void Ultra(in Reckoning how)
+        private static void Ultra(in Reckoning how, bool board)
         {
             if (!Options.Current.ExtendedDebugLogging) return;
             var said = new List<string>();
@@ -488,7 +492,7 @@ namespace TradeLord
                                " can take, so the lines above come to more"
                              : ""));
             }
-            if (how.Board != null && how.Board.Count > 0)
+            if (board && how.Board != null && how.Board.Count > 0)
             {
                 how.Board.Sort(FastestFirst);
                 said.Add("  ultralog: the " + how.Board.Count + " market(s) it priced, best first");
@@ -522,7 +526,7 @@ namespace TradeLord
             if (said.Count > 0) Log.WriteMany(said);
         }
 
-        private static List<(EquipmentElement item, int amount, int worth)> WhatYouCarryToSell(
+        private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> WhatYouCarryToSell(
             MobileParty party)
         {
             int version = party.ItemRoster.VersionNo;
@@ -533,14 +537,17 @@ namespace TradeLord
             ISet<string> locked = TradePolicy.LockedKeys();
             var keepBack = TradePolicy.KeptBack(party.ItemRoster, TradeActionBehavior.TheVisit,
                                                 sim: false, out var awaited);
-            var cargo = new List<(EquipmentElement item, int amount, int worth)>();
+            var cargo = new List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)>();
             for (int i = 0; i < party.ItemRoster.Count; i++)
             {
                 ItemRosterElement el = party.ItemRoster.GetElementCopyAtIndex(i);
                 if (!TradePolicy.MaySell(el, locked, keepBack, awaited, out int keep)) continue;
                 if (el.Amount - keep <= 0) continue;
                 ItemObject item = el.EquipmentElement.Item;
-                cargo.Add((el.EquipmentElement, el.Amount - keep, TradePolicy.WorthToBeat(el.EquipmentElement)));
+                int worth = TradePolicy.WorthToBeat(el.EquipmentElement);
+                int[] dearer = LedgerBehavior.Instance?.DearerUnits(el.EquipmentElement, Options.Current.MinProfitMargin);
+                cargo.Add((el.EquipmentElement, el.Amount - keep, worth,
+                           new TradeMath.DearFirst(dearer, el.Amount - (dearer == null ? 0 : dearer.Length), worth)));
             }
             _cargo = cargo;
             _cargoHeld = Held(cargo);
@@ -548,7 +555,7 @@ namespace TradeLord
         }
 
         private static List<(string good, int amount, bool food)> Held(
-            List<(EquipmentElement item, int amount, int worth)> cargo)
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)
         {
             var held = new List<(string good, int amount, bool food)>(cargo.Count);
             for (int i = 0; i < cargo.Count; i++)
@@ -567,20 +574,23 @@ namespace TradeLord
 
         private static Takings WhatItWouldFetch(
             Settlement site, SettlementComponent market, MobileParty party, float ride,
-            List<(EquipmentElement item, int amount, int worth)> cargo,
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
             int gold, List<Share> bill)
         {
             Takings took = default(Takings);
-            foreach (var (item, amount, worth) in cargo)
+            foreach (var (item, amount, worth, floors) in cargo)
             {
                 Paying pays = WhatThatMarketPays(site, market, item, party, ride);
+                TradeMath.DearFirst walk = floors;
                 long fetched = 0L;
                 int moved = 0, opening = 0, last = 0;
                 for (int u = 0; u < amount; u++)
                 {
                     int price = pays.At(u);
                     if (price <= 0) break;
-                    if (!TradeMath.ProfitAcceptable(worth, price, Options.Current.MinProfitMargin)) break;
+                    if (!TradeMath.ProfitAcceptable(walk.Floor(price, Options.Current.MinProfitMargin), price,
+                                                    Options.Current.MinProfitMargin)) break;
+                    walk.Took();
                     if (moved == 0) opening = price;
                     last = price;
                     fetched += price;
@@ -651,7 +661,7 @@ namespace TradeLord
 
         private static float RateThere((Settlement s, SettlementComponent market, int gold, float days) one,
                                        MobileParty party,
-                                       List<(EquipmentElement item, int amount, int worth)> cargo)
+                                       List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)
         {
             Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null);
             if (took.Value <= 0L) return 0f;
@@ -661,7 +671,7 @@ namespace TradeLord
 
         private static Settlement OutEarnsTheMark(
             List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, Settlement holder,
-            MobileParty party, List<(EquipmentElement item, int amount, int worth)> cargo,
+            MobileParty party, List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
             List<string> compared)
         {
             int mine = -1;
