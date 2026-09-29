@@ -867,6 +867,7 @@ namespace TradeLord
                 Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));
                 Guard.Run("Action.RestoreMarker", Marker.Update);
                 Guard.Run("Shops.MendTheGamesRecords", Shops.MendTheGamesRecords);
+                Guard.Run("Shops.SayWhoSetsTheLimit", Shops.SayWhoSetsTheLimit);
                 Log.Write(Travel.NavalActive
                     ? "naval capability: party can sail - routes and travel times include sea legs"
                     : "naval capability: land-only - land routing in effect");

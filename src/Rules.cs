@@ -832,6 +832,12 @@ namespace TradeLord
             return youAsked;
         }
 
+        public static int WorkshopsYouMayOwn(int gameSays, int youAsked, bool roomKept)
+        {
+            int mayOwn = WorkshopsYouMayOwn(gameSays, youAsked);
+            return roomKept || mayOwn <= gameSays ? mayOwn : gameSays;
+        }
+
         public const int MostWorkshopsYouMayAskFor = 200;
 
         public static int WorkshopRecordsToKeep(int gameSays) =>

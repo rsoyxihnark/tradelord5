@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.95.7
+
+- Fixed Buy Workshops Remotely offering workshops in towns at war with you when Exclude hostile markets is off
+- Fixed Buy Workshops Remotely offering each town's hidden Artisans workshop, which the game never sells
+- Most workshops you may own now falls back to the game's own limit if a game update stops TradeLord making room for more workshops
+- TradeLord.log now names any other mod that changes how many workshops you may own
+
 ## 1.95.6
 
 - Fixed the renown tooltip on the clan screen offering more workshops at the next tier when Most workshops you may own sets the limit

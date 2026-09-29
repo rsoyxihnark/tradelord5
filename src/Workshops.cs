@@ -19,8 +19,10 @@ namespace TradeLord
         {
             int asked = Options.Current.MaxWorkshopsOwned;
             int gameSays = FromTheGame();
-            return Holdings.WorkshopsYouMayOwn(gameSays, asked);
+            return Holdings.WorkshopsYouMayOwn(gameSays, asked, RoomIsKept);
         }
+
+        internal static bool RoomIsKept => Patcher.Holds(nameof(Patch_WorkshopsYouMayHave));
 
         private static int FromTheGame()
         {
@@ -86,14 +88,18 @@ namespace TradeLord
 
         internal static bool OnTheMarket(Workshop shop)
         {
-            if (shop?.Settlement == null || shop.WorkshopType == null) return false;
+            if (shop?.Settlement == null || shop.WorkshopType == null || shop.WorkshopType.IsHidden) return false;
             Hero owner = shop.Owner;
             return owner != null && owner != Hero.MainHero && owner.IsNotable && !owner.IsDead;
         }
 
+        internal static bool InAnEnemyTown(Workshop shop) =>
+            shop?.Settlement != null && LedgerBehavior.IsHostile(shop.Settlement);
+
         internal static Block WhatStopsBuying(Workshop shop, int cost, int purse, int owned, int mayOwn)
         {
             if (shop == null || !OnTheMarket(shop)) return Block.NotTradable;
+            if (InAnEnemyTown(shop)) return Block.NotTradable;
             if (!Holdings.RoomForOneMore(owned, mayOwn)) return Block.HeldEnough;
             if (cost <= 0) return Block.NotTradable;
             if (cost > purse) return Block.BudgetSpent;
@@ -110,8 +116,7 @@ namespace TradeLord
                     Workshop[] shops = town?.Workshops;
                     if (shops == null) continue;
                     if (LedgerBehavior.UnderAttack(town.Settlement)) continue;
-                    if (Options.Current.ExcludeHostileTowns &&
-                        LedgerBehavior.IsHostile(town.Settlement)) continue;
+                    if (LedgerBehavior.IsHostile(town.Settlement)) continue;
                     for (int i = 0; i < shops.Length; i++)
                         if (OnTheMarket(shops[i])) found.Add(shops[i]);
                 }
@@ -131,7 +136,8 @@ namespace TradeLord
             {
                 said = WhyNot(why, shop, cost, purse, owned, mayOwn);
                 Log.Write("workshop not bought: " + Named(shop) + " for " + cost + " gold, purse " + purse +
-                          ", owned " + owned + " of " + mayOwn + ", stopped on " + why);
+                          ", owned " + owned + " of " + mayOwn + ", stopped on " + why +
+                          (InAnEnemyTown(shop) ? ", its town at war with you" : ""));
                 return false;
             }
             bool done = false;
@@ -173,6 +179,12 @@ namespace TradeLord
         private static TextObject WhyNot(Block why, Workshop shop, int cost, int purse,
                                          int owned, int mayOwn)
         {
+            if (why == Block.NotTradable && InAnEnemyTown(shop))
+            {
+                TextObject enemy = Tongue.Text("{=TL477}You cannot own a workshop in {TOWN} while it is at war with you.");
+                enemy.SetTextVariable("TOWN", shop.Settlement.Name);
+                return enemy;
+            }
             if (why == Block.HeldEnough)
             {
                 TextObject full = Tongue.Text("{=TL435}You already own {OWNED} workshop(s), which is all Most workshops you may own allows. Raise it in TradeLord's settings to buy another.");
@@ -236,6 +248,31 @@ namespace TradeLord
                     : "ERROR: the game kept no record of " + Named(shop) + " and would not take one");
             }
         }
+
+        internal static void SayWhoSetsTheLimit()
+        {
+            var others = new List<string>();
+            OthersChanging(AccessTools.Method(typeof(DefaultWorkshopModel), "GetMaxWorkshopCountForClanTier"), others);
+            OthersChanging(AccessTools.PropertyGetter(typeof(DefaultWorkshopModel), "MaximumWorkshopsPlayerCanHave"), others);
+            object model = Campaign.Current?.Models?.WorkshopModel;
+            Log.Write("workshop limit: the game's workshop model is " +
+                      (model == null ? "not something TradeLord can read" : model.GetType().Name) +
+                      (others.Count == 0
+                          ? ", and no other mod changes the limit"
+                          : ", and the limit is also changed by " + string.Join(", ", others.ToArray())) +
+                      (RoomIsKept
+                          ? ""
+                          : "; TradeLord could not make room for more workshops on this game version, " +
+                            "so Most workshops you may own stays within the game's own limit"));
+        }
+
+        private static void OthersChanging(MethodBase method, List<string> others)
+        {
+            Patches found = method == null ? null : Harmony.GetPatchInfo(method);
+            if (found?.Owners == null) return;
+            foreach (string owner in found.Owners)
+                if (owner != SubModule.HarmonyId && !others.Contains(owner)) others.Add(owner);
+        }
     }
 
     [HarmonyPatch(typeof(DefaultWorkshopModel), "GetMaxWorkshopCountForClanTier")]
@@ -245,7 +282,7 @@ namespace TradeLord
         {
             if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier(), Shops.ItIsYouBuying) &&
                 !Holdings.TheGameIsWeighingYourNextTier(tier, Shops.YourTier(), Shops.ItIsYourNextTier)) return;
-            __result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);
+            __result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned, Shops.RoomIsKept);
         }
     }
 
