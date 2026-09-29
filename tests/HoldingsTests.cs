@@ -111,6 +111,71 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Every_25_points_of_Trade_earn_one_workshop_on_top_of_the_games_own_limit()
+        {
+            Assert.Equal(25, Holdings.TradeSkillPerWorkshop);
+            Assert.Equal(3, Holdings.WorkshopsYouEarn(3, 200, 0));
+            Assert.Equal(3, Holdings.WorkshopsYouEarn(3, 200, 24));
+            Assert.Equal(4, Holdings.WorkshopsYouEarn(3, 200, 25));
+            Assert.Equal(7, Holdings.WorkshopsYouEarn(3, 200, 100));
+            Assert.Equal(16, Holdings.WorkshopsYouEarn(3, 200, 330));
+        }
+
+        [Fact]
+        public void What_you_earn_never_passes_Most_workshops_you_may_own()
+        {
+            Assert.Equal(5, Holdings.WorkshopsYouEarn(3, 5, 330));
+            Assert.Equal(2, Holdings.WorkshopsYouEarn(3, 2, 100));
+            Assert.Equal(200, Holdings.WorkshopsYouEarn(190, 200, 330));
+        }
+
+        [Fact]
+        public void With_Most_workshops_you_may_own_at_0_you_earn_the_games_own_limit_and_no_more()
+        {
+            Assert.Equal(3, Holdings.WorkshopsYouEarn(3, 0, 330));
+            Assert.Equal(0, Holdings.WorkshopsYouEarn(0, 0, 330));
+        }
+
+        [Fact]
+        public void A_Trade_skill_the_game_cannot_read_earns_nothing()
+        {
+            Assert.Equal(3, Holdings.WorkshopsYouEarn(3, 200, -5));
+        }
+
+        [Fact]
+        public void What_you_earn_grows_with_Trade_and_stays_between_the_games_limit_and_your_ceiling()
+        {
+            var roll = new System.Random(8812);
+            for (int i = 0; i < 20000; i++)
+            {
+                int gameSays = roll.Next(0, 12);
+                int asked = roll.Next(-5, Holdings.MostWorkshopsYouMayAskFor + 1);
+                int trade = roll.Next(-5, 400);
+                int ceiling = Holdings.WorkshopsYouMayOwn(gameSays, asked);
+                int earned = Holdings.WorkshopsYouEarn(gameSays, asked, trade);
+                Assert.True(earned <= ceiling);
+                Assert.True(earned >= System.Math.Min(gameSays, ceiling));
+                Assert.True(Holdings.WorkshopsYouEarn(gameSays, asked, trade + 1) >= earned);
+                Assert.True(Holdings.WorkshopsYouMayOwn(gameSays, earned) <= Holdings.WorkshopRecordsToKeep(gameSays));
+            }
+        }
+
+        [Fact]
+        public void While_you_earn_workshops_the_next_tier_adds_one_until_your_ceiling()
+        {
+            var roll = new System.Random(9034);
+            for (int i = 0; i < 20000; i++)
+            {
+                int tier = roll.Next(0, 6);
+                int asked = roll.Next(1, Holdings.MostWorkshopsYouMayAskFor + 1);
+                int trade = roll.Next(0, 331);
+                int now = Holdings.WorkshopsYouMayOwn(tier + 1, Holdings.WorkshopsYouEarn(tier + 1, asked, trade));
+                int next = Holdings.WorkshopsYouMayOwn(tier + 2, Holdings.WorkshopsYouEarn(tier + 2, asked, trade));
+                Assert.Equal(tier + 2 + trade / 25 <= asked ? 1 : 0, next - now);
+            }
+        }
+
+        [Fact]
         public void The_limit_is_only_lifted_where_the_game_is_asking_about_your_own_clan()
         {
             Assert.True(Holdings.TheGameIsAskingAboutYou(3, 3, whileYouBuy: true));

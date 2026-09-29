@@ -619,6 +619,11 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public int MaxWorkshopsOwned { get => _o.MaxWorkshopsOwned; set { _o.MaxWorkshopsOwned = value; Options.Bump(); } }
 
+        [SettingPropertyBool("{=TL478}Earn workshops with Trade skill", Order = 20, RequireRestart = false,
+            HintText = "{=TL479}You earn workshops up to Most workshops you may own: the game's own limit, which rises with your clan tier, plus one more for every 25 points of your Trade skill. OFF by default.")]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
+        public bool EarnWorkshopsWithTrade { get => _o.EarnWorkshopsWithTrade; set { _o.EarnWorkshopsWithTrade = value; Options.Bump(); } }
+
         [SettingPropertyInteger("{=TL221}Restock and keep food (days of supply)", 0, 30, Order = 0, RequireRestart = false,
             HintText = "{=TL321}Days of food to keep: held back from selling and topped up as TradeLord trades, cheapest first, never above the cheapest price it knows. Your never-buy list holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]

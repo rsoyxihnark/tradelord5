@@ -129,6 +129,8 @@ namespace TradeLord
 
         public int MaxWorkshopsOwned = 200;
 
+        public bool EarnWorkshopsWithTrade = false;
+
         public bool BuyHaulAnimals = true;
 
         public int HaulAnimalGoldFloor = 2000;
