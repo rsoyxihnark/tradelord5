@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.95.5
+
+- Fixed unpinning a town in the TradeLord ledger taking the map marker off it when Auto-mark best sell market on map pointed there
+- Fixed What this means in the TradeLord ledger saying Left counts from when you arrive, when it counts from now
+- The clan screen's Workshops count on the Other tab now uses Most workshops you may own instead of your clan tier's limit
+- The hint for Restock and keep food (days of supply) now says it never pays more for food than the cheapest price TradeLord knows
+
 ## 1.95.4
 
 - Fixed a saved game crashing soon after loading because of a workshop bought after raising Most workshops you may own
@@ -7,7 +14,6 @@
 ## 1.95.3
 
 - Fixed the game crashing after raising Most workshops you may own and buying a workshop past its old value without reloading
-- Fixed Left in the TradeLord ledger counting from now instead of from when you reach the buy town
 - Fixed TradeLord.ini losing settings from a newer TradeLord after you start an older one with MCM
 
 ## 1.95.2

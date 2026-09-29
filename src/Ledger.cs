@@ -1201,7 +1201,7 @@ namespace TradeLord
                             Confidence = confidence, Score = score,
                             Simulated = q.Simulated, Caravans = caravans, DataAgeDays = age,
                             StillComing = TradeMath.StillComing(q.Units, onTheShelfNow),
-                            RunsOutInDays = Projection.LeftOnceYouArrive(runsOut, toBuy)
+                            RunsOutInDays = runsOut
                         };
                     }
                 }

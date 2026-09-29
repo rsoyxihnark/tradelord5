@@ -109,6 +109,13 @@ namespace TradeLord
             }
         }
 
+        internal static bool TakesOver(Settlement s)
+        {
+            if (s == null || s != _picked || !Options.Current.MarkBestSellTownOnMap) return false;
+            _tracked = s;
+            return true;
+        }
+
         internal static bool DueAgain(Vec2 at)
         {
             int hour = (int)CampaignTime.Now.ToHours;

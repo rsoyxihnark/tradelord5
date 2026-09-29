@@ -620,7 +620,7 @@ namespace TradeLord.Mcm
         public int MaxWorkshopsOwned { get => _o.MaxWorkshopsOwned; set { _o.MaxWorkshopsOwned = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL221}Restock and keep food (days of supply)", 0, 30, Order = 0, RequireRestart = false,
-            HintText = "{=TL321}The days of food TradeLord keeps you stocked to: it holds that much back from selling and tops you up as it trades, cheapest first. Your never-buy list holds, and it stops before your gold reaches your reserve. 0 turns both off. Default 3.")]
+            HintText = "{=TL321}Days of food to keep: held back from selling and topped up as TradeLord trades, cheapest first, never above the cheapest price it knows. Your never-buy list holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public int KeepFoodDays { get => _o.KeepFoodDays; set { _o.KeepFoodDays = value; Options.Bump(); } }
 

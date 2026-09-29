@@ -8,6 +8,7 @@ using TaleWorlds.CampaignSystem.CampaignBehaviors;
 using TaleWorlds.CampaignSystem.GameComponents;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.CampaignSystem.Settlements.Workshops;
+using TaleWorlds.CampaignSystem.ViewModelCollection.ClanManagement.Categories;
 using TaleWorlds.Localization;
 
 namespace TradeLord
@@ -246,6 +247,14 @@ namespace TradeLord
 
     [HarmonyPatch(typeof(WorkshopsCharactersCampaignBehavior), "can_player_buy_workshop_clickable_condition")]
     internal static class Patch_WorkshopOwnerConversation
+    {
+        private static void Prefix() => Shops.YouStartBuying();
+
+        private static void Finalizer() => Shops.YouStopBuying();
+    }
+
+    [HarmonyPatch(typeof(ClanIncomeVM), "RefreshList")]
+    internal static class Patch_ClanScreenWorkshopLimit
     {
         private static void Prefix() => Shops.YouStartBuying();
 

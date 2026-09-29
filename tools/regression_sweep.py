@@ -2822,7 +2822,8 @@ chk("1.6.7", "the panel's own pin list, not the map's marker state, decides what
     (lambda b: ordered(b, "if (Unpin(settlement)) return;", "_panelPins.Add(settlement)"))
     (method_body(S['Panel.cs'], "private static void ToggleMarker")) and
     (lambda b: ordered(b, "if (settlement == null || !_panelPins.Remove(settlement)) return false;",
-                       "tracker.CheckTracked(settlement)) tracker.RemoveTrackedObject(settlement);",
+                       "tracker.CheckTracked(settlement) && !Marker.TakesOver(settlement))\n"
+                       "                tracker.RemoveTrackedObject(settlement);",
                        "return true;"))
     (method_body(S['Panel.cs'], "internal static bool Unpin")) and
     S['Panel.cs'].count("_panelPins.Remove(") == 1 and
@@ -8318,12 +8319,12 @@ def a_route_says_how_long_its_buy_market_holds_that_quantity():
             and "_shelfAhead.Clear();" in method_body(S['Forecast.cs'], "private static void Build")
             and "public float RunsOutInDays = Projection.NeverRunsOut;" in S['Ledger.cs']
             and "float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);" in scan
-            and "RunsOutInDays = Projection.LeftOnceYouArrive(runsOut, toBuy)" in scan
+            and "RunsOutInDays = runsOut" in scan
             and "float days = _route.RunsOutInDays;" in S['Panel.cs']
             and 'if (days <= 0f) return "";' in S['Panel.cs']
             and '"HeadDays", "HeadRunsOut",' in S['Panel.cs']
             and '{=TL416}Left' in S['Panel.cs']
-            and '{=TL417} | Left = how long that shelf still holds this Qty once you arrive' in S['Panel.cs']
+            and '{=TL417} | Left = how long from now that shelf still holds this Qty' in S['Panel.cs']
             and 'Text="@RunsOut"' in PREFAB and 'Text="@HeadRunsOut"' in PREFAB
             and all(said_in_every_language(one) for one in ("TL414", "TL415", "TL416", "TL417"))
             and panel_columns()[0] is not None and len(panel_columns()[0]) == 12)
@@ -8723,7 +8724,7 @@ def how_long_a_shelf_lasts_now_counts_towards_the_route_score():
                         ": 1f / (1f + Math.Max(caravans, 0) * 0.15f);")
             and "float c = resilience * depth * haste * quiet * fresh;" in of
             and ordered(scan, "float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);",
-                        "runsOut, toBuy);", "RunsOutInDays = Projection.LeftOnceYouArrive(runsOut, toBuy)")
+                        "runsOut, toBuy);", "RunsOutInDays = runsOut")
             and scan.count("Forecast.RunsOutIn(") == 1
             and '{=TL417}' in S['Panel.cs']
             and 'lowers Conf' in english_string('TL417')
@@ -14626,7 +14627,8 @@ chk("1.95.2", "a dry run of the release note sync that names versions to drop le
 
 def the_branch_guard_sees_through_the_ways_a_branch_can_be_started():
     return ('[A-Za-z_]*=*) shift ;;' in GUARD
-            and 'env|command|exec|nohup|time|sudo|-*) shift ;;' in GUARD
+            and "env|command|exec|nohup|time|sudo|then|do|else|elif|if|while|until|'!'|'{'|-*) shift ;;" in GUARD
+            and 'write it with a file tool instead' in method_body(GUARD, "refuse()")
             and 'git|*/git) ;;' in GUARD
             and '-C|-c|--git-dir|--work-tree|--namespace|--config-env) shift; shift ;;' in GUARD
             and '--create=*|--force-create=*|--orphan=*|-t|--track|--track=*)' in GUARD
@@ -14665,22 +14667,19 @@ chk("1.95.3", "the game keeps a record for as many workshops as Most workshops y
     the_game_keeps_a_record_for_every_workshop_you_may_ever_own())
 
 
-def left_counts_from_the_moment_you_arrive():
-    left = method_body(S['Projection.cs'], "internal static float LeftOnceYouArrive")
-    return (left
-            and "if (runsOut < 0f || float.IsNaN(runsOut)) return NeverRunsOut;" in left
-            and "float waited = daysToTheBuyTown > 0f && !float.IsNaN(daysToTheBuyTown) ? daysToTheBuyTown : 0f;" in left
-            and "return runsOut - waited;" in left
-            and "RunsOutInDays = Projection.LeftOnceYouArrive(runsOut, toBuy)" in
-                method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
-            and "once you arrive" in english_string('TL417')
-            and all(one in PROJECTIONTESTS for one in
-                    ("Left_counts_from_the_moment_you_arrive_not_from_now",
-                     "A_shelf_that_runs_out_always_has_some_time_left_once_you_arrive",
-                     "new System.Random(6203)")))
+def left_counts_from_now_the_way_its_legend_says():
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    en, tr, ru, cn = (spoken(p) for p in [ENGLISH] + list(TRANSLATIONS.values()))
+    return ("RunsOutInDays = runsOut\n" in scan
+            and "LeftOnceYouArrive" not in ALL
+            and "Fixed Left in the TradeLord ledger counting from now instead of from when you reach the buy town" not in CHANGES
+            and "from now" in en['TL417'] and "once you arrive" not in en['TL417']
+            and "\u015fu andan itibaren" in tr['TL417'] and "vard\u0131ktan sonra" not in tr['TL417']
+            and "\u0441 \u044d\u0442\u043e\u0433\u043e \u043c\u043e\u043c\u0435\u043d\u0442\u0430" in ru['TL417'] and "\u043f\u0440\u0438\u0431\u044b\u0442\u0438\u044f" not in ru['TL417']
+            and "\u4ece\u73b0\u5728\u8d77" in cn['TL417'] and "\u62b5\u8fbe\u540e" not in cn['TL417'])
 
-chk("1.95.3", "Left in the ledger counts how long the shelf holds from the moment you arrive, the way its legend says, not from now",
-    left_counts_from_the_moment_you_arrive())
+chk("1.95.5", "Left in the ledger counts how long the buy market's shelf holds from now, your ride there included, and What this means says so in every language",
+    left_counts_from_now_the_way_its_legend_says())
 
 
 def a_newer_file_is_never_restamped_as_the_screens_when_the_screen_is_ready_at_startup():
@@ -14741,6 +14740,57 @@ def a_workshop_the_game_kept_no_record_of_is_given_one_when_the_game_loads():
 
 chk("1.95.4", "a workshop you own that the game kept no record or warehouse for is given one when the game loads, so a save that crashed over it plays again",
     a_workshop_the_game_kept_no_record_of_is_given_one_when_the_game_loads())
+
+
+
+def unpinning_the_marked_town_leaves_the_map_marker_on_it():
+    takes = method_body(S['Marker.cs'], "internal static bool TakesOver")
+    unpin = method_body(S['Panel.cs'], "internal static bool Unpin")
+    return (takes and unpin
+            and "if (s == null || s != _picked || !Options.Current.MarkBestSellTownOnMap) return false;" in takes
+            and ordered(takes, "return false;", "_tracked = s;", "return true;")
+            and ("if (tracker != null && tracker.CheckTracked(settlement) && !Marker.TakesOver(settlement))\n"
+                 "                tracker.RemoveTrackedObject(settlement);") in unpin
+            and "if (_tracked != null && !LedgerPanel.IsPinned(_tracked) && tracker.CheckTracked(_tracked))" in
+                method_body(S['Marker.cs'], "internal static void Update"))
+
+chk("1.95.5", "unpinning a town in the ledger leaves the map marker on it when the marker points there, and the marker owns that arrow from then on so it can take it down later",
+    unpinning_the_marked_town_leaves_the_map_marker_on_it())
+
+
+def the_clan_screen_shows_the_workshop_limit_you_set():
+    shops = S['Workshops.cs']
+    patch = method_body(shops, "internal static class Patch_ClanScreenWorkshopLimit")
+    return (patch
+            and '[HarmonyPatch(typeof(ClanIncomeVM), "RefreshList")]' in shops
+            and "private static void Prefix() => Shops.YouStartBuying();" in patch
+            and "private static void Finalizer() => Shops.YouStopBuying();" in patch
+            and "Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier(), Shops.ItIsYouBuying)" in
+                method_body(shops, "internal static class Patch_WorkshopLimit")
+            and "Patcher.TryPatch(harmony, typeof(Patch_ClanScreenWorkshopLimit));" in S['SubModule.cs']
+            and ('"TaleWorlds.CampaignSystem.ViewModelCollection.ClanManagement.Categories.ClanIncomeVM",\n'
+                 '                "RefreshList", null),') in COMPAT)
+
+chk("1.95.5", "the clan screen counts your workshops against the limit Most workshops you may own sets, through a finalizer that always lowers it again, while every other reader still gets the game's own limit",
+    the_clan_screen_shows_the_workshop_limit_you_set())
+
+
+def the_food_hint_says_it_pays_no_more_than_the_cheapest_price_known():
+    larder = method_body(S['Trading.cs'], "public static void ExecuteResupply")
+    en, tr, ru, cn = (spoken(p) for p in [ENGLISH] + list(TRANSLATIONS.values()))
+    return ("var larder = CheapestFirst(pass," in larder
+            and "it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true));" in larder
+            and "Pass pass, Func<ItemObject, bool> wanted, float tolerance = 1f)" in S['Trading.cs']
+            and "if (float.IsNaN(tolerance) || tolerance <= 1f) return cheapest;" in
+                method_body(S['TradeMath.cs'], "public static int MostToPayOverTheCheapest")
+            and "cheapest first, never above the cheapest price it knows" in en['TL321']
+            and option_default('KeepFoodDays') == '3' and "Default 3." in en['TL321']
+            and "bildi\u011fi en ucuz fiyat\u0131 a\u015fmadan" in tr['TL321']
+            and "\u043d\u0435 \u0434\u043e\u0440\u043e\u0436\u0435 \u0441\u0430\u043c\u043e\u0439 \u043d\u0438\u0437\u043a\u043e\u0439 \u0438\u0437\u0432\u0435\u0441\u0442\u043d\u043e\u0439 \u0435\u043c\u0443 \u0446\u0435\u043d\u044b" in ru['TL321']
+            and "\u51fa\u4ef7\u4ece\u4e0d\u9ad8\u4e8e\u5b83\u6240\u77e5\u7684\u6700\u4f4e\u4ef7" in cn['TL321'])
+
+chk("1.95.5", "the hint for Restock and keep food says it buys the cheapest food first and never above the cheapest price TradeLord knows, the way the larder is filled, in every language",
+    the_food_hint_says_it_pays_no_more_than_the_cheapest_price_known())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
