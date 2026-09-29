@@ -185,7 +185,7 @@
 		<string id="TL317" text="Bir pazara adım attığınız anda, sorulmadan, kurallarınızın izin verdiği her şeyi satar. Ticaret tecrübesi verilir. Kapalıyken TradeLord yalnızca menüdeki ticaret girdisini seçtiğinizde satar."/>
 		<string id="TL318" text="Bir pazara adım attığınız anda, satın aldıklarınızı sattıktan sonra ve hiç almadıklarınızı satmadan önce alır. Bu kapalıyken TradeLord yalnızca menüdeki ticaret girdisini seçtiğinizde alır."/>
 		<string id="TL320" text="Her ticaretin iki yönde geçmesi gereken kâr payı. Yalnızca fiyat maliyetinizi en az bu kadar aşarsa satar. Yalnızca uzak pazar, yeniden satış güvenlik payından sonra yerel fiyatı bu kadar aşarsa alır ya da rota gösterir. Yükseldikçe ticaret azalır."/>
-		<string id="TL321" text="TradeLord'un sizi kaç günlük yiyecekle dolu tuttuğu: satarken bu kadarını ayırır, ticaret ettikçe en ucuzundan tamamlar. Asla alma listeniz geçerlidir ve altın rezervinize ulaşmadan durur. 0 ikisini de kapatır. Varsayılan 3."/>
+		<string id="TL321" text="TradeLord'un kaç günlük yiyecek tuttuğu: satarken bu kadarını ayırır, ticaret ettikçe en ucuzundan ve bildiği en ucuz fiyatı aşmadan tamamlar. Asla alma listeniz geçerlidir; altın rezervinize varmadan durur. 0 ikisini de kapatır. Varsayılan 3."/>
 		<string id="TL322" text="Otomatik ticaretin yiyecekle ne yapabileceği. Günlük yiyecek rezervi ayrıdır ve yine geçerlidir."/>
 		<string id="TL323" text="Otomatik ticaretin kömür, sert odun, demir cevheri ve külçelerle ne yapabileceği. Demircilik stokunu otomatik ticaretin tümüyle dışında tutmak için Dokunma seçin."/>
 		<string id="TL324" text="Otomatik ticaretin koyun, sığır ve domuzla ne yapabileceği. Alış, oyunun kendi sürü hesabıyla sınırlanır, bu yüzden müfrezeyi sürü hız cezasına sokmaz. Yük hayvanlarının ve binek atlarının kendi ayarları vardır, bu ayar onlara işlemez."/>
@@ -256,7 +256,7 @@
 		<string id="TL414" text="s"/>
 		<string id="TL415" text="g"/>
 		<string id="TL416" text="Kalan"/>
-		<string id="TL417" text=" | Kalan = siz vardıktan sonra o tezgahın bu Adet kadarını daha ne kadar elinde tutacağı; önce boşalan bir tezgah Güven değerini düşürür"/>
+		<string id="TL417" text=" | Kalan = şu andan itibaren o tezgahın bu Adet kadarını daha ne kadar elinde tutacağı; önce boşalan bir tezgah Güven değerini düşürür"/>
 		<string id="TL418" text="Son ticaretler (son {COUNT})"/>
 		<string id="TL419" text="Son ticaretler: bu seferde henüz ticaret yapılmadı"/>
 		<string id="TL420" text="{DAYS} gün önce"/>

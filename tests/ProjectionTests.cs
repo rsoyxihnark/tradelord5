@@ -270,39 +270,6 @@ namespace TradeLord.Tests
                                                        unitValue, stockNow, afterDays), wanted);
 
         [Fact]
-        public void Left_counts_from_the_moment_you_arrive_not_from_now()
-        {
-            var coming = new List<Spending> { Purse(150, 1f), Purse(150, 2f) };
-            float runsOut = RunsOut(new List<Landing>(), coming,
-                                    OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f);
-            Assert.Equal(2f, runsOut);
-            Assert.Equal(1.5f, Projection.LeftOnceYouArrive(runsOut, 0.5f));
-            Assert.Equal(2f, Projection.LeftOnceYouArrive(runsOut, 0f));
-            Assert.Equal(2f, Projection.LeftOnceYouArrive(runsOut, float.NaN));
-            Assert.Equal(Projection.NeverRunsOut, Projection.LeftOnceYouArrive(Projection.NeverRunsOut, 0.5f));
-            Assert.Equal(Projection.NeverRunsOut, Projection.LeftOnceYouArrive(float.NaN, 0.5f));
-        }
-
-        [Fact]
-        public void A_shelf_that_runs_out_always_has_some_time_left_once_you_arrive()
-        {
-            var rng = new System.Random(6203);
-            for (int round = 0; round < 20000; round++)
-            {
-                float after = (float)(rng.NextDouble() * 3d);
-                var coming = new List<Spending>();
-                int purses = rng.Next(0, 5);
-                for (int i = 0; i < purses; i++)
-                    coming.Add(Purse(rng.Next(1, 4000), (float)(rng.NextDouble() * 6d)));
-                float at = RunsOut(null, coming, OnePull("grain"), 1f,
-                                   "grain", "grain", rng.Next(1, 200),
-                                   rng.Next(0, 200), rng.Next(1, 60), after);
-                float left = Projection.LeftOnceYouArrive(at, after);
-                Assert.True(at == Projection.NeverRunsOut ? left == Projection.NeverRunsOut : left > 0f && left == at - after);
-            }
-        }
-
-        [Fact]
         public void A_shelf_nobody_is_coming_for_never_runs_out()
         {
             Assert.Equal(Projection.NeverRunsOut,

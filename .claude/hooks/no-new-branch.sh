@@ -9,6 +9,7 @@ refuse() {
     printf 'Refused by this repository: %s\n' "$1"
     printf 'It keeps one branch, main. Commit where you are and push with:\n'
     printf '  git push -u origin HEAD:main\n'
+    printf 'If that line is text, such as a heredoc or a script body, rather than a command, write it with a file tool instead.\n'
   } >&2
   exit 2
 }
@@ -19,7 +20,7 @@ while IFS= read -r segment; do
   set -- $segment
   while [ $# -gt 0 ]; do
     case "$1" in
-      env|command|exec|nohup|time|sudo|-*) shift ;;
+      env|command|exec|nohup|time|sudo|then|do|else|elif|if|while|until|'!'|'{'|-*) shift ;;
       [A-Za-z_]*=*) shift ;;
       *) break ;;
     esac
