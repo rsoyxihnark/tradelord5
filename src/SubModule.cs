@@ -35,6 +35,7 @@ namespace TradeLord
             Patcher.TryPatch(harmony, typeof(Patch_WorkshopsYouMayHave));
             Patcher.TryPatch(harmony, typeof(Patch_WorkshopOwnerConversation));
             Patcher.TryPatch(harmony, typeof(Patch_ClanScreenWorkshopLimit));
+            Patcher.TryPatch(harmony, typeof(Patch_ClanTierWorkshopBonus));
             Patcher.TryPatch(harmony, typeof(Patch_VillagerOfferShown));
             Patcher.TryPatch(harmony, typeof(Patch_VillagerOfferTaken));
 

@@ -8971,7 +8971,8 @@ def the_workshop_limit_is_lifted_for_your_clan_alone():
     return ("public static bool TheGameIsAskingAboutYou(int askedAboutTier, int yourTier," in rules
             and "bool whileYouBuy) =>" in rules
             and "whileYouBuy && yourTier >= 0 && askedAboutTier == yourTier;" in rules
-            and "if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier(), Shops.ItIsYouBuying)) return;"
+            and ("if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier(), Shops.ItIsYouBuying) &&\n"
+                 "                !Holdings.TheGameIsWeighingYourNextTier(tier, Shops.YourTier(), Shops.ItIsYourNextTier)) return;")
                 in tier
             and '[HarmonyPatch(typeof(DefaultWorkshopModel), "MaximumWorkshopsPlayerCanHave", MethodType.Getter)]' in shops
             and "Patcher.TryPatch(harmony, typeof(Patch_WorkshopsYouMayHave));" in S['SubModule.cs']
@@ -9170,7 +9171,8 @@ def the_workshop_limit_is_only_lifted_while_it_is_you_buying():
             and "Shops.ItIsYouBuying" in tier
             and "internal static bool ItIsYouBuying => _youBuying > 0;" in shops
             and ordered(window, "_youBuying++;", "try { work(); }", "finally { _youBuying--; }")
-            and "internal static void ForgetWhoIsBuying() => _youBuying = 0;" in shops
+            and ("internal static void ForgetWhoIsBuying()\n        {\n            _youBuying = 0;\n"
+                 "            _yourNextTier = 0;\n        }") in shops
             and shops.count("WhileItIsYouBuying(") == 2
             and "WhileItIsYouBuying(" in method_body(shops, "internal static bool Buy")
             and "Shops.ForgetWhoIsBuying();" in
@@ -14791,6 +14793,36 @@ def the_food_hint_says_it_pays_no_more_than_the_cheapest_price_known():
 
 chk("1.95.5", "the hint for Restock and keep food says it buys the cheapest food first and never above the cheapest price TradeLord knows, the way the larder is filled, in every language",
     the_food_hint_says_it_pays_no_more_than_the_cheapest_price_known())
+
+
+
+def the_next_tier_adds_no_workshop_past_the_limit_you_set():
+    shops = S['Workshops.cs']
+    patch = method_body(shops, "internal static class Patch_ClanTierWorkshopBonus")
+    rule = between(S['Rules.cs'], "public static bool TheGameIsWeighingYourNextTier", ";")
+    return (patch and rule
+            and '[HarmonyPatch(typeof(DefaultClanTierModel), "HasUpcomingTier")]' in shops
+            and "__state = clan != null && clan == Clan.PlayerClan;" in patch
+            and "if (__state) Shops.YouLookAhead();" in patch
+            and "private static void Finalizer(bool __state)" in patch
+            and "if (__state) Shops.YouStopLookingAhead();" in patch
+            and "(askedAboutTier == yourTier || askedAboutTier == yourTier + 1)" in rule
+            and "whileYouLookAhead && yourTier >= 0 &&" in rule
+            and "internal static bool ItIsYourNextTier => _yourNextTier > 0;" in shops
+            and "internal static void YouLookAhead() => _yourNextTier++;" in shops
+            and "internal static void YouStopLookingAhead() => _yourNextTier--;" in shops
+            and shops.count("Shops.YouLookAhead()") == 1
+            and shops.count("Shops.YouStopLookingAhead()") == 1
+            and "Patcher.TryPatch(harmony, typeof(Patch_ClanTierWorkshopBonus));" in S['SubModule.cs']
+            and '("TaleWorlds.CampaignSystem.GameComponents.DefaultClanTierModel", "HasUpcomingTier", null),' in COMPAT
+            and "renown tooltip follow Most workshops you may own" in README
+            and all(one in HOLDINGTESTS for one in
+                    ("Weighing_your_next_tier_lifts_your_tier_and_the_one_above_it_and_nothing_else",
+                     "A_limit_you_set_adds_no_workshop_at_your_next_tier",
+                     "new System.Random(6071)")))
+
+chk("1.95.6", "the renown tooltip on the clan screen adds no workshop at the next tier while Most workshops you may own sets the limit, and keeps the game's own steps at 0",
+    the_next_tier_adds_no_workshop_past_the_limit_you_set())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

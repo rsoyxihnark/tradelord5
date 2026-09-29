@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.95.6
+
+- Fixed the renown tooltip on the clan screen offering more workshops at the next tier when Most workshops you may own sets the limit
+- The feature list now says the clan screen's Workshops count and renown tooltip follow Most workshops you may own
+
 ## 1.95.5
 
 - Fixed unpinning a town in the TradeLord ledger taking the map marker off it when Auto-mark best sell market on map pointed there

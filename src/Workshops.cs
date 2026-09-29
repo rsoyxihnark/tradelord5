@@ -50,11 +50,23 @@ namespace TradeLord
             finally { _youBuying--; }
         }
 
-        internal static void ForgetWhoIsBuying() => _youBuying = 0;
+        internal static void ForgetWhoIsBuying()
+        {
+            _youBuying = 0;
+            _yourNextTier = 0;
+        }
 
         internal static void YouStartBuying() => _youBuying++;
 
         internal static void YouStopBuying() => _youBuying--;
+
+        private static int _yourNextTier;
+
+        internal static bool ItIsYourNextTier => _yourNextTier > 0;
+
+        internal static void YouLookAhead() => _yourNextTier++;
+
+        internal static void YouStopLookingAhead() => _yourNextTier--;
 
         internal static int Owned()
         {
@@ -231,7 +243,8 @@ namespace TradeLord
     {
         private static void Postfix(int tier, ref int __result)
         {
-            if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier(), Shops.ItIsYouBuying)) return;
+            if (!Holdings.TheGameIsAskingAboutYou(tier, Shops.YourTier(), Shops.ItIsYouBuying) &&
+                !Holdings.TheGameIsWeighingYourNextTier(tier, Shops.YourTier(), Shops.ItIsYourNextTier)) return;
             __result = Holdings.WorkshopsYouMayOwn(__result, Options.Current.MaxWorkshopsOwned);
         }
     }
@@ -259,5 +272,20 @@ namespace TradeLord
         private static void Prefix() => Shops.YouStartBuying();
 
         private static void Finalizer() => Shops.YouStopBuying();
+    }
+
+    [HarmonyPatch(typeof(DefaultClanTierModel), "HasUpcomingTier")]
+    internal static class Patch_ClanTierWorkshopBonus
+    {
+        private static void Prefix(Clan clan, out bool __state)
+        {
+            __state = clan != null && clan == Clan.PlayerClan;
+            if (__state) Shops.YouLookAhead();
+        }
+
+        private static void Finalizer(bool __state)
+        {
+            if (__state) Shops.YouStopLookingAhead();
+        }
     }
 }
