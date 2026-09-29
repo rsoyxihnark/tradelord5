@@ -317,5 +317,44 @@ namespace TradeLord.Tests
                 Assert.True(owed >= 0);
             }
         }
+
+        [Fact]
+        public void A_workshop_pays_for_itself_in_its_cost_over_what_it_pays_a_day_rounded_up()
+        {
+            Assert.Equal(100, Holdings.DaysToPayBack(160000, 1600));
+            Assert.Equal(101, Holdings.DaysToPayBack(160001, 1600));
+            Assert.Equal(1, Holdings.DaysToPayBack(900, 1600));
+        }
+
+        [Fact]
+        public void A_workshop_that_pays_nothing_a_day_never_pays_for_itself()
+        {
+            Assert.Equal(Holdings.NeverPaysBack, Holdings.DaysToPayBack(40000, 0));
+            Assert.Equal(Holdings.NeverPaysBack, Holdings.DaysToPayBack(40000, -5));
+            Assert.Equal(0, Holdings.DaysToPayBack(0, 0));
+        }
+
+        [Fact]
+        public void The_workshop_that_pays_for_itself_soonest_comes_first_not_the_one_that_earns_most()
+        {
+            var offers = new System.Collections.Generic.List<(int cost, int aDay)>
+            {
+                (162000, 1800), (30000, 600), (80000, 1000), (20000, 0), (10000, 0),
+            };
+            offers.Sort(Holdings.SoonestToPayBackFirst);
+            Assert.Equal((30000, 600), offers[0]);
+            Assert.Equal((80000, 1000), offers[1]);
+            Assert.Equal((162000, 1800), offers[2]);
+            Assert.Equal((10000, 0), offers[3]);
+            Assert.Equal((20000, 0), offers[4]);
+        }
+
+        [Fact]
+        public void Of_two_workshops_that_pay_for_themselves_as_soon_the_one_paying_more_a_day_comes_first()
+        {
+            Assert.True(Holdings.SoonestToPayBackFirst((100000, 2000), (50000, 1000)) < 0);
+            Assert.True(Holdings.SoonestToPayBackFirst((50000, 1000), (100000, 2000)) > 0);
+            Assert.Equal(0, Holdings.SoonestToPayBackFirst((50000, 1000), (50000, 1000)));
+        }
     }
 }

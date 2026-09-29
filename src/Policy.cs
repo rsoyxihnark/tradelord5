@@ -483,7 +483,19 @@ namespace TradeLord
             TradeMath.Credit(proceeds, basis, unpaidWorth);
 
         internal static float Realizable(int farSellPrice) =>
-            TradeMath.Realizable(farSellPrice, Options.Current.ResaleSafetyFactor);
+            TradeMath.Realizable(farSellPrice, ResaleSafety());
+
+        internal static float ResaleSafety() => ResaleSafety(out _, out _, out _);
+
+        internal static float ResaleSafety(out float setting, out int judged, out float fetched)
+        {
+            setting = Options.Current.ResaleSafetyFactor;
+            LedgerBehavior ledger = LedgerBehavior.Instance;
+            if (ledger != null) return ledger.ResaleSafety(setting, out judged, out fetched);
+            judged = 0;
+            fetched = TradeMath.NoShareToGive;
+            return TradeMath.ResaleSafetyAsSalesWent(setting, judged, fetched);
+        }
 
         internal static bool BuyAcceptable(int buyPrice, float realizable) =>
             TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin);

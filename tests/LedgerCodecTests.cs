@@ -379,6 +379,53 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void What_each_batch_of_a_good_cost_and_was_meant_to_fetch_survives_a_save_and_a_load()
+        {
+            var rec = new PurchaseRecord { ItemId = "felt" };
+            TradeMath.AddPurchase(rec, 1, 836, 1135);
+            TradeMath.AddPurchase(rec, 4, 1114, 584);
+            string written = LedgerCodec.WritePurchases(new List<PurchaseRecord> { rec });
+
+            var back = LedgerCodec.ReadPurchases(written);
+
+            Assert.Single(back);
+            Assert.Equal(5, back[0].Count);
+            Assert.Equal(2, back[0].Batches.Count);
+            Assert.Equal(278, back[0].Batches[0].Unit);
+            Assert.Equal(4, back[0].Batches[0].Count);
+            Assert.Equal(584, back[0].Batches[0].Meant);
+            Assert.Equal(836, back[0].Batches[1].Unit);
+            Assert.Equal(1135, back[0].Batches[1].Meant);
+            Assert.Equal(written, LedgerCodec.WritePurchases(back));
+        }
+
+        [Fact]
+        public void A_purchase_saved_before_batches_were_kept_reads_back_with_none()
+        {
+            var back = LedgerCodec.ReadPurchases("wine|500|10|50");
+
+            Assert.Single(back);
+            Assert.Empty(back[0].Batches);
+            Assert.Equal("wine|500|10|50", LedgerCodec.WritePurchases(back));
+        }
+
+        [Theory]
+        [InlineData("wine|500|10|50|50:9:0")]
+        [InlineData("wine|500|10|50|50:10")]
+        [InlineData("wine|500|10|50|50:10:0,x:1:0")]
+        [InlineData("wine|500|10|50|50:0:0,50:10:0")]
+        [InlineData("wine|500|10|50|-50:10:0")]
+        public void Batches_that_do_not_add_up_to_the_record_are_dropped_and_the_record_is_kept(string written)
+        {
+            var back = LedgerCodec.ReadPurchases(written);
+
+            Assert.Single(back);
+            Assert.Equal(10, back[0].Count);
+            Assert.Equal(500, back[0].TotalPaid);
+            Assert.Empty(back[0].Batches);
+        }
+
+        [Fact]
         public void An_empty_campaign_reads_and_writes_as_nothing()
         {
             Assert.Empty(LedgerCodec.ReadLedger(null));

@@ -20,12 +20,20 @@ namespace TradeLord
         public bool SeenBefore => WasDay >= 0f;
     }
 
+    public struct Batch
+    {
+        public int Unit;
+        public int Count;
+        public int Meant;
+    }
+
     public class PurchaseRecord
     {
         public string ItemId;
         public int TotalPaid;
         public int Count;
         public int LastUnitPaid;
+        public List<Batch> Batches = new List<Batch>();
     }
 
     public class PromiseRecord
@@ -57,6 +65,8 @@ namespace TradeLord
 
         private const char FieldMark = '|';
         private const char RecordMark = ';';
+        private const char BatchMark = ',';
+        private const char BatchFieldMark = ':';
 
         public const char QualityMark = '@';
 
@@ -166,8 +176,37 @@ namespace TradeLord
                   .Append(Number(rec.TotalPaid)).Append(FieldMark)
                   .Append(Number(rec.Count)).Append(FieldMark)
                   .Append(Number(rec.LastUnitPaid));
+                if (rec.Batches == null || rec.Batches.Count == 0 || !TradeMath.BatchesAddUp(rec)) continue;
+                sb.Append(FieldMark);
+                for (int b = 0; b < rec.Batches.Count; b++)
+                {
+                    if (b > 0) sb.Append(BatchMark);
+                    sb.Append(Number(rec.Batches[b].Unit)).Append(BatchFieldMark)
+                      .Append(Number(rec.Batches[b].Count)).Append(BatchFieldMark)
+                      .Append(Number(rec.Batches[b].Meant));
+                }
             }
             return sb.ToString();
+        }
+
+        public static List<Batch> ReadBatches(string text, int count)
+        {
+            var kept = new List<Batch>();
+            if (string.IsNullOrEmpty(text) || count <= 0) return kept;
+            long units = 0L;
+            string[] batches = text.Split(BatchMark);
+            for (int i = 0; i < batches.Length; i++)
+            {
+                string[] parts = batches[i].Split(BatchFieldMark);
+                if (parts.Length < 3 || !Whole(parts[0], out int unit) || !Whole(parts[1], out int many) ||
+                    !Whole(parts[2], out int meant) || unit < 0 || many <= 0 || meant < 0)
+                    return new List<Batch>();
+                units += many;
+                kept.Add(new Batch { Unit = unit, Count = many, Meant = meant });
+            }
+            if (units != count) return new List<Batch>();
+            kept.Sort((x, y) => x.Unit != y.Unit ? x.Unit.CompareTo(y.Unit) : x.Meant.CompareTo(y.Meant));
+            return kept;
         }
 
         public static string WritePromises(List<PromiseRecord> promises)
@@ -199,7 +238,7 @@ namespace TradeLord
                 if (!Whole(parts[1], out int scored) || scored <= 0) continue;
                 if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture,
                                     out float held) || !Storable(held) || held < 0f) continue;
-                kept.Add(new PromiseRecord { TownId = parts[0], Scored = scored, Held = held });
+                kept.Add(new PromiseRecord { TownId = parts[0], Scored = scored, Held = held > scored ? scored : held });
             }
             return kept;
         }
@@ -255,7 +294,10 @@ namespace TradeLord
                 if (count <= 0) continue;
                 kept.Add(new PurchaseRecord
                 {
-                    ItemId = parts[0], TotalPaid = total, Count = count, LastUnitPaid = last
+                    ItemId = parts[0], TotalPaid = total, Count = count, LastUnitPaid = last,
+                    Batches = parts.Length > FieldsAPurchaseNeeds
+                        ? ReadBatches(parts[FieldsAPurchaseNeeds], count)
+                        : new List<Batch>()
                 });
             }
             return kept;

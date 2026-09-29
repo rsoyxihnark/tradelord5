@@ -551,5 +551,19 @@ namespace TradeLord.Tests
             Assert.Equal(0, books.Moves(true));
             Assert.Equal(0, books.PaidOut(false));
         }
+
+        [Fact]
+        public void ADryRunRemembersWhichDearUnitsItDrewUntilTheDryRunIsForgotten()
+        {
+            Books books = Fresh();
+            books.NotePaidDrawn("felt", 836);
+            books.NotePaidDrawn("felt");
+            Assert.Equal(2, books.PaidDrawn(true, "felt"));
+            Assert.Equal(new[] { 836 }, books.DearDrawn(true, "felt").ToArray());
+            Assert.Null(books.DearDrawn(false, "felt"));
+            books.ForgetTheDryRun();
+            Assert.Null(books.DearDrawn(true, "felt"));
+            Assert.Equal(0, books.PaidDrawn(true, "felt"));
+        }
     }
 }

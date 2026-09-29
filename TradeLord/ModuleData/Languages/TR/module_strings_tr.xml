@@ -200,7 +200,7 @@
 		<string id="TL335" text="TradeLord'un bir ziyarette bir maldan aldığı en fazla birim. 0 = sayıda sınır yok. Varsayılan 32."/>
 		<string id="TL336" text="Ziyaret başına mal başına harcamayı dinar olarak da sınırlar."/>
 		<string id="TL337" text="TradeLord'un yerleşim ziyareti başına harcayabileceği toplam dinar. Varsayılan 1000. Aşağıdaki Uyarlanan harcama sınırı keseniz büyüdükçe bunu yükseltir."/>
-		<string id="TL338" text="En iyi satış fiyatının yalnızca bu oranının siz varana kadar duracağını varsayar."/>
+		<string id="TL338" text="En iyi satış fiyatının yalnızca bu oranının siz varana kadar duracağını varsayar. TradeLord buradan başlar, sonra bunu kendi satışlarının planladığı fiyatın gerçekte ne kadarını getirdiğine doğru kaydırır."/>
 		<string id="TL339" text="Tahıl ağır ve kâr payı düşüktür, bu yüzden almak yükü az getiriyle doldurur. Satış ve yiyecek rezervi etkilenmez. Varsayılan AÇIK."/>
 		<string id="TL340" text="TradeLord'un asla almaması gereken mallar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Satışları etkilenmez."/>
 		<string id="TL341" text="TradeLord köy menülerinde ticaret yapar ve köyler fiyat taramalarına katılır."/>
@@ -317,5 +317,8 @@
 		<string id="TL477" text="{TOWN} sizinle savaştayken orada işyeri sahibi olamazsınız."/>
 		<string id="TL478" text="İşyerlerini Ticaret yeteneğiyle kazan"/>
 		<string id="TL479" text="İşyerlerini Sahip olabileceğiniz en fazla işyeri sınırına kadar kazanırsınız: oyunun klan kademenizle yükselen kendi sınırı, artı Ticaret yeteneğinizin her 25 puanı için bir işyeri daha. Varsayılan KAPALI."/>
+		<string id="TL480" text="günde +{GOLD}"/>
+		<string id="TL481" text=" Sahibine şu an günde {GOLD} dinar kazandırdığına göre, kendini yaklaşık {DAYS} günde öder."/>
+		<string id="TL482" text=" Şu an sahibine günde hiçbir şey kazandırmıyor, bu yüzden kendini ne zaman ödeyeceği belli değil."/>
 	</strings>
 </base>

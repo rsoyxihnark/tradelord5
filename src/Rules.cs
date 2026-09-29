@@ -868,5 +868,24 @@ namespace TradeLord
 
         public static bool DipsIntoWhatYouHoldBack(int cost, int purse, int heldBack) =>
             cost > 0 && heldBack > 0 && purse - cost < heldBack;
+
+        public const int NeverPaysBack = int.MaxValue;
+
+        public static int DaysToPayBack(int cost, int aDay)
+        {
+            if (cost <= 0) return 0;
+            if (aDay <= 0) return NeverPaysBack;
+            double days = Math.Ceiling((double)cost / aDay);
+            return days >= NeverPaysBack ? NeverPaysBack : (int)days;
+        }
+
+        public static int SoonestToPayBackFirst((int cost, int aDay) x, (int cost, int aDay) y)
+        {
+            bool xPays = x.aDay > 0, yPays = y.aDay > 0;
+            if (xPays != yPays) return xPays ? -1 : 1;
+            if (!xPays) return x.cost.CompareTo(y.cost);
+            int soonest = ((double)x.cost / x.aDay).CompareTo((double)y.cost / y.aDay);
+            return soonest != 0 ? soonest : y.aDay.CompareTo(x.aDay);
+        }
     }
 }

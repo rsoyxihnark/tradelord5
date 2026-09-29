@@ -110,16 +110,20 @@ namespace TradeLord
         private readonly Workshop _shop;
         private readonly Action _bought;
         private readonly int _cost;
+        private readonly int _aDay;
 
-        public ShopOfferRowVM(Workshop shop, int cost, bool affordable, Action bought)
+        public ShopOfferRowVM(Workshop shop, int cost, int aDay, bool affordable, Action bought)
         {
             _shop = shop;
             _bought = bought;
             _cost = cost;
+            _aDay = aDay;
             Where = shop.Settlement == null ? "" : Tongue.Named(shop.Settlement.Name, shop.Settlement.StringId);
             What = shop.WorkshopType == null ? "" : Tongue.Named(shop.WorkshopType.Name, shop.WorkshopType.StringId);
             Owner = shop.Owner == null ? "" : Tongue.Named(shop.Owner.Name, shop.Owner.StringId);
-            Profit = (shop.ProfitMade >= 0 ? "+" : "") + shop.ProfitMade;
+            TextObject aDayLine = Tongue.Text("{=TL480}+{GOLD} a day");
+            aDayLine.SetTextVariable("GOLD", aDay.ToString("N0"));
+            Profit = aDayLine.ToString();
             Cost = cost.ToString("N0");
             Affordable = affordable;
         }
@@ -141,6 +145,16 @@ namespace TradeLord
             asked.SetTextVariable("OWNER", Owner);
             asked.SetTextVariable("GOLD", Cost);
             string body = asked.ToString();
+            int days = Holdings.DaysToPayBack(_cost, _aDay);
+            if (days == Holdings.NeverPaysBack)
+                body += Tongue.Text("{=TL482} It pays its owner nothing a day now, so there is no telling when it would pay for itself.").ToString();
+            else
+            {
+                TextObject payback = Tongue.Text("{=TL481} At the {GOLD} denars a day it pays its owner now, it would pay for itself in about {DAYS} days.");
+                payback.SetTextVariable("GOLD", _aDay.ToString("N0"));
+                payback.SetTextVariable("DAYS", days.ToString("N0"));
+                body += payback.ToString();
+            }
             int heldBack = TradeActionBehavior.GoldHeldBack();
             if (Holdings.DipsIntoWhatYouHoldBack(_cost, Hero.MainHero?.Gold ?? 0, heldBack))
             {
@@ -486,10 +500,9 @@ namespace TradeLord
             var rows = new MBBindingList<ShopOfferRowVM>();
             for (int i = 0; i < offers.Count; i++)
             {
-                Workshop shop = offers[i];
-                int cost = TradeLord.Shops.CostOf(shop);
+                var (shop, cost, aDay) = offers[i];
                 if (cost <= 0) continue;
-                rows.Add(new ShopOfferRowVM(shop, cost, cost <= purse && owned < mayOwn,
+                rows.Add(new ShopOfferRowVM(shop, cost, aDay, cost <= purse && owned < mayOwn,
                                             () => Guard.Run("Panel.ShopsAgain", RefreshShops)));
             }
             Shops = rows;
@@ -505,7 +518,7 @@ namespace TradeLord
             ShopsHeader = head.ToString();
         }
 
-        private static List<Workshop> Shops_OnOffer() => TradeLord.Shops.OnOffer();
+        private static List<(Workshop shop, int cost, int aDay)> Shops_OnOffer() => TradeLord.Shops.OnOffer();
 
         private void RefreshTrades()
         {
