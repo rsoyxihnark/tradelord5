@@ -204,7 +204,7 @@
 		<string id="TL335" text="Most units of one good TradeLord buys per visit. 0 = no limit on the count. Default 32."/>
 		<string id="TL336" text="Also cap spending per item per visit in denars."/>
 		<string id="TL337" text="Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows."/>
-		<string id="TL338" text="Assume only this share of the best sell price elsewhere is still there when you arrive. TradeLord starts here, then moves it toward the share of its planned sale price that its own sales really fetch."/>
+		<string id="TL338" text="Assume only this share of the best sell price elsewhere is still there when you arrive. With Learn the resale safety factor on, TradeLord starts here and moves it as your own walk-ins show."/>
 		<string id="TL339" text="Grain is heavy and low margin, so buying it fills the cargo for little return. Selling and the food reserve are unaffected. ON by default."/>
 		<string id="TL340" text="Goods TradeLord must never buy. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected."/>
 		<string id="TL341" text="TradeLord trades in village menus and villages join the price scans."/>
@@ -320,5 +320,8 @@
 		<string id="TL480" text="+{GOLD} a day"/>
 		<string id="TL481" text=" At the {GOLD} denars a day it pays its owner now, it would pay for itself in about {DAYS} days."/>
 		<string id="TL482" text=" It pays its owner nothing a day now, so there is no telling when it would pay for itself."/>
+		<string id="TL483" text="Learn the resale safety factor"/>
+		<string id="TL484" text="Moves Resale safety factor toward how much of the Sell price this panel promised has really been there when you walked in, counting that record more as it grows. OFF uses the factor exactly as set. ON by default."/>
+		<string id="TL485" text=" | a price elsewhere counts at {USED}: Resale safety factor starts it at {SET} and {COUNT} walk-in(s) have moved it"/>
 	</strings>
 </base>

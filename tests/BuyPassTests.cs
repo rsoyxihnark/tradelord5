@@ -133,11 +133,9 @@ namespace TradeLord.Tests
 
             public void Resold(int at, int units, int gold) => ResoldFor.Add((at, units, gold));
 
-            internal readonly List<int> Meant = new List<int>();
-
             public float ResaleSafety() => Rules.ResaleSafetyFactor;
 
-            public bool Take(int at, int price, int meant, out int cost)
+            public bool Take(int at, int price, out int cost)
             {
                 cost = 0;
                 if (RefuseAfter >= 0 && Taken.Count >= RefuseAfter) { Halted = true; return false; }
@@ -148,7 +146,6 @@ namespace TradeLord.Tests
                 Stalls[at].Amount--;
                 Stalls[at].Carried++;
                 Taken.Add(Stalls[at].Good.Id);
-                Meant.Add(meant);
                 return true;
             }
         }
@@ -782,18 +779,6 @@ namespace TradeLord.Tests
             market.Rules.BuyCapPerItem = 0;
             Assert.Equal(2, Buy(market, sim: true, books: books).Units);
             Assert.Equal(4, market.Stalls[0].Carried);
-        }
-
-        [Fact]
-        public void Every_unit_bought_is_written_down_with_what_it_was_meant_to_fetch_where_it_is_going()
-        {
-            var market = new FakeMarket();
-            Stall wool = market.Add(Cargo("wool"), amount: 3, price: 100, resale: 200);
-            wool.ResaleStep = 10;
-
-            Buy(market);
-
-            Assert.Equal(new[] { 200, 190, 180 }, market.Meant.ToArray());
         }
 
         [Fact]

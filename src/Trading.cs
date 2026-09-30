@@ -1590,7 +1590,7 @@ namespace TradeLord
             public int PurchasedUnits(int at) => LedgerBehavior.Instance?.PurchasedUnits(_plan[at].EquipmentElement) ?? 0;
 
             public int[] DearerUnits(int at, float margin) =>
-                LedgerBehavior.Instance?.DearerUnits(_plan[at].EquipmentElement, margin);
+                LedgerBehavior.Instance?.DearerUnits(_plan[at].EquipmentElement, _plan[at].Amount, margin);
 
             public int UnpaidWorth(int at) => TradePolicy.UnpaidWorth(Item(at));
 
@@ -1684,8 +1684,8 @@ namespace TradeLord
                 return true;
             }
 
-            public void RecordedSale(int at, int proceeds, int unitPaid) =>
-                LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, proceeds, unitPaid);
+            public void RecordedSale(int at, int unitPaid) =>
+                LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, unitPaid);
         }
 
         private const float HoldShareOff = 0f;
@@ -1749,7 +1749,14 @@ namespace TradeLord
 
             var larder = CheapestFirst(pass,
                 it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true));
-            if (larder.Count == 0) return;
+            if (larder.Count == 0)
+            {
+                Log.Repeatable("resupply none on sale", settlement.StringId,
+                               "resupply: your party is short " + shortfall + " unit(s) of food, and no food TradeLord " +
+                               "may buy is on sale at " + settlement.Name + " at the cheapest price it knows for it");
+                return;
+            }
+            string stopped = null;
 
             pass.CountFrom();
             InAPass(() =>
@@ -1769,12 +1776,17 @@ namespace TradeLord
                     while (shortfall > 0 && remaining > 0)
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
-                        if (price <= 0 || price > ceiling) break;
-                        if (pass.WouldReachYourReserve(price)) break;
-                        if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;
-                        if (settlement.IsVillage && remaining <= 1) break;
+                        if (price <= 0 || price > ceiling) { stopped = "its price is above the cheapest TradeLord knows"; break; }
+                        if (pass.WouldReachYourReserve(price)) { stopped = "buying it would reach your gold reserve or spending cap"; break; }
+                        if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None)
+                        {
+                            stopped = "your buying caps for it are reached";
+                            break;
+                        }
+                        if (settlement.IsVillage && remaining <= 1) { stopped = "a village keeps its last unit"; break; }
                         if (NoRoomForOneMore(good, pass.Room() - simWeight))
                         {
+                            stopped = "your cargo has no room for it";
                             if (firstLeft == null)
                                 firstLeft = (el, good, fed, ceiling, remaining, (countThis, spentThis), held);
                             break;
@@ -1813,7 +1825,14 @@ namespace TradeLord
                                                  settlement.IsVillage);
                 _unfitted = (food.weight, food.cost, 0f, true);
             }
-            if (stocked <= 0) return;
+            if (stocked <= 0)
+            {
+                if (shortfall > 0 && stopped != null && !pass.DirectionError)
+                    Log.Repeatable("resupply none bought", settlement.StringId + "/" + stopped,
+                                   "resupply: your party is short " + shortfall + " unit(s) of food, and none was bought " +
+                                   "at " + settlement.Name + ": " + stopped);
+                return;
+            }
 
             int spent = pass.Spent(simSpent);
             pass.Moved(gold: spent, selling: false);
@@ -1943,10 +1962,12 @@ namespace TradeLord
                           "so TradeLord leaves it alone");
                 return false;
             }
-            if (!Options.Current.ExcludeHostileTowns) return true;
             IFaction mine = Hero.MainHero?.MapFaction;
-            return mine == null || met.MapFaction == null ||
-                   !FactionManager.IsAtWarAgainstFaction(met.MapFaction, mine);
+            if (mine == null || met.MapFaction == null || !FactionManager.IsAtWarAgainstFaction(met.MapFaction, mine))
+                return true;
+            Log.Write(met.Name + " are at war with you, and the game offers no trade to a party at war with you, " +
+                      "so TradeLord leaves them alone");
+            return false;
         }
 
         private static Books _meetingBooks;
@@ -2150,10 +2171,22 @@ namespace TradeLord
 
             int herdRoom = Drove.RoomForLivestock(pass.Party);
             herdRoom -= pass.Books.HerdTaken(pass.Sim);
-            if (herdRoom <= 0) return false;
+            if (herdRoom <= 0)
+            {
+                Log.Repeatable("haul animal herd", settlement.StringId,
+                               "haul animals are left alone at " + settlement.Name + ": one more animal would put " +
+                               "your party into the herd speed penalty");
+                return false;
+            }
 
             float each = Drove.CargoAHaulAnimalAdds(pass.Party);
-            if (each <= 0f) return false;
+            if (each <= 0f)
+            {
+                Log.Repeatable("haul animal no room", settlement.StringId,
+                               "haul animals are left alone at " + settlement.Name + ": a haul animal would add no " +
+                               "cargo room to your party");
+                return false;
+            }
             float roomLeft = pass.Room() - pass.Books.Weight(pass.Sim);
             if (roomLeft < 0f)
             {
@@ -2173,7 +2206,13 @@ namespace TradeLord
 
             var stable = CheapestFirst(pass, it => TradePolicy.MayHaul(it, pass.Locked),
                                        Options.Current.HaulAnimalPriceTolerance);
-            if (stable.Count == 0) return false;
+            if (stable.Count == 0)
+            {
+                Log.Repeatable("haul animal none on sale", settlement.StringId,
+                               "haul animals are left alone at " + settlement.Name + ": none is on sale here, or none " +
+                               "within Most it will pay for a haul animal");
+                return false;
+            }
 
             pass.CountFrom();
             InAPass(() =>
@@ -2566,14 +2605,13 @@ namespace TradeLord
                 _pass.Tally(Item(at), 1, price);
             }
 
-            public bool Take(int at, int price, int meant, out int cost)
+            public bool Take(int at, int price, out int cost)
             {
                 ItemObject item = Item(at);
                 _pass.Quote(item, 1, price);
                 if (!_pass.BuyOne(Shelf[at], price, _what, _named, out cost)) return false;
                 if (cost == 0) return true;
-                LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), 1, cost,
-                                                        meant);
+                LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), 1, cost);
                 _pass.Tally(item, 1, cost);
                 return true;
             }

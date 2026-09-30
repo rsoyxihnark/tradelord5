@@ -545,7 +545,8 @@ namespace TradeLord
                 if (el.Amount - keep <= 0) continue;
                 ItemObject item = el.EquipmentElement.Item;
                 int worth = TradePolicy.WorthToBeat(el.EquipmentElement);
-                int[] dearer = LedgerBehavior.Instance?.DearerUnits(el.EquipmentElement, Options.Current.MinProfitMargin);
+                int[] dearer = LedgerBehavior.Instance?.DearerUnits(el.EquipmentElement, el.Amount,
+                                                                    Options.Current.MinProfitMargin);
                 cargo.Add((el.EquipmentElement, el.Amount - keep, worth,
                            new TradeMath.DearFirst(dearer, el.Amount - (dearer == null ? 0 : dearer.Length), worth)));
             }
@@ -588,8 +589,7 @@ namespace TradeLord
                 {
                     int price = pays.At(u);
                     if (price <= 0) break;
-                    if (!TradeMath.ProfitAcceptable(walk.Floor(price, Options.Current.MinProfitMargin), price,
-                                                    Options.Current.MinProfitMargin)) break;
+                    if (!TradeMath.ProfitAcceptable(walk.Floor(price), price, Options.Current.MinProfitMargin)) break;
                     walk.Took();
                     if (moved == 0) opening = price;
                     last = price;

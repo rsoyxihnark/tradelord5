@@ -7,7 +7,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 18;
+        public const int Shape = 19;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -36,6 +36,7 @@ namespace TradeLord
             if (from < 15) changed |= WhatToBuyFirstIsOneRuleNow(written, notes);
             if (from < 16) changed |= ThreeLogSwitchesBecameOne(written, notes);
             if (from < 18) changed |= HoldCargoBecameOneShare(written, notes);
+            if (from < 19) changed |= AResaleSafetyFactorYouSetIsUsedAsSet(written, notes);
             if (changed && notes != null)
                 notes.Add("your settings were written by an older TradeLord, so they have been brought forward from shape " +
                           from + " to shape " + Shape);
@@ -107,6 +108,26 @@ namespace TradeLord
             }
             return changed;
         }
+
+        private static bool AResaleSafetyFactorYouSetIsUsedAsSet(IDictionary<string, string> written,
+                                                                 ICollection<string> notes)
+        {
+            const string factor = "ResaleSafetyFactor", learn = "LearnResaleSafety";
+            if (written.ContainsKey(learn) || !written.TryGetValue(factor, out string held)) return false;
+            if (!float.TryParse(held, NumberStyles.Float, CultureInfo.InvariantCulture, out float set) ||
+                float.IsNaN(set) || float.IsInfinity(set) || LearnsAtFirst(set)) return false;
+            written[learn] = "false";
+            notes?.Add("your Resale safety factor of " + held + " is not the one TradeLord ships with, so Learn the " +
+                       "resale safety factor starts off and your factor is used exactly as you set it");
+            return true;
+        }
+
+        public static bool LearnsAtFirst(float factor) =>
+            !float.IsNaN(factor) && !float.IsInfinity(factor) &&
+            Math.Round(factor * 100d) == Math.Round(new Options().ResaleSafetyFactor * 100d);
+
+        public static bool LearnsOnceSettled(bool said, bool learning, float factor) =>
+            learning && (said || LearnsAtFirst(factor));
 
         private const string LogSwitch = "ExtendedDebugLogging";
 
@@ -265,7 +286,7 @@ namespace TradeLord
     {
         public const bool Armed = false;
 
-        public const int CracksAt = 18;
+        public const int CracksAt = 19;
 
         public static bool Cracks(bool armed, int cracksAt, int shipped, int shape) =>
             armed && cracksAt > 0 && cracksAt == shipped && shape < cracksAt;

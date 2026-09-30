@@ -496,7 +496,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(18, Migration.Shape);
+            Assert.Equal(19, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));
@@ -604,6 +604,71 @@ namespace TradeLord.Tests
             Assert.Equal(3, notes.Count);
             Assert.Contains(notes, one => one.Contains("PreferBestSellTown = " + held) && one.Contains("75%"));
             Assert.Contains(notes, one => one.Contains("BestSellTownTolerance = " + share));
+        }
+
+        [Theory]
+        [InlineData("0.95")]
+        [InlineData("0.5")]
+        [InlineData("1")]
+        public void AResaleSafetyFactorYouSetYourselfIsUsedAsSetRatherThanLearnedOver(string factor)
+        {
+            var written = File("ResaleSafetyFactor", factor, "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(18, written, notes));
+            Assert.Equal("false", written["LearnResaleSafety"]);
+            Assert.Equal(factor, written["ResaleSafetyFactor"]);
+            Assert.Single(notes, one => one.Contains("Resale safety factor of " + factor));
+        }
+
+        [Theory]
+        [InlineData("0.85")]
+        [InlineData("0.8500001")]
+        [InlineData("0.851")]
+        [InlineData("not a number")]
+        public void TheResaleSafetyFactorTradeLordShipsWithLeavesLearningOn(string factor)
+        {
+            var written = File("ResaleSafetyFactor", factor);
+            Assert.False(Migration.Lift(18, written, new List<string>()));
+            Assert.False(written.ContainsKey("LearnResaleSafety"));
+        }
+
+        [Fact]
+        public void OnlyTheResaleSafetyFactorTradeLordShipsWithStartsOutLearning()
+        {
+            Assert.True(Migration.LearnsAtFirst(new Options().ResaleSafetyFactor));
+            Assert.True(Migration.LearnsAtFirst(0.846f));
+            Assert.False(Migration.LearnsAtFirst(0.95f));
+            Assert.False(Migration.LearnsAtFirst(0.5f));
+            Assert.False(Migration.LearnsAtFirst(float.NaN));
+            Assert.False(Migration.LearnsAtFirst(float.PositiveInfinity));
+        }
+
+        [Theory]
+        [InlineData(true, true, 0.5f, true)]
+        [InlineData(false, true, 0.5f, false)]
+        [InlineData(false, true, 0.85f, true)]
+        [InlineData(false, false, 0.85f, false)]
+        [InlineData(true, false, 0.5f, false)]
+        public void WhenNeitherTwinSaidWhetherToLearnTheFactorInForceDecidesItOnce(bool said, bool learning, float factor,
+                                                                                bool settled)
+        {
+            Assert.Equal(settled, Migration.LearnsOnceSettled(said, learning, factor));
+        }
+
+        [Fact]
+        public void TheLearningSwitchIsDecidedOnlyForAFileFromBeforeItArrived()
+        {
+            var yours = File("ResaleSafetyFactor", "0.95", "LearnResaleSafety", "true");
+            Assert.False(Migration.Lift(18, yours, new List<string>()));
+            Assert.Equal("true", yours["LearnResaleSafety"]);
+
+            var current = File("ResaleSafetyFactor", "0.95");
+            Assert.False(Migration.Lift(19, current, new List<string>()));
+            Assert.False(current.ContainsKey("LearnResaleSafety"));
+
+            var none = File("GoldReserve", "800");
+            Assert.False(Migration.Lift(18, none, new List<string>()));
+            Assert.False(none.ContainsKey("LearnResaleSafety"));
         }
 
         [Fact]

@@ -714,56 +714,61 @@ namespace TradeLord.Mcm
         public bool AdaptiveSpendLimit { get => _o.AdaptiveSpendLimit; set { _o.AdaptiveSpendLimit = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL238}Resale safety factor", 0.5f, 1f, "#0%", Order = 7, RequireRestart = false,
-            HintText = "{=TL338}Assume only this share of the best sell price elsewhere is still there when you arrive. TradeLord starts here, then moves it toward the share of its planned sale price that its own sales really fetch.")]
+            HintText = "{=TL338}Assume only this share of the best sell price elsewhere is still there when you arrive. With Learn the resale safety factor on, TradeLord starts here and moves it as your own walk-ins show.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL265}Buy to fill the ships", Order = 8, RequireRestart = false,
+        [SettingPropertyBool("{=TL483}Learn the resale safety factor", Order = 8, RequireRestart = false,
+            HintText = "{=TL484}Moves Resale safety factor toward how much of the Sell price this panel promised has really been there when you walked in, counting that record more as it grows. OFF uses the factor exactly as set. ON by default.")]
+        [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
+        public bool LearnResaleSafety { get => _o.LearnResaleSafety; set { _o.LearnResaleSafety = value; Config.ScreenSaidWhetherToLearn = true; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL265}Buy to fill the ships", Order = 9, RequireRestart = false,
             HintText = "{=TL365}Size purchases to what your ships can hold rather than your carts, so you can load the fleet while you are ashore. Your party has to be able to sail; without a fleet TradeLord counts the carts instead and says so in its log. OFF by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool UseFleetCapacity { get => _o.UseFleetCapacity; set { _o.UseFleetCapacity = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL239}Never buy grain", Order = 9, RequireRestart = false,
+        [SettingPropertyBool("{=TL239}Never buy grain", Order = 10, RequireRestart = false,
             HintText = "{=TL339}Grain is heavy and low margin, so buying it fills the cargo for little return. Selling and the food reserve are unaffected. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool NeverBuyGrain { get => _o.NeverBuyGrain; set { _o.NeverBuyGrain = value; Options.Bump(); } }
 
-        [SettingPropertyText("{=TL240}Never buy (item ids or names, comma separated)", Order = 10, RequireRestart = false,
+        [SettingPropertyText("{=TL240}Never buy (item ids or names, comma separated)", Order = 11, RequireRestart = false,
             HintText = "{=TL340}Goods TradeLord must never buy. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public string NeverBuyItems { get => _o.NeverBuyItems; set { _o.NeverBuyItems = value; Options.Bump(); } }
 
-        [SettingPropertyText("{=TL252}Always buy (item ids or names, comma separated)", Order = 11, RequireRestart = false,
+        [SettingPropertyText("{=TL252}Always buy (item ids or names, comma separated)", Order = 12, RequireRestart = false,
             HintText = "{=TL352}Goods TradeLord always buys, past the category policies and the never-buy-grain switch, named as above. The never lists and an inventory lock still hold, and it buys only what it can sell on for more somewhere in reach.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public string AlwaysBuyItems { get => _o.AlwaysBuyItems; set { _o.AlwaysBuyItems = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL267}Buy haul animals", Order = 12, RequireRestart = false,
+        [SettingPropertyBool("{=TL267}Buy haul animals", Order = 13, RequireRestart = false,
             HintText = "{=TL367}Buy any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, only to carry goods or food a full cargo left behind. Never enough to slow you, and it stops before your gold reaches your reserve. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool BuyHaulAnimals { get => _o.BuyHaulAnimals; set { _o.BuyHaulAnimals = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL425}Gold before it buys a haul animal (0 = off)", 0, 100000, Order = 13, RequireRestart = false,
+        [SettingPropertyInteger("{=TL425}Gold before it buys a haul animal (0 = off)", 0, 100000, Order = 14, RequireRestart = false,
             HintText = "{=TL426}Buy a haul animal only while your purse stays above this once the animal is paid for. Below it TradeLord leaves them alone however cheap they are, so early gold goes on goods instead. 0 lets it buy from the first denar. Default 2000.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int HaulAnimalGoldFloor { get => _o.HaulAnimalGoldFloor; set { _o.HaulAnimalGoldFloor = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL427}Most it will pay for a haul animal", 1f, 3f, "#0%", Order = 14, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL427}Most it will pay for a haul animal", 1f, 3f, "#0%", Order = 15, RequireRestart = false,
             HintText = "{=TL428}How far above the cheapest price TradeLord knows for that animal it will still pay. 100% means only at the cheapest. 125% by default, so it pays up to a quarter more than the cheapest.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float HaulAnimalPriceTolerance { get => _o.HaulAnimalPriceTolerance; set { _o.HaulAnimalPriceTolerance = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL274}Share of the hold one good may fill (0 = off)", 0f, 1f, "#0%", Order = 15, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL274}Share of the hold one good may fill (0 = off)", 0f, 1f, "#0%", Order = 16, RequireRestart = false,
             HintText = "{=TL374}Stop buying a good once it would fill more than this share of what your party can carry. It is measured against your real capacity, so the ceiling grows with your carts and haul animals. 0 turns it off. Selling is unaffected.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float MaxHeldShare { get => _o.MaxHeldShare; set { _o.MaxHeldShare = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL410}Share of the hold TradeLord may fill", 0.1f, 1f, "#0%", Order = 16, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL410}Share of the hold TradeLord may fill", 0.1f, 1f, "#0%", Order = 17, RequireRestart = false,
             HintText = "{=TL411}Stop buying once your cargo reaches this share of what your party can carry, so there is room left for what a battle or a quest hands you. 100% lets it fill the hold. Selling is unaffected.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float MaxCargoShare { get => _o.MaxCargoShare; set { _o.MaxCargoShare = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL459}Pick where to sell on the whole load", Order = 17, RequireRestart = false,
+        [SettingPropertyBool("{=TL459}Pick where to sell on the whole load", Order = 18, RequireRestart = false,
             HintText = "{=TL460}TradeLord buys each good for a market it means to sell in. OFF: that market is picked on one unit's price. ON: every market in reach is weighed again on what it would pay for the whole load. Takes a little time. ON while it is tried out.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool PickTheBuyerOnTheWholeStack

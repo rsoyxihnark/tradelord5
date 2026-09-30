@@ -170,7 +170,7 @@ namespace TradeLord
         float Room();
         int HerdRoom();
         void Staged(int at, int price);
-        bool Take(int at, int price, int meant, out int cost);
+        bool Take(int at, int price, out int cost);
         void Resold(int at, int units, int gold);
         float ResaleSafety();
     }
@@ -201,7 +201,7 @@ namespace TradeLord
         int TillNow();
         void Staged(int at, int price);
         bool Give(int at, int price, out int proceeds);
-        void RecordedSale(int at, int proceeds, int unitPaid);
+        void RecordedSale(int at, int unitPaid);
     }
 
     internal struct Basis
@@ -239,8 +239,8 @@ namespace TradeLord
             return worth;
         }
 
-        internal int Floor(int worth, int price, float margin) =>
-            PaidLeft <= 0 || FromMarket ? worth : Walk.Floor(price, margin);
+        internal int Floor(int worth, int price) =>
+            PaidLeft <= 0 || FromMarket ? worth : Walk.Floor(price);
 
         internal bool SoldOne()
         {
@@ -432,7 +432,7 @@ namespace TradeLord
                         continue;
                     }
 
-                    if (!market.Take(picked.At, price, wouldDraw - drawn, out int cost)) break;
+                    if (!market.Take(picked.At, price, out int cost)) break;
                     if (cost == 0) break;
 
                     books.NoteBought(good.Id, cost);
@@ -566,7 +566,7 @@ namespace TradeLord
                         continue;
                     }
 
-                    if (!market.Take(at, price, 0, out int cost) || cost == 0) return moved;
+                    if (!market.Take(at, price, out int cost) || cost == 0) return moved;
                     books.NoteBought(good.Id, cost);
                     moved.Units++;
                 }
@@ -646,7 +646,7 @@ namespace TradeLord
                     int worth = basis.Unit(out bool askTheMarket);
                     if (askTheMarket) basis.UnpaidWorth = market.UnpaidWorth(at);
                     int price = market.PriceToSell(at);
-                    int mustBeat = TradeRules.WorthToBeat(good, basis.Floor(worth, price, s.MinProfitMargin),
+                    int mustBeat = TradeRules.WorthToBeat(good, basis.Floor(worth, price),
                                                           basis.UnpaidWorth);
                     if (!TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))
                     {
@@ -691,7 +691,7 @@ namespace TradeLord
                     if (!market.Give(at, price, out int proceeds)) break;
                     if (proceeds == 0) break;
 
-                    if (basis.SoldOne()) market.RecordedSale(at, proceeds, basis.SoldAt);
+                    if (basis.SoldOne()) market.RecordedSale(at, basis.SoldAt);
                     books.NoteSold(good.Id);
                     moved.Units++;
                     int earned = TradeMath.Credit(proceeds, worth, basis.UnpaidWorth);
