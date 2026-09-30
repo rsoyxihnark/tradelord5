@@ -109,11 +109,9 @@ namespace TradeLord.Tests
 
             public void Resold(int at, int units, int gold) => ResoldFor.Add((at, units, gold));
 
-            internal readonly List<int> Meant = new List<int>();
-
             public float ResaleSafety() => Rules.ResaleSafetyFactor;
 
-            public bool Take(int at, int price, int meant, out int cost)
+            public bool Take(int at, int price, out int cost)
             {
                 cost = 0;
                 if (RefuseAfter >= 0 && Taken.Count >= RefuseAfter) { Halted = true; return false; }
@@ -123,7 +121,6 @@ namespace TradeLord.Tests
                 Stalls[at].Amount--;
                 Stalls[at].Carried++;
                 Taken.Add(Stalls[at].Good.Id);
-                Meant.Add(meant);
                 return true;
             }
         }

@@ -291,19 +291,6 @@ namespace TradeLord
             if (_said.TryGet(site.StringId, item.StringId, out Said waiting) && waiting.Item != null &&
                 Scoring.StillToBeJudged(waiting.WithinDays, waiting.AtHours, (float)CampaignTime.Now.ToHours))
                 return;
-            int steps = Scoring.StepsItIsReadOver(withinDays);
-            var stockAhead = new int[steps];
-            var worthAhead = new int[steps];
-            bool moves = false;
-            for (int step = Scoring.FirstStepJudged(withinDays); step < steps; step++)
-            {
-                float days = Scoring.DaysAtStep(step);
-                stockAhead[step] = TradeMath.MissedBy(Forecast.UnitsLeaving(site, item, days),
-                                                      Forecast.UnitsLanding(site, item, days));
-                worthAhead[step] = Forecast.WorthShift(site, item, days);
-                if (stockAhead[step] != 0 || worthAhead[step] != 0) moves = true;
-            }
-            if (!moves) return;
             if (!_said.Holds(site.StringId, item.StringId) && _said.Full && !RoomForOneMoreFigure())
             {
                 Log.Repeatable("forecast check", "full",
@@ -311,6 +298,21 @@ namespace TradeLord
                                "so newer ones are passed over until one it holds is judged or grows too old to judge");
                 return;
             }
+            int steps = Scoring.StepsItIsReadOver(withinDays);
+            int[] stockAhead = null, worthAhead = null;
+            for (int step = Scoring.FirstStepJudged(withinDays); step < steps; step++)
+            {
+                var (stock, worth) = Forecast.ShiftAt(site, item, Scoring.DaysAtStep(step));
+                if (stock == 0 && worth == 0) continue;
+                if (stockAhead == null)
+                {
+                    stockAhead = new int[steps];
+                    worthAhead = new int[steps];
+                }
+                stockAhead[step] = stock;
+                worthAhead[step] = worth;
+            }
+            if (stockAhead == null) return;
             _said.Put(site.StringId, item.StringId, new Said
             {
                 Item = item,

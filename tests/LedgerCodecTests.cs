@@ -379,11 +379,11 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void What_each_batch_of_a_good_cost_and_was_meant_to_fetch_survives_a_save_and_a_load()
+        public void What_each_batch_of_a_good_cost_survives_a_save_and_a_load()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(rec, 1, 836, 1135);
-            TradeMath.AddPurchase(rec, 4, 1114, 584);
+            TradeMath.AddPurchase(rec, 1, 836);
+            TradeMath.AddPurchase(rec, 4, 1114);
             string written = LedgerCodec.WritePurchases(new List<PurchaseRecord> { rec });
 
             var back = LedgerCodec.ReadPurchases(written);
@@ -393,10 +393,54 @@ namespace TradeLord.Tests
             Assert.Equal(2, back[0].Batches.Count);
             Assert.Equal(278, back[0].Batches[0].Unit);
             Assert.Equal(4, back[0].Batches[0].Count);
-            Assert.Equal(584, back[0].Batches[0].Meant);
             Assert.Equal(836, back[0].Batches[1].Unit);
-            Assert.Equal(1135, back[0].Batches[1].Meant);
+            Assert.Equal(1, back[0].Batches[1].Count);
             Assert.Equal(written, LedgerCodec.WritePurchases(back));
+        }
+
+        [Fact]
+        public void Batches_written_by_1_97_0_with_a_third_field_still_read_back()
+        {
+            var back = LedgerCodec.ReadPurchases("felt|1948|5|278|278:4:584,836:1:1135");
+
+            Assert.Single(back);
+            Assert.Equal(2, back[0].Batches.Count);
+            Assert.Equal(836, back[0].Batches[1].Unit);
+        }
+
+        [Fact]
+        public void Batches_that_do_not_add_up_to_the_record_are_read_as_none()
+        {
+            var back = LedgerCodec.ReadPurchases("felt|2000000000|999|1|999:2000000000:0");
+
+            Assert.Single(back);
+            Assert.Equal(999, back[0].Count);
+            Assert.Empty(back[0].Batches);
+        }
+
+        [Fact]
+        public void A_record_claiming_two_billion_units_lists_its_dear_ones_only_up_to_what_is_held()
+        {
+            var back = LedgerCodec.ReadPurchases("felt|999|2000000000|1|999:2000000000:0");
+
+            Assert.Single(back);
+            Assert.Equal(2000000000, back[0].Count);
+            int covers = TradeMath.WhatTheAverageCovers(TradeMath.UnitBasis(back[0], 0), 0.15f);
+            Assert.Equal(5, TradeMath.DearerThan(back[0], covers, 5).Length);
+        }
+
+        [Fact]
+        public void A_record_with_more_batches_than_are_ever_kept_is_read_as_one_at_its_average()
+        {
+            var many = new List<string>();
+            for (int i = 0; i <= TradeMath.MostBatchesKept; i++) many.Add((100 + i) + ":1:0");
+            string text = "felt|1000|" + many.Count + "|100|" + string.Join(",", many);
+
+            var back = LedgerCodec.ReadPurchases(text);
+
+            Assert.Single(back);
+            Assert.Empty(back[0].Batches);
+            Assert.Null(TradeMath.DearerThan(back[0], 100, back[0].Count));
         }
 
         [Fact]
@@ -411,7 +455,7 @@ namespace TradeLord.Tests
 
         [Theory]
         [InlineData("wine|500|10|50|50:9:0")]
-        [InlineData("wine|500|10|50|50:10")]
+        [InlineData("wine|500|10|50|50")]
         [InlineData("wine|500|10|50|50:10:0,x:1:0")]
         [InlineData("wine|500|10|50|50:0:0,50:10:0")]
         [InlineData("wine|500|10|50|-50:10:0")]

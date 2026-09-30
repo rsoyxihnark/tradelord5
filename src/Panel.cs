@@ -485,6 +485,7 @@ namespace TradeLord
                           + Tongue.Text("{=TL417} | Left = how long from now that shelf still holds this Qty, and a shelf that empties first lowers Conf").ToString()
                         : ""))
                 + HowThePromiseHasHeld()
+                + ResaleSafetyInUse()
                 + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero));
             LegendText = OneClauseToALine(LegendText);
 
@@ -555,6 +556,17 @@ namespace TradeLord
             TextObject line = Tongue.Text("{=TL399} | the Sell price has held at {HELD} of what this panel promised, over {COUNT} price(s) it has checked");
             line.SetTextVariable("HELD", ((int)Math.Round(held * 100f)).ToString() + "%");
             line.SetTextVariable("COUNT", checked_.ToString());
+            return line.ToString();
+        }
+
+        private static string ResaleSafetyInUse()
+        {
+            float used = TradePolicy.ResaleSafety(out float setting, out bool learn, out int walkIns, out _);
+            if (!learn || walkIns <= 0) return "";
+            TextObject line = Tongue.Text("{=TL485} | a price elsewhere counts at {USED}: Resale safety factor starts it at {SET} and {COUNT} walk-in(s) have moved it");
+            line.SetTextVariable("USED", ((int)Math.Round(used * 100f)).ToString() + "%");
+            line.SetTextVariable("SET", ((int)Math.Round(setting * 100f)).ToString() + "%");
+            line.SetTextVariable("COUNT", walkIns.ToString());
             return line.ToString();
         }
 

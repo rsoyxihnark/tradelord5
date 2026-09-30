@@ -33,6 +33,10 @@ namespace TradeLord
         private static readonly List<KeyValuePair<string, string>> _newerLines =
             new List<KeyValuePair<string, string>>();
         private static int _newerShape;
+        private static bool _fileSaidWhetherToLearn;
+        private static bool _learningSettled;
+
+        internal static bool ScreenSaidWhetherToLearn;
         private static readonly Dictionary<string, (string taken, string written)> _newerValues =
             new Dictionary<string, (string taken, string written)>(StringComparer.OrdinalIgnoreCase);
 
@@ -133,10 +137,12 @@ namespace TradeLord
             {
                 if (held != null)
                     Log.Write("settings file: the settings screen was saved more recently, so this file is written to match it");
+                SettleTheLearningSwitch(_fileSaidWhetherToLearn || ScreenSaidWhetherToLearn);
                 _dirty = true;
                 return;
             }
             foreach (FieldInfo field in Fields()) field.SetValue(Options.Current, field.GetValue(held));
+            SettleTheLearningSwitch(_fileSaidWhetherToLearn);
             Options.Bump();
             Log.Write(_fileScreenWrote
                 ? "settings file: this file was saved more recently than the settings screen, so the screen is set from it"
@@ -192,6 +198,7 @@ namespace TradeLord
             _path = found ?? Log.Beside(FileName, mustExist: false);
             if (found == null)
             {
+                if (!McmLoader.Awaiting) SettleTheLearningSwitch(screen && ScreenSaidWhetherToLearn);
                 Write(_path, screen ? "written to match the settings screen" : "no settings file yet");
                 return;
             }
@@ -246,7 +253,11 @@ namespace TradeLord
             bool handEdited = screen && screenWroteIt && ChangedByHand(found, stamped);
             if (Twins.ScreenWins(screen, screenWroteIt, handEdited))
             {
+                if (lifted)
+                    Log.Write("settings file: it was brought forward from shape " + shape + ", but the settings screen " +
+                              "was saved more recently, so the screen's settings are the ones kept");
                 Log.Write("settings file: the settings screen was saved more recently, so this file is written to match it");
+                SettleTheLearningSwitch(ScreenSaidWhetherToLearn);
                 Write(found, "made to match the settings screen");
                 return;
             }
@@ -279,6 +290,9 @@ namespace TradeLord
             }
             finally { _applying = false; }
 
+            _fileSaidWhetherToLearn = seen.Contains(nameof(Options.LearnResaleSafety));
+            if (!McmLoader.Awaiting) SettleTheLearningSwitch(_fileSaidWhetherToLearn || (screen && ScreenSaidWhetherToLearn));
+
             if (!screen && !whipped)
             {
                 _fileHeld = new Options();
@@ -307,6 +321,20 @@ namespace TradeLord
                 Write(found, "brought forward from shape " + shape + " to shape " + Migration.Shape);
             else if (seen.Count < known.Count)
                 Write(found, "the file was missing " + (known.Count - seen.Count) + " setting(s) this version knows");
+        }
+
+        private static void SettleTheLearningSwitch(bool said)
+        {
+            if (_learningSettled) return;
+            _learningSettled = true;
+            Options s = Options.Current;
+            if (Migration.LearnsOnceSettled(said, s.LearnResaleSafety, s.ResaleSafetyFactor) == s.LearnResaleSafety) return;
+            s.LearnResaleSafety = false;
+            Log.Write("settings file: neither this file nor the settings screen said whether to learn the resale safety " +
+                      "factor, so Learn the resale safety factor starts off and your Resale safety factor of " +
+                      Math.Round(s.ResaleSafetyFactor * 100d).ToString(CultureInfo.InvariantCulture) +
+                      "% is used exactly as you set it");
+            if (McmLoader.SettingsInHand) McmLoader.Reseat?.Invoke();
         }
 
         private static void SayWhatYouHadSet(IDictionary<string, string> written)
@@ -416,10 +444,27 @@ namespace TradeLord
             lines.AddRange(_newerLines);
             try
             {
-                File.WriteAllText(path, SettingsFile.Compose(Header, lines));
+                WholeOrNotAtAll(path, SettingsFile.Compose(Header, lines));
                 Log.Write("settings file written to " + path + " (" + why + ") - edit it to change how TradeLord trades");
             }
             catch (Exception e) { Log.Error(e, "writing the settings file (TradeLord runs on the settings it has)"); }
+        }
+
+        private static void WholeOrNotAtAll(string path, string text)
+        {
+            string fresh = path + ".new";
+            File.WriteAllText(fresh, text);
+            try
+            {
+                if (File.Exists(path)) File.Replace(fresh, path, null);
+                else File.Move(fresh, path);
+            }
+            catch (Exception)
+            {
+                File.WriteAllText(path, text);
+                try { File.Delete(fresh); }
+                catch (Exception) { }
+            }
         }
     }
 }

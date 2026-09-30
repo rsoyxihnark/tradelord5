@@ -485,17 +485,21 @@ namespace TradeLord
         internal static float Realizable(int farSellPrice) =>
             TradeMath.Realizable(farSellPrice, ResaleSafety());
 
-        internal static float ResaleSafety() => ResaleSafety(out _, out _, out _);
+        internal static float ResaleSafety() => ResaleSafety(out _, out _, out _, out _);
 
-        internal static float ResaleSafety(out float setting, out int judged, out float fetched)
+        internal static float ResaleSafety(out float setting, out bool learn, out int walkIns, out float held)
         {
             setting = Options.Current.ResaleSafetyFactor;
+            learn = Options.Current.LearnResaleSafety;
             LedgerBehavior ledger = LedgerBehavior.Instance;
-            if (ledger != null) return ledger.ResaleSafety(setting, out judged, out fetched);
-            judged = 0;
-            fetched = TradeMath.NoShareToGive;
-            return TradeMath.ResaleSafetyAsSalesWent(setting, judged, fetched);
+            if (ledger != null) return ledger.ResaleSafety(setting, learn, out walkIns, out held);
+            walkIns = 0;
+            held = TradeMath.NoShareToGive;
+            return TradeMath.ResaleSafetyAsPromisesHeld(setting, learn, walkIns, held);
         }
+
+        internal static int WhatTheAverageCovers(int basis) =>
+            TradeMath.WhatTheAverageCovers(basis, Options.Current.MinProfitMargin);
 
         internal static bool BuyAcceptable(int buyPrice, float realizable) =>
             TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin);

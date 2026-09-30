@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.97.1
+
+- How much of a price elsewhere TradeLord counts on is now learned from how much of the ledger's promised Sell price held when you walked in
+- Added Learn the resale safety factor under Buying, on out of the box; turn it off to use Resale safety factor exactly as you set it
+- Learn the resale safety factor starts off if you had set a Resale safety factor of your own before it arrived
+- What this means now says what share of a price elsewhere TradeLord counts on once your walk-ins have moved it
+- The hint for Resale safety factor now says it only moves with Learn the resale safety factor on, as your walk-ins show
+- A unit that cost well over the average now sells once a market pays what it cost, rather than your margin over what it cost
+- Fixed a unit you bought dear still being held to its own cost after you sold it by hand or through Staged Trading
+- Fixed What this means saying the Sell price held at more than 100% of what this panel promised
+- The count of prices What this means has checked starts over once, as the old count let a price above its promise hide one below it
+- Each market's record of what it paid against the ledger's promise starts over once, so no old price above a promise hides one below it
+- Fixed a forecast of what is on its way to a market earning more trust when more moved than it said
+- How far TradeLord trusts what is on its way to a market starts over once, as the old record counted a bigger move than forecast as more
+- Fixed TradeLord trading with caravans and villagers at war with you when Exclude hostile markets is off
+- TradeLord.log now says why no haul animal was bought after your cargo filled
+- TradeLord.log now says why no food was bought when your party is short of food
+- Fixed TradeLord.ini left half written if the game stopped while saving it, putting your settings back to what TradeLord ships with
+- Fixed a damaged purchase record in a save stopping TradeLord from selling that good or pricing it for the map marker
+- The route scan no longer spends time working out forecast figures the forecast check has no room to keep
+- The feature list now says how much of a price elsewhere TradeLord counts on is learned from how the promised Sell price held
+- The feature list now says What this means shows the share of a price elsewhere TradeLord counts on
+- The feature list now says a unit the average cost would sell at a loss is never sold for less than it cost
+- The feature list now says TradeLord.log writes how much of the promised Sell price has held at the markets you walked into
+- The feature list now says TradeLord never trades with caravans and villagers at war with you
+- The feature list now counts eight numbers in what TradeLord puts in a save
+
 ## 1.97.0
 
 - Buy Workshops Remotely now lists first the workshop that pays for itself soonest, not the one that has earned the most lately

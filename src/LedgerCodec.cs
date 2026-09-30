@@ -24,7 +24,6 @@ namespace TradeLord
     {
         public int Unit;
         public int Count;
-        public int Meant;
     }
 
     public class PurchaseRecord
@@ -183,7 +182,7 @@ namespace TradeLord
                     if (b > 0) sb.Append(BatchMark);
                     sb.Append(Number(rec.Batches[b].Unit)).Append(BatchFieldMark)
                       .Append(Number(rec.Batches[b].Count)).Append(BatchFieldMark)
-                      .Append(Number(rec.Batches[b].Meant));
+                      .Append(Number(0));
                 }
             }
             return sb.ToString();
@@ -195,17 +194,18 @@ namespace TradeLord
             if (string.IsNullOrEmpty(text) || count <= 0) return kept;
             long units = 0L;
             string[] batches = text.Split(BatchMark);
+            if (batches.Length > TradeMath.MostBatchesKept) return kept;
             for (int i = 0; i < batches.Length; i++)
             {
                 string[] parts = batches[i].Split(BatchFieldMark);
-                if (parts.Length < 3 || !Whole(parts[0], out int unit) || !Whole(parts[1], out int many) ||
-                    !Whole(parts[2], out int meant) || unit < 0 || many <= 0 || meant < 0)
+                if (parts.Length < 2 || !Whole(parts[0], out int unit) || !Whole(parts[1], out int many) ||
+                    unit < 0 || many <= 0)
                     return new List<Batch>();
                 units += many;
-                kept.Add(new Batch { Unit = unit, Count = many, Meant = meant });
+                kept.Add(new Batch { Unit = unit, Count = many });
             }
             if (units != count) return new List<Batch>();
-            kept.Sort((x, y) => x.Unit != y.Unit ? x.Unit.CompareTo(y.Unit) : x.Meant.CompareTo(y.Meant));
+            kept.Sort((x, y) => x.Unit.CompareTo(y.Unit));
             return kept;
         }
 
@@ -221,13 +221,19 @@ namespace TradeLord
                 if (sb.Length > 0) sb.Append(RecordMark);
                 sb.Append(rec.TownId).Append(FieldMark)
                   .Append(Number(rec.Scored)).Append(FieldMark)
-                  .Append(Number(rec.Held));
+                  .Append(Number(rec.Held)).Append(FieldMark)
+                  .Append(KeptUnderTheCap);
             }
             return sb.ToString();
         }
 
-        public static List<PromiseRecord> ReadPromises(string text)
+        public const string KeptUnderTheCap = "1";
+
+        public static List<PromiseRecord> ReadPromises(string text) => ReadPromises(text, out _);
+
+        public static List<PromiseRecord> ReadPromises(string text, out int setAside)
         {
+            setAside = 0;
             var kept = new List<PromiseRecord>();
             if (string.IsNullOrEmpty(text)) return kept;
             string[] records = text.Split(RecordMark);
@@ -238,7 +244,12 @@ namespace TradeLord
                 if (!Whole(parts[1], out int scored) || scored <= 0) continue;
                 if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture,
                                     out float held) || !Storable(held) || held < 0f) continue;
-                kept.Add(new PromiseRecord { TownId = parts[0], Scored = scored, Held = held > scored ? scored : held });
+                if (parts.Length <= FieldsAPromiseNeeds || parts[FieldsAPromiseNeeds] != KeptUnderTheCap || held > scored)
+                {
+                    setAside++;
+                    continue;
+                }
+                kept.Add(new PromiseRecord { TownId = parts[0], Scored = scored, Held = held });
             }
             return kept;
         }

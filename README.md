@@ -7,7 +7,7 @@
 ## Everything it does
 
 - ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
-- ✅ It declares no save types of its own. All it puts in a save is five strings, eleven numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
+- ✅ It declares no save types of its own. All it puts in a save is five strings, eight numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
@@ -98,7 +98,8 @@
 - ✅ A lame horse, mule or camel, or one of any other quality, is never sold to get you back up to speed or bought to carry more, because the game does not count it gone or come until you load again
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
-- ✅ How much of a price elsewhere it counts on is learned from its own sales: it starts at Resale safety factor and moves toward the share of the planned price its sales really fetched
+- ✅ How much of a price elsewhere it counts on is learned: with Learn the resale safety factor on, it starts at Resale safety factor and moves toward how much of the promised Sell price really held when you walked in
+- ✅ What this means says what share of a price elsewhere it counts on once your walk-ins have moved it
 - ✅ When your cargo room or your gold runs short, it buys first the good that makes the most for each unit of room or each denar it uses
 - ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it. On out of the box
 - ✅ Adaptive spend limit holds at Max spend per visit until your purse is five times that, then grows by one more Max spend per visit for every doubling of the purse, so 10000 in the purse allows 2000 and 20000 allows 3000
@@ -163,6 +164,7 @@
 - ✅ Any good you put on the never-sell or never-buy list, named by its item id or by the name on screen
 - ✅ More livestock than your party can drive, so a purchase never slows you down
 - ✅ Markets belonging to a faction you are at war with
+- ✅ Caravans and villagers at war with you, since the game offers them no trade, whatever Exclude hostile markets says
 - ✅ The game's economy: it trades at the game's own prices, through the game's own buying and selling
 - ✅ On the road, where there is no market to sell to, it moves the goods and the gold itself, at the prices the game's own trade screen or the villagers' own offer would charge you
 
@@ -184,7 +186,7 @@
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know
 - ✅ What a good counts as having cost you sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells
-- ✅ A unit you paid so much for that the average cost would sell it at a loss is held to your margin over what it cost, and is sold first wherever a market pays that
+- ✅ A unit you paid so much for that the average cost would sell it at a loss is never sold for less than it cost, and is sold first wherever a market pays that
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay, off out of the box, that keeps it out of a brand new campaign until prices calm down
 - ✅ Staged Trading, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other
@@ -215,7 +217,7 @@
 - ✅ The same switch writes down the marked market broken down good by good with today's price beside the price it expects once what is on its way lands, how long each weighing took, and how the mark held up against what that market paid you
 - ✅ When only other markets change, the same switch writes one line naming each market whose gold or units changed, any market newly priced or no longer priced, and a new next best
 - ✅ When the mark stays but what your cargo would fetch there changes, the same switch writes that market good by good and one line naming the other markets that changed
-- ✅ The same switch writes down, whenever it changes, what share of a price elsewhere TradeLord counts on when it buys and what its own sales have fetched of what it meant to sell them for
+- ✅ The same switch writes down, whenever it changes, what share of a price elsewhere TradeLord counts on when it buys and how much of the promised Sell price has held at the markets you walked into
 - ✅ What this means, behind a ? beside the TradeLord ledger title: the line that used to run under the routes, one clause to a line in a window of its own, so the ledger itself stays clean
 - ✅ Recent trades, on its own button on the campaign map under the TradeLord one, so it opens without the ledger: the last twenty buys and sells it made for you, newest first, each with the day, the town, the gold it gained or cost, and what moved
 - ✅ In Recent trades, gold gained reads green and gold spent amber. It is kept in your save, so the list is still there when you load the campaign again

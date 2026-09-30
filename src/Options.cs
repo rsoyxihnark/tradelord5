@@ -139,6 +139,8 @@ namespace TradeLord
 
         public float ResaleSafetyFactor = 0.85f;
 
+        public bool LearnResaleSafety = true;
+
         public bool PickTheBuyerOnTheWholeStack = true;
 
         public string PanelKey = "T";

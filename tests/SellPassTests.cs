@@ -173,12 +173,15 @@ namespace TradeLord.Tests
                 if (OnTheScreen) Cargo[at].Amount--;
             }
 
+            internal readonly List<int> SoldFor = new List<int>();
+
             public bool Give(int at, int price, out int proceeds)
             {
                 proceeds = 0;
                 if (RefuseAfter >= 0 && Given.Count >= RefuseAfter) { Halted = true; return false; }
                 if (PayNothingAfter >= 0 && Given.Count >= PayNothingAfter) return true;
                 proceeds = price;
+                SoldFor.Add(price);
                 Till -= price;
                 Cargo[at].Amount--;
                 Cargo[at].Price -= Cargo[at].Falls;
@@ -186,13 +189,11 @@ namespace TradeLord.Tests
                 return true;
             }
 
-            internal readonly List<int> RecordedAt = new List<int>();
             internal readonly List<int> RecordedPaid = new List<int>();
 
-            public void RecordedSale(int at, int proceeds, int unitPaid)
+            public void RecordedSale(int at, int unitPaid)
             {
                 Recorded.Add(Cargo[at].Good.Id);
-                RecordedAt.Add(proceeds);
                 RecordedPaid.Add(unitPaid);
                 Cargo[at].Purchased--;
             }
@@ -912,7 +913,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_unit_bought_dear_is_sold_once_a_market_pays_enough_over_what_it_cost()
+        public void A_unit_bought_dear_is_sold_once_a_market_pays_what_it_cost()
         {
             var market = new FakeMarket();
             Load felt = market.Add(Cargo("felt"), amount: 5, price: 1135);
@@ -943,19 +944,6 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Each_sale_passes_on_what_it_fetched_to_the_purchase_record()
-        {
-            var market = new FakeMarket();
-            Load iron = market.Add(Cargo("iron"), amount: 2, price: 200);
-            iron.Basis = 100;
-            iron.Purchased = 2;
-
-            Sell(market);
-
-            Assert.Equal(new[] { 200, 200 }, market.RecordedAt.ToArray());
-        }
-
-        [Fact]
         public void The_price_you_set_for_the_market_basis_is_never_raised_by_what_you_paid()
         {
             var market = new FakeMarket();
@@ -983,8 +971,25 @@ namespace TradeLord.Tests
             Run run = Sell(market);
 
             Assert.Equal(5, run.Units);
-            Assert.Equal(new[] { 1135, 1026, 917, 808, 699 }, market.RecordedAt.ToArray());
+            Assert.Equal(new[] { 1135, 1026, 917, 808, 699 }, market.SoldFor.ToArray());
             Assert.Equal(new[] { 836, 0, 0, 0, 0 }, market.RecordedPaid.ToArray());
+        }
+
+        [Theory]
+        [InlineData(836, 1)]
+        [InlineData(835, 0)]
+        public void A_unit_bought_dear_sells_at_exactly_what_it_cost_and_never_one_denar_under(int price, int sold)
+        {
+            var market = new FakeMarket();
+            Load felt = market.Add(Cargo("felt"), amount: 1, price: price);
+            felt.Basis = 390;
+            felt.Purchased = 1;
+            felt.Dearer = new[] { 836 };
+
+            Run run = Sell(market);
+
+            Assert.Equal(sold, run.Units);
+            Assert.Equal(sold == 1 ? new[] { 836 } : new int[0], market.RecordedPaid.ToArray());
         }
 
         [Fact]
