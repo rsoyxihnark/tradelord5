@@ -6,6 +6,9 @@ from nexus_changelog import sections
 REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
+    '1.97.0': 'entries for what 1.97.4 took back out are gone from the changelog, and the release note is synced once this lands',
+    '1.97.1': 'entries for what 1.97.4 took back out are gone from the changelog, and the release note is synced once this lands',
+    '1.97.2': 'entries for what 1.97.4 took back out are gone from the changelog, and the release note is synced once this lands',
 }
 
 

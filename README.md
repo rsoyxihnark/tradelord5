@@ -98,8 +98,8 @@
 - ✅ A lame horse, mule or camel, or one of any other quality, is never sold to get you back up to speed or bought to carry more, because the game does not count it gone or come until you load again
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
-- ✅ How much of a price elsewhere it counts on is learned: with Learn the resale safety factor on, it starts at Resale safety factor and moves toward how much of the promised Sell price really held when you walked in
-- ✅ What this means says what share of a price elsewhere it counts on once your walk-ins have moved it
+- ✅ How much of a price elsewhere it counts on is learned: with Learn the resale safety factor on, it starts at Resale safety factor and only ever lowers it, toward how much of the promised Sell price really held when you walked in
+- ✅ What this means says what share of a price elsewhere it counts on once your walk-ins have lowered it
 - ✅ When your cargo room or your gold runs short, it buys first the good that makes the most for each unit of room or each denar it uses
 - ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it. On out of the box
 - ✅ Adaptive spend limit holds at Max spend per visit until your purse is five times that, then grows by one more Max spend per visit for every doubling of the purse, so 10000 in the purse allows 2000 and 20000 allows 3000
@@ -191,7 +191,6 @@
 - ✅ A good you never bought, loot and animals included, adds nothing to the profit reported and earns no Trade XP when it sells
 - ✅ Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them, which is usually none
 - ✅ When some of a good is eaten, lost or given away, it comes off every price you paid in proportion, so a unit bought dear keeps its cost
-- ✅ A unit you paid so much for that the average cost would sell it at a loss is never sold for less than it cost, and is sold first wherever a market pays that
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay, off out of the box, that keeps it out of a brand new campaign until prices calm down
 - ✅ Staged Trading, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other

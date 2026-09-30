@@ -382,7 +382,11 @@ namespace TradeLord
             private int _top;
             private int _topTaken;
             private int _unknown;
-            private bool _picked;
+            private int _picked;
+
+            private const int NotPicked = 0;
+            private const int TheDearest = 1;
+            private const int TheLeastDear = 2;
 
             public DearFirst(Batch[] costs, int covers, int worth, int unknown = 0)
             {
@@ -399,28 +403,30 @@ namespace TradeLord
                 _top = many - 1;
                 _topTaken = 0;
                 _unknown = unknown > 0 ? unknown : 0;
-                _picked = false;
+                _picked = NotPicked;
             }
 
             public int Floor(int price)
             {
-                while (_top >= _dearLow && price < _costs[_top].Unit) DropTheTop();
-                _picked = _top >= _dearLow;
-                return _picked || _low < _split || _unknown > 0 ? _worth : NoUnitThisPriceSells;
+                _picked = _top < _dearLow ? NotPicked
+                        : price >= _costs[_top].Unit ? TheDearest
+                        : price >= _costs[_dearLow].Unit ? TheLeastDear
+                        : NotPicked;
+                return _top >= _dearLow || _low < _split || _unknown > 0 ? _worth : NoUnitThisPriceSells;
             }
 
             public int Took()
             {
-                bool dear = _picked && _top >= _dearLow;
-                _picked = false;
-                if (dear)
+                int picked = _top >= _dearLow ? _picked : NotPicked;
+                _picked = NotPicked;
+                if (picked == TheDearest)
                 {
                     int dearest = _costs[_top].Unit;
                     _topTaken++;
                     if (LeftIn(_top) <= 0) DropTheTop();
                     return dearest;
                 }
-                if (_low < _split)
+                if (picked == NotPicked && _low < _split)
                 {
                     int cheapest = _costs[_low].Unit;
                     if (++_lowTaken >= _costs[_low].Count)
@@ -430,7 +436,7 @@ namespace TradeLord
                     }
                     return cheapest;
                 }
-                if (_unknown > 0)
+                if (picked == NotPicked && _unknown > 0)
                 {
                     _unknown--;
                     return _worth;
@@ -876,7 +882,7 @@ namespace TradeLord
             if (!learn || walkIns <= 0 || held == NoShareToGive || float.IsNaN(held) || float.IsInfinity(held))
                 return start;
             float learned = held < LeastResaleSafety ? LeastResaleSafety
-                          : held > MostResaleSafety ? MostResaleSafety : held;
+                          : held > start ? start : held;
             float weight = (float)walkIns / ((float)walkIns + EnoughWalkIns);
             return start + (learned - start) * weight;
         }

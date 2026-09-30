@@ -331,17 +331,17 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_price_under_what_the_dear_unit_cost_sells_only_the_cheap_ones()
+        public void A_price_under_what_the_dear_unit_cost_sells_the_cheap_ones_first_and_the_dear_one_last()
         {
             var sold = Walked(new TradeMath.DearFirst(Costs(278, 278, 278, 278, 836), 448, 390), 5, u => 484);
-            Assert.Equal(new[] { 278, 278, 278, 278 }, sold.ToArray());
+            Assert.Equal(new[] { 278, 278, 278, 278, 836 }, sold.ToArray());
         }
 
         [Fact]
         public void Of_several_dear_units_the_dearest_the_price_clears_goes_first()
         {
             var sold = Walked(new TradeMath.DearFirst(Costs(100, 100, 500, 900), 115, 100), 4, u => 700 - 10 * u);
-            Assert.Equal(new[] { 500, 100, 100 }, sold.ToArray());
+            Assert.Equal(new[] { 500, 100, 100, 900 }, sold.ToArray());
             sold = Walked(new TradeMath.DearFirst(Costs(100, 100, 500, 900), 115, 100), 4, u => 1100 - 10 * u);
             Assert.Equal(new[] { 900, 500, 100, 100 }, sold.ToArray());
         }
@@ -464,19 +464,23 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Prices_that_held_at_their_promise_move_the_safety_toward_all_of_the_price()
+        public void Prices_that_held_at_their_promise_never_raise_the_safety_above_what_you_set()
         {
-            float some = TradeMath.ResaleSafetyAsPromisesHeld(0.85f, true, TradeMath.EnoughWalkIns, 1f);
-            Assert.Equal(0.925f, some, 3);
-            float many = TradeMath.ResaleSafetyAsPromisesHeld(0.85f, true, 5000, 1f);
-            Assert.True(many > some && many <= TradeMath.MostResaleSafety);
+            Assert.Equal(0.85f, TradeMath.ResaleSafetyAsPromisesHeld(0.85f, true, TradeMath.EnoughWalkIns, 1f), 4);
+            Assert.Equal(0.85f, TradeMath.ResaleSafetyAsPromisesHeld(0.85f, true, 5000, 1f), 4);
+            Assert.Equal(0.6f, TradeMath.ResaleSafetyAsPromisesHeld(0.6f, true, 5000, 0.9f), 4);
         }
 
         [Fact]
-        public void The_owners_own_record_of_prices_holding_at_96_percent_moves_the_safety_up_but_not_all_the_way()
+        public void The_owners_own_record_of_prices_holding_at_96_percent_leaves_the_safety_as_set()
         {
-            float after = TradeMath.ResaleSafetyAsPromisesHeld(0.85f, true, 51, 0.958f);
-            Assert.True(after > 0.9f && after < 0.958f);
+            Assert.Equal(0.85f, TradeMath.ResaleSafetyAsPromisesHeld(0.85f, true, 51, 0.958f), 4);
+        }
+
+        [Fact]
+        public void Prices_that_held_under_what_you_set_lower_the_safety_toward_them()
+        {
+            Assert.Equal(0.85f, TradeMath.ResaleSafetyAsPromisesHeld(0.9f, true, TradeMath.EnoughWalkIns, 0.8f), 3);
         }
 
         [Fact]
@@ -539,12 +543,14 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_dear_unit_sells_at_exactly_what_it_cost_and_never_one_denar_under()
+        public void A_dear_unit_sells_once_the_price_beats_the_average_by_your_margin()
         {
             var at = Walked(new TradeMath.DearFirst(Costs(836), 0, 390), 1, u => 836);
             Assert.Equal(new[] { 836 }, at.ToArray());
-            var under = Walked(new TradeMath.DearFirst(Costs(836), 0, 390), 1, u => 835);
-            Assert.Empty(under);
+            var under = Walked(new TradeMath.DearFirst(Costs(836), 0, 390), 1, u => 449);
+            Assert.Equal(new[] { 836 }, under.ToArray());
+            var belowTheMargin = Walked(new TradeMath.DearFirst(Costs(836), 0, 390), 1, u => 448);
+            Assert.Empty(belowTheMargin);
         }
 
         [Fact]

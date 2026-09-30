@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.97.4
+
+- Learn the resale safety factor now only ever lowers Resale safety factor from what you set
+- What this means now shows the share of a price elsewhere TradeLord counts on only once your walk-ins have lowered it
+- The hint for Resale safety factor now says Learn the resale safety factor only ever lowers it
+- The hint for Learn the resale safety factor now says it never raises Resale safety factor above what you set
+- The feature list now says Learn the resale safety factor only ever lowers Resale safety factor
+- The feature list now says What this means shows the share of a price elsewhere TradeLord counts on once your walk-ins have lowered it
+
 ## 1.97.3
 
 - Fixed Trade XP for one unit using what the game gave for another unit sold at the same time
@@ -12,8 +21,6 @@
 - Fixed TradeLord giving profit and Trade XP for selling loot, animals or anything else you never bought
 - Fixed goods bought from villagers earning Trade XP the game itself never gives for them, whether TradeLord or you sold them
 - Profit and Trade XP no longer follow What a good counts as having cost you, and read what each unit you sold really cost instead
-- Fixed a unit you bought dear being sold for less than it cost after some of the same good was eaten, lost or given away
-- Fixed a unit you bought dear being sold under its cost while TradeLord's purchase record still counted units you no longer had
 - Fixed a deal you took on the trade screen that lost money being reported as 0 profit
 - The hint for What a good counts as having cost you now says profit is what each unit fetched over what it cost you
 - The hint for What a good counts as having cost you now says Trade XP never goes past what the game gives
@@ -38,8 +45,6 @@
 - Learn the resale safety factor starts off if you had set a Resale safety factor of your own before it arrived
 - What this means now says what share of a price elsewhere TradeLord counts on once your walk-ins have moved it
 - The hint for Resale safety factor now says it only moves with Learn the resale safety factor on, as your walk-ins show
-- A unit that cost well over the average now sells once a market pays what it cost, rather than your margin over what it cost
-- Fixed a unit you bought dear still being held to its own cost after you sold it by hand or through Staged Trading
 - Fixed What this means saying the Sell price held at more than 100% of what this panel promised
 - The count of prices What this means has checked starts over once, as the old count let a price above its promise hide one below it
 - Each market's record of what it paid against the ledger's promise starts over once, so no old price above a promise hides one below it
@@ -53,21 +58,14 @@
 - The route scan no longer spends time working out forecast figures the forecast check has no room to keep
 - The feature list now says how much of a price elsewhere TradeLord counts on is learned from how the promised Sell price held
 - The feature list now says What this means shows the share of a price elsewhere TradeLord counts on
-- The feature list now says a unit the average cost would sell at a loss is never sold for less than it cost
 - The feature list now says TradeLord.log writes how much of the promised Sell price has held at the markets you walked into
 - The feature list now says TradeLord never trades with caravans and villagers at war with you
-- The feature list now counts eight numbers in what TradeLord puts in a save
 
 ## 1.97.0
 
 - Buy Workshops Remotely now lists first the workshop that pays for itself soonest, not the one that has earned the most lately
 - Buy Workshops Remotely now shows what each workshop pays its owner a day
 - Buying a workshop from Buy Workshops Remotely now says about how many days it takes to pay for itself
-- Fixed TradeLord selling a unit at a loss because cheaper units bought after it pulled the average cost down
-- A unit that cost well over the average is now sold first wherever a market pays your margin over what it cost
-- Fixed the map marker weighing a market on a unit TradeLord would not sell there because it cost well over the average
-- How much of a price elsewhere TradeLord counts on when buying is now learned from what its own sales really fetched
-- The hint for Resale safety factor now says TradeLord starts there and moves toward what its own sales really fetch
 - When your cargo room or your gold runs short, TradeLord now buys first the good that makes the most for each unit of room or each denar
 - Fixed a market paying well over the ledger's promise for one good hiding that it paid under the promise for another
 - Fixed the forecast of what is on its way to a market being judged at the end of the ride it expected, not on the day you walked in
@@ -78,14 +76,12 @@
 - Fixed the Russian warning about your gold reserve when buying a workshop spelling denars differently from every other message
 - The feature list now says a price above what the ledger promised counts as the promise and no more
 - The feature list now says the forecast is judged against what moved by the day you walked in
-- The feature list now says how much of a price elsewhere TradeLord counts on is learned from its own sales
 - The feature list now says TradeLord buys first what makes the most for the cargo room or gold that runs short
-- The feature list now says a unit the average cost would sell at a loss is held to your margin over what it cost
 - The feature list now says Buy Workshops Remotely lists first the workshop that pays for itself soonest, and what each pays a day
 - The feature list now says TradeLord.log writes the map marker's table of every market only when the marker moves
 - The feature list now says TradeLord.log writes the marked market good by good when the mark stays but its gold changes
 - The feature list now says TradeLord.log writes what share of a price elsewhere TradeLord counts on when buying
-- The feature list now counts eleven numbers in what TradeLord puts in a save
+- The feature list now counts eight numbers in what TradeLord puts in a save
 
 ## 1.96.0
 

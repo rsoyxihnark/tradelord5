@@ -1000,7 +1000,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_unit_bought_dear_is_not_sold_cheap_because_cheaper_ones_pulled_the_average_down()
+        public void A_unit_bought_dear_sells_with_the_rest_of_its_good_once_the_average_is_beaten()
         {
             foreach (bool sim in new[] { false, true })
             {
@@ -1012,7 +1012,8 @@ namespace TradeLord.Tests
 
                 Run run = Sell(market, sim);
 
-                Assert.Equal(4, run.Units);
+                Assert.Equal(5, run.Units);
+                Assert.Equal(5 * 484 - 4 * 390 - 836, run.Profit);
             }
         }
 
@@ -1034,7 +1035,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_dry_run_that_already_drew_the_cheap_units_holds_the_dear_one_to_its_own_price()
+        public void A_dry_run_that_already_drew_the_cheap_units_still_sells_the_dear_one_at_the_average()
         {
             var market = new FakeMarket();
             Load felt = market.Add(Cargo("felt"), amount: 2, price: 484);
@@ -1046,7 +1047,8 @@ namespace TradeLord.Tests
 
             Run run = Sell(market, sim: true, books: books);
 
-            Assert.Equal(1, run.Units);
+            Assert.Equal(2, run.Units);
+            Assert.Equal(2 * 484 - 390 - 836, run.Profit);
         }
 
         [Fact]
@@ -1085,8 +1087,10 @@ namespace TradeLord.Tests
 
         [Theory]
         [InlineData(836, 1)]
-        [InlineData(835, 0)]
-        public void A_unit_bought_dear_sells_at_exactly_what_it_cost_and_never_one_denar_under(int price, int sold)
+        [InlineData(835, 1)]
+        [InlineData(449, 1)]
+        [InlineData(448, 0)]
+        public void A_unit_bought_dear_sells_once_the_price_beats_the_average_by_your_margin(int price, int sold)
         {
             var market = new FakeMarket();
             Load felt = market.Add(Cargo("felt"), amount: 1, price: price);
