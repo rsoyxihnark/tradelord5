@@ -2751,9 +2751,14 @@ chk("1.6.1", "the XP line is queued last, in amber, and is translatable",
             "_pending.AddRange(_afterXp);",
             "InformationManager.DisplayMessage") and
     '{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.' in S['Trading.cs'] and
-    ordered(sell_pass(),
-            "Notices.Say(msg, profit > 0",
-            "AwardTradeXpForOurOwnTrade(moved.Earned, pass.Muted)"))
+    ordered(method_body(S['Trading.cs'], "internal static void FlushToasts"),
+            'Guard.Run("GameTradeBook.Settle", SettleTheSales);',
+            "CreditTradeSkill(xp, profit, muted)",
+            "Notices.Drain();") and
+    "Notices.Say(msg, profit > 0" in sell_pass() and
+    "AwardTradeXpForOurOwnTrade(" not in sell_pass() and
+    "if (profit > 0) AwardTradeXpForOurOwnTrade(profit, muted);" in
+        method_body(S['Trading.cs'], "private static void SettleTheSales"))
 chk("1.6.1", "ending a campaign drops trade XP that was queued but not yet handed over",
     "_pendingXp = 0;" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.1", "the gold reserve default leaves room for two safe passages and a wage run",
@@ -3387,7 +3392,20 @@ def quiet_automation_silences_only_the_automated_lines():
             "if (!pass.Muted) Notices.Say(msg, profit > 0" in sell and
             "if (!pass.Muted) Notices.Say(msg, Notices.Spend);" in buy and
             "if (!muted) Notices.Say(earned, Notices.Xp);" in credit and
-            "AwardTradeXpForOurOwnTrade(moved.Earned, pass.Muted);" in sell)
+            the_quiet_setting_follows_a_sale_to_its_trade_xp())
+
+def the_quiet_setting_follows_a_sale_to_its_trade_xp():
+    t = S['Trading.cs']
+    return ('Guard.Run("GameTradeBook", () => GameTradeBook.Sold(_unit.EquipmentElement, paid, Muted));' in
+                method_body(t, "private bool Swap(bool selling")
+            and "if (!muted) _heard = true;" in
+                method_body(S['Passes.cs'], "internal void Sold(T what, int gold, bool muted)")
+            and "muted = !_heard;" in method_body(S['Passes.cs'], "internal Line[] Closed(out bool muted)")
+            and ordered(method_body(t, "private static void SettleTheSales"),
+                        "int profit = GameTradeBook.Settle(out bool muted);",
+                        "if (profit > 0) AwardTradeXpForOurOwnTrade(profit, muted);")
+            and "if (!muted) _pendingXpMuted = false;" in
+                method_body(t, "private static void AwardTradeXpForOurOwnTrade"))
 
 def quiet_automation_leaves_the_cargo_warning_alone():
     return "Muted(" not in method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
@@ -5732,7 +5750,7 @@ def every_handler_the_game_calls_guards_its_own_work():
             if not body or "Guard.Run" not in body:
                 return False
             held += 1
-    return held == 11 and settled in S['Trading.cs']
+    return held == 12 and settled in S['Trading.cs']
 
 def a_save_is_never_failed_by_the_mods_own_bookkeeping():
     trade = method_body(S['Trading.cs'], "public override void SyncData")
@@ -5792,13 +5810,13 @@ def getting_back_up_to_speed_credits_what_it_makes():
             and "bool bought = basis.SoldOne();" in relief
             and "int credited = TradeMath.MadeOnAUnit(price, bought, basis.SoldAt);" in relief
             and "profit += credited;" in relief
-            and "xpOnThisAnimal = TradeMath.AddedUp(xpOnThisAnimal, TradeMath.TradeXpForAUnit(credited, allowed));" in relief
-            and ordered(relief, "if (!pass.Sim && xpOnThisAnimal > 0 && el.EquipmentElement.ItemModifier == null)",
-                        "earned = TradeMath.AddedUp(earned, xpOnThisAnimal);")
+            and 'if (!pass.SellOne(el, price, "selling an animal to relieve the herd", "Herd relief", out price)) break;' in relief
+            and "AwardTradeXpForOurOwnTrade(" not in relief
+            and 'GameTradeBook.Sold(_unit.EquipmentElement, paid, Muted)' in
+                method_body(S['Trading.cs'], "private bool Swap(bool selling")
             and "pass.Moved(profit, gained, selling: true);" in relief
             and "if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);" in
                 method_body(S['Trading.cs'], "internal void Moved")
-            and "if (!pass.Sim && earned > 0) AwardTradeXpForOurOwnTrade(earned, pass.Muted);" in relief
             and relief.count("LedgerBehavior.Instance?.RecordSale(paidKey, 1, basis.SoldAt);") == 1)
 
 def the_rankings_are_dropped_when_the_party_moves_not_only_when_the_hour_turns():
@@ -5905,7 +5923,7 @@ def a_meeting_on_the_road_answers_to_the_silence_setting():
             and "if (StillSettling(Muted(automated: true))) return;" in
                 method_body(t, "public static void ExecuteRoadTrade")
             and "if (!quiet)" in method_body(t, "private static bool StillSettling")
-            and "AwardTradeXpForOurOwnTrade(moved.Earned, pass.Muted);" in sell
+            and the_quiet_setting_follows_a_sale_to_its_trade_xp()
             and "AwardTradeXpForOurOwnTrade(profit, false)" not in t
             and named in re.search(r'\{=TL349\}([^"]*)"', M).group(1)
             and named in spoken(ENGLISH)['TL349'])
@@ -9012,7 +9030,7 @@ def the_deal_you_took_is_reported_and_credited_like_any_pass():
                         "foreach (var (element, said) in sold)")
             and "internal static bool Awaiting => _shown != null;" in S['Counter.cs']
             and "_shown == null ? 0 : (Hero.MainHero?.Gold ?? _goldAtOpen) - _goldAtOpen;" in S['Counter.cs']
-            and t.count("AwardTradeXpForOurOwnTrade(") == 3)
+            and t.count("AwardTradeXpForOurOwnTrade(") == 2)
 
 chk("1.76.2", "the deal you took is read in the gold the game hands over, squared against what your purse actually did, and put to your total only when the two agree",
     the_deal_you_took_is_reported_and_credited_like_any_pass())
@@ -10171,13 +10189,13 @@ def whoever_made_the_trade_credits_the_trade_skill_for_it():
     ledger = S['Ledger.cs']
     credit = method_body(t, "private static void CreditTradeSkill")
     heard = method_body(ledger, "private void OnPlayerTradeProfit")
-    return ("internal int Earned;" in passes
-            and "bool TheGameGivesTradeXpFor(int at);" in passes
-            and "public bool TheGameGivesTradeXpFor(int at) => _plan[at].EquipmentElement.ItemModifier == null;" in t
-            and passes.count("market.TheGameGivesTradeXpFor(at)") == 1
-            and ordered(passes, "if (xpOnThisGood > 0 && market.TheGameGivesTradeXpFor(at))",
-                        "moved.Earned = TradeMath.AddedUp(moved.Earned, xpOnThisGood);")
-            and t.count("AwardTradeXpForOurOwnTrade(") == 3
+    return ("internal int Earned;" not in passes
+            and "TheGameGivesTradeXpFor" not in passes + t
+            and 'Guard.Run("GameTradeBook", () => GameTradeBook.Sold(_unit.EquipmentElement, paid, Muted));' in
+                method_body(t, "private bool Swap(bool selling")
+            and "if (profit > 0) AwardTradeXpForOurOwnTrade(profit, muted);" in
+                method_body(t, "private static void SettleTheSales")
+            and t.count("AwardTradeXpForOurOwnTrade(") == 2
             and "AwardTradeXpForOurOwnTrade(" not in method_body(t, "private static void ReportWhatYouSold")
             and "internal int Earned;" not in t
             and "CampaignEventDispatcher.Instance.OnPlayerTradeProfit(profit)" in credit
@@ -12286,18 +12304,23 @@ def free_passage_holds_off_the_band_and_nobody_else_for_longer_than_the_game_doe
 
 
 def a_trade_tradelord_makes_is_written_into_the_games_own_trade_record():
-    swap = method_body(S['Trading.cs'], "private bool Swap(bool selling")
-    note = method_body(S['Trading.cs'], "internal static int Note(bool selling, EquipmentElement what, int gold)")
-    return (ordered(swap, "if (SwapOneUnit(", "if (selling || Met == null || !Met.IsVillager)",
-                    'Guard.Run("GameTradeBook", () => gave = GameTradeBook.Note(selling, _unit.EquipmentElement, paid));',
+    t = S['Trading.cs']
+    swap = method_body(t, "private bool Swap(bool selling")
+    book = method_body(t, "private static TradeSkillCampaignBehavior Book()")
+    bought = method_body(t, "internal static void Bought(EquipmentElement what, int gold)")
+    settle = method_body(t, "internal static int Settle(out bool muted)")
+    return (ordered(swap, "if (SwapOneUnit(", "if (selling)",
+                    'Guard.Run("GameTradeBook", () => GameTradeBook.Sold(_unit.EquipmentElement, paid, Muted));',
+                    "else if (Met == null || !Met.IsVillager)",
+                    'Guard.Run("GameTradeBook", () => GameTradeBook.Bought(_unit.EquipmentElement, paid));',
                     "return true;")
-            and ordered(note, "if (gold <= 0 || what.Item == null) return NotKnown;",
+            and ordered(book, "if (book == null || _read) return book;", "_read = true;",
                         '"ProcessPurchases", BindingFlags.Instance | BindingFlags.NonPublic);',
-                        '"ProcessSales", BindingFlags.Instance | BindingFlags.NonPublic);',
-                        "var one = new ItemRosterElement(what, 1);",
-                        "_bought?.Invoke(book, new object[] { one, gold });",
-                        "return _sold?.Invoke(book, new object[] { one, gold, true }) is int gave ? gave : NotKnown;")
-            and "GameTradeBook.Forget();" in method_body(S['Trading.cs'], "internal static void ForgetVisit")
+                        '"ProcessSales", BindingFlags.Instance | BindingFlags.NonPublic);')
+            and ordered(bought, "if (gold <= 0 || what.Item == null) return;", "TradeSkillCampaignBehavior book = Book();",
+                        "_bought?.Invoke(book, new object[] { new ItemRosterElement(what, 1), gold });")
+            and "_sold.Invoke(book, new object[] { new ItemRosterElement(line.What, line.Units), line.Gold, true })" in settle
+            and "GameTradeBook.Forget();" in method_body(t, "internal static void ForgetVisit")
             and all(('"' + m + '"') in COMPAT for m in ("ProcessPurchases", "ProcessSales")))
 
 
@@ -15598,7 +15621,7 @@ def profit_reads_what_each_unit_really_cost():
             and "Profit is what each unit fetched over what it cost you" in M
             and said_in_every_language("TL327")
             and "The profit reported is what each unit you bought fetched over what that unit cost you" in README
-            and "A good you never bought, loot and animals included, adds nothing to the profit reported and earns no Trade XP" in README)
+            and "A good you never bought, loot and animals included, adds nothing to the profit reported" in README)
 
 chk("1.97.2", "the profit TradeLord reports is what each unit you bought fetched over what that unit really cost, and a good you never bought makes none, on its own sales, on herd relief and on a deal taken on the trade screen",
     profit_reads_what_each_unit_really_cost())
@@ -15629,58 +15652,64 @@ def what_each_unit_cost_is_read_from_its_batches():
 chk("1.97.2", "what each unit cost is read from the few batches it was bought in, never listed one entry per unit held, so a huge stack costs no more to price than a small one, and a copy of the walk never moves the one it came from",
     what_each_unit_cost_is_read_from_its_batches())
 
-def trade_xp_never_goes_past_what_the_game_gives():
+def trade_xp_is_what_the_game_gives_for_the_same_sale():
     t = S['Trading.cs']
-    note = method_body(t, "internal static int Note(bool selling, EquipmentElement what, int gold)")
-    swap = method_body(t, "private bool Swap(bool selling")
-    give = method_body(t, "public bool Give(int at, int price, out int proceeds, out int allowed)")
-    return (note and swap and give
-            and "return _sold?.Invoke(book, new object[] { one, gold, true }) is int gave ? gave : NotKnown;" in note
-            and ordered(swap, "TheGameGave = GameTradeBook.NotKnown;", "if (selling || Met == null || !Met.IsVillager)",
-                        "TheGameGave = gave;")
-            and ordered(give, "allowed = GameTradeBook.NotKnown;", "allowed = _pass.TheGameGave;")
-            and "bool Give(int at, int price, out int proceeds, out int allowed);" in S['Passes.cs']
-            and "Trade XP never goes past what the game gives" in spoken(ENGLISH)["TL327"]
-            and "Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them" in README)
-
-chk("1.97.2", "Trade XP from TradeLord's own sales never goes past what the game itself gives for the same sales, read from the game's own record as each unit sells, and goods bought from villagers are never written into that record",
-    trade_xp_never_goes_past_what_the_game_gives())
-
-def each_unit_earns_only_the_trade_xp_the_game_gives_for_it():
-    math = S['TradeMath.cs']
-    unit = between(math, "public static int TradeXpForAUnit(int made, int allowed) =>", ";")
-    sell = method_body(S['Passes.cs'], "internal static Traded SellThem")
-    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    passes = S['Passes.cs']
     ledger = S['Ledger.cs']
-    return (unit and sell and relief
-            and "made <= 0 || allowed <= 0 ? 0 : made < allowed ? made : allowed" in unit
-            and ordered(sell, "int xpOnThisGood = 0;",
-                        "if (!market.Give(at, price, out int proceeds, out int allowed)) break;",
-                        "int earned = TradeMath.MadeOnAUnit(proceeds, paidFor, basis.SoldAt);",
-                        "xpOnThisGood = TradeMath.AddedUp(xpOnThisGood, TradeMath.TradeXpForAUnit(earned, allowed));",
-                        "if (xpOnThisGood > 0 && market.TheGameGivesTradeXpFor(at))",
-                        "moved.Earned = TradeMath.AddedUp(moved.Earned, xpOnThisGood);")
-            and ordered(relief, "int xpOnThisAnimal = 0;", "allowed = pass.TheGameGave;",
-                        "int credited = TradeMath.MadeOnAUnit(price, bought, basis.SoldAt);",
-                        "xpOnThisAnimal = TradeMath.AddedUp(xpOnThisAnimal, TradeMath.TradeXpForAUnit(credited, allowed));",
-                        "if (!pass.Sim && xpOnThisAnimal > 0 && el.EquipmentElement.ItemModifier == null)")
-            and not any(word in text for word in ("TradeXpWaiting", "XpWaiting", "TradeMath.TradeXpNow",
+    book = between(t, "internal static class GameTradeBook", "public class TradeActionBehavior")
+    sold = method_body(passes, "internal void Sold(T what, int gold, bool muted)")
+    closed = method_body(passes, "internal Line[] Closed(out bool muted)")
+    settle = method_body(t, "internal static int Settle(out bool muted)")
+    settles = method_body(t, "private static void SettleTheSales")
+    flush = method_body(t, "internal static void FlushToasts")
+    saving = method_body(t, "private void OnBeforeSave")
+    return (book and sold and closed and settle and settles and flush and saving
+            and "(one, other) => one.Item == other.Item && one.ItemModifier == other.ItemModifier" in book
+            and "_sales.Forget();" in method_body(book, "internal static void Forget()")
+            and "if (what.Item != null) _sales.Sold(what, gold, muted);" in
+                method_body(book, "internal static void Sold(EquipmentElement what, int gold, bool muted)")
+            and ordered(sold, "if (gold <= 0) return;", "if (!muted) _heard = true;",
+                        "if (!_same(line.What, what)) continue;", "line.Units++;",
+                        "line.Gold = TradeMath.AddedUp(line.Gold, gold);",
+                        "_lines.Add(new Line { What = what, Units = 1, Gold = gold });")
+            and ordered(closed, "muted = !_heard;", "Line[] lines = _lines.ToArray();", "Forget();", "return lines;")
+            and ordered(settle, "if (_sales.Count == 0) return 0;", "_sales.Closed(out muted);",
+                        "TradeSkillCampaignBehavior book = Book();", "if (book == null || _sold == null) return 0;",
+                        "foreach (SalesOnOneScreen<EquipmentElement>.Line line in lines)",
+                        "_sold.Invoke(book, new object[] { new ItemRosterElement(line.What, line.Units), line.Gold, true })",
+                        "profit = TradeMath.AddedUp(profit, gave);", "return profit;")
+            and settle.count("_sold.Invoke(") == 1
+            and ordered(settles, "int profit = GameTradeBook.Settle(out bool muted);",
+                        "if (profit > 0) AwardTradeXpForOurOwnTrade(profit, muted);")
+            and ordered(flush, 'Guard.Run("GameTradeBook.Settle", SettleTheSales);', "int xp = _pendingXp;",
+                        "if (xp > 0) CreditTradeSkill(xp, profit, muted);")
+            and 'Guard.Run("Save.FlushToasts", FlushToasts);' in saving
+            and "CampaignEvents.OnBeforeSaveEvent.AddNonSerializedListener(this, OnBeforeSave);" in t
+            and t.count("AwardTradeXpForOurOwnTrade(") == 2
+            and not any(word in text for word in ("TradeXpForAUnit", "TheGameGave", "out int allowed",
+                                                  "TradeXpWaiting", "XpWaiting", "TradeMath.TradeXpNow",
                                                   "market.TradeXpNow", "Instance?.TradeXpNow")
                         for text in list(S.values()) + [MATHTESTS, SELLPASSTESTS, TESTS])
+            and "internal int Earned;" not in passes
             and "TradeLord_TradeXp" not in ledger.replace("TradeLord_LifetimeTradeXp", "")
-            and all(one in MATHTESTS for one in
-                    ("A_unit_earns_trade_xp_for_what_it_made_but_never_more_than_the_game_gives_for_it",
-                     "A_unit_the_game_gives_nothing_for_or_that_made_nothing_earns_no_trade_xp"))
             and all(one in SELLPASSTESTS for one in
-                    ("Each_unit_earns_only_the_trade_xp_the_game_gives_for_that_unit",
-                     "Trade_xp_the_game_does_not_give_for_a_sale_is_never_given_by_a_later_one",
-                     "Trade_xp_never_goes_past_what_the_game_gives_for_the_same_sales",
-                     "A_unit_the_game_never_counted_as_bought_shows_its_profit_but_earns_no_trade_xp"))
-            and "Trade XP for each unit you sell is what that unit really made, never more than the game itself gives for that unit" in README
+                    ("One_good_sold_a_unit_at_a_time_is_one_sale_as_the_trade_screen_counts_it",
+                     "Closing_the_screen_empties_it_so_the_next_visit_starts_a_new_one",
+                     "A_sale_that_paid_nothing_is_left_off_the_screen",
+                     "The_screen_is_quiet_only_when_every_sale_on_it_was_quiet",
+                     "The_gold_on_one_line_stops_at_the_largest_number_rather_than_turning_negative",
+                     "Forgetting_the_screen_drops_what_was_on_it"))
+            and "Trade XP is what the game gives for that sale" in spoken(ENGLISH)["TL327"]
+            and "Trade XP is what the game gives for that sale" in M
+            and said_in_every_language("TL327")
+            and "Trade XP for what TradeLord sells is exactly what the game itself gives for the same sale made on its trade screen" in README
+            and "Credits your Trade skill with what the game gives for the same sale made on its trade screen, at a rate you set" in README
+            and "earns only the Trade XP the game itself would give for it, which is usually none" in README
+            and "Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them" in README
             and "All it puts in a save is five strings, eight numbers, a switch and a settlement reference" in README)
 
-chk("1.97.3", "each unit's Trade XP is the smaller of what that unit really made and what the game gives for that unit, nothing one unit is owed goes to another, and nothing the game does not give is kept back for a later sale",
-    each_unit_earns_only_the_trade_xp_the_game_gives_for_it())
+chk("1.97.5", "Trade XP for what TradeLord sells is what the game gives for the same sale on its trade screen: a visit's sales are put together good by good as that screen does and handed to the game's own reckoning once, before any save",
+    trade_xp_is_what_the_game_gives_for_the_same_sale())
 
 def a_deal_that_lost_money_is_reported_as_the_loss_it_was():
     rules = method_body(S['Rules.cs'], "public static int NoMoreThanTheSale")

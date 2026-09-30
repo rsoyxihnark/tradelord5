@@ -691,23 +691,6 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_unit_earns_trade_xp_for_what_it_made_but_never_more_than_the_game_gives_for_it()
-        {
-            Assert.Equal(94, TradeMath.TradeXpForAUnit(206, 94));
-            Assert.Equal(94, TradeMath.TradeXpForAUnit(94, 206));
-            Assert.Equal(300, TradeMath.TradeXpForAUnit(300, 300));
-        }
-
-        [Fact]
-        public void A_unit_the_game_gives_nothing_for_or_that_made_nothing_earns_no_trade_xp()
-        {
-            Assert.Equal(0, TradeMath.TradeXpForAUnit(0, 446));
-            Assert.Equal(0, TradeMath.TradeXpForAUnit(-236, 210));
-            Assert.Equal(0, TradeMath.TradeXpForAUnit(280, 0));
-            Assert.Equal(0, TradeMath.TradeXpForAUnit(100, -1));
-        }
-
-        [Fact]
         public void A_hand_sale_makes_what_each_unit_fetched_over_what_that_unit_cost()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };

@@ -8,7 +8,8 @@ REPO = 'rsoyxihnark/tradelord5'
 OUTSTANDING = {
     '1.97.0': 'entries for what 1.97.4 took back out are gone from the changelog, and the release note is synced once this lands',
     '1.97.1': 'entries for what 1.97.4 took back out are gone from the changelog, and the release note is synced once this lands',
-    '1.97.2': 'entries for what 1.97.4 took back out are gone from the changelog, and the release note is synced once this lands',
+    '1.97.2': 'entries for what 1.97.4 and 1.97.5 took back out are gone from the changelog, and the release note is synced once this lands',
+    '1.97.3': 'everything it shipped was taken back out by 1.97.5, so its section is gone, and its release and tag are thrown away once this lands',
 }
 
 
@@ -176,7 +177,10 @@ def main(argv):
         if row['files'] == 0 and bare(row['tag']):
             faults.append(version + ' was published with no file attached')
         if version not in said:
-            faults.append(version + ' was published and the changelog carries no section for it')
+            if version in OUTSTANDING:
+                outstanding.append(version + ': ' + OUTSTANDING[version])
+            else:
+                faults.append(version + ' was published and the changelog carries no section for it')
             continue
         out = bulleted(row['body'])
         if not out:

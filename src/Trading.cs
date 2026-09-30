@@ -82,41 +82,61 @@ namespace TradeLord
         private static bool _read;
         private static MethodInfo _bought;
         private static MethodInfo _sold;
-
-        internal const int NotKnown = -1;
+        private static readonly SalesOnOneScreen<EquipmentElement> _sales = new SalesOnOneScreen<EquipmentElement>(
+            (one, other) => one.Item == other.Item && one.ItemModifier == other.ItemModifier);
 
         internal static void Forget()
         {
             _read = false;
             _bought = null;
             _sold = null;
+            _sales.Forget();
         }
 
-        internal static int Note(bool selling, EquipmentElement what, int gold)
+        private static TradeSkillCampaignBehavior Book()
         {
-            if (gold <= 0 || what.Item == null) return NotKnown;
             TradeSkillCampaignBehavior book = Campaign.Current?.GetCampaignBehavior<TradeSkillCampaignBehavior>();
-            if (book == null) return NotKnown;
-            if (!_read)
-            {
-                _read = true;
-                _bought = typeof(TradeSkillCampaignBehavior).GetMethod(
-                    "ProcessPurchases", BindingFlags.Instance | BindingFlags.NonPublic);
-                _sold = typeof(TradeSkillCampaignBehavior).GetMethod(
-                    "ProcessSales", BindingFlags.Instance | BindingFlags.NonPublic);
-                if (_bought == null || _sold == null)
-                    Log.Write("the game's own record of what you paid for your goods could not be reached on " +
-                              "this game version, so what TradeLord trades for you is left out of it, the " +
-                              "Trade XP the game gives for goods you sell by hand may be off, and TradeLord " +
-                              "gives no Trade XP for its own sales");
-            }
-            var one = new ItemRosterElement(what, 1);
-            if (!selling)
-            {
-                _bought?.Invoke(book, new object[] { one, gold });
-                return NotKnown;
-            }
-            return _sold?.Invoke(book, new object[] { one, gold, true }) is int gave ? gave : NotKnown;
+            if (book == null || _read) return book;
+            _read = true;
+            _bought = typeof(TradeSkillCampaignBehavior).GetMethod(
+                "ProcessPurchases", BindingFlags.Instance | BindingFlags.NonPublic);
+            _sold = typeof(TradeSkillCampaignBehavior).GetMethod(
+                "ProcessSales", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (_bought == null || _sold == null)
+                Log.Write("the game's own record of what you paid for your goods could not be reached on " +
+                          "this game version, so what TradeLord trades for you is left out of it, the " +
+                          "Trade XP the game gives for goods you sell by hand may be off, and TradeLord " +
+                          "gives no Trade XP for its own sales");
+            return book;
+        }
+
+        internal static void Bought(EquipmentElement what, int gold)
+        {
+            if (gold <= 0 || what.Item == null) return;
+            TradeSkillCampaignBehavior book = Book();
+            if (book == null) return;
+            _bought?.Invoke(book, new object[] { new ItemRosterElement(what, 1), gold });
+        }
+
+        internal static void Sold(EquipmentElement what, int gold, bool muted)
+        {
+            if (what.Item != null) _sales.Sold(what, gold, muted);
+        }
+
+        internal static int Settle(out bool muted)
+        {
+            muted = true;
+            if (_sales.Count == 0) return 0;
+            SalesOnOneScreen<EquipmentElement>.Line[] lines = _sales.Closed(out muted);
+            TradeSkillCampaignBehavior book = Book();
+            if (book == null || _sold == null) return 0;
+            int profit = 0;
+            foreach (SalesOnOneScreen<EquipmentElement>.Line line in lines)
+                if (_sold.Invoke(book, new object[] { new ItemRosterElement(line.What, line.Units), line.Gold, true }) is int gave)
+                    profit = TradeMath.AddedUp(profit, gave);
+            Log.Write("the game's own trade record gives " + profit + " denars of profit for the " + lines.Length +
+                      " good(s) TradeLord just sold, what it gives for the same sales made on its trade screen");
+            return profit;
         }
     }
 
@@ -281,9 +301,15 @@ namespace TradeLord
             CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
             CampaignEvents.TickEvent.AddNonSerializedListener(this, OnTick);
             CampaignEvents.ConversationEnded.AddNonSerializedListener(this, OnConversationEnded);
+            CampaignEvents.OnBeforeSaveEvent.AddNonSerializedListener(this, OnBeforeSave);
         }
 
         private void OnConversationEnded(IEnumerable<CharacterObject> spoke) => Meetings.ConversationEnded();
+
+        private void OnBeforeSave()
+        {
+            Guard.Run("Save.FlushToasts", FlushToasts);
+        }
 
         private void OnTick(float dt)
         {
@@ -692,18 +718,15 @@ namespace TradeLord
                 return Swap(false, _buyUnit, what, named, out gold);
             }
 
-            internal int TheGameGave { get; private set; } = GameTradeBook.NotKnown;
-
             private bool Swap(bool selling, Action swap, string what, string named, out int gold)
             {
-                TheGameGave = GameTradeBook.NotKnown;
                 if (SwapOneUnit(selling, swap, Site == null ? null : Shop, what, named, out gold))
                 {
                     int paid = gold;
-                    int gave = GameTradeBook.NotKnown;
-                    if (selling || Met == null || !Met.IsVillager)
-                        Guard.Run("GameTradeBook", () => gave = GameTradeBook.Note(selling, _unit.EquipmentElement, paid));
-                    TheGameGave = gave;
+                    if (selling)
+                        Guard.Run("GameTradeBook", () => GameTradeBook.Sold(_unit.EquipmentElement, paid, Muted));
+                    else if (Met == null || !Met.IsVillager)
+                        Guard.Run("GameTradeBook", () => GameTradeBook.Bought(_unit.EquipmentElement, paid));
                     return true;
                 }
                 DirectionError = true;
@@ -1194,6 +1217,7 @@ namespace TradeLord
 
         internal static void FlushToasts()
         {
+            Guard.Run("GameTradeBook.Settle", SettleTheSales);
             int xp = _pendingXp;
             int profit = _pendingProfit;
             bool muted = _pendingXpMuted;
@@ -1515,7 +1539,6 @@ namespace TradeLord
                     soldItems, goldGained);
                 msg.SetTextVariable("PROFIT", profit);
                 if (!pass.Muted) Notices.Say(msg, profit > 0 ? Notices.Gain : Notices.Flat);
-                if (!pass.Sim && moved.Earned > 0) AwardTradeXpForOurOwnTrade(moved.Earned, pass.Muted);
             }
             else if (!pass.DirectionError)
             {
@@ -1585,8 +1608,6 @@ namespace TradeLord
             }
 
             public Good GoodAt(int at) => TradePolicy.Describe(Item(at));
-
-            public bool TheGameGivesTradeXpFor(int at) => _plan[at].EquipmentElement.ItemModifier == null;
 
             public bool OfAQuality(int at) => _plan[at].EquipmentElement.ItemModifier != null;
 
@@ -1687,13 +1708,11 @@ namespace TradeLord
                 _pass.Tally(Item(at), 1, price);
             }
 
-            public bool Give(int at, int price, out int proceeds, out int allowed)
+            public bool Give(int at, int price, out int proceeds)
             {
                 ItemObject item = Item(at);
                 _pass.Quote(item, 1, price);
-                allowed = GameTradeBook.NotKnown;
                 if (!_pass.SellOne(_plan[at], price, _what, _named, out proceeds)) return false;
-                allowed = _pass.TheGameGave;
                 if (proceeds == 0) return true;
                 _pass.Tally(item, 1, proceeds);
                 return true;
@@ -2079,7 +2098,7 @@ namespace TradeLord
             if (stable.Count == 0) { Drove.SayWhatItWillNotGiveUp(mine, shed, settlement); return; }
             stable.Sort((x, y) => x.rank != y.rank ? x.rank.CompareTo(y.rank) : x.price.CompareTo(y.price));
 
-            int sold = 0, profit = 0, earned = 0, simGold = 0, simTill = pass.Till;
+            int sold = 0, profit = 0, simGold = 0, simTill = pass.Till;
 
             pass.CountFrom();
             InAPass(() =>
@@ -2101,7 +2120,6 @@ namespace TradeLord
                                             LedgerBehavior.Instance?.PurchasedUnits(el.EquipmentElement) ?? 0,
                                             paidKey, pass.Books, pass.Sim, Options.Current,
                                             LedgerBehavior.Instance?.UnitCosts(el.EquipmentElement, el.Amount));
-                    int xpOnThisAnimal = 0;
 
                     while (remaining > 0 && shed > 0)
                     {
@@ -2113,7 +2131,6 @@ namespace TradeLord
                         if (price <= 0) break;
                         if (TradeRules.WhatTheTillCanPay(pass.Sim ? simTill : pass.TillNow,
                                                          settlement.IsVillage) < price) break;
-                        int allowed = GameTradeBook.NotKnown;
                         if (pass.Sim)
                         {
                             simTill -= price;
@@ -2127,7 +2144,6 @@ namespace TradeLord
                         {
                             if (!pass.SellOne(el, price, "selling an animal to relieve the herd", "Herd relief", out price)) break;
                             if (price == 0) break;
-                            allowed = pass.TheGameGave;
                             pass.Books.NoteSold(item.StringId);
                         }
                         bool bought = basis.SoldOne();
@@ -2138,7 +2154,6 @@ namespace TradeLord
                         }
                         int credited = TradeMath.MadeOnAUnit(price, bought, basis.SoldAt);
                         profit += credited;
-                        xpOnThisAnimal = TradeMath.AddedUp(xpOnThisAnimal, TradeMath.TradeXpForAUnit(credited, allowed));
                         sold++;
                         remaining--;
                         shed--;
@@ -2146,8 +2161,6 @@ namespace TradeLord
                         else if (rank != RankLivestock) mountsLeft--;
                         pass.Tally(item, 1, price);
                     }
-                    if (!pass.Sim && xpOnThisAnimal > 0 && el.EquipmentElement.ItemModifier == null)
-                        earned = TradeMath.AddedUp(earned, xpOnThisAnimal);
                 }
             });
 
@@ -2163,7 +2176,6 @@ namespace TradeLord
                 "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.",
                 sold, gained);
             if (!pass.Muted) Notices.Say(msg, Notices.Gain);
-            if (!pass.Sim && earned > 0) AwardTradeXpForOurOwnTrade(earned, pass.Muted);
         }
 
         private static bool PurseBelowTheHaulAnimalFloor(Pass pass)
@@ -2676,6 +2688,12 @@ namespace TradeLord
             InformationManager.ShowInquiry(new InquiryData(
                 Tongue.Text("{=TL07}TradeLord ledger").ToString(), body,
                 true, false, Tongue.Text("{=TL09}Close").ToString(), "", null, null));
+        }
+
+        private static void SettleTheSales()
+        {
+            int profit = GameTradeBook.Settle(out bool muted);
+            if (profit > 0) AwardTradeXpForOurOwnTrade(profit, muted);
         }
 
         private static void AwardTradeXpForOurOwnTrade(int profit, bool muted)

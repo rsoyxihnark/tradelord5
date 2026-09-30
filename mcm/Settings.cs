@@ -561,7 +561,7 @@ namespace TradeLord.Mcm
         public bool RespectLocks { get => _o.RespectLocks; set { _o.RespectLocks = value; Options.Bump(); } }
 
         [SettingPropertyDropdown("{=TL227}What a good counts as having cost you", Order = 9, RequireRestart = false,
-            HintText = "{=TL327}What a sale has to beat by your margin, while a trade good or livestock you never bought has to beat the cheapest market you know. Profit is what each unit fetched over what it cost you, and Trade XP never goes past what the game gives.")]
+            HintText = "{=TL327}What a sale has to beat by your margin, while a trade good or livestock you never bought has to beat the cheapest market you know. Profit is what each unit fetched over what it cost you, and Trade XP is what the game gives for that sale.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public Dropdown<string> CostBasisMode
         {

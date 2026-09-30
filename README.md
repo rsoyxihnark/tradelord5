@@ -113,7 +113,7 @@
 - ✅ Hold cargo for the best market holds nothing in the marked market itself, or while Auto-mark best sell market on map is off
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ What you never bought, loot included, is sold only once it has sold what you bought and done its buying, with the gold the merchant has left, so the goods you trade get that gold first
-- ✅ Credits the profit to your Trade skill, at a rate you set, and says so on screen when the skill goes up a level
+- ✅ Credits your Trade skill with what the game gives for the same sale made on its trade screen, at a rate you set, and says so on screen when the skill goes up a level
 - ✅ Says on screen when the profit could add no Trade XP because your Trade skill is past the game's learning limit, and how many focus points in Trade or points of Social would let it learn again
 - ✅ Credits every companion riding with you a share of that same profit, which the game turns into Trade XP the same way it does yours, at a share you set, so a trading clan learns from the run as well as its lord
 - ✅ Share of the profit your companions learn from is off out of the box, so the XP is yours alone until you ask for it
@@ -187,8 +187,8 @@
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know
 - ✅ What a good counts as having cost you is what the price has to beat by your margin before a good you bought sells
 - ✅ The profit reported is what each unit you bought fetched over what that unit cost you, whichever cost you pick
-- ✅ Trade XP for each unit you sell is what that unit really made, never more than the game itself gives for that unit
-- ✅ A good you never bought, loot and animals included, adds nothing to the profit reported and earns no Trade XP when it sells
+- ✅ Trade XP for what TradeLord sells is exactly what the game itself gives for the same sale made on its trade screen
+- ✅ A good you never bought, loot and animals included, adds nothing to the profit reported and earns only the Trade XP the game itself would give for it, which is usually none
 - ✅ Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them, which is usually none
 - ✅ When some of a good is eaten, lost or given away, it comes off every price you paid in proportion, so a unit bought dear keeps its cost
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them

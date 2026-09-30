@@ -16,9 +16,6 @@ namespace TradeLord
             return made > int.MaxValue ? int.MaxValue : made < int.MinValue ? int.MinValue : (int)made;
         }
 
-        public static int TradeXpForAUnit(int made, int allowed) =>
-            made <= 0 || allowed <= 0 ? 0 : made < allowed ? made : allowed;
-
         public static int MadeOnAHandSale(PurchaseRecord rec, int units, long gold, int covers, List<int> laidOut)
         {
             if (rec == null || rec.Count <= 0 || units <= 0 || gold <= 0L) return 0;

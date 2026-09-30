@@ -33,8 +33,6 @@ namespace TradeLord.Tests
             internal bool Modified;
             internal int Reserved;
             internal int Falls;
-            internal bool Counted = true;
-            internal int GameAverage = -1;
         }
 
         private sealed class FakeMarket : ISellingMarket
@@ -57,7 +55,6 @@ namespace TradeLord.Tests
             internal int AskedFor;
             internal int AskedWorth;
             internal int MarkPurse = 1000000;
-            internal int CountedUnits = -1;
             internal readonly List<(string good, int units, int there, int here)> Held =
                 new List<(string good, int units, int there, int here)>();
 
@@ -175,8 +172,6 @@ namespace TradeLord.Tests
 
             public int PriceToSell(int at) => Cargo[at].Price;
 
-            public bool TheGameGivesTradeXpFor(int at) => !Cargo[at].Modified;
-
             public bool OfAQuality(int at) => Cargo[at].Modified;
 
             int ISellingMarket.Till() => Till - Ledger.TillDrawn(Sim);
@@ -191,13 +186,9 @@ namespace TradeLord.Tests
 
             internal readonly List<int> SoldFor = new List<int>();
 
-            public bool Give(int at, int price, out int proceeds, out int allowed)
+            public bool Give(int at, int price, out int proceeds)
             {
                 proceeds = 0;
-                Load load = Cargo[at];
-                allowed = load.Counted && (CountedUnits < 0 || Given.Count < CountedUnits) && load.Purchased > 0
-                    ? Math.Max(0, price - (load.GameAverage >= 0 ? load.GameAverage : load.Basis))
-                    : 0;
                 if (RefuseAfter >= 0 && Given.Count >= RefuseAfter) { Halted = true; return false; }
                 if (PayNothingAfter >= 0 && Given.Count >= PayNothingAfter) return true;
                 proceeds = price;
@@ -229,7 +220,6 @@ namespace TradeLord.Tests
         {
             internal int Units;
             internal int Profit;
-            internal int Earned;
             internal int SimGold;
             internal BlockTally Tally;
             internal Books Books;
@@ -257,7 +247,6 @@ namespace TradeLord.Tests
             Traded moved = TradePass.SellThem(market, run.Books, sim, market.Rules, run.Tally, loot);
             run.Units += moved.Units;
             run.Profit += moved.Profit;
-            run.Earned += moved.Earned;
             run.SimGold += moved.SimGold;
             return run;
         }
@@ -345,7 +334,6 @@ namespace TradeLord.Tests
             Run run = Sell(market);
             Assert.Equal(3, run.Units);
             Assert.Equal(0, run.Profit);
-            Assert.Equal(0, run.Earned);
             Assert.True(run.Tally.Saw(Block.BelowMargin));
         }
 
@@ -619,7 +607,6 @@ namespace TradeLord.Tests
             Run looted = OnePass(market, loot: true, books: books);
             Assert.Equal(2, looted.Units);
             Assert.Equal(0, looted.Profit);
-            Assert.Equal(0, looted.Earned);
             Assert.Equal(0, load.Amount);
         }
 
@@ -833,7 +820,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_good_with_a_modifier_is_sold_but_earns_no_trade_xp()
+        public void A_good_with_a_modifier_is_sold_and_shows_its_profit()
         {
             var market = new FakeMarket();
             Load iron = market.Add(Cargo("iron"), price: 200);
@@ -846,28 +833,10 @@ namespace TradeLord.Tests
             Run run = Sell(market);
             Assert.Equal(2, run.Units);
             Assert.Equal(200, run.Profit);
-            Assert.Equal(100, run.Earned);
         }
 
         [Fact]
-        public void A_unit_the_game_never_counted_as_bought_shows_its_profit_but_earns_no_trade_xp()
-        {
-            var market = new FakeMarket();
-            Load grain = market.Add(Cargo("grain"), amount: 2, price: 200);
-            grain.Basis = 100;
-            grain.Purchased = 2;
-            grain.Counted = false;
-            Load iron = market.Add(Cargo("iron"), amount: 1, price: 200);
-            iron.Basis = 100;
-            iron.Purchased = 1;
-            Run run = Sell(market);
-            Assert.Equal(3, run.Units);
-            Assert.Equal(300, run.Profit);
-            Assert.Equal(100, run.Earned);
-        }
-
-        [Fact]
-        public void Trade_xp_never_goes_past_what_the_game_gives_for_the_same_sales()
+        public void Units_bought_at_different_prices_each_count_at_what_they_cost()
         {
             var market = new FakeMarket();
             Load grain = market.Add(Cargo("grain"), amount: 3, price: 200);
@@ -876,15 +845,13 @@ namespace TradeLord.Tests
             grain.Cheap = 100;
             grain.Dearer = new[] { 190 };
             market.Rules.CostBasisMode = 1;
-            market.CountedUnits = 1;
             Run run = Sell(market);
             Assert.Equal(3, run.Units);
             Assert.Equal(100 + 100 + 10, run.Profit);
-            Assert.Equal(200 - 150, run.Earned);
         }
 
         [Fact]
-        public void Trade_xp_the_game_does_not_give_for_a_sale_is_never_given_by_a_later_one()
+        public void A_dear_unit_sold_at_what_it_cost_shows_no_profit_and_the_rest_count_at_their_own_cost()
         {
             var market = new FakeMarket();
             Load felt = market.Add(Cargo("felt"), amount: 5, price: 836);
@@ -898,7 +865,6 @@ namespace TradeLord.Tests
 
             Assert.Equal(1, first.Units);
             Assert.Equal(0, first.Profit);
-            Assert.Equal(0, first.Earned);
 
             felt.Price = 484;
             felt.Falls = 0;
@@ -907,25 +873,6 @@ namespace TradeLord.Tests
 
             Assert.Equal(4, second.Units);
             Assert.Equal(4 * (484 - 278), second.Profit);
-            Assert.Equal(4 * (484 - 390), second.Earned);
-        }
-
-        [Fact]
-        public void Each_unit_earns_only_the_trade_xp_the_game_gives_for_that_unit()
-        {
-            var market = new FakeMarket();
-            Load felt = market.Add(Cargo("felt"), amount: 5, price: 836);
-            felt.Falls = 88;
-            felt.Basis = 390;
-            felt.Purchased = 5;
-            felt.Cheap = 278;
-            felt.Dearer = new[] { 836 };
-
-            Run run = Sell(market);
-
-            Assert.Equal(5, run.Units);
-            Assert.Equal(new[] { 836, 748, 660, 572, 484 }, market.SoldFor.ToArray());
-            Assert.Equal((748 - 390) + (660 - 390) + (572 - 390) + (484 - 390), run.Earned);
         }
 
         [Fact]
@@ -1031,7 +978,6 @@ namespace TradeLord.Tests
 
             Assert.Equal(5, run.Units);
             Assert.Equal(5 * 1135 - 836 - 4 * 278, run.Profit);
-            Assert.Equal((1135 - 836) + 4 * (1135 - 390), run.Earned);
         }
 
         [Fact]
@@ -1132,6 +1078,92 @@ namespace TradeLord.Tests
             felt.Price = 500;
             market.Till = 100000;
             Assert.Equal(2, OnePass(market, loot: false, sim: true, books: books).Units);
+        }
+
+        private static SalesOnOneScreen<string> Screen() =>
+            new SalesOnOneScreen<string>((one, other) => one == other);
+
+        [Fact]
+        public void One_good_sold_a_unit_at_a_time_is_one_sale_as_the_trade_screen_counts_it()
+        {
+            SalesOnOneScreen<string> screen = Screen();
+            screen.Sold("felt", 836, muted: false);
+            screen.Sold("felt", 748, muted: false);
+            screen.Sold("grain", 20, muted: false);
+            screen.Sold("felt", 660, muted: false);
+
+            SalesOnOneScreen<string>.Line[] lines = screen.Closed(out bool muted);
+
+            Assert.False(muted);
+            Assert.Equal(2, lines.Length);
+            Assert.Equal("felt", lines[0].What);
+            Assert.Equal(3, lines[0].Units);
+            Assert.Equal(836 + 748 + 660, lines[0].Gold);
+            Assert.Equal("grain", lines[1].What);
+            Assert.Equal(1, lines[1].Units);
+            Assert.Equal(20, lines[1].Gold);
+        }
+
+        [Fact]
+        public void Closing_the_screen_empties_it_so_the_next_visit_starts_a_new_one()
+        {
+            SalesOnOneScreen<string> screen = Screen();
+            screen.Sold("felt", 836, muted: false);
+            Assert.Single(screen.Closed(out _));
+
+            Assert.Equal(0, screen.Count);
+            Assert.Empty(screen.Closed(out bool muted));
+            Assert.True(muted);
+        }
+
+        [Fact]
+        public void A_sale_that_paid_nothing_is_left_off_the_screen()
+        {
+            SalesOnOneScreen<string> screen = Screen();
+            screen.Sold("felt", 0, muted: false);
+            screen.Sold("felt", -5, muted: false);
+
+            Assert.Empty(screen.Closed(out bool muted));
+            Assert.True(muted);
+        }
+
+        [Fact]
+        public void The_screen_is_quiet_only_when_every_sale_on_it_was_quiet()
+        {
+            SalesOnOneScreen<string> screen = Screen();
+            screen.Sold("felt", 836, muted: true);
+            screen.Sold("grain", 20, muted: true);
+            screen.Closed(out bool allQuiet);
+            Assert.True(allQuiet);
+
+            screen.Sold("felt", 836, muted: true);
+            screen.Sold("grain", 20, muted: false);
+            screen.Closed(out bool oneSpoke);
+            Assert.False(oneSpoke);
+        }
+
+        [Fact]
+        public void The_gold_on_one_line_stops_at_the_largest_number_rather_than_turning_negative()
+        {
+            SalesOnOneScreen<string> screen = Screen();
+            screen.Sold("jewelry", int.MaxValue, muted: false);
+            screen.Sold("jewelry", int.MaxValue, muted: false);
+
+            SalesOnOneScreen<string>.Line[] lines = screen.Closed(out _);
+
+            Assert.Equal(2, lines[0].Units);
+            Assert.Equal(int.MaxValue, lines[0].Gold);
+        }
+
+        [Fact]
+        public void Forgetting_the_screen_drops_what_was_on_it()
+        {
+            SalesOnOneScreen<string> screen = Screen();
+            screen.Sold("felt", 836, muted: false);
+            screen.Forget();
+
+            Assert.Empty(screen.Closed(out bool muted));
+            Assert.True(muted);
         }
     }
 }
