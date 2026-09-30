@@ -714,12 +714,12 @@ namespace TradeLord.Mcm
         public bool AdaptiveSpendLimit { get => _o.AdaptiveSpendLimit; set { _o.AdaptiveSpendLimit = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL238}Resale safety factor", 0.5f, 1f, "#0%", Order = 7, RequireRestart = false,
-            HintText = "{=TL338}Assume only this share of the best sell price elsewhere is still there when you arrive. With Learn the resale safety factor on, TradeLord starts here and moves it as your own walk-ins show.")]
+            HintText = "{=TL338}Assume only this share of the best sell price elsewhere is still there when you arrive. With Learn the resale safety factor on, TradeLord starts here and only ever lowers it, as your own walk-ins show.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL483}Learn the resale safety factor", Order = 8, RequireRestart = false,
-            HintText = "{=TL484}Moves Resale safety factor toward how much of the Sell price this panel promised has really been there when you walked in, counting that record more as it grows. OFF uses the factor exactly as set. ON by default.")]
+            HintText = "{=TL484}Lowers Resale safety factor toward how much of the Sell price this panel promised has really been there when you walked in, counting that record more as it grows, and never raises it above what you set. OFF uses it as set. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool LearnResaleSafety { get => _o.LearnResaleSafety; set { _o.LearnResaleSafety = value; Config.ScreenSaidWhetherToLearn = true; Options.Bump(); } }
 

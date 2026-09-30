@@ -562,7 +562,7 @@ namespace TradeLord
         private static string ResaleSafetyInUse()
         {
             float used = TradePolicy.ResaleSafety(out float setting, out bool learn, out int walkIns, out _);
-            if (!learn || walkIns <= 0) return "";
+            if (!learn || walkIns <= 0 || Math.Round(used * 100f) == Math.Round(setting * 100f)) return "";
             TextObject line = Tongue.Text("{=TL485} | a price elsewhere counts at {USED}: Resale safety factor starts it at {SET} and {COUNT} walk-in(s) have moved it");
             line.SetTextVariable("USED", ((int)Math.Round(used * 100f)).ToString() + "%");
             line.SetTextVariable("SET", ((int)Math.Round(setting * 100f)).ToString() + "%");

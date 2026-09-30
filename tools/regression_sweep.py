@@ -15196,7 +15196,7 @@ def the_workshops_for_sale_come_soonest_to_pay_for_themselves_first():
 chk("1.97.0", "Buy Workshops Remotely lists first the workshop that pays for itself soonest, shows what each pays its owner a day, and says before buying about how many days it takes to pay for itself",
     the_workshops_for_sale_come_soonest_to_pay_for_themselves_first())
 
-def a_unit_bought_dear_is_held_to_its_own_price_not_the_average():
+def a_unit_bought_dear_sells_at_the_average_and_is_booked_at_its_own_cost():
     math = S['TradeMath.cs']
     codec = S['LedgerCodec.cs']
     ledger = S['Ledger.cs']
@@ -15234,14 +15234,18 @@ def a_unit_bought_dear_is_held_to_its_own_price_not_the_average():
             and ordered(costs, "List<Batch> kept = CopyOfTheBatches(rec);",
                         "if (rec.Count > held) TakeInProportion(kept, rec.Count - held);")
             and ordered(walk, "while (split < many && costs[split].Unit <= covers) split++;",
-                        "while (_top >= _dearLow && price < _costs[_top].Unit) DropTheTop();",
-                        "_picked = _top >= _dearLow;",
-                        "return _picked || _low < _split || _unknown > 0 ? _worth : NoUnitThisPriceSells;",
-                        "bool dear = _picked && _top >= _dearLow;",
+                        "_picked = _top < _dearLow ? NotPicked",
+                        ": price >= _costs[_top].Unit ? TheDearest",
+                        ": price >= _costs[_dearLow].Unit ? TheLeastDear",
+                        "return _top >= _dearLow || _low < _split || _unknown > 0 ? _worth : NoUnitThisPriceSells;",
+                        "int picked = _top >= _dearLow ? _picked : NotPicked;",
                         "int dearest = _costs[_top].Unit;",
+                        "if (picked == NotPicked && _low < _split)",
                         "int cheapest = _costs[_low].Unit;",
+                        "if (picked == NotPicked && _unknown > 0)",
                         "_unknown--;",
                         "int lowest = _costs[_dearLow].Unit;")
+            and "price < _costs[_top].Unit" not in walk
             and "ProfitAcceptable" not in walk
             and "TradeMath.UnitCosts(rec, held)" in method_body(ledger, "public Batch[] UnitCosts(EquipmentElement el, int held) =>")
             and ordered(made, "int covers = s.CostBasisMode == 0 ? TradeMath.WhatTheAverageCovers(costBasis, s.MinProfitMargin) : int.MaxValue;",
@@ -15262,8 +15266,8 @@ def a_unit_bought_dear_is_held_to_its_own_price_not_the_average():
                     ("A_unit_the_average_would_sell_at_a_loss_keeps_its_own_price",
                      "Units_bought_up_one_rising_price_are_all_held_to_the_average_as_before",
                      "The_dear_unit_takes_the_best_price_rather_than_the_one_left_after_the_cheap_ones",
-                     "A_price_under_what_the_dear_unit_cost_sells_only_the_cheap_ones",
-                     "A_dear_unit_sells_at_exactly_what_it_cost_and_never_one_denar_under",
+                     "A_price_under_what_the_dear_unit_cost_sells_the_cheap_ones_first_and_the_dear_one_last",
+                     "A_dear_unit_sells_once_the_price_beats_the_average_by_your_margin",
                      "Of_several_dear_units_the_dearest_the_price_clears_goes_first",
                      "With_no_dear_unit_the_walk_is_the_average_it_always_was",
                      "A_sale_of_a_dear_unit_is_taken_from_its_own_batch",
@@ -15274,25 +15278,25 @@ def a_unit_bought_dear_is_held_to_its_own_price_not_the_average():
                      "A_record_kept_before_batches_were_written_down_counts_as_one_batch_at_its_average",
                      "Selling_nothing_leaves_the_record_exactly_as_it_was"))
             and all(one in SELLPASSTESTS for one in
-                    ("A_unit_bought_dear_is_not_sold_cheap_because_cheaper_ones_pulled_the_average_down",
+                    ("A_unit_bought_dear_sells_with_the_rest_of_its_good_once_the_average_is_beaten",
                      "A_unit_bought_dear_is_sold_once_a_market_pays_what_it_cost",
-                     "A_unit_bought_dear_sells_at_exactly_what_it_cost_and_never_one_denar_under",
+                     "A_unit_bought_dear_sells_once_the_price_beats_the_average_by_your_margin",
                      "A_unit_bought_dear_takes_the_best_price_before_the_cheap_ones_pull_it_down",
                      "Goods_with_no_unit_the_average_would_sell_at_a_loss_sell_as_they_always_did",
-                     "A_dry_run_that_already_drew_the_cheap_units_holds_the_dear_one_to_its_own_price",
+                     "A_dry_run_that_already_drew_the_cheap_units_still_sells_the_dear_one_at_the_average",
                      "The_price_you_set_for_the_market_basis_is_never_raised_by_what_you_paid"))
             and all(one in TESTS for one in
                     ("What_each_batch_of_a_good_cost_survives_a_save_and_a_load",
                      "Batches_written_by_1_97_0_with_a_third_field_still_read_back",
                      "A_purchase_saved_before_batches_were_kept_reads_back_with_none",
                      "Batches_that_do_not_add_up_to_the_record_are_dropped_and_the_record_is_kept"))
-            and "the average cost would sell it at a loss is never sold for less than it cost" in README)
+            and "never sold for less than it cost" not in README)
 
-chk("1.97.0", "a unit the average cost would sell at a loss is never sold for less than it cost and takes the best price a market offers first, the sell pass and the map marker alike",
-    a_unit_bought_dear_is_held_to_its_own_price_not_the_average())
+chk("1.97.4", "a unit bought dear sells like the rest of its good once the price beats the average by your margin, and each sale is booked at what the unit it took cost, the sell pass and the map marker alike",
+    a_unit_bought_dear_sells_at_the_average_and_is_booked_at_its_own_cost())
 
 
-def the_resale_safety_is_learned_from_how_the_promised_prices_held():
+def the_resale_safety_is_only_ever_lowered_by_how_the_promised_prices_held():
     math = S['TradeMath.cs']
     ledger = S['Ledger.cs']
     policy = S['Policy.cs']
@@ -15304,6 +15308,7 @@ def the_resale_safety_is_learned_from_how_the_promised_prices_held():
     return (learned and tally and said and shown
             and ordered(learned, "if (!learn || walkIns <= 0 || held == NoShareToGive",
                         "float learned = held < LeastResaleSafety ? LeastResaleSafety",
+                        ": held > start ? start : held;",
                         "float weight = (float)walkIns / ((float)walkIns + EnoughWalkIns);",
                         "return start + (learned - start) * weight;")
             and "public const int EnoughWalkIns = 25;" in math
@@ -15319,28 +15324,29 @@ def the_resale_safety_is_learned_from_how_the_promised_prices_held():
             and "SayTheResaleSafety();" in method_body(ledger, "private void OnDailyTick")
             and "if (!Options.Current.ExtendedDebugLogging) return;" in said
             and "if (!learn || walkIns <= 0 || percent == _resaleSafetySaid) return;" in said
-            and "if (!learn || walkIns <= 0) return \"\";" in shown
+            and "if (!learn || walkIns <= 0 || Math.Round(used * 100f) == Math.Round(setting * 100f)) return \"\";" in shown
             and "ResaleSafetyInUse()" in method_body(S['Panel.cs'], "private void Refresh")
             and option_default('LearnResaleSafety') == 'true'
             and EVER_SHIPPED.get('LearnResaleSafety') == 'bool'
             and ("public bool LearnResaleSafety { get => _o.LearnResaleSafety; set { _o.LearnResaleSafety = value; "
                  "Config.ScreenSaidWhetherToLearn = true; Options.Bump(); } }") in M
             and all(said_in_every_language(t) for t in ("TL338", "TL483", "TL484", "TL485"))
-            and "With Learn the resale safety factor on, TradeLord starts here and moves it as your own walk-ins show." in spoken(ENGLISH)["TL338"]
-            and "OFF uses the factor exactly as set. ON by default." in spoken(ENGLISH)["TL484"]
+            and "With Learn the resale safety factor on, TradeLord starts here and only ever lowers it, as your own walk-ins show." in spoken(ENGLISH)["TL338"]
+            and "and never raises it above what you set. OFF uses it as set. ON by default." in spoken(ENGLISH)["TL484"]
             and all(one in MATHTESTS for one in
                     ("With_no_walk_in_judged_yet_the_resale_safety_factor_you_set_is_the_one_used",
                      "With_learning_off_the_factor_you_set_is_used_however_the_prices_held",
-                     "Prices_that_held_at_their_promise_move_the_safety_toward_all_of_the_price",
-                     "The_owners_own_record_of_prices_holding_at_96_percent_moves_the_safety_up_but_not_all_the_way",
+                     "Prices_that_held_at_their_promise_never_raise_the_safety_above_what_you_set",
+                     "The_owners_own_record_of_prices_holding_at_96_percent_leaves_the_safety_as_set",
+                     "Prices_that_held_under_what_you_set_lower_the_safety_toward_them",
                      "Prices_that_fall_short_move_the_safety_down_but_never_under_half",
                      "A_few_walk_ins_that_fall_short_move_the_safety_only_a_little",
                      "A_resale_safety_setting_outside_its_range_is_held_inside_it"))
             and "Buying_weighs_a_price_elsewhere_at_the_resale_safety_the_market_hands_it" in BUYPASSTESTS
-            and "with Learn the resale safety factor on, it starts at Resale safety factor and moves toward how much of the promised Sell price really held when you walked in" in README)
+            and "with Learn the resale safety factor on, it starts at Resale safety factor and only ever lowers it, toward how much of the promised Sell price really held when you walked in" in README)
 
-chk("1.97.0", "how much of a price elsewhere buying counts on starts at Resale safety factor and, with Learn the resale safety factor on, moves toward how much of the promised Sell price held when you walked in, and What this means says the share in use",
-    the_resale_safety_is_learned_from_how_the_promised_prices_held())
+chk("1.97.4", "how much of a price elsewhere buying counts on starts at Resale safety factor and, with Learn the resale safety factor on, is only ever lowered toward how much of the promised Sell price held, and What this means says so once it moves",
+    the_resale_safety_is_only_ever_lowered_by_how_the_promised_prices_held())
 
 def a_party_at_war_with_you_is_never_traded_with_on_the_road():
     reach = method_body(S['Trading.cs'], "private static bool RoadPartyReachable")

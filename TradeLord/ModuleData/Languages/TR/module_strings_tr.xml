@@ -200,7 +200,7 @@
 		<string id="TL335" text="TradeLord'un bir ziyarette bir maldan aldığı en fazla birim. 0 = sayıda sınır yok. Varsayılan 32."/>
 		<string id="TL336" text="Ziyaret başına mal başına harcamayı dinar olarak da sınırlar."/>
 		<string id="TL337" text="TradeLord'un yerleşim ziyareti başına harcayabileceği toplam dinar. Varsayılan 1000. Aşağıdaki Uyarlanan harcama sınırı keseniz büyüdükçe bunu yükseltir."/>
-		<string id="TL338" text="En iyi satış fiyatının yalnızca bu oranının siz varana kadar duracağını varsayar. Yeniden satış güvenlik payını öğren açıkken TradeLord buradan başlar ve bunu pazar girişlerinizin gösterdiğine göre kaydırır."/>
+		<string id="TL338" text="En iyi satış fiyatının yalnızca bu oranının siz varana kadar duracağını varsayar. Yeniden satış güvenlik payını öğren açıkken TradeLord buradan başlar ve bunu pazar girişlerinizin gösterdiğine göre yalnızca düşürür."/>
 		<string id="TL339" text="Tahıl ağır ve kâr payı düşüktür, bu yüzden almak yükü az getiriyle doldurur. Satış ve yiyecek rezervi etkilenmez. Varsayılan AÇIK."/>
 		<string id="TL340" text="TradeLord'un asla almaması gereken mallar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Satışları etkilenmez."/>
 		<string id="TL341" text="TradeLord köy menülerinde ticaret yapar ve köyler fiyat taramalarına katılır."/>
@@ -321,7 +321,7 @@
 		<string id="TL481" text=" Sahibine şu an günde {GOLD} dinar kazandırdığına göre, kendini yaklaşık {DAYS} günde öder."/>
 		<string id="TL482" text=" Şu an sahibine günde hiçbir şey kazandırmıyor, bu yüzden kendini ne zaman ödeyeceği belli değil."/>
 		<string id="TL483" text="Yeniden satış güvenlik payını öğren"/>
-		<string id="TL484" text="Yeniden satış güvenlik payını, bu panelin söz verdiği Satış fiyatının pazara girdiğinizde gerçekte ne kadarının durduğuna doğru kaydırır ve bu kayıt büyüdükçe ona daha çok güvenir. KAPALI iken pay tam ayarladığınız gibi kullanılır. Varsayılan AÇIK."/>
+		<string id="TL484" text="Yeniden satış güvenlik payını, bu panelin söz verdiği Satış fiyatının pazara girdiğinizde ne kadarının durduğuna doğru düşürür, kayıt büyüdükçe ona daha çok güvenir, ayarınızın üstüne asla çıkarmaz. KAPALI: pay ayarlandığı gibi. Varsayılan AÇIK."/>
 		<string id="TL485" text=" | başka yerdeki fiyat {USED} sayılır: Yeniden satış güvenlik payı {SET} ile başlatır, {COUNT} pazar girişi bunu kaydırdı"/>
 	</strings>
 </base>
