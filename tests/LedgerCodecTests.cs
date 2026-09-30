@@ -425,8 +425,7 @@ namespace TradeLord.Tests
 
             Assert.Single(back);
             Assert.Equal(2000000000, back[0].Count);
-            int covers = TradeMath.WhatTheAverageCovers(TradeMath.UnitBasis(back[0], 0), 0.15f);
-            Assert.Equal(5, TradeMath.DearerThan(back[0], covers, 5).Length);
+            Assert.Equal(5, TradeMath.UnitsIn(TradeMath.UnitCosts(back[0], 5)));
         }
 
         [Fact]
@@ -440,7 +439,39 @@ namespace TradeLord.Tests
 
             Assert.Single(back);
             Assert.Empty(back[0].Batches);
-            Assert.Null(TradeMath.DearerThan(back[0], 100, back[0].Count));
+            Batch[] costs = TradeMath.UnitCosts(back[0], back[0].Count);
+            Assert.Equal(back[0].Count, TradeMath.UnitsIn(costs));
+            Assert.All(costs, one => Assert.Equal(111, one.Unit));
+        }
+
+        [Fact]
+        public void Trade_xp_that_waits_survives_a_save_and_a_load()
+        {
+            var waiting = new Dictionary<string, TradeXpWaiting>
+            {
+                ["felt"] = new TradeXpWaiting { Made = 448, Allowed = 0 },
+                ["grain"] = new TradeXpWaiting { Made = -236, Allowed = 210 },
+                ["salt"] = new TradeXpWaiting(),
+                ["bad|id"] = new TradeXpWaiting { Made = 5, Allowed = 5 },
+            };
+
+            var back = LedgerCodec.ReadTradeXpWaiting(LedgerCodec.WriteTradeXpWaiting(waiting));
+
+            Assert.Equal(2, back.Count);
+            Assert.Equal(448L, back["felt"].Made);
+            Assert.Equal(-236L, back["grain"].Made);
+            Assert.Equal(210L, back["grain"].Allowed);
+        }
+
+        [Fact]
+        public void Waiting_trade_xp_that_cannot_be_read_is_left_out_and_nothing_the_game_gives_is_below_zero()
+        {
+            var back = LedgerCodec.ReadTradeXpWaiting("felt|12|x;grain|3;oil|7|-9;;wine|4|6");
+
+            Assert.Equal(2, back.Count);
+            Assert.Equal(0L, back["oil"].Allowed);
+            Assert.Equal(6L, back["wine"].Allowed);
+            Assert.Empty(LedgerCodec.ReadTradeXpWaiting(null));
         }
 
         [Fact]

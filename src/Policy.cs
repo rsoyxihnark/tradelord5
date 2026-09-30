@@ -479,9 +479,6 @@ namespace TradeLord
                               .Allowed;
         }
 
-        internal static int Credit(int proceeds, int basis, int unpaidWorth) =>
-            TradeMath.Credit(proceeds, basis, unpaidWorth);
-
         internal static float Realizable(int farSellPrice) =>
             TradeMath.Realizable(farSellPrice, ResaleSafety());
 

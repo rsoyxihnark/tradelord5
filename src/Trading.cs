@@ -83,6 +83,8 @@ namespace TradeLord
         private static MethodInfo _bought;
         private static MethodInfo _sold;
 
+        internal const int NotKnown = -1;
+
         internal static void Forget()
         {
             _read = false;
@@ -90,11 +92,11 @@ namespace TradeLord
             _sold = null;
         }
 
-        internal static void Note(bool selling, EquipmentElement what, int gold)
+        internal static int Note(bool selling, EquipmentElement what, int gold)
         {
-            if (gold <= 0 || what.Item == null) return;
+            if (gold <= 0 || what.Item == null) return NotKnown;
             TradeSkillCampaignBehavior book = Campaign.Current?.GetCampaignBehavior<TradeSkillCampaignBehavior>();
-            if (book == null) return;
+            if (book == null) return NotKnown;
             if (!_read)
             {
                 _read = true;
@@ -104,12 +106,17 @@ namespace TradeLord
                     "ProcessSales", BindingFlags.Instance | BindingFlags.NonPublic);
                 if (_bought == null || _sold == null)
                     Log.Write("the game's own record of what you paid for your goods could not be reached on " +
-                              "this game version, so what TradeLord trades for you is left out of it and the " +
-                              "Trade XP the game gives for goods you sell by hand may be off");
+                              "this game version, so what TradeLord trades for you is left out of it, the " +
+                              "Trade XP the game gives for goods you sell by hand may be off, and TradeLord " +
+                              "gives no Trade XP for its own sales");
             }
             var one = new ItemRosterElement(what, 1);
-            if (selling) _sold?.Invoke(book, new object[] { one, gold, true });
-            else _bought?.Invoke(book, new object[] { one, gold });
+            if (!selling)
+            {
+                _bought?.Invoke(book, new object[] { one, gold });
+                return NotKnown;
+            }
+            return _sold?.Invoke(book, new object[] { one, gold, true }) is int gave ? gave : NotKnown;
         }
     }
 
@@ -685,12 +692,18 @@ namespace TradeLord
                 return Swap(false, _buyUnit, what, named, out gold);
             }
 
+            internal int TheGameGave { get; private set; } = GameTradeBook.NotKnown;
+
             private bool Swap(bool selling, Action swap, string what, string named, out int gold)
             {
+                TheGameGave = GameTradeBook.NotKnown;
                 if (SwapOneUnit(selling, swap, Site == null ? null : Shop, what, named, out gold))
                 {
                     int paid = gold;
-                    Guard.Run("GameTradeBook", () => GameTradeBook.Note(selling, _unit.EquipmentElement, paid));
+                    int gave = GameTradeBook.NotKnown;
+                    if (selling || Met == null || !Met.IsVillager)
+                        Guard.Run("GameTradeBook", () => gave = GameTradeBook.Note(selling, _unit.EquipmentElement, paid));
+                    TheGameGave = gave;
                     return true;
                 }
                 DirectionError = true;
@@ -1112,9 +1125,9 @@ namespace TradeLord
                 took.Units += count;
                 took.Gold += said;
                 if (selling)
-                    took.Profit += TradeMath.Credit(TradeMath.PerUnit(said, count),
-                                                    TradePolicy.CostBasis(el.EquipmentElement),
-                                                    TradePolicy.UnpaidWorth(item)) * count;
+                    took.Profit += LedgerBehavior.Instance?.MadeOnAHandSale(
+                        el.EquipmentElement, count, said,
+                        TheVisit.DearDrawn(true, LedgerBehavior.PaidKey(el.EquipmentElement))) ?? 0;
                 pass.Tally(item, count, said);
             }
             took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);
@@ -1151,7 +1164,7 @@ namespace TradeLord
             pass.Moved(addsUp ? (int?)got.Profit : null, got.Gold, selling: true);
             Log.Write("the deal you took sold " + got.Units + " item(s) for +" + got.Gold +
                       " gold, profit about " + got.Profit + " " + pass.Where +
-                      " (the gold is what the trade screen paid, and the profit is worked out on what each good fetched on average)");
+                      " (the gold is what the trade screen paid, and the profit is what the units you had bought fetched over what each of them cost you)");
             pass.Logged(selling: true, "the deal you took on the trade screen");
             TextObject msg = pass.Said(
                 "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
@@ -1589,8 +1602,8 @@ namespace TradeLord
 
             public int PurchasedUnits(int at) => LedgerBehavior.Instance?.PurchasedUnits(_plan[at].EquipmentElement) ?? 0;
 
-            public int[] DearerUnits(int at, float margin) =>
-                LedgerBehavior.Instance?.DearerUnits(_plan[at].EquipmentElement, _plan[at].Amount, margin);
+            public Batch[] UnitCosts(int at) =>
+                LedgerBehavior.Instance?.UnitCosts(_plan[at].EquipmentElement, _plan[at].Amount);
 
             public int UnpaidWorth(int at) => TradePolicy.UnpaidWorth(Item(at));
 
@@ -1674,15 +1687,20 @@ namespace TradeLord
                 _pass.Tally(Item(at), 1, price);
             }
 
-            public bool Give(int at, int price, out int proceeds)
+            public bool Give(int at, int price, out int proceeds, out int allowed)
             {
                 ItemObject item = Item(at);
                 _pass.Quote(item, 1, price);
+                allowed = GameTradeBook.NotKnown;
                 if (!_pass.SellOne(_plan[at], price, _what, _named, out proceeds)) return false;
+                allowed = _pass.TheGameGave;
                 if (proceeds == 0) return true;
                 _pass.Tally(item, 1, proceeds);
                 return true;
             }
+
+            public int TradeXpNow(int at, int made, int allowed) =>
+                LedgerBehavior.Instance?.TradeXpNow(Item(at), made, allowed) ?? 0;
 
             public void RecordedSale(int at, int unitPaid) =>
                 LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, unitPaid);
@@ -2084,7 +2102,10 @@ namespace TradeLord
                     string paidKey = LedgerBehavior.PaidKey(el.EquipmentElement);
                     Basis basis = Basis.For(TradePolicy.CostBasis(el.EquipmentElement),
                                             LedgerBehavior.Instance?.PurchasedUnits(el.EquipmentElement) ?? 0,
-                                            paidKey, pass.Books, pass.Sim, Options.Current);
+                                            paidKey, pass.Books, pass.Sim, Options.Current,
+                                            LedgerBehavior.Instance?.UnitCosts(el.EquipmentElement, el.Amount));
+                    int madeOnThisAnimal = 0;
+                    int allowedOnThisAnimal = 0;
 
                     while (remaining > 0 && shed > 0)
                     {
@@ -2096,9 +2117,7 @@ namespace TradeLord
                         if (price <= 0) break;
                         if (TradeRules.WhatTheTillCanPay(pass.Sim ? simTill : pass.TillNow,
                                                          settlement.IsVillage) < price) break;
-                        int worth = basis.Unit(out bool askTheMarket);
-                        if (askTheMarket) basis.UnpaidWorth = TradePolicy.UnpaidWorth(item);
-
+                        int allowed = GameTradeBook.NotKnown;
                         if (pass.Sim)
                         {
                             simTill -= price;
@@ -2112,16 +2131,19 @@ namespace TradeLord
                         {
                             if (!pass.SellOne(el, price, "selling an animal to relieve the herd", "Herd relief", out price)) break;
                             if (price == 0) break;
+                            allowed = pass.TheGameGave;
                             pass.Books.NoteSold(item.StringId);
                         }
-                        if (basis.SoldOne())
+                        bool bought = basis.SoldOne();
+                        if (bought)
                         {
                             if (pass.Sim) pass.Books.NotePaidDrawn(paidKey, basis.SoldAt);
-                            else LedgerBehavior.Instance?.RecordSale(paidKey, 1);
+                            else LedgerBehavior.Instance?.RecordSale(paidKey, 1, basis.SoldAt);
                         }
-                        int credited = TradePolicy.Credit(price, worth, basis.UnpaidWorth);
+                        int credited = TradeMath.MadeOnAUnit(price, bought, basis.SoldAt);
                         profit += credited;
-                        if (el.EquipmentElement.ItemModifier == null) earned += credited;
+                        madeOnThisAnimal = TradeMath.AddedUp(madeOnThisAnimal, credited);
+                        if (allowed > 0) allowedOnThisAnimal = TradeMath.AddedUp(allowedOnThisAnimal, allowed);
                         sold++;
                         remaining--;
                         shed--;
@@ -2129,6 +2151,10 @@ namespace TradeLord
                         else if (rank != RankLivestock) mountsLeft--;
                         pass.Tally(item, 1, price);
                     }
+                    if (!pass.Sim && el.EquipmentElement.ItemModifier == null &&
+                        (madeOnThisAnimal != 0 || allowedOnThisAnimal != 0))
+                        earned = TradeMath.AddedUp(earned,
+                                                   LedgerBehavior.Instance?.TradeXpNow(item, madeOnThisAnimal, allowedOnThisAnimal) ?? 0);
                 }
             });
 

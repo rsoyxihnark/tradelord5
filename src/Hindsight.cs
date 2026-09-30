@@ -395,8 +395,9 @@ namespace TradeLord
                                 shared + " good(s)"));
                 if (LedgerBehavior.Instance != null &&
                     LedgerBehavior.Instance.ForecastScore(out int figures, out float held))
-                    lines.Add("  over this campaign: of the worth it said would move, " + Share(held) +
-                              " came true over " + figures + " figure(s) checked, so what is on its way is counted at " +
+                    lines.Add("  over this campaign, by least squares: of the worth it said would move, " + Share(held) +
+                              " came true over " + figures + " figure(s) checked, each counted by the square of its size, " +
+                              "so what is on its way is counted at " +
                               Share(TradeMath.TrustInTheForecast(figures, held)) + " of what it says");
             }
             if (scored + stale == 0)

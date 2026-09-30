@@ -545,10 +545,12 @@ namespace TradeLord
                 if (el.Amount - keep <= 0) continue;
                 ItemObject item = el.EquipmentElement.Item;
                 int worth = TradePolicy.WorthToBeat(el.EquipmentElement);
-                int[] dearer = LedgerBehavior.Instance?.DearerUnits(el.EquipmentElement, el.Amount,
-                                                                    Options.Current.MinProfitMargin);
+                Batch[] costs = LedgerBehavior.Instance?.UnitCosts(el.EquipmentElement, el.Amount);
+                int covers = Options.Current.CostBasisMode == 0 && costs != null
+                    ? TradeMath.WhatTheAverageCovers(worth, Options.Current.MinProfitMargin)
+                    : int.MaxValue;
                 cargo.Add((el.EquipmentElement, el.Amount - keep, worth,
-                           new TradeMath.DearFirst(dearer, el.Amount - (dearer == null ? 0 : dearer.Length), worth)));
+                           new TradeMath.DearFirst(costs, covers, worth, el.Amount - TradeMath.UnitsIn(costs))));
             }
             _cargo = cargo;
             _cargoHeld = Held(cargo);
