@@ -3217,12 +3217,6 @@ chk("1.6.22", "a menu id the mod does not guard fails the run, and a guarded one
     a_menu_id_the_mod_does_not_guard_fails_the_run())
 chk("1.6.22", "with no game install named, the menu-id check is skipped rather than failed",
     the_menu_id_check_is_skipped_rather_than_failed_when_unset())
-chk("1.36.0", "a commit that changes the feature list is refused unless the changelog gains an entry saying what changed in it",
-    "grep -qx 'README.md'" in WORKFLOW and
-    "the changelog gains no entry saying what changed" in WORKFLOW and
-    r"grep -q '^+- '" in WORKFLOW and
-    r"grep -qi '^+.*feature list'" not in WORKFLOW and
-    WORKFLOW.index("grep -qx 'README.md'") < WORKFLOW.index("grep -qx 'CHANGELOG.md'"))
 chk("1.34.0", "the build runs the compatibility tool, on the built assemblies, against the other game version the feature list claims",
     "dotnet run --project tools/compat" in WORKFLOW and
     GAME_VERSION_BETA + "-beta" in WORKFLOW and
@@ -3584,7 +3578,7 @@ def the_workflow_gates_the_changelog():
             and "fetch-depth: 0" in WORKFLOW)
 
 def the_gate_lets_a_checks_only_commit_through():
-    return (r"grep -Ev '^(tests/|tools/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$)'" in WORKFLOW
+    return (r"grep -Ev '^(tests/|tools/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$|README\.md$|COMPARISON\.md$)'" in WORKFLOW
             and "so it writes no changelog entry" in WORKFLOW)
 
 def the_gate_lets_a_behaviour_neutral_change_through_but_never_a_version():
@@ -3726,7 +3720,7 @@ def only_main_may_be_pushed():
 
 chk("1.6.32", "a commit that changes what a user gets is refused when it leaves the changelog untouched",
     the_workflow_gates_the_changelog())
-chk("1.6.32", "a commit that touches only the checks, the workflow and the working rules is let through",
+chk("1.6.32", "a commit that touches only the checks, the workflow, the working rules, the README or the comparison is let through",
     the_gate_lets_a_checks_only_commit_through())
 chk("1.6.32", "a version is not published while the changelog still says Unreleased or has no section for it",
     the_workflow_refuses_to_publish_an_unfinished_changelog())
@@ -15710,6 +15704,27 @@ def trade_xp_is_what_the_game_gives_for_the_same_sale():
 
 chk("1.97.5", "Trade XP for what TradeLord sells is what the game gives for the same sale on its trade screen: a visit's sales are put together good by good as that screen does and handed to the game's own reckoning once, before any save",
     trade_xp_is_what_the_game_gives_for_the_same_sale())
+
+DOCS_NEVER_WRITTEN = ("feature list", "mod description", "mod page", "readme", "comparison")
+
+
+def a_change_to_the_readme_or_the_comparison_is_never_written_up():
+    entries = [line[2:].lower() for line in CHANGES.split('\n') if line.startswith('- ')]
+    refused = r"grep -qiE '^\+- .*(feature list|mod description|mod page|readme|comparison)'"
+    return (len(entries) > 300
+            and not [one for one in entries if any(word in one for word in DOCS_NEVER_WRITTEN)]
+            and refused in WORKFLOW
+            and "into the changelog, which is never written" in WORKFLOW
+            and "the changelog gains no entry saying what changed" not in WORKFLOW
+            and WORKFLOW.index(refused) < WORKFLOW.index("the changelog carries this commit's entries")
+            and "A change to the README or to `COMPARISON.md` is never written into the changelog, "
+                "a release note or a commit message." in RULES
+            and "No entry like `The feature list now says ...` is ever written" in RULES
+            and "ships as `[no release]` under a subject that says the page was touched and no more" in RULES)
+
+
+chk("1.97.5", "a change to the README or the comparison is never written into the changelog, the gate refuses an entry about one, and the working rules keep it out of the notes and the commits",
+    a_change_to_the_readme_or_the_comparison_is_never_written_up())
 
 def a_deal_that_lost_money_is_reported_as_the_loss_it_was():
     rules = method_body(S['Rules.cs'], "public static int NoMoreThanTheSale")

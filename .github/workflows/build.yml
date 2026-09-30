@@ -47,22 +47,20 @@ jobs:
                 exit 1
               fi ;;
           esac
-          if printf '%s\n' "$CHANGED" | grep -qx 'README.md'; then
-            NOTES=$(git diff "$GITHUB_SHA^" "$GITHUB_SHA" -- CHANGELOG.md 2>/dev/null \
-                    || git show --pretty=format: "$GITHUB_SHA" -- CHANGELOG.md)
-            if ! printf '%s\n' "$NOTES" | grep -q '^+- '; then
-              echo "this commit changes the feature list in README.md and the changelog gains no entry saying what changed"
-              exit 1
-            fi
-            echo "the changelog records what this commit changed in the feature list"
+          NOTES=$(git diff "$GITHUB_SHA^" "$GITHUB_SHA" -- CHANGELOG.md 2>/dev/null \
+                  || git show --pretty=format: "$GITHUB_SHA" -- CHANGELOG.md)
+          if printf '%s\n' "$NOTES" | grep -qiE '^\+- .*(feature list|mod description|mod page|readme|comparison)'; then
+            echo "this commit writes a change to the README or the comparison into the changelog, which is never written:"
+            printf '%s\n' "$NOTES" | grep -iE '^\+- .*(feature list|mod description|mod page|readme|comparison)'
+            exit 1
           fi
           if printf '%s\n' "$CHANGED" | grep -qx 'CHANGELOG.md'; then
             echo "the changelog carries this commit's entries"
             exit 0
           fi
-          OUTSIDE=$(printf '%s\n' "$CHANGED" | grep -Ev '^(tests/|tools/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$)' || true)
+          OUTSIDE=$(printf '%s\n' "$CHANGED" | grep -Ev '^(tests/|tools/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$|README\.md$|COMPARISON\.md$)' || true)
           if [ -z "$OUTSIDE" ]; then
-            echo "this commit touches only the project's own checks, workflow and working rules, so it writes no changelog entry"
+            echo "this commit touches only the project's own checks, workflow, working rules, README or comparison, so it writes no changelog entry"
             exit 0
           fi
           case "$SUBJECT" in
