@@ -16,17 +16,8 @@ namespace TradeLord
             return made > int.MaxValue ? int.MaxValue : made < int.MinValue ? int.MinValue : (int)made;
         }
 
-        public static int TradeXpNow(ref TradeXpWaiting waiting, int made, int allowed)
-        {
-            waiting.Made = AddedUp(waiting.Made, made);
-            waiting.Allowed = AddedUp(waiting.Allowed, allowed > 0 ? allowed : 0);
-            long now = Math.Min(waiting.Made, waiting.Allowed);
-            if (now <= 0L) return 0;
-            if (now > int.MaxValue) now = int.MaxValue;
-            waiting.Made -= now;
-            waiting.Allowed -= now;
-            return (int)now;
-        }
+        public static int TradeXpForAUnit(int made, int allowed) =>
+            made <= 0 || allowed <= 0 ? 0 : made < allowed ? made : allowed;
 
         public static int MadeOnAHandSale(PurchaseRecord rec, int units, long gold, int covers, List<int> laidOut)
         {

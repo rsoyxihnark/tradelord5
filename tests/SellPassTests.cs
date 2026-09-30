@@ -191,16 +191,6 @@ namespace TradeLord.Tests
 
             internal readonly List<int> SoldFor = new List<int>();
 
-            internal readonly Dictionary<string, TradeXpWaiting> Waiting = new Dictionary<string, TradeXpWaiting>();
-
-            public int TradeXpNow(int at, int made, int allowed)
-            {
-                Waiting.TryGetValue(Cargo[at].Good.Id, out TradeXpWaiting waiting);
-                int now = TradeMath.TradeXpNow(ref waiting, made, allowed);
-                Waiting[Cargo[at].Good.Id] = waiting;
-                return now;
-            }
-
             public bool Give(int at, int price, out int proceeds, out int allowed)
             {
                 proceeds = 0;
@@ -894,7 +884,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Trade_xp_the_game_held_back_comes_with_a_later_sale_of_the_same_good()
+        public void Trade_xp_the_game_does_not_give_for_a_sale_is_never_given_by_a_later_one()
         {
             var market = new FakeMarket();
             Load felt = market.Add(Cargo("felt"), amount: 5, price: 836);
@@ -917,7 +907,25 @@ namespace TradeLord.Tests
 
             Assert.Equal(4, second.Units);
             Assert.Equal(4 * (484 - 278), second.Profit);
-            Assert.Equal(836 - 390 + 4 * (484 - 390), second.Earned);
+            Assert.Equal(4 * (484 - 390), second.Earned);
+        }
+
+        [Fact]
+        public void Each_unit_earns_only_the_trade_xp_the_game_gives_for_that_unit()
+        {
+            var market = new FakeMarket();
+            Load felt = market.Add(Cargo("felt"), amount: 5, price: 836);
+            felt.Falls = 88;
+            felt.Basis = 390;
+            felt.Purchased = 5;
+            felt.Cheap = 278;
+            felt.Dearer = new[] { 836 };
+
+            Run run = Sell(market);
+
+            Assert.Equal(5, run.Units);
+            Assert.Equal(new[] { 836, 748, 660, 572, 484 }, market.SoldFor.ToArray());
+            Assert.Equal((748 - 390) + (660 - 390) + (572 - 390) + (484 - 390), run.Earned);
         }
 
         [Fact]
@@ -1022,7 +1030,7 @@ namespace TradeLord.Tests
 
             Assert.Equal(5, run.Units);
             Assert.Equal(5 * 1135 - 836 - 4 * 278, run.Profit);
-            Assert.Equal(5 * (1135 - 390), run.Earned);
+            Assert.Equal((1135 - 836) + 4 * (1135 - 390), run.Earned);
         }
 
         [Fact]

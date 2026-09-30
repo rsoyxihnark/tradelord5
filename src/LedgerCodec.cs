@@ -26,12 +26,6 @@ namespace TradeLord
         public int Count;
     }
 
-    public struct TradeXpWaiting
-    {
-        public long Made;
-        public long Allowed;
-    }
-
     public class PurchaseRecord
     {
         public string ItemId;
@@ -68,8 +62,6 @@ namespace TradeLord
 
         public const int FieldsATradeNeeds = 4;
 
-        public const int FieldsAWaitNeeds = 3;
-
         private const char FieldMark = '|';
         private const char RecordMark = ';';
         private const char BatchMark = ',';
@@ -81,8 +73,6 @@ namespace TradeLord
             string.IsNullOrEmpty(qualityId) ? itemId : itemId + QualityMark + qualityId;
 
         private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
-
-        private static string Number(long value) => value.ToString(CultureInfo.InvariantCulture);
 
         private static string Number(float value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
@@ -297,37 +287,6 @@ namespace TradeLord
                 {
                     Where = parts[0], What = parts[1], Gold = gold, Day = day
                 });
-            }
-            return kept;
-        }
-
-        public static string WriteTradeXpWaiting(Dictionary<string, TradeXpWaiting> waiting)
-        {
-            var sb = new StringBuilder();
-            if (waiting == null) return sb.ToString();
-            foreach (var kv in waiting)
-            {
-                if (!Storable(kv.Key) || (kv.Value.Made == 0L && kv.Value.Allowed == 0L)) continue;
-                if (sb.Length > 0) sb.Append(RecordMark);
-                sb.Append(kv.Key).Append(FieldMark)
-                  .Append(Number(kv.Value.Made)).Append(FieldMark)
-                  .Append(Number(kv.Value.Allowed));
-            }
-            return sb.ToString();
-        }
-
-        public static Dictionary<string, TradeXpWaiting> ReadTradeXpWaiting(string text)
-        {
-            var kept = new Dictionary<string, TradeXpWaiting>(System.StringComparer.Ordinal);
-            if (string.IsNullOrEmpty(text)) return kept;
-            string[] records = text.Split(RecordMark);
-            for (int i = 0; i < records.Length; i++)
-            {
-                string[] parts = records[i].Split(FieldMark);
-                if (parts.Length < FieldsAWaitNeeds || !Storable(parts[0])) continue;
-                if (!long.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out long made)) continue;
-                if (!long.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out long allowed)) continue;
-                kept[parts[0]] = new TradeXpWaiting { Made = made, Allowed = allowed < 0L ? 0L : allowed };
             }
             return kept;
         }

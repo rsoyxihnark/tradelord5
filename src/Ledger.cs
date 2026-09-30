@@ -64,9 +64,6 @@ namespace TradeLord
         private Dictionary<string, PromiseRecord> _promises =
             new Dictionary<string, PromiseRecord>(StringComparer.Ordinal);
         private string _latelyText = "";
-        private string _xpWaitingText = "";
-        private Dictionary<string, TradeXpWaiting> _xpWaiting =
-            new Dictionary<string, TradeXpWaiting>(StringComparer.Ordinal);
         private ItemRoster _watched;
         private bool _settle;
         private bool _villagePursesPutBack;
@@ -191,7 +188,6 @@ namespace TradeLord
                     _purchaseText = LedgerCodec.WritePurchases(_purchases);
                     _promiseText = LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));
                     _latelyText = LedgerCodec.WriteTrades(_lately);
-                    _xpWaitingText = LedgerCodec.WriteTradeXpWaiting(_xpWaiting);
                     Log.Write("ledger written into the save: " + RecordedPrices() + " recorded price(s) in " +
                               _ledgerText.Length + " character(s), and " + _purchases.Count +
                               " purchase record(s) in " + _purchaseText.Length);
@@ -210,7 +206,6 @@ namespace TradeLord
             dataStore.SyncData("TradeLord_ForecastCameTrueSquared", ref _forecastMatched);
             dataStore.SyncData("TradeLord_LatelyText", ref _latelyText);
             dataStore.SyncData("TradeLord_VillagePursesPutBack", ref _villagePursesPutBack);
-            dataStore.SyncData("TradeLord_TradeXpWaiting", ref _xpWaitingText);
             if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;
             if (dataStore.IsLoading) Guard.Run("Ledger.OlderRecords", () => ReadTheOlderRecords(dataStore));
             if (dataStore.IsLoading) ReadSavedText();
@@ -270,21 +265,6 @@ namespace TradeLord
                           "letting a price above a promise hide one below it");
             _lately.Clear();
             _lately.AddRange(LedgerCodec.ReadTrades(_latelyText, Recent.MostKept));
-            _xpWaiting = LedgerCodec.ReadTradeXpWaiting(_xpWaitingText);
-        }
-
-        internal int TradeXpNow(ItemObject item, int made, int allowed)
-        {
-            if (item == null) return 0;
-            _xpWaiting.TryGetValue(item.StringId, out TradeXpWaiting waiting);
-            int now = TradeMath.TradeXpNow(ref waiting, made, allowed);
-            if (waiting.Made == 0L && waiting.Allowed == 0L) _xpWaiting.Remove(item.StringId);
-            else _xpWaiting[item.StringId] = waiting;
-            if (Options.Current.ExtendedDebugLogging && now != (made > 0 ? made : 0))
-                Log.Write("trade XP for " + item.StringId + ": " + made + " made on this sale and the game gives " +
-                          allowed + " for it, so " + now + " counts now, " + waiting.Made + " made waits for the " +
-                          "game to give it and " + waiting.Allowed + " the game gives waits for a sale that makes it");
-            return now;
         }
 
         private static Dictionary<string, Dictionary<string, PriceObservation>> KeyedByTown(

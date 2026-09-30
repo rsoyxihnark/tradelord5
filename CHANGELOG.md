@@ -1,10 +1,14 @@
 # Changelog
 
+## 1.97.3
+
+- Fixed Trade XP for one unit using what the game gave for another unit sold at the same time
+- The feature list now says each unit's Trade XP is what that unit made, never more than the game gives for that unit
+
 ## 1.97.2
 
 - The profit TradeLord reports is now what each unit you bought fetched over what that unit really cost you
 - Trade XP from TradeLord's own trades now comes from what each unit really made, and never more than the game gives for the same sales
-- Profit the game would give no Trade XP for yet now waits, and comes as Trade XP with a later sale of the same good
 - Fixed TradeLord giving profit and Trade XP for selling loot, animals or anything else you never bought
 - Fixed goods bought from villagers earning Trade XP the game itself never gives for them, whether TradeLord or you sold them
 - Profit and Trade XP no longer follow What a good counts as having cost you, and read what each unit you sold really cost instead
@@ -17,7 +21,6 @@
 - How far TradeLord trusts what is on its way to a market is now learned by least squares, so a big miss counts for more than a small one
 - How far TradeLord trusts what is on its way to a market starts over once, as the old record weighed each forecast by its size alone
 - Enable extended debug logging now says the trust in what is on its way to a market is worked out by least squares
-- Enable extended debug logging now writes how much Trade XP waits for the game to give it, good by good
 - TradeLord.log now says the profit on a deal you took on the trade screen is what the units you had bought fetched over their cost
 - The feature list now says the profit reported is what each unit you bought fetched over what that unit cost you
 - The feature list now says Trade XP comes from what each unit really made and never goes past what the game gives
@@ -27,7 +30,6 @@
 - The feature list now says a deal you took on the trade screen that lost money is reported as the loss it was
 - The feature list now says What a good counts as having cost you is what the price has to beat by your margin
 - The feature list now says what is on its way to a market is trusted by least squares
-- The feature list now counts six strings in what TradeLord puts in a save
 
 ## 1.97.1
 
