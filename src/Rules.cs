@@ -812,7 +812,7 @@ namespace TradeLord
 
         public static int NoMoreThanTheSale(int profit, int gained)
         {
-            if (profit <= 0 || gained <= 0) return 0;
+            if (gained <= 0) return 0;
             return profit > gained ? gained : profit;
         }
 

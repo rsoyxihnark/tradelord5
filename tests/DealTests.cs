@@ -102,8 +102,9 @@ namespace TradeLord.Tests
         {
             Assert.Equal(816, Deals.NoMoreThanTheSale(816, 2031));
             Assert.Equal(2031, Deals.NoMoreThanTheSale(20417, 2031));
-            Assert.Equal(0, Deals.NoMoreThanTheSale(-5, 2031));
+            Assert.Equal(-5, Deals.NoMoreThanTheSale(-5, 2031));
             Assert.Equal(0, Deals.NoMoreThanTheSale(500, 0));
+            Assert.Equal(0, Deals.NoMoreThanTheSale(-500, 0));
         }
 
         [Fact]
@@ -116,9 +117,9 @@ namespace TradeLord.Tests
                 int spent = rng.Next(0, 50000);
                 int purse = gained - spent;
                 Assert.True(Deals.AddsUp(gained - spent, purse));
-                int profit = Deals.NoMoreThanTheSale(rng.Next(-100, 80000), gained);
-                Assert.True(profit >= 0);
-                Assert.True(gained == 0 ? profit == 0 : profit <= gained);
+                int reckoned = rng.Next(-100, 80000);
+                int profit = Deals.NoMoreThanTheSale(reckoned, gained);
+                Assert.True(gained == 0 ? profit == 0 : profit <= gained && profit >= Math.Min(reckoned, 0));
             }
         }
 

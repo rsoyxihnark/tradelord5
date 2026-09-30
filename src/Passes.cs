@@ -187,7 +187,7 @@ namespace TradeLord
         int CostBasis(int at);
         string PaidKeyAt(int at);
         int PurchasedUnits(int at);
-        int[] DearerUnits(int at, float margin);
+        Batch[] UnitCosts(int at);
         int UnpaidWorth(int at);
         int HoldableUnits(int at);
         int ResalePurse();
@@ -200,7 +200,8 @@ namespace TradeLord
         int Till();
         int TillNow();
         void Staged(int at, int price);
-        bool Give(int at, int price, out int proceeds);
+        bool Give(int at, int price, out int proceeds, out int allowed);
+        int TradeXpNow(int at, int made, int allowed);
         void RecordedSale(int at, int unitPaid);
     }
 
@@ -214,7 +215,7 @@ namespace TradeLord
         internal int SoldAt;
 
         internal static Basis For(int costBasis, int purchased, string id, Books books, bool sim,
-                                  Options s, int[] dearer = null)
+                                  Options s, Batch[] costs = null)
         {
             Basis basis;
             basis.Paid = costBasis;
@@ -222,13 +223,14 @@ namespace TradeLord
             basis.PaidLeft = Math.Max(0, purchased - books.PaidDrawn(sim, id));
             basis.UnpaidWorth = -1;
             basis.SoldAt = 0;
-            if (basis.FromMarket) dearer = null;
-            int cheap = Math.Max(0, purchased - (dearer == null ? 0 : dearer.Length));
             int drawn = Math.Max(0, purchased) - basis.PaidLeft;
-            int drawnDear = TradeMath.LeaveOut(ref dearer, books.DearDrawn(sim, id));
-            int drawnCheap = Math.Min(Math.Max(0, drawn - drawnDear), cheap);
-            basis.Walk = new TradeMath.DearFirst(dearer, cheap - drawnCheap, costBasis,
-                                                 Math.Max(0, drawn - drawnDear - drawnCheap));
+            bool listed = costs != null;
+            int drawnKnown = TradeMath.LeaveOut(ref costs, books.DearDrawn(sim, id));
+            TradeMath.DropTheCheapest(ref costs, drawn - drawnKnown);
+            int covers = s.CostBasisMode == 0 ? TradeMath.WhatTheAverageCovers(costBasis, s.MinProfitMargin) : int.MaxValue;
+            int known = TradeMath.UnitsIn(costs);
+            if (listed && basis.PaidLeft > known) basis.PaidLeft = known;
+            basis.Walk = new TradeMath.DearFirst(costs, covers, costBasis, basis.PaidLeft - known);
             return basis;
         }
 
@@ -635,11 +637,13 @@ namespace TradeLord
                 if (remaining <= 0) { tally.Note(Block.TradedHereAlready); continue; }
 
                 Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),
-                                        books, sim, s, market.DearerUnits(at, s.MinProfitMargin));
+                                        books, sim, s, market.UnitCosts(at));
                 if (!basis.LeftToThisSale(ref remaining, loot)) continue;
 
                 int[] there = holding?[at].Rungs;
                 int holdFor = holding?[at].Units ?? 0;
+                int madeOnThisGood = 0;
+                int allowedOnThisGood = 0;
 
                 while (remaining > 0)
                 {
@@ -671,9 +675,9 @@ namespace TradeLord
                     {
                         simTill -= price;
                         moved.SimGold += price;
-                        int credited = TradeMath.Credit(price, worth, basis.UnpaidWorth);
+                        bool bought = basis.SoldOne();
+                        int credited = TradeMath.MadeOnAUnit(price, bought, basis.SoldAt);
                         moved.Profit += credited;
-                        if (market.TheGameGivesTradeXpFor(at)) moved.Earned += credited;
                         int herdRank = TradeRules.HerdShedRank(good);
                         books.NoteSale(good.Id, price, good.Weight, TradeRules.FoodValue(good));
                         books.NoteSoldFrom(market.PaidKeyAt(at));
@@ -683,22 +687,26 @@ namespace TradeLord
                                            herdRank != TradeRules.RankLivestock);
                         moved.Units++;
                         remaining--;
-                        if (basis.SoldOne()) books.NotePaidDrawn(market.PaidKeyAt(at), basis.SoldAt);
+                        if (bought) books.NotePaidDrawn(market.PaidKeyAt(at), basis.SoldAt);
                         market.Staged(at, price);
                         continue;
                     }
 
-                    if (!market.Give(at, price, out int proceeds)) break;
+                    if (!market.Give(at, price, out int proceeds, out int allowed)) break;
                     if (proceeds == 0) break;
 
-                    if (basis.SoldOne()) market.RecordedSale(at, basis.SoldAt);
+                    bool paidFor = basis.SoldOne();
+                    if (paidFor) market.RecordedSale(at, basis.SoldAt);
                     books.NoteSold(good.Id);
                     moved.Units++;
-                    int earned = TradeMath.Credit(proceeds, worth, basis.UnpaidWorth);
+                    int earned = TradeMath.MadeOnAUnit(proceeds, paidFor, basis.SoldAt);
                     moved.Profit += earned;
-                    if (market.TheGameGivesTradeXpFor(at)) moved.Earned += earned;
+                    madeOnThisGood = TradeMath.AddedUp(madeOnThisGood, earned);
+                    if (allowed > 0) allowedOnThisGood = TradeMath.AddedUp(allowedOnThisGood, allowed);
                     remaining--;
                 }
+                if (!sim && (madeOnThisGood != 0 || allowedOnThisGood != 0) && market.TheGameGivesTradeXpFor(at))
+                    moved.Earned = TradeMath.AddedUp(moved.Earned, market.TradeXpNow(at, madeOnThisGood, allowedOnThisGood));
             }
             return moved;
         }

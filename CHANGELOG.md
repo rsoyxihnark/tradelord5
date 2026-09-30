@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.97.2
+
+- The profit TradeLord reports is now what each unit you bought fetched over what that unit really cost you
+- Trade XP from TradeLord's own trades now comes from what each unit really made, and never more than the game gives for the same sales
+- Profit the game would give no Trade XP for yet now waits, and comes as Trade XP with a later sale of the same good
+- Fixed TradeLord giving profit and Trade XP for selling loot, animals or anything else you never bought
+- Fixed goods bought from villagers earning Trade XP the game itself never gives for them, whether TradeLord or you sold them
+- Profit and Trade XP no longer follow What a good counts as having cost you, and read what each unit you sold really cost instead
+- Fixed a unit you bought dear being sold for less than it cost after some of the same good was eaten, lost or given away
+- Fixed a unit you bought dear being sold under its cost while TradeLord's purchase record still counted units you no longer had
+- Fixed a deal you took on the trade screen that lost money being reported as 0 profit
+- The hint for What a good counts as having cost you now says profit is what each unit fetched over what it cost you
+- The hint for What a good counts as having cost you now says Trade XP never goes past what the game gives
+- The hint for What a good counts as having cost you now says only trade goods and livestock you never bought must beat the cheapest market
+- How far TradeLord trusts what is on its way to a market is now learned by least squares, so a big miss counts for more than a small one
+- How far TradeLord trusts what is on its way to a market starts over once, as the old record weighed each forecast by its size alone
+- Enable extended debug logging now says the trust in what is on its way to a market is worked out by least squares
+- Enable extended debug logging now writes how much Trade XP waits for the game to give it, good by good
+- TradeLord.log now says the profit on a deal you took on the trade screen is what the units you had bought fetched over their cost
+- The feature list now says the profit reported is what each unit you bought fetched over what that unit cost you
+- The feature list now says Trade XP comes from what each unit really made and never goes past what the game gives
+- The feature list now says a good you never bought earns no profit and no Trade XP when it sells
+- The feature list now says goods bought from villagers earn only the Trade XP the game itself would give for them
+- The feature list now says a unit bought dear keeps its cost when some of the same good is eaten, lost or given away
+- The feature list now says a deal you took on the trade screen that lost money is reported as the loss it was
+- The feature list now says What a good counts as having cost you is what the price has to beat by your margin
+- The feature list now says what is on its way to a market is trusted by least squares
+- The feature list now counts six strings in what TradeLord puts in a save
+
 ## 1.97.1
 
 - How much of a price elsewhere TradeLord counts on is now learned from how much of the ledger's promised Sell price held when you walked in

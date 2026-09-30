@@ -24,6 +24,7 @@ namespace TradeLord.Tests
             internal int Basis;
             internal int Purchased;
             internal int[] Dearer;
+            internal int Cheap = -1;
             internal int Worth = 100;
             internal int Resale;
             internal int Takes = 1000;
@@ -32,6 +33,8 @@ namespace TradeLord.Tests
             internal bool Modified;
             internal int Reserved;
             internal int Falls;
+            internal bool Counted = true;
+            internal int GameAverage = -1;
         }
 
         private sealed class FakeMarket : ISellingMarket
@@ -54,6 +57,7 @@ namespace TradeLord.Tests
             internal int AskedFor;
             internal int AskedWorth;
             internal int MarkPurse = 1000000;
+            internal int CountedUnits = -1;
             internal readonly List<(string good, int units, int there, int here)> Held =
                 new List<(string good, int units, int there, int here)>();
 
@@ -109,7 +113,19 @@ namespace TradeLord.Tests
 
             public int PurchasedUnits(int at) => Cargo[at].Purchased;
 
-            public int[] DearerUnits(int at, float margin) => Cargo[at].Dearer;
+            public Batch[] UnitCosts(int at)
+            {
+                Load load = Cargo[at];
+                if (load.Purchased <= 0) return null;
+                int dear = load.Dearer == null ? 0 : load.Dearer.Length;
+                var costs = new List<Batch>();
+                if (load.Purchased > dear)
+                    costs.Add(new Batch { Unit = load.Cheap >= 0 ? load.Cheap : load.Basis, Count = load.Purchased - dear });
+                if (load.Dearer != null)
+                    foreach (int unit in load.Dearer) costs.Add(new Batch { Unit = unit, Count = 1 });
+                costs.Sort((x, y) => x.Unit.CompareTo(y.Unit));
+                return costs.ToArray();
+            }
 
             public int UnpaidWorth(int at)
             {
@@ -175,9 +191,23 @@ namespace TradeLord.Tests
 
             internal readonly List<int> SoldFor = new List<int>();
 
-            public bool Give(int at, int price, out int proceeds)
+            internal readonly Dictionary<string, TradeXpWaiting> Waiting = new Dictionary<string, TradeXpWaiting>();
+
+            public int TradeXpNow(int at, int made, int allowed)
+            {
+                Waiting.TryGetValue(Cargo[at].Good.Id, out TradeXpWaiting waiting);
+                int now = TradeMath.TradeXpNow(ref waiting, made, allowed);
+                Waiting[Cargo[at].Good.Id] = waiting;
+                return now;
+            }
+
+            public bool Give(int at, int price, out int proceeds, out int allowed)
             {
                 proceeds = 0;
+                Load load = Cargo[at];
+                allowed = load.Counted && (CountedUnits < 0 || Given.Count < CountedUnits) && load.Purchased > 0
+                    ? Math.Max(0, price - (load.GameAverage >= 0 ? load.GameAverage : load.Basis))
+                    : 0;
                 if (RefuseAfter >= 0 && Given.Count >= RefuseAfter) { Halted = true; return false; }
                 if (PayNothingAfter >= 0 && Given.Count >= PayNothingAfter) return true;
                 proceeds = price;
@@ -324,7 +354,8 @@ namespace TradeLord.Tests
             load.Worth = 80;
             Run run = Sell(market);
             Assert.Equal(3, run.Units);
-            Assert.Equal(90, run.Profit);
+            Assert.Equal(0, run.Profit);
+            Assert.Equal(0, run.Earned);
             Assert.True(run.Tally.Saw(Block.BelowMargin));
         }
 
@@ -597,7 +628,8 @@ namespace TradeLord.Tests
             Assert.Equal(2, load.Amount);
             Run looted = OnePass(market, loot: true, books: books);
             Assert.Equal(2, looted.Units);
-            Assert.Equal(300, looted.Profit);
+            Assert.Equal(0, looted.Profit);
+            Assert.Equal(0, looted.Earned);
             Assert.Equal(0, load.Amount);
         }
 
@@ -814,14 +846,78 @@ namespace TradeLord.Tests
         public void A_good_with_a_modifier_is_sold_but_earns_no_trade_xp()
         {
             var market = new FakeMarket();
-            market.Add(Cargo("iron"), price: 200).Basis = 100;
-            market.Add(Cargo("sword"), price: 200).Modified = true;
-            market.Cargo[1].Basis = 100;
+            Load iron = market.Add(Cargo("iron"), price: 200);
+            iron.Basis = 100;
+            iron.Purchased = 1;
+            Load sword = market.Add(Cargo("sword"), price: 200);
+            sword.Modified = true;
+            sword.Basis = 100;
+            sword.Purchased = 1;
             Run run = Sell(market);
             Assert.Equal(2, run.Units);
-            Assert.True(run.Profit > 0);
-            Assert.True(run.Earned > 0);
-            Assert.True(run.Earned < run.Profit);
+            Assert.Equal(200, run.Profit);
+            Assert.Equal(100, run.Earned);
+        }
+
+        [Fact]
+        public void A_unit_the_game_never_counted_as_bought_shows_its_profit_but_earns_no_trade_xp()
+        {
+            var market = new FakeMarket();
+            Load grain = market.Add(Cargo("grain"), amount: 2, price: 200);
+            grain.Basis = 100;
+            grain.Purchased = 2;
+            grain.Counted = false;
+            Load iron = market.Add(Cargo("iron"), amount: 1, price: 200);
+            iron.Basis = 100;
+            iron.Purchased = 1;
+            Run run = Sell(market);
+            Assert.Equal(3, run.Units);
+            Assert.Equal(300, run.Profit);
+            Assert.Equal(100, run.Earned);
+        }
+
+        [Fact]
+        public void Trade_xp_never_goes_past_what_the_game_gives_for_the_same_sales()
+        {
+            var market = new FakeMarket();
+            Load grain = market.Add(Cargo("grain"), amount: 3, price: 200);
+            grain.Basis = 150;
+            grain.Purchased = 3;
+            grain.Cheap = 100;
+            grain.Dearer = new[] { 190 };
+            market.Rules.CostBasisMode = 1;
+            market.CountedUnits = 1;
+            Run run = Sell(market);
+            Assert.Equal(3, run.Units);
+            Assert.Equal(100 + 100 + 10, run.Profit);
+            Assert.Equal(200 - 150, run.Earned);
+        }
+
+        [Fact]
+        public void Trade_xp_the_game_held_back_comes_with_a_later_sale_of_the_same_good()
+        {
+            var market = new FakeMarket();
+            Load felt = market.Add(Cargo("felt"), amount: 5, price: 836);
+            felt.Falls = 400;
+            felt.Basis = 390;
+            felt.Purchased = 5;
+            felt.Cheap = 278;
+            felt.Dearer = new[] { 836 };
+
+            Run first = Sell(market);
+
+            Assert.Equal(1, first.Units);
+            Assert.Equal(0, first.Profit);
+            Assert.Equal(0, first.Earned);
+
+            felt.Price = 484;
+            felt.Falls = 0;
+            felt.Dearer = null;
+            Run second = Sell(market);
+
+            Assert.Equal(4, second.Units);
+            Assert.Equal(4 * (484 - 278), second.Profit);
+            Assert.Equal(836 - 390 + 4 * (484 - 390), second.Earned);
         }
 
         [Fact]
@@ -919,12 +1015,14 @@ namespace TradeLord.Tests
             Load felt = market.Add(Cargo("felt"), amount: 5, price: 1135);
             felt.Basis = 390;
             felt.Purchased = 5;
+            felt.Cheap = 278;
             felt.Dearer = new[] { 836 };
 
             Run run = Sell(market);
 
             Assert.Equal(5, run.Units);
-            Assert.Equal(5 * (1135 - 390), run.Profit);
+            Assert.Equal(5 * 1135 - 836 - 4 * 278, run.Profit);
+            Assert.Equal(5 * (1135 - 390), run.Earned);
         }
 
         [Fact]
@@ -966,13 +1064,15 @@ namespace TradeLord.Tests
             felt.Falls = 109;
             felt.Basis = 390;
             felt.Purchased = 5;
+            felt.Cheap = 278;
             felt.Dearer = new[] { 836 };
 
             Run run = Sell(market);
 
             Assert.Equal(5, run.Units);
             Assert.Equal(new[] { 1135, 1026, 917, 808, 699 }, market.SoldFor.ToArray());
-            Assert.Equal(new[] { 836, 0, 0, 0, 0 }, market.RecordedPaid.ToArray());
+            Assert.Equal(new[] { 836, 278, 278, 278, 278 }, market.RecordedPaid.ToArray());
+            Assert.Equal(1135 + 1026 + 917 + 808 + 699 - 836 - 4 * 278, run.Profit);
         }
 
         [Theory]

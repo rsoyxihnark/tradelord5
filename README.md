@@ -7,7 +7,7 @@
 ## Everything it does
 
 - ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
-- ✅ It declares no save types of its own. All it puts in a save is five strings, eight numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
+- ✅ It declares no save types of its own. All it puts in a save is six strings, eight numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
@@ -43,7 +43,7 @@
 - ✅ Every workshop is followed day by day, every line of it at the game's own pace, and a run counts only while the town holds its inputs and the run pays
 - ✅ Your own workshops draw on their warehouse first, and only the share of what they make that you send to the market is counted as landing there
 - ✅ A village is priced through the town it trades with, so what lands in that town moves the village's price as well
-- ✅ It keeps score of that forecast as well, against what really moved by the day you walked in, and counts what is on its way at the share of it that came true, so it leans less and less on one that keeps missing
+- ✅ It keeps score of that forecast as well, against what really moved by the day you walked in, and counts what is on its way at the share of it that came true by least squares, so it leans less and less on one that keeps missing
 - ✅ Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into
 - ✅ Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
@@ -185,7 +185,12 @@
 - ✅ They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off an animal, unless Buy to fill the ships is on, since only a ship's hold counts one as cargo
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know
-- ✅ What a good counts as having cost you sets the profit reported and the Trade XP earned, and for a good you never bought it is what the price has to beat before it sells
+- ✅ What a good counts as having cost you is what the price has to beat by your margin before a good you bought sells
+- ✅ The profit reported is what each unit you bought fetched over what that unit cost you, whichever cost you pick
+- ✅ Trade XP comes from what each unit really made, never more than the game itself gives for those sales, and what the game holds back waits for a later sale of the same good
+- ✅ A good you never bought, loot and animals included, adds nothing to the profit reported and earns no Trade XP when it sells
+- ✅ Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them, which is usually none
+- ✅ When some of a good is eaten, lost or given away, it comes off every price you paid in proportion, so a unit bought dear keeps its cost
 - ✅ A unit you paid so much for that the average cost would sell it at a loss is never sold for less than it cost, and is sold first wherever a market pays that
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay, off out of the box, that keeps it out of a brand new campaign until prices calm down
@@ -195,6 +200,7 @@
 - ✅ While Staged Trading is on, nothing is traded as you arrive or as you leave: Trade here now (TradeLord) in the town menu is what lays the deal out, and a party met on the road still trades as before
 - ✅ The trade screen's own running total shows what the deal comes to, and once you close it TradeLord says what your purse did
 - ✅ Press Done and it reports what moved the same way it reports a trade of its own, and credits the profit to your Trade skill
+- ✅ A deal you took on the trade screen that lost money is reported as the loss it was
 - ✅ Buy Workshops Remotely, on its own button below the TradeLord ledger: every workshop in Calradia a notable would sell you, with its town, what it makes, who owns it, what it pays a day and what it costs
 - ✅ Buy Workshops Remotely lists first the workshop that pays for itself soonest, not the one earning the most
 - ✅ Buy any workshop from there, wherever you are standing, and it asks you to confirm before it spends a denar, saying about how many days it takes to pay for itself
