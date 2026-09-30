@@ -6,9 +6,6 @@
 - Fixed the Trade XP from a trade being left out of a save the game made the moment TradeLord traded
 - TradeLord.log now says how much profit the game's own trade record gives for what TradeLord sold
 - The hint for What a good counts as having cost you now says Trade XP is what the game gives for that sale
-- The feature list now says Trade XP for what TradeLord sells is exactly what the game gives for the same sale
-- The feature list now says TradeLord credits your Trade skill with what the game gives for the same sale, at a rate you set
-- The feature list now says a good you never bought earns only the Trade XP the game itself would give for it
 
 ## 1.97.4
 
@@ -16,8 +13,6 @@
 - What this means now shows the share of a price elsewhere TradeLord counts on only once your walk-ins have lowered it
 - The hint for Resale safety factor now says Learn the resale safety factor only ever lowers it
 - The hint for Learn the resale safety factor now says it never raises Resale safety factor above what you set
-- The feature list now says Learn the resale safety factor only ever lowers Resale safety factor
-- The feature list now says What this means shows the share of a price elsewhere TradeLord counts on once your walk-ins have lowered it
 
 ## 1.97.2
 
@@ -32,13 +27,6 @@
 - How far TradeLord trusts what is on its way to a market starts over once, as the old record weighed each forecast by its size alone
 - Enable extended debug logging now says the trust in what is on its way to a market is worked out by least squares
 - TradeLord.log now says the profit on a deal you took on the trade screen is what the units you had bought fetched over their cost
-- The feature list now says the profit reported is what each unit you bought fetched over what that unit cost you
-- The feature list now says a good you never bought earns no profit and no Trade XP when it sells
-- The feature list now says goods bought from villagers earn only the Trade XP the game itself would give for them
-- The feature list now says a unit bought dear keeps its cost when some of the same good is eaten, lost or given away
-- The feature list now says a deal you took on the trade screen that lost money is reported as the loss it was
-- The feature list now says What a good counts as having cost you is what the price has to beat by your margin
-- The feature list now says what is on its way to a market is trusted by least squares
 
 ## 1.97.1
 
@@ -58,10 +46,6 @@
 - Fixed TradeLord.ini left half written if the game stopped while saving it, putting your settings back to what TradeLord ships with
 - Fixed a damaged purchase record in a save stopping TradeLord from selling that good or pricing it for the map marker
 - The route scan no longer spends time working out forecast figures the forecast check has no room to keep
-- The feature list now says how much of a price elsewhere TradeLord counts on is learned from how the promised Sell price held
-- The feature list now says What this means shows the share of a price elsewhere TradeLord counts on
-- The feature list now says TradeLord.log writes how much of the promised Sell price has held at the markets you walked into
-- The feature list now says TradeLord never trades with caravans and villagers at war with you
 
 ## 1.97.0
 
@@ -76,21 +60,12 @@
 - Enable extended debug logging now writes what share of a price elsewhere TradeLord counts on when buying, whenever it changes
 - Fixed the Chinese warning about your gold reserve when buying a workshop writing troop wages with the wrong character
 - Fixed the Russian warning about your gold reserve when buying a workshop spelling denars differently from every other message
-- The feature list now says a price above what the ledger promised counts as the promise and no more
-- The feature list now says the forecast is judged against what moved by the day you walked in
-- The feature list now says TradeLord buys first what makes the most for the cargo room or gold that runs short
-- The feature list now says Buy Workshops Remotely lists first the workshop that pays for itself soonest, and what each pays a day
-- The feature list now says TradeLord.log writes the map marker's table of every market only when the marker moves
-- The feature list now says TradeLord.log writes the marked market good by good when the mark stays but its gold changes
-- The feature list now says TradeLord.log writes what share of a price elsewhere TradeLord counts on when buying
-- The feature list now counts eight numbers in what TradeLord puts in a save
 
 ## 1.96.0
 
 - Added Earn workshops with Trade skill under General, off out of the box, which makes you earn workshops up to Most workshops you may own
 - Earn workshops with Trade skill lets you own the game's own limit plus one workshop for every 25 points of your Trade skill
 - With Earn workshops with Trade skill on, the renown tooltip on the clan screen shows the workshop your next clan tier adds
-- The feature list now names Earn workshops with Trade skill
 
 ## 1.95.7
 
@@ -102,7 +77,6 @@
 ## 1.95.6
 
 - Fixed the renown tooltip on the clan screen offering more workshops at the next tier when Most workshops you may own sets the limit
-- The feature list now says the clan screen's Workshops count and renown tooltip follow Most workshops you may own
 
 ## 1.95.5
 
@@ -130,14 +104,10 @@
 - Fixed the TradeLord ledger sending you to Knowledge for Town travel ceiling and Village travel ceiling, which are under Trade Pool
 - Fixed the hint for Most it will pay for a haul animal saying it goes by the cheapest price you ever saw, not the cheapest TradeLord knows
 - The hint for Most it will pay for a haul animal now gives its default as 125%, the way the slider shows it
-- The feature list now says every good, livestock included, takes its room in the ships' hold with Buy to fill the ships on
-- The feature list now says the share of the hold is left off an animal only while Buy to fill the ships is off
 
 ## 1.95.1
 
 - The longest hints on the settings screen are shorter
-- The longest lines of the feature list are shorter
-- The longest lines of the comparison with the other trade mods are shorter
 
 ## 1.95.0
 
@@ -146,8 +116,6 @@
 - Fixed Hold cargo for the best market not counting the gold this market pays for goods you bought that the marked market does not want
 - The hint for Trade entry in town menu now says it sells what you bought, buys, then sells what you never bought
 - The hint for Auto buy now says it buys after selling what you bought and before selling what you never bought
-- The feature list now says the trade entry sells what you bought, buys, then sells what you never bought
-- The feature list now says what you never bought, loot included, is sold once the buying is done, with the gold the merchant has left
 
 ## 1.94.3
 
@@ -186,9 +154,6 @@
 - The reason shown when TradeLord holds cargo back now names Hold cargo for the best market
 - When a good misses both Minimum profit margin and Hold cargo for the best market, the reason shown now says prices here miss your margin
 - The hint for Hold cargo for the best market now says what the slider holds back and when it holds nothing
-- The feature list now says Hold cargo for the best market holds a good you bought for the market marked on your map, at 75%
-- The feature list now says Hold cargo for the best market holds only as many as the marked market would buy, and never looted gear
-- The feature list now says Hold cargo for the best market holds nothing in the marked market, or with Auto-mark best sell market on map off
 
 ## 1.93.16
 
@@ -203,8 +168,6 @@
 - The hint for Count what is on its way to a market now says what uses it, and which prices need Bulk price simulation
 - The hint for Auto-mark best sell market on map now says it skips the market TradeLord last traded at until you return
 - The hint for Hold cargo for the best market now says it counts what is on its way to that market
-- The feature list now says Count what is on its way to a market also steers Hold cargo for the best market
-- The feature list now says the last market traded at gets one look once it is back and takes the mark if it earns more a day
 
 ## 1.93.14
 
@@ -219,11 +182,6 @@
 - TradeLord.log now says when coming back to the market TradeLord made its last trade at lets the map marker mark it again
 - Fixed TradeLord.log saying trading on arrival leaves a market alone when nothing trades as you arrive
 - Fixed TradeLord.log calling the daily herd check "on the road" while you were in a town, a village or a castle
-- The feature list now says the map marker leaves out the market TradeLord made its last trade at until you come back to it
-- The feature list now says a deal you take from Staged Trading counts as TradeLord's last trade at that market
-- The feature list now says TradeLord.log shows today's price beside the price the map marker expects once what is on its way lands
-- The feature list now says TradeLord.log names each other market whose gold or units changed while the map marker stays put
-- The feature list now says the map marker's whole weighing is written down when only the units or whether it holds the mark change too
 
 ## 1.93.13
 
@@ -234,7 +192,6 @@
 - Fixed the map marker passing over the market TradeLord traded at before this town, once TradeLord has traded in this town
 - Fixed TradeLord.log saying the market a good is bought for counted what is on its way there when that changed nothing
 - Fixed TradeLord.log timing the map marker's weighing no finer than the system clock ticks
-- The feature list now says the map marker counts what is on its way to a market only with Bulk price simulation on
 
 ## 1.93.11
 
@@ -252,12 +209,6 @@
 - TradeLord.log now says how long the map marker took each time it writes down what it weighed
 - TradeLord.log now names the market the map marker leaves out because TradeLord made its last trade there
 - TradeLord.log now says when the market TradeLord buys a good for is priced with what is on its way there
-- The feature list now says the map marker prices each market as it will be when you get there, with Count what is on its way to a market on
-- The feature list now says the map marker leaves out the market TradeLord made its last trade at while Auto sell would leave it alone
-- The feature list now says a trade with caravans or villagers on the road frees the market TradeLord made its last trade at
-- The feature list now says Count what is on its way to a market also steers where TradeLord means to sell and the map marker
-- The feature list now says the map marker's weighing is written down each time what your cargo would fetch there changes
-- The feature list now says TradeLord.log says how long each weighing of the map marker took
 
 ## 1.93.10
 
@@ -267,8 +218,6 @@
 - TradeLord.log now says when trading on arrival left a market alone because TradeLord made its last trade there
 - TradeLord.log now says when selling animals on the way out of a market waits because TradeLord made its last trade there
 - TradeLord.log now notes each market TradeLord traded at as you leave it
-- The feature list now says the first time you come back to the market TradeLord made its last trade at, it leaves that market alone
-- The feature list now says Esc closes the ledger or Recent trades and leaves the game's own menu shut
 
 ## 1.93.9
 
@@ -277,8 +226,6 @@
 - Count what is on its way to a market now counts a workshop run only while the town holds its inputs and the run pays
 - Count what is on its way to a market now counts your own workshops drawing on their warehouse and landing only what you send to the market
 - Count what is on its way to a market starts learning afresh how far to trust itself, now that it follows every workshop run
-- The feature list now says every workshop is followed day by day and a run counts only while the town can feed it and it pays
-- The feature list now says your own workshops draw on their warehouse first and land only what you send to the market
 
 ## 1.93.8
 
@@ -290,10 +237,6 @@
 - TradeLord.log now says when the next haul animal would have taken your purse down to Gold before it buys a haul animal
 - TradeLord.log now says when the goods your full cargo left behind would make less than a haul animal costs
 - TradeLord.log now says when the food your full cargo left behind was too little for a haul animal while your party still had a day of food
-- The feature list now says Buy haul animals never leaves your purse at Gold before it buys a haul animal or below
-- The feature list now says Buy haul animals buys an animal for light goods that would make more than the animal costs
-- The feature list now says Buy haul animals buys an animal for food only when the food would fill half of it or your party is down to its last day of food
-- The feature list now says a dry run takes away the cargo room of the haul animals and spare mounts it would sell
 
 ## 1.93.7
 
@@ -302,9 +245,6 @@
 - Fixed Simulation mode (dry run) leaving out the goods and food the haul animals it would buy could carry
 - TradeLord.log now says when Gold before it buys a haul animal stopped Buy haul animals partway through
 - TradeLord.log now says when the goods your full cargo left behind would fill less than half a haul animal
-- The feature list now says Buy haul animals checks Gold before it buys a haul animal again before every animal
-- The feature list now says Buy haul animals buys no animal for goods that would fill less than half of one
-- The feature list now says a dry run counts the cargo room of the haul animals it would buy
 
 ## 1.93.6
 
@@ -317,7 +257,6 @@
 - Fixed TradeLord.log's marker check scoring a market you reached too soon to say anything, such as after the map's teleport cheat
 - Fixed the map marker flicking to another market and back when a slow stretch of road briefly put the marked one past your travel ceiling
 - The hint under Town travel ceiling now says a town already marked on the map may pass it by a fifth
-- The feature list now says the market already marked keeps its mark until it is a fifth past your travel ceiling
 - TradeLord.log now says when the map marker keeps a market a little past your travel ceiling
 
 ## 1.93.5
@@ -328,23 +267,19 @@
 - Buy haul animals no longer buys while your cargo is fuller than Share of the hold TradeLord may fill allows, and TradeLord.log says so
 - The hint under Buy haul animals now says it buys only to carry goods or food a full cargo left behind
 - Fixed the Chinese hint under Buy haul animals giving the Mule the wrong name
-- The feature list now says Buy haul animals buys only for what a full cargo left behind and never for a cargo already too full
 - TradeLord.log now names the weight of goods or food your full cargo left behind whenever it buys haul animals
 - Fixed Count what is on its way to a market never moving a village's price in the ledger panel and item tooltips
-- The feature list now says a village is priced through the town it trades with
 - Fixed Count what is on its way to a market ignoring what a town uses up each day and what its workshops take
 - The ledger panel's Qty, Left and Conf now count what a town and its workshops use up
 - Count what is on its way to a market starts learning afresh how far to trust itself, now that it counts what leaves a market
 - The hint under Count what is on its way to a market now names what the town and its workshops use up, and says a village follows its town
 - The ledger panel's legend now says its prices and stock count what the town and its workshops use up
-- The feature list now says what a town and its workshops use up is counted in prices, stock and Left
 - TradeLord.log now judges the forecast with what the town uses up counted to the day you walked in
 - TradeLord.log now gives the forecast's unit figure as what lands less what leaves, rather than what lands alone
 - Fixed Pick where to sell on the whole load weighing units you would never buy
 - Fixed Pick where to sell on the whole load choosing a market without the gold to pay for the load
 - Fixed Pick where to sell on the whole load weighing more livestock than your herd has room for
 - Pick where to sell on the whole load now picks the market again when the gold left buys fewer units than it weighed
-- The feature list now says Pick where to sell on the whole load weighs only what you could buy and what each market can pay for
 - TradeLord.log now says the whole-load pick counts only the units that clear your margin and the market's purse
 - Fixed every market dropping out of reach for an hour after the map's teleport cheat, which took the map marker off and stopped buying
 - Fixed every market counting as out of reach while you stood in a village after the map's teleport cheat
@@ -352,7 +287,6 @@
 - Fixed TradeLord.log putting denars in the wrong place in the forecast check, as in 950 left instead denars
 - Fixed TradeLord.log's forecast check reading backwards when it had said goods would leave a market
 - Fixed the villagers' offer message blaming your margin when there was nowhere in reach to resell the goods
-- The feature list now says the villagers' offer message can say there is nowhere in reach to resell it
 
 ## 1.93.4
 
@@ -382,7 +316,6 @@
 - Fixed TradeLord's forecast going unchecked when you reach a market before the figure it gave for that market is due
 - TradeLord.log now gives the price a purchase is meant to fetch as the buyer's average over the units bought, not the first unit's price
 - The hint under Max spend per visit now names Adaptive spend limit
-- The feature list now names Adaptive spend limit and how it grows with your purse
 
 ## 1.92.0
 
@@ -392,10 +325,6 @@
 - A message now says why TradeLord left the villagers' offer to you
 - A message now says when your profit could add no Trade XP because your Trade skill is past its learning limit, and what would lift it
 - The hint under Trade with caravans and villagers now says the villagers' offer is taken whatever your caps and Never buy grain say
-- The feature list now says the villagers' offer is taken whole whatever Max spend per visit, Never buy grain and the caps on one good say
-- The feature list now says a message tells you why TradeLord left the villagers' offer to you
-- The feature list now says TradeLord tells you when your Trade skill is past its learning limit
-- The feature list now says only a caravan on the road is held to every rule a market visit is
 
 ## 1.91.9
 
@@ -409,7 +338,6 @@
 - TradeLord.log now names the lame animals Sell animals that slow you down leaves alone when it has nothing else it may sell
 - Fixed TradeLord profit dropping when you sold goods you never paid for cheaply in a deal Staged Trading laid out
 - Fixed TradeLord.log writing the map marker's days with a comma in some languages
-- The feature list now says a lame horse, mule or camel is never sold to get you back up to speed or bought to carry more
 
 ## 1.91.7
 
@@ -442,19 +370,12 @@
 ## 1.91.3
 
 - Fixed Best sell prices and Best buy prices in a lame horse's tooltip showing a sound horse's prices
-- The feature list now says What this means is where the ledger tallies how well its promised Sell price has held
-- The feature list now says What this means is where the ledger says your gold reserve is stopping you buying
-- The feature list now says Left shows days instead of hours once a shelf holds for two days or more
-- The feature list now names the Trade XP shown along the top of the ledger
-- The feature list now says TradeLord trades on the road at the prices the game's trade screen or the villagers' offer charges
-- The comparison with the other trade mods now says only a trade in a market goes through the game's own sale
 
 ## 1.91.2
 
 - Fixed meeting the same caravan or villagers again days later still counting what you spent the first time against Max spend per visit
 - Fixed TradeLord passing over goods it had traded with a caravan days earlier when meeting that caravan again
 - TradeLord no longer trades in a town or village when the game cannot say whether you may trade there
-- The feature list now says that meeting the same caravan or villagers again later starts afresh
 
 ## 1.91.1
 
@@ -569,21 +490,15 @@
 - Fixed the ledger opening a route at a price far above what that market is paying
 - TradeLord.log now lists every market the map marker priced, instead of the five best
 - TradeLord.log now says how far off the forecast has been this campaign and how much of it is being counted
-- The mod description now says the forecast is scored against what really moved
 
 ## 1.90.4
 
 - Fixed the map marker swapping between two towns while you were riding to one of them
 - Fixed the ledger promising a price the market would not pay once you got there
 
-## 1.90.3
-
-- The mod description now says the most workshops you may own in one line instead of two
-
 ## 1.90.2
 
 - The Free passage from bandits setting is written as BanditFreePassage in TradeLord.ini now, and the value you had is carried over
-- The mod description now says the most workshops you may own is raised to 200 out of the box
 
 ## 1.90.1
 
@@ -597,7 +512,6 @@
 - The map marker now reads every market's price live, instead of keeping one it read up to three hours earlier
 - A market is weighed on the units it would really take from you, stopping where your Minimum profit margin runs out
 - The map marker is quicker despite reading prices live, because it stops asking a market once your margin is gone
-- The mod description no longer says the map marker can be on prices a few hours old
 
 ## 1.89.1
 
@@ -611,12 +525,10 @@
 - Town travel ceiling now says on the settings screen that setting it to 0 weighs every town in Calradia and is the slowest TradeLord runs
 - With Enable extended debug logging on, TradeLord.log says while Town travel ceiling is off how many markets are being weighed
 - With Enable extended debug logging on, TradeLord.log says after every route scan how many prices it opened and how long it took
-- The mod description now says what turning Town travel ceiling off costs, and names what TradeLord.log writes after a route scan
 
 ## 1.88.2
 
 - The buying pass is quicker in a market full of goods, and quicker still when you are already carrying a large load
-- Fixed the mod description saying Live world prices ships off, when it ships on
 
 ## 1.88.1
 
@@ -627,13 +539,11 @@
 - Added Pick the market a buy is aimed at on the whole stack, on out of the box, which weighs markets on the whole lot, not one unit
 - With Enable extended debug logging on, TradeLord.log names the market the whole stack picked when one unit would have picked another
 - With Enable extended debug logging on, TradeLord.log says after every buying pass how many price ladders it walked and how long they took
-- The mod description now names Pick the market a buy is aimed at on the whole stack
 
 ## 1.87.0
 
 - The three switches under Debug are one setting now, Enable extended debug logging, and it ships on
 - Write a price trace to the log, Score the forecast in the log and Ultralog in your settings file carry over to Enable extended debug logging
-- The mod description now names Enable extended debug logging and says what it writes
 
 ## 1.86.0
 
@@ -669,8 +579,6 @@
 - With Ultralog on, TradeLord.log scores the marked market when you walk in, against what it really paid you
 - With Ultralog on, TradeLord.log writes a line when the map marker weighs your cargo again and stays where it is
 - With Ultralog on, TradeLord.log says how many markets the map marker left out and what left each of them out
-- The mod description is rewritten in short lines, so it reads at a glance rather than in paragraphs
-- Fixed the mod description saying your food is topped up before TradeLord trades for profit, when since 1.83.2 the larder is filled after
 
 ## 1.83.3
 
@@ -741,14 +649,11 @@
 
 - TradeLord now puts 1000 denars back into every village left with an empty purse, once, so they will trade again
 - TradeLord says on screen how many village purses it refilled, and names each one in the log
-- The mod description now mentions the one time village purse refill
-- The mod description now counts the switch TradeLord writes into your save as well as the strings and numbers
 
 ## 1.81.6
 
 - Villages now keep the last coin in their purse, so Buy products no longer greys out with Village shop is not available right now
 - The map marker and the ledger now skip a village left with nothing but that coin
-- The mod description now says a village keeps the last coin in its purse as well as its last of each good
 
 ## 1.81.5
 
@@ -801,7 +706,6 @@
 
 - Fixed villages looking like they pay half what they really do, which made TradeLord skip sales worth making
 - Fixed markets of a faction you are at war with carrying a price penalty TradeLord is never actually charged
-- The mod description now says the price TradeLord shows is the price it pays
 
 ## 1.80.8
 
@@ -875,7 +779,6 @@
 
 - Silence trade messages now names the three warnings it still shows on screen
 - Mark a market rising or falling now says it needs Live world prices off, since with them on it marks nothing
-- The mod description now says a town's purse is read live, so with Live world prices off a route is planned on stock alone
 
 ## 1.78.1
 
@@ -903,7 +806,6 @@
 ## 1.77.1
 
 - Fixed Auto-mark best sell market on map repricing every market on the map each time you walk in or out of a settlement
-- The mod description now names two limits it had left unsaid, Buy cap per item at 32 units a visit and Max spend per visit at 1000 denars
 
 ## 1.76.9
 
@@ -956,8 +858,6 @@
 
 - Most workshops you may own now lifts the limit for your own clan only
 - The confirm box now warns you when a workshop takes you below your Gold reserve and wage cover, and still lets you buy it
-- The comparison with the other trade mods now names what TradeLord has gained since it was written
-- The comparison called Staged Trading by its old name, and now uses the one on the settings screen
 
 ## 1.76.0
 
@@ -972,7 +872,6 @@
 
 - The map marker line in TradeLord.log now calls the market it beat the next best it priced, rather than the second best on the map
 - Fixed a market whose prices could not be read saying so only once a session, and never again in your next campaign
-- The mod description now says meeting the same caravan or villagers again keeps the books of what was already traded
 
 ## 1.75.0
 
@@ -997,10 +896,6 @@
 - The line under the routes now says what Left does, not just what it means
 - Routes are ranked by Left only with Live world prices on, and with it off the caravan count decides as before
 
-## 1.72.1
-
-- The mod description now names Recent trades
-
 ## 1.72.0
 
 - Added Recent trades at the end of the ledger, the last twenty buys and sells with the day, the town and the gold
@@ -1011,19 +906,16 @@
 
 - Fixed Economy settling delay shutting every market on a campaign whose age the game cannot work out
 - The days left of Economy settling delay are never shown as none, or as more than you set
-- The mod description now ends with short answers to the questions people ask before installing
 
 ## 1.71.1
 
 - TradeLord now keeps at most 2500 recorded prices, oldest forgotten first, so a long campaign cannot grow your save without end
 - TradeLord.log now says at every save how many recorded prices and purchase records went into it, and how large they are
-- The comparison with the other trade mods is now one short entry a mod, and no longer says another mod alone tells you how long a route lasts
 
 ## 1.71.0
 
 - Added a Left column to the ledger, saying how many hours the shelf holds what a route quotes before the caravans buy it out
 - The panel is a little wider to make room for it
-- The mod description now names the Left column too
 
 ## 1.70.0
 
@@ -1031,7 +923,6 @@
 - Added Share of the profit your companions learn from under General, which gives every companion riding with you Trade XP
 - An item tooltip now says what you paid per unit for a good you own, so you can see at a glance whether the market in front of you beats it
 - The panel no longer quotes more of a good than a market will have when you arrive
-- The mod description now names both new settings too
 
 ## 1.69.3
 
@@ -1041,8 +932,6 @@
 
 - Fixed a market looking as though it is next door when the game could not work out how far away it was
 - Fixed the panel dividing by a price of nothing when working out how many of a good are worth showing
-- The mod description now opens with five short lines instead of four and a long paragraph
-- The comparison with the other trade mods now says when they were read, and that anything they have changed since is not in it
 
 ## 1.69.1
 
@@ -1057,22 +946,18 @@
 ## 1.68.0
 
 - Added Mark a market rising or falling under Insight, which ships off, so tooltips read as they did before until you turn it on
-- The mod description now names Mark a market rising or falling too
 
 ## 1.67.0
 
 - Item tooltips now mark a market rising or falling when its price has moved 5% or more since the last day you looked
 - TradeLord now remembers the price from your previous visit to a market as well as the latest one
 - An older campaign keeps every price it had, and starts marking a direction after two visits to a market
-- The mod description now says prices are read through each market's own price model, the way the trade screen asks
 - The opening line now says the default settings are there to get you earning as fast as possible
-- The mod description now says how a price is read too
 
 ## 1.66.0
 
 - TradeLord.log now opens every campaign with one self check line, so a bug report is one line to paste rather than a hunt through the log
 - Anything TradeLord cannot read now says so as your campaign opens rather than the first time it matters
-- The mod description now names the self check line too
 
 ## 1.65.0
 
@@ -1081,7 +966,6 @@
 - With Lay the trade out for you first on, nothing is traded as you arrive, and Trade here now (TradeLord) lays the deal out instead
 - A deal with nothing in it says so rather than leaving you looking at an empty screen
 - Simulation mode (dry run) still wins over Lay the trade out for you first, so a dry run never puts anything on the screen
-- The mod description now names Lay the trade out for you first too
 
 ## 1.64.1
 
@@ -1096,13 +980,11 @@
 - The line under the routes says how much of the promised Sell price has really been there, and over how many arrivals
 - With Score the forecast in the log on, the log breaks the score down by Conf
 - A promise you arrive far too late for is dropped rather than scored
-- The mod description now names the panel's own score too
 
 ## 1.63.0
 
 - Added Score the forecast in the log under Debug, which writes down what a market was expected to hold and what it really held
 - Score the forecast in the log needs Count what is on its way to a market, and ships off
-- The mod description now names Score the forecast in the log too
 
 ## 1.62.2
 
@@ -1114,24 +996,13 @@
 
 - The ledger now marks a route Qty! where its amount counts goods still on the road, so a number larger than the shelf is never a surprise
 - The line under the routes says what Qty! means
-- The mod description now names the Qty! mark too
 
 ## 1.62.0
 
 - The five markets in an item tooltip are now priced as each will be when you get there
 - A tooltip's five markets are ordered on the prices you will actually be offered, so one about to be picked over no longer tops the list
 - The note under Count what is on its way to a market now says it reaches a tooltip price as well as a route
-- The mod description now says the tooltip prices a market as it will be when you arrive
-- The mod description now says the ledger ranks the best route for each good, thirty rows, not every profitable route
-- The mod description now calls the smithing choice Keep the ones you have not learned, its name on the settings screen
-- The mod description now says quiet mode still speaks the warning that your cargo is full
-- The mod description now says a route is listed even when your herd is already full
-- The mod description also says a dry run is marked a best case, and a route priced without walking every unit is marked on its Conf
 - The opening summary now names what is actually weighed in a route rather than counting the factors behind it
-- The mod description now says you can tell a caravan it was a good trade once the goods have changed hands, and that the trader answers
-- The mod description now says the town menu entry falls back to the six best routes written out as text when the ledger cannot open
-- The mod description now counts how much of the margin survives unit by unit pricing among the things a route's confidence is discounted by
-- The mod description now says the settling delay ships off, and that a trade on the road moves the goods and the gold itself
 
 ## 1.61.0
 
@@ -1140,7 +1011,6 @@
 - A caravan's purse counts only where it is going, only if it arrives before you, and never for more gold than it carries
 - Count goods on their way to a market is now called Count what is on its way to a market, since it counts the gold as well
 - The line under the routes now says prices count what will be bought off a market as well as what will be added to it
-- The mod description now says a route's price counts the purses the caravans are bringing
 
 ## 1.60.0
 
@@ -1150,14 +1020,12 @@
 - The workshop list on the ledger now says what each workshop will make next, beside what it has earned
 - Added Count goods on their way to a market under Knowledge, on out of the box, and it follows Live world prices
 - The line under the routes now says when prices and stock are counting what is on the way
-- The mod description now says prices and stock count the caravans on the road and the workshops
 
 ## 1.59.0
 
 - The map marker can now land on a village as well as a town, as long as Trade with villages is on
 - A village being raided or rebuilding is never marked, since you could not trade there anyway
 - Auto-mark best sell town on map is now called Auto-mark best sell market on map, and keeps to the Village travel ceiling
-- The mod description now says the map marker can land on a village as well as a town
 
 ## 1.58.2
 
@@ -1173,7 +1041,6 @@
 
 - Livestock is no longer counted as food, so a herd is bought and sold as ordinary goods with only the herd speed penalty holding it back
 - Keep some of every kind of food now says livestock is left out, because a herd is traded as goods and never as food
-- The mod description now says a herd is never counted as food
 
 ## 1.57.0
 
@@ -1192,14 +1059,12 @@
 - The town marked on your map is never one TradeLord would walk into and then leave alone
 - When TradeLord cannot thin your herd, TradeLord.log now names the animals it is holding back rather than going quiet
 - Always sell now says a good a quest is waiting on still holds, not only an animal
-- The mod description now says anything a quest is waiting on is held back from every sale
 
 ## 1.54.0
 
 - Keep gold for days of wages now ships at 0, so a large army no longer stops TradeLord buying out of the box
 - Nothing bought here now blames your purse only when nothing else held a good back, so the reason you see is the one you can act on
 - With Simulation mode (dry run) on, what it spends goes back into the market's gold, so a later sale is measured properly
-- The mod description now says TradeLord holds back only the days of your troops' wages you ask it to keep
 
 ## 1.53.0
 
@@ -1222,14 +1087,12 @@
 
 - Restock and keep food (days of supply) set to 0 now keeps no food back at all, not even the few of each kind
 - The hint under Keep some of every kind of food now says it needs Restock and keep food (days of supply) turned on
-- The mod description now says keeping some of every kind of food follows the days of supply you set
 
 ## 1.52.0
 
 - Buy cap per item and Stop buying at this many held now hold while TradeLord restocks your food and buys haul animals
 - Share of the hold one good may fill now holds while TradeLord restocks your food, and is left off haul animals
 - The lines TradeLord adds when you meet a caravan or bandits now come out in the language you picked
-- The mod description now says which passes the per item caps hold in, and that a conversation line takes the new language too
 
 ## 1.51.1
 
@@ -1240,7 +1103,6 @@
 - Added Trade with towns, which turns trading in town menus off the same way Trade with villages does, and it ships on
 - The settings screen has a new Trade Pool group, holding who TradeLord trades with, the two travel ceilings and Exclude hostile markets
 - The longest hints on the settings screen are shorter, so a hint no longer spills over the settings beneath it
-- The mod description now says trading in towns and trading in villages can be switched off one at a time
 
 ## 1.50.2
 
@@ -1266,7 +1128,6 @@
 - Fixed the herd check in TradeLord.log reporting no herd penalty when it could not read one at all
 - Fixed a panel hotkey written with a leading plus, such as +T, reporting an empty modifier in TradeLord.log
 - Fixed buying none of a good leaving TradeLord holding a cost against goods you have none of
-- The mod description now says the price trace is written before anything is traded, and records what was quoted against what was paid
 
 ## 1.47.5
 
@@ -1279,7 +1140,6 @@
 ## 1.47.3
 
 - Fixed the running total of what TradeLord has made you turning negative once it passed about 2.1 billion denars
-- The mod description now says a save carries two of TradeLord's numbers rather than one
 
 ## 1.47.2
 
@@ -1294,10 +1154,6 @@
 
 - Added Write a price trace to the log, off out of the box, which writes down what the market you are in pays and charges
 - The price trace names the market, the price model the game is running, and any other mod changing either of them
-- The mod description now says TradeLord can write a price trace to its log
-- The mod description now says trading on arrival runs once per arrival, and that walking straight back in counts as the same visit
-- The mod description now says goods you never paid for wait for a price that clears your margin
-- The mod description now says the map marker keeps up with you as you ride, and that TradeLord.log is kept between sessions
 
 ## 1.46.2
 
@@ -1345,7 +1201,6 @@
 ## 1.42.3
 
 - Meeting a caravan or villagers on the road and trading nothing with them now really does tell you why, which 1.42.0 meant to do and did not
-- The mod description no longer says a route is quoted against what your purse holds
 
 ## 1.42.2
 
@@ -1382,12 +1237,6 @@
 
 - Walking into a market no longer has TradeLord work the best markets out all over again, since walking in moves no prices
 - After TradeLord trades, it works out again only the goods whose price its own trading moved, instead of every good on the map
-
-## 1.41.5
-
-- The mod description now calls Live world prices by the name the settings screen gives it
-- The mod description now says a pin comes off a town by itself once TradeLord has traded there
-- The mod description now says Share of the hold one good may fill ships at 45%
 
 ## 1.41.4
 
@@ -1459,7 +1308,6 @@
 ## 1.38.5
 
 - Fixed TradeLord matching its own lines to their translations differently depending on the language your computer is set to
-- The mod description now says asking a band to let you pass is a line you say to them, rather than the pop up it used to be
 
 ## 1.38.4
 
@@ -1532,7 +1380,6 @@
 
 - The free passage setting now describes what it really does, asking you as you meet the band
 - The setting that sells animals to get your party back up to speed now says that an animal a quest is waiting on is left alone
-- The mod description now says getting your party back up to speed keeps back the animals a quest is waiting on
 
 ## 1.37.0
 
@@ -1556,7 +1403,6 @@
 - Bandits who have let you go now leave you be for a few hours, instead of turning round and hitting you again the moment the game unpauses
 - The language you pick now takes hold when you press Done on the settings screen, and the ledger panel changes over with it
 - TradeLord.log says how long the free passage holds and which band it holds off you
-- The mod description now says the free passage leaves the band off you afterwards
 
 ## 1.35.2
 
@@ -1576,7 +1422,6 @@
 - The Reset button now puts your settings back at once instead of taking several seconds over it
 - The hint under Ledger panel hotkey (map screen) now says one key name is all it takes, and anything else falls back to T
 - TradeLord.log now says how many of your settings had been changed when you press Reset
-- The mod description now says the language reaches your town menu entries too
 
 ## 1.34.0
 
@@ -1586,7 +1431,6 @@
 - Bandits now offer you free passage as soon as you meet them, asking whether to ride on or fight
 - TradeLord.log now calls a trade with a caravan or villagers a sale or a purchase on the road, and names the party
 - TradeLord.log names the band each time free passage is offered
-- The mod description now says a caravan or villagers are traded with the moment you meet them
 
 ## 1.33.0
 
@@ -1594,18 +1438,12 @@
 - The hint under Share of the hold one good may fill now calls them haul animals, the same name the rest of the settings screen already uses
 - TradeLord.log now calls a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse and a Pack Camel a haul animal
 - The hint under the Language setting now says the language takes hold as you pick it, and the town menu follows next load
-- The mod description now covers things TradeLord already did, among them the three herd checks a visit and the Reset button
 
 ## 1.32.0
 
 - The ledger now counts your purse, so it no longer offers you 32 of something you can only pay for 3 of
 - Your gold reserve and your spending cap for the visit are left out of what the ledger reckons you can afford
 - When your purse is what holds the ledger back, the panel says so, instead of blaming your travel ceilings
-- The mod description now says your own purse is counted into every route the ledger quotes
-
-## 1.31.1
-
-- The mod description now calls a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse and a Pack Camel haul animals
 
 ## 1.31.0
 
@@ -1627,15 +1465,11 @@
 - With Buy to fill the ships off, thinning your herd now keeps enough haul animals for your carts rather than your ships
 - TradeLord.log now says once why TradeLord cannot work out your herd, whichever part of it asked first
 
-## 1.30.1
-
-- The mod description and what it needs now both say TradeLord runs on the Bannerlord 1.5.2.121216 beta as well as on 1.4.8.119303
-
 ## 1.30.0
 
 - Restocking food now buys only where the market asks no more than the cheapest price you know of
 - Buying a haul animal and restocking food both stop before your gold reaches your reserve, so there is always something left to trade with
-- The hints under Buy haul animals and Restock food (days of supply) now say what each does, and the mod description matches
+- The hints under Buy haul animals and Restock food (days of supply) now say what each does
 
 ## 1.29.1
 
@@ -1721,43 +1555,33 @@
 ## 1.23.0
 
 - An animal that carries nothing for you and is not livestock is no longer kept with your haul animals, and is sold like any other cargo
-- The mod description now says where the line falls between a haul animal TradeLord keeps for you and an animal it sells
 
 ## 1.22.0
 
 - TradeLord now sells a spare mount nobody can ride once it drags you into the herd speed penalty, so your party stops crawling
 - TradeLord sells the cheapest spare first, never a haul animal, and one switch turns the whole thing off
 - A mule, a sumpter horse, a work horse and a pack camel are now called haul animals on the settings screen
-- The mod description now says what TradeLord will pay for a haul animal
 - Three settings no longer say a mount can never be sold, because now one can
-
-## 1.21.1
-
-- The mod description now names the animals TradeLord buys for your baggage train
 
 ## 1.21.0
 
 - Looted gear now sells to the first market that can pay for it, and Hold cargo for the best market is the only thing that holds cargo back
 - The setting that buys mules and horses now calls them animals rather than beasts
-- The mod description now names your gold reserve as 300 denars, and says what the settings out of the box are aimed at
 
 ## 1.20.1
 
 - The line saying TradeLord bought pack animals now comes just after the line crediting your Trade skill, rather than before it
-- The mod description now covers the top of the ledger panel, the on screen warnings, and leaving a village its last of each good
 
 ## 1.20.0
 
 - TradeLord now trades with a caravan you meet on the road, so talk to it and the deal is already done, paid out of the caravan's own purse
 - Added a setting capping how much of your hold one good may fill as a share rather than a flat count, so the ceiling grows with your carts
 - A horse one of your men on foot can ride no longer counts against the herd
-- The mod description covers trading with caravans and the new share of the hold
 
 ## 1.19.0
 
 - Keeping smeltable weapons is now a choice of three, and the new one keeps a weapon only while a part of it is locked in your smithy
 - Asking bandits to let you go is now on out of the box, and one switch turns it off
-- The mod description explains the three ways to play the smeltable weapon setting
 
 ## 1.18.0
 
@@ -1766,7 +1590,6 @@
 - Restocking now tops your food back up to three days of supply instead of five
 - Added a switch, off until you turn it on, that lets you ask bandits to let you go, with no fight and no ransom
 - The setting that keeps smeltable weapons now says plainly what it holds back, every weapon built from smithing parts
-- The mod description now covers what TradeLord buys for your baggage train and what it leaves alone
 
 ## 1.17.0
 
@@ -2100,7 +1923,6 @@
 
 ## 1.5.3
 
-- The mod description's count of releases, and the version it named, are corrected
 - The Nexus description of what the four Harmony patches do is corrected
 
 ## 1.5.2
@@ -2240,7 +2062,6 @@
 - The price colouring hint now mentions livestock and horses, which 1.3.14 added
 - The Minimum profit margin hint now says it applies to buying and to the route panel too, not just selling
 - The Economy settling delay hint now says it stops the town menu buttons as well as the automation
-- Two stale mod description lines about tooltips and per item caps are corrected
 
 ## 1.3.17
 
@@ -2408,7 +2229,6 @@ The versions below are the earlier test builds, from the two repositories this o
 ## 0.916Alpha
 
 - The download now unpacks straight into the game folder, the layout mod managers expect
-- The install instructions in the mod description now match the download's folder layout
 
 ## 0.915Alpha
 
@@ -2431,8 +2251,6 @@ The versions below are the earlier test builds, from the two repositories this o
 - The town and village travel ceilings can be turned off or changed in the settings
 - When two markets tie on price, the nearer one now ranks first
 - An empty list now names the ceiling that emptied it
-- Added a feature comparison page alongside the mod description
-- The mod description is brought in line with the comparison page
 
 ## 0.911Alpha
 
