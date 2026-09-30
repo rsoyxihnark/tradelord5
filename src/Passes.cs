@@ -201,7 +201,6 @@ namespace TradeLord
         int TillNow();
         void Staged(int at, int price);
         bool Give(int at, int price, out int proceeds, out int allowed);
-        int TradeXpNow(int at, int made, int allowed);
         void RecordedSale(int at, int unitPaid);
     }
 
@@ -642,8 +641,7 @@ namespace TradeLord
 
                 int[] there = holding?[at].Rungs;
                 int holdFor = holding?[at].Units ?? 0;
-                int madeOnThisGood = 0;
-                int allowedOnThisGood = 0;
+                int xpOnThisGood = 0;
 
                 while (remaining > 0)
                 {
@@ -701,12 +699,11 @@ namespace TradeLord
                     moved.Units++;
                     int earned = TradeMath.MadeOnAUnit(proceeds, paidFor, basis.SoldAt);
                     moved.Profit += earned;
-                    madeOnThisGood = TradeMath.AddedUp(madeOnThisGood, earned);
-                    if (allowed > 0) allowedOnThisGood = TradeMath.AddedUp(allowedOnThisGood, allowed);
+                    xpOnThisGood = TradeMath.AddedUp(xpOnThisGood, TradeMath.TradeXpForAUnit(earned, allowed));
                     remaining--;
                 }
-                if (!sim && (madeOnThisGood != 0 || allowedOnThisGood != 0) && market.TheGameGivesTradeXpFor(at))
-                    moved.Earned = TradeMath.AddedUp(moved.Earned, market.TradeXpNow(at, madeOnThisGood, allowedOnThisGood));
+                if (xpOnThisGood > 0 && market.TheGameGivesTradeXpFor(at))
+                    moved.Earned = TradeMath.AddedUp(moved.Earned, xpOnThisGood);
             }
             return moved;
         }

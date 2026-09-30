@@ -1699,9 +1699,6 @@ namespace TradeLord
                 return true;
             }
 
-            public int TradeXpNow(int at, int made, int allowed) =>
-                LedgerBehavior.Instance?.TradeXpNow(Item(at), made, allowed) ?? 0;
-
             public void RecordedSale(int at, int unitPaid) =>
                 LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, unitPaid);
         }
@@ -2104,8 +2101,7 @@ namespace TradeLord
                                             LedgerBehavior.Instance?.PurchasedUnits(el.EquipmentElement) ?? 0,
                                             paidKey, pass.Books, pass.Sim, Options.Current,
                                             LedgerBehavior.Instance?.UnitCosts(el.EquipmentElement, el.Amount));
-                    int madeOnThisAnimal = 0;
-                    int allowedOnThisAnimal = 0;
+                    int xpOnThisAnimal = 0;
 
                     while (remaining > 0 && shed > 0)
                     {
@@ -2142,8 +2138,7 @@ namespace TradeLord
                         }
                         int credited = TradeMath.MadeOnAUnit(price, bought, basis.SoldAt);
                         profit += credited;
-                        madeOnThisAnimal = TradeMath.AddedUp(madeOnThisAnimal, credited);
-                        if (allowed > 0) allowedOnThisAnimal = TradeMath.AddedUp(allowedOnThisAnimal, allowed);
+                        xpOnThisAnimal = TradeMath.AddedUp(xpOnThisAnimal, TradeMath.TradeXpForAUnit(credited, allowed));
                         sold++;
                         remaining--;
                         shed--;
@@ -2151,10 +2146,8 @@ namespace TradeLord
                         else if (rank != RankLivestock) mountsLeft--;
                         pass.Tally(item, 1, price);
                     }
-                    if (!pass.Sim && el.EquipmentElement.ItemModifier == null &&
-                        (madeOnThisAnimal != 0 || allowedOnThisAnimal != 0))
-                        earned = TradeMath.AddedUp(earned,
-                                                   LedgerBehavior.Instance?.TradeXpNow(item, madeOnThisAnimal, allowedOnThisAnimal) ?? 0);
+                    if (!pass.Sim && xpOnThisAnimal > 0 && el.EquipmentElement.ItemModifier == null)
+                        earned = TradeMath.AddedUp(earned, xpOnThisAnimal);
                 }
             });
 

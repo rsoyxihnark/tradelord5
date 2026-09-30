@@ -1403,7 +1403,7 @@ def saved_numbers_read_the_same_in_every_language():
     numeric = [c for c in re.findall(
         r'\w+\.ToString\([^)]*\)|\b(?:int|float|double|long)\.(?:Try)?Parse\([^;]*', codec)
         if not c.startswith('sb.ToString')]
-    return (len(numeric) == 10
+    return (len(numeric) == 7
             and all('CultureInfo.InvariantCulture' in c for c in numeric)
             and 'NumberStyles.Integer, CultureInfo.InvariantCulture' in codec
             and 'NumberStyles.Float, CultureInfo.InvariantCulture' in codec
@@ -5746,7 +5746,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
                         "LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));",
                         'dataStore.SyncData("TradeLord_LedgerText"')
             and trade.count("dataStore.SyncData(") == 2
-            and ledger.count("dataStore.SyncData(") == 14)
+            and ledger.count("dataStore.SyncData(") == 13)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
     arrays = dict(re.findall(r'private static readonly string\[\] (\w+) =\s*\{(.*?)\};', M, re.S))
@@ -5792,9 +5792,9 @@ def getting_back_up_to_speed_credits_what_it_makes():
             and "bool bought = basis.SoldOne();" in relief
             and "int credited = TradeMath.MadeOnAUnit(price, bought, basis.SoldAt);" in relief
             and "profit += credited;" in relief
-            and "madeOnThisAnimal = TradeMath.AddedUp(madeOnThisAnimal, credited);" in relief
-            and ordered(relief, "if (!pass.Sim && el.EquipmentElement.ItemModifier == null &&",
-                        "LedgerBehavior.Instance?.TradeXpNow(item, madeOnThisAnimal, allowedOnThisAnimal) ?? 0);")
+            and "xpOnThisAnimal = TradeMath.AddedUp(xpOnThisAnimal, TradeMath.TradeXpForAUnit(credited, allowed));" in relief
+            and ordered(relief, "if (!pass.Sim && xpOnThisAnimal > 0 && el.EquipmentElement.ItemModifier == null)",
+                        "earned = TradeMath.AddedUp(earned, xpOnThisAnimal);")
             and "pass.Moved(profit, gained, selling: true);" in relief
             and "if (profit.HasValue) LedgerBehavior.Instance?.AddProfit(profit.Value);" in
                 method_body(S['Trading.cs'], "internal void Moved")
@@ -10175,8 +10175,8 @@ def whoever_made_the_trade_credits_the_trade_skill_for_it():
             and "bool TheGameGivesTradeXpFor(int at);" in passes
             and "public bool TheGameGivesTradeXpFor(int at) => _plan[at].EquipmentElement.ItemModifier == null;" in t
             and passes.count("market.TheGameGivesTradeXpFor(at)") == 1
-            and ordered(passes, "market.TheGameGivesTradeXpFor(at))",
-                        "moved.Earned = TradeMath.AddedUp(moved.Earned, market.TradeXpNow(at, madeOnThisGood, allowedOnThisGood));")
+            and ordered(passes, "if (xpOnThisGood > 0 && market.TheGameGivesTradeXpFor(at))",
+                        "moved.Earned = TradeMath.AddedUp(moved.Earned, xpOnThisGood);")
             and t.count("AwardTradeXpForOurOwnTrade(") == 3
             and "AwardTradeXpForOurOwnTrade(" not in method_body(t, "private static void ReportWhatYouSold")
             and "internal int Earned;" not in t
@@ -15625,68 +15625,56 @@ chk("1.97.2", "what each unit cost is read from the few batches it was bought in
 
 def trade_xp_never_goes_past_what_the_game_gives():
     t = S['Trading.cs']
-    now = method_body(S['TradeMath.cs'], "public static int TradeXpNow(ref TradeXpWaiting waiting, int made, int allowed)")
     note = method_body(t, "internal static int Note(bool selling, EquipmentElement what, int gold)")
     swap = method_body(t, "private bool Swap(bool selling")
     give = method_body(t, "public bool Give(int at, int price, out int proceeds, out int allowed)")
-    relief = method_body(t, "public static void ExecuteHerdRelief")
-    sell = method_body(S['Passes.cs'], "internal static Traded SellThem")
-    ledger = S['Ledger.cs']
-    kept = method_body(ledger, "internal int TradeXpNow(ItemObject item, int made, int allowed)")
-    write = method_body(S['LedgerCodec.cs'], "public static string WriteTradeXpWaiting")
-    read = method_body(S['LedgerCodec.cs'], "public static Dictionary<string, TradeXpWaiting> ReadTradeXpWaiting")
-    return (now and note and swap and give and relief and sell and kept and write and read
-            and ordered(now, "waiting.Made = AddedUp(waiting.Made, made);",
-                        "waiting.Allowed = AddedUp(waiting.Allowed, allowed > 0 ? allowed : 0);",
-                        "long now = Math.Min(waiting.Made, waiting.Allowed);", "if (now <= 0L) return 0;",
-                        "if (now > int.MaxValue) now = int.MaxValue;",
-                        "waiting.Made -= now;", "waiting.Allowed -= now;")
-            and "public long Made;" in S['LedgerCodec.cs'] and "public long Allowed;" in S['LedgerCodec.cs']
+    return (note and swap and give
             and "return _sold?.Invoke(book, new object[] { one, gold, true }) is int gave ? gave : NotKnown;" in note
             and ordered(swap, "TheGameGave = GameTradeBook.NotKnown;", "if (selling || Met == null || !Met.IsVillager)",
                         "TheGameGave = gave;")
             and ordered(give, "allowed = GameTradeBook.NotKnown;", "allowed = _pass.TheGameGave;")
-            and "int TradeXpNow(int at, int made, int allowed);" in S['Passes.cs']
-            and ordered(sell, "int madeOnThisGood = 0;", "int allowedOnThisGood = 0;",
-                        "if (!market.Give(at, price, out int proceeds, out int allowed)) break;",
-                        "madeOnThisGood = TradeMath.AddedUp(madeOnThisGood, earned);",
-                        "if (allowed > 0) allowedOnThisGood = TradeMath.AddedUp(allowedOnThisGood, allowed);",
-                        "if (!sim && (madeOnThisGood != 0 || allowedOnThisGood != 0) && market.TheGameGivesTradeXpFor(at))")
-            and "madeOnThisGood +=" not in sell and "moved.Earned += " not in sell
-            and ordered(relief, "int madeOnThisAnimal = 0;", "int allowedOnThisAnimal = 0;",
-                        "allowed = pass.TheGameGave;",
-                        "if (allowed > 0) allowedOnThisAnimal = TradeMath.AddedUp(allowedOnThisAnimal, allowed);",
-                        "if (!pass.Sim && el.EquipmentElement.ItemModifier == null &&")
-            and ordered(kept, "int now = TradeMath.TradeXpNow(ref waiting, made, allowed);",
-                        "if (waiting.Made == 0L && waiting.Allowed == 0L) _xpWaiting.Remove(item.StringId);",
-                        "if (Options.Current.ExtendedDebugLogging && now != (made > 0 ? made : 0))")
-            and ordered(ledger, "_xpWaitingText = LedgerCodec.WriteTradeXpWaiting(_xpWaiting);",
-                        'dataStore.SyncData("TradeLord_TradeXpWaiting", ref _xpWaitingText);',
-                        "_xpWaiting = LedgerCodec.ReadTradeXpWaiting(_xpWaitingText);")
-            and "if (!Storable(kv.Key) || (kv.Value.Made == 0L && kv.Value.Allowed == 0L)) continue;" in write
-            and "Allowed = allowed < 0L ? 0L : allowed" in read
-            and "ItemsTradeData" not in t and "TheGameCountsItBought" not in t and "ProfitTheGameCounts" not in S['TradeMath.cs']
-            and all(one in MATHTESTS for one in
-                    ("Trade_xp_is_the_profit_made_when_the_game_gives_at_least_as_much",
-                     "A_unit_sold_at_what_it_cost_earns_no_trade_xp_until_a_sale_makes_a_profit",
-                     "Profit_past_what_the_game_gives_waits_for_a_later_sale_the_game_gives_more_for",
-                     "A_loss_is_made_up_before_any_more_trade_xp_comes",
-                     "Goods_the_game_gives_nothing_for_earn_no_trade_xp",
-                     "What_waits_never_runs_past_the_largest_number_it_can_hold"))
-            and all(one in SELLPASSTESTS for one in
-                    ("A_unit_the_game_never_counted_as_bought_shows_its_profit_but_earns_no_trade_xp",
-                     "Trade_xp_never_goes_past_what_the_game_gives_for_the_same_sales",
-                     "Trade_xp_the_game_held_back_comes_with_a_later_sale_of_the_same_good",
-                     "A_good_with_a_modifier_is_sold_but_earns_no_trade_xp"))
-            and all(one in TESTS for one in
-                    ("Trade_xp_that_waits_survives_a_save_and_a_load",
-                     "Waiting_trade_xp_that_cannot_be_read_is_left_out_and_nothing_the_game_gives_is_below_zero"))
+            and "bool Give(int at, int price, out int proceeds, out int allowed);" in S['Passes.cs']
             and "Trade XP never goes past what the game gives" in spoken(ENGLISH)["TL327"]
-            and "Trade XP comes from what each unit really made, never more than the game itself gives for those sales" in README
             and "Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them" in README)
 
-chk("1.97.2", "Trade XP from TradeLord's own sales follows what each unit really made but never goes past what the game gives for the same sales, and what either side holds back waits in the save for a later sale of that good",
+chk("1.97.2", "Trade XP from TradeLord's own sales never goes past what the game itself gives for the same sales, read from the game's own record as each unit sells, and goods bought from villagers are never written into that record",
     trade_xp_never_goes_past_what_the_game_gives())
+
+def each_unit_earns_only_the_trade_xp_the_game_gives_for_it():
+    math = S['TradeMath.cs']
+    unit = between(math, "public static int TradeXpForAUnit(int made, int allowed) =>", ";")
+    sell = method_body(S['Passes.cs'], "internal static Traded SellThem")
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    ledger = S['Ledger.cs']
+    return (unit and sell and relief
+            and "made <= 0 || allowed <= 0 ? 0 : made < allowed ? made : allowed" in unit
+            and ordered(sell, "int xpOnThisGood = 0;",
+                        "if (!market.Give(at, price, out int proceeds, out int allowed)) break;",
+                        "int earned = TradeMath.MadeOnAUnit(proceeds, paidFor, basis.SoldAt);",
+                        "xpOnThisGood = TradeMath.AddedUp(xpOnThisGood, TradeMath.TradeXpForAUnit(earned, allowed));",
+                        "if (xpOnThisGood > 0 && market.TheGameGivesTradeXpFor(at))",
+                        "moved.Earned = TradeMath.AddedUp(moved.Earned, xpOnThisGood);")
+            and ordered(relief, "int xpOnThisAnimal = 0;", "allowed = pass.TheGameGave;",
+                        "int credited = TradeMath.MadeOnAUnit(price, bought, basis.SoldAt);",
+                        "xpOnThisAnimal = TradeMath.AddedUp(xpOnThisAnimal, TradeMath.TradeXpForAUnit(credited, allowed));",
+                        "if (!pass.Sim && xpOnThisAnimal > 0 && el.EquipmentElement.ItemModifier == null)")
+            and not any(word in text for word in ("TradeXpWaiting", "XpWaiting", "TradeMath.TradeXpNow",
+                                                  "market.TradeXpNow", "Instance?.TradeXpNow")
+                        for text in list(S.values()) + [MATHTESTS, SELLPASSTESTS, TESTS])
+            and "TradeLord_TradeXp" not in ledger.replace("TradeLord_LifetimeTradeXp", "")
+            and all(one in MATHTESTS for one in
+                    ("A_unit_earns_trade_xp_for_what_it_made_but_never_more_than_the_game_gives_for_it",
+                     "A_unit_the_game_gives_nothing_for_or_that_made_nothing_earns_no_trade_xp"))
+            and all(one in SELLPASSTESTS for one in
+                    ("Each_unit_earns_only_the_trade_xp_the_game_gives_for_that_unit",
+                     "Trade_xp_the_game_does_not_give_for_a_sale_is_never_given_by_a_later_one",
+                     "Trade_xp_never_goes_past_what_the_game_gives_for_the_same_sales",
+                     "A_unit_the_game_never_counted_as_bought_shows_its_profit_but_earns_no_trade_xp"))
+            and "Trade XP for each unit you sell is what that unit really made, never more than the game itself gives for that unit" in README
+            and "All it puts in a save is five strings, eight numbers, a switch and a settlement reference" in README)
+
+chk("1.97.3", "each unit's Trade XP is the smaller of what that unit really made and what the game gives for that unit, nothing one unit is owed goes to another, and nothing the game does not give is kept back for a later sale",
+    each_unit_earns_only_the_trade_xp_the_game_gives_for_it())
 
 def a_deal_that_lost_money_is_reported_as_the_loss_it_was():
     rules = method_body(S['Rules.cs'], "public static int NoMoreThanTheSale")

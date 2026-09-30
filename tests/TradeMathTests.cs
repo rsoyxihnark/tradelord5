@@ -685,59 +685,20 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Trade_xp_is_the_profit_made_when_the_game_gives_at_least_as_much()
+        public void A_unit_earns_trade_xp_for_what_it_made_but_never_more_than_the_game_gives_for_it()
         {
-            var waiting = new TradeXpWaiting();
-            Assert.Equal(300, TradeMath.TradeXpNow(ref waiting, 300, 300));
-            Assert.Equal(0L, waiting.Made);
-            Assert.Equal(0L, waiting.Allowed);
+            Assert.Equal(94, TradeMath.TradeXpForAUnit(206, 94));
+            Assert.Equal(94, TradeMath.TradeXpForAUnit(94, 206));
+            Assert.Equal(300, TradeMath.TradeXpForAUnit(300, 300));
         }
 
         [Fact]
-        public void A_unit_sold_at_what_it_cost_earns_no_trade_xp_until_a_sale_makes_a_profit()
+        public void A_unit_the_game_gives_nothing_for_or_that_made_nothing_earns_no_trade_xp()
         {
-            var waiting = new TradeXpWaiting();
-            Assert.Equal(0, TradeMath.TradeXpNow(ref waiting, 0, 446));
-            Assert.Equal(822, TradeMath.TradeXpNow(ref waiting, 824, 376));
-            Assert.Equal(2L, waiting.Made);
-            Assert.Equal(0L, waiting.Allowed);
-        }
-
-        [Fact]
-        public void Profit_past_what_the_game_gives_waits_for_a_later_sale_the_game_gives_more_for()
-        {
-            var waiting = new TradeXpWaiting();
-            Assert.Equal(376, TradeMath.TradeXpNow(ref waiting, 824, 376));
-            Assert.Equal(446, TradeMath.TradeXpNow(ref waiting, 0, 446));
-            Assert.Equal(2L, waiting.Made);
-        }
-
-        [Fact]
-        public void A_loss_is_made_up_before_any_more_trade_xp_comes()
-        {
-            var waiting = new TradeXpWaiting();
-            Assert.Equal(0, TradeMath.TradeXpNow(ref waiting, -236, 210));
-            Assert.Equal(586, TradeMath.TradeXpNow(ref waiting, 824, 376));
-            Assert.Equal(2L, waiting.Made);
-            Assert.Equal(0L, waiting.Allowed);
-        }
-
-        [Fact]
-        public void Goods_the_game_gives_nothing_for_earn_no_trade_xp()
-        {
-            var waiting = new TradeXpWaiting();
-            Assert.Equal(0, TradeMath.TradeXpNow(ref waiting, 280, 0));
-            Assert.Equal(0, TradeMath.TradeXpNow(ref waiting, 100, -1));
-            Assert.Equal(380L, waiting.Made);
-            Assert.Equal(0L, waiting.Allowed);
-        }
-
-        [Fact]
-        public void What_waits_never_runs_past_the_largest_number_it_can_hold()
-        {
-            var waiting = new TradeXpWaiting { Made = long.MaxValue - 5, Allowed = long.MaxValue - 5 };
-            Assert.Equal(int.MaxValue, TradeMath.TradeXpNow(ref waiting, int.MaxValue, int.MaxValue));
-            Assert.True(waiting.Made > 0L && waiting.Allowed > 0L);
+            Assert.Equal(0, TradeMath.TradeXpForAUnit(0, 446));
+            Assert.Equal(0, TradeMath.TradeXpForAUnit(-236, 210));
+            Assert.Equal(0, TradeMath.TradeXpForAUnit(280, 0));
+            Assert.Equal(0, TradeMath.TradeXpForAUnit(100, -1));
         }
 
         [Fact]

@@ -7,7 +7,7 @@
 ## Everything it does
 
 - ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
-- ✅ It declares no save types of its own. All it puts in a save is six strings, eight numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
+- ✅ It declares no save types of its own. All it puts in a save is five strings, eight numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
@@ -187,7 +187,7 @@
 - ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know
 - ✅ What a good counts as having cost you is what the price has to beat by your margin before a good you bought sells
 - ✅ The profit reported is what each unit you bought fetched over what that unit cost you, whichever cost you pick
-- ✅ Trade XP comes from what each unit really made, never more than the game itself gives for those sales, and what the game holds back waits for a later sale of the same good
+- ✅ Trade XP for each unit you sell is what that unit really made, never more than the game itself gives for that unit
 - ✅ A good you never bought, loot and animals included, adds nothing to the profit reported and earns no Trade XP when it sells
 - ✅ Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them, which is usually none
 - ✅ When some of a good is eaten, lost or given away, it comes off every price you paid in proportion, so a unit bought dear keeps its cost
