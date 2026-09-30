@@ -64,7 +64,6 @@ namespace TradeLord
         internal int Units;
         internal int SimGold;
         internal int Profit;
-        internal int Earned;
         internal float Unfitted;
         internal int UnfittedCost;
         internal float UnfittedProfit;
@@ -195,12 +194,11 @@ namespace TradeLord
         Func<int, int> PricesHere(int at);
         void HeldBack(int at, int units, int there, int here);
         int PriceToSell(int at);
-        bool TheGameGivesTradeXpFor(int at);
         bool OfAQuality(int at);
         int Till();
         int TillNow();
         void Staged(int at, int price);
-        bool Give(int at, int price, out int proceeds, out int allowed);
+        bool Give(int at, int price, out int proceeds);
         void RecordedSale(int at, int unitPaid);
     }
 
@@ -641,7 +639,6 @@ namespace TradeLord
 
                 int[] there = holding?[at].Rungs;
                 int holdFor = holding?[at].Units ?? 0;
-                int xpOnThisGood = 0;
 
                 while (remaining > 0)
                 {
@@ -690,7 +687,7 @@ namespace TradeLord
                         continue;
                     }
 
-                    if (!market.Give(at, price, out int proceeds, out int allowed)) break;
+                    if (!market.Give(at, price, out int proceeds)) break;
                     if (proceeds == 0) break;
 
                     bool paidFor = basis.SoldOne();
@@ -699,13 +696,61 @@ namespace TradeLord
                     moved.Units++;
                     int earned = TradeMath.MadeOnAUnit(proceeds, paidFor, basis.SoldAt);
                     moved.Profit += earned;
-                    xpOnThisGood = TradeMath.AddedUp(xpOnThisGood, TradeMath.TradeXpForAUnit(earned, allowed));
                     remaining--;
                 }
-                if (xpOnThisGood > 0 && market.TheGameGivesTradeXpFor(at))
-                    moved.Earned = TradeMath.AddedUp(moved.Earned, xpOnThisGood);
             }
             return moved;
+        }
+    }
+
+    internal sealed class SalesOnOneScreen<T>
+    {
+        internal struct Line
+        {
+            internal T What;
+            internal int Units;
+            internal int Gold;
+        }
+
+        private readonly Func<T, T, bool> _same;
+        private readonly List<Line> _lines = new List<Line>();
+        private bool _heard;
+
+        internal SalesOnOneScreen(Func<T, T, bool> same)
+        {
+            _same = same;
+        }
+
+        internal int Count => _lines.Count;
+
+        internal void Sold(T what, int gold, bool muted)
+        {
+            if (gold <= 0) return;
+            if (!muted) _heard = true;
+            for (int i = 0; i < _lines.Count; i++)
+            {
+                Line line = _lines[i];
+                if (!_same(line.What, what)) continue;
+                line.Units++;
+                line.Gold = TradeMath.AddedUp(line.Gold, gold);
+                _lines[i] = line;
+                return;
+            }
+            _lines.Add(new Line { What = what, Units = 1, Gold = gold });
+        }
+
+        internal Line[] Closed(out bool muted)
+        {
+            muted = !_heard;
+            Line[] lines = _lines.ToArray();
+            Forget();
+            return lines;
+        }
+
+        internal void Forget()
+        {
+            _lines.Clear();
+            _heard = false;
         }
     }
 }
