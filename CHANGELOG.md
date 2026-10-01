@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.97.8
+
+- Fixed the cargo room and gold freed by selling what you never bought going unused until the next market
+- Fixed TradeLord buying a haul animal for goods that would fit once what you never bought was sold
+- Fixed the Nothing bought here message showing after TradeLord had bought goods to trade in that market
+- Fixed unpinning a town in the TradeLord ledger, or trading there, taking off a map marker a quest or the encyclopedia put on it
+- Fixed the caravan dialog offering you That was a nice trade when TradeLord had traded nothing with the caravan
+- Fixed the hint for Days to keep a price you recorded saying 0 keeps every price, when only the 2500 newest are kept
+- Fixed the hint for Color prices by world market saying livestock, when it colors horses, mules and camels too
+- Fixed the purse warning in Simulation mode (dry run) naming your real gold instead of what the dry run left you
+- The hint for Auto buy now says it buys once more with the room and gold that selling what you never bought frees
+
 ## 1.97.7
 
 - Fixed TradeLord.ini.new being left beside TradeLord.ini when the game stopped while saving your settings
@@ -555,11 +567,11 @@
 ## 1.87.0
 
 - The three switches under Debug are one setting now, Enable extended debug logging, and it ships on
-- Write a price trace to the log, Score the forecast in the log and Ultralog in your settings file carry over to Enable extended debug logging
+- Whichever of the three old switches under Debug you had on in your settings file carries over to Enable extended debug logging
 
 ## 1.86.0
 
-- With Ultralog on, TradeLord.log now names the market TradeLord bought each good for and what it pays a unit there
+- With Enable extended debug logging on, TradeLord.log now names the market TradeLord bought each good for and what it pays a unit there
 - Fixed TradeLord.log saying a price went down to a figure higher than the one it started at
 
 ## 1.85.2
@@ -584,13 +596,13 @@
 
 ## 1.84.0
 
-- Ultralog is a new switch under Debug, on out of the box, that writes everything the map marker weighed to TradeLord.log
-- With Ultralog on, TradeLord.log lists the markets the map marker priced, best first, with the days, units, gold and rate of each
-- With Ultralog on, TradeLord.log breaks the marked market down good by good, with what each fetches there and what it cost you
-- With Ultralog on, TradeLord.log says how much of what the marked market would pay is profit, and which of the two the marker went on
-- With Ultralog on, TradeLord.log scores the marked market when you walk in, against what it really paid you
-- With Ultralog on, TradeLord.log writes a line when the map marker weighs your cargo again and stays where it is
-- With Ultralog on, TradeLord.log says how many markets the map marker left out and what left each of them out
+- Enable extended debug logging now writes everything the map marker weighed to TradeLord.log
+- With Enable extended debug logging on, TradeLord.log lists the markets the map marker priced, best first, with days, units, gold and rate
+- With Enable extended debug logging on, TradeLord.log breaks the marked market down good by good, with what each fetches and cost you
+- With Enable extended debug logging on, TradeLord.log says how much of the marked market's pay is profit, and which the marker went on
+- With Enable extended debug logging on, TradeLord.log scores the marked market when you walk in, against what it really paid you
+- With Enable extended debug logging on, TradeLord.log writes a line when the map marker weighs your cargo again and stays where it is
+- With Enable extended debug logging on, TradeLord.log says how many markets the map marker left out and what left each of them out
 
 ## 1.83.3
 
@@ -826,11 +838,11 @@
 ## 1.76.8
 
 - A pass that trades a lot of goods no longer stutters as it finishes, because the list reaches TradeLord.log in one go
-- The panel's promise score and Score the forecast in the log now reach the log in one go as you walk into a market
+- The panel's promise score and the forecast score now reach TradeLord.log in one go as you walk into a market
 
 ## 1.76.7
 
-- With Write a price trace to the log on, the price trace no longer stutters as you walk in, because it reaches TradeLord.log in one go
+- With Enable extended debug logging on, the price trace no longer stutters as you walk in, because it reaches TradeLord.log in one go
 - The trade screen opens faster, because the best markets are worked out once instead of once for every good
 
 ## 1.76.6
@@ -878,7 +890,7 @@
 - Added Most workshops you may own under General, at 200, and a 0 hands the limit back to the game
 - The deal Staged Trading lays out now reports what moved when you press Done, and credits the profit to your Trade skill
 - The line under the routes has moved into a window of its own on a new What this means button, one clause to a line
-- Write a price trace to the log and Score the forecast in the log both ship on now
+- The price trace and the forecast score in TradeLord.log both ship on now
 
 ## 1.75.1
 
@@ -990,13 +1002,13 @@
 
 - The panel now scores its own promise, holding the Sell price it quoted against what the market really pays when you walk in
 - The line under the routes says how much of the promised Sell price has really been there, and over how many arrivals
-- With Score the forecast in the log on, the log breaks the score down by Conf
+- With Enable extended debug logging on, TradeLord.log breaks the forecast score down by Conf
 - A promise you arrive far too late for is dropped rather than scored
 
 ## 1.63.0
 
-- Added Score the forecast in the log under Debug, which writes down what a market was expected to hold and what it really held
-- Score the forecast in the log needs Count what is on its way to a market, and ships off
+- Added a forecast score to TradeLord.log, which writes down what a market was expected to hold and what it really held
+- The forecast score in TradeLord.log needs Count what is on its way to a market, and ships off
 
 ## 1.62.2
 
@@ -1131,9 +1143,9 @@
 ## 1.48.0
 
 - Keeping food back and restocking it are one setting now, Restock and keep food (days of supply), which ships at 3 days
-- If you had set Restock food (days of supply) yourself, TradeLord now goes by your Keep food number for both and says so in TradeLord.log
+- If you had set your own restock days, TradeLord now goes by the days of food you kept back for both and says so in TradeLord.log
 - Town travel ceiling now ships at 2.4 days instead of 3
-- Write a price trace to the log now sits in a Debug group of its own at the foot of the settings screen
+- The price trace now has a Debug group of its own at the foot of the settings screen
 - The price trace is now written as you walk into a market, before anything is traded, so it holds the prices TradeLord went on
 - With the price trace on, every good a pass moves is written down with the price TradeLord quoted next to what the market really paid
 - When TradeLord cannot read the game's herd penalty, TradeLord.log now names everything that stops, not just livestock buying
@@ -1164,7 +1176,7 @@
 
 ## 1.47.0
 
-- Added Write a price trace to the log, off out of the box, which writes down what the market you are in pays and charges
+- Added a price trace to TradeLord.log, off out of the box, which writes down what the market you are in pays and charges
 - The price trace names the market, the price model the game is running, and any other mod changing either of them
 
 ## 1.46.2
@@ -1481,7 +1493,7 @@
 
 - Restocking food now buys only where the market asks no more than the cheapest price you know of
 - Buying a haul animal and restocking food both stop before your gold reaches your reserve, so there is always something left to trade with
-- The hints under Buy haul animals and Restock food (days of supply) now say what each does
+- The hints under Buy haul animals and Restock and keep food (days of supply) now say what each does
 
 ## 1.29.1
 
@@ -1645,7 +1657,6 @@
 ## 1.14.1
 
 - The ledger panel no longer opens on its hotkey while you are typing into a box on the campaign map
-- The best market tolerance hint now says its price floor always holds back goods you never bought, such as looted gear
 
 ## 1.14.0
 

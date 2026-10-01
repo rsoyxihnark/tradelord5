@@ -1553,7 +1553,7 @@ chk("1.3.18", "neither pass trades before the settling delay is served, in a mar
     "MarketOpen(site, quiet)" not in S['Trading.cs'] and
     S['Trading.cs'].count("MarketOpen(") == 2 and
     S['Trading.cs'].count("Pass.Open(settlement, quiet)") == 8 and
-    S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 4)
+    S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 5)
 chk("1.3.2", "how far a scan reaches is the two travel ceilings alone, and the scan radius that used to narrow it is gone",
     "WithinRadius" not in S['Ledger.cs'] and "ScanRadius" not in S['Ledger.cs'] and
     "ScanRadius" not in S['Options.cs'] and "ScanRadius" not in M and
@@ -1579,7 +1579,14 @@ chk("1.3.2", "zero-gold purchase not recorded",
     re.search(r'if \(cost == 0\) break;\s*books\.NoteBought\(good\.Id, cost\);',
               method_body(S['Passes.cs'], "internal static Traded BuyThem")) is not None)
 chk("1.3.2", "panel tracks a set of pins", "_panelPins = new HashSet<Settlement>" in S['Panel.cs'])
-chk("1.3.2", "marker never removes a panel pin", "LedgerPanel.IsPinned(_tracked)" in S['Marker.cs'])
+chk("1.3.2", "marker never removes a panel pin",
+    (lambda update, toggle: "if (_tracked != null && tracker.CheckTracked(_tracked))\n"
+                            "                tracker.RemoveTrackedObject(_tracked);" in update
+                            and S['Marker.cs'].count("RemoveTrackedObject(") == 1
+                            and ordered(toggle, "_panelPins.Add(settlement);", "tracker.RegisterObject(settlement);")
+                            and "CheckTracked(" not in toggle)
+    (method_body(S['Marker.cs'], "internal static void Update"),
+     method_body(S['Panel.cs'], "private static void ToggleMarker")))
 chk("1.3.2", "a good one half of the pass moved here is left alone by the other half",
     (lambda b: "if (books.Bought(sim, market.IdAt(at))) { tally.Note(Block.TradedHereAlready); continue; }" in b
            and "books.NoteSold(good.Id);" in b)
@@ -2857,12 +2864,13 @@ chk("1.6.7", "the panel's own pin list, not the map's marker state, decides what
     (lambda b: ordered(b, "if (Unpin(settlement)) return;", "_panelPins.Add(settlement)"))
     (method_body(S['Panel.cs'], "private static void ToggleMarker")) and
     (lambda b: ordered(b, "if (settlement == null || !_panelPins.Remove(settlement)) return false;",
-                       "tracker.CheckTracked(settlement) && !Marker.TakesOver(settlement))\n"
-                       "                tracker.RemoveTrackedObject(settlement);",
+                       "if (tracker != null && tracker.CheckTracked(settlement)) tracker.RemoveTrackedObject(settlement);",
                        "return true;"))
     (method_body(S['Panel.cs'], "internal static bool Unpin")) and
     S['Panel.cs'].count("_panelPins.Remove(") == 1 and
-    "LedgerPanel.IsPinned(_tracked)" in S['Marker.cs'])
+    (lambda b: ordered(b, "_panelPins.Add(settlement);", "tracker.RegisterObject(settlement);")
+               and "CheckTracked(" not in b)
+    (method_body(S['Panel.cs'], "private static void ToggleMarker")))
 
 chk("1.90.1", "the map button reserves the mouse over the button and nowhere else, with no guessed region standing in for it",
     "OverTheStripInstead" not in S['Rules.cs'] and "OverAssumedBounds" not in S['Panel.cs'] and
@@ -3062,12 +3070,15 @@ chk("1.6.13", "a line newer than this build is still found when nothing has load
     "g <= McmGeneration + GenerationsAhead" in method_body(S['Support.cs'], "private static string Detect"))
 
 chk("1.6.14", "the auto-marker claims a town only when it placed the marker itself, so it never removes one you set",
-    len(re.findall(r'if \(target != null && !tracker\.CheckTracked\(target\)\)\s*\{\s*'
+    len(re.findall(r'if \(target != null && \(_tracked != target \|\| !tracker\.CheckTracked\(target\)\)\)\s*\{\s*'
                    r'tracker\.RegisterObject\(target\);\s*_tracked = target;\s*\}',
-                   method_body(S['Marker.cs'], "internal static void Update"))) == 2 and
+                   method_body(S['Marker.cs'], "internal static void Update"))) == 1 and
+    len(re.findall(r'if \(target != null\)\s*\{\s*tracker\.RegisterObject\(target\);\s*_tracked = target;\s*\}',
+                   method_body(S['Marker.cs'], "internal static void Update"))) == 1 and
     "_tracked = target;" not in between(method_body(S['Marker.cs'], "internal static void Update"),
                                         "tracker.RemoveTrackedObject(_tracked);", "if (target != null") and
-    "if (_tracked != null && !LedgerPanel.IsPinned(_tracked) && tracker.CheckTracked(_tracked))" in S['Marker.cs'])
+    "if (_tracked != null && tracker.CheckTracked(_tracked))" in S['Marker.cs'] and
+    "LedgerPanel.IsPinned(" not in S['Marker.cs'])
 chk("1.6.14", "a pin restored from a save is put back on the map, so the panel and the map agree",
     (lambda b: "VisualTrackerManager tracker = Campaign.Current?.VisualTrackerManager;" in b
            and "if (tracker != null && !tracker.CheckTracked(s)) tracker.RegisterObject(s);" in b
@@ -3246,7 +3257,10 @@ def an_empty_purse_is_reported_on_the_way_into_a_market():
     entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
     return ("TradedThisVisit()" not in body
             and "int held = GoldHeldBack(), flat = Options.Current.GoldReserve;" in body
-            and "if (Hero.MainHero.Gold + Visit.Purse(Simulating) - held > 0) return false;" in body
+            and "int purse = Hero.MainHero.Gold + Visit.Purse(Simulating);" in body
+            and "if (purse - held > 0) return false;" in body
+            and 'msg.SetTextVariable("GOLD", purse);' in body
+            and "Hero.MainHero.Gold)" not in body
             and "if (TradedThisVisit()) return;" in
                 method_body(S['Trading.cs'], "private static void WarnNoRoomToCarry")
             and "Tongue.Text(held > flat" in body
@@ -4804,8 +4818,8 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
             and "while (remaining > 0 && shed > 0)" in relief
             and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
                         "ExecuteQuickBuy(settlement, quiet: true)",
-                        "ExecuteHaulage(settlement, quiet: true)",
                         "ExecuteLootSale(settlement, quiet: true)",
+                        "ExecuteHaulage(settlement, quiet: true)",
                         "ExecuteHerdRelief(settlement, quiet: true)")
             and "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);" in entered)
 
@@ -4956,8 +4970,8 @@ def the_herd_is_looked_at_three_times_a_visit():
             and entered.count("ExecuteHerdRelief(settlement, quiet: true)") == 2
             and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
                         "ExecuteQuickBuy(settlement, quiet: true)",
-                        "ExecuteHaulage(settlement, quiet: true)",
                         "ExecuteLootSale(settlement, quiet: true)",
+                        "ExecuteHaulage(settlement, quiet: true)",
                         "ExecuteHerdRelief(settlement, quiet: true)",
                         "ExecuteResupply(settlement, quiet: true)")
             and ordered_last(entered, "ExecuteQuickBuy(settlement, quiet: true)",
@@ -5540,7 +5554,7 @@ def a_meeting_on_the_road_is_priced_as_one_meeting():
     t = S['Trading.cs']
     body = method_body(t, "public static void ExecuteRoadTrade")
     return ("Books books = BooksForTheMeeting(met);" in body
-            and body.count("books, party)") == 4
+            and body.count("books, party)") == 5
             and "new Books()" not in body
             and method_body(t, "private static Books BooksForTheMeeting").count("new Books()") == 1
             and t.count("new Books()") == 2
@@ -6154,13 +6168,13 @@ def a_market_and_a_meeting_on_the_road_run_the_same_two_passes():
     buy = buy_pass()
     return (t.count("private static void SellPass(Pass pass, string label, string what, string named, string why, bool loot)") == 1
             and t.count("private static void BuyPass(Pass pass, string label, string what, string named, string why)") == 1
-            and t.count("SellPass(") == 5 and t.count("BuyPass(") == 3
+            and t.count("SellPass(") == 5 and t.count("BuyPass(") == 4
             and 'SellPass(Pass.Open(settlement, quiet), "quick-sell", "selling", "Selling", "the selling pass", loot: false);' in t
             and 'SellPass(Pass.Open(settlement, quiet), "loot-sell", "selling loot", "Selling loot", "the loot sale", loot: true);' in t
             and 'BuyPass(Pass.Open(settlement, quiet), "quick-buy", "buying", "Buying", "the buying pass");' in t
             and road.count('SellPass(Pass.Meet(met, road, books, party),') == 2
             and 'BuyPass(Pass.Meet(met, road, books, party),' in road
-            and len(road.splitlines()) < 28
+            and len(road.splitlines()) < 31
             and all(word not in road for word in
                     ("ItemRoster", "Basis", "TradePolicy.", "WhatStopsBuying", "InAPass",
                      "Notices.Say(", "Log.Write", "SwapOneUnit", "simWeight", "herdRoom"))
@@ -8119,14 +8133,15 @@ def the_shelf_life_setting_says_what_it_needs_and_what_nothing_means():
     said = spoken(ENGLISH)
     return (said['TL282'] == "Days to keep a price you recorded"
             and "Live world prices" in said['TL408']
-            and "0 keeps every price" in said['TL408']
+            and "0 sets no day limit" in said['TL408']
+            and all("2500" in spoken(f)['TL408'] for f in list(TRANSLATIONS.values()) + [ENGLISH])
             and {'TL282', 'TL408'} <= strings_declared()
             and all({'TL282', 'TL408'} <= set(spoken(f))
                     for f in list(TRANSLATIONS.values()) + [ENGLISH])
             and "{=TL282}Days to keep a price you recorded" in M
             and "{=TL408}" in M)
 
-chk("1.69.0", "a price you recorded yourself is forgotten once it is older than the days you asked for, and nothing means keep it forever",
+chk("1.69.0", "a price you recorded yourself is forgotten once it is older than the days you asked for, and 0 sets no day limit",
     a_price_you_recorded_is_forgotten_once_it_is_older_than_you_asked())
 chk("1.69.0", "the setting that forgets old prices names the setting it needs and says what nothing means, in every language",
     the_shelf_life_setting_says_what_it_needs_and_what_nothing_means())
@@ -10888,6 +10903,11 @@ WITHDRAWN_NEVER_WRITTEN = (
     "untraded behind a warning",
     "spend down to your gold reserve",
     "stolen goods",
+    "ultralog",
+    "write a price trace to the log",
+    "score the forecast in the log",
+    "best market tolerance",
+    "restock food (days of supply)",
 )
 
 
@@ -14426,13 +14446,13 @@ def what_you_never_bought_is_sold_after_what_you_bought_and_the_buying():
     keep = method_body(S['TradeMath.cs'], "public static bool KeepToTheBoughtUnits")
     return (ordered(entered, "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);",
                     "if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);",
-                    "if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))",
                     "if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);",
+                    "if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))",
                     "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);")
             and ordered(menu, "ExecuteQuickSell(Settlement.CurrentSettlement);",
                         "ExecuteQuickBuy(Settlement.CurrentSettlement);",
-                        "if (ExecuteHaulage(Settlement.CurrentSettlement))",
                         "ExecuteLootSale(Settlement.CurrentSettlement);",
+                        "if (ExecuteHaulage(Settlement.CurrentSettlement))",
                         "ExecuteResupply(Settlement.CurrentSettlement);")
             and ordered(road, '"sale on the road", "selling on the road", "Road trading", why, loot: false);',
                         "BuyPass(Pass.Meet(met, road, books, party),",
@@ -14455,6 +14475,66 @@ def what_you_never_bought_is_sold_after_what_you_bought_and_the_buying():
 
 chk("1.95.0", "in a market and with a caravan on the road TradeLord sells what you bought, then buys, and only then sells what you never bought, loot included, with the gold left",
     what_you_never_bought_is_sold_after_what_you_bought_and_the_buying())
+
+
+def the_room_and_gold_the_loot_sale_frees_are_bought_with():
+    t = S['Trading.cs']
+    entered = method_body(t, "private void OnSettlementEntered")
+    menu = between(t, '"tradelord_quicktrade"', '"tradelord_report"')
+    road = method_body(t, "public static void ExecuteRoadTrade")
+    sell = method_body(t, "private static void SellPass")
+    buy = method_body(t, "private static void BuyPass")
+    noted = method_body(t, "private static void NoteStalled")
+    reset = method_body(t, "private static void ResetVisit")
+    return (ordered(entered, "if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);",
+                    "if (Options.Current.AutoBuyOnEntry && _lootSold > 0) ExecuteQuickBuy(settlement, quiet: true);",
+                    "if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))",
+                    "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);")
+            and ordered(menu, "ExecuteLootSale(Settlement.CurrentSettlement);",
+                        "if (_lootSold > 0) ExecuteQuickBuy(Settlement.CurrentSettlement);",
+                        "if (ExecuteHaulage(Settlement.CurrentSettlement))",
+                        "ExecuteHerdRelief(Settlement.CurrentSettlement);")
+            and "Haul animals are bought after the sale of what you never bought, so none is bought for goods "
+                "that fit once that is gone" in README
+            and ordered(road, '"Road loot selling", why, loot: true);',
+                        "if (_lootSold > 0)\n                    BuyPass(Pass.Meet(met, road, books, party),",
+                        "NoteARoadTrade(met, books, movesBefore);")
+            and road.count("BuyPass(Pass.Meet(met, road, books, party),") == 2
+            and ordered(sell, "if (!loot) _boughtThisRound = 0;", "if (loot) _lootSold = 0;",
+                        "if (pass == null) return;", "if (loot) _lootSold = soldItems;")
+            and ordered(buy, "if (bought > 0)", "_buyStalled = null;", "_boughtThisRound += bought;",
+                        "pass.Moved(gold: spent, selling: false);")
+            and "if (selling) _sellStalled = why; else if (_boughtThisRound == 0) _buyStalled = why;" in noted
+            and "_boughtThisRound = 0;" in reset and "_lootSold = 0;" in reset
+            and ordered(method_body(t, "public static bool ExecuteHaulage"), "if (!unfitted.food)",
+                        "_buyStalled = null;", "_boughtThisRound += hauled;", "return true;")
+            and spoken(ENGLISH)['TL318'] in M
+            and "and again with the room and gold that sale frees." in spoken(ENGLISH)['TL318']
+            and "o satışın açtığı yer ve altınla bir kez daha alır" in
+                spoken('TradeLord/ModuleData/Languages/TR/module_strings_tr.xml')['TL318']
+            and "и ещё раз на место и золото от этой продажи" in
+                spoken('TradeLord/ModuleData/Languages/RU/module_strings_ru.xml')['TL318']
+            and "卖掉那些东西腾出空间和钱之后，它会再买一次" in
+                spoken('TradeLord/ModuleData/Languages/CNs/module_strings_cns.xml')['TL318']
+            and "Once what you never bought has sold, it buys once more with the cargo room and gold that sale freed"
+                in README)
+
+def the_caravan_line_is_offered_only_after_a_trade_that_landed():
+    met = method_body(S['Encounters.cs'], "private static bool CaravanMet")
+    once = method_body(S['Encounters.cs'], "private static void TradeOnce")
+    noted = method_body(S['Trading.cs'], "private static void NoteARoadTrade")
+    return (ordered(met, "TradeOnce(caravan);", "return TradeActionBehavior.RoadTradeLanded;")
+            and "return true;" not in met
+            and ordered(once, "_tradedIn = here;", "TradeActionBehavior.RoadTradeLanded = false;",
+                        "TradeActionBehavior.ExecuteRoadTrade(met)")
+            and "RoadTradeLanded = !Simulating && books.Moves(Simulating) > movesBefore;" in noted
+            and S['Trading.cs'].count("RoadTradeLanded = ") == 1)
+
+chk("1.97.8", "the caravan offers That was a nice trade only when TradeLord really traded with it, never after a dry run or a meeting where nothing moved",
+    the_caravan_line_is_offered_only_after_a_trade_that_landed())
+
+chk("1.97.8", "once the sale of what you never bought has sold something, TradeLord buys again with the room and gold it freed, in a market and on the road, and no buying pass says nothing was bought after one that did",
+    the_room_and_gold_the_loot_sale_frees_are_bought_with())
 
 
 def the_herd_is_relieved_once_everything_that_sells_here_has_sold():
@@ -14513,7 +14593,8 @@ def the_trade_entry_and_auto_buy_say_what_is_sold_before_and_after_the_buying():
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
     return ("it sells what you bought, buys, then sells what you never bought, loot included." in en['TL316']
-            and "after selling what you bought and before selling what you never bought." in en['TL318']
+            and ("after selling what you bought and before selling what you never bought, and again with the room "
+                 "and gold that sale frees.") in en['TL318']
             and "after any selling" not in en['TL318']
             and all(en[one] in M for one in ('TL316', 'TL318'))
             and all(said_in_every_language(one) for one in ('TL316', 'TL318'))
@@ -14523,8 +14604,8 @@ def the_trade_entry_and_auto_buy_say_what_is_sold_before_and_after_the_buying():
             and "战利品也算在内" in cn['TL316'] and "卖你没买过的东西之前" in cn['TL318']
             and "One trade entry in the town menu, selling what you bought, buying, then selling what you never "
                 "bought, loot included, in one go, whenever you want it" in README
-            and "What you never bought, loot included, is sold only once it has sold what you bought and done its "
-                "buying, with the gold the merchant has left" in README
+            and "What you never bought, loot included, is sold only once it has sold what you bought and done a "
+                "first round of buying, with the gold the merchant has left" in README
             and "selling then buying in one go" not in README)
 
 chk("1.95.0", "the hints under Trade entry in town menu and Auto buy and the feature list say what is sold before the buying and what after it, in every language",
@@ -14770,6 +14851,299 @@ chk("1.95.2", "the branch guard refuses a branch started through a prefixed or p
     the_branch_guard_sees_through_the_ways_a_branch_can_be_started())
 
 
+GUARD_TOOL_LINES = (
+    '*__create_branch)',
+    'refuse "that tool starts a new branch on GitHub" ;;',
+    '*__create_pull_request)',
+    'refuse "a pull request needs a second branch, and main is the only branch" ;;',
+    '*__update_pull_request_branch)',
+    'refuse "that tool writes to the branch of a pull request, and main is the only branch" ;;',
+    '*__push_files|*__create_or_update_file|*__delete_file)',
+    'BRANCH=\'"branch"[[:space:]]*:[[:space:]]*"([^"]*)"\'',
+    '[[ $INPUT =~ $BRANCH ]] && TARGET=${BASH_REMATCH[1]}',
+    "''|main|refs/heads/main) ;;",
+    '*) refuse "that tool writes to the branch $TARGET on GitHub, and main is the only branch" ;;',
+)
+
+GUARD_REQUEST_LINES = (
+    '-R|--repo|--hostname) SKIP=1; continue ;;',
+    '1:pr) STEP=2 ;;',
+    '1:alias) STEP=3 ;;',
+    '2:create|2:checkout) refuse "gh pr $token needs or makes a second branch, and main is the only branch" ;;',
+    '3:set|3:import) refuse "that command defines a gh alias, and the guard cannot see into an alias" ;;',
+    '*createRef*|*updateRefs*|*[Cc]reate*[Bb]ranch*)',
+    'refuse "that request starts a new branch on GitHub" ;;',
+    '*branches/*/rename*)',
+    'refuse "that request renames a branch on GitHub, and main is the only branch" ;;',
+    'case "$token" in --expand-*) token=--${token#--expand-} ;; esac',
+    'case "$token" in *git/refs*) REFS=1 ;; esac',
+    'case "$token" in *refs/tags/*) TAGGED=1 ;; esac',
+    'POST|post|PATCH|patch|PUT|put|-*XPOST|-*XPATCH|-*XPUT|*=POST|*=PATCH|*=PUT) WRITE=1 ;;',
+    'DELETE|delete|-*XDELETE|*=DELETE) DELETE=1 ;;',
+    '--field*|--raw-field*|--input*|--data*|--json*|--form*|--upload-file*) WRITE=1 ;;',
+    'flagged "$token" fF HpqtX && WRITE=1',
+    'flagged "$token" dFT AbcCDeEHKmoPQrtuUwxXyYz && WRITE=1',
+    '*refs/heads/*) rest=${rest#*refs/heads/} ;;',
+    'name=${rest%%[!A-Za-z0-9._/-]*}',
+    "''|[],}?\\&#\\\\:]*) ;;",
+    '*) name="$name${rest#"$name"}" ;;',
+    'if [ "$name" = main ]; then MAIN=1; else OTHER=${OTHER:-$name}; fi',
+    '[ "$DELETE" = 1 ] && [ "$MAIN" = 1 ] && refuse "that request would delete main on GitHub"',
+    '[ "$DELETE" = 0 ] && [ "$WRITE" = 1 ] && [ -n "$OTHER" ] &&',
+    'refuse "that request starts or moves the branch $OTHER on GitHub, and main is the only branch"',
+    '[ "$MAIN" = 0 ] && [ "$TAGGED" = 0 ] && [ -z "$OTHER" ] && { [ "$WRITE" = 1 ] || [ "$DELETE" = 1 ]; } &&',
+    'refuse "that request changes a ref on GitHub, and the guard cannot read which one"',
+)
+
+GUARD_WRAPPER_LINES = (
+    'local rest=${1#-} one',
+    'one=${rest:0:1}',
+    'rest=${rest:1}',
+    '[$2]) return 0 ;;',
+    '[$3]) return 1 ;;',
+    'NAMED=\'"tool_name"[[:space:]]*:[[:space:]]*"([^"]*)"\'',
+    '[[ $INPUT =~ $NAMED ]] && TOOL=${BASH_REMATCH[1]}',
+    "tr '|;&()`' '\\n\\n\\n\\n\\n\\n'",
+    'GIT_CONFIG_KEY_*=[Aa][Ll][Ii][Aa][Ss].*|GIT_CONFIG_PARAMETERS=*[Aa][Ll][Ii][Aa][Ss].*)',
+    'refuse "that command defines a git alias through the environment, and the guard cannot see into an alias" ;;',
+    '-u|-g|-p|-a|-C|-D|-h|-r|-t|-U|-T|--user|--group|--prompt|--chdir|--host|--role|--type) shift; shift ;;',
+    '--other-user|--command-timeout|--close-from) shift; shift ;;',
+    'case "${1:-}" in -a) shift; shift ;; esac ;;',
+    'xargs) shift; FED=1',
+    '-n|-I|-L|-P|-s|-d|-E|-a|--max-args|--max-lines|--max-procs|--delimiter|--arg-file|--process-slot-var) shift; shift ;;',
+    'bash|sh|zsh|dash|ksh|*/bash|*/sh|*/zsh|*/dash|*/ksh) shift',
+    '-o|-O|+o|+O|--rcfile|--init-file) shift; shift ;;',
+    '-c*|-[!-]*c*) shift; break ;;',
+    '*) set --; break ;;',
+    'find|*/find) shift',
+    '-exec|-execdir|-ok|-okdir) shift; break ;;',
+    'builtin|eval) shift ;;',
+    '[ "$FED" = 1 ] && set -- "$@" "{}"',
+    '-c|--config-env)',
+    '[Aa][Ll][Ii][Aa][Ss].*) refuse "that command defines a git alias inline, and the guard cannot see into an alias" ;;',
+    '--config-env=[Aa][Ll][Ii][Aa][Ss].*)',
+    '--stdin) refuse "git update-ref --stdin can start a branch the guard cannot read" ;;',
+    '--get|--get-all|--get-regexp|--get-urlmatch|-l|--list|--unset|--unset-all|--remove-section) READING=1 ;;',
+    'get|list|unset|remove-section) READING=1 ;;',
+    '[Aa][Ll][Ii][Aa][Ss]|[Aa][Ll][Ii][Aa][Ss].*) ALIAS=1 ;;',
+    '[ "$ALIAS" = 1 ] && [ "$READING" = 0 ] &&',
+    'refuse "that command defines a git alias, and the guard cannot see into an alias" ;;',
+    'send-pack|http-push|fast-import)',
+    'refuse "git $SUB can start a branch the guard cannot read" ;;',
+    '-b*|--b*) refuse "git subtree with a branch starts a new branch" ;;',
+    'push) PUSHING=1 ;;',
+    'case "${LAST##*:}" in',
+    '*) refuse "that subtree push would create the remote branch ${LAST##*:}" ;;',
+    '  } >&2\n  exit 2\n}',
+    '[ -n "$WRONG" ] && refuse "that push would create the remote branch $WRONG"',
+)
+
+GUARD_LINES_IN_TURN = (
+    'flagged() {',
+    'local rest=${1#-} one',
+    'while [ -n "$rest" ]; do',
+    'one=${rest:0:1}',
+    'rest=${rest:1}',
+    'case "$one" in',
+    '[$2]) return 0 ;;',
+    '[$3]) return 1 ;;',
+    'return 1',
+    'INPUT=$(cat)',
+    'TOOL=""',
+    'NAMED=\'"tool_name"[[:space:]]*:[[:space:]]*"([^"]*)"\'',
+    '[[ $INPUT =~ $NAMED ]] && TOOL=${BASH_REMATCH[1]}',
+    'case "$TOOL" in',
+    'mcp__*)',
+    'case "$TOOL" in',
+    '*__create_branch)',
+    'refuse "that tool starts a new branch on GitHub" ;;',
+    '*__create_pull_request)',
+    'refuse "a pull request needs a second branch, and main is the only branch" ;;',
+    '*__update_pull_request_branch)',
+    'refuse "that tool writes to the branch of a pull request, and main is the only branch" ;;',
+    '*__push_files|*__create_or_update_file|*__delete_file)',
+    'TARGET=""',
+    'BRANCH=\'"branch"[[:space:]]*:[[:space:]]*"([^"]*)"\'',
+    '[[ $INPUT =~ $BRANCH ]] && TARGET=${BASH_REMATCH[1]}',
+    'case "$TARGET" in',
+    "''|main|refs/heads/main) ;;",
+    '*) refuse "that tool writes to the branch $TARGET on GitHub, and main is the only branch" ;;',
+    'exit 0 ;;',
+    'if command -v jq >/dev/null 2>&1; then',
+    'COMMAND=$(printf \'%s\' "$INPUT" | jq -r \'.tool_input.command // empty\' 2>/dev/null || true)',
+    "elif python3 -c 'import json' >/dev/null 2>&1; then",
+    'COMMAND=$(printf \'%s\' "$INPUT" | python3 -c \'import json, sys; print((json.load(sys.stdin).get("tool_input") or {}).get("command") or "")\' 2>/dev/null || true)',
+    'COMMAND=$(printf \'%s\' "$INPUT" | sed -n \'s/.*"command"[[:space:]]*:[[:space:]]*"\\(\\([^"\\\\]\\|\\\\.\\)*\\)".*/\\1/p\' |',
+    'sed -e \'s/\\\\n/\\n/g\' -e \'s/\\\\t/\\t/g\' -e \'s/\\\\"/"/g\' -e \'s/\\\\\\\\/\\\\/g\')',
+    'if [ -z "$COMMAND" ]; then',
+    'case "$INPUT" in',
+    '*git*)',
+    "printf 'Refused by this repository: the branch guard needs jq or python3 to read a git command, and has neither\\n' >&2",
+    'exit 2 ;;',
+    'exit 0',
+    'SEGMENTS=$(printf \'%s\\n\' "$COMMAND" | { sed \'s/%([^)]*)/%/g\' 2>/dev/null || cat; } | tr \'|;&()`\' \'\\n\\n\\n\\n\\n\\n\')',
+    'set -- ${segment//[\\\'\\"]/}',
+    'for token in "$@"; do',
+    'case "$token" in',
+    'GIT_CONFIG_KEY_*=[Aa][Ll][Ii][Aa][Ss].*|GIT_CONFIG_PARAMETERS=*[Aa][Ll][Ii][Aa][Ss].*)',
+    'refuse "that command defines a git alias through the environment, and the guard cannot see into an alias" ;;',
+    'FED=0',
+    'timeout) shift',
+    'while [ $# -gt 0 ]; do',
+    'case "$1" in',
+    '-s|-k|--signal|--kill-after) shift; shift ;;',
+    '-*) shift ;;',
+    '*) shift; break ;;',
+    'nice) shift',
+    'case "${1:-}" in -n|--adjustment) shift; shift ;; esac ;;',
+    'sudo) shift',
+    'while [ $# -gt 0 ]; do',
+    'case "$1" in',
+    '-u|-g|-p|-a|-C|-D|-h|-r|-t|-U|-T|--user|--group|--prompt|--chdir|--host|--role|--type) shift; shift ;;',
+    '--other-user|--command-timeout|--close-from) shift; shift ;;',
+    '-*) shift ;;',
+    '*) break ;;',
+    'exec) shift',
+    'case "${1:-}" in -a) shift; shift ;; esac ;;',
+    'xargs) shift; FED=1',
+    'while [ $# -gt 0 ]; do',
+    'case "$1" in',
+    '-n|-I|-L|-P|-s|-d|-E|-a|--max-args|--max-lines|--max-procs|--delimiter|--arg-file|--process-slot-var) shift; shift ;;',
+    '-*) shift ;;',
+    '*) break ;;',
+    'bash|sh|zsh|dash|ksh|*/bash|*/sh|*/zsh|*/dash|*/ksh) shift',
+    'while [ $# -gt 0 ]; do',
+    'case "$1" in',
+    '-o|-O|+o|+O|--rcfile|--init-file) shift; shift ;;',
+    '-c*|-[!-]*c*) shift; break ;;',
+    '-*|+*) shift ;;',
+    '*) set --; break ;;',
+    'find|*/find) shift',
+    'while [ $# -gt 0 ]; do',
+    'case "$1" in',
+    '-exec|-execdir|-ok|-okdir) shift; break ;;',
+    '*) shift ;;',
+    '-u|-g|-C|--unset|--chdir) shift; shift ;;',
+    'builtin|eval) shift ;;',
+    '[ "$FED" = 1 ] && set -- "$@" "{}"',
+    'gh|*/gh|curl|*/curl)',
+    'if [ "${1##*/}" = gh ]; then',
+    'STEP=0; SKIP=0',
+    'for token in "$@"; do',
+    'if [ "$SKIP" = 1 ]; then SKIP=0; continue; fi',
+    'case "$token" in',
+    '-R|--repo|--hostname) SKIP=1; continue ;;',
+    '-*) continue ;;',
+    'case "$STEP:$token" in',
+    '0:*) STEP=1 ;;',
+    '1:pr) STEP=2 ;;',
+    '1:alias) STEP=3 ;;',
+    '2:create|2:checkout) refuse "gh pr $token needs or makes a second branch, and main is the only branch" ;;',
+    '3:set|3:import) refuse "that command defines a gh alias, and the guard cannot see into an alias" ;;',
+    '*) break ;;',
+    'REFS=0; WRITE=0; DELETE=0; MAIN=0; TAGGED=0; OTHER=""',
+    '*createRef*|*updateRefs*|*[Cc]reate*[Bb]ranch*)',
+    'refuse "that request starts a new branch on GitHub" ;;',
+    '*branches/*/rename*)',
+    'refuse "that request renames a branch on GitHub, and main is the only branch" ;;',
+    'case "$token" in --expand-*) token=--${token#--expand-} ;; esac',
+    'case "$token" in *git/refs*) REFS=1 ;; esac',
+    'case "$token" in *refs/tags/*) TAGGED=1 ;; esac',
+    'POST|post|PATCH|patch|PUT|put|-*XPOST|-*XPATCH|-*XPUT|*=POST|*=PATCH|*=PUT) WRITE=1 ;;',
+    'DELETE|delete|-*XDELETE|*=DELETE) DELETE=1 ;;',
+    '--field*|--raw-field*|--input*|--data*|--json*|--form*|--upload-file*) WRITE=1 ;;',
+    '-*)',
+    'if [ "${1##*/}" = gh ]; then',
+    'flagged "$token" fF HpqtX && WRITE=1',
+    'flagged "$token" dFT AbcCDeEHKmoPQrtuUwxXyYz && WRITE=1',
+    'rest=$token',
+    'while :; do',
+    'case "$rest" in',
+    '*refs/heads/*) rest=${rest#*refs/heads/} ;;',
+    '*) break ;;',
+    'name=${rest%%[!A-Za-z0-9._/-]*}',
+    'case "${rest#"$name"}" in',
+    "''|[],}?\\&#\\\\:]*) ;;",
+    '*) name="$name${rest#"$name"}" ;;',
+    'if [ "$name" = main ]; then MAIN=1; else OTHER=${OTHER:-$name}; fi',
+    'if [ "$REFS" = 1 ]; then',
+    '[ "$DELETE" = 1 ] && [ "$MAIN" = 1 ] && refuse "that request would delete main on GitHub"',
+    '[ "$DELETE" = 0 ] && [ "$WRITE" = 1 ] && [ -n "$OTHER" ] &&',
+    'refuse "that request starts or moves the branch $OTHER on GitHub, and main is the only branch"',
+    '[ "$MAIN" = 0 ] && [ "$TAGGED" = 0 ] && [ -z "$OTHER" ] && { [ "$WRITE" = 1 ] || [ "$DELETE" = 1 ]; } &&',
+    'refuse "that request changes a ref on GitHub, and the guard cannot read which one"',
+    'continue ;;',
+    'git.exe|*/git.exe) ;;',
+    '--super-prefix|--attr-source) shift; shift ;;',
+    '-c|--config-env)',
+    'case "${2:-}" in',
+    '[Aa][Ll][Ii][Aa][Ss].*) refuse "that command defines a git alias inline, and the guard cannot see into an alias" ;;',
+    'shift; shift ;;',
+    '--config-env=[Aa][Ll][Ii][Aa][Ss].*)',
+    'refuse "that command defines a git alias inline, and the guard cannot see into an alias" ;;',
+    '-*) shift ;;',
+    '--cr*|--force-c*|--or*|--tr*)',
+    'if [ -n "$FIRST" ] && [ "$FIRST" != main ] && [ "$FIRST" != HEAD ] && [ "$DETACH" = 0 ] && [ "$GUESS" = 1 ] &&',
+    '--stdin) refuse "git update-ref --stdin can start a branch the guard cannot read" ;;',
+    'symbolic-ref)',
+    '-d|--delete) break ;;',
+    'refs/heads/main) ;;',
+    'refs/heads/*) refuse "that command points HEAD at a new branch" ;;',
+    'config)',
+    'READING=0; ALIAS=0',
+    '--get|--get-all|--get-regexp|--get-urlmatch|-l|--list|--unset|--unset-all|--remove-section) READING=1 ;;',
+    'get|list|unset|remove-section) READING=1 ;;',
+    '[Aa][Ll][Ii][Aa][Ss]|[Aa][Ll][Ii][Aa][Ss].*) ALIAS=1 ;;',
+    '[ "$ALIAS" = 1 ] && [ "$READING" = 0 ] &&',
+    'refuse "that command defines a git alias, and the guard cannot see into an alias" ;;',
+    'send-pack|http-push|fast-import)',
+    'refuse "git $SUB can start a branch the guard cannot read" ;;',
+    'subtree)',
+    'PUSHING=0; LAST=""',
+    '-b*|--b*) refuse "git subtree with a branch starts a new branch" ;;',
+    'push) PUSHING=1 ;;',
+    'LAST=$token',
+    'if [ "$PUSHING" = 1 ]; then',
+    'case "${LAST##*:}" in',
+    'main|refs/heads/main) ;;',
+    '*) refuse "that subtree push would create the remote branch ${LAST##*:}" ;;',
+    'fetch|pull)',
+    '-d|-D|--delete|-r|--remotes|-a|--all|-l|--list|--show-current|--edit-description) READS=1 ;;',
+    '--contains|--contains=*|--no-contains|--no-contains=*|--merged|--merged=*) READS=1 ;;',
+    '--no-merged|--no-merged=*|--points-at|--points-at=*) READS=1 ;;',
+    '-u|--set-upstream-to|--set-upstream-to=*|--unset-upstream) READS=1 ;;',
+    '--format|--sort) SKIP=1 ;;',
+    '--de*|-[!o-]*d*) DELETING=1 ;;',
+    '-o|--push-option|--repo|--receive-pack|--exec) SKIP=1 ;;',
+)
+
+
+def the_guard_keeps_each_of_its_lines_in_turn():
+    at = 0
+    for line in GUARD_LINES_IN_TURN:
+        at = GUARD.find(line, at)
+        if at < 0:
+            return False
+        at += len(line)
+    return True
+
+
+def the_branch_guard_also_watches_github_tools_and_requests():
+    tools = between(GUARD, 'case "$TOOL" in', "exit 0 ;;")
+    web = between(GUARD, "gh|*/gh|curl|*/curl)", "\n      continue ;;\n  esac\n")
+    return ('"matcher": "mcp__.*[Gg]it[Hh]ub.*"' in SETTINGS
+            and SETTINGS.count('no-new-branch.sh') == 2
+            and all(one in tools for one in GUARD_TOOL_LINES)
+            and all(one in web for one in GUARD_REQUEST_LINES)
+            and all(one in GUARD for one in GUARD_WRAPPER_LINES)
+            and ordered(GUARD, 'flagged() {', 'INPUT=$(cat)', '[[ $INPUT =~ $NAMED ]] && TOOL=${BASH_REMATCH[1]}', 'case "$TOOL" in', 'exit 0 ;;', 'if command -v jq >/dev/null 2>&1; then')
+            and ordered(GUARD, 'FED=0', 'xargs) shift; FED=1', '[ "$FED" = 1 ] && set -- "$@" "{}"', 'gh|*/gh|curl|*/curl)', 'git|*/git) ;;')
+            and the_guard_keeps_each_of_its_lines_in_turn())
+
+chk("1.97.8", "the branch guard also refuses a branch started through a GitHub tool, gh or curl, a shell or find running git, xargs, sudo, an alias or a low level git command",
+    the_branch_guard_also_watches_github_tools_and_requests())
+
+
 def the_game_keeps_a_record_for_every_workshop_you_may_ever_own():
     shops = S['Workshops.cs']
     table = method_body(shops, "internal static class Patch_WorkshopsYouMayHave")
@@ -14871,15 +15245,17 @@ chk("1.95.4", "a workshop you own that the game kept no record or warehouse for 
 
 
 def unpinning_the_marked_town_leaves_the_map_marker_on_it():
-    takes = method_body(S['Marker.cs'], "internal static bool TakesOver")
+    toggle = method_body(S['Panel.cs'], "private static void ToggleMarker")
     unpin = method_body(S['Panel.cs'], "internal static bool Unpin")
-    return (takes and unpin
-            and "if (s == null || s != _picked || !Options.Current.MarkBestSellTownOnMap) return false;" in takes
-            and ordered(takes, "return false;", "_tracked = s;", "return true;")
-            and ("if (tracker != null && tracker.CheckTracked(settlement) && !Marker.TakesOver(settlement))\n"
-                 "                tracker.RemoveTrackedObject(settlement);") in unpin
-            and "if (_tracked != null && !LedgerPanel.IsPinned(_tracked) && tracker.CheckTracked(_tracked))" in
-                method_body(S['Marker.cs'], "internal static void Update"))
+    update = method_body(S['Marker.cs'], "internal static void Update")
+    return (toggle and unpin and update
+            and ordered(toggle, "_panelPins.Add(settlement);", "tracker.RegisterObject(settlement);")
+            and "CheckTracked(" not in toggle
+            and unpin.count("tracker.RemoveTrackedObject(settlement);") == 1
+            and "if (tracker != null && tracker.CheckTracked(settlement)) tracker.RemoveTrackedObject(settlement);" in unpin
+            and "TakesOver" not in S['Marker.cs'] and "TakesOver" not in S['Panel.cs']
+            and "if (target != null && (_tracked != target || !tracker.CheckTracked(target)))" in update
+            and "if (_tracked != null && tracker.CheckTracked(_tracked))" in update)
 
 chk("1.95.5", "unpinning a town in the ledger leaves the map marker on it when the marker points there, and the marker owns that arrow from then on so it can take it down later",
     unpinning_the_marked_town_leaves_the_map_marker_on_it())

@@ -151,6 +151,8 @@ namespace TradeLord
         private static Block? _sellStalled;
         private static Block? _buyStalled;
         private static (int units, int gold) _soldThisRound;
+        private static int _boughtThisRound;
+        private static int _lootSold;
 
         internal static bool AutomatedTradeInProgress { get; private set; }
 
@@ -408,8 +410,11 @@ namespace TradeLord
             Arrivals.LastTradedAt(MobileParty.MainParty?.CurrentSettlement?.StringId,
                                   Visit.Moves(Simulating) > _movesAtArrival, _lastTradedAt);
 
+        internal static bool RoadTradeLanded;
+
         private static void NoteARoadTrade(MobileParty met, Books books, int movesBefore)
         {
+            RoadTradeLanded = !Simulating && books.Moves(Simulating) > movesBefore;
             string was = _lastTradedAt;
             _lastTradedAt = Arrivals.AfterTheRoad(books.Moves(Simulating) > movesBefore, was);
             if (was != null && _lastTradedAt == null)
@@ -479,6 +484,8 @@ namespace TradeLord
             _sellStalled = null;
             _buyStalled = null;
             _soldThisRound = default;
+            _boughtThisRound = 0;
+            _lootSold = 0;
         }
 
         private static bool NoRoomToCarry()
@@ -861,11 +868,12 @@ namespace TradeLord
         private static bool WarnPurseBelowReserve()
         {
             int held = GoldHeldBack(), flat = Options.Current.GoldReserve;
-            if (Hero.MainHero.Gold + Visit.Purse(Simulating) - held > 0) return false;
+            int purse = Hero.MainHero.Gold + Visit.Purse(Simulating);
+            if (purse - held > 0) return false;
             TextObject msg = Tongue.Text(held > flat
                 ? "{=TL392}Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages, so it will not buy anything here. Sell some cargo, or lower either of those in its settings."
                 : "{=TL92}Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower Gold reserve in its settings.");
-            msg.SetTextVariable("GOLD", Hero.MainHero.Gold);
+            msg.SetTextVariable("GOLD", purse);
             msg.SetTextVariable("RESERVE", held);
             msg.SetTextVariable("FLAT", flat);
             msg.SetTextVariable("WAGES", held - flat);
@@ -928,9 +936,10 @@ namespace TradeLord
                                 Drove.LogState("trading by hand at " + Settlement.CurrentSettlement.Name);
                                 ExecuteQuickSell(Settlement.CurrentSettlement);
                                 ExecuteQuickBuy(Settlement.CurrentSettlement);
+                                ExecuteLootSale(Settlement.CurrentSettlement);
+                                if (_lootSold > 0) ExecuteQuickBuy(Settlement.CurrentSettlement);
                                 if (ExecuteHaulage(Settlement.CurrentSettlement))
                                     ExecuteQuickBuy(Settlement.CurrentSettlement);
-                                ExecuteLootSale(Settlement.CurrentSettlement);
                                 ExecuteHerdRelief(Settlement.CurrentSettlement);
                                 ExecuteResupply(Settlement.CurrentSettlement);
                                 if (ExecuteHaulage(Settlement.CurrentSettlement))
@@ -1034,9 +1043,10 @@ namespace TradeLord
 
                 if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
+                if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);
+                if (Options.Current.AutoBuyOnEntry && _lootSold > 0) ExecuteQuickBuy(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))
                     ExecuteQuickBuy(settlement, quiet: true);
-                if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))
@@ -1457,7 +1467,7 @@ namespace TradeLord
 
         private static void NoteStalled(bool selling, Block why)
         {
-            if (selling) _sellStalled = why; else _buyStalled = why;
+            if (selling) _sellStalled = why; else if (_boughtThisRound == 0) _buyStalled = why;
         }
 
         private static void ReportStalledPasses()
@@ -1507,6 +1517,8 @@ namespace TradeLord
         private static void SellPass(Pass pass, string label, string what, string named, string why, bool loot)
         {
             if (!loot) _soldThisRound = default;
+            if (!loot) _boughtThisRound = 0;
+            if (loot) _lootSold = 0;
             if (pass == null) return;
 
             pass.Capture();
@@ -1525,6 +1537,7 @@ namespace TradeLord
             int goldGained = pass.Gained(moved.SimGold);
             var sold = (units: _soldThisRound.units + soldItems, gold: _soldThisRound.gold + goldGained);
             _soldThisRound = sold;
+            if (loot) _lootSold = soldItems;
 
             if (loot && pass.Site != null && !pass.Sim)
                 Guard.Run("Marker.Check", () => Marker.ScoreTheMark(pass.Site, sold.units, sold.gold));
@@ -2060,6 +2073,9 @@ namespace TradeLord
                         "purchase on the road", "buying on the road", "Road buying", why);
                 SellPass(Pass.Meet(met, road, books, party),
                          "loot sale on the road", "selling loot on the road", "Road loot selling", why, loot: true);
+                if (_lootSold > 0)
+                    BuyPass(Pass.Meet(met, road, books, party),
+                            "purchase on the road", "buying on the road", "Road buying", why);
             }
             NoteARoadTrade(met, books, movesBefore);
             ReportStalledPasses();
@@ -2361,6 +2377,7 @@ namespace TradeLord
             {
                 _buyStalled = null;
                 _cargoWasFull = false;
+                _boughtThisRound += hauled;
             }
             return true;
         }
@@ -2404,6 +2421,8 @@ namespace TradeLord
             int spent = pass.Spent(moved.SimGold);
             if (bought > 0)
             {
+                _buyStalled = null;
+                _boughtThisRound += bought;
                 pass.Moved(gold: spent, selling: false);
                 Log.Write(pass.Headed(label) + bought +
                           " items, -" + spent + " gold " + pass.Where);

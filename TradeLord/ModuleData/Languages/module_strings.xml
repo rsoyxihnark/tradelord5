@@ -182,12 +182,12 @@
 		<string id="TL310" text="Order the panel by profit per day, discounted by how likely that profit is to survive the trip: margin, stock depth, trip length, caravan traffic and price age. OFF ranks on raw profit per day."/>
 		<string id="TL311" text="Adds the best known buy and sell markets, with stock and travel time, to item tooltips."/>
 		<string id="TL312" text="Skips the vanilla merchandise rumor block so the tooltip shows one consistent set of price hints."/>
-		<string id="TL313" text="Colors trade-good and livestock rows in the inventory by how this market's price compares with the best known market."/>
+		<string id="TL313" text="Colors trade-good and animal rows in the inventory by how this market's price compares with the best known market."/>
 		<string id="TL314" text="Key that opens the ledger panel on the campaign map. One key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, such as Ctrl+T. A bare key the game also uses triggers both actions. Anything unknown falls back to T." />
 		<string id="TL315" text="Two clickable buttons on the right edge of the campaign map: TradeLord opens the ledger panel, and Recent trades below it opens the last twenty buys and sells. Turn OFF if they interfere with map clicks."/>
 		<string id="TL316" text="TradeLord's trade entry in town and village menus: it sells what you bought, buys, then sells what you never bought, loot included. Turn it off to trade only on arrival. While Staged Trading holds that trading back, the entry shows anyway."/>
 		<string id="TL317" text="Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu."/>
-		<string id="TL318" text="Buys the moment you walk into a market, after selling what you bought and before selling what you never bought. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
+		<string id="TL318" text="Buys the moment you walk into a market, after selling what you bought and before selling what you never bought, and again with the room and gold that sale frees. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
 		<string id="TL320" text="The margin every trade must clear, both ways. Sell only if the price beats your cost basis by this much. Buy or list a route only if the far market beats the local price by this much after the resale safety factor. Raising it trades less."/>
 		<string id="TL321" text="Days of food to keep: held back from selling and topped up as TradeLord trades, cheapest first, never above the cheapest price it knows. Your never-buy list holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
 		<string id="TL322" text="What automated trading may do with food. The days-of-supply food reserve is separate and still applies."/>
@@ -247,7 +247,7 @@
 		<string id="TL406" text="Mark a market rising or falling"/>
 		<string id="TL407" text="Marks a market in the tooltip rising or falling when its price moved 5% or more since you last looked there, after two looks on different days. Only does anything with Live world prices off, when TradeLord records prices. OFF by default."/>
 		<string id="TL282" text="Days to keep a price you recorded"/>
-		<string id="TL408" text="A price you wrote down is kept this many days, then forgotten: a market last seen longer ago is no longer suggested and leaves your save. 0 keeps every price. Only does anything with Live world prices off, when TradeLord records prices."/>
+		<string id="TL408" text="A price you wrote down is kept this many days, then its market is no longer suggested and leaves your save. 0 sets no day limit. Past 2500 prices, the oldest go. Only does anything with Live world prices off, when TradeLord records prices."/>
 		<string id="TL409" text="You paid"/>
 		<string id="TL410" text="Share of the hold TradeLord may fill"/>
 		<string id="TL411" text="Stop buying once your cargo reaches this share of what your party can carry, so there is room left for what a battle or a quest hands you. 100% lets it fill the hold. Selling is unaffected."/>
