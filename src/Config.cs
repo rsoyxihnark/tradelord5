@@ -196,6 +196,7 @@ namespace TradeLord
             bool screen = McmLoader.SettingsInHand;
             string found = Log.Beside(FileName, mustExist: true);
             _path = found ?? Log.Beside(FileName, mustExist: false);
+            ClearAnUnfinishedWrite(_path);
             if (found == null)
             {
                 if (!McmLoader.Awaiting) SettleTheLearningSwitch(screen && ScreenSaidWhetherToLearn);
@@ -453,7 +454,13 @@ namespace TradeLord
         private static void WholeOrNotAtAll(string path, string text)
         {
             string fresh = path + ".new";
-            File.WriteAllText(fresh, text);
+            try { File.WriteAllText(fresh, text); }
+            catch (Exception)
+            {
+                try { File.Delete(fresh); }
+                catch (Exception) { }
+                throw;
+            }
             try
             {
                 if (File.Exists(path)) File.Replace(fresh, path, null);
@@ -465,6 +472,19 @@ namespace TradeLord
                 try { File.Delete(fresh); }
                 catch (Exception) { }
             }
+        }
+
+        private static void ClearAnUnfinishedWrite(string path)
+        {
+            string fresh = path + ".new";
+            try
+            {
+                if (!File.Exists(fresh)) return;
+                File.Delete(fresh);
+                Log.Write("settings file: " + Path.GetFileName(fresh) + " was left by a save the game never finished, " +
+                          "so it is removed and " + Path.GetFileName(path) + " is read as it is");
+            }
+            catch (Exception e) { Log.Error(e, "removing a settings file a save the game never finished left behind"); }
         }
     }
 }

@@ -283,7 +283,7 @@
 		<string id="TL441" text=" This takes you below the {HELD} denars TradeLord holds back as your gold reserve and wage cover, which it will not spend on goods."/>
 		<string id="TL442" text="Today"/>
 		<string id="TL443" text="Trust a market by what it has paid"/>
-		<string id="TL444" text="A market paying less than this panel promised scores lower, so its routes fall in the list: only once you have walked into that market five times, and by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default."/>
+		<string id="TL444" text="A market paying under what the TradeLord ledger promised scores lower, its routes falling in the list once you have walked into that market five times, by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default."/>
 		<string id="TL445" text=" | Score is lowered for a market that has paid less than this panel promised"/>
 		<string id="TL446" text="?"/>
 		<string id="TL447" text=" | stock counts what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there and what the town and its workshops use up; prices need Bulk price simulation"/>
@@ -321,7 +321,7 @@
 		<string id="TL481" text=" It pays its owner {GOLD} denars a day now and less in its first days with you, so it would pay for itself in about {DAYS} days."/>
 		<string id="TL482" text=" It pays its owner nothing a day now, so there is no telling when it would pay for itself."/>
 		<string id="TL483" text="Learn the resale safety factor"/>
-		<string id="TL484" text="Lowers Resale safety factor toward how much of the Sell price this panel promised has really been there when you walked in, counting that record more as it grows, and never raises it above what you set. OFF uses it as set. ON by default."/>
+		<string id="TL484" text="Lowers Resale safety factor toward how much of the Sell price the TradeLord ledger promised has been there when you walked in, counting that record more as it grows, and never raises it above what you set. OFF uses it as set. ON by default."/>
 		<string id="TL485" text=" | a price elsewhere counts at {USED}: Resale safety factor starts it at {SET} and {COUNT} walk-in(s) have moved it"/>
 		<string id="TL486" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold."/>
 		<string id="TL487" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}."/>
