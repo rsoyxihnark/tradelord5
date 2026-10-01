@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.97.9
+
+- The message that TradeLord credited your Trade skill now also says how much Trade XP your skill gained
+
 ## 1.97.8
 
 - Fixed the cargo room and gold freed by selling what you never bought going unused until the next market
