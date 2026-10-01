@@ -1282,13 +1282,16 @@ namespace TradeLord
             bool asTheGameCounts = xp == profit;
             TextObject earned = Tongue.Text(asTheGameCounts
                 ? (rose
-                    ? "{=TL487}TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}."
-                    : "{=TL486}TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold.")
+                    ? "{=TL487}TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}.{ADDED}"
+                    : "{=TL486}TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold.{ADDED}")
                 : (rose
-                    ? "{=TL88}TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."
-                    : "{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill."));
+                    ? "{=TL88}TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}.{ADDED}"
+                    : "{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.{ADDED}"));
             earned.SetTextVariable("GOLD", xp);
             if (rose) earned.SetTextVariable("LEVEL", now);
+            TextObject added = Tongue.Text("{=TL488} It added {XP} Trade XP to your skill.");
+            added.SetTextVariable("XP", gained);
+            earned.SetTextVariable("ADDED", gained > 0 ? added.ToString() : "");
             if (!muted) Notices.Say(earned, Notices.Xp);
             if (rose) Log.Write("trade skill rose to " + now + " - named in TradeLord's own line");
         }

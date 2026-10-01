@@ -16226,5 +16226,26 @@ def the_settings_hints_name_the_tradelord_ledger_rather_than_this_panel():
 chk("1.97.7", "the hints for Trust a market by what it has paid and Learn the resale safety factor name the TradeLord ledger, not this panel, in every language",
     the_settings_hints_name_the_tradelord_ledger_rather_than_this_panel())
 
+
+def the_trade_xp_line_says_the_xp_the_skill_really_gained():
+    credit = method_body(S['Trading.cs'], "private static void CreditTradeSkill")
+    return (credit
+            and ordered(credit, "float xpBefore = Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade);",
+                        "SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);",
+                        "int gained = (int)Math.Round(Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) - xpBefore);",
+                        'earned.SetTextVariable("GOLD", xp);',
+                        'TextObject added = Tongue.Text("{=TL488} It added {XP} Trade XP to your skill.");',
+                        'added.SetTextVariable("XP", gained);',
+                        'earned.SetTextVariable("ADDED", gained > 0 ? added.ToString() : "");',
+                        "if (!muted) Notices.Say(earned, Notices.Xp);")
+            and all(credit.count('{ADDED}"') == 4 for _ in [0])
+            and all("{ADDED}" in spoken(f)[t] for f in [ENGLISH] + list(TRANSLATIONS.values())
+                    for t in ("TL81", "TL88", "TL486", "TL487"))
+            and all("{XP}" in spoken(f)["TL488"] for f in [ENGLISH] + list(TRANSLATIONS.values()))
+            and said_in_every_language("TL488"))
+
+chk("1.97.9", "the line saying TradeLord credited your Trade skill also says how much Trade XP the skill really gained, after the game's learning rate",
+    the_trade_xp_line_says_the_xp_the_skill_really_gained())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

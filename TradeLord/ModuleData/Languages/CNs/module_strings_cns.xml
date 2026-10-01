@@ -64,7 +64,7 @@
 		<string id="TL77" text="利润：+{PCT}%"/>
 		<string id="TL78" text="库存：{COUNT}"/>
 		<string id="TL79" text="约 {DAYS} 天"/>
-		<string id="TL81" text="TradeLord 把 {GOLD} 第纳尔的利润记进了你的交易技能。"/>
+		<string id="TL81" text="TradeLord 把 {GOLD} 第纳尔的利润记进了你的交易技能。{ADDED}"/>
 		<string id="TL82" text="载货已满。招募更多士兵、购买更多马匹，或手动卖出货物。"/>
 		<string id="TL93" text="你携带的这种货物已经到了你设的上限"/>
 		<string id="TL94" text="此处没有任何交易：{REASON}。"/>
@@ -73,7 +73,7 @@
 		<string id="TL84" text="{ITEM}：在 {FROM} 买入（{BUY} 第纳尔）-&gt; 在 {TO} 卖出（{SELL}）  x{QTY} = +{PROFIT} 第纳尔，从这里约 {DAYS} 天"/>
 		<string id="TL85" text="“为最好的市场留住货物”正把货物留给标出的市场"/>
 		<string id="TL86" text="你的队伍再也赶不动更多牲畜了"/>
-		<string id="TL88" text="TradeLord 把 {GOLD} 第纳尔的利润记进了你的交易技能，现在是 {LEVEL} 级。"/>
+		<string id="TL88" text="TradeLord 把 {GOLD} 第纳尔的利润记进了你的交易技能，现在是 {LEVEL} 级。{ADDED}"/>
 		<string id="TL89" text="以你目前记下的价格来看，行程上限之内没有可盈利的路线。多走几个市场，或者在“交易池”设置中提高上限。"/>
 		<string id="TL90" text="以你目前记下的价格来看，没有路线落在你的行程上限之内。多走几个市场，或者在“交易池”设置中提高上限。"/>
 		<string id="TL91" text="你的某份 TradeLord 货物名单上有一项，在这局游戏里找不到对应的货物，因此毫无作用。TradeLord.log 里写明了是哪一项。"/>
@@ -323,7 +323,8 @@
 		<string id="TL483" text="自动学习转卖安全系数"/>
 		<string id="TL484" text="让转卖安全系数向你进入市场时TradeLord 账簿所承诺卖价的实际兑现比例下调，核对的次数越多，调整得越多，但绝不高于你设定的系数。关闭时完全按你设定的系数使用。默认开启。"/>
 		<string id="TL485" text=" | 别处的价格按 {USED} 计算：转卖安全系数从 {SET} 起步，已根据你 {COUNT} 次进入市场的结果调整"/>
-		<string id="TL486" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能。"/>
-		<string id="TL487" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能，现在是 {LEVEL} 级。"/>
+		<string id="TL486" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能。{ADDED}"/>
+		<string id="TL487" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能，现在是 {LEVEL} 级。{ADDED}"/>
+		<string id="TL488" text=" 这增加了 {XP} 点交易经验。"/>
 	</strings>
 </base>

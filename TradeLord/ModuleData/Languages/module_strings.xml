@@ -64,7 +64,7 @@
 		<string id="TL77" text="Profit: +{PCT}%"/>
 		<string id="TL78" text="Stock: {COUNT}"/>
 		<string id="TL79" text="~{DAYS} days"/>
-		<string id="TL81" text="TradeLord credited {GOLD} denars of profit to your Trade skill."/>
+		<string id="TL81" text="TradeLord credited {GOLD} denars of profit to your Trade skill.{ADDED}"/>
 		<string id="TL82" text="Cargo is full. Recruit more men, buy more horses, or sell goods manually."/>
 		<string id="TL93" text="you are already carrying as many of these as you allow"/>
 		<string id="TL94" text="Nothing traded here - {REASON}."/>
@@ -73,7 +73,7 @@
 		<string id="TL84" text="{ITEM}: buy {FROM} ({BUY} denars) -&gt; sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} days from here"/>
 		<string id="TL85" text="Hold cargo for the best market keeps your cargo for the marked market"/>
 		<string id="TL86" text="your party cannot drive any more livestock"/>
-		<string id="TL88" text="TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."/>
+		<string id="TL88" text="TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}.{ADDED}"/>
 		<string id="TL89" text="No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Trade Pool settings."/>
 		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Trade Pool settings."/>
 		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
@@ -323,7 +323,8 @@
 		<string id="TL483" text="Learn the resale safety factor"/>
 		<string id="TL484" text="Lowers Resale safety factor toward how much of the Sell price the TradeLord ledger promised has been there when you walked in, counting that record more as it grows, and never raises it above what you set. OFF uses it as set. ON by default."/>
 		<string id="TL485" text=" | a price elsewhere counts at {USED}: Resale safety factor starts it at {SET} and {COUNT} walk-in(s) have moved it"/>
-		<string id="TL486" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold."/>
-		<string id="TL487" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}."/>
+		<string id="TL486" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold.{ADDED}"/>
+		<string id="TL487" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}.{ADDED}"/>
+		<string id="TL488" text=" It added {XP} Trade XP to your skill."/>
 	</strings>
 </base>

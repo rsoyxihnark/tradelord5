@@ -64,7 +64,7 @@
 		<string id="TL77" text="Kâr: +%{PCT}"/>
 		<string id="TL78" text="Stok: {COUNT}"/>
 		<string id="TL79" text="~{DAYS} gün"/>
-		<string id="TL81" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi."/>
+		<string id="TL81" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi.{ADDED}"/>
 		<string id="TL82" text="Yük dolu. Daha fazla asker alın, daha fazla at satın alın ya da malları elle satın."/>
 		<string id="TL93" text="bu maldan izin verdiğiniz kadarını zaten taşıyorsunuz"/>
 		<string id="TL94" text="Burada ticaret yapılmadı: {REASON}."/>
@@ -73,7 +73,7 @@
 		<string id="TL84" text="{ITEM}: {FROM} şehrinden al ({BUY} dinar) -&gt; {TO} şehrinde sat ({SELL})  x{QTY} = +{PROFIT} dinar, buradan ~{DAYS} gün"/>
 		<string id="TL85" text="Yükü en iyi pazar için tut ayarı kargonuzu işaretli pazar için saklıyor"/>
 		<string id="TL86" text="müfrezeniz daha fazla hayvan güdemez"/>
-		<string id="TL88" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}."/>
+		<string id="TL88" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}.{ADDED}"/>
 		<string id="TL89" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde kârlı rota yok. Daha çok pazar gezin ya da Ticaret havuzu ayarlarından sınırları yükseltin."/>
 		<string id="TL90" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde rota yok. Daha çok pazar gezin ya da Ticaret havuzu ayarlarından sınırları yükseltin."/>
 		<string id="TL91" text="TradeLord mal listelerinizden birindeki bir girdi bu oyundaki hiçbir mala uymuyor ve hiçbir işe yaramıyor. Hangisi olduğunu TradeLord.log yazıyor."/>
@@ -323,7 +323,8 @@
 		<string id="TL483" text="Yeniden satış güvenlik payını öğren"/>
 		<string id="TL484" text="Yeniden satış güvenlik payını, TradeLord defterinin söz verdiği Satış fiyatının pazar girişlerinizde ne kadarının durduğuna doğru düşürür, kayıt büyüdükçe ona daha çok güvenir, ayarınızın üstüne çıkarmaz. KAPALI: ayarlandığı gibi. Varsayılan AÇIK."/>
 		<string id="TL485" text=" | başka yerdeki fiyat {USED} sayılır: Yeniden satış güvenlik payı {SET} ile başlatır, {COUNT} pazar girişi bunu kaydırdı"/>
-		<string id="TL486" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi."/>
-		<string id="TL487" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}."/>
+		<string id="TL486" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi.{ADDED}"/>
+		<string id="TL487" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}.{ADDED}"/>
+		<string id="TL488" text=" Bu, {XP} Ticaret tecrübesi kattı."/>
 	</strings>
 </base>
