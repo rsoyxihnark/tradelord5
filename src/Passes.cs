@@ -199,7 +199,7 @@ namespace TradeLord
         int TillNow();
         void Staged(int at, int price);
         bool Give(int at, int price, out int proceeds);
-        void RecordedSale(int at, int unitPaid);
+        void RecordedSale(int at, int unitPaid, int price, int bestPays);
     }
 
     internal struct Basis
@@ -227,7 +227,9 @@ namespace TradeLord
             int covers = s.CostBasisMode == 0 ? TradeMath.WhatTheAverageCovers(costBasis, s.MinProfitMargin) : int.MaxValue;
             int known = TradeMath.UnitsIn(costs);
             if (listed && basis.PaidLeft > known) basis.PaidLeft = known;
-            basis.Walk = new TradeMath.DearFirst(costs, covers, costBasis, basis.PaidLeft - known);
+            basis.Walk = s.CostBasisMode == Options.CostOfEachUnit
+                ? TradeMath.DearFirst.EachAtItsOwnCost(costs, costBasis, basis.PaidLeft - known, s.MinProfitMargin)
+                : new TradeMath.DearFirst(costs, covers, costBasis, basis.PaidLeft - known);
             return basis;
         }
 
@@ -655,6 +657,7 @@ namespace TradeLord
                     }
                     int boughtLeft = Math.Min(remaining, basis.PaidLeft);
                     int floor = TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket);
+                    int bestPays = floor > 0 && boughtLeft <= holdFor ? there[boughtLeft - 1] : 0;
                     if (TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))
                     {
                         tally.Note(Block.BelowBestMarket);
@@ -691,7 +694,7 @@ namespace TradeLord
                     if (proceeds == 0) break;
 
                     bool paidFor = basis.SoldOne();
-                    if (paidFor) market.RecordedSale(at, basis.SoldAt);
+                    if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays);
                     books.NoteSold(good.Id);
                     moved.Units++;
                     int earned = TradeMath.MadeOnAUnit(proceeds, paidFor, basis.SoldAt);

@@ -48,7 +48,9 @@ namespace TradeLord
 
         public int ObservationShelfLifeDays = 15;
 
-        public int CostBasisMode = 0;
+        public const int CostOfEachUnit = 3;
+
+        public int CostBasisMode = CostOfEachUnit;
 
         public bool ExcludeHostileTowns = true;
 

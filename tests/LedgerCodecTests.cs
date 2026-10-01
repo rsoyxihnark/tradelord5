@@ -382,8 +382,8 @@ namespace TradeLord.Tests
         public void What_each_batch_of_a_good_cost_survives_a_save_and_a_load()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(rec, 1, 836);
-            TradeMath.AddPurchase(rec, 4, 1114);
+            TradeMath.AddPurchase(rec, 1, 836, 1L);
+            TradeMath.AddPurchase(rec, 4, 1114, 2L);
             string written = LedgerCodec.WritePurchases(new List<PurchaseRecord> { rec });
 
             var back = LedgerCodec.ReadPurchases(written);
@@ -429,19 +429,46 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_record_with_more_batches_than_are_ever_kept_is_read_as_one_at_its_average()
+        public void A_record_with_more_prices_than_an_older_TradeLord_kept_reads_back_every_one()
         {
             var many = new List<string>();
-            for (int i = 0; i <= TradeMath.MostBatchesKept; i++) many.Add((100 + i) + ":1:0");
+            for (int i = 0; i < 9; i++) many.Add((100 + i) + ":1:0");
             string text = "felt|1000|" + many.Count + "|100|" + string.Join(",", many);
 
             var back = LedgerCodec.ReadPurchases(text);
 
             Assert.Single(back);
-            Assert.Empty(back[0].Batches);
+            Assert.Equal(9, back[0].Batches.Count);
             Batch[] costs = TradeMath.UnitCosts(back[0], back[0].Count);
-            Assert.Equal(back[0].Count, TradeMath.UnitsIn(costs));
-            Assert.All(costs, one => Assert.Equal(111, one.Unit));
+            Assert.Equal(new[] { 100, 101, 102, 103, 104, 105, 106, 107, 108 }, costs.Select(one => one.Unit).ToArray());
+        }
+
+        [Fact]
+        public void Every_unit_number_survives_a_save_and_a_load()
+        {
+            var rec = new PurchaseRecord { ItemId = "felt" };
+            TradeMath.AddPurchase(rec, 1, 836, 7L);
+            TradeMath.AddPurchase(rec, 4, 1114, 20L);
+            string written = LedgerCodec.WritePurchases(new List<PurchaseRecord> { rec });
+
+            var back = LedgerCodec.ReadPurchases(written);
+
+            Assert.Equal("felt|1950|5|278|278:4:0:20,836:1:0:7", written);
+            Assert.Equal(20L, back[0].Batches[0].First);
+            Assert.Equal(7L, back[0].Batches[1].First);
+            Assert.Equal(written, LedgerCodec.WritePurchases(back));
+        }
+
+        [Fact]
+        public void Batches_written_before_units_had_numbers_read_back_with_none_for_the_ledger_to_give()
+        {
+            var back = LedgerCodec.ReadPurchases("felt|1948|5|278|278:4:0,836:1:0");
+
+            Assert.Equal(2, back[0].Batches.Count);
+            Assert.All(back[0].Batches, one => Assert.Equal(0L, one.First));
+            var odd = LedgerCodec.ReadPurchases("felt|1948|5|278|278:4:0:x,836:1:0:-3");
+            Assert.Equal(2, odd[0].Batches.Count);
+            Assert.All(odd[0].Batches, one => Assert.Equal(0L, one.First));
         }
 
         [Fact]

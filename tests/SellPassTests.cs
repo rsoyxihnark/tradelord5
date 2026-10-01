@@ -7,6 +7,8 @@ namespace TradeLord.Tests
 {
     public class SellPassTests
     {
+        private const int AveragePaid = 0;
+
         private struct Says : IWhatTheGameSays
         {
             public bool Locked() => false;
@@ -201,11 +203,13 @@ namespace TradeLord.Tests
             }
 
             internal readonly List<int> RecordedPaid = new List<int>();
+            internal readonly List<int> RecordedBest = new List<int>();
 
-            public void RecordedSale(int at, int unitPaid)
+            public void RecordedSale(int at, int unitPaid, int price, int bestPays)
             {
                 Recorded.Add(Cargo[at].Good.Id);
                 RecordedPaid.Add(unitPaid);
+                RecordedBest.Add(bestPays);
                 Cargo[at].Purchased--;
             }
         }
@@ -854,6 +858,7 @@ namespace TradeLord.Tests
         public void A_dear_unit_sold_at_what_it_cost_shows_no_profit_and_the_rest_count_at_their_own_cost()
         {
             var market = new FakeMarket();
+            market.Rules.CostBasisMode = AveragePaid;
             Load felt = market.Add(Cargo("felt"), amount: 5, price: 836);
             felt.Falls = 400;
             felt.Basis = 390;
@@ -952,6 +957,7 @@ namespace TradeLord.Tests
             foreach (bool sim in new[] { false, true })
             {
                 var market = new FakeMarket();
+                market.Rules.CostBasisMode = AveragePaid;
                 Load felt = market.Add(Cargo("felt"), amount: 5, price: 484);
                 felt.Basis = 390;
                 felt.Purchased = 5;
@@ -984,6 +990,7 @@ namespace TradeLord.Tests
         public void A_dry_run_that_already_drew_the_cheap_units_still_sells_the_dear_one_at_the_average()
         {
             var market = new FakeMarket();
+            market.Rules.CostBasisMode = AveragePaid;
             Load felt = market.Add(Cargo("felt"), amount: 2, price: 484);
             felt.Basis = 390;
             felt.Purchased = 5;
@@ -1039,6 +1046,7 @@ namespace TradeLord.Tests
         public void A_unit_bought_dear_sells_once_the_price_beats_the_average_by_your_margin(int price, int sold)
         {
             var market = new FakeMarket();
+            market.Rules.CostBasisMode = AveragePaid;
             Load felt = market.Add(Cargo("felt"), amount: 1, price: price);
             felt.Basis = 390;
             felt.Purchased = 1;
@@ -1048,6 +1056,83 @@ namespace TradeLord.Tests
 
             Assert.Equal(sold, run.Units);
             Assert.Equal(sold == 1 ? new[] { 836 } : new int[0], market.RecordedPaid.ToArray());
+        }
+
+        [Fact]
+        public void Each_unit_at_its_own_cost_sells_the_dearest_the_price_clears_by_your_margin_and_keeps_the_rest()
+        {
+            var market = new FakeMarket();
+            Assert.Equal(Options.CostOfEachUnit, market.Rules.CostBasisMode);
+            Load cloth = market.Add(Cargo("cloth"), amount: 3, price: 260);
+            cloth.Basis = 200;
+            cloth.Purchased = 3;
+            cloth.Cheap = 100;
+            cloth.Dearer = new[] { 200, 300 };
+
+            Run run = Sell(market);
+
+            Assert.Equal(2, run.Units);
+            Assert.Equal(new[] { 200, 100 }, market.RecordedPaid.ToArray());
+            Assert.Equal((260 - 200) + (260 - 100), run.Profit);
+            Assert.True(run.Tally.Saw(Block.BelowMargin));
+        }
+
+        [Fact]
+        public void Each_unit_at_its_own_cost_goes_down_the_ladder_from_the_dearest_as_the_price_falls()
+        {
+            foreach (bool sim in new[] { false, true })
+            {
+                var market = new FakeMarket();
+                Load cloth = market.Add(Cargo("cloth"), amount: 3, price: 400);
+                cloth.Falls = 50;
+                cloth.Basis = 200;
+                cloth.Purchased = 3;
+                cloth.Cheap = 100;
+                cloth.Dearer = new[] { 200, 300 };
+
+                Run run = Sell(market, sim);
+
+                Assert.Equal(3, run.Units);
+                Assert.Equal((400 - 300) + (sim ? 400 - 200 : 350 - 200) + (sim ? 400 - 100 : 300 - 100), run.Profit);
+                if (!sim) Assert.Equal(new[] { 300, 200, 100 }, market.RecordedPaid.ToArray());
+            }
+        }
+
+        [Fact]
+        public void Each_unit_at_its_own_cost_sells_nothing_when_no_unit_clears_your_margin()
+        {
+            var market = new FakeMarket();
+            Load cloth = market.Add(Cargo("cloth"), amount: 3, price: 114);
+            cloth.Basis = 200;
+            cloth.Purchased = 3;
+            cloth.Cheap = 100;
+            cloth.Dearer = new[] { 200, 300 };
+
+            Run run = Sell(market);
+
+            Assert.Equal(0, run.Units);
+            Assert.Empty(market.RecordedPaid);
+            Assert.True(run.Tally.Saw(Block.BelowMargin));
+        }
+
+        [Fact]
+        public void Each_unit_at_its_own_cost_also_has_to_fetch_three_quarters_of_what_the_marked_market_pays()
+        {
+            var market = new FakeMarket();
+            Load cloth = Bought(market, 3, price: 240, paid: 100, there: 300);
+            cloth.Takes = 3;
+
+            Run run = Sell(market);
+
+            Assert.Equal(3, run.Units);
+            Assert.Equal(new[] { 300, 300, 300 }, market.RecordedBest.ToArray());
+
+            var held = new FakeMarket();
+            Bought(held, 3, price: 224, paid: 100, there: 300).Takes = 3;
+            Run kept = Sell(held);
+
+            Assert.Equal(0, kept.Units);
+            Assert.True(kept.Tally.Saw(Block.BelowBestMarket));
         }
 
         [Fact]

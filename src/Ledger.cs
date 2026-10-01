@@ -44,6 +44,7 @@ namespace TradeLord
         private List<PurchaseRecord> _purchases = new List<PurchaseRecord>();
         private string _ledgerText = "";
         private string _purchaseText = "";
+        private long _nextUnitNumber = TradeMath.FirstUnitNumber;
         private int _unreadable;
         private Dictionary<string, PurchaseRecord> _paid;
         private long _lifetimeProfit;
@@ -57,6 +58,7 @@ namespace TradeLord
         private int _olderForecasts;
         private int _overcountedForecasts;
         private int _unsquaredForecasts;
+        private int _squaredForecasts;
         private int _olderPromises;
         private int _walkInsKept = -1;
         private float _keptAtWalkIns;
@@ -129,14 +131,14 @@ namespace TradeLord
         {
             if (!TradeMath.HowMuchCameTrue(said, moved, out float share)) return;
             _forecastsJudged++;
-            _forecastWeighed = TradeMath.AddedUp(_forecastWeighed, TradeMath.SquaredSize(said));
-            _forecastMatched = TradeMath.AddedUp(_forecastMatched, TradeMath.SquaredShareThatCameTrue(said, share));
+            _forecastWeighed = TradeMath.AddedUp(_forecastWeighed, TradeMath.SizeOf(said));
+            _forecastMatched = TradeMath.AddedUp(_forecastMatched, TradeMath.SizedShareThatCameTrue(said, share));
         }
 
         internal bool ForecastScore(out int scored, out float cameTrue)
         {
             scored = _forecastsJudged;
-            cameTrue = TradeMath.ShareByLeastSquares(_forecastWeighed, _forecastMatched);
+            cameTrue = TradeMath.ShareBySize(_forecastWeighed, _forecastMatched);
             return scored > 0;
         }
 
@@ -195,15 +197,16 @@ namespace TradeLord
             _lifetimeProfitCapped = Capped(_lifetimeProfit);
             dataStore.SyncData("TradeLord_LedgerText", ref _ledgerText);
             dataStore.SyncData("TradeLord_PurchaseText", ref _purchaseText);
+            dataStore.SyncData("TradeLord_NextUnitNumber", ref _nextUnitNumber);
             dataStore.SyncData("TradeLord_LifetimeProfit", ref _lifetimeProfitCapped);
             dataStore.SyncData("TradeLord_LifetimeProfitWide", ref _lifetimeProfit);
             dataStore.SyncData("TradeLord_LifetimeTradeXp", ref _lifetimeTradeXp);
             dataStore.SyncData("TradeLord_PromisesScoredUpToThePromise", ref _promisesScored);
             dataStore.SyncData("TradeLord_PromiseHeldUpToThePromise", ref _promiseHeld);
             dataStore.SyncData("TradeLord_PromiseTextWhenDue", ref _promiseText);
-            dataStore.SyncData("TradeLord_ForecastsJudgedByLeastSquares", ref _forecastsJudged);
-            dataStore.SyncData("TradeLord_ForecastSaidSquared", ref _forecastWeighed);
-            dataStore.SyncData("TradeLord_ForecastCameTrueSquared", ref _forecastMatched);
+            dataStore.SyncData("TradeLord_ForecastsJudgedBySize", ref _forecastsJudged);
+            dataStore.SyncData("TradeLord_ForecastSaidBySize", ref _forecastWeighed);
+            dataStore.SyncData("TradeLord_ForecastCameTrueBySize", ref _forecastMatched);
             dataStore.SyncData("TradeLord_LatelyText", ref _latelyText);
             dataStore.SyncData("TradeLord_VillagePursesPutBack", ref _villagePursesPutBack);
             if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;
@@ -229,9 +232,13 @@ namespace TradeLord
                           "counting a move bigger than the forecast said as more than it said were set aside, so how " +
                           "far to trust what is on its way to a market is learned afresh");
             if (dataStore.IsLoading && _unsquaredForecasts > 0)
-                Log.Write("forecast check: the " + _unsquaredForecasts + " figure(s) an older TradeLord weighed by their " +
-                          "size rather than by least squares were set aside, so how far to trust what is on its way " +
-                          "to a market is learned afresh");
+                Log.Write("forecast check: the " + _unsquaredForecasts + " figure(s) an older TradeLord added up as " +
+                          "fractions were set aside, so how far to trust what is on its way to a market is learned " +
+                          "afresh, each figure counted by its size");
+            if (dataStore.IsLoading && _squaredForecasts > 0)
+                Log.Write("forecast check: the " + _squaredForecasts + " figure(s) an older TradeLord weighed by the " +
+                          "square of their size were set aside, so how far to trust what is on its way to a market is " +
+                          "learned afresh, each figure counted by its size");
             if (dataStore.IsLoading && _olderPromises > 0)
                 Log.Write("promise check: the " + _olderPromises + " price(s) checked over this campaign before a price " +
                           "above its promise counted as the promise and no more were set aside, so the campaign " +
@@ -240,14 +247,16 @@ namespace TradeLord
 
         private void ReadTheOlderRecords(IDataStore dataStore)
         {
-            int everyRun = 0, onTheDay = 0, upToSaid = 0, whenDue = 0;
+            int everyRun = 0, onTheDay = 0, upToSaid = 0, squared = 0, whenDue = 0;
             dataStore.SyncData("TradeLord_ForecastsScoredEveryRun", ref everyRun);
             dataStore.SyncData("TradeLord_ForecastsJudgedOnTheDay", ref onTheDay);
             dataStore.SyncData("TradeLord_ForecastsJudgedUpToWhatWasSaid", ref upToSaid);
+            dataStore.SyncData("TradeLord_ForecastsJudgedByLeastSquares", ref squared);
             dataStore.SyncData("TradeLord_PromisesScoredWhenDue", ref whenDue);
             _olderForecasts = everyRun > 0 ? everyRun : 0;
             _overcountedForecasts = onTheDay > 0 ? onTheDay : 0;
             _unsquaredForecasts = upToSaid > 0 ? upToSaid : 0;
+            _squaredForecasts = squared > 0 ? squared : 0;
             _olderPromises = whenDue > 0 ? whenDue : 0;
         }
 
@@ -257,6 +266,12 @@ namespace TradeLord
         {
             _ledger = KeyedByTown(LedgerCodec.ReadLedger(_ledgerText, out _unreadable));
             _purchases = LedgerCodec.ReadPurchases(_purchaseText);
+            _nextUnitNumber = TradeMath.NumberEveryUnit(_purchases, _nextUnitNumber, out long numbered);
+            if (numbered > 0L)
+                Log.Write("purchase record: " + numbered + " unit(s) you hold had no number of their own, or one " +
+                          "another unit already had, so each was given a new one, from #" +
+                          (_nextUnitNumber - numbered) + " to #" + (_nextUnitNumber - 1) +
+                          ", and no number is ever given out twice");
             _promises = KeyedByTownId(LedgerCodec.ReadPromises(_promiseText, out int setAside));
             _walkInsKept = -1;
             if (setAside > 0)
@@ -654,13 +669,15 @@ namespace TradeLord
 
         public void RecordPurchase(string itemId, int count, int totalPaid)
         {
+            if (count <= 0) return;
             if (!Paid.TryGetValue(itemId, out var rec))
             {
                 rec = new PurchaseRecord { ItemId = itemId, TotalPaid = 0, Count = 0 };
                 Paid[itemId] = rec;
                 _purchases.Add(rec);
             }
-            TradeMath.AddPurchase(rec, count, totalPaid);
+            TradeMath.AddPurchase(rec, count, totalPaid, _nextUnitNumber);
+            _nextUnitNumber += count;
         }
 
         public void RecordSale(string itemId, int count)
@@ -668,9 +685,12 @@ namespace TradeLord
             if (Paid.TryGetValue(itemId, out var rec)) TradeMath.DrainSale(rec, count);
         }
 
-        public void RecordSale(string itemId, int count, int unitPaid)
+        public long RecordSale(string itemId, int count, int unitPaid)
         {
-            if (Paid.TryGetValue(itemId, out var rec)) TradeMath.DrainSale(rec, count, unitPaid);
+            if (!Paid.TryGetValue(itemId, out var rec)) return 0L;
+            long number = TradeMath.NumberASaleTakes(rec, unitPaid);
+            TradeMath.DrainSale(rec, count, unitPaid);
+            return number;
         }
 
         private void RecordHandSale(string itemId, int count, int gold, List<int> laidOut)
@@ -688,7 +708,9 @@ namespace TradeLord
         private static int WhatAHandSaleCovers(PurchaseRecord rec) =>
             Options.Current.CostBasisMode == 0
                 ? TradePolicy.WhatTheAverageCovers(TradeMath.UnitBasis(rec, 0))
-                : TradeMath.NoRecordedBasis;
+                : Options.Current.CostBasisMode == Options.CostOfEachUnit
+                    ? TradeMath.EachUnitApart
+                    : TradeMath.NoRecordedBasis;
 
         internal static string PaidKey(EquipmentElement el) =>
             el.Item == null ? null : LedgerCodec.PaidKey(el.Item.StringId, el.ItemModifier?.StringId);

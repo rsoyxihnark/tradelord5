@@ -6,6 +6,7 @@ from nexus_changelog import sections
 REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
+    '1.97.2': 'the entries about how far to trust what is on its way to a market came out of the changelog',
 }
 
 

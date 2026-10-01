@@ -529,7 +529,7 @@ namespace TradeLord.Tests
         [InlineData("KeepPerFoodKind", 0.0, 1.0)]
         [InlineData("Language", 7.0, 3.0)]
         [InlineData("FoodPolicy", -3.0, 0.0)]
-        [InlineData("CostBasisMode", 9.0, 2.0)]
+        [InlineData("CostBasisMode", 9.0, 3.0)]
         [InlineData("KeepSmeltableWeapons", 5.0, 2.0)]
         public void ANumberOutsideItsLimitsIsBroughtBackInside(string name, double asked, double kept)
         {

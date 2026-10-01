@@ -24,6 +24,7 @@ namespace TradeLord
     {
         public int Unit;
         public int Count;
+        public long First;
     }
 
     public class PurchaseRecord
@@ -58,6 +59,8 @@ namespace TradeLord
 
         public const int FieldsAPurchaseNeeds = 4;
 
+        public const int FieldsABatchIsNumberedIn = 4;
+
         public const int FieldsAPromiseNeeds = 3;
 
         public const int FieldsATradeNeeds = 4;
@@ -74,10 +77,15 @@ namespace TradeLord
 
         private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
 
+        private static string Number(long value) => value.ToString(CultureInfo.InvariantCulture);
+
         private static string Number(float value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
         private static bool Whole(string text, out int value) =>
             int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+
+        private static bool Whole(string text, out long value) =>
+            long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
 
         private static bool Storable(string id) =>
             !string.IsNullOrEmpty(id) && id.IndexOf(FieldMark) < 0 && id.IndexOf(RecordMark) < 0;
@@ -182,7 +190,8 @@ namespace TradeLord
                     if (b > 0) sb.Append(BatchMark);
                     sb.Append(Number(rec.Batches[b].Unit)).Append(BatchFieldMark)
                       .Append(Number(rec.Batches[b].Count)).Append(BatchFieldMark)
-                      .Append(Number(0));
+                      .Append(Number(0)).Append(BatchFieldMark)
+                      .Append(Number(rec.Batches[b].First));
                 }
             }
             return sb.ToString();
@@ -194,7 +203,7 @@ namespace TradeLord
             if (string.IsNullOrEmpty(text) || count <= 0) return kept;
             long units = 0L;
             string[] batches = text.Split(BatchMark);
-            if (batches.Length > TradeMath.MostBatchesKept) return kept;
+            if (batches.Length > count) return kept;
             for (int i = 0; i < batches.Length; i++)
             {
                 string[] parts = batches[i].Split(BatchFieldMark);
@@ -202,10 +211,13 @@ namespace TradeLord
                     unit < 0 || many <= 0)
                     return new List<Batch>();
                 units += many;
-                kept.Add(new Batch { Unit = unit, Count = many });
+                long first = 0L;
+                if (parts.Length >= FieldsABatchIsNumberedIn && Whole(parts[3], out long numbered) && numbered > 0L)
+                    first = numbered;
+                kept.Add(new Batch { Unit = unit, Count = many, First = first });
             }
             if (units != count) return new List<Batch>();
-            kept.Sort((x, y) => x.Unit.CompareTo(y.Unit));
+            kept.Sort(TradeMath.CheapestThenOldest);
             return kept;
         }
 

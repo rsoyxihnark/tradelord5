@@ -185,7 +185,8 @@ namespace TradeLord.Mcm
 
         private static readonly string[] BasisWords =
         {
-            "{=TL257}Average of what you paid", "{=TL258}Last price you paid", "{=TL259}Cheapest market you know"
+            "{=TL257}Average of what you paid", "{=TL258}Last price you paid", "{=TL259}Cheapest market you know",
+            "{=TL495}What each unit cost you"
         };
 
         private Dropdown<string> _foodPolicy;
