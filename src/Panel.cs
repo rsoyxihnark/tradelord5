@@ -145,15 +145,22 @@ namespace TradeLord
             asked.SetTextVariable("OWNER", Owner);
             asked.SetTextVariable("GOLD", Cost);
             string body = asked.ToString();
-            int days = Holdings.DaysToPayBack(_cost, _aDay);
+            float smoothing = Shops.PayoutSmoothing();
+            int days = Holdings.DaysToPayBack(_cost, _aDay, smoothing);
             if (days == Holdings.NeverPaysBack)
                 body += Tongue.Text("{=TL482} It pays its owner nothing a day now, so there is no telling when it would pay for itself.").ToString();
             else
             {
-                TextObject payback = Tongue.Text("{=TL481} At the {GOLD} denars a day it pays its owner now, it would pay for itself in about {DAYS} days.");
+                TextObject payback = Tongue.Text("{=TL481} It pays its owner {GOLD} denars a day now and less in its first days with you, so it would pay for itself in about {DAYS} days.");
                 payback.SetTextVariable("GOLD", _aDay.ToString("N0"));
                 payback.SetTextVariable("DAYS", days.ToString("N0"));
                 body += payback.ToString();
+                Log.Write("workshop payback: " + Shops.Named(_shop) + " costs " + _cost + " and pays its owner " + _aDay +
+                          " a day now; the game hands an owner 1/" +
+                          smoothing.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) +
+                          " of what the workshop holds over its starting capital each day, and a workshop you buy " +
+                          "starts back at that capital, so it pays for itself in about " + days + " day(s), where " +
+                          "its pay now alone would say " + Holdings.DaysToPayBack(_cost, _aDay, Holdings.PaidOutInFull));
             }
             int heldBack = TradeActionBehavior.GoldHeldBack();
             if (Holdings.DipsIntoWhatYouHoldBack(_cost, Hero.MainHero?.Gold ?? 0, heldBack))

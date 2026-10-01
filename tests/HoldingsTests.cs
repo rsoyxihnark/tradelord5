@@ -321,17 +321,61 @@ namespace TradeLord.Tests
         [Fact]
         public void A_workshop_pays_for_itself_in_its_cost_over_what_it_pays_a_day_rounded_up()
         {
-            Assert.Equal(100, Holdings.DaysToPayBack(160000, 1600));
-            Assert.Equal(101, Holdings.DaysToPayBack(160001, 1600));
-            Assert.Equal(1, Holdings.DaysToPayBack(900, 1600));
+            Assert.Equal(100, Holdings.DaysToPayBack(160000, 1600, Holdings.PaidOutInFull));
+            Assert.Equal(101, Holdings.DaysToPayBack(160001, 1600, Holdings.PaidOutInFull));
+            Assert.Equal(1, Holdings.DaysToPayBack(900, 1600, Holdings.PaidOutInFull));
         }
 
         [Fact]
         public void A_workshop_that_pays_nothing_a_day_never_pays_for_itself()
         {
-            Assert.Equal(Holdings.NeverPaysBack, Holdings.DaysToPayBack(40000, 0));
-            Assert.Equal(Holdings.NeverPaysBack, Holdings.DaysToPayBack(40000, -5));
-            Assert.Equal(0, Holdings.DaysToPayBack(0, 0));
+            Assert.Equal(Holdings.NeverPaysBack, Holdings.DaysToPayBack(40000, 0, 5f));
+            Assert.Equal(Holdings.NeverPaysBack, Holdings.DaysToPayBack(40000, -5, 5f));
+            Assert.Equal(0, Holdings.DaysToPayBack(0, 0, 5f));
+        }
+
+        private static int DaysTheGameTakes(int cost, int aDay, int smoothing)
+        {
+            double over = 0d, drawn = 0d;
+            for (int day = 1; day < 1000000; day++)
+            {
+                over += aDay;
+                double draw = over / smoothing;
+                over -= draw;
+                drawn += draw;
+                if (drawn >= cost - 1e-6) return day;
+            }
+            return Holdings.NeverPaysBack;
+        }
+
+        [Fact]
+        public void A_workshop_you_buy_pays_less_in_its_first_days_so_it_takes_longer_to_pay_for_itself()
+        {
+            Assert.Equal(104, Holdings.DaysToPayBack(160000, 1600, 5f));
+            Assert.Equal(3, Holdings.DaysToPayBack(900, 1600, 5f));
+            Assert.True(Holdings.DaysToPayBack(160000, 1600, 5f) > Holdings.DaysToPayBack(160000, 1600, Holdings.PaidOutInFull));
+        }
+
+        [Fact]
+        public void The_days_a_workshop_takes_to_pay_for_itself_are_what_the_game_pays_a_new_owner_day_by_day()
+        {
+            var rng = new System.Random(4107);
+            for (int round = 0; round < 3000; round++)
+            {
+                int aDay = rng.Next(1, 3000);
+                int cost = rng.Next(1, 400000);
+                int smoothing = rng.Next(1, 9);
+                Assert.Equal(DaysTheGameTakes(cost, aDay, smoothing), Holdings.DaysToPayBack(cost, aDay, smoothing));
+            }
+        }
+
+        [Fact]
+        public void A_payout_the_game_does_not_smooth_or_cannot_be_read_pays_in_full_from_the_first_day()
+        {
+            Assert.Equal(100, Holdings.DaysToPayBack(160000, 1600, 0f));
+            Assert.Equal(100, Holdings.DaysToPayBack(160000, 1600, float.NaN));
+            Assert.Equal(100, Holdings.DaysToPayBack(160000, 1600, -3f));
+            Assert.Equal(Holdings.NeverPaysBack, Holdings.DaysToPayBack(int.MaxValue, 1, float.MaxValue));
         }
 
         [Fact]

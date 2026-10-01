@@ -318,10 +318,12 @@
 		<string id="TL478" text="Earn workshops with Trade skill"/>
 		<string id="TL479" text="You earn workshops up to Most workshops you may own: the game's own limit, which rises with your clan tier, plus one more for every 25 points of your Trade skill. OFF by default."/>
 		<string id="TL480" text="+{GOLD} a day"/>
-		<string id="TL481" text=" At the {GOLD} denars a day it pays its owner now, it would pay for itself in about {DAYS} days."/>
+		<string id="TL481" text=" It pays its owner {GOLD} denars a day now and less in its first days with you, so it would pay for itself in about {DAYS} days."/>
 		<string id="TL482" text=" It pays its owner nothing a day now, so there is no telling when it would pay for itself."/>
 		<string id="TL483" text="Learn the resale safety factor"/>
 		<string id="TL484" text="Lowers Resale safety factor toward how much of the Sell price this panel promised has really been there when you walked in, counting that record more as it grows, and never raises it above what you set. OFF uses it as set. ON by default."/>
 		<string id="TL485" text=" | a price elsewhere counts at {USED}: Resale safety factor starts it at {SET} and {COUNT} walk-in(s) have moved it"/>
+		<string id="TL486" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold."/>
+		<string id="TL487" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}."/>
 	</strings>
 </base>
