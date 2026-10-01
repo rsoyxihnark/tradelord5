@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.97.7
+
+- Fixed TradeLord.ini.new being left beside TradeLord.ini when the game stopped while saving your settings
+- The hint for Learn the resale safety factor now names the TradeLord ledger instead of this panel
+- The hint for Trust a market by what it has paid now names the TradeLord ledger instead of this panel
+
 ## 1.97.6
 
 - Fixed Buy Workshops Remotely saying a workshop pays for itself sooner than it really does

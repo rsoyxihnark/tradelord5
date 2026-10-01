@@ -15503,9 +15503,11 @@ def the_settings_file_is_written_whole_or_not_at_all():
     whole = method_body(S['Config.cs'], "private static void WholeOrNotAtAll")
     return (write and whole
             and "WholeOrNotAtAll(path, SettingsFile.Compose(Header, lines));" in write
-            and ordered(whole, 'string fresh = path + ".new";', "File.WriteAllText(fresh, text);",
+            and ordered(whole, 'string fresh = path + ".new";', "File.WriteAllText(fresh, text);", "throw;",
                         "if (File.Exists(path)) File.Replace(fresh, path, null);", "else File.Move(fresh, path);",
-                        "File.WriteAllText(path, text);", "File.Delete(fresh);")
+                        "File.WriteAllText(path, text);")
+            and ordered_last(whole, "File.WriteAllText(path, text);", "File.Delete(fresh);")
+            and whole.count("File.Delete(fresh);") == 2
             and S['Config.cs'].count("File.WriteAllText(") == 2)
 
 chk("1.97.1", "TradeLord.ini is written to a new file first and swapped into place, so a crash while it is written never leaves half a file",
@@ -15810,6 +15812,43 @@ def the_trade_xp_line_names_the_profit_the_game_counts():
 
 chk("1.97.6", "the line saying TradeLord credited your Trade skill says the profit in it is what the game counts for what TradeLord sold whenever Trade XP multiplier leaves that profit as the game counted it",
     the_trade_xp_line_names_the_profit_the_game_counts())
+
+
+def a_settings_file_a_save_never_finished_is_cleared_away():
+    read = method_body(S['Config.cs'], "private static void Read()")
+    whole = method_body(S['Config.cs'], "private static void WholeOrNotAtAll")
+    clear = method_body(S['Config.cs'], "private static void ClearAnUnfinishedWrite")
+    return (read and whole and clear
+            and ordered(read, "_path = found ?? Log.Beside(FileName, mustExist: false);",
+                        "ClearAnUnfinishedWrite(_path);", "if (found == null)")
+            and ordered(whole, "try { File.WriteAllText(fresh, text); }", "File.Delete(fresh);", "throw;",
+                        "if (File.Exists(path)) File.Replace(fresh, path, null);")
+            and ordered(clear, 'string fresh = path + ".new";', "if (!File.Exists(fresh)) return;",
+                        "File.Delete(fresh);", "Log.Write(", "Log.Error(e,"))
+
+chk("1.97.7", "a TradeLord.ini.new left by a save the game never finished is removed as TradeLord starts, and a write that fails half way leaves none behind",
+    a_settings_file_a_save_never_finished_is_cleared_away())
+
+
+def the_settings_hints_name_the_tradelord_ledger_rather_than_this_panel():
+    everywhere = [ENGLISH] + list(TRANSLATIONS.values())
+    named = {ENGLISH: "the TradeLord ledger"}
+    for path in TRANSLATIONS.values():
+        named[path] = spoken(path).get("TL07", "")
+    panel = ("this panel", "\u672c\u9762\u677f", "\u043f\u0430\u043d\u0435\u043b", "panel")
+    return (all(said_in_every_language(t) for t in ("TL444", "TL484"))
+            and all(not any(word in spoken(f)[t].lower() for word in panel)
+                    for f in everywhere for t in ("TL444", "TL484"))
+            and all(named[f] and (named[f].split()[0] in spoken(f)["TL444"] or
+                                  named[f].split()[-1] in spoken(f)["TL444"])
+                    for f in everywhere)
+            and "the TradeLord ledger promised" in spoken(ENGLISH)["TL444"]
+            and "the TradeLord ledger promised" in spoken(ENGLISH)["TL484"]
+            and 'HintText = "{=TL444}' + spoken(ENGLISH)["TL444"] + '"' in M
+            and 'HintText = "{=TL484}' + spoken(ENGLISH)["TL484"] + '"' in M)
+
+chk("1.97.7", "the hints for Trust a market by what it has paid and Learn the resale safety factor name the TradeLord ledger, not this panel, in every language",
+    the_settings_hints_name_the_tradelord_ledger_rather_than_this_panel())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

@@ -283,7 +283,7 @@
 		<string id="TL441" text=" Bu alış, TradeLord’un altın rezerv ve asker ücreti karşılığı olarak ayırdığı, mala harcamadığı {HELD} dinarın altına düşmenize yol açar."/>
 		<string id="TL442" text="Bugün"/>
 		<string id="TL443" text="Bir pazara, daha önce ödediği fiyata göre güven"/>
-		<string id="TL444" text="Panelin söz verdiğinden az ödemiş bir pazar daha düşük puan alır ve rotaları listede aşağı iner. Bu, o pazara beş kez girdikten sonra başlar ve bir rotanın Puanını en çok dörtte bir oynatır. Rotaları güvene göre sırala gerekir. Varsayılan AÇIK."/>
+		<string id="TL444" text="TradeLord defterinin söz verdiğinden az ödeyen pazar daha düşük puan alır, rotaları listede iner. Bu, o pazara beş kez girdikten sonra başlar ve bir rotanın Puanını en çok dörtte bir oynatır. Rotaları güvene göre sırala gerekir. Varsayılan AÇIK."/>
 		<string id="TL445" text=" | Bu panelin söz verdiğinden az ödemiş bir pazar için Puan düşürülür"/>
 		<string id="TL446" text="?"/>
 		<string id="TL447" text=" | stok, siz varmadan kervanların ve atölyelerin pazara ekleyeceğini sayar, kervanların kesesinin orada alacağı tahmini ile kasabanın ve atölyelerinin tükettiği düşülerek; fiyatlar için Toplu fiyat benzetimi gerekir"/>
@@ -321,7 +321,7 @@
 		<string id="TL481" text=" Sahibine şu an günde {GOLD} dinar kazandırıyor, sizdeki ilk günlerinde ise daha az, bu yüzden kendini yaklaşık {DAYS} günde öder."/>
 		<string id="TL482" text=" Şu an sahibine günde hiçbir şey kazandırmıyor, bu yüzden kendini ne zaman ödeyeceği belli değil."/>
 		<string id="TL483" text="Yeniden satış güvenlik payını öğren"/>
-		<string id="TL484" text="Yeniden satış güvenlik payını, bu panelin söz verdiği Satış fiyatının pazara girdiğinizde ne kadarının durduğuna doğru düşürür, kayıt büyüdükçe ona daha çok güvenir, ayarınızın üstüne asla çıkarmaz. KAPALI: pay ayarlandığı gibi. Varsayılan AÇIK."/>
+		<string id="TL484" text="Yeniden satış güvenlik payını, TradeLord defterinin söz verdiği Satış fiyatının pazar girişlerinizde ne kadarının durduğuna doğru düşürür, kayıt büyüdükçe ona daha çok güvenir, ayarınızın üstüne çıkarmaz. KAPALI: ayarlandığı gibi. Varsayılan AÇIK."/>
 		<string id="TL485" text=" | başka yerdeki fiyat {USED} sayılır: Yeniden satış güvenlik payı {SET} ile başlatır, {COUNT} pazar girişi bunu kaydırdı"/>
 		<string id="TL486" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi."/>
 		<string id="TL487" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}."/>
