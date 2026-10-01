@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.98.0
+
+- Every unit you buy now gets a number no other unit is ever given, and keeps the exact price you paid for it
+- Goods you already carry get their unit numbers the first time you load your save
+- What a good counts as having cost you has a new choice, What each unit cost you, and TradeLord now ships with it
+- With What each unit cost you, the dearest unit the price beats by your margin sells first, and a unit it cannot beat stays in your cargo
+- With What each unit cost you, the market marked on your map is chosen by what each unit would sell for over its own price
+- With What each unit cost you, a good you sell by hand counts as the dearest units its price covers
+- Fixed the profit on a good bought at more than eight different prices being worked out from prices averaged together
+- TradeLord.log now names every unit TradeLord sells by its number, with what it cost, what it fetched and the least it had to fetch
+- TradeLord now warns you with every Trade XP it credits while Trade is within one point of its learning limit or past it
+- The learning limit warning says how many focus points in Trade or attribute points would raise the limit
+
 ## 1.97.9
 
 - The message that TradeLord credited your Trade skill now also says how much Trade XP your skill gained
@@ -51,9 +64,6 @@
 - Fixed a deal you took on the trade screen that lost money being reported as 0 profit
 - The hint for What a good counts as having cost you now says profit is what each unit fetched over what it cost you
 - The hint for What a good counts as having cost you now says only trade goods and livestock you never bought must beat the cheapest market
-- How far TradeLord trusts what is on its way to a market is now learned by least squares, so a big miss counts for more than a small one
-- How far TradeLord trusts what is on its way to a market starts over once, as the old record weighed each forecast by its size alone
-- Enable extended debug logging now says the trust in what is on its way to a market is worked out by least squares
 - TradeLord.log now says the profit on a deal you took on the trade screen is what the units you had bought fetched over their cost
 
 ## 1.97.1

@@ -326,5 +326,12 @@
 		<string id="TL486" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能。{ADDED}"/>
 		<string id="TL487" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能，现在是 {LEVEL} 级。{ADDED}"/>
 		<string id="TL488" text=" 这增加了 {XP} 点交易经验。"/>
+		<string id="TL489" text="你的交易技能（{SKILL}）已接近学习上限（{LIMIT}）：超过之后交易经验会变慢，最后停止。{REMEDY}"/>
+		<string id="TL490" text="你的交易技能（{SKILL}）已超过学习上限（{LIMIT}），交易经验会变慢，最后停止。{REMEDY}"/>
+		<string id="TL491" text="再给交易加 {FOCUS} 个专精点，或给{ATTRIBUTE}加 {POINTS} 点，就能提高上限。"/>
+		<string id="TL492" text="再给交易加 {FOCUS} 个专精点，就能提高上限。"/>
+		<string id="TL493" text="再给{ATTRIBUTE}加 {POINTS} 点，就能提高上限。"/>
+		<string id="TL494" text="要提高上限，得同时提高交易的专精和{ATTRIBUTE}。"/>
+		<string id="TL495" text="每一件各自花费的价格"/>
 	</strings>
 </base>

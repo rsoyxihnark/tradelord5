@@ -1293,7 +1293,73 @@ namespace TradeLord
             added.SetTextVariable("XP", gained);
             earned.SetTextVariable("ADDED", gained > 0 ? added.ToString() : "");
             if (!muted) Notices.Say(earned, Notices.Xp);
+            Guard.Run("TradeXp.Near", () => SayHowNearTheLearningLimit(muted));
             if (rose) Log.Write("trade skill rose to " + now + " - named in TradeLord's own line");
+        }
+
+        private static void SayHowNearTheLearningLimit(bool muted)
+        {
+            Hero hero = Hero.MainHero;
+            CharacterDevelopmentModel model = Campaign.Current?.Models?.CharacterDevelopmentModel;
+            SkillObject trade = DefaultSkills.Trade;
+            if (model == null || hero?.HeroDeveloper == null || trade == null) return;
+            IReadOnlyPropertyOwner<CharacterAttribute> attributes = hero.CharacterAttributes;
+            int focus = hero.HeroDeveloper.GetFocus(trade);
+            int skill = hero.GetSkillValue(trade);
+            int limit = MathF.Round(model.CalculateLearningLimit(attributes, focus, trade).ResultNumber);
+            if (!TradeMath.NearTheLearningLimit(skill, limit)) return;
+
+            int focusNeeded = TradeMath.FewestThatLets(model.MaxFocusPerSkill - focus,
+                more => !TradeMath.NearTheLearningLimit(skill,
+                    MathF.Round(model.CalculateLearningLimit(attributes, focus + more, trade).ResultNumber)));
+            CharacterAttribute named = null;
+            int pointsNeeded = 0;
+            foreach (CharacterAttribute attribute in trade.Attributes)
+            {
+                if (attribute == null) continue;
+                if (named == null) named = attribute;
+                int needed = TradeMath.FewestThatLets(model.MaxAttribute - attributes.GetPropertyValue(attribute),
+                    more => !TradeMath.NearTheLearningLimit(skill, MathF.Round(
+                        model.CalculateLearningLimit(new Raised(attributes, attribute, more), focus, trade).ResultNumber)));
+                if (needed > 0 && (pointsNeeded == 0 || needed < pointsNeeded))
+                {
+                    named = attribute;
+                    pointsNeeded = needed;
+                }
+            }
+
+            TextObject remedy = Tongue.Text(focusNeeded > 0 && pointsNeeded > 0
+                ? "{=TL491} {FOCUS} more focus point(s) in Trade or {POINTS} more point(s) of {ATTRIBUTE} would raise the limit."
+                : focusNeeded > 0
+                    ? "{=TL492} {FOCUS} more focus point(s) in Trade would raise the limit."
+                    : pointsNeeded > 0
+                        ? "{=TL493} {POINTS} more point(s) of {ATTRIBUTE} would raise the limit."
+                        : "{=TL494} Raise your focus in Trade and your {ATTRIBUTE} together to raise the limit.");
+            remedy.SetTextVariable("FOCUS", focusNeeded);
+            remedy.SetTextVariable("POINTS", pointsNeeded);
+            remedy.SetTextVariable("ATTRIBUTE", named?.Name?.ToString() ?? "");
+            TextObject said = Tongue.Text(skill > limit
+                ? "{=TL490}Trade ({SKILL}) is past its learning limit ({LIMIT}), so Trade XP comes slower and then stops.{REMEDY}"
+                : "{=TL489}Trade ({SKILL}) is close to its learning limit ({LIMIT}): past it, Trade XP comes slower and then stops.{REMEDY}");
+            said.SetTextVariable("SKILL", skill);
+            said.SetTextVariable("LIMIT", limit);
+            said.SetTextVariable("REMEDY", remedy.ToString());
+            if (!muted) Notices.Say(said, Notices.Alert);
+
+            int focusToSpend = hero.HeroDeveloper.UnspentFocusPoints;
+            int pointsToSpend = hero.HeroDeveloper.UnspentAttributePoints;
+            Log.Repeatable("trade-xp-near-limit", skill + "/" + limit + "/" + focus + "/" + focusNeeded + "/" + pointsNeeded,
+                           "trade skill: Trade is at " + skill + " against a learning limit of " + limit + " with " +
+                           focus + " focus point(s) in it, so TradeLord warns with every Trade XP it credits until " +
+                           (focusNeeded > 0 ? focusNeeded + " more focus point(s)" : "no focus alone") + " or " +
+                           (pointsNeeded > 0 ? pointsNeeded + " more point(s) of " + named?.StringId : "no attribute alone") +
+                           " lift the limit clear of it, with " + focusToSpend + " focus and " + pointsToSpend +
+                           " attribute point(s) unspent");
+            if (focusToSpend <= 0 && pointsToSpend <= 0) return;
+            TextObject spend = Tongue.Text("{=TL472}You have {FOCUS} focus point(s) and {POINTS} attribute point(s) left to spend on the character screen.");
+            spend.SetTextVariable("FOCUS", focusToSpend);
+            spend.SetTextVariable("POINTS", pointsToSpend);
+            if (!muted) Notices.Say(spend, Notices.Alert);
         }
 
         private static bool SayTheLearningLimit(bool muted)
@@ -1739,8 +1805,25 @@ namespace TradeLord
                 return true;
             }
 
-            public void RecordedSale(int at, int unitPaid) =>
-                LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, unitPaid);
+            public void RecordedSale(int at, int unitPaid, int price, int bestPays)
+            {
+                long number = LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, unitPaid) ?? 0L;
+                ItemObject item = Item(at);
+                if (item == null) return;
+                float margin = Options.Current.MinProfitMargin;
+                float share = Options.Current.HoldCargoForBestMarket;
+                Log.Write("unit " + (number > 0L ? "#" + number + " " : "") + "of " +
+                          Tongue.Named(item.Name, item.StringId) + ", bought for " + unitPaid + ", sold for " + price +
+                          (Options.Current.CostBasisMode == Options.CostOfEachUnit
+                              ? ", at least the " + TradeMath.LeastThatClears(unitPaid, margin) +
+                                " it needed to clear your margin"
+                              : "") +
+                          (bestPays > 0 && _mark != null
+                              ? ", and at least the " + TradeRules.BestMarketFloor(bestPays, share) + " that is " +
+                                Math.Round(share * 100f) + "% of the " + bestPays + " " +
+                                Tongue.Named(_mark.Name, _mark.StringId) + " would pay for it"
+                              : ""));
+            }
         }
 
         private const float HoldShareOff = 0f;

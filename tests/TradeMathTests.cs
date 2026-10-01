@@ -9,10 +9,18 @@ namespace TradeLord.Tests
     {
         private const int AveragePaid = 0, LastPaid = 1, CheapestKnown = 2;
 
+        private static long _numbered = TradeMath.FirstUnitNumber;
+
+        private static void Buy(PurchaseRecord rec, int count, int totalPaid)
+        {
+            TradeMath.AddPurchase(rec, count, totalPaid, _numbered);
+            if (count > 0) _numbered += count;
+        }
+
         private static PurchaseRecord Bought(int count, int totalPaid)
         {
             var rec = new PurchaseRecord { ItemId = "grain" };
-            TradeMath.AddPurchase(rec, count, totalPaid);
+            Buy(rec, count, totalPaid);
             return rec;
         }
 
@@ -117,7 +125,7 @@ namespace TradeLord.Tests
         public void Buying_again_at_a_new_price_averages_the_lot_and_remembers_the_last()
         {
             var rec = Bought(10, 100);
-            TradeMath.AddPurchase(rec, 10, 300);
+            Buy(rec, 10, 300);
             Assert.Equal(20, TradeMath.UnitBasis(rec, AveragePaid));
             Assert.Equal(30, TradeMath.UnitBasis(rec, LastPaid));
         }
@@ -203,7 +211,7 @@ namespace TradeLord.Tests
             var rec = Bought(7, 93);
             for (int round = 1; round <= 200; round++)
             {
-                TradeMath.AddPurchase(rec, round % 5 + 1, round * 13 % 97 + 1);
+                Buy(rec, round % 5 + 1, round * 13 % 97 + 1);
                 TradeMath.DrainSale(rec, round % 7 + 1);
                 Assert.True(rec.Count >= 0);
                 Assert.True(rec.TotalPaid >= 0);
@@ -216,7 +224,7 @@ namespace TradeLord.Tests
         public void A_unit_the_average_would_sell_at_a_loss_keeps_its_own_price()
         {
             var rec = Bought(1, 836);
-            TradeMath.AddPurchase(rec, 4, 1114);
+            Buy(rec, 4, 1114);
             int basis = TradeMath.UnitBasis(rec, AveragePaid);
             Assert.Equal(390, basis);
             Assert.Equal(448, TradeMath.WhatTheAverageCovers(basis, 0.15f));
@@ -228,7 +236,7 @@ namespace TradeLord.Tests
         public void Units_bought_up_one_rising_price_are_all_held_to_the_average_as_before()
         {
             var rec = new PurchaseRecord { ItemId = "linen" };
-            foreach (int paid in new[] { 249, 257, 266, 275, 286, 298 }) TradeMath.AddPurchase(rec, 1, paid);
+            foreach (int paid in new[] { 249, 257, 266, 275, 286, 298 }) Buy(rec, 1, paid);
             int basis = TradeMath.UnitBasis(rec, AveragePaid);
             Assert.Equal(272, basis);
             Assert.Null(Dear(rec, TradeMath.WhatTheAverageCovers(basis, 0.15f), rec.Count));
@@ -256,7 +264,7 @@ namespace TradeLord.Tests
         public void A_sale_is_taken_from_the_cheapest_units_first_and_the_average_is_kept_as_it_was()
         {
             var rec = Bought(1, 836);
-            TradeMath.AddPurchase(rec, 4, 1114);
+            Buy(rec, 4, 1114);
             TradeMath.DrainSale(rec, 4);
             Assert.Equal(1, rec.Count);
             Assert.Equal(390, TradeMath.UnitBasis(rec, AveragePaid));
@@ -270,7 +278,7 @@ namespace TradeLord.Tests
         public void The_last_price_paid_mode_still_never_lets_a_dearer_unit_go_under_what_it_cost()
         {
             var rec = Bought(1, 836);
-            TradeMath.AddPurchase(rec, 4, 1114);
+            Buy(rec, 4, 1114);
             int basis = TradeMath.UnitBasis(rec, LastPaid);
             Assert.Equal(278, basis);
             Assert.Equal(new[] { 836 }, Dear(rec, basis, rec.Count));
@@ -399,14 +407,18 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_record_never_keeps_more_batches_than_its_limit_and_the_odd_one_out_stays_apart()
+        public void Every_price_paid_is_kept_apart_however_many_prices_there_are()
         {
             var rec = Bought(1, 5000);
-            for (int price = 100; price < 130; price++) TradeMath.AddPurchase(rec, 1, price);
-            Assert.True(rec.Batches.Count <= TradeMath.MostBatchesKept);
+            for (int price = 100; price < 130; price++) Buy(rec, 1, price);
+            Assert.Equal(31, rec.Batches.Count);
             Assert.True(TradeMath.BatchesAddUp(rec));
             Assert.Equal(5000, rec.Batches[rec.Batches.Count - 1].Unit);
             Assert.Equal(1, rec.Batches[rec.Batches.Count - 1].Count);
+            var paid = new List<int>();
+            for (int price = 100; price < 130; price++) paid.Add(price);
+            paid.Add(5000);
+            Assert.Equal(paid.ToArray(), Units(TradeMath.UnitCosts(rec, rec.Count)));
         }
 
         [Fact]
@@ -416,7 +428,7 @@ namespace TradeLord.Tests
             var rec = Bought(3, 90);
             for (int round = 0; round < 5000; round++)
             {
-                if (rng.Next(3) > 0) TradeMath.AddPurchase(rec, rng.Next(1, 6), rng.Next(1, 4000));
+                if (rng.Next(3) > 0) Buy(rec, rng.Next(1, 6), rng.Next(1, 4000));
                 else TradeMath.DrainSale(rec, rng.Next(0, 9));
                 Assert.True(TradeMath.BatchesAddUp(rec));
                 int basis = TradeMath.UnitBasis(rec, AveragePaid);
@@ -429,7 +441,7 @@ namespace TradeLord.Tests
         public void A_record_kept_before_batches_were_written_down_counts_as_one_batch_at_its_average()
         {
             var rec = new PurchaseRecord { ItemId = "felt", TotalPaid = 1200, Count = 4, LastUnitPaid = 300 };
-            TradeMath.AddPurchase(rec, 1, 900);
+            Buy(rec, 1, 900);
             Assert.True(TradeMath.BatchesAddUp(rec));
             Assert.Equal(2, rec.Batches.Count);
             Assert.Equal(300, rec.Batches[0].Unit);
@@ -503,8 +515,8 @@ namespace TradeLord.Tests
         public void A_sale_of_a_dear_unit_is_taken_from_its_own_batch()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(rec, 1, 836);
-            TradeMath.AddPurchase(rec, 4, 1114);
+            Buy(rec, 1, 836);
+            Buy(rec, 4, 1114);
             TradeMath.DrainSale(rec, 1, 836);
             Assert.Single(rec.Batches);
             Assert.Equal(278, rec.Batches[0].Unit);
@@ -514,13 +526,176 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_dear_batch_is_never_merged_far_away_when_closer_batches_can_be_merged()
+        public void Nine_prices_paid_are_nine_prices_kept_and_none_is_averaged_into_another()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            foreach (int paid in new[] { 100, 101, 110, 111, 120, 121, 130, 500, 900 }) TradeMath.AddPurchase(rec, 1, paid);
-            Assert.Equal(TradeMath.MostBatchesKept, rec.Batches.Count);
-            Assert.Contains(rec.Batches, one => one.Unit == 900 && one.Count == 1);
-            Assert.Contains(rec.Batches, one => one.Unit == 500 && one.Count == 1);
+            foreach (int paid in new[] { 100, 101, 110, 111, 120, 121, 130, 500, 900 }) Buy(rec, 1, paid);
+            Assert.Equal(9, rec.Batches.Count);
+            Assert.Equal(new[] { 100, 101, 110, 111, 120, 121, 130, 500, 900 },
+                         Units(TradeMath.UnitCosts(rec, rec.Count)));
+        }
+
+        private static TradeMath.DearFirst OwnCost(Batch[] costs, int worth = 200, int unknown = 0) =>
+            TradeMath.DearFirst.EachAtItsOwnCost(costs, worth, unknown, 0.15f);
+
+        [Fact]
+        public void Each_unit_at_its_own_cost_sells_the_dearest_the_price_clears_by_your_margin_first()
+        {
+            Assert.Equal(new[] { 200, 100 }, Walked(OwnCost(Costs(100, 200, 300)), 3, u => 260).ToArray());
+        }
+
+        [Fact]
+        public void Each_unit_at_its_own_cost_goes_down_the_ladder_as_the_price_falls()
+        {
+            Assert.Equal(new[] { 300, 200, 100 }, Walked(OwnCost(Costs(100, 200, 300)), 3, u => 400 - 50 * u).ToArray());
+            Assert.Equal(new[] { 300, 100 }, Walked(OwnCost(Costs(100, 200, 300)), 3, u => 345 - 120 * u).ToArray());
+        }
+
+        [Fact]
+        public void A_unit_whose_own_cost_the_price_cannot_clear_by_your_margin_never_sells()
+        {
+            var walk = OwnCost(Costs(300));
+            Assert.Equal(TradeMath.NoUnitThisPriceSells, walk.Floor(344));
+            Assert.Equal(300, walk.Floor(345));
+            Assert.Equal(300, walk.Took());
+            Assert.Equal(TradeMath.NoUnitThisPriceSells, walk.Floor(5000));
+        }
+
+        [Fact]
+        public void Units_of_no_known_cost_go_at_the_average_once_no_unit_with_a_cost_clears()
+        {
+            var walk = OwnCost(Costs(300), worth: 200, unknown: 2);
+            Assert.Equal(200, walk.Floor(250));
+            Assert.Equal(200, walk.Took());
+            Assert.Equal(300, walk.Floor(400));
+            Assert.Equal(300, walk.Took());
+            Assert.Equal(200, walk.Floor(400));
+            Assert.Equal(200, walk.Took());
+            Assert.Equal(TradeMath.NoUnitThisPriceSells, walk.Floor(400));
+        }
+
+        [Fact]
+        public void A_copy_of_an_own_cost_walk_leaves_the_one_it_was_copied_from_where_it_was()
+        {
+            var first = OwnCost(Costs(100, 200, 200, 300));
+            TradeMath.DearFirst copy = first;
+            Assert.Equal(new[] { 300, 200, 200, 100 }, Walked(copy, 4, u => 1000).ToArray());
+            Assert.Equal(new[] { 300, 200, 200, 100 }, Walked(first, 4, u => 1000).ToArray());
+        }
+
+        [Fact]
+        public void An_own_cost_walk_never_takes_more_units_than_it_holds_however_they_are_taken()
+        {
+            var walk = OwnCost(Costs(100, 100, 300));
+            Assert.Equal(300, walk.Floor(400));
+            Assert.Equal(300, walk.Took());
+            Assert.Equal(100, walk.Took());
+            Assert.Equal(100, walk.Floor(400));
+            Assert.Equal(100, walk.Took());
+            Assert.Equal(TradeMath.NoUnitThisPriceSells, walk.Floor(400));
+            var one = OwnCost(Costs(500, 500, 500));
+            Assert.Equal(500, one.Took());
+            Assert.Equal(500, one.Floor(600));
+            Assert.Equal(500, one.Took());
+            Assert.Equal(500, one.Floor(600));
+            Assert.Equal(500, one.Took());
+            Assert.Equal(TradeMath.NoUnitThisPriceSells, one.Floor(600));
+        }
+
+        [Theory]
+        [InlineData(300, 0.15f, 345)]
+        [InlineData(100, 0.15f, 115)]
+        [InlineData(100, 0f, 100)]
+        [InlineData(0, 0.15f, 1)]
+        public void The_least_price_that_clears_a_unit_is_the_least_your_margin_accepts(int cost, float margin, int least)
+        {
+            Assert.Equal(least, TradeMath.LeastThatClears(cost, margin));
+            Assert.True(TradeMath.ProfitAcceptable(cost, least, margin));
+            Assert.False(TradeMath.ProfitAcceptable(cost, least - 1, margin));
+        }
+
+        [Fact]
+        public void Every_unit_bought_has_a_number_and_a_sale_takes_the_number_of_the_unit_it_sold()
+        {
+            var rec = new PurchaseRecord { ItemId = "cloth" };
+            TradeMath.AddPurchase(rec, 1, 100, 1L);
+            TradeMath.AddPurchase(rec, 1, 200, 2L);
+            TradeMath.AddPurchase(rec, 1, 300, 3L);
+            Assert.Equal(3L, TradeMath.NumberASaleTakes(rec, 300));
+            TradeMath.DrainSale(rec, 1, 300);
+            Assert.Equal(new[] { 100, 200 }, Units(TradeMath.UnitCosts(rec, rec.Count)));
+            Assert.Equal(2L, TradeMath.NumberASaleTakes(rec, 200));
+            Assert.Equal(1L, TradeMath.NumberASaleTakes(rec, 0));
+            Assert.Equal(0L, TradeMath.NumberASaleTakes(null, 100));
+        }
+
+        [Fact]
+        public void Units_bought_one_after_another_at_one_price_keep_one_run_of_numbers()
+        {
+            var rec = new PurchaseRecord { ItemId = "cloth" };
+            TradeMath.AddPurchase(rec, 2, 200, 10L);
+            TradeMath.AddPurchase(rec, 3, 300, 12L);
+            TradeMath.AddPurchase(rec, 1, 100, 20L);
+            Assert.Equal(2, rec.Batches.Count);
+            Assert.Equal(10L, rec.Batches[0].First);
+            Assert.Equal(5, rec.Batches[0].Count);
+            Assert.Equal(20L, rec.Batches[1].First);
+            Assert.Equal(14L, TradeMath.NumberASaleTakes(rec, 100));
+            TradeMath.DrainSale(rec, 1, 100);
+            Assert.Equal(13L, TradeMath.NumberASaleTakes(rec, 100));
+        }
+
+        [Fact]
+        public void Units_with_no_number_or_one_another_unit_has_get_new_numbers_past_every_number_in_use()
+        {
+            var plain = new PurchaseRecord { ItemId = "wine", Count = 2, TotalPaid = 200 };
+            plain.Batches = new List<Batch> { new Batch { Unit = 100, Count = 2 } };
+            var kept = new PurchaseRecord { ItemId = "oil", Count = 3, TotalPaid = 600 };
+            kept.Batches = new List<Batch> { new Batch { Unit = 200, Count = 3, First = 5L } };
+            var twice = new PurchaseRecord { ItemId = "salt", Count = 2, TotalPaid = 600 };
+            twice.Batches = new List<Batch> { new Batch { Unit = 300, Count = 2, First = 6L } };
+            var old = new PurchaseRecord { ItemId = "fur", Count = 4, TotalPaid = 400 };
+
+            long next = TradeMath.NumberEveryUnit(new List<PurchaseRecord> { plain, kept, twice, old }, 1L, out long numbered);
+
+            Assert.Equal(8L, numbered);
+            Assert.Equal(16L, next);
+            Assert.Equal(5L, kept.Batches[0].First);
+            var used = new HashSet<long>();
+            foreach (PurchaseRecord rec in new[] { plain, kept, twice, old })
+                foreach (Batch one in rec.Batches)
+                    for (long n = one.First; n < one.First + one.Count; n++)
+                    {
+                        Assert.True(n >= TradeMath.FirstUnitNumber && n < next);
+                        Assert.True(used.Add(n));
+                    }
+            Assert.Equal(11, used.Count);
+        }
+
+        [Fact]
+        public void A_number_given_out_is_never_given_again_even_after_its_unit_is_sold()
+        {
+            var rec = new PurchaseRecord { ItemId = "cloth" };
+            TradeMath.AddPurchase(rec, 3, 300, 40L);
+            TradeMath.DrainSale(rec, 3, 100);
+            Assert.Equal(0, rec.Count);
+            Assert.Equal(43L, TradeMath.NumberEveryUnit(new List<PurchaseRecord> { rec }, 43L, out long none));
+            Assert.Equal(0L, none);
+            var held = new PurchaseRecord { ItemId = "cloth" };
+            TradeMath.AddPurchase(held, 2, 200, 90L);
+            Assert.Equal(92L, TradeMath.NumberEveryUnit(new List<PurchaseRecord> { held }, 0L, out none));
+            Assert.Equal(0L, none);
+        }
+
+        [Fact]
+        public void A_run_of_numbers_that_would_run_past_the_largest_number_is_numbered_afresh()
+        {
+            var rec = new PurchaseRecord { ItemId = "cloth", Count = 5, TotalPaid = 500 };
+            rec.Batches = new List<Batch> { new Batch { Unit = 100, Count = 5, First = long.MaxValue - 1 } };
+            long next = TradeMath.NumberEveryUnit(new List<PurchaseRecord> { rec }, 7L, out long numbered);
+            Assert.Equal(5L, numbered);
+            Assert.Equal(7L, rec.Batches[0].First);
+            Assert.Equal(12L, next);
         }
 
         [Fact]
@@ -557,9 +732,9 @@ namespace TradeLord.Tests
         public void A_hand_sale_takes_the_dearest_units_its_gold_covers_and_works_down_from_there()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(rec, 1, 500);
-            TradeMath.AddPurchase(rec, 1, 900);
-            TradeMath.AddPurchase(rec, 8, 800);
+            Buy(rec, 1, 500);
+            Buy(rec, 1, 900);
+            Buy(rec, 8, 800);
             int covers = TradeMath.WhatTheAverageCovers(TradeMath.UnitBasis(rec, AveragePaid), 0.15f);
             Assert.Equal(253, covers);
             Assert.Equal(new List<int> { 900, 500 }, TradeMath.WhatAHandSaleTook(rec, 2, 1400, covers, null));
@@ -568,12 +743,24 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_hand_sale_with_each_unit_at_its_own_cost_takes_the_dearest_units_its_gold_covers()
+        {
+            var rec = new PurchaseRecord { ItemId = "cloth" };
+            Buy(rec, 1, 100);
+            Buy(rec, 1, 200);
+            Buy(rec, 1, 300);
+            Assert.Equal(new List<int> { 200 }, TradeMath.WhatAHandSaleTook(rec, 1, 250, TradeMath.EachUnitApart, null));
+            Assert.Equal(new List<int> { 300, 200 }, TradeMath.WhatAHandSaleTook(rec, 2, 500, TradeMath.EachUnitApart, null));
+            Assert.Equal(250 - 200, TradeMath.MadeOnAHandSale(rec, 1, 250, TradeMath.EachUnitApart, null));
+        }
+
+        [Fact]
         public void A_deal_shrunk_on_the_trade_screen_takes_only_as_many_dear_units_as_really_moved()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(rec, 1, 500);
-            TradeMath.AddPurchase(rec, 1, 900);
-            TradeMath.AddPurchase(rec, 8, 800);
+            Buy(rec, 1, 500);
+            Buy(rec, 1, 900);
+            Buy(rec, 8, 800);
             int covers = TradeMath.WhatTheAverageCovers(TradeMath.UnitBasis(rec, AveragePaid), 0.15f);
             var laidOut = new List<int> { 900, 500 };
             Assert.Equal(new List<int> { 900 }, TradeMath.WhatAHandSaleTook(rec, 1, 5000, covers, laidOut));
@@ -595,8 +782,8 @@ namespace TradeLord.Tests
         public void A_record_claiming_more_than_is_held_drops_units_from_every_batch_in_proportion_as_the_daily_check_would()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(rec, 3, 2700);
-            TradeMath.AddPurchase(rec, 7, 4200);
+            Buy(rec, 3, 2700);
+            Buy(rec, 7, 4200);
             Assert.Equal(new[] { 600, 600, 600, 900, 900 }, Units(TradeMath.UnitCosts(rec, 5)));
             TradeMath.DrainWhatLeftUnsold(rec, 5);
             Assert.Equal(new[] { 600, 600, 600, 900, 900 }, Units(TradeMath.UnitCosts(rec, 5)));
@@ -606,8 +793,8 @@ namespace TradeLord.Tests
         public void A_unit_bought_dear_keeps_its_own_cost_after_some_of_the_good_is_eaten()
         {
             var rec = new PurchaseRecord { ItemId = "jewelry" };
-            TradeMath.AddPurchase(rec, 10, 1000);
-            TradeMath.AddPurchase(rec, 1, 836);
+            Buy(rec, 10, 1000);
+            Buy(rec, 1, 836);
             TradeMath.DrainWhatLeftUnsold(rec, 1);
             Assert.Equal(10, rec.Count);
             int covers = TradeMath.WhatTheAverageCovers(TradeMath.UnitBasis(rec, AveragePaid), 0.15f);
@@ -618,13 +805,13 @@ namespace TradeLord.Tests
         public void Goods_that_left_unsold_come_off_every_batch_in_proportion_and_a_tie_off_the_cheaper()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(rec, 4, 1112);
-            TradeMath.AddPurchase(rec, 1, 836);
+            Buy(rec, 4, 1112);
+            Buy(rec, 1, 836);
             TradeMath.DrainWhatLeftUnsold(rec, 4);
             Assert.Equal(new[] { 278 }, Units(TradeMath.UnitCosts(rec, rec.Count)));
             var even = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(even, 1, 100);
-            TradeMath.AddPurchase(even, 1, 900);
+            Buy(even, 1, 100);
+            Buy(even, 1, 900);
             TradeMath.DrainWhatLeftUnsold(even, 1);
             Assert.Equal(new[] { 900 }, Units(TradeMath.UnitCosts(even, even.Count)));
         }
@@ -694,8 +881,8 @@ namespace TradeLord.Tests
         public void A_hand_sale_makes_what_each_unit_fetched_over_what_that_unit_cost()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(rec, 1, 836);
-            TradeMath.AddPurchase(rec, 4, 1112);
+            Buy(rec, 1, 836);
+            Buy(rec, 4, 1112);
             int covers = TradeMath.WhatTheAverageCovers(TradeMath.UnitBasis(rec, AveragePaid), 0.15f);
             Assert.Equal(1135 - 836, TradeMath.MadeOnAHandSale(rec, 1, 1135, covers, null));
             Assert.Equal(484 - 278, TradeMath.MadeOnAHandSale(rec, 1, 484, covers, null));
@@ -707,7 +894,7 @@ namespace TradeLord.Tests
         public void A_hand_sale_counts_nothing_for_units_you_never_bought()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(rec, 2, 600);
+            Buy(rec, 2, 600);
             Assert.Equal(2 * 400 - 600, TradeMath.MadeOnAHandSale(rec, 4, 1600, 345, null));
             Assert.Equal(0, TradeMath.MadeOnAHandSale(null, 4, 1600, 345, null));
             Assert.Equal(0, TradeMath.MadeOnAHandSale(rec, 0, 1600, 345, null));
@@ -1192,48 +1379,49 @@ namespace TradeLord.Tests
             Assert.Equal(TradeMath.NoShareToGive, TradeMath.ShareThatCameTrue(1010f, float.NaN));
         }
 
-        private static float ByLeastSquares(params (int said, int moved)[] figures)
+        private static float BySize(params (int said, int moved)[] figures)
         {
             long weighed = 0L, matched = 0L;
             foreach (var (said, moved) in figures)
             {
                 if (!TradeMath.HowMuchCameTrue(said, moved, out float share)) continue;
-                weighed = TradeMath.AddedUp(weighed, TradeMath.SquaredSize(said));
-                matched = TradeMath.AddedUp(matched, TradeMath.SquaredShareThatCameTrue(said, share));
+                weighed = TradeMath.AddedUp(weighed, TradeMath.SizeOf(said));
+                matched = TradeMath.AddedUp(matched, TradeMath.SizedShareThatCameTrue(said, share));
             }
-            return TradeMath.ShareByLeastSquares(weighed, matched);
+            return TradeMath.ShareBySize(weighed, matched);
         }
 
         [Fact]
-        public void By_least_squares_a_forecast_that_came_true_every_time_is_trusted_in_full()
+        public void By_size_a_forecast_that_came_true_every_time_is_trusted_in_full()
         {
-            Assert.Equal(1f, ByLeastSquares((100, 100), (400, 400), (-50, -50)), 4);
+            Assert.Equal(1f, BySize((100, 100), (400, 400), (-50, -50)), 4);
         }
 
         [Fact]
-        public void By_least_squares_a_big_figure_that_missed_outweighs_small_ones_that_came_true()
+        public void By_size_one_big_miss_counts_for_its_size_and_no_more()
         {
-            float share = ByLeastSquares((1000, 0), (100, 100), (100, 100), (100, 100));
-            Assert.Equal(30000f / 1030000f, share, 4);
-            Assert.True(share < 0.05f);
+            float share = BySize((1000, 0), (100, 100), (100, 100), (100, 100));
+            Assert.Equal(300f / 1300f, share, 4);
+            Assert.True(share > 0.2f);
         }
 
         [Fact]
-        public void By_least_squares_no_figure_counts_for_more_than_it_said_either_way()
+        public void By_size_no_figure_counts_for_more_than_it_said_either_way()
         {
-            Assert.Equal(1f, ByLeastSquares((100, 5000)), 4);
-            Assert.Equal(0.5f, ByLeastSquares((100, 100), (100, -5000), (100, 100), (100, 100)), 4);
-            Assert.Equal(0f, ByLeastSquares((100, -5000)));
+            Assert.Equal(1f, BySize((100, 5000)), 4);
+            Assert.Equal(0.5f, BySize((100, 100), (100, -5000), (100, 100), (100, 100)), 4);
+            Assert.Equal(0f, BySize((100, -5000)));
         }
 
         [Fact]
-        public void By_least_squares_nothing_checked_says_nothing_and_a_huge_record_never_overflows()
+        public void By_size_nothing_checked_says_nothing_and_a_huge_record_never_overflows()
         {
-            Assert.Equal(TradeMath.NoShareToGive, ByLeastSquares());
-            Assert.Equal(TradeMath.NoShareToGive, ByLeastSquares((0, 700)));
+            Assert.Equal(TradeMath.NoShareToGive, BySize());
+            Assert.Equal(TradeMath.NoShareToGive, BySize((0, 700)));
             Assert.Equal(long.MaxValue, TradeMath.AddedUp(long.MaxValue - 5L, 10L));
             Assert.Equal(long.MinValue, TradeMath.AddedUp(long.MinValue + 5L, -10L));
-            Assert.Equal((long)int.MaxValue * int.MaxValue, TradeMath.SquaredSize(int.MaxValue));
+            Assert.Equal(2147483648L, TradeMath.SizeOf(int.MinValue));
+            Assert.Equal(700L, TradeMath.SizeOf(-700));
         }
 
         [Fact]
@@ -1981,6 +2169,26 @@ namespace TradeLord.Tests
             Assert.Equal(0, TradeMath.FewestThatLets(0, more => true));
             Assert.Equal(0, TradeMath.FewestThatLets(-2, more => true));
             Assert.Equal(0, TradeMath.FewestThatLets(5, null));
+        }
+
+        [Fact]
+        public void Trade_one_point_under_its_learning_limit_starts_the_warning_and_two_under_ends_it()
+        {
+            Assert.False(TradeMath.NearTheLearningLimit(53, 55));
+            Assert.True(TradeMath.NearTheLearningLimit(54, 55));
+            Assert.True(TradeMath.NearTheLearningLimit(55, 55));
+            Assert.True(TradeMath.NearTheLearningLimit(70, 55));
+            Assert.False(TradeMath.NearTheLearningLimit(54, 56));
+            Assert.True(TradeMath.NearTheLearningLimit(0, 0));
+        }
+
+        [Fact]
+        public void The_fewest_focus_points_that_end_the_warning_lift_the_limit_two_clear_of_the_skill()
+        {
+            System.Func<int, int> limit = focus => 25 + 30 * focus;
+            Assert.Equal(1, TradeMath.FewestThatLets(5, more => !TradeMath.NearTheLearningLimit(54, limit(1 + more))));
+            Assert.Equal(2, TradeMath.FewestThatLets(5, more => !TradeMath.NearTheLearningLimit(113, limit(1 + more))));
+            Assert.Equal(3, TradeMath.FewestThatLets(5, more => !TradeMath.NearTheLearningLimit(114, limit(1 + more))));
         }
 
         [Fact]

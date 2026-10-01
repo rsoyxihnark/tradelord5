@@ -168,6 +168,7 @@ namespace TradeLord
             internal int Last;
             internal int Today;
             internal int Paid;
+            internal long Cost;
             internal long Fetched;
         }
 
@@ -475,8 +476,7 @@ namespace TradeLord
                                      ? ", " + share.Today + " a unit today before what is on its way lands"
                                      : "") +
                                  ", " + share.Fetched + " gold, cost " + share.Paid + " a unit = " +
-                                 (long)share.Paid * share.Moved + " gold, profit " +
-                                 (share.Fetched - (long)share.Paid * share.Moved));
+                                 share.Cost + " gold, profit " + (share.Fetched - share.Cost));
                     }
                 said.Add("    " + how.Value + " gold in all, of which " + how.Cost +
                          " is what it cost you, so it marked on the " + (how.Value - how.Cost) +
@@ -542,8 +542,11 @@ namespace TradeLord
                 int covers = Options.Current.CostBasisMode == 0 && costs != null
                     ? TradeMath.WhatTheAverageCovers(worth, Options.Current.MinProfitMargin)
                     : int.MaxValue;
+                int unknown = el.Amount - TradeMath.UnitsIn(costs);
                 cargo.Add((el.EquipmentElement, el.Amount - keep, worth,
-                           new TradeMath.DearFirst(costs, covers, worth, el.Amount - TradeMath.UnitsIn(costs))));
+                           Options.Current.CostBasisMode == Options.CostOfEachUnit
+                               ? TradeMath.DearFirst.EachAtItsOwnCost(costs, worth, unknown, Options.Current.MinProfitMargin)
+                               : new TradeMath.DearFirst(costs, covers, worth, unknown)));
             }
             _cargo = cargo;
             _cargoHeld = Held(cargo);
@@ -574,18 +577,19 @@ namespace TradeLord
             int gold, List<Share> bill)
         {
             Takings took = default(Takings);
+            bool eachAtItsOwnCost = Options.Current.CostBasisMode == Options.CostOfEachUnit;
             foreach (var (item, amount, worth, floors) in cargo)
             {
                 Paying pays = WhatThatMarketPays(site, market, item, party, ride);
                 TradeMath.DearFirst walk = floors;
-                long fetched = 0L;
+                long fetched = 0L, booked = 0L;
                 int moved = 0, opening = 0, last = 0;
                 for (int u = 0; u < amount; u++)
                 {
                     int price = pays.At(u);
                     if (price <= 0) break;
                     if (!TradeMath.ProfitAcceptable(walk.Floor(price), price, Options.Current.MinProfitMargin)) break;
-                    walk.Took();
+                    booked += walk.Took();
                     if (moved == 0) opening = price;
                     last = price;
                     fetched += price;
@@ -593,8 +597,9 @@ namespace TradeLord
                     if (took.Value + fetched >= gold) { took.PurseCapped = true; break; }
                 }
                 if (moved == 0) continue;
+                long cost = eachAtItsOwnCost ? booked : (long)worth * moved;
                 took.Value += fetched;
-                took.Cost += (long)worth * moved;
+                took.Cost += cost;
                 took.Units += moved;
                 took.Kinds++;
                 bill?.Add(new Share
@@ -605,7 +610,8 @@ namespace TradeLord
                     Price = opening,
                     Last = last,
                     Today = pays.OnItsWay ? pays.Today : 0,
-                    Paid = worth,
+                    Paid = eachAtItsOwnCost ? (int)System.Math.Round((double)booked / moved) : worth,
+                    Cost = cost,
                     Fetched = fetched
                 });
                 if (took.PurseCapped) break;

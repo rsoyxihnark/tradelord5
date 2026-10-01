@@ -326,5 +326,12 @@
 		<string id="TL486" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi.{ADDED}"/>
 		<string id="TL487" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}.{ADDED}"/>
 		<string id="TL488" text=" Bu, {XP} Ticaret tecrübesi kattı."/>
+		<string id="TL489" text="Ticaret yeteneğiniz ({SKILL}) öğrenme sınırına ({LIMIT}) yaklaştı: sınırı geçince Ticaret tecrübesi yavaşlar, sonra durur.{REMEDY}"/>
+		<string id="TL490" text="Ticaret yeteneğiniz ({SKILL}) öğrenme sınırını ({LIMIT}) aştı, bu yüzden Ticaret tecrübesi yavaşlar, sonra durur.{REMEDY}"/>
+		<string id="TL491" text=" Ticaret'e {FOCUS} odak puanı daha ya da {ATTRIBUTE} için {POINTS} puan daha verirseniz sınır yükselir."/>
+		<string id="TL492" text=" Ticaret'e {FOCUS} odak puanı daha verirseniz sınır yükselir."/>
+		<string id="TL493" text=" {ATTRIBUTE} için {POINTS} puan daha verirseniz sınır yükselir."/>
+		<string id="TL494" text=" Sınırı yükseltmek için Ticaret'teki odağınızı ve {ATTRIBUTE} değerinizi birlikte yükseltin."/>
+		<string id="TL495" text="Her birime ödediğiniz"/>
 	</strings>
 </base>

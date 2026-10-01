@@ -7,7 +7,7 @@
 ## Everything it does
 
 - ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
-- ✅ It declares no save types of its own. All it puts in a save is five strings, eight numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
+- ✅ It declares no save types of its own. All it puts in a save is five strings, nine numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
@@ -43,7 +43,7 @@
 - ✅ Every workshop is followed day by day, every line of it at the game's own pace, and a run counts only while the town holds its inputs and the run pays
 - ✅ Your own workshops draw on their warehouse first, and only the share of what they make that you send to the market is counted as landing there
 - ✅ A village is priced through the town it trades with, so what lands in that town moves the village's price as well
-- ✅ It keeps score of that forecast as well, against what really moved by the day you walked in, and counts what is on its way at the share of it that came true by least squares, so it leans less and less on one that keeps missing
+- ✅ It keeps score of that forecast as well, against what really moved by the day you walked in, and counts what is on its way at the share of it that came true, each forecast counted by its size, so it leans less and less on one that keeps missing
 - ✅ Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into
 - ✅ Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
@@ -186,8 +186,11 @@
 - ✅ A cap on the whole visit, which ships at 1000 denars so a full purse is never spent in one town
 - ✅ They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off an animal, unless Buy to fill the ships is on, since only a ship's hold counts one as cargo
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
-- ✅ What a good counts as having cost you: the average of what you paid, the last price you paid, or the cheapest market you know
+- ✅ What a good counts as having cost you: what each unit cost you, which it ships with, the average of what you paid, the last price you paid, or the cheapest market you know
 - ✅ What a good counts as having cost you is what the price has to beat by your margin before a good you bought sells
+- ✅ Every unit you buy gets a number of its own and keeps the exact price you paid for it, and no number is ever given to another unit
+- ✅ With What each unit cost you, the dearest unit the price beats by your margin sells first, then the next dearest, and a unit the price cannot beat stays in your cargo
+- ✅ TradeLord.log names every unit TradeLord sells by its number, with what it cost, what it fetched and the least it had to fetch
 - ✅ The profit reported is what each unit you bought fetched over what that unit cost you, whichever cost you pick
 - ✅ Trade XP for what TradeLord sells is exactly what the game itself gives for the same sale made on its trade screen
 - ✅ A good you never bought, loot and animals included, adds nothing to the profit reported and earns only the Trade XP the game itself would give for it, which is usually none

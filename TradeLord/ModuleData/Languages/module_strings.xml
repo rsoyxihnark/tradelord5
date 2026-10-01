@@ -326,5 +326,12 @@
 		<string id="TL486" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold.{ADDED}"/>
 		<string id="TL487" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}.{ADDED}"/>
 		<string id="TL488" text=" It added {XP} Trade XP to your skill."/>
+		<string id="TL489" text="Trade ({SKILL}) is close to its learning limit ({LIMIT}): past it, Trade XP comes slower and then stops.{REMEDY}"/>
+		<string id="TL490" text="Trade ({SKILL}) is past its learning limit ({LIMIT}), so Trade XP comes slower and then stops.{REMEDY}"/>
+		<string id="TL491" text=" {FOCUS} more focus point(s) in Trade or {POINTS} more point(s) of {ATTRIBUTE} would raise the limit."/>
+		<string id="TL492" text=" {FOCUS} more focus point(s) in Trade would raise the limit."/>
+		<string id="TL493" text=" {POINTS} more point(s) of {ATTRIBUTE} would raise the limit."/>
+		<string id="TL494" text=" Raise your focus in Trade and your {ATTRIBUTE} together to raise the limit."/>
+		<string id="TL495" text="What each unit cost you"/>
 	</strings>
 </base>
