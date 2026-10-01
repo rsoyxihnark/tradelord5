@@ -871,13 +871,30 @@ namespace TradeLord
 
         public const int NeverPaysBack = int.MaxValue;
 
-        public static int DaysToPayBack(int cost, int aDay)
+        public const float PaidOutInFull = 1f;
+
+        public static int DaysToPayBack(int cost, int aDay, float smoothing)
         {
             if (cost <= 0) return 0;
             if (aDay <= 0) return NeverPaysBack;
-            double days = Math.Ceiling((double)cost / aDay);
-            return days >= NeverPaysBack ? NeverPaysBack : (int)days;
+            double plain = Math.Ceiling((double)cost / aDay);
+            if (plain >= NeverPaysBack) return NeverPaysBack;
+            double kept = TradeMath.Finite(smoothing, PaidOutInFull);
+            if (kept <= PaidOutInFull) return (int)plain;
+            double lost = kept - 1d;
+            double left = lost / kept;
+            long low = (long)plain;
+            long high = (long)Math.Ceiling(Math.Min(plain + lost, NeverPaysBack));
+            while (low < high)
+            {
+                long mid = low + (high - low) / 2;
+                if (PaidBy(aDay, mid, lost, left) >= cost) high = mid; else low = mid + 1;
+            }
+            return low >= NeverPaysBack ? NeverPaysBack : (int)low;
         }
+
+        public static double PaidBy(int aDay, long days, double lost, double left) =>
+            days <= 0L ? 0d : (double)aDay * (days - lost * (1d - Math.Pow(left, days)));
 
         public static int SoonestToPayBackFirst((int cost, int aDay) x, (int cost, int aDay) y)
         {

@@ -1269,9 +1269,14 @@ namespace TradeLord
             bool rose = now > before;
             if (!learned && xp > 0 && Guard.Read("TradeXp.Limit", muted, SayTheLearningLimit, false))
                 return;
-            TextObject earned = Tongue.Text(rose
-                ? "{=TL88}TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."
-                : "{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.");
+            bool asTheGameCounts = xp == profit;
+            TextObject earned = Tongue.Text(asTheGameCounts
+                ? (rose
+                    ? "{=TL487}TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}."
+                    : "{=TL486}TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold.")
+                : (rose
+                    ? "{=TL88}TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}."
+                    : "{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill."));
             earned.SetTextVariable("GOLD", xp);
             if (rose) earned.SetTextVariable("LEVEL", now);
             if (!muted) Notices.Say(earned, Notices.Xp);

@@ -318,10 +318,12 @@
 		<string id="TL478" text="İşyerlerini Ticaret yeteneğiyle kazan"/>
 		<string id="TL479" text="İşyerlerini Sahip olabileceğiniz en fazla işyeri sınırına kadar kazanırsınız: oyunun klan kademenizle yükselen kendi sınırı, artı Ticaret yeteneğinizin her 25 puanı için bir işyeri daha. Varsayılan KAPALI."/>
 		<string id="TL480" text="günde +{GOLD}"/>
-		<string id="TL481" text=" Sahibine şu an günde {GOLD} dinar kazandırdığına göre, kendini yaklaşık {DAYS} günde öder."/>
+		<string id="TL481" text=" Sahibine şu an günde {GOLD} dinar kazandırıyor, sizdeki ilk günlerinde ise daha az, bu yüzden kendini yaklaşık {DAYS} günde öder."/>
 		<string id="TL482" text=" Şu an sahibine günde hiçbir şey kazandırmıyor, bu yüzden kendini ne zaman ödeyeceği belli değil."/>
 		<string id="TL483" text="Yeniden satış güvenlik payını öğren"/>
 		<string id="TL484" text="Yeniden satış güvenlik payını, bu panelin söz verdiği Satış fiyatının pazara girdiğinizde ne kadarının durduğuna doğru düşürür, kayıt büyüdükçe ona daha çok güvenir, ayarınızın üstüne asla çıkarmaz. KAPALI: pay ayarlandığı gibi. Varsayılan AÇIK."/>
 		<string id="TL485" text=" | başka yerdeki fiyat {USED} sayılır: Yeniden satış güvenlik payı {SET} ile başlatır, {COUNT} pazar girişi bunu kaydırdı"/>
+		<string id="TL486" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi."/>
+		<string id="TL487" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}."/>
 	</strings>
 </base>

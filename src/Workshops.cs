@@ -107,6 +107,16 @@ namespace TradeLord
             catch { return 0; }
         }
 
+        internal static float PayoutSmoothing()
+        {
+            try
+            {
+                var model = Campaign.Current?.Models?.ClanFinanceModel;
+                return model == null ? Holdings.PaidOutInFull : model.RevenueSmoothenFraction();
+            }
+            catch { return Holdings.PaidOutInFull; }
+        }
+
         internal static bool OnTheMarket(Workshop shop)
         {
             if (shop?.Settlement == null || shop.WorkshopType == null || shop.WorkshopType.IsHidden) return false;

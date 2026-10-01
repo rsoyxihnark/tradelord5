@@ -318,10 +318,12 @@
 		<string id="TL478" text="凭交易技能挣得作坊"/>
 		<string id="TL479" text="作坊要一家家挣来，最多挣到“你最多能拥有的作坊数”：游戏自己的上限（随家族等级提升），再加上交易技能每 25 点多一家。默认关闭。"/>
 		<string id="TL480" text="每天 +{GOLD}"/>
-		<string id="TL481" text=" 按它现在每天给主人带来的 {GOLD} 第纳尔计算，大约 {DAYS} 天就能回本。"/>
+		<string id="TL481" text=" 它现在每天给主人带来 {GOLD} 第纳尔，归你之后的头几天会少一些，所以大约 {DAYS} 天能回本。"/>
 		<string id="TL482" text=" 它现在每天没给主人带来任何收入，所以说不准何时能回本。"/>
 		<string id="TL483" text="自动学习转卖安全系数"/>
 		<string id="TL484" text="让转卖安全系数向你进入市场时本面板所承诺卖价的实际兑现比例下调，核对的次数越多，调整得越多，但绝不高于你设定的系数。关闭时完全按你设定的系数使用。默认开启。"/>
 		<string id="TL485" text=" | 别处的价格按 {USED} 计算：转卖安全系数从 {SET} 起步，已根据你 {COUNT} 次进入市场的结果调整"/>
+		<string id="TL486" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能。"/>
+		<string id="TL487" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能，现在是 {LEVEL} 级。"/>
 	</strings>
 </base>

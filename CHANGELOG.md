@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.97.6
+
+- Fixed Buy Workshops Remotely saying a workshop pays for itself sooner than it really does
+- Buying a workshop from Buy Workshops Remotely now says it pays less in its first days with you
+- With Trade XP multiplier at 100%, the message that TradeLord credited your Trade skill now says the game counted that profit
+
 ## 1.97.5
 
 - Trade XP for what TradeLord sells is now exactly what the game gives for the same sale made on its trade screen

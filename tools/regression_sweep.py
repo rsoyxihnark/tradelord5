@@ -15191,7 +15191,7 @@ def the_workshops_for_sale_come_soonest_to_pay_for_themselves_first():
             and "ProfitMade" not in offer + row
             and "found.Add((shops[i], CostOf(shops[i]), PaysADay(shops[i])));" in offer
             and "model.CalculateOwnerIncomeFromWorkshop(shop)" in pays
-            and "public static int DaysToPayBack(int cost, int aDay)" in rules
+            and "public static int DaysToPayBack(int cost, int aDay, float smoothing)" in rules
             and "public static int SoonestToPayBackFirst((int cost, int aDay) x, (int cost, int aDay) y)" in rules
             and ordered(method_body(rules, "public static int SoonestToPayBackFirst"),
                         "if (xPays != yPays) return xPays ? -1 : 1;",
@@ -15199,7 +15199,7 @@ def the_workshops_for_sale_come_soonest_to_pay_for_themselves_first():
                         "((double)x.cost / x.aDay).CompareTo((double)y.cost / y.aDay);")
             and "var (shop, cost, aDay) = offers[i];" in shown
             and '{=TL480}' in row and 'aDayLine.SetTextVariable("GOLD", aDay.ToString("N0"));' in row
-            and ordered(buy, "int days = Holdings.DaysToPayBack(_cost, _aDay);",
+            and ordered(buy, "int days = Holdings.DaysToPayBack(_cost, _aDay, smoothing);",
                         "if (days == Holdings.NeverPaysBack)", "{=TL482}", "{=TL481}",
                         'payback.SetTextVariable("DAYS", days.ToString("N0"));',
                         "int heldBack = TradeActionBehavior.GoldHeldBack();")
@@ -15767,6 +15767,49 @@ def goods_that_leave_unsold_come_off_every_batch_in_proportion():
 
 chk("1.97.2", "goods that leave your party without a sale come off every price paid for them in proportion, the cheaper on a tie, so a unit bought dear keeps its own cost and is never sold under it for that",
     goods_that_leave_unsold_come_off_every_batch_in_proportion())
+
+def a_workshop_you_buy_is_counted_as_paying_less_in_its_first_days():
+    rules = method_body(S['Rules.cs'], "public static int DaysToPayBack(int cost, int aDay, float smoothing)")
+    paid = method_body(S['Rules.cs'], "public static double PaidBy")
+    smooth = method_body(S['Workshops.cs'], "internal static float PayoutSmoothing")
+    buy = method_body(S['Panel.cs'], "public void ExecuteBuy")
+    return (rules and smooth
+            and ordered(rules, "if (cost <= 0) return 0;", "if (aDay <= 0) return NeverPaysBack;",
+                        "double plain = Math.Ceiling((double)cost / aDay);",
+                        "if (kept <= PaidOutInFull) return (int)plain;",
+                        "double lost = kept - 1d;", "double left = lost / kept;",
+                        "long high = (long)Math.Ceiling(Math.Min(plain + lost, NeverPaysBack));",
+                        "if (PaidBy(aDay, mid, lost, left) >= cost) high = mid; else low = mid + 1;")
+            and "(double)aDay * (days - lost * (1d - Math.Pow(left, days)))" in paid
+            and "model.RevenueSmoothenFraction()" in smooth
+            and "Holdings.PaidOutInFull" in smooth
+            and ordered(buy, "float smoothing = Shops.PayoutSmoothing();",
+                        "int days = Holdings.DaysToPayBack(_cost, _aDay, smoothing);",
+                        "{=TL481}", "Log.Write(\"workshop payback: \"")
+            and "and less in its first days with you" in english_string("TL481")
+            and said_in_every_language("TL481")
+            and all(one in HOLDINGTESTS for one in
+                    ("A_workshop_you_buy_pays_less_in_its_first_days_so_it_takes_longer_to_pay_for_itself",
+                     "The_days_a_workshop_takes_to_pay_for_itself_are_what_the_game_pays_a_new_owner_day_by_day",
+                     "A_payout_the_game_does_not_smooth_or_cannot_be_read_pays_in_full_from_the_first_day")))
+
+chk("1.97.6", "a workshop you buy starts back at the game's starting capital and pays its new owner less in its first days, so Buy Workshops Remotely counts the days it takes to pay for itself the way the game pays them out",
+    a_workshop_you_buy_is_counted_as_paying_less_in_its_first_days())
+
+def the_trade_xp_line_names_the_profit_the_game_counts():
+    credit = method_body(S['Trading.cs'], "private static void CreditTradeSkill")
+    return (credit
+            and ordered(credit, "bool asTheGameCounts = xp == profit;",
+                        "TextObject earned = Tongue.Text(asTheGameCounts",
+                        "{=TL487}", "{=TL486}", "{=TL88}", "{=TL81}",
+                        'earned.SetTextVariable("GOLD", xp);')
+            and "SkillLevelingManager.OnTradeProfitMade(Hero.MainHero, xp);" in credit
+            and "the {GOLD} denars of profit the game counts for what it sold." in english_string("TL486")
+            and "the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}." in english_string("TL487")
+            and all(said_in_every_language(t) for t in ("TL81", "TL88", "TL486", "TL487")))
+
+chk("1.97.6", "the line saying TradeLord credited your Trade skill says the profit in it is what the game counts for what TradeLord sold whenever Trade XP multiplier leaves that profit as the game counted it",
+    the_trade_xp_line_names_the_profit_the_game_counts())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
