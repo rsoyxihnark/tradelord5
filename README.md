@@ -83,6 +83,7 @@
 - ✅ A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
 - ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to a quarter more than the cheapest price it knows of for one, which you can set anywhere from the cheapest to three times it
 - ✅ It buys them only when your cargo is full and leaves behind goods worth buying or the food Restock and keep food (days of supply) asks for, only as many as the gold left after them can fill, and then buys what now fits
+- ✅ Haul animals are bought after the sale of what you never bought, so none is bought for goods that fit once that is gone
 - ✅ It buys no haul animal for goods that would fill less than half of one, unless those goods would make more than the animal costs
 - ✅ It buys one for food only when the food would fill at least half of it, or when your party is down to its last day of food
 - ✅ It buys none while your cargo is already fuller than Share of the hold TradeLord may fill allows, since the first animals would only carry what you already have
@@ -112,7 +113,8 @@
 - ✅ Hold cargo for the best market holds only as many as the marked market would buy, 0% holds nothing, and looted gear goes to the first market that can pay for it
 - ✅ Hold cargo for the best market holds nothing in the marked market itself, or while Auto-mark best sell market on map is off
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
-- ✅ What you never bought, loot included, is sold only once it has sold what you bought and done its buying, with the gold the merchant has left, so the goods you trade get that gold first
+- ✅ What you never bought, loot included, is sold only once it has sold what you bought and done a first round of buying, with the gold the merchant has left, so the goods you trade get that gold first
+- ✅ Once what you never bought has sold, it buys once more with the cargo room and gold that sale freed
 - ✅ Credits your Trade skill with what the game gives for the same sale made on its trade screen, at a rate you set, and says so on screen when the skill goes up a level
 - ✅ Says on screen when the profit could add no Trade XP because your Trade skill is past the game's learning limit, and how many focus points in Trade or points of Social would let it learn again
 - ✅ Credits every companion riding with you a share of that same profit, which the game turns into Trade XP the same way it does yours, at a share you set, so a trading clan learns from the run as well as its lord

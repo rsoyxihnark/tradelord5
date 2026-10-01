@@ -24,6 +24,7 @@ jobs:
       - name: Changelog gate
         shell: bash
         run: |
+          TIP="$GITHUB_SHA"
           BEFORE="${{ github.event.before }}"
           PUSHED=""
           if [ -n "$BEFORE" ] && [ -n "${BEFORE//0/}" ] && git merge-base --is-ancestor "$BEFORE" "$GITHUB_SHA" 2>/dev/null; then
@@ -44,6 +45,11 @@ jobs:
             "[no release]"*)
               if printf '%s\n' "$CHANGED" | grep -qx 'TradeLord/SubModule.xml'; then
                 echo "a [no release] commit may not ship a version, and this one changes TradeLord/SubModule.xml"
+                exit 1
+              fi ;;
+            "["[0-9]*)
+              if [ "$GITHUB_SHA" != "$TIP" ]; then
+                echo "a commit that ships a version has to be the last commit of its push, or its release is never published"
                 exit 1
               fi ;;
           esac
@@ -111,13 +117,14 @@ jobs:
       - name: Resolve version from SubModule.xml
         id: ver
         shell: bash
+        env:
+          INPUT: ${{ github.event.inputs.version }}
         run: |
           MODVER=$(sed -n 's/.*<Version value="\(v[0-9][^"]*\)".*/\1/p' TradeLord/SubModule.xml)
           if [ -z "$MODVER" ]; then
             echo "no version found in TradeLord/SubModule.xml"
             exit 1
           fi
-          INPUT="${{ github.event.inputs.version }}"
           if [ -n "$INPUT" ] && [ "$INPUT" != "$MODVER" ]; then
             echo "requested $INPUT but SubModule.xml declares $MODVER - bump SubModule.xml first"
             exit 1

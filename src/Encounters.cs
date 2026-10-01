@@ -246,7 +246,7 @@ namespace TradeLord
             MobileParty caravan = MobileParty.ConversationParty;
             if (!Options.Current.TradeWithCaravans || caravan == null || !caravan.IsCaravan) return false;
             TradeOnce(caravan);
-            return true;
+            return TradeActionBehavior.RoadTradeLanded;
         }
 
         private static void AddBanditLines(CampaignGameStarter starter) => Guard.Run(
@@ -277,6 +277,7 @@ namespace TradeLord
             if (_tradedWith == met || (here != null && _tradedIn == here)) return;
             _tradedWith = met;
             _tradedIn = here;
+            TradeActionBehavior.RoadTradeLanded = false;
             Guard.Run("Action.RoadTrade", () => TradeActionBehavior.ExecuteRoadTrade(met));
         }
 

@@ -399,7 +399,7 @@ namespace TradeLord.Mcm
         public bool Omniscient { get => _o.Omniscient; set { _o.Omniscient = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL282}Days to keep a price you recorded", 0, 60, Order = 1, RequireRestart = false,
-            HintText = "{=TL408}A price you wrote down is kept this many days, then forgotten: a market last seen longer ago is no longer suggested and leaves your save. 0 keeps every price. Only does anything with Live world prices off, when TradeLord records prices.")]
+            HintText = "{=TL408}A price you wrote down is kept this many days, then its market is no longer suggested and leaves your save. 0 sets no day limit. Past 2500 prices, the oldest go. Only does anything with Live world prices off, when TradeLord records prices.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public int ObservationShelfLifeDays { get => _o.ObservationShelfLifeDays; set { _o.ObservationShelfLifeDays = value; Options.Bump(); } }
 
@@ -449,7 +449,7 @@ namespace TradeLord.Mcm
         public bool SuppressVanillaTradeLines { get => _o.SuppressVanillaTradeLines; set { _o.SuppressVanillaTradeLines = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL213}Color prices by world market", Order = 2, RequireRestart = false,
-            HintText = "{=TL313}Colors trade-good and livestock rows in the inventory by how this market's price compares with the best known market.")]
+            HintText = "{=TL313}Colors trade-good and animal rows in the inventory by how this market's price compares with the best known market.")]
         [SettingPropertyGroup("{=TL102}Insight", GroupOrder = 4)]
         public bool ProfitColoring { get => _o.ProfitColoring; set { _o.ProfitColoring = value; Options.Bump(); } }
 
@@ -474,7 +474,7 @@ namespace TradeLord.Mcm
         public bool AutoSellOnEntry { get => _o.AutoSellOnEntry; set { _o.AutoSellOnEntry = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL218}Auto buy", Order = 1, RequireRestart = false,
-            HintText = "{=TL318}Buys the moment you walk into a market, after selling what you bought and before selling what you never bought. With this off, TradeLord buys only when you pick its trade entry in the menu.")]
+            HintText = "{=TL318}Buys the moment you walk into a market, after selling what you bought and before selling what you never bought, and again with the room and gold that sale frees. With this off, TradeLord buys only when you pick its trade entry in the menu.")]
         [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 1)]
         public bool AutoBuyOnEntry { get => _o.AutoBuyOnEntry; set { _o.AutoBuyOnEntry = value; Options.Bump(); } }
 

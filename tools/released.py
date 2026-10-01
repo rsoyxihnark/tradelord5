@@ -6,6 +6,18 @@ from nexus_changelog import sections
 REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
+    '1.14.1': 'an entry taken out of the changelog, and the release note is synced once this lands',
+    '1.30.0': 'entries reworded to the setting they live under today, and the release note is synced once this lands',
+    '1.47.0': 'entries reworded to the setting they live under today, and the release note is synced once this lands',
+    '1.48.0': 'entries reworded to the setting they live under today, and the release note is synced once this lands',
+    '1.63.0': 'entries reworded to the setting they live under today, and the release note is synced once this lands',
+    '1.64.0': 'entries reworded to the setting they live under today, and the release note is synced once this lands',
+    '1.76.0': 'entries reworded to the setting they live under today, and the release note is synced once this lands',
+    '1.76.7': 'entries reworded to the setting they live under today, and the release note is synced once this lands',
+    '1.76.8': 'entries reworded to the setting they live under today, and the release note is synced once this lands',
+    '1.84.0': 'entries reworded to the setting they live under today, and the release note is synced once this lands',
+    '1.86.0': 'entries reworded to the setting they live under today, and the release note is synced once this lands',
+    '1.87.0': 'entries reworded to the setting they live under today, and the release note is synced once this lands',
 }
 
 

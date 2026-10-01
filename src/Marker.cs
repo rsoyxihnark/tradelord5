@@ -109,13 +109,6 @@ namespace TradeLord
             }
         }
 
-        internal static bool TakesOver(Settlement s)
-        {
-            if (s == null || s != _picked || !Options.Current.MarkBestSellTownOnMap) return false;
-            _tracked = s;
-            return true;
-        }
-
         internal static bool DueAgain(Vec2 at)
         {
             int hour = (int)CampaignTime.Now.ToHours;
@@ -246,7 +239,7 @@ namespace TradeLord
 
             if (target == _picked)
             {
-                if (target != null && !tracker.CheckTracked(target))
+                if (target != null && (_tracked != target || !tracker.CheckTracked(target)))
                 {
                     tracker.RegisterObject(target);
                     _tracked = target;
@@ -256,13 +249,13 @@ namespace TradeLord
                 if (target != null) SayItWeighedAgain(target, how);
                 return;
             }
-            if (_tracked != null && !LedgerPanel.IsPinned(_tracked) && tracker.CheckTracked(_tracked))
+            if (_tracked != null && tracker.CheckTracked(_tracked))
                 tracker.RemoveTrackedObject(_tracked);
             _tracked = null;
             _picked = target;
             Marks.OweAFairLook(_owedAFairLook, how.Compared, MobileParty.MainParty?.CurrentSettlement?.StringId,
                                target == null ? null : TradeActionBehavior.MarketTheMarkerLeavesOut(), true);
-            if (target != null && !tracker.CheckTracked(target))
+            if (target != null)
             {
                 tracker.RegisterObject(target);
                 _tracked = target;
