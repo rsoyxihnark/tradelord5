@@ -1,4 +1,7 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
 using Helpers;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.GameState;
@@ -132,6 +135,22 @@ namespace TradeLord
             Log.Write("the trade screen is open at " + site.Name +
                       " and TradeLord is laying its deal out on it rather than trading");
             return true;
+        }
+
+        private static readonly FieldInfo TheScreensHistory =
+            typeof(InventoryLogic).GetField("_transactionHistory", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        internal static List<(EquipmentElement el, List<int> prices)> WhatEachUnitWentFor()
+        {
+            InventoryLogic logic = InventoryScreenHelper.GetActiveInventoryState()?.InventoryLogic;
+            object history = logic == null ? null : TheScreensHistory?.GetValue(logic);
+            FieldInfo logs = history?.GetType().GetField("_transactionLogs", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (!(logs?.GetValue(history) is IDictionary byLot)) return null;
+            var each = new List<(EquipmentElement el, List<int> prices)>();
+            foreach (DictionaryEntry lot in byLot)
+                if (lot.Key is EquipmentElement el && lot.Value is IEnumerable<int> prices)
+                    each.Add((el, new List<int>(prices)));
+            return each;
         }
 
         private static float TradeXpNow() =>

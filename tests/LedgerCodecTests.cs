@@ -382,8 +382,8 @@ namespace TradeLord.Tests
         public void What_each_batch_of_a_good_cost_survives_a_save_and_a_load()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(rec, 1, 836, 1L, 100f);
-            TradeMath.AddPurchase(rec, 4, 1114, 2L, 100f);
+            TradeMath.AddPurchase(rec, new[] { 836 }, 1L, 100f);
+            TradeMath.AddPurchase(rec, new[] { 277, 278, 279, 280 }, 2L, 100f);
             string written = LedgerCodec.WritePurchases(new List<PurchaseRecord> { rec });
 
             var back = LedgerCodec.ReadPurchases(written);
@@ -391,7 +391,7 @@ namespace TradeLord.Tests
             Assert.Single(back);
             Assert.Equal(5, back[0].Count);
             Assert.Equal(5, back[0].Batches.Count);
-            Assert.Equal(new[] { 278, 278, 279, 279, 836 }, back[0].Batches.Select(one => one.Unit).ToArray());
+            Assert.Equal(new[] { 277, 278, 279, 280, 836 }, back[0].Batches.Select(one => one.Unit).ToArray());
             Assert.All(back[0].Batches, one => Assert.Equal(1, one.Count));
             Assert.Equal(written, LedgerCodec.WritePurchases(back));
         }
@@ -445,14 +445,14 @@ namespace TradeLord.Tests
         public void Every_unit_number_survives_a_save_and_a_load()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
-            TradeMath.AddPurchase(rec, 1, 836, 7L, 100f);
-            TradeMath.AddPurchase(rec, 4, 1114, 20L, 100f);
+            TradeMath.AddPurchase(rec, new[] { 836 }, 7L, 100f);
+            TradeMath.AddPurchase(rec, new[] { 277, 278, 279, 280 }, 20L, 100f);
             string written = LedgerCodec.WritePurchases(new List<PurchaseRecord> { rec });
 
             var back = LedgerCodec.ReadPurchases(written);
 
-            Assert.Equal("felt|1950|5|278|278:1:0:23:100,278:1:0:22:100,279:1:0:21:100,279:1:0:20:100,836:1:0:7:100", written);
-            Assert.Equal(new[] { 23L, 22L, 21L, 20L, 7L }, back[0].Batches.Select(one => one.First).ToArray());
+            Assert.Equal("felt|1950|5|280|277:1:0:20:100,278:1:0:21:100,279:1:0:22:100,280:1:0:23:100,836:1:0:7:100", written);
+            Assert.Equal(new[] { 20L, 21L, 22L, 23L, 7L }, back[0].Batches.Select(one => one.First).ToArray());
             Assert.All(back[0].Batches, one => Assert.Equal(100f, one.Day));
             Assert.Equal(written, LedgerCodec.WritePurchases(back));
         }

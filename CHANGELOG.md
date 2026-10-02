@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.99.2
+
+- Fixed units bought on the trade screen being written down at the deal's price per unit instead of what each one really cost
+- Fixed units sold on the trade screen being booked against the deal's average instead of what each one fetched
+- Fixed Average you paid still counting what the units you had already sold cost
+- Fixed the newer of two units bought at one price going first when TradeLord took the cheapest units
+- When some of a good is eaten, lost or given away, the units you bought first now go first
+- TradeLord.log now names every unit you sell on the trade screen by its number, with what it cost and what it fetched
+
 ## 1.99.1
 
 - Fixed fresh units of a food good skipping Hold cargo for the best market once other units of it had waited past Sell at cost after

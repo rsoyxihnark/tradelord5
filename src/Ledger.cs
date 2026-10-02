@@ -276,7 +276,12 @@ namespace TradeLord
             if (trimmed > 0L)
                 Log.Write("purchase record: a record claimed " + trimmed + " unit(s) more than the " +
                           TradeMath.MostUnitsKeptApart + " one good can keep apart, far more than any party " +
-                          "carries, so those units were taken off every price paid in proportion");
+                          "carries, so that many of its oldest units were taken off");
+            int recounted = TradeMath.AddUpEveryRecord(_purchases);
+            if (recounted > 0)
+                Log.Write("purchase record: what you paid for " + recounted + " good(s) is now added up from what " +
+                          "each unit you hold was bought for, rather than an average carried over from units " +
+                          "already sold or gone");
             _promises = KeyedByTownId(LedgerCodec.ReadPromises(_promiseText, out int setAside));
             _walkInsKept = -1;
             if (setAside > 0)
@@ -445,7 +450,8 @@ namespace TradeLord
             }
             if (goods > 0)
                 Log.Write("purchase record: " + units + " unit(s) of " + goods + " good(s) left the party " +
-                          "without being sold, so what was paid for them is no longer held against a resale: " +
+                          "without being sold, so the units bought first came off and what was paid for them is no " +
+                          "longer held against a resale: " +
                           string.Join(", ", dropped.ToArray()));
         }
 
@@ -578,38 +584,36 @@ namespace TradeLord
             {
                 if (!isTrading || TradeActionBehavior.AutomatedTradeInProgress) return;
                 bool laidOut = Counter.Awaiting;
-                if (laidOut)
-                    Guard.Run("Counter.TookTheDeal",
-                              () => TradeActionBehavior.TookTheDeal(purchased, sold));
                 Settlement here = Settlement.CurrentSettlement;
                 SettlementComponent market = here?.SettlementComponent;
+                List<(EquipmentElement el, List<int> prices)> each = null;
+                Guard.Run("Counter.WhatEachUnitWentFor", () => each = Counter.WhatEachUnitWentFor());
+                List<List<int>> boughtAt = WhatEachUnitWentFor(each, purchased, market, selling: false);
+                List<List<int>> soldAt = WhatEachUnitWentFor(each, sold, market, selling: true);
+                if (laidOut)
+                    Guard.Run("Counter.TookTheDeal",
+                              () => TradeActionBehavior.TookTheDeal(purchased, boughtAt, sold, soldAt));
                 ItemRoster carried = MobileParty.MainParty?.ItemRoster;
                 var moved = new List<(ItemObject item, int intoTheMarket)>();
-                foreach (var (element, said) in purchased)
+                for (int i = 0; i < purchased.Count; i++)
                 {
-                    ItemObject item = element.EquipmentElement.Item;
-                    if (item == null || said <= 0) continue;
-                    int unit = market != null
-                        ? Priced.At(market, element.EquipmentElement, MobileParty.MainParty, false)
-                        : item.Value;
-                    int bought = Deals.UnitsMoved(element.Amount, said, unit);
-                    moved.Add((item, -bought));
-                    int took = Math.Min(bought, InAll(carried, element.EquipmentElement));
+                    List<int> paid = boughtAt[i];
+                    if (paid == null) continue;
+                    EquipmentElement el = purchased[i].Item1.EquipmentElement;
+                    moved.Add((el.Item, -paid.Count));
+                    int took = Math.Min(paid.Count, InAll(carried, el));
                     if (took <= 0) continue;
-                    RecordPurchase(PaidKey(element.EquipmentElement), took,
-                                   Deals.PaidForWhatYouKept(said, bought, took));
+                    RecordPurchase(PaidKey(el), paid.GetRange(0, took));
                 }
-                foreach (var (element, said) in sold)
+                for (int i = 0; i < sold.Count; i++)
                 {
-                    ItemObject item = element.EquipmentElement.Item;
-                    if (item == null || said <= 0) continue;
-                    int unit = market != null
-                        ? Priced.At(market, element.EquipmentElement, MobileParty.MainParty, true)
-                        : item.Value;
-                    int gone = Deals.UnitsMoved(element.Amount, said, unit);
-                    moved.Add((item, gone));
-                    string key = PaidKey(element.EquipmentElement);
-                    RecordHandSale(key, gone, said, laidOut ? TradeActionBehavior.TheVisit.DearDrawn(true, key) : null);
+                    List<int> fetched = soldAt[i];
+                    if (fetched == null) continue;
+                    EquipmentElement el = sold[i].Item1.EquipmentElement;
+                    moved.Add((el.Item, fetched.Count));
+                    string key = PaidKey(el);
+                    RecordHandSale(el, fetched, laidOut ? TradeActionBehavior.TheVisit.DearDrawn(true, key) : null,
+                                   laidOut);
                 }
                 Hindsight.YouTraded(here, moved);
                 CaptureSettlement(Settlement.CurrentSettlement, force: true);
@@ -681,17 +685,55 @@ namespace TradeLord
             };
         }
 
-        public void RecordPurchase(string itemId, int count, int totalPaid)
+        internal static List<List<int>> WhatEachUnitWentFor(List<(EquipmentElement el, List<int> prices)> each,
+                                                            List<(ItemRosterElement, int)> lines,
+                                                            SettlementComponent market, bool selling)
         {
-            if (count <= 0) return;
+            var prices = new List<List<int>>(lines?.Count ?? 0);
+            for (int i = 0; lines != null && i < lines.Count; i++)
+            {
+                var (element, said) = lines[i];
+                EquipmentElement el = element.EquipmentElement;
+                if (el.Item == null || said <= 0)
+                {
+                    prices.Add(null);
+                    continue;
+                }
+                int found = -1;
+                for (int k = 0; each != null && k < each.Count && found < 0; k++)
+                {
+                    List<int> read = each[k].prices;
+                    if (each[k].el.Item == el.Item && each[k].el.ItemModifier == el.ItemModifier && read.Count > 0 &&
+                        (element.Amount <= 0 || read.Count == element.Amount) && TradeMath.WorthOf(read) == said)
+                        found = k;
+                }
+                if (found >= 0)
+                {
+                    prices.Add(each[found].prices);
+                    each.RemoveAt(found);
+                    continue;
+                }
+                int unit = market != null ? Priced.At(market, el, MobileParty.MainParty, selling) : el.Item.Value;
+                int units = Deals.UnitsMoved(element.Amount, said, unit);
+                prices.Add(new List<int>(TradeMath.SpreadOver(units, said)));
+                Log.Write("ERROR: TradeLord could not read on the trade screen what each of the " + units + " " +
+                          Tongue.Named(el.Item.Name, el.Item.StringId) + " " + (selling ? "fetched" : "cost") +
+                          ", so the " + said + " gold is spread evenly over them");
+            }
+            return prices;
+        }
+
+        public void RecordPurchase(string itemId, IList<int> paid)
+        {
+            if (itemId == null || paid == null || paid.Count == 0) return;
             if (!Paid.TryGetValue(itemId, out var rec))
             {
                 rec = new PurchaseRecord { ItemId = itemId, TotalPaid = 0, Count = 0 };
                 Paid[itemId] = rec;
                 _purchases.Add(rec);
             }
-            TradeMath.AddPurchase(rec, count, totalPaid, _nextUnitNumber, (float)CampaignTime.Now.ToDays);
-            _nextUnitNumber += count;
+            TradeMath.AddPurchase(rec, paid, _nextUnitNumber, (float)CampaignTime.Now.ToDays);
+            _nextUnitNumber += paid.Count;
         }
 
         public void RecordSale(string itemId, int count)
@@ -711,16 +753,28 @@ namespace TradeLord
             return number;
         }
 
-        private void RecordHandSale(string itemId, int count, int gold, List<int> laidOut)
+        private void RecordHandSale(EquipmentElement el, List<int> fetched, List<int> laidOut, bool staged)
         {
-            if (itemId == null || count <= 0 || !Paid.TryGetValue(itemId, out var rec)) return;
-            TradeMath.DrainSale(rec, count, TradeMath.WhatAHandSaleTook(rec, count, gold, WhatAHandSaleCovers(rec), laidOut));
+            string itemId = PaidKey(el);
+            if (itemId == null || fetched == null || fetched.Count == 0 || !Paid.TryGetValue(itemId, out var rec)) return;
+            float today = (float)CampaignTime.Now.ToDays;
+            var lines = new List<string>();
+            foreach (TradeMath.SoldUnit one in TradeMath.DrainHandSale(rec, fetched, WhatAHandSaleCovers(rec), laidOut))
+            {
+                if (!one.Bought) continue;
+                int waited = one.Day > 0f ? (int)Math.Floor(today - one.Day) : -1;
+                lines.Add("unit " + (one.Number > 0L ? "#" + one.Number + " " : "") + "of " +
+                          Tongue.Named(el.Item.Name, el.Item.StringId) + ", bought for " + one.Cost +
+                          (waited >= 0 ? " " + waited + " day(s) ago" : "") + ", sold for " + one.Price +
+                          (staged ? " in the deal TradeLord laid out on the trade screen" : " by hand on the trade screen"));
+            }
+            Log.WriteMany(lines);
         }
 
-        internal int MadeOnAHandSale(EquipmentElement el, int count, int gold, List<int> laidOut)
+        internal int MadeOnAHandSale(EquipmentElement el, List<int> fetched, List<int> laidOut)
         {
-            if (el.Item == null || count <= 0 || !Paid.TryGetValue(PaidKey(el), out var rec)) return 0;
-            return TradeMath.MadeOnAHandSale(rec, count, gold, WhatAHandSaleCovers(rec), laidOut);
+            if (el.Item == null || fetched == null || !Paid.TryGetValue(PaidKey(el), out var rec)) return 0;
+            return TradeMath.MadeOnAHandSale(rec, fetched, WhatAHandSaleCovers(rec), laidOut);
         }
 
         private static int WhatAHandSaleCovers(PurchaseRecord rec) =>

@@ -189,17 +189,20 @@
 - ✅ Price a sale must beat: Each unit's own price, which it ships with, Average you paid, Last price you paid or Cheapest market price
 - ✅ Price a sale must beat is what a good you bought has to beat by your margin before it sells
 - ✅ Every unit you buy gets a number of its own and keeps the price you paid for it, and no number is ever given to another unit
+- ✅ A unit you buy on the trade screen keeps the price the screen charged for that one unit, as the price rises with each one you take
+- ✅ A unit you sell on the trade screen is booked at the price that one unit fetched
 - ✅ Every unit keeps a row of its own with the day you bought it, even when you bought many at one price
 - ✅ With Each unit's own price, the dearest unit the price beats by your margin sells first, then the next dearest, and a unit the price cannot beat stays in your cargo
 - ✅ With Each unit's own price, of two units bought at one price the older one sells first
 - ✅ With Each unit's own price, Sell at cost after, which ships at 30 days, lets a unit that has waited that long sell for what it cost you, with no margin and no Hold cargo for the best market
 - ✅ With Each unit's own price, Hold cargo for the best market counts unit by unit which of your units the marked market would take at a profit, and never holds a unit waiting past Sell at cost after
 - ✅ TradeLord.log names every unit TradeLord sells by its number, with what it cost, how many days it waited, what it fetched and the least it had to fetch
+- ✅ TradeLord.log also names every unit you sell on the trade screen by its number, with what it cost and what it fetched
 - ✅ The profit reported is what each unit you bought fetched over what that unit cost you, whichever cost you pick
 - ✅ Trade XP for what TradeLord sells is exactly what the game itself gives for the same sale made on its trade screen
 - ✅ A good you never bought, loot and animals included, adds nothing to the profit reported and earns only the Trade XP the game itself would give for it, which is usually none
 - ✅ Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them, which is usually none
-- ✅ When some of a good is eaten, lost or given away, it comes off every price you paid in proportion, so a unit bought dear keeps its cost
+- ✅ When some of a good is eaten, lost or given away, it comes off the units you bought first, and every unit left keeps the price it was bought for
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay, off out of the box, that keeps it out of a brand new campaign until prices calm down
 - ✅ Staged Trading, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other
