@@ -16702,7 +16702,7 @@ def a_visit_says_each_kind_of_trade_in_one_line():
             and all(("{=" + tid + "}") not in ALL for tid in gone)
             and all(tid not in spoken(f) for tid in gone for f in [ENGLISH] + list(TRANSLATIONS.values()))
             and len(recorded) == 8
-            and re.search(r'internal enum Told\s*\{\s*Sold, Bought\s*\}', S['Passes.cs']) is not None
+            and re.search(r'internal enum Told\s*\{\s*Bought, Sold\s*\}', S['Passes.cs']) is not None
             and "OnlyToCarry" not in S['Passes.cs'] and "toCarry" not in t
             and ordered(said, "CloseWhatMoved();", "var lines = new List<OneLineEach<ItemObject>.Said>(_toSay);",
                         "_toSay.Clear();", "foreach (OneLineEach<ItemObject>.Said line in lines)",
@@ -16725,17 +16725,17 @@ def a_visit_says_each_kind_of_trade_in_one_line():
             and "SayAfterXp" not in t and "_afterXp" not in S['Notices.cs']
             and all(one in ONELINETESTS for one in (
                 "Wine_and_donkeys_bought_then_cheese_after_the_loot_sale_are_one_bought_line",
-                "The_lines_come_out_the_same_whatever_order_the_passes_ran_in",
+                "The_bought_line_comes_out_before_the_sold_line_whatever_order_the_passes_ran_in",
                 "A_good_bought_in_two_passes_is_named_once_with_both_counted",
                 "Haul_animals_food_and_goods_bought_on_one_visit_are_one_bought_line",
                 "A_dry_run_line_never_merges_with_a_real_one",
                 "Closing_the_lines_empties_them_so_the_next_visit_starts_fresh",
                 "Forgetting_the_lines_drops_what_was_never_said",
                 "A_loss_on_one_sale_is_taken_off_the_profit_of_the_other"))
-            and "Each time it trades, all it sold is one line on screen and all it bought is another, whatever order it traded in" in README
+            and "Each time it trades, all it bought is one line on screen and all it sold is the next, whatever order it traded in" in README
             and "Animals sold to get your party back up to speed are in the Sold line, and food restocked and haul animals bought are in the Bought line" in README)
 
-chk("1.100.0", "each time TradeLord trades, all it sold, animals sold for speed included, is one line and all it bought, haul animals and food included, another, in the same order whatever order the passes ran in, with the Trade XP on the Sold line",
+chk("1.100.0", "each time TradeLord trades, all it bought, haul animals and food included, is one line and all it sold, animals sold for speed included, the next, whatever order the passes ran in, with the Trade XP on the Sold line",
     a_visit_says_each_kind_of_trade_in_one_line())
 
 

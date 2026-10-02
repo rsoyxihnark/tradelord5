@@ -787,7 +787,7 @@ namespace TradeLord
 
     internal enum Told
     {
-        Sold, Bought
+        Bought, Sold
     }
 
     internal sealed class OneLineEach<T>

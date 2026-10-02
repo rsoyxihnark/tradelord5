@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.101.2
+
+- Fixed the Sold line showing before the Bought line on screen
+
 ## 1.101.1
 
 - TradeLord.log now numbers where each unit came from: 1 market, 2 caravan, 3 villager party, 4 loot, 5 others

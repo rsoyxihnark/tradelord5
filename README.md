@@ -140,7 +140,7 @@
 - ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore
 - ✅ With Buy to fill the ships on, every good, livestock included, takes the room it takes in the ships' hold
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
-- ✅ Each time it trades, all it sold is one line on screen and all it bought is another, whatever order it traded in
+- ✅ Each time it trades, all it bought is one line on screen and all it sold is the next, whatever order it traded in
 - ✅ Animals sold to get your party back up to speed are in the Sold line, and food restocked and haul animals bought are in the Bought line
 - ✅ The Sold line also says how much Trade XP the sale added, and your Trade skill when it goes up a level
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
