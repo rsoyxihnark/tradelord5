@@ -185,8 +185,8 @@ namespace TradeLord.Mcm
 
         private static readonly string[] BasisWords =
         {
-            "{=TL257}Average of what you paid", "{=TL258}Last price you paid", "{=TL259}Cheapest market you know",
-            "{=TL495}What each unit cost you"
+            "{=TL257}Average you paid", "{=TL258}Last price you paid", "{=TL259}Cheapest market price",
+            "{=TL495}Each unit's own price"
         };
 
         private Dropdown<string> _foodPolicy;
@@ -561,7 +561,7 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool RespectLocks { get => _o.RespectLocks; set { _o.RespectLocks = value; Options.Bump(); } }
 
-        [SettingPropertyDropdown("{=TL227}What a good counts as having cost you", Order = 9, RequireRestart = false,
+        [SettingPropertyDropdown("{=TL227}Price a sale must beat", Order = 9, RequireRestart = false,
             HintText = "{=TL327}What a sale has to beat by your margin, while a trade good or livestock you never bought has to beat the cheapest market you know. Profit is what each unit fetched over what it cost you, and Trade XP is what the game gives for that sale.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public Dropdown<string> CostBasisMode
@@ -570,57 +570,62 @@ namespace TradeLord.Mcm
             set { _costBasis = value; Follows(value, () => _o.CostBasisMode, picked => _o.CostBasisMode = picked); Options.Bump(); }
         }
 
-        [SettingPropertyBool("{=TL242}Simulation mode (dry run)", Order = 10, RequireRestart = false,
+        [SettingPropertyInteger("{=TL496}Sell at cost after (days, 0 = off)", 0, 365, Order = 10, RequireRestart = false,
+            HintText = "{=TL497}With Price a sale must beat on Each unit's own price, a unit you bought that has waited this many days may sell for what it cost you, with no margin and no Hold cargo for the best market.")]
+        [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
+        public int SellAtCostAfterDays { get => _o.SellAtCostAfterDays; set { _o.SellAtCostAfterDays = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL242}Simulation mode (dry run)", Order = 11, RequireRestart = false,
             HintText = "{=TL342}Reports what TradeLord would sell and buy without trading. Treat it as a best case: nothing moves, so every unit is priced at today's opening price and a real pass usually trades less. Every cap and the merchant's gold are modelled exactly.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool SimulationMode { get => _o.SimulationMode; set { _o.SimulationMode = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL243}Economy settling delay (days, 0 = off)", 0, 100, Order = 11, RequireRestart = false,
+        [SettingPropertyInteger("{=TL243}Economy settling delay (days, 0 = off)", 0, 100, Order = 12, RequireRestart = false,
             HintText = "{=TL343}No TradeLord trading before this campaign day, from the menu or on entry. Prices in a new campaign have not settled yet.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public int EconomySettlingDays { get => _o.EconomySettlingDays; set { _o.EconomySettlingDays = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL244}Trade XP multiplier", 0f, 3f, "#0%", Order = 12, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL244}Trade XP multiplier", 0f, 3f, "#0%", Order = 13, RequireRestart = false,
             HintText = "{=TL344}Scales the Trade XP awarded for automated profit. 0 disables XP.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public float TradeXpMultiplier { get => _o.TradeXpMultiplier; set { _o.TradeXpMultiplier = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL245}Auto-mark best sell market on map", Order = 13, RequireRestart = false,
+        [SettingPropertyBool("{=TL245}Auto-mark best sell market on map", Order = 14, RequireRestart = false,
             HintText = "{=TL345}Marks the market paying most for the cargo it would really sell there, within the travel ceilings; a village only while Trade with villages is on. It skips the market TradeLord last traded at until you return. ON by default.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool MarkBestSellTownOnMap { get => _o.MarkBestSellTownOnMap; set { _o.MarkBestSellTownOnMap = value; Options.Bump(); } }
 
-        [SettingPropertyFloatingInteger("{=TL412}Share of the profit your companions learn from", 0f, 2f, "#0%", Order = 14, RequireRestart = false,
+        [SettingPropertyFloatingInteger("{=TL412}Share of the profit your companions learn from", 0f, 2f, "#0%", Order = 15, RequireRestart = false,
             HintText = "{=TL413}Every companion riding with you also earns Trade XP from a trade, worth this share of the profit each. 0 keeps the XP to you alone, which is what TradeLord ships with.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public float PartyTradeXpShare { get => _o.PartyTradeXpShare; set { _o.PartyTradeXpShare = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL247}Coin sound on trade", Order = 15, RequireRestart = false,
+        [SettingPropertyBool("{=TL247}Coin sound on trade", Order = 16, RequireRestart = false,
             HintText = "{=TL347}Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool CoinSound { get => _o.CoinSound; set { _o.CoinSound = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL248}Detailed trade summary", Order = 16, RequireRestart = false,
+        [SettingPropertyBool("{=TL248}Detailed trade summary", Order = 17, RequireRestart = false,
             HintText = "{=TL348}Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool DetailedTradeSummary { get => _o.DetailedTradeSummary; set { _o.DetailedTradeSummary = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL249}Silence trade messages", Order = 17, RequireRestart = false,
+        [SettingPropertyBool("{=TL249}Silence trade messages", Order = 18, RequireRestart = false,
             HintText = "{=TL349}Auto trading, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports only to TradeLord.log. Warnings still show on screen: cargo full, purse below Gold reserve, a list entry that matches no good.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool QuietAutomation { get => _o.QuietAutomation; set { _o.QuietAutomation = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL269}Free passage from bandits", Order = 18, RequireRestart = false,
+        [SettingPropertyBool("{=TL269}Free passage from bandits", Order = 19, RequireRestart = false,
             HintText = "{=TL369}When you run into looters or bandits, TradeLord adds a line asking to be let past. Saying it ends the encounter with no fight and no ransom, and they leave you alone for a few hours. It is ON by default.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool BanditFreePassage { get => _o.BanditFreePassage; set { _o.BanditFreePassage = value; Options.Bump(); } }
 
-        [SettingPropertyInteger("{=TL429}Most workshops you may own (0 = the game's own limit)", 0, 200, Order = 19, RequireRestart = false,
+        [SettingPropertyInteger("{=TL429}Most workshops you may own (0 = the game's own limit)", 0, 200, Order = 20, RequireRestart = false,
             HintText = "{=TL430}Lifts the limit the game puts on how many workshops you may own. 200 is as good as no limit at all. 0 hands the decision back to the game, which allows more as your clan tier rises. Default 200.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public int MaxWorkshopsOwned { get => _o.MaxWorkshopsOwned; set { _o.MaxWorkshopsOwned = value; Options.Bump(); } }
 
-        [SettingPropertyBool("{=TL478}Earn workshops with Trade skill", Order = 20, RequireRestart = false,
+        [SettingPropertyBool("{=TL478}Earn workshops with Trade skill", Order = 21, RequireRestart = false,
             HintText = "{=TL479}You earn workshops up to Most workshops you may own: the game's own limit, which rises with your clan tier, plus one more for every 25 points of your Trade skill. OFF by default.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool EarnWorkshopsWithTrade { get => _o.EarnWorkshopsWithTrade; set { _o.EarnWorkshopsWithTrade = value; Options.Bump(); } }

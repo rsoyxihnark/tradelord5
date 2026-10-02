@@ -835,7 +835,8 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
                     "int unknown = el.Amount - TradeMath.UnitsIn(costs);",
                     "cargo.Add((el.EquipmentElement, el.Amount - keep, worth,",
                     "Options.Current.CostBasisMode == Options.CostOfEachUnit",
-                    "? TradeMath.DearFirst.EachAtItsOwnCost(costs, worth, unknown, Options.Current.MinProfitMargin)",
+                    "? TradeMath.DearFirst.EachAtItsOwnCost(costs, worth, unknown, Options.Current.MinProfitMargin,",
+                    "today, Options.Current.SellAtCostAfterDays)",
                     ": new TradeMath.DearFirst(costs, covers, worth, unknown)));")
             and "var cargo = WhatYouCarryToSell(party);" in marker
             and "int paid = CostBasis(el);" in worth
@@ -846,7 +847,7 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
             and ordered(method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch"),
                         "Paying pays = WhatThatMarketPays(site, market, item, party, ride);",
                         "int price = pays.At(u);",
-                        "if (!TradeMath.ProfitAcceptable(walk.Floor(price), price, Options.Current.MinProfitMargin)) break;",
+                        "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
                         "took.Value += fetched;")
             and "if (took.Value <= 0L) { how.Refused++; continue; }" in marker
             and "BestMarketFloor" not in S['Marker.cs']
@@ -1292,7 +1293,7 @@ def the_money_rules_need_nothing_from_the_game():
 
 def the_ledger_keeps_no_second_copy_of_the_cost_basis_rules():
     body = S['Ledger.cs']
-    forwards = ('TradeMath.AddPurchase(rec, count, totalPaid, _nextUnitNumber);',
+    forwards = ('TradeMath.AddPurchase(rec, count, totalPaid, _nextUnitNumber, (float)CampaignTime.Now.ToDays);',
                 'long number = TradeMath.NumberASaleTakes(rec, unitPaid);',
                 '_nextUnitNumber = TradeMath.NumberEveryUnit(_purchases, _nextUnitNumber, out long numbered);',
                 'TradeMath.DrainSale(rec, count);',
@@ -1408,7 +1409,7 @@ def saved_numbers_read_the_same_in_every_language():
     numeric = [c for c in re.findall(
         r'\w+\.ToString\([^)]*\)|\b(?:int|float|double|long)\.(?:Try)?Parse\([^;]*', codec)
         if not c.startswith('sb.ToString')]
-    return (len(numeric) == 9
+    return (len(numeric) == 10
             and all('CultureInfo.InvariantCulture' in c for c in numeric)
             and 'NumberStyles.Integer, CultureInfo.InvariantCulture' in codec
             and 'NumberStyles.Float, CultureInfo.InvariantCulture' in codec
@@ -1897,7 +1898,7 @@ chk("1.3.16", "the hold-for-best-market floor is tested against every unit as th
     and ordered(method_body(S['Passes.cs'], "internal static Traded SellThem"),
                 "while (remaining > 0)",
                 "int floor = TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket);",
-                "if (TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))")
+                "if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))")
     and "? 0 : BestMarketFloor(rungs[boughtLeft - 1], share);" in S['Rules.cs']
     and "(int)(there * s.HoldCargoForBestMarket)" not in S['Passes.cs']
     and 'Rules.cs' in TESTPROJ and 'Passes.cs' in TESTPROJ
@@ -2996,7 +2997,7 @@ chk("1.6.12", "the simulated pass and the real one credit profit through the sam
     S['Passes.cs'].count("int earned = TradeMath.MadeOnAUnit(proceeds, paidFor, basis.SoldAt);") == 1 and
     method_body(S['Passes.cs'], "internal static Traded SellThem").count("TradeMath.MadeOnAUnit(") == 2)
 chk("1.6.12", "what quick-sell agrees to sell runs through one margin rule, and the credit reads what the unit sold had cost",
-    S['Passes.cs'].count("if (!TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))") == 1 and
+    S['Passes.cs'].count("if (aged ? price < mustBeat : !TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))") == 1 and
     S['Passes.cs'].count("int worth = basis.Unit(out bool askTheMarket);") == 1 and
     "basis.Unit(" not in S['Trading.cs'] and
     "ProfitAcceptable(basis.UnpaidWorth" not in S['Trading.cs'] + S['Passes.cs'] and
@@ -3004,18 +3005,18 @@ chk("1.6.12", "what quick-sell agrees to sell runs through one margin rule, and 
     "ProfitAcceptable(" not in S['Policy.cs'] and
     S['Passes.cs'].count("int mustBeat = TradeRules.WorthToBeat(good, basis.Floor(worth, price),") == 1 and
     S['Passes.cs'].count("TradeMath.MadeOnAUnit(price, bought, basis.SoldAt)") == 1 and
-    "if (!TradeMath.ProfitAcceptable(walk.Floor(price), price, Options.Current.MinProfitMargin)) break;" in S['Marker.cs'] and
+    "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;" in S['Marker.cs'] and
     re.search(r'ProfitAcceptable\(int costBasis, int townSellPrice, float margin\) =>\s*costBasis > 0\s*\?\s*'
               r'townSellPrice >= costBasis \* \(1f \+ margin\)\s*:\s*'
               r'townSellPrice > 0;', S['TradeMath.cs']) is not None)
 chk("1.21.0", "loot goes to the first market that can pay, since nothing but Hold cargo for the best market raises the floor and it never holds a unit you did not buy",
     S['Passes.cs'].count("ForTheMark[] holding = !loot && s.HoldCargoForBestMarket > 0f ?") == 1 and
-    "int units = Math.Min(yours, basis.PaidLeft);" in
+    "int units = Math.Min(yours, basis.PaidLeft - basis.AgedLeft);" in
         sell_pass() and
-    "int boughtLeft = Math.Min(remaining, basis.PaidLeft);" in sell_pass() and
+    "int boughtLeft = Math.Min(remaining, basis.PaidLeft) - basis.AgedLeft;" in sell_pass() and
     "s.HoldCargoForBestMarket" in
-        between(S['Passes.cs'], "int boughtLeft = Math.Min(remaining, basis.PaidLeft);",
-                "if (TradeRules.HeldForTheMark(") and
+        between(S['Passes.cs'], "int boughtLeft = Math.Min(remaining, basis.PaidLeft) - basis.AgedLeft;",
+                "if (!aged && TradeRules.HeldForTheMark(") and
     ordered(method_body(S['TradeMath.cs'], "public static bool SetTheBoughtUnitsAside"),
             "if (paidLeft <= 0 || remaining <= paidLeft) return false;",
             "remaining -= paidLeft;", "paidLeft = 0;") and
@@ -4710,7 +4711,7 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
             and "TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin)" in sell
             and "s.HoldCargoForBestMarket > 0f" in sell
             and "TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket)" in sell
-            and ordered(sell, "if (!TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))",
+            and ordered(sell, "if (aged ? price < mustBeat : !TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))",
                         "if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;",
                         "TradeMath.SkipTheUnitsYouPaidFor(FromMarket, ref remaining, ref PaidLeft)",
                         "if (basisIsMarket || paidLeft <= 0 || remaining <= paidLeft) return false;",
@@ -5121,15 +5122,14 @@ chk("1.22.0", "no hint still tells the player a mount can never be sold",
 def a_dropdown_only_ever_gains_choices_at_the_end():
     lists = {}
     for m in re.finditer(r'string\[\]\s+(\w+Words)\s*=\s*\{(.*?)\n\s*\};', M, re.S):
-        lists[m.group(1)] = [re.sub(r'\{=\w+\}', '', w)
+        lists[m.group(1)] = [(re.match(r'\{=(\w+)\}', w).group(1) if re.match(r'\{=(\w+)\}', w) else w)
                              for w in re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(2))]
     shipped = {
         'LanguageWords': ['English', 'T\\u00FCrk\\u00E7e',
                           '\\u0420\\u0443\\u0441\\u0441\\u043A\\u0438\\u0439', '\\u7B80\\u4F53\\u4E2D\\u6587'],
-        'PolicyWords': ['Leave alone', 'Sell only', 'Buy only', 'Buy and sell'],
-        'SmeltableWords': ['Sell them', 'Keep every one', 'Keep the ones you have not learned'],
-        'BasisWords': ['Average of what you paid', 'Last price you paid', 'Cheapest market you know',
-                       'What each unit cost you'],
+        'PolicyWords': ['TL253', 'TL254', 'TL255', 'TL256'],
+        'SmeltableWords': ['TL270', 'TL271', 'TL272'],
+        'BasisWords': ['TL257', 'TL258', 'TL259', 'TL495'],
     }
     return (set(lists) == set(shipped)
             and all(lists[k][:len(v)] == v for k, v in shipped.items())
@@ -5169,6 +5169,7 @@ EVER_SHIPPED = {
     "BuyPackAnimals": "bool",
     "BuyValueCapPerItem": "int", "CoinSound": "bool", "ConfidenceRanking": "bool",
     "ConservativeRouteProjection": "bool", "CostBasisMode": "int", "CraftingPolicy": "int",
+    "SellAtCostAfterDays": "int",
     "TrustWhatAMarketPaid": "bool",
     "DetailedTradeSummary": "bool", "EconomySettlingDays": "int", "ExcludeHostileTowns": "bool",
     "FoodPolicy": "int", "GoldReserve": "int", "KeepEveryFoodKind": "bool", "KeepFoodDays": "int",
@@ -6487,7 +6488,7 @@ def goods_you_were_given_are_held_to_your_margin_like_the_ones_you_bought():
             and "WorthIsWhatYouPaid(good, paid) ? paid : unpaidWorth;" in rules
             and ordered(sell, "int worth = basis.Unit(out bool askTheMarket);",
                         "int mustBeat = TradeRules.WorthToBeat(good, basis.Floor(worth, price),",
-                        "if (!TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))")
+                        "if (aged ? price < mustBeat : !TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))")
             and "WorthToBeat" not in relief
             and 'Rules.cs' in TESTPROJ
             and "TradeRules.WorthToBeat" in SELLTESTS
@@ -6988,14 +6989,14 @@ def a_dry_run_draws_the_price_you_paid_down_the_way_a_real_pass_does():
             and "LedgerBehavior.Instance?.PurchasedUnits(el.EquipmentElement) ?? 0," in herd
             and "basis.PaidLeft = Math.Max(0, purchased - books.PaidDrawn(sim, id));" in basis
             and t.count("Basis.For(") == 1
-            and S['Passes.cs'].count("Basis.For(") == 2
+            and S['Passes.cs'].count("Basis.For(") == 3
             and "internal static Basis For(" in basis
             and t.count("Basis.For(item)") == 0
             and ordered(sell, "bool bought = basis.SoldOne();",
                         "if (bought) books.NotePaidDrawn(market.PaidKeyAt(at), basis.SoldAt);")
             and ordered(sell, "bool paidFor = basis.SoldOne();",
                         "if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays);")
-            and "long number = LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, unitPaid) ?? 0L;" in sell
+            and "long number = ledger == null ? 0L : ledger.RecordSale(PaidKeyAt(at), 1, unitPaid, out bought);" in sell
             and ordered(herd, "bool bought = basis.SoldOne();", "if (bought)",
                         "if (pass.Sim) pass.Books.NotePaidDrawn(paidKey, basis.SoldAt);",
                         "else LedgerBehavior.Instance?.RecordSale(paidKey, 1, basis.SoldAt);")
@@ -10634,7 +10635,7 @@ def the_marker_walks_the_price_down_the_way_a_sale_really_would():
             and "while (_rungs.Count <= taken) _rungs.Add(Next());" in asked
             and ordered(fetch, "for (int u = 0; u < amount; u++)",
                         "int price = pays.At(u);", "if (price <= 0) break;",
-                        "if (!TradeMath.ProfitAcceptable(walk.Floor(price), price, Options.Current.MinProfitMargin)) break;",
+                        "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
                         "fetched += price;", "moved++;",
                         "if (moved == 0) continue;", "took.Value += fetched;",
                         "took.Units += moved;")
@@ -11147,7 +11148,7 @@ def a_ladder_stops_where_the_margin_goes():
             and "while (_rungs.Count <= taken) _rungs.Add(Next());" in paid
             and "_asked = true;" in step
             and ordered(fetch, "for (int u = 0; u < amount; u++)", "int price = pays.At(u);",
-                        "if (!TradeMath.ProfitAcceptable(walk.Floor(price), price, Options.Current.MinProfitMargin)) break;")
+                        "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;")
             and "upTo" not in S['Marker.cs'])
 
 
@@ -12211,7 +12212,7 @@ def what_you_paid_is_kept_for_each_quality_of_a_good():
             and "public string PaidKeyAt(int at) => LedgerBehavior.PaidKey(_plan[at].EquipmentElement);" in t
             and "public int CostBasis(int at) => TradePolicy.CostBasis(_plan[at].EquipmentElement);" in t
             and "public int PurchasedUnits(int at) => LedgerBehavior.Instance?.PurchasedUnits(_plan[at].EquipmentElement) ?? 0;" in t
-            and "long number = LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, unitPaid) ?? 0L;" in t
+            and "long number = ledger == null ? 0L : ledger.RecordSale(PaidKeyAt(at), 1, unitPaid, out bought);" in t
             and t.count("RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), 1, price);") == 2
             and "RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), 1, cost);" in t
             and ordered(herd, "Basis basis = Basis.For(TradePolicy.CostBasis(el.EquipmentElement),",
@@ -12745,7 +12746,7 @@ def loot_you_never_bought_costs_nothing_whichever_cost_you_pick():
             and "int worth = FromMarket || PaidLeft > 0 ? Paid : 0;" in S['Passes.cs']
             and "looted gear goes to the first market that can pay for it" in README)
 
-chk("1.93.3", "with What a good counts as having cost you on Cheapest market you know, looted gear you never bought still goes to the first market that can pay for it, and only a trade good, livestock or a good you bought is counted at the cheapest market",
+chk("1.93.3", "with Price a sale must beat on Cheapest market price, looted gear you never bought still goes to the first market that can pay for it, and only a trade good, livestock or a good you bought is counted at the cheapest market",
     loot_you_never_bought_costs_nothing_whichever_cost_you_pick())
 
 def a_party_on_the_road_lands_its_load_only_at_a_town():
@@ -14239,17 +14240,17 @@ def the_hold_counts_only_what_the_mark_would_buy_of_what_you_bought():
     return (ordered(sell, "ForTheMark[] holding = !loot && s.HoldCargoForBestMarket > 0f ? WhatTheMarkKeeps(market, books, sim, s) : null;",
                     "int[] there = holding?[at].Rungs;",
                     "int holdFor = holding?[at].Units ?? 0;",
-                    "if (!TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))",
+                    "if (aged ? price < mustBeat : !TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))",
                     "if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;",
-                    "int boughtLeft = Math.Min(remaining, basis.PaidLeft);",
+                    "int boughtLeft = Math.Min(remaining, basis.PaidLeft) - basis.AgedLeft;",
                     "int floor = TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket);",
-                    "if (TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))",
+                    "if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))",
                     "tally.Note(Block.BelowBestMarket);",
                     "if (!basis.SetTheBoughtUnitsAside(ref remaining)) break;",
                     "if (TradeRules.WhatTheTillCanPay(")
             and "market.ResaleMarket(" not in sell
             and keeps.count("market.ResaleMarket(") == 1
-            and "if (!market.ResaleMarket(at, before + units, basis.Paid, out int[] ladder)) continue;" in keeps
+            and "if (!market.ResaleMarket(at, before + units, eachAtItsOwn ? fresh.LeastItAsks() : basis.Paid," in keeps
             and ordered(takes, "if (rungAt == null || carried <= 0) return new int[0];",
                         "for (int u = 0; u < carried; u++)",
                         "int price = rungAt(u);",
@@ -14297,13 +14298,13 @@ def the_marked_market_s_gold_is_shared_across_every_good_you_carry():
                     "bool boughtHere = books.Bought(sim, id);",
                     "int yours = market.HoldableUnits(at);",
                     "Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),",
-                    "int units = Math.Min(yours, basis.PaidLeft);",
+                    "int units = Math.Min(yours, basis.PaidLeft - basis.AgedLeft);",
                     "if (units <= 0 || basis.Paid <= 0) continue;",
                     "int[] sells = boughtHere",
                     "? new int[0]",
                     ": TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);",
                     "asked.TryGetValue(id, out int before);",
-                    "if (!market.ResaleMarket(at, before + units, basis.Paid, out int[] ladder)) continue;",
+                    "if (!market.ResaleMarket(at, before + units, eachAtItsOwn ? fresh.LeastItAsks() : basis.Paid,",
                     "rungs[at] = TradeRules.PastTheFirst(ladder, before);",
                     "asked[id] = before + rungs[at].Length;",
                     "bought[at] = units;",
@@ -14566,9 +14567,9 @@ def the_look_ahead_counts_every_good_you_bought_that_this_market_takes():
     keeps = method_body(S['Passes.cs'], "internal static ForTheMark[] WhatTheMarkKeeps")
     return (ordered(keeps, "if (units <= 0 || basis.Paid <= 0) continue;",
                     ": TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);",
-                    "if (!market.ResaleMarket(at, before + units, basis.Paid, out int[] ladder)) continue;",
+                    "if (!market.ResaleMarket(at, before + units, eachAtItsOwn ? fresh.LeastItAsks() : basis.Paid,",
                     "here[at] = sells;")
-            and keeps.count("TradeRules.WhatSellsHere(") == 1
+            and keeps.count("TradeRules.WhatSellsHere(") == 2
             and "A_good_you_bought_that_the_marked_market_does_not_want_counts_against_this_market_s_gold"
                 in SELLPASSTESTS)
 
@@ -14762,7 +14763,7 @@ chk("1.95.2", "the ledger with no routes in reach names the settings group the t
 def the_haul_animal_price_hint_reads_the_way_its_slider_does():
     en, tr, ru, cn = (spoken(p) for p in [ENGLISH] + list(TRANSLATIONS.values()))
     return (option_default('HaulAnimalPriceTolerance') == '1.25f'
-            and '"#0%", Order = 14' in M
+            and '[SettingPropertyFloatingInteger("{=TL427}Most it will pay for a haul animal", 1f, 3f, "#0%", Order = 15,' in M
             and "125% by default" in en['TL428'] and "knows" in en['TL428']
             and "%125" in tr['TL428'] and "125%" in ru['TL428'] and "125%" in cn['TL428']
             and all("1.25" not in one['TL428'] for one in (en, tr, ru, cn)))
@@ -15432,7 +15433,7 @@ def workshops_can_be_earned_with_trade_skill_and_that_ships_off():
             and "return Holdings.WorkshopsYouMayOwn(gameSays, Asked(gameSays), RoomIsKept);" in method_body(shops, "internal static int MayOwn")
             and "Holdings.WorkshopsYouMayOwn(__result, Shops.Asked(__result), Shops.RoomIsKept);" in
                 method_body(shops, "internal static class Patch_WorkshopLimit")
-            and '[SettingPropertyBool("{=TL478}Earn workshops with Trade skill", Order = 20,' in M
+            and '[SettingPropertyBool("{=TL478}Earn workshops with Trade skill", Order = 21,' in M
             and "public bool EarnWorkshopsWithTrade { get => _o.EarnWorkshopsWithTrade;" in M
             and all(said_in_every_language(one) for one in ("TL478", "TL479"))
             and "every 25 points of your Trade skill" in en['TL479'] and "OFF by default." in en['TL479']
@@ -15619,14 +15620,12 @@ def a_unit_bought_dear_sells_at_the_average_and_is_booked_at_its_own_cost():
                         "if (rec == null || rec.Count <= 0 || count <= 0) return;",
                         "TakeFromTheBatches(BatchesOf(rec), drain, named);",
                         "LeaveTheAverage(rec, drain);")
-            and ordered(take, "int at = batches.FindIndex(one => one.Unit == named[i]);", "TakeOne(batches, at);",
+            and ordered(take, "int at = batches.FindLastIndex(one => one.Unit == named[i]);", "TakeOne(batches, at);",
                         "Batch cheapest = batches[0];")
             and ordered(method_body(math, "private static void AddBatch"),
-                        "if (same.Unit != added.Unit || added.First <= 0L || same.First <= 0L ||",
-                        "same.First + same.Count != added.First || same.Count > int.MaxValue - added.Count)",
-                        "same.Count += added.Count;",
-                        "while (at < batches.Count && CheapestThenOldest(batches[at], added) < 0) at++;",
-                        "batches.Insert(at, added);")
+                        "int at = batches.BinarySearch(added, InTheirPlace);",
+                        "batches.Insert(at < 0 ? ~at : at, added);")
+            and "Count += added.Count" not in method_body(math, "private static void AddBatch")
             and "MostBatchesKept" not in math and "MergeTheClosest" not in math
             and ordered(made, "int drawnKnown = TradeMath.LeaveOut(ref costs, books.DearDrawn(sim, id));",
                         "TradeMath.DropTheCheapest(ref costs, drawn - drawnKnown);")
@@ -15649,8 +15648,9 @@ def a_unit_bought_dear_sells_at_the_average_and_is_booked_at_its_own_cost():
                         "_unknown--;",
                         "int lowest = _costs[_dearLow].Unit;")
             and "price < _costs[_top].Unit" not in walk
-            and walk.count("ProfitAcceptable") == 1
+            and walk.count("ProfitAcceptable") == 2
             and "ProfitAcceptable" in method_body(walk, "private int TheDearestThatClears")
+            and "ProfitAcceptable" in method_body(walk, "public bool Clears(int price, float margin)")
             and ordered(walk, "public int Floor(int price)", "if (_ownCost) return TheDearestThatClears(price);",
                         "_picked = _top < _dearLow ? NotPicked")
             and "TradeMath.UnitCosts(rec, held)" in method_body(ledger, "public Batch[] UnitCosts(EquipmentElement el, int held) =>")
@@ -15660,14 +15660,14 @@ def a_unit_bought_dear_sells_at_the_average_and_is_booked_at_its_own_cost():
                         ": new TradeMath.DearFirst(costs, covers, costBasis, basis.PaidLeft - known);")
             and "PaidLeft <= 0 || FromMarket ? worth : Walk.Floor(price);" in basis
             and ordered(method_body(basis, "internal bool SoldOne()"), "PaidLeft--;", "SoldAt = Walk.Took();")
-            and ordered(sell, "books, sim, s, market.UnitCosts(at));",
+            and ordered(sell, "books, sim, s, market.UnitCosts(at), market.Today);",
                         "int worth = basis.Unit(out bool askTheMarket);",
                         "int price = market.PriceToSell(at);",
                         "int mustBeat = TradeRules.WorthToBeat(good, basis.Floor(worth, price),",
                         "bool bought = basis.SoldOne();",
                         "bool paidFor = basis.SoldOne();",
                         "if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays);")
-            and ordered(fetch, "TradeMath.DearFirst walk = floors;", "walk.Floor(price)",
+            and ordered(fetch, "TradeMath.DearFirst walk = floors;", "walk.Clears(price, Options.Current.MinProfitMargin)",
                         "booked += walk.Took();", "long cost = eachAtItsOwnCost ? booked : (long)worth * moved;",
                         "took.Cost += cost;")
             and all(one in MATHTESTS for one in
@@ -15824,7 +15824,7 @@ def a_damaged_purchase_record_never_lists_more_dear_units_than_you_hold():
                         "if (rec.Count > held) TakeInProportion(kept, rec.Count - held);",
                         "return kept.Count == 0 ? null : kept.ToArray();")
             and ordered(copy, "if (BatchesAddUp(rec))", "var copy = new List<Batch>(rec.Batches);",
-                        "copy.Sort(CheapestThenOldest);",
+                        "copy.Sort(CheapestFirstOldestLast);",
                         "if (rec.Count > 0) one.Add(new Batch { Unit = unit > 0 ? unit : 0, Count = rec.Count });")
             and "new int[" not in costs and "new int[" not in walk
             and ordered(unsold, "int drain = Math.Min(count, rec.Count);", "TakeInProportion(BatchesOf(rec), drain);",
@@ -16020,7 +16020,7 @@ def profit_reads_what_each_unit_really_cost():
 chk("1.97.2", "the profit TradeLord reports is what each unit you bought fetched over what that unit really cost, and a good you never bought makes none, on its own sales, on herd relief and on a deal taken on the trade screen",
     profit_reads_what_each_unit_really_cost())
 
-def what_each_unit_cost_is_read_from_its_batches():
+def what_each_unit_cost_is_read_from_its_own_row():
     math = S['TradeMath.cs']
     costs = method_body(math, "public static Batch[] UnitCosts")
     walk = method_body(math, "public struct DearFirst")
@@ -16034,17 +16034,24 @@ def what_each_unit_cost_is_read_from_its_batches():
                         "_costs[at].Count - (at == _top ? _topTaken : 0) - (at == _dearLow ? _dearLowTaken : 0);")
             and "_costs[" not in between(walk, "public DearFirst(", "public int Floor(int price)").replace("costs[split]", "")
             and "TakeFromTheBatches(left, units, null);" in drop
-            and ordered(leave, "int at = left.FindIndex(one => one.Unit == drawn[i]);", "TakeOne(left, at);", "taken++;")
+            and ordered(leave, "int at = left.FindLastIndex(one => one.Unit == drawn[i]);", "TakeOne(left, at);", "taken++;")
             and "return units > int.MaxValue ? int.MaxValue : (int)units;" in units
             and "Batch[] UnitCosts(int at);" in S['Passes.cs']
             and all(one in MATHTESTS for one in
                     ("A_copy_of_the_walk_leaves_the_one_it_was_copied_from_where_it_was",
                      "Units_taken_from_both_ends_of_one_dear_batch_never_come_to_more_than_it_holds",
                      "Units_already_drawn_are_left_out_of_the_walk_from_the_cheapest_up",
-                     "A_record_claiming_far_more_than_is_held_lists_no_more_dear_units_than_are_held")))
+                     "A_record_claiming_far_more_than_is_held_lists_no_more_dear_units_than_are_held",
+                     "A_record_claiming_more_units_than_any_party_carries_is_cut_down_before_it_is_split",
+                     "Every_unit_bought_has_a_row_of_its_own_even_at_one_price"))
+            and "public const int MostUnitsKeptApart = 100000;" in math
+            and ordered(method_body(math, "public static long KeepEveryUnitApart"),
+                        "if (rec.Count > MostUnitsKeptApart)", "DrainWhatLeftUnsold(rec, rec.Count - MostUnitsKeptApart);",
+                        "Unit = one.Unit, Count = 1, First = one.First > 0L ? one.First + u : 0L, Day = one.Day",
+                        "apart.Sort(CheapestFirstOldestLast);", "rec.Batches = apart;"))
 
-chk("1.97.2", "what each unit cost is read from the few batches it was bought in, never listed one entry per unit held, so a huge stack costs no more to price than a small one, and a copy of the walk never moves the one it came from",
-    what_each_unit_cost_is_read_from_its_batches())
+chk("1.99.0", "what each unit cost is read from its own row, a record claiming more than any party could carry is cut down before its units are kept apart, and a copy of the walk never moves the one it came from",
+    what_each_unit_cost_is_read_from_its_own_row())
 
 def trade_xp_is_what_the_game_gives_for_the_same_sale():
     t = S['Trading.cs']
@@ -16142,7 +16149,7 @@ def a_record_counting_units_you_no_longer_have_never_opens_the_average_floor():
     return (made
             and ordered(made, "bool listed = costs != null;", "int known = TradeMath.UnitsIn(costs);",
                         "if (listed && basis.PaidLeft > known) basis.PaidLeft = known;",
-                        "? TradeMath.DearFirst.EachAtItsOwnCost(costs, costBasis, basis.PaidLeft - known, s.MinProfitMargin)",
+                        "? TradeMath.DearFirst.EachAtItsOwnCost(costs, costBasis, basis.PaidLeft - known, s.MinProfitMargin,",
                         ": new TradeMath.DearFirst(costs, covers, costBasis, basis.PaidLeft - known);"))
 
 chk("1.97.2", "a purchase record that still counts units you no longer have never lets a unit bought dear sell under its cost as one of them",
@@ -16153,11 +16160,14 @@ def goods_that_leave_unsold_come_off_every_batch_in_proportion():
     share = method_body(math, "private static void TakeInProportion(List<Batch> batches, int units)")
     return (share
             and "TakeTheDearest" not in math
-            and ordered(share, "if (units >= all)", "long share = (long)batches[i].Count * units;",
-                        "off[i] = share / all;", "over[i] = share % all;",
+            and ordered(share, "if (units >= all)",
+                        "if (last >= 0 && batches[prices[last].start].Unit == batches[i].Unit)",
+                        "long share = prices[p].count * units;",
+                        "off[p] = share / all;", "over[p] = share % all;",
                         "for (long left = units - taken; left > 0L; left--)",
-                        "if (off[i] < batches[i].Count && (most < 0 || over[i] > over[most])) most = i;",
-                        "one.Count -= (int)off[i];")
+                        "if (off[p] < prices[p].count && (most < 0 || over[p] > over[most])) most = p;",
+                        "for (int i = prices[p].start; i <= prices[p].end && off[p] > 0L; i++)",
+                        "one.Count -= gone;", "batches.RemoveAll(one => one.Count <= 0);")
             and "TakeInProportion(BatchesOf(rec), drain);" in method_body(math, "public static void DrainWhatLeftUnsold")
             and "TakeInProportion(kept, rec.Count - held);" in method_body(math, "public static Batch[] UnitCosts")
             and all(one in MATHTESTS for one in
@@ -16319,27 +16329,29 @@ def every_unit_keeps_a_number_of_its_own_and_sells_at_its_own_price():
     return (all((walk, clears, took, numbered, taken, added, restore, bought, sold, hand, made, row))
             and "public long First;" in method_body(codec, "public struct Batch")
             and ordered(method_body(codec, "public static string WritePurchases"),
-                        ".Append(Number(0)).Append(BatchFieldMark)", ".Append(Number(rec.Batches[b].First));")
+                        ".Append(Number(0)).Append(BatchFieldMark)", ".Append(Number(rec.Batches[b].First)).Append(BatchFieldMark)",
+                        ".Append(Number(rec.Batches[b].Day));")
             and "public const int FieldsABatchIsNumberedIn = 4;" in codec
             and "if (parts.Length >= FieldsABatchIsNumberedIn && Whole(parts[3], out long numbered) && numbered > 0L)" in codec
-            and "kept.Sort(TradeMath.CheapestThenOldest);" in codec
+            and "kept.Sort(TradeMath.CheapestFirstOldestLast);" in codec
             and "long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);" in codec
             and "MostBatchesKept" not in ALL and "MergeTheClosest" not in ALL
-            and "same.First + same.Count != added.First" in added
+            and "batches.Insert(at < 0 ? ~at : at, added);" in added
             and ordered(clears, "for (int at = _top; at >= _dearLow; at--)",
-                        "if (LeftIn(at) <= 0 || !ProfitAcceptable(_costs[at].Unit, price, _margin)) continue;",
-                        "_picked = TheDearest;", "_pickedAt = at;", "return _costs[at].Unit;",
-                        "return _unknown > 0 ? _worth : NoUnitThisPriceSells;")
+                        "if (LeftIn(at) <= 0) continue;", "bool aged = AgedAt(at);",
+                        "if (aged ? price < _costs[at].Unit : !ProfitAcceptable(_costs[at].Unit, price, _margin)) continue;",
+                        "_picked = TheDearest;", "_pickedAt = at;", "_pickedAged = aged;", "return _costs[at].Unit;",
+                        "return _unknown > 0 && _only == EveryUnit ? _worth : NoUnitThisPriceSells;")
             and ordered(took, "if (picked == TheDearest && _ownCost && _pickedAt >= _dearLow && _pickedAt < _top)",
                         "_top = _pickedAt;", "_topTaken = 0;", "if (picked == TheDearest)")
-            and "new DearFirst(costs, CoversNoUnit, worth, unknown, true, margin);" in walk
+            and "new DearFirst(costs, CoversNoUnit, worth, unknown, true, margin, today, agedAfter);" in walk
             and "private const int CoversNoUnit = -1;" in walk
             and ordered(numbered, "long free = next < FirstUnitNumber ? FirstUnitNumber : next;",
                         "one.First > long.MaxValue - one.Count",
                         "if (ranges[i].first <= highest) { twice.Add((ranges[i].rec, ranges[i].batch)); continue; }",
                         "if (highest >= free) free = highest + 1;", "one.First = free;", "free += one.Count;",
-                        "if (moved) batches.Sort(CheapestThenOldest);")
-            and ordered(taken, "int at = unitPaid > 0 ? batches.FindIndex(one => one.Unit == unitPaid) : -1;",
+                        "if (moved) batches.Sort(CheapestFirstOldestLast);")
+            and ordered(taken, "int at = unitPaid > 0 ? batches.FindLastIndex(one => one.Unit == unitPaid) : -1;",
                         "return taken.First > 0L ? taken.First + taken.Count - 1 : 0L;")
             and "public const long FirstUnitNumber = 1L;" in math
             and "private long _nextUnitNumber = TradeMath.FirstUnitNumber;" in ledger
@@ -16348,7 +16360,7 @@ def every_unit_keeps_a_number_of_its_own_and_sells_at_its_own_price():
             and ordered(restore, "_purchases = LedgerCodec.ReadPurchases(_purchaseText);",
                         "_nextUnitNumber = TradeMath.NumberEveryUnit(_purchases, _nextUnitNumber, out long numbered);",
                         '"another unit already had, so each was given a new one, from #"')
-            and ordered(bought, "if (count <= 0) return;", "TradeMath.AddPurchase(rec, count, totalPaid, _nextUnitNumber);",
+            and ordered(bought, "if (count <= 0) return;", "TradeMath.AddPurchase(rec, count, totalPaid, _nextUnitNumber, (float)CampaignTime.Now.ToDays);",
                         "_nextUnitNumber += count;")
             and ledger.count("_nextUnitNumber +=") == 1 and "_nextUnitNumber -=" not in ledger
             and ordered(sold, "long number = TradeMath.NumberASaleTakes(rec, unitPaid);",
@@ -16358,12 +16370,12 @@ def every_unit_keeps_a_number_of_its_own_and_sells_at_its_own_price():
             and "public const int CostOfEachUnit = 3;" in S['Options.cs']
             and "public int CostBasisMode = CostOfEachUnit;" in S['Options.cs']
             and '{ "CostBasisMode", new double[] { 0, 3 } },' in S['Migrate.cs']
-            and '"{=TL495}What each unit cost you"' in M
+            and '"{=TL495}Each unit\'s own price"' in M
             and said_in_every_language("TL495")
             and ordered(made, "basis.Walk = s.CostBasisMode == Options.CostOfEachUnit",
-                        "? TradeMath.DearFirst.EachAtItsOwnCost(costs, costBasis, basis.PaidLeft - known, s.MinProfitMargin)")
-            and "int bestPays = floor > 0 && boughtLeft <= holdFor ? there[boughtLeft - 1] : 0;" in S['Passes.cs']
-            and ordered(row, "long number = LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, unitPaid) ?? 0L;",
+                        "? TradeMath.DearFirst.EachAtItsOwnCost(costs, costBasis, basis.PaidLeft - known, s.MinProfitMargin,")
+            and "int bestPays = !aged && floor > 0 && boughtLeft <= holdFor ? there[boughtLeft - 1] : 0;" in S['Passes.cs']
+            and ordered(row, "long number = ledger == null ? 0L : ledger.RecordSale(PaidKeyAt(at), 1, unitPaid, out bought);",
                         'Log.Write("unit "', "TradeMath.LeastThatClears(unitPaid, margin)",
                         "TradeRules.BestMarketFloor(bestPays, share)")
             and "public static int LeastThatClears(int costBasis, float margin)" in math
@@ -16376,7 +16388,7 @@ def every_unit_keeps_a_number_of_its_own_and_sells_at_its_own_price():
                      "An_own_cost_walk_never_takes_more_units_than_it_holds_however_they_are_taken",
                      "The_least_price_that_clears_a_unit_is_the_least_your_margin_accepts",
                      "Every_unit_bought_has_a_number_and_a_sale_takes_the_number_of_the_unit_it_sold",
-                     "Units_bought_one_after_another_at_one_price_keep_one_run_of_numbers",
+                     "Units_bought_one_after_another_at_one_price_keep_a_number_and_a_row_each",
                      "Units_with_no_number_or_one_another_unit_has_get_new_numbers_past_every_number_in_use",
                      "A_number_given_out_is_never_given_again_even_after_its_unit_is_sold",
                      "A_run_of_numbers_that_would_run_past_the_largest_number_is_numbered_afresh",
@@ -16397,8 +16409,79 @@ def every_unit_keeps_a_number_of_its_own_and_sells_at_its_own_price():
             and "the dearest unit the price beats by your margin sells first, then the next dearest" in README
             and "TradeLord.log names every unit TradeLord sells by its number" in README)
 
-chk("1.98.0", "every unit you buy keeps a number never given to another unit and the exact price you paid, and with What each unit cost you the dearest unit the price beats by your margin sells first, down the ladder",
+chk("1.98.0", "every unit you buy keeps a number never given to another unit and the exact price you paid, and with Price a sale must beat on Each unit's own price the dearest unit the price beats by your margin sells first, down the ladder",
     every_unit_keeps_a_number_of_its_own_and_sells_at_its_own_price())
+
+def every_unit_keeps_a_row_and_an_age_and_may_sell_at_cost_once_it_has_waited():
+    math = S['TradeMath.cs']
+    codec = S['LedgerCodec.cs']
+    ledger = S['Ledger.cs']
+    passes = S['Passes.cs']
+    added = method_body(math, "public static void AddPurchase(PurchaseRecord rec, int count, int totalPaid, long first, float day)")
+    clears = method_body(math, "private int TheDearestThatClears")
+    sell = method_body(passes, "internal static Traded SellThem")
+    keeps = method_body(passes, "internal static ForTheMark[] WhatTheMarkKeeps")
+    row = method_body(S['Trading.cs'], "public void RecordedSale(int at, int unitPaid, int price, int bestPays)")
+    launched = method_body(ledger, "private void OnSessionLaunched")
+    restore = method_body(ledger, "private void RestoreSaved")
+    en = spoken(ENGLISH)
+    return (all((added, clears, sell, keeps, row, launched, restore))
+            and ordered(added, "for (int i = 0; i < count; i++)",
+                        "Unit = unit, Count = 1, First = first > 0L ? first + i : 0L, Day = day > 0f ? day : 0f")
+            and "public float Day;" in method_body(codec, "public struct Batch")
+            and "public const int FieldsABatchIsDatedIn = 5;" in codec
+            and "x.Unit != y.Unit ? x.Unit.CompareTo(y.Unit) : y.First.CompareTo(x.First);" in math
+            and ordered(restore, "TradeMath.NumberEveryUnit(_purchases, _nextUnitNumber, out long numbered);",
+                        "long trimmed = TradeMath.KeepEveryUnitApart(_purchases);")
+            and ordered(launched, 'Guard.Run("Ledger.MatchPurchases", MatchPurchasesToWhatIsHeld);',
+                        'Guard.Run("Ledger.DateTheUnits", DateTheUnits);')
+            and "TradeMath.DateEveryUnit(_purchases, (float)CampaignTime.Now.ToDays);" in method_body(ledger, "private void DateTheUnits")
+            and "agedAfter > 0 && unit.Day > 0f && today - unit.Day >= agedAfter;" in math
+            and "if (aged ? price < _costs[at].Unit : !ProfitAcceptable(_costs[at].Unit, price, _margin)) continue;" in clears
+            and ordered(sell, "bool aged = basis.Aged;",
+                        "if (aged ? price < mustBeat : !TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))",
+                        "if (basis.HoldingAllButTheAged)",
+                        "int boughtLeft = Math.Min(remaining, basis.PaidLeft) - basis.AgedLeft;",
+                        "if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))",
+                        "if (basis.KeepOnlyTheAged()) continue;")
+            and ordered(keeps, "bool eachAtItsOwn = s.CostBasisMode == Options.CostOfEachUnit;",
+                        "int units = Math.Min(yours, basis.PaidLeft - basis.AgedLeft);",
+                        "TradeMath.DearFirst fresh = basis.Walk.WithoutTheAged();",
+                        "TradeRules.WhatSellsHere(market.PricesHere(at), units, fresh, s.MinProfitMargin, ref till)",
+                        "if (eachAtItsOwn) rungs[at] = TradeRules.WhatTheWalkTakes(rungs[at], fresh, s.MinProfitMargin);")
+            and ordered(row, "ledger.RecordSale(PaidKeyAt(at), 1, unitPaid, out bought);",
+                        "bool aged = eachAtItsOwn && agedAfter > 0 && bought > 0f && Today - bought >= agedAfter;",
+                        '" day(s) ago"', '" it was bought for, as it had waited past the "')
+            and "public int SellAtCostAfterDays = 30;" in S['Options.cs']
+            and '{ "SellAtCostAfterDays", new double[] { 0, 365 } },' in S['Migrate.cs']
+            and '[SettingPropertyInteger("{=TL496}Sell at cost after (days, 0 = off)", 0, 365, Order = 10,' in M
+            and "public int SellAtCostAfterDays { get => _o.SellAtCostAfterDays;" in M
+            and all(said_in_every_language(one) for one in ("TL227", "TL257", "TL258", "TL259", "TL495", "TL496", "TL497"))
+            and en["TL227"] == "Price a sale must beat" and en["TL257"] == "Average you paid"
+            and en["TL259"] == "Cheapest market price" and en["TL495"] == "Each unit's own price"
+            and "with no margin and no Hold cargo for the best market" in en["TL497"]
+            and all(one in MATHTESTS for one in
+                    ("Every_unit_bought_has_a_row_of_its_own_even_at_one_price",
+                     "Of_two_units_at_one_price_the_older_one_goes_first",
+                     "A_run_kept_by_an_older_TradeLord_is_split_into_one_row_for_each_unit",
+                     "A_unit_past_its_age_sells_for_what_it_cost_with_no_margin",
+                     "A_unit_past_its_age_never_sells_under_what_it_cost",
+                     "With_no_age_limit_or_no_day_a_unit_always_needs_its_margin",
+                     "Holding_all_but_the_aged_sells_only_units_past_their_age",
+                     "Without_the_aged_a_walk_counts_only_units_still_inside_their_age"))
+            and all(one in SELLPASSTESTS for one in
+                    ("Wine_bought_at_five_prices_sells_down_the_ladder_and_one_past_its_age_sells_at_what_it_cost",
+                     "A_unit_past_its_age_sells_at_what_it_cost_while_Hold_cargo_for_the_best_market_keeps_the_rest",
+                     "With_Sell_at_cost_after_at_0_a_unit_never_skips_its_margin_however_long_it_waited",
+                     "A_unit_past_its_age_still_never_sells_for_less_than_it_cost",
+                     "The_marked_market_is_counted_unit_by_unit_so_a_unit_it_would_not_take_at_a_profit_is_never_held_for_it",
+                     "A_unit_past_its_age_is_never_held_for_the_marked_market"))
+            and "Every unit keeps a row of its own with the day you bought it" in README
+            and "Sell at cost after, which ships at 30 days" in README
+            and "Hold cargo for the best market counts unit by unit" in README)
+
+chk("1.99.0", "every unit keeps a row of its own with the day it was bought, a unit that waited past Sell at cost after may sell at what it cost with no margin and no Hold cargo for the best market, and the marked market is counted unit by unit",
+    every_unit_keeps_a_row_and_an_age_and_may_sell_at_cost_once_it_has_waited())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

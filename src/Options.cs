@@ -52,6 +52,8 @@ namespace TradeLord
 
         public int CostBasisMode = CostOfEachUnit;
 
+        public int SellAtCostAfterDays = 30;
+
         public bool ExcludeHostileTowns = true;
 
         public int MinTownStock = 10;

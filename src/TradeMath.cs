@@ -108,34 +108,102 @@ namespace TradeLord
             return lowest;
         }
 
-        public static void AddPurchase(PurchaseRecord rec, int count, int totalPaid, long first)
+        public static void AddPurchase(PurchaseRecord rec, int count, int totalPaid, long first, float day)
         {
             if (rec == null || count <= 0) return;
             List<Batch> batches = BatchesOf(rec);
             rec.TotalPaid += totalPaid;
             rec.Count += count;
             rec.LastUnitPaid = (int)Math.Round((double)totalPaid / count);
-            AddBatch(batches, new Batch
-            {
-                Unit = rec.LastUnitPaid > 0 ? rec.LastUnitPaid : 0, Count = count, First = first > 0L ? first : 0L
-            });
+            int unit = rec.LastUnitPaid > 0 ? rec.LastUnitPaid : 0;
+            for (int i = 0; i < count; i++)
+                AddBatch(batches, new Batch
+                {
+                    Unit = unit, Count = 1, First = first > 0L ? first + i : 0L, Day = day > 0f ? day : 0f
+                });
         }
 
         public const long FirstUnitNumber = 1L;
 
         public const int EachUnitApart = 0;
 
-        public static readonly Comparison<Batch> CheapestThenOldest = (x, y) =>
-            x.Unit != y.Unit ? x.Unit.CompareTo(y.Unit) : x.First.CompareTo(y.First);
+        public const int MostUnitsKeptApart = 100000;
+
+        public static readonly Comparison<Batch> CheapestFirstOldestLast = (x, y) =>
+            x.Unit != y.Unit ? x.Unit.CompareTo(y.Unit) : y.First.CompareTo(x.First);
+
+        private static readonly IComparer<Batch> InTheirPlace = Comparer<Batch>.Create(CheapestFirstOldestLast);
 
         public static long NumberASaleTakes(PurchaseRecord rec, int unitPaid)
         {
             if (rec == null || rec.Count <= 0) return 0L;
             List<Batch> batches = BatchesOf(rec);
             if (batches.Count == 0) return 0L;
-            int at = unitPaid > 0 ? batches.FindIndex(one => one.Unit == unitPaid) : -1;
+            int at = unitPaid > 0 ? batches.FindLastIndex(one => one.Unit == unitPaid) : -1;
             Batch taken = batches[at < 0 ? 0 : at];
             return taken.First > 0L ? taken.First + taken.Count - 1 : 0L;
+        }
+
+        public static float DayASaleTakes(PurchaseRecord rec, int unitPaid)
+        {
+            if (rec == null || rec.Count <= 0) return 0f;
+            List<Batch> batches = BatchesOf(rec);
+            if (batches.Count == 0) return 0f;
+            int at = unitPaid > 0 ? batches.FindLastIndex(one => one.Unit == unitPaid) : -1;
+            return batches[at < 0 ? 0 : at].Day;
+        }
+
+        public static long KeepEveryUnitApart(List<PurchaseRecord> purchases)
+        {
+            long trimmed = 0L;
+            if (purchases == null) return trimmed;
+            for (int r = 0; r < purchases.Count; r++)
+            {
+                PurchaseRecord rec = purchases[r];
+                if (rec == null || rec.Count <= 0) continue;
+                if (rec.Count > MostUnitsKeptApart)
+                {
+                    trimmed += rec.Count - MostUnitsKeptApart;
+                    DrainWhatLeftUnsold(rec, rec.Count - MostUnitsKeptApart);
+                }
+                List<Batch> batches = BatchesOf(rec);
+                bool split = false;
+                for (int b = 0; b < batches.Count && !split; b++) split = batches[b].Count > 1;
+                if (!split) continue;
+                var apart = new List<Batch>(rec.Count);
+                for (int b = 0; b < batches.Count; b++)
+                {
+                    Batch one = batches[b];
+                    for (int u = 0; u < one.Count; u++)
+                        apart.Add(new Batch
+                        {
+                            Unit = one.Unit, Count = 1, First = one.First > 0L ? one.First + u : 0L, Day = one.Day
+                        });
+                }
+                apart.Sort(CheapestFirstOldestLast);
+                rec.Batches = apart;
+            }
+            return trimmed;
+        }
+
+        public static int DateEveryUnit(List<PurchaseRecord> purchases, float today)
+        {
+            int dated = 0;
+            if (purchases == null || today <= 0f) return dated;
+            for (int r = 0; r < purchases.Count; r++)
+            {
+                PurchaseRecord rec = purchases[r];
+                if (rec?.Batches == null || rec.Count <= 0) continue;
+                for (int b = 0; b < rec.Batches.Count; b++)
+                {
+                    Batch one = rec.Batches[b];
+                    if (one.Day > 0f) continue;
+                    one.Day = today;
+                    rec.Batches[b] = one;
+                    dated += one.Count;
+                }
+            }
+            return dated;
         }
 
         public static long NumberEveryUnit(List<PurchaseRecord> purchases, long next, out long numbered)
@@ -183,7 +251,7 @@ namespace TradeLord
                     batches[b] = one;
                     moved = true;
                 }
-                if (moved) batches.Sort(CheapestThenOldest);
+                if (moved) batches.Sort(CheapestFirstOldestLast);
             }
             return free;
         }
@@ -231,7 +299,7 @@ namespace TradeLord
             long left = gold;
             for (int i = 0; laidOut != null && i < laidOut.Count; i++)
             {
-                int at = dear.FindIndex(one => one.Unit == laidOut[i]);
+                int at = dear.FindLastIndex(one => one.Unit == laidOut[i]);
                 if (at < 0) continue;
                 TakeOne(dear, at);
                 if (took.Count < units && left >= laidOut[i] + (units - took.Count - 1) * each)
@@ -255,7 +323,7 @@ namespace TradeLord
             long cost = 0L;
             for (int i = 0; named != null && i < named.Count && units > 0; i++)
             {
-                int at = batches.FindIndex(one => one.Unit == named[i]);
+                int at = batches.FindLastIndex(one => one.Unit == named[i]);
                 if (at < 0) continue;
                 cost += batches[at].Unit;
                 TakeOne(batches, at);
@@ -278,7 +346,7 @@ namespace TradeLord
             if (BatchesAddUp(rec))
             {
                 var copy = new List<Batch>(rec.Batches);
-                copy.Sort(CheapestThenOldest);
+                copy.Sort(CheapestFirstOldestLast);
                 return copy;
             }
             var one = new List<Batch>();
@@ -297,31 +365,43 @@ namespace TradeLord
                 batches.Clear();
                 return;
             }
-            var off = new long[batches.Count];
-            var over = new long[batches.Count];
-            long taken = 0L;
+            var prices = new List<(int start, int end, long count)>();
             for (int i = 0; i < batches.Count; i++)
             {
-                long share = (long)batches[i].Count * units;
-                off[i] = share / all;
-                over[i] = share % all;
-                taken += off[i];
+                int last = prices.Count - 1;
+                if (last >= 0 && batches[prices[last].start].Unit == batches[i].Unit)
+                    prices[last] = (prices[last].start, i, prices[last].count + batches[i].Count);
+                else prices.Add((i, i, batches[i].Count));
+            }
+            var off = new long[prices.Count];
+            var over = new long[prices.Count];
+            long taken = 0L;
+            for (int p = 0; p < prices.Count; p++)
+            {
+                long share = prices[p].count * units;
+                off[p] = share / all;
+                over[p] = share % all;
+                taken += off[p];
             }
             for (long left = units - taken; left > 0L; left--)
             {
                 int most = -1;
-                for (int i = 0; i < batches.Count; i++)
-                    if (off[i] < batches[i].Count && (most < 0 || over[i] > over[most])) most = i;
+                for (int p = 0; p < prices.Count; p++)
+                    if (off[p] < prices[p].count && (most < 0 || over[p] > over[most])) most = p;
                 if (most < 0) break;
                 off[most]++;
                 over[most] = -1L;
             }
-            for (int i = batches.Count - 1; i >= 0; i--)
-            {
-                Batch one = batches[i];
-                one.Count -= (int)off[i];
-                if (one.Count <= 0) batches.RemoveAt(i); else batches[i] = one;
-            }
+            for (int p = 0; p < prices.Count; p++)
+                for (int i = prices[p].start; i <= prices[p].end && off[p] > 0L; i++)
+                {
+                    Batch one = batches[i];
+                    int gone = (int)Math.Min(off[p], one.Count);
+                    one.Count -= gone;
+                    off[p] -= gone;
+                    batches[i] = one;
+                }
+            batches.RemoveAll(one => one.Count <= 0);
         }
 
         private static void TakeOne(List<Batch> batches, int at)
@@ -359,19 +439,8 @@ namespace TradeLord
 
         private static void AddBatch(List<Batch> batches, Batch added)
         {
-            for (int i = 0; i < batches.Count; i++)
-            {
-                Batch same = batches[i];
-                if (same.Unit != added.Unit || added.First <= 0L || same.First <= 0L ||
-                    same.First + same.Count != added.First || same.Count > int.MaxValue - added.Count)
-                    continue;
-                same.Count += added.Count;
-                batches[i] = same;
-                return;
-            }
-            int at = 0;
-            while (at < batches.Count && CheapestThenOldest(batches[at], added) < 0) at++;
-            batches.Insert(at, added);
+            int at = batches.BinarySearch(added, InTheirPlace);
+            batches.Insert(at < 0 ? ~at : at, added);
         }
 
         public static int LeaveOut(ref Batch[] costs, List<int> drawn)
@@ -381,7 +450,7 @@ namespace TradeLord
             int taken = 0;
             for (int i = 0; i < drawn.Count; i++)
             {
-                int at = left.FindIndex(one => one.Unit == drawn[i]);
+                int at = left.FindLastIndex(one => one.Unit == drawn[i]);
                 if (at < 0) continue;
                 TakeOne(left, at);
                 taken++;
@@ -430,6 +499,12 @@ namespace TradeLord
             private readonly int _split;
             private readonly bool _ownCost;
             private readonly float _margin;
+            private readonly float _today;
+            private readonly int _agedAfter;
+            private readonly int _aged;
+            private int _agedTaken;
+            private int _only;
+            private bool _pickedAged;
             private int _low;
             private int _lowTaken;
             private int _dearLow;
@@ -446,20 +521,35 @@ namespace TradeLord
 
             private const int CoversNoUnit = -1;
 
+            private const int EveryUnit = 0;
+            private const int OnlyTheAged = 1;
+            private const int NoneOfTheAged = 2;
+
             public DearFirst(Batch[] costs, int covers, int worth, int unknown = 0)
-                : this(costs, covers, worth, unknown, false, 0f)
+                : this(costs, covers, worth, unknown, false, 0f, 0f, 0)
             {
             }
 
-            public static DearFirst EachAtItsOwnCost(Batch[] costs, int worth, int unknown, float margin) =>
-                new DearFirst(costs, CoversNoUnit, worth, unknown, true, margin);
+            public static DearFirst EachAtItsOwnCost(Batch[] costs, int worth, int unknown, float margin,
+                                                     float today = 0f, int agedAfter = 0) =>
+                new DearFirst(costs, CoversNoUnit, worth, unknown, true, margin, today, agedAfter);
 
-            private DearFirst(Batch[] costs, int covers, int worth, int unknown, bool ownCost, float margin)
+            private DearFirst(Batch[] costs, int covers, int worth, int unknown, bool ownCost, float margin,
+                              float today, int agedAfter)
             {
                 _costs = costs;
                 _worth = worth;
                 _ownCost = ownCost;
                 _margin = margin;
+                _today = today;
+                _agedAfter = ownCost && agedAfter > 0 && today > 0f ? agedAfter : 0;
+                _agedTaken = 0;
+                _only = EveryUnit;
+                _pickedAged = false;
+                int aged = 0;
+                for (int at = 0; _agedAfter > 0 && costs != null && at < costs.Length; at++)
+                    if (HasAged(costs[at], today, _agedAfter)) aged += costs[at].Count;
+                _aged = aged;
                 int many = costs == null ? 0 : costs.Length;
                 int split = 0;
                 while (split < many && costs[split].Unit <= covers) split++;
@@ -485,17 +575,67 @@ namespace TradeLord
                 return _top >= _dearLow || _low < _split || _unknown > 0 ? _worth : NoUnitThisPriceSells;
             }
 
+            private static bool HasAged(Batch unit, float today, int agedAfter) =>
+                agedAfter > 0 && unit.Day > 0f && today - unit.Day >= agedAfter;
+
+            private bool AgedAt(int at) => HasAged(_costs[at], _today, _agedAfter);
+
+            public bool PickedHasAged => _picked == TheDearest && _pickedAged;
+
+            public int AgedLeft => _aged - _agedTaken > 0 ? _aged - _agedTaken : 0;
+
+            public bool KeepOnlyTheAged()
+            {
+                if (AgedLeft <= 0) return false;
+                _only = OnlyTheAged;
+                return true;
+            }
+
+            public bool HoldingAllButTheAged => _only == OnlyTheAged;
+
+            public DearFirst WithoutTheAged()
+            {
+                DearFirst fresh = this;
+                fresh._only = NoneOfTheAged;
+                fresh._unknown = 0;
+                return fresh;
+            }
+
+            public bool Clears(int price, float margin)
+            {
+                int floor = Floor(price);
+                if (floor == NoUnitThisPriceSells) return false;
+                return PickedHasAged ? price >= floor : ProfitAcceptable(floor, price, margin);
+            }
+
+            public int LeastItAsks()
+            {
+                for (int at = _dearLow; at <= _top; at++)
+                {
+                    if (LeftIn(at) <= 0) continue;
+                    bool aged = _ownCost && AgedAt(at);
+                    if (_only == OnlyTheAged && !aged || _only == NoneOfTheAged && aged) continue;
+                    return _costs[at].Unit;
+                }
+                return _unknown > 0 && _only == EveryUnit ? _worth : NoUnitThisPriceSells;
+            }
+
             private int TheDearestThatClears(int price)
             {
                 _picked = NotPicked;
+                _pickedAged = false;
                 for (int at = _top; at >= _dearLow; at--)
                 {
-                    if (LeftIn(at) <= 0 || !ProfitAcceptable(_costs[at].Unit, price, _margin)) continue;
+                    if (LeftIn(at) <= 0) continue;
+                    bool aged = AgedAt(at);
+                    if (_only == OnlyTheAged && !aged || _only == NoneOfTheAged && aged) continue;
+                    if (aged ? price < _costs[at].Unit : !ProfitAcceptable(_costs[at].Unit, price, _margin)) continue;
                     _picked = TheDearest;
                     _pickedAt = at;
+                    _pickedAged = aged;
                     return _costs[at].Unit;
                 }
-                return _unknown > 0 ? _worth : NoUnitThisPriceSells;
+                return _unknown > 0 && _only == EveryUnit ? _worth : NoUnitThisPriceSells;
             }
 
             public int Took()
@@ -510,6 +650,7 @@ namespace TradeLord
                 if (picked == TheDearest)
                 {
                     int dearest = _costs[_top].Unit;
+                    if (_agedAfter > 0 && AgedAt(_top)) _agedTaken++;
                     _topTaken++;
                     if (LeftIn(_top) <= 0) DropTheTop();
                     return dearest;
@@ -531,6 +672,7 @@ namespace TradeLord
                 }
                 if (_top < _dearLow) return _worth;
                 int lowest = _costs[_dearLow].Unit;
+                if (_agedAfter > 0 && AgedAt(_dearLow)) _agedTaken++;
                 _dearLowTaken++;
                 if (LeftIn(_dearLow) <= 0)
                 {

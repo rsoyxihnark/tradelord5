@@ -200,6 +200,7 @@ namespace TradeLord
         void Staged(int at, int price);
         bool Give(int at, int price, out int proceeds);
         void RecordedSale(int at, int unitPaid, int price, int bestPays);
+        float Today { get; }
     }
 
     internal struct Basis
@@ -212,7 +213,7 @@ namespace TradeLord
         internal int SoldAt;
 
         internal static Basis For(int costBasis, int purchased, string id, Books books, bool sim,
-                                  Options s, Batch[] costs = null)
+                                  Options s, Batch[] costs = null, float today = 0f)
         {
             Basis basis;
             basis.Paid = costBasis;
@@ -228,7 +229,8 @@ namespace TradeLord
             int known = TradeMath.UnitsIn(costs);
             if (listed && basis.PaidLeft > known) basis.PaidLeft = known;
             basis.Walk = s.CostBasisMode == Options.CostOfEachUnit
-                ? TradeMath.DearFirst.EachAtItsOwnCost(costs, costBasis, basis.PaidLeft - known, s.MinProfitMargin)
+                ? TradeMath.DearFirst.EachAtItsOwnCost(costs, costBasis, basis.PaidLeft - known, s.MinProfitMargin,
+                                                       today, s.SellAtCostAfterDays)
                 : new TradeMath.DearFirst(costs, covers, costBasis, basis.PaidLeft - known);
             return basis;
         }
@@ -242,6 +244,14 @@ namespace TradeLord
 
         internal int Floor(int worth, int price) =>
             PaidLeft <= 0 || FromMarket ? worth : Walk.Floor(price);
+
+        internal bool Aged => PaidLeft > 0 && !FromMarket && Walk.PickedHasAged;
+
+        internal int AgedLeft => FromMarket ? 0 : Math.Min(PaidLeft, Walk.AgedLeft);
+
+        internal bool HoldingAllButTheAged => !FromMarket && Walk.HoldingAllButTheAged;
+
+        internal bool KeepOnlyTheAged() => !FromMarket && PaidLeft > 0 && Walk.KeepOnlyTheAged();
 
         internal bool SoldOne()
         {
@@ -593,14 +603,23 @@ namespace TradeLord
                 if (yours <= 0) continue;
                 Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),
                                         books, sim, s);
-                int units = Math.Min(yours, basis.PaidLeft);
+                bool eachAtItsOwn = s.CostBasisMode == Options.CostOfEachUnit;
+                if (eachAtItsOwn)
+                    basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),
+                                      books, sim, s, market.UnitCosts(at), market.Today);
+                int units = Math.Min(yours, basis.PaidLeft - basis.AgedLeft);
                 if (units <= 0 || basis.Paid <= 0) continue;
+                TradeMath.DearFirst fresh = basis.Walk.WithoutTheAged();
                 int[] sells = boughtHere
                     ? new int[0]
-                    : TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);
+                    : eachAtItsOwn
+                        ? TradeRules.WhatSellsHere(market.PricesHere(at), units, fresh, s.MinProfitMargin, ref till)
+                        : TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);
                 asked.TryGetValue(id, out int before);
-                if (!market.ResaleMarket(at, before + units, basis.Paid, out int[] ladder)) continue;
+                if (!market.ResaleMarket(at, before + units, eachAtItsOwn ? fresh.LeastItAsks() : basis.Paid,
+                                         out int[] ladder)) continue;
                 rungs[at] = TradeRules.PastTheFirst(ladder, before);
+                if (eachAtItsOwn) rungs[at] = TradeRules.WhatTheWalkTakes(rungs[at], fresh, s.MinProfitMargin);
                 if (rungs[at].Length == 0) { rungs[at] = null; continue; }
                 asked[id] = before + rungs[at].Length;
                 bought[at] = units;
@@ -636,7 +655,7 @@ namespace TradeLord
                 if (remaining <= 0) { tally.Note(Block.TradedHereAlready); continue; }
 
                 Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),
-                                        books, sim, s, market.UnitCosts(at));
+                                        books, sim, s, market.UnitCosts(at), market.Today);
                 if (!basis.LeftToThisSale(ref remaining, loot)) continue;
 
                 int[] there = holding?[at].Rungs;
@@ -649,19 +668,26 @@ namespace TradeLord
                     int price = market.PriceToSell(at);
                     int mustBeat = TradeRules.WorthToBeat(good, basis.Floor(worth, price),
                                                           basis.UnpaidWorth);
-                    if (!TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))
+                    bool aged = basis.Aged;
+                    if (aged ? price < mustBeat : !TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))
                     {
+                        if (basis.HoldingAllButTheAged)
+                        {
+                            if (basis.SetTheBoughtUnitsAside(ref remaining)) continue;
+                            break;
+                        }
                         tally.Note(Block.BelowMargin);
                         if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;
                         continue;
                     }
-                    int boughtLeft = Math.Min(remaining, basis.PaidLeft);
+                    int boughtLeft = Math.Min(remaining, basis.PaidLeft) - basis.AgedLeft;
                     int floor = TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket);
-                    int bestPays = floor > 0 && boughtLeft <= holdFor ? there[boughtLeft - 1] : 0;
-                    if (TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))
+                    int bestPays = !aged && floor > 0 && boughtLeft <= holdFor ? there[boughtLeft - 1] : 0;
+                    if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))
                     {
                         tally.Note(Block.BelowBestMarket);
                         market.HeldBack(at, boughtLeft, there[boughtLeft - 1], price);
+                        if (basis.KeepOnlyTheAged()) continue;
                         if (!basis.SetTheBoughtUnitsAside(ref remaining)) break;
                         continue;
                     }

@@ -25,6 +25,7 @@ namespace TradeLord
         public int Unit;
         public int Count;
         public long First;
+        public float Day;
     }
 
     public class PurchaseRecord
@@ -60,6 +61,8 @@ namespace TradeLord
         public const int FieldsAPurchaseNeeds = 4;
 
         public const int FieldsABatchIsNumberedIn = 4;
+
+        public const int FieldsABatchIsDatedIn = 5;
 
         public const int FieldsAPromiseNeeds = 3;
 
@@ -191,7 +194,8 @@ namespace TradeLord
                     sb.Append(Number(rec.Batches[b].Unit)).Append(BatchFieldMark)
                       .Append(Number(rec.Batches[b].Count)).Append(BatchFieldMark)
                       .Append(Number(0)).Append(BatchFieldMark)
-                      .Append(Number(rec.Batches[b].First));
+                      .Append(Number(rec.Batches[b].First)).Append(BatchFieldMark)
+                      .Append(Number(rec.Batches[b].Day));
                 }
             }
             return sb.ToString();
@@ -214,10 +218,15 @@ namespace TradeLord
                 long first = 0L;
                 if (parts.Length >= FieldsABatchIsNumberedIn && Whole(parts[3], out long numbered) && numbered > 0L)
                     first = numbered;
-                kept.Add(new Batch { Unit = unit, Count = many, First = first });
+                float day = 0f;
+                if (parts.Length >= FieldsABatchIsDatedIn &&
+                    float.TryParse(parts[4], NumberStyles.Float, CultureInfo.InvariantCulture, out float bought) &&
+                    Storable(bought) && bought > 0f)
+                    day = bought;
+                kept.Add(new Batch { Unit = unit, Count = many, First = first, Day = day });
             }
             if (units != count) return new List<Batch>();
-            kept.Sort(TradeMath.CheapestThenOldest);
+            kept.Sort(TradeMath.CheapestFirstOldestLast);
             return kept;
         }
 

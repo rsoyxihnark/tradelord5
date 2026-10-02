@@ -94,9 +94,9 @@
 		<string id="TL254" text="Yalnızca sat"/>
 		<string id="TL255" text="Yalnızca al"/>
 		<string id="TL256" text="Al ve sat"/>
-		<string id="TL257" text="Ödediğinizin ortalaması"/>
+		<string id="TL257" text="Ödediğiniz ortalama"/>
 		<string id="TL258" text="Son ödediğiniz fiyat"/>
-		<string id="TL259" text="Bildiğiniz en ucuz pazar"/>
+		<string id="TL259" text="En ucuz pazar fiyatı"/>
 		<string id="TL260" text="Şehir menüsünde defter girdisi"/>
 		<string id="TL261" text="Her yiyecek türünden biraz sakla" />
 		<string id="TL361" text="Her yiyecekten birkaçını tutarak yiyecek çeşitliliği moral bonusunu korur. Yukarıdaki Yiyecek tamamla ve sakla (kaç günlük) açık olmalı; tuttukları o günlere sayılır. Çiftlik hayvanları hariç: TradeLord sürüyü mal sayar. Varsayılan KAPALI." />
@@ -147,7 +147,7 @@
 		<string id="TL224" text="Hayvan kuralı"/>
 		<string id="TL225" text="Eşsiz ve dövülmüş eşyaları koru"/>
 		<string id="TL226" text="Envanter kilitlerine uy"/>
-		<string id="TL227" text="Bir malın size neye mal olduğu"/>
+		<string id="TL227" text="Satışın geçmesi gereken fiyat"/>
 		<string id="TL228" text="Ganimeti şu seviyeye kadar sat (0 = kapalı)"/>
 		<string id="TL229" text="Yükü en iyi pazar için tut"/>
 		<string id="TL231" text="Asla satma (mal kimlikleri ya da adları, virgülle ayrılmış)"/>
@@ -332,6 +332,8 @@
 		<string id="TL492" text=" Ticaret'e {FOCUS} odak puanı daha verirseniz sınır yükselir."/>
 		<string id="TL493" text=" {ATTRIBUTE} için {POINTS} puan daha verirseniz sınır yükselir."/>
 		<string id="TL494" text=" Sınırı yükseltmek için Ticaret'teki odağınızı ve {ATTRIBUTE} değerinizi birlikte yükseltin."/>
-		<string id="TL495" text="Her birime ödediğiniz"/>
+		<string id="TL495" text="Her birimin kendi fiyatı"/>
+		<string id="TL496" text="Maliyetine sat (gün, 0 = kapalı)"/>
+		<string id="TL497" text="Satışın geçmesi gereken fiyat Her birimin kendi fiyatı iken, bu kadar gün bekleyen bir birim size mal olduğu fiyata satılabilir; kâr payı ve Yükü en iyi pazar için tut aranmaz."/>
 	</strings>
 </base>

@@ -343,6 +343,7 @@ namespace TradeLord
                 { "CraftingPolicy", new double[] { 0, 3 } },
                 { "LivestockPolicy", new double[] { 0, 3 } },
                 { "CostBasisMode", new double[] { 0, 3 } },
+                { "SellAtCostAfterDays", new double[] { 0, 365 } },
                 { "KeepSmeltableWeapons", new double[] { 0, 2 } },
             };
 

@@ -13,7 +13,7 @@ namespace TradeLord.Tests
 
         private static void Buy(PurchaseRecord rec, int count, int totalPaid)
         {
-            TradeMath.AddPurchase(rec, count, totalPaid, _numbered);
+            TradeMath.AddPurchase(rec, count, totalPaid, _numbered, 100f);
             if (count > 0) _numbered += count;
         }
 
@@ -518,11 +518,10 @@ namespace TradeLord.Tests
             Buy(rec, 1, 836);
             Buy(rec, 4, 1114);
             TradeMath.DrainSale(rec, 1, 836);
-            Assert.Single(rec.Batches);
-            Assert.Equal(278, rec.Batches[0].Unit);
-            Assert.Equal(4, rec.Batches[0].Count);
+            Assert.Equal(4, rec.Batches.Count);
+            Assert.All(rec.Batches, one => Assert.Equal(278, one.Unit));
             TradeMath.DrainSale(rec, 1, 999);
-            Assert.Equal(3, rec.Batches[0].Count);
+            Assert.Equal(3, rec.Batches.Count);
         }
 
         [Fact]
@@ -618,9 +617,9 @@ namespace TradeLord.Tests
         public void Every_unit_bought_has_a_number_and_a_sale_takes_the_number_of_the_unit_it_sold()
         {
             var rec = new PurchaseRecord { ItemId = "cloth" };
-            TradeMath.AddPurchase(rec, 1, 100, 1L);
-            TradeMath.AddPurchase(rec, 1, 200, 2L);
-            TradeMath.AddPurchase(rec, 1, 300, 3L);
+            TradeMath.AddPurchase(rec, 1, 100, 1L, 100f);
+            TradeMath.AddPurchase(rec, 1, 200, 2L, 100f);
+            TradeMath.AddPurchase(rec, 1, 300, 3L, 100f);
             Assert.Equal(3L, TradeMath.NumberASaleTakes(rec, 300));
             TradeMath.DrainSale(rec, 1, 300);
             Assert.Equal(new[] { 100, 200 }, Units(TradeMath.UnitCosts(rec, rec.Count)));
@@ -630,19 +629,18 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Units_bought_one_after_another_at_one_price_keep_one_run_of_numbers()
+        public void Units_bought_one_after_another_at_one_price_keep_a_number_and_a_row_each()
         {
             var rec = new PurchaseRecord { ItemId = "cloth" };
-            TradeMath.AddPurchase(rec, 2, 200, 10L);
-            TradeMath.AddPurchase(rec, 3, 300, 12L);
-            TradeMath.AddPurchase(rec, 1, 100, 20L);
-            Assert.Equal(2, rec.Batches.Count);
-            Assert.Equal(10L, rec.Batches[0].First);
-            Assert.Equal(5, rec.Batches[0].Count);
-            Assert.Equal(20L, rec.Batches[1].First);
-            Assert.Equal(14L, TradeMath.NumberASaleTakes(rec, 100));
+            TradeMath.AddPurchase(rec, 2, 200, 10L, 100f);
+            TradeMath.AddPurchase(rec, 3, 300, 12L, 100f);
+            TradeMath.AddPurchase(rec, 1, 100, 20L, 100f);
+            Assert.Equal(6, rec.Batches.Count);
+            Assert.Equal(new[] { 20L, 14L, 13L, 12L, 11L, 10L }, rec.Batches.ConvertAll(one => one.First).ToArray());
+            Assert.Equal(10L, TradeMath.NumberASaleTakes(rec, 100));
             TradeMath.DrainSale(rec, 1, 100);
-            Assert.Equal(13L, TradeMath.NumberASaleTakes(rec, 100));
+            Assert.Equal(11L, TradeMath.NumberASaleTakes(rec, 100));
+            Assert.Equal(5, rec.Batches.Count);
         }
 
         [Fact]
@@ -676,13 +674,13 @@ namespace TradeLord.Tests
         public void A_number_given_out_is_never_given_again_even_after_its_unit_is_sold()
         {
             var rec = new PurchaseRecord { ItemId = "cloth" };
-            TradeMath.AddPurchase(rec, 3, 300, 40L);
+            TradeMath.AddPurchase(rec, 3, 300, 40L, 100f);
             TradeMath.DrainSale(rec, 3, 100);
             Assert.Equal(0, rec.Count);
             Assert.Equal(43L, TradeMath.NumberEveryUnit(new List<PurchaseRecord> { rec }, 43L, out long none));
             Assert.Equal(0L, none);
             var held = new PurchaseRecord { ItemId = "cloth" };
-            TradeMath.AddPurchase(held, 2, 200, 90L);
+            TradeMath.AddPurchase(held, 2, 200, 90L, 100f);
             Assert.Equal(92L, TradeMath.NumberEveryUnit(new List<PurchaseRecord> { held }, 0L, out none));
             Assert.Equal(0L, none);
         }
@@ -696,6 +694,132 @@ namespace TradeLord.Tests
             Assert.Equal(5L, numbered);
             Assert.Equal(7L, rec.Batches[0].First);
             Assert.Equal(12L, next);
+        }
+
+        private static Batch Unit(long number, int paid, float day) =>
+            new Batch { Unit = paid, Count = 1, First = number, Day = day };
+
+        private static Batch[] Sorted(params Batch[] rows)
+        {
+            var list = new List<Batch>(rows);
+            list.Sort(TradeMath.CheapestFirstOldestLast);
+            return list.ToArray();
+        }
+
+        [Fact]
+        public void Every_unit_bought_has_a_row_of_its_own_even_at_one_price()
+        {
+            var rec = new PurchaseRecord { ItemId = "cloth" };
+            TradeMath.AddPurchase(rec, 3, 300, 7L, 40f);
+            Assert.Equal(3, rec.Batches.Count);
+            Assert.All(rec.Batches, one => Assert.Equal(1, one.Count));
+            Assert.All(rec.Batches, one => Assert.Equal(40f, one.Day));
+            Assert.Equal(new[] { 9L, 8L, 7L }, rec.Batches.ConvertAll(one => one.First).ToArray());
+        }
+
+        [Fact]
+        public void Of_two_units_at_one_price_the_older_one_goes_first()
+        {
+            var rec = new PurchaseRecord { ItemId = "wine" };
+            TradeMath.AddPurchase(rec, 1, 100, 1L, 10f);
+            TradeMath.AddPurchase(rec, 1, 100, 2L, 20f);
+            Assert.Equal(1L, TradeMath.NumberASaleTakes(rec, 100));
+            Assert.Equal(10f, TradeMath.DayASaleTakes(rec, 100));
+            TradeMath.DrainSale(rec, 1, 100);
+            Assert.Equal(2L, TradeMath.NumberASaleTakes(rec, 100));
+            var walk = OwnCost(Sorted(Unit(1, 100, 10f), Unit(2, 100, 20f), Unit(3, 50, 30f)));
+            Assert.Equal(100, walk.Floor(200));
+            Assert.Equal(100, walk.Took());
+        }
+
+        [Fact]
+        public void A_run_kept_by_an_older_TradeLord_is_split_into_one_row_for_each_unit()
+        {
+            var rec = new PurchaseRecord { ItemId = "cloth", Count = 5, TotalPaid = 700 };
+            rec.Batches = new List<Batch> { new Batch { Unit = 100, Count = 3, First = 5L }, new Batch { Unit = 200, Count = 2 } };
+            var all = new List<PurchaseRecord> { rec };
+            long next = TradeMath.NumberEveryUnit(all, 1L, out long numbered);
+            Assert.Equal(0L, TradeMath.KeepEveryUnitApart(all));
+            Assert.Equal(2L, numbered);
+            Assert.Equal(10L, next);
+            Assert.Equal(5, rec.Batches.Count);
+            Assert.All(rec.Batches, one => Assert.Equal(1, one.Count));
+            Assert.Equal(new[] { 7L, 6L, 5L, 9L, 8L }, rec.Batches.ConvertAll(one => one.First).ToArray());
+            Assert.Equal(5, TradeMath.DateEveryUnit(all, 300f));
+            Assert.All(rec.Batches, one => Assert.Equal(300f, one.Day));
+            Assert.Equal(0, TradeMath.DateEveryUnit(all, 400f));
+        }
+
+        [Fact]
+        public void A_record_claiming_more_units_than_any_party_carries_is_cut_down_before_it_is_split()
+        {
+            var rec = new PurchaseRecord { ItemId = "felt", Count = 2000000000, TotalPaid = 2000000000, LastUnitPaid = 1 };
+            rec.Batches = new List<Batch> { new Batch { Unit = 999, Count = 2000000000, First = 1L } };
+            long trimmed = TradeMath.KeepEveryUnitApart(new List<PurchaseRecord> { rec });
+            Assert.Equal(2000000000L - TradeMath.MostUnitsKeptApart, trimmed);
+            Assert.Equal(TradeMath.MostUnitsKeptApart, rec.Count);
+            Assert.Equal(TradeMath.MostUnitsKeptApart, rec.Batches.Count);
+        }
+
+        [Fact]
+        public void A_unit_past_its_age_sells_for_what_it_cost_with_no_margin()
+        {
+            var walk = TradeMath.DearFirst.EachAtItsOwnCost(
+                Sorted(Unit(21, 120, 88f), Unit(22, 100, 69f), Unit(23, 70, 95f)), 0, 0, 0.15f, 100f, 30);
+            Assert.Equal(1, walk.AgedLeft);
+            Assert.Equal(100, walk.Floor(105));
+            Assert.True(walk.PickedHasAged);
+            Assert.True(walk.Clears(105, 0.15f));
+            Assert.Equal(100, walk.Took());
+            Assert.Equal(0, walk.AgedLeft);
+            Assert.Equal(70, walk.Floor(99));
+            Assert.False(walk.PickedHasAged);
+        }
+
+        [Fact]
+        public void A_unit_past_its_age_never_sells_under_what_it_cost()
+        {
+            var walk = TradeMath.DearFirst.EachAtItsOwnCost(Sorted(Unit(1, 100, 10f)), 0, 0, 0.15f, 100f, 30);
+            Assert.False(walk.Clears(99, 0.15f));
+            Assert.True(walk.Clears(100, 0.15f));
+        }
+
+        [Fact]
+        public void With_no_age_limit_or_no_day_a_unit_always_needs_its_margin()
+        {
+            var off = TradeMath.DearFirst.EachAtItsOwnCost(Sorted(Unit(1, 100, 10f)), 0, 0, 0.15f, 100f, 0);
+            Assert.Equal(0, off.AgedLeft);
+            Assert.False(off.Clears(110, 0.15f));
+            var undated = TradeMath.DearFirst.EachAtItsOwnCost(Sorted(Unit(1, 100, 0f)), 0, 0, 0.15f, 100f, 30);
+            Assert.Equal(0, undated.AgedLeft);
+            Assert.False(undated.Clears(110, 0.15f));
+        }
+
+        [Fact]
+        public void Holding_all_but_the_aged_sells_only_units_past_their_age()
+        {
+            var walk = TradeMath.DearFirst.EachAtItsOwnCost(
+                Sorted(Unit(1, 50, 60f), Unit(2, 60, 99f)), 0, 0, 0.15f, 100f, 30);
+            Assert.True(walk.KeepOnlyTheAged());
+            Assert.True(walk.HoldingAllButTheAged);
+            Assert.Equal(50, walk.Floor(80));
+            Assert.Equal(50, walk.Took());
+            Assert.Equal(TradeMath.NoUnitThisPriceSells, walk.Floor(80));
+            Assert.False(walk.KeepOnlyTheAged());
+        }
+
+        [Fact]
+        public void Without_the_aged_a_walk_counts_only_units_still_inside_their_age()
+        {
+            var walk = TradeMath.DearFirst.EachAtItsOwnCost(
+                Sorted(Unit(1, 10, 50f), Unit(2, 20, 99f), Unit(3, 30, 99f)), 15, 2, 0.15f, 100f, 30);
+            TradeMath.DearFirst fresh = walk.WithoutTheAged();
+            Assert.Equal(20, fresh.LeastItAsks());
+            Assert.Equal(10, walk.LeastItAsks());
+            Assert.Equal(new[] { 32 }, TradeRules.WhatTheWalkTakes(new[] { 32, 28, 24 }, fresh, 0.15f));
+            int till = 1000;
+            Assert.Equal(new[] { 40, 35 }, TradeRules.WhatSellsHere(u => 40 - 5 * u, 3, fresh, 0.15f, ref till));
+            Assert.Equal(925, till);
         }
 
         [Fact]

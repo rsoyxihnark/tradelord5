@@ -186,11 +186,15 @@
 - ✅ A cap on the whole visit, which ships at 1000 denars so a full purse is never spent in one town
 - ✅ They hold whether TradeLord is buying for profit, restocking your food or buying a haul animal, and only the share of the hold is left off an animal, unless Buy to fill the ships is on, since only a ship's hold counts one as cargo
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
-- ✅ What a good counts as having cost you: what each unit cost you, which it ships with, the average of what you paid, the last price you paid, or the cheapest market you know
-- ✅ What a good counts as having cost you is what the price has to beat by your margin before a good you bought sells
+- ✅ Price a sale must beat: Each unit's own price, which it ships with, Average you paid, Last price you paid or Cheapest market price
+- ✅ Price a sale must beat is what a good you bought has to beat by your margin before it sells
 - ✅ Every unit you buy gets a number of its own and keeps the exact price you paid for it, and no number is ever given to another unit
-- ✅ With What each unit cost you, the dearest unit the price beats by your margin sells first, then the next dearest, and a unit the price cannot beat stays in your cargo
-- ✅ TradeLord.log names every unit TradeLord sells by its number, with what it cost, what it fetched and the least it had to fetch
+- ✅ Every unit keeps a row of its own with the day you bought it, even when you bought many at one price
+- ✅ With Each unit's own price, the dearest unit the price beats by your margin sells first, then the next dearest, and a unit the price cannot beat stays in your cargo
+- ✅ With Each unit's own price, of two units bought at one price the older one sells first
+- ✅ Sell at cost after, which ships at 30 days, lets a unit that has waited that long sell for what it cost you, with no margin and no Hold cargo for the best market
+- ✅ Hold cargo for the best market counts unit by unit which of your units the marked market would take at a profit, and never holds one waiting past Sell at cost after
+- ✅ TradeLord.log names every unit TradeLord sells by its number, with what it cost, how many days it waited, what it fetched and the least it had to fetch
 - ✅ The profit reported is what each unit you bought fetched over what that unit cost you, whichever cost you pick
 - ✅ Trade XP for what TradeLord sells is exactly what the game itself gives for the same sale made on its trade screen
 - ✅ A good you never bought, loot and animals included, adds nothing to the profit reported and earns only the Trade XP the game itself would give for it, which is usually none

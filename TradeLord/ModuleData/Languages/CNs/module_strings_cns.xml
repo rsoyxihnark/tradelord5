@@ -94,9 +94,9 @@
 		<string id="TL254" text="只卖出"/>
 		<string id="TL255" text="只买入"/>
 		<string id="TL256" text="买入和卖出"/>
-		<string id="TL257" text="你付出价格的平均值"/>
+		<string id="TL257" text="你付出的平均价"/>
 		<string id="TL258" text="你最后一次付出的价格"/>
-		<string id="TL259" text="你所知最便宜的市场"/>
+		<string id="TL259" text="最便宜的市场价"/>
 		<string id="TL260" text="城镇菜单里的账簿入口"/>
 		<string id="TL261" text="每种食物都留一些" />
 		<string id="TL361" text="你带的每种食物都留下几个，让队伍保住食物多样性的士气加成。要让它生效，上面的补给并留下食物（可供天数）必须开着，留下的也算进那些天数里。牲畜不算在内，因为 TradeLord 把畜群当作货物买卖，而不是食物。默认关闭。" />
@@ -147,7 +147,7 @@
 		<string id="TL224" text="牲畜策略"/>
 		<string id="TL225" text="保护独特物品和自制物品"/>
 		<string id="TL226" text="遵守物品栏锁定"/>
-		<string id="TL227" text="一件货物算作花了你多少钱"/>
+		<string id="TL227" text="卖出必须超过的价格"/>
 		<string id="TL228" text="卖出战利品的最高等级（0 = 关闭）"/>
 		<string id="TL229" text="为最好的市场留住货物"/>
 		<string id="TL231" text="从不卖出（货物 id 或名称，用逗号分隔）"/>
@@ -332,6 +332,8 @@
 		<string id="TL492" text="再给交易加 {FOCUS} 个专精点，就能提高上限。"/>
 		<string id="TL493" text="再给{ATTRIBUTE}加 {POINTS} 点，就能提高上限。"/>
 		<string id="TL494" text="要提高上限，得同时提高交易的专精和{ATTRIBUTE}。"/>
-		<string id="TL495" text="每一件各自花费的价格"/>
+		<string id="TL495" text="每一件自己的价格"/>
+		<string id="TL496" text="多少天后按成本卖（天，0 = 关闭）"/>
+		<string id="TL497" text="卖出必须超过的价格设为每一件自己的价格时，你买来的一件货放了这么多天后，可以按它花你的钱卖出，不看利润率，也不看为最好的市场留住货物。"/>
 	</strings>
 </base>
