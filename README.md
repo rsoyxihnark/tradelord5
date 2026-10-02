@@ -188,12 +188,12 @@
 - ✅ Never-sell, always-sell, never-buy and always-buy lists, taking item ids or item names, in any capitalisation
 - ✅ Price a sale must beat: Each unit's own price, which it ships with, Average you paid, Last price you paid or Cheapest market price
 - ✅ Price a sale must beat is what a good you bought has to beat by your margin before it sells
-- ✅ Every unit you buy gets a number of its own and keeps the exact price you paid for it, and no number is ever given to another unit
+- ✅ Every unit you buy gets a number of its own and keeps the price you paid for it, and no number is ever given to another unit
 - ✅ Every unit keeps a row of its own with the day you bought it, even when you bought many at one price
 - ✅ With Each unit's own price, the dearest unit the price beats by your margin sells first, then the next dearest, and a unit the price cannot beat stays in your cargo
 - ✅ With Each unit's own price, of two units bought at one price the older one sells first
-- ✅ Sell at cost after, which ships at 30 days, lets a unit that has waited that long sell for what it cost you, with no margin and no Hold cargo for the best market
-- ✅ Hold cargo for the best market counts unit by unit which of your units the marked market would take at a profit, and never holds one waiting past Sell at cost after
+- ✅ With Each unit's own price, Sell at cost after, which ships at 30 days, lets a unit that has waited that long sell for what it cost you, with no margin and no Hold cargo for the best market
+- ✅ With Each unit's own price, Hold cargo for the best market counts unit by unit which of your units the marked market would take at a profit, and never holds a unit waiting past Sell at cost after
 - ✅ TradeLord.log names every unit TradeLord sells by its number, with what it cost, how many days it waited, what it fetched and the least it had to fetch
 - ✅ The profit reported is what each unit you bought fetched over what that unit cost you, whichever cost you pick
 - ✅ Trade XP for what TradeLord sells is exactly what the game itself gives for the same sale made on its trade screen

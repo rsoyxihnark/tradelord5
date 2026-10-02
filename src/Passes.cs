@@ -680,7 +680,7 @@ namespace TradeLord
                         if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;
                         continue;
                     }
-                    int boughtLeft = Math.Min(remaining, basis.PaidLeft) - basis.AgedLeft;
+                    int boughtLeft = Math.Min(remaining, basis.PaidLeft - basis.AgedLeft);
                     int floor = TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket);
                     int bestPays = !aged && floor > 0 && boughtLeft <= holdFor ? there[boughtLeft - 1] : 0;
                     if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))

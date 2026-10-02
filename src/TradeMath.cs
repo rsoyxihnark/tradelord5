@@ -115,11 +115,12 @@ namespace TradeLord
             rec.TotalPaid += totalPaid;
             rec.Count += count;
             rec.LastUnitPaid = (int)Math.Round((double)totalPaid / count);
-            int unit = rec.LastUnitPaid > 0 ? rec.LastUnitPaid : 0;
+            int unit = totalPaid > 0 ? totalPaid / count : 0;
+            int over = totalPaid > 0 ? totalPaid - unit * count : 0;
             for (int i = 0; i < count; i++)
                 AddBatch(batches, new Batch
                 {
-                    Unit = unit, Count = 1, First = first > 0L ? first + i : 0L, Day = day > 0f ? day : 0f
+                    Unit = i < over ? unit + 1 : unit, Count = 1, First = first > 0L ? first + i : 0L, Day = day > 0f ? day : 0f
                 });
         }
 
@@ -292,6 +293,9 @@ namespace TradeLord
             var took = new List<int>();
             if (rec == null || rec.Count <= 0 || units <= 0 || covers < 0) return took;
             List<Batch> batches = BatchesOf(rec);
+            if (covers == EachUnitApart && rec.Count <= MostUnitsKeptApart)
+                return TheDearestAHandSaleCovers(batches, Math.Min(units, rec.Count),
+                                                 gold * Math.Min(units, rec.Count) / units, laidOut);
             long each = Math.Max(0L, (long)Math.Round((double)rec.TotalPaid / rec.Count));
             var dear = new List<Batch>();
             for (int b = 0; b < batches.Count; b++)
@@ -315,6 +319,59 @@ namespace TradeLord
                     took.Add(dear[b].Unit);
                     left -= dear[b].Unit;
                 }
+            return took;
+        }
+
+        private static List<int> TheDearestAHandSaleCovers(List<Batch> batches, int units, long gold, List<int> laidOut)
+        {
+            var took = new List<int>();
+            var held = new Dictionary<int, int>();
+            for (int b = 0; b < batches.Count; b++)
+            {
+                if (batches[b].Count <= 0) continue;
+                held.TryGetValue(batches[b].Unit, out int count);
+                held[batches[b].Unit] = count + batches[b].Count;
+            }
+            for (int i = 0; laidOut != null && i < laidOut.Count && took.Count < units; i++)
+            {
+                if (!held.TryGetValue(laidOut[i], out int count) || count <= 0) continue;
+                held[laidOut[i]] = count - 1;
+                took.Add(laidOut[i]);
+                gold -= laidOut[i];
+            }
+            var left = new List<int>();
+            foreach (KeyValuePair<int, int> one in held)
+                for (int u = 0; u < one.Value; u++) left.Add(one.Key);
+            left.Sort();
+            var below = new long[left.Count + 1];
+            for (int i = 0; i < left.Count; i++) below[i + 1] = below[i] + left[i];
+            var passed = new List<int>();
+            var passedSum = new List<long> { 0L };
+            int top = left.Count - 1;
+            while (took.Count < units && top >= 0)
+            {
+                int others = units - took.Count - 1;
+                if (others > top)
+                {
+                    int dearer = Math.Min(others - top, passed.Count);
+                    if (below[top + 1] + passedSum[passed.Count] - passedSum[passed.Count - dearer] > gold) break;
+                    for (int i = passed.Count - dearer; i < passed.Count; i++) took.Add(passed[i]);
+                    for (int i = top; i >= 0; i--) took.Add(left[i]);
+                    break;
+                }
+                int at = -1;
+                for (int x = top; x >= others && at < 0; x--)
+                    if (left[x] + below[others] <= gold) at = x;
+                if (at < 0) break;
+                for (int x = top; x > at; x--)
+                {
+                    passed.Add(left[x]);
+                    passedSum.Add(passedSum[passedSum.Count - 1] + left[x]);
+                }
+                took.Add(left[at]);
+                gold -= left[at];
+                top = at - 1;
+            }
             return took;
         }
 
@@ -514,10 +571,28 @@ namespace TradeLord
             private int _unknown;
             private int _picked;
             private int _pickedAt;
+            private PassedOver _passedOver;
 
             private const int NotPicked = 0;
             private const int TheDearest = 1;
-            private const int TheLeastDear = 2;
+
+            private sealed class PassedOver
+            {
+                internal readonly int Low;
+                internal readonly int High;
+                internal readonly int TakenAtLow;
+                internal readonly int TakenAtHigh;
+                internal readonly PassedOver Next;
+
+                internal PassedOver(int low, int high, int takenAtLow, int takenAtHigh, PassedOver next)
+                {
+                    Low = low;
+                    High = high;
+                    TakenAtLow = takenAtLow;
+                    TakenAtHigh = takenAtHigh;
+                    Next = next;
+                }
+            }
 
             private const int CoversNoUnit = -1;
 
@@ -563,16 +638,22 @@ namespace TradeLord
                 _unknown = unknown > 0 ? unknown : 0;
                 _picked = NotPicked;
                 _pickedAt = -1;
+                _passedOver = null;
             }
 
             public int Floor(int price)
             {
                 if (_ownCost) return TheDearestThatClears(price);
-                _picked = _top < _dearLow ? NotPicked
-                        : price >= _costs[_top].Unit ? TheDearest
-                        : price >= _costs[_dearLow].Unit ? TheLeastDear
-                        : NotPicked;
-                return _top >= _dearLow || _low < _split || _unknown > 0 ? _worth : NoUnitThisPriceSells;
+                _picked = NotPicked;
+                for (int at = _top; at >= _dearLow; at--)
+                {
+                    if (LeftIn(at) <= 0 || price < _costs[at].Unit) continue;
+                    _picked = TheDearest;
+                    _pickedAt = at;
+                    break;
+                }
+                return _top >= _dearLow || _low < _split || _unknown > 0 || _passedOver != null
+                    ? _worth : NoUnitThisPriceSells;
             }
 
             private static bool HasAged(Batch unit, float today, int agedAfter) =>
@@ -642,8 +723,9 @@ namespace TradeLord
             {
                 int picked = _top >= _dearLow ? _picked : NotPicked;
                 _picked = NotPicked;
-                if (picked == TheDearest && _ownCost && _pickedAt >= _dearLow && _pickedAt < _top)
+                if (picked == TheDearest && _pickedAt >= _dearLow && _pickedAt < _top)
                 {
+                    if (!_ownCost) _passedOver = new PassedOver(_pickedAt + 1, _top, 0, _topTaken, _passedOver);
                     _top = _pickedAt;
                     _topTaken = 0;
                 }
@@ -670,7 +752,7 @@ namespace TradeLord
                     _unknown--;
                     return _worth;
                 }
-                if (_top < _dearLow) return _worth;
+                if (_top < _dearLow) return _passedOver != null ? TheCheapestPassedOver() : _worth;
                 int lowest = _costs[_dearLow].Unit;
                 if (_agedAfter > 0 && AgedAt(_dearLow)) _agedTaken++;
                 _dearLowTaken++;
@@ -684,6 +766,18 @@ namespace TradeLord
 
             private int LeftIn(int at) =>
                 _costs[at].Count - (at == _top ? _topTaken : 0) - (at == _dearLow ? _dearLowTaken : 0);
+
+            private int TheCheapestPassedOver()
+            {
+                PassedOver head = _passedOver;
+                int at = head.Low;
+                int taken = head.TakenAtLow + 1;
+                int left = _costs[at].Count - taken - (at == head.High ? head.TakenAtHigh : 0);
+                _passedOver = left > 0 ? new PassedOver(at, head.High, taken, head.TakenAtHigh, head.Next)
+                            : at < head.High ? new PassedOver(at + 1, head.High, 0, head.TakenAtHigh, head.Next)
+                            : head.Next;
+                return _costs[at].Unit;
+            }
 
             private void DropTheTop()
             {

@@ -325,7 +325,7 @@
 		<string id="TL485" text=" | 别处的价格按 {USED} 计算：转卖安全系数从 {SET} 起步，已根据你 {COUNT} 次进入市场的结果调整"/>
 		<string id="TL486" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能。{ADDED}"/>
 		<string id="TL487" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能，现在是 {LEVEL} 级。{ADDED}"/>
-		<string id="TL488" text=" 这增加了 {XP} 点交易经验。"/>
+		<string id="TL488" text="这增加了 {XP} 点交易经验。"/>
 		<string id="TL489" text="你的交易技能（{SKILL}）已接近学习上限（{LIMIT}）：超过之后交易经验会变慢，最后停止。{REMEDY}"/>
 		<string id="TL490" text="你的交易技能（{SKILL}）已超过学习上限（{LIMIT}），交易经验会变慢，最后停止。{REMEDY}"/>
 		<string id="TL491" text="再给交易加 {FOCUS} 个专精点，或给{ATTRIBUTE}加 {POINTS} 点，就能提高上限。"/>
@@ -334,6 +334,6 @@
 		<string id="TL494" text="要提高上限，得同时提高交易的专精和{ATTRIBUTE}。"/>
 		<string id="TL495" text="每一件自己的价格"/>
 		<string id="TL496" text="多少天后按成本卖（天，0 = 关闭）"/>
-		<string id="TL497" text="卖出必须超过的价格设为每一件自己的价格时，你买来的一件货放了这么多天后，可以按它花你的钱卖出，不看利润率，也不看为最好的市场留住货物。"/>
+		<string id="TL497" text="“卖出必须超过的价格”设为“每一件自己的价格”时，你买来的一件货放了这么多天后，可以按它花你的钱卖出，不看利润率，也不看“为最好的市场留住货物”。"/>
 	</strings>
 </base>
