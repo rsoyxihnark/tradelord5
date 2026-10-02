@@ -442,6 +442,36 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Where_each_unit_came_from_survives_a_save_and_a_load_and_an_older_row_reads_as_bought()
+        {
+            var rec = new PurchaseRecord { ItemId = "wine" };
+            TradeMath.AddPurchase(rec, new[] { 30 }, 4L, 100f, TradeMath.FromVillagers);
+            TradeMath.AddPurchase(rec, new[] { 40 }, 5L, 100f, TradeMath.FromACaravan);
+            string written = LedgerCodec.WritePurchases(new List<PurchaseRecord> { rec });
+            Assert.Equal("wine|70|2|40|30:1:0:4:100:2,40:1:0:5:100:1", written);
+            var back = LedgerCodec.ReadPurchases(written);
+            Assert.Equal(new[] { TradeMath.FromVillagers, TradeMath.FromACaravan },
+                         back[0].Batches.Select(one => one.From).ToArray());
+            var older = LedgerCodec.ReadPurchases("wine|70|2|40|30:1:0:4:100,40:1:0:5:100:9");
+            Assert.All(older[0].Batches, one => Assert.Equal(TradeMath.FromAMarket, one.From));
+        }
+
+        [Fact]
+        public void Units_that_came_without_a_purchase_survive_a_save_and_a_load_at_no_cost()
+        {
+            var free = new PurchaseRecord { ItemId = "iron" };
+            TradeMath.AddPurchase(free, new int[3], 40L, 120f, TradeMath.CameWithoutAPurchase);
+            string written = LedgerCodec.WritePurchases(new List<PurchaseRecord> { free });
+            var back = LedgerCodec.ReadPurchases(written);
+            Assert.Single(back);
+            Assert.Equal(3, back[0].Count);
+            Assert.Equal(0, back[0].TotalPaid);
+            Assert.Equal(new[] { 40L, 41L, 42L }, back[0].Batches.Select(one => one.First).OrderBy(n => n).ToArray());
+            Assert.All(back[0].Batches, one => Assert.Equal(TradeMath.CameWithoutAPurchase, one.From));
+            Assert.Equal(written, LedgerCodec.WritePurchases(back));
+        }
+
+        [Fact]
         public void Every_unit_number_survives_a_save_and_a_load()
         {
             var rec = new PurchaseRecord { ItemId = "felt" };
@@ -451,7 +481,7 @@ namespace TradeLord.Tests
 
             var back = LedgerCodec.ReadPurchases(written);
 
-            Assert.Equal("felt|1950|5|280|277:1:0:20:100,278:1:0:21:100,279:1:0:22:100,280:1:0:23:100,836:1:0:7:100", written);
+            Assert.Equal("felt|1950|5|280|277:1:0:20:100:0,278:1:0:21:100:0,279:1:0:22:100:0,280:1:0:23:100:0,836:1:0:7:100:0", written);
             Assert.Equal(new[] { 20L, 21L, 22L, 23L, 7L }, back[0].Batches.Select(one => one.First).ToArray());
             Assert.All(back[0].Batches, one => Assert.Equal(100f, one.Day));
             Assert.Equal(written, LedgerCodec.WritePurchases(back));

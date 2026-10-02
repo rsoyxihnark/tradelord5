@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.101.0
+
+- Trade messages no longer start with TradeLord, and say the profit in denars
+- Animals sold to get your party back up to speed are now part of the Sold line instead of a line of their own
+- Food restocked and haul animals bought are now part of the Bought line instead of lines of their own
+- The Sold line now shows the Trade XP the sale added, and your Trade skill when it goes up a level
+- The separate message saying TradeLord credited your Trade skill is gone
+- A market paying more than the TradeLord ledger promised now scores lower, the same as one paying less
+- What this means in the TradeLord ledger now says how close prices came to the promised Sell price, above or below
+- Learn the resale safety factor now counts a price above the promised Sell price as a miss, the same as one below it
+- What is on its way to a market is now trusted less when more moved than the forecast said, not only when less did
+- The hints for Trust a market by what it has paid and Learn the resale safety factor now say a price above or below counts as a miss
+- Each market's record of what it paid against the ledger's promise starts over once, as the old one let a price above a promise count as kept
+- The count of prices What this means has checked starts over once, as the old count let a price above its promise count as kept
+- Learn the resale safety factor starts again from Resale safety factor once, as it learns from each market's record
+- How far TradeLord trusts what is on its way to a market starts over once, as the old record let a bigger move than forecast count as kept
+- TradeLord.log now says where each unit came from: a market, a caravan, villagers, or no purchase at all
+- TradeLord.log now says for each unit sold whether the game gives Trade XP for it
+- Goods that came without a purchase, loot and rewards among them, now get unit numbers and are named in TradeLord.log when sold
+- When some of a good is eaten, lost or given away, its oldest units now go first, bought or not
+
 ## 1.100.0
 
 - TradeLord now sells what you never bought, loot included, then what you bought, and buys once both are sold

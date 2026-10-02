@@ -2,13 +2,13 @@
 <base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="string">
 	<tags><tag language="简体中文"/></tags>
 	<strings>
-		<string id="TL02" text="TradeLord 卖出 {ITEMS}，得到 {GOLD} 第纳尔（利润 {PROFIT}）。"/>
+		<string id="TL02" text="卖出 {ITEMS}，得到 {GOLD} 第纳尔，利润 {PROFIT} 第纳尔{XP}。"/>
 		<string id="TL20" text="最佳卖出价"/>
 		<string id="TL21" text="最佳买入价"/>
 		<string id="TL22" text="* 这里是卖出此物的最佳市场！"/>
 		<string id="TL23" text="* 这里是买入此物最便宜的市场！"/>
 		<string id="TL24" text="{TOWN} 更便宜：{PRICE}{GOLD}"/>
-		<string id="TL06" text="TradeLord 买入 {ITEMS}，花费 {GOLD} 第纳尔。"/>
+		<string id="TL06" text="买入 {ITEMS}，花费 {GOLD} 第纳尔。"/>
 		<string id="TL07" text="TradeLord 账簿"/>
 		<string id="TL08" text="行程上限之内没有可盈利的路线。请在“交易池”设置中提高上限，或者靠近更多市场。"/>
 		<string id="TL09" text="关闭"/>
@@ -16,8 +16,8 @@
 		<string id="TL26" text="在此交易（TradeLord）"/>
 		<string id="TL29" text="另有 {COUNT} 项"/>
 		<string id="TL31" text="{COUNT} 件货物"/>
-		<string id="TL13" text="[模拟，最理想情况] TradeLord 本会卖出 {ITEMS}，得到 {GOLD} 第纳尔（利润 {PROFIT}）。"/>
-		<string id="TL14" text="[模拟，最理想情况] TradeLord 本会买入 {ITEMS}，花费 {GOLD} 第纳尔。"/>
+		<string id="TL13" text="[模拟，最理想情况] 本会卖出 {ITEMS}，得到 {GOLD} 第纳尔，利润 {PROFIT} 第纳尔。"/>
+		<string id="TL14" text="[模拟，最理想情况] 本会买入 {ITEMS}，花费 {GOLD} 第纳尔。"/>
 		<string id="TL15" text="改在那里卖出可多 {PCT}%"/>
 		<string id="TL18" text="市场仍在稳定中（还需 {DAYS} 天）。"/>
 		<string id="TL32" text="此处未卖出任何货物：{REASON}。"/>
@@ -64,7 +64,6 @@
 		<string id="TL77" text="利润：+{PCT}%"/>
 		<string id="TL78" text="库存：{COUNT}"/>
 		<string id="TL79" text="约 {DAYS} 天"/>
-		<string id="TL81" text="TradeLord 把 {GOLD} 第纳尔的利润记进了你的交易技能。{ADDED}"/>
 		<string id="TL82" text="载货已满。招募更多士兵、购买更多马匹，或手动卖出货物。"/>
 		<string id="TL93" text="你携带的这种货物已经到了你设的上限"/>
 		<string id="TL94" text="此处没有任何交易：{REASON}。"/>
@@ -73,16 +72,11 @@
 		<string id="TL84" text="{ITEM}：在 {FROM} 买入（{BUY} 第纳尔）-&gt; 在 {TO} 卖出（{SELL}）  x{QTY} = +{PROFIT} 第纳尔，从这里约 {DAYS} 天"/>
 		<string id="TL85" text="“为最好的市场留住货物”正把货物留给标出的市场"/>
 		<string id="TL86" text="你的队伍再也赶不动更多牲畜了"/>
-		<string id="TL88" text="TradeLord 把 {GOLD} 第纳尔的利润记进了你的交易技能，现在是 {LEVEL} 级。{ADDED}"/>
 		<string id="TL89" text="以你目前记下的价格来看，行程上限之内没有可盈利的路线。多走几个市场，或者在“交易池”设置中提高上限。"/>
 		<string id="TL90" text="以你目前记下的价格来看，没有路线落在你的行程上限之内。 | 多走几个市场，或者在“交易池”设置中提高上限。"/>
 		<string id="TL91" text="你的某份 TradeLord 货物名单上有一项，在这局游戏里找不到对应的货物，因此毫无作用。TradeLord.log 里写明了是哪一项。"/>
 		<string id="TL92" text="你的钱袋里有 {GOLD} 第纳尔，而金钱储备是 {RESERVE}，所以 TradeLord 不会在这里买任何东西。卖掉一些货物，或者在设置里调低“金钱储备”。"/>
-		<string id="TL97" text="TradeLord 补给了 {ITEMS}，花费 {GOLD} 第纳尔。"/>
-		<string id="TL98" text="[模拟，最理想情况] TradeLord 本会补给 {ITEMS}，花费 {GOLD} 第纳尔。"/>
 		<string id="TL99" text="你正留着铁匠铺能拆解的东西"/>
-		<string id="TL110" text="TradeLord 为了多装货买下 {ITEMS}，花费 {GOLD} 第纳尔。"/>
-		<string id="TL111" text="[模拟，最理想情况] TradeLord 本会为了多装货买下 {ITEMS}，花费 {GOLD} 第纳尔。"/>
 		<string id="TL113" text="哦，抱歉，当然可以。不过别忘了去 NexusMods 点个赞！"/>
 		<string id="TL387" text="放我们过去，我们这就上路。[TRADELORD]"/>
 		<string id="TL388" text="谷物没有买入，因为它只会把货舱塞满，换不回多少"/>
@@ -220,8 +214,6 @@
 		<string id="TL106" text="通用"/>
 		<string id="TL107" text="调试"/>
 		<string id="TL108" text="交易池"/>
-		<string id="TL116" text="TradeLord 卖掉了 {ITEMS}，得到 {GOLD} 第纳尔，让队伍重新提起速度。"/>
-		<string id="TL117" text="[模拟，最好情况] TradeLord 会卖掉 {ITEMS}，得到 {GOLD} 第纳尔，让队伍重新提起速度。"/>
 		<string id="TL275" text="卖掉拖慢你的牲口"/>
 		<string id="TL375" text="为解除畜群速度惩罚而卖掉牲口，只在惩罚生效时进行，也只卖到刚好解除为止。先卖牲畜，再卖没人骑的备用坐骑，然后是你的驮兽，最后才是战马和贵族马；驮兽会留够，足以驮起你已经带着的东西。你保护过的东西一概不动。默认开启。"/>
 		<string id="TL276" text="把每一项设置都退回 TradeLord 出厂时的样子" />
@@ -237,7 +229,7 @@
 		<string id="TL394" text=" | 价格与库存已计入你到达前商队、工坊与城镇会添上和拿走的东西"/>
 		<string id="TL395" text="，以及各自接下来要做的东西"/>
 		<string id="TL397" text=" | 数量! = 这个数量里有一部分还在路上，会比你先到"/>
-		<string id="TL399" text=" | 卖价兑现了本面板所承诺的 {HELD}，依据已核对的 {COUNT} 个价格"/>
+		<string id="TL399" text=" | 本面板承诺的卖价命中率为 {HELD}，偏高偏低都算偏差，依据已核对的 {COUNT} 个价格"/>
 		<string id="TL400" text="TradeLord 不再替你成交，而是打开交易界面，把整笔买卖摆在上面：要卖的都在一边，要买的都在另一边。你随意改动，然后按“完成”成交，或按“取消”全部作罢。开启时抵达市场不会自动成交，路上遇到的队伍仍按原样交易。默认关闭。"/>
 		<string id="TL401" text="TradeLord 摆出了 {SOLD} 件要卖，值 {GAINED} 第纳尔，以及 {BOUGHT} 件要买，值 {SPENT}。你随意改动，然后按“完成”成交，或按“取消”作罢。"/>
 		<string id="TL402" text="TradeLord 在这里没找到值得买卖的东西，因此什么也没摆出来。按“取消”让市场保持原样。"/>
@@ -283,8 +275,8 @@
 		<string id="TL441" text=" 这笔买卖会让你跌到 TradeLord 留作金钱储备和军饷、不会拿去进货的 {HELD} 第纳尔之下。"/>
 		<string id="TL442" text="今天"/>
 		<string id="TL443" text="根据市场以往的实付价格来信任它"/>
-		<string id="TL444" text="支付低于TradeLord 账簿承诺价格的市场评分会被调低，通往该市场的路线因此下移。只有在你进入该市场五次之后才会计入，且对路线评分的影响永远不超过四分之一。需要开启“按把握给路线排序”。默认开启。"/>
-		<string id="TL445" text=" | 对于支付低于本面板承诺的市场，评分会被调低"/>
+		<string id="TL444" text="支付低于或高于TradeLord 账簿承诺价格的市场评分会被调低，通往该市场的路线因此下移。只有在你进入该市场五次之后才会计入，且对路线评分的影响永远不超过四分之一。需要开启“按把握给路线排序”。默认开启。"/>
+		<string id="TL445" text=" | 对于支付低于或高于本面板承诺的市场，评分会被调低"/>
 		<string id="TL446" text="？"/>
 		<string id="TL447" text=" | 库存已计入你到达前商队、工坊与城镇会添上和拿走的东西 | 价格要计入这些，需要开启“整批价格模拟”"/>
 		<string id="TL448" text="交易经验：{AMOUNT}" />
@@ -321,11 +313,8 @@
 		<string id="TL481" text=" 它现在每天给主人带来 {GOLD} 第纳尔，归你之后的头几天会少一些，所以大约 {DAYS} 天能回本。"/>
 		<string id="TL482" text=" 它现在每天没给主人带来任何收入，所以说不准何时能回本。"/>
 		<string id="TL483" text="自动学习转卖安全系数"/>
-		<string id="TL484" text="让转卖安全系数向你进入市场时TradeLord 账簿所承诺卖价的实际兑现比例下调，核对的次数越多，调整得越多，但绝不高于你设定的系数。关闭时完全按你设定的系数使用。默认开启。"/>
+		<string id="TL484" text="让转卖安全系数向你进入市场时实际卖价与TradeLord 账簿承诺卖价的接近程度下调，偏高偏低都算偏差，核对的次数越多，调整得越多，但绝不高于你设定的系数。关闭时完全按你设定的系数使用。默认开启。"/>
 		<string id="TL485" text=" | 别处的价格按 {USED} 计：转卖安全系数设为 {SET}，已按你 {COUNT} 次进入市场调整"/>
-		<string id="TL486" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能。{ADDED}"/>
-		<string id="TL487" text="TradeLord 把游戏为它卖出的货物算出的 {GOLD} 第纳尔利润记进了你的交易技能，现在是 {LEVEL} 级。{ADDED}"/>
-		<string id="TL488" text="这增加了 {XP} 点交易经验。"/>
 		<string id="TL489" text="你的交易技能（{SKILL}）已接近学习上限（{LIMIT}）：超过之后交易经验会变慢，最后停止。{REMEDY}"/>
 		<string id="TL490" text="你的交易技能（{SKILL}）已超过学习上限（{LIMIT}），交易经验会变慢，最后停止。{REMEDY}"/>
 		<string id="TL491" text="再给交易加 {FOCUS} 个专精点，或给{ATTRIBUTE}加 {POINTS} 点，就能提高上限。"/>
@@ -336,5 +325,9 @@
 		<string id="TL496" text="多少天后按成本卖（天，0 = 关闭）"/>
 		<string id="TL497" text="“卖出必须超过的价格”设为“每一件自己的价格”时，你买来的一件货放了这么多天后，可以按它花你的钱卖出，不看利润率，也不看“为最好的市场留住货物”。"/>
 		<string id="TL498" text="交易的专精和{ATTRIBUTE}都已到顶，上限无法再提高。"/>
+		<string id="TL499" text="（+{XP} 点交易经验）"/>
+		<string id="TL500" text="（+{XP} 点交易经验，交易现为 {LEVEL}）"/>
+		<string id="TL501" text="卖出的货物增加了 {XP} 点交易经验。"/>
+		<string id="TL502" text="卖出的货物增加了 {XP} 点交易经验，交易现为 {LEVEL}。"/>
 	</strings>
 </base>

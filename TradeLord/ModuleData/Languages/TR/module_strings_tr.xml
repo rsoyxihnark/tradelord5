@@ -2,13 +2,13 @@
 <base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="string">
 	<tags><tag language="Türkçe"/></tags>
 	<strings>
-		<string id="TL02" text="TradeLord {ITEMS} sattı, {GOLD} dinar ({PROFIT} kâr)."/>
+		<string id="TL02" text="{ITEMS} {GOLD} dinara satıldı, {PROFIT} dinar kâr{XP}."/>
 		<string id="TL20" text="En iyi satış fiyatları"/>
 		<string id="TL21" text="En iyi alış fiyatları"/>
 		<string id="TL22" text="* Bunu satmak için en iyi pazar!"/>
 		<string id="TL23" text="* Bunu almak için en ucuz pazar!"/>
 		<string id="TL24" text="{TOWN} şehrinde daha ucuz: {PRICE}{GOLD}"/>
-		<string id="TL06" text="TradeLord {ITEMS} aldı, {GOLD} dinar."/>
+		<string id="TL06" text="{ITEMS} {GOLD} dinara alındı."/>
 		<string id="TL07" text="TradeLord defteri"/>
 		<string id="TL08" text="Yol süresi sınırlarınız içinde kârlı bir rota yok. Ticaret havuzu ayarlarından sınırları yükseltin ya da daha çok pazarın yakınına gidin."/>
 		<string id="TL09" text="Kapat"/>
@@ -16,8 +16,8 @@
 		<string id="TL26" text="Burada hemen ticaret yap (TradeLord)"/>
 		<string id="TL29" text="ve {COUNT} tane daha"/>
 		<string id="TL31" text="{COUNT} parça"/>
-		<string id="TL13" text="[Benzetim, en iyi durum] TradeLord {ITEMS} satardı, {GOLD} dinar ({PROFIT} kâr)."/>
-		<string id="TL14" text="[Benzetim, en iyi durum] TradeLord {ITEMS} alırdı, {GOLD} dinar."/>
+		<string id="TL13" text="[Benzetim, en iyi durum] {ITEMS} {GOLD} dinara satılırdı, {PROFIT} dinar kâr."/>
+		<string id="TL14" text="[Benzetim, en iyi durum] {ITEMS} {GOLD} dinara alınırdı."/>
 		<string id="TL15" text="Orada satsanız +%{PCT}"/>
 		<string id="TL18" text="Pazar hâlâ oturuyor ({DAYS} gün daha)."/>
 		<string id="TL32" text="Burada bir şey satılmadı: {REASON}."/>
@@ -64,7 +64,6 @@
 		<string id="TL77" text="Kâr: +%{PCT}"/>
 		<string id="TL78" text="Stok: {COUNT}"/>
 		<string id="TL79" text="~{DAYS} gün"/>
-		<string id="TL81" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi.{ADDED}"/>
 		<string id="TL82" text="Yük dolu. Daha fazla asker alın, daha fazla at satın alın ya da malları elle satın."/>
 		<string id="TL93" text="bu maldan izin verdiğiniz kadarını zaten taşıyorsunuz"/>
 		<string id="TL94" text="Burada ticaret yapılmadı: {REASON}."/>
@@ -73,16 +72,11 @@
 		<string id="TL84" text="{ITEM}: {FROM} şehrinden al ({BUY} dinar) -&gt; {TO} şehrinde sat ({SELL})  x{QTY} = +{PROFIT} dinar, buradan ~{DAYS} gün"/>
 		<string id="TL85" text="Yükü en iyi pazar için tut ayarı kargonuzu işaretli pazar için saklıyor"/>
 		<string id="TL86" text="müfrezeniz daha fazla hayvan güdemez"/>
-		<string id="TL88" text="TradeLord {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}.{ADDED}"/>
 		<string id="TL89" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde kârlı rota yok. Daha çok pazar gezin ya da Ticaret havuzu ayarlarından sınırları yükseltin."/>
 		<string id="TL90" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde rota yok. | Daha çok pazar gezin ya da Ticaret havuzu ayarlarından sınırları yükseltin."/>
 		<string id="TL91" text="TradeLord mal listelerinizden birindeki bir girdi bu oyundaki hiçbir mala uymuyor ve hiçbir işe yaramıyor. Hangisi olduğunu TradeLord.log yazıyor."/>
 		<string id="TL92" text="Keseniz {GOLD} dinar, altın rezerviniz {RESERVE}, bu yüzden TradeLord burada bir şey almayacak. Biraz yük satın ya da ayarlardan Altın rezervi değerini düşürün."/>
-		<string id="TL97" text="TradeLord {ITEMS} ikmal etti, {GOLD} dinar."/>
-		<string id="TL98" text="[Benzetim, en iyi durum] TradeLord {ITEMS} ikmal ederdi, {GOLD} dinar."/>
 		<string id="TL99" text="demirci ocağının parçalarına ayırabileceğini saklıyorsunuz"/>
-		<string id="TL110" text="TradeLord daha çok yük taşımak için {ITEMS} aldı, {GOLD} dinar."/>
-		<string id="TL111" text="[Benzetim, en iyi durum] TradeLord daha çok yük taşımak için {ITEMS} alırdı, {GOLD} dinar."/>
 		<string id="TL113" text="Ah, kusura bakmayın, tabii ki. Ama NexusMods'ta beğeni vermeyi unutmayın!"/>
 		<string id="TL387" text="Bırakın geçelim, yolumuza gidelim. [TRADELORD]"/>
 		<string id="TL388" text="tahıl alınmıyor, çünkü yükü az getiriyle doldurur"/>
@@ -220,8 +214,6 @@
 		<string id="TL106" text="Genel"/>
 		<string id="TL107" text="Hata ayıklama"/>
 		<string id="TL108" text="Ticaret havuzu"/>
-		<string id="TL116" text="TradeLord {ITEMS} sattı, {GOLD} dinar aldı, böylece müfrezeniz yeniden hızlanır."/>
-		<string id="TL117" text="[Benzetim, en iyi durum] TradeLord {ITEMS} satıp {GOLD} dinar alırdı, böylece müfrezeniz yeniden hızlanırdı."/>
 		<string id="TL275" text="Sizi yavaşlatan hayvanları sat"/>
 		<string id="TL375" text="Sürü hız cezasını kaldırmaya yetecek kadar hayvan satar: önce çiftlik hayvanları, sonra binilmeyen bir binek, sonra yük hayvanlarınız, en son savaş ve soylu atlarınız. Taşıdığınızı taşıyacak kadar yük hayvanı tutar. Varsayılan AÇIK."/>
 		<string id="TL276" text="Her ayarı TradeLord'un geldiği haline geri al" />
@@ -237,7 +229,7 @@
 		<string id="TL394" text=" | fiyatlar ve stok, siz varmadan kervanların, atölyelerin ve şehrin ekleyip alacağını sayar"/>
 		<string id="TL395" text=" ve her birinin sırada ne üreteceği"/>
 		<string id="TL397" text=" | Adet! = o miktarın bir kısmı hâlâ yolda ve sizden önce varıyor"/>
-		<string id="TL399" text=" | Satış fiyatı, bu panelin söz verdiğinin {HELD} kadarını tuttu, şimdiye dek denetlediği {COUNT} fiyat üzerinden"/>
+		<string id="TL399" text=" | Bu panelin söz verdiği Satış fiyatı, altında ya da üstünde, denetlenen {COUNT} fiyatta {HELD} isabet tuttu"/>
 		<string id="TL400" text="Ticaret yerine TradeLord bütün teklifini ticaret ekranına koyar: satışlar bir yanda, alışlar öbür yanda. İstediğinizi değiştirip Tamam'a ya da İptal'e basın. Varışta ticaret yapılmaz; yolda karşılaşılan bölük yine ticaret yapar. Varsayılan KAPALI."/>
 		<string id="TL401" text="TradeLord satmak için {SOLD} adet ({GAINED} dinar) ve almak için {BOUGHT} adet ({SPENT} dinar) önünüze koydu. İstediğinizi değiştirin, sonra ticaret için Tamam'a basın, bırakmak için İptal'e."/>
 		<string id="TL402" text="TradeLord burada ticarete değer bir şey bulamadı, bu yüzden hiçbir şey koymadı. Pazarı olduğu gibi bırakmak için İptal'e basın."/>
@@ -283,8 +275,8 @@
 		<string id="TL441" text=" Bu alış, TradeLord’un altın rezerv ve asker ücreti karşılığı olarak ayırdığı, mala harcamadığı {HELD} dinarın altına düşmenize yol açar."/>
 		<string id="TL442" text="Bugün"/>
 		<string id="TL443" text="Bir pazara, daha önce ödediği fiyata göre güven"/>
-		<string id="TL444" text="TradeLord defterinin söz verdiğinden az ödeyen pazar daha düşük puan alır, rotaları listede iner. Bu, o pazara beş kez girdikten sonra başlar ve bir rotanın Puanını en çok dörtte bir oynatır. Rotaları güvene göre sırala gerekir. Varsayılan AÇIK."/>
-		<string id="TL445" text=" | Bu panelin söz verdiğinden az ödemiş bir pazar için Puan düşürülür"/>
+		<string id="TL444" text="TradeLord defterinin söz verdiğinden az ya da fazla ödeyen pazar düşük puan alır, rotaları listede iner. Bu, o pazara beş girişten sonra başlar ve bir rotanın Puanını en çok dörtte bir oynatır. Rotaları güvene göre sırala gerekir. Varsayılan AÇIK."/>
+		<string id="TL445" text=" | Bu panelin söz verdiğinden az ya da fazla ödemiş bir pazar için Puan düşürülür"/>
 		<string id="TL446" text="?"/>
 		<string id="TL447" text=" | stok, siz varmadan kervanların, atölyelerin ve şehrin ekleyip alacağını sayar | fiyatların bunu sayması için Toplu fiyat benzetimi gerekir"/>
 		<string id="TL448" text="Ticaret TP: {AMOUNT}" />
@@ -321,11 +313,8 @@
 		<string id="TL481" text=" Sahibine şu an günde {GOLD} dinar kazandırıyor, sizdeki ilk günlerinde ise daha az, bu yüzden kendini yaklaşık {DAYS} günde öder."/>
 		<string id="TL482" text=" Şu an sahibine günde hiçbir şey kazandırmıyor, bu yüzden kendini ne zaman ödeyeceği belli değil."/>
 		<string id="TL483" text="Yeniden satış güvenlik payını öğren"/>
-		<string id="TL484" text="Yeniden satış güvenlik payını, TradeLord defterinin söz verdiği Satış fiyatının pazar girişlerinizde ne kadarının durduğuna doğru düşürür, kayıt büyüdükçe ona daha çok güvenir, ayarınızın üstüne çıkarmaz. KAPALI: ayarlandığı gibi. Varsayılan AÇIK."/>
+		<string id="TL484" text="Yeniden satış güvenlik payını, pazarın ödediği fiyatın TradeLord defterinin sözüne ne kadar yakın çıktığına doğru düşürür; altı da üstü de ıskadır, kayıt büyüdükçe daha çok sayılır, ayarınızı aşmaz. KAPALI: ayarlandığı gibi. Varsayılan AÇIK."/>
 		<string id="TL485" text=" | başka yerdeki fiyat {USED} sayılır: Yeniden satış güvenlik payı {SET} verdi, {COUNT} pazar girişi kaydırdı"/>
-		<string id="TL486" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi.{ADDED}"/>
-		<string id="TL487" text="TradeLord, sattıkları için oyunun saydığı {GOLD} dinarlık kârı Ticaret yeteneğinize işledi, yetenek şimdi {LEVEL}.{ADDED}"/>
-		<string id="TL488" text=" Bu, {XP} Ticaret tecrübesi kattı."/>
 		<string id="TL489" text="Ticaret yeteneğiniz ({SKILL}) öğrenme sınırına ({LIMIT}) yaklaştı: sınırı geçince Ticaret tecrübesi yavaşlar, sonra durur.{REMEDY}"/>
 		<string id="TL490" text="Ticaret yeteneğiniz ({SKILL}) öğrenme sınırını ({LIMIT}) aştı, bu yüzden Ticaret tecrübesi yavaşlar, sonra durur.{REMEDY}"/>
 		<string id="TL491" text=" Ticaret'e {FOCUS} odak puanı daha ya da {ATTRIBUTE} için {POINTS} puan daha verirseniz sınır yükselir."/>
@@ -336,5 +325,9 @@
 		<string id="TL496" text="Maliyetine satış için bekleme süresi (gün, 0 = kapalı)"/>
 		<string id="TL497" text="Satışın geçmesi gereken fiyat Her birimin kendi fiyatı iken, bu kadar gün bekleyen bir birim size mal olduğu fiyata satılabilir; kâr payı ve Yükü en iyi pazar için tut aranmaz."/>
 		<string id="TL498" text=" Ticaret'teki odağınız ve {ATTRIBUTE} değeriniz zaten en yüksekte, bu yüzden sınır daha fazla yükselemez."/>
+		<string id="TL499" text=" (+{XP} Ticaret tecrübesi)"/>
+		<string id="TL500" text=" (+{XP} Ticaret tecrübesi, Ticaret artık {LEVEL})"/>
+		<string id="TL501" text="Satılanlar {XP} Ticaret tecrübesi kazandırdı."/>
+		<string id="TL502" text="Satılanlar {XP} Ticaret tecrübesi kazandırdı, Ticaret artık {LEVEL}."/>
 	</strings>
 </base>

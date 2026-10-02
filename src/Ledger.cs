@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.Extensions;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
@@ -42,11 +43,14 @@ namespace TradeLord
         private Dictionary<string, Dictionary<string, PriceObservation>> _ledger =
             new Dictionary<string, Dictionary<string, PriceObservation>>();
         private List<PurchaseRecord> _purchases = new List<PurchaseRecord>();
+        private List<PurchaseRecord> _free = new List<PurchaseRecord>();
         private string _ledgerText = "";
         private string _purchaseText = "";
+        private string _freeText = "";
         private long _nextUnitNumber = TradeMath.FirstUnitNumber;
         private int _unreadable;
         private Dictionary<string, PurchaseRecord> _paid;
+        private Dictionary<string, PurchaseRecord> _freeOf;
         private long _lifetimeProfit;
         private long _lifetimeTradeXp;
         private int _lifetimeProfitCapped;
@@ -59,6 +63,8 @@ namespace TradeLord
         private int _overcountedForecasts;
         private int _unsquaredForecasts;
         private int _squaredForecasts;
+        private int _cappedForecasts;
+        private int _cappedPromises;
         private int _olderPromises;
         private int _walkInsKept = -1;
         private float _keptAtWalkIns;
@@ -93,7 +99,7 @@ namespace TradeLord
         {
             if (held < 0f || float.IsNaN(held)) return;
             _promisesScored++;
-            _promiseHeld += TradeMath.UpToThePromise(held);
+            _promiseHeld += TradeMath.HowCloseToThePromise(held);
         }
 
         internal void KeepArrival(string townId, float held)
@@ -188,25 +194,28 @@ namespace TradeLord
                 {
                     _ledgerText = LedgerCodec.WriteLedger(Listed(_ledger));
                     _purchaseText = LedgerCodec.WritePurchases(_purchases);
+                    _freeText = LedgerCodec.WritePurchases(_free);
                     _promiseText = LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));
                     _latelyText = LedgerCodec.WriteTrades(_lately);
                     Log.Write("ledger written into the save: " + RecordedPrices() + " recorded price(s) in " +
                               _ledgerText.Length + " character(s), and " + _purchases.Count +
-                              " purchase record(s) in " + _purchaseText.Length);
+                              " purchase record(s) in " + _purchaseText.Length + ", and " + _free.Count +
+                              " record(s) of goods that came without a purchase in " + _freeText.Length);
                 });
             _lifetimeProfitCapped = Capped(_lifetimeProfit);
             dataStore.SyncData("TradeLord_LedgerText", ref _ledgerText);
             dataStore.SyncData("TradeLord_PurchaseText", ref _purchaseText);
+            dataStore.SyncData("TradeLord_CameWithoutAPurchaseText", ref _freeText);
             dataStore.SyncData("TradeLord_NextUnitNumber", ref _nextUnitNumber);
             dataStore.SyncData("TradeLord_LifetimeProfit", ref _lifetimeProfitCapped);
             dataStore.SyncData("TradeLord_LifetimeProfitWide", ref _lifetimeProfit);
             dataStore.SyncData("TradeLord_LifetimeTradeXp", ref _lifetimeTradeXp);
-            dataStore.SyncData("TradeLord_PromisesScoredUpToThePromise", ref _promisesScored);
-            dataStore.SyncData("TradeLord_PromiseHeldUpToThePromise", ref _promiseHeld);
+            dataStore.SyncData("TradeLord_PromisesScoredOnTheCurve", ref _promisesScored);
+            dataStore.SyncData("TradeLord_PromiseHeldOnTheCurve", ref _promiseHeld);
             dataStore.SyncData("TradeLord_PromiseTextWhenDue", ref _promiseText);
-            dataStore.SyncData("TradeLord_ForecastsJudgedBySize", ref _forecastsJudged);
-            dataStore.SyncData("TradeLord_ForecastSaidBySize", ref _forecastWeighed);
-            dataStore.SyncData("TradeLord_ForecastCameTrueBySize", ref _forecastMatched);
+            dataStore.SyncData("TradeLord_ForecastsJudgedOnTheCurve", ref _forecastsJudged);
+            dataStore.SyncData("TradeLord_ForecastSaidOnTheCurve", ref _forecastWeighed);
+            dataStore.SyncData("TradeLord_ForecastCameTrueOnTheCurve", ref _forecastMatched);
             dataStore.SyncData("TradeLord_LatelyText", ref _latelyText);
             dataStore.SyncData("TradeLord_VillagePursesPutBack", ref _villagePursesPutBack);
             if (dataStore.IsLoading && _lifetimeProfit == 0L) _lifetimeProfit = _lifetimeProfitCapped;
@@ -243,21 +252,33 @@ namespace TradeLord
                 Log.Write("promise check: the " + _olderPromises + " price(s) checked over this campaign before a price " +
                           "above its promise counted as the promise and no more were set aside, so the campaign " +
                           "figure starts over");
+            if (dataStore.IsLoading && _cappedForecasts > 0)
+                Log.Write("forecast check: the " + _cappedForecasts + " figure(s) an older TradeLord judged while a move " +
+                          "bigger than the forecast said counted as all of it were set aside, so how far to trust what is " +
+                          "on its way to a market is learned afresh, a move too big missing as much as one too small");
+            if (dataStore.IsLoading && _cappedPromises > 0)
+                Log.Write("promise check: the " + _cappedPromises + " price(s) checked over this campaign while a price " +
+                          "above its promise counted as the promise were set aside, so the campaign figure starts over, " +
+                          "a price above the promise missing it as much as one below it");
         }
 
         private void ReadTheOlderRecords(IDataStore dataStore)
         {
-            int everyRun = 0, onTheDay = 0, upToSaid = 0, squared = 0, whenDue = 0;
+            int everyRun = 0, onTheDay = 0, upToSaid = 0, squared = 0, whenDue = 0, bySize = 0, upToThePromise = 0;
             dataStore.SyncData("TradeLord_ForecastsScoredEveryRun", ref everyRun);
             dataStore.SyncData("TradeLord_ForecastsJudgedOnTheDay", ref onTheDay);
             dataStore.SyncData("TradeLord_ForecastsJudgedUpToWhatWasSaid", ref upToSaid);
             dataStore.SyncData("TradeLord_ForecastsJudgedByLeastSquares", ref squared);
             dataStore.SyncData("TradeLord_PromisesScoredWhenDue", ref whenDue);
+            dataStore.SyncData("TradeLord_ForecastsJudgedBySize", ref bySize);
+            dataStore.SyncData("TradeLord_PromisesScoredUpToThePromise", ref upToThePromise);
             _olderForecasts = everyRun > 0 ? everyRun : 0;
             _overcountedForecasts = onTheDay > 0 ? onTheDay : 0;
             _unsquaredForecasts = upToSaid > 0 ? upToSaid : 0;
             _squaredForecasts = squared > 0 ? squared : 0;
             _olderPromises = whenDue > 0 ? whenDue : 0;
+            _cappedForecasts = bySize > 0 ? bySize : 0;
+            _cappedPromises = upToThePromise > 0 ? upToThePromise : 0;
         }
 
         private void ReadSavedText() => Guard.Run("Ledger.ReadSaved", RestoreSaved);
@@ -266,13 +287,16 @@ namespace TradeLord
         {
             _ledger = KeyedByTown(LedgerCodec.ReadLedger(_ledgerText, out _unreadable));
             _purchases = LedgerCodec.ReadPurchases(_purchaseText);
-            _nextUnitNumber = TradeMath.NumberEveryUnit(_purchases, _nextUnitNumber, out long numbered);
+            _free = LedgerCodec.ReadPurchases(_freeText);
+            var every = new List<PurchaseRecord>(_purchases);
+            every.AddRange(_free);
+            _nextUnitNumber = TradeMath.NumberEveryUnit(every, _nextUnitNumber, out long numbered);
             if (numbered > 0L)
                 Log.Write("purchase record: " + numbered + " unit(s) you hold had no number of their own, or one " +
                           "another unit already had, so each was given a new one, from #" +
                           (_nextUnitNumber - numbered) + " to #" + (_nextUnitNumber - 1) +
                           ", and no number is ever given out twice");
-            long trimmed = TradeMath.KeepEveryUnitApart(_purchases);
+            long trimmed = TradeMath.KeepEveryUnitApart(_purchases) + TradeMath.KeepEveryUnitApart(_free);
             if (trimmed > 0L)
                 Log.Write("purchase record: a record claimed " + trimmed + " unit(s) more than the " +
                           TradeMath.MostUnitsKeptApart + " one good can keep apart, far more than any party " +
@@ -285,9 +309,9 @@ namespace TradeLord
             _promises = KeyedByTownId(LedgerCodec.ReadPromises(_promiseText, out int setAside));
             _walkInsKept = -1;
             if (setAside > 0)
-                Log.Write("market records: " + setAside + " market(s) were kept before a price above what the ledger " +
-                          "promised counted as the promise and no more, so their record starts over rather than " +
-                          "letting a price above a promise hide one below it");
+                Log.Write("market records: " + setAside + " market(s) were kept while a price above what the ledger " +
+                          "promised did not count against it, so their record starts over, a price above the promise " +
+                          "missing it as much as one below it");
             _lately.Clear();
             _lately.AddRange(LedgerCodec.ReadTrades(_latelyText, Recent.MostKept));
         }
@@ -424,33 +448,33 @@ namespace TradeLord
         private void MatchPurchasesToWhatIsHeld()
         {
             ItemRoster carried = MobileParty.MainParty?.ItemRoster;
-            if (carried == null || _purchases.Count == 0) return;
-            var held = new Dictionary<string, int>(StringComparer.Ordinal);
-            for (int i = 0; i < carried.Count; i++)
-            {
-                ItemRosterElement el = carried.GetElementCopyAtIndex(i);
-                string key = PaidKey(el.EquipmentElement);
-                if (key == null || el.Amount <= 0) continue;
-                held.TryGetValue(key, out int had);
-                held[key] = had + el.Amount;
-            }
+            if (carried == null || (_purchases.Count == 0 && _free.Count == 0)) return;
+            Dictionary<string, (EquipmentElement el, int units)> held = HeldByKey(carried);
+            var keys = new List<string>(Paid.Keys);
+            foreach (string key in Free.Keys) if (!Paid.ContainsKey(key)) keys.Add(key);
             int goods = 0, units = 0;
             var dropped = new List<string>();
-            for (int i = 0; i < _purchases.Count; i++)
+            foreach (string key in keys)
             {
-                PurchaseRecord rec = _purchases[i];
-                if (rec?.ItemId == null || rec.Count <= 0) continue;
-                held.TryGetValue(rec.ItemId, out int have);
-                if (rec.Count <= have) continue;
-                int gone = rec.Count - have;
+                Paid.TryGetValue(key, out PurchaseRecord rec);
+                Free.TryGetValue(key, out PurchaseRecord free);
+                int recorded = (rec?.Count ?? 0) + (free?.Count ?? 0);
+                held.TryGetValue(key, out var have);
+                if (recorded <= have.units) continue;
+                int gone = recorded - have.units;
                 goods++;
                 units += gone;
-                dropped.Add(gone + " " + rec.ItemId);
-                TradeMath.DrainWhatLeftUnsold(rec, gone);
+                dropped.Add(gone + " " + key);
+                TradeMath.DrainTheOldestOf(rec, free, gone);
+                if (free != null && free.Count <= 0)
+                {
+                    _free.Remove(free);
+                    _freeOf.Remove(key);
+                }
             }
             if (goods > 0)
                 Log.Write("purchase record: " + units + " unit(s) of " + goods + " good(s) left the party " +
-                          "without being sold, so the units bought first came off and what was paid for them is no " +
+                          "without being sold, so the oldest units came off and what was paid for them is no " +
                           "longer held against a resale: " +
                           string.Join(", ", dropped.ToArray()));
         }
@@ -468,6 +492,78 @@ namespace TradeLord
                 PurchaseRecord rec = _purchases[i];
                 if (rec?.ItemId != null) _paid[rec.ItemId] = rec;
             }
+            _freeOf = new Dictionary<string, PurchaseRecord>();
+            for (int i = 0; i < _free.Count; i++)
+            {
+                PurchaseRecord rec = _free[i];
+                if (rec?.ItemId != null) _freeOf[rec.ItemId] = rec;
+            }
+        }
+
+        private Dictionary<string, PurchaseRecord> Free
+        {
+            get { if (_freeOf == null) Reindex(); return _freeOf; }
+        }
+
+        private static Dictionary<string, (EquipmentElement el, int units)> HeldByKey(ItemRoster carried)
+        {
+            var held = new Dictionary<string, (EquipmentElement el, int units)>(StringComparer.Ordinal);
+            for (int i = 0; carried != null && i < carried.Count; i++)
+            {
+                ItemRosterElement el = carried.GetElementCopyAtIndex(i);
+                string key = PaidKey(el.EquipmentElement);
+                if (key == null || el.Amount <= 0) continue;
+                held.TryGetValue(key, out var had);
+                held[key] = (el.EquipmentElement, had.units + el.Amount);
+            }
+            return held;
+        }
+
+        internal void NoteWhatCameWithoutAPurchase()
+        {
+            ItemRoster carried = MobileParty.MainParty?.ItemRoster;
+            if (carried == null) return;
+            float today = (float)CampaignTime.Now.ToDays;
+            var named = new List<string>();
+            foreach (var kv in HeldByKey(carried))
+            {
+                Paid.TryGetValue(kv.Key, out PurchaseRecord bought);
+                Free.TryGetValue(kv.Key, out PurchaseRecord free);
+                int kept = free?.Count ?? 0;
+                int surplus = Math.Min(kv.Value.units - (bought?.Count ?? 0) - kept, TradeMath.MostUnitsKeptApart - kept);
+                if (surplus <= 0) continue;
+                if (free == null)
+                {
+                    free = new PurchaseRecord { ItemId = kv.Key };
+                    _free.Add(free);
+                    _freeOf[kv.Key] = free;
+                }
+                long first = _nextUnitNumber;
+                TradeMath.AddPurchase(free, new int[surplus], first, today, TradeMath.CameWithoutAPurchase);
+                _nextUnitNumber += surplus;
+                named.Add(surplus + " " + Tongue.Named(kv.Value.el.Item.Name, kv.Value.el.Item.StringId) + " as #" +
+                          first + (surplus > 1 ? " to #" + (first + surplus - 1) : ""));
+            }
+            if (named.Count > 0)
+                Log.Write("came without a purchase: " + string.Join(", ", named.ToArray()) + ", written down at no " +
+                          "cost, so selling them counts no profit and no Trade XP");
+        }
+
+        internal void RecordFreeSale(EquipmentElement el, int price, string how)
+        {
+            string key = PaidKey(el);
+            if (key == null || !Free.TryGetValue(key, out PurchaseRecord free)) return;
+            if (!TradeMath.DrainTheOldestUnit(free, out long number, out float day)) return;
+            if (free.Count <= 0)
+            {
+                _free.Remove(free);
+                _freeOf.Remove(key);
+            }
+            int waited = day > 0f ? (int)Math.Floor((float)CampaignTime.Now.ToDays - day) : -1;
+            Log.Write("unit " + (number > 0L ? "#" + number + " " : "") + "of " +
+                      Tongue.Named(el.Item.Name, el.Item.StringId) + ", came without a purchase" +
+                      (waited >= 0 ? " " + waited + " day(s) ago" : "") + ", sold for " + price + how +
+                      ", counting no profit and no Trade XP");
         }
 
         private void OnSettlementEntered(MobileParty party, Settlement settlement, Hero hero)
@@ -479,6 +575,7 @@ namespace TradeLord
         private void OnDailyTick() => Guard.Run("Ledger.OnDailyTick", () =>
         {
             MatchPurchasesToWhatIsHeld();
+            NoteWhatCameWithoutAPurchase();
             PruneObservations();
             SayTheResaleSafety();
         });
@@ -492,8 +589,9 @@ namespace TradeLord
             int percent = (int)Math.Round(used * 100f);
             if (!learn || walkIns <= 0 || percent == _resaleSafetySaid) return;
             _resaleSafetySaid = percent;
-            Log.Write("resale safety: the markets you walked into have paid " + Scoring.Share(held) +
-                      " of the Sell price the ledger promised, over " + walkIns + " walk-in(s), so a price " +
+            Log.Write("resale safety: the prices at the markets you walked into have come " + Scoring.Share(held) +
+                      " close to the Sell price the ledger promised, a price above it missing as much as one " +
+                      "below it, over " + walkIns + " walk-in(s), so a price " +
                       "elsewhere counts at " + percent + "% when TradeLord buys, where Resale safety factor " +
                       "starts it at " + (int)Math.Round(setting * 100f) + "%");
         }
@@ -503,6 +601,7 @@ namespace TradeLord
             Guard.Run("Ledger.WatchTheParty", WatchTheParty);
             Guard.Run("Ledger.MatchPurchases", MatchPurchasesToWhatIsHeld);
             Guard.Run("Ledger.DateTheUnits", DateTheUnits);
+            Guard.Run("Ledger.CameWithoutAPurchase", NoteWhatCameWithoutAPurchase);
             Guard.Run("Ledger.VillagePurses", PutBackEmptyVillagePurses);
         }
 
@@ -571,8 +670,9 @@ namespace TradeLord
             Guard.Run("Ledger.OnPlayerTradeProfit", () =>
             {
                 if (!TheGameCreditedADealTradeLordLaidOut) return;
-                AddTradeXp(Counter.TradeXpEarnedOnTheScreen());
-                Counter.SayWhatTheScreenCredited(profit);
+                int xp = Counter.TradeXpEarnedOnTheScreen();
+                AddTradeXp(xp);
+                TradeActionBehavior.NoteScreenXp(xp, Counter.SayWhatTheScreenCredited(profit));
             });
         }
 
@@ -603,7 +703,7 @@ namespace TradeLord
                     moved.Add((el.Item, -paid.Count));
                     int took = Math.Min(paid.Count, InAll(carried, el));
                     if (took <= 0) continue;
-                    RecordPurchase(PaidKey(el), paid.GetRange(0, took));
+                    RecordPurchase(PaidKey(el), paid.GetRange(0, took), BoughtFrom(here));
                 }
                 for (int i = 0; i < sold.Count; i++)
                 {
@@ -723,7 +823,9 @@ namespace TradeLord
             return prices;
         }
 
-        public void RecordPurchase(string itemId, IList<int> paid)
+        public void RecordPurchase(string itemId, IList<int> paid) => RecordPurchase(itemId, paid, TradeMath.FromAMarket);
+
+        public void RecordPurchase(string itemId, IList<int> paid, int from)
         {
             if (itemId == null || paid == null || paid.Count == 0) return;
             if (!Paid.TryGetValue(itemId, out var rec))
@@ -732,7 +834,7 @@ namespace TradeLord
                 Paid[itemId] = rec;
                 _purchases.Add(rec);
             }
-            TradeMath.AddPurchase(rec, paid, _nextUnitNumber, (float)CampaignTime.Now.ToDays);
+            TradeMath.AddPurchase(rec, paid, _nextUnitNumber, (float)CampaignTime.Now.ToDays, from);
             _nextUnitNumber += paid.Count;
         }
 
@@ -743,32 +845,58 @@ namespace TradeLord
 
         public long RecordSale(string itemId, int count, int unitPaid) => RecordSale(itemId, count, unitPaid, out _);
 
-        public long RecordSale(string itemId, int count, int unitPaid, out float bought)
+        public long RecordSale(string itemId, int count, int unitPaid, out float bought) =>
+            RecordSale(itemId, count, unitPaid, out bought, out _);
+
+        public long RecordSale(string itemId, int count, int unitPaid, out float bought, out int from)
         {
             bought = 0f;
+            from = TradeMath.FromAMarket;
             if (!Paid.TryGetValue(itemId, out var rec)) return 0L;
             long number = TradeMath.NumberASaleTakes(rec, unitPaid);
             bought = TradeMath.DayASaleTakes(rec, unitPaid);
+            from = TradeMath.FromASaleTakes(rec, unitPaid);
             TradeMath.DrainSale(rec, count, unitPaid);
             return number;
         }
 
+        private static int BoughtFrom(Settlement here)
+        {
+            if (here != null) return TradeMath.FromAMarket;
+            MobileParty met = PlayerEncounter.EncounteredMobileParty ?? MobileParty.ConversationParty;
+            return met != null && met.IsVillager ? TradeMath.FromVillagers : TradeMath.FromACaravan;
+        }
+
+        internal static string TradeXpNote(int from, EquipmentElement el) =>
+            TradeMath.GivesTradeXp(from) && el.ItemModifier == null
+                ? ", a unit the game counts for Trade XP"
+                : ", a unit the game gives no Trade XP for";
+
         private void RecordHandSale(EquipmentElement el, List<int> fetched, List<int> laidOut, bool staged)
         {
             string itemId = PaidKey(el);
-            if (itemId == null || fetched == null || fetched.Count == 0 || !Paid.TryGetValue(itemId, out var rec)) return;
+            if (itemId == null || fetched == null || fetched.Count == 0) return;
+            string how = staged ? " in the deal TradeLord laid out on the trade screen" : " by hand on the trade screen";
             float today = (float)CampaignTime.Now.ToDays;
             var lines = new List<string>();
-            foreach (TradeMath.SoldUnit one in TradeMath.DrainHandSale(rec, fetched, WhatAHandSaleCovers(rec), laidOut))
-            {
-                if (!one.Bought) continue;
-                int waited = one.Day > 0f ? (int)Math.Floor(today - one.Day) : -1;
-                lines.Add("unit " + (one.Number > 0L ? "#" + one.Number + " " : "") + "of " +
-                          Tongue.Named(el.Item.Name, el.Item.StringId) + ", bought for " + one.Cost +
-                          (waited >= 0 ? " " + waited + " day(s) ago" : "") + ", sold for " + one.Price +
-                          (staged ? " in the deal TradeLord laid out on the trade screen" : " by hand on the trade screen"));
-            }
+            var unbought = new List<int>();
+            if (Paid.TryGetValue(itemId, out var rec))
+                foreach (TradeMath.SoldUnit one in TradeMath.DrainHandSale(rec, fetched, WhatAHandSaleCovers(rec), laidOut))
+                {
+                    if (!one.Bought)
+                    {
+                        unbought.Add(one.Price);
+                        continue;
+                    }
+                    int waited = one.Day > 0f ? (int)Math.Floor(today - one.Day) : -1;
+                    lines.Add("unit " + (one.Number > 0L ? "#" + one.Number + " " : "") + "of " +
+                              Tongue.Named(el.Item.Name, el.Item.StringId) + ", " + TradeMath.WhereFrom(one.From) +
+                              " for " + one.Cost + (waited >= 0 ? " " + waited + " day(s) ago" : "") +
+                              ", sold for " + one.Price + how + TradeXpNote(one.From, el));
+                }
+            else unbought.AddRange(fetched);
             Log.WriteMany(lines);
+            foreach (int price in unbought) RecordFreeSale(el, price, how);
         }
 
         internal int MadeOnAHandSale(EquipmentElement el, List<int> fetched, List<int> laidOut)

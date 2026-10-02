@@ -26,18 +26,22 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_price_above_the_promise_counts_as_the_promise_and_no_more()
+        public void A_price_above_the_promise_misses_it_as_much_as_one_below_it()
         {
-            Assert.Equal(1f, TradeMath.UpToThePromise(2.01f));
-            Assert.Equal(1f, TradeMath.UpToThePromise(1f));
-            Assert.Equal(0.6f, TradeMath.UpToThePromise(0.6f));
+            Assert.Equal(1f, TradeMath.HowCloseToThePromise(1f));
+            Assert.Equal(0.9f, TradeMath.HowCloseToThePromise(0.9f), 4);
+            Assert.Equal(0.9f, TradeMath.HowCloseToThePromise(1.1f), 4);
+            Assert.Equal(0.5f, TradeMath.HowCloseToThePromise(1.5f), 4);
+            Assert.Equal(0f, TradeMath.HowCloseToThePromise(2f));
+            Assert.Equal(0f, TradeMath.HowCloseToThePromise(2.01f));
+            Assert.Equal(0f, TradeMath.HowCloseToThePromise(-1f));
         }
 
         [Fact]
         public void Paying_over_the_promise_for_one_good_never_hides_paying_under_it_for_another()
         {
-            float walkIn = TradeMath.MeanOf(TradeMath.UpToThePromise(2.01f) + TradeMath.UpToThePromise(0.6f), 2);
-            Assert.Equal(0.8f, walkIn, 4);
+            float walkIn = TradeMath.MeanOf(TradeMath.HowCloseToThePromise(2.01f) + TradeMath.HowCloseToThePromise(0.6f), 2);
+            Assert.Equal(0.3f, walkIn, 4);
             Assert.Equal(Confidence.RecordAtAMarket.Lowers,
                          Confidence.WhatAMarketsRecordDoes(true, 40, TradeMath.PromiseMean(After(walkIn))));
         }
@@ -51,12 +55,22 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_capped_record_that_still_claims_more_than_it_scored_is_set_aside()
+        public void A_record_on_the_curve_that_still_claims_more_than_it_scored_is_set_aside()
         {
-            var read = LedgerCodec.ReadPromises("town_A1|2|2.6|1;town_B2|3|2.5|1", out int setAside);
+            var read = LedgerCodec.ReadPromises("town_A1|2|2.6|2;town_B2|3|2.5|2", out int setAside);
             Assert.Single(read);
             Assert.Equal("town_B2", read[0].TownId);
             Assert.Equal(1, setAside);
+        }
+
+        [Fact]
+        public void A_record_kept_while_a_price_above_the_promise_counted_as_kept_is_set_aside_to_start_again()
+        {
+            var read = LedgerCodec.ReadPromises("town_A1|2|1.6|1;town_B2|3|2.5|2", out int setAside);
+            Assert.Single(read);
+            Assert.Equal("town_B2", read[0].TownId);
+            Assert.Equal(1, setAside);
+            Assert.Equal("town_B2|3|2.5|2", LedgerCodec.WritePromises(read));
         }
 
         [Fact]
@@ -82,7 +96,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Paying_above_the_promise_is_never_a_bonus()
+        public void A_record_past_full_marks_is_never_a_bonus()
         {
             Assert.Equal(100f, Confidence.AsPromisesHaveHeld(100f, 40, 1.8f), 3);
         }
@@ -155,7 +169,7 @@ namespace TradeLord.Tests
         [Fact]
         public void A_record_written_by_a_newer_TradeLord_is_read_as_far_as_this_one_understands_it()
         {
-            var read = LedgerCodec.ReadPromises("town_A1|4|3.2|1|else");
+            var read = LedgerCodec.ReadPromises("town_A1|4|3.2|2|else");
             Assert.Single(read);
             Assert.Equal(4, read[0].Scored);
             Assert.Equal(3.2f, read[0].Held, 3);
@@ -185,7 +199,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_market_that_has_paid_what_it_promised_or_more_takes_nothing_off_a_score()
+        public void A_market_that_has_paid_what_it_promised_takes_nothing_off_a_score()
         {
             Assert.Equal(Confidence.RecordAtAMarket.TakesNothingOff,
                          Confidence.WhatAMarketsRecordDoes(true, 40, 1f));

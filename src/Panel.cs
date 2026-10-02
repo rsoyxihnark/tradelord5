@@ -480,7 +480,7 @@ namespace TradeLord
                         ? Tongue.Text("{=TL71} | Score = profit per day discounted by Conf").ToString()
                         : Tongue.Text("{=TL72} | Score = profit per day").ToString())
                   + (Options.Current.ConfidenceRanking && Options.Current.TrustWhatAMarketPaid
-                        ? Tongue.Text("{=TL445} | Score is lowered for a market that has paid less than this panel promised").ToString()
+                        ? Tongue.Text("{=TL445} | Score is lowered for a market that has paid less or more than this panel promised").ToString()
                         : "")
                   + (Options.Current.ConservativeRouteProjection
                         ? Tongue.Text("{=TL73} | resale safety factor applied").ToString() : "")
@@ -560,7 +560,7 @@ namespace TradeLord
         {
             LedgerBehavior ledger = LedgerBehavior.Instance;
             if (ledger == null || !ledger.PromiseScore(out int checked_, out float held)) return "";
-            TextObject line = Tongue.Text("{=TL399} | the Sell price has held at {HELD} of what this panel promised, over {COUNT} price(s) it has checked");
+            TextObject line = Tongue.Text("{=TL399} | the Sell price this panel promised has been {HELD} on target, above or below, over {COUNT} price(s) checked");
             line.SetTextVariable("HELD", ((int)Math.Round(held * 100f)).ToString() + "%");
             line.SetTextVariable("COUNT", checked_.ToString());
             return line.ToString();
