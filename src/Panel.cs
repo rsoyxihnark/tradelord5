@@ -472,8 +472,8 @@ namespace TradeLord
                 : Line("{=TL68}{COUNT} profitable routes, best first", "COUNT", rows.Count.ToString());
             LegendText = (empty
                 ? Tongue.Text(Options.Current.Omniscient
-                    ? "{=TL69}No routes are within your travel ceilings. Raise the ceilings in the Trade Pool settings, or move nearer to more markets."
-                    : "{=TL90}No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Trade Pool settings.").ToString()
+                    ? "{=TL69}No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."
+                    : "{=TL90}No routes are within your travel ceilings, from the prices you have recorded so far. | Walk more markets, or raise the ceilings in the Trade Pool settings.").ToString()
                 : Tongue.Text("{=TL70}Click a town name to jump to it and pin or unpin it | Days = you -> buy town -> sell town | Carv. = caravans at those towns").ToString()
                   + Tongue.Text("{=TL476} | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit").ToString()
                   + (Options.Current.ConfidenceRanking
@@ -486,8 +486,8 @@ namespace TradeLord
                         ? Tongue.Text("{=TL73} | resale safety factor applied").ToString() : "")
                   + (Forecast.On
                         ? (Options.Current.BulkSimulation
-                              ? Tongue.Text("{=TL394} | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there and what the town and its workshops use up").ToString()
-                              : Tongue.Text("{=TL447} | stock counts what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there and what the town and its workshops use up; prices need Bulk price simulation").ToString())
+                              ? Tongue.Text("{=TL394} | prices and stock count what caravans, workshops and the town add and take before you arrive").ToString()
+                              : Tongue.Text("{=TL447} | stock counts what caravans, workshops and the town add and take before you arrive | prices need Bulk price simulation to count it").ToString())
                           + Tongue.Text("{=TL397} | Qty! = part of that amount is still on the road and lands before you would").ToString()
                           + Tongue.Text("{=TL417} | Left = how long from now that shelf still holds this Qty, and a shelf that empties first lowers Conf").ToString()
                         : ""))
@@ -570,7 +570,7 @@ namespace TradeLord
         {
             float used = TradePolicy.ResaleSafety(out float setting, out bool learn, out int walkIns, out _);
             if (!learn || walkIns <= 0 || Math.Round(used * 100f) == Math.Round(setting * 100f)) return "";
-            TextObject line = Tongue.Text("{=TL485} | a price elsewhere counts at {USED}: Resale safety factor starts it at {SET} and {COUNT} walk-in(s) have moved it");
+            TextObject line = Tongue.Text("{=TL485} | a price elsewhere counts at {USED}: Resale safety factor set it at {SET} and {COUNT} walk-in(s) moved it");
             line.SetTextVariable("USED", ((int)Math.Round(used * 100f)).ToString() + "%");
             line.SetTextVariable("SET", ((int)Math.Round(setting * 100f)).ToString() + "%");
             line.SetTextVariable("COUNT", walkIns.ToString());
@@ -581,8 +581,8 @@ namespace TradeLord
         {
             int held = TradeActionBehavior.GoldHeldBack(), flat = Options.Current.GoldReserve;
             TextObject line = Tongue.Text(held > flat
-                ? "{=TL393}Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages, so there is nothing here you could buy. Sell some cargo, or lower either of those in its settings."
-                : "{=TL377}Your purse is at {GOLD} denars and your gold reserve holds {RESERVE} of it back, so there is nothing here you could buy. Sell some cargo, or lower Gold reserve in its settings.");
+                ? "{=TL393}Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, so you could buy nothing here. | That is {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages. | Sell some cargo, or lower either of those settings."
+                : "{=TL377}Your purse is at {GOLD} denars and Gold reserve holds {RESERVE} of it back, so you could buy nothing here. | Sell some cargo, or lower Gold reserve in its settings.");
             line.SetTextVariable("GOLD", (hero?.Gold ?? 0).ToString("N0"));
             line.SetTextVariable("RESERVE", held.ToString("N0"));
             line.SetTextVariable("FLAT", flat.ToString("N0"));

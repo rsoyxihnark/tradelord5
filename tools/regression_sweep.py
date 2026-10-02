@@ -49,6 +49,7 @@ LOTTESTS = io.open('tests/LotTests.cs', encoding='utf-8').read()
 FLOORTESTS = io.open('tests/BestMarketFloorTests.cs', encoding='utf-8').read()
 TALLYTESTS = io.open('tests/TallyTests.cs', encoding='utf-8').read()
 HOLDINGTESTS = io.open('tests/HoldingsTests.cs', encoding='utf-8').read()
+ONELINETESTS = io.open('tests/OneLineEachTests.cs', encoding='utf-8').read()
 T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'HoldingsTests.cs': HOLDINGTESTS,
      'RouteRulesTests.cs': ROUTETESTS, 'MigrationTests.cs': MIGRATIONTESTS,
@@ -68,7 +69,8 @@ T = {'LedgerCodecTests.cs': TESTS, 'TradeMathTests.cs': MATHTESTS,
      'PromiseTests.cs': PROMISETESTS,
      'BestMarketFloorTests.cs': FLOORTESTS,
      'DealTests.cs': DEALTESTS,
-     'LotTests.cs': LOTTESTS}
+     'LotTests.cs': LOTTESTS,
+     'OneLineEachTests.cs': ONELINETESTS}
 TESTPROJ = io.open('tests/TradeLord.Tests.csproj', encoding='utf-8').read()
 M = io.open('mcm/Settings.cs', encoding='utf-8').read()
 WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
@@ -522,8 +524,9 @@ def a_road_trade_that_moved_nothing_says_why():
     passes = [method_body(S['Trading.cs'], one)
               for one in ("private static void SellPass", "private static void BuyPass")]
     stalled = [one.split("else if (!pass.DirectionError)", 1)[-1] for one in passes]
-    return (ordered(road, "SellPass(Pass.Meet(", "BuyPass(Pass.Meet(", "ReportStalledPasses();")
-            and road.count("ReportStalledPasses();") == 1
+    return (ordered(road, "SellPass(Pass.Meet(", "BuyPass(Pass.Meet(", "EndTheRound();")
+            and road.count("EndTheRound();") == 1
+            and "ReportStalledPasses();" in method_body(S['Trading.cs'], "private static void EndTheRound")
             and all("else if (!pass.DirectionError)" in one for one in passes)
             and all("NoteStalled(" in one and "pass.Site" not in one and "pass.Reports" not in one
                     for one in stalled))
@@ -1213,17 +1216,21 @@ def a_market_that_traded_nothing_is_reported_once():
                         'and nothing bought - {SECOND}.")',
                         'Tongue.Text("{=TL32}', 'Tongue.Text("{=TL33}', 'Notices.Say(none);')
             and 'TL94' in strings_declared() and 'TL95' in strings_declared()
-            and S['Trading.cs'].count("ReportStalledPasses();") == 3
-            and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
-                        "ExecuteQuickBuy(settlement, quiet: true)", "ReportStalledPasses();")
-            and ordered(launched, "ExecuteQuickSell(Settlement.CurrentSettlement);",
-                        "ExecuteQuickBuy(Settlement.CurrentSettlement);", "ReportStalledPasses();"))
+            and S['Trading.cs'].count("ReportStalledPasses();") == 1
+            and "ReportStalledPasses();" in method_body(S['Trading.cs'], "private static void EndTheRound")
+            and S['Trading.cs'].count("EndTheRound();") == 3
+            and ordered(entered, "ExecuteLootSale(settlement, quiet: true)", "ExecuteQuickSell(settlement, quiet: true)",
+                        "ExecuteQuickBuy(settlement, quiet: true)", "EndTheRound();")
+            and ordered(launched, "ExecuteLootSale(Settlement.CurrentSettlement);",
+                        "ExecuteQuickSell(Settlement.CurrentSettlement);",
+                        "ExecuteQuickBuy(Settlement.CurrentSettlement);", "EndTheRound();"))
 
 def a_market_that_traded_something_drops_the_empty_lines():
     report = method_body(S['Trading.cs'], "private static void ReportStalledPasses")
     sell = sell_pass()
     buy = buy_pass()
     reset = method_body(S['Trading.cs'], "private static void ResetVisit")
+    begin = method_body(S['Trading.cs'], "private static void BeginTheRound")
     return ("if (!sell.HasValue && !buy.HasValue) return;" in report
             and ordered(report, "Block? sell = _sellStalled;", "Block? buy = _buyStalled;",
                         "_sellStalled = null;", "_buyStalled = null;",
@@ -1235,7 +1242,9 @@ def a_market_that_traded_something_drops_the_empty_lines():
             and all(one.index("NoteStalled(") > one.index("else if (!pass.DirectionError)")
                     for one in (sell, buy))
             and "if (stopped != Block.None && !pass.Muted && first) NoteStalled(selling: true, stopped);" in sell
-            and "bool first = !loot || (sold.units == 0 && !_sellStalled.HasValue);" in sell
+            and "bool first = _soldThisRound.units == 0 && (!loot || !_sellStalled.HasValue);" in sell
+            and all(field in begin for field in ("_sellStalled = null;", "_buyStalled = null;",
+                                                 "_soldThisRound = default;"))
             and ordered(sell, "if (soldItems > 0)", "_sellStalled = null;",
                         "pass.Moved(profit, goldGained, selling: true);")
             and "if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);" in buy
@@ -1558,7 +1567,7 @@ chk("1.3.18", "neither pass trades before the settling delay is served, in a mar
     "MarketOpen(site, quiet)" not in S['Trading.cs'] and
     S['Trading.cs'].count("MarketOpen(") == 2 and
     S['Trading.cs'].count("Pass.Open(settlement, quiet)") == 8 and
-    S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 5)
+    S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 4)
 chk("1.3.2", "how far a scan reaches is the two travel ceilings alone, and the scan radius that used to narrow it is gone",
     "WithinRadius" not in S['Ledger.cs'] and "ScanRadius" not in S['Ledger.cs'] and
     "ScanRadius" not in S['Options.cs'] and "ScanRadius" not in M and
@@ -2075,7 +2084,7 @@ chk("1.36.0", "a trade on the road moves one unit and its price itself, because 
     S['Trading.cs'].count("HandOver(") == 2 and S['Trading.cs'].count("TakeDelivery(") == 2)
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
-    S['Trading.cs'].count("[Simulated, best case]") == 8 and
+    S['Trading.cs'].count("[Simulated, best case]") == 7 and
     S['Trading.cs'].count("(simulated, best case): ") == 3 and
     'internal string Headed(string label) => label + (Sim ? Counter.Heading : ": ");'
         in S['Trading.cs'] and
@@ -2420,7 +2429,7 @@ chk("1.5.3", "every declared Harmony patch is installed",
     every_declared_patch_is_installed())
 chk("1.5.3", "both projects pin the same reference-assembly version",
     projects_pin_one_reference_assembly())
-chk("1.30.1", "the feature list and what it needs both name the game version the mod is built on and the beta it also runs on",
+chk("1.30.2", "the feature list and what it needs both name the game version the mod is built on and the beta it also runs on",
     the_readme_names_the_game_versions_the_mod_was_checked_against())
 chk("1.5.3", "the manifest declares exactly one required dependency, Harmony",
     one_hard_dependency())
@@ -2763,15 +2772,18 @@ chk("1.6.1", "the XP line is queued last, in amber, and is translatable",
     ordered(method_body(S['Trading.cs'], "internal static void FlushToasts"),
             "CreditTradeSkill(xp, profit, muted)",
             "Notices.Drain();") and
-    ordered(method_body(S['Notices.cs'], "internal static void Drain"),
-            "_pending.AddRange(_afterXp);",
-            "InformationManager.DisplayMessage") and
+    ordered(method_body(S['Trading.cs'], "internal static void FlushToasts"),
+            'Guard.Run("Action.SayWhatMoved", SayWhatMoved);',
+            "CreditTradeSkill(xp, profit, muted)",
+            "Notices.Drain();") and
     '{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.' in S['Trading.cs'] and
     ordered(method_body(S['Trading.cs'], "internal static void FlushToasts"),
             'Guard.Run("GameTradeBook.Settle", SettleTheSales);',
             "CreditTradeSkill(xp, profit, muted)",
             "Notices.Drain();") and
-    "Notices.Say(msg, profit > 0" in sell_pass() and
+    "if (!pass.Muted) _told.Add(Told.Sold, pass.Sim, pass.Detail, soldItems, goldGained, profit);" in sell_pass() and
+    "Notices.Say(sold, line.Profit > 0 ? Notices.Gain : Notices.Flat);" in
+        method_body(S['Trading.cs'], "private static void SayWhatMoved") and
     "AwardTradeXpForOurOwnTrade(" not in sell_pass() and
     "if (profit > 0) AwardTradeXpForOurOwnTrade(profit, muted);" in
         method_body(S['Trading.cs'], "private static void SettleTheSales"))
@@ -2833,7 +2845,7 @@ chk("1.6.5", "an item list is parsed once per edit and never left unset",
 chk("1.6.5", "ending a campaign drops trade messages queued but not yet shown",
     "Notices.Forget();" in method_body(S['Trading.cs'], "internal static void ForgetVisit") and
     "_pending.Clear();" in method_body(S['Notices.cs'], "internal static void Forget") and
-    "_afterXp.Clear();" in method_body(S['Notices.cs'], "internal static void Forget"))
+    "_told.Forget();" in method_body(S['Trading.cs'], "internal static void ForgetVisit"))
 chk("1.6.5", "the route scan is reused within the hour and dropped with the market rankings",
     "_routes = ScanRoutes();" in method_body(S['Ledger.cs'], "public List<TradeRoute> BestRoutes") and
     "_routes = null;" in method_body(S['Ledger.cs'], "private void ForgetPricedRankings") and
@@ -3178,15 +3190,15 @@ def the_first_market_of_a_campaign_trades_like_every_other_one():
 
 chk("1.74.0", "the first market a campaign walks into trades like every other one, with no notice held over it",
     the_first_market_of_a_campaign_trades_like_every_other_one())
-chk("1.6.18", "every variable a shipped line leaves a slot for is filled in by name",
+chk("1.6.19", "every variable a shipped line leaves a slot for is filled in by name",
     every_text_variable_is_supplied())
-chk("1.13.2", "nothing is written down about MCM that nothing reads back",
+chk("1.14.0", "nothing is written down about MCM that nothing reads back",
     "SettingsReachable" not in ALL and "SettingsReachable" not in M)
 chk("1.13.0", "the README counts what goes into a save as the source actually saves it",
     the_readme_counts_the_saved_values_right())
-chk("1.6.18", "the defaults the README publishes are the defaults the module ships",
+chk("1.6.19", "the defaults the README publishes are the defaults the module ships",
     readme_defaults_match_the_shipped_ones())
-chk("1.6.18", "the changelog opens on the version the manifest ships, and that entry says something",
+chk("1.6.19", "the changelog opens on the version the manifest ships, and that entry says something",
     changelog_opens_on_the_shipped_version())
 chk("1.6.20", "a campaign save carries no type this module defines, so removing the mod cannot cost the save",
     every_saved_value_is_a_plain_one() and nothing_this_module_defines_is_saveable() and
@@ -3243,15 +3255,15 @@ chk("1.34.0", "the build runs the compatibility tool, on the built assemblies, a
     WORKFLOW.index("dotnet build mcm/TradeLord.MCM.csproj") <
     WORKFLOW.index("dotnet run --project tools/compat") <
     WORKFLOW.index("Assemble the module folder"))
-chk("1.6.24", "the rules that decide what a trade is worth need nothing from the game",
+chk("1.6.25", "the rules that decide what a trade is worth need nothing from the game",
     the_money_rules_need_nothing_from_the_game())
-chk("1.6.24", "the policy layer forwards to those rules instead of keeping a second copy",
+chk("1.6.25", "the policy layer forwards to those rules instead of keeping a second copy",
     the_policy_layer_keeps_no_second_copy_of_the_money_rules())
-chk("1.6.24", "margin, resale factor and profit credit are proved by tests the build runs",
+chk("1.6.25", "margin, resale factor and profit credit are proved by tests the build runs",
     the_money_rules_are_covered_by_tests_the_build_runs())
-chk("1.6.24", "the purse rule and the route confidence need nothing from the game",
+chk("1.6.25", "the purse rule and the route confidence need nothing from the game",
     the_route_rules_need_nothing_from_the_game())
-chk("1.6.24", "the purse rule, route confidence and the item lists are proved by tests the build runs",
+chk("1.6.25", "the purse rule, route confidence and the item lists are proved by tests the build runs",
     the_route_rules_are_covered_by_tests_the_build_runs())
 
 def the_purse_is_the_last_reason_named():
@@ -3406,8 +3418,8 @@ def quiet_automation_silences_only_the_automated_lines():
                 method_body(S['Trading.cs'], "private static bool Muted") and
             "TradeActionBehavior.Muted(Quiet)" in
                 between(S['Trading.cs'], "internal bool Muted =>", ";") and
-            "if (!pass.Muted) Notices.Say(msg, profit > 0" in sell and
-            "if (!pass.Muted) Notices.Say(msg, Notices.Spend);" in buy and
+            "if (!pass.Muted) _told.Add(Told.Sold," in sell and
+            "if (!pass.Muted) _told.Add(Told.Bought," in buy and
             "if (!muted) Notices.Say(earned, Notices.Xp);" in credit and
             the_quiet_setting_follows_a_sale_to_its_trade_xp())
 
@@ -3912,7 +3924,7 @@ def the_language_hint_keeps_to_what_it_is_for():
 
 chk("1.27.4", "a language picked on the screen is spoken again into the names, hints and headings the screen already holds",
     the_screen_is_spoken_again_where_it_already_stands())
-chk("1.27.5", "the hint under the language setting names the language and nothing about the settings screen itself",
+chk("1.28.0", "the hint under the language setting names the language and nothing about the settings screen itself",
     the_language_hint_keeps_to_what_it_is_for())
 
 def a_choice_between_named_things_is_picked_from_a_list():
@@ -4782,24 +4794,6 @@ def every_pass_that_really_moves_goods_rings_the_coin():
 chk("1.36.1", "a pass that really moves goods rings the coin, selling on the road along with the rest",
     every_pass_that_really_moves_goods_rings_the_coin())
 
-def the_pack_animal_line_lands_after_the_trade_skill_line():
-    flush = method_body(S['Trading.cs'], "internal static void FlushToasts")
-    haul = method_body(S['Trading.cs'], "public static bool ExecuteHaulage")
-    forget = method_body(S['Trading.cs'], "internal static void ForgetVisit")
-    return (ordered(flush, "if (xp > 0) CreditTradeSkill(xp, profit, muted);", "Notices.Drain();")
-            and ordered(method_body(S['Notices.cs'], "internal static void Drain"),
-                        "_pending.AddRange(_afterXp);", "_afterXp.Clear();",
-                        "if (_pending.Count == 0) return;")
-            and "{=TL110}" in haul
-            and "if (!pass.Muted) Notices.SayAfterXp(msg, Notices.Spend);" in haul
-            and "Notices.Say(msg, Notices.Spend);" not in haul
-            and S['Trading.cs'].count("Notices.SayAfterXp(") == 1
-            and S['Notices.cs'].count("internal static void SayAfterXp(") == 1
-            and "Notices.Forget();" in forget)
-
-chk("1.20.1", "the pack animal line waits for the trade skill line and is dropped with the rest when a visit is forgotten",
-    the_pack_animal_line_lands_after_the_trade_skill_line())
-
 def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
     shed = method_body(S['Drove.cs'], "internal static int AnimalsToShed")
     relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
@@ -4825,9 +4819,9 @@ def a_spare_mount_goes_only_when_it_is_costing_the_party_speed():
             and "if (shed <= 0) return;" in relief
             and "pass.Books.NoteSold(item.StringId);" in relief
             and "while (remaining > 0 && shed > 0)" in relief
-            and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
+            and ordered(entered, "ExecuteLootSale(settlement, quiet: true)",
+                        "ExecuteQuickSell(settlement, quiet: true)",
                         "ExecuteQuickBuy(settlement, quiet: true)",
-                        "ExecuteLootSale(settlement, quiet: true)",
                         "ExecuteHaulage(settlement, quiet: true)",
                         "ExecuteHerdRelief(settlement, quiet: true)")
             and "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);" in entered)
@@ -4977,9 +4971,9 @@ def the_herd_is_looked_at_three_times_a_visit():
     return ('Drove.LogState("entering " + settlement.Name);' in entered
             and 'Drove.LogState("after trading at " + settlement.Name);' in entered
             and entered.count("ExecuteHerdRelief(settlement, quiet: true)") == 2
-            and ordered(entered, "ExecuteQuickSell(settlement, quiet: true)",
+            and ordered(entered, "ExecuteLootSale(settlement, quiet: true)",
+                        "ExecuteQuickSell(settlement, quiet: true)",
                         "ExecuteQuickBuy(settlement, quiet: true)",
-                        "ExecuteLootSale(settlement, quiet: true)",
                         "ExecuteHaulage(settlement, quiet: true)",
                         "ExecuteHerdRelief(settlement, quiet: true)",
                         "ExecuteResupply(settlement, quiet: true)")
@@ -5006,9 +5000,9 @@ def the_herd_is_looked_at_three_times_a_visit():
             and method_body(S['Trading.cs'], "private void OnDailyTick").count(
                 "Drove.AnimalsToShed(") == 1
             and launched.count("ExecuteHerdRelief(Settlement.CurrentSettlement);") == 2
-            and ordered(launched, "ExecuteQuickSell(Settlement.CurrentSettlement);",
+            and ordered(launched, "ExecuteLootSale(Settlement.CurrentSettlement);",
+                        "ExecuteQuickSell(Settlement.CurrentSettlement);",
                         "ExecuteQuickBuy(Settlement.CurrentSettlement);",
-                        "ExecuteLootSale(Settlement.CurrentSettlement);",
                         "ExecuteHerdRelief(Settlement.CurrentSettlement);")
             and ordered_last(launched, "ExecuteQuickBuy(Settlement.CurrentSettlement);",
                              "ExecuteHerdRelief(Settlement.CurrentSettlement);",
@@ -5580,7 +5574,7 @@ def a_meeting_on_the_road_is_priced_as_one_meeting():
     t = S['Trading.cs']
     body = method_body(t, "public static void ExecuteRoadTrade")
     return ("Books books = BooksForTheMeeting(met);" in body
-            and body.count("books, party)") == 5
+            and body.count("books, party)") == 4
             and "new Books()" not in body
             and method_body(t, "private static Books BooksForTheMeeting").count("new Books()") == 1
             and t.count("new Books()") == 2
@@ -5894,7 +5888,7 @@ def the_larder_and_the_stable_leave_the_gold_reserve_whole():
             and said in spoken(ENGLISH).get('TL321', '')
             and said in spoken(ENGLISH).get('TL367', ''))
 
-chk("1.39.3", "restocking and buying a haul animal stop before your gold reaches your reserve, word for word as their own settings promise, and buying for profit is the one pass that may spend down to it",
+chk("1.40.0", "restocking and buying a haul animal stop before your gold reaches your reserve, word for word as their own settings promise, and buying for profit is the one pass that may spend down to it",
     the_larder_and_the_stable_leave_the_gold_reserve_whole())
 
 def an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on():
@@ -5936,11 +5930,12 @@ def every_pass_says_what_it_moved_from_one_place():
                         'said.SetTextVariable("GOLD", gold);', "return said;")
             and t.count('SetTextVariable("ITEMS"') == 1
             and t.count('SetTextVariable("GOLD", gold);') == 1
-            and t.count("PassMessage(") == 2
+            and t.count("PassMessage(") == 7
+            and method_body(t, "private static void SayWhatMoved").count("PassMessage(line.Sim,") == 5
             and "PassMessage(Sim, simSaid, realSaid, Detail, items, gold)" in
                 between(t, "internal TextObject Said(", ";")
             and all("pass.Moved(" in method_body(t, one) for one in passes)
-            and all("pass.Said(" in method_body(t, one) for one in passes)
+            and all("if (!pass.Muted) _told.Add(Told." in method_body(t, one) for one in passes)
             and "PassMessage" not in method_body(t, "public static void ExecuteRoadTrade"))
 
 def a_meeting_on_the_road_answers_to_the_silence_setting():
@@ -5952,8 +5947,8 @@ def a_meeting_on_the_road_answers_to_the_silence_setting():
             and "internal bool Muted => Counter.Staging || TradeActionBehavior.Muted(Quiet);" in t
             and "private static bool Muted(bool automated) => automated && Options.Current.QuietAutomation;"
                 in t
-            and sell.count("if (!pass.Muted) Notices.Say(") == 1
-            and buy.count("if (!pass.Muted) Notices.Say(") == 1
+            and sell.count("if (!pass.Muted) _told.Add(") == 1
+            and buy.count("if (!pass.Muted) _told.Add(") == 1
             and "if (StillSettling(Muted(automated: true))) return;" in
                 method_body(t, "public static void ExecuteRoadTrade")
             and "if (!quiet)" in method_body(t, "private static bool StillSettling")
@@ -6194,7 +6189,7 @@ def a_market_and_a_meeting_on_the_road_run_the_same_two_passes():
     buy = buy_pass()
     return (t.count("private static void SellPass(Pass pass, string label, string what, string named, string why, bool loot)") == 1
             and t.count("private static void BuyPass(Pass pass, string label, string what, string named, string why)") == 1
-            and t.count("SellPass(") == 5 and t.count("BuyPass(") == 4
+            and t.count("SellPass(") == 5 and t.count("BuyPass(") == 3
             and 'SellPass(Pass.Open(settlement, quiet), "quick-sell", "selling", "Selling", "the selling pass", loot: false);' in t
             and 'SellPass(Pass.Open(settlement, quiet), "loot-sell", "selling loot", "Selling loot", "the loot sale", loot: true);' in t
             and 'BuyPass(Pass.Open(settlement, quiet), "quick-buy", "buying", "Buying", "the buying pass");' in t
@@ -6450,9 +6445,9 @@ chk("1.41.7", "the rules that decide a purchase stand clear of the game too, and
     the_buying_rules_stand_clear_of_the_game_too())
 chk("1.41.7", "the rules that decide a sale stand clear of the game, so a test can ask them, and the costly answers stay behind the seam",
     the_selling_rules_stand_clear_of_the_game())
-chk("1.41.5", "the feature list names the live-price setting the way the settings screen names it, and never calls it honest-merchant mode",
+chk("1.41.6", "the feature list names the live-price setting the way the settings screen names it, and never calls it honest-merchant mode",
     the_feature_list_calls_a_setting_what_the_settings_screen_calls_it())
-chk("1.41.5", "the feature list says a pin comes off a town once TradeLord has traded there",
+chk("1.41.6", "the feature list says a pin comes off a town once TradeLord has traded there",
     the_feature_list_says_a_pin_comes_off_a_town_it_traded_in())
 chk("1.41.4", "the price tooltip and the profit colouring hand their state to the guard rather than closing over it",
     the_tooltip_patches_hand_their_state_over_instead_of_capturing_it())
@@ -9680,12 +9675,18 @@ def quiet_mode_names_the_warnings_it_still_shows():
             return False
         if (name + "()") not in entered:
             return False
-    onscreen = [l for l in code_only(S['Trading.cs']).splitlines()
-                if "Notices.Say(" in l or "Notices.SayAfterXp(" in l]
+    onscreen = [l for l in code_only(S['Trading.cs']).splitlines() if "Notices.Say(" in l]
     asked = [l for l in onscreen if "Muted" in l or "muted" in l]
+    passed = [l for l in code_only(method_body(S['Trading.cs'], "private static void SayWhatMoved")).splitlines()
+              if "Notices.Say(" in l]
+    recorded = [l.strip() for l in code_only(S['Trading.cs']).splitlines() if "_told.Add(" in l]
     said = spoken(ENGLISH)
-    return (len(onscreen) == 23
-            and len(asked) == 14
+    return (len(onscreen) == 22
+            and len(asked) == 8
+            and len(passed) == 5
+            and len(recorded) == 6
+            and all(one.startswith("if (!pass.Muted) _told.Add(Told.") for one in recorded)
+            and "Notices.SayAfterXp(" not in S['Trading.cs']
             and all(("{=TL" + s + "}") in S['Trading.cs'] for s in ("82", "91", "92", "392"))
             and "Warnings still show on screen" in said['TL349']
             and "cargo full" in said['TL349']
@@ -10862,12 +10863,16 @@ def the_mark_is_scored_against_what_that_market_really_paid():
                     "TradeMath.HeldShare(", '": it marked this market for " + _markedUnits +')
             and "Scoring.Share(held)" in score
             and '" of what it marked on"' in score
-            and ordered(sell, "if (!loot) _soldThisRound = default;",
-                        "var sold = (units: _soldThisRound.units + soldItems, gold: _soldThisRound.gold + goldGained);",
-                        "_soldThisRound = sold;",
-                        "if (loot && pass.Site != null && !pass.Sim)",
-                        'Guard.Run("Marker.Check", () => Marker.ScoreTheMark(pass.Site, sold.units, sold.gold));')
-            and sell.count("Marker.ScoreTheMark(") == 1)
+            and ordered(sell, "int goldGained = pass.Gained(moved.SimGold);",
+                        "_soldThisRound = (_soldThisRound.units + soldItems, _soldThisRound.gold + goldGained,",
+                        "pass.Site != null && !pass.Sim ? pass.Site : _soldThisRound.at);")
+            and "Marker.ScoreTheMark(" not in sell
+            and "_soldThisRound = default;" in method_body(S['Trading.cs'], "private static void BeginTheRound")
+            and ordered(method_body(S['Trading.cs'], "private static void EndTheRound"),
+                        "var sold = _soldThisRound;", "if (sold.at != null)",
+                        'Guard.Run("Marker.Check", () => Marker.ScoreTheMark(sold.at, sold.units, sold.gold));')
+            and S['Trading.cs'].count("Marker.ScoreTheMark(") == 1
+            and S['Trading.cs'].count("EndTheRound();") == 3)
 
 
 chk("1.84.0", "the ultralog scores the marked market on arrival, once, against what it really paid you",
@@ -11984,7 +11989,7 @@ def a_party_of_villagers_is_never_sold_to_and_its_offer_is_taken_whole_or_left()
     return (road and lot and offer and priced and judged and taken
             and ordered(road, "if (met.IsVillager)", "LotPass(Pass.Meet(met, road, books, party), why);",
                         "else", "SellPass(Pass.Meet(met, road, books, party),",
-                        "BuyPass(Pass.Meet(met, road, books, party),", "ReportStalledPasses();")
+                        "BuyPass(Pass.Meet(met, road, books, party),", "EndTheRound();")
             and t.count("LotPass(") == 2
             and ordered(priced, "if (met != null && met.IsVillager) return TheirOfferFrom(met);",
                         "if (met == null || !met.IsCaravan) return RoadMarket();")
@@ -12002,7 +12007,7 @@ def a_party_of_villagers_is_never_sold_to_and_its_offer_is_taken_whole_or_left()
                         "InAPass(() => moved = TradePass.TakeTheLot(market, pass.Books, pass.Sim));",
                         "if (bought <= 0) return;", "if (!pass.Sim) Meetings.TookTheirOffer(pass.Met);",
                         "pass.Moved(gold: spent, selling: false);",
-                        "if (!pass.Muted) Notices.Say(msg, Notices.Spend);")
+                        "if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, bought, spent);")
             and ordered(judged, "if (!market.MayBuy(at, good, out Block whyBuy)) refused = whyBuy;",
                         "shelf.Add(new Pick { At = at, Good = good });",
                         "if (lot.Units == 0) return Block.NoStock;",
@@ -13009,8 +13014,8 @@ def what_a_town_uses_up_and_its_workshops_take_leave_its_shelf_in_the_forecast()
                      "A_shelf_a_landing_keeps_up_still_runs_out_on_the_day_the_town_has_used_it_up"))
             and "A_town_uses_up_as_many_goods_a_day_as_its_budget_for_the_kind_buys_at_its_own_price" in MATHTESTS
             and "and the town uses up before you arrive" in spoken(ENGLISH)['TL396']
-            and "what the town and its workshops use up" in spoken(ENGLISH)['TL447']
-            and "what the town and its workshops use up" in spoken(ENGLISH)['TL394']
+            and "what caravans, workshops and the town add and take before you arrive" in spoken(ENGLISH)['TL447']
+            and "what caravans, workshops and the town add and take before you arrive" in spoken(ENGLISH)['TL394']
             and said_in_every_language('TL447') and said_in_every_language('TL394')
             and "What leaves the shelf is counted too: what the town uses up every day and what its workshops take" in README)
 
@@ -13707,7 +13712,7 @@ def the_marker_leaves_out_the_market_arrival_trading_leaves_alone():
                         "int movesBefore = books.Moves(Simulating);",
                         "LotPass(", "SellPass(", "BuyPass(",
                         "NoteARoadTrade(met, books, movesBefore);",
-                        "ReportStalledPasses();")
+                        "EndTheRound();")
             and ordered(noted, "string was = _lastTradedAt;",
                         "_lastTradedAt = Arrivals.AfterTheRoad(books.Moves(Simulating) > movesBefore, was);",
                         "if (was != null && _lastTradedAt == null)",
@@ -14487,30 +14492,14 @@ chk("1.94.3", "the Russian hint for Hold cargo for the best market names the set
     the_hold_hint_names_the_marker_setting_and_calls_loot_what_sell_loot_up_to_tier_does())
 
 
-def what_you_never_bought_is_sold_after_what_you_bought_and_the_buying():
+def the_two_sales_each_take_only_their_own_units():
     t = S['Trading.cs']
-    entered = method_body(t, "private void OnSettlementEntered")
-    menu = between(t, '"tradelord_quicktrade"', '"tradelord_report"')
-    road = method_body(t, "public static void ExecuteRoadTrade")
     sell = method_body(t, "private static void SellPass")
     them = method_body(S['Passes.cs'], "internal static Traded SellThem")
     basis = method_body(S['Passes.cs'], "internal struct Basis")
     keep = method_body(S['TradeMath.cs'], "public static bool KeepToTheBoughtUnits")
-    return (ordered(entered, "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);",
-                    "if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);",
-                    "if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);",
-                    "if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))",
-                    "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);")
-            and ordered(menu, "ExecuteQuickSell(Settlement.CurrentSettlement);",
-                        "ExecuteQuickBuy(Settlement.CurrentSettlement);",
-                        "ExecuteLootSale(Settlement.CurrentSettlement);",
-                        "if (ExecuteHaulage(Settlement.CurrentSettlement))",
-                        "ExecuteResupply(Settlement.CurrentSettlement);")
-            and ordered(road, '"sale on the road", "selling on the road", "Road trading", why, loot: false);',
-                        "BuyPass(Pass.Meet(met, road, books, party),",
-                        '"loot sale on the road", "selling loot on the road", "Road loot selling", why, loot: true);')
+    return ("TradePass.SellThem(market, pass.Books, pass.Sim, Options.Current, tally, loot));" in sell
             and t.count("ExecuteLootSale(") == 3
-            and "TradePass.SellThem(market, pass.Books, pass.Sim, Options.Current, tally, loot));" in sell
             and ordered(them, "Basis basis = Basis.For(",
                         "if (!basis.LeftToThisSale(ref remaining, loot)) continue;",
                         "int[] there = holding?[at].Rungs;")
@@ -14520,56 +14509,26 @@ def what_you_never_bought_is_sold_after_what_you_bought_and_the_buying():
                         "if (remaining > paidLeft) remaining = paidLeft;", "return true;")
             and all(one in SELLPASSTESTS for one in
                     ("Selling_what_you_bought_leaves_what_you_did_not_buy_for_the_loot_sale",
-                     "The_loot_sale_leaves_the_units_you_bought_where_they_are",
-                     "Loot_is_sold_only_with_the_gold_this_market_has_left_after_what_you_bought",
-                     "A_dry_run_leaves_the_loot_sale_only_the_gold_the_first_sale_left"))
+                     "The_loot_sale_leaves_the_units_you_bought_where_they_are"))
             and "Selling_what_you_bought_takes_only_the_units_you_bought" in MATHTESTS)
 
-chk("1.95.0", "in a market and with a caravan on the road TradeLord sells what you bought, then buys, and only then sells what you never bought, loot included, with the gold left",
-    what_you_never_bought_is_sold_after_what_you_bought_and_the_buying())
+chk("1.95.0", "the sale of what you bought takes only the units you bought, and the sale of what you never bought, loot included, leaves those units where they are",
+    the_two_sales_each_take_only_their_own_units())
 
 
-def the_room_and_gold_the_loot_sale_frees_are_bought_with():
+def no_buying_pass_says_nothing_was_bought_after_one_that_did():
     t = S['Trading.cs']
-    entered = method_body(t, "private void OnSettlementEntered")
-    menu = between(t, '"tradelord_quicktrade"', '"tradelord_report"')
-    road = method_body(t, "public static void ExecuteRoadTrade")
-    sell = method_body(t, "private static void SellPass")
     buy = method_body(t, "private static void BuyPass")
     noted = method_body(t, "private static void NoteStalled")
     reset = method_body(t, "private static void ResetVisit")
-    return (ordered(entered, "if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);",
-                    "if (Options.Current.AutoBuyOnEntry && _lootSold > 0) ExecuteQuickBuy(settlement, quiet: true);",
-                    "if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))",
-                    "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);")
-            and ordered(menu, "ExecuteLootSale(Settlement.CurrentSettlement);",
-                        "if (_lootSold > 0) ExecuteQuickBuy(Settlement.CurrentSettlement);",
-                        "if (ExecuteHaulage(Settlement.CurrentSettlement))",
-                        "ExecuteHerdRelief(Settlement.CurrentSettlement);")
-            and "Haul animals are bought after the sale of what you never bought, so none is bought for goods "
-                "that fit once that is gone" in README
-            and ordered(road, '"Road loot selling", why, loot: true);',
-                        "if (_lootSold > 0)\n                    BuyPass(Pass.Meet(met, road, books, party),",
-                        "NoteARoadTrade(met, books, movesBefore);")
-            and road.count("BuyPass(Pass.Meet(met, road, books, party),") == 2
-            and ordered(sell, "if (!loot) _boughtThisRound = 0;", "if (loot) _lootSold = 0;",
-                        "if (pass == null) return;", "if (loot) _lootSold = soldItems;")
-            and ordered(buy, "if (bought > 0)", "_buyStalled = null;", "_boughtThisRound += bought;",
-                        "pass.Moved(gold: spent, selling: false);")
+    begin = method_body(t, "private static void BeginTheRound")
+    return (ordered(buy, "if (bought > 0)", "_buyStalled = null;", "_boughtThisRound += bought;",
+                    "pass.Moved(gold: spent, selling: false);")
             and "if (selling) _sellStalled = why; else if (_boughtThisRound == 0) _buyStalled = why;" in noted
-            and "_boughtThisRound = 0;" in reset and "_lootSold = 0;" in reset
+            and "_boughtThisRound = 0;" in reset and "_boughtThisRound = 0;" in begin
+            and "_boughtThisRound" not in method_body(t, "private static void SellPass")
             and ordered(method_body(t, "public static bool ExecuteHaulage"), "if (!unfitted.food)",
-                        "_buyStalled = null;", "_boughtThisRound += hauled;", "return true;")
-            and spoken(ENGLISH)['TL318'] in M
-            and "and again with the room and gold that sale frees." in spoken(ENGLISH)['TL318']
-            and "o satışın açtığı yer ve altınla bir kez daha alır" in
-                spoken('TradeLord/ModuleData/Languages/TR/module_strings_tr.xml')['TL318']
-            and "и ещё раз на место и золото от этой продажи" in
-                spoken('TradeLord/ModuleData/Languages/RU/module_strings_ru.xml')['TL318']
-            and "卖掉那些东西腾出空间和钱之后，它会再买一次" in
-                spoken('TradeLord/ModuleData/Languages/CNs/module_strings_cns.xml')['TL318']
-            and "Once what you never bought has sold, it buys once more with the cargo room and gold that sale freed"
-                in README)
+                        "_buyStalled = null;", "_boughtThisRound += hauled;", "return true;"))
 
 def the_caravan_line_is_offered_only_after_a_trade_that_landed():
     met = method_body(S['Encounters.cs'], "private static bool CaravanMet")
@@ -14585,8 +14544,8 @@ def the_caravan_line_is_offered_only_after_a_trade_that_landed():
 chk("1.97.8", "the caravan offers That was a nice trade only when TradeLord really traded with it, never after a dry run or a meeting where nothing moved",
     the_caravan_line_is_offered_only_after_a_trade_that_landed())
 
-chk("1.97.8", "once the sale of what you never bought has sold something, TradeLord buys again with the room and gold it freed, in a market and on the road, and no buying pass says nothing was bought after one that did",
-    the_room_and_gold_the_loot_sale_frees_are_bought_with())
+chk("1.97.8", "no buying pass says nothing was bought after one that did, in a market and on the road",
+    no_buying_pass_says_nothing_was_bought_after_one_that_did())
 
 
 def the_herd_is_relieved_once_everything_that_sells_here_has_sold():
@@ -14637,31 +14596,9 @@ def a_dry_run_never_sells_a_unit_of_a_stack_twice():
             and "ADryRunCountsWhatEachStackSoldSoALaterSaleNeverSellsItAgain" in BOOKTESTS
             and "A_dry_run_keeps_what_you_paid_for_each_quality_of_a_good_apart" in SELLPASSTESTS)
 
-chk("1.95.0", "a dry run counts what it has sold from each lot of a good, so the sale of what you never bought never sells again a unit the sale of what you bought already sold",
+chk("1.95.0", "a dry run counts what it has sold from each lot of a good, so neither the sale of what you never bought nor the sale of what you bought sells again a unit the other already sold",
     a_dry_run_never_sells_a_unit_of_a_stack_twice())
 
-
-def the_trade_entry_and_auto_buy_say_what_is_sold_before_and_after_the_buying():
-    en = spoken(ENGLISH)
-    tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    return ("it sells what you bought, buys, then sells what you never bought, loot included." in en['TL316']
-            and ("after selling what you bought and before selling what you never bought, and again with the room "
-                 "and gold that sale frees.") in en['TL318']
-            and "after any selling" not in en['TL318']
-            and all(en[one] in M for one in ('TL316', 'TL318'))
-            and all(said_in_every_language(one) for one in ('TL316', 'TL318'))
-            and len(en['TL316']) <= 248
-            and "ganimet dâhil" in tr['TL316'] and "hiç almadıklarınızı satmadan önce alır" in tr['TL318']
-            and "включая трофеи" in ru['TL316'] and "до продажи того, что вы не покупали" in ru['TL318']
-            and "战利品也算在内" in cn['TL316'] and "卖你没买过的东西之前" in cn['TL318']
-            and "One trade entry in the town menu, selling what you bought, buying, then selling what you never "
-                "bought, loot included, in one go, whenever you want it" in README
-            and "What you never bought, loot included, is sold only once it has sold what you bought and done a "
-                "first round of buying, with the gold the merchant has left" in README
-            and "selling then buying in one go" not in README)
-
-chk("1.95.0", "the hints under Trade entry in town menu and Auto buy and the feature list say what is sold before the buying and what after it, in every language",
-    the_trade_entry_and_auto_buy_say_what_is_sold_before_and_after_the_buying())
 
 def no_text_runs_past_248_characters():
     import tokenize
@@ -14979,7 +14916,8 @@ GUARD_WRAPPER_LINES = (
     'get|list|unset|remove-section) READING=1 ;;',
     '[Aa][Ll][Ii][Aa][Ss]|[Aa][Ll][Ii][Aa][Ss].*) ALIAS=1 ;;',
     '[ "$ALIAS" = 1 ] && [ "$READING" = 0 ] &&',
-    'refuse "that command defines a git alias, and the guard cannot see into an alias" ;;',
+    'refuse "that command defines a git alias, and the guard cannot see into an alias"',
+    '[ "$INCLUDE" = 1 ] && [ "$READING" = 0 ] &&',
     'send-pack|http-push|fast-import)',
     'refuse "git $SUB can start a branch the guard cannot read" ;;',
     '-b*|--b*) refuse "git subtree with a branch starts a new branch" ;;',
@@ -15034,7 +14972,7 @@ GUARD_LINES_IN_TURN = (
     'exit 2 ;;',
     'exit 0',
     'SEGMENTS=$(printf \'%s\\n\' "$COMMAND" | { sed \'s/%([^)]*)/%/g\' 2>/dev/null || cat; } | tr \'|;&()`\' \'\\n\\n\\n\\n\\n\\n\')',
-    'set -- ${segment//[\\\'\\"]/}',
+    'set -- ${segment//[\\\'\\"\\\\]/}',
     'for token in "$@"; do',
     'case "$token" in',
     'GIT_CONFIG_KEY_*=[Aa][Ll][Ii][Aa][Ss].*|GIT_CONFIG_PARAMETERS=*[Aa][Ll][Ii][Aa][Ss].*)',
@@ -15078,7 +15016,7 @@ GUARD_LINES_IN_TURN = (
     '-u|-g|-C|--unset|--chdir) shift; shift ;;',
     'builtin|eval) shift ;;',
     '[ "$FED" = 1 ] && set -- "$@" "{}"',
-    'gh|*/gh|curl|*/curl)',
+    'gh|*/gh|curl|*/curl|wget|*/wget|http|*/http|https|*/https|xh|*/xh|xhs|*/xhs)',
     'if [ "${1##*/}" = gh ]; then',
     'STEP=0; SKIP=0',
     'for token in "$@"; do',
@@ -15093,7 +15031,7 @@ GUARD_LINES_IN_TURN = (
     '2:create|2:checkout) refuse "gh pr $token needs or makes a second branch, and main is the only branch" ;;',
     '3:set|3:import) refuse "that command defines a gh alias, and the guard cannot see into an alias" ;;',
     '*) break ;;',
-    'REFS=0; WRITE=0; DELETE=0; MAIN=0; TAGGED=0; OTHER=""',
+    'REFS=0; WRITE=0; DELETE=0; MAIN=0; TAGGED=0; PULLS=0; OTHER=""',
     '*createRef*|*updateRefs*|*[Cc]reate*[Bb]ranch*)',
     'refuse "that request starts a new branch on GitHub" ;;',
     '*branches/*/rename*)',
@@ -15147,7 +15085,8 @@ GUARD_LINES_IN_TURN = (
     'get|list|unset|remove-section) READING=1 ;;',
     '[Aa][Ll][Ii][Aa][Ss]|[Aa][Ll][Ii][Aa][Ss].*) ALIAS=1 ;;',
     '[ "$ALIAS" = 1 ] && [ "$READING" = 0 ] &&',
-    'refuse "that command defines a git alias, and the guard cannot see into an alias" ;;',
+    'refuse "that command defines a git alias, and the guard cannot see into an alias"',
+    '[ "$INCLUDE" = 1 ] && [ "$READING" = 0 ] &&',
     'send-pack|http-push|fast-import)',
     'refuse "git $SUB can start a branch the guard cannot read" ;;',
     'subtree)',
@@ -15182,14 +15121,16 @@ def the_guard_keeps_each_of_its_lines_in_turn():
 
 def the_branch_guard_also_watches_github_tools_and_requests():
     tools = between(GUARD, 'case "$TOOL" in', "exit 0 ;;")
-    web = between(GUARD, "gh|*/gh|curl|*/curl)", "\n      continue ;;\n  esac\n")
+    web = between(GUARD, "gh|*/gh|curl|*/curl|wget|*/wget|http|*/http|https|*/https|xh|*/xh|xhs|*/xhs)",
+                  "\n      continue ;;\n  esac\n")
     return ('"matcher": "mcp__.*[Gg]it[Hh]ub.*"' in SETTINGS
-            and SETTINGS.count('no-new-branch.sh') == 2
+            and SETTINGS.count('no-new-branch.sh') == 3
             and all(one in tools for one in GUARD_TOOL_LINES)
             and all(one in web for one in GUARD_REQUEST_LINES)
             and all(one in GUARD for one in GUARD_WRAPPER_LINES)
             and ordered(GUARD, 'flagged() {', 'INPUT=$(cat)', '[[ $INPUT =~ $NAMED ]] && TOOL=${BASH_REMATCH[1]}', 'case "$TOOL" in', 'exit 0 ;;', 'if command -v jq >/dev/null 2>&1; then')
-            and ordered(GUARD, 'FED=0', 'xargs) shift; FED=1', '[ "$FED" = 1 ] && set -- "$@" "{}"', 'gh|*/gh|curl|*/curl)', 'git|*/git) ;;')
+            and ordered(GUARD, 'FED=0', 'xargs) shift; FED=1', '[ "$FED" = 1 ] && set -- "$@" "{}"',
+                        'gh|*/gh|curl|*/curl|wget|*/wget|http|*/http|https|*/https|xh|*/xh|xhs|*/xhs)', 'git|*/git) ;;')
             and the_guard_keeps_each_of_its_lines_in_turn())
 
 chk("1.97.8", "the branch guard also refuses a branch started through a GitHub tool, gh or curl, a shell or find running git, xargs, sudo, an alias or a low level git command",
@@ -16663,6 +16604,530 @@ def every_unit_keeps_the_price_it_was_really_bought_and_sold_for():
 
 chk("1.99.2", "every unit keeps the price it was really bought and sold for: the trade screen's own price for each unit is read, a sale there names each unit it took, and no average is written over the units",
     every_unit_keeps_the_price_it_was_really_bought_and_sold_for())
+
+def a_visit_says_each_kind_of_trade_in_one_line():
+    t = S['Trading.cs']
+    said = method_body(t, "private static void SayWhatMoved")
+    begin = method_body(t, "private static void BeginTheRound")
+    end = method_body(t, "private static void EndTheRound")
+    flush = method_body(t, "internal static void FlushToasts")
+    forget = method_body(t, "internal static void ForgetVisit")
+    left = method_body(t, "private void OnSettlementLeft")
+    each = method_body(S['Passes.cs'], "internal sealed class OneLineEach<T>")
+    recorded = [l.strip() for l in code_only(t).splitlines() if "_told.Add(" in l]
+    sites = {
+        "private static void SellPass":
+            "if (!pass.Muted) _told.Add(Told.Sold, pass.Sim, pass.Detail, soldItems, goldGained, profit);",
+        "private static void BuyPass":
+            "if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, bought, spent);",
+        "private static void LotPass":
+            "if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, bought, spent);",
+        "public static bool ExecuteHaulage":
+            "if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, hauled, spent, toCarry: true);",
+        "public static void ExecuteHerdRelief":
+            "if (!pass.Muted) _told.Add(Told.HerdRelief, pass.Sim, pass.Detail, sold, gained, profit);",
+        "public static void ExecuteResupply":
+            "if (!pass.Muted) _told.Add(Told.Restocked, pass.Sim, pass.Detail, stocked, spent);",
+    }
+    return (said and begin and end and each
+            and "private static readonly OneLineEach<ItemObject> _told = new OneLineEach<ItemObject>();" in t
+            and all(line in method_body(t, where) for where, line in sites.items())
+            and all(tid not in method_body(t, where) for where in sites
+                    for tid in ("{=TL02}", "{=TL13}", "{=TL06}", "{=TL14}", "{=TL110}", "{=TL111}",
+                                 "{=TL116}", "{=TL117}", "{=TL97}", "{=TL98}"))
+            and len(recorded) == 6
+            and all(one.startswith("if (!pass.Muted) _told.Add(Told.") for one in recorded)
+            and ordered(said, "if (_told.Count == 0) return;",
+                        "foreach (OneLineEach<ItemObject>.Said line in _told.Closed())",
+                        "{=TL02}", "{=TL110}", "{=TL06}", "{=TL116}", "{=TL97}")
+            and "else if (line.What == Told.Bought && line.OnlyToCarry)" in said
+            and said.count("Notices.Say(") == 5
+            and "Sold, Bought, HerdRelief, Restocked" in S['Passes.cs']
+            and "lines.Sort((x, y) => x.What != y.What ? x.What.CompareTo(y.What) : x.Sim.CompareTo(y.Sim));" in each
+            and "Said line = _said.Find(one => one.What == what && one.Sim == sim);" in each
+            and ordered(begin, "SayWhatMoved();", "_soldThisRound = default;", "_boughtThisRound = 0;",
+                        "_sellStalled = null;", "_buyStalled = null;")
+            and ordered(end, "SayWhatMoved();", "ReportStalledPasses();")
+            and t.count("BeginTheRound();") == 3 and t.count("EndTheRound();") == 3
+            and ordered(flush, 'Guard.Run("Action.SayWhatMoved", SayWhatMoved);',
+                        'Guard.Run("GameTradeBook.Settle", SettleTheSales);',
+                        "if (xp > 0) CreditTradeSkill(xp, profit, muted);", "Notices.Drain();")
+            and "_told.Forget();" in forget
+            and ordered(left, "if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);",
+                        "SayWhatMoved();")
+            and "SayAfterXp" not in t and "_afterXp" not in S['Notices.cs']
+            and all(one in ONELINETESTS for one in (
+                "Wine_and_donkeys_bought_then_cheese_after_the_loot_sale_are_one_bought_line",
+                "The_lines_come_out_the_same_whatever_order_the_passes_ran_in",
+                "A_good_bought_in_two_passes_is_named_once_with_both_counted",
+                "Haul_animals_bought_alone_keep_their_own_line",
+                "A_dry_run_line_never_merges_with_a_real_one",
+                "Closing_the_lines_empties_them_so_the_next_visit_starts_fresh",
+                "Forgetting_the_lines_drops_what_was_never_said"))
+            and "Each time it trades, all it sold is one line on screen and all it bought, haul animals included, is another" in README)
+
+chk("1.100.0", "each time TradeLord trades, all it sold is one line and all it bought, haul animals included, another, with food restocked and animals sold for speed in a line each, in the same order whatever order the passes ran in, before the trade skill line",
+    a_visit_says_each_kind_of_trade_in_one_line())
+
+
+def what_you_never_bought_is_sold_first_then_what_you_bought_then_the_buying():
+    t = S['Trading.cs']
+    entered = method_body(t, "private void OnSettlementEntered")
+    menu = between(t, '"tradelord_quicktrade"', '"tradelord_report"')
+    road = method_body(t, "public static void ExecuteRoadTrade")
+    sell = method_body(t, "private static void SellPass")
+    return (ordered(entered, "BeginTheRound();",
+                    "if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);",
+                    "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);",
+                    "if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);",
+                    "if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))",
+                    "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true);",
+                    "EndTheRound();")
+            and ordered(menu, "BeginTheRound();", "ExecuteLootSale(Settlement.CurrentSettlement);",
+                        "ExecuteQuickSell(Settlement.CurrentSettlement);",
+                        "ExecuteQuickBuy(Settlement.CurrentSettlement);",
+                        "if (ExecuteHaulage(Settlement.CurrentSettlement))",
+                        "ExecuteResupply(Settlement.CurrentSettlement);", "EndTheRound();")
+            and ordered(road, "BeginTheRound();",
+                        '"loot sale on the road", "selling loot on the road", "Road loot selling", why, loot: true);',
+                        '"sale on the road", "selling on the road", "Road trading", why, loot: false);',
+                        "BuyPass(Pass.Meet(met, road, books, party),",
+                        "NoteARoadTrade(met, books, movesBefore);", "EndTheRound();")
+            and road.count("BuyPass(Pass.Meet(met, road, books, party),") == 1
+            and entered.count("ExecuteQuickBuy(settlement, quiet: true)") == 2
+            and menu.count("ExecuteQuickBuy(Settlement.CurrentSettlement);") == 2
+            and t.count("ExecuteLootSale(") == 3
+            and "_lootSold" not in t
+            and "_soldThisRound = default;" not in sell and "_boughtThisRound = 0;" not in sell
+            and "bool first = _soldThisRound.units == 0 && (!loot || !_sellStalled.HasValue);" in sell
+            and "foreach (bool loot in new[] { true, false }) OnePass(market, run, sim, loot);" in SELLPASSTESTS
+            and all(one in SELLPASSTESTS for one in
+                    ("What_you_bought_is_sold_only_with_the_gold_this_market_has_left_after_the_loot",
+                     "A_dry_run_leaves_the_sale_of_what_you_bought_only_the_gold_the_loot_sale_left"))
+            and ("What you never bought, loot included, is sold first and what you bought after it, so the "
+                 "merchant's gold goes to the loot first") in README
+            and "It buys only once both are sold, so the cargo room and gold they free go straight into what it buys" in README
+            and "Haul animals are bought only once what you never bought and what you bought have sold" in README)
+
+chk("1.100.0", "in a market and with a caravan on the road TradeLord sells what you never bought, loot included, then what you bought, and buys only once both are sold, whatever a round of trading noted before",
+    what_you_never_bought_is_sold_first_then_what_you_bought_then_the_buying())
+
+
+def the_trade_entry_and_auto_buy_say_the_selling_comes_first():
+    en = spoken(ENGLISH)
+    tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
+    return ("it sells what you never bought, loot included, then what you bought, then buys." in en['TL316']
+            and "Buys the moment you walk into a market, after any selling." in en['TL318']
+            and "never bought" not in en['TL318']
+            and all(en[one] in M for one in ('TL316', 'TL318'))
+            and all(said_in_every_language(one) for one in ('TL316', 'TL318'))
+            and "hiç almadıklarınızı, ganimet dâhil, sonra satın aldıklarınızı satar, ardından alır." in tr['TL316']
+            and "varsa satıştan sonra alır" in tr['TL318']
+            and "продаёт то, что вы не покупали, включая трофеи, затем купленное, затем покупает." in ru['TL316']
+            and "после продажи." in ru['TL318']
+            and "先卖掉你没买过的东西，战利品也算在内，再卖掉你买来的货，最后买进。" in cn['TL316']
+            and "卖完之后它就开始买" in cn['TL318']
+            and ("One trade entry in the town menu, selling what you never bought, loot included, then what you "
+                 "bought, then buying, in one go, whenever you want it") in README)
+
+chk("1.100.0", "the hint under Trade entry in town menu and the feature list say it sells what you never bought, then what you bought, then buys, and the hint under Auto buy says it buys after any selling, in every language",
+    the_trade_entry_and_auto_buy_say_the_selling_comes_first())
+
+def every_line_of_what_this_means_fits_its_window():
+    panel = S['Panel.cs']
+    refresh = method_body(panel, "private void Refresh")
+    built = "".join(method_body(panel, one) for one in (
+        "private void Refresh", "private static string HowThePromiseHasHeld",
+        "private static string ResaleSafetyInUse", "private static string NothingHereYouCouldBuy"))
+    legend = refresh[refresh.find("LegendText = (empty"):refresh.find("LegendText = OneClauseToALine(LegendText);")]
+    ids = sorted(set(re.findall(r'\{=(TL\d+)\}', legend + "".join(method_body(panel, one) for one in (
+        "private static string HowThePromiseHasHeld", "private static string ResaleSafetyInUse",
+        "private static string NothingHereYouCouldBuy")))), key=lambda one: int(one[2:]))
+    measured = ['TL69', 'TL70', 'TL71', 'TL72', 'TL73', 'TL90', 'TL377', 'TL393', 'TL394', 'TL397', 'TL399',
+                'TL417', 'TL445', 'TL447', 'TL476', 'TL485']
+    widest = {'{GOLD}': '123,456', '{RESERVE}': '12,345', '{FLAT}': '12,345', '{WAGES}': '12,345',
+              '{USED}': '100%', '{SET}': '100%', '{COUNT}': '1,234', '{HELD}': '100%'}
+    def width(clause):
+        for name, value in widest.items():
+            clause = clause.replace(name, value)
+        across = 0.0
+        for c in clause:
+            o = ord(c)
+            if 0x2E80 <= o <= 0x9FFF or 0x3000 <= o <= 0x303F or 0xFF00 <= o <= 0xFFEF or c in '\u201c\u201d':
+                across += 2.5
+            elif 0x0400 <= o <= 0x04FF:
+                across += 1.1
+            else:
+                across += 1.0
+        return across
+    window = re.search(r'IsVisible="@IsLegendVisible".*?SuggestedWidth="(\d+)".*?Brush.FontSize="(\d+)"\s+'
+                       r'Brush.FontColor="#E2E2E2FF"\s+Text="@LegendText"', PREFAB, re.S)
+    return (ids == measured
+            and "LegendText = OneClauseToALine(LegendText);" in refresh
+            and 'said == null ? "" : said.Replace(" | ", "\\n");' in panel
+            and window is not None and window.group(1) == "900" and window.group(2) == "18"
+            and all(width(clause.strip()) <= 108
+                    for path in [ENGLISH] + list(TRANSLATIONS.values())
+                    for one in measured
+                    for clause in spoken(path)[one].split(' | ') if clause.strip())
+            and "{=TL394} | prices and stock count what caravans, workshops and the town add and take before you arrive" in built)
+
+chk("1.100.0", "every line of What this means in the TradeLord ledger fits on one line of its window in every language, so no line runs on into the next",
+    every_line_of_what_this_means_fits_its_window())
+
+GUARD_READS_THROUGH_BLOCKS = (
+    (
+        'ours() {',
+        '  [ "$1" -ef "$0" ] || [ "$1" -ef "${0%/*}/session-start.sh" ]',
+        '}',
+    ),
+    (
+        '      *__fork_repository)',
+        '        refuse "a fork is a second copy of the repository, with branches of its own" ;;',
+        '      *__create_session)',
+        '        OUTCOME=""',
+        '        BRANCH=\'"outcome_branch"[[:space:]]*:[[:space:]]*"([^"]*)"\'',
+        '        [[ $INPUT =~ $BRANCH ]] && OUTCOME=${BASH_REMATCH[1]}',
+        '        case "$OUTCOME" in',
+        "          ''|main|refs/heads/main) ;;",
+        '          *) refuse "that session would push to the branch $OUTCOME, and main is the only branch" ;;',
+        '        esac ;;',
+    ),
+    (
+        'FEEDS=$COMMAND',
+        'for depth in 1 2 3; do',
+        '  MORE=""',
+        '  PIPED=""',
+        '  while IFS= read -r line; do',
+        '    line=${line//<<</ <<< }',
+        '    set -- ${line//[\\\'\\"]/}',
+        '    while [ $# -gt 0 ]; do',
+        '      case "$1" in',
+        "        sudo|env|command|exec|nohup|time|builtin|then|do|else|'!'|'{'|[A-Za-z_]*=*) shift ;;",
+        '        *) break ;;',
+        '      esac',
+        '    done',
+        '    case "${1:-}" in',
+        '      echo|printf|*/echo|*/printf) shift; PIPED="$*"; continue ;;',
+        '      cat|*/cat) shift',
+        '        PIPED=""',
+        '        for one in "$@"; do',
+        '          [ -f "$one" ] && [ -r "$one" ] && ! ours "$one" && PIPED+=$\'\\n\'$(head -c 200000 "$one" 2>/dev/null)',
+        '        done',
+        '        continue ;;',
+        '      source|.|bash|sh|zsh|dash|ksh|*/bash|*/sh|*/zsh|*/dash|*/ksh) shift',
+        '        while [ $# -gt 0 ]; do',
+        '          case "$1" in',
+        '            -o|-O|+o|+O|--rcfile|--init-file) shift; shift ;;',
+        '            -c*|-[!-]*c*) set -- -c; break ;;',
+        '            -*|+*) shift ;;',
+        '            *) break ;;',
+        '          esac',
+        '        done',
+        '        case "${1:-}" in \'<\'[!\'<\']*) set -- \'<\' "${1#<}" ;; esac',
+        '        if [ "${1:-}" = "<<<" ]; then',
+        '          shift',
+        '          MORE+=$\'\\n\'"$*"',
+        '        elif [ "${1:-}" = "<" ] && [ -f "${2:-}" ] && [ -r "${2:-}" ] && ! ours "$2"; then',
+        '          MORE+=$\'\\n\'$(head -c 200000 "$2" 2>/dev/null)',
+        '        elif [ $# -gt 0 ] && [ "$1" != -c ] && [ -f "$1" ] && [ -r "$1" ] && ! ours "$1"; then',
+        '          MORE+=$\'\\n\'$(head -c 200000 "$1" 2>/dev/null)',
+        '        elif [ $# -eq 0 ] && [ -n "$PIPED" ]; then',
+        '          MORE+=$\'\\n\'"$PIPED"',
+        '        fi ;;',
+        '    esac',
+        '    PIPED=""',
+        '  done <<<"$(printf \'%s\\n\' "$FEEDS" | tr \'|;&()`\' \'\\n\\n\\n\\n\\n\\n\')"',
+        '  [ -n "$MORE" ] || break',
+        '  COMMAND+=$MORE',
+        '  FEEDS=$MORE',
+        'done',
+        '',
+        'SEGMENTS=',
+    ),
+    (
+        'while IFS= read -r segment; do',
+        "  while [[ $segment =~ \\$\\'([^\\']*)\\' ]]; do",
+        '    printf -v plain \'%b\' "${BASH_REMATCH[1]}"',
+        '    segment=${segment/"${BASH_REMATCH[0]}"/"$plain"}',
+        '  done',
+        '  set -- ${segment//[\\\'\\"\\\\]/}',
+        '  for token in "$@"; do',
+        '    case "$token" in',
+        '      GIT_CONFIG_KEY_*=[Aa][Ll][Ii][Aa][Ss].*|GIT_CONFIG_PARAMETERS=*[Aa][Ll][Ii][Aa][Ss].*)',
+        '        refuse "that command defines a git alias through the environment, and the guard cannot see into an alias" ;;',
+        '      GIT_CONFIG_KEY_*=[Ii][Nn][Cc][Ll][Uu][Dd][Ee]*|GIT_CONFIG_PARAMETERS=*[Ii][Nn][Cc][Ll][Uu][Dd][Ee]*)',
+        '        refuse "that command makes git read another config file, which can hold an alias the guard cannot see" ;;',
+        '      GIT_CONFIG_GLOBAL=*|GIT_CONFIG_SYSTEM=*|GIT_CONFIG=*)',
+        '        refuse "that command points git at another config file, which can hold an alias the guard cannot see" ;;',
+    ),
+    (
+        '      [A-Za-z_]*=*) shift ;;',
+        '      *) break ;;',
+        '    esac',
+        '  done',
+        '  [ "$FED" = 1 ] && set -- "$@" "{}"',
+    ),
+    (
+        '    gh|*/gh|curl|*/curl|wget|*/wget|http|*/http|https|*/https|xh|*/xh|xhs|*/xhs)',
+        '      if [ "${1##*/}" = gh ]; then',
+        '        STEP=0; SKIP=0',
+        '        for token in "$@"; do',
+        '          if [ "$SKIP" = 1 ]; then SKIP=0; continue; fi',
+        '          case "$token" in',
+        '            -R|--repo|--hostname) SKIP=1; continue ;;',
+        '            -*) continue ;;',
+        '          esac',
+        '          case "$STEP:$token" in',
+        '            0:*) STEP=1 ;;',
+        '            1:pr) STEP=2 ;;',
+        '            1:alias) STEP=3 ;;',
+        '            1:repo) STEP=4 ;;',
+        '            2:create|2:checkout) refuse "gh pr $token needs or makes a second branch, and main is the only branch" ;;',
+        '            3:set|3:import) refuse "that command defines a gh alias, and the guard cannot see into an alias" ;;',
+        '            4:fork) refuse "gh repo fork makes a second copy of the repository, with branches of its own" ;;',
+    ),
+    (
+        '      REFS=0; WRITE=0; DELETE=0; MAIN=0; TAGGED=0; PULLS=0; OTHER=""',
+        '      for token in "$@"; do',
+        '        case "$token" in',
+        '          *createRef*|*updateRefs*|*[Cc]reate*[Bb]ranch*)',
+        '            refuse "that request starts a new branch on GitHub" ;;',
+        '          --config|--config=*)',
+        '            [ "${1##*/}" != gh ] && refuse "the guard cannot read a request kept in a config file" ;;',
+        '          -[!-]*)',
+        '            [ "${1##*/}" = curl ] && flagged "$token" K AbcCdDeEFHmoPQrtTuUwxXyYz &&',
+        '              refuse "the guard cannot read a request kept in a config file" ;;',
+    ),
+    (
+        '        case "$token" in *refs/tags/*) TAGGED=1 ;; esac',
+        '        case "$token" in */pulls|*/pulls/|*/pulls\\?*) PULLS=1 ;; esac',
+    ),
+    (
+        '          --field*|--raw-field*|--input*|--data*|--json*|--form*|--upload-file*) WRITE=1 ;;',
+        '          --post-data*|--post-file*|--body-data*|--body-file*) WRITE=1 ;;',
+    ),
+    (
+        '      done',
+        '      [ "$PULLS" = 1 ] && [ "$WRITE" = 1 ] && refuse "a pull request needs a second branch, and main is the only branch"',
+    ),
+    (
+        '  VARIED=0',
+        '  case "${1:-}" in',
+        '    git|*/git) ;;',
+        '    git.exe|*/git.exe) ;;',
+        "    '$'[A-Za-z_{]*) VARIED=1 ;;",
+        '    *) continue ;;',
+        '  esac',
+        '  shift',
+        '  while [ $# -gt 0 ]; do',
+    ),
+    (
+        '          [Aa][Ll][Ii][Aa][Ss].*) refuse "that command defines a git alias inline, and the guard cannot see into an alias" ;;',
+        '          [Ii][Nn][Cc][Ll][Uu][Dd][Ee]*) refuse "that command makes git read another config file, which can hold an alias the guard cannot see" ;;',
+        '        esac',
+        '        shift; shift ;;',
+        '      --config-env=[Aa][Ll][Ii][Aa][Ss].*)',
+        '        refuse "that command defines a git alias inline, and the guard cannot see into an alias" ;;',
+        '      --config-env=[Ii][Nn][Cc][Ll][Uu][Dd][Ee]*)',
+        '        refuse "that command makes git read another config file, which can hold an alias the guard cannot see" ;;',
+    ),
+    (
+        '      -*) shift ;;',
+        '      *) break ;;',
+        '    esac',
+        '  done',
+        '  SUB=${1:-}',
+        '  [ $# -gt 0 ] && shift',
+        '  case "$SUB" in',
+        '    \'$\'*) [ "$VARIED" = 0 ] && refuse "the guard cannot read which git command $SUB stands for" ;;',
+        '  esac',
+    ),
+    (
+        '      READING=0; ALIAS=0; INCLUDE=0',
+        '      for token in "$@"; do',
+        '        case "$token" in',
+        '          --get|--get-all|--get-regexp|--get-urlmatch|-l|--list|--unset|--unset-all|--remove-section) READING=1 ;;',
+        '          get|list|unset|remove-section) READING=1 ;;',
+        '          [Aa][Ll][Ii][Aa][Ss]|[Aa][Ll][Ii][Aa][Ss].*) ALIAS=1 ;;',
+        '          [Ii][Nn][Cc][Ll][Uu][Dd][Ee]*) INCLUDE=1 ;;',
+        '        esac',
+        '      done',
+        '      [ "$ALIAS" = 1 ] && [ "$READING" = 0 ] &&',
+        '        refuse "that command defines a git alias, and the guard cannot see into an alias"',
+        '      [ "$INCLUDE" = 1 ] && [ "$READING" = 0 ] &&',
+        '        refuse "that command makes git read another config file, which can hold an alias the guard cannot see" ;;',
+    ),
+)
+
+
+def the_branch_guard_reads_through_disguised_commands():
+    at = -1
+    for lines in GUARD_READS_THROUGH_BLOCKS:
+        one = "\n".join(lines)
+        found = GUARD.find(one)
+        if found <= at or GUARD.count(one) != 1:
+            return False
+        at = found
+    named = SETTINGS.find('"matcher": "mcp__.*__create_session"')
+    return (named > SETTINGS.find('"matcher": "mcp__.*[Gg]it[Hh]ub.*"') > 0
+            and '"command": "$CLAUDE_PROJECT_DIR/.claude/hooks/no-new-branch.sh"' in SETTINGS[named:])
+
+chk("1.100.0", "the branch guard reads through backslashes, ANSI-C quotes, a variable standing for git, a shell fed by echo, printf, cat, a here-string or a script, and refuses forks, pull requests, curl config files, git includes and a session's own branch",
+    the_branch_guard_reads_through_disguised_commands())
+
+GUARD_KEPT_BLOCKS = (
+    (
+        '    checkout|switch)',
+        '      DETACH=0; GUESS=1; FIRST=""',
+        '      for token in "$@"; do',
+        '        case "$token" in',
+        '          --) break ;;',
+        '          -b|-B|-c|-C|--create|--force-create|--orphan)',
+        '            refuse "that command starts a new branch" ;;',
+        '          --create=*|--force-create=*|--orphan=*|-t|--track|--track=*)',
+        '            refuse "that command starts a new branch" ;;',
+        '          --cr*|--force-c*|--or*|--tr*)',
+        '            refuse "that command starts a new branch" ;;',
+        '          --detach) DETACH=1 ;;',
+        '          --no-guess) GUESS=0 ;;',
+        '          --*) ;;',
+        '          -*[bBcCt]*) refuse "that command starts a new branch" ;;',
+        '          -*d*) [ "$SUB" = switch ] && DETACH=1 ;;',
+        '          -*) ;;',
+        '          *) [ -z "$FIRST" ] && FIRST=$token ;;',
+        '        esac',
+        '      done',
+        '      if [ -n "$FIRST" ] && [ "$FIRST" != main ] && [ "$FIRST" != HEAD ] && [ "$DETACH" = 0 ] && [ "$GUESS" = 1 ] &&',
+        '         ! git show-ref --verify --quiet "refs/heads/$FIRST" 2>/dev/null &&',
+        '         [ -n "$(git for-each-ref --format=\'%(refname)\' "refs/remotes/*/$FIRST" 2>/dev/null)" ]; then',
+        '        { [ "$SUB" = checkout ] && [ -e "$FIRST" ]; } ||',
+        '          refuse "that command starts a local branch $FIRST from the remote one"',
+        '      fi ;;',
+        '',
+    ),
+    (
+        '    update-ref)',
+        '      DELETING=0; SKIP=0',
+        '      for token in "$@"; do',
+        '        if [ "$SKIP" = 1 ]; then SKIP=0; continue; fi',
+        '        case "$token" in',
+        '          -d|--delete) DELETING=1 ;;',
+        '          -m) SKIP=1 ;;',
+        '          --stdin) refuse "git update-ref --stdin can start a branch the guard cannot read" ;;',
+        '          -*) ;;',
+        '          *)',
+        '            if [ "$DELETING" = 0 ]; then',
+        '              case "$token" in',
+        '                refs/heads/main) ;;',
+        '                refs/heads/*) refuse "that command starts a new branch" ;;',
+        '              esac',
+        '            fi',
+        '            break ;;',
+        '        esac',
+        '      done ;;',
+        '',
+    ),
+    (
+        '    fetch|pull)',
+        '      REMOTE=0',
+        '      for token in "$@"; do',
+        '        case "$token" in',
+        '          -*) ;;',
+        '          *)',
+        '            if [ "$REMOTE" = 0 ]; then',
+        '              REMOTE=1',
+        '            else',
+        '              case "$token" in',
+        '                *://*) ;;',
+        '                *:*)',
+        '                  case "${token##*:}" in',
+        "                    ''|main|refs/heads/main|refs/remotes/*|refs/tags/*) ;;",
+        '                    *) refuse "that fetch would start the local branch ${token##*:}" ;;',
+        '                  esac ;;',
+        '              esac',
+        '            fi ;;',
+        '        esac',
+        '      done ;;',
+        '',
+    ),
+    (
+        '    branch)',
+        '      NAMES=0; READS=0; SKIP=0',
+        '      for token in "$@"; do',
+        '        if [ "$SKIP" = 1 ]; then SKIP=0; continue; fi',
+        '        case "$token" in',
+        '          *\'>\'*|*\'<\'*) case "$token" in *\'>\'|*\'<\') SKIP=1 ;; esac ;;',
+        '          -d|-D|--delete|-r|--remotes|-a|--all|-l|--list|--show-current|--edit-description) READS=1 ;;',
+        '          --contains|--contains=*|--no-contains|--no-contains=*|--merged|--merged=*) READS=1 ;;',
+        '          --no-merged|--no-merged=*|--points-at|--points-at=*) READS=1 ;;',
+        '          -u|--set-upstream-to|--set-upstream-to=*|--unset-upstream) READS=1 ;;',
+        '          --format|--sort) SKIP=1 ;;',
+        '          -*) ;;',
+        '          *) NAMES=1 ;;',
+        '        esac',
+        '      done',
+        '      [ "$NAMES" = 1 ] && [ "$READS" = 0 ] &&',
+        '        refuse "git branch with a name starts a new branch" ;;',
+        '',
+    ),
+    (
+        '    push)',
+        '      DELETING=0; TAGS=0; REMOTE=0; TOMAIN=0; SKIP=0; WRONG=""',
+        '      for token in "$@"; do',
+        '        if [ "$SKIP" = 1 ]; then SKIP=0; continue; fi',
+        '        case "$token" in',
+        '          *\'>\'*|*\'<\'*) case "$token" in *\'>\'|*\'<\') SKIP=1 ;; esac ;;',
+        '          --delete|-d) DELETING=1 ;;',
+        '          --de*|-[!o-]*d*) DELETING=1 ;;',
+        '          --tags|--follow-tags) TAGS=1 ;;',
+        '          -o|--push-option|--repo|--receive-pack|--exec) SKIP=1 ;;',
+        '          -*) ;;',
+        '          *)',
+        '            if [ "$REMOTE" = 0 ]; then',
+        '              REMOTE=1',
+        '            else',
+        '              case "$token" in',
+        '                :*|+:*)',
+        '                  case "${token##*:}" in',
+        '                    main|refs/heads/main) refuse "that push would delete main from the remote" ;;',
+        '                  esac ;;',
+        '              esac',
+        '              case "${token##*:}" in',
+        '                main|refs/heads/main) TOMAIN=1 ;;',
+        '                *) WRONG=${token##*:} ;;',
+        '              esac',
+        '            fi ;;',
+        '        esac',
+        '      done',
+        '      [ "$DELETING" = 1 ] && [ "$TOMAIN" = 1 ] &&',
+        '        refuse "that push would delete main from the remote"',
+        '      if [ "$DELETING" = 0 ]; then',
+        '        [ -n "$WRONG" ] && refuse "that push would create the remote branch $WRONG"',
+        '        [ "$TOMAIN" = 0 ] && [ "$TAGS" = 0 ] &&',
+        '          refuse "a push has to name where it goes, and main is the only place it may go"',
+        '      fi ;;',
+        '  esac',
+        'done <<<"$SEGMENTS"',
+        '',
+        'exit 0',
+        '',
+    ),
+)
+
+
+def the_branch_guard_keeps_every_line_of_its_git_checks():
+    at = -1
+    for lines in GUARD_KEPT_BLOCKS:
+        one = "\n".join(lines)
+        found = GUARD.find(one)
+        if found <= at or GUARD.count(one) != 1:
+            return False
+        at = found
+    return GUARD.endswith("\n".join(GUARD_KEPT_BLOCKS[-1]))
+
+chk("1.100.0", "every line of the branch guard's checks on checkout, switch, update-ref, fetch, pull, branch and push stands where it is, down to the last line of the guard",
+    the_branch_guard_keeps_every_line_of_its_git_checks())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

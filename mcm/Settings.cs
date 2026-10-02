@@ -475,7 +475,7 @@ namespace TradeLord.Mcm
         public bool AutoSellOnEntry { get => _o.AutoSellOnEntry; set { _o.AutoSellOnEntry = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL218}Auto buy", Order = 1, RequireRestart = false,
-            HintText = "{=TL318}Buys the moment you walk into a market, after selling what you bought and before selling what you never bought, and again with the room and gold that sale frees. With this off, TradeLord buys only when you pick its trade entry in the menu.")]
+            HintText = "{=TL318}Buys the moment you walk into a market, after any selling. With this off, TradeLord buys only when you pick its trade entry in the menu.")]
         [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 1)]
         public bool AutoBuyOnEntry { get => _o.AutoBuyOnEntry; set { _o.AutoBuyOnEntry = value; Options.Bump(); } }
 
@@ -485,7 +485,7 @@ namespace TradeLord.Mcm
         public bool StagedTrading { get => _o.StagedTrading; set { _o.StagedTrading = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL216}Trade entry in town menu", Order = 0, RequireRestart = false,
-            HintText = "{=TL316}TradeLord's trade entry in town and village menus: it sells what you bought, buys, then sells what you never bought, loot included. Turn it off to trade only on arrival. While Staged Trading holds that trading back, the entry shows anyway.")]
+            HintText = "{=TL316}TradeLord's trade entry in town and village menus: it sells what you never bought, loot included, then what you bought, then buys. Turn it off to trade only on arrival. While Staged Trading holds that trading back, the entry shows anyway.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool QuickSellMenu { get => _o.QuickSellMenu; set { _o.QuickSellMenu = value; Options.Bump(); } }
 
