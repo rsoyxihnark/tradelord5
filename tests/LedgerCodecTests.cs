@@ -391,7 +391,7 @@ namespace TradeLord.Tests
             Assert.Single(back);
             Assert.Equal(5, back[0].Count);
             Assert.Equal(5, back[0].Batches.Count);
-            Assert.Equal(new[] { 278, 278, 278, 278, 836 }, back[0].Batches.Select(one => one.Unit).ToArray());
+            Assert.Equal(new[] { 278, 278, 279, 279, 836 }, back[0].Batches.Select(one => one.Unit).ToArray());
             Assert.All(back[0].Batches, one => Assert.Equal(1, one.Count));
             Assert.Equal(written, LedgerCodec.WritePurchases(back));
         }
@@ -451,7 +451,7 @@ namespace TradeLord.Tests
 
             var back = LedgerCodec.ReadPurchases(written);
 
-            Assert.Equal("felt|1950|5|278|278:1:0:23:100,278:1:0:22:100,278:1:0:21:100,278:1:0:20:100,836:1:0:7:100", written);
+            Assert.Equal("felt|1950|5|278|278:1:0:23:100,278:1:0:22:100,279:1:0:21:100,279:1:0:20:100,836:1:0:7:100", written);
             Assert.Equal(new[] { 23L, 22L, 21L, 20L, 7L }, back[0].Batches.Select(one => one.First).ToArray());
             Assert.All(back[0].Batches, one => Assert.Equal(100f, one.Day));
             Assert.Equal(written, LedgerCodec.WritePurchases(back));

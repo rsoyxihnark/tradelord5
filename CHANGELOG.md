@@ -1,21 +1,32 @@
 # Changelog
 
+## 1.99.1
+
+- Fixed fresh units of a food good skipping Hold cargo for the best market once other units of it had waited past Sell at cost after
+- Fixed a good you sell by hand with Each unit's own price counting as your cheapest units while a dearer unit stayed in your cargo
+- Fixed units Staged Trading laid out on the trade screen being booked as cheaper units you never sold, with Each unit's own price
+- Fixed Average you paid booking a sale against the least dear unit the price covers instead of the dearest one
+- Fixed units you bought together by hand not adding up to what you paid for them
+- Fixed the Turkish name of Sell at cost after leaving out that it waits a number of days
+- Fixed the Russian and Chinese hint for Sell at cost after not marking the setting names it mentions
+- Fixed a stray space in the Chinese message saying how much Trade XP your skill gained
+
 ## 1.99.0
 
 - What a good counts as having cost you is now called Price a sale must beat
 - The choices of Price a sale must beat are now called Each unit's own price, Average you paid, Last price you paid and Cheapest market price
 - Every unit you buy now keeps a row of its own with the day you bought it, even when you buy many at one price
 - With Each unit's own price, of two units bought at one price the older one now sells first
-- Sell at cost after is a new setting, 30 days by default, for units you bought that have waited too long to sell
-- A unit that waited past Sell at cost after may sell for what it cost you, with no margin and no Hold cargo for the best market
-- Hold cargo for the best market now counts unit by unit which of your units the marked market would take at a profit
-- Hold cargo for the best market never holds a unit that waited past Sell at cost after
+- With Each unit's own price, Sell at cost after is a new setting, 30 days by default, for units you bought that have waited too long to sell
+- With Each unit's own price, a unit that waited past Sell at cost after may sell for what it cost you, with no margin and no Hold cargo for the best market
+- With Each unit's own price, Hold cargo for the best market now counts unit by unit which of your units the marked market would take at a profit
+- With Each unit's own price, Hold cargo for the best market never holds a unit that waited past Sell at cost after
 - Goods you already carry count their age from the day you first load your save with this version
 - TradeLord.log now says how many days each unit TradeLord sells had waited
 
 ## 1.98.0
 
-- Every unit you buy now gets a number no other unit is ever given, and keeps the exact price you paid for it
+- Every unit you buy now gets a number no other unit is ever given, and keeps the price you paid for it
 - Goods you already carry get their unit numbers the first time you load your save
 - What a good counts as having cost you has a new choice, What each unit cost you, and TradeLord now ships with it
 - With What each unit cost you, the dearest unit the price beats by your margin sells first, and a unit it cannot beat stays in your cargo

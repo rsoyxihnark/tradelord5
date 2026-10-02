@@ -229,7 +229,7 @@ namespace TradeLord.Tests
             Assert.Equal(390, basis);
             Assert.Equal(448, TradeMath.WhatTheAverageCovers(basis, 0.15f));
             Assert.Equal(new[] { 836 }, Dear(rec, TradeMath.WhatTheAverageCovers(basis, 0.15f), rec.Count));
-            Assert.Equal(new[] { 278, 278, 278, 278, 836 }, Units(TradeMath.UnitCosts(rec, rec.Count)));
+            Assert.Equal(new[] { 278, 278, 279, 279, 836 }, Units(TradeMath.UnitCosts(rec, rec.Count)));
         }
 
         [Fact]
@@ -281,7 +281,7 @@ namespace TradeLord.Tests
             Buy(rec, 4, 1114);
             int basis = TradeMath.UnitBasis(rec, LastPaid);
             Assert.Equal(278, basis);
-            Assert.Equal(new[] { 836 }, Dear(rec, basis, rec.Count));
+            Assert.Equal(new[] { 279, 279, 836 }, Dear(rec, basis, rec.Count));
         }
 
         private static Batch[] Costs(params int[] units)
@@ -352,6 +352,32 @@ namespace TradeLord.Tests
             Assert.Equal(new[] { 500, 100, 100, 900 }, sold.ToArray());
             sold = Walked(new TradeMath.DearFirst(Costs(100, 100, 500, 900), 115, 100), 4, u => 1100 - 10 * u);
             Assert.Equal(new[] { 900, 500, 100, 100 }, sold.ToArray());
+        }
+
+        [Fact]
+        public void Of_several_dear_units_a_price_covers_the_dearest_is_booked_and_the_dearer_one_waits()
+        {
+            var sold = Walked(new TradeMath.DearFirst(Costs(100, 400, 500, 900), 115, 100), 4, u => 600);
+            Assert.Equal(new[] { 500, 400, 100, 900 }, sold.ToArray());
+        }
+
+        [Fact]
+        public void Dear_units_a_price_passed_over_are_still_taken_cheapest_first_and_never_twice()
+        {
+            var walk = new TradeMath.DearFirst(Costs(100, 300, 300, 400, 500, 500, 900), 115, 100);
+            Assert.Equal(100, walk.Floor(2000));
+            Assert.Equal(900, walk.Took());
+            Assert.Equal(100, walk.Floor(510));
+            Assert.Equal(500, walk.Took());
+            Assert.Equal(100, walk.Floor(350));
+            Assert.Equal(300, walk.Took());
+            TradeMath.DearFirst copy = walk;
+            var rest = new List<int>();
+            for (int u = 0; u < 4; u++) rest.Add(walk.Took());
+            Assert.Equal(new[] { 100, 300, 400, 500 }, rest.ToArray());
+            Assert.Equal(TradeMath.NoUnitThisPriceSells, walk.Floor(5000));
+            Assert.Equal(100, copy.Took());
+            Assert.Equal(300, copy.Took());
         }
 
         [Fact]
@@ -519,7 +545,7 @@ namespace TradeLord.Tests
             Buy(rec, 4, 1114);
             TradeMath.DrainSale(rec, 1, 836);
             Assert.Equal(4, rec.Batches.Count);
-            Assert.All(rec.Batches, one => Assert.Equal(278, one.Unit));
+            Assert.Equal(new[] { 278, 278, 279, 279 }, Units(TradeMath.UnitCosts(rec, rec.Count)));
             TradeMath.DrainSale(rec, 1, 999);
             Assert.Equal(3, rec.Batches.Count);
         }
@@ -876,6 +902,37 @@ namespace TradeLord.Tests
             Assert.Equal(new List<int> { 200 }, TradeMath.WhatAHandSaleTook(rec, 1, 250, TradeMath.EachUnitApart, null));
             Assert.Equal(new List<int> { 300, 200 }, TradeMath.WhatAHandSaleTook(rec, 2, 500, TradeMath.EachUnitApart, null));
             Assert.Equal(250 - 200, TradeMath.MadeOnAHandSale(rec, 1, 250, TradeMath.EachUnitApart, null));
+        }
+
+        [Fact]
+        public void A_hand_sale_with_each_unit_at_its_own_cost_is_not_put_off_by_a_dear_unit_left_unsold()
+        {
+            var rec = new PurchaseRecord { ItemId = "cloth" };
+            foreach (int paid in new[] { 50, 120, 130, 1000 }) Buy(rec, 1, paid);
+            Assert.Equal(new List<int> { 130, 120 }, TradeMath.WhatAHandSaleTook(rec, 2, 300, TradeMath.EachUnitApart, null));
+            Assert.Equal(300 - 130 - 120, TradeMath.MadeOnAHandSale(rec, 2, 300, TradeMath.EachUnitApart, null));
+            TradeMath.DrainSale(rec, 2, TradeMath.WhatAHandSaleTook(rec, 2, 300, TradeMath.EachUnitApart, null));
+            Assert.Equal(new[] { 50, 1000 }, Units(TradeMath.UnitCosts(rec, rec.Count)));
+        }
+
+        [Fact]
+        public void Units_laid_out_for_a_hand_sale_are_taken_at_their_own_cost()
+        {
+            var rec = new PurchaseRecord { ItemId = "cloth" };
+            foreach (int paid in new[] { 10, 290, 300, 3000 }) Buy(rec, 1, paid);
+            var laidOut = new List<int> { 300, 290 };
+            Assert.Equal(new List<int> { 300, 290 }, TradeMath.WhatAHandSaleTook(rec, 2, 695, TradeMath.EachUnitApart, laidOut));
+            Assert.Equal(695 - 300 - 290, TradeMath.MadeOnAHandSale(rec, 2, 695, TradeMath.EachUnitApart, laidOut));
+        }
+
+        [Fact]
+        public void Units_bought_together_by_hand_add_up_to_what_was_paid()
+        {
+            var rec = new PurchaseRecord { ItemId = "felt" };
+            Buy(rec, 4, 1114);
+            Buy(rec, 3, 1000);
+            Assert.Equal(new[] { 278, 278, 279, 279, 333, 333, 334 }, Units(TradeMath.UnitCosts(rec, rec.Count)));
+            Assert.Equal(1114 + 1000, rec.TotalPaid);
         }
 
         [Fact]

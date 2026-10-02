@@ -1238,6 +1238,28 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Food_kept_back_with_units_past_their_age_sells_the_aged_units_and_holds_the_fresh_ones_for_the_marked_market()
+        {
+            var market = new FakeMarket { Day = 100f };
+            Load cheese = market.Add(Ration("cheese"), amount: 10, price: 200);
+            cheese.Basis = 130;
+            cheese.Purchased = 10;
+            cheese.Elsewhere = true;
+            cheese.Resale = 300;
+            cheese.Reserved = 7;
+            cheese.Rows = new[]
+            {
+                Row(1, 100, 10f), Row(2, 100, 10f), Row(3, 100, 10f), Row(4, 100, 10f),
+                Row(5, 150, 99f), Row(6, 150, 99f), Row(7, 150, 99f), Row(8, 150, 99f), Row(9, 150, 99f), Row(10, 150, 99f)
+            };
+
+            Run run = Sell(market);
+
+            Assert.Equal(new[] { 100, 100, 100 }, market.RecordedPaid.ToArray());
+            Assert.True(run.Tally.Saw(Block.BelowBestMarket));
+        }
+
+        [Fact]
         public void A_unit_past_its_age_is_never_held_for_the_marked_market()
         {
             var market = new FakeMarket { Day = 100f };
