@@ -531,6 +531,7 @@ namespace TradeLord
             var keepBack = TradePolicy.KeptBack(party.ItemRoster, TradeActionBehavior.TheVisit,
                                                 sim: false, out var awaited);
             var cargo = new List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)>();
+            float today = (float)CampaignTime.Now.ToDays;
             for (int i = 0; i < party.ItemRoster.Count; i++)
             {
                 ItemRosterElement el = party.ItemRoster.GetElementCopyAtIndex(i);
@@ -545,7 +546,8 @@ namespace TradeLord
                 int unknown = el.Amount - TradeMath.UnitsIn(costs);
                 cargo.Add((el.EquipmentElement, el.Amount - keep, worth,
                            Options.Current.CostBasisMode == Options.CostOfEachUnit
-                               ? TradeMath.DearFirst.EachAtItsOwnCost(costs, worth, unknown, Options.Current.MinProfitMargin)
+                               ? TradeMath.DearFirst.EachAtItsOwnCost(costs, worth, unknown, Options.Current.MinProfitMargin,
+                                                                      today, Options.Current.SellAtCostAfterDays)
                                : new TradeMath.DearFirst(costs, covers, worth, unknown)));
             }
             _cargo = cargo;
@@ -588,7 +590,7 @@ namespace TradeLord
                 {
                     int price = pays.At(u);
                     if (price <= 0) break;
-                    if (!TradeMath.ProfitAcceptable(walk.Floor(price), price, Options.Current.MinProfitMargin)) break;
+                    if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;
                     booked += walk.Took();
                     if (moved == 0) opening = price;
                     last = price;

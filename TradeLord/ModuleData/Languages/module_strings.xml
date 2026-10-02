@@ -96,9 +96,9 @@
 		<string id="TL254" text="Sell only"/>
 		<string id="TL255" text="Buy only"/>
 		<string id="TL256" text="Buy and sell"/>
-		<string id="TL257" text="Average of what you paid"/>
+		<string id="TL257" text="Average you paid"/>
 		<string id="TL258" text="Last price you paid"/>
-		<string id="TL259" text="Cheapest market you know"/>
+		<string id="TL259" text="Cheapest market price"/>
 		<string id="TL260" text="Ledger entry in town menu"/>
 		<string id="TL261" text="Keep some of every kind of food" />
 		<string id="TL361" text="Keeps a few of each food for the food variety morale bonus, out of your days of food. It needs Restock and keep food (days of supply) above turned on to do anything. No livestock: it trades a herd as goods and never as food. OFF by default." />
@@ -151,7 +151,7 @@
 		<string id="TL224" text="Livestock policy"/>
 		<string id="TL225" text="Protect unique and crafted items"/>
 		<string id="TL226" text="Respect inventory locks"/>
-		<string id="TL227" text="What a good counts as having cost you"/>
+		<string id="TL227" text="Price a sale must beat"/>
 		<string id="TL228" text="Sell loot up to tier (0 = off)"/>
 		<string id="TL229" text="Hold cargo for the best market"/>
 		<string id="TL231" text="Never sell (item ids or names, comma separated)"/>
@@ -332,6 +332,8 @@
 		<string id="TL492" text=" {FOCUS} more focus point(s) in Trade would raise the limit."/>
 		<string id="TL493" text=" {POINTS} more point(s) of {ATTRIBUTE} would raise the limit."/>
 		<string id="TL494" text=" Raise your focus in Trade and your {ATTRIBUTE} together to raise the limit."/>
-		<string id="TL495" text="What each unit cost you"/>
+		<string id="TL495" text="Each unit's own price"/>
+		<string id="TL496" text="Sell at cost after (days, 0 = off)"/>
+		<string id="TL497" text="With Price a sale must beat on Each unit's own price, a unit you bought that has waited this many days may sell for what it cost you, with no margin and no Hold cargo for the best market."/>
 	</strings>
 </base>

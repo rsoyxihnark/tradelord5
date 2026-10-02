@@ -272,6 +272,11 @@ namespace TradeLord
                           "another unit already had, so each was given a new one, from #" +
                           (_nextUnitNumber - numbered) + " to #" + (_nextUnitNumber - 1) +
                           ", and no number is ever given out twice");
+            long trimmed = TradeMath.KeepEveryUnitApart(_purchases);
+            if (trimmed > 0L)
+                Log.Write("purchase record: a record claimed " + trimmed + " unit(s) more than the " +
+                          TradeMath.MostUnitsKeptApart + " one good can keep apart, far more than any party " +
+                          "carries, so those units were taken off every price paid in proportion");
             _promises = KeyedByTownId(LedgerCodec.ReadPromises(_promiseText, out int setAside));
             _walkInsKept = -1;
             if (setAside > 0)
@@ -491,7 +496,16 @@ namespace TradeLord
         {
             Guard.Run("Ledger.WatchTheParty", WatchTheParty);
             Guard.Run("Ledger.MatchPurchases", MatchPurchasesToWhatIsHeld);
+            Guard.Run("Ledger.DateTheUnits", DateTheUnits);
             Guard.Run("Ledger.VillagePurses", PutBackEmptyVillagePurses);
+        }
+
+        private void DateTheUnits()
+        {
+            int dated = TradeMath.DateEveryUnit(_purchases, (float)CampaignTime.Now.ToDays);
+            if (dated > 0)
+                Log.Write("purchase record: " + dated + " unit(s) you hold were bought before TradeLord wrote down the " +
+                          "day of each purchase, so their age counts from today");
         }
 
         private void PutBackEmptyVillagePurses()
@@ -676,7 +690,7 @@ namespace TradeLord
                 Paid[itemId] = rec;
                 _purchases.Add(rec);
             }
-            TradeMath.AddPurchase(rec, count, totalPaid, _nextUnitNumber);
+            TradeMath.AddPurchase(rec, count, totalPaid, _nextUnitNumber, (float)CampaignTime.Now.ToDays);
             _nextUnitNumber += count;
         }
 
@@ -685,10 +699,14 @@ namespace TradeLord
             if (Paid.TryGetValue(itemId, out var rec)) TradeMath.DrainSale(rec, count);
         }
 
-        public long RecordSale(string itemId, int count, int unitPaid)
+        public long RecordSale(string itemId, int count, int unitPaid) => RecordSale(itemId, count, unitPaid, out _);
+
+        public long RecordSale(string itemId, int count, int unitPaid, out float bought)
         {
+            bought = 0f;
             if (!Paid.TryGetValue(itemId, out var rec)) return 0L;
             long number = TradeMath.NumberASaleTakes(rec, unitPaid);
+            bought = TradeMath.DayASaleTakes(rec, unitPaid);
             TradeMath.DrainSale(rec, count, unitPaid);
             return number;
         }

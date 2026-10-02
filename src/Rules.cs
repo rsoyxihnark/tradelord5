@@ -681,6 +681,39 @@ namespace TradeLord
             return sold;
         }
 
+        internal static int[] WhatSellsHere(Func<int, int> priceAt, int units, TradeMath.DearFirst walk, float margin,
+                                            ref int till)
+        {
+            if (priceAt == null || units <= 0) return new int[0];
+            var sold = new int[units];
+            int count = 0;
+            for (int u = 0; u < units; u++)
+            {
+                int price = priceAt(u);
+                if (price <= 0 || !walk.Clears(price, margin) || price > till) break;
+                walk.Took();
+                till -= price;
+                sold[count++] = price;
+            }
+            Array.Resize(ref sold, count);
+            return sold;
+        }
+
+        internal static int[] WhatTheWalkTakes(int[] rungs, TradeMath.DearFirst walk, float margin)
+        {
+            if (rungs == null) return new int[0];
+            int count = 0;
+            while (count < rungs.Length && rungs[count] > 0 && walk.Clears(rungs[count], margin))
+            {
+                walk.Took();
+                count++;
+            }
+            if (count == rungs.Length) return rungs;
+            var taken = new int[count];
+            Array.Copy(rungs, taken, count);
+            return taken;
+        }
+
         internal static int[] SharePurse(int purse, int[][] rungs, int[][] here, int[] bought, float share)
         {
             int goods = rungs == null ? 0 : rungs.Length;

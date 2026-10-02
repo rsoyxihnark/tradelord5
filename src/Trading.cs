@@ -1805,19 +1805,31 @@ namespace TradeLord
                 return true;
             }
 
+            public float Today => (float)CampaignTime.Now.ToDays;
+
             public void RecordedSale(int at, int unitPaid, int price, int bestPays)
             {
-                long number = LedgerBehavior.Instance?.RecordSale(PaidKeyAt(at), 1, unitPaid) ?? 0L;
+                LedgerBehavior ledger = LedgerBehavior.Instance;
+                float bought = 0f;
+                long number = ledger == null ? 0L : ledger.RecordSale(PaidKeyAt(at), 1, unitPaid, out bought);
                 ItemObject item = Item(at);
                 if (item == null) return;
                 float margin = Options.Current.MinProfitMargin;
                 float share = Options.Current.HoldCargoForBestMarket;
+                int waited = bought > 0f ? (int)Math.Floor(Today - bought) : -1;
+                int agedAfter = Options.Current.SellAtCostAfterDays;
+                bool eachAtItsOwn = Options.Current.CostBasisMode == Options.CostOfEachUnit;
+                bool aged = eachAtItsOwn && agedAfter > 0 && bought > 0f && Today - bought >= agedAfter;
                 Log.Write("unit " + (number > 0L ? "#" + number + " " : "") + "of " +
-                          Tongue.Named(item.Name, item.StringId) + ", bought for " + unitPaid + ", sold for " + price +
-                          (Options.Current.CostBasisMode == Options.CostOfEachUnit
-                              ? ", at least the " + TradeMath.LeastThatClears(unitPaid, margin) +
-                                " it needed to clear your margin"
-                              : "") +
+                          Tongue.Named(item.Name, item.StringId) + ", bought for " + unitPaid +
+                          (waited >= 0 ? " " + waited + " day(s) ago" : "") + ", sold for " + price +
+                          (aged
+                              ? ", at least the " + unitPaid + " it was bought for, as it had waited past the " +
+                                agedAfter + " day(s) of Sell at cost after"
+                              : eachAtItsOwn
+                                  ? ", at least the " + TradeMath.LeastThatClears(unitPaid, margin) +
+                                    " it needed to clear your margin"
+                                  : "") +
                           (bestPays > 0 && _mark != null
                               ? ", and at least the " + TradeRules.BestMarketFloor(bestPays, share) + " that is " +
                                 Math.Round(share * 100f) + "% of the " + bestPays + " " +

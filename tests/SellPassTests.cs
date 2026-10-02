@@ -26,6 +26,7 @@ namespace TradeLord.Tests
             internal int Basis;
             internal int Purchased;
             internal int[] Dearer;
+            internal Batch[] Rows;
             internal int Cheap = -1;
             internal int Worth = 100;
             internal int Resale;
@@ -116,6 +117,12 @@ namespace TradeLord.Tests
             {
                 Load load = Cargo[at];
                 if (load.Purchased <= 0) return null;
+                if (load.Rows != null)
+                {
+                    var rows = new List<Batch>(load.Rows);
+                    rows.Sort(TradeMath.CheapestFirstOldestLast);
+                    return rows.ToArray();
+                }
                 int dear = load.Dearer == null ? 0 : load.Dearer.Length;
                 var costs = new List<Batch>();
                 if (load.Purchased > dear)
@@ -201,6 +208,10 @@ namespace TradeLord.Tests
                 Given.Add(Cargo[at].Good.Id);
                 return true;
             }
+
+            internal float Day;
+
+            public float Today => Day;
 
             internal readonly List<int> RecordedPaid = new List<int>();
             internal readonly List<int> RecordedBest = new List<int>();
@@ -1133,6 +1144,114 @@ namespace TradeLord.Tests
 
             Assert.Equal(0, kept.Units);
             Assert.True(kept.Tally.Saw(Block.BelowBestMarket));
+        }
+
+        private static Batch Row(long number, int paid, float day) =>
+            new Batch { Unit = paid, Count = 1, First = number, Day = day };
+
+        [Fact]
+        public void Wine_bought_at_five_prices_sells_down_the_ladder_and_one_past_its_age_sells_at_what_it_cost()
+        {
+            var market = new FakeMarket { Day = 100f };
+            Load wine = market.Add(Cargo("wine"), amount: 5, price: 105);
+            wine.Falls = 3;
+            wine.Basis = 78;
+            wine.Purchased = 5;
+            wine.Elsewhere = true;
+            wine.Ladder = new[] { 130, 125, 120, 115, 110 };
+            wine.Rows = new[] { Row(21, 120, 88f), Row(22, 100, 69f), Row(23, 70, 95f), Row(24, 70, 95f), Row(25, 30, 98f) };
+
+            Run run = Sell(market);
+
+            Assert.Equal(4, run.Units);
+            Assert.Equal(new[] { 100, 70, 70, 30 }, market.RecordedPaid.ToArray());
+            Assert.Equal(new[] { 0, 0, 120, 125 }, market.RecordedBest.ToArray());
+            Assert.Equal((105 - 100) + (102 - 70) + (99 - 70) + (96 - 30), run.Profit);
+        }
+
+        [Fact]
+        public void A_unit_past_its_age_sells_at_what_it_cost_while_Hold_cargo_for_the_best_market_keeps_the_rest()
+        {
+            var market = new FakeMarket { Day = 100f };
+            Load wine = market.Add(Cargo("wine"), amount: 2, price: 80);
+            wine.Basis = 55;
+            wine.Purchased = 2;
+            wine.Elsewhere = true;
+            wine.Ladder = new[] { 130, 130 };
+            wine.Rows = new[] { Row(1, 50, 60f), Row(2, 60, 99f) };
+
+            Run run = Sell(market);
+
+            Assert.Equal(1, run.Units);
+            Assert.Equal(new[] { 50 }, market.RecordedPaid.ToArray());
+            Assert.True(run.Tally.Saw(Block.BelowBestMarket));
+        }
+
+        [Fact]
+        public void With_Sell_at_cost_after_at_0_a_unit_never_skips_its_margin_however_long_it_waited()
+        {
+            var market = new FakeMarket { Day = 500f };
+            market.Rules.SellAtCostAfterDays = 0;
+            Load wine = market.Add(Cargo("wine"), amount: 2, price: 80);
+            wine.Basis = 55;
+            wine.Purchased = 2;
+            wine.Elsewhere = true;
+            wine.Ladder = new[] { 130, 130 };
+            wine.Rows = new[] { Row(1, 50, 60f), Row(2, 60, 99f) };
+
+            Run run = Sell(market);
+
+            Assert.Equal(0, run.Units);
+            Assert.True(run.Tally.Saw(Block.BelowBestMarket));
+        }
+
+        [Fact]
+        public void A_unit_past_its_age_still_never_sells_for_less_than_it_cost()
+        {
+            var market = new FakeMarket { Day = 100f };
+            Load wine = market.Add(Cargo("wine"), amount: 1, price: 99);
+            wine.Basis = 100;
+            wine.Purchased = 1;
+            wine.Rows = new[] { Row(1, 100, 10f) };
+
+            Assert.Equal(0, Sell(market).Units);
+            wine.Price = 100;
+            Assert.Equal(1, Sell(market).Units);
+            Assert.Equal(new[] { 100 }, market.RecordedPaid.ToArray());
+        }
+
+        [Fact]
+        public void The_marked_market_is_counted_unit_by_unit_so_a_unit_it_would_not_take_at_a_profit_is_never_held_for_it()
+        {
+            var market = new FakeMarket { Day = 100f };
+            Load lemonade = market.Add(Cargo("lemonade"), amount: 3, price: 20);
+            lemonade.Basis = 20;
+            lemonade.Purchased = 3;
+            lemonade.Elsewhere = true;
+            lemonade.Ladder = new[] { 32, 28, 24, 20 };
+            lemonade.Rows = new[] { Row(1, 10, 99f), Row(2, 20, 99f), Row(3, 30, 99f) };
+
+            ForTheMark[] holding = TradePass.WhatTheMarkKeeps(market, new Books(), false, market.Rules);
+
+            Assert.Equal(new[] { 32, 28 }, holding[0].Rungs);
+            Assert.Equal(10, market.AskedWorth);
+        }
+
+        [Fact]
+        public void A_unit_past_its_age_is_never_held_for_the_marked_market()
+        {
+            var market = new FakeMarket { Day = 100f };
+            Load lemonade = market.Add(Cargo("lemonade"), amount: 3, price: 20);
+            lemonade.Basis = 20;
+            lemonade.Purchased = 3;
+            lemonade.Elsewhere = true;
+            lemonade.Ladder = new[] { 32, 28, 24, 20 };
+            lemonade.Rows = new[] { Row(1, 10, 50f), Row(2, 20, 99f), Row(3, 30, 99f) };
+
+            ForTheMark[] holding = TradePass.WhatTheMarkKeeps(market, new Books(), false, market.Rules);
+
+            Assert.Equal(new[] { 32 }, holding[0].Rungs);
+            Assert.Equal(2, market.AskedFor);
         }
 
         [Fact]
