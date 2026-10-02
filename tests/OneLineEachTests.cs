@@ -43,7 +43,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_lines_come_out_the_same_whatever_order_the_passes_ran_in()
+        public void The_bought_line_comes_out_before_the_sold_line_whatever_order_the_passes_ran_in()
         {
             var first = new OneLineEach<string>();
             first.Add(Told.Sold, false, Goods(("sword", 3, 900)), 3, 900, 900);
@@ -66,7 +66,7 @@ namespace TradeLord.Tests
             List<OneLineEach<string>.Said> one = first.Closed();
             List<OneLineEach<string>.Said> other = second.Closed();
 
-            Assert.Equal(new[] { Told.Sold, Told.Bought },
+            Assert.Equal(new[] { Told.Bought, Told.Sold },
                          one.ConvertAll(line => line.What).ToArray());
             Assert.Equal(one.Count, other.Count);
             for (int at = 0; at < one.Count; at++)
@@ -77,10 +77,10 @@ namespace TradeLord.Tests
                 Assert.Equal(one[at].Profit, other[at].Profit);
                 Assert.Equal(one[at].Detail, other[at].Detail);
             }
-            Assert.Equal(1150, one[0].Profit);
-            Assert.Equal((1, 200), one[0].Detail["horse"]);
-            Assert.Equal((8, 80), one[1].Detail["grain"]);
-            Assert.Equal((1, 150), one[1].Detail["mule"]);
+            Assert.Equal(1150, one[1].Profit);
+            Assert.Equal((1, 200), one[1].Detail["horse"]);
+            Assert.Equal((8, 80), one[0].Detail["grain"]);
+            Assert.Equal((1, 150), one[0].Detail["mule"]);
         }
 
         [Fact]
