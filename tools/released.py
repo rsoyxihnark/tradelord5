@@ -7,7 +7,7 @@ REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
     '1.98.0': 'the entry about the price every unit keeps no longer calls it exact',
-    '1.99.0': 'the entries about Sell at cost after and Hold cargo for the best market now say they need Each unit\'s own price',
+    '1.99.0': 'the entries about Sell at cost after and Hold cargo for the best market now say they need Each unit\'s own price, and the renamed choices leave out Last price you paid',
 }
 
 

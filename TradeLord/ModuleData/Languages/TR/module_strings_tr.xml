@@ -335,5 +335,6 @@
 		<string id="TL495" text="Her birimin kendi fiyatı"/>
 		<string id="TL496" text="Maliyetine satış için bekleme süresi (gün, 0 = kapalı)"/>
 		<string id="TL497" text="Satışın geçmesi gereken fiyat Her birimin kendi fiyatı iken, bu kadar gün bekleyen bir birim size mal olduğu fiyata satılabilir; kâr payı ve Yükü en iyi pazar için tut aranmaz."/>
+		<string id="TL498" text=" Ticaret'teki odağınız ve {ATTRIBUTE} değeriniz zaten en yüksekte, bu yüzden sınır daha fazla yükselemez."/>
 	</strings>
 </base>

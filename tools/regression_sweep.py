@@ -5131,8 +5131,24 @@ def a_dropdown_only_ever_gains_choices_at_the_end():
         'SmeltableWords': ['TL270', 'TL271', 'TL272'],
         'BasisWords': ['TL257', 'TL258', 'TL259', 'TL495'],
     }
+    names = {
+        'TL253': ['Leave alone'], 'TL254': ['Sell only'], 'TL255': ['Buy only'], 'TL256': ['Buy and sell'],
+        'TL270': ['Sell them'], 'TL271': ['Keep every one'], 'TL272': ['Keep the ones you have not learned'],
+        'TL257': ['Average of what you paid', 'Average you paid'],
+        'TL258': ['Last price you paid'],
+        'TL259': ['Cheapest market you know', 'Cheapest market price'],
+        'TL495': ['What each unit cost you', "Each unit's own price"],
+    }
+    en = spoken(ENGLISH)
+    told = [spoken(f) for f in TRANSLATIONS.values()]
+    choices = [t for k, v in shipped.items() if k != 'LanguageWords' for t in v]
     return (set(lists) == set(shipped)
             and all(lists[k][:len(v)] == v for k, v in shipped.items())
+            and set(names) == set(choices)
+            and all(en.get(t) == names[t][-1] for t in choices)
+            and all(not set(names[a]) & set(names[b]) for a in choices for b in choices if a != b)
+            and all(len({one.get(t) for t in v}) == len(v) and all(one.get(t) for t in v)
+                    for one in told for k, v in shipped.items() if k != 'LanguageWords')
             and 'keep(from.SelectedIndex);' in method_body(M, "private static void Follows"))
 
 def a_settings_file_that_could_not_be_read_is_never_written_over():
@@ -5158,7 +5174,7 @@ chk("1.81.8", "a settings file TradeLord could not read is left exactly as it is
     a_settings_file_that_could_not_be_read_is_never_written_over())
 
 
-chk("1.23.1", "a dropdown's choices keep the order they shipped in, so a saved setting never comes back meaning something else",
+chk("1.23.1", "a dropdown's choices keep the order they shipped in and each choice keeps the name it shipped with, so a saved setting never comes back meaning something else",
     a_dropdown_only_ever_gains_choices_at_the_end())
 
 EVER_SHIPPED = {
@@ -15700,7 +15716,7 @@ def a_unit_bought_dear_sells_at_the_average_and_is_booked_at_its_own_cost():
                      "Batches_that_do_not_add_up_to_the_record_are_dropped_and_the_record_is_kept"))
             and "never sold for less than it cost" not in README)
 
-chk("1.97.4", "a unit bought dear sells like the rest of its good once the price beats the average by your margin, and each sale is booked at what the unit it took cost, the sell pass and the map marker alike",
+chk("1.97.4", "with Average you paid, a unit bought dear sells like the rest of its good once the price beats the average by your margin, and each sale is booked at what the unit it took cost, the sell pass and the map marker alike",
     a_unit_bought_dear_sells_at_the_average_and_is_booked_at_its_own_cost())
 
 
@@ -15852,7 +15868,7 @@ def a_damaged_purchase_record_never_lists_more_dear_units_than_you_hold():
                     ("A_record_claiming_two_billion_units_lists_its_dear_ones_only_up_to_what_is_held",
                      "A_record_with_more_prices_than_an_older_TradeLord_kept_reads_back_every_one")))
 
-chk("1.97.1", "a purchase record claiming more than your party holds never lists more dear units than you hold, goods that left unsold drain it from every batch in proportion without listing each unit, and a hand sale walks its batches",
+chk("1.97.1", "a purchase record claiming more than your party holds never lists more dear units than you hold, goods that left unsold drain it from every price paid in proportion, a huge record without listing each of its units, and a hand sale walks its batches",
     a_damaged_purchase_record_never_lists_more_dear_units_than_you_hold())
 
 def older_forecast_and_promise_records_are_set_aside_when_a_save_loads():
@@ -16152,7 +16168,7 @@ def a_record_counting_units_you_no_longer_have_never_opens_the_average_floor():
                         "? TradeMath.DearFirst.EachAtItsOwnCost(costs, costBasis, basis.PaidLeft - known, s.MinProfitMargin,",
                         ": new TradeMath.DearFirst(costs, covers, costBasis, basis.PaidLeft - known);"))
 
-chk("1.97.2", "a purchase record that still counts units you no longer have never lets a unit bought dear sell under its cost as one of them",
+chk("1.97.2", "a purchase record that still counts units you no longer have never lets a unit you hold sell as one of those, so every sale is weighed and booked against a unit you really have",
     a_record_counting_units_you_no_longer_have_never_opens_the_average_floor())
 
 def goods_that_leave_unsold_come_off_every_batch_in_proportion():
@@ -16544,6 +16560,31 @@ def a_sale_is_booked_against_the_dearest_unit_its_price_covers_and_food_kept_bac
 
 chk("1.99.1", "a sale is booked against the dearest unit its price covers, by hand too, units bought together by hand add up to what was paid, and food kept back never lets a fresh unit skip Hold cargo for the best market",
     a_sale_is_booked_against_the_dearest_unit_its_price_covers_and_food_kept_back_never_skips_the_mark())
+
+def the_learning_limit_warning_says_when_nothing_can_raise_the_limit():
+    trading = S['Trading.cs']
+    near = method_body(trading, "private static void SayHowNearTheLearningLimit")
+    highest = method_body(trading, "private static IReadOnlyPropertyOwner<CharacterAttribute> AtTheirHighest")
+    en = spoken(ENGLISH)
+    body = CHANGES.split('## 1.99.0', 1)[1].split('\n## ', 1)[0]
+    return (near and highest
+            and ordered(near, "bool asHighAsItGoes = focusNeeded <= 0 && pointsNeeded <= 0",
+                        "&& TradeMath.NearTheLearningLimit(skill, MathF.Round(model.CalculateLearningLimit(",
+                        "AtTheirHighest(attributes, trade, model.MaxAttribute), Math.Max(focus, model.MaxFocusPerSkill), trade).ResultNumber));",
+                        ": pointsNeeded > 0", ": asHighAsItGoes",
+                        '? "{=TL498} Your focus in Trade and your {ATTRIBUTE} are as high as they go, so the limit cannot rise any further."',
+                        ': "{=TL494} Raise your focus in Trade and your {ATTRIBUTE} together to raise the limit.");')
+            and ordered(highest, "foreach (CharacterAttribute attribute in skill.Attributes)",
+                        "topped = new Raised(topped, attribute, Math.Max(0, most - attributes.GetPropertyValue(attribute)));",
+                        "return topped;")
+            and en.get("TL498") == " Your focus in Trade and your {ATTRIBUTE} are as high as they go, so the limit cannot rise any further."
+            and said_in_every_language("TL498")
+            and all("{ATTRIBUTE}" in spoken(f)["TL498"] for f in TRANSLATIONS.values())
+            and "- Three choices of Price a sale must beat are now called Each unit's own price, Average you paid and Cheapest market price" in body
+            and "Last price you paid" not in body)
+
+chk("1.99.1", "the learning limit warning says the limit cannot rise once your focus in Trade and its attribute are as high as they go, rather than telling you to raise them",
+    the_learning_limit_warning_says_when_nothing_can_raise_the_limit())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
