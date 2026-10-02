@@ -460,15 +460,19 @@ namespace TradeLord.Tests
         public void Units_that_came_without_a_purchase_survive_a_save_and_a_load_at_no_cost()
         {
             var free = new PurchaseRecord { ItemId = "iron" };
-            TradeMath.AddPurchase(free, new int[3], 40L, 120f, TradeMath.CameWithoutAPurchase);
+            TradeMath.AddPurchase(free, new int[2], 40L, 120f, TradeMath.FromLoot);
+            TradeMath.AddPurchase(free, new int[1], 42L, 121f, TradeMath.FromElsewhere);
             string written = LedgerCodec.WritePurchases(new List<PurchaseRecord> { free });
             var back = LedgerCodec.ReadPurchases(written);
             Assert.Single(back);
             Assert.Equal(3, back[0].Count);
             Assert.Equal(0, back[0].TotalPaid);
             Assert.Equal(new[] { 40L, 41L, 42L }, back[0].Batches.Select(one => one.First).OrderBy(n => n).ToArray());
-            Assert.All(back[0].Batches, one => Assert.Equal(TradeMath.CameWithoutAPurchase, one.From));
+            Assert.Equal(new[] { TradeMath.FromLoot, TradeMath.FromLoot, TradeMath.FromElsewhere },
+                         back[0].Batches.OrderBy(one => one.First).Select(one => one.From).ToArray());
             Assert.Equal(written, LedgerCodec.WritePurchases(back));
+            var older = LedgerCodec.ReadPurchases("iron|0|1|0|0:1:0:40:120:3");
+            Assert.Equal(TradeMath.FromElsewhere, older[0].Batches[0].From);
         }
 
         [Fact]

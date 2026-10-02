@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using Helpers;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.Extensions;
+using TaleWorlds.CampaignSystem.GameState;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -184,6 +186,7 @@ namespace TradeLord
             CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);
             CampaignEvents.PlayerInventoryExchangeEvent.AddNonSerializedListener(this, OnPlayerInventoryExchange);
             CampaignEvents.OnPlayerTradeProfitEvent.AddNonSerializedListener(this, OnPlayerTradeProfit);
+            CampaignEvents.ItemsLooted.AddNonSerializedListener(this, OnItemsLooted);
         }
 
         public override void SyncData(IDataStore dataStore)
@@ -529,31 +532,77 @@ namespace TradeLord
             {
                 Paid.TryGetValue(kv.Key, out PurchaseRecord bought);
                 Free.TryGetValue(kv.Key, out PurchaseRecord free);
-                int kept = free?.Count ?? 0;
-                int surplus = Math.Min(kv.Value.units - (bought?.Count ?? 0) - kept, TradeMath.MostUnitsKeptApart - kept);
-                if (surplus <= 0) continue;
-                if (free == null)
-                {
-                    free = new PurchaseRecord { ItemId = kv.Key };
-                    _free.Add(free);
-                    _freeOf[kv.Key] = free;
-                }
-                long first = _nextUnitNumber;
-                TradeMath.AddPurchase(free, new int[surplus], first, today, TradeMath.CameWithoutAPurchase);
-                _nextUnitNumber += surplus;
-                named.Add(surplus + " " + Tongue.Named(kv.Value.el.Item.Name, kv.Value.el.Item.StringId) + " as #" +
-                          first + (surplus > 1 ? " to #" + (first + surplus - 1) : ""));
+                int surplus = kv.Value.units - (bought?.Count ?? 0) - (free?.Count ?? 0);
+                string said = WriteDownFree(kv.Key, kv.Value.el, surplus, TradeMath.FromElsewhere, today);
+                if (said != null) named.Add(said);
             }
             if (named.Count > 0)
-                Log.Write("came without a purchase: " + string.Join(", ", named.ToArray()) + ", written down at no " +
-                          "cost, so selling them counts no profit and no Trade XP");
+                Log.Write("came without a purchase: " + string.Join(", ", named.ToArray()) + ", " +
+                          TradeMath.WhereFrom(TradeMath.FromElsewhere) + ", written down at no cost, so selling " +
+                          "them counts no profit and no Trade XP");
+        }
+
+        private void NoteLoot(IEnumerable<ItemRosterElement> taken, string how)
+        {
+            float today = (float)CampaignTime.Now.ToDays;
+            var named = new List<string>();
+            Dictionary<string, (EquipmentElement el, int units)> held = HeldByKey(MobileParty.MainParty?.ItemRoster);
+            foreach (ItemRosterElement one in taken)
+            {
+                string key = PaidKey(one.EquipmentElement);
+                if (key == null || !held.TryGetValue(key, out var have)) continue;
+                Paid.TryGetValue(key, out PurchaseRecord bought);
+                Free.TryGetValue(key, out PurchaseRecord free);
+                int unexplained = have.units - (bought?.Count ?? 0) - (free?.Count ?? 0);
+                string said = WriteDownFree(key, one.EquipmentElement, Math.Min(one.Amount, unexplained),
+                                            TradeMath.FromLoot, today);
+                if (said != null) named.Add(said);
+            }
+            if (named.Count > 0)
+                Log.Write("loot " + how + ": " + string.Join(", ", named.ToArray()) + ", " +
+                          TradeMath.WhereFrom(TradeMath.FromLoot) + ", written down at no cost, so selling them " +
+                          "counts no profit and no Trade XP");
+        }
+
+        private string WriteDownFree(string key, EquipmentElement el, int units, int from, float today)
+        {
+            Free.TryGetValue(key, out PurchaseRecord free);
+            int kept = free?.Count ?? 0;
+            int adding = Math.Min(units, TradeMath.MostUnitsKeptApart - kept);
+            if (adding <= 0 || el.Item == null) return null;
+            if (free == null)
+            {
+                free = new PurchaseRecord { ItemId = key };
+                _free.Add(free);
+                _freeOf[key] = free;
+            }
+            long first = _nextUnitNumber;
+            TradeMath.AddPurchase(free, new int[adding], first, today, from);
+            _nextUnitNumber += adding;
+            return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +
+                   (adding > 1 ? " to #" + (first + adding - 1) : "");
+        }
+
+        private static bool OnALootScreen() =>
+            GameStateManager.Current?.ActiveState is InventoryState screen &&
+            screen.InventoryMode == InventoryScreenHelper.InventoryMode.Loot;
+
+        private void OnItemsLooted(MobileParty party, ItemRoster items)
+        {
+            if (party == null || party != MobileParty.MainParty || items == null) return;
+            Guard.Run("Ledger.OnItemsLooted", () =>
+            {
+                var taken = new List<ItemRosterElement>();
+                for (int i = 0; i < items.Count; i++) taken.Add(items.GetElementCopyAtIndex(i));
+                NoteLoot(taken, "carried off in a raid");
+            });
         }
 
         internal void RecordFreeSale(EquipmentElement el, int price, string how)
         {
             string key = PaidKey(el);
             if (key == null || !Free.TryGetValue(key, out PurchaseRecord free)) return;
-            if (!TradeMath.DrainTheOldestUnit(free, out long number, out float day)) return;
+            if (!TradeMath.DrainTheOldestUnit(free, out long number, out float day, out int from)) return;
             if (free.Count <= 0)
             {
                 _free.Remove(free);
@@ -561,7 +610,7 @@ namespace TradeLord
             }
             int waited = day > 0f ? (int)Math.Floor((float)CampaignTime.Now.ToDays - day) : -1;
             Log.Write("unit " + (number > 0L ? "#" + number + " " : "") + "of " +
-                      Tongue.Named(el.Item.Name, el.Item.StringId) + ", came without a purchase" +
+                      Tongue.Named(el.Item.Name, el.Item.StringId) + ", " + TradeMath.WhereFrom(from) +
                       (waited >= 0 ? " " + waited + " day(s) ago" : "") + ", sold for " + price + how +
                       ", counting no profit and no Trade XP");
         }
@@ -682,6 +731,13 @@ namespace TradeLord
         {
             Guard.Run("Ledger.OnPlayerInventoryExchange", () =>
             {
+                if (!isTrading && OnALootScreen())
+                {
+                    var taken = new List<ItemRosterElement>();
+                    foreach (var one in purchased) taken.Add(one.Item1);
+                    NoteLoot(taken, "taken on the loot screen");
+                    return;
+                }
                 if (!isTrading || TradeActionBehavior.AutomatedTradeInProgress) return;
                 bool laidOut = Counter.Awaiting;
                 Settlement here = Settlement.CurrentSettlement;

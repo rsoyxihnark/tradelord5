@@ -208,7 +208,8 @@
 - ✅ A good you never bought, loot and animals included, adds nothing to the profit reported and earns only the Trade XP the game itself would give for it, which is usually none
 - ✅ Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them, which is usually none
 - ✅ When some of a good is eaten, lost or given away, its oldest units go first, bought or not, and every unit left keeps the price it was bought for
-- ✅ Every unit keeps where it came from: a market, a caravan, villagers, or no purchase at all, and TradeLord.log names it with the unit
+- ✅ Every unit keeps where it came from: 1 market, 2 caravan, 3 villager party, 4 loot or 5 others, and TradeLord.log names it with the unit
+- ✅ Goods you take on a loot screen or carry off in a raid are marked as loot, and anything else that came without a purchase as others
 - ✅ Goods that came without a purchase, loot and rewards among them, get unit numbers too, and each one sold counts no profit and no Trade XP
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay, off out of the box, that keeps it out of a brand new campaign until prices calm down

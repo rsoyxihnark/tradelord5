@@ -5796,7 +5796,7 @@ def every_handler_the_game_calls_guards_its_own_work():
             if not body or "Guard.Run" not in body:
                 return False
             held += 1
-    return held == 12 and settled in S['Trading.cs']
+    return held == 13 and settled in S['Trading.cs']
 
 def a_save_is_never_failed_by_the_mods_own_bookkeeping():
     trade = method_body(S['Trading.cs'], "public override void SyncData")
@@ -9857,9 +9857,10 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
             return False
     return (read == 7
             and ALL.count("Tongue.Named(") == 26
-            and 'named.Add(surplus + " " + Tongue.Named(kv.Value.el.Item.Name, kv.Value.el.Item.StringId) + " as #" +'
-                in method_body(S['Ledger.cs'], "internal void NoteWhatCameWithoutAPurchase")
-            and 'Tongue.Named(el.Item.Name, el.Item.StringId) + ", came without a purchase" +'
+            and 'return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +'
+                in method_body(S['Ledger.cs'], "private string WriteDownFree")
+            and "if (adding <= 0 || el.Item == null) return null;" in method_body(S['Ledger.cs'], "private string WriteDownFree")
+            and 'Tongue.Named(el.Item.Name, el.Item.StringId) + ", " + TradeMath.WhereFrom(from) +'
                 in method_body(S['Ledger.cs'], "internal void RecordFreeSale")
             and "_pass.Held[item] = (Tongue.Named(_mark.Name, _mark.StringId), units, there, here);" in S['Trading.cs']
             and "(Tongue.Named(one.Where.Name, one.Where.StringId), one.Units, one.Value)" in S['Marker.cs']
@@ -16403,10 +16404,10 @@ def every_unit_keeps_a_number_of_its_own_and_sells_at_its_own_price():
             and ordered(bought, "if (itemId == null || paid == null || paid.Count == 0) return;",
                         "TradeMath.AddPurchase(rec, paid, _nextUnitNumber, (float)CampaignTime.Now.ToDays, from);",
                         "_nextUnitNumber += paid.Count;")
-            and ordered(method_body(ledger, "internal void NoteWhatCameWithoutAPurchase"),
+            and ordered(method_body(ledger, "private string WriteDownFree"),
                         "long first = _nextUnitNumber;",
-                        "TradeMath.AddPurchase(free, new int[surplus], first, today, TradeMath.CameWithoutAPurchase);",
-                        "_nextUnitNumber += surplus;")
+                        "TradeMath.AddPurchase(free, new int[adding], first, today, from);",
+                        "_nextUnitNumber += adding;")
             and ledger.count("_nextUnitNumber +=") == 2 and "_nextUnitNumber -=" not in ledger
             and ordered(sold, "long number = TradeMath.NumberASaleTakes(rec, unitPaid);",
                         "TradeMath.DrainSale(rec, count, unitPaid);", "return number;")
@@ -17210,7 +17211,8 @@ def every_unit_says_where_it_came_from_and_the_sold_line_carries_the_trade_xp():
     everywhere = [ENGLISH] + list(TRANSLATIONS.values())
     return (noted and free and hand and sell and begin
             and all(one in math for one in ("public const int FromAMarket = 0;", "public const int FromACaravan = 1;",
-                                            "public const int FromVillagers = 2;", "public const int CameWithoutAPurchase = 3;"))
+                                            "public const int FromVillagers = 2;", "public const int FromElsewhere = 3;",
+                                            "public const int FromLoot = 4;"))
             and "public static bool GivesTradeXp(int from) => from == FromAMarket || from == FromACaravan;" in math
             and "int source = IsASource(from) ? from : FromAMarket;" in
                 method_body(math, "public static void AddPurchase(PurchaseRecord rec, IList<int> paid, long first, float day,")
@@ -17231,11 +17233,14 @@ def every_unit_says_where_it_came_from_and_the_sold_line_carries_the_trade_xp():
             and 'dataStore.SyncData("TradeLord_CameWithoutAPurchaseText", ref _freeText);' in
                 method_body(l, "public override void SyncData")
             and ordered(noted, "foreach (var kv in HeldByKey(carried))",
-                        "int surplus = Math.Min(kv.Value.units - (bought?.Count ?? 0) - kept, TradeMath.MostUnitsKeptApart - kept);",
-                        "if (surplus <= 0) continue;",
-                        "TradeMath.AddPurchase(free, new int[surplus], first, today, TradeMath.CameWithoutAPurchase);",
-                        '"cost, so selling them counts no profit and no Trade XP"')
-            and ordered(free, "if (!TradeMath.DrainTheOldestUnit(free, out long number, out float day)) return;",
+                        "int surplus = kv.Value.units - (bought?.Count ?? 0) - (free?.Count ?? 0);",
+                        "string said = WriteDownFree(kv.Key, kv.Value.el, surplus, TradeMath.FromElsewhere, today);",
+                        '"them counts no profit and no Trade XP"')
+            and ordered(method_body(l, "private string WriteDownFree"),
+                        "int adding = Math.Min(units, TradeMath.MostUnitsKeptApart - kept);",
+                        "if (adding <= 0 || el.Item == null) return null;",
+                        "TradeMath.AddPurchase(free, new int[adding], first, today, from);")
+            and ordered(free, "if (!TradeMath.DrainTheOldestUnit(free, out long number, out float day, out int from)) return;",
                         '", counting no profit and no Trade XP"')
             and ordered(hand, "if (!one.Bought)", "unbought.Add(one.Price);", "else unbought.AddRange(fetched);",
                         "foreach (int price in unbought) RecordFreeSale(el, price, how);")
@@ -17264,12 +17269,51 @@ def every_unit_says_where_it_came_from_and_the_sold_line_carries_the_trade_xp():
                 "Where_each_unit_came_from_survives_a_save_and_a_load_and_an_older_row_reads_as_bought",
                 "Units_that_came_without_a_purchase_survive_a_save_and_a_load_at_no_cost"))
             and "Loot_sold_is_booked_against_what_came_without_a_purchase_and_makes_no_profit" in SELLPASSTESTS
-            and "Every unit keeps where it came from: a market, a caravan, villagers, or no purchase at all" in README
+            and "Every unit keeps where it came from: 1 market, 2 caravan, 3 villager party, 4 loot or 5 others" in README
             and "Goods that came without a purchase, loot and rewards among them, get unit numbers too" in README
             and "The Sold line also says how much Trade XP the sale added" in README)
 
 chk("1.101.0", "every unit keeps where it came from, goods that came without a purchase are numbered at no cost and sold for no profit and no Trade XP, and trade lines drop the TradeLord prefix with the Trade XP on the Sold line",
     every_unit_says_where_it_came_from_and_the_sold_line_carries_the_trade_xp())
+
+def loot_is_told_apart_from_other_goods_that_came_without_a_purchase():
+    l = S['Ledger.cs']
+    math = S['TradeMath.cs']
+    loot = method_body(l, "private void NoteLoot")
+    raid = method_body(l, "private void OnItemsLooted")
+    exchange = method_body(l, "private void OnPlayerInventoryExchange")
+    return (loot and raid and exchange
+            and "public static bool IsASource(int from) => from >= FromAMarket && from <= FromLoot;" in math
+            and "public static bool CameFree(int from) => from == FromElsewhere || from == FromLoot;" in math
+            and ordered(method_body(math, "public static int SourceNumber"), "from == FromACaravan ? 2",
+                        ": from == FromVillagers ? 3", ": from == FromLoot ? 4", ": from == FromElsewhere ? 5", ": 1;")
+            and ordered(method_body(math, "public static string SourceNamed"), '"caravan"', '"villager party"',
+                        '"loot"', '"others"', '"market"')
+            and '"source " + SourceNumber(from) + " (" + SourceNamed(from) + "), " +' in
+                between(math, "public static string WhereFrom(int from) =>", ";")
+            and "from = batches[at].From;" in
+                method_body(math, "public static bool DrainTheOldestUnit(PurchaseRecord rec, out long number, out float day, out int from)")
+            and "CampaignEvents.ItemsLooted.AddNonSerializedListener(this, OnItemsLooted);" in l
+            and ordered(raid, "if (party == null || party != MobileParty.MainParty || items == null) return;",
+                        'Guard.Run("Ledger.OnItemsLooted", () =>', 'NoteLoot(taken, "carried off in a raid");')
+            and ordered(between(l, "private static bool OnALootScreen() =>", ";"),
+                        "GameStateManager.Current?.ActiveState is InventoryState screen &&",
+                        "screen.InventoryMode == InventoryScreenHelper.InventoryMode.Loot")
+            and ordered(exchange, "if (!isTrading && OnALootScreen())",
+                        "foreach (var one in purchased) taken.Add(one.Item1);",
+                        'NoteLoot(taken, "taken on the loot screen");', "return;",
+                        "if (!isTrading || TradeActionBehavior.AutomatedTradeInProgress) return;")
+            and ordered(loot, "Dictionary<string, (EquipmentElement el, int units)> held = HeldByKey(MobileParty.MainParty?.ItemRoster);",
+                        "int unexplained = have.units - (bought?.Count ?? 0) - (free?.Count ?? 0);",
+                        "string said = WriteDownFree(key, one.EquipmentElement, Math.Min(one.Amount, unexplained),",
+                        "TradeMath.FromLoot, today);")
+            and '"Helpers.InventoryScreenHelper+InventoryMode",' in io.open('tools/compat/Program.cs', encoding='utf-8').read()
+            and "Where_a_unit_came_from_is_numbered_1_market_2_caravan_3_villager_party_4_loot_5_others" in MATHTESTS
+            and 'var older = LedgerCodec.ReadPurchases("iron|0|1|0|0:1:0:40:120:3");' in TESTS
+            and "Goods you take on a loot screen or carry off in a raid are marked as loot" in README)
+
+chk("1.101.1", "TradeLord.log numbers where each unit came from, 1 market, 2 caravan, 3 villager party, 4 loot, 5 others, with loot taken on a loot screen or in a raid and capped at what the party holds unexplained",
+    loot_is_told_apart_from_other_goods_that_came_without_a_purchase())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
