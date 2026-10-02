@@ -1328,13 +1328,18 @@ namespace TradeLord
                 }
             }
 
+            bool asHighAsItGoes = focusNeeded <= 0 && pointsNeeded <= 0
+                && TradeMath.NearTheLearningLimit(skill, MathF.Round(model.CalculateLearningLimit(
+                    AtTheirHighest(attributes, trade, model.MaxAttribute), Math.Max(focus, model.MaxFocusPerSkill), trade).ResultNumber));
             TextObject remedy = Tongue.Text(focusNeeded > 0 && pointsNeeded > 0
                 ? "{=TL491} {FOCUS} more focus point(s) in Trade or {POINTS} more point(s) of {ATTRIBUTE} would raise the limit."
                 : focusNeeded > 0
                     ? "{=TL492} {FOCUS} more focus point(s) in Trade would raise the limit."
                     : pointsNeeded > 0
                         ? "{=TL493} {POINTS} more point(s) of {ATTRIBUTE} would raise the limit."
-                        : "{=TL494} Raise your focus in Trade and your {ATTRIBUTE} together to raise the limit.");
+                        : asHighAsItGoes
+                            ? "{=TL498} Your focus in Trade and your {ATTRIBUTE} are as high as they go, so the limit cannot rise any further."
+                            : "{=TL494} Raise your focus in Trade and your {ATTRIBUTE} together to raise the limit.");
             remedy.SetTextVariable("FOCUS", focusNeeded);
             remedy.SetTextVariable("POINTS", pointsNeeded);
             remedy.SetTextVariable("ATTRIBUTE", named?.Name?.ToString() ?? "");
@@ -1424,6 +1429,16 @@ namespace TradeLord
             spend.SetTextVariable("POINTS", pointsToSpend);
             if (!muted) Notices.Say(spend, Notices.Alert);
             return true;
+        }
+
+        private static IReadOnlyPropertyOwner<CharacterAttribute> AtTheirHighest(
+            IReadOnlyPropertyOwner<CharacterAttribute> attributes, SkillObject skill, int most)
+        {
+            IReadOnlyPropertyOwner<CharacterAttribute> topped = attributes;
+            foreach (CharacterAttribute attribute in skill.Attributes)
+                if (attribute != null)
+                    topped = new Raised(topped, attribute, Math.Max(0, most - attributes.GetPropertyValue(attribute)));
+            return topped;
         }
 
         private sealed class Raised : IReadOnlyPropertyOwner<CharacterAttribute>

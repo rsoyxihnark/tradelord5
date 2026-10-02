@@ -10,11 +10,12 @@
 - Fixed the Turkish name of Sell at cost after leaving out that it waits a number of days
 - Fixed the Russian and Chinese hint for Sell at cost after not marking the setting names it mentions
 - Fixed a stray space in the Chinese message saying how much Trade XP your skill gained
+- Fixed the learning limit warning telling you to raise your focus in Trade and your attribute together when both are as high as they go
 
 ## 1.99.0
 
 - What a good counts as having cost you is now called Price a sale must beat
-- The choices of Price a sale must beat are now called Each unit's own price, Average you paid, Last price you paid and Cheapest market price
+- Three choices of Price a sale must beat are now called Each unit's own price, Average you paid and Cheapest market price
 - Every unit you buy now keeps a row of its own with the day you bought it, even when you buy many at one price
 - With Each unit's own price, of two units bought at one price the older one now sells first
 - With Each unit's own price, Sell at cost after is a new setting, 30 days by default, for units you bought that have waited too long to sell
