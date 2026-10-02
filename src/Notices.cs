@@ -14,12 +14,10 @@ namespace TradeLord
         internal static readonly Color Alert = new Color(0.90f, 0.28f, 0.28f);
 
         private static readonly List<InformationMessage> _pending = new List<InformationMessage>();
-        private static readonly List<InformationMessage> _afterXp = new List<InformationMessage>();
 
         internal static void Forget()
         {
             _pending.Clear();
-            _afterXp.Clear();
         }
 
         internal static void Say(TextObject msg) => Say(msg, Note);
@@ -27,16 +25,8 @@ namespace TradeLord
         internal static void Say(TextObject msg, Color color) =>
             _pending.Add(new InformationMessage(msg.ToString(), color));
 
-        internal static void SayAfterXp(TextObject msg, Color color) =>
-            _afterXp.Add(new InformationMessage(msg.ToString(), color));
-
         internal static void Drain()
         {
-            if (_afterXp.Count > 0)
-            {
-                _pending.AddRange(_afterXp);
-                _afterXp.Clear();
-            }
             if (_pending.Count == 0) return;
             try
             {

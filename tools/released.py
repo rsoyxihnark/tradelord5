@@ -6,6 +6,10 @@ from nexus_changelog import sections
 REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
+    '1.20.1': 'its one entry taken out of the changelog, and its release and tag are thrown away once this lands',
+    '1.21.0': 'an entry taken out of the changelog in part, and the release note is synced once this lands',
+    '1.95.0': 'entries taken out of the changelog, and the release note is synced once this lands',
+    '1.97.8': 'entries taken out of the changelog, and the release note is synced once this lands',
 }
 
 

@@ -245,7 +245,7 @@ namespace TradeLord.Tests
             var run = new Run { Tally = new BlockTally(), Books = books ?? new Books() };
             market.Ledger = run.Books;
             market.Sim = sim;
-            foreach (bool loot in new[] { false, true }) OnePass(market, run, sim, loot);
+            foreach (bool loot in new[] { true, false }) OnePass(market, run, sim, loot);
             return run;
         }
 
@@ -639,17 +639,20 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Loot_is_sold_only_with_the_gold_this_market_has_left_after_what_you_bought()
+        public void What_you_bought_is_sold_only_with_the_gold_this_market_has_left_after_the_loot()
         {
             var market = new FakeMarket { MarkPurse = 1250, Till = 2190 };
             Load loot = market.Add(Cargo("sword"), 10, 200);
             loot.Worth = 100;
-            BoughtAs(market, "iron", 10, price: 200, paid: 100, there: 250);
-            BoughtAs(market, "tools", 5, price: 150, paid: 100, there: 250);
+            Load iron = BoughtAs(market, "iron", 10, price: 200, paid: 100, there: 250);
+            Load tools = BoughtAs(market, "tools", 5, price: 150, paid: 100, there: 250);
             Run run = Sell(market);
-            Assert.Equal(10, run.Units);
-            Assert.Equal(10, loot.Amount);
-            Assert.Equal(("tools", 5, 250, 150), Assert.Single(market.Held));
+            Assert.Equal(11, run.Units);
+            Assert.Equal(0, loot.Amount);
+            Assert.Equal(10, iron.Amount);
+            Assert.Equal(4, tools.Amount);
+            Assert.Equal(40, market.Till);
+            Assert.Empty(market.Held);
             Assert.True(run.Tally.Saw(Block.MerchantTillEmpty));
         }
 
@@ -667,7 +670,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_dry_run_leaves_the_loot_sale_only_the_gold_the_first_sale_left()
+        public void A_dry_run_leaves_the_sale_of_what_you_bought_only_the_gold_the_loot_sale_left()
         {
             var market = new FakeMarket { Till = 500 };
             Load iron = market.Add(Cargo("iron"), amount: 2, price: 200);
@@ -677,6 +680,8 @@ namespace TradeLord.Tests
             Run run = Sell(market, sim: true);
             Assert.Equal(2, run.Units);
             Assert.Equal(400, run.SimGold);
+            Assert.Equal(1, run.Books.SoldFrom(true, "sword"));
+            Assert.Equal(1, run.Books.SoldFrom(true, "iron"));
         }
 
         [Fact]

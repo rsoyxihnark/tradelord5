@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.100.0
+
+- TradeLord now sells what you never bought, loot included, then what you bought, and buys once both are sold
+- Fixed TradeLord reporting what it bought on one visit, haul animals included, in several lines instead of one
+- Fixed TradeLord reporting what it sold on one visit in two lines, one for what you never bought and one for what you bought
+- Fixed restocked food, and animals sold to get your party back up to speed, each taking up to two lines on one visit
+- The hint for Trade entry in town menu now says it sells what you never bought, loot included, then what you bought, then buys
+- Fixed long lines under What this means in the TradeLord ledger running on into a second line, in every language
+
 ## 1.99.2
 
 - Fixed units bought on the trade screen being written down at the deal's price per unit instead of what each one really cost
@@ -53,15 +62,12 @@
 
 ## 1.97.8
 
-- Fixed the cargo room and gold freed by selling what you never bought going unused until the next market
-- Fixed TradeLord buying a haul animal for goods that would fit once what you never bought was sold
 - Fixed the Nothing bought here message showing after TradeLord had bought goods to trade in that market
 - Fixed unpinning a town in the TradeLord ledger, or trading there, taking off a map marker a quest or the encyclopedia put on it
 - Fixed the caravan dialog offering you That was a nice trade when TradeLord had traded nothing with the caravan
 - Fixed the hint for Days to keep a price you recorded saying 0 keeps every price, when only the 2500 newest are kept
 - Fixed the hint for Color prices by world market saying livestock, when it colors horses, mules and camels too
 - Fixed the purse warning in Simulation mode (dry run) naming your real gold instead of what the dry run left you
-- The hint for Auto buy now says it buys once more with the room and gold that selling what you never bought frees
 
 ## 1.97.7
 
@@ -183,11 +189,8 @@
 
 ## 1.95.0
 
-- TradeLord now sells what you bought and buys before it sells what you never bought, loot included, with the gold the merchant has left
 - Selling animals to get your party back up to speed now waits until the buying and the sale of what you never bought are done
 - Fixed Hold cargo for the best market not counting the gold this market pays for goods you bought that the marked market does not want
-- The hint for Trade entry in town menu now says it sells what you bought, buys, then sells what you never bought
-- The hint for Auto buy now says it buys after selling what you bought and before selling what you never bought
 
 ## 1.94.3
 
@@ -1637,12 +1640,10 @@
 
 ## 1.21.0
 
-- Looted gear now sells to the first market that can pay for it, and Hold cargo for the best market is the only thing that holds cargo back
+- Hold cargo for the best market is now the only thing that holds cargo back
 - The setting that buys mules and horses now calls them animals rather than beasts
 
 ## 1.20.1
-
-- The line saying TradeLord bought pack animals now comes just after the line crediting your Trade skill, rather than before it
 
 ## 1.20.0
 
@@ -1981,7 +1982,6 @@
 ## 1.5.5
 
 - Fixed a dry run blocking the real trade that followed it in the same visit
-- Fixed the best market floor never reaching the loot it exists to protect
 - Fixed a mixed stack charging the looted units a cost they never had
 
 ## 1.5.4
@@ -2027,7 +2027,6 @@
 - Fixed the ledger panel being torn down and rebuilt every time you opened any other screen
 - The cost basis now asks the same livestock question the rest of the mod asks
 - Fixed Trade XP collapsing to almost nothing on goods you had not bought
-- The best market floor now always guards goods with no cost basis, replacing a cost the mod used to invent for them
 
 ## 1.4.2
 

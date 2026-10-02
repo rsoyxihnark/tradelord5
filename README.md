@@ -69,7 +69,7 @@
 
 **What it does for you**
 
-- ✅ One trade entry in the town menu, selling what you bought, buying, then selling what you never bought, loot included, in one go, whenever you want it
+- ✅ One trade entry in the town menu, selling what you never bought, loot included, then what you bought, then buying, in one go, whenever you want it
 - ✅ Sells and buys the moment you enter a market by default, once for each arrival
 - ✅ Wait here for some time, a walk through the lands, or anything else that drops you back at the town or village menu does not set it trading again, and it leaves that market alone until your party has taken to the road
 - ✅ The first time you come back to the market TradeLord made its last trade at, it leaves that market alone as you arrive and as you leave
@@ -83,7 +83,7 @@
 - ✅ A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
 - ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to a quarter more than the cheapest price it knows of for one, which you can set anywhere from the cheapest to three times it
 - ✅ It buys them only when your cargo is full and leaves behind goods worth buying or the food Restock and keep food (days of supply) asks for, only as many as the gold left after them can fill, and then buys what now fits
-- ✅ Haul animals are bought after the sale of what you never bought, so none is bought for goods that fit once that is gone
+- ✅ Haul animals are bought only once what you never bought and what you bought have sold, so none is bought for goods that would fit once those are gone
 - ✅ It buys no haul animal for goods that would fill less than half of one, unless those goods would make more than the animal costs
 - ✅ It buys one for food only when the food would fill at least half of it, or when your party is down to its last day of food
 - ✅ It buys none while your cargo is already fuller than Share of the hold TradeLord may fill allows, since the first animals would only carry what you already have
@@ -113,8 +113,8 @@
 - ✅ Hold cargo for the best market holds only as many as the marked market would buy, 0% holds nothing, and looted gear goes to the first market that can pay for it
 - ✅ Hold cargo for the best market holds nothing in the marked market itself, or while Auto-mark best sell market on map is off
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
-- ✅ What you never bought, loot included, is sold only once it has sold what you bought and done a first round of buying, with the gold the merchant has left, so the goods you trade get that gold first
-- ✅ Once what you never bought has sold, it buys once more with the cargo room and gold that sale freed
+- ✅ What you never bought, loot included, is sold first and what you bought after it, so the merchant's gold goes to the loot first
+- ✅ It buys only once both are sold, so the cargo room and gold they free go straight into what it buys
 - ✅ Credits your Trade skill with what the game gives for the same sale made on its trade screen, at a rate you set, and says so on screen when the skill goes up a level
 - ✅ Says on screen when the profit could add no Trade XP because your Trade skill is past the game's learning limit, and how many focus points in Trade or points of Social would let it learn again
 - ✅ Credits every companion riding with you a share of that same profit, which the game turns into Trade XP the same way it does yours, at a share you set, so a trading clan learns from the run as well as its lord
@@ -138,6 +138,8 @@
 - ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore
 - ✅ With Buy to fill the ships on, every good, livestock included, takes the room it takes in the ships' hold
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
+- ✅ Each time it trades, all it sold is one line on screen and all it bought, haul animals included, is another, whatever order it traded in
+- ✅ Food it restocked and animals it sold to get your party back up to speed each get one line of their own each time it trades
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen, apart from three warnings: cargo full, a purse below your Gold reserve, and an item list entry that matches no good

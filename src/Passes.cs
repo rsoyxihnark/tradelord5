@@ -782,4 +782,60 @@ namespace TradeLord
             _heard = false;
         }
     }
+
+    internal enum Told
+    {
+        Sold, Bought, HerdRelief, Restocked
+    }
+
+    internal sealed class OneLineEach<T>
+    {
+        internal sealed class Said
+        {
+            internal Told What;
+            internal bool Sim;
+            internal int Units;
+            internal int Gold;
+            internal int Profit;
+            internal bool OnlyToCarry = true;
+            internal readonly Dictionary<T, (int count, int gold)> Detail = new Dictionary<T, (int count, int gold)>();
+        }
+
+        private readonly List<Said> _said = new List<Said>();
+
+        internal int Count => _said.Count;
+
+        internal void Add(Told what, bool sim, IEnumerable<KeyValuePair<T, (int count, int gold)>> detail,
+                          int units, int gold, int profit = 0, bool toCarry = false)
+        {
+            if (units <= 0) return;
+            Said line = _said.Find(one => one.What == what && one.Sim == sim);
+            if (line == null)
+            {
+                line = new Said { What = what, Sim = sim };
+                _said.Add(line);
+            }
+            line.Units = TradeMath.AddedUp(line.Units, units);
+            line.Gold = TradeMath.AddedUp(line.Gold, gold);
+            line.Profit = TradeMath.AddedUp(line.Profit, profit);
+            if (!toCarry) line.OnlyToCarry = false;
+            if (detail == null) return;
+            foreach (KeyValuePair<T, (int count, int gold)> one in detail)
+            {
+                line.Detail.TryGetValue(one.Key, out (int count, int gold) had);
+                line.Detail[one.Key] = (TradeMath.AddedUp(had.count, one.Value.count),
+                                        TradeMath.AddedUp(had.gold, one.Value.gold));
+            }
+        }
+
+        internal List<Said> Closed()
+        {
+            var lines = new List<Said>(_said);
+            lines.Sort((x, y) => x.What != y.What ? x.What.CompareTo(y.What) : x.Sim.CompareTo(y.Sim));
+            _said.Clear();
+            return lines;
+        }
+
+        internal void Forget() => _said.Clear();
+    }
 }

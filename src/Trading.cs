@@ -150,9 +150,9 @@ namespace TradeLord
         private static (float weight, int cost, float profit, bool food) _unfitted;
         private static Block? _sellStalled;
         private static Block? _buyStalled;
-        private static (int units, int gold) _soldThisRound;
+        private static (int units, int gold, Settlement at) _soldThisRound;
         private static int _boughtThisRound;
-        private static int _lootSold;
+        private static readonly OneLineEach<ItemObject> _told = new OneLineEach<ItemObject>();
 
         internal static bool AutomatedTradeInProgress { get; private set; }
 
@@ -263,6 +263,7 @@ namespace TradeLord
             _tradingWith = null;
             _silenced.Clear();
             Notices.Forget();
+            _told.Forget();
             _pendingXp = 0;
             _pendingProfit = 0;
             _pendingXpMuted = true;
@@ -365,6 +366,7 @@ namespace TradeLord
                     return;
                 }
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
+                SayWhatMoved();
             });
             Guard.Run("Action.NoteWhereItTraded", () => NoteWhereItTraded(settlement));
             Guard.Run("Action.OnSettlementLeft", Marker.Update);
@@ -485,7 +487,6 @@ namespace TradeLord
             _buyStalled = null;
             _soldThisRound = default;
             _boughtThisRound = 0;
-            _lootSold = 0;
         }
 
         private static bool NoRoomToCarry()
@@ -934,10 +935,10 @@ namespace TradeLord
                             try
                             {
                                 Drove.LogState("trading by hand at " + Settlement.CurrentSettlement.Name);
+                                BeginTheRound();
+                                ExecuteLootSale(Settlement.CurrentSettlement);
                                 ExecuteQuickSell(Settlement.CurrentSettlement);
                                 ExecuteQuickBuy(Settlement.CurrentSettlement);
-                                ExecuteLootSale(Settlement.CurrentSettlement);
-                                if (_lootSold > 0) ExecuteQuickBuy(Settlement.CurrentSettlement);
                                 if (ExecuteHaulage(Settlement.CurrentSettlement))
                                     ExecuteQuickBuy(Settlement.CurrentSettlement);
                                 ExecuteHerdRelief(Settlement.CurrentSettlement);
@@ -946,7 +947,7 @@ namespace TradeLord
                                     ExecuteResupply(Settlement.CurrentSettlement);
                                 ExecuteHerdRelief(Settlement.CurrentSettlement);
                                 Drove.LogState("after trading by hand at " + Settlement.CurrentSettlement.Name);
-                                ReportStalledPasses();
+                                EndTheRound();
                             }
                             finally
                             {
@@ -1041,10 +1042,10 @@ namespace TradeLord
                               "here, so the map marker no longer leaves it out");
                 }
 
+                BeginTheRound();
+                if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
-                if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);
-                if (Options.Current.AutoBuyOnEntry && _lootSold > 0) ExecuteQuickBuy(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))
                     ExecuteQuickBuy(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
@@ -1053,7 +1054,7 @@ namespace TradeLord
                     ExecuteResupply(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
                 if (HasAMarket(settlement)) Drove.LogState("after trading at " + settlement.Name);
-                ReportStalledPasses();
+                EndTheRound();
                 if (CanTradeHere(settlement) &&
                     (Options.Current.AutoBuyOnEntry || Options.Current.QuickSellMenu))
                 {
@@ -1229,6 +1230,7 @@ namespace TradeLord
 
         internal static void FlushToasts()
         {
+            Guard.Run("Action.SayWhatMoved", SayWhatMoved);
             Guard.Run("GameTradeBook.Settle", SettleTheSales);
             int xp = _pendingXp;
             int profit = _pendingProfit;
@@ -1551,6 +1553,61 @@ namespace TradeLord
             catch { }
         }
 
+        private static void BeginTheRound()
+        {
+            SayWhatMoved();
+            _soldThisRound = default;
+            _boughtThisRound = 0;
+            _sellStalled = null;
+            _buyStalled = null;
+        }
+
+        private static void EndTheRound()
+        {
+            var sold = _soldThisRound;
+            if (sold.at != null)
+                Guard.Run("Marker.Check", () => Marker.ScoreTheMark(sold.at, sold.units, sold.gold));
+            SayWhatMoved();
+            ReportStalledPasses();
+        }
+
+        private static void SayWhatMoved()
+        {
+            if (_told.Count == 0) return;
+            foreach (OneLineEach<ItemObject>.Said line in _told.Closed())
+            {
+                if (line.What == Told.Sold)
+                {
+                    TextObject sold = PassMessage(line.Sim,
+                        "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
+                        "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).",
+                        line.Detail, line.Units, line.Gold);
+                    sold.SetTextVariable("PROFIT", line.Profit);
+                    Notices.Say(sold, line.Profit > 0 ? Notices.Gain : Notices.Flat);
+                }
+                else if (line.What == Told.Bought && line.OnlyToCarry)
+                    Notices.Say(PassMessage(line.Sim,
+                        "{=TL111}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more.",
+                        "{=TL110}TradeLord bought {ITEMS} for {GOLD} denars to carry more.",
+                        line.Detail, line.Units, line.Gold), Notices.Spend);
+                else if (line.What == Told.Bought)
+                    Notices.Say(PassMessage(line.Sim,
+                        "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
+                        "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.",
+                        line.Detail, line.Units, line.Gold), Notices.Spend);
+                else if (line.What == Told.HerdRelief)
+                    Notices.Say(PassMessage(line.Sim,
+                        "{=TL117}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars to get your party back up to speed.",
+                        "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.",
+                        line.Detail, line.Units, line.Gold), Notices.Gain);
+                else
+                    Notices.Say(PassMessage(line.Sim,
+                        "{=TL98}[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars.",
+                        "{=TL97}TradeLord restocked {ITEMS} for {GOLD} denars.",
+                        line.Detail, line.Units, line.Gold), Notices.Spend);
+            }
+        }
+
         private static void NoteStalled(bool selling, Block why)
         {
             if (selling) _sellStalled = why; else if (_boughtThisRound == 0) _buyStalled = why;
@@ -1602,9 +1659,6 @@ namespace TradeLord
 
         private static void SellPass(Pass pass, string label, string what, string named, string why, bool loot)
         {
-            if (!loot) _soldThisRound = default;
-            if (!loot) _boughtThisRound = 0;
-            if (loot) _lootSold = 0;
             if (pass == null) return;
 
             pass.Capture();
@@ -1621,12 +1675,8 @@ namespace TradeLord
             int soldItems = moved.Units;
             int profit = moved.Profit;
             int goldGained = pass.Gained(moved.SimGold);
-            var sold = (units: _soldThisRound.units + soldItems, gold: _soldThisRound.gold + goldGained);
-            _soldThisRound = sold;
-            if (loot) _lootSold = soldItems;
-
-            if (loot && pass.Site != null && !pass.Sim)
-                Guard.Run("Marker.Check", () => Marker.ScoreTheMark(pass.Site, sold.units, sold.gold));
+            _soldThisRound = (_soldThisRound.units + soldItems, _soldThisRound.gold + goldGained,
+                              pass.Site != null && !pass.Sim ? pass.Site : _soldThisRound.at);
 
             if (soldItems > 0)
             {
@@ -1637,12 +1687,7 @@ namespace TradeLord
                 pass.Logged(selling: true, why);
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
                 foreach (string held in pass.HeldFor()) Log.Write("  " + held);
-                TextObject msg = pass.Said(
-                    "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
-                    "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).",
-                    soldItems, goldGained);
-                msg.SetTextVariable("PROFIT", profit);
-                if (!pass.Muted) Notices.Say(msg, profit > 0 ? Notices.Gain : Notices.Flat);
+                if (!pass.Muted) _told.Add(Told.Sold, pass.Sim, pass.Detail, soldItems, goldGained, profit);
             }
             else if (!pass.DirectionError)
             {
@@ -1650,7 +1695,7 @@ namespace TradeLord
                 if (tally.Any) Log.Repeatable(label + "-empty " + pass.Key, tally.Summary() + held,
                     label + " moved nothing " + pass.Where + ": " + tally.Summary() + held);
                 Block stopped = tally.Dominant();
-                bool first = !loot || (sold.units == 0 && !_sellStalled.HasValue);
+                bool first = _soldThisRound.units == 0 && (!loot || !_sellStalled.HasValue);
                 if (stopped != Block.None && !pass.Muted && first) NoteStalled(selling: true, stopped);
             }
         }
@@ -2007,11 +2052,7 @@ namespace TradeLord
                       " items, -" + spent + " gold at " + settlement.Name +
                       ", still short " + (shortfall > 0 ? shortfall : 0) + " unit(s) of food");
             pass.Logged(selling: false, "restocking the larder");
-            TextObject msg = pass.Said(
-                "{=TL98}[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars.",
-                "{=TL97}TradeLord restocked {ITEMS} for {GOLD} denars.",
-                stocked, spent);
-            if (!pass.Muted) Notices.Say(msg, Notices.Spend);
+            if (!pass.Muted) _told.Add(Told.Restocked, pass.Sim, pass.Detail, stocked, spent);
         }
 
         private static (float weight, int cost) FoodTheHoldLeftBehind(Pass pass, ItemRosterElement el, in Good good,
@@ -2178,22 +2219,20 @@ namespace TradeLord
             Books books = BooksForTheMeeting(met);
             int movesBefore = books.Moves(Simulating);
             string why = "trading with a party on the road";
+            BeginTheRound();
             if (met.IsVillager)
                 LotPass(Pass.Meet(met, road, books, party), why);
             else
             {
                 SellPass(Pass.Meet(met, road, books, party),
+                         "loot sale on the road", "selling loot on the road", "Road loot selling", why, loot: true);
+                SellPass(Pass.Meet(met, road, books, party),
                          "sale on the road", "selling on the road", "Road trading", why, loot: false);
                 BuyPass(Pass.Meet(met, road, books, party),
                         "purchase on the road", "buying on the road", "Road buying", why);
-                SellPass(Pass.Meet(met, road, books, party),
-                         "loot sale on the road", "selling loot on the road", "Road loot selling", why, loot: true);
-                if (_lootSold > 0)
-                    BuyPass(Pass.Meet(met, road, books, party),
-                            "purchase on the road", "buying on the road", "Road buying", why);
             }
             NoteARoadTrade(met, books, movesBefore);
-            ReportStalledPasses();
+            EndTheRound();
         }
 
         private const int RankLivestock = TradeRules.RankLivestock;
@@ -2307,11 +2346,7 @@ namespace TradeLord
             Log.Write((pass.Sim ? "herd relief (simulated, best case): " : "herd relief: ") + sold +
                       " sold, +" + gained + " gold, profit " + profit + " at " + settlement.Name);
             pass.Logged(selling: true, "herd relief, getting the party back up to speed");
-            TextObject msg = pass.Said(
-                "{=TL117}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars to get your party back up to speed.",
-                "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.",
-                sold, gained);
-            if (!pass.Muted) Notices.Say(msg, Notices.Gain);
+            if (!pass.Muted) _told.Add(Told.HerdRelief, pass.Sim, pass.Detail, sold, gained, profit);
         }
 
         private static bool PurseBelowTheHaulAnimalFloor(Pass pass)
@@ -2483,11 +2518,7 @@ namespace TradeLord
                             " set in Gold before it buys a haul animal"
                           : ""));
             pass.Logged(selling: false, "stocking the baggage train");
-            TextObject msg = pass.Said(
-                "{=TL111}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more.",
-                "{=TL110}TradeLord bought {ITEMS} for {GOLD} denars to carry more.",
-                hauled, spent);
-            if (!pass.Muted) Notices.SayAfterXp(msg, Notices.Spend);
+            if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, hauled, spent, toCarry: true);
             if (!unfitted.food)
             {
                 _buyStalled = null;
@@ -2543,11 +2574,7 @@ namespace TradeLord
                           " items, -" + spent + " gold " + pass.Where);
                 pass.Logged(selling: false, why);
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
-                TextObject msg = pass.Said(
-                    "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
-                    "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.",
-                    bought, spent);
-                if (!pass.Muted) Notices.Say(msg, Notices.Spend);
+                if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, bought, spent);
             }
             else if (!pass.DirectionError)
             {
@@ -2594,11 +2621,7 @@ namespace TradeLord
             pass.Moved(gold: spent, selling: false);
             Log.Write(pass.Headed(label) + bought + " items, -" + spent + " gold " + pass.Where);
             pass.Logged(selling: false, why);
-            TextObject msg = pass.Said(
-                "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
-                "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.",
-                bought, spent);
-            if (!pass.Muted) Notices.Say(msg, Notices.Spend);
+            if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, bought, spent);
         }
 
         private static TextObject WhyTheOfferIsLeft(BuyingAt market, Block stops, in Lot lot)

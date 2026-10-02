@@ -24,6 +24,10 @@ flagged() {
   return 1
 }
 
+ours() {
+  [ "$1" -ef "$0" ] || [ "$1" -ef "${0%/*}/session-start.sh" ]
+}
+
 INPUT=$(cat)
 
 TOOL=""
@@ -36,6 +40,16 @@ case "$TOOL" in
         refuse "that tool starts a new branch on GitHub" ;;
       *__create_pull_request)
         refuse "a pull request needs a second branch, and main is the only branch" ;;
+      *__fork_repository)
+        refuse "a fork is a second copy of the repository, with branches of its own" ;;
+      *__create_session)
+        OUTCOME=""
+        BRANCH='"outcome_branch"[[:space:]]*:[[:space:]]*"([^"]*)"'
+        [[ $INPUT =~ $BRANCH ]] && OUTCOME=${BASH_REMATCH[1]}
+        case "$OUTCOME" in
+          ''|main|refs/heads/main) ;;
+          *) refuse "that session would push to the branch $OUTCOME, and main is the only branch" ;;
+        esac ;;
       *__update_pull_request_branch)
         refuse "that tool writes to the branch of a pull request, and main is the only branch" ;;
       *__push_files|*__create_or_update_file|*__delete_file)
@@ -68,14 +82,71 @@ else
 fi
 [ -n "${COMMAND:-}" ] || exit 0
 
+FEEDS=$COMMAND
+for depth in 1 2 3; do
+  MORE=""
+  PIPED=""
+  while IFS= read -r line; do
+    line=${line//<<</ <<< }
+    set -- ${line//[\'\"]/}
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        sudo|env|command|exec|nohup|time|builtin|then|do|else|'!'|'{'|[A-Za-z_]*=*) shift ;;
+        *) break ;;
+      esac
+    done
+    case "${1:-}" in
+      echo|printf|*/echo|*/printf) shift; PIPED="$*"; continue ;;
+      cat|*/cat) shift
+        PIPED=""
+        for one in "$@"; do
+          [ -f "$one" ] && [ -r "$one" ] && ! ours "$one" && PIPED+=$'\n'$(head -c 200000 "$one" 2>/dev/null)
+        done
+        continue ;;
+      source|.|bash|sh|zsh|dash|ksh|*/bash|*/sh|*/zsh|*/dash|*/ksh) shift
+        while [ $# -gt 0 ]; do
+          case "$1" in
+            -o|-O|+o|+O|--rcfile|--init-file) shift; shift ;;
+            -c*|-[!-]*c*) set -- -c; break ;;
+            -*|+*) shift ;;
+            *) break ;;
+          esac
+        done
+        case "${1:-}" in '<'[!'<']*) set -- '<' "${1#<}" ;; esac
+        if [ "${1:-}" = "<<<" ]; then
+          shift
+          MORE+=$'\n'"$*"
+        elif [ "${1:-}" = "<" ] && [ -f "${2:-}" ] && [ -r "${2:-}" ] && ! ours "$2"; then
+          MORE+=$'\n'$(head -c 200000 "$2" 2>/dev/null)
+        elif [ $# -gt 0 ] && [ "$1" != -c ] && [ -f "$1" ] && [ -r "$1" ] && ! ours "$1"; then
+          MORE+=$'\n'$(head -c 200000 "$1" 2>/dev/null)
+        elif [ $# -eq 0 ] && [ -n "$PIPED" ]; then
+          MORE+=$'\n'"$PIPED"
+        fi ;;
+    esac
+    PIPED=""
+  done <<<"$(printf '%s\n' "$FEEDS" | tr '|;&()`' '\n\n\n\n\n\n')"
+  [ -n "$MORE" ] || break
+  COMMAND+=$MORE
+  FEEDS=$MORE
+done
+
 SEGMENTS=$(printf '%s\n' "$COMMAND" | { sed 's/%([^)]*)/%/g' 2>/dev/null || cat; } | tr '|;&()`' '\n\n\n\n\n\n')
 
 while IFS= read -r segment; do
-  set -- ${segment//[\'\"]/}
+  while [[ $segment =~ \$\'([^\']*)\' ]]; do
+    printf -v plain '%b' "${BASH_REMATCH[1]}"
+    segment=${segment/"${BASH_REMATCH[0]}"/"$plain"}
+  done
+  set -- ${segment//[\'\"\\]/}
   for token in "$@"; do
     case "$token" in
       GIT_CONFIG_KEY_*=[Aa][Ll][Ii][Aa][Ss].*|GIT_CONFIG_PARAMETERS=*[Aa][Ll][Ii][Aa][Ss].*)
         refuse "that command defines a git alias through the environment, and the guard cannot see into an alias" ;;
+      GIT_CONFIG_KEY_*=[Ii][Nn][Cc][Ll][Uu][Dd][Ee]*|GIT_CONFIG_PARAMETERS=*[Ii][Nn][Cc][Ll][Uu][Dd][Ee]*)
+        refuse "that command makes git read another config file, which can hold an alias the guard cannot see" ;;
+      GIT_CONFIG_GLOBAL=*|GIT_CONFIG_SYSTEM=*|GIT_CONFIG=*)
+        refuse "that command points git at another config file, which can hold an alias the guard cannot see" ;;
     esac
   done
   FED=0
@@ -135,7 +206,7 @@ while IFS= read -r segment; do
   done
   [ "$FED" = 1 ] && set -- "$@" "{}"
   case "${1:-}" in
-    gh|*/gh|curl|*/curl)
+    gh|*/gh|curl|*/curl|wget|*/wget|http|*/http|https|*/https|xh|*/xh|xhs|*/xhs)
       if [ "${1##*/}" = gh ]; then
         STEP=0; SKIP=0
         for token in "$@"; do
@@ -148,27 +219,36 @@ while IFS= read -r segment; do
             0:*) STEP=1 ;;
             1:pr) STEP=2 ;;
             1:alias) STEP=3 ;;
+            1:repo) STEP=4 ;;
             2:create|2:checkout) refuse "gh pr $token needs or makes a second branch, and main is the only branch" ;;
             3:set|3:import) refuse "that command defines a gh alias, and the guard cannot see into an alias" ;;
+            4:fork) refuse "gh repo fork makes a second copy of the repository, with branches of its own" ;;
             *) break ;;
           esac
         done
       fi
-      REFS=0; WRITE=0; DELETE=0; MAIN=0; TAGGED=0; OTHER=""
+      REFS=0; WRITE=0; DELETE=0; MAIN=0; TAGGED=0; PULLS=0; OTHER=""
       for token in "$@"; do
         case "$token" in
           *createRef*|*updateRefs*|*[Cc]reate*[Bb]ranch*)
             refuse "that request starts a new branch on GitHub" ;;
+          --config|--config=*)
+            [ "${1##*/}" != gh ] && refuse "the guard cannot read a request kept in a config file" ;;
+          -[!-]*)
+            [ "${1##*/}" = curl ] && flagged "$token" K AbcCdDeEFHmoPQrtTuUwxXyYz &&
+              refuse "the guard cannot read a request kept in a config file" ;;
           *branches/*/rename*)
             refuse "that request renames a branch on GitHub, and main is the only branch" ;;
         esac
         case "$token" in --expand-*) token=--${token#--expand-} ;; esac
         case "$token" in *git/refs*) REFS=1 ;; esac
         case "$token" in *refs/tags/*) TAGGED=1 ;; esac
+        case "$token" in */pulls|*/pulls/|*/pulls\?*) PULLS=1 ;; esac
         case "$token" in
           POST|post|PATCH|patch|PUT|put|-*XPOST|-*XPATCH|-*XPUT|*=POST|*=PATCH|*=PUT) WRITE=1 ;;
           DELETE|delete|-*XDELETE|*=DELETE) DELETE=1 ;;
           --field*|--raw-field*|--input*|--data*|--json*|--form*|--upload-file*) WRITE=1 ;;
+          --post-data*|--post-file*|--body-data*|--body-file*) WRITE=1 ;;
           --*) ;;
           -*)
             if [ "${1##*/}" = gh ]; then
@@ -191,6 +271,7 @@ while IFS= read -r segment; do
           if [ "$name" = main ]; then MAIN=1; else OTHER=${OTHER:-$name}; fi
         done
       done
+      [ "$PULLS" = 1 ] && [ "$WRITE" = 1 ] && refuse "a pull request needs a second branch, and main is the only branch"
       if [ "$REFS" = 1 ]; then
         [ "$DELETE" = 1 ] && [ "$MAIN" = 1 ] && refuse "that request would delete main on GitHub"
         [ "$DELETE" = 0 ] && [ "$WRITE" = 1 ] && [ -n "$OTHER" ] &&
@@ -200,9 +281,11 @@ while IFS= read -r segment; do
       fi
       continue ;;
   esac
+  VARIED=0
   case "${1:-}" in
     git|*/git) ;;
     git.exe|*/git.exe) ;;
+    '$'[A-Za-z_{]*) VARIED=1 ;;
     *) continue ;;
   esac
   shift
@@ -212,10 +295,13 @@ while IFS= read -r segment; do
       -c|--config-env)
         case "${2:-}" in
           [Aa][Ll][Ii][Aa][Ss].*) refuse "that command defines a git alias inline, and the guard cannot see into an alias" ;;
+          [Ii][Nn][Cc][Ll][Uu][Dd][Ee]*) refuse "that command makes git read another config file, which can hold an alias the guard cannot see" ;;
         esac
         shift; shift ;;
       --config-env=[Aa][Ll][Ii][Aa][Ss].*)
         refuse "that command defines a git alias inline, and the guard cannot see into an alias" ;;
+      --config-env=[Ii][Nn][Cc][Ll][Uu][Dd][Ee]*)
+        refuse "that command makes git read another config file, which can hold an alias the guard cannot see" ;;
       -C|-c|--git-dir|--work-tree|--namespace|--config-env) shift; shift ;;
       -*) shift ;;
       *) break ;;
@@ -223,6 +309,9 @@ while IFS= read -r segment; do
   done
   SUB=${1:-}
   [ $# -gt 0 ] && shift
+  case "$SUB" in
+    '$'*) [ "$VARIED" = 0 ] && refuse "the guard cannot read which git command $SUB stands for" ;;
+  esac
 
   case "$SUB" in
     checkout|switch)
@@ -285,16 +374,19 @@ while IFS= read -r segment; do
       done ;;
 
     config)
-      READING=0; ALIAS=0
+      READING=0; ALIAS=0; INCLUDE=0
       for token in "$@"; do
         case "$token" in
           --get|--get-all|--get-regexp|--get-urlmatch|-l|--list|--unset|--unset-all|--remove-section) READING=1 ;;
           get|list|unset|remove-section) READING=1 ;;
           [Aa][Ll][Ii][Aa][Ss]|[Aa][Ll][Ii][Aa][Ss].*) ALIAS=1 ;;
+          [Ii][Nn][Cc][Ll][Uu][Dd][Ee]*) INCLUDE=1 ;;
         esac
       done
       [ "$ALIAS" = 1 ] && [ "$READING" = 0 ] &&
-        refuse "that command defines a git alias, and the guard cannot see into an alias" ;;
+        refuse "that command defines a git alias, and the guard cannot see into an alias"
+      [ "$INCLUDE" = 1 ] && [ "$READING" = 0 ] &&
+        refuse "that command makes git read another config file, which can hold an alias the guard cannot see" ;;
 
     send-pack|http-push|fast-import)
       refuse "git $SUB can start a branch the guard cannot read" ;;

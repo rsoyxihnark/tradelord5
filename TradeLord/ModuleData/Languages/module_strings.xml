@@ -56,7 +56,7 @@
 		<string id="TL66" text="TradeLord profit: {AMOUNT}"/>
 		<string id="TL67" text="No profitable routes in reach"/>
 		<string id="TL68" text="{COUNT} profitable routes, best first"/>
-		<string id="TL69" text="No routes are within your travel ceilings. Raise the ceilings in the Trade Pool settings, or move nearer to more markets."/>
+		<string id="TL69" text="No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."/>
 		<string id="TL70" text="Click a town name to jump to it and pin or unpin it | Days = you -&gt; buy town -&gt; sell town | Carv. = caravans at those towns"/>
 		<string id="TL71" text=" | Score = profit per day discounted by Conf"/>
 		<string id="TL72" text=" | Score = profit per day"/>
@@ -75,7 +75,7 @@
 		<string id="TL86" text="your party cannot drive any more livestock"/>
 		<string id="TL88" text="TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}.{ADDED}"/>
 		<string id="TL89" text="No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Trade Pool settings."/>
-		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Trade Pool settings."/>
+		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. | Walk more markets, or raise the ceilings in the Trade Pool settings."/>
 		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
 		<string id="TL92" text="Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower Gold reserve in its settings."/>
 		<string id="TL97" text="TradeLord restocked {ITEMS} for {GOLD} denars."/>
@@ -185,9 +185,9 @@
 		<string id="TL313" text="Colors trade-good and animal rows in the inventory by how this market's price compares with the best known market."/>
 		<string id="TL314" text="Key that opens the ledger panel on the campaign map. One key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, such as Ctrl+T. A bare key the game also uses triggers both actions. Anything unknown falls back to T." />
 		<string id="TL315" text="Two clickable buttons on the right edge of the campaign map: TradeLord opens the ledger panel, and Recent trades below it opens the last twenty buys and sells. Turn OFF if they interfere with map clicks."/>
-		<string id="TL316" text="TradeLord's trade entry in town and village menus: it sells what you bought, buys, then sells what you never bought, loot included. Turn it off to trade only on arrival. While Staged Trading holds that trading back, the entry shows anyway."/>
+		<string id="TL316" text="TradeLord's trade entry in town and village menus: it sells what you never bought, loot included, then what you bought, then buys. Turn it off to trade only on arrival. While Staged Trading holds that trading back, the entry shows anyway."/>
 		<string id="TL317" text="Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu."/>
-		<string id="TL318" text="Buys the moment you walk into a market, after selling what you bought and before selling what you never bought, and again with the room and gold that sale frees. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
+		<string id="TL318" text="Buys the moment you walk into a market, after any selling. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
 		<string id="TL320" text="The margin every trade must clear, both ways. Sell only if the price beats your cost basis by this much. Buy or list a route only if the far market beats the local price by this much after the resale safety factor. Raising it trades less."/>
 		<string id="TL321" text="Days of food to keep: held back from selling and topped up as TradeLord trades, cheapest first, never above the cheapest price it knows. Your never-buy list holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
 		<string id="TL322" text="What automated trading may do with food. The days-of-supply food reserve is separate and still applies."/>
@@ -228,13 +228,13 @@
 		<string id="TL277" text="Reset" />
 		<string id="TL278" text="Trade with towns" />
 		<string id="TL376" text="Puts every TradeLord setting back to its shipped value at once, writing it to TradeLord.ini so nothing is left half changed. Your never sell, always sell, never buy and always buy lists are emptied too, and TradeLord.log says what changed." />
-		<string id="TL377" text="Your purse is at {GOLD} denars and your gold reserve holds {RESERVE} of it back, so there is nothing here you could buy. Sell some cargo, or lower Gold reserve in its settings." />
+		<string id="TL377" text="Your purse is at {GOLD} denars and Gold reserve holds {RESERVE} of it back, so you could buy nothing here. | Sell some cargo, or lower Gold reserve in its settings." />
 		<string id="TL392" text="Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages, so it will not buy anything here. Sell some cargo, or lower either of those in its settings."/>
-		<string id="TL393" text="Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages, so there is nothing here you could buy. Sell some cargo, or lower either of those in its settings."/>
+		<string id="TL393" text="Your purse is at {GOLD} denars and TradeLord holds {RESERVE} of it back, so you could buy nothing here. | That is {FLAT} for Gold reserve and {WAGES} for Keep gold for days of wages. | Sell some cargo, or lower either of those settings."/>
 		<string id="TL390" text="TradeLord trades in town menus and towns join the price scans. ON by default." />
 		<string id="TL279" text="Count what is on its way to a market"/>
 		<string id="TL396" text="Counts what caravans and workshops bring or take and the town uses up before you arrive; a village follows its town. It sets route stock and, with Bulk price simulation on, route and tooltip prices and where to sell. Live world prices only."/>
-		<string id="TL394" text=" | prices and stock count what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there and what the town and its workshops use up"/>
+		<string id="TL394" text=" | prices and stock count what caravans, workshops and the town add and take before you arrive"/>
 		<string id="TL395" text=" and what each will make next"/>
 		<string id="TL397" text=" | Qty! = part of that amount is still on the road and lands before you would"/>
 		<string id="TL399" text=" | the Sell price has held at {HELD} of what this panel promised, over {COUNT} price(s) it has checked"/>
@@ -286,7 +286,7 @@
 		<string id="TL444" text="A market paying under what the TradeLord ledger promised scores lower, its routes falling in the list once you have walked into that market five times, by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default."/>
 		<string id="TL445" text=" | Score is lowered for a market that has paid less than this panel promised"/>
 		<string id="TL446" text="?"/>
-		<string id="TL447" text=" | stock counts what the caravans and the workshops will add to a market before you arrive, less an estimate of what the caravans' purses will buy there and what the town and its workshops use up; prices need Bulk price simulation"/>
+		<string id="TL447" text=" | stock counts what caravans, workshops and the town add and take before you arrive | prices need Bulk price simulation to count it"/>
 		<string id="TL448" text="Trade XP: {AMOUNT}" />
 		<string id="TL449" text="TradeLord has refilled {COUNT} empty village purse(s), so those village shops can trade again."/>
 		<string id="TL450" text="No market in reach stocks {COUNT} or more. | Minimum stock for buy suggestions asks for that. | Lower it to see where to buy this."/>
@@ -322,7 +322,7 @@
 		<string id="TL482" text=" It pays its owner nothing a day now, so there is no telling when it would pay for itself."/>
 		<string id="TL483" text="Learn the resale safety factor"/>
 		<string id="TL484" text="Lowers Resale safety factor toward how much of the Sell price the TradeLord ledger promised has been there when you walked in, counting that record more as it grows, and never raises it above what you set. OFF uses it as set. ON by default."/>
-		<string id="TL485" text=" | a price elsewhere counts at {USED}: Resale safety factor starts it at {SET} and {COUNT} walk-in(s) have moved it"/>
+		<string id="TL485" text=" | a price elsewhere counts at {USED}: Resale safety factor set it at {SET} and {COUNT} walk-in(s) moved it"/>
 		<string id="TL486" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold.{ADDED}"/>
 		<string id="TL487" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}.{ADDED}"/>
 		<string id="TL488" text=" It added {XP} Trade XP to your skill."/>
