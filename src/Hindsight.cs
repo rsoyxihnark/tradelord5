@@ -222,7 +222,7 @@ namespace TradeLord
                 if (holding != Holding.Scored) continue;
                 scored++;
                 heldTotal += held;
-                keptTotal += TradeMath.UpToThePromise(held);
+                keptTotal += TradeMath.HowCloseToThePromise(held);
                 _bands.Add(said.Confidence, held);
                 LedgerBehavior.Instance?.KeepPromiseScore(held);
                 lines.Add("  " + Named(said.Item) + ": the panel promised " + said.SellPrice +
@@ -257,13 +257,14 @@ namespace TradeLord
                 }
                 if (LedgerBehavior.Instance != null &&
                     LedgerBehavior.Instance.PromiseScore(out int kept, out float overall))
-                    lines.Add("  over this campaign: the price has held at " + Share(overall) +
-                              " of promise over " + kept + " price(s) checked");
+                    lines.Add("  over this campaign: the price has come " + Share(overall) +
+                              " close to its promise over " + kept + " price(s) checked, a price above it " +
+                              "missing as much as one below it");
                 if (LedgerBehavior.Instance != null &&
                     LedgerBehavior.Instance.PromiseScoreAt(site.StringId, out int walkIns, out float hereOverall))
-                    lines.Add("  at " + site.Name + ": the price has held at " + Share(hereOverall) +
-                              " of promise over " + walkIns + " walk-in(s) here, counting a price above " +
-                              "its promise as the promise" + WhatTheRecordDoes(walkIns, hereOverall));
+                    lines.Add("  at " + site.Name + ": the price has come " + Share(hereOverall) +
+                              " close to its promise over " + walkIns + " walk-in(s) here, a price above " +
+                              "its promise missing as much as one below it" + WhatTheRecordDoes(walkIns, hereOverall));
             }
             Log.WriteMany(lines);
         }
@@ -390,13 +391,14 @@ namespace TradeLord
                           Figure(TradeMath.MeanOf(landingMiss, scored)) + " unit(s) a good" +
                           (shared == 0
                               ? ", and no worth figure could be held to anything here"
-                              : ", and of the worth it said would move, " +
-                                Share(TradeMath.ShareThatCameTrue(weighed, cameTrue)) + " came true, over " +
+                              : ", and the worth it said would move came " +
+                                Share(TradeMath.ShareThatCameTrue(weighed, cameTrue)) + " close to what really moved, over " +
                                 shared + " good(s)"));
                 if (LedgerBehavior.Instance != null &&
                     LedgerBehavior.Instance.ForecastScore(out int figures, out float held))
-                    lines.Add("  over this campaign: of the worth it said would move, " + Share(held) +
-                              " came true over " + figures + " figure(s) checked, so what is on its way is counted at " +
+                    lines.Add("  over this campaign: the worth it said would move came " + Share(held) +
+                              " close to what really moved over " + figures + " figure(s) checked, a move bigger " +
+                              "than it said missing as much as a smaller one, so what is on its way is counted at " +
                               Share(TradeMath.TrustInTheForecast(figures, held)) + " of what it says");
             }
             if (scored + stale == 0)

@@ -1013,6 +1013,57 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Every_unit_keeps_where_it_came_from_and_only_market_and_caravan_units_count_for_Trade_XP()
+        {
+            var rec = new PurchaseRecord { ItemId = "wine" };
+            TradeMath.AddPurchase(rec, new[] { 30 }, 1L, 100f, TradeMath.FromVillagers);
+            TradeMath.AddPurchase(rec, new[] { 40 }, 2L, 100f, TradeMath.FromACaravan);
+            TradeMath.AddPurchase(rec, new[] { 50 }, 3L, 100f);
+            Assert.Equal(new[] { TradeMath.FromVillagers, TradeMath.FromACaravan, TradeMath.FromAMarket },
+                         rec.Batches.ConvertAll(one => one.From).ToArray());
+            Assert.Equal(TradeMath.FromVillagers, TradeMath.FromASaleTakes(rec, 30));
+            Assert.False(TradeMath.GivesTradeXp(TradeMath.FromVillagers));
+            Assert.False(TradeMath.GivesTradeXp(TradeMath.CameWithoutAPurchase));
+            Assert.True(TradeMath.GivesTradeXp(TradeMath.FromACaravan));
+            Assert.True(TradeMath.GivesTradeXp(TradeMath.FromAMarket));
+            Assert.Equal("bought from villagers", TradeMath.WhereFrom(TradeMath.FromVillagers));
+            Assert.Equal("came without a purchase", TradeMath.WhereFrom(TradeMath.CameWithoutAPurchase));
+            List<TradeMath.SoldUnit> sold = TradeMath.DrainHandSale(rec, new[] { 45 }, TradeMath.EachUnitApart, null);
+            Assert.Equal(TradeMath.FromACaravan, sold[0].From);
+        }
+
+        [Fact]
+        public void What_left_the_party_unsold_comes_off_the_oldest_units_bought_or_not()
+        {
+            var bought = new PurchaseRecord { ItemId = "grain" };
+            var free = new PurchaseRecord { ItemId = "grain" };
+            TradeMath.AddPurchase(bought, new[] { 20, 21 }, 10L, 50f);
+            TradeMath.AddPurchase(free, new int[3], 20L, 40f, TradeMath.CameWithoutAPurchase);
+            TradeMath.AddPurchase(bought, new[] { 22 }, 30L, 60f);
+            Assert.Equal(0, TradeMath.DrainTheOldestOf(bought, free, 2));
+            Assert.Equal(1, free.Count);
+            Assert.Equal(3, bought.Count);
+            Assert.Equal(2, TradeMath.DrainTheOldestOf(bought, free, 3));
+            Assert.Equal(0, free.Count);
+            Assert.Equal(new[] { 22 }, Units(TradeMath.UnitCosts(bought, bought.Count)));
+            Assert.Equal(0, free.TotalPaid);
+        }
+
+        [Fact]
+        public void A_unit_that_came_without_a_purchase_leaves_oldest_first_with_its_number()
+        {
+            var free = new PurchaseRecord { ItemId = "iron" };
+            TradeMath.AddPurchase(free, new int[2], 7L, 90f, TradeMath.CameWithoutAPurchase);
+            TradeMath.AddPurchase(free, new int[1], 3L, 80f, TradeMath.CameWithoutAPurchase);
+            Assert.True(TradeMath.DrainTheOldestUnit(free, out long number, out float day));
+            Assert.Equal(3L, number);
+            Assert.Equal(80f, day);
+            Assert.Equal(2, free.Count);
+            Assert.Equal(0, free.TotalPaid);
+            Assert.False(TradeMath.DrainTheOldestUnit(new PurchaseRecord { ItemId = "none" }, out _, out _));
+        }
+
+        [Fact]
         public void A_spread_used_only_when_the_screen_cannot_be_read_still_adds_up_to_the_gold()
         {
             Assert.Equal(new[] { 279, 279, 278, 278 }, TradeMath.SpreadOver(4, 1114));
@@ -1626,10 +1677,25 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_move_bigger_than_the_forecast_said_misses_as_much_as_a_smaller_one()
+        {
+            Assert.True(TradeMath.HowMuchCameTrue(100, 100, out float right));
+            Assert.Equal(1f, right);
+            Assert.True(TradeMath.HowMuchCameTrue(100, 90, out float under));
+            Assert.True(TradeMath.HowMuchCameTrue(100, 110, out float overBy));
+            Assert.Equal(0.9f, under, 4);
+            Assert.Equal(0.9f, overBy, 4);
+            Assert.True(TradeMath.HowMuchCameTrue(-100, -150, out float half));
+            Assert.Equal(0.5f, half, 4);
+            Assert.True(TradeMath.HowMuchCameTrue(100, 250, out float wild));
+            Assert.Equal(0f, wild);
+        }
+
+        [Fact]
         public void One_wild_miss_cannot_speak_for_the_whole_forecast()
         {
             Assert.True(TradeMath.HowMuchCameTrue(-76, -2000, out float over));
-            Assert.Equal(TradeMath.MostOfAMoveThatCounts, over);
+            Assert.Equal(0f, over);
             Assert.True(TradeMath.HowMuchCameTrue(100, -5000, out float against));
             Assert.Equal(TradeMath.LeastOfAMoveThatCounts, against);
             Assert.True(TradeMath.HowMuchCameTrue(-400, -200, out float half));
@@ -1680,7 +1746,8 @@ namespace TradeLord.Tests
         [Fact]
         public void By_size_no_figure_counts_for_more_than_it_said_either_way()
         {
-            Assert.Equal(1f, BySize((100, 5000)), 4);
+            Assert.Equal(0f, BySize((100, 5000)), 4);
+            Assert.Equal(0.9f, BySize((100, 110)), 4);
             Assert.Equal(0.5f, BySize((100, 100), (100, -5000), (100, 100), (100, 100)), 4);
             Assert.Equal(0f, BySize((100, -5000)));
         }

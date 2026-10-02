@@ -2,13 +2,13 @@
 <base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="string">
 	<tags><tag language="English"/></tags>
 	<strings>
-		<string id="TL02" text="TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit)."/>
+		<string id="TL02" text="Sold {ITEMS} for {GOLD} denars, {PROFIT} denars profit{XP}."/>
 		<string id="TL20" text="Best sell prices"/>
 		<string id="TL21" text="Best buy prices"/>
 		<string id="TL22" text="* Best market to sell this!"/>
 		<string id="TL23" text="* Cheapest market to buy this!"/>
 		<string id="TL24" text="Cheaper in {TOWN}: {PRICE}{GOLD}"/>
-		<string id="TL06" text="TradeLord bought {ITEMS} for {GOLD} denars."/>
+		<string id="TL06" text="Bought {ITEMS} for {GOLD} denars."/>
 		<string id="TL07" text="TradeLord ledger"/>
 		<string id="TL08" text="No profitable routes within your travel ceilings. Raise the ceilings in the Trade Pool settings, or move nearer to more markets."/>
 		<string id="TL09" text="Close"/>
@@ -16,8 +16,8 @@
 		<string id="TL26" text="Trade here now (TradeLord)"/>
 		<string id="TL29" text="and {COUNT} more"/>
 		<string id="TL31" text="{COUNT} items"/>
-		<string id="TL13" text="[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit)."/>
-		<string id="TL14" text="[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars."/>
+		<string id="TL13" text="[Simulated, best case] Would sell {ITEMS} for {GOLD} denars, {PROFIT} denars profit."/>
+		<string id="TL14" text="[Simulated, best case] Would buy {ITEMS} for {GOLD} denars."/>
 		<string id="TL15" text="+{PCT}% if sold there instead"/>
 		<string id="TL18" text="The market is still settling ({DAYS} more days)."/>
 		<string id="TL32" text="Nothing sold here - {REASON}."/>
@@ -64,7 +64,6 @@
 		<string id="TL77" text="Profit: +{PCT}%"/>
 		<string id="TL78" text="Stock: {COUNT}"/>
 		<string id="TL79" text="~{DAYS} days"/>
-		<string id="TL81" text="TradeLord credited {GOLD} denars of profit to your Trade skill.{ADDED}"/>
 		<string id="TL82" text="Cargo is full. Recruit more men, buy more horses, or sell goods manually."/>
 		<string id="TL93" text="you are already carrying as many of these as you allow"/>
 		<string id="TL94" text="Nothing traded here - {REASON}."/>
@@ -73,23 +72,16 @@
 		<string id="TL84" text="{ITEM}: buy {FROM} ({BUY} denars) -&gt; sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} days from here"/>
 		<string id="TL85" text="Hold cargo for the best market keeps your cargo for the marked market"/>
 		<string id="TL86" text="your party cannot drive any more livestock"/>
-		<string id="TL88" text="TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}.{ADDED}"/>
 		<string id="TL89" text="No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Trade Pool settings."/>
 		<string id="TL90" text="No routes are within your travel ceilings, from the prices you have recorded so far. | Walk more markets, or raise the ceilings in the Trade Pool settings."/>
 		<string id="TL91" text="An entry on one of your TradeLord item lists matches no good in this game and is doing nothing. TradeLord.log names which." />
 		<string id="TL92" text="Your purse is at {GOLD} denars and your gold reserve is {RESERVE}, so TradeLord will not buy anything here. Sell some cargo, or lower Gold reserve in its settings."/>
-		<string id="TL97" text="TradeLord restocked {ITEMS} for {GOLD} denars."/>
-		<string id="TL98" text="[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars."/>
 		<string id="TL99" text="you are keeping what the smithy can break down"/>
-		<string id="TL110" text="TradeLord bought {ITEMS} for {GOLD} denars to carry more."/>
-		<string id="TL111" text="[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more."/>
 		<string id="TL113" text="Oh, sorry, of course. But do not forget to leave an endorsement thumbs up on NexusMods!"/>
 		<string id="TL387" text="Let us pass, and we will be on our way. [TRADELORD]"/>
 		<string id="TL388" text="grain is left alone, since it fills the cargo for little return"/>
 		<string id="TL114" text="That was a nice trade. [TRADELORD]"/>
 		<string id="TL115" text="Agreed. I wish I could use that mod too. Hope you gave a thumbs up endorsement on NexusMods!"/>
-		<string id="TL116" text="TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed."/>
-		<string id="TL117" text="[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars to get your party back up to speed."/>
 		<string id="TL251" text="Stop buying at this many held (0 = off)"/>
 		<string id="TL252" text="Always buy (item ids or names, comma separated)"/>
 		<string id="TL253" text="Leave alone"/>
@@ -237,7 +229,7 @@
 		<string id="TL394" text=" | prices and stock count what caravans, workshops and the town add and take before you arrive"/>
 		<string id="TL395" text=" and what each will make next"/>
 		<string id="TL397" text=" | Qty! = part of that amount is still on the road and lands before you would"/>
-		<string id="TL399" text=" | the Sell price has held at {HELD} of what this panel promised, over {COUNT} price(s) it has checked"/>
+		<string id="TL399" text=" | the Sell price this panel promised has been {HELD} on target, above or below, over {COUNT} price(s) checked"/>
 		<string id="TL400" text="Instead of trading, TradeLord lays its whole deal on the trade screen: sales on one side, buys on the other. Change what you like and press Done or Cancel. Nothing is traded on arrival; a party met on the road still trades. OFF by default."/>
 		<string id="TL401" text="TradeLord has laid out {SOLD} unit(s) to sell for {GAINED} denars and {BOUGHT} to buy for {SPENT}. Change anything you like, then press Done to trade, or Cancel to leave it."/>
 		<string id="TL402" text="TradeLord found nothing here worth trading, so it has laid out nothing. Press Cancel to leave the market as it is."/>
@@ -283,8 +275,8 @@
 		<string id="TL441" text=" This takes you below the {HELD} denars TradeLord holds back as your gold reserve and wage cover, which it will not spend on goods."/>
 		<string id="TL442" text="Today"/>
 		<string id="TL443" text="Trust a market by what it has paid"/>
-		<string id="TL444" text="A market paying under what the TradeLord ledger promised scores lower, its routes falling in the list once you have walked into that market five times, by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default."/>
-		<string id="TL445" text=" | Score is lowered for a market that has paid less than this panel promised"/>
+		<string id="TL444" text="A market paying under or over what the TradeLord ledger promised scores lower, its routes falling in the list after you have walked into it five times, by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default."/>
+		<string id="TL445" text=" | Score is lowered for a market that has paid less or more than this panel promised"/>
 		<string id="TL446" text="?"/>
 		<string id="TL447" text=" | stock counts what caravans, workshops and the town add and take before you arrive | prices need Bulk price simulation to count it"/>
 		<string id="TL448" text="Trade XP: {AMOUNT}" />
@@ -321,11 +313,8 @@
 		<string id="TL481" text=" It pays its owner {GOLD} denars a day now and less in its first days with you, so it would pay for itself in about {DAYS} days."/>
 		<string id="TL482" text=" It pays its owner nothing a day now, so there is no telling when it would pay for itself."/>
 		<string id="TL483" text="Learn the resale safety factor"/>
-		<string id="TL484" text="Lowers Resale safety factor toward how much of the Sell price the TradeLord ledger promised has been there when you walked in, counting that record more as it grows, and never raises it above what you set. OFF uses it as set. ON by default."/>
+		<string id="TL484" text="Lowers Resale safety factor toward how close a market paid to the Sell price the TradeLord ledger promised as you walked in, under or over, counting that record more as it grows, never above what you set. OFF uses it as set. ON by default."/>
 		<string id="TL485" text=" | a price elsewhere counts at {USED}: Resale safety factor set it at {SET} and {COUNT} walk-in(s) moved it"/>
-		<string id="TL486" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold.{ADDED}"/>
-		<string id="TL487" text="TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}.{ADDED}"/>
-		<string id="TL488" text=" It added {XP} Trade XP to your skill."/>
 		<string id="TL489" text="Trade ({SKILL}) is close to its learning limit ({LIMIT}): past it, Trade XP comes slower and then stops.{REMEDY}"/>
 		<string id="TL490" text="Trade ({SKILL}) is past its learning limit ({LIMIT}), so Trade XP comes slower and then stops.{REMEDY}"/>
 		<string id="TL491" text=" {FOCUS} more focus point(s) in Trade or {POINTS} more point(s) of {ATTRIBUTE} would raise the limit."/>
@@ -336,5 +325,9 @@
 		<string id="TL496" text="Sell at cost after (days, 0 = off)"/>
 		<string id="TL497" text="With Price a sale must beat on Each unit's own price, a unit you bought that has waited this many days may sell for what it cost you, with no margin and no Hold cargo for the best market."/>
 		<string id="TL498" text=" Your focus in Trade and your {ATTRIBUTE} are as high as they go, so the limit cannot rise any further."/>
+		<string id="TL499" text=" (+{XP} Trade XP)"/>
+		<string id="TL500" text=" (+{XP} Trade XP, Trade is now {LEVEL})"/>
+		<string id="TL501" text="What was sold added {XP} Trade XP."/>
+		<string id="TL502" text="What was sold added {XP} Trade XP, and Trade is now {LEVEL}."/>
 	</strings>
 </base>

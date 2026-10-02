@@ -26,7 +26,7 @@ namespace TradeLord.Tests
         {
             var told = new OneLineEach<string>();
             told.Add(Told.Bought, false, Goods(("wine", 10, 500)), 10, 500);
-            told.Add(Told.Bought, false, Goods(("donkey", 2, 300)), 2, 300, toCarry: true);
+            told.Add(Told.Bought, false, Goods(("donkey", 2, 300)), 2, 300);
             told.Add(Told.Sold, false, Goods(("sword", 3, 900)), 3, 900, 900);
             told.Add(Told.Bought, false, Goods(("cheese", 4, 100)), 4, 100);
 
@@ -36,7 +36,6 @@ namespace TradeLord.Tests
             OneLineEach<string>.Said bought = lines.Find(line => line.What == Told.Bought);
             Assert.Equal(16, bought.Units);
             Assert.Equal(900, bought.Gold);
-            Assert.False(bought.OnlyToCarry);
             Assert.Equal((10, 500), bought.Detail["wine"]);
             Assert.Equal((2, 300), bought.Detail["donkey"]);
             Assert.Equal((4, 100), bought.Detail["cheese"]);
@@ -50,24 +49,24 @@ namespace TradeLord.Tests
             first.Add(Told.Sold, false, Goods(("sword", 3, 900)), 3, 900, 900);
             first.Add(Told.Sold, false, Goods(("wine", 10, 800)), 10, 800, 200);
             first.Add(Told.Bought, false, Goods(("wine", 10, 500)), 10, 500);
-            first.Add(Told.HerdRelief, false, Goods(("horse", 1, 200)), 1, 200, 50);
-            first.Add(Told.Restocked, false, Goods(("grain", 5, 50)), 5, 50);
-            first.Add(Told.Bought, false, Goods(("mule", 1, 150)), 1, 150, toCarry: true);
-            first.Add(Told.Restocked, false, Goods(("grain", 3, 30)), 3, 30);
+            first.Add(Told.Sold, false, Goods(("horse", 1, 200)), 1, 200, 50);
+            first.Add(Told.Bought, false, Goods(("grain", 5, 50)), 5, 50);
+            first.Add(Told.Bought, false, Goods(("mule", 1, 150)), 1, 150);
+            first.Add(Told.Bought, false, Goods(("grain", 3, 30)), 3, 30);
 
             var second = new OneLineEach<string>();
-            second.Add(Told.Restocked, false, Goods(("grain", 3, 30)), 3, 30);
-            second.Add(Told.Bought, false, Goods(("mule", 1, 150)), 1, 150, toCarry: true);
+            second.Add(Told.Bought, false, Goods(("grain", 3, 30)), 3, 30);
+            second.Add(Told.Bought, false, Goods(("mule", 1, 150)), 1, 150);
             second.Add(Told.Bought, false, Goods(("wine", 10, 500)), 10, 500);
-            second.Add(Told.Restocked, false, Goods(("grain", 5, 50)), 5, 50);
+            second.Add(Told.Bought, false, Goods(("grain", 5, 50)), 5, 50);
             second.Add(Told.Sold, false, Goods(("wine", 10, 800)), 10, 800, 200);
-            second.Add(Told.HerdRelief, false, Goods(("horse", 1, 200)), 1, 200, 50);
+            second.Add(Told.Sold, false, Goods(("horse", 1, 200)), 1, 200, 50);
             second.Add(Told.Sold, false, Goods(("sword", 3, 900)), 3, 900, 900);
 
             List<OneLineEach<string>.Said> one = first.Closed();
             List<OneLineEach<string>.Said> other = second.Closed();
 
-            Assert.Equal(new[] { Told.Sold, Told.Bought, Told.HerdRelief, Told.Restocked },
+            Assert.Equal(new[] { Told.Sold, Told.Bought },
                          one.ConvertAll(line => line.What).ToArray());
             Assert.Equal(one.Count, other.Count);
             for (int at = 0; at < one.Count; at++)
@@ -76,11 +75,12 @@ namespace TradeLord.Tests
                 Assert.Equal(one[at].Units, other[at].Units);
                 Assert.Equal(one[at].Gold, other[at].Gold);
                 Assert.Equal(one[at].Profit, other[at].Profit);
-                Assert.Equal(one[at].OnlyToCarry, other[at].OnlyToCarry);
                 Assert.Equal(one[at].Detail, other[at].Detail);
             }
-            Assert.Equal(1100, one[0].Profit);
-            Assert.Equal((8, 80), one[3].Detail["grain"]);
+            Assert.Equal(1150, one[0].Profit);
+            Assert.Equal((1, 200), one[0].Detail["horse"]);
+            Assert.Equal((8, 80), one[1].Detail["grain"]);
+            Assert.Equal((1, 150), one[1].Detail["mule"]);
         }
 
         [Fact]
@@ -99,16 +99,18 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Haul_animals_bought_alone_keep_their_own_line()
+        public void Haul_animals_food_and_goods_bought_on_one_visit_are_one_bought_line()
         {
             var told = new OneLineEach<string>();
-            told.Add(Told.Bought, false, Goods(("mule", 2, 300)), 2, 300, toCarry: true);
-            told.Add(Told.Bought, false, Goods(("camel", 1, 400)), 1, 400, toCarry: true);
+            told.Add(Told.Bought, false, Goods(("mule", 2, 300)), 2, 300);
+            told.Add(Told.Bought, false, Goods(("camel", 1, 400)), 1, 400);
+            told.Add(Told.Bought, false, Goods(("grain", 5, 50)), 5, 50);
 
             OneLineEach<string>.Said bought = Assert.Single(told.Closed());
 
-            Assert.True(bought.OnlyToCarry);
-            Assert.Equal(3, bought.Units);
+            Assert.Equal(Told.Bought, bought.What);
+            Assert.Equal(8, bought.Units);
+            Assert.Equal(750, bought.Gold);
         }
 
         [Fact]
@@ -156,7 +158,7 @@ namespace TradeLord.Tests
         public void Forgetting_the_lines_drops_what_was_never_said()
         {
             var told = new OneLineEach<string>();
-            told.Add(Told.Restocked, false, Goods(("grain", 5, 50)), 5, 50);
+            told.Add(Told.Bought, false, Goods(("grain", 5, 50)), 5, 50);
             told.Forget();
 
             Assert.Empty(told.Closed());

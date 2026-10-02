@@ -264,6 +264,8 @@ namespace TradeLord
             _silenced.Clear();
             Notices.Forget();
             _told.Forget();
+            _toSay.Clear();
+            _screenXp = default(XpGained);
             _pendingXp = 0;
             _pendingProfit = 0;
             _pendingXpMuted = true;
@@ -366,7 +368,7 @@ namespace TradeLord
                     return;
                 }
                 if (Options.Current.AutoSellOnEntry) ExecuteHerdRelief(settlement, quiet: true);
-                SayWhatMoved();
+                CloseWhatMoved();
             });
             Guard.Run("Action.NoteWhereItTraded", () => NoteWhereItTraded(settlement));
             Guard.Run("Action.OnSettlementLeft", Marker.Update);
@@ -520,6 +522,10 @@ namespace TradeLord
             internal readonly MobileParty Party;
             internal readonly MobileParty Met;
             internal readonly IMarketData Road;
+
+            internal int BoughtFrom => Site != null ? TradeMath.FromAMarket
+                : Met != null && Met.IsVillager ? TradeMath.FromVillagers
+                : TradeMath.FromACaravan;
             internal readonly Books Books;
             internal readonly bool Sim;
             internal readonly bool Quiet;
@@ -787,9 +793,6 @@ namespace TradeLord
             {
                 if (Site != null) LedgerBehavior.Instance?.CaptureSettlement(Site);
             }
-
-            internal TextObject Said(string simSaid, string realSaid, int items, int gold) =>
-                PassMessage(Sim, simSaid, realSaid, Detail, items, gold);
 
             internal void Logged(bool selling, string why) =>
                 LogDetail(selling, Sim, Detail, Quoted, Aimed, why);
@@ -1202,11 +1205,7 @@ namespace TradeLord
                       " gold, profit about " + got.Profit + " " + pass.Where +
                       " (the gold is what the trade screen paid, and the profit is what the units you had bought fetched over what each of them cost you)");
             pass.Logged(selling: true, "the deal you took on the trade screen");
-            TextObject msg = pass.Said(
-                "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
-                "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).", got.Units, got.Gold);
-            msg.SetTextVariable("PROFIT", got.Profit);
-            Notices.Say(msg, got.Profit > 0 ? Notices.Gain : Notices.Flat);
+            _told.Add(Told.Sold, pass.Sim, pass.Detail, got.Units, got.Gold, got.Profit);
         }
 
         private static void ReportWhatYouBought(Pass pass, Took paid, bool addsUp)
@@ -1216,8 +1215,7 @@ namespace TradeLord
             Log.Write("the deal you took bought " + paid.Units + " item(s) for -" + paid.Gold +
                       " gold " + pass.Where + " (what the trade screen charged)");
             pass.Logged(selling: false, "the deal you took on the trade screen");
-            Notices.Say(pass.Said("{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
-                            "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.", paid.Units, paid.Gold), Notices.Spend);
+            _told.Add(Told.Bought, pass.Sim, pass.Detail, paid.Units, paid.Gold);
         }
 
         internal static void WatchTheTradeScreen()
@@ -1228,9 +1226,22 @@ namespace TradeLord
             Guard.Run("Action.MarkerAfterTheDeal", Marker.Update);
         }
 
+        private struct XpGained
+        {
+            internal int Xp;
+            internal int Level;
+        }
+
+        private static XpGained _screenXp;
+
+        internal static void NoteScreenXp(int xp, int level)
+        {
+            if (xp > 0) _screenXp.Xp = TradeMath.AddedUp(_screenXp.Xp, xp);
+            if (level > 0) _screenXp.Level = level;
+        }
+
         internal static void FlushToasts()
         {
-            Guard.Run("Action.SayWhatMoved", SayWhatMoved);
             Guard.Run("GameTradeBook.Settle", SettleTheSales);
             int xp = _pendingXp;
             int profit = _pendingProfit;
@@ -1238,7 +1249,21 @@ namespace TradeLord
             _pendingXp = 0;
             _pendingProfit = 0;
             _pendingXpMuted = true;
-            if (xp > 0) CreditTradeSkill(xp, profit, muted);
+            XpGained gained = _screenXp;
+            _screenXp = default(XpGained);
+            bool learned = true;
+            if (xp > 0)
+            {
+                XpGained own = CreditTradeSkill(xp, profit, out learned);
+                if (!muted)
+                {
+                    gained.Xp = TradeMath.AddedUp(gained.Xp, own.Xp);
+                    if (own.Level > 0) gained.Level = own.Level;
+                }
+            }
+            Guard.Run("Action.SayWhatMoved", () => SayWhatMoved(gained));
+            if (xp > 0 && !(!learned && Guard.Read("TradeXp.Limit", muted, SayTheLearningLimit, false)))
+                Guard.Run("TradeXp.Near", () => SayHowNearTheLearningLimit(muted));
             Notices.Drain();
         }
 
@@ -1260,9 +1285,11 @@ namespace TradeLord
                           ((int)each) + " of the " + xp + " denars of profit");
         }
 
-        private static void CreditTradeSkill(int xp, int profit, bool muted)
+        private static XpGained CreditTradeSkill(int xp, int profit, out bool learned)
         {
-            if (Campaign.Current == null || Hero.MainHero == null) return;
+            var got = default(XpGained);
+            learned = true;
+            if (Campaign.Current == null || Hero.MainHero == null) return got;
             int before = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
             float xpBefore = Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade);
             OpenTransaction();
@@ -1270,7 +1297,7 @@ namespace TradeLord
             finally { CloseTransaction(); ReportSilenced(); }
             int gained = (int)Math.Round(Hero.MainHero.HeroDeveloper.GetSkillXp(DefaultSkills.Trade) - xpBefore);
             LedgerBehavior.Instance?.AddTradeXp(gained);
-            bool learned = gained > 0;
+            learned = gained > 0;
             if (profit > 0)
                 Guard.Run("TradeXp.Event", () =>
                 {
@@ -1280,25 +1307,18 @@ namespace TradeLord
                 });
             Guard.Run("TradeXp.Party", () => CreditTheCompanionsWithYou(xp));
             int now = Hero.MainHero.GetSkillValue(DefaultSkills.Trade);
-            bool rose = now > before;
-            if (!learned && xp > 0 && Guard.Read("TradeXp.Limit", muted, SayTheLearningLimit, false))
-                return;
+            got.Xp = gained > 0 ? gained : 0;
+            if (now > before)
+            {
+                got.Level = now;
+                Log.Write("trade skill rose to " + now + " - named in TradeLord's own line");
+            }
             bool asTheGameCounts = xp == profit;
-            TextObject earned = Tongue.Text(asTheGameCounts
-                ? (rose
-                    ? "{=TL487}TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold, and your Trade skill is now {LEVEL}.{ADDED}"
-                    : "{=TL486}TradeLord credited your Trade skill with the {GOLD} denars of profit the game counts for what it sold.{ADDED}")
-                : (rose
-                    ? "{=TL88}TradeLord credited {GOLD} denars of profit to your Trade skill, which is now {LEVEL}.{ADDED}"
-                    : "{=TL81}TradeLord credited {GOLD} denars of profit to your Trade skill.{ADDED}"));
-            earned.SetTextVariable("GOLD", xp);
-            if (rose) earned.SetTextVariable("LEVEL", now);
-            TextObject added = Tongue.Text("{=TL488} It added {XP} Trade XP to your skill.");
-            added.SetTextVariable("XP", gained);
-            earned.SetTextVariable("ADDED", gained > 0 ? added.ToString() : "");
-            if (!muted) Notices.Say(earned, Notices.Xp);
-            Guard.Run("TradeXp.Near", () => SayHowNearTheLearningLimit(muted));
-            if (rose) Log.Write("trade skill rose to " + now + " - named in TradeLord's own line");
+            Log.Write("trade XP: " + xp + " denars of profit " + (asTheGameCounts
+                          ? "the game counts for what TradeLord sold"
+                          : "Trade XP multiplier made of the " + profit + " the game counts for what TradeLord sold") +
+                      " added " + got.Xp + " Trade XP to your skill");
+            return got;
         }
 
         private static void SayHowNearTheLearningLimit(bool muted)
@@ -1555,7 +1575,8 @@ namespace TradeLord
 
         private static void BeginTheRound()
         {
-            SayWhatMoved();
+            CloseWhatMoved();
+            Guard.Run("Ledger.CameWithoutAPurchase", () => LedgerBehavior.Instance?.NoteWhatCameWithoutAPurchase());
             _soldThisRound = default;
             _boughtThisRound = 0;
             _sellStalled = null;
@@ -1567,45 +1588,57 @@ namespace TradeLord
             var sold = _soldThisRound;
             if (sold.at != null)
                 Guard.Run("Marker.Check", () => Marker.ScoreTheMark(sold.at, sold.units, sold.gold));
-            SayWhatMoved();
+            CloseWhatMoved();
             ReportStalledPasses();
         }
 
-        private static void SayWhatMoved()
+        private static string XpSaid(XpGained gained)
         {
-            if (_told.Count == 0) return;
-            foreach (OneLineEach<ItemObject>.Said line in _told.Closed())
+            if (gained.Xp <= 0) return "";
+            TextObject said = Tongue.Text(gained.Level > 0
+                ? "{=TL500} (+{XP} Trade XP, Trade is now {LEVEL})"
+                : "{=TL499} (+{XP} Trade XP)");
+            said.SetTextVariable("XP", gained.Xp);
+            if (gained.Level > 0) said.SetTextVariable("LEVEL", gained.Level);
+            return said.ToString();
+        }
+
+        private static readonly List<OneLineEach<ItemObject>.Said> _toSay = new List<OneLineEach<ItemObject>.Said>();
+
+        private static void CloseWhatMoved() => _toSay.AddRange(_told.Closed());
+
+        private static void SayWhatMoved(XpGained gained)
+        {
+            CloseWhatMoved();
+            var lines = new List<OneLineEach<ItemObject>.Said>(_toSay);
+            _toSay.Clear();
+            bool told = false;
+            foreach (OneLineEach<ItemObject>.Said line in lines)
             {
                 if (line.What == Told.Sold)
                 {
                     TextObject sold = PassMessage(line.Sim,
-                        "{=TL13}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars ({PROFIT} profit).",
-                        "{=TL02}TradeLord sold {ITEMS} for {GOLD} denars ({PROFIT} profit).",
+                        "{=TL13}[Simulated, best case] Would sell {ITEMS} for {GOLD} denars, {PROFIT} denars profit.",
+                        "{=TL02}Sold {ITEMS} for {GOLD} denars, {PROFIT} denars profit{XP}.",
                         line.Detail, line.Units, line.Gold);
                     sold.SetTextVariable("PROFIT", line.Profit);
+                    sold.SetTextVariable("XP", line.Sim || told ? "" : XpSaid(gained));
+                    if (!line.Sim) told = true;
                     Notices.Say(sold, line.Profit > 0 ? Notices.Gain : Notices.Flat);
                 }
-                else if (line.What == Told.Bought && line.OnlyToCarry)
-                    Notices.Say(PassMessage(line.Sim,
-                        "{=TL111}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars to carry more.",
-                        "{=TL110}TradeLord bought {ITEMS} for {GOLD} denars to carry more.",
-                        line.Detail, line.Units, line.Gold), Notices.Spend);
-                else if (line.What == Told.Bought)
-                    Notices.Say(PassMessage(line.Sim,
-                        "{=TL14}[Simulated, best case] TradeLord would buy {ITEMS} for {GOLD} denars.",
-                        "{=TL06}TradeLord bought {ITEMS} for {GOLD} denars.",
-                        line.Detail, line.Units, line.Gold), Notices.Spend);
-                else if (line.What == Told.HerdRelief)
-                    Notices.Say(PassMessage(line.Sim,
-                        "{=TL117}[Simulated, best case] TradeLord would sell {ITEMS} for {GOLD} denars to get your party back up to speed.",
-                        "{=TL116}TradeLord sold {ITEMS} for {GOLD} denars to get your party back up to speed.",
-                        line.Detail, line.Units, line.Gold), Notices.Gain);
                 else
                     Notices.Say(PassMessage(line.Sim,
-                        "{=TL98}[Simulated, best case] TradeLord would restock {ITEMS} for {GOLD} denars.",
-                        "{=TL97}TradeLord restocked {ITEMS} for {GOLD} denars.",
+                        "{=TL14}[Simulated, best case] Would buy {ITEMS} for {GOLD} denars.",
+                        "{=TL06}Bought {ITEMS} for {GOLD} denars.",
                         line.Detail, line.Units, line.Gold), Notices.Spend);
             }
+            if (told || gained.Xp <= 0) return;
+            TextObject alone = Tongue.Text(gained.Level > 0
+                ? "{=TL502}What was sold added {XP} Trade XP, and Trade is now {LEVEL}."
+                : "{=TL501}What was sold added {XP} Trade XP.");
+            alone.SetTextVariable("XP", gained.Xp);
+            if (gained.Level > 0) alone.SetTextVariable("LEVEL", gained.Level);
+            Notices.Say(alone, Notices.Xp);
         }
 
         private static void NoteStalled(bool selling, Block why)
@@ -1873,7 +1906,8 @@ namespace TradeLord
             {
                 LedgerBehavior ledger = LedgerBehavior.Instance;
                 float bought = 0f;
-                long number = ledger == null ? 0L : ledger.RecordSale(PaidKeyAt(at), 1, unitPaid, out bought);
+                int from = TradeMath.FromAMarket;
+                long number = ledger == null ? 0L : ledger.RecordSale(PaidKeyAt(at), 1, unitPaid, out bought, out from);
                 ItemObject item = Item(at);
                 if (item == null) return;
                 float margin = Options.Current.MinProfitMargin;
@@ -1883,7 +1917,7 @@ namespace TradeLord
                 bool eachAtItsOwn = Options.Current.CostBasisMode == Options.CostOfEachUnit;
                 bool aged = eachAtItsOwn && agedAfter > 0 && bought > 0f && Today - bought >= agedAfter;
                 Log.Write("unit " + (number > 0L ? "#" + number + " " : "") + "of " +
-                          Tongue.Named(item.Name, item.StringId) + ", bought for " + unitPaid +
+                          Tongue.Named(item.Name, item.StringId) + ", " + TradeMath.WhereFrom(from) + " for " + unitPaid +
                           (waited >= 0 ? " " + waited + " day(s) ago" : "") + ", sold for " + price +
                           (aged
                               ? ", at least the " + unitPaid + " it was bought for, as it had waited past the " +
@@ -1896,8 +1930,12 @@ namespace TradeLord
                               ? ", and at least the " + TradeRules.BestMarketFloor(bestPays, share) + " that is " +
                                 Math.Round(share * 100f) + "% of the " + bestPays + " " +
                                 Tongue.Named(_mark.Name, _mark.StringId) + " would pay for it"
-                              : ""));
+                              : "") +
+                          LedgerBehavior.TradeXpNote(from, _plan[at].EquipmentElement));
             }
+
+            public void RecordedFreeSale(int at, int price) =>
+                LedgerBehavior.Instance?.RecordFreeSale(_plan[at].EquipmentElement, price, "");
         }
 
         private const float HoldShareOff = 0f;
@@ -2015,7 +2053,7 @@ namespace TradeLord
                         {
                             if (!pass.BuyOne(el, price, "restocking", "Restocking", out price)) break;
                             if (price == 0) break;
-                            LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), new[] { price });
+                            LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), new[] { price }, pass.BoughtFrom);
                             pass.Books.NoteBought(item.StringId, price);
                         }
                         stocked++;
@@ -2052,7 +2090,7 @@ namespace TradeLord
                       " items, -" + spent + " gold at " + settlement.Name +
                       ", still short " + (shortfall > 0 ? shortfall : 0) + " unit(s) of food");
             pass.Logged(selling: false, "restocking the larder");
-            if (!pass.Muted) _told.Add(Told.Restocked, pass.Sim, pass.Detail, stocked, spent);
+            if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, stocked, spent);
         }
 
         private static (float weight, int cost) FoodTheHoldLeftBehind(Pass pass, ItemRosterElement el, in Good good,
@@ -2327,6 +2365,9 @@ namespace TradeLord
                             if (pass.Sim) pass.Books.NotePaidDrawn(paidKey, basis.SoldAt);
                             else LedgerBehavior.Instance?.RecordSale(paidKey, 1, basis.SoldAt);
                         }
+                        else if (!pass.Sim)
+                            LedgerBehavior.Instance?.RecordFreeSale(el.EquipmentElement, price,
+                                                                    " to get your party back up to speed");
                         int credited = TradeMath.MadeOnAUnit(price, bought, basis.SoldAt);
                         profit += credited;
                         sold++;
@@ -2346,7 +2387,7 @@ namespace TradeLord
             Log.Write((pass.Sim ? "herd relief (simulated, best case): " : "herd relief: ") + sold +
                       " sold, +" + gained + " gold, profit " + profit + " at " + settlement.Name);
             pass.Logged(selling: true, "herd relief, getting the party back up to speed");
-            if (!pass.Muted) _told.Add(Told.HerdRelief, pass.Sim, pass.Detail, sold, gained, profit);
+            if (!pass.Muted) _told.Add(Told.Sold, pass.Sim, pass.Detail, sold, gained, profit);
         }
 
         private static bool PurseBelowTheHaulAnimalFloor(Pass pass)
@@ -2473,7 +2514,7 @@ namespace TradeLord
                         {
                             if (!pass.BuyOne(el, price, "buying a haul animal", "Haul animal buying", out price)) break;
                             if (price == 0) break;
-                            LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), new[] { price });
+                            LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), new[] { price }, pass.BoughtFrom);
                             pass.Books.NoteBought(item.StringId, price);
                         }
                         hauled++;
@@ -2518,7 +2559,7 @@ namespace TradeLord
                             " set in Gold before it buys a haul animal"
                           : ""));
             pass.Logged(selling: false, "stocking the baggage train");
-            if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, hauled, spent, toCarry: true);
+            if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, hauled, spent);
             if (!unfitted.food)
             {
                 _buyStalled = null;
@@ -2804,7 +2845,7 @@ namespace TradeLord
                 _pass.Quote(item, 1, price);
                 if (!_pass.BuyOne(Shelf[at], price, _what, _named, out cost)) return false;
                 if (cost == 0) return true;
-                LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), new[] { cost });
+                LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), new[] { cost }, _pass.BoughtFrom);
                 _pass.Tally(item, 1, cost);
                 return true;
             }

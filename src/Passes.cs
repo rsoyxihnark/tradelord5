@@ -200,6 +200,7 @@ namespace TradeLord
         void Staged(int at, int price);
         bool Give(int at, int price, out int proceeds);
         void RecordedSale(int at, int unitPaid, int price, int bestPays);
+        void RecordedFreeSale(int at, int price);
         float Today { get; }
     }
 
@@ -721,6 +722,7 @@ namespace TradeLord
 
                     bool paidFor = basis.SoldOne();
                     if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays);
+                    else market.RecordedFreeSale(at, proceeds);
                     books.NoteSold(good.Id);
                     moved.Units++;
                     int earned = TradeMath.MadeOnAUnit(proceeds, paidFor, basis.SoldAt);
@@ -785,7 +787,7 @@ namespace TradeLord
 
     internal enum Told
     {
-        Sold, Bought, HerdRelief, Restocked
+        Sold, Bought
     }
 
     internal sealed class OneLineEach<T>
@@ -797,7 +799,6 @@ namespace TradeLord
             internal int Units;
             internal int Gold;
             internal int Profit;
-            internal bool OnlyToCarry = true;
             internal readonly Dictionary<T, (int count, int gold)> Detail = new Dictionary<T, (int count, int gold)>();
         }
 
@@ -806,7 +807,7 @@ namespace TradeLord
         internal int Count => _said.Count;
 
         internal void Add(Told what, bool sim, IEnumerable<KeyValuePair<T, (int count, int gold)>> detail,
-                          int units, int gold, int profit = 0, bool toCarry = false)
+                          int units, int gold, int profit = 0)
         {
             if (units <= 0) return;
             Said line = _said.Find(one => one.What == what && one.Sim == sim);
@@ -818,7 +819,6 @@ namespace TradeLord
             line.Units = TradeMath.AddedUp(line.Units, units);
             line.Gold = TradeMath.AddedUp(line.Gold, gold);
             line.Profit = TradeMath.AddedUp(line.Profit, profit);
-            if (!toCarry) line.OnlyToCarry = false;
             if (detail == null) return;
             foreach (KeyValuePair<T, (int count, int gold)> one in detail)
             {

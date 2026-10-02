@@ -7,7 +7,7 @@
 ## Everything it does
 
 - ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
-- ✅ It declares no save types of its own. All it puts in a save is five strings, nine numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
+- ✅ It declares no save types of its own. All it puts in a save is six strings, nine numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
@@ -30,9 +30,9 @@
 - ✅ A confidence score on each route, which starts at profit per day and is marked down by everything that could eat it
 - ✅ What marks it down: how much of the margin survives unit by unit pricing, how much of the good the seller has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
 - ✅ The panel keeps its own score, writing down the Sell price it promised you and holding it against what that market really pays when you walk in near the time it said
-- ✅ What this means says how much of that promised Sell price has actually been there, over how many prices it has checked, and the tally carries on across your campaign
-- ✅ The panel learns from that, and a market that has paid less than it promised is scored lower, so routes selling there fall down the list
-- ✅ A price above what it promised counts as the promise and no more, so a market paying over for one good never hides paying under for another
+- ✅ What this means says how close the price has come to that promised Sell price, above or below, over how many prices it has checked, and the tally carries on across your campaign
+- ✅ The panel learns from that, and a market that has paid less or more than it promised is scored lower, so routes selling there fall down the list
+- ✅ A price above what it promised misses it as much as one below it, so a market paying over for one good never hides paying under for another
 - ✅ It keeps a record for each market on its own, written into your save, counts it only once you have walked into that market five times, and can never move a route's Score by more than a quarter
 - ✅ Trust a market by what it has paid turns that off
 - ✅ How long each route lasts, under Left, which says how long the shelf still holds the amount the route quotes before the caravans heading there buy it out or the town and its workshops use it up, in hours, or in days from two days on
@@ -43,7 +43,8 @@
 - ✅ Every workshop is followed day by day, every line of it at the game's own pace, and a run counts only while the town holds its inputs and the run pays
 - ✅ Your own workshops draw on their warehouse first, and only the share of what they make that you send to the market is counted as landing there
 - ✅ A village is priced through the town it trades with, so what lands in that town moves the village's price as well
-- ✅ It keeps score of that forecast as well, against what really moved by the day you walked in, and counts what is on its way at the share of it that came true, each forecast counted by its size, so it leans less and less on one that keeps missing
+- ✅ It keeps score of that forecast as well, against what really moved by the day you walked in, and counts what is on its way at how close it came, each forecast counted by its size, so it leans less and less on one that keeps missing
+- ✅ A move bigger than the forecast said misses it as much as a smaller one
 - ✅ Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into
 - ✅ Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
@@ -99,7 +100,8 @@
 - ✅ A lame horse, mule or camel, or one of any other quality, is never sold to get you back up to speed or bought to carry more, because the game does not count it gone or come until you load again
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
-- ✅ How much of a price elsewhere it counts on is learned: with Learn the resale safety factor on, it starts at Resale safety factor and only ever lowers it, toward how much of the promised Sell price really held when you walked in
+- ✅ How much of a price elsewhere it counts on is learned: with Learn the resale safety factor on, it starts at Resale safety factor and only ever lowers it, toward how close the price you found came to the promised Sell price when you walked in
+- ✅ Learn the resale safety factor counts a price above that promised Sell price as much of a miss as one below it
 - ✅ What this means says what share of a price elsewhere it counts on once your walk-ins have lowered it
 - ✅ When your cargo room or your gold runs short, it buys first the good that makes the most for each unit of room or each denar it uses
 - ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it. On out of the box
@@ -138,8 +140,9 @@
 - ✅ Buys to fill your ships rather than your carts, if you ask it to, so you can load a War Sails fleet from ashore
 - ✅ With Buy to fill the ships on, every good, livestock included, takes the room it takes in the ships' hold
 - ✅ Tells you on screen exactly what it moved, and names what stopped it when it moves nothing, in one line for a market where nothing changed hands at all
-- ✅ Each time it trades, all it sold is one line on screen and all it bought, haul animals included, is another, whatever order it traded in
-- ✅ Food it restocked and animals it sold to get your party back up to speed each get one line of their own each time it trades
+- ✅ Each time it trades, all it sold is one line on screen and all it bought is another, whatever order it traded in
+- ✅ Animals sold to get your party back up to speed are in the Sold line, and food restocked and haul animals bought are in the Bought line
+- ✅ The Sold line also says how much Trade XP the sale added, and your Trade skill when it goes up a level
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen, apart from three warnings: cargo full, a purse below your Gold reserve, and an item list entry that matches no good
@@ -204,7 +207,9 @@
 - ✅ Trade XP for what TradeLord sells is exactly what the game itself gives for the same sale made on its trade screen
 - ✅ A good you never bought, loot and animals included, adds nothing to the profit reported and earns only the Trade XP the game itself would give for it, which is usually none
 - ✅ Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them, which is usually none
-- ✅ When some of a good is eaten, lost or given away, it comes off the units you bought first, and every unit left keeps the price it was bought for
+- ✅ When some of a good is eaten, lost or given away, its oldest units go first, bought or not, and every unit left keeps the price it was bought for
+- ✅ Every unit keeps where it came from: a market, a caravan, villagers, or no purchase at all, and TradeLord.log names it with the unit
+- ✅ Goods that came without a purchase, loot and rewards among them, get unit numbers too, and each one sold counts no profit and no Trade XP
 - ✅ Live world prices, on out of the box; turn it off and TradeLord uses only the prices you have seen in person, recorded market by market as you walk them
 - ✅ A settling delay, off out of the box, that keeps it out of a brand new campaign until prices calm down
 - ✅ Staged Trading, off out of the box: instead of trading, TradeLord opens the game's own trade screen and lays its whole deal on it, all it would sell on one side and all it would buy on the other

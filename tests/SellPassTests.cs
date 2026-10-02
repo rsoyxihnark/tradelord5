@@ -223,6 +223,10 @@ namespace TradeLord.Tests
                 RecordedBest.Add(bestPays);
                 Cargo[at].Purchased--;
             }
+
+            internal readonly List<int> RecordedFree = new List<int>();
+
+            public void RecordedFreeSale(int at, int price) => RecordedFree.Add(price);
         }
 
         private static Good Cargo(string id, float weight = 1f, int value = 100) =>
@@ -410,6 +414,19 @@ namespace TradeLord.Tests
             market.Rules.HoldCargoForBestMarket = 0f;
             Bought(market, 3, price: 200, paid: 100, there: 1000);
             Assert.Equal(3, Sell(market).Units);
+        }
+
+        [Fact]
+        public void Loot_sold_is_booked_against_what_came_without_a_purchase_and_makes_no_profit()
+        {
+            var market = new FakeMarket();
+            Load load = market.Add(Cargo("iron"), amount: 3, price: 200);
+            load.Worth = 100;
+            Run run = Sell(market);
+            Assert.Equal(3, run.Units);
+            Assert.Equal(new[] { 200, 200, 200 }, market.RecordedFree.ToArray());
+            Assert.Empty(market.RecordedPaid);
+            Assert.Equal(0, run.Profit);
         }
 
         [Fact]

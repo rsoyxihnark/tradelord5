@@ -435,7 +435,7 @@ namespace TradeLord.Mcm
         public bool MarketForecast { get => _o.MarketForecast; set { _o.MarketForecast = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL443}Trust a market by what it has paid", Order = 11, RequireRestart = false,
-            HintText = "{=TL444}A market paying under what the TradeLord ledger promised scores lower, its routes falling in the list once you have walked into that market five times, by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default.")]
+            HintText = "{=TL444}A market paying under or over what the TradeLord ledger promised scores lower, its routes falling in the list after you have walked into it five times, by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool TrustWhatAMarketPaid { get => _o.TrustWhatAMarketPaid; set { _o.TrustWhatAMarketPaid = value; Options.Bump(); } }
 
@@ -725,7 +725,7 @@ namespace TradeLord.Mcm
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL483}Learn the resale safety factor", Order = 8, RequireRestart = false,
-            HintText = "{=TL484}Lowers Resale safety factor toward how much of the Sell price the TradeLord ledger promised has been there when you walked in, counting that record more as it grows, and never raises it above what you set. OFF uses it as set. ON by default.")]
+            HintText = "{=TL484}Lowers Resale safety factor toward how close a market paid to the Sell price the TradeLord ledger promised as you walked in, under or over, counting that record more as it grows, never above what you set. OFF uses it as set. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool LearnResaleSafety { get => _o.LearnResaleSafety; set { _o.LearnResaleSafety = value; Config.ScreenSaidWhetherToLearn = true; Options.Bump(); } }
 

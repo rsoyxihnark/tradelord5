@@ -32,6 +32,7 @@ namespace TradeLord
             public int Cost;
             public long Number;
             public float Day;
+            public int From;
         }
 
         public static bool ProfitAcceptable(int costBasis, int townSellPrice, float margin) =>
@@ -116,14 +117,35 @@ namespace TradeLord
             return lowest;
         }
 
-        public static void AddPurchase(PurchaseRecord rec, IList<int> paid, long first, float day)
+        public const int FromAMarket = 0;
+
+        public const int FromACaravan = 1;
+
+        public const int FromVillagers = 2;
+
+        public const int CameWithoutAPurchase = 3;
+
+        public static bool IsASource(int from) => from >= FromAMarket && from <= CameWithoutAPurchase;
+
+        public static bool GivesTradeXp(int from) => from == FromAMarket || from == FromACaravan;
+
+        public static string WhereFrom(int from) =>
+            from == FromACaravan ? "bought from a caravan"
+            : from == FromVillagers ? "bought from villagers"
+            : from == CameWithoutAPurchase ? "came without a purchase"
+            : "bought";
+
+        public static void AddPurchase(PurchaseRecord rec, IList<int> paid, long first, float day,
+                                       int from = FromAMarket)
         {
             if (rec == null || paid == null || paid.Count == 0) return;
             List<Batch> batches = BatchesOf(rec);
+            int source = IsASource(from) ? from : FromAMarket;
             for (int i = 0; i < paid.Count; i++)
                 AddBatch(batches, new Batch
                 {
-                    Unit = paid[i] > 0 ? paid[i] : 0, Count = 1, First = first > 0L ? first + i : 0L, Day = day > 0f ? day : 0f
+                    Unit = paid[i] > 0 ? paid[i] : 0, Count = 1, First = first > 0L ? first + i : 0L, Day = day > 0f ? day : 0f,
+                    From = source
                 });
             rec.LastUnitPaid = paid[paid.Count - 1] > 0 ? paid[paid.Count - 1] : 0;
             AddUpTheRows(rec);
@@ -167,6 +189,15 @@ namespace TradeLord
             return taken.First > 0L ? taken.First + taken.Count - 1 : 0L;
         }
 
+        public static int FromASaleTakes(PurchaseRecord rec, int unitPaid)
+        {
+            if (rec == null || rec.Count <= 0) return FromAMarket;
+            List<Batch> batches = BatchesOf(rec);
+            if (batches.Count == 0) return FromAMarket;
+            int at = unitPaid > 0 ? batches.FindLastIndex(one => one.Unit == unitPaid) : -1;
+            return batches[at < 0 ? TheOldestOfTheCheapest(batches) : at].From;
+        }
+
         public static float DayASaleTakes(PurchaseRecord rec, int unitPaid)
         {
             if (rec == null || rec.Count <= 0) return 0f;
@@ -200,7 +231,8 @@ namespace TradeLord
                     for (int u = 0; u < one.Count; u++)
                         apart.Add(new Batch
                         {
-                            Unit = one.Unit, Count = 1, First = one.First > 0L ? one.First + u : 0L, Day = one.Day
+                            Unit = one.Unit, Count = 1, First = one.First > 0L ? one.First + u : 0L, Day = one.Day,
+                            From = one.From
                         });
                 }
                 apart.Sort(CheapestFirstOldestLast);
@@ -363,7 +395,7 @@ namespace TradeLord
                 Batch taken = batches[at];
                 sold.Add(new SoldUnit
                 {
-                    Price = price, Bought = true, Cost = taken.Unit, Day = taken.Day,
+                    Price = price, Bought = true, Cost = taken.Unit, Day = taken.Day, From = taken.From,
                     Number = taken.First > 0L ? taken.First + taken.Count - 1 : 0L
                 });
                 TakeOne(batches, at);
@@ -418,6 +450,57 @@ namespace TradeLord
 
         public static readonly Comparison<Batch> OldestFirst = (x, y) =>
             x.Day != y.Day ? x.Day.CompareTo(y.Day) : x.First.CompareTo(y.First);
+
+        public static bool DrainTheOldestUnit(PurchaseRecord rec, out long number, out float day)
+        {
+            number = 0L;
+            day = 0f;
+            if (rec == null || rec.Count <= 0) return false;
+            List<Batch> batches = BatchesOf(rec);
+            if (batches.Count == 0) return false;
+            int at = 0;
+            for (int i = 1; i < batches.Count; i++)
+                if (OldestFirst(batches[i], batches[at]) < 0) at = i;
+            number = batches[at].First;
+            day = batches[at].Day;
+            TakeTheOldest(batches, 1);
+            AddUpTheRows(rec);
+            return true;
+        }
+
+        public static int DrainTheOldestOf(PurchaseRecord bought, PurchaseRecord free, int units)
+        {
+            if (units <= 0) return 0;
+            var rows = new List<Batch>();
+            var mine = new List<bool>();
+            foreach (PurchaseRecord rec in new[] { bought, free })
+            {
+                if (rec == null || rec.Count <= 0) continue;
+                List<Batch> batches = BatchesOf(rec);
+                for (int i = 0; i < batches.Count; i++)
+                {
+                    rows.Add(batches[i]);
+                    mine.Add(rec == bought);
+                }
+            }
+            var order = new List<int>(rows.Count);
+            for (int i = 0; i < rows.Count; i++) order.Add(i);
+            order.Sort((x, y) =>
+            {
+                int older = OldestFirst(rows[x], rows[y]);
+                return older != 0 ? older : x.CompareTo(y);
+            });
+            int fromBought = 0, fromFree = 0;
+            for (int o = 0; o < order.Count && units > 0; o++)
+            {
+                int gone = Math.Min(units, rows[order[o]].Count);
+                if (mine[order[o]]) fromBought += gone; else fromFree += gone;
+                units -= gone;
+            }
+            if (bought != null && fromBought > 0) DrainWhatLeftUnsold(bought, fromBought);
+            if (free != null && fromFree > 0) DrainWhatLeftUnsold(free, fromFree);
+            return fromBought;
+        }
 
         private static void TakeTheOldest(List<Batch> batches, int units)
         {
@@ -1138,18 +1221,20 @@ namespace TradeLord
         public static float MeanOf(float total, int counted) =>
             counted <= 0 ? 0f : Finite(total / counted, 0f);
 
-        public const float MostOfAMoveThatCounts = 1f;
-
         public const float LeastOfAMoveThatCounts = -1f;
+
+        public static float OnTheCurve(double came)
+        {
+            if (double.IsNaN(came)) return 0f;
+            if (came >= 1d) return came >= 2d ? 0f : (float)(2d - came);
+            return came <= LeastOfAMoveThatCounts ? LeastOfAMoveThatCounts : (float)came;
+        }
 
         public static bool HowMuchCameTrue(int said, int moved, out float share)
         {
             share = 0f;
             if (said == 0) return false;
-            double came = (double)moved / said;
-            share = came > MostOfAMoveThatCounts ? MostOfAMoveThatCounts
-                  : came < LeastOfAMoveThatCounts ? LeastOfAMoveThatCounts
-                  : (float)came;
+            share = OnTheCurve((double)moved / said);
             return true;
         }
 
@@ -1225,7 +1310,8 @@ namespace TradeLord
         public static float HeldShare(int promised, int found) =>
             promised <= 0 ? NoShareToGive : (found < 0 ? 0f : (float)found / promised);
 
-        public static float UpToThePromise(float held) => held > 1f ? 1f : held;
+        public static float HowCloseToThePromise(float held) =>
+            float.IsNaN(held) || float.IsInfinity(held) || held <= 0f ? 0f : OnTheCurve(held);
 
         public const float GraceDays = 1f;
 

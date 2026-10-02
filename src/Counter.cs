@@ -159,7 +159,7 @@ namespace TradeLord
         private static int TradeLevelNow() =>
             Hero.MainHero?.GetSkillValue(DefaultSkills.Trade) ?? 0;
 
-        internal static void SayWhatTheScreenCredited(int profit)
+        internal static int SayWhatTheScreenCredited(int profit)
         {
             int now = TradeLevelNow();
             bool rose = now > _tradeLevelSeen;
@@ -168,6 +168,7 @@ namespace TradeLord
                 Log.Write("trade profit the game credited for the deal you took on the trade screen: " + profit +
                           " denars");
             if (rose) Log.Write("trade skill rose to " + now + " on the trade screen");
+            return rose ? now : 0;
         }
 
         internal static int TradeXpEarnedOnTheScreen()
