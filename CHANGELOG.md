@@ -1643,8 +1643,6 @@
 - Hold cargo for the best market is now the only thing that holds cargo back
 - The setting that buys mules and horses now calls them animals rather than beasts
 
-## 1.20.1
-
 ## 1.20.0
 
 - TradeLord now trades with a caravan you meet on the road, so talk to it and the deal is already done, paid out of the caravan's own purse
