@@ -1023,13 +1023,31 @@ namespace TradeLord.Tests
                          rec.Batches.ConvertAll(one => one.From).ToArray());
             Assert.Equal(TradeMath.FromVillagers, TradeMath.FromASaleTakes(rec, 30));
             Assert.False(TradeMath.GivesTradeXp(TradeMath.FromVillagers));
-            Assert.False(TradeMath.GivesTradeXp(TradeMath.CameWithoutAPurchase));
+            Assert.False(TradeMath.GivesTradeXp(TradeMath.FromLoot));
+            Assert.False(TradeMath.GivesTradeXp(TradeMath.FromElsewhere));
             Assert.True(TradeMath.GivesTradeXp(TradeMath.FromACaravan));
             Assert.True(TradeMath.GivesTradeXp(TradeMath.FromAMarket));
-            Assert.Equal("bought from villagers", TradeMath.WhereFrom(TradeMath.FromVillagers));
-            Assert.Equal("came without a purchase", TradeMath.WhereFrom(TradeMath.CameWithoutAPurchase));
+            Assert.Equal("source 3 (villager party), bought", TradeMath.WhereFrom(TradeMath.FromVillagers));
+            Assert.Equal("source 4 (loot), came without a purchase", TradeMath.WhereFrom(TradeMath.FromLoot));
             List<TradeMath.SoldUnit> sold = TradeMath.DrainHandSale(rec, new[] { 45 }, TradeMath.EachUnitApart, null);
             Assert.Equal(TradeMath.FromACaravan, sold[0].From);
+        }
+
+        [Fact]
+        public void Where_a_unit_came_from_is_numbered_1_market_2_caravan_3_villager_party_4_loot_5_others()
+        {
+            int[] sources = { TradeMath.FromAMarket, TradeMath.FromACaravan, TradeMath.FromVillagers,
+                              TradeMath.FromLoot, TradeMath.FromElsewhere };
+            Assert.Equal(new[] { 1, 2, 3, 4, 5 }, Array.ConvertAll(sources, TradeMath.SourceNumber));
+            Assert.Equal(new[] { "market", "caravan", "villager party", "loot", "others" },
+                         Array.ConvertAll(sources, TradeMath.SourceNamed));
+            Assert.Equal(new[] { false, false, false, true, true }, Array.ConvertAll(sources, TradeMath.CameFree));
+            Assert.All(sources, one => Assert.True(TradeMath.IsASource(one)));
+            Assert.False(TradeMath.IsASource(5));
+            Assert.False(TradeMath.IsASource(-1));
+            Assert.Equal("source 1 (market), bought", TradeMath.WhereFrom(TradeMath.FromAMarket));
+            Assert.Equal("source 2 (caravan), bought", TradeMath.WhereFrom(TradeMath.FromACaravan));
+            Assert.Equal("source 5 (others), came without a purchase", TradeMath.WhereFrom(TradeMath.FromElsewhere));
         }
 
         [Fact]
@@ -1038,7 +1056,7 @@ namespace TradeLord.Tests
             var bought = new PurchaseRecord { ItemId = "grain" };
             var free = new PurchaseRecord { ItemId = "grain" };
             TradeMath.AddPurchase(bought, new[] { 20, 21 }, 10L, 50f);
-            TradeMath.AddPurchase(free, new int[3], 20L, 40f, TradeMath.CameWithoutAPurchase);
+            TradeMath.AddPurchase(free, new int[3], 20L, 40f, TradeMath.FromLoot);
             TradeMath.AddPurchase(bought, new[] { 22 }, 30L, 60f);
             Assert.Equal(0, TradeMath.DrainTheOldestOf(bought, free, 2));
             Assert.Equal(1, free.Count);
@@ -1053,14 +1071,15 @@ namespace TradeLord.Tests
         public void A_unit_that_came_without_a_purchase_leaves_oldest_first_with_its_number()
         {
             var free = new PurchaseRecord { ItemId = "iron" };
-            TradeMath.AddPurchase(free, new int[2], 7L, 90f, TradeMath.CameWithoutAPurchase);
-            TradeMath.AddPurchase(free, new int[1], 3L, 80f, TradeMath.CameWithoutAPurchase);
-            Assert.True(TradeMath.DrainTheOldestUnit(free, out long number, out float day));
+            TradeMath.AddPurchase(free, new int[2], 7L, 90f, TradeMath.FromElsewhere);
+            TradeMath.AddPurchase(free, new int[1], 3L, 80f, TradeMath.FromLoot);
+            Assert.True(TradeMath.DrainTheOldestUnit(free, out long number, out float day, out int from));
             Assert.Equal(3L, number);
             Assert.Equal(80f, day);
+            Assert.Equal(TradeMath.FromLoot, from);
             Assert.Equal(2, free.Count);
             Assert.Equal(0, free.TotalPaid);
-            Assert.False(TradeMath.DrainTheOldestUnit(new PurchaseRecord { ItemId = "none" }, out _, out _));
+            Assert.False(TradeMath.DrainTheOldestUnit(new PurchaseRecord { ItemId = "none" }, out _, out _, out _));
         }
 
         [Fact]

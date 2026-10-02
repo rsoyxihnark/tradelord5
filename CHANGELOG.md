@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.101.1
+
+- TradeLord.log now numbers where each unit came from: 1 market, 2 caravan, 3 villager party, 4 loot, 5 others
+- Goods you take on a loot screen after a battle, a surrender or forced supplies are now marked as loot in TradeLord.log
+- Goods you carry off in a raid are now marked as loot in TradeLord.log
+- Goods that came without a purchase any other way, such as quest rewards or gifts, are now marked as others in TradeLord.log
+
 ## 1.101.0
 
 - Trade messages no longer start with TradeLord, and say the profit in denars

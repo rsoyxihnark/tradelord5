@@ -123,17 +123,33 @@ namespace TradeLord
 
         public const int FromVillagers = 2;
 
-        public const int CameWithoutAPurchase = 3;
+        public const int FromElsewhere = 3;
 
-        public static bool IsASource(int from) => from >= FromAMarket && from <= CameWithoutAPurchase;
+        public const int FromLoot = 4;
+
+        public static bool IsASource(int from) => from >= FromAMarket && from <= FromLoot;
 
         public static bool GivesTradeXp(int from) => from == FromAMarket || from == FromACaravan;
 
+        public static bool CameFree(int from) => from == FromElsewhere || from == FromLoot;
+
+        public static int SourceNumber(int from) =>
+            from == FromACaravan ? 2
+            : from == FromVillagers ? 3
+            : from == FromLoot ? 4
+            : from == FromElsewhere ? 5
+            : 1;
+
+        public static string SourceNamed(int from) =>
+            from == FromACaravan ? "caravan"
+            : from == FromVillagers ? "villager party"
+            : from == FromLoot ? "loot"
+            : from == FromElsewhere ? "others"
+            : "market";
+
         public static string WhereFrom(int from) =>
-            from == FromACaravan ? "bought from a caravan"
-            : from == FromVillagers ? "bought from villagers"
-            : from == CameWithoutAPurchase ? "came without a purchase"
-            : "bought";
+            "source " + SourceNumber(from) + " (" + SourceNamed(from) + "), " +
+            (CameFree(from) ? "came without a purchase" : "bought");
 
         public static void AddPurchase(PurchaseRecord rec, IList<int> paid, long first, float day,
                                        int from = FromAMarket)
@@ -451,10 +467,11 @@ namespace TradeLord
         public static readonly Comparison<Batch> OldestFirst = (x, y) =>
             x.Day != y.Day ? x.Day.CompareTo(y.Day) : x.First.CompareTo(y.First);
 
-        public static bool DrainTheOldestUnit(PurchaseRecord rec, out long number, out float day)
+        public static bool DrainTheOldestUnit(PurchaseRecord rec, out long number, out float day, out int from)
         {
             number = 0L;
             day = 0f;
+            from = FromElsewhere;
             if (rec == null || rec.Count <= 0) return false;
             List<Batch> batches = BatchesOf(rec);
             if (batches.Count == 0) return false;
@@ -463,6 +480,7 @@ namespace TradeLord
                 if (OldestFirst(batches[i], batches[at]) < 0) at = i;
             number = batches[at].First;
             day = batches[at].Day;
+            from = batches[at].From;
             TakeTheOldest(batches, 1);
             AddUpTheRows(rec);
             return true;

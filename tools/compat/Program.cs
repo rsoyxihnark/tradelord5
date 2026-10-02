@@ -134,6 +134,7 @@ namespace TradeLord.Compat
             "TaleWorlds.CampaignSystem.ComponentInterfaces.SettlementAccessModel+SettlementAction",
             "TaleWorlds.CampaignSystem.GameMenus.GameMenuOption+LeaveType",
             "TaleWorlds.CampaignSystem.Inventory.InventoryLogic+InventorySide",
+            "Helpers.InventoryScreenHelper+InventoryMode",
             "TaleWorlds.CampaignSystem.Settlements.Village+VillageStates",
             "TaleWorlds.CampaignSystem.Party.MobileParty+NavigationType",
             "TaleWorlds.Core.ItemObject+ItemTiers",
