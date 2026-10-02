@@ -362,7 +362,7 @@ namespace TradeLord
                 return;
             }
             foreach (var line in offered)
-                LedgerBehavior.Instance?.RecordPurchase(line.id, line.units, TradeMath.WorthOf(line.units, line.price));
+                LedgerBehavior.Instance?.RecordPurchase(line.id, TradeMath.AtOnePrice(line.units, line.price));
             Log.Write("you took the villagers' offer yourself: " + paid + " gold for " + offered.Count +
                       " kind(s) of goods, written down as what you paid for them");
         }

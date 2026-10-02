@@ -1142,7 +1142,8 @@ namespace TradeLord
             internal int Profit;
         }
 
-        private static Took Reckon(Pass pass, List<(ItemRosterElement, int)> lines, bool selling)
+        private static Took Reckon(Pass pass, List<(ItemRosterElement, int)> lines, List<List<int>> each,
+                                   bool selling)
         {
             var took = default(Took);
             if (pass == null || lines == null) return took;
@@ -1150,16 +1151,16 @@ namespace TradeLord
             {
                 var (el, said) = lines[i];
                 ItemObject item = el.EquipmentElement.Item;
-                if (item == null || said <= 0) continue;
-                int price = pass.Price(el.EquipmentElement, selling: selling);
-                if (price <= 0) continue;
-                int count = Deals.UnitsMoved(el.Amount, said, price);
+                List<int> prices = each != null && i < each.Count ? each[i] : null;
+                if (item == null || said <= 0 || prices == null) continue;
+                if (pass.Price(el.EquipmentElement, selling: selling) <= 0) continue;
+                int count = prices.Count;
                 if (count <= 0) continue;
                 took.Units += count;
                 took.Gold += said;
                 if (selling)
                     took.Profit += LedgerBehavior.Instance?.MadeOnAHandSale(
-                        el.EquipmentElement, count, said,
+                        el.EquipmentElement, prices,
                         TheVisit.DearDrawn(true, LedgerBehavior.PaidKey(el.EquipmentElement))) ?? 0;
                 pass.Tally(item, count, said);
             }
@@ -1167,8 +1168,9 @@ namespace TradeLord
             return took;
         }
 
-        internal static void TookTheDeal(List<(ItemRosterElement, int)> bought,
-                                        List<(ItemRosterElement, int)> sold, bool quiet = false)
+        internal static void TookTheDeal(List<(ItemRosterElement, int)> bought, List<List<int>> boughtAt,
+                                        List<(ItemRosterElement, int)> sold, List<List<int>> soldAt,
+                                        bool quiet = false)
         {
             Settlement settlement = Settlement.CurrentSettlement;
             if (settlement?.SettlementComponent == null) return;
@@ -1178,8 +1180,8 @@ namespace TradeLord
             if (selling == null || buying == null) return;
             selling.OnTheScreen = true;
             buying.OnTheScreen = true;
-            Took got = Reckon(selling, sold, true);
-            Took paid = Reckon(buying, bought, false);
+            Took got = Reckon(selling, sold, soldAt, true);
+            Took paid = Reckon(buying, bought, boughtAt, false);
             Visit.NoteADealTaken(got.Units + paid.Units);
             bool addsUp = Deals.AddsUp(got.Gold - paid.Gold, purseMoved);
             if (!addsUp)
@@ -1968,7 +1970,7 @@ namespace TradeLord
                         {
                             if (!pass.BuyOne(el, price, "restocking", "Restocking", out price)) break;
                             if (price == 0) break;
-                            LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), 1, price);
+                            LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), new[] { price });
                             pass.Books.NoteBought(item.StringId, price);
                         }
                         stocked++;
@@ -2436,7 +2438,7 @@ namespace TradeLord
                         {
                             if (!pass.BuyOne(el, price, "buying a haul animal", "Haul animal buying", out price)) break;
                             if (price == 0) break;
-                            LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), 1, price);
+                            LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), new[] { price });
                             pass.Books.NoteBought(item.StringId, price);
                         }
                         hauled++;
@@ -2779,7 +2781,7 @@ namespace TradeLord
                 _pass.Quote(item, 1, price);
                 if (!_pass.BuyOne(Shelf[at], price, _what, _named, out cost)) return false;
                 if (cost == 0) return true;
-                LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), 1, cost);
+                LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), new[] { cost });
                 _pass.Tally(item, 1, cost);
                 return true;
             }

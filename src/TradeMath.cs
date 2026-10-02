@@ -16,14 +16,22 @@ namespace TradeLord
             return made > int.MaxValue ? int.MaxValue : made < int.MinValue ? int.MinValue : (int)made;
         }
 
-        public static int MadeOnAHandSale(PurchaseRecord rec, int units, long gold, int covers, List<int> laidOut)
+        public static int MadeOnAHandSale(PurchaseRecord rec, IList<int> prices, int covers, IList<int> laidOut)
         {
-            if (rec == null || rec.Count <= 0 || units <= 0 || gold <= 0L) return 0;
-            int bought = Math.Min(units, rec.Count);
-            List<int> dear = covers >= 0 ? WhatAHandSaleTook(rec, units, gold, covers, laidOut) : null;
-            long cost = TakeFromTheBatches(CopyOfTheBatches(rec), bought, dear);
-            long made = gold * bought / units - cost;
+            if (rec == null || rec.Count <= 0 || prices == null || prices.Count == 0) return 0;
+            long made = 0L;
+            foreach (SoldUnit one in TakeAHandSale(CopyOfTheBatches(rec), prices, covers, laidOut))
+                if (one.Bought) made += (long)one.Price - one.Cost;
             return made > int.MaxValue ? int.MaxValue : made < int.MinValue ? int.MinValue : (int)made;
+        }
+
+        public struct SoldUnit
+        {
+            public int Price;
+            public bool Bought;
+            public int Cost;
+            public long Number;
+            public float Day;
         }
 
         public static bool ProfitAcceptable(int costBasis, int townSellPrice, float margin) =>
@@ -108,20 +116,34 @@ namespace TradeLord
             return lowest;
         }
 
-        public static void AddPurchase(PurchaseRecord rec, int count, int totalPaid, long first, float day)
+        public static void AddPurchase(PurchaseRecord rec, IList<int> paid, long first, float day)
         {
-            if (rec == null || count <= 0) return;
+            if (rec == null || paid == null || paid.Count == 0) return;
             List<Batch> batches = BatchesOf(rec);
-            rec.TotalPaid += totalPaid;
-            rec.Count += count;
-            rec.LastUnitPaid = (int)Math.Round((double)totalPaid / count);
-            int unit = totalPaid > 0 ? totalPaid / count : 0;
-            int over = totalPaid > 0 ? totalPaid - unit * count : 0;
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < paid.Count; i++)
                 AddBatch(batches, new Batch
                 {
-                    Unit = i < over ? unit + 1 : unit, Count = 1, First = first > 0L ? first + i : 0L, Day = day > 0f ? day : 0f
+                    Unit = paid[i] > 0 ? paid[i] : 0, Count = 1, First = first > 0L ? first + i : 0L, Day = day > 0f ? day : 0f
                 });
+            rec.LastUnitPaid = paid[paid.Count - 1] > 0 ? paid[paid.Count - 1] : 0;
+            AddUpTheRows(rec);
+        }
+
+        public static int[] AtOnePrice(int units, int price)
+        {
+            var each = new int[units > 0 ? units : 0];
+            for (int i = 0; i < each.Length; i++) each[i] = price;
+            return each;
+        }
+
+        public static int[] SpreadOver(int units, int gold)
+        {
+            var each = new int[units > 0 ? units : 0];
+            if (each.Length == 0 || gold <= 0) return each;
+            int unit = gold / each.Length;
+            int over = gold - unit * each.Length;
+            for (int i = 0; i < each.Length; i++) each[i] = i < over ? unit + 1 : unit;
+            return each;
         }
 
         public const long FirstUnitNumber = 1L;
@@ -141,7 +163,7 @@ namespace TradeLord
             List<Batch> batches = BatchesOf(rec);
             if (batches.Count == 0) return 0L;
             int at = unitPaid > 0 ? batches.FindLastIndex(one => one.Unit == unitPaid) : -1;
-            Batch taken = batches[at < 0 ? 0 : at];
+            Batch taken = batches[at < 0 ? TheOldestOfTheCheapest(batches) : at];
             return taken.First > 0L ? taken.First + taken.Count - 1 : 0L;
         }
 
@@ -151,7 +173,7 @@ namespace TradeLord
             List<Batch> batches = BatchesOf(rec);
             if (batches.Count == 0) return 0f;
             int at = unitPaid > 0 ? batches.FindLastIndex(one => one.Unit == unitPaid) : -1;
-            return batches[at < 0 ? 0 : at].Day;
+            return batches[at < 0 ? TheOldestOfTheCheapest(batches) : at].Day;
         }
 
         public static long KeepEveryUnitApart(List<PurchaseRecord> purchases)
@@ -267,112 +289,93 @@ namespace TradeLord
             if (rec == null || rec.Count <= 0 || count <= 0) return;
             int drain = Math.Min(count, rec.Count);
             TakeFromTheBatches(BatchesOf(rec), drain, named);
-            LeaveTheAverage(rec, drain);
+            AddUpTheRows(rec);
+        }
+
+        public static List<SoldUnit> DrainHandSale(PurchaseRecord rec, IList<int> prices, int covers, IList<int> laidOut)
+        {
+            if (rec == null || rec.Count <= 0 || prices == null || prices.Count == 0) return new List<SoldUnit>();
+            List<SoldUnit> sold = TakeAHandSale(BatchesOf(rec), prices, covers, laidOut);
+            AddUpTheRows(rec);
+            return sold;
         }
 
         public static void DrainWhatLeftUnsold(PurchaseRecord rec, int count)
         {
             if (rec == null || rec.Count <= 0 || count <= 0) return;
-            int drain = Math.Min(count, rec.Count);
-            TakeInProportion(BatchesOf(rec), drain);
-            LeaveTheAverage(rec, drain);
+            TakeTheOldest(BatchesOf(rec), Math.Min(count, rec.Count));
+            AddUpTheRows(rec);
         }
 
-        private static void LeaveTheAverage(PurchaseRecord rec, int drain)
+        public static int AddUpEveryRecord(List<PurchaseRecord> purchases)
         {
-            int left = rec.Count - drain;
-            if (left <= 0) { rec.Count = 0; rec.TotalPaid = 0; return; }
-            int unit = (int)Math.Round((double)rec.TotalPaid / rec.Count);
-            rec.Count = left;
-            rec.TotalPaid = unit > 0 ? (int)Math.Min((long)unit * left, int.MaxValue) : 0;
+            int moved = 0;
+            for (int r = 0; purchases != null && r < purchases.Count; r++)
+            {
+                PurchaseRecord rec = purchases[r];
+                if (rec == null || rec.Count <= 0 || !BatchesAddUp(rec)) continue;
+                int was = rec.TotalPaid;
+                AddUpTheRows(rec);
+                if (rec.TotalPaid != was) moved++;
+            }
+            return moved;
         }
 
-        public static List<int> WhatAHandSaleTook(PurchaseRecord rec, int units, long gold, int covers,
-                                                  List<int> laidOut)
+        private static void AddUpTheRows(PurchaseRecord rec)
         {
-            var took = new List<int>();
-            if (rec == null || rec.Count <= 0 || units <= 0 || covers < 0) return took;
-            List<Batch> batches = BatchesOf(rec);
-            if (covers == EachUnitApart && rec.Count <= MostUnitsKeptApart)
-                return TheDearestAHandSaleCovers(batches, Math.Min(units, rec.Count),
-                                                 gold * Math.Min(units, rec.Count) / units, laidOut);
-            long each = Math.Max(0L, (long)Math.Round((double)rec.TotalPaid / rec.Count));
-            var dear = new List<Batch>();
-            for (int b = 0; b < batches.Count; b++)
-                if (batches[b].Unit > covers) dear.Add(batches[b]);
-            long left = gold;
-            for (int i = 0; laidOut != null && i < laidOut.Count; i++)
+            long units = 0L, paid = 0L;
+            for (int i = 0; i < rec.Batches.Count; i++)
             {
-                int at = dear.FindLastIndex(one => one.Unit == laidOut[i]);
-                if (at < 0) continue;
-                TakeOne(dear, at);
-                if (took.Count < units && left >= laidOut[i] + (units - took.Count - 1) * each)
-                {
-                    took.Add(laidOut[i]);
-                    left -= laidOut[i];
-                }
+                units += rec.Batches[i].Count;
+                paid += (long)rec.Batches[i].Unit * rec.Batches[i].Count;
             }
-            for (int b = dear.Count - 1; b >= 0; b--)
-                for (int u = 0; u < dear[b].Count && took.Count < units; u++)
-                {
-                    if (left < dear[b].Unit + (units - took.Count - 1) * each) break;
-                    took.Add(dear[b].Unit);
-                    left -= dear[b].Unit;
-                }
-            return took;
+            rec.Count = units > int.MaxValue ? int.MaxValue : (int)units;
+            rec.TotalPaid = rec.Count <= 0 ? 0 : paid > int.MaxValue ? int.MaxValue : (int)paid;
         }
 
-        private static List<int> TheDearestAHandSaleCovers(List<Batch> batches, int units, long gold, List<int> laidOut)
+        public static List<SoldUnit> WhatAHandSaleTook(PurchaseRecord rec, IList<int> prices, int covers,
+                                                       IList<int> laidOut) =>
+            rec == null || rec.Count <= 0 || prices == null
+                ? new List<SoldUnit>()
+                : TakeAHandSale(CopyOfTheBatches(rec), prices, covers, laidOut);
+
+        private static List<SoldUnit> TakeAHandSale(List<Batch> batches, IList<int> prices, int covers,
+                                                    IList<int> laidOut)
         {
-            var took = new List<int>();
-            var held = new Dictionary<int, int>();
-            for (int b = 0; b < batches.Count; b++)
+            var sold = new List<SoldUnit>(prices.Count);
+            for (int i = 0; i < prices.Count; i++)
             {
-                if (batches[b].Count <= 0) continue;
-                held.TryGetValue(batches[b].Unit, out int count);
-                held[batches[b].Unit] = count + batches[b].Count;
-            }
-            for (int i = 0; laidOut != null && i < laidOut.Count && took.Count < units; i++)
-            {
-                if (!held.TryGetValue(laidOut[i], out int count) || count <= 0) continue;
-                held[laidOut[i]] = count - 1;
-                took.Add(laidOut[i]);
-                gold -= laidOut[i];
-            }
-            var left = new List<int>();
-            foreach (KeyValuePair<int, int> one in held)
-                for (int u = 0; u < one.Value; u++) left.Add(one.Key);
-            left.Sort();
-            var below = new long[left.Count + 1];
-            for (int i = 0; i < left.Count; i++) below[i + 1] = below[i] + left[i];
-            var passed = new List<int>();
-            var passedSum = new List<long> { 0L };
-            int top = left.Count - 1;
-            while (took.Count < units && top >= 0)
-            {
-                int others = units - took.Count - 1;
-                if (others > top)
+                int price = prices[i];
+                if (batches.Count == 0)
                 {
-                    int dearer = Math.Min(others - top, passed.Count);
-                    if (below[top + 1] + passedSum[passed.Count] - passedSum[passed.Count - dearer] > gold) break;
-                    for (int i = passed.Count - dearer; i < passed.Count; i++) took.Add(passed[i]);
-                    for (int i = top; i >= 0; i--) took.Add(left[i]);
-                    break;
+                    sold.Add(new SoldUnit { Price = price });
+                    continue;
                 }
                 int at = -1;
-                for (int x = top; x >= others && at < 0; x--)
-                    if (left[x] + below[others] <= gold) at = x;
-                if (at < 0) break;
-                for (int x = top; x > at; x--)
+                if (laidOut != null && i < laidOut.Count)
                 {
-                    passed.Add(left[x]);
-                    passedSum.Add(passedSum[passedSum.Count - 1] + left[x]);
+                    int named = laidOut[i];
+                    at = batches.FindLastIndex(one => one.Unit == named);
                 }
-                took.Add(left[at]);
-                gold -= left[at];
-                top = at - 1;
+                if (at < 0 && covers >= 0)
+                    at = batches.FindLastIndex(one => one.Unit > covers && one.Unit <= price);
+                if (at < 0) at = TheOldestOfTheCheapest(batches);
+                Batch taken = batches[at];
+                sold.Add(new SoldUnit
+                {
+                    Price = price, Bought = true, Cost = taken.Unit, Day = taken.Day,
+                    Number = taken.First > 0L ? taken.First + taken.Count - 1 : 0L
+                });
+                TakeOne(batches, at);
             }
-            return took;
+            return sold;
+        }
+
+        private static int TheOldestOfTheCheapest(List<Batch> batches)
+        {
+            int at = 0;
+            while (at + 1 < batches.Count && batches[at + 1].Unit == batches[0].Unit) at++;
+            return at;
         }
 
         private static long TakeFromTheBatches(List<Batch> batches, int units, List<int> named)
@@ -388,12 +391,13 @@ namespace TradeLord
             }
             while (units > 0 && batches.Count > 0)
             {
-                Batch cheapest = batches[0];
+                int at = TheOldestOfTheCheapest(batches);
+                Batch cheapest = batches[at];
                 int off = Math.Min(units, cheapest.Count);
                 cost += (long)off * cheapest.Unit;
                 units -= off;
                 cheapest.Count -= off;
-                if (cheapest.Count <= 0) batches.RemoveAt(0); else batches[0] = cheapest;
+                if (cheapest.Count <= 0) batches.RemoveAt(at); else batches[at] = cheapest;
             }
             return cost;
         }
@@ -412,52 +416,28 @@ namespace TradeLord
             return one;
         }
 
-        private static void TakeInProportion(List<Batch> batches, int units)
+        public static readonly Comparison<Batch> OldestFirst = (x, y) =>
+            x.Day != y.Day ? x.Day.CompareTo(y.Day) : x.First.CompareTo(y.First);
+
+        private static void TakeTheOldest(List<Batch> batches, int units)
         {
-            long all = 0L;
-            for (int i = 0; i < batches.Count; i++) all += batches[i].Count;
-            if (units <= 0 || all <= 0L) return;
-            if (units >= all)
+            if (units <= 0 || batches.Count == 0) return;
+            var order = new List<int>(batches.Count);
+            for (int i = 0; i < batches.Count; i++) order.Add(i);
+            order.Sort((x, y) =>
             {
-                batches.Clear();
-                return;
-            }
-            var prices = new List<(int start, int end, long count)>();
-            for (int i = 0; i < batches.Count; i++)
+                int older = OldestFirst(batches[x], batches[y]);
+                return older != 0 ? older : x.CompareTo(y);
+            });
+            for (int o = 0; o < order.Count && units > 0; o++)
             {
-                int last = prices.Count - 1;
-                if (last >= 0 && batches[prices[last].start].Unit == batches[i].Unit)
-                    prices[last] = (prices[last].start, i, prices[last].count + batches[i].Count);
-                else prices.Add((i, i, batches[i].Count));
+                Batch oldest = batches[order[o]];
+                int gone = Math.Min(units, oldest.Count);
+                oldest.Count -= gone;
+                if (oldest.First > 0L) oldest.First += gone;
+                units -= gone;
+                batches[order[o]] = oldest;
             }
-            var off = new long[prices.Count];
-            var over = new long[prices.Count];
-            long taken = 0L;
-            for (int p = 0; p < prices.Count; p++)
-            {
-                long share = prices[p].count * units;
-                off[p] = share / all;
-                over[p] = share % all;
-                taken += off[p];
-            }
-            for (long left = units - taken; left > 0L; left--)
-            {
-                int most = -1;
-                for (int p = 0; p < prices.Count; p++)
-                    if (off[p] < prices[p].count && (most < 0 || over[p] > over[most])) most = p;
-                if (most < 0) break;
-                off[most]++;
-                over[most] = -1L;
-            }
-            for (int p = 0; p < prices.Count; p++)
-                for (int i = prices[p].start; i <= prices[p].end && off[p] > 0L; i++)
-                {
-                    Batch one = batches[i];
-                    int gone = (int)Math.Min(off[p], one.Count);
-                    one.Count -= gone;
-                    off[p] -= gone;
-                    batches[i] = one;
-                }
             batches.RemoveAll(one => one.Count <= 0);
         }
 
@@ -528,7 +508,7 @@ namespace TradeLord
         {
             if (rec == null || rec.Count <= 0 || held <= 0) return null;
             List<Batch> kept = CopyOfTheBatches(rec);
-            if (rec.Count > held) TakeInProportion(kept, rec.Count - held);
+            if (rec.Count > held) TakeTheOldest(kept, rec.Count - held);
             return kept.Count == 0 ? null : kept.ToArray();
         }
 
@@ -986,6 +966,13 @@ namespace TradeLord
             if (units <= 0 || unitValue <= 0) return 0;
             long worth = (long)units * unitValue;
             return worth > int.MaxValue ? int.MaxValue : (int)worth;
+        }
+
+        public static int WorthOf(IList<int> each)
+        {
+            long worth = 0L;
+            for (int i = 0; each != null && i < each.Count; i++) worth += each[i];
+            return worth > int.MaxValue ? int.MaxValue : worth < int.MinValue ? int.MinValue : (int)worth;
         }
 
         public const int RichAtThisManyLimits = 5;
