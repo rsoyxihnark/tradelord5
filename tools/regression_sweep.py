@@ -542,43 +542,40 @@ def the_ledger_lists_a_route_you_could_not_take_this_second():
             and "Options.Current.BuyValueCapPerItem" in size
             and "Options.Current.BuyCapPerItem" in size)
 
-def the_best_markets_are_picked_without_sorting_every_town():
-    l = S['Ledger.cs']
-    rerank = method_body(l, "private static List<(Settlement, int)> Rerank")
-    prime = method_body(l, "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
-    keep = method_body(S['Ranking.cs'], "internal static void Keep<T>")
-    return ("all.Sort(" not in l
-            and "if (selling) kept.Add(one); else MarketRank.Keep(kept, one, false);" in rerank
-            and "Where = all[i].s, Price = all[i].price, Straight = all[i].days, Days = days" in rerank
-            and "return Settled(kept, selling);" in rerank
-            and "MarketRank.Keep(buys[i], new Reach<Settlement>" in prime
-            and "if (kept.Count == TopCacheSize &&" in keep
-            and "kept[TopCacheSize - 1].Price, kept[TopCacheSize - 1].Straight) >= 0) return;" in keep
-            and "if (kept.Count > TopCacheSize) kept.RemoveAt(TopCacheSize);" in keep
-            and "Only_eight_markets_are_ever_kept" in RANKTESTS
-            and "A_market_worse_than_the_eight_already_kept_is_turned_away" in RANKTESTS
-            and "The_eight_are_chosen_on_the_straight_line_and_ordered_on_the_real_ride" in RANKTESTS
-            and "The_eight_it_keeps_are_the_eight_a_full_sort_would_have_picked" in RANKTESTS)
-
-
 def every_market_a_good_could_be_sold_at_is_offered_to_the_route_scan():
     l = S['Ledger.cs']
     rerank = method_body(l, "private static List<(Settlement, int)> Rerank")
     prime = method_body(l, "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
     scan = method_body(l, "private List<TradeRoute> ScanRoutes()")
-    return ("if (selling) kept.Add(one); else MarketRank.Keep(kept, one, false);" in rerank
+    return ("                kept.Add(one);" in rerank
+            and "MarketRank.Keep(" not in rerank
             and "sells[i].Add(new Reach<Settlement>" in prime
             and "MarketRank.Keep(sells[i]" not in prime
             and "public List<(Settlement town, int price)> EverySell(ItemObject item) =>\n"
                 "            TakeN(TopMarkets(item, true), int.MaxValue);" in l
             and "var sells = EverySell(item);" in scan
-            and "var buys = TopBuy(item, MarketRank.TopCacheSize);" in scan
+            and "var buys = EveryBuy(item);" in scan
             and "ledger.TopSell(item, MarketRank.TopCacheSize);" in S['TooltipPatches.cs']
             and "var markets = EverySell(item);" in
                 method_body(l, "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest")
             and ordered(scan, "float ceiling = (float)(openingSell - openingBuy) * qtyCap;",
                         "if (best != null && TradeMath.PerDay(ceiling, days) <= bestKey)",
                         "RouteQuote q = Bulk.Walk("))
+
+def every_market_a_good_could_be_bought_at_is_offered_to_the_route_scan():
+    l = S['Ledger.cs']
+    rerank = method_body(l, "private static List<(Settlement, int)> Rerank")
+    prime = method_body(l, "private void PrimeLiveRankings(List<ItemObject> wanted, int hour)")
+    scan = method_body(l, "private List<TradeRoute> ScanRoutes()")
+    return ("                kept.Add(one);" in rerank
+            and "MarketRank.Keep(" not in l
+            and "buys[i].Add(new Reach<Settlement>" in prime
+            and "public List<(Settlement town, int price)> EveryBuy(ItemObject item) =>\n"
+                "            TakeN(TopMarkets(item, false), int.MaxValue);" in l
+            and "var buys = EveryBuy(item);" in scan
+            and "TopBuy(" not in scan
+            and "ledger.TopBuy(item, MarketRank.TopCacheSize);" in S['TooltipPatches.cs']
+            and "public (Settlement town, int price) BestBuy(ItemObject item) => First(TopMarkets(item, selling: false));" in l)
 
 def a_route_scan_prices_each_town_once_for_every_good_it_wants():
     l = S['Ledger.cs']
@@ -591,7 +588,7 @@ def a_route_scan_prices_each_town_once_for_every_good_it_wants():
             and "_marketCache[(item.StringId, false)] = (Freshness.At(hour), kind, Settled(buys[i], false));" in prime
             and "PrimeLiveRankings(wanted, (int)CampaignTime.Now.ToHours);" in scan
             and scan.find("wanted.Add(item);") < scan.find("PrimeLiveRankings(wanted,")
-            and scan.find("PrimeLiveRankings(wanted,") < scan.find("var buys = TopBuy(item, MarketRank.TopCacheSize);"))
+            and scan.find("PrimeLiveRankings(wanted,") < scan.find("var buys = EveryBuy(item);"))
 
 def a_language_file_that_could_not_be_read_is_tried_again():
     said = method_body(S['Tongue.cs'], "private static bool Ready")
@@ -6443,10 +6440,10 @@ chk("1.42.0", "trading with a caravan or villagers on the road says why nothing 
     a_road_trade_that_moved_nothing_says_why())
 chk("1.42.0", "the ledger works a route out from your settings alone and never from what you are carrying, holding or able to spend right now, deliberately, so nothing you happen to be doing can hide a route from you",
     the_ledger_lists_a_route_you_could_not_take_this_second())
-chk("1.41.9", "the markets a good could be bought at are picked by keeping the best few as they come, rather than putting every town in order first",
-    the_best_markets_are_picked_without_sorting_every_town())
 chk("1.85.0", "every market a good could be sold at is put to the route scan and to the buying pass, so a market that pays less than the dearest eight is no longer out of their reach, while the tooltip still shows the dearest",
     every_market_a_good_could_be_sold_at_is_offered_to_the_route_scan())
+chk("1.102.0", "every market a good could be bought at is put to the route scan, so a market that charges more than the cheapest eight is no longer out of the ledger's reach, while the tooltip still shows the cheapest",
+    every_market_a_good_could_be_bought_at_is_offered_to_the_route_scan())
 chk("1.41.9", "a route scan asks each town its prices once for every good it wants, and never prices a town it has already ruled out as too far",
     a_route_scan_prices_each_town_once_for_every_good_it_wants())
 chk("1.41.8", "a language file that could not be read is tried again rather than settled for, without going back to disk for every line",
