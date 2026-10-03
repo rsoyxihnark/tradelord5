@@ -1686,7 +1686,6 @@
 
 ## 1.21.0
 
-- Hold cargo for the best market is now the only thing that holds cargo back
 - The setting that buys mules and horses now calls them animals rather than beasts
 
 ## 1.20.0
