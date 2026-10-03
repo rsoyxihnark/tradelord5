@@ -78,7 +78,7 @@
 - ✅ A trade with caravans or villagers on the road frees the market TradeLord made its last trade at, so arriving there trades as usual
 - ✅ A deal you take from Staged Trading counts as TradeLord's last trade at that market
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
-- ✅ Tops your food back up to three days of supply, buying the cheapest food the market has and never paying more than the cheapest price it knows of for it
+- ✅ Tops your food back up to three days of supply, buying the cheapest food the market has at no more than the cheapest price it knows of for it, or up to twice that for one day of food when your party is about to go hungry
 - ✅ The larder is filled after it has traded for profit, so your gold and your cargo room go to the goods you came to trade first
 - ✅ Buys and sells livestock as ordinary goods, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
 - ✅ A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
@@ -91,7 +91,7 @@
 - ✅ It never buys one that would leave your purse at 2000 denars or less, which you can set too, so early gold goes on goods instead
 - ✅ It buys no riding horses or camels at all, and it stops before your gold reaches your reserve
 - ✅ It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
-- ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it
+- ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it, never one you bought by hand in that town on the same visit
 - ✅ Your herd is looked at three times a visit, as you enter a settlement, again once it has finished trading, and once more as you leave, so a penalty that arrives while you are in town is caught before you ride out
 - ✅ Losing men in a battle or to desertion is noticed the same way as picking up an animal
 - ✅ Livestock goes first, then a spare riding horse or camel of the plain horse kind that nobody is riding, then your haul animals, and your war horses and noble horses last of all, cheapest first at every step

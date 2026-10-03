@@ -2161,6 +2161,24 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_party_short_of_a_day_of_food_may_pay_up_to_twice_the_cheapest_price()
+        {
+            Assert.Equal(2f, TradeMath.HungryFoodTolerance);
+            Assert.Equal(220, TradeMath.MostToPayOverTheCheapest(110, TradeMath.HungryFoodTolerance));
+        }
+
+        [Fact]
+        public void Only_the_food_short_of_one_day_is_bought_above_the_cheapest_price()
+        {
+            Assert.Equal(7, TradeMath.FoodShortOfADay(3, 10));
+            Assert.Equal(10, TradeMath.FoodShortOfADay(0, 10));
+            Assert.Equal(10, TradeMath.FoodShortOfADay(-4, 10));
+            Assert.Equal(0, TradeMath.FoodShortOfADay(10, 10));
+            Assert.Equal(0, TradeMath.FoodShortOfADay(25, 10));
+            Assert.Equal(0, TradeMath.FoodShortOfADay(0, 0));
+        }
+
+        [Fact]
         public void A_tolerance_below_one_never_pays_less_than_the_cheapest()
         {
             Assert.Equal(110, TradeMath.MostToPayOverTheCheapest(110, 0.5f));

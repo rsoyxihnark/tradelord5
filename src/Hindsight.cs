@@ -251,9 +251,10 @@ namespace TradeLord
                 for (int band = TradeMath.Bands - 1; band >= 0; band--)
                 {
                     if (_bands.Scored(band) == 0) continue;
-                    lines.Add("  " + Scoring.Banded(band) + ": held at " +
-                              Share(_bands.Held(band)) + " of promise over " +
-                              _bands.Scored(band) + " price(s) checked this session");
+                    lines.Add("  " + Scoring.Banded(band) + ": the price came " +
+                              Share(_bands.Held(band)) + " close to its promise over " +
+                              _bands.Scored(band) + " price(s) checked this session, a price above it " +
+                              "missing as much as one below it");
                 }
                 if (LedgerBehavior.Instance != null &&
                     LedgerBehavior.Instance.PromiseScore(out int kept, out float overall))

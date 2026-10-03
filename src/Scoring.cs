@@ -126,7 +126,7 @@ namespace TradeLord
         internal void Add(float confidence, float held)
         {
             int band = TradeMath.BandOf(confidence);
-            _held[band] += held;
+            _held[band] += TradeMath.HowCloseToThePromise(held);
             _scored[band]++;
         }
 

@@ -181,7 +181,7 @@
 		<string id="TL317" text="Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu."/>
 		<string id="TL318" text="Buys the moment you walk into a market, after any selling. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
 		<string id="TL320" text="The margin every trade must clear, both ways. Sell only if the price beats your cost basis by this much. Buy or list a route only if the far market beats the local price by this much after the resale safety factor. Raising it trades less."/>
-		<string id="TL321" text="Days of food to keep: held back from selling and topped up as TradeLord trades, cheapest first, never above the cheapest price it knows. Your never-buy list holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
+		<string id="TL321" text="Days of food kept from selling and topped up cheapest first at the cheapest price it knows, or up to twice it for a day's food when you run short. Never-buy holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
 		<string id="TL322" text="What automated trading may do with food. The days-of-supply food reserve is separate and still applies."/>
 		<string id="TL323" text="What automated trading may do with charcoal, hardwood, iron ore and ingots. Pick Leave alone to keep smithing stock out of automated trading entirely."/>
 		<string id="TL324" text="What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Haul animals and riding mounts have their own settings."/>
