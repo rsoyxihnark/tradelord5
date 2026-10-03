@@ -1,0 +1,40 @@
+name: Put tags back on main
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Move the tags. Untick it for a dry run that only says what would move."
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  tags:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Read every tag
+        run: git fetch --force --tags origin
+
+      - name: Keep a copy of every tag and the commits it points at
+        run: git bundle create tags-before.bundle --tags
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tags-before
+          path: tags-before.bundle
+          retention-days: 90
+
+      - name: Put every version tag on the commit on main that ships the same version
+        env:
+          APPLY: ${{ inputs.apply }}
+        run: |
+          set --
+          if [ "$APPLY" = "true" ]; then set -- --apply; fi
+          python3 tools/move_tags.py "$@"
