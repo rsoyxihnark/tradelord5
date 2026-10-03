@@ -759,6 +759,8 @@ namespace TradeLord
                     moved.Add((el.Item, -paid.Count));
                     int took = Math.Min(paid.Count, InAll(carried, el));
                     if (took <= 0) continue;
+                    if (el.Item.HasHorseComponent)
+                        TradeActionBehavior.TheVisit.NoteHandBought(el.Item.StringId, took);
                     RecordPurchase(PaidKey(el), paid.GetRange(0, took), BoughtFrom(here));
                 }
                 for (int i = 0; i < sold.Count; i++)

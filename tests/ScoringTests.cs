@@ -245,6 +245,18 @@ namespace TradeLord.Tests
             Assert.Equal(1, bands.Scored(1));
             Assert.Equal(1, bands.Scored(2));
             Assert.Equal(2, bands.Scored(3));
+            Assert.Equal(0.9f, bands.Held(3), 4);
+        }
+
+        [Fact]
+        public void A_price_above_its_promise_is_a_miss_in_its_confidence_band_as_much_as_one_below_it()
+        {
+            var bands = new BandTally();
+            bands.Add(0.9f, 0.8f);
+            bands.Add(0.9f, 1.2f);
+            Assert.Equal(0.8f, bands.Held(3), 4);
+            bands.Forget();
+            bands.Add(0.9f, 1f);
             Assert.Equal(1f, bands.Held(3), 4);
         }
 

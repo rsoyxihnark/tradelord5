@@ -1509,7 +1509,7 @@ def restocking_runs_after_the_trading_buy():
             and "found.Sort((x, y) => x.price.CompareTo(y.price));" in body
             and "pass.WouldReachYourReserve(price)" in body
             and "int worth = TradePolicy.UnpaidWorth(it);" in body
-            and body.count("price > ceiling") == 2
+            and body.count("price > ceiling") == 3
             and "int ceiling = TradeMath.MostToPayOverTheCheapest(worth, tolerance);" in body
             and "TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true));"
                 in method_body(S['Trading.cs'], "public static void ExecuteResupply")
@@ -2094,7 +2094,7 @@ chk("1.36.0", "a trade on the road moves one unit and its price itself, because 
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
     S['Trading.cs'].count("[Simulated, best case]") == 2 and
-    S['Trading.cs'].count("(simulated, best case): ") == 3 and
+    S['Trading.cs'].count("(simulated, best case): ") == 4 and
     'internal string Headed(string label) => label + (Sim ? Counter.Heading : ": ");'
         in S['Trading.cs'] and
     'internal static string Heading => Staging ? " (laid out): " : " (simulated, best case): ";'
@@ -3999,7 +3999,7 @@ def the_grain_switch_keeps_grain_out_of_trading_not_out_of_the_larder():
             and "!always && !toFeed && s.NeverBuyGrain && good.IsGrain" in buy
             and "toFeed: true" in restock
             and "toFeed" not in profit and "toFeed" not in road
-            and S['Trading.cs'].count("toFeed: true") == 1
+            and S['Trading.cs'].count("toFeed: true") == restock.count("toFeed: true") == 2
             and "Listed(s.NeverSet, good) || Listed(s.NeverBuySet, good)" in buy)
 
 chk("1.37.2", "the never buy grain switch keeps grain out of trading for profit without starving the larder",
@@ -5537,12 +5537,12 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and "herdRoom = Math.Max(0, market.HerdRoom() - books.HerdTaken(sim));" in buy
             and "int remaining = market.YoursToSell(at) - keep;" in sell
             and "int remaining = pass.YoursToSell(el);" in relief
-            and t.count("int remaining = pass.TheirsToSell(el);") == 2
+            and t.count("int remaining = pass.TheirsToSell(el);") == 3
             and "int remaining = market.TheirsToSell(picked.At);" in S['Passes.cs']
             and "int held = market.Carried(at) + books.Held(sim, good.Id);" in buy
             and t.count("pass.Books.NoteSale(") == 1
             and S['Passes.cs'].count("books.NoteSale(") == 1
-            and t.count("pass.Books.NotePurchase(") == 2
+            and t.count("pass.Books.NotePurchase(") == 3
             and S['Passes.cs'].count("books.NotePurchase(") == 2
             and "pass.Books.NoteShed(rank == RankHaulAnimal, rank != RankLivestock);" in relief
             and "books.NoteShed(herdRank == TradeRules.RankHaulAnimal,\n"
@@ -5556,7 +5556,7 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and "CheapestFirst(" in larder and "CheapestFirst(" in haul
             and S['Passes.cs'].count("books.Bought(sim, market.IdAt(at))") == 1
             and S['Passes.cs'].count("bool boughtHere = books.Bought(sim, id);") == 1
-            and t.count("pass.Books.Purchases(pass.Sim,") == 2
+            and t.count("pass.Books.Purchases(pass.Sim,") == 3
             and S['Passes.cs'].count("books.Purchases(sim, good.Id)") == 1)
 
 def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
@@ -5564,7 +5564,7 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
     forget = method_body(ledger, "internal void Forget")
     dry = method_body(ledger, "internal void ForgetTheDryRun")
     fields = set(re.findall(r'^\s*private (?:readonly )?.*?(_\w+)(?: =|;)', ledger, re.M))
-    live = {"_bought", "_sold", "_paid", "_moves"}
+    live = {"_bought", "_sold", "_byHand", "_paid", "_moves"}
     cleared = lambda body: set(re.findall(r'(_\w+)(?:\.Clear\(\)| = 0f?);', body))
     return ("static" not in ledger
             and all(reader in ledger for reader in (
@@ -5581,7 +5581,7 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
                 "internal float CapacityAdded(bool sim) => OnPaper(sim) ? _capacity : 0f;",
                 "OnPaper(sim) && key != null && _drySoldFrom.TryGetValue(key, out int units) ? units : 0;"))
             and all(dry in ledger for dry in ("_drySold", "_dryBought"))
-            and len(fields) == 21
+            and len(fields) == 22
             and "ForgetTheDryRun();" in forget
             and cleared(forget) == live
             and cleared(dry) == fields - live
@@ -5640,8 +5640,8 @@ def every_pass_hands_one_place_the_trade_and_the_visits_books():
     return ("int before = Hero.MainHero.Gold;" in swap
             and t.count("int before = Hero.MainHero.Gold;") == 1
             and t.count("transaction direction changed on this game version") == 1
-            and t.count("LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(") == 3
-            and t.count("pass.Books.NoteBought(item.StringId,") == 2
+            and t.count("LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(") == 4
+            and t.count("pass.Books.NoteBought(item.StringId,") == 3
             and S['Passes.cs'].count("books.NoteBought(good.Id, cost);") == 2
             and "_paid += price;" in books
             and S['Books.cs'].count("_paid +=") == 1
@@ -6078,12 +6078,12 @@ def every_market_pass_is_opened_and_carried_by_one_object():
             and t.count("Priced.At(Market,") == 1
             and "Priced.At(Market, what, Party, selling)" in
                 between(t, "internal int Price(", "Road.GetPrice")
-            and t.count("pass.Price(el.EquipmentElement, selling: ") == 6
+            and t.count("pass.Price(el.EquipmentElement, selling: ") == 7
             and "_pass.Price(_plan[at].EquipmentElement, selling: true)" in t
             and "_pass.Price(Shelf[at].EquipmentElement, selling: false)" in t
             and "TradeActionBehavior.Tally(Detail, item, count, gold)" in
                 between(t, "internal void Tally(ItemObject item", ";")
-            and t.count("pass.Tally(item, 1, ") == 5
+            and t.count("pass.Tally(item, 1, ") == 6
             and t.count("_pass.Tally(Item(at), 1, price);") == 2
             and "CheapestFirst(\n            Pass pass, Func<ItemObject, bool> wanted, float tolerance = 1f)" in t)
 
@@ -6735,10 +6735,10 @@ def one_stack_of_a_good_never_spends_what_another_stack_holds():
                  "                                LedgerBehavior.InAll(Stock, item)"
                  " - Books.Stocked(Sim, item.StringId));") in held
             and t.count("pass.YoursToSell(el)") == 2
-            and t.count("pass.TheirsToSell(el)") == 3
+            and t.count("pass.TheirsToSell(el)") == 4
             and "_pass.YoursToSell(_plan[at])" in t
             and "_pass.TheirsToSell(Shelf[at])" in t
-            and len(counted) == 2
+            and len(counted) == 3
             and all("LedgerBehavior.InAll(" in one and "el.Amount" not in one for one in counted)
             and len(held_afresh) == 4
             and all("market.Carried(" in one and "AmountAt(" not in one for one in held_afresh))
@@ -7100,9 +7100,9 @@ def the_per_item_caps_bind_every_pass_that_buys():
             and "float shareCap = pass.ShareCap;" in larder
             and all("var prior = pass.Books.Purchases(pass.Sim, item.StringId);" in b
                     and "int countThis = prior.count, spentThis = prior.spent;" in b
-                    and b.count("countThis++;") == 1 and b.count("spentThis += price;") == 1
-                    and b.count("held++;") == 1
-                    for b in (larder, haul))
+                    and b.count("countThis++;") == rounds and b.count("spentThis += price;") == rounds
+                    and b.count("held++;") == rounds
+                    for b, rounds in ((larder, 2), (haul, 1)))
             and "TradeRules.WhatStopsBuying(good, price, market.Spendable(),\n"
                 "                                                              (countThis, spentThis), held, shareCap," in buy)
 
@@ -8005,7 +8005,7 @@ def nothing_moves_while_the_deal_is_laid_out():
     return ("Sim = Options.Current.SimulationMode || Counter.Staging;" in t
             and "internal static bool Staging => _logic != null;" in S['Counter.cs']
             and t.count("Counter.Stage(el, selling: true, price);") == 1
-            and t.count("Counter.Stage(el, selling: false, price);") == 2
+            and t.count("Counter.Stage(el, selling: false, price);") == 3
             and t.count("Counter.Stage(_plan[at], selling: true, price);") == 1
             and t.count("Counter.Stage(Shelf[at], selling: false, price);") == 1
             and all("Counter.Stage(" in method_body(t, where)
@@ -9856,7 +9856,7 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 26
+            and ALL.count("Tongue.Named(") == 27
             and 'return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +'
                 in method_body(S['Ledger.cs'], "private string WriteDownFree")
             and "if (adding <= 0 || el.Item == null) return null;" in method_body(S['Ledger.cs'], "private string WriteDownFree")
@@ -11512,7 +11512,7 @@ def every_stack_of_a_good_is_counted_rather_than_the_first():
             and "return InAll(s.ItemRoster, item);" in method_body(l, "internal static int StockOf")
             and "held[item] = had + shelf.GetElementNumber(i);" in stocks
             and "int took = Math.Min(paid.Count, InAll(carried, el));" in l
-            and S['Trading.cs'].count("LedgerBehavior.InAll(") == 5
+            and S['Trading.cs'].count("LedgerBehavior.InAll(") == 6
             and "GetItemNumber(" not in ALL + "\n" + M)
 
 
@@ -12286,7 +12286,7 @@ def what_you_paid_is_kept_for_each_quality_of_a_good():
             and "public int CostBasis(int at) => TradePolicy.CostBasis(_plan[at].EquipmentElement);" in t
             and "public int PurchasedUnits(int at) => LedgerBehavior.Instance?.PurchasedUnits(_plan[at].EquipmentElement) ?? 0;" in t
             and "long number = ledger == null ? 0L : ledger.RecordSale(PaidKeyAt(at), 1, unitPaid, out bought, out from);" in t
-            and t.count("RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), new[] { price }, pass.BoughtFrom);") == 2
+            and t.count("RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), new[] { price }, pass.BoughtFrom);") == 3
             and "RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), new[] { cost }, _pass.BoughtFrom);" in t
             and ordered(herd, "Basis basis = Basis.For(TradePolicy.CostBasis(el.EquipmentElement),",
                         "LedgerBehavior.Instance?.PurchasedUnits(el.EquipmentElement) ?? 0,",
@@ -15312,7 +15312,7 @@ chk("1.95.5", "the clan screen counts your workshops against the limit Most work
     the_clan_screen_shows_the_workshop_limit_you_set())
 
 
-def the_food_hint_says_it_pays_no_more_than_the_cheapest_price_known():
+def the_food_hint_says_what_the_larder_pays():
     larder = method_body(S['Trading.cs'], "public static void ExecuteResupply")
     en, tr, ru, cn = (spoken(p) for p in [ENGLISH] + list(TRANSLATIONS.values()))
     return ("var larder = CheapestFirst(pass," in larder
@@ -15320,14 +15320,14 @@ def the_food_hint_says_it_pays_no_more_than_the_cheapest_price_known():
             and "Pass pass, Func<ItemObject, bool> wanted, float tolerance = 1f)" in S['Trading.cs']
             and "if (float.IsNaN(tolerance) || tolerance <= 1f) return cheapest;" in
                 method_body(S['TradeMath.cs'], "public static int MostToPayOverTheCheapest")
-            and "cheapest first, never above the cheapest price it knows" in en['TL321']
+            and "topped up cheapest first at the cheapest price it knows, or up to twice it for a day's food when you run short" in en['TL321']
             and option_default('KeepFoodDays') == '3' and "Default 3." in en['TL321']
-            and "bildi\u011fi en ucuz fiyat\u0131 a\u015fmadan" in tr['TL321']
-            and "\u043d\u0435 \u0434\u043e\u0440\u043e\u0436\u0435 \u0441\u0430\u043c\u043e\u0439 \u043d\u0438\u0437\u043a\u043e\u0439 \u0438\u0437\u0432\u0435\u0441\u0442\u043d\u043e\u0439 \u0435\u043c\u0443 \u0446\u0435\u043d\u044b" in ru['TL321']
-            and "\u51fa\u4ef7\u4ece\u4e0d\u9ad8\u4e8e\u5b83\u6240\u77e5\u7684\u6700\u4f4e\u4ef7" in cn['TL321'])
+            and "bildiği en ucuz fiyattan, bir günlükten az kalınca iki katına kadar" in tr['TL321']
+            and "по низшей известной цене, а при запасе меньше чем на день до вдвое дороже" in ru['TL321']
+            and "出价不高于它所知的最低价；食物不足一天时，可出到最低价的两倍" in cn['TL321'])
 
-chk("1.95.5", "the hint for Restock and keep food says it buys the cheapest food first and never above the cheapest price TradeLord knows, the way the larder is filled, in every language",
-    the_food_hint_says_it_pays_no_more_than_the_cheapest_price_known())
+chk("1.95.5", "the hint for Restock and keep food says it buys the cheapest food first at the cheapest price TradeLord knows, and up to twice it for a party short of a day's food, the way the larder is filled, in every language",
+    the_food_hint_says_what_the_larder_pays())
 
 
 
@@ -17314,6 +17314,75 @@ def loot_is_told_apart_from_other_goods_that_came_without_a_purchase():
 
 chk("1.101.1", "TradeLord.log numbers where each unit came from, 1 market, 2 caravan, 3 villager party, 4 loot, 5 others, with loot taken on a loot screen or in a raid and capped at what the party holds unexplained",
     loot_is_told_apart_from_other_goods_that_came_without_a_purchase())
+
+def an_animal_you_bought_by_hand_stays_through_the_visit():
+    l = S['Ledger.cs']
+    b = S['Books.cs']
+    hand = method_body(l, "private void OnPlayerInventoryExchange")
+    relief = method_body(S['Trading.cs'], "public static void ExecuteHerdRelief")
+    return (ordered(hand, "int took = Math.Min(paid.Count, InAll(carried, el));",
+                    "if (el.Item.HasHorseComponent)",
+                    "TradeActionBehavior.TheVisit.NoteHandBought(el.Item.StringId, took);",
+                    "RecordPurchase(PaidKey(el), paid.GetRange(0, took), BoughtFrom(here));")
+            and "if (!isTrading || TradeActionBehavior.AutomatedTradeInProgress) return;" in hand
+            and "_byHand[id] = had + units;" in method_body(b, "internal void NoteHandBought")
+            and "id != null && _byHand.TryGetValue(id, out int units) ? units : 0" in
+                between(b, "internal int HandBought(string id) =>", ";")
+            and "_byHand.Clear();" in method_body(b, "internal void Forget")
+            and "_byHand" not in method_body(b, "internal void ForgetTheDryRun")
+            and ordered(relief, "promised[item] = owed - spare;",
+                        "if (!byHand.TryGetValue(item, out int yours)) yours = pass.Books.HandBought(item.StringId);",
+                        "int kept = Math.Min(remaining, yours);", "byHand[item] = yours - kept;",
+                        "remaining -= kept;", "while (remaining > 0 && shed > 0)")
+            and ordered(relief, '" that you bought by hand at " + settlement.Name + " on this visit" +',
+                        '", so your herd still slows your party"', "if (sold <= 0) return;")
+            and "Animals_bought_by_hand_are_remembered_for_the_visit_and_forgotten_with_it" in BOOKTESTS
+            and "never one you bought by hand in that town on the same visit" in README)
+
+chk("1.101.3", "an animal you bought by hand on the trade screen is never sold to get your party back up to speed on the same visit, and TradeLord.log says which it kept",
+    an_animal_you_bought_by_hand_stays_through_the_visit())
+
+def a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price():
+    larder = method_body(S['Trading.cs'], "public static void ExecuteResupply")
+    math = S['TradeMath.cs']
+    return ("public const float HungryFoodTolerance = 2f;" in math
+            and "day <= 0 || held >= day ? 0 : day - (held < 0 ? 0 : held)" in
+                between(math, "public static int FoodShortOfADay(int held, int day) =>", ";")
+            and "bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall, TradePolicy.FoodForADay()) > 0;" in larder
+            and "if (larder.Count == 0 && !hungry)" in larder
+            and ordered(larder, "foreach (var (el, good, _, ceiling) in larder)",
+                        "int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall, TradePolicy.FoodForADay());",
+                        "if (hunger <= 0 || pass.DirectionError) return;",
+                        "TradeMath.HungryFoodTolerance);",
+                        "foreach (var (el, good, _, ceiling) in lean)",
+                        "while (hunger > 0 && remaining > 0)",
+                        "if (price <= 0 || price > ceiling) break;",
+                        "if (pass.WouldReachYourReserve(price)) break;",
+                        "if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;",
+                        "if (settlement.IsVillage && remaining <= 1) break;",
+                        "if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;",
+                        "hunger -= fed;",
+                        "at up to twice the cheapest price TradeLord knows at ")
+            and larder.count("TradeMath.HungryFoodTolerance") == 1
+            and "A_party_short_of_a_day_of_food_may_pay_up_to_twice_the_cheapest_price" in MATHTESTS
+            and "Only_the_food_short_of_one_day_is_bought_above_the_cheapest_price" in MATHTESTS
+            and "or up to twice that for one day of food when your party is about to go hungry" in README)
+
+chk("1.101.3", "a party short of a day's food buys one day of it at up to twice the cheapest price TradeLord knows, still inside your gold reserve, your buying caps and your cargo room",
+    a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price())
+
+def each_confidence_band_counts_a_price_above_its_promise_as_a_miss():
+    hindsight = S['Hindsight.cs']
+    return ("_held[band] += TradeMath.HowCloseToThePromise(held);" in
+                method_body(S['Scoring.cs'], "internal void Add")
+            and "_bands.Add(said.Confidence, held);" in hindsight
+            and ordered(hindsight, 'lines.Add("  " + Scoring.Banded(band) + ": the price came " +',
+                        'Share(_bands.Held(band)) + " close to its promise over " +',
+                        '"missing as much as one below it");')
+            and "A_price_above_its_promise_is_a_miss_in_its_confidence_band_as_much_as_one_below_it" in SCORINGTESTS)
+
+chk("1.101.3", "each Conf band in the promise check TradeLord.log writes counts a price above its promise as a miss, the same as one below it",
+    each_confidence_band_counts_a_price_above_its_promise_as_a_miss())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

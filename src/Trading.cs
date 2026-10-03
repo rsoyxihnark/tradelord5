@@ -1999,7 +1999,8 @@ namespace TradeLord
 
             var larder = CheapestFirst(pass,
                 it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true));
-            if (larder.Count == 0)
+            bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall, TradePolicy.FoodForADay()) > 0;
+            if (larder.Count == 0 && !hungry)
             {
                 Log.Repeatable("resupply none on sale", settlement.StringId,
                                "resupply: your party is short " + shortfall + " unit(s) of food, and no food TradeLord " +
@@ -2065,6 +2066,69 @@ namespace TradeLord
                         pass.Tally(item, 1, price);
                     }
                 }
+
+                int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall, TradePolicy.FoodForADay());
+                if (hunger <= 0 || pass.DirectionError) return;
+                int hungryUnits = 0, hungryGold = 0;
+                var lean = CheapestFirst(pass,
+                    it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true),
+                    TradeMath.HungryFoodTolerance);
+                foreach (var (el, good, _, ceiling) in lean)
+                {
+                    if (pass.DirectionError || hunger <= 0) break;
+                    ItemObject item = el.EquipmentElement.Item;
+                    int fed = TradeRules.FoodValue(good);
+                    if (fed <= 0) continue;
+                    int remaining = pass.TheirsToSell(el);
+                    var prior = pass.Books.Purchases(pass.Sim, item.StringId);
+                    int countThis = prior.count, spentThis = prior.spent;
+                    int held = LedgerBehavior.InAll(pass.Party.ItemRoster, item) +
+                               pass.Books.Held(pass.Sim, item.StringId);
+
+                    while (hunger > 0 && remaining > 0)
+                    {
+                        int price = pass.Price(el.EquipmentElement, selling: false);
+                        if (price <= 0 || price > ceiling) break;
+                        if (pass.WouldReachYourReserve(price)) break;
+                        if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;
+                        if (settlement.IsVillage && remaining <= 1) break;
+                        if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;
+
+                        if (pass.Sim)
+                        {
+                            simSpent += price;
+                            pass.Books.NotePurchase(item.StringId, price, good.Weight, fed);
+                            simWeight = pass.Books.Weight(pass.Sim);
+                            Counter.Stage(el, selling: false, price);
+                        }
+                        else
+                        {
+                            if (!pass.BuyOne(el, price, "restocking", "Restocking", out price)) break;
+                            if (price == 0) break;
+                            LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(el.EquipmentElement), new[] { price }, pass.BoughtFrom);
+                            pass.Books.NoteBought(item.StringId, price);
+                        }
+                        stocked++;
+                        remaining--;
+                        shortfall -= fed;
+                        hunger -= fed;
+                        countThis++;
+                        spentThis += price;
+                        held++;
+                        hungryUnits++;
+                        hungryGold += price;
+                        pass.Tally(item, 1, price);
+                    }
+                }
+                if (hungryUnits > 0)
+                    Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") +
+                              "your party had less than a day of food, so " + hungryUnits + " item(s) were bought for " +
+                              hungryGold + " gold at up to twice the cheapest price TradeLord knows at " + settlement.Name);
+                else
+                    Log.Repeatable("resupply hungry", settlement.StringId,
+                                   "resupply: your party has less than a day of food, and none is on sale at " +
+                                   settlement.Name + " at up to twice the cheapest price TradeLord knows, " +
+                                   "within your gold reserve, your buying caps and your cargo room");
             });
 
             if (shortfall > 0 && firstLeft.HasValue && !pass.DirectionError)
@@ -2289,6 +2353,8 @@ namespace TradeLord
             ItemRoster mine = pass.Party.ItemRoster;
             if (!Errands.AnimalsKnown) return;
             TradePolicy.KeptBack(mine, pass.Books, pass.Sim, out Dictionary<ItemObject, int> promised);
+            var byHand = new Dictionary<ItemObject, int>();
+            var keptByHand = new Dictionary<ItemObject, int>();
 
             int mountsLeft = Drove.SpareMounts(pass.Party);
             mountsLeft -= pass.Books.MountsShed(pass.Sim);
@@ -2326,6 +2392,15 @@ namespace TradeLord
                         int spare = Math.Min(remaining, owed);
                         promised[item] = owed - spare;
                         remaining -= spare;
+                    }
+                    if (!byHand.TryGetValue(item, out int yours)) yours = pass.Books.HandBought(item.StringId);
+                    if (yours > 0 && remaining > 0)
+                    {
+                        int kept = Math.Min(remaining, yours);
+                        byHand[item] = yours - kept;
+                        remaining -= kept;
+                        keptByHand.TryGetValue(item, out int keptBefore);
+                        keptByHand[item] = keptBefore + kept;
                     }
 
                     string paidKey = LedgerBehavior.PaidKey(el.EquipmentElement);
@@ -2379,6 +2454,16 @@ namespace TradeLord
                     }
                 }
             });
+
+            if (keptByHand.Count > 0)
+            {
+                var named = new List<string>();
+                foreach (KeyValuePair<ItemObject, int> one in keptByHand)
+                    named.Add(one.Value + " " + Tongue.Named(one.Key.Name, one.Key.StringId));
+                Log.Write("herd relief" + (pass.Sim ? Counter.Aside : "") + " kept " + string.Join(", ", named) +
+                          " that you bought by hand at " + settlement.Name + " on this visit" +
+                          (shed > 0 ? ", so your herd still slows your party" : ""));
+            }
 
             if (sold <= 0) return;
 

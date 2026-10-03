@@ -14,6 +14,7 @@ namespace TradeLord
         private readonly Dictionary<string, (int count, int spent)> _bought =
             new Dictionary<string, (int, int)>();
         private readonly HashSet<string> _sold = new HashSet<string>();
+        private readonly Dictionary<string, int> _byHand = new Dictionary<string, int>();
 
         private int _paid;
         private int _spent;
@@ -38,6 +39,7 @@ namespace TradeLord
             ForgetTheDryRun();
             _bought.Clear();
             _sold.Clear();
+            _byHand.Clear();
             _paid = 0;
             _moves = 0;
         }
@@ -119,6 +121,16 @@ namespace TradeLord
         {
             if (units > 0) _moves++;
         }
+
+        internal void NoteHandBought(string id, int units)
+        {
+            if (id == null || units <= 0) return;
+            _byHand.TryGetValue(id, out int had);
+            _byHand[id] = had + units;
+        }
+
+        internal int HandBought(string id) =>
+            id != null && _byHand.TryGetValue(id, out int units) ? units : 0;
 
         internal void NoteSold(string id)
         {

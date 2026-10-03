@@ -75,6 +75,11 @@ namespace TradeLord
             return most > int.MaxValue ? int.MaxValue : (int)most;
         }
 
+        public const float HungryFoodTolerance = 2f;
+
+        public static int FoodShortOfADay(int held, int day) =>
+            day <= 0 || held >= day ? 0 : day - (held < 0 ? 0 : held);
+
         public const float DriftWorthSaying = 0.05f;
 
         public const int KeptForever = 0;

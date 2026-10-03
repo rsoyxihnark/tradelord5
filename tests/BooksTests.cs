@@ -565,5 +565,22 @@ namespace TradeLord.Tests
             Assert.Null(books.DearDrawn(true, "felt"));
             Assert.Equal(0, books.PaidDrawn(true, "felt"));
         }
+
+        [Fact]
+        public void Animals_bought_by_hand_are_remembered_for_the_visit_and_forgotten_with_it()
+        {
+            Books books = Fresh();
+            books.NoteHandBought("sheep", 3);
+            books.NoteHandBought("sheep", 2);
+            books.NoteHandBought("mule", 0);
+            books.NoteHandBought(null, 4);
+            Assert.Equal(5, books.HandBought("sheep"));
+            Assert.Equal(0, books.HandBought("mule"));
+            Assert.Equal(0, books.HandBought(null));
+            books.ForgetTheDryRun();
+            Assert.Equal(5, books.HandBought("sheep"));
+            books.Forget();
+            Assert.Equal(0, books.HandBought("sheep"));
+        }
     }
 }

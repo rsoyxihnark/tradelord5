@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.101.3
+
+- Fixed Sell animals that slow you down selling back animals you had just bought by hand in the same visit
+- Fixed your party going hungry when the food on sale cost more than the cheapest price TradeLord knows
+- The hint for Restock and keep food (days of supply) now says a party short of a day's food pays up to twice the cheapest price
+- Fixed TradeLord.log's promise check letting a price above the promise hide one below it in each Conf band
+
 ## 1.101.2
 
 - Fixed the Sold line showing before the Bought line on screen
