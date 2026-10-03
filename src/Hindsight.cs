@@ -190,7 +190,7 @@ namespace TradeLord
             float now = (float)CampaignTime.Now.ToHours;
             var lines = new List<string>();
             int scored = 0, stale = 0, unpriced = 0, yours = 0, early = 0;
-            float heldTotal = 0f, keptTotal = 0f;
+            float keptTotal = 0f;
             var stillToCome = new List<KeyValuePair<string, Promised>>();
             foreach (KeyValuePair<string, Promised> one in here)
             {
@@ -221,7 +221,6 @@ namespace TradeLord
                 }
                 if (holding != Holding.Scored) continue;
                 scored++;
-                heldTotal += held;
                 keptTotal += TradeMath.HowCloseToThePromise(held);
                 _bands.Add(said.Confidence, held);
                 LedgerBehavior.Instance?.KeepPromiseScore(held);
@@ -246,8 +245,9 @@ namespace TradeLord
             }
             if (scored > 0)
             {
-                lines.Add("  here: the price held at " + Share(TradeMath.MeanOf(heldTotal, scored)) +
-                          " of what the panel promised");
+                lines.Add("  here: the price came " + Share(TradeMath.MeanOf(keptTotal, scored)) +
+                          " close to its promise over " + scored +
+                          " price(s) checked on this visit, a price above it missing as much as one below it");
                 for (int band = TradeMath.Bands - 1; band >= 0; band--)
                 {
                     if (_bands.Scored(band) == 0) continue;

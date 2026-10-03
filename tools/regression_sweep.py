@@ -11872,7 +11872,7 @@ def a_check_says_so_when_everything_at_a_market_was_passed_over_or_set_aside():
     return (kept and written and yours
             and ordered_last(kept, "if (!Writing || scored + stale + yours + unpriced + early == 0) return;",
                              'lines.Insert(0, "promise check at "', "if (scored > 0)",
-                             '"  here: the price held at "', "Log.WriteMany(lines);")
+                             '"  here: the price came "', "Log.WriteMany(lines);")
             and kept.count("if (scored > 0)") == 2
             and ordered(written, "if (!Writing || scored + stale + early == 0) return;",
                         'lines.Insert(0, "forecast check at "', '(scored == 0 ? "" : ":"));',
@@ -15477,8 +15477,8 @@ def a_price_over_its_promise_never_hides_one_under_it():
     kept = method_body(S['Hindsight.cs'], "private static void Kept")
     read = method_body(S['LedgerCodec.cs'], "public static List<PromiseRecord> ReadPromises")
     return (kept and read
-            and "float heldTotal = 0f, keptTotal = 0f;" in kept
-            and ordered(kept, "heldTotal += held;", "keptTotal += TradeMath.HowCloseToThePromise(held);",
+            and "float keptTotal = 0f;" in kept
+            and ordered(kept, "keptTotal += TradeMath.HowCloseToThePromise(held);",
                         "LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(keptTotal, scored));")
             and '"missing as much as one below it");' in kept
             and "float.IsNaN(held) || float.IsInfinity(held) || held <= 0f ? 0f : OnTheCurve(held)" in
@@ -17380,6 +17380,19 @@ def each_confidence_band_counts_a_price_above_its_promise_as_a_miss():
 
 chk("1.101.3", "each Conf band in the promise check TradeLord.log writes counts a price above its promise as a miss, the same as one below it",
     each_confidence_band_counts_a_price_above_its_promise_as_a_miss())
+
+def the_here_line_counts_a_price_above_its_promise_as_a_miss():
+    kept = method_body(S['Hindsight.cs'], "private static void Kept")
+    return (kept
+            and "heldTotal" not in kept
+            and "float keptTotal = 0f;" in kept
+            and ordered(kept, "keptTotal += TradeMath.HowCloseToThePromise(held);",
+                        'lines.Add("  here: the price came " + Share(TradeMath.MeanOf(keptTotal, scored)) +',
+                        '" price(s) checked on this visit, a price above it missing as much as one below it");')
+            and "A_price_above_the_promise_misses_it_as_much_as_one_below_it" in PROMISETESTS)
+
+chk("1.102.1", "the here: line of the promise check TradeLord.log writes counts a price above its promise as a miss, the same as one below it, so prices at 80% and 120% come to 80% rather than 100%",
+    the_here_line_counts_a_price_above_its_promise_as_a_miss())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

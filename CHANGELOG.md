@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.102.1
+
+- Fixed TradeLord.log's promise check letting a price above the promise hide one below it in the here: line
+
 ## 1.102.0
 
 - The TradeLord ledger now weighs every market a good could be bought at, so a nearby market charging a little more can win a place
