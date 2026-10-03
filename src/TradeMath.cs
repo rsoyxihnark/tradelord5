@@ -77,6 +77,8 @@ namespace TradeLord
 
         public const float HungryFoodTolerance = 2f;
 
+        public const float ShortFoodTolerance = 1.5f;
+
         public static int FoodShortOfADay(int held, int day) =>
             day <= 0 || held >= day ? 0 : day - (held < 0 ? 0 : held);
 
@@ -157,7 +159,7 @@ namespace TradeLord
             (CameFree(from) ? "came without a purchase" : "bought");
 
         public static void AddPurchase(PurchaseRecord rec, IList<int> paid, long first, float day,
-                                       int from = FromAMarket)
+                                       int from = FromAMarket, bool traded = false)
         {
             if (rec == null || paid == null || paid.Count == 0) return;
             List<Batch> batches = BatchesOf(rec);
@@ -166,10 +168,19 @@ namespace TradeLord
                 AddBatch(batches, new Batch
                 {
                     Unit = paid[i] > 0 ? paid[i] : 0, Count = 1, First = first > 0L ? first + i : 0L, Day = day > 0f ? day : 0f,
-                    From = source
+                    From = source, Traded = traded
                 });
             rec.LastUnitPaid = paid[paid.Count - 1] > 0 ? paid[paid.Count - 1] : 0;
             AddUpTheRows(rec);
+        }
+
+        public static int UnitsBoughtToTrade(PurchaseRecord rec)
+        {
+            if (rec == null || rec.Count <= 0 || !BatchesAddUp(rec)) return 0;
+            int units = 0;
+            foreach (Batch one in rec.Batches)
+                if (one.Traded && one.Count > 0) units += one.Count;
+            return units;
         }
 
         public static int[] AtOnePrice(int units, int price)
@@ -253,7 +264,7 @@ namespace TradeLord
                         apart.Add(new Batch
                         {
                             Unit = one.Unit, Count = 1, First = one.First > 0L ? one.First + u : 0L, Day = one.Day,
-                            From = one.From
+                            From = one.From, Traded = one.Traded
                         });
                 }
                 apart.Sort(CheapestFirstOldestLast);
@@ -1187,6 +1198,14 @@ namespace TradeLord
         public static bool LandsInTime(float etaDays, float horizonDays) =>
             etaDays <= horizonDays;
 
+        public static float ShareThatLands(float etaDays, float horizonDays)
+        {
+            float reach = horizonDays / 2f < HorizonStep ? horizonDays / 2f : HorizonStep;
+            if (!(reach > 0f)) return LandsInTime(etaDays, horizonDays) ? 1f : 0f;
+            float share = Finite((horizonDays + reach - etaDays) / (2f * reach), 0f);
+            return share <= 0f ? 0f : share >= 1f ? 1f : share;
+        }
+
         public const float HorizonStep = 0.25f;
 
         public static float ToTheQuarterDay(float days)
@@ -1244,6 +1263,8 @@ namespace TradeLord
         public static float MeanOf(float total, int counted) =>
             counted <= 0 ? 0f : Finite(total / counted, 0f);
 
+        public const float MostOfAMoveThatCounts = 1f;
+
         public const float LeastOfAMoveThatCounts = -1f;
 
         public static float OnTheCurve(double came)
@@ -1257,7 +1278,10 @@ namespace TradeLord
         {
             share = 0f;
             if (said == 0) return false;
-            share = OnTheCurve((double)moved / said);
+            double came = (double)moved / said;
+            share = came > MostOfAMoveThatCounts ? MostOfAMoveThatCounts
+                  : came < LeastOfAMoveThatCounts ? LeastOfAMoveThatCounts
+                  : (float)came;
             return true;
         }
 
@@ -1282,12 +1306,15 @@ namespace TradeLord
 
         public const int EnoughForecasts = 5;
 
+        public const float TrustBeforeAnyCheck = 0.5f;
+
         public static float TrustInTheForecast(int scored, float cameTrue)
         {
-            if (scored <= 0 || cameTrue < 0f || float.IsNaN(cameTrue) || float.IsInfinity(cameTrue)) return 1f;
+            if (scored <= 0 || cameTrue < 0f || float.IsNaN(cameTrue) || float.IsInfinity(cameTrue))
+                return TrustBeforeAnyCheck;
             float earned = cameTrue > 1f ? 1f : cameTrue;
             float weight = (float)scored / (scored + EnoughForecasts);
-            float trust = 1f - (1f - earned) * weight;
+            float trust = TrustBeforeAnyCheck + (earned - TrustBeforeAnyCheck) * weight;
             if (trust < 0f) return 0f;
             return trust > 1f ? 1f : trust;
         }
@@ -1332,6 +1359,8 @@ namespace TradeLord
 
         public static float HeldShare(int promised, int found) =>
             promised <= 0 ? NoShareToGive : (found < 0 ? 0f : (float)found / promised);
+
+        public static float UpToThePromise(float held) => held > 1f ? 1f : held;
 
         public static float HowCloseToThePromise(float held) =>
             float.IsNaN(held) || float.IsInfinity(held) || held <= 0f ? 0f : OnTheCurve(held);

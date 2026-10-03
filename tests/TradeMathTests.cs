@@ -1013,6 +1013,21 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_unit_bought_to_trade_keeps_that_mark_when_its_units_are_kept_apart()
+        {
+            var rec = new PurchaseRecord { ItemId = "cheese" };
+            TradeMath.AddPurchase(rec, new[] { 68 }, 1L, 100f, TradeMath.FromAMarket, traded: true);
+            TradeMath.AddPurchase(rec, new[] { 40 }, 2L, 100f);
+            Assert.Equal(new[] { false, true }, rec.Batches.ConvertAll(one => one.Traded).ToArray());
+            rec.Batches = new List<Batch> { new Batch { Unit = 68, Count = 2, First = 5L, Day = 9f, Traded = true } };
+            rec.Count = 2;
+            rec.TotalPaid = 136;
+            TradeMath.KeepEveryUnitApart(new List<PurchaseRecord> { rec });
+            Assert.Equal(2, rec.Batches.Count);
+            Assert.True(rec.Batches.TrueForAll(one => one.Traded));
+        }
+
+        [Fact]
         public void Every_unit_keeps_where_it_came_from_and_only_market_and_caravan_units_count_for_Trade_XP()
         {
             var rec = new PurchaseRecord { ItemId = "wine" };
@@ -1696,25 +1711,25 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_move_bigger_than_the_forecast_said_misses_as_much_as_a_smaller_one()
+        public void A_move_bigger_than_the_forecast_said_counts_as_all_of_it_and_no_more()
         {
             Assert.True(TradeMath.HowMuchCameTrue(100, 100, out float right));
             Assert.Equal(1f, right);
             Assert.True(TradeMath.HowMuchCameTrue(100, 90, out float under));
             Assert.True(TradeMath.HowMuchCameTrue(100, 110, out float overBy));
             Assert.Equal(0.9f, under, 4);
-            Assert.Equal(0.9f, overBy, 4);
-            Assert.True(TradeMath.HowMuchCameTrue(-100, -150, out float half));
-            Assert.Equal(0.5f, half, 4);
+            Assert.Equal(TradeMath.MostOfAMoveThatCounts, overBy);
+            Assert.True(TradeMath.HowMuchCameTrue(-100, -150, out float bigger));
+            Assert.Equal(TradeMath.MostOfAMoveThatCounts, bigger);
             Assert.True(TradeMath.HowMuchCameTrue(100, 250, out float wild));
-            Assert.Equal(0f, wild);
+            Assert.Equal(TradeMath.MostOfAMoveThatCounts, wild);
         }
 
         [Fact]
         public void One_wild_miss_cannot_speak_for_the_whole_forecast()
         {
             Assert.True(TradeMath.HowMuchCameTrue(-76, -2000, out float over));
-            Assert.Equal(0f, over);
+            Assert.Equal(TradeMath.MostOfAMoveThatCounts, over);
             Assert.True(TradeMath.HowMuchCameTrue(100, -5000, out float against));
             Assert.Equal(TradeMath.LeastOfAMoveThatCounts, against);
             Assert.True(TradeMath.HowMuchCameTrue(-400, -200, out float half));
@@ -1765,8 +1780,8 @@ namespace TradeLord.Tests
         [Fact]
         public void By_size_no_figure_counts_for_more_than_it_said_either_way()
         {
-            Assert.Equal(0f, BySize((100, 5000)), 4);
-            Assert.Equal(0.9f, BySize((100, 110)), 4);
+            Assert.Equal(1f, BySize((100, 5000)), 4);
+            Assert.Equal(1f, BySize((100, 110)), 4);
             Assert.Equal(0.5f, BySize((100, 100), (100, -5000), (100, 100), (100, 100)), 4);
             Assert.Equal(0f, BySize((100, -5000)));
         }
@@ -1783,23 +1798,70 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_forecast_that_has_never_been_checked_is_taken_at_its_word()
+        public void A_forecast_that_has_never_been_checked_is_taken_at_half()
         {
-            Assert.Equal(1f, TradeMath.TrustInTheForecast(0, 0.5f));
-            Assert.Equal(1f, TradeMath.TrustInTheForecast(-3, 0.5f));
-            Assert.Equal(1f, TradeMath.TrustInTheForecast(50, TradeMath.NoShareToGive));
+            Assert.Equal(0.5f, TradeMath.TrustBeforeAnyCheck);
+            Assert.Equal(TradeMath.TrustBeforeAnyCheck, TradeMath.TrustInTheForecast(0, 0.9f));
+            Assert.Equal(TradeMath.TrustBeforeAnyCheck, TradeMath.TrustInTheForecast(-3, 0.9f));
+            Assert.Equal(TradeMath.TrustBeforeAnyCheck, TradeMath.TrustInTheForecast(50, TradeMath.NoShareToGive));
         }
 
         [Fact]
         public void A_forecast_that_keeps_missing_is_believed_less_and_less()
         {
-            float few = TradeMath.TrustInTheForecast(2, 0.5f);
-            float many = TradeMath.TrustInTheForecast(80, 0.5f);
+            float few = TradeMath.TrustInTheForecast(2, 0.3f);
+            float many = TradeMath.TrustInTheForecast(80, 0.3f);
             Assert.True(few > many);
-            Assert.True(many > 0.5f && many < 0.55f);
-            Assert.True(TradeMath.TrustInTheForecast(80, 1f) > 0.99f);
-            Assert.True(TradeMath.TrustInTheForecast(80, 1.7f) > 0.99f);
+            Assert.True(many > 0.3f && many < 0.32f);
             Assert.True(TradeMath.TrustInTheForecast(80, 0f) < many);
+            Assert.Equal(0.5f, TradeMath.TrustInTheForecast(3, 0.5f), 4);
+        }
+
+        [Fact]
+        public void A_forecast_that_keeps_coming_true_is_believed_more_and_more_but_never_past_full()
+        {
+            float few = TradeMath.TrustInTheForecast(2, 1f);
+            float many = TradeMath.TrustInTheForecast(80, 1f);
+            Assert.True(few > TradeMath.TrustBeforeAnyCheck);
+            Assert.True(many > few);
+            Assert.Equal(0.75f, TradeMath.TrustInTheForecast(5, 1f), 4);
+            Assert.True(many > 0.95f && many < 1f);
+            Assert.Equal(many, TradeMath.TrustInTheForecast(80, 1.7f), 4);
+        }
+
+        [Fact]
+        public void A_landing_counts_in_full_well_before_you_arrive_in_part_near_it_and_not_at_all_well_after()
+        {
+            Assert.Equal(1f, TradeMath.ShareThatLands(0.75f, 1f));
+            Assert.Equal(0.5f, TradeMath.ShareThatLands(1f, 1f), 4);
+            Assert.Equal(0.75f, TradeMath.ShareThatLands(0.875f, 1f), 4);
+            Assert.Equal(0f, TradeMath.ShareThatLands(1.25f, 1f));
+            Assert.Equal(0f, TradeMath.ShareThatLands(3f, 1f));
+            Assert.Equal(0f, TradeMath.ShareThatLands(float.NaN, 1f));
+        }
+
+        [Fact]
+        public void On_a_short_ride_the_part_counted_narrows_to_half_the_ride_and_none_is_a_plain_test()
+        {
+            Assert.Equal(1f, TradeMath.ShareThatLands(0.125f, 0.25f));
+            Assert.Equal(0.5f, TradeMath.ShareThatLands(0.25f, 0.25f), 4);
+            Assert.Equal(0f, TradeMath.ShareThatLands(0.375f, 0.25f));
+            Assert.Equal(1f, TradeMath.ShareThatLands(0f, 0.25f));
+            Assert.Equal(1f, TradeMath.ShareThatLands(0f, 0f));
+            Assert.Equal(0f, TradeMath.ShareThatLands(0.01f, 0f));
+        }
+
+        [Fact]
+        public void A_landing_a_little_later_or_sooner_moves_its_share_only_a_little()
+        {
+            float hour = 1f / 24f;
+            foreach (float horizon in new[] { 0.25f, 0.5f, 1f, 2.75f })
+                for (float eta = 0f; eta < horizon + 1f; eta += hour)
+                {
+                    float jump = Math.Abs(TradeMath.ShareThatLands(eta + hour, horizon) -
+                                          TradeMath.ShareThatLands(eta, horizon));
+                    Assert.True(jump <= 4f * hour + 0.0001f);
+                }
         }
 
         [Fact]
@@ -2158,6 +2220,14 @@ namespace TradeLord.Tests
         {
             Assert.Equal(137, TradeMath.MostToPayOverTheCheapest(110, 1.25f));
             Assert.Equal(500, TradeMath.MostToPayOverTheCheapest(400, 1.25f));
+        }
+
+        [Fact]
+        public void A_party_short_of_its_days_of_food_may_pay_up_to_half_again_the_cheapest_price()
+        {
+            Assert.Equal(1.5f, TradeMath.ShortFoodTolerance);
+            Assert.Equal(15, TradeMath.MostToPayOverTheCheapest(10, TradeMath.ShortFoodTolerance));
+            Assert.True(TradeMath.ShortFoodTolerance < TradeMath.HungryFoodTolerance);
         }
 
         [Fact]

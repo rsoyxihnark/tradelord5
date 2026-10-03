@@ -27,7 +27,7 @@ namespace TradeLord
 
     internal static class Projection
     {
-        internal static int UnitsLanding(IList<Landing> listed, string item, float withinDays)
+        internal static int UnitsLanding(IList<Landing> listed, string item, float withinDays, bool graded = false)
         {
             if (listed == null || item == null) return 0;
             withinDays = TradeMath.ToTheQuarterDay(withinDays);
@@ -36,13 +36,15 @@ namespace TradeLord
             {
                 Landing landing = listed[i];
                 if (landing.Item != item) continue;
-                if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;
-                units += landing.Units;
+                float share = Landed(landing.Days, withinDays, graded);
+                if (share <= 0f) continue;
+                units += PartOf(landing.Units, share);
             }
             return units;
         }
 
-        internal static int WorthLanding(IList<Landing> listed, string category, float withinDays)
+        internal static int WorthLanding(IList<Landing> listed, string category, float withinDays,
+                                         bool graded = false)
         {
             if (listed == null || category == null) return 0;
             withinDays = TradeMath.ToTheQuarterDay(withinDays);
@@ -51,13 +53,14 @@ namespace TradeLord
             {
                 Landing landing = listed[i];
                 if (landing.Category != category) continue;
-                if (!TradeMath.LandsInTime(landing.Days, withinDays)) continue;
-                worth = TradeMath.ShelfAfterLanding(worth, landing.Worth);
+                float share = Landed(landing.Days, withinDays, graded);
+                if (share <= 0f) continue;
+                worth = TradeMath.ShelfAfterLanding(worth, PartOf(landing.Worth, share));
             }
             return worth;
         }
 
-        internal static int PurseLanding(IList<Spending> coming, float withinDays)
+        internal static int PurseLanding(IList<Spending> coming, float withinDays, bool graded = false)
         {
             if (coming == null) return 0;
             withinDays = TradeMath.ToTheQuarterDay(withinDays);
@@ -65,11 +68,19 @@ namespace TradeLord
             for (int i = 0; i < coming.Count; i++)
             {
                 Spending spending = coming[i];
-                if (!TradeMath.LandsInTime(spending.Days, withinDays)) continue;
-                purse += spending.Gold;
+                float share = Landed(spending.Days, withinDays, graded);
+                if (share <= 0f) continue;
+                purse += PartOf(spending.Gold, share);
             }
             return purse;
         }
+
+        private static float Landed(float etaDays, float withinDays, bool graded) =>
+            graded ? TradeMath.ShareThatLands(etaDays, withinDays)
+            : TradeMath.LandsInTime(etaDays, withinDays) ? 1f : 0f;
+
+        private static int PartOf(int whole, float share) =>
+            share >= 1f ? whole : (int)Math.Round(whole * (double)share, MidpointRounding.AwayFromZero);
 
         internal static int WorthLeaving(int purse, IDictionary<string, float> pull, float across,
                                          string category)
@@ -80,7 +91,7 @@ namespace TradeLord
         }
 
         internal static int WorthUsedUp(IList<Draw> drawn, string category, float withinDays, int usedADay,
-                                        int most)
+                                        int most, bool graded = false)
         {
             if (category == null || most <= 0) return 0;
             withinDays = TradeMath.ToTheQuarterDay(withinDays);
@@ -89,8 +100,9 @@ namespace TradeLord
             {
                 Draw draw = drawn[i];
                 if (draw.Category != category || draw.Worth <= 0) continue;
-                if (!TradeMath.LandsInTime(draw.Days, withinDays)) continue;
-                used += draw.Worth;
+                float share = Landed(draw.Days, withinDays, graded);
+                if (share <= 0f) continue;
+                used += draw.Worth * (double)share;
             }
             return used >= most ? most : (int)used;
         }

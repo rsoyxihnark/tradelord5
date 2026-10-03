@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.102.2
+
+- Fixed the map marker jumping back and forth between two markets as you travel
+- Fixed the price expected at a market jumping up and down when what is on its way lands there about when you would arrive
+- Fixed TradeLord trusting what is on its way to a market in full before it had checked a single forecast
+- Fixed food bought to trade, such as cheese, being held back as your party's food instead of being sold
+- Fixed Restock and keep food (days of supply) leaving your party short of food at every market that was not the cheapest it knew
+- The hint for Restock and keep food (days of supply) now says it pays up to 1.5 times the cheapest price it knows
+- The hint for Restock and keep food (days of supply) now says food bought to trade is counted last
+- Fixed TradeLord.log calling a village's purse a town purse
+- Fixed the hint for Detailed trade summary showing an old form of the Sold line
+
 ## 1.102.1
 
 - Fixed TradeLord.log's promise check letting a price above the promise hide one below it in the here: line
@@ -33,15 +45,8 @@
 - Food restocked and haul animals bought are now part of the Bought line instead of lines of their own
 - The Sold line now shows the Trade XP the sale added, and your Trade skill when it goes up a level
 - The separate message saying TradeLord credited your Trade skill is gone
-- A market paying more than the TradeLord ledger promised now scores lower, the same as one paying less
 - What this means in the TradeLord ledger now says how close prices came to the promised Sell price, above or below
-- Learn the resale safety factor now counts a price above the promised Sell price as a miss, the same as one below it
-- What is on its way to a market is now trusted less when more moved than the forecast said, not only when less did
-- The hints for Trust a market by what it has paid and Learn the resale safety factor now say a price above or below counts as a miss
-- Each market's record of what it paid against the ledger's promise starts over once, as the old one let a price above a promise count as kept
 - The count of prices What this means has checked starts over once, as the old count let a price above its promise count as kept
-- Learn the resale safety factor starts again from Resale safety factor once, as it learns from each market's record
-- How far TradeLord trusts what is on its way to a market starts over once, as the old record let a bigger move than forecast count as kept
 - TradeLord.log now says where each unit came from: a market, a caravan, villagers, or no purchase at all
 - TradeLord.log now says for each unit sold whether the game gives Trade XP for it
 - Goods that came without a purchase, loot and rewards among them, now get unit numbers and are named in TradeLord.log when sold

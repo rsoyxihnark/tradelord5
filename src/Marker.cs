@@ -95,6 +95,9 @@ namespace TradeLord
         private static long _toldValue = -1L;
         private static int _toldUnits = -1;
         private static bool _toldHeld;
+        private static bool _toldSecondLook;
+        private static int _lostAt = -1;
+        private static List<(string good, int amount, bool food)> _heldCargo;
         private static string _toldNext;
         private static readonly Dictionary<string, (string name, int units, long value)> _toldBoard =
             new Dictionary<string, (string name, int units, long value)>(System.StringComparer.Ordinal);
@@ -155,6 +158,9 @@ namespace TradeLord
             _toldValue = -1L;
             _toldUnits = -1;
             _toldHeld = false;
+            _toldSecondLook = false;
+            _lostAt = -1;
+            _heldCargo = null;
             _toldNext = null;
             _toldBoard.Clear();
         }
@@ -224,6 +230,18 @@ namespace TradeLord
             internal double Took;
             internal List<Share> Bill;
             internal List<Weighing> Board;
+            internal bool HeldForASecondLook;
+            internal bool HolderPriced;
+            internal long HolderValue;
+            internal long HolderCost;
+            internal float HolderRate;
+            internal float HolderDays;
+            internal float HolderCeilingPassed;
+            internal int HolderUnits;
+            internal int HolderKinds;
+            internal int HolderPurse;
+            internal bool HolderPurseCapped;
+            internal List<Share> HolderBill;
         }
 
         internal static void Update()
@@ -237,6 +255,21 @@ namespace TradeLord
             if (on) target = TheMarkFairlyWeighed(out how);
             how.Took = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /
                        System.Diagnostics.Stopwatch.Frequency;
+
+            int hour = (int)CampaignTime.Now.ToHours;
+            if (target != null && _picked != null && target != _picked &&
+                Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null,
+                                          Marks.OnlyEatenFrom(_heldCargo, _cargoHeld), _lostAt, hour))
+            {
+                if (_lostAt < 0) _lostAt = hour;
+                TheHolderStays(ref how);
+                target = _picked;
+            }
+            else
+            {
+                _lostAt = -1;
+                _heldCargo = _cargoHeld;
+            }
 
             if (target == _picked)
             {
@@ -270,6 +303,26 @@ namespace TradeLord
             Remember(target, how);
         }
 
+        private static void TheHolderStays(ref Reckoning how)
+        {
+            how.RunnerUp = how.Best;
+            how.RunnerUpValue = how.Value;
+            how.RunnerUpRate = how.Rate;
+            how.Best = _picked;
+            how.Value = how.HolderValue;
+            how.Cost = how.HolderCost;
+            how.Rate = how.HolderRate;
+            how.Days = how.HolderDays;
+            how.CeilingPassed = how.HolderCeilingPassed;
+            how.Units = how.HolderUnits;
+            how.Kinds = how.HolderKinds;
+            how.Purse = how.HolderPurse;
+            how.PurseCapped = how.HolderPurseCapped;
+            how.Bill = how.HolderBill;
+            how.Held = false;
+            how.HeldForASecondLook = true;
+        }
+
         private static List<(string where, int units, long value)> OnTheBoard(in Reckoning how)
         {
             if (how.Board == null) return null;
@@ -287,6 +340,7 @@ namespace TradeLord
             _toldValue = how.Board == null ? -1L : how.Value;
             _toldUnits = how.Units;
             _toldHeld = how.Held;
+            _toldSecondLook = how.HeldForASecondLook;
             _toldNext = how.RunnerUp?.StringId;
             _toldBoard.Clear();
             for (int i = 0; how.Board != null && i < how.Board.Count; i++)
@@ -301,7 +355,8 @@ namespace TradeLord
         private static void SayItWeighedAgain(Settlement target, in Reckoning how)
         {
             if (!Options.Current.ExtendedDebugLogging) return;
-            if (Marks.WorthSayingAgain(how.Value, how.Units, how.Held, _toldValue, _toldUnits, _toldHeld))
+            if (Marks.WorthSayingAgain(how.Value, how.Units, how.Held, _toldValue, _toldUnits, _toldHeld) ||
+                how.HeldForASecondLook != _toldSecondLook)
             {
                 Log.Write("map marker weighed your cargo again and stayed on " + target.Name + ": " + Why(how));
                 Ultra(how, board: false);
@@ -422,8 +477,8 @@ namespace TradeLord
                    "margin there, " + how.Units + " unit(s) for " + how.Value + " gold, " +
                    (how.Value - how.Cost) + " of it profit" +
                    (how.PurseCapped
-                       ? ", which is all that town's purse of " + how.Purse + " can take"
-                       : " against a town purse of " + how.Purse) +
+                       ? ", which is all that " + MarketKind(how.Best) + "'s purse of " + how.Purse + " can take"
+                       : " against a " + MarketKind(how.Best) + " purse of " + how.Purse) +
                    ", about " + how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away" +
                    (how.CeilingPassed > 0f
                        ? ", past your travel ceiling of " +
@@ -439,12 +494,17 @@ namespace TradeLord
                        : "");
         }
 
+        private static string MarketKind(Settlement s) => s != null && s.IsVillage ? "village" : "town";
+
         private static string TheNextBest(in Reckoning how)
         {
             if (how.RunnerUp == null) return ", and no other market it priced would take any of it";
             string next = how.RunnerUp.Name + ", the next best it priced, at " +
                           how.RunnerUpRate.ToString("0") + " gold a day for " +
                           how.RunnerUpValue + " gold";
+            if (how.HeldForASecondLook)
+                return ", and it holds the mark against " + next +
+                       ", until another market earns more in a later hour";
             return how.Held
                 ? ", and it holds the mark against " + next +
                   ", because the marker only moves for a clear gain"
@@ -481,7 +541,7 @@ namespace TradeLord
                 said.Add("    " + how.Value + " gold in all, of which " + how.Cost +
                          " is what it cost you, so it marked on the " + (how.Value - how.Cost) +
                          (how.PurseCapped
-                             ? ", which is all that town's purse of " + how.Purse +
+                             ? ", which is all that " + MarketKind(how.Best) + "'s purse of " + how.Purse +
                                " can take, so the lines above come to more"
                              : ""));
             }
@@ -752,6 +812,20 @@ namespace TradeLord
                 long earned = total - took.Cost;
                 float rate = TradeMath.PerDay(earned, ride);
                 float weighed = TradeMath.RateTheMarkHolds(rate, s == holder);
+                if (s == holder)
+                {
+                    how.HolderPriced = true;
+                    how.HolderValue = total;
+                    how.HolderCost = took.Cost;
+                    how.HolderRate = rate;
+                    how.HolderDays = ride;
+                    float flat = LedgerBehavior.TravelCeiling(s);
+                    how.HolderCeilingPassed = flat > 0f && ride > flat ? flat : 0f;
+                    how.HolderUnits = took.Units;
+                    how.HolderKinds = took.Kinds;
+                    how.HolderPurse = gold;
+                    how.HolderPurseCapped = took.PurseCapped;
+                }
                 how.Board?.Add(new Weighing
                 {
                     Where = s, Days = ride, Units = took.Units, Value = total,
@@ -784,6 +858,12 @@ namespace TradeLord
             {
                 how.Bill = new List<Share>();
                 WhatItWouldFetch(how.Best, how.Best.SettlementComponent, party, how.Days, cargo, how.Purse, how.Bill);
+            }
+            if (ultra && how.HolderPriced && how.Best != holder)
+            {
+                how.HolderBill = new List<Share>();
+                WhatItWouldFetch(holder, holder.SettlementComponent, party, how.HolderDays, cargo, how.HolderPurse,
+                                 how.HolderBill);
             }
             return how.Best;
         }

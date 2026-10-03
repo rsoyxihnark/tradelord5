@@ -1987,8 +1987,9 @@ namespace TradeLord
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
 
+            int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster);
             int shortfall = TradePolicy.FoodWanted() -
-                            TradePolicy.FoodHeld(pass.Party.ItemRoster) - pass.Books.FoodHeld(pass.Sim);
+                            TradePolicy.FoodHeld(pass.Party.ItemRoster) - pass.Books.FoodHeld(pass.Sim) + traded;
             if (shortfall <= 0) return;
 
             int stocked = 0, simSpent = 0;
@@ -1998,13 +1999,16 @@ namespace TradeLord
                 firstLeft = null;
 
             var larder = CheapestFirst(pass,
-                it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true));
-            bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall, TradePolicy.FoodForADay()) > 0;
+                it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true),
+                TradeMath.ShortFoodTolerance);
+            bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall + traded,
+                                                    TradePolicy.FoodForADay()) > 0;
             if (larder.Count == 0 && !hungry)
             {
                 Log.Repeatable("resupply none on sale", settlement.StringId,
                                "resupply: your party is short " + shortfall + " unit(s) of food, and no food TradeLord " +
-                               "may buy is on sale at " + settlement.Name + " at the cheapest price it knows for it");
+                               "may buy is on sale at " + settlement.Name + " at up to 1.5 times the cheapest price it " +
+                               "knows for it");
                 return;
             }
             string stopped = null;
@@ -2027,7 +2031,11 @@ namespace TradeLord
                     while (shortfall > 0 && remaining > 0)
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
-                        if (price <= 0 || price > ceiling) { stopped = "its price is above the cheapest TradeLord knows"; break; }
+                        if (price <= 0 || price > ceiling)
+                        {
+                            stopped = "its price is above 1.5 times the cheapest TradeLord knows";
+                            break;
+                        }
                         if (pass.WouldReachYourReserve(price)) { stopped = "buying it would reach your gold reserve or spending cap"; break; }
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None)
                         {
@@ -2067,7 +2075,8 @@ namespace TradeLord
                     }
                 }
 
-                int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall, TradePolicy.FoodForADay());
+                int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall + traded,
+                                                       TradePolicy.FoodForADay());
                 if (hunger <= 0 || pass.DirectionError) return;
                 int hungryUnits = 0, hungryGold = 0;
                 var lean = CheapestFirst(pass,
@@ -2930,7 +2939,8 @@ namespace TradeLord
                 _pass.Quote(item, 1, price);
                 if (!_pass.BuyOne(Shelf[at], price, _what, _named, out cost)) return false;
                 if (cost == 0) return true;
-                LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), new[] { cost }, _pass.BoughtFrom);
+                LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), new[] { cost }, _pass.BoughtFrom,
+                                                        traded: true);
                 _pass.Tally(item, 1, cost);
                 return true;
             }

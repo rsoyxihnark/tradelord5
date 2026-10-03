@@ -108,6 +108,23 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void On_the_price_path_a_load_landing_near_your_arrival_counts_in_part()
+        {
+            var listed = new List<Landing>
+            {
+                Coming("grain", "grain", 10, 400, 0.95f),
+                Coming("grain", "grain", 10, 400, 1.1f)
+            };
+            Assert.Equal(10, Projection.UnitsLanding(listed, "grain", 1f));
+            Assert.Equal(9, Projection.UnitsLanding(listed, "grain", 1f, graded: true));
+            Assert.Equal(400, Projection.WorthLanding(listed, "grain", 1f));
+            Assert.Equal(360, Projection.WorthLanding(listed, "grain", 1f, graded: true));
+            var coming = new List<Spending> { new Spending { Gold = 1000, Days = 1.1f } };
+            Assert.Equal(0, Projection.PurseLanding(coming, 1f));
+            Assert.Equal(300, Projection.PurseLanding(coming, 1f, graded: true));
+        }
+
+        [Fact]
         public void The_window_is_read_to_the_nearest_quarter_day()
         {
             var listed = new List<Landing> { Coming("grain", "grain", 20, 400, 0.6f) };

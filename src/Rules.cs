@@ -119,6 +119,10 @@ namespace TradeLord
     {
         internal static bool OutEarns(float back, float marked) => back > 0f && back > marked;
 
+        internal static bool HoldsForASecondLook(bool holderPriced, bool afresh, bool cargoSame, int lostAt,
+                                                 int hourNow) =>
+            holderPriced && !afresh && cargoSame && (lostAt < 0 || lostAt >= hourNow);
+
         internal static void OweAFairLook(ISet<string> owed, IList<string> compared, string here, string leftOutNow,
                                           bool markMoved)
         {
@@ -417,7 +421,11 @@ namespace TradeLord
         {
             internal Good Good;
             internal int Amount;
+            internal int Traded;
         }
+
+        private static int YourOwn(in Ration held) =>
+            held.Traded <= 0 ? held.Amount : held.Traded >= held.Amount ? 0 : held.Amount - held.Traded;
 
         internal static int FoodValue(in Good good)
         {
@@ -459,6 +467,8 @@ namespace TradeLord
                 {
                     Ration had = food[seen];
                     had.Amount += held.Amount;
+                    had.Traded += held.Traded;
+                    if (had.Traded > had.Amount) had.Traded = had.Amount;
                     food[seen] = had;
                     continue;
                 }
@@ -471,23 +481,25 @@ namespace TradeLord
             if (variety > 0)
                 foreach (Ration held in food)
                 {
-                    int floor = Math.Min(held.Amount, variety);
+                    int floor = Math.Min(YourOwn(held), variety);
                     keep.TryGetValue(held.Good.Id, out int had);
                     if (floor <= had) continue;
                     reserve -= (floor - had) * FoodValue(held.Good);
                     keep[held.Good.Id] = floor;
                 }
 
-            foreach (Ration held in food)
-            {
-                if (reserve <= 0) break;
-                int perUnit = FoodValue(held.Good);
-                keep.TryGetValue(held.Good.Id, out int had);
-                if (had >= held.Amount) continue;
-                int take = Math.Min(held.Amount - had, (reserve + perUnit - 1) / perUnit);
-                reserve -= take * perUnit;
-                keep[held.Good.Id] = had + take;
-            }
+            foreach (bool traded in new[] { false, true })
+                foreach (Ration held in food)
+                {
+                    if (reserve <= 0) break;
+                    int perUnit = FoodValue(held.Good);
+                    keep.TryGetValue(held.Good.Id, out int had);
+                    int upTo = traded ? held.Amount : YourOwn(held);
+                    if (had >= upTo) continue;
+                    int take = Math.Min(upTo - had, (reserve + perUnit - 1) / perUnit);
+                    reserve -= take * perUnit;
+                    keep[held.Good.Id] = had + take;
+                }
             return keep;
         }
 
