@@ -1338,7 +1338,6 @@
 
 ## 1.41.9
 
-- Working out which markets pay best for a good is quicker, because only the best few are kept as it goes
 - TradeLord no longer asks a town what it pays for a good when that town is already beyond your Travel ceiling
 
 ## 1.41.8
