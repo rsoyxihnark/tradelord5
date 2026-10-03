@@ -7,6 +7,7 @@ REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
     '1.21.0': 'an entry taken out of the changelog, and the release note is synced once this lands',
+    '1.101.0': 'entries taken out of the changelog, and the release note is synced once this lands',
 }
 
 

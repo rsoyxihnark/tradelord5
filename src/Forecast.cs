@@ -73,7 +73,7 @@ namespace TradeLord
         internal static int UnitsLanding(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null) return 0;
-            return Projection.UnitsLanding(Read(site), item.StringId, withinDays);
+            return Projection.UnitsLanding(Read(site), item.StringId, withinDays, graded: true);
         }
 
         internal static int UnitsLeaving(Settlement site, ItemObject item, float withinDays)
@@ -127,7 +127,8 @@ namespace TradeLord
         internal static float TrustEarned()
         {
             LedgerBehavior kept = LedgerBehavior.Instance;
-            if (kept == null || !kept.ForecastScore(out int scored, out float cameTrue)) return 1f;
+            if (kept == null || !kept.ForecastScore(out int scored, out float cameTrue))
+                return TradeMath.TrustInTheForecast(0, 0f);
             return TradeMath.TrustInTheForecast(scored, cameTrue);
         }
 
@@ -151,7 +152,7 @@ namespace TradeLord
         internal static int WorthLanding(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
-            return Projection.WorthLanding(Read(site), item.ItemCategory.StringId, withinDays);
+            return Projection.WorthLanding(Read(site), item.ItemCategory.StringId, withinDays, graded: true);
         }
 
         internal static int WorthLeaving(Settlement site, ItemObject item, float withinDays)
@@ -178,7 +179,7 @@ namespace TradeLord
         private static int WorthBought(Settlement site, ItemObject item, float withinDays)
         {
             if (!_spending.TryGetValue(site.StringId, out List<Spending> coming)) return 0;
-            int purse = Projection.PurseLanding(coming, withinDays);
+            int purse = Projection.PurseLanding(coming, withinDays, graded: true);
             if (purse <= 0) return 0;
             if (!PullAt(site, out Dictionary<string, float> pull, out float across)) return 0;
             return Projection.WorthLeaving(purse, pull, across, item.ItemCategory.StringId);
@@ -189,7 +190,7 @@ namespace TradeLord
             _drawing.TryGetValue(site.StringId, out List<Draw> drawn);
             int usedADay = UsedUpADay(site, item.ItemCategory);
             if (drawn == null && usedADay <= 0) return 0;
-            return Projection.WorthUsedUp(drawn, item.ItemCategory.StringId, withinDays, usedADay, most);
+            return Projection.WorthUsedUp(drawn, item.ItemCategory.StringId, withinDays, usedADay, most, graded: true);
         }
 
         private static int UsedUpADay(Settlement site, ItemCategory category)

@@ -243,7 +243,11 @@ namespace TradeLord
                 int amount = TradeRules.StillCarried(soldAlready, item.StringId, el.Amount);
                 if (amount <= 0) continue;
                 byId[item.StringId] = item;
-                carried.Add(new TradeRules.Ration { Good = Describe(item), Amount = amount });
+                int traded = LedgerBehavior.Instance?.UnitsBoughtToTrade(el.EquipmentElement) ?? 0;
+                carried.Add(new TradeRules.Ration
+                {
+                    Good = Describe(item), Amount = amount, Traded = traded < amount ? traded : amount
+                });
             }
             return carried;
         }
@@ -301,6 +305,23 @@ namespace TradeLord
                 if (el.Amount > 0) held += FoodValue(el.EquipmentElement.Item) * el.Amount;
             }
             return held;
+        }
+
+        internal static int FoodBoughtToTrade(ItemRoster roster)
+        {
+            LedgerBehavior kept = LedgerBehavior.Instance;
+            if (roster == null || kept == null) return 0;
+            int traded = 0;
+            for (int i = 0; i < roster.Count; i++)
+            {
+                ItemRosterElement el = roster.GetElementCopyAtIndex(i);
+                if (el.Amount <= 0) continue;
+                int fed = FoodValue(el.EquipmentElement.Item);
+                if (fed <= 0) continue;
+                int units = kept.UnitsBoughtToTrade(el.EquipmentElement);
+                traded += fed * (units < el.Amount ? units : el.Amount);
+            }
+            return traded;
         }
 
         internal static int FoodForADay() => (int)Math.Ceiling(AppetitePerDay());

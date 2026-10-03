@@ -720,6 +720,23 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_mark_moves_only_once_its_market_has_lost_two_weighings_in_different_hours()
+        {
+            Assert.True(Marks.HoldsForASecondLook(true, false, true, -1, 100));
+            Assert.True(Marks.HoldsForASecondLook(true, false, true, 100, 100));
+            Assert.False(Marks.HoldsForASecondLook(true, false, true, 100, 101));
+            Assert.False(Marks.HoldsForASecondLook(true, false, true, 90, 140));
+        }
+
+        [Fact]
+        public void The_mark_moves_at_once_when_its_market_is_not_priced_a_fair_look_wins_or_the_cargo_changed()
+        {
+            Assert.False(Marks.HoldsForASecondLook(false, false, true, -1, 100));
+            Assert.False(Marks.HoldsForASecondLook(true, true, true, -1, 100));
+            Assert.False(Marks.HoldsForASecondLook(true, false, false, -1, 100));
+        }
+
+        [Fact]
         public void A_market_left_out_while_the_mark_stands_is_owed_a_fair_look_until_it_gets_one()
         {
             var owed = new HashSet<string>();

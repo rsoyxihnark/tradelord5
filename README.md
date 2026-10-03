@@ -31,8 +31,8 @@
 - ✅ What marks it down: how much of the margin survives unit by unit pricing, how much of the good the seller has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
 - ✅ The panel keeps its own score, writing down the Sell price it promised you and holding it against what that market really pays when you walk in near the time it said
 - ✅ What this means says how close the price has come to that promised Sell price, above or below, over how many prices it has checked, and the tally carries on across your campaign
-- ✅ The panel learns from that, and a market that has paid less or more than it promised is scored lower, so routes selling there fall down the list
-- ✅ A price above what it promised misses it as much as one below it, so a market paying over for one good never hides paying under for another
+- ✅ The panel learns from that, and a market that has paid less than it promised is scored lower, so routes selling there fall down the list
+- ✅ A price above what it promised counts as the promise and no more, so a market paying over for one good never hides paying under for another
 - ✅ It keeps a record for each market on its own, written into your save, counts it only once you have walked into that market five times, and can never move a route's Score by more than a quarter
 - ✅ Trust a market by what it has paid turns that off
 - ✅ How long each route lasts, under Left, which says how long the shelf still holds the amount the route quotes before the caravans heading there buy it out or the town and its workshops use it up, in hours, or in days from two days on
@@ -43,9 +43,9 @@
 - ✅ Every workshop is followed day by day, every line of it at the game's own pace, and a run counts only while the town holds its inputs and the run pays
 - ✅ Your own workshops draw on their warehouse first, and only the share of what they make that you send to the market is counted as landing there
 - ✅ A village is priced through the town it trades with, so what lands in that town moves the village's price as well
-- ✅ It keeps score of that forecast as well, against what really moved by the day you walked in, and counts what is on its way at how close it came, each forecast counted by its size, so it leans less and less on one that keeps missing
-- ✅ A move bigger than the forecast said misses it as much as a smaller one
-- ✅ Counted at each end of a route, and only what arrives before you would, so a route is priced on the market you will actually walk into
+- ✅ It keeps score of that forecast as well, against what really moved by the day you walked in, and counts what is on its way at the share of it that came true, each forecast counted by its size, so it leans less and less on one that keeps missing
+- ✅ Before it has checked a single forecast, it counts what is on its way at half, and its record moves that up or down from there
+- ✅ Counted at each end of a route, by what arrives before you would, a load landing within a quarter day of you counted in part, so a route is priced on the market you will actually walk into
 - ✅ Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
 - ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
@@ -60,8 +60,9 @@
 - ✅ With Count what is on its way to a market and Bulk price simulation on, it prices each market as it will be when you get there, the same way the ledger does
 - ✅ It leaves out the market TradeLord made its last trade at until you come back to it
 - ✅ The market already marked keeps its mark until it is a fifth past your travel ceiling, so a brief slow stretch of road does not flick the marker to another market and back
+- ✅ Another market takes the mark only once it has earned more on two weighings in different hours, so a caravan landing about when you would does not flick the marker back and forth
 - ✅ Once the market TradeLord made its last trade at is back, it gets one look on the day's gold alone and takes the mark if it earns more a day than the market already marked
-- ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that town's purse, how far away it is and the market it beat
+- ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that market's purse, how far away it is and the market it beat
 - ✅ The five workshops in Calradia earning the most right now, with their town, what each will make next and their owner, on that same panel
 - ✅ With Live world prices turned off it shows yours instead
 - ✅ Your gold, your cargo against what your party can carry, your party's speed, the running total of what TradeLord has made you and the Trade XP it has earned you, along the top of that same panel
@@ -78,7 +79,8 @@
 - ✅ A trade with caravans or villagers on the road frees the market TradeLord made its last trade at, so arriving there trades as usual
 - ✅ A deal you take from Staged Trading counts as TradeLord's last trade at that market
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
-- ✅ Tops your food back up to three days of supply, buying the cheapest food the market has at no more than the cheapest price it knows of for it, or up to twice that for one day of food when your party is about to go hungry
+- ✅ Tops your food back up to three days of supply, buying the cheapest food the market has at up to 1.5 times the cheapest price it knows of for it, or up to twice that for one day of food when your party is about to go hungry
+- ✅ Food you bought to trade is counted last toward those days, so it sells where it pays once your own food fills them
 - ✅ The larder is filled after it has traded for profit, so your gold and your cargo room go to the goods you came to trade first
 - ✅ Buys and sells livestock as ordinary goods, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
 - ✅ A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
@@ -100,8 +102,7 @@
 - ✅ A lame horse, mule or camel, or one of any other quality, is never sold to get you back up to speed or bought to carry more, because the game does not count it gone or come until you load again
 - ✅ Sells one unit at a time and stops the moment the price stops clearing your margin, all of it instant, on one click or automatically as you enter a settlement
 - ✅ Buys only what it can resell at a profit somewhere within reach
-- ✅ How much of a price elsewhere it counts on is learned: with Learn the resale safety factor on, it starts at Resale safety factor and only ever lowers it, toward how close the price you found came to the promised Sell price when you walked in
-- ✅ Learn the resale safety factor counts a price above that promised Sell price as much of a miss as one below it
+- ✅ How much of a price elsewhere it counts on is learned: with Learn the resale safety factor on, it starts at Resale safety factor and only ever lowers it, toward how much of the promised Sell price really held when you walked in
 - ✅ What this means says what share of a price elsewhere it counts on once your walk-ins have lowered it
 - ✅ When your cargo room or your gold runs short, it buys first the good that makes the most for each unit of room or each denar it uses
 - ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it. On out of the box

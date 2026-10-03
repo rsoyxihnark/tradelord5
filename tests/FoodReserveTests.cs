@@ -36,6 +36,72 @@ namespace TradeLord.Tests
                                                     float perDay = 1f) =>
             TradeRules.FoodKeep(carried, perDay, s);
 
+        private static TradeRules.Ration Traded(TradeRules.Ration held, int traded)
+        {
+            held.Traded = traded;
+            return held;
+        }
+
+        [Fact]
+        public void Food_bought_to_trade_is_counted_last_toward_the_days_of_food_kept()
+        {
+            var s = new Options { KeepFoodDays = 3, KeepEveryFoodKind = false };
+            var carried = new List<TradeRules.Ration>
+            {
+                Traded(Food("cheese", 2, 40), 2),
+                Food("grain", 3, 10)
+            };
+            Dictionary<string, int> keep = Keep(carried, s);
+            Assert.Equal(3, keep["grain"]);
+            Assert.False(keep.ContainsKey("cheese"));
+        }
+
+        [Fact]
+        public void Food_bought_to_trade_still_fills_the_days_your_own_food_cannot()
+        {
+            var s = new Options { KeepFoodDays = 3, KeepEveryFoodKind = false };
+            var carried = new List<TradeRules.Ration>
+            {
+                Traded(Food("cheese", 5, 40), 5),
+                Food("grain", 1, 10)
+            };
+            Dictionary<string, int> keep = Keep(carried, s);
+            Assert.Equal(1, keep["grain"]);
+            Assert.Equal(2, keep["cheese"]);
+            Assert.Equal(3, Keep(new List<TradeRules.Ration> { Traded(Food("olives", 5, 20), 5) }, s)["olives"]);
+        }
+
+        [Fact]
+        public void Your_own_units_of_a_good_are_kept_before_its_units_bought_to_trade()
+        {
+            var s = new Options { KeepFoodDays = 3, KeepEveryFoodKind = false };
+            var carried = new List<TradeRules.Ration>
+            {
+                Traded(Food("cheese", 4, 40), 3),
+                Traded(Food("cheese", 2, 40), 1),
+                Food("grain", 1, 10)
+            };
+            Dictionary<string, int> keep = Keep(carried, s);
+            Assert.Equal(1, keep["grain"]);
+            Assert.Equal(2, keep["cheese"]);
+            var mixed = new List<TradeRules.Ration> { Traded(Food("fish", 6, 30), 4) };
+            Assert.Equal(2, Keep(mixed, new Options { KeepFoodDays = 2, KeepEveryFoodKind = false })["fish"]);
+        }
+
+        [Fact]
+        public void A_share_of_every_kind_of_food_is_kept_only_from_food_not_bought_to_trade()
+        {
+            var s = new Options { KeepFoodDays = 1, KeepEveryFoodKind = true, KeepPerFoodKind = 2 };
+            var carried = new List<TradeRules.Ration>
+            {
+                Traded(Food("cheese", 3, 40), 3),
+                Food("grain", 4, 10)
+            };
+            Dictionary<string, int> keep = Keep(carried, s);
+            Assert.Equal(2, keep["grain"]);
+            Assert.False(keep.ContainsKey("cheese"));
+        }
+
         [Fact]
         public void What_a_good_feeds_is_one_for_food_and_nothing_at_all_for_an_animal()
         {

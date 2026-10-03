@@ -53,6 +53,32 @@ namespace TradeLord.Tests
             Assert.Equal(300, back[1].TotalPaid);
         }
 
+        [Fact]
+        public void A_unit_bought_to_trade_is_written_down_as_such_and_read_back()
+        {
+            var rec = new PurchaseRecord { ItemId = "cheese", TotalPaid = 108, Count = 2, LastUnitPaid = 40 };
+            rec.Batches.Add(new Batch { Unit = 40, Count = 1, First = 1L, Day = 9f, Traded = false });
+            rec.Batches.Add(new Batch { Unit = 68, Count = 1, First = 2L, Day = 9f, Traded = true });
+            string written = LedgerCodec.WritePurchases(new List<PurchaseRecord> { rec });
+            Assert.EndsWith(":0:1", written);
+            var back = LedgerCodec.ReadPurchases(written);
+            Assert.Single(back);
+            Assert.Equal(new[] { false, true }, back[0].Batches.ConvertAll(one => one.Traded).ToArray());
+        }
+
+        [Fact]
+        public void A_unit_written_before_units_were_marked_as_bought_to_trade_reads_as_your_own()
+        {
+            var six = LedgerCodec.ReadBatches("40:2:0:1:9:0", 2);
+            Assert.Single(six);
+            Assert.False(six[0].Traded);
+            var odd = LedgerCodec.ReadBatches("40:2:0:1:9:0:x", 2);
+            Assert.Single(odd);
+            Assert.False(odd[0].Traded);
+            var newer = LedgerCodec.ReadBatches("40:2:0:1:9:0:1:else", 2);
+            Assert.True(newer[0].Traded);
+        }
+
         private static List<PurchaseRecord> SamplePurchases() =>
             new List<PurchaseRecord>
             {

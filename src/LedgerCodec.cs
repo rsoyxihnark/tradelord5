@@ -27,6 +27,7 @@ namespace TradeLord
         public long First;
         public float Day;
         public int From;
+        public bool Traded;
     }
 
     public class PurchaseRecord
@@ -66,6 +67,10 @@ namespace TradeLord
         public const int FieldsABatchIsDatedIn = 5;
 
         public const int FieldsABatchIsSourcedIn = 6;
+
+        public const int FieldsABatchIsTradedIn = 7;
+
+        public const string BoughtToTrade = "1";
 
         public const int FieldsAPromiseNeeds = 3;
 
@@ -200,6 +205,7 @@ namespace TradeLord
                       .Append(Number(rec.Batches[b].First)).Append(BatchFieldMark)
                       .Append(Number(rec.Batches[b].Day)).Append(BatchFieldMark)
                       .Append(Number(rec.Batches[b].From));
+                    if (rec.Batches[b].Traded) sb.Append(BatchFieldMark).Append(BoughtToTrade);
                 }
             }
             return sb.ToString();
@@ -231,7 +237,8 @@ namespace TradeLord
                 if (parts.Length >= FieldsABatchIsSourcedIn && Whole(parts[5], out int source) &&
                     TradeMath.IsASource(source))
                     from = source;
-                kept.Add(new Batch { Unit = unit, Count = many, First = first, Day = day, From = from });
+                bool traded = parts.Length >= FieldsABatchIsTradedIn && parts[6] == BoughtToTrade;
+                kept.Add(new Batch { Unit = unit, Count = many, First = first, Day = day, From = from, Traded = traded });
             }
             if (units != count) return new List<Batch>();
             kept.Sort(TradeMath.CheapestFirstOldestLast);
@@ -251,12 +258,12 @@ namespace TradeLord
                 sb.Append(rec.TownId).Append(FieldMark)
                   .Append(Number(rec.Scored)).Append(FieldMark)
                   .Append(Number(rec.Held)).Append(FieldMark)
-                  .Append(KeptOnTheCurve);
+                  .Append(KeptUpToThePromise);
             }
             return sb.ToString();
         }
 
-        public const string KeptOnTheCurve = "2";
+        public const string KeptUpToThePromise = "3";
 
         public static List<PromiseRecord> ReadPromises(string text) => ReadPromises(text, out _);
 
@@ -273,7 +280,7 @@ namespace TradeLord
                 if (!Whole(parts[1], out int scored) || scored <= 0) continue;
                 if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture,
                                     out float held) || !Storable(held) || held < 0f) continue;
-                if (parts.Length <= FieldsAPromiseNeeds || parts[FieldsAPromiseNeeds] != KeptOnTheCurve || held > scored)
+                if (parts.Length <= FieldsAPromiseNeeds || parts[FieldsAPromiseNeeds] != KeptUpToThePromise || held > scored)
                 {
                     setAside++;
                     continue;

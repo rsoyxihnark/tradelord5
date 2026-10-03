@@ -435,7 +435,7 @@ namespace TradeLord.Mcm
         public bool MarketForecast { get => _o.MarketForecast; set { _o.MarketForecast = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL443}Trust a market by what it has paid", Order = 11, RequireRestart = false,
-            HintText = "{=TL444}A market paying under or over what the TradeLord ledger promised scores lower, its routes falling in the list after you have walked into it five times, by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default.")]
+            HintText = "{=TL444}A market paying under what the TradeLord ledger promised scores lower, its routes falling in the list after you have walked into it five times, by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool TrustWhatAMarketPaid { get => _o.TrustWhatAMarketPaid; set { _o.TrustWhatAMarketPaid = value; Options.Bump(); } }
 
@@ -606,7 +606,7 @@ namespace TradeLord.Mcm
         public bool CoinSound { get => _o.CoinSound; set { _o.CoinSound = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL248}Detailed trade summary", Order = 17, RequireRestart = false,
-            HintText = "{=TL348}Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log.")]
+            HintText = "{=TL348}Name the goods in the one-line trade summary, e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 denars profit', instead of a bare item count. The full list is always written to TradeLord.log.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool DetailedTradeSummary { get => _o.DetailedTradeSummary; set { _o.DetailedTradeSummary = value; Options.Bump(); } }
 
@@ -631,7 +631,7 @@ namespace TradeLord.Mcm
         public bool EarnWorkshopsWithTrade { get => _o.EarnWorkshopsWithTrade; set { _o.EarnWorkshopsWithTrade = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL221}Restock and keep food (days of supply)", 0, 30, Order = 0, RequireRestart = false,
-            HintText = "{=TL321}Days of food kept from selling and topped up cheapest first at the cheapest price it knows, or up to twice it for a day's food when you run short. Never-buy holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3.")]
+            HintText = "{=TL321}Days of food kept from selling, trade food last, topped up cheapest first at up to 1.5x the cheapest price it knows, 2x if short of a day's food. Never-buy holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public int KeepFoodDays { get => _o.KeepFoodDays; set { _o.KeepFoodDays = value; Options.Bump(); } }
 
@@ -725,7 +725,7 @@ namespace TradeLord.Mcm
         public float ResaleSafetyFactor { get => _o.ResaleSafetyFactor; set { _o.ResaleSafetyFactor = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL483}Learn the resale safety factor", Order = 8, RequireRestart = false,
-            HintText = "{=TL484}Lowers Resale safety factor toward how close a market paid to the Sell price the TradeLord ledger promised as you walked in, under or over, counting that record more as it grows, never above what you set. OFF uses it as set. ON by default.")]
+            HintText = "{=TL484}Lowers Resale safety factor toward how much of the Sell price the TradeLord ledger promised has been there when you walked in, counting that record more as it grows, and never raises it above what you set. OFF uses it as set. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool LearnResaleSafety { get => _o.LearnResaleSafety; set { _o.LearnResaleSafety = value; Config.ScreenSaidWhetherToLearn = true; Options.Bump(); } }
 

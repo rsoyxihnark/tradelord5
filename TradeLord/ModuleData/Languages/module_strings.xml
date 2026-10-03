@@ -181,7 +181,7 @@
 		<string id="TL317" text="Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu."/>
 		<string id="TL318" text="Buys the moment you walk into a market, after any selling. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
 		<string id="TL320" text="The margin every trade must clear, both ways. Sell only if the price beats your cost basis by this much. Buy or list a route only if the far market beats the local price by this much after the resale safety factor. Raising it trades less."/>
-		<string id="TL321" text="Days of food kept from selling and topped up cheapest first at the cheapest price it knows, or up to twice it for a day's food when you run short. Never-buy holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
+		<string id="TL321" text="Days of food kept from selling, trade food last, topped up cheapest first at up to 1.5x the cheapest price it knows, 2x if short of a day's food. Never-buy holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
 		<string id="TL322" text="What automated trading may do with food. The days-of-supply food reserve is separate and still applies."/>
 		<string id="TL323" text="What automated trading may do with charcoal, hardwood, iron ore and ingots. Pick Leave alone to keep smithing stock out of automated trading entirely."/>
 		<string id="TL324" text="What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Haul animals and riding mounts have their own settings."/>
@@ -205,7 +205,7 @@
 		<string id="TL344" text="Scales the Trade XP awarded for automated profit. 0 disables XP."/>
 		<string id="TL345" text="Marks the market paying most for the cargo it would really sell there, within the travel ceilings; a village only while Trade with villages is on. It skips the market TradeLord last traded at until you return. ON by default."/>
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
-		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'TradeLord sold 8 Olives, 3 Wine for 240 denars', instead of a bare item count. The full list is always written to TradeLord.log."/>
+		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 denars profit', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Auto trading, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports only to TradeLord.log. Warnings still show on screen: cargo full, purse below Gold reserve, a list entry that matches no good."/>
 		<string id="TL100" text="Language"/>
 		<string id="TL101" text="Knowledge"/>
@@ -275,7 +275,7 @@
 		<string id="TL441" text=" This takes you below the {HELD} denars TradeLord holds back as your gold reserve and wage cover, which it will not spend on goods."/>
 		<string id="TL442" text="Today"/>
 		<string id="TL443" text="Trust a market by what it has paid"/>
-		<string id="TL444" text="A market paying under or over what the TradeLord ledger promised scores lower, its routes falling in the list after you have walked into it five times, by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default."/>
+		<string id="TL444" text="A market paying under what the TradeLord ledger promised scores lower, its routes falling in the list after you have walked into it five times, by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default."/>
 		<string id="TL445" text=" | Score is lowered for a market that has paid less or more than this panel promised"/>
 		<string id="TL446" text="?"/>
 		<string id="TL447" text=" | stock counts what caravans, workshops and the town add and take before you arrive | prices need Bulk price simulation to count it"/>
@@ -313,7 +313,7 @@
 		<string id="TL481" text=" It pays its owner {GOLD} denars a day now and less in its first days with you, so it would pay for itself in about {DAYS} days."/>
 		<string id="TL482" text=" It pays its owner nothing a day now, so there is no telling when it would pay for itself."/>
 		<string id="TL483" text="Learn the resale safety factor"/>
-		<string id="TL484" text="Lowers Resale safety factor toward how close a market paid to the Sell price the TradeLord ledger promised as you walked in, under or over, counting that record more as it grows, never above what you set. OFF uses it as set. ON by default."/>
+		<string id="TL484" text="Lowers Resale safety factor toward how much of the Sell price the TradeLord ledger promised has been there when you walked in, counting that record more as it grows, and never raises it above what you set. OFF uses it as set. ON by default."/>
 		<string id="TL485" text=" | a price elsewhere counts at {USED}: Resale safety factor set it at {SET} and {COUNT} walk-in(s) moved it"/>
 		<string id="TL489" text="Trade ({SKILL}) is close to its learning limit ({LIMIT}): past it, Trade XP comes slower and then stops.{REMEDY}"/>
 		<string id="TL490" text="Trade ({SKILL}) is past its learning limit ({LIMIT}), so Trade XP comes slower and then stops.{REMEDY}"/>
