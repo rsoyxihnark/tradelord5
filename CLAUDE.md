@@ -152,6 +152,7 @@ The release workflow publishes the commit body as the release notes, so a commit
 - Run the checks a session opens with quietly: the fetch, `HEAD` against `origin/main`, the signature, the hijack check. Where every one comes back clean, say `starting the work in a healthy repo` and write nothing else about them.
 - What a check actually finds is the exception worth writing out: a checkout behind `origin/main`, uncommitted work, a branch that is not `main`, a signature that is wrong. Say what it is and what it means for the work.
 - Never narrate a plan before carrying it out, and never list what you are about to read. Do it, then say what came of it.
+- The owner is the developer and, for now, the only user of what he tests. Before every update he deletes the mod with its settings and installs the new version fresh, so every test runs on what the program ships with. Never ask him to change a setting of his own, never ask him to check that settings survive a restart, an update or MCM, and never list either as an open item.
 
 ## Intentional, never reported
 
@@ -160,6 +161,8 @@ These are the owner's choices. A session leaves them as they are and never lists
 - Whether the one time settings reset is armed or disarmed.
 - That the owner's account preferences differ from this file. This file is the one a session follows.
 - That a debug or diagnostic log switch ships on out of the box.
+- That TradeLord puts 1000 denars, once a campaign, into every village purse the game has left empty. It mends a fault in the game itself.
+- That TradeLord's Trade XP multiplier reaches 300%, and that Share of the profit your companions learn from gives companions Trade XP. Both ship matching the game, and going past the game is the player's choice.
 
 ## Never
 
