@@ -1079,6 +1079,8 @@ namespace TradeLord
         public List<(Settlement town, int price)> EverySell(ItemObject item) =>
             TakeN(TopMarkets(item, true), int.MaxValue);
         public List<(Settlement town, int price)> TopBuy(ItemObject item, int n) => TakeN(TopMarkets(item, false), n);
+        public List<(Settlement town, int price)> EveryBuy(ItemObject item) =>
+            TakeN(TopMarkets(item, false), int.MaxValue);
 
         internal bool AnyMarketFor(ItemObject item)
         {
@@ -1273,7 +1275,7 @@ namespace TradeLord
                 {
                     Where = all[i].s, Price = all[i].price, Straight = all[i].days, Days = days
                 };
-                if (selling) kept.Add(one); else MarketRank.Keep(kept, one, false);
+                kept.Add(one);
             }
             return Settled(kept, selling);
         }
@@ -1327,8 +1329,8 @@ namespace TradeLord
                          TradeMath.EnoughOnTheShelf(stocked, item.Value, minStock, minWorth)))
                     {
                         int price = Priced.At(market, item, me, false);
-                        if (price > 0) MarketRank.Keep(buys[i], new Reach<Settlement>
-                        { Where = town, Price = price, Straight = straight, Days = days }, false);
+                        if (price > 0) buys[i].Add(new Reach<Settlement>
+                        { Where = town, Price = price, Straight = straight, Days = days });
                     }
                 }
             }
@@ -1496,7 +1498,7 @@ namespace TradeLord
             {
                 ItemObject item = wanted[at];
 
-                var buys = TopBuy(item, MarketRank.TopCacheSize);
+                var buys = EveryBuy(item);
                 var sells = EverySell(item);
                 if (buys.Count == 0 || sells.Count == 0) continue;
 

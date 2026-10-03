@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.102.0
+
+- The TradeLord ledger now weighs every market a good could be bought at, so a nearby market charging a little more can win a place
+
 ## 1.101.3
 
 - Fixed Sell animals that slow you down selling back animals you had just bought by hand in the same visit
