@@ -6090,7 +6090,7 @@ def every_market_pass_is_opened_and_carried_by_one_object():
             and "_pass.Price(Shelf[at].EquipmentElement, selling: false)" in t
             and "TradeActionBehavior.Tally(Detail, item, count, gold)" in
                 between(t, "internal void Tally(ItemObject item", ";")
-            and t.count("pass.Tally(item, 1, ") == 6
+            and t.count("pass.Tally(item, 1, ") == 7
             and t.count("_pass.Tally(Item(at), 1, price);") == 2
             and "CheapestFirst(\n            Pass pass, Func<ItemObject, bool> wanted, float tolerance = 1f)" in t)
 
@@ -17817,6 +17817,23 @@ def each_promise_names_the_five_parts_of_its_conf():
 
 chk("1.103.0", "each promise TradeLord.log checks names the five parts of its Conf, kept with the promise in memory, so the part that misleads can be found",
     each_promise_names_the_five_parts_of_its_conf())
+
+def gear_from_a_villagers_offer_tradelord_takes_goes_out_as_loot():
+    buy = method_body(S['Trading.cs'], "private sealed class BuyingAt")
+    take = method_body(S['Trading.cs'], "public bool Take(int at, int price, out int cost)")
+    lot = method_body(S['Trading.cs'], "private static void LotPass")
+    return (buy and take and lot
+            and ordered(take, "if (!_pass.BuyOne(Shelf[at], price, _what, _named, out cost)) return false;",
+                        "if (cost != 0 && _theirOffer && TradeRules.TakenAsLoot(GoodAt(at), Options.Current))",
+                        "WriteDownTheirGear(at);", "return true;", "if (cost == 0) return true;",
+                        "LedgerBehavior.Instance?.RecordPurchase(")
+            and "LedgerBehavior.Instance?.WriteDownTheirGear(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement)," in buy
+            and ordered(lot, "theirOffer: true);", "InAPass(() => moved = TradePass.TakeTheLot(market, pass.Books, pass.Sim));",
+                        "pass.Logged(selling: false, why);", "market.SayTheGearWrittenDownAsLoot();")
+            and "Gear in an offer TradeLord takes, within Sell loot up to tier, is written down at no cost and sold like loot" in README)
+
+chk("1.103.1", "gear in a villagers' offer TradeLord takes, within Sell loot up to tier, is written down at no cost and sold as loot, as when you take the offer yourself",
+    gear_from_a_villagers_offer_tradelord_takes_goes_out_as_loot())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

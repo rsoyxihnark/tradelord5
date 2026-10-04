@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.103.1
+
+- Fixed clothes from a villagers' offer TradeLord took, such as a Commoner Tunic, being kept until a market paid more than the villagers asked
+
 ## 1.103.0
 
 - The profit in the Sold line is now in orange, so you can find it at a glance
