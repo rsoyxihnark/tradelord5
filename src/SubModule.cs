@@ -38,6 +38,8 @@ namespace TradeLord
             Patcher.TryPatch(harmony, typeof(Patch_ClanTierWorkshopBonus));
             Patcher.TryPatch(harmony, typeof(Patch_VillagerOfferShown));
             Patcher.TryPatch(harmony, typeof(Patch_VillagerOfferTaken));
+            Patcher.TryPatch(harmony, typeof(Patch_ChatLineShowsTheProfit));
+            Patcher.TryPatch(harmony, typeof(Patch_YourOwnFoodIsEatenFirst));
 
             Guard.Run("McmLoader", McmLoader.TryLoad);
             Config.Follow();

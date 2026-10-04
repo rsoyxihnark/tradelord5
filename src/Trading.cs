@@ -1485,8 +1485,6 @@ namespace TradeLord
                 attribute == _raised || _had.HasProperty(attribute);
         }
 
-        private const int NamedItemCap = 6;
-
         private static string MeantFor(bool selling, Dictionary<ItemObject, (string where, int price)> aimed,
                                        ItemObject item)
         {
@@ -1545,16 +1543,9 @@ namespace TradeLord
             int named = 0;
             foreach (var kv in byValue)
             {
-                if (named == NamedItemCap) break;
                 if (named > 0) sb.Append(", ");
                 sb.Append(kv.Value.count).Append(" ").Append(kv.Key.Name);
                 named++;
-            }
-            if (detail.Count > named)
-            {
-                TextObject more = Tongue.Text("{=TL29}and {COUNT} more");
-                more.SetTextVariable("COUNT", detail.Count - named);
-                sb.Append(" ").Append(more.ToString());
             }
             return sb.ToString();
         }
@@ -1621,7 +1612,7 @@ namespace TradeLord
                         "{=TL13}[Simulated, best case] Would sell {ITEMS} for {GOLD} denars, {PROFIT} denars profit.",
                         "{=TL02}Sold {ITEMS} for {GOLD} denars, {PROFIT} denars profit{XP}.",
                         line.Detail, line.Units, line.Gold);
-                    sold.SetTextVariable("PROFIT", line.Profit);
+                    sold.SetTextVariable("PROFIT", Notices.Profit(line.Profit));
                     sold.SetTextVariable("XP", line.Sim || told ? "" : XpSaid(gained));
                     if (!line.Sim) told = true;
                     Notices.Say(sold, line.Profit > 0 ? Notices.Gain : Notices.Flat);
@@ -1947,6 +1938,8 @@ namespace TradeLord
         private static bool NoRoomForOneMore(in Good good, float roomLeft) =>
             TradeRules.NoRoomForOneMore(good, roomLeft);
 
+        private static string _foodMissed;
+
         private static List<(ItemRosterElement el, Good good, int price, int ceiling)> CheapestFirst(
             Pass pass, Func<ItemObject, bool> wanted, float tolerance = 1f)
         {
@@ -1968,12 +1961,25 @@ namespace TradeLord
             LedgerBehavior.Instance?.PrimeMarketsFor(goods);
 
             var found = new List<(ItemRosterElement el, Good good, int price, int ceiling)>();
+            _foodMissed = null;
+            int missedAt = int.MaxValue;
             foreach (var (el, price) in shelf)
             {
                 ItemObject it = el.EquipmentElement.Item;
                 int worth = TradePolicy.UnpaidWorth(it);
                 int ceiling = TradeMath.MostToPayOverTheCheapest(worth, tolerance);
-                if (price > ceiling) continue;
+                bool food = TradePolicy.IsStorableFood(it);
+                if (food) ceiling = TradeMath.AtLeastTwiceItsValue(ceiling, it.Value);
+                if (price > ceiling)
+                {
+                    if (food && price < missedAt)
+                    {
+                        missedAt = price;
+                        _foodMissed = it.Name + " at " + price + " against a bar of " + ceiling + " (" + worth +
+                                      " the cheapest price it knows, " + it.Value + " its value)";
+                    }
+                    continue;
+                }
                 found.Add((el, TradePolicy.Describe(it), price, ceiling));
             }
             found.Sort((x, y) => x.price.CompareTo(y.price));
@@ -1987,7 +1993,7 @@ namespace TradeLord
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
 
-            int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster);
+            int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);
             int shortfall = TradePolicy.FoodWanted() -
                             TradePolicy.FoodHeld(pass.Party.ItemRoster) - pass.Books.FoodHeld(pass.Sim) + traded;
             if (shortfall <= 0) return;
@@ -2005,10 +2011,12 @@ namespace TradeLord
                                                     TradePolicy.FoodForADay()) > 0;
             if (larder.Count == 0 && !hungry)
             {
+                string missed = _foodMissed;
                 Log.Repeatable("resupply none on sale", settlement.StringId,
                                "resupply: your party is short " + shortfall + " unit(s) of food, and no food TradeLord " +
                                "may buy is on sale at " + settlement.Name + " at up to 1.5 times the cheapest price it " +
-                               "knows for it");
+                               "knows for it or twice its value" +
+                               (missed == null ? ", nor any it may buy at all" : ": the cheapest on sale is " + missed));
                 return;
             }
             string stopped = null;
@@ -2033,7 +2041,7 @@ namespace TradeLord
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (price <= 0 || price > ceiling)
                         {
-                            stopped = "its price is above 1.5 times the cheapest TradeLord knows";
+                            stopped = "its price is above both 1.5 times the cheapest TradeLord knows and twice its value";
                             break;
                         }
                         if (pass.WouldReachYourReserve(price)) { stopped = "buying it would reach your gold reserve or spending cap"; break; }
@@ -2132,12 +2140,13 @@ namespace TradeLord
                 if (hungryUnits > 0)
                     Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") +
                               "your party had less than a day of food, so " + hungryUnits + " item(s) were bought for " +
-                              hungryGold + " gold at up to twice the cheapest price TradeLord knows at " + settlement.Name);
+                              hungryGold + " gold at up to twice the cheapest price TradeLord knows or twice their value at " +
+                              settlement.Name);
                 else
                     Log.Repeatable("resupply hungry", settlement.StringId,
                                    "resupply: your party has less than a day of food, and none is on sale at " +
-                                   settlement.Name + " at up to twice the cheapest price TradeLord knows, " +
-                                   "within your gold reserve, your buying caps and your cargo room");
+                                   settlement.Name + " at up to twice the cheapest price TradeLord knows or twice its " +
+                                   "value, within your gold reserve, your buying caps and your cargo room");
             });
 
             if (shortfall > 0 && firstLeft.HasValue && !pass.DirectionError)
@@ -2930,6 +2939,8 @@ namespace TradeLord
             public void Staged(int at, int price)
             {
                 Counter.Stage(Shelf[at], selling: false, price);
+                _pass.Books.NoteBoughtToTrade(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement),
+                                              TradePolicy.FoodValue(Item(at)));
                 _pass.Tally(Item(at), 1, price);
             }
 

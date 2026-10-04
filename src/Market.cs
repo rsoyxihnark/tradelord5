@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Reflection;
 using HarmonyLib;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.GameComponents;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -327,6 +328,22 @@ namespace TradeLord
             object model = Campaign.Current == null || Campaign.Current.Models == null
                 ? null : Campaign.Current.Models.TradeItemPriceFactorModel;
             return model == null ? "price model not read" : "prices from " + model.GetType().Name;
+        }
+
+        internal static bool PricedAsTheGameItself()
+        {
+            object model = Campaign.Current == null || Campaign.Current.Models == null
+                ? null : Campaign.Current.Models.TradeItemPriceFactorModel;
+            if (model == null || model.GetType() != typeof(DefaultTradeItemPriceFactorModel)) return false;
+            return Untouched(AccessTools.Method(model.GetType(), "GetPrice")) &&
+                   Untouched(AccessTools.Method(model.GetType(), "GetBasePriceFactor"));
+        }
+
+        private static bool Untouched(MethodBase method)
+        {
+            if (method == null) return false;
+            Patches found = Harmony.GetPatchInfo(method);
+            return found == null || found.Owners == null || found.Owners.Count == 0;
         }
 
         internal static PartyBase Merchant(Settlement site) => site?.Party;

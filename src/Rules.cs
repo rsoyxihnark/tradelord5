@@ -123,6 +123,9 @@ namespace TradeLord
                                                  int hourNow) =>
             holderPriced && !afresh && cargoSame && (lostAt < 0 || lostAt >= hourNow);
 
+        internal static bool WaitsPastTheCeiling(float cap, float straight, float ride, bool roadFound) =>
+            cap > 0f && roadFound && (straight > cap || ride > cap);
+
         internal static void OweAFairLook(ISet<string> owed, IList<string> compared, string here, string leftOutNow,
                                           bool markMoved)
         {
@@ -371,6 +374,48 @@ namespace TradeLord
             }
             return other;
         }
+    }
+
+    internal static class Eating
+    {
+        internal static List<(int back, int take)> YourOwnFirst(IList<(int before, int after, int traded)> lines)
+        {
+            var swaps = new List<(int back, int take)>();
+            if (lines == null) return swaps;
+            int n = lines.Count;
+            var own = new int[n];
+            var tradeEaten = new int[n];
+            for (int i = 0; i < n; i++)
+            {
+                int before = Math.Max(0, lines[i].before);
+                int traded = Math.Min(Math.Max(0, lines[i].traded), before);
+                int ownBefore = before - traded;
+                int eaten = Math.Max(0, before - Math.Max(0, lines[i].after));
+                int ownEaten = Math.Min(eaten, ownBefore);
+                tradeEaten[i] = eaten - ownEaten;
+                own[i] = ownBefore - ownEaten;
+            }
+            for (int i = 0; i < n; i++)
+                while (tradeEaten[i] > 0)
+                {
+                    int take = -1;
+                    for (int j = 0; j < n; j++)
+                        if (j != i && own[j] > 0 && (take < 0 || own[j] > own[take])) take = j;
+                    if (take < 0) return swaps;
+                    swaps.Add((i, take));
+                    own[take]--;
+                    tradeEaten[i]--;
+                }
+            return swaps;
+        }
+    }
+
+    internal static class ProfitMark
+    {
+        internal const string Style = "TradeLord.Profit";
+
+        internal static string Shown(int profit, bool styled) =>
+            styled ? "<span style=\"" + Style + "\">" + profit + "</span>" : profit.ToString();
     }
 
     internal static class Tallies
@@ -785,6 +830,11 @@ namespace TradeLord
 
         internal static int WorthToBeat(in Good good, int paid, int unpaidWorth) =>
             WorthIsWhatYouPaid(good, paid) ? paid : unpaidWorth;
+
+        internal static bool TakenAsLoot(in Good good, Options s) =>
+            good.Id != null && !good.IsTradeGood && !good.HasHorse &&
+            s.MaxLootTier > 0 && !good.IsFood && !good.IsAnimal && !good.IsMountable &&
+            good.Tier + 1 <= s.MaxLootTier;
 
         internal static SellVerdict MaySell<TGame>(in Good good, int amount, in SellFacts facts,
                                                    Options s, TGame game)

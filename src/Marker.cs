@@ -242,6 +242,9 @@ namespace TradeLord
             internal int HolderPurse;
             internal bool HolderPurseCapped;
             internal List<Share> HolderBill;
+            internal bool HolderPastAllowance;
+            internal bool PastAllowance;
+            internal string HolderLost;
         }
 
         internal static void Update()
@@ -257,6 +260,9 @@ namespace TradeLord
                        System.Diagnostics.Stopwatch.Frequency;
 
             int hour = (int)CampaignTime.Now.ToHours;
+            Settlement was = _picked;
+            int lostBefore = _lostAt;
+            bool cargoSame = Marks.OnlyEatenFrom(_heldCargo, _cargoHeld);
             if (target != null && _picked != null && target != _picked &&
                 Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null,
                                           Marks.OnlyEatenFrom(_heldCargo, _cargoHeld), _lostAt, hour))
@@ -295,9 +301,13 @@ namespace TradeLord
                 _tracked = target;
             }
             string why = on ? Why(how) : "the map marker is switched off";
+            string left = on ? LeftBecause(was, target, how, lostBefore, hour, cargoSame) : null;
             Log.Write(target != null
-                ? "map marker moved to " + target.Name + ": " + why
-                : "map marker taken off the map: " + why);
+                ? "map marker moved to " + target.Name + (left == null ? "" : " from " + was.Name + " because " + left) +
+                  ": " + why
+                : left == null
+                    ? "map marker taken off the map: " + why
+                    : "map marker taken off " + was.Name + " because " + left + ": " + why);
             Ultra(how, board: true);
             Told(how);
             Remember(target, how);
@@ -319,8 +329,26 @@ namespace TradeLord
             how.Purse = how.HolderPurse;
             how.PurseCapped = how.HolderPurseCapped;
             how.Bill = how.HolderBill;
+            how.PastAllowance = how.HolderPastAllowance;
             how.Held = false;
             how.HeldForASecondLook = true;
+        }
+
+        private static string LeftBecause(Settlement was, Settlement target, in Reckoning how, int lostBefore,
+                                             int hour, bool cargoSame)
+        {
+            if (was == null || was == target) return null;
+            if (how.Afresh != null && how.Unheld != null)
+                return "a market left out while it was marked was weighed again and earns more a day";
+            string hadItsHour = lostBefore >= 0 && lostBefore < hour ? ", and it already had its hour to hold the mark" : "";
+            if (how.HolderLost != null) return how.HolderLost + (how.HolderPastAllowance ? hadItsHour : "");
+            if (!how.HolderPriced) return was.Name + " was not priced";
+            if (target == null)
+                return was.Name + " would earn " + how.HolderRate.ToString("0") + " gold a day on what you carry";
+            string against = target.Name + " earns " + how.Rate.ToString("0") + " gold a day against " + was.Name + "'s " +
+                             how.HolderRate.ToString("0");
+            if (!cargoSame) return "your cargo changed and " + against;
+            return lostBefore >= 0 ? against + " for a second hour in a row" : against;
         }
 
         private static List<(string where, int units, long value)> OnTheBoard(in Reckoning how)
@@ -483,9 +511,13 @@ namespace TradeLord
                    (how.CeilingPassed > 0f
                        ? ", past your travel ceiling of " +
                          how.CeilingPassed.ToString("0.#", CultureInfo.InvariantCulture) +
-                         " day(s) (the market already marked may pass it by " +
-                         ((TradeMath.TheMarkedTownHoldsBy - 1f) * 100f).ToString("0", CultureInfo.InvariantCulture) +
-                         "%)"
+                         (!how.PastAllowance
+                             ? " day(s) (the market already marked may pass it by " +
+                               ((TradeMath.TheMarkedTownHoldsBy - 1f) * 100f).ToString("0", CultureInfo.InvariantCulture) +
+                               "%)"
+                             : " day(s) and past the " +
+                               ((TradeMath.TheMarkedTownHoldsBy - 1f) * 100f).ToString("0", CultureInfo.InvariantCulture) +
+                               "% more the market already marked may go, so it keeps the mark for one hour only")
                        : "") +
                    ", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how) +
                    (how.Afresh != null && how.Unheld != null
@@ -852,6 +884,8 @@ namespace TradeLord
                 else if (rate > how.RunnerUpRate)
                 { how.RunnerUpRate = rate; how.RunnerUpValue = total; how.RunnerUp = s; }
             }
+            if (holder != null && !how.HolderPriced)
+                how.HolderLost = TheMarkLeftOut(holder, party, cargo, reachable, ref how);
             how.Held = how.Best != null && how.Best == holder && how.RunnerUpRate > how.Rate;
             how.Left = reachable.Count - how.Told;
             if (ultra && how.Best != null)
@@ -866,6 +900,62 @@ namespace TradeLord
                                  how.HolderBill);
             }
             return how.Best;
+        }
+
+        private static string TheMarkLeftOut(
+            Settlement holder, MobileParty party,
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
+            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, ref Reckoning how)
+        {
+            for (int at = 0; at < reachable.Count; at++)
+                if (reachable[at].s == holder)
+                    return holder.Name + " would pay too little for anything you carry to clear Minimum profit margin";
+            SettlementComponent market = holder.SettlementComponent;
+            if (market == null) return holder.Name + " has no market";
+            if (holder == party.CurrentSettlement || TradeActionBehavior.StillTheSameArrival(holder))
+                return "you walked into " + holder.Name;
+            if (!TradeActionBehavior.IsMarket(holder)) return holder.Name + " is a market TradeLord is set not to trade with";
+            if (TradeActionBehavior.MarkerLeavesItOut(holder))
+                return "TradeLord traded at " + holder.Name + " and leaves it out until you come back to it";
+            if (holder.IsUnderSiege)
+            {
+                MobileParty besieger = holder.SiegeEvent?.BesiegerCamp?.LeaderParty;
+                return holder.Name + " is under siege" + (besieger == null ? "" : " by " + besieger.Name);
+            }
+            if (holder.IsUnderRaid) return holder.Name + " is being raided";
+            if (LedgerBehavior.VillageShut(holder))
+                return holder.Name + " is shut, its village " +
+                       (holder.Village.VillageState == Village.VillageStates.Looted ? "looted" : holder.Village.VillageState.ToString());
+            if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(holder))
+                return holder.Name + " is at war with you";
+            int purse = TradeRules.WhatTheTillCanPay(market.Gold, holder.IsVillage);
+            if (purse <= 0) return holder.Name + "'s purse is empty, " + market.Gold + " gold";
+            float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(holder), true);
+            float straight = Travel.StraightDaysFromParty(holder);
+            float ride = Travel.EstimateDaysFromParty(holder);
+            bool road = !TradeMath.OutOfReach(ride);
+            if (!road) return "no road to " + holder.Name + " could be found";
+            if (!Marks.WaitsPastTheCeiling(cap, straight, ride, road)) return null;
+            Takings took = WhatItWouldFetch(holder, market, party, ride, cargo, purse, null);
+            if (took.Value > 0L)
+            {
+                long total = took.Value > purse ? purse : took.Value;
+                how.HolderPriced = true;
+                how.HolderPastAllowance = true;
+                how.HolderValue = total;
+                how.HolderCost = took.Cost;
+                how.HolderRate = TradeMath.PerDay(total - took.Cost, ride);
+                how.HolderDays = ride;
+                float flat = LedgerBehavior.TravelCeiling(holder);
+                how.HolderCeilingPassed = flat > 0f && ride > flat ? flat : 0f;
+                how.HolderUnits = took.Units;
+                how.HolderKinds = took.Kinds;
+                how.HolderPurse = purse;
+                how.HolderPurseCapped = took.PurseCapped;
+            }
+            float away = ride > cap ? ride : straight;
+            return holder.Name + " is " + away.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away, past the " +
+                   cap.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) the marked market may go";
         }
 
         internal static void NoteTheWalkIn(Settlement at)

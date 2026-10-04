@@ -31,6 +31,7 @@ namespace TradeLord
             internal int SellPrice;
             internal int Units;
             internal float Confidence;
+            internal TradeLord.Confidence.Parts Parts;
             internal bool YourTradeMovedIt;
         }
 
@@ -163,7 +164,8 @@ namespace TradeLord
                 WithinDays = route.TravelDays,
                 SellPrice = route.SellPrice,
                 Units = route.Quantity,
-                Confidence = route.Confidence
+                Confidence = route.Confidence,
+                Parts = route.Parts
             });
         }
 
@@ -227,7 +229,9 @@ namespace TradeLord
                 LedgerBehavior.Instance?.KeepPromiseScore(held);
                 lines.Add("  " + Named(said.Item) + ": the panel promised " + said.SellPrice +
                           " a unit for " + said.Units + " unit(s) within " + Figure(said.WithinDays) +
-                          " day(s) at Conf " + Share(said.Confidence) + "; you walked in " + Figure(since) +
+                          " day(s) at Conf " + Share(said.Confidence) +
+                          (said.Parts.Haste > 0f ? " (" + Confidence.Spelled(said.Parts) + ")" : "") +
+                          "; you walked in " + Figure(since) +
                           " day(s) later and it pays " + found + ", " + Share(held) + " of what it promised");
             }
             foreach (KeyValuePair<string, Promised> one in stillToCome) _promised.Put(site.StringId, one.Key, one.Value);

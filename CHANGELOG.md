@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.103.0
+
+- The profit in the Sold line is now in orange, so you can find it at a glance
+- The Sold and Bought lines now name every good traded, largest first, instead of the first six and a count of the rest
+- The hint for Detailed trade summary now says the goods are named largest first
+- Fixed clothes from a villagers' offer you took, such as a Commoner Tunic, being kept until a market paid more than the villagers asked
+- TradeLord.log now says why the map marker moved, such as the marked market coming under siege
+- Fixed Restock and keep food (days of supply) buying no food when every food cost more than 1.5 times the cheapest price TradeLord knew
+- The hint for Restock and keep food (days of supply) now says it pays up to twice a food's value
+- Your party now eats its own food before food bought to trade
+- Fixed food laid out on the trade screen by Staged Trading being counted as your party's food
+- Food from a villagers' offer you take now counts as food bought to trade
+- Fixed the map marker leaving a market for an hour when its travel time briefly crossed your travel ceiling
+- TradeLord works out the best routes faster, most of all with the travel ceilings off
+- TradeLord.log now names the five parts of Conf for each price it checks
+
 ## 1.102.2
 
 - Fixed the map marker jumping back and forth between two markets as you travel

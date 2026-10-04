@@ -74,6 +74,36 @@ namespace TradeLord
             return c < 0.01f ? 0.01f : (c > 1f ? 1f : c);
         }
 
+        public struct Parts
+        {
+            public float Resilience;
+            public float Depth;
+            public float Haste;
+            public float Quiet;
+            public float Fresh;
+        }
+
+        public static Parts PartsOf(bool simulated, int flatProfit, int simulatedProfit,
+                                    int stock, int units, float travelDays,
+                                    int caravans, float dataAgeDays,
+                                    float runsOutInDays = NotKnown, float daysToTheBuyTown = 0f)
+        {
+            Parts p;
+            p.Resilience = simulated && flatProfit > 0 ? Clamp((float)simulatedProfit / flatProfit) : Unsimulated;
+            p.Depth = stock > 0 && units > 0 ? Clamp(stock / (units * 1.5f)) : 1f;
+            p.Haste = 1f / (1f + Math.Max(travelDays, 0f) / 3f);
+            p.Quiet = runsOutInDays >= 0f
+                ? Holds(runsOutInDays, daysToTheBuyTown)
+                : 1f / (1f + Math.Max(caravans, 0) * 0.15f);
+            p.Fresh = dataAgeDays < 0f ? 1f : 1f / (1f + dataAgeDays / 5f);
+            return p;
+        }
+
+        public static string Spelled(Parts p) =>
+            "resilience " + Scoring.Share(p.Resilience) + " x depth " + Scoring.Share(p.Depth) +
+            " x haste " + Scoring.Share(p.Haste) + " x quiet " + Scoring.Share(p.Quiet) +
+            " x fresh " + Scoring.Share(p.Fresh);
+
         private static float Clamp(float v) => v < 0f ? 0f : (v > 1f ? 1f : v);
     }
 }

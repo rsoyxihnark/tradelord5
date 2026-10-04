@@ -737,6 +737,28 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_marked_market_past_its_ceiling_with_a_road_is_priced_so_it_may_wait_one_hour()
+        {
+            Assert.True(Marks.WaitsPastTheCeiling(2.4f, 1.9f, 2.5f, true));
+            Assert.True(Marks.WaitsPastTheCeiling(2.4f, 2.6f, 2.5f, true));
+            Assert.False(Marks.WaitsPastTheCeiling(2.4f, 1.9f, 2.3f, true));
+            Assert.False(Marks.WaitsPastTheCeiling(2.4f, 1.9f, 2.5f, false));
+            Assert.False(Marks.WaitsPastTheCeiling(0f, 1.9f, 9f, true));
+        }
+
+        [Fact]
+        public void A_marked_market_past_its_ceiling_keeps_the_mark_for_one_hour_and_no_more()
+        {
+            bool priced = Marks.WaitsPastTheCeiling(2.4f, 2.0f, 2.5f, true);
+            Assert.True(Marks.HoldsForASecondLook(priced, false, true, -1, 100));
+            Assert.True(Marks.HoldsForASecondLook(priced, false, true, 100, 100));
+            Assert.False(Marks.HoldsForASecondLook(priced, false, true, 100, 101));
+            Assert.False(Marks.HoldsForASecondLook(priced, false, false, -1, 100));
+            bool noRoad = Marks.WaitsPastTheCeiling(2.4f, 2.0f, 2.5f, false);
+            Assert.False(Marks.HoldsForASecondLook(noRoad, false, true, -1, 100));
+        }
+
+        [Fact]
         public void A_market_left_out_while_the_mark_stands_is_owed_a_fair_look_until_it_gets_one()
         {
             var owed = new HashSet<string>();

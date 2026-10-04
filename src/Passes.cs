@@ -212,6 +212,9 @@ namespace TradeLord
         internal int UnpaidWorth;
         internal TradeMath.DearFirst Walk;
         internal int SoldAt;
+        internal bool OwnCost;
+        internal int TradedLeft;
+        internal bool SoldTraded;
 
         internal static Basis For(int costBasis, int purchased, string id, Books books, bool sim,
                                   Options s, Batch[] costs = null, float today = 0f)
@@ -229,6 +232,9 @@ namespace TradeLord
             int covers = s.CostBasisMode == 0 ? TradeMath.WhatTheAverageCovers(costBasis, s.MinProfitMargin) : int.MaxValue;
             int known = TradeMath.UnitsIn(costs);
             if (listed && basis.PaidLeft > known) basis.PaidLeft = known;
+            basis.OwnCost = s.CostBasisMode == Options.CostOfEachUnit;
+            basis.TradedLeft = TradeMath.TradedUnitsIn(costs);
+            basis.SoldTraded = false;
             basis.Walk = s.CostBasisMode == Options.CostOfEachUnit
                 ? TradeMath.DearFirst.EachAtItsOwnCost(costs, costBasis, basis.PaidLeft - known, s.MinProfitMargin,
                                                        today, s.SellAtCostAfterDays)
@@ -257,9 +263,12 @@ namespace TradeLord
         internal bool SoldOne()
         {
             SoldAt = 0;
+            SoldTraded = false;
             if (PaidLeft <= 0) return false;
             PaidLeft--;
             SoldAt = Walk.Took();
+            SoldTraded = OwnCost ? Walk.TookTraded : TradedLeft > 0;
+            if (SoldTraded && TradedLeft > 0) TradedLeft--;
             return true;
         }
 
@@ -706,6 +715,8 @@ namespace TradeLord
                         int herdRank = TradeRules.HerdShedRank(good);
                         books.NoteSale(good.Id, price, good.Weight, TradeRules.FoodValue(good));
                         books.NoteSoldFrom(market.PaidKeyAt(at));
+                        if (bought && basis.SoldTraded && TradeRules.FoodValue(good) > 0)
+                            books.NoteTradeSold(market.PaidKeyAt(at));
                         if (herdRank >= 0 &&
                             Herding.TheGameCountsItAtOnce(herdRank == TradeRules.RankLivestock, market.OfAQuality(at)))
                             books.NoteShed(herdRank == TradeRules.RankHaulAnimal,

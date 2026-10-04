@@ -15,6 +15,9 @@ namespace TradeLord
             new Dictionary<string, (int, int)>();
         private readonly HashSet<string> _sold = new HashSet<string>();
         private readonly Dictionary<string, int> _byHand = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> _stagedToTrade = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> _tradeSold = new Dictionary<string, int>();
+        private int _tradeFood;
 
         private int _paid;
         private int _spent;
@@ -52,6 +55,9 @@ namespace TradeLord
             _dryDrawn.Clear();
             _dryDrawnDear.Clear();
             _drySoldFrom.Clear();
+            _stagedToTrade.Clear();
+            _tradeSold.Clear();
+            _tradeFood = 0;
             _spent = 0;
             _gained = 0;
             _drawn = 0;
@@ -198,6 +204,29 @@ namespace TradeLord
             _dryBought.TryGetValue(id, out var prior);
             _dryBought[id] = (prior.count + 1, prior.spent + price);
         }
+
+        internal void NoteBoughtToTrade(string key, int foodValue)
+        {
+            if (key == null) return;
+            _stagedToTrade.TryGetValue(key, out int units);
+            _stagedToTrade[key] = units + 1;
+            if (foodValue > 0) _tradeFood += foodValue;
+        }
+
+        internal int BoughtToTrade(bool sim, string key) =>
+            sim && key != null && _stagedToTrade.TryGetValue(key, out int units) ? units : 0;
+
+        internal int TradeFoodBought(bool sim) => sim ? _tradeFood : 0;
+
+        internal void NoteTradeSold(string key)
+        {
+            if (key == null) return;
+            _tradeSold.TryGetValue(key, out int units);
+            _tradeSold[key] = units + 1;
+        }
+
+        internal int TradeSold(bool sim, string key) =>
+            sim && key != null && _tradeSold.TryGetValue(key, out int units) ? units : 0;
 
         internal void NoteShed(bool haulAnimal, bool spareMount)
         {

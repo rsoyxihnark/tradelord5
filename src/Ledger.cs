@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using HarmonyLib;
 using Helpers;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.CampaignBehaviors;
 using TaleWorlds.CampaignSystem.Encounters;
 using TaleWorlds.CampaignSystem.Extensions;
 using TaleWorlds.CampaignSystem.GameState;
@@ -36,6 +38,8 @@ namespace TradeLord
         public float DataAgeDays = -1f;
 
         public float RunsOutInDays = Projection.NeverRunsOut;
+
+        public TradeLord.Confidence.Parts Parts;
     }
 
     public class LedgerBehavior : CampaignBehaviorBase
@@ -476,7 +480,10 @@ namespace TradeLord
                 goods++;
                 units += gone;
                 dropped.Add(gone + " " + key);
-                TradeMath.DrainTheOldestOf(rec, free, gone);
+                if (have.units > 0 && TradePolicy.FoodValue(have.el.Item) > 0)
+                    TradeMath.DrainYourOwnFoodFirst(rec, free, gone);
+                else
+                    TradeMath.DrainTheOldestOf(rec, free, gone);
                 if (free != null && free.Count <= 0)
                 {
                     _free.Remove(free);
@@ -485,7 +492,7 @@ namespace TradeLord
             }
             if (goods > 0)
                 Log.Write("purchase record: " + units + " unit(s) of " + goods + " good(s) left the party " +
-                          "without being sold, so the oldest units came off and what was paid for them is no " +
+                          "without being sold, so the oldest units came off, food bought to trade last, and what was paid for them is no " +
                           "longer held against a resale: " +
                           string.Join(", ", dropped.ToArray()));
         }
@@ -572,6 +579,9 @@ namespace TradeLord
                           "counts no profit and no Trade XP");
         }
 
+        internal string WriteDownTheirGear(string key, EquipmentElement el, int units) =>
+            key == null ? null : WriteDownFree(key, el, units, TradeMath.FromVillagers, (float)CampaignTime.Now.ToDays);
+
         private string WriteDownFree(string key, EquipmentElement el, int units, int from, float today)
         {
             Free.TryGetValue(key, out PurchaseRecord free);
@@ -618,7 +628,7 @@ namespace TradeLord
             }
             int waited = day > 0f ? (int)Math.Floor((float)CampaignTime.Now.ToDays - day) : -1;
             Log.Write("unit " + (number > 0L ? "#" + number + " " : "") + "of " +
-                      Tongue.Named(el.Item.Name, el.Item.StringId) + ", " + TradeMath.WhereFrom(from) +
+                      Tongue.Named(el.Item.Name, el.Item.StringId) + ", " + TradeMath.WhereFreeFrom(from) +
                       (waited >= 0 ? " " + waited + " day(s) ago" : "") + ", sold for " + price + how +
                       ", counting no profit and no Trade XP");
         }
@@ -769,7 +779,11 @@ namespace TradeLord
                     if (took <= 0) continue;
                     if (el.Item.HasHorseComponent)
                         TradeActionBehavior.TheVisit.NoteHandBought(el.Item.StringId, took);
+                    long first = _nextUnitNumber;
                     RecordPurchase(PaidKey(el), paid.GetRange(0, took), BoughtFrom(here));
+                    int laidOutToTrade = laidOut ? Math.Min(took, TradeActionBehavior.TheVisit.BoughtToTrade(true, PaidKey(el))) : 0;
+                    if (laidOutToTrade > 0 && Paid.TryGetValue(PaidKey(el), out PurchaseRecord rec))
+                        TradeMath.MarkBoughtToTrade(rec, first, laidOutToTrade);
                 }
                 for (int i = 0; i < sold.Count; i++)
                 {
@@ -1005,7 +1019,47 @@ namespace TradeLord
         }
 
         public Batch[] UnitCosts(EquipmentElement el, int held) =>
-            el.Item != null && Paid.TryGetValue(PaidKey(el), out var rec) ? TradeMath.UnitCosts(rec, held) : null;
+            el.Item != null && Paid.TryGetValue(PaidKey(el), out var rec)
+                ? TradePolicy.FoodValue(el.Item) > 0 ? TradeMath.UnitCostsOfFood(rec, held) : TradeMath.UnitCosts(rec, held)
+                : null;
+
+        internal static List<(EquipmentElement el, int amount, int traded)> FoodLines(MobileParty party)
+        {
+            ItemRoster roster = party?.ItemRoster;
+            LedgerBehavior kept = Instance;
+            if (roster == null || kept == null) return null;
+            var lines = new List<(EquipmentElement el, int amount, int traded)>();
+            for (int i = 0; i < roster.Count; i++)
+            {
+                ItemRosterElement el = roster.GetElementCopyAtIndex(i);
+                if (el.Amount <= 0 || el.EquipmentElement.Item == null || !el.EquipmentElement.Item.IsFood) continue;
+                lines.Add((el.EquipmentElement, el.Amount, kept.UnitsBoughtToTrade(el.EquipmentElement)));
+            }
+            return lines;
+        }
+
+        internal static void YourOwnFoodIsEatenFirst(MobileParty party,
+                                                     List<(EquipmentElement el, int amount, int traded)> before)
+        {
+            ItemRoster roster = party?.ItemRoster;
+            if (roster == null || before == null || before.Count == 0) return;
+            var lines = new List<(int before, int after, int traded)>(before.Count);
+            foreach (var one in before)
+            {
+                int at = roster.FindIndexOfElement(one.el);
+                lines.Add((one.amount, at < 0 ? 0 : roster.GetElementNumber(at), one.traded));
+            }
+            List<(int back, int take)> swaps = Eating.YourOwnFirst(lines);
+            if (swaps.Count == 0) return;
+            var said = new List<string>();
+            foreach (var (back, take) in swaps)
+            {
+                roster.AddToCounts(before[back].el, 1);
+                roster.AddToCounts(before[take].el, -1);
+                said.Add(before[take].el.Item.StringId + " in place of " + before[back].el.Item.StringId);
+            }
+            Log.Write("your party ate its own food before food bought to trade: " + string.Join(", ", said.ToArray()));
+        }
 
         public int PaidPerUnit(EquipmentElement el)
         {
@@ -1494,6 +1548,9 @@ namespace TradeLord
             Bulk.Forget();
             long started = System.Diagnostics.Stopwatch.GetTimestamp();
             int opened = 0, thrownAway = 0;
+            int passedOver = 0;
+            bool passOver = Guard.Read("Scan.PricedAsTheGame", 0, none => Priced.PricedAsTheGameItself(), false);
+            float safety = TradePolicy.ResaleSafety();
             var routes = new List<TradeRoute>();
             ISet<string> locked = TradePolicy.LockedKeys();
             float cap = Options.Current.MaxTravelDaysTown;
@@ -1558,6 +1615,13 @@ namespace TradeLord
                         if (cap > 0f && days > cap) continue;
 
                         int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);
+                        if (passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,
+                                                                              stocked, days, best != null, bestKey,
+                                                                              safety))
+                        {
+                            passedOver++;
+                            continue;
+                        }
                         int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);
                         opened++;
                         float realizable = TradePolicy.Realizable(openingSell);
@@ -1609,6 +1673,8 @@ namespace TradeLord
                             TravelDays = days, TotalProfit = profit, ProfitPerDay = perDay,
                             Confidence = confidence, Score = score,
                             Simulated = q.Simulated, Caravans = caravans, DataAgeDays = age,
+                            Parts = Confidence.PartsOf(q.Simulated, flat, profit, shelf, q.Units, days, caravans, age,
+                                                       runsOut, toBuy),
                             StillComing = TradeMath.StillComing(q.Units, onTheShelfNow),
                             RunsOutInDays = runsOut
                         };
@@ -1621,22 +1687,42 @@ namespace TradeLord
             routes.Sort((x, y) => rankByScore
                 ? y.Score.CompareTo(x.Score)
                 : y.ProfitPerDay.CompareTo(x.ProfitPerDay));
-            SayWhatTheScanCost(routes.Count, opened, thrownAway,
+            SayWhatTheScanCost(routes.Count, opened, thrownAway, passedOver,
                                System.Diagnostics.Stopwatch.GetTimestamp() - started);
             Bulk.Forget();
             return routes;
         }
 
-        private static void SayWhatTheScanCost(int found, int opened, int thrownAway, long ticks)
+        private static void SayWhatTheScanCost(int found, int opened, int thrownAway, int passedOver, long ticks)
         {
             if (!Options.Current.ExtendedDebugLogging) return;
             Log.Write("route scan: " + found + " route(s) off " + opened +
                       " opening price(s), " + thrownAway + " of them thrown away by a later test, in " +
                       (ticks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString("0.0",
-                          System.Globalization.CultureInfo.InvariantCulture) + " ms");
+                          System.Globalization.CultureInfo.InvariantCulture) + " ms" +
+                      (passedOver > 0
+                          ? ", and " + passedOver + " pair(s) passed over unpriced, as no opening price could make them a route"
+                          : ""));
         }
 
         private static int Pressure(Dictionary<Settlement, int> map, Settlement s) =>
             s != null && map.TryGetValue(s, out int n) ? n : 0;
+    }
+
+    [HarmonyPatch(typeof(FoodConsumptionBehavior), "MakeFoodConsumption")]
+    internal static class Patch_YourOwnFoodIsEatenFirst
+    {
+        private static void Prefix(MobileParty __0, out List<(EquipmentElement el, int amount, int traded)> __state)
+        {
+            __state = null;
+            if (__0 == null || __0 != MobileParty.MainParty) return;
+            __state = Guard.Read("Food.BeforeEating", __0, LedgerBehavior.FoodLines, null);
+        }
+
+        private static void Postfix(MobileParty __0, List<(EquipmentElement el, int amount, int traded)> __state)
+        {
+            if (__state == null) return;
+            Guard.Run("Food.YourOwnFirst", () => LedgerBehavior.YourOwnFoodIsEatenFirst(__0, __state));
+        }
     }
 }

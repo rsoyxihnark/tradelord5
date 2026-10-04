@@ -2694,5 +2694,215 @@ namespace TradeLord.Tests
             Assert.Empty(TradeMath.WhatTheMarkTakes(null, 3, 100, 0.15f, -1));
             Assert.Empty(TradeMath.WhatTheMarkTakes(u => 500, 3, 100, 0.15f, 0));
         }
-    }
+    
+        [Fact]
+        public void A_unit_from_a_villagers_offer_written_down_at_no_cost_says_so_when_it_sells()
+        {
+            Assert.Equal("source 3 (villager party), came with a villagers' offer at no cost",
+                         TradeMath.WhereFreeFrom(TradeMath.FromVillagers));
+            Assert.Equal(TradeMath.WhereFrom(TradeMath.FromLoot), TradeMath.WhereFreeFrom(TradeMath.FromLoot));
+            Assert.Equal(TradeMath.WhereFrom(TradeMath.FromElsewhere), TradeMath.WhereFreeFrom(TradeMath.FromElsewhere));
+            Assert.Equal("source 3 (villager party), bought", TradeMath.WhereFrom(TradeMath.FromVillagers));
+        }
+
+        [Fact]
+        public void A_food_is_never_refused_for_price_at_up_to_twice_its_value()
+        {
+            Assert.Equal(2f, TradeMath.FoodValueTolerance);
+            int known = TradeMath.MostToPayOverTheCheapest(10, TradeMath.ShortFoodTolerance);
+            Assert.Equal(40, TradeMath.AtLeastTwiceItsValue(known, 20));
+            Assert.Equal(15, TradeMath.AtLeastTwiceItsValue(known, 5));
+            Assert.Equal(16, TradeMath.AtLeastTwiceItsValue(TradeMath.MostToPayOverTheCheapest(0, TradeMath.ShortFoodTolerance), 8));
+            Assert.Equal(20, TradeMath.AtLeastTwiceItsValue(TradeMath.MostToPayOverTheCheapest(10, TradeMath.HungryFoodTolerance), 8));
+            Assert.Equal(0, TradeMath.AtLeastTwiceItsValue(0, 0));
+        }
+
+        [Fact]
+        public void The_units_bought_to_trade_among_what_a_good_cost_are_counted()
+        {
+            var costs = new[]
+            {
+                new Batch { Unit = 9, Count = 1, Traded = true },
+                new Batch { Unit = 10, Count = 2, Traded = true },
+                new Batch { Unit = 12, Count = 3 }
+            };
+            Assert.Equal(3, TradeMath.TradedUnitsIn(costs));
+            Assert.Equal(0, TradeMath.TradedUnitsIn(null));
+        }
+
+        [Fact]
+        public void The_dear_first_walk_says_whether_the_unit_it_took_was_bought_to_trade()
+        {
+            var costs = new[] { new Batch { Unit = 10, Count = 1, Traded = true }, new Batch { Unit = 20, Count = 1 } };
+            var walk = TradeMath.DearFirst.EachAtItsOwnCost(costs, 0, 0, 0f);
+            walk.Floor(100);
+            Assert.Equal(20, walk.Took());
+            Assert.False(walk.TookTraded);
+            walk.Floor(100);
+            Assert.Equal(10, walk.Took());
+            Assert.True(walk.TookTraded);
+
+            var average = new TradeMath.DearFirst(new[] { new Batch { Unit = 10, Count = 1, Traded = true } }, 15, 10);
+            Assert.Equal(10, average.Took());
+            Assert.True(average.TookTraded);
+        }
+
+        [Fact]
+        public void Units_TradeLord_laid_out_to_trade_are_marked_so_and_units_added_by_hand_are_not()
+        {
+            var rec = new PurchaseRecord { ItemId = "fish" };
+            TradeMath.AddPurchase(rec, new[] { 30, 30 }, 10L, 100f);
+            TradeMath.AddPurchase(rec, new[] { 32, 32, 33 }, 12L, 101f);
+            Assert.Equal(2, TradeMath.MarkBoughtToTrade(rec, 12L, 2));
+            Assert.Equal(2, TradeMath.UnitsBoughtToTrade(rec));
+            Assert.Equal(0, TradeMath.MarkBoughtToTrade(rec, 12L, 2));
+            Assert.Equal(0, TradeMath.MarkBoughtToTrade(rec, 0L, 2));
+            Assert.Equal(5, rec.Count);
+        }
+
+        [Fact]
+        public void Food_that_left_unsold_comes_off_your_own_units_first_and_food_bought_to_trade_last()
+        {
+            var bought = new PurchaseRecord { ItemId = "fish" };
+            TradeMath.AddPurchase(bought, new[] { 30, 30 }, 10L, 100f, TradeMath.FromAMarket, traded: true);
+            TradeMath.AddPurchase(bought, new[] { 20, 20 }, 12L, 101f);
+            var free = new PurchaseRecord { ItemId = "fish" };
+            TradeMath.AddPurchase(free, new[] { 0 }, 14L, 102f, TradeMath.FromLoot);
+
+            Assert.Equal(2, TradeMath.DrainYourOwnFoodFirst(bought, free, 3));
+            Assert.Equal(0, free.Count);
+            Assert.Equal(2, bought.Count);
+            Assert.Equal(2, TradeMath.UnitsBoughtToTrade(bought));
+
+            Assert.Equal(1, TradeMath.DrainYourOwnFoodFirst(bought, null, 1));
+            Assert.Equal(1, TradeMath.UnitsBoughtToTrade(bought));
+            Assert.Equal(1, bought.Count);
+        }
+
+        [Fact]
+        public void A_food_record_claiming_more_than_is_held_drops_your_own_units_first()
+        {
+            var rec = new PurchaseRecord { ItemId = "fish" };
+            TradeMath.AddPurchase(rec, new[] { 30 }, 10L, 100f, TradeMath.FromAMarket, traded: true);
+            TradeMath.AddPurchase(rec, new[] { 20 }, 11L, 101f);
+
+            Batch[] food = TradeMath.UnitCostsOfFood(rec, 1);
+            Assert.Single(food);
+            Assert.True(food[0].Traded);
+            Assert.Equal(30, food[0].Unit);
+
+            Batch[] other = TradeMath.UnitCosts(rec, 1);
+            Assert.Single(other);
+            Assert.Equal(20, other[0].Unit);
+        }
+
+        private static bool TodayThrowsAway(int openingBuy, int openingSell, int stocked, int till, float days,
+                                            bool beaten, float bestKey, float safety, float margin)
+        {
+            float realizable = TradeMath.Realizable(openingSell, safety);
+            if (!TradeMath.BuyAcceptable(openingBuy, realizable, margin)) return true;
+            int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;
+            if (qtyCap <= 0) return true;
+            float ceiling = (float)(openingSell - openingBuy) * qtyCap;
+            return beaten && TradeMath.PerDay(ceiling, days) <= bestKey;
+        }
+
+        [Fact]
+        public void A_forecast_never_lifts_a_price_past_the_most_the_route_scan_counts_on()
+        {
+            foreach (int live in new[] { 1, 2, 3, 7, 10, 33, 99, 100, 101, 250, 999, 1000, 4097, 65535 })
+            {
+                int most = TradeMath.MostAForecastCanReach(live);
+                Assert.Equal(most, TradeMath.ForecastWithin(live, int.MaxValue));
+                foreach (int forecast in new[] { -5, 0, 1, live / 2, live, most - 1, most, most + 1, live * 3 })
+                    Assert.True(TradeMath.ForecastWithin(live, forecast) <= most);
+            }
+        }
+
+        [Fact]
+        public void A_pair_the_route_scan_passes_over_is_one_it_would_throw_away_at_any_opening_price()
+        {
+            int passed = 0;
+            foreach (float safety in new[] { 0.6f, 0.85f, 1f })
+                foreach (float margin in new[] { 0f, 0.15f, 0.4f })
+                    foreach (int buy in new[] { 0, 1, 40, 99, 250 })
+                        foreach (int quoted in new[] { 1, 30, 70, 100, 180, 400 })
+                            foreach (int stocked in new[] { 1, 6, 30 })
+                                foreach (float days in new[] { 0.2f, 2f, 9f })
+                                    foreach (float bestKey in new[] { 0f, 5f, 80f, 900f })
+                                        foreach (bool beaten in new[] { false, true })
+                                        {
+                                            if (!TradeMath.NoOpeningPriceCouldMakeIt(buy, quoted, 3, stocked, days,
+                                                                                    beaten, bestKey, safety, margin))
+                                                continue;
+                                            passed++;
+                                            int most = TradeMath.MostAForecastCanReach(quoted);
+                                            foreach (int walked in new[] { -3, 0, 1, quoted / 2, quoted, most, most * 2 })
+                                                foreach (int till in new[] { 0, 50, 5000 })
+                                                    Assert.True(TodayThrowsAway(buy, TradeMath.ForecastWithin(quoted, walked),
+                                                                                stocked, till, days, beaten, bestKey,
+                                                                                safety, margin));
+                                        }
+            Assert.True(passed > 0);
+            Assert.False(TradeMath.NoOpeningPriceCouldMakeIt(10, 100, 0, 5, 2f, true, 99999f, 0.85f, 0.15f));
+            Assert.False(TradeMath.NoOpeningPriceCouldMakeIt(10, 0, 3, 5, 2f, true, 99999f, 0.85f, 0.15f));
+            Assert.False(TradeMath.NoOpeningPriceCouldMakeIt(10, 100, 3, 5, 2f, true, 99999f, float.NaN, 0.15f));
+        }
+
+        [Fact]
+        public void The_route_scan_picks_the_same_routes_with_and_without_passing_over_pairs()
+        {
+            var rng = new Random(1031);
+            int skipped = 0;
+            for (int item = 0; item < 400; item++)
+            {
+                float safety = new[] { 0.6f, 0.85f, 1f }[rng.Next(3)];
+                float margin = new[] { 0f, 0.15f, 0.3f }[rng.Next(3)];
+                var pairs = new List<(int buy, int quoted, int landed, int walked, int stocked, int till, float days)>();
+                int many = rng.Next(1, 60);
+                for (int i = 0; i < many; i++)
+                    pairs.Add((rng.Next(1, 400), rng.Next(1, 600), rng.Next(3) == 0 ? 0 : rng.Next(-40, 41),
+                               rng.Next(-10, 1200), rng.Next(1, 60), rng.Next(3) == 0 ? 0 : rng.Next(0, 20000),
+                               0.1f + (float)rng.NextDouble() * 15f));
+                var plain = Scan(pairs, false, safety, margin, out int plainWalks, out _);
+                var quick = Scan(pairs, true, safety, margin, out int quickWalks, out int passed);
+                skipped += passed;
+                Assert.Equal(plain, quick);
+                Assert.Equal(plainWalks, quickWalks);
+            }
+            Assert.True(skipped > 0);
+        }
+
+        private static (int at, float key) Scan(
+            List<(int buy, int quoted, int landed, int walked, int stocked, int till, float days)> pairs,
+            bool passOver, float safety, float margin, out int walks, out int passed)
+        {
+            int bestAt = -1;
+            float bestKey = 0f;
+            walks = 0;
+            passed = 0;
+            for (int i = 0; i < pairs.Count; i++)
+            {
+                var p = pairs[i];
+                if (passOver && TradeMath.NoOpeningPriceCouldMakeIt(p.buy, p.quoted, p.landed, p.stocked, p.days,
+                                                                    bestAt >= 0, bestKey, safety, margin))
+                {
+                    passed++;
+                    continue;
+                }
+                int openingSell = p.landed == 0 ? p.walked : TradeMath.ForecastWithin(p.quoted, p.walked);
+                if (TodayThrowsAway(p.buy, openingSell, p.stocked, p.till, p.days, bestAt >= 0, bestKey, safety, margin))
+                    continue;
+                walks++;
+                int units = p.till > 0 ? Math.Min(p.stocked, p.till / openingSell) : p.stocked;
+                int profit = units * (openingSell - p.buy) - units * (units - 1) / 2;
+                if (profit <= 0) continue;
+                float key = TradeMath.PerDay(profit, p.days);
+                if (bestAt >= 0 && key <= bestKey) continue;
+                bestAt = i;
+                bestKey = key;
+            }
+            return (bestAt, bestKey);
+        }
+}
 }

@@ -582,5 +582,32 @@ namespace TradeLord.Tests
             books.Forget();
             Assert.Equal(0, books.HandBought("sheep"));
         }
-    }
+    
+        [Fact]
+        public void Goods_laid_out_to_trade_and_trade_food_sold_on_a_dry_run_are_kept_apart_and_emptied_with_it()
+        {
+            Books books = Fresh();
+            books.NoteBoughtToTrade("fish", 1);
+            books.NoteBoughtToTrade("fish", 1);
+            books.NoteBoughtToTrade("tools", 0);
+            books.NoteTradeSold("cheese");
+
+            Assert.Equal(2, books.BoughtToTrade(true, "fish"));
+            Assert.Equal(1, books.BoughtToTrade(true, "tools"));
+            Assert.Equal(2, books.TradeFoodBought(true));
+            Assert.Equal(1, books.TradeSold(true, "cheese"));
+            Assert.Equal(0, books.BoughtToTrade(false, "fish"));
+            Assert.Equal(0, books.TradeFoodBought(false));
+            Assert.Equal(0, books.TradeSold(false, "cheese"));
+
+            books.LaidOut = true;
+            Assert.Equal(2, books.TradeFoodBought(true));
+            Assert.Equal(2, books.BoughtToTrade(true, "fish"));
+
+            books.ForgetTheDryRun();
+            Assert.Equal(0, books.BoughtToTrade(true, "fish"));
+            Assert.Equal(0, books.TradeFoodBought(true));
+            Assert.Equal(0, books.TradeSold(true, "cheese"));
+        }
+}
 }

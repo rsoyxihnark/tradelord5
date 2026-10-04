@@ -1413,5 +1413,51 @@ namespace TradeLord.Tests
             Assert.Empty(screen.Closed(out bool muted));
             Assert.True(muted);
         }
-    }
+    
+        [Fact]
+        public void A_dry_run_sale_of_food_bought_to_trade_is_counted_by_the_unit_the_walk_took()
+        {
+            var market = new FakeMarket();
+            market.Rules = new Options { CostBasisMode = Options.CostOfEachUnit, MinProfitMargin = 0f };
+            Load fish = market.Add(Ration("fish"), amount: 3, price: 200);
+            fish.Basis = 20;
+            fish.Purchased = 3;
+            fish.Rows = new[]
+            {
+                new Batch { Unit = 10, Count = 2, Traded = true },
+                new Batch { Unit = 30, Count = 1 }
+            };
+
+            Run run = Sell(market, sim: true);
+
+            Assert.Equal(3, run.Units);
+            Assert.Equal(2, run.Books.TradeSold(true, LedgerCodec.PaidKey("fish", null)));
+        }
+
+        [Fact]
+        public void A_dry_run_sale_of_food_counts_units_bought_to_trade_first_when_units_share_one_cost()
+        {
+            var market = new FakeMarket();
+            market.Rules = new Options { CostBasisMode = AveragePaid, MinProfitMargin = 0f };
+            Load fish = market.Add(Ration("fish"), amount: 5, price: 200);
+            fish.Basis = 20;
+            fish.Purchased = 5;
+            fish.Rows = new[]
+            {
+                new Batch { Unit = 20, Count = 2, Traded = true },
+                new Batch { Unit = 20, Count = 3 }
+            };
+            Run sold = OnePass(market, loot: false, sim: true);
+            Assert.Equal(2, sold.Books.TradeSold(true, LedgerCodec.PaidKey("fish", null)));
+
+            var real = new FakeMarket();
+            real.Rules = new Options { CostBasisMode = AveragePaid, MinProfitMargin = 0f };
+            Load more = real.Add(Ration("fish"), amount: 2, price: 200);
+            more.Basis = 20;
+            more.Purchased = 2;
+            more.Rows = new[] { new Batch { Unit = 20, Count = 2, Traded = true } };
+            Run live = OnePass(real, loot: false, sim: false);
+            Assert.Equal(0, live.Books.TradeSold(true, LedgerCodec.PaidKey("fish", null)));
+        }
+}
 }
