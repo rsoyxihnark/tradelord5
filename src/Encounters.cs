@@ -383,7 +383,7 @@ namespace TradeLord
                             string.Join(", ", atTheirPrice.ToArray())
                           : "") +
                       (asLoot.Count > 0
-                          ? ", and gear within Sell loot up to tier written down at no cost, so the loot sale sells it: " +
+                          ? ", and gear within Sell loot up to tier written down at no cost, like loot: " +
                             string.Join(", ", asLoot.ToArray())
                           : ""));
         }

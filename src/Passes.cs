@@ -212,8 +212,6 @@ namespace TradeLord
         internal int UnpaidWorth;
         internal TradeMath.DearFirst Walk;
         internal int SoldAt;
-        internal bool OwnCost;
-        internal int TradedLeft;
         internal bool SoldTraded;
 
         internal static Basis For(int costBasis, int purchased, string id, Books books, bool sim,
@@ -232,8 +230,6 @@ namespace TradeLord
             int covers = s.CostBasisMode == 0 ? TradeMath.WhatTheAverageCovers(costBasis, s.MinProfitMargin) : int.MaxValue;
             int known = TradeMath.UnitsIn(costs);
             if (listed && basis.PaidLeft > known) basis.PaidLeft = known;
-            basis.OwnCost = s.CostBasisMode == Options.CostOfEachUnit;
-            basis.TradedLeft = TradeMath.TradedUnitsIn(costs);
             basis.SoldTraded = false;
             basis.Walk = s.CostBasisMode == Options.CostOfEachUnit
                 ? TradeMath.DearFirst.EachAtItsOwnCost(costs, costBasis, basis.PaidLeft - known, s.MinProfitMargin,
@@ -267,8 +263,7 @@ namespace TradeLord
             if (PaidLeft <= 0) return false;
             PaidLeft--;
             SoldAt = Walk.Took();
-            SoldTraded = OwnCost ? Walk.TookTraded : TradedLeft > 0;
-            if (SoldTraded && TradedLeft > 0) TradedLeft--;
+            SoldTraded = Walk.TookTraded;
             return true;
         }
 

@@ -17467,7 +17467,7 @@ def the_mark_moves_only_after_its_market_loses_two_weighings_in_different_hours(
     return (update and stays and nextbest and marker and rule
             and ordered(update, "int hour = (int)CampaignTime.Now.ToHours;",
                         "bool cargoSame = Marks.OnlyEatenFrom(_heldCargo, _cargoHeld);",
-                        "if (target != null && _picked != null && target != _picked &&",
+                        "if (_picked != null && target != _picked && (target != null || how.HolderPastAllowance) &&",
                         "Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null, cargoSame, _lostAt, hour))",
                         "if (_lostAt < 0) _lostAt = hour;", "TheHolderStays(ref how);", "target = _picked;",
                         "_lostAt = -1;", "_heldCargo = _cargoHeld;", "if (target == _picked)")
@@ -17602,7 +17602,7 @@ def gear_from_a_villagers_offer_you_take_goes_out_as_loot():
                         "if (TradeRules.TakenAsLoot(TradePolicy.Describe(line.el.Item), Options.Current))",
                         "LedgerBehavior.Instance?.WriteDownTheirGear(line.id, line.el, line.units);", "continue;",
                         "TradeMath.FromVillagers,", "traded: true);",
-                        "and gear within Sell loot up to tier written down at no cost, so the loot sale sells it")
+                        "and gear within Sell loot up to tier written down at no cost, like loot")
             and all(one in taken for one in ("!good.IsTradeGood", "!good.HasHorse", "s.MaxLootTier > 0", "!good.IsFood",
                                             "!good.IsAnimal", "!good.IsMountable", "good.Tier + 1 <= s.MaxLootTier"))
             and "WriteDownFree(key, el, units, TradeMath.FromVillagers, (float)CampaignTime.Now.ToDays);" in S['Ledger.cs']
@@ -17690,7 +17690,7 @@ def the_restock_pays_up_to_twice_a_foods_value_and_counts_laid_out_trade_food_ap
                         "books.NoteSoldFrom(market.PaidKeyAt(at));",
                         "if (bought && basis.SoldTraded && TradeRules.FoodValue(good) > 0)",
                         "books.NoteTradeSold(market.PaidKeyAt(at));")
-            and ordered(sold, "SoldAt = Walk.Took();", "SoldTraded = OwnCost ? Walk.TookTraded : TradedLeft > 0;")
+            and ordered(sold, "SoldAt = Walk.Took();", "SoldTraded = Walk.TookTraded;")
             and ordered(hand, "long first = _nextUnitNumber;",
                         "RecordPurchase(PaidKey(el), paid.GetRange(0, took), BoughtFrom(here));",
                         "TradeActionBehavior.TheVisit.BoughtToTrade(true, PaidKey(el))",
@@ -17834,6 +17834,48 @@ def gear_from_a_villagers_offer_tradelord_takes_goes_out_as_loot():
 
 chk("1.103.1", "gear in a villagers' offer TradeLord takes, within Sell loot up to tier, is written down at no cost and sold as loot, as when you take the offer yourself",
     gear_from_a_villagers_offer_tradelord_takes_goes_out_as_loot())
+
+def a_laid_out_sale_counts_as_trade_food_only_the_units_it_drew():
+    basis = between(S['Passes.cs'], "internal struct Basis", "internal struct ForTheMark")
+    sold = method_body(S['Passes.cs'], "internal bool SoldOne()")
+    return (basis and sold
+            and ordered(sold, "SoldTraded = false;", "PaidLeft--;", "SoldAt = Walk.Took();", "SoldTraded = Walk.TookTraded;")
+            and sold.count("SoldTraded =") == 2
+            and "TradedLeft" not in basis
+            and "internal bool OwnCost;" not in basis
+            and "TradedUnitsIn" not in S['TradeMath.cs']
+            and "A_dry_run_sale_of_food_counts_as_bought_to_trade_only_the_units_the_sale_drew_on_an_average_cost" in SELLPASSTESTS)
+
+chk("1.103.2", "a sale Staged Trading lays out counts as food bought to trade only the units it drew, whatever Price a sale must beat is set to",
+    a_laid_out_sale_counts_as_trade_food_only_the_units_it_drew())
+
+def a_market_past_its_ceiling_keeps_the_mark_one_hour_with_no_other_market_to_move_to():
+    update = method_body(S['Marker.cs'], "internal static void Update")
+    out = method_body(S['Marker.cs'], "private static string TheMarkLeftOut")
+    left = method_body(S['Marker.cs'], "private static string LeftBecause")
+    nextbest = method_body(S['Marker.cs'], "private static string TheNextBest")
+    return (update and out and left and nextbest
+            and ordered(update, "if (_picked != null && target != _picked && (target != null || how.HolderPastAllowance) &&",
+                        "Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null, cargoSame, _lostAt, hour))",
+                        "TheHolderStays(ref how);", "target = _picked;", "if (target == _picked)")
+            and update.count("how.HolderPastAllowance") == 1
+            and ordered(out, "how.HolderPriced = true;", "how.HolderPastAllowance = true;")
+            and "how.HolderLost + (how.HolderPastAllowance ? hadItsHour : \"\")" in left
+            and ordered(nextbest, "if (how.RunnerUp == null)", '", and no other market it priced would take any of it"'))
+
+chk("1.103.2", "a marked market that drifts past its travel ceiling keeps the mark one hour also when no other market would take your cargo",
+    a_market_past_its_ceiling_keeps_the_mark_one_hour_with_no_other_market_to_move_to())
+
+def the_log_says_gear_from_a_villagers_offer_is_written_down_like_loot_and_promises_no_sale():
+    took = method_body(S['Encounters.cs'], "internal static void YouTookTheirOffer")
+    said = method_body(S['Trading.cs'], "internal void SayTheGearWrittenDownAsLoot()")
+    return (took and said
+            and '", and gear within Sell loot up to tier written down at no cost, like loot: "' in took
+            and '"  gear within Sell loot up to tier written down at no cost, like loot: "' in said
+            and all("the loot sale sells it" not in S[name] for name in ('Encounters.cs', 'Trading.cs')))
+
+chk("1.103.2", "TradeLord.log says gear from a villagers' offer is written down at no cost like loot, without promising the loot sale sells gear your settings keep",
+    the_log_says_gear_from_a_villagers_offer_is_written_down_like_loot_and_promises_no_sale())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

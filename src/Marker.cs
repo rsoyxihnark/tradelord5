@@ -262,7 +262,7 @@ namespace TradeLord
             Settlement was = _picked;
             int lostBefore = _lostAt;
             bool cargoSame = Marks.OnlyEatenFrom(_heldCargo, _cargoHeld);
-            if (target != null && _picked != null && target != _picked &&
+            if (_picked != null && target != _picked && (target != null || how.HolderPastAllowance) &&
                 Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null, cargoSame, _lostAt, hour))
             {
                 if (_lostAt < 0) _lostAt = hour;

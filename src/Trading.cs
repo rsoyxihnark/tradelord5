@@ -2976,7 +2976,7 @@ namespace TradeLord
             internal void SayTheGearWrittenDownAsLoot()
             {
                 if (_gear == null || _gear.Count == 0) return;
-                Log.Write("  gear within Sell loot up to tier written down at no cost, so the loot sale sells it: " +
+                Log.Write("  gear within Sell loot up to tier written down at no cost, like loot: " +
                           string.Join(", ", _gear.ToArray()));
                 _gear = null;
             }
