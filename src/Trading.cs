@@ -2765,6 +2765,7 @@ namespace TradeLord
             pass.Moved(gold: spent, selling: false);
             Log.Write(pass.Headed(label) + bought + " items, -" + spent + " gold " + pass.Where);
             pass.Logged(selling: false, why);
+            market.SayTheGearWrittenDownAsLoot();
             if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, bought, spent);
         }
 
@@ -2823,6 +2824,7 @@ namespace TradeLord
             private Dictionary<string, int> _asked;
             private Dictionary<int, (Settlement where, Ladder rungs, int till)> _resale;
             private Dictionary<ItemObject, (int units, int gold)> _resold;
+            private List<string> _gear;
 
             internal BuyingAt(Pass pass, string what, string named, bool theirOffer = false)
             {
@@ -2949,11 +2951,34 @@ namespace TradeLord
                 ItemObject item = Item(at);
                 _pass.Quote(item, 1, price);
                 if (!_pass.BuyOne(Shelf[at], price, _what, _named, out cost)) return false;
+                if (cost != 0 && _theirOffer && TradeRules.TakenAsLoot(GoodAt(at), Options.Current))
+                {
+                    WriteDownTheirGear(at);
+                    _pass.Tally(item, 1, cost);
+                    return true;
+                }
                 if (cost == 0) return true;
                 LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement), new[] { cost }, _pass.BoughtFrom,
                                                         traded: true);
                 _pass.Tally(item, 1, cost);
                 return true;
+            }
+
+            private void WriteDownTheirGear(int at)
+            {
+                string said = LedgerBehavior.Instance?.WriteDownTheirGear(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement),
+                                                                          Shelf[at].EquipmentElement, 1);
+                if (said == null) return;
+                if (_gear == null) _gear = new List<string>();
+                _gear.Add(said);
+            }
+
+            internal void SayTheGearWrittenDownAsLoot()
+            {
+                if (_gear == null || _gear.Count == 0) return;
+                Log.Write("  gear within Sell loot up to tier written down at no cost, so the loot sale sells it: " +
+                          string.Join(", ", _gear.ToArray()));
+                _gear = null;
             }
 
             public float ResaleSafety() => TradePolicy.ResaleSafety();

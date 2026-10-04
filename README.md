@@ -135,6 +135,7 @@
 - ✅ Never sells to a party of villagers, and takes their whole offer the moment you meet them when it clears your margin, at the price the game's own "What kind of products do you have?" offer charges
 - ✅ The villagers' offer is one deal: Max spend per visit, Never buy grain and the caps on one good never hold it back, so it is taken whole whenever it clears your margin and your purse can pay
 - ✅ Once TradeLord has taken the villagers' offer, the game's own offer is gone for the rest of that meeting, so the same goods can never be bought twice
+- ✅ Gear in an offer TradeLord takes, within Sell loot up to tier, is written down at no cost and sold like loot, as when you take the offer yourself
 - ✅ An offer TradeLord leaves is still yours to take in the conversation, and what you pay for it is written down as what those goods cost you
 - ✅ Taken that way, its goods count as bought to trade, while its gear within Sell loot up to tier is written down at no cost and sold like loot
 - ✅ When TradeLord leaves the villagers' offer to you, a message on screen says why: your margin, your purse, your cargo room, your herd, the good in it that kept it off or nowhere in reach to resell it
