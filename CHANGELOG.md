@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.103.2
+
+- Fixed Staged Trading restocking too little food after it sold your own food, when Price a sale must beat was not Each unit's own price
+- Fixed the map marker leaving a market when its travel time briefly crossed your travel ceiling and no other market would take your cargo
+- Fixed TradeLord.log saying gear from a villagers' offer would be sold as loot even when your settings keep it
+
 ## 1.103.1
 
 - Fixed clothes from a villagers' offer TradeLord took, such as a Commoner Tunic, being kept until a market paid more than the villagers asked

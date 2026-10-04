@@ -2718,19 +2718,6 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_units_bought_to_trade_among_what_a_good_cost_are_counted()
-        {
-            var costs = new[]
-            {
-                new Batch { Unit = 9, Count = 1, Traded = true },
-                new Batch { Unit = 10, Count = 2, Traded = true },
-                new Batch { Unit = 12, Count = 3 }
-            };
-            Assert.Equal(3, TradeMath.TradedUnitsIn(costs));
-            Assert.Equal(0, TradeMath.TradedUnitsIn(null));
-        }
-
-        [Fact]
         public void The_dear_first_walk_says_whether_the_unit_it_took_was_bought_to_trade()
         {
             var costs = new[] { new Batch { Unit = 10, Count = 1, Traded = true }, new Batch { Unit = 20, Count = 1 } };

@@ -1459,5 +1459,27 @@ namespace TradeLord.Tests
             Run live = OnePass(real, loot: false, sim: false);
             Assert.Equal(0, live.Books.TradeSold(true, LedgerCodec.PaidKey("fish", null)));
         }
+
+        [Fact]
+        public void A_dry_run_sale_of_food_counts_as_bought_to_trade_only_the_units_the_sale_drew_on_an_average_cost()
+        {
+            var market = new FakeMarket();
+            market.Rules = new Options { CostBasisMode = AveragePaid, MinProfitMargin = 0.1f };
+            Load fish = market.Add(Ration("fish"), amount: 10, price: 25);
+            fish.Basis = 15;
+            fish.Purchased = 10;
+            fish.Reserved = 5;
+            fish.Rows = new[]
+            {
+                new Batch { Unit = 10, Count = 5, Traded = true, First = 1 },
+                new Batch { Unit = 20, Count = 5, First = 6 }
+            };
+            Run sold = OnePass(market, loot: false, sim: true);
+            string key = LedgerCodec.PaidKey("fish", null);
+            List<int> drawn = sold.Books.DearDrawn(true, key);
+            Assert.Equal(5, sold.Units);
+            Assert.Equal(new[] { 20, 20, 20, 20, 20 }, drawn.ToArray());
+            Assert.Equal(0, sold.Books.TradeSold(true, key));
+        }
 }
 }

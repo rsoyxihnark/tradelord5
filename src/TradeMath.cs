@@ -82,14 +82,6 @@ namespace TradeLord
         public static int AtLeastTwiceItsValue(int ceiling, int value) =>
             Math.Max(ceiling, MostToPayOverTheCheapest(value, FoodValueTolerance));
 
-        public static int TradedUnitsIn(Batch[] costs)
-        {
-            int units = 0;
-            for (int i = 0; costs != null && i < costs.Length; i++)
-                if (costs[i].Traded && costs[i].Count > 0) units += costs[i].Count;
-            return units;
-        }
-
         public const float ShortFoodTolerance = 1.5f;
 
         public static int FoodShortOfADay(int held, int day) =>
