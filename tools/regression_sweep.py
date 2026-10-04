@@ -9099,7 +9099,7 @@ def the_deal_you_took_is_reported_and_credited_like_any_pass():
                     "Took paid = Reckon(buying, bought, boughtAt, false);",
                     "bool addsUp = Deals.AddsUp(got.Gold - paid.Gold, purseMoved);",
                     "ReportWhatYouSold(selling, got, addsUp);",
-                    "ReportWhatYouBought(buying, paid, addsUp);")
+                    "ReportWhatYouBought(buying, paid);")
             and ordered(reckon, "List<int> prices = each != null && i < each.Count ? each[i] : null;",
                         "int count = prices.Count;",
                         "took.Gold += said;",
@@ -17466,9 +17466,9 @@ def the_mark_moves_only_after_its_market_loses_two_weighings_in_different_hours(
     rule = between(S['Rules.cs'], "internal static bool HoldsForASecondLook(", ";")
     return (update and stays and nextbest and marker and rule
             and ordered(update, "int hour = (int)CampaignTime.Now.ToHours;",
+                        "bool cargoSame = Marks.OnlyEatenFrom(_heldCargo, _cargoHeld);",
                         "if (target != null && _picked != null && target != _picked &&",
-                        "Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null,",
-                        "Marks.OnlyEatenFrom(_heldCargo, _cargoHeld), _lostAt, hour))",
+                        "Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null, cargoSame, _lostAt, hour))",
                         "if (_lostAt < 0) _lostAt = hour;", "TheHolderStays(ref how);", "target = _picked;",
                         "_lostAt = -1;", "_heldCargo = _cargoHeld;", "if (target == _picked)")
             and "holderPriced && !afresh && cargoSame && (lostAt < 0 || lostAt >= hourNow)" in rule

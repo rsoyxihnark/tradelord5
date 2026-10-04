@@ -1194,7 +1194,7 @@ namespace TradeLord
                           " on that screen. TradeLord reports what it read and counts none of it towards your " +
                           "Trade skill or your TradeLord profit, because it cannot square the two.");
             ReportWhatYouSold(selling, got, addsUp);
-            ReportWhatYouBought(buying, paid, addsUp);
+            ReportWhatYouBought(buying, paid);
         }
 
         private static void ReportWhatYouSold(Pass pass, Took got, bool addsUp)
@@ -1208,7 +1208,7 @@ namespace TradeLord
             _told.Add(Told.Sold, pass.Sim, pass.Detail, got.Units, got.Gold, got.Profit);
         }
 
-        private static void ReportWhatYouBought(Pass pass, Took paid, bool addsUp)
+        private static void ReportWhatYouBought(Pass pass, Took paid)
         {
             if (paid.Units <= 0) return;
             pass.Moved(gold: paid.Gold, selling: false);

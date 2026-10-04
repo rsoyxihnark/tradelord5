@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Party;
-using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
@@ -264,8 +263,7 @@ namespace TradeLord
             int lostBefore = _lostAt;
             bool cargoSame = Marks.OnlyEatenFrom(_heldCargo, _cargoHeld);
             if (target != null && _picked != null && target != _picked &&
-                Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null,
-                                          Marks.OnlyEatenFrom(_heldCargo, _cargoHeld), _lostAt, hour))
+                Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null, cargoSame, _lostAt, hour))
             {
                 if (_lostAt < 0) _lostAt = hour;
                 TheHolderStays(ref how);
@@ -629,7 +627,6 @@ namespace TradeLord
                 ItemRosterElement el = party.ItemRoster.GetElementCopyAtIndex(i);
                 if (!TradePolicy.MaySell(el, locked, keepBack, awaited, out int keep)) continue;
                 if (el.Amount - keep <= 0) continue;
-                ItemObject item = el.EquipmentElement.Item;
                 int worth = TradePolicy.WorthToBeat(el.EquipmentElement);
                 Batch[] costs = LedgerBehavior.Instance?.UnitCosts(el.EquipmentElement, el.Amount);
                 int covers = Options.Current.CostBasisMode == 0 && costs != null
