@@ -60,9 +60,11 @@
 - ✅ With Count what is on its way to a market and Bulk price simulation on, it prices each market as it will be when you get there, the same way the ledger does
 - ✅ It leaves out the market TradeLord made its last trade at until you come back to it
 - ✅ The market already marked keeps its mark until it is a fifth past your travel ceiling, so a brief slow stretch of road does not flick the marker to another market and back
+- ✅ A marked market that drifts past even that keeps the mark one hour more, so one slow reading of the road cannot send the marker away and straight back
 - ✅ Another market takes the mark only once it has earned more on two weighings in different hours, so a caravan landing about when you would does not flick the marker back and forth
 - ✅ Once the market TradeLord made its last trade at is back, it gets one look on the day's gold alone and takes the mark if it earns more a day than the market already marked
 - ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that market's purse, how far away it is and the market it beat
+- ✅ It also says why the market marked before lost the mark, with the figures behind it, such as a siege, the days it is away or a market earning more a day
 - ✅ The five workshops in Calradia earning the most right now, with their town, what each will make next and their owner, on that same panel
 - ✅ With Live world prices turned off it shows yours instead
 - ✅ Your gold, your cargo against what your party can carry, your party's speed, the running total of what TradeLord has made you and the Trade XP it has earned you, along the top of that same panel
@@ -80,7 +82,10 @@
 - ✅ A deal you take from Staged Trading counts as TradeLord's last trade at that market
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
 - ✅ Tops your food back up to three days of supply, buying the cheapest food the market has at up to 1.5 times the cheapest price it knows of for it, or up to twice that for one day of food when your party is about to go hungry
+- ✅ A food is never passed over for its price while it costs no more than twice its value in the game
 - ✅ Food you bought to trade is counted last toward those days, so it sells where it pays once your own food fills them
+- ✅ Your party eats its own food before food bought to trade, while any of its own is left
+- ✅ Food Staged Trading lays out on the trade screen to sell on counts as food bought to trade, never as your party's own
 - ✅ The larder is filled after it has traded for profit, so your gold and your cargo room go to the goods you came to trade first
 - ✅ Buys and sells livestock as ordinary goods, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
 - ✅ A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
@@ -131,6 +136,7 @@
 - ✅ The villagers' offer is one deal: Max spend per visit, Never buy grain and the caps on one good never hold it back, so it is taken whole whenever it clears your margin and your purse can pay
 - ✅ Once TradeLord has taken the villagers' offer, the game's own offer is gone for the rest of that meeting, so the same goods can never be bought twice
 - ✅ An offer TradeLord leaves is still yours to take in the conversation, and what you pay for it is written down as what those goods cost you
+- ✅ Taken that way, its goods count as bought to trade, while its gear within Sell loot up to tier is written down at no cost and sold like loot
 - ✅ When TradeLord leaves the villagers' offer to you, a message on screen says why: your margin, your purse, your cargo room, your herd, the good in it that kept it off or nowhere in reach to resell it
 - ✅ A caravan is traded with at the prices of the town you are in, or else the nearest town, which is what the game's own trade screen charges you with a caravan
 - ✅ A caravan on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, and your looted gear
@@ -144,6 +150,7 @@
 - ✅ Each time it trades, all it bought is one line on screen and all it sold is the next, whatever order it traded in
 - ✅ Animals sold to get your party back up to speed are in the Sold line, and food restocked and haul animals bought are in the Bought line
 - ✅ The Sold line also says how much Trade XP the sale added, and your Trade skill when it goes up a level
+- ✅ The Sold and Bought lines name every good traded, largest first, and the profit in the Sold line is in orange
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen, apart from three warnings: cargo full, a purse below your Gold reserve, and an item list entry that matches no good
@@ -208,7 +215,7 @@
 - ✅ Trade XP for what TradeLord sells is exactly what the game itself gives for the same sale made on its trade screen
 - ✅ A good you never bought, loot and animals included, adds nothing to the profit reported and earns only the Trade XP the game itself would give for it, which is usually none
 - ✅ Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them, which is usually none
-- ✅ When some of a good is eaten, lost or given away, its oldest units go first, bought or not, and every unit left keeps the price it was bought for
+- ✅ When some of a good is eaten, lost or given away, its oldest units go first, bought or not, food you bought to trade last, and every unit left keeps the price it was bought for
 - ✅ Every unit keeps where it came from: 1 market, 2 caravan, 3 villager party, 4 loot or 5 others, and TradeLord.log names it with the unit
 - ✅ Goods you take on a loot screen or carry off in a raid are marked as loot, and anything else that came without a purchase as others
 - ✅ Goods that came without a purchase, loot and rewards among them, get unit numbers too, and each one sold counts no profit and no Trade XP
@@ -238,12 +245,14 @@
 - ✅ Enable extended debug logging, on out of the box, one switch for everything TradeLord writes about its own working in `TradeLord.log`
 - ✅ The same switch writes what the market you are standing in pays and charges for every good you carry, read four ways before anything is traded, named alongside the price model the game is running and any other mod changing it
 - ✅ The same switch writes what it quoted for every good it traded next to what the market actually paid, and after every route scan how many prices it opened and how long it took
+- ✅ The route scan passes over a pair of markets no price could make a route, so it works out the best routes faster, and the same switch counts the pairs it passed over
 - ✅ The same switch writes down what it expected a market to hold by the time you got there and what it really held when you walked in, good by good
 - ✅ The same switch writes down everything the map marker weighed each time it moves the mark: every market it priced with the days, the units, the gold and the profit a day
 - ✅ The same switch writes down the marked market broken down good by good with today's price beside the price it expects once what is on its way lands, how long each weighing took, and how the mark held up against what that market paid you
 - ✅ When only other markets change, the same switch writes one line naming each market whose gold or units changed, any market newly priced or no longer priced, and a new next best
 - ✅ When the mark stays but what your cargo would fetch there changes, the same switch writes that market good by good and one line naming the other markets that changed
 - ✅ The same switch writes down, whenever it changes, what share of a price elsewhere TradeLord counts on when it buys and how much of the promised Sell price has held at the markets you walked into
+- ✅ For each promise it checks, the same switch names the five parts of its Conf, so the one that misleads can be found
 - ✅ What this means, behind a ? beside the TradeLord ledger title: the line that used to run under the routes, one clause to a line in a window of its own, so the ledger itself stays clean
 - ✅ Recent trades, on its own button on the campaign map under the TradeLord one, so it opens without the ledger: the last twenty buys and sells it made for you, newest first, each with the day, the town, the gold it gained or cost, and what moved
 - ✅ In Recent trades, gold gained reads green and gold spent amber. It is kept in your save, so the list is still there when you load the campaign again

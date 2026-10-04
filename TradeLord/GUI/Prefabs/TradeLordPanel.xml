@@ -433,8 +433,8 @@
                                                WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren"
                                                StackLayout.LayoutMethod="VerticalTopToBottom">
                                       <ItemTemplate>
-                                        <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed"
-                                                   SuggestedHeight="26" MarginBottom="1"
+                                        <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren"
+                                                   MinHeight="26" MarginBottom="1"
                                                    StackLayout.LayoutMethod="HorizontalLeftToRight">
                                           <Children>
                                             <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="110"
@@ -459,7 +459,7 @@
                                                         IsVisible="@Spent"
                                                         Text="@Gold" />
                                             <TextWidget WidthSizePolicy="StretchToParent"
-                                                        HeightSizePolicy="StretchToParent"
+                                                        HeightSizePolicy="CoverChildren" VerticalAlignment="Center"
                                                         Brush="Popup.Button.Text" Brush.FontSize="17"
                                                         Brush.FontColor="#CFCFCFDD"
                                                         Text="@What" />

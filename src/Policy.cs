@@ -307,7 +307,7 @@ namespace TradeLord
             return held;
         }
 
-        internal static int FoodBoughtToTrade(ItemRoster roster)
+        internal static int FoodBoughtToTrade(ItemRoster roster, Books books = null, bool sim = false)
         {
             LedgerBehavior kept = LedgerBehavior.Instance;
             if (roster == null || kept == null) return 0;
@@ -319,9 +319,11 @@ namespace TradeLord
                 int fed = FoodValue(el.EquipmentElement.Item);
                 if (fed <= 0) continue;
                 int units = kept.UnitsBoughtToTrade(el.EquipmentElement);
+                if (books != null) units -= books.TradeSold(sim, LedgerBehavior.PaidKey(el.EquipmentElement));
+                if (units <= 0) continue;
                 traded += fed * (units < el.Amount ? units : el.Amount);
             }
-            return traded;
+            return traded + (books?.TradeFoodBought(sim) ?? 0);
         }
 
         internal static int FoodForADay() => (int)Math.Ceiling(AppetitePerDay());
@@ -521,5 +523,10 @@ namespace TradeLord
 
         internal static bool BuyAcceptable(int buyPrice, float realizable) =>
             TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin);
+
+        internal static bool NoOpeningPriceCouldMakeIt(int openingBuy, int quotedSell, int landed, int stocked,
+                                                       float days, bool beaten, float bestKey, float safety) =>
+            TradeMath.NoOpeningPriceCouldMakeIt(openingBuy, quotedSell, landed, stocked, days, beaten, bestKey, safety,
+                                                Options.Current.MinProfitMargin);
     }
 }

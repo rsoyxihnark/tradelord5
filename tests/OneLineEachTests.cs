@@ -176,5 +176,13 @@ namespace TradeLord.Tests
             Assert.Equal(150, sold.Profit);
             Assert.Equal(1100, sold.Gold);
         }
+
+        [Fact]
+        public void The_profit_is_marked_orange_only_once_the_chat_line_can_show_it()
+        {
+            Assert.Equal("2062", ProfitMark.Shown(2062, false));
+            Assert.Equal("<span style=\"TradeLord.Profit\">2062</span>", ProfitMark.Shown(2062, true));
+            Assert.Equal("<span style=\"TradeLord.Profit\">0</span>", ProfitMark.Shown(0, true));
+        }
     }
 }

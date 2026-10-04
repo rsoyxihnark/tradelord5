@@ -88,5 +88,32 @@ namespace TradeLord.Tests
             float many = Confidence.Of(false, 0, 0, 100, 10, 2f, 9, -1f);
             Assert.True(many < few);
         }
-    }
+    
+        [Fact]
+        public void Conf_is_the_product_of_the_five_parts_the_log_names()
+        {
+            foreach (bool simulated in new[] { false, true })
+                foreach (int flat in new[] { 0, 400 })
+                    foreach (int stock in new[] { 0, 5, 40 })
+                        foreach (float days in new[] { 0f, 1.5f, 9f })
+                            foreach (int caravans in new[] { 0, 4 })
+                                foreach (float age in new[] { -1f, 3f })
+                                    foreach (float runsOut in new[] { Confidence.NotKnown, 0.5f, 6f })
+                                    {
+                                        Confidence.Parts p = Confidence.PartsOf(simulated, flat, 310, stock, 12, days,
+                                                                                caravans, age, runsOut, 1f);
+                                        float c = p.Resilience * p.Depth * p.Haste * p.Quiet * p.Fresh;
+                                        float expected = c < 0.01f ? 0.01f : (c > 1f ? 1f : c);
+                                        Assert.Equal(expected, Confidence.Of(simulated, flat, 310, stock, 12, days,
+                                                                             caravans, age, runsOut, 1f));
+                                    }
+        }
+
+        [Fact]
+        public void The_five_parts_of_Conf_are_spelled_out_in_the_order_they_multiply()
+        {
+            var parts = new Confidence.Parts { Resilience = 0.85f, Depth = 1f, Haste = 0.63f, Quiet = 0.8f, Fresh = 0.75f };
+            Assert.Equal("resilience 85% x depth 100% x haste 63% x quiet 80% x fresh 75%", Confidence.Spelled(parts));
+        }
+}
 }

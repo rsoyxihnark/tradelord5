@@ -567,5 +567,36 @@ namespace TradeLord.Tests
                 Assert.True(more >= fewer);
             }
         }
-    }
+    
+        [Fact]
+        public void A_unit_of_trade_food_eaten_is_swapped_for_one_of_your_own_while_any_is_left()
+        {
+            var swaps = Eating.YourOwnFirst(new List<(int before, int after, int traded)> { (10, 9, 10), (5, 5, 0) });
+            Assert.Equal(new List<(int back, int take)> { (0, 1) }, swaps);
+        }
+
+        [Fact]
+        public void Your_own_units_of_a_food_are_counted_eaten_before_its_units_bought_to_trade()
+        {
+            Assert.Empty(Eating.YourOwnFirst(new List<(int before, int after, int traded)> { (10, 7, 6), (5, 5, 0) }));
+            var swaps = Eating.YourOwnFirst(new List<(int before, int after, int traded)> { (10, 4, 6), (5, 5, 0) });
+            Assert.Equal(new List<(int back, int take)> { (0, 1), (0, 1) }, swaps);
+        }
+
+        [Fact]
+        public void Trade_food_eaten_stays_eaten_once_your_own_food_is_gone()
+        {
+            Assert.Empty(Eating.YourOwnFirst(new List<(int before, int after, int traded)> { (10, 8, 10), (3, 2, 3) }));
+            var swaps = Eating.YourOwnFirst(new List<(int before, int after, int traded)> { (10, 7, 10), (1, 1, 0) });
+            Assert.Equal(new List<(int back, int take)> { (0, 1) }, swaps);
+            Assert.Empty(Eating.YourOwnFirst(null));
+        }
+
+        [Fact]
+        public void A_swap_takes_from_the_food_of_your_own_you_hold_the_most_of()
+        {
+            var swaps = Eating.YourOwnFirst(new List<(int before, int after, int traded)> { (4, 3, 4), (2, 2, 0), (6, 6, 0) });
+            Assert.Equal(new List<(int back, int take)> { (0, 2) }, swaps);
+        }
+}
 }

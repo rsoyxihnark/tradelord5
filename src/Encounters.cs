@@ -332,12 +332,12 @@ namespace TradeLord
             met != null && met == _offerTakenFrom &&
             _offerTakenIn != null && _offerTakenIn == PlayerEncounter.Current;
 
-        internal static List<(string id, int units, int price)> WhatTheyOffer(MobileParty met)
+        internal static List<(string id, int units, int price, EquipmentElement el)> WhatTheyOffer(MobileParty met)
         {
             Village home = met != null && met.IsVillager ? met.HomeSettlement?.Village : null;
             if (home == null || MobileParty.MainParty == null) return null;
             var priced = new TheirOffer(home);
-            var offered = new List<(string id, int units, int price)>();
+            var offered = new List<(string id, int units, int price, EquipmentElement el)>();
             ItemRoster goods = met.ItemRoster;
             for (int at = 0; at < goods.Count; at++)
             {
@@ -345,12 +345,13 @@ namespace TradeLord
                 ItemObject item = el.EquipmentElement.Item;
                 if (item == null || el.Amount <= 0 || item.ItemCategory == DefaultItemCategories.PackAnimal) continue;
                 offered.Add((LedgerBehavior.PaidKey(el.EquipmentElement), el.Amount,
-                             priced.GetPrice(el.EquipmentElement, MobileParty.MainParty, isSelling: true, met.Party)));
+                             priced.GetPrice(el.EquipmentElement, MobileParty.MainParty, isSelling: true, met.Party),
+                             el.EquipmentElement));
             }
             return offered;
         }
 
-        internal static void YouTookTheirOffer(List<(string id, int units, int price)> offered, int paid)
+        internal static void YouTookTheirOffer(List<(string id, int units, int price, EquipmentElement el)> offered, int paid)
         {
             if (offered == null || offered.Count == 0 || paid <= 0) return;
             int asked = 0;
@@ -361,10 +362,30 @@ namespace TradeLord
                           "goods came to " + asked + ", so what you paid is not written down against them");
                 return;
             }
+            var atTheirPrice = new List<string>();
+            var asLoot = new List<string>();
             foreach (var line in offered)
-                LedgerBehavior.Instance?.RecordPurchase(line.id, TradeMath.AtOnePrice(line.units, line.price), TradeMath.FromVillagers);
+            {
+                if (TradeRules.TakenAsLoot(TradePolicy.Describe(line.el.Item), Options.Current))
+                {
+                    string free = LedgerBehavior.Instance?.WriteDownTheirGear(line.id, line.el, line.units);
+                    if (free != null) asLoot.Add(free);
+                    continue;
+                }
+                LedgerBehavior.Instance?.RecordPurchase(line.id, TradeMath.AtOnePrice(line.units, line.price), TradeMath.FromVillagers,
+                                                        traded: true);
+                atTheirPrice.Add(line.units + " " + Tongue.Named(line.el.Item?.Name, line.id) + " at " + line.price);
+            }
             Log.Write("you took the villagers' offer yourself: " + paid + " gold for " + offered.Count +
-                      " kind(s) of goods, written down as what you paid for them");
+                      " kind(s) of goods" +
+                      (atTheirPrice.Count > 0
+                          ? ", written down as what you paid for them and as bought to trade: " +
+                            string.Join(", ", atTheirPrice.ToArray())
+                          : "") +
+                      (asLoot.Count > 0
+                          ? ", and gear within Sell loot up to tier written down at no cost, so the loot sale sells it: " +
+                            string.Join(", ", asLoot.ToArray())
+                          : ""));
         }
 
         internal static void ConversationEnded() => _tradedWith = null;
@@ -405,7 +426,7 @@ namespace TradeLord
     [HarmonyPatch(typeof(VillagerCampaignBehavior), "conversation_player_decided_to_buy_on_consequence")]
     internal static class Patch_VillagerOfferTaken
     {
-        private static bool Prefix(out (List<(string id, int units, int price)> offered, int gold) __state)
+        private static bool Prefix(out (List<(string id, int units, int price, EquipmentElement el)> offered, int gold) __state)
         {
             __state = (null, 0);
             MobileParty met = MobileParty.ConversationParty;
@@ -416,13 +437,13 @@ namespace TradeLord
                 if (PlayerEncounter.Current != null) PlayerEncounter.LeaveEncounter = true;
                 return false;
             }
-            List<(string id, int units, int price)> offered = null;
+            List<(string id, int units, int price, EquipmentElement el)> offered = null;
             Guard.Run("Villagers.Offer", () => offered = Meetings.WhatTheyOffer(met));
             __state = (offered, Hero.MainHero?.Gold ?? 0);
             return true;
         }
 
-        private static void Postfix((List<(string id, int units, int price)> offered, int gold) __state)
+        private static void Postfix((List<(string id, int units, int price, EquipmentElement el)> offered, int gold) __state)
         {
             if (__state.offered == null || Hero.MainHero == null) return;
             int paid = __state.gold - Hero.MainHero.Gold;

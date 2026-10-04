@@ -1,6 +1,10 @@
 using System.Collections.Generic;
+using HarmonyLib;
+using TaleWorlds.GauntletUI;
+using TaleWorlds.GauntletUI.BaseTypes;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
+using TaleWorlds.MountAndBlade.GauntletUI.Widgets.Chat;
 
 namespace TradeLord
 {
@@ -14,6 +18,23 @@ namespace TradeLord
         internal static readonly Color Alert = new Color(0.90f, 0.28f, 0.28f);
 
         private static readonly List<InformationMessage> _pending = new List<InformationMessage>();
+
+        private static bool _profitStyled;
+
+        internal static string Profit(int profit) => ProfitMark.Shown(profit, _profitStyled);
+
+        internal static void LetTheProfitShow(RichTextWidget line)
+        {
+            Brush brush = line?.Brush;
+            if (brush == null || brush.GetStyle(ProfitMark.Style) != null) return;
+            var style = new Style(brush.Layers) { Name = ProfitMark.Style, DefaultStyle = brush.DefaultStyle };
+            style.FontColor = Xp;
+            brush.AddStyle(style);
+            if (_profitStyled) return;
+            _profitStyled = true;
+            Log.Write("the profit in the Sold line shows in orange from now on: the chat line brush " + brush.Name +
+                      " took the " + ProfitMark.Style + " style");
+        }
 
         internal static void Forget()
         {
@@ -36,5 +57,12 @@ namespace TradeLord
             }
             finally { _pending.Clear(); }
         }
+    }
+
+    [HarmonyPatch(typeof(ChatLogItemWidget), "OneLineTextWidget", MethodType.Setter)]
+    internal static class Patch_ChatLineShowsTheProfit
+    {
+        private static void Postfix(RichTextWidget __0) =>
+            Guard.Run("ChatLine.Profit", __0, Notices.LetTheProfitShow);
     }
 }

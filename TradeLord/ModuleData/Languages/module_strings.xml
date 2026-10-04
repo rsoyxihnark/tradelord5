@@ -14,7 +14,6 @@
 		<string id="TL09" text="Close"/>
 		<string id="TL11" text="Consult the TradeLord ledger"/>
 		<string id="TL26" text="Trade here now (TradeLord)"/>
-		<string id="TL29" text="and {COUNT} more"/>
 		<string id="TL31" text="{COUNT} items"/>
 		<string id="TL13" text="[Simulated, best case] Would sell {ITEMS} for {GOLD} denars, {PROFIT} denars profit."/>
 		<string id="TL14" text="[Simulated, best case] Would buy {ITEMS} for {GOLD} denars."/>
@@ -181,7 +180,7 @@
 		<string id="TL317" text="Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu."/>
 		<string id="TL318" text="Buys the moment you walk into a market, after any selling. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
 		<string id="TL320" text="The margin every trade must clear, both ways. Sell only if the price beats your cost basis by this much. Buy or list a route only if the far market beats the local price by this much after the resale safety factor. Raising it trades less."/>
-		<string id="TL321" text="Days of food kept from selling, trade food last, topped up cheapest first at up to 1.5x the cheapest price it knows, 2x if short of a day's food. Never-buy holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
+		<string id="TL321" text="Days of food kept from selling, trade food last, topped up cheapest first up to 1.5x the lowest price known (2x if short a day) or 2x its value. Never-buy holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
 		<string id="TL322" text="What automated trading may do with food. The days-of-supply food reserve is separate and still applies."/>
 		<string id="TL323" text="What automated trading may do with charcoal, hardwood, iron ore and ingots. Pick Leave alone to keep smithing stock out of automated trading entirely."/>
 		<string id="TL324" text="What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Haul animals and riding mounts have their own settings."/>
@@ -205,7 +204,7 @@
 		<string id="TL344" text="Scales the Trade XP awarded for automated profit. 0 disables XP."/>
 		<string id="TL345" text="Marks the market paying most for the cargo it would really sell there, within the travel ceilings; a village only while Trade with villages is on. It skips the market TradeLord last traded at until you return. ON by default."/>
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
-		<string id="TL348" text="Name the goods in the one-line trade summary, e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 denars profit', instead of a bare item count. The full list is always written to TradeLord.log."/>
+		<string id="TL348" text="Name the goods in the one-line trade summary, largest first, e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 denars profit', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Auto trading, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports only to TradeLord.log. Warnings still show on screen: cargo full, purse below Gold reserve, a list entry that matches no good."/>
 		<string id="TL100" text="Language"/>
 		<string id="TL101" text="Knowledge"/>

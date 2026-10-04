@@ -865,7 +865,8 @@ def the_marker_says_in_the_log_which_town_it_picked_and_why():
                     "if (target == _picked)",
                     'string why = on ? Why(how) : "the map marker is switched off";',
                     'Log.Write(target != null')
-            and '"map marker moved to " + target.Name + ": " + why' in track
+            and ordered(track, '"map marker moved to " + target.Name + (left == null ? "" : " from " + was.Name + " because " + left) +',
+                        '": " + why')
             and '"map marker taken off the map: " + why' in track
             and "Why(" not in marker
             and 'return "nothing in your cargo is yours to sell";' in said
@@ -1839,7 +1840,7 @@ chk("1.3.11", "the panel hands back the movie and the mouse, and honours the mod
     "if (!Input.IsKeyDown(_modifiers[i].left) && !Input.IsKeyDown(_modifiers[i].right)) return false;" in
     method_body(S['Panel.cs'], "private static bool HotkeyReleased"))
 chk("1.3.9", "panel respects locks", "ISet<string> locked = TradePolicy.LockedKeys();" in S['Ledger.cs'])
-chk("1.3.9", "summary names the six biggest by gold",
+chk("1.3.9", "summary names the goods biggest by gold first",
     "byValue.Sort((x, y) => y.Value.gold.CompareTo(x.Value.gold));" in S['Trading.cs'])
 chk("1.3.9", "null item lists tolerated", '(src ?? "")' in S['Options.cs'])
 chk("1.13.0", "every setting the screen shows reads and writes its own value only, so load order cannot matter",
@@ -5587,7 +5588,7 @@ def a_dry_run_keeps_its_own_books_and_writes_none_of_the_live_ones():
                 "internal float CapacityAdded(bool sim) => OnPaper(sim) ? _capacity : 0f;",
                 "OnPaper(sim) && key != null && _drySoldFrom.TryGetValue(key, out int units) ? units : 0;"))
             and all(dry in ledger for dry in ("_drySold", "_dryBought"))
-            and len(fields) == 22
+            and len(fields) == 25
             and "ForgetTheDryRun();" in forget
             and cleared(forget) == live
             and cleared(dry) == fields - live
@@ -9884,11 +9885,11 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 27
+            and ALL.count("Tongue.Named(") == 28
             and 'return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +'
                 in method_body(S['Ledger.cs'], "private string WriteDownFree")
             and "if (adding <= 0 || el.Item == null) return null;" in method_body(S['Ledger.cs'], "private string WriteDownFree")
-            and 'Tongue.Named(el.Item.Name, el.Item.StringId) + ", " + TradeMath.WhereFrom(from) +'
+            and 'Tongue.Named(el.Item.Name, el.Item.StringId) + ", " + TradeMath.WhereFreeFrom(from) +'
                 in method_body(S['Ledger.cs'], "internal void RecordFreeSale")
             and "_pass.Held[item] = (Tongue.Named(_mark.Name, _mark.StringId), units, there, here);" in S['Trading.cs']
             and "(Tongue.Named(one.Where.Name, one.Where.StringId), one.Units, one.Value)" in S['Marker.cs']
@@ -10052,7 +10053,7 @@ chk("1.79.2", "what a route could at best be worth is worked out from the same a
 
 def a_route_is_judged_only_on_what_that_market_will_charge_when_you_reach_it():
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
-    return (scan.count("sellPrice") == 3
+    return (scan.count("sellPrice") == 4
             and scan.count("buyPrice") == 4
             and "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);" in scan
             and "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);" in scan
@@ -12134,7 +12135,8 @@ def the_offer_is_gone_once_tradelord_took_it_and_moves_nothing_if_asked_for_agai
             and ordered_last(method_body(enc, "internal static void YouTookTheirOffer"),
                              "if (!Deals.AddsUp(asked, paid))", "return;",
                              "LedgerBehavior.Instance?.RecordPurchase(line.id, "
-                             "TradeMath.AtOnePrice(line.units, line.price), TradeMath.FromVillagers);")
+                             "TradeMath.AtOnePrice(line.units, line.price), TradeMath.FromVillagers,",
+                             "traded: true);")
             and "Patcher.TryPatch(harmony, typeof(Patch_VillagerOfferShown));" in S['SubModule.cs']
             and "Patcher.TryPatch(harmony, typeof(Patch_VillagerOfferTaken));" in S['SubModule.cs'])
 
@@ -15370,12 +15372,12 @@ def the_food_hint_says_what_the_larder_pays():
             and "Pass pass, Func<ItemObject, bool> wanted, float tolerance = 1f)" in S['Trading.cs']
             and "if (float.IsNaN(tolerance) || tolerance <= 1f) return cheapest;" in
                 method_body(S['TradeMath.cs'], "public static int MostToPayOverTheCheapest")
-            and "trade food last, topped up cheapest first at up to 1.5x the cheapest price it knows, 2x if short of a day's food" in en['TL321']
+            and "trade food last, topped up cheapest first up to 1.5x the lowest price known (2x if short a day) or 2x its value" in en['TL321']
             and option_default('KeepFoodDays') == '3' and "Default 3." in en['TL321']
-            and "ticaret için alınan en son sayılır. En ucuzundan, bildiği en düşük fiyatın 1,5 katına, bir günlükten azsa 2 katına" in tr['TL321']
-            and "купленная для торговли считается последней. Докупает с самой дешёвой до 1,5x низшей известной цены, при запасе меньше дня до 2x" in ru['TL321']
+            and "ticaret yiyeceği en son sayılır. En ucuzdan, bilinen en düşük fiyatın 1,5 katına (bir günlükten azsa 2 katına) ya da değerinin 2 katına" in tr['TL321']
+            and "купленная для торговли считается последней. Докупает самую дешёвую до 1,5x низшей известной цены (2x при запасе меньше дня) или 2x её стоимости" in ru['TL321']
             and "为交易买的食物最后才算进去" in cn['TL321']
-            and "出价不高于它所知最低价的 1.5 倍；食物不足一天时，可出到最低价的两倍" in cn['TL321'])
+            and "出价不高于它所知最低价的 1.5 倍（食物不足一天时为 2 倍）或该食物价值的 2 倍" in cn['TL321'])
 
 chk("1.95.5", "the hint for Restock and keep food says it counts food bought to trade last and buys the cheapest food first at up to 1.5 times the cheapest price it knows, twice it when short of a day's food, in every language",
     the_food_hint_says_what_the_larder_pays())
@@ -17421,7 +17423,7 @@ def a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price():
                         "if (settlement.IsVillage && remaining <= 1) break;",
                         "if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;",
                         "hunger -= fed;",
-                        "at up to twice the cheapest price TradeLord knows at ")
+                        "at up to twice the cheapest price TradeLord knows or twice their value at ")
             and larder.count("TradeMath.HungryFoodTolerance") == 1
             and "A_party_short_of_a_day_of_food_may_pay_up_to_twice_the_cheapest_price" in MATHTESTS
             and "Only_the_food_short_of_one_day_is_bought_above_the_cheapest_price" in MATHTESTS
@@ -17506,10 +17508,10 @@ def food_bought_to_trade_is_counted_last_and_the_restock_pays_half_again():
             and "From = one.From, Traded = one.Traded" in apart
             and "if (one.Traded && one.Count > 0) units += one.Count;" in count
             and "int units = kept.UnitsBoughtToTrade(el.EquipmentElement);" in trade
-            and ordered(larder, "int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster);",
+            and ordered(larder, "int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);",
                         "int shortfall = TradePolicy.FoodWanted() -", "+ traded;", "if (shortfall <= 0) return;",
                         "TradeMath.ShortFoodTolerance);", '" at up to 1.5 times the cheapest price it "',
-                        '"its price is above 1.5 times the cheapest TradeLord knows"')
+                        '"its price is above both 1.5 times the cheapest TradeLord knows and twice its value"')
             and all(one in FOODTESTS for one in
                     ("Food_bought_to_trade_is_counted_last_toward_the_days_of_food_kept",
                      "Food_bought_to_trade_still_fills_the_days_your_own_food_cannot",
@@ -17543,6 +17545,278 @@ def the_summary_hint_shows_the_sold_line_as_the_screen_writes_it():
 
 chk("1.102.2", "the hint for Detailed trade summary shows the Sold line the way the screen writes it, with the profit and without TradeLord in front, in every language",
     the_summary_hint_shows_the_sold_line_as_the_screen_writes_it())
+
+def every_good_traded_is_named_largest_first():
+    t = S['Trading.cs']
+    summary = method_body(t, "private static string ItemSummary")
+    every = [ENGLISH] + list(TRANSLATIONS.values())
+    return ("NamedItemCap" not in t and "{=TL29}" not in ALL
+            and all("TL29" not in spoken(p) for p in every)
+            and "byValue.Sort((x, y) => y.Value.gold.CompareTo(x.Value.gold));" in summary
+            and "break;" not in summary and " more" not in summary
+            and "largest first, e.g. 'Sold 8 Olives, 3 Wine" in spoken(ENGLISH)['TL348']
+            and "largest first, e.g. 'Sold 8 Olives, 3 Wine" in M)
+
+chk("1.103.0", "the Sold and Bought lines name every good traded, largest first, with no count of the rest, and the Detailed trade summary hint says so",
+    every_good_traded_is_named_largest_first())
+
+def a_long_trade_grows_its_recent_trades_row():
+    import xml.etree.ElementTree as ET
+    root = ET.parse('TradeLord/GUI/Prefabs/TradeLordPanel.xml').getroot()
+    trades = next((lp for lp in root.iter('ListPanel') if lp.get('Id') == 'TradeList'), None)
+    row = trades.find('ItemTemplate/ListPanel') if trades is not None else None
+    if row is None:
+        return False
+    what = [w for w in row.iter('TextWidget') if w.get('Text') == '@What']
+    return (row.get('HeightSizePolicy') == 'CoverChildren' and row.get('MinHeight') == '26'
+            and row.get('SuggestedHeight') is None
+            and len(what) == 1 and what[0].get('HeightSizePolicy') == 'CoverChildren')
+
+chk("1.103.0", "a Recent trades row grows with a long list of goods instead of cutting it off, and a one line row keeps its height",
+    a_long_trade_grows_its_recent_trades_row())
+
+def the_profit_shows_in_orange_once_the_chat_line_can_show_it():
+    n = S['Notices.cs']
+    said = method_body(S['Trading.cs'], "private static void SayWhatMoved")
+    show = method_body(n, "internal static void LetTheProfitShow")
+    return ('[HarmonyPatch(typeof(ChatLogItemWidget), "OneLineTextWidget", MethodType.Setter)]' in n
+            and 'Guard.Run("ChatLine.Profit", __0, Notices.LetTheProfitShow);' in n
+            and "Patcher.TryPatch(harmony, typeof(Patch_ChatLineShowsTheProfit));" in S['SubModule.cs']
+            and 'sold.SetTextVariable("PROFIT", Notices.Profit(line.Profit));' in said
+            and "internal static string Profit(int profit) => ProfitMark.Shown(profit, _profitStyled);" in n
+            and ordered(show, "if (brush == null || brush.GetStyle(ProfitMark.Style) != null) return;",
+                        "DefaultStyle = brush.DefaultStyle", "style.FontColor = Xp;", "brush.AddStyle(style);",
+                        "if (_profitStyled) return;", "_profitStyled = true;", "Log.Write(")
+            and all(spoken(p)['TL02'].count('{PROFIT}') == 1 and spoken(p)['TL13'].count('{PROFIT}') == 1
+                    for p in [ENGLISH] + list(TRANSLATIONS.values()))
+            and "The_profit_is_marked_orange_only_once_the_chat_line_can_show_it" in ONELINETESTS)
+
+chk("1.103.0", "the profit in the Sold line is orange once the chat line has the orange style, and stays a plain number where the game never gave it one",
+    the_profit_shows_in_orange_once_the_chat_line_can_show_it())
+
+def gear_from_a_villagers_offer_you_take_goes_out_as_loot():
+    took = method_body(S['Encounters.cs'], "internal static void YouTookTheirOffer")
+    taken = between(S['Rules.cs'], "internal static bool TakenAsLoot(in Good good, Options s) =>", ";")
+    return (took and taken
+            and ordered(took, "if (!Deals.AddsUp(asked, paid))",
+                        "if (TradeRules.TakenAsLoot(TradePolicy.Describe(line.el.Item), Options.Current))",
+                        "LedgerBehavior.Instance?.WriteDownTheirGear(line.id, line.el, line.units);", "continue;",
+                        "TradeMath.FromVillagers,", "traded: true);",
+                        "and gear within Sell loot up to tier written down at no cost, so the loot sale sells it")
+            and all(one in taken for one in ("!good.IsTradeGood", "!good.HasHorse", "s.MaxLootTier > 0", "!good.IsFood",
+                                            "!good.IsAnimal", "!good.IsMountable", "good.Tier + 1 <= s.MaxLootTier"))
+            and "WriteDownFree(key, el, units, TradeMath.FromVillagers, (float)CampaignTime.Now.ToDays);" in S['Ledger.cs']
+            and "came with a villagers' offer at no cost" in
+                between(S['TradeMath.cs'], "public static string WhereFreeFrom(int from) =>", ";")
+            and all(one in SELLTESTS for one in (
+                "Gear_from_a_villagers_offer_is_taken_as_loot_within_the_tier_you_allow_and_nothing_else_is",
+                "What_the_loot_sale_may_sell_is_what_a_villagers_offer_writes_down_as_loot"))
+            and "A_unit_from_a_villagers_offer_written_down_at_no_cost_says_so_when_it_sells" in MATHTESTS)
+
+chk("1.103.0", "gear from a villagers' offer you take, within Sell loot up to tier, is written down at no cost and sold as loot, while their trade goods count as bought to trade",
+    gear_from_a_villagers_offer_you_take_goes_out_as_loot())
+
+def the_log_says_why_the_mark_left_its_market_and_a_market_past_its_ceiling_waits_one_hour():
+    update = method_body(S['Marker.cs'], "internal static void Update")
+    left = method_body(S['Marker.cs'], "private static string LeftBecause")
+    out = method_body(S['Marker.cs'], "private static string TheMarkLeftOut")
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    stays = method_body(S['Marker.cs'], "private static void TheHolderStays")
+    why = method_body(S['Marker.cs'], "private static string Why")
+    return (update and left and out and marker and stays and why
+            and ordered(update, "Settlement was = _picked;", "int lostBefore = _lostAt;",
+                        "bool cargoSame = Marks.OnlyEatenFrom(_heldCargo, _cargoHeld);",
+                        "Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null,",
+                        "string left = on ? LeftBecause(was, target, how, lostBefore, hour, cargoSame) : null;",
+                        '" from " + was.Name + " because " + left', '"map marker taken off " + was.Name + " because " + left')
+            and ordered(marker, "TheMarkedTownFirst(reachable, holder);", "if (holder != null && !how.HolderPriced)",
+                        "how.HolderLost = TheMarkLeftOut(holder, party, cargo, reachable, ref how);",
+                        "how.Held = how.Best != null")
+            and ordered(out, '" would pay too little for anything you carry to clear Minimum profit margin"',
+                        "holder == party.CurrentSettlement || TradeActionBehavior.StillTheSameArrival(holder)",
+                        "!TradeActionBehavior.IsMarket(holder)", "TradeActionBehavior.MarkerLeavesItOut(holder)",
+                        "holder.IsUnderSiege", "holder.SiegeEvent?.BesiegerCamp?.LeaderParty", "holder.IsUnderRaid",
+                        "LedgerBehavior.VillageShut(holder)", "LedgerBehavior.IsHostile(holder)",
+                        "if (purse <= 0)", "TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(holder), true)",
+                        "if (!road)", "if (!Marks.WaitsPastTheCeiling(cap, straight, ride, road)) return null;",
+                        "Takings took = WhatItWouldFetch(holder, market, party, ride, cargo, purse, null);",
+                        "how.HolderPriced = true;", "how.HolderPastAllowance = true;",
+                        '" day(s) the marked market may go"')
+            and "how.Best = " not in out and "bar" not in out
+            and ordered(left, "if (how.HolderLost != null)", 'return "your cargo changed and " + against;',
+                        '" for a second hour in a row"')
+            and "how.PastAllowance = how.HolderPastAllowance;" in stays
+            and '"% more the market already marked may go, so it keeps the mark for one hour only"' in why
+            and "cap > 0f && roadFound && (straight > cap || ride > cap)" in
+                between(S['Rules.cs'], "internal static bool WaitsPastTheCeiling(", ";")
+            and all(one in SCORINGTESTS for one in (
+                "A_marked_market_past_its_ceiling_with_a_road_is_priced_so_it_may_wait_one_hour",
+                "A_marked_market_past_its_ceiling_keeps_the_mark_for_one_hour_and_no_more")))
+
+chk("1.103.0", "TradeLord.log says why the map marker left its market, with the values behind it, and a marked market that drifts past its travel ceiling keeps the mark one hour",
+    the_log_says_why_the_mark_left_its_market_and_a_market_past_its_ceiling_waits_one_hour())
+
+def the_restock_pays_up_to_twice_a_foods_value_and_counts_laid_out_trade_food_apart():
+    t = S['Trading.cs']
+    cheapest = method_body(t, "private static List<(ItemRosterElement el, Good good, int price, int ceiling)> CheapestFirst")
+    larder = method_body(t, "public static void ExecuteResupply")
+    hand = method_body(S['Ledger.cs'], "private void OnPlayerInventoryExchange")
+    trade = method_body(S['Policy.cs'], "internal static int FoodBoughtToTrade")
+    sold = method_body(S['Passes.cs'], "internal bool SoldOne()")
+    en = spoken(ENGLISH)
+    return (cheapest and larder and hand and trade and sold
+            and ordered(cheapest, "_foodMissed = null;", "int ceiling = TradeMath.MostToPayOverTheCheapest(worth, tolerance);",
+                        "bool food = TradePolicy.IsStorableFood(it);",
+                        "if (food) ceiling = TradeMath.AtLeastTwiceItsValue(ceiling, it.Value);",
+                        "if (price > ceiling)", "_foodMissed = it.Name + ",
+                        "found.Add((el, TradePolicy.Describe(it), price, ceiling));")
+            and cheapest.count("price > ceiling") == 1
+            and "public const float FoodValueTolerance = 2f;" in S['TradeMath.cs']
+            and "Math.Max(ceiling, MostToPayOverTheCheapest(value, FoodValueTolerance))" in
+                between(S['TradeMath.cs'], "public static int AtLeastTwiceItsValue(int ceiling, int value) =>", ";")
+            and ordered(larder, "int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);",
+                        "var larder = CheapestFirst(pass,", "string missed = _foodMissed;",
+                        '": the cheapest on sale is " + missed')
+            and ordered(trade, "int units = kept.UnitsBoughtToTrade(el.EquipmentElement);",
+                        "if (books != null) units -= books.TradeSold(sim, LedgerBehavior.PaidKey(el.EquipmentElement));",
+                        "if (units <= 0) continue;", "traded += fed * (units < el.Amount ? units : el.Amount);",
+                        "return traded + (books?.TradeFoodBought(sim) ?? 0);")
+            and t.count("NoteBoughtToTrade(") == 1
+            and ordered(method_body(t, "private sealed class BuyingAt"), "public void Staged(int at, int price)",
+                        "Counter.Stage(Shelf[at], selling: false, price);",
+                        "_pass.Books.NoteBoughtToTrade(LedgerBehavior.PaidKey(Shelf[at].EquipmentElement),")
+            and "NoteBoughtToTrade" not in S['Counter.cs']
+            and ordered(S['Passes.cs'], "bool bought = basis.SoldOne();",
+                        "books.NoteSoldFrom(market.PaidKeyAt(at));",
+                        "if (bought && basis.SoldTraded && TradeRules.FoodValue(good) > 0)",
+                        "books.NoteTradeSold(market.PaidKeyAt(at));")
+            and ordered(sold, "SoldAt = Walk.Took();", "SoldTraded = OwnCost ? Walk.TookTraded : TradedLeft > 0;")
+            and ordered(hand, "long first = _nextUnitNumber;",
+                        "RecordPurchase(PaidKey(el), paid.GetRange(0, took), BoughtFrom(here));",
+                        "TradeActionBehavior.TheVisit.BoughtToTrade(true, PaidKey(el))",
+                        "TradeMath.MarkBoughtToTrade(rec, first, laidOutToTrade);")
+            and "or 2x its value" in en['TL321'] and "or 2x its value" in M
+            and all(one in MATHTESTS for one in (
+                "A_food_is_never_refused_for_price_at_up_to_twice_its_value",
+                "The_dear_first_walk_says_whether_the_unit_it_took_was_bought_to_trade",
+                "Units_TradeLord_laid_out_to_trade_are_marked_so_and_units_added_by_hand_are_not"))
+            and "Goods_laid_out_to_trade_and_trade_food_sold_on_a_dry_run_are_kept_apart_and_emptied_with_it" in BOOKTESTS
+            and all(one in SELLPASSTESTS for one in (
+                "A_dry_run_sale_of_food_bought_to_trade_is_counted_by_the_unit_the_walk_took",
+                "A_dry_run_sale_of_food_counts_units_bought_to_trade_first_when_units_share_one_cost")))
+
+chk("1.103.0", "Restock and keep food pays up to twice a food's value, names the cheapest food it missed, and counts trade food laid out on the trade screen as trade food, not yours",
+    the_restock_pays_up_to_twice_a_foods_value_and_counts_laid_out_trade_food_apart())
+
+def your_own_food_is_eaten_first_and_food_bought_to_trade_last():
+    math = S['TradeMath.cs']
+    l = S['Ledger.cs']
+    match = method_body(l, "private void MatchPurchasesToWhatIsHeld")
+    own = method_body(math, "private static void TakeYourOwnFirst")
+    drain = method_body(math, "public static int DrainYourOwnFoodFirst")
+    food = method_body(math, "public static Batch[] UnitCostsOfFood")
+    patch = method_body(l, "internal static class Patch_YourOwnFoodIsEatenFirst")
+    swap = method_body(l, "internal static void YourOwnFoodIsEatenFirst")
+    rule = method_body(S['Rules.cs'], "internal static List<(int back, int take)> YourOwnFirst")
+    return (match and own and drain and food and patch and swap and rule
+            and ordered(match, 'dropped.Add(gone + " " + key);',
+                        "if (have.units > 0 && TradePolicy.FoodValue(have.el.Item) > 0)",
+                        "TradeMath.DrainYourOwnFoodFirst(rec, free, gone);", "TradeMath.DrainTheOldestOf(rec, free, gone);")
+            and ordered(own, "List<Batch> mine = batches.FindAll(one => !one.Traded);",
+                        "List<Batch> traded = batches.FindAll(one => one.Traded);",
+                        "int fromMine = Math.Min(units, own);", "TakeTheOldest(mine, fromMine);",
+                        "TakeTheOldest(traded, units - fromMine);", "batches.Sort(CheapestFirstOldestLast);")
+            and ordered(drain, "if (batches[i].Traded)", "int older = OldestFirst(rows[x], rows[y]);",
+                        "fromBought += Math.Min(units, traded);", "DrainYourOwnFirst(bought, fromBought);",
+                        "DrainWhatLeftUnsold(free, fromFree);")
+            and "if (rec.Count > held) TakeYourOwnFirst(kept, rec.Count - held);" in food
+            and "TradePolicy.FoodValue(el.Item) > 0 ? TradeMath.UnitCostsOfFood(rec, held) : TradeMath.UnitCosts(rec, held)" in l
+            and '[HarmonyPatch(typeof(FoodConsumptionBehavior), "MakeFoodConsumption")]' in l
+            and "if (__0 == null || __0 != MobileParty.MainParty) return;" in patch
+            and "private static void Prefix(" in patch and "bool Prefix" not in patch
+            and ordered(swap, "List<(int back, int take)> swaps = Eating.YourOwnFirst(lines);",
+                        "roster.AddToCounts(before[back].el, 1);", "roster.AddToCounts(before[take].el, -1);", "Log.Write(")
+            and ordered(rule, "int ownEaten = Math.Min(eaten, ownBefore);", "tradeEaten[i] = eaten - ownEaten;",
+                        "if (j != i && own[j] > 0 && (take < 0 || own[j] > own[take])) take = j;",
+                        "if (take < 0) return swaps;")
+            and "Patcher.TryPatch(harmony, typeof(Patch_YourOwnFoodIsEatenFirst));" in S['SubModule.cs']
+            and S['SubModule.cs'].count("Patcher.TryPatch(harmony, typeof(") == 14
+            and all(one in FOODTESTS for one in (
+                "A_unit_of_trade_food_eaten_is_swapped_for_one_of_your_own_while_any_is_left",
+                "Your_own_units_of_a_food_are_counted_eaten_before_its_units_bought_to_trade",
+                "Trade_food_eaten_stays_eaten_once_your_own_food_is_gone",
+                "A_swap_takes_from_the_food_of_your_own_you_hold_the_most_of"))
+            and all(one in MATHTESTS for one in (
+                "Food_that_left_unsold_comes_off_your_own_units_first_and_food_bought_to_trade_last",
+                "A_food_record_claiming_more_than_is_held_drops_your_own_units_first"))
+            and "its oldest units go first, bought or not, food you bought to trade last" in README)
+
+chk("1.103.0", "your party eats its own food before food bought to trade, and food that leaves unsold comes off your own units first, the same order the cost of what is left is read in",
+    your_own_food_is_eaten_first_and_food_bought_to_trade_last())
+
+def the_route_scan_passes_over_only_pairs_no_price_could_make_a_route():
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    early = method_body(S['TradeMath.cs'], "public static bool NoOpeningPriceCouldMakeIt")
+    priced = method_body(S['Market.cs'], "internal static bool PricedAsTheGameItself")
+    return (scan and early and priced
+            and ordered(scan, "int passedOver = 0;",
+                        'bool passOver = Guard.Read("Scan.PricedAsTheGame", 0, none => Priced.PricedAsTheGameItself(), false);',
+                        "float safety = TradePolicy.ResaleSafety();",
+                        "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);",
+                        "if (passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,",
+                        "passedOver++;", "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
+                        "opened++;", "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { thrownAway++; continue; }",
+                        "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;",
+                        "float ceiling = (float)(openingSell - openingBuy) * qtyCap;",
+                        "SayWhatTheScanCost(routes.Count, opened, thrownAway, passedOver,")
+            and scan.count("passedOver++;") == 1
+            and ordered(early, "if (landed == 0 || quotedSell <= 0 || stocked <= 0 || !(safety >= 0f)) return false;",
+                        "int upper = MostAForecastCanReach(quotedSell);",
+                        "if (!BuyAcceptable(openingBuy, Realizable(upper, safety), margin)) return true;",
+                        "return beaten && upper >= openingBuy && PerDay((float)(upper - openingBuy) * stocked, days) <= bestKey;")
+            and "(int)(live * (1f + MostAForecastMayMoveAPrice))" in
+                between(S['TradeMath.cs'], "public static int MostAForecastCanReach(int live) =>", ";")
+            and "int most = (int)(live * (1f + MostAForecastMayMoveAPrice));" in
+                method_body(S['TradeMath.cs'], "public static int ForecastWithin")
+            and ordered(priced, "model.GetType() != typeof(DefaultTradeItemPriceFactorModel)",
+                        'Untouched(AccessTools.Method(model.GetType(), "GetPrice"))',
+                        'Untouched(AccessTools.Method(model.GetType(), "GetBasePriceFactor"))')
+            and "TradeMath.NoOpeningPriceCouldMakeIt(openingBuy, quotedSell, landed, stocked, days, beaten, bestKey, safety," in S['Policy.cs']
+            and '" pair(s) passed over unpriced, as no opening price could make them a route"' in
+                method_body(S['Ledger.cs'], "private static void SayWhatTheScanCost")
+            and all(one in MATHTESTS for one in (
+                "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;",
+                "float ceiling = (float)(openingSell - openingBuy) * qtyCap;",
+                "if (!TradeMath.BuyAcceptable(openingBuy, realizable, margin)) return true;",
+                "A_forecast_never_lifts_a_price_past_the_most_the_route_scan_counts_on",
+                "A_pair_the_route_scan_passes_over_is_one_it_would_throw_away_at_any_opening_price",
+                "The_route_scan_picks_the_same_routes_with_and_without_passing_over_pairs")))
+
+chk("1.103.0", "the route scan passes over, unpriced, only a pair no opening price could make a route, and only while the game's own price model is untouched",
+    the_route_scan_passes_over_only_pairs_no_price_could_make_a_route())
+
+def each_promise_names_the_five_parts_of_its_conf():
+    conf = S['Confidence.cs']
+    parts = method_body(conf, "public static Parts PartsOf")
+    kept = method_body(S['Hindsight.cs'], "private static void Kept")
+    promise = method_body(S['Hindsight.cs'], "private static void Promise")
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    return (parts and kept and promise and scan
+            and ordered(parts, "p.Resilience = ", "p.Depth = ", "p.Haste = ", "p.Quiet = ", "p.Fresh = ")
+            and ordered(between(conf, "public static string Spelled(Parts p) =>", ";"), '"resilience "', '" x depth "',
+                        '" x haste "', '" x quiet "', '" x fresh "')
+            and "Parts = Confidence.PartsOf(q.Simulated, flat, profit, shelf, q.Units, days, caravans, age," in scan
+            and "float confidence = Confidence.Of(q.Simulated, flat, profit, shelf," in scan
+            and "Parts = route.Parts" in promise
+            and "internal TradeLord.Confidence.Parts Parts;" in S['Hindsight.cs']
+            and '(said.Parts.Haste > 0f ? " (" + Confidence.Spelled(said.Parts) + ")" : "")' in kept
+            and "TaleWorlds" not in conf
+            and all(one in EXPIRYTESTS for one in (
+                "Conf_is_the_product_of_the_five_parts_the_log_names",
+                "The_five_parts_of_Conf_are_spelled_out_in_the_order_they_multiply")))
+
+chk("1.103.0", "each promise TradeLord.log checks names the five parts of its Conf, kept with the promise in memory, so the part that misleads can be found",
+    each_promise_names_the_five_parts_of_its_conf())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

@@ -348,5 +348,36 @@ namespace TradeLord.Tests
             Assert.Equal(0, TradeRules.PutBackIntoAnEmptyPurse(1000));
             Assert.Equal(0, TradeRules.PutBackIntoAnEmptyPurse(2500));
         }
-    }
+    
+        [Fact]
+        public void Gear_from_a_villagers_offer_is_taken_as_loot_within_the_tier_you_allow_and_nothing_else_is()
+        {
+            var one = new Options { MaxLootTier = 1 };
+            Assert.True(TradeRules.TakenAsLoot(Loot("tunic", tier: -1), one));
+            Assert.True(TradeRules.TakenAsLoot(Loot(tier: 0), one));
+            Assert.False(TradeRules.TakenAsLoot(Loot(tier: 1), one));
+            Assert.False(TradeRules.TakenAsLoot(Loot(tier: 0), new Options { MaxLootTier = 0 }));
+            Assert.False(TradeRules.TakenAsLoot(Cargo(), one));
+            Assert.False(TradeRules.TakenAsLoot(Livestock(), one));
+            var horse = new Good { Id = "empire_horse", Name = "empire_horse", HasHorse = true, IsMountable = true };
+            Assert.False(TradeRules.TakenAsLoot(horse, new Options { MaxLootTier = 6 }));
+            var meal = new Good { Id = "meal", Name = "meal", Tier = 0, IsFood = true };
+            Assert.False(TradeRules.TakenAsLoot(meal, one));
+            Assert.False(TradeRules.TakenAsLoot(default(Good), one));
+        }
+
+        [Fact]
+        public void What_the_loot_sale_may_sell_is_what_a_villagers_offer_writes_down_as_loot()
+        {
+            foreach (int allowed in new[] { 0, 1, 3 })
+            {
+                var s = new Options { MaxLootTier = allowed };
+                foreach (int tier in new[] { -1, 0, 1, 2, 3 })
+                {
+                    Good gear = Loot(tier: tier);
+                    Assert.Equal(Ask(gear, s: s).Allowed, TradeRules.TakenAsLoot(gear, s));
+                }
+            }
+        }
+}
 }

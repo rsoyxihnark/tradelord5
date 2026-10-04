@@ -77,6 +77,19 @@ namespace TradeLord
 
         public const float HungryFoodTolerance = 2f;
 
+        public const float FoodValueTolerance = 2f;
+
+        public static int AtLeastTwiceItsValue(int ceiling, int value) =>
+            Math.Max(ceiling, MostToPayOverTheCheapest(value, FoodValueTolerance));
+
+        public static int TradedUnitsIn(Batch[] costs)
+        {
+            int units = 0;
+            for (int i = 0; costs != null && i < costs.Length; i++)
+                if (costs[i].Traded && costs[i].Count > 0) units += costs[i].Count;
+            return units;
+        }
+
         public const float ShortFoodTolerance = 1.5f;
 
         public static int FoodShortOfADay(int held, int day) =>
@@ -158,6 +171,11 @@ namespace TradeLord
             "source " + SourceNumber(from) + " (" + SourceNamed(from) + "), " +
             (CameFree(from) ? "came without a purchase" : "bought");
 
+        public static string WhereFreeFrom(int from) =>
+            from == FromVillagers
+                ? "source " + SourceNumber(from) + " (" + SourceNamed(from) + "), came with a villagers' offer at no cost"
+                : WhereFrom(from);
+
         public static void AddPurchase(PurchaseRecord rec, IList<int> paid, long first, float day,
                                        int from = FromAMarket, bool traded = false)
         {
@@ -181,6 +199,21 @@ namespace TradeLord
             foreach (Batch one in rec.Batches)
                 if (one.Traded && one.Count > 0) units += one.Count;
             return units;
+        }
+
+        public static int MarkBoughtToTrade(PurchaseRecord rec, long first, int units)
+        {
+            if (rec == null || rec.Batches == null || units <= 0 || first <= 0L) return 0;
+            int marked = 0;
+            for (int i = 0; i < rec.Batches.Count; i++)
+            {
+                Batch one = rec.Batches[i];
+                if (one.Traded || one.Count <= 0 || one.First < first || one.First + one.Count > first + units) continue;
+                one.Traded = true;
+                rec.Batches[i] = one;
+                marked += one.Count;
+            }
+            return marked;
         }
 
         public static int[] AtOnePrice(int units, int price)
@@ -558,6 +591,70 @@ namespace TradeLord
             batches.RemoveAll(one => one.Count <= 0);
         }
 
+        private static void TakeYourOwnFirst(List<Batch> batches, int units)
+        {
+            if (units <= 0 || batches.Count == 0) return;
+            List<Batch> mine = batches.FindAll(one => !one.Traded);
+            List<Batch> traded = batches.FindAll(one => one.Traded);
+            int own = 0;
+            for (int i = 0; i < mine.Count; i++) own += mine[i].Count;
+            int fromMine = Math.Min(units, own);
+            TakeTheOldest(mine, fromMine);
+            TakeTheOldest(traded, units - fromMine);
+            batches.Clear();
+            batches.AddRange(mine);
+            batches.AddRange(traded);
+            batches.Sort(CheapestFirstOldestLast);
+        }
+
+        public static void DrainYourOwnFirst(PurchaseRecord rec, int count)
+        {
+            if (rec == null || rec.Count <= 0 || count <= 0) return;
+            TakeYourOwnFirst(BatchesOf(rec), Math.Min(count, rec.Count));
+            AddUpTheRows(rec);
+        }
+
+        public static int DrainYourOwnFoodFirst(PurchaseRecord bought, PurchaseRecord free, int units)
+        {
+            if (units <= 0) return 0;
+            var rows = new List<Batch>();
+            var mine = new List<bool>();
+            int traded = 0;
+            foreach (PurchaseRecord rec in new[] { bought, free })
+            {
+                if (rec == null || rec.Count <= 0) continue;
+                List<Batch> batches = BatchesOf(rec);
+                for (int i = 0; i < batches.Count; i++)
+                {
+                    if (batches[i].Traded)
+                    {
+                        traded += batches[i].Count;
+                        continue;
+                    }
+                    rows.Add(batches[i]);
+                    mine.Add(rec == bought);
+                }
+            }
+            var order = new List<int>(rows.Count);
+            for (int i = 0; i < rows.Count; i++) order.Add(i);
+            order.Sort((x, y) =>
+            {
+                int older = OldestFirst(rows[x], rows[y]);
+                return older != 0 ? older : x.CompareTo(y);
+            });
+            int fromBought = 0, fromFree = 0;
+            for (int o = 0; o < order.Count && units > 0; o++)
+            {
+                int gone = Math.Min(units, rows[order[o]].Count);
+                if (mine[order[o]]) fromBought += gone; else fromFree += gone;
+                units -= gone;
+            }
+            fromBought += Math.Min(units, traded);
+            if (bought != null && fromBought > 0) DrainYourOwnFirst(bought, fromBought);
+            if (free != null && fromFree > 0) DrainWhatLeftUnsold(free, fromFree);
+            return fromBought;
+        }
+
         private static void TakeOne(List<Batch> batches, int at)
         {
             Batch taken = batches[at];
@@ -629,6 +726,14 @@ namespace TradeLord
             return kept.Count == 0 ? null : kept.ToArray();
         }
 
+        public static Batch[] UnitCostsOfFood(PurchaseRecord rec, int held)
+        {
+            if (rec == null || rec.Count <= 0 || held <= 0) return null;
+            List<Batch> kept = CopyOfTheBatches(rec);
+            if (rec.Count > held) TakeYourOwnFirst(kept, rec.Count - held);
+            return kept.Count == 0 ? null : kept.ToArray();
+        }
+
         public static int UnitsIn(Batch[] costs)
         {
             long units = 0L;
@@ -669,6 +774,7 @@ namespace TradeLord
             private int _picked;
             private int _pickedAt;
             private PassedOver _passedOver;
+            private bool _tookTraded;
 
             private const int NotPicked = 0;
             private const int TheDearest = 1;
@@ -736,7 +842,10 @@ namespace TradeLord
                 _picked = NotPicked;
                 _pickedAt = -1;
                 _passedOver = null;
+                _tookTraded = false;
             }
+
+            public bool TookTraded => _tookTraded;
 
             public int Floor(int price)
             {
@@ -820,6 +929,7 @@ namespace TradeLord
             {
                 int picked = _top >= _dearLow ? _picked : NotPicked;
                 _picked = NotPicked;
+                _tookTraded = false;
                 if (picked == TheDearest && _pickedAt >= _dearLow && _pickedAt < _top)
                 {
                     if (!_ownCost) _passedOver = new PassedOver(_pickedAt + 1, _top, 0, _topTaken, _passedOver);
@@ -829,6 +939,7 @@ namespace TradeLord
                 if (picked == TheDearest)
                 {
                     int dearest = _costs[_top].Unit;
+                    _tookTraded = _costs[_top].Traded;
                     if (_agedAfter > 0 && AgedAt(_top)) _agedTaken++;
                     _topTaken++;
                     if (LeftIn(_top) <= 0) DropTheTop();
@@ -837,6 +948,7 @@ namespace TradeLord
                 if (picked == NotPicked && _low < _split)
                 {
                     int cheapest = _costs[_low].Unit;
+                    _tookTraded = _costs[_low].Traded;
                     if (++_lowTaken >= _costs[_low].Count)
                     {
                         _low++;
@@ -851,6 +963,7 @@ namespace TradeLord
                 }
                 if (_top < _dearLow) return _passedOver != null ? TheCheapestPassedOver() : _worth;
                 int lowest = _costs[_dearLow].Unit;
+                _tookTraded = _costs[_dearLow].Traded;
                 if (_agedAfter > 0 && AgedAt(_dearLow)) _agedTaken++;
                 _dearLowTaken++;
                 if (LeftIn(_dearLow) <= 0)
@@ -873,6 +986,7 @@ namespace TradeLord
                 _passedOver = left > 0 ? new PassedOver(at, head.High, taken, head.TakenAtHigh, head.Next)
                             : at < head.High ? new PassedOver(at + 1, head.High, 0, head.TakenAtHigh, head.Next)
                             : head.Next;
+                _tookTraded = _costs[at].Traded;
                 return _costs[at].Unit;
             }
 
@@ -940,6 +1054,17 @@ namespace TradeLord
             int least = (int)(live * (1f - MostAForecastMayMoveAPrice));
             if (forecast > most) return most;
             return forecast < least ? least : forecast;
+        }
+
+        public static int MostAForecastCanReach(int live) => (int)(live * (1f + MostAForecastMayMoveAPrice));
+
+        public static bool NoOpeningPriceCouldMakeIt(int openingBuy, int quotedSell, int landed, int stocked, float days,
+                                                     bool beaten, float bestKey, float safety, float margin)
+        {
+            if (landed == 0 || quotedSell <= 0 || stocked <= 0 || !(safety >= 0f)) return false;
+            int upper = MostAForecastCanReach(quotedSell);
+            if (!BuyAcceptable(openingBuy, Realizable(upper, safety), margin)) return true;
+            return beaten && upper >= openingBuy && PerDay((float)(upper - openingBuy) * stocked, days) <= bestKey;
         }
 
         public static int LandingWithinReach(int live, int landed, int firstUnit, Func<int, int> firstUnitAt)

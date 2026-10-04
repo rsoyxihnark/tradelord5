@@ -39,6 +39,8 @@ namespace TradeLord.Compat
                 "village_farmer_buy_products_on_condition", null),
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.VillagerCampaignBehavior",
                 "conversation_player_decided_to_buy_on_consequence", null),
+            ("TaleWorlds.MountAndBlade.GauntletUI.Widgets.Chat.ChatLogItemWidget", "set_OneLineTextWidget", null),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.FoodConsumptionBehavior", "MakeFoodConsumption", null),
         };
 
         private static readonly (string type, string member)[] ReflectedMethods =
