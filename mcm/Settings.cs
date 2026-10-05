@@ -606,7 +606,7 @@ namespace TradeLord.Mcm
         public bool CoinSound { get => _o.CoinSound; set { _o.CoinSound = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL248}Detailed trade summary", Order = 17, RequireRestart = false,
-            HintText = "{=TL348}Name the goods in the one-line trade summary, largest first, e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 denars profit', instead of a bare item count. The full list is always written to TradeLord.log.")]
+            HintText = "{=TL348}Name the goods in the one-line trade summary, largest first, e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 profit', instead of a bare item count. The full list is always written to TradeLord.log.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool DetailedTradeSummary { get => _o.DetailedTradeSummary; set { _o.DetailedTradeSummary = value; Options.Bump(); } }
 
@@ -710,7 +710,7 @@ namespace TradeLord.Mcm
         public int MaxHeldPerItem { get => _o.MaxHeldPerItem; set { _o.MaxHeldPerItem = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL237}Max spend per visit (0 = unlimited)", 0, 100000, Order = 5, RequireRestart = false,
-            HintText = "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows.")]
+            HintText = "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food for a party down to less than a day of it may go past it.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int MaxSpendPerVisit { get => _o.MaxSpendPerVisit; set { _o.MaxSpendPerVisit = value; Options.Bump(); } }
 

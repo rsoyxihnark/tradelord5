@@ -223,6 +223,8 @@ namespace TradeLord
 
         internal static bool TakesTheMouse(bool windowOpen, bool buttonOn, bool overButton) =>
             windowOpen || (buttonOn && overButton);
+
+        internal static bool TakesTheWheel(bool windowOpen) => windowOpen;
     }
 
     internal static class Ranks
@@ -414,8 +416,10 @@ namespace TradeLord
     {
         internal const string Style = "TradeLord.Profit";
 
+        internal const string Coin = "<img src=\"General\\Icons\\Coin@2x\" extend=\"6\">";
+
         internal static string Shown(int profit, bool styled) =>
-            styled ? "<span style=\"" + Style + "\">" + profit + "</span>" : profit.ToString();
+            (styled ? "<span style=\"" + Style + "\">" + profit + "</span>" : profit.ToString()) + Coin;
     }
 
     internal static class Tallies

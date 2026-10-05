@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.103.3
+
+- The profit in the Sold line is now golden yellow, with a denar coin in place of the word denars
+- The hint for Detailed trade summary now shows the profit the way the Sold line writes it
+- Fixed large gaps between the trades in the Recent trades window
+- Fixed the mouse wheel zooming the map instead of scrolling the Recent trades window
+- Fixed a party down to less than a day of food getting no food, or no haul animal to carry it, once trade goods had used Max spend per visit
+- The hint for Max spend per visit now says food for a party down to less than a day of it may go past it
+
 ## 1.103.2
 
 - Fixed Staged Trading restocking too little food after it sold your own food, when Price a sale must beat was not Each unit's own price

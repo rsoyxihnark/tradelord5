@@ -178,11 +178,12 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_profit_is_marked_orange_only_once_the_chat_line_can_show_it()
+        public void The_profit_carries_a_denar_coin_and_turns_golden_once_the_chat_line_can_show_it()
         {
-            Assert.Equal("2062", ProfitMark.Shown(2062, false));
-            Assert.Equal("<span style=\"TradeLord.Profit\">2062</span>", ProfitMark.Shown(2062, true));
-            Assert.Equal("<span style=\"TradeLord.Profit\">0</span>", ProfitMark.Shown(0, true));
+            const string coin = "<img src=\"General\\Icons\\Coin@2x\" extend=\"6\">";
+            Assert.Equal("2062" + coin, ProfitMark.Shown(2062, false));
+            Assert.Equal("<span style=\"TradeLord.Profit\">2062</span>" + coin, ProfitMark.Shown(2062, true));
+            Assert.Equal("<span style=\"TradeLord.Profit\">0</span>" + coin, ProfitMark.Shown(0, true));
         }
     }
 }

@@ -631,6 +631,10 @@ namespace TradeLord
 
             internal bool WouldReachYourReserve(int price) => price >= Spendable();
 
+            internal int SpendableToFeed(bool starving) => TradeActionBehavior.SpendableToFeed(Books, Sim, starving);
+
+            internal bool WouldReachYourReserveToFeed(int price, bool starving) => price >= SpendableToFeed(starving);
+
             internal float Capacity =>
                 (_capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity) + Books.CapacityAdded(Sim) -
                 CapacitySoldOnPaper();
@@ -837,6 +841,9 @@ namespace TradeLord
 
         internal static int PurseForTheirOffer(Books books, bool sim) =>
             TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(), 0, 0);
+
+        internal static int SpendableToFeed(Books books, bool sim, bool starving) =>
+            starving ? PurseForTheirOffer(books, sim) : Spendable(books, sim);
 
         internal static int PurseForAVisit()
         {
@@ -1609,8 +1616,8 @@ namespace TradeLord
                 if (line.What == Told.Sold)
                 {
                     TextObject sold = PassMessage(line.Sim,
-                        "{=TL13}[Simulated, best case] Would sell {ITEMS} for {GOLD} denars, {PROFIT} denars profit.",
-                        "{=TL02}Sold {ITEMS} for {GOLD} denars, {PROFIT} denars profit{XP}.",
+                        "{=TL13}[Simulated, best case] Would sell {ITEMS} for {GOLD} denars, {PROFIT} profit.",
+                        "{=TL02}Sold {ITEMS} for {GOLD} denars, {PROFIT} profit{XP}.",
                         line.Detail, line.Units, line.Gold);
                     sold.SetTextVariable("PROFIT", Notices.Profit(line.Profit));
                     sold.SetTextVariable("XP", line.Sim || told ? "" : XpSaid(gained));
@@ -2020,6 +2027,7 @@ namespace TradeLord
                 return;
             }
             string stopped = null;
+            int pastTheCapUnits = 0, pastTheCapGold = 0;
 
             pass.CountFrom();
             InAPass(() =>
@@ -2044,7 +2052,13 @@ namespace TradeLord
                             stopped = "its price is above both 1.5 times the cheapest TradeLord knows and twice its value";
                             break;
                         }
-                        if (pass.WouldReachYourReserve(price)) { stopped = "buying it would reach your gold reserve or spending cap"; break; }
+                        if (pass.WouldReachYourReserveToFeed(price, hungry))
+                        {
+                            stopped = hungry ? "buying it would reach your gold reserve"
+                                             : "buying it would reach your gold reserve or spending cap";
+                            break;
+                        }
+                        bool pastTheCap = hungry && pass.WouldReachYourReserve(price);
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None)
                         {
                             stopped = "your buying caps for it are reached";
@@ -2080,6 +2094,7 @@ namespace TradeLord
                         spentThis += price;
                         held++;
                         pass.Tally(item, 1, price);
+                        if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }
                     }
                 }
 
@@ -2106,10 +2121,11 @@ namespace TradeLord
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (price <= 0 || price > ceiling) break;
-                        if (pass.WouldReachYourReserve(price)) break;
+                        if (pass.WouldReachYourReserveToFeed(price, hungry)) break;
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
                         if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;
+                        bool pastTheCap = hungry && pass.WouldReachYourReserve(price);
 
                         if (pass.Sim)
                         {
@@ -2135,6 +2151,7 @@ namespace TradeLord
                         hungryUnits++;
                         hungryGold += price;
                         pass.Tally(item, 1, price);
+                        if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }
                     }
                 }
                 if (hungryUnits > 0)
@@ -2149,12 +2166,17 @@ namespace TradeLord
                                    "value, within your gold reserve, your buying caps and your cargo room");
             });
 
+            if (pastTheCapUnits > 0)
+                Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") +
+                          "your party had less than a day of food, so " + pastTheCapUnits + " item(s) for " +
+                          pastTheCapGold + " gold were bought past Max spend per visit at " + settlement.Name +
+                          ", still within your gold reserve");
             if (shortfall > 0 && firstLeft.HasValue && !pass.DirectionError)
             {
                 var left = firstLeft.Value;
                 var food = FoodTheHoldLeftBehind(pass, left.el, left.good, left.fed, left.ceiling, shortfall,
                                                  left.remaining, left.taken, left.held, shareCap,
-                                                 settlement.IsVillage);
+                                                 settlement.IsVillage, hungry);
                 _unfitted = (food.weight, food.cost, 0f, true);
             }
             if (stocked <= 0)
@@ -2178,10 +2200,11 @@ namespace TradeLord
         private static (float weight, int cost) FoodTheHoldLeftBehind(Pass pass, ItemRosterElement el, in Good good,
                                                                       int fed, int ceiling, int shortfall,
                                                                       int remaining, (int count, int spent) taken,
-                                                                      int held, float shareCap, bool village)
+                                                                      int held, float shareCap, bool village,
+                                                                      bool starving)
         {
             Func<int, int> ahead = pass.PricesAhead(el.EquipmentElement);
-            int budget = pass.Spendable();
+            int budget = pass.SpendableToFeed(starving);
             float weight = 0f;
             int cost = 0, units = 0;
             while (shortfall > 0 && remaining > 0)
@@ -2549,6 +2572,10 @@ namespace TradeLord
             float leastFilled = Herding.LeastFilledFor(unfitted.food,
                 TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),
                 TradePolicy.FoodForADay());
+            bool starving = unfitted.food && TradeMath.FoodShortOfADay(
+                TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),
+                TradePolicy.FoodForADay()) > 0;
+            bool pastTheCap = false;
 
             var stable = CheapestFirst(pass, it => TradePolicy.MayHaul(it, pass.Locked),
                                        Options.Current.HaulAnimalPriceTolerance);
@@ -2587,13 +2614,13 @@ namespace TradeLord
                             enough = true;
                             break;
                         }
-                        if (pass.WouldReachYourReserve(price)) break;
+                        if (pass.WouldReachYourReserveToFeed(price, starving)) break;
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, HoldShareOff) != Block.None) break;
                         if (settlement.IsVillage && remaining <= 1) break;
                         float stillToCarry = TradeMath.WeightTheBudgetCanStillBuy(unfitted.weight, unfitted.cost,
-                                                                                   pass.Spendable() - price);
+                                                                                   pass.SpendableToFeed(starving) - price);
                         float profitToCarry = TradeMath.ProfitTheBudgetCanStillBuy(unfitted.profit, unfitted.cost,
-                                                                                    pass.Spendable() - price);
+                                                                                    pass.SpendableToFeed(starving) - price);
                         if (!Herding.AnotherHaulAnimalIsWanted(hauled, each, Options.Current.MaxCargoShare,
                                                                roomLeft, stillToCarry, leastFilled,
                                                                profitToCarry, price))
@@ -2605,6 +2632,7 @@ namespace TradeLord
                             break;
                         }
 
+                        bool overTheCap = starving && pass.WouldReachYourReserve(price);
                         if (pass.Sim)
                         {
                             simSpent += price;
@@ -2627,6 +2655,7 @@ namespace TradeLord
                         spentThis += price;
                         held++;
                         pass.Tally(item, 1, price);
+                        if (overTheCap) pastTheCap = true;
                     }
                 }
             });
@@ -2650,12 +2679,14 @@ namespace TradeLord
 
             int spent = pass.Spent(simSpent);
             pass.Moved(gold: spent, selling: false);
-            float carrying = TradeMath.WeightTheBudgetCanStillBuy(unfitted.weight, unfitted.cost, pass.Spendable());
+            float carrying = TradeMath.WeightTheBudgetCanStillBuy(unfitted.weight, unfitted.cost,
+                                                                  pass.SpendableToFeed(starving));
             Log.Write((pass.Sim ? "haul animals (simulated, best case): " : "haul animals: ") + hauled +
                       " bought, -" + spent + " gold at " + settlement.Name + ", for " +
                       (unfitted.food ? "food" : "goods") + " weighing " +
                       carrying.ToString("0", System.Globalization.CultureInfo.InvariantCulture) +
                       " that your full cargo left behind and the gold left can still buy" +
+                      (pastTheCap ? ", past Max spend per visit as your party has less than a day of food" : "") +
                       (floored
                           ? ", stopping there as the next, at " + priceAtTheFloor + ", would leave your purse at " +
                             (purseAtTheFloor - priceAtTheFloor) + ", not above the " + floor +

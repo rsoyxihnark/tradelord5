@@ -2,7 +2,7 @@
 <base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="string">
 	<tags><tag language="简体中文"/></tags>
 	<strings>
-		<string id="TL02" text="卖出 {ITEMS}，得到 {GOLD} 第纳尔，利润 {PROFIT} 第纳尔{XP}。"/>
+		<string id="TL02" text="卖出 {ITEMS}，得到 {GOLD} 第纳尔，利润 {PROFIT}{XP}。"/>
 		<string id="TL20" text="最佳卖出价"/>
 		<string id="TL21" text="最佳买入价"/>
 		<string id="TL22" text="* 这里是卖出此物的最佳市场！"/>
@@ -15,7 +15,7 @@
 		<string id="TL11" text="查看 TradeLord 账簿"/>
 		<string id="TL26" text="在此交易（TradeLord）"/>
 		<string id="TL31" text="{COUNT} 件货物"/>
-		<string id="TL13" text="[模拟，最理想情况] 本会卖出 {ITEMS}，得到 {GOLD} 第纳尔，利润 {PROFIT} 第纳尔。"/>
+		<string id="TL13" text="[模拟，最理想情况] 本会卖出 {ITEMS}，得到 {GOLD} 第纳尔，利润 {PROFIT}。"/>
 		<string id="TL14" text="[模拟，最理想情况] 本会买入 {ITEMS}，花费 {GOLD} 第纳尔。"/>
 		<string id="TL15" text="改在那里卖出可多 {PCT}%"/>
 		<string id="TL18" text="市场仍在稳定中（还需 {DAYS} 天）。"/>
@@ -192,7 +192,7 @@
 		<string id="TL334" text="手里的钱降到这个数以下就不再花。默认 300，够你花钱躲开两次敌对遭遇，采购之后还付得起一次军饷。"/>
 		<string id="TL335" text="每次到访 TradeLord 最多买同一种货物多少件。0 = 不限件数。默认 32。"/>
 		<string id="TL336" text="同时按第纳尔限制每次到访花在每种货物上的钱。"/>
-		<string id="TL337" text="每到访一个定居点，TradeLord 最多可花的第纳尔总额。默认 1000。下面的“自适应花费上限”会随钱袋变鼓把它调高。"/>
+		<string id="TL337" text="每到访一个定居点，TradeLord 最多可花的第纳尔总额。默认 1000。下面的“自适应花费上限”会随钱袋变鼓把它调高。队伍的食物不足一天时，买食物可以超出这个上限。"/>
 		<string id="TL338" text="假定你赶到时，最高卖价只剩下这个比例。开启“自动学习转卖安全系数”后，TradeLord 从这里起步，只会按你每次进入市场时的实际情况往下调，绝不调高。"/>
 		<string id="TL339" text="谷物又重利润又薄，买它只会把货舱塞满，换不回多少。卖出和食物储备不受影响。默认打开。"/>
 		<string id="TL340" text="TradeLord 绝不能买的货物。和上面一样，用货物 id 或游戏中显示的名称填写，以逗号分隔。卖出它们不受影响。"/>
@@ -202,7 +202,7 @@
 		<string id="TL344" text="缩放自动交易的利润所给的交易经验。填 0 就不给经验。"/>
 		<string id="TL345" text="标出够得着、且对它在那里真能卖掉的货物出价最高的市场，并随你骑行一路跟着。只有在“与村庄交易”开启时才会标出村庄。它遵守行程上限，并跳过 TradeLord 最后一次交易的市场，直到你回到那里。默认开启；在账簿面板点击城镇仍可手动钉住标记。"/>
 		<string id="TL347" text="真的成交时播放金币声。什么都没交易的一趟保持安静。"/>
-		<string id="TL348" text="在一行交易摘要里点出货物的名字，按金额从大到小，比如“卖出 8 橄榄, 3 葡萄酒，得到 240 第纳尔，利润 90 第纳尔”，而不是只给一个件数。完整清单始终会写进 TradeLord.log。"/>
+		<string id="TL348" text="在一行交易摘要里点出货物的名字，按金额从大到小，比如“卖出 8 橄榄, 3 葡萄酒，得到 240 第纳尔，利润 90”，而不是只给一个件数。完整清单始终会写进 TradeLord.log。"/>
 		<string id="TL349" text="自动进行的交易，无论是走进市场时，还是在路上遇到商队或一队村民时，都只写进 TradeLord.log，屏幕上不出现交易提示。警告仍会显示在屏幕上：载货已满、钱袋低于金钱储备，以及货物名单上有一项找不到对应的货物。菜单里的交易项则一律照常提示。"/>
 		<string id="TL100" text="语言"/>
 		<string id="TL101" text="情报"/>

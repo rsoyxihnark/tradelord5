@@ -2,7 +2,7 @@
 <base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="string">
 	<tags><tag language="Türkçe"/></tags>
 	<strings>
-		<string id="TL02" text="{ITEMS} {GOLD} dinara satıldı, {PROFIT} dinar kâr{XP}."/>
+		<string id="TL02" text="{ITEMS} {GOLD} dinara satıldı, {PROFIT} kâr{XP}."/>
 		<string id="TL20" text="En iyi satış fiyatları"/>
 		<string id="TL21" text="En iyi alış fiyatları"/>
 		<string id="TL22" text="* Bunu satmak için en iyi pazar!"/>
@@ -15,7 +15,7 @@
 		<string id="TL11" text="TradeLord defterine bak"/>
 		<string id="TL26" text="Burada hemen ticaret yap (TradeLord)"/>
 		<string id="TL31" text="{COUNT} parça"/>
-		<string id="TL13" text="[Benzetim, en iyi durum] {ITEMS} {GOLD} dinara satılırdı, {PROFIT} dinar kâr."/>
+		<string id="TL13" text="[Benzetim, en iyi durum] {ITEMS} {GOLD} dinara satılırdı, {PROFIT} kâr."/>
 		<string id="TL14" text="[Benzetim, en iyi durum] {ITEMS} {GOLD} dinara alınırdı."/>
 		<string id="TL15" text="Orada satsanız +%{PCT}"/>
 		<string id="TL18" text="Pazar hâlâ oturuyor ({DAYS} gün daha)."/>
@@ -192,7 +192,7 @@
 		<string id="TL334" text="Harcarken bu kadar altının altına asla inmez. Varsayılan 300; bu, iki düşman karşılaşmasından pazarlıkla çıkmaya ve alışveriş sonrası bir maaş ödemesini karşılamaya yeter."/>
 		<string id="TL335" text="TradeLord'un bir ziyarette bir maldan aldığı en fazla birim. 0 = sayıda sınır yok. Varsayılan 32."/>
 		<string id="TL336" text="Ziyaret başına mal başına harcamayı dinar olarak da sınırlar."/>
-		<string id="TL337" text="TradeLord'un yerleşim ziyareti başına harcayabileceği toplam dinar. Varsayılan 1000. Aşağıdaki Uyarlanan harcama sınırı keseniz büyüdükçe bunu yükseltir."/>
+		<string id="TL337" text="TradeLord'un yerleşim ziyareti başına harcayabileceği toplam dinar. Varsayılan 1000. Aşağıdaki Uyarlanan harcama sınırı keseniz büyüdükçe bunu yükseltir. Partinizin bir günden az yiyeceği kaldığında yiyecek bu sınırı aşabilir."/>
 		<string id="TL338" text="En iyi satış fiyatının yalnızca bu oranının siz varana kadar duracağını varsayar. Yeniden satış güvenlik payını öğren açıkken TradeLord buradan başlar ve bunu pazar girişlerinizin gösterdiğine göre yalnızca düşürür."/>
 		<string id="TL339" text="Tahıl ağır ve kâr payı düşüktür, bu yüzden almak yükü az getiriyle doldurur. Satış ve yiyecek rezervi etkilenmez. Varsayılan AÇIK."/>
 		<string id="TL340" text="TradeLord'un asla almaması gereken mallar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Satışları etkilenmez."/>
@@ -202,7 +202,7 @@
 		<string id="TL344" text="Otomatik kâr için verilen Ticaret tecrübesini ölçekler. 0 tecrübeyi kapatır."/>
 		<string id="TL345" text="Orada gerçekten satacağı kargoya en çok ödeyen pazarı, yol süresi sınırları içinde ve köyse yalnızca Köylerle ticaret yap açıkken işaretler. TradeLord'un son ticaret yaptığı pazarı siz oraya dönene kadar atlar. Varsayılan AÇIK."/>
 		<string id="TL347" text="Bir geçiş gerçekten bir şey taşıdığında bozuk para sesi çalar. Hiçbir şey taşımayan geçiş sessiz kalır."/>
-		<string id="TL348" text="Tek satırlık ticaret özetinde malları toplam tutarı en büyük olandan başlayarak adlandırır, örneğin '8 Zeytin, 3 Şarap 240 dinara satıldı, 90 dinar kâr', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
+		<string id="TL348" text="Tek satırlık ticaret özetinde malları toplam tutarı en büyük olandan başlayarak adlandırır, örneğin '8 Zeytin, 3 Şarap 240 dinara satıldı, 90 kâr', yalın bir parça sayısı yerine. Tam liste her zaman TradeLord.log'a yazılır."/>
 		<string id="TL349" text="Kendiliğinden yapılan ticaret, hem pazara girerken hem yolda bir kervan ya da köylü bölüğüyle karşılaşınca, yalnızca TradeLord.log'a yazar. Uyarılar yine ekranda görünür: yük dolu, kese Altın rezervinin altında, hiçbir mala uymayan liste girdisi."/>
 		<string id="TL100" text="Dil"/>
 		<string id="TL101" text="Bilgi"/>
