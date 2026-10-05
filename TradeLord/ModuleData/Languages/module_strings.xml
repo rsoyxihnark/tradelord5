@@ -2,7 +2,7 @@
 <base xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="string">
 	<tags><tag language="English"/></tags>
 	<strings>
-		<string id="TL02" text="Sold {ITEMS} for {GOLD} denars, {PROFIT} denars profit{XP}."/>
+		<string id="TL02" text="Sold {ITEMS} for {GOLD} denars, {PROFIT} profit{XP}."/>
 		<string id="TL20" text="Best sell prices"/>
 		<string id="TL21" text="Best buy prices"/>
 		<string id="TL22" text="* Best market to sell this!"/>
@@ -15,7 +15,7 @@
 		<string id="TL11" text="Consult the TradeLord ledger"/>
 		<string id="TL26" text="Trade here now (TradeLord)"/>
 		<string id="TL31" text="{COUNT} items"/>
-		<string id="TL13" text="[Simulated, best case] Would sell {ITEMS} for {GOLD} denars, {PROFIT} denars profit."/>
+		<string id="TL13" text="[Simulated, best case] Would sell {ITEMS} for {GOLD} denars, {PROFIT} profit."/>
 		<string id="TL14" text="[Simulated, best case] Would buy {ITEMS} for {GOLD} denars."/>
 		<string id="TL15" text="+{PCT}% if sold there instead"/>
 		<string id="TL18" text="The market is still settling ({DAYS} more days)."/>
@@ -194,7 +194,7 @@
 		<string id="TL334" text="Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip."/>
 		<string id="TL335" text="Most units of one good TradeLord buys per visit. 0 = no limit on the count. Default 32."/>
 		<string id="TL336" text="Also cap spending per item per visit in denars."/>
-		<string id="TL337" text="Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows."/>
+		<string id="TL337" text="Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food for a party down to less than a day of it may go past it."/>
 		<string id="TL338" text="Assume only this share of the best sell price elsewhere is still there when you arrive. With Learn the resale safety factor on, TradeLord starts here and only ever lowers it, as your own walk-ins show."/>
 		<string id="TL339" text="Grain is heavy and low margin, so buying it fills the cargo for little return. Selling and the food reserve are unaffected. ON by default."/>
 		<string id="TL340" text="Goods TradeLord must never buy. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected."/>
@@ -204,7 +204,7 @@
 		<string id="TL344" text="Scales the Trade XP awarded for automated profit. 0 disables XP."/>
 		<string id="TL345" text="Marks the market paying most for the cargo it would really sell there, within the travel ceilings; a village only while Trade with villages is on. It skips the market TradeLord last traded at until you return. ON by default."/>
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
-		<string id="TL348" text="Name the goods in the one-line trade summary, largest first, e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 denars profit', instead of a bare item count. The full list is always written to TradeLord.log."/>
+		<string id="TL348" text="Name the goods in the one-line trade summary, largest first, e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 profit', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Auto trading, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports only to TradeLord.log. Warnings still show on screen: cargo full, purse below Gold reserve, a list entry that matches no good."/>
 		<string id="TL100" text="Language"/>
 		<string id="TL101" text="Knowledge"/>

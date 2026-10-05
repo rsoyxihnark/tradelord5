@@ -1832,7 +1832,7 @@ chk("1.3.11", "the panel hands back the movie and the mouse, and honours the mod
     "SetInputRestrictions(false, InputUsageMask.All)" in
     method_body(S['Panel.cs'], "private static void ApplyIdleInput") and
     (lambda b: ordered(b, "if (wantMouse)", "_layer.ActiveCursor = CursorType.Default;",
-                       "SetInputRestrictions(true, InputUsageMask.MouseButtons)",
+                       "SetInputRestrictions(true, wantWheel ? InputUsageMask.Mouse : InputUsageMask.MouseButtons)",
                        "else", "SetInputRestrictions(false, InputUsageMask.All)"))
     (method_body(S['Panel.cs'], "private static void UpdateIdleInput")) and
     "SetInputRestrictions(true, InputUsageMask.Mouse)" in
@@ -2095,7 +2095,7 @@ chk("1.36.0", "a trade on the road moves one unit and its price itself, because 
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
     S['Trading.cs'].count("[Simulated, best case]") == 2 and
-    S['Trading.cs'].count("(simulated, best case): ") == 4 and
+    S['Trading.cs'].count("(simulated, best case): ") == 5 and
     'internal string Headed(string label) => label + (Sim ? Counter.Heading : ": ");'
         in S['Trading.cs'] and
     'internal static string Heading => Staging ? " (laid out): " : " (simulated, best case): ";'
@@ -2785,7 +2785,7 @@ chk("1.6.1", "the Trade XP rides on the Sold line, or on an amber line of its ow
             "XpGained own = CreditTradeSkill(xp, profit, out learned);",
             'Guard.Run("Action.SayWhatMoved", () => SayWhatMoved(gained));',
             "Notices.Drain();") and
-    '"{=TL02}Sold {ITEMS} for {GOLD} denars, {PROFIT} denars profit{XP}."' in S['Trading.cs'] and
+    '"{=TL02}Sold {ITEMS} for {GOLD} denars, {PROFIT} profit{XP}."' in S['Trading.cs'] and
     '"{=TL499} (+{XP} Trade XP)"' in S['Trading.cs'] and
     '"{=TL500} (+{XP} Trade XP, Trade is now {LEVEL})"' in S['Trading.cs'] and
     '"{=TL501}What was sold added {XP} Trade XP."' in S['Trading.cs'] and
@@ -5898,14 +5898,22 @@ def the_larder_and_the_stable_leave_the_gold_reserve_whole():
     capped = cap_rule()
     said = "it stops before your gold reaches your reserve"
     reserve = between(S['Trading.cs'], "internal bool WouldReachYourReserve", ";")
-    return ('if (pass.WouldReachYourReserve(price)) { stopped = "buying it would reach your gold reserve or spending cap"; break; }'
-                in larder
-            and "if (pass.WouldReachYourReserve(price)) break;" in stable
+    return ('if (pass.WouldReachYourReserveToFeed(price, hungry))\n'
+            '                        {\n'
+            '                            stopped = hungry ? "buying it would reach your gold reserve"\n'
+            '                                             : "buying it would reach your gold reserve or spending cap";\n'
+            '                            break;\n'
+            '                        }' in larder
+            and "if (pass.WouldReachYourReserveToFeed(price, starving)) break;" in stable
             and "price >= Spendable()" in reserve
+            and "price >= SpendableToFeed(starving)" in between(S['Trading.cs'], "internal bool WouldReachYourReserveToFeed", ";")
+            and "starving ? PurseForTheirOffer(books, sim) : Spendable(books, sim)" in
+                between(S['Trading.cs'], "internal static int SpendableToFeed(Books books, bool sim, bool starving) =>", ";")
             and "pass.Spendable()" not in larder
-            and "pass.Spendable()" not in re.sub(
+            and "pass.Spendable()" not in stable
+            and "pass.SpendableToFeed(starving)" not in re.sub(
                 r'TradeMath\.(?:WeightTheBudgetCanStillBuy\(unfitted\.weight|ProfitTheBudgetCanStillBuy\(unfitted\.profit), '
-                r'unfitted\.cost,\s*pass\.Spendable\(\)( - price)?\)',
+                r'unfitted\.cost,\s*pass\.SpendableToFeed\(starving\)( - price)?\)',
                 '', stable)
             and "if (price > pass.Spendable()) break;" not in S['Trading.cs']
             and "if (price > budget) return Block.BudgetSpent;" in capped
@@ -12915,9 +12923,9 @@ def a_haul_animal_is_bought_only_for_what_a_full_cargo_left_behind_and_the_gold_
                         '" over what TradeLord may fill, so none is bought to carry what it left behind");\n'
                         '                return false;',
                         "if (pass.DirectionError || enough) break;",
-                        "if (pass.WouldReachYourReserve(price)) break;",
+                        "if (pass.WouldReachYourReserveToFeed(price, starving)) break;",
                         "float stillToCarry = TradeMath.WeightTheBudgetCanStillBuy(unfitted.weight, unfitted.cost,",
-                        "pass.Spendable() - price);",
+                        "pass.SpendableToFeed(starving) - price);",
                         "if (!Herding.AnotherHaulAnimalIsWanted(hauled, each, Options.Current.MaxCargoShare,",
                         "roomLeft, stillToCarry, leastFilled,",
                         "roomLeft, stillToCarry);\n                            enough = true;")
@@ -12979,7 +12987,7 @@ def what_a_full_cargo_left_behind_is_counted_at_the_price_it_would_climb_to_good
                         'Log.Repeatable("resupply none bought", settlement.StringId + "/" + stopped,',
                         '": " + stopped);\n                return;\n            }', "int spent = pass.Spent(simSpent);")
             and ordered(food, "Func<int, int> ahead = pass.PricesAhead(el.EquipmentElement);",
-                        "int budget = pass.Spendable();", "while (shortfall > 0 && remaining > 0)",
+                        "int budget = pass.SpendableToFeed(starving);", "while (shortfall > 0 && remaining > 0)",
                         "int price = ahead(units);", "if (price <= 0 || price > ceiling || price >= budget) break;",
                         "if (WhatCapsAGood(good, price, taken, held, shareCap) != Block.None) break;",
                         "shortfall -= fed;", "cost = TradeMath.AddedUp(cost, price);")
@@ -13453,7 +13461,7 @@ def a_haul_animal_is_never_bought_if_it_would_take_the_purse_down_to_its_floor()
                         "if (price <= 0 || price > ceiling) break;",
                         "int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);",
                         "if (!Herding.PurseClearsTheFloor(purse - price, floor))",
-                        "if (pass.WouldReachYourReserve(price)) break;")
+                        "if (pass.WouldReachYourReserveToFeed(price, starving)) break;")
             and ordered(haul, "if (hauled <= 0)", "if (floored)",
                         'Log.Repeatable("haul animal floor after paying", settlement.StringId,',
                         '", would leave your purse at " + (purseAtTheFloor - priceAtTheFloor) +',
@@ -13491,7 +13499,7 @@ def light_goods_that_would_pay_for_a_haul_animal_still_get_one():
             and ("public static float ProfitTheBudgetCanStillBuy(float profit, int cost, int budget) =>\n"
                  "            WeightTheBudgetCanStillBuy(profit, cost, budget);") in S['TradeMath.cs']
             and ordered(haul, "float profitToCarry = TradeMath.ProfitTheBudgetCanStillBuy(unfitted.profit, unfitted.cost,\n"
-                        "                                                                                    pass.Spendable() - price);",
+                        "                                                                                    pass.SpendableToFeed(starving) - price);",
                         "roomLeft, stillToCarry, leastFilled,", "profitToCarry, price))")
             and "A_haul_animal_is_bought_for_light_goods_that_would_make_more_than_it_costs" in HERDTESTS
             and "moved.UnfittedProfit" in BUYPASSTESTS
@@ -17315,7 +17323,7 @@ def every_unit_says_where_it_came_from_and_the_sold_line_carries_the_trade_xp():
             and all(not spoken(f)[k].startswith("TradeLord") and "TradeLord" not in spoken(f)[k]
                     for f in everywhere for k in ("TL02", "TL06", "TL13", "TL14"))
             and all(spoken(f)["TL02"].count("{XP}") == 1 for f in everywhere)
-            and spoken(ENGLISH)["TL02"] == "Sold {ITEMS} for {GOLD} denars, {PROFIT} denars profit{XP}."
+            and spoken(ENGLISH)["TL02"] == "Sold {ITEMS} for {GOLD} denars, {PROFIT} profit{XP}."
             and spoken(ENGLISH)["TL06"] == "Bought {ITEMS} for {GOLD} denars."
             and spoken(ENGLISH)["TL499"] == " (+{XP} Trade XP)"
             and spoken(ENGLISH)["TL500"] == " (+{XP} Trade XP, Trade is now {LEVEL})"
@@ -17418,7 +17426,7 @@ def a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price():
                         "foreach (var (el, good, _, ceiling) in lean)",
                         "while (hunger > 0 && remaining > 0)",
                         "if (price <= 0 || price > ceiling) break;",
-                        "if (pass.WouldReachYourReserve(price)) break;",
+                        "if (pass.WouldReachYourReserveToFeed(price, hungry)) break;",
                         "if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;",
                         "if (settlement.IsVillage && remaining <= 1) break;",
                         "if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;",
@@ -17540,8 +17548,8 @@ def the_summary_hint_shows_the_sold_line_as_the_screen_writes_it():
         return re.search(pattern, hint) is not None and 'TradeLord sold' not in hint
     every = [spoken(ENGLISH)] + [spoken(p) for p in TRANSLATIONS.values()]
     return (len(every) == 4 and all(shown(one) for one in every)
-            and "e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 denars profit'" in spoken(ENGLISH)['TL348']
-            and "e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 denars profit'" in M)
+            and "e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 profit'" in spoken(ENGLISH)['TL348']
+            and "e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 profit'" in M)
 
 chk("1.102.2", "the hint for Detailed trade summary shows the Sold line the way the screen writes it, with the profit and without TradeLord in front, in every language",
     the_summary_hint_shows_the_sold_line_as_the_screen_writes_it())
@@ -17575,7 +17583,7 @@ def a_long_trade_grows_its_recent_trades_row():
 chk("1.103.0", "a Recent trades row grows with a long list of goods instead of cutting it off, and a one line row keeps its height",
     a_long_trade_grows_its_recent_trades_row())
 
-def the_profit_shows_in_orange_once_the_chat_line_can_show_it():
+def the_profit_shows_in_its_own_colour_once_the_chat_line_can_show_it():
     n = S['Notices.cs']
     said = method_body(S['Trading.cs'], "private static void SayWhatMoved")
     show = method_body(n, "internal static void LetTheProfitShow")
@@ -17585,14 +17593,14 @@ def the_profit_shows_in_orange_once_the_chat_line_can_show_it():
             and 'sold.SetTextVariable("PROFIT", Notices.Profit(line.Profit));' in said
             and "internal static string Profit(int profit) => ProfitMark.Shown(profit, _profitStyled);" in n
             and ordered(show, "if (brush == null || brush.GetStyle(ProfitMark.Style) != null) return;",
-                        "DefaultStyle = brush.DefaultStyle", "style.FontColor = Xp;", "brush.AddStyle(style);",
+                        "DefaultStyle = brush.DefaultStyle", "style.FontColor = Golden;", "brush.AddStyle(style);",
                         "if (_profitStyled) return;", "_profitStyled = true;", "Log.Write(")
             and all(spoken(p)['TL02'].count('{PROFIT}') == 1 and spoken(p)['TL13'].count('{PROFIT}') == 1
                     for p in [ENGLISH] + list(TRANSLATIONS.values()))
-            and "The_profit_is_marked_orange_only_once_the_chat_line_can_show_it" in ONELINETESTS)
+            and "The_profit_carries_a_denar_coin_and_turns_golden_once_the_chat_line_can_show_it" in ONELINETESTS)
 
-chk("1.103.0", "the profit in the Sold line is orange once the chat line has the orange style, and stays a plain number where the game never gave it one",
-    the_profit_shows_in_orange_once_the_chat_line_can_show_it())
+chk("1.103.0", "the profit in the Sold line takes its own colour once the chat line has the TradeLord style, and stays uncoloured where the game never gave it one",
+    the_profit_shows_in_its_own_colour_once_the_chat_line_can_show_it())
 
 def gear_from_a_villagers_offer_you_take_goes_out_as_loot():
     took = method_body(S['Encounters.cs'], "internal static void YouTookTheirOffer")
@@ -17876,6 +17884,107 @@ def the_log_says_gear_from_a_villagers_offer_is_written_down_like_loot_and_promi
 
 chk("1.103.2", "TradeLord.log says gear from a villagers' offer is written down at no cost like loot, without promising the loot sale sells gear your settings keep",
     the_log_says_gear_from_a_villagers_offer_is_written_down_like_loot_and_promises_no_sale())
+
+def the_profit_is_golden_with_a_denar_coin_in_place_of_the_word_denars():
+    n = S['Notices.cs']
+    show = method_body(n, "internal static void LetTheProfitShow")
+    mark = between(S['Rules.cs'], "internal static class ProfitMark", "internal static class Tallies")
+    every = [spoken(ENGLISH)] + [spoken(p) for p in TRANSLATIONS.values()]
+    words = ("{PROFIT} denars", "{PROFIT} dinar", "{PROFIT} \u0434\u0435\u043d\u0430\u0440\u043e\u0432", "{PROFIT} \u7b2c\u7eb3\u5c14")
+    return (show and mark
+            and "internal static readonly Color Golden = new Color(0.95f, 0.85f, 0.50f);" in n
+            and "style.FontColor = Golden;" in show
+            and '"the profit in the Sold line shows in golden yellow from now on: the chat line brush "' in show
+            and "orange" not in n
+            and 'internal const string Coin = "<img src=\\"General\\\\Icons\\\\Coin@2x\\" extend=\\"6\\">";' in mark
+            and '(styled ? "<span style=\\"" + Style + "\\">" + profit + "</span>" : profit.ToString()) + Coin;' in mark
+            and len(every) == 4
+            and all(one['TL02'].count('{PROFIT}') == 1 and one['TL13'].count('{PROFIT}') == 1 for one in every)
+            and all(word not in one['TL02'] and word not in one['TL13'] for one in every for word in words)
+            and spoken(ENGLISH)['TL02'] == "Sold {ITEMS} for {GOLD} denars, {PROFIT} profit{XP}."
+            and '"{=TL13}[Simulated, best case] Would sell {ITEMS} for {GOLD} denars, {PROFIT} profit."' in S['Trading.cs']
+            and "and the profit in the Sold line is golden yellow with a denar coin" in README
+            and "The_profit_carries_a_denar_coin_and_turns_golden_once_the_chat_line_can_show_it" in ONELINETESTS)
+
+chk("1.103.3", "the profit in the Sold line is golden yellow with the game's denar coin beside it, in place of the word denars, in every language",
+    the_profit_is_golden_with_a_denar_coin_in_place_of_the_word_denars())
+
+def a_recent_trades_row_is_as_tall_as_its_tallest_text():
+    import xml.etree.ElementTree as ET
+    root = ET.parse('TradeLord/GUI/Prefabs/TradeLordPanel.xml').getroot()
+    trades = next((lp for lp in root.iter('ListPanel') if lp.get('Id') == 'TradeList'), None)
+    row = trades.find('ItemTemplate/ListPanel') if trades is not None else None
+    if row is None:
+        return False
+    texts = list(row.iter('TextWidget'))
+    beside = [w for w in texts if w.get('Text') in ('@When', '@Where', '@Gold')]
+    return (row.get('HeightSizePolicy') == 'CoverChildren' and row.get('MinHeight') == '26'
+            and len(texts) == 5 and len(beside) == 4
+            and all(w.get('HeightSizePolicy') == 'CoverChildren' for w in texts)
+            and all(w.get('VerticalAlignment') == 'Center' for w in texts)
+            and not any(w.get('HeightSizePolicy') == 'StretchToParent' for w in row.iter()))
+
+chk("1.103.3", "a Recent trades row is as tall as its tallest text, never as tall as the list, so the trades sit one under another",
+    a_recent_trades_row_is_as_tall_as_its_tallest_text())
+
+def the_recent_trades_window_takes_the_mouse_wheel():
+    idle = method_body(S['Panel.cs'], "private static void UpdateIdleInput")
+    return (idle
+            and "internal static bool TakesTheWheel(bool windowOpen) => windowOpen;" in S['Rules.cs']
+            and ordered(idle, "bool wantWheel = wantMouse && MapButton.TakesTheWheel(_vm.IsTradesVisible);",
+                        "if (wantMouse == _idleMouseActive && wantWheel == _idleWheelTaken) return;",
+                        "_idleWheelTaken = wantWheel;",
+                        "SetInputRestrictions(true, wantWheel ? InputUsageMask.Mouse : InputUsageMask.MouseButtons)")
+            and S['Panel.cs'].count("_idleWheelTaken = false;") == 2
+            and S['Panel.cs'].count("_idleMouseActive = false;") == 2
+            and "The_mouse_wheel_is_taken_only_while_a_window_is_open_so_the_map_still_zooms_over_the_button"
+                in T['MapButtonTests.cs'])
+
+chk("1.103.3", "the mouse wheel scrolls the Recent trades window while it is open and zooms the map again once it closes, and the cursor over the map button takes only clicks",
+    the_recent_trades_window_takes_the_mouse_wheel())
+
+def a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve():
+    t = S['Trading.cs']
+    larder = method_body(t, "public static void ExecuteResupply")
+    food = method_body(t, "private static (float weight, int cost) FoodTheHoldLeftBehind")
+    haul = method_body(t, "public static bool ExecuteHaulage")
+    en = spoken(ENGLISH)
+    return (larder and food and haul
+            and "starving ? PurseForTheirOffer(books, sim) : Spendable(books, sim)" in
+                between(t, "internal static int SpendableToFeed(Books books, bool sim, bool starving) =>", ";")
+            and "internal int SpendableToFeed(bool starving) => TradeActionBehavior.SpendableToFeed(Books, Sim, starving);" in t
+            and "internal bool WouldReachYourReserveToFeed(int price, bool starving) => price >= SpendableToFeed(starving);" in t
+            and ordered(larder, "bool hungry = TradeMath.FoodShortOfADay(", "int pastTheCapUnits = 0, pastTheCapGold = 0;",
+                        "if (pass.WouldReachYourReserveToFeed(price, hungry))",
+                        "bool pastTheCap = hungry && pass.WouldReachYourReserve(price);",
+                        "if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }",
+                        "while (hunger > 0 && remaining > 0)", "if (hungryUnits > 0)",
+                        "if (pastTheCapUnits > 0)", '" gold were bought past Max spend per visit at "',
+                        "settlement.IsVillage, hungry);")
+            and ordered(between(larder, "while (hunger > 0 && remaining > 0)", "if (hungryUnits > 0)"),
+                        "if (pass.WouldReachYourReserveToFeed(price, hungry)) break;",
+                        "bool pastTheCap = hungry && pass.WouldReachYourReserve(price);",
+                        "if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }")
+            and larder.count("bool pastTheCap = hungry && pass.WouldReachYourReserve(price);") == 2
+            and larder.count("if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }") == 2
+            and larder.count("pass.WouldReachYourReserveToFeed(price, hungry)") == 2
+            and "pass.WouldReachYourReserve(price))" not in larder
+            and "int budget = pass.SpendableToFeed(starving);" in food
+            and ordered(haul, "bool starving = unfitted.food && TradeMath.FoodShortOfADay(",
+                        "TradePolicy.FoodForADay()) > 0;", "bool pastTheCap = false;",
+                        "if (pass.WouldReachYourReserveToFeed(price, starving)) break;",
+                        "bool overTheCap = starving && pass.WouldReachYourReserve(price);",
+                        "pass.Tally(item, 1, price);", "if (overTheCap) pastTheCap = true;",
+                        '", past Max spend per visit as your party has less than a day of food"')
+            and "Food for a party down to less than a day of it may go past it." in en['TL337']
+            and "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food for a party down to less than a day of it may go past it." in M
+            and "bir g\u00fcnden az yiyece\u011fi" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL337']
+            and "\u043c\u0435\u043d\u044c\u0448\u0435 \u0447\u0435\u043c \u043d\u0430 \u0434\u0435\u043d\u044c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL337']
+            and "\u4e0d\u8db3\u4e00\u5929" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL337']
+            and "When your party is down to less than a day of food, the food it buys and a haul animal to carry it may go past Max spend per visit, never past your gold reserve" in README)
+
+chk("1.103.3", "a party down to less than a day of food buys its food, and a haul animal to carry it, past Max spend per visit, never past the gold reserve, and TradeLord.log says so",
+    a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

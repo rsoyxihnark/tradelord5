@@ -719,6 +719,7 @@ namespace TradeLord
         }
 
         private static bool _idleMouseActive;
+        private static bool _idleWheelTaken;
         private static Widget _mapButton;
         private const string MapButtonId = "TradeLordMapButton";
         private static int _huntIn;
@@ -765,12 +766,14 @@ namespace TradeLord
         {
             bool wantMouse = MapButton.TakesTheMouse(
                 _vm.IsTradesVisible, buttonOn, OverButtonBounds(Input.MousePositionRanged));
-            if (wantMouse == _idleMouseActive) return;
+            bool wantWheel = wantMouse && MapButton.TakesTheWheel(_vm.IsTradesVisible);
+            if (wantMouse == _idleMouseActive && wantWheel == _idleWheelTaken) return;
             _idleMouseActive = wantMouse;
+            _idleWheelTaken = wantWheel;
             if (wantMouse)
             {
                 _layer.ActiveCursor = CursorType.Default;
-                _layer.InputRestrictions.SetInputRestrictions(true, InputUsageMask.MouseButtons);
+                _layer.InputRestrictions.SetInputRestrictions(true, wantWheel ? InputUsageMask.Mouse : InputUsageMask.MouseButtons);
             }
             else
                 _layer.InputRestrictions.SetInputRestrictions(false, InputUsageMask.All);
@@ -842,6 +845,7 @@ namespace TradeLord
         {
             if (_layer == null) return;
             _idleMouseActive = false;
+            _idleWheelTaken = false;
             _layer.InputRestrictions.SetInputRestrictions(false, InputUsageMask.All);
         }
 
@@ -984,6 +988,7 @@ namespace TradeLord
             _loggedArmed = false;
             _loggedButtonMissing = false;
             _idleMouseActive = false;
+            _idleWheelTaken = false;
             _keySource = null;
         }
 

@@ -83,6 +83,7 @@
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
 - ✅ Tops your food back up to three days of supply, buying the cheapest food the market has at up to 1.5 times the cheapest price it knows of for it, or up to twice that for one day of food when your party is about to go hungry
 - ✅ A food is never passed over for its price while it costs no more than twice its value in the game
+- ✅ When your party is down to less than a day of food, the food it buys and a haul animal to carry it may go past Max spend per visit, never past your gold reserve
 - ✅ Food you bought to trade is counted last toward those days, so it sells where it pays once your own food fills them
 - ✅ Your party eats its own food before food bought to trade, while any of its own is left
 - ✅ Food Staged Trading lays out on the trade screen to sell on counts as food bought to trade, never as your party's own
@@ -151,7 +152,7 @@
 - ✅ Each time it trades, all it bought is one line on screen and all it sold is the next, whatever order it traded in
 - ✅ Animals sold to get your party back up to speed are in the Sold line, and food restocked and haul animals bought are in the Bought line
 - ✅ The Sold line also says how much Trade XP the sale added, and your Trade skill when it goes up a level
-- ✅ The Sold and Bought lines name every good traded, largest first, and the profit in the Sold line is in orange
+- ✅ The Sold and Bought lines name every good traded, largest first, and the profit in the Sold line is golden yellow with a denar coin
 - ✅ Keeps the game's per-item message spam out of a forty-unit sale
 - ✅ A coin sound on a trade that lands, silence on one that does not
 - ✅ A quiet mode that keeps automated trading to the log and off your screen, apart from three warnings: cargo full, a purse below your Gold reserve, and an item list entry that matches no good

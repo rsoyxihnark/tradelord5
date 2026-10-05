@@ -85,6 +85,13 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_mouse_wheel_is_taken_only_while_a_window_is_open_so_the_map_still_zooms_over_the_button()
+        {
+            Assert.True(MapButton.TakesTheWheel(windowOpen: true));
+            Assert.False(MapButton.TakesTheWheel(windowOpen: false));
+        }
+
+        [Fact]
         public void With_no_window_open_only_the_cursor_on_the_button_takes_the_mouse()
         {
             Assert.True(MapButton.TakesTheMouse(windowOpen: false, buttonOn: true, overButton: true));

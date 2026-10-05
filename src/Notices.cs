@@ -15,6 +15,7 @@ namespace TradeLord
         internal static readonly Color Flat = new Color(0.85f, 0.75f, 0.45f);
         internal static readonly Color Note = new Color(0.75f, 0.75f, 0.75f);
         internal static readonly Color Xp = new Color(1f, 0.72f, 0.20f);
+        internal static readonly Color Golden = new Color(0.95f, 0.85f, 0.50f);
         internal static readonly Color Alert = new Color(0.90f, 0.28f, 0.28f);
 
         private static readonly List<InformationMessage> _pending = new List<InformationMessage>();
@@ -28,11 +29,11 @@ namespace TradeLord
             Brush brush = line?.Brush;
             if (brush == null || brush.GetStyle(ProfitMark.Style) != null) return;
             var style = new Style(brush.Layers) { Name = ProfitMark.Style, DefaultStyle = brush.DefaultStyle };
-            style.FontColor = Xp;
+            style.FontColor = Golden;
             brush.AddStyle(style);
             if (_profitStyled) return;
             _profitStyled = true;
-            Log.Write("the profit in the Sold line shows in orange from now on: the chat line brush " + brush.Name +
+            Log.Write("the profit in the Sold line shows in golden yellow from now on: the chat line brush " + brush.Name +
                       " took the " + ProfitMark.Style + " style");
         }
 

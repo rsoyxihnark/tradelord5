@@ -438,22 +438,22 @@
                                                    StackLayout.LayoutMethod="HorizontalLeftToRight">
                                           <Children>
                                             <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="110"
-                                                        HeightSizePolicy="StretchToParent"
+                                                        HeightSizePolicy="CoverChildren" VerticalAlignment="Center"
                                                         Brush="Popup.Button.Text" Brush.FontSize="17"
                                                         Brush.FontColor="#BBBBBBFF"
                                                         Text="@When" />
                                             <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="200"
-                                                        HeightSizePolicy="StretchToParent"
+                                                        HeightSizePolicy="CoverChildren" VerticalAlignment="Center"
                                                         Brush="Popup.Button.Text" Brush.FontSize="17"
                                                         Text="@Where" />
                                             <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="110"
-                                                        HeightSizePolicy="StretchToParent"
+                                                        HeightSizePolicy="CoverChildren" VerticalAlignment="Center"
                                                         Brush="Popup.Button.Text" Brush.FontSize="17"
                                                         Brush.FontColor="#7FD633FF"
                                                         IsVisible="@Gained"
                                                         Text="@Gold" />
                                             <TextWidget WidthSizePolicy="Fixed" SuggestedWidth="110"
-                                                        HeightSizePolicy="StretchToParent"
+                                                        HeightSizePolicy="CoverChildren" VerticalAlignment="Center"
                                                         Brush="Popup.Button.Text" Brush.FontSize="17"
                                                         Brush.FontColor="#E08A5AFF"
                                                         IsVisible="@Spent"
