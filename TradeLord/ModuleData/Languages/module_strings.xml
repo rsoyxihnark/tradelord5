@@ -194,7 +194,7 @@
 		<string id="TL334" text="Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip."/>
 		<string id="TL335" text="Most units of one good TradeLord buys per visit. 0 = no limit on the count. Default 32."/>
 		<string id="TL336" text="Also cap spending per item per visit in denars."/>
-		<string id="TL337" text="Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food for a party down to less than a day of it may go past it."/>
+		<string id="TL337" text="Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food for a party down to less than a day of it, and a haul animal to carry it, may go past it."/>
 		<string id="TL338" text="Assume only this share of the best sell price elsewhere is still there when you arrive. With Learn the resale safety factor on, TradeLord starts here and only ever lowers it, as your own walk-ins show."/>
 		<string id="TL339" text="Grain is heavy and low margin, so buying it fills the cargo for little return. Selling and the food reserve are unaffected. ON by default."/>
 		<string id="TL340" text="Goods TradeLord must never buy. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected."/>
@@ -256,7 +256,7 @@
 		<string id="TL423" text="The deal TradeLord laid out is closed and your purse is where it was."/>
 		<string id="TL424" text="Recent trades"/>
 		<string id="TL425" text="Gold before it buys a haul animal (0 = off)"/>
-		<string id="TL426" text="Buy a haul animal only while your purse stays above this once the animal is paid for. Below it TradeLord leaves them alone however cheap they are, so early gold goes on goods instead. 0 lets it buy from the first denar. Default 2000."/>
+		<string id="TL426" text="Buy a haul animal only while your purse stays above this once it is paid for, however cheap, so early gold goes on goods. A party down to less than a day of food may go below it. 0 lets it buy from the first denar. Default 2000."/>
 		<string id="TL427" text="Most it will pay for a haul animal"/>
 		<string id="TL428" text="How far above the cheapest price TradeLord knows for that animal it will still pay. 100% means only at the cheapest. 125% by default, so it pays up to a quarter more than the cheapest."/>
 		<string id="TL429" text="Most workshops you may own (0 = the game's own limit)"/>

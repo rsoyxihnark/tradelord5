@@ -97,7 +97,7 @@
 - ✅ It buys no haul animal for goods that would fill less than half of one, unless those goods would make more than the animal costs
 - ✅ It buys one for food only when the food would fill at least half of it, or when your party is down to its last day of food
 - ✅ It buys none while your cargo is already fuller than Share of the hold TradeLord may fill allows, since the first animals would only carry what you already have
-- ✅ It never buys one that would leave your purse at 2000 denars or less, which you can set too, so early gold goes on goods instead
+- ✅ It never buys one that would leave your purse at 2000 denars or less, which you can set too, so early gold goes on goods instead, unless your party is down to less than a day of food
 - ✅ It buys no riding horses or camels at all, and it stops before your gold reaches your reserve
 - ✅ It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
 - ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it, never one you bought by hand in that town on the same visit

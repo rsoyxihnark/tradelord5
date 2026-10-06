@@ -4561,7 +4561,8 @@ def no_haul_animal_is_bought_until_the_purse_is_above_its_floor():
     haul = method_body(t, "public static bool ExecuteHaulage")
     return (ordered(haul, "if (!Options.Current.BuyHaulAnimals || unfitted.weight <= 0f || unfitted.cost <= 0) return false;",
                     "Pass pass = Pass.Open(settlement, quiet);",
-                    "if (PurseBelowTheHaulAnimalFloor(pass)) return false;",
+                    "bool starving = unfitted.food && TradeMath.FoodShortOfADay(",
+                    "if (!starving && PurseBelowTheHaulAnimalFloor(pass)) return false;",
                     "int herdRoom = Drove.RoomForLivestock(pass.Party);")
             and ordered(floor, "int floor = Options.Current.HaulAnimalGoldFloor;",
                         "if (floor <= 0) return false;",
@@ -4640,7 +4641,7 @@ chk("1.19.0", "only an animal that carries for you is bought that way, the herd 
     only_a_carrying_animal_is_hauled_and_the_herd_still_binds())
 chk("1.30.0", "a haul animal is bought only within the ceiling over the cheapest TradeLord has seen, and never below the gold reserve",
     a_pack_animal_is_bought_only_at_the_cheapest_price_and_never_below_the_reserve())
-chk("1.75.0", "no haul animal is bought at all until your purse is above the floor its own setting names, however cheap one is",
+chk("1.75.0", "no haul animal is bought at all until your purse is above the floor its own setting names, however cheap one is, unless your party is down to less than a day of food",
     no_haul_animal_is_bought_until_the_purse_is_above_its_floor())
 chk("1.36.0", "the getaway is offered as you meet a band, and leaving holds both sides off each other",
     the_getaway_ships_on_names_no_cheat_and_only_answers_bandits())
@@ -13390,26 +13391,26 @@ def a_haul_animal_is_bought_only_while_your_purse_is_above_its_floor_before_ever
             and "internal static bool PurseClearsTheFloor(int purse, int floor) => floor <= 0 || purse > floor;"
                 in S['Rules.cs']
             and "int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);" in floor
-            and ordered(haul, "if (PurseBelowTheHaulAnimalFloor(pass)) return false;",
+            and ordered(haul, "if (!starving && PurseBelowTheHaulAnimalFloor(pass)) return false;",
                         "int floor = Options.Current.HaulAnimalGoldFloor, purseAtTheFloor = 0, priceAtTheFloor = 0;",
                         "while (remaining > 0 && herdRoom > 0)",
                         "int price = pass.Price(el.EquipmentElement, selling: false);",
                         "int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);",
-                        "if (!Herding.PurseClearsTheFloor(purse - price, floor))",
+                        "if (!Herding.PurseClearsTheFloor(purse - price, floor, starving))",
                         "floored = true;",
                         "purseAtTheFloor = purse;\n                            priceAtTheFloor = price;\n"
                         "                            enough = true;\n                            break;",
                         "if (pass.Sim)",
                         '", stopping there as the next, at " + priceAtTheFloor + ", would leave your purse at " +',
                         '" set in Gold before it buys a haul animal"\n                          : ""));')
-            and haul.count("Herding.PurseClearsTheFloor(") == 1
+            and haul.count("Herding.PurseClearsTheFloor(") == 2
             and all(one in HERDTESTS for one in
                     ("A_haul_animal_is_bought_only_while_your_purse_is_above_the_floor_you_set",
                      "A_haul_animal_is_bought_only_while_your_purse_stays_above_the_floor_once_it_is_paid_for"))
             and "It never buys one that would leave your purse at 2000 denars or less" in README)
 
 
-chk("1.93.7", "a haul animal is bought only while your purse is still above Gold before it buys a haul animal, looked at again before every animal rather than the first alone, and TradeLord.log says when the purse stopped it",
+chk("1.93.7", "a haul animal is bought only while your purse is still above Gold before it buys a haul animal, unless your party has less than a day of food, looked at again before every animal, and TradeLord.log says when the purse stopped it",
     a_haul_animal_is_bought_only_while_your_purse_is_above_its_floor_before_every_animal())
 
 
@@ -13465,12 +13466,12 @@ chk("1.93.7", "a dry run counts the cargo room of the haul animals it would buy,
 
 def a_haul_animal_is_never_bought_if_it_would_take_the_purse_down_to_its_floor():
     haul = method_body(S['Trading.cs'], "public static bool ExecuteHaulage")
-    said = "Buy a haul animal only while your purse stays above this once the animal is paid for."
+    said = "Buy a haul animal only while your purse stays above this once it is paid for"
     return (haul
             and ordered(haul, "int price = pass.Price(el.EquipmentElement, selling: false);",
                         "if (price <= 0 || price > ceiling) break;",
                         "int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);",
-                        "if (!Herding.PurseClearsTheFloor(purse - price, floor))",
+                        "if (!Herding.PurseClearsTheFloor(purse - price, floor, starving))",
                         "if (pass.WouldReachYourReserveToFeed(price, starving)) break;")
             and ordered(haul, "if (hauled <= 0)", "if (floored)",
                         'Log.Repeatable("haul animal floor after paying", settlement.StringId,',
@@ -13486,7 +13487,7 @@ def a_haul_animal_is_never_bought_if_it_would_take_the_purse_down_to_its_floor()
             and "It never buys one that would leave your purse at 2000 denars or less" in README)
 
 
-chk("1.93.8", "a haul animal is bought only when your purse stays above Gold before it buys a haul animal once that animal is paid for, the hint says so in every language, and TradeLord.log names the price of the animal that would have taken the purse down to it",
+chk("1.93.8", "a haul animal is bought only when your purse stays above Gold before it buys a haul animal once it is paid for, unless your party is short of a day of food, the hint says so, and TradeLord.log names the price that would have taken the purse down",
     a_haul_animal_is_never_bought_if_it_would_take_the_purse_down_to_its_floor())
 
 
@@ -13526,9 +13527,9 @@ def food_gets_a_haul_animal_it_would_fill_less_than_half_of_only_on_its_last_day
             and ("internal static float LeastFilledFor(bool food, int foodHeld, int foodForADay) =>\n"
                  "            food && foodHeld < foodForADay ? 0f : LeastAHaulAnimalIsFilled;") in S['Rules.cs']
             and "internal static int FoodForADay() => (int)Math.Ceiling(AppetitePerDay());" in S['Policy.cs']
-            and ordered(haul, "float leastFilled = Herding.LeastFilledFor(unfitted.food,",
-                        "TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),",
-                        "TradePolicy.FoodForADay());")
+            and ("float leastFilled = Herding.LeastFilledFor(unfitted.food,\n"
+                 "                TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),\n"
+                 "                TradePolicy.FoodForADay());") in haul
             and '"and your party still has a day of food or more"' in haul
             and "Food_gets_a_haul_animal_it_would_fill_less_than_half_of_only_once_the_party_is_down_to_its_last_day"
                 in HERDTESTS
@@ -17986,8 +17987,8 @@ def a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve():
                         "bool overTheCap = starving && pass.WouldReachYourReserve(price);",
                         "pass.Tally(item, 1, price);", "if (overTheCap) pastTheCap = true;",
                         '", past Max spend per visit as your party has less than a day of food"')
-            and "Food for a party down to less than a day of it may go past it." in en['TL337']
-            and "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food for a party down to less than a day of it may go past it." in M
+            and "Food for a party down to less than a day of it, and a haul animal to carry it, may go past it." in en['TL337']
+            and "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food for a party down to less than a day of it, and a haul animal to carry it, may go past it." in M
             and "bir g\u00fcnden az yiyece\u011fi" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL337']
             and "\u043c\u0435\u043d\u044c\u0448\u0435 \u0447\u0435\u043c \u043d\u0430 \u0434\u0435\u043d\u044c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL337']
             and "\u4e0d\u8db3\u4e00\u5929" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL337']
@@ -18119,6 +18120,89 @@ def with_live_world_prices_off_the_marker_goes_only_on_prices_you_have_seen():
 
 chk("1.103.5", "with Live world prices off, the map marker and Hold cargo for the best market go only on Sell prices you have seen, never on a unit with a modifier, and never read a market's purse",
     with_live_world_prices_off_the_marker_goes_only_on_prices_you_have_seen())
+
+
+def a_party_short_of_a_days_food_buys_its_haul_animal_below_the_floor():
+    haul = method_body(S['Trading.cs'], "public static bool ExecuteHaulage")
+    en = spoken(ENGLISH)
+    tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
+    said = "A party down to less than a day of food may go below it."
+    return (haul
+            and ("internal static bool PurseClearsTheFloor(int purse, int floor, bool starving) =>\n"
+                 "            starving || PurseClearsTheFloor(purse, floor);") in S['Rules.cs']
+            and ordered(haul, "Pass pass = Pass.Open(settlement, quiet);",
+                        "bool starving = unfitted.food && TradeMath.FoodShortOfADay(",
+                        "if (!starving && PurseBelowTheHaulAnimalFloor(pass)) return false;",
+                        "bool pastTheFloor = false;",
+                        "if (!Herding.PurseClearsTheFloor(purse - price, floor, starving))",
+                        "if (pass.WouldReachYourReserveToFeed(price, starving)) break;",
+                        "bool underTheFloor = starving && !Herding.PurseClearsTheFloor(purse - price, floor);",
+                        "if (underTheFloor) pastTheFloor = true;",
+                        '" below Gold before it buys a haul animal"')
+            and haul.count("bool starving =") == 1
+            and "A_party_down_to_less_than_a_day_of_food_buys_its_haul_animal_below_the_floor" in HERDTESTS
+            and said in en['TL426']
+            and 'HintText = "{=TL426}' + en['TL426'] + '"' in M
+            and "Bölüğünüzün bir günden az yiyeceği kaldıysa altına inebilir." in tr['TL426']
+            and "Если еды у отряда меньше чем на день, можно и ниже." in ru['TL426']
+            and "队伍的食物不足一天时可以低于它。" in cn['TL426']
+            and "so early gold goes on goods instead, unless your party is down to less than a day of food" in README)
+
+chk("1.103.6", "a party down to less than a day of food may buy a haul animal to carry its food below Gold before it buys a haul animal, never past the gold reserve, and the hint and TradeLord.log say so",
+    a_party_short_of_a_days_food_buys_its_haul_animal_below_the_floor())
+
+
+def the_visit_cap_hint_lets_a_haul_animal_carry_a_starving_partys_food_past_it():
+    en = spoken(ENGLISH)
+    tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
+    return (en['TL337'].endswith("Food for a party down to less than a day of it, and a haul animal to carry it, may go past it.")
+            and 'HintText = "{=TL337}' + en['TL337'] + '"' in M
+            and "yiyecek ve yük hayvanı bu sınırı aşabilir" in tr['TL337']
+            and "еда и вьючное животное могут выйти за предел" in ru['TL337']
+            and "买食物和用来驮食物的驮兽都可以超出这个上限" in cn['TL337']
+            and "bool overTheCap = starving && pass.WouldReachYourReserve(price);" in S['Trading.cs'])
+
+chk("1.103.6", "the hint for Max spend per visit says a haul animal to carry food for a party down to less than a day of it may go past it, in every language",
+    the_visit_cap_hint_lets_a_haul_animal_carry_a_starving_partys_food_past_it())
+
+
+def the_turkish_text_calls_your_party_by_one_word():
+    tr = spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])
+    return (tr['TL86'] == "bölüğünüz daha fazla hayvan güdemez"
+            and "bu yüzden bölüğünüzü sürü hız cezasına sokmaz" in tr['TL324']
+            and all("bölüğünüz" in tr[one].lower() for one in ('TL337', 'TL351', 'TL365', 'TL374', 'TL411'))
+            and not any("müfreze" in said.lower() for said in tr.values()))
+
+chk("1.103.6", "the Turkish hint for Livestock policy and the Turkish Nothing bought here message call your party bölük, as every other Turkish line does, never a müfreze",
+    the_turkish_text_calls_your_party_by_one_word())
+
+
+def every_name_that_switches_off_at_zero_writes_it_the_same_way():
+    ru = spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])
+    cn = spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])
+    offs = [said for said in ru.values() if said and "0 = выкл" in said]
+    closed = [said for said in cn.values() if said and re.search("（[^（）]*0[^（）]*关闭）", said)]
+    return (len(offs) >= 10 and all("0 = выкл." in said for said in offs)
+            and len(closed) >= 10 and all("0 = 关闭）" in said for said in closed)
+            and ru['TL274'].endswith("(0 = выкл.)") and ru['TL425'].endswith("(0 = выкл.)")
+            and cn['TL274'].endswith("（0 = 关闭）"))
+
+chk("1.103.6", "every Russian and Chinese setting name that switches off at 0 writes it the way the others do",
+    every_name_that_switches_off_at_zero_writes_it_the_same_way())
+
+
+def the_chinese_text_sets_tradelord_apart_and_the_turkish_names_the_gold_reserve():
+    tr = spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])
+    cn = spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])
+    crammed = [tid for tid, said in cn.items()
+               if any('\u4e00' <= said[at - 1] <= '\u9fff' for at in range(1, len(said)) if said.startswith("TradeLord", at))]
+    return (not crammed
+            and "支付低于 TradeLord 账簿" in cn['TL444'] and "进入市场时 TradeLord 账簿" in cn['TL484']
+            and "TradeLord'un altın rezervi ve asker ücreti" in tr['TL441']
+            and "altın rezerv ve" not in tr['TL441'])
+
+chk("1.103.6", "the Chinese text sets TradeLord apart with a space after a character, and the Turkish workshop warning writes gold reserve the way the setting does",
+    the_chinese_text_sets_tradelord_apart_and_the_turkish_names_the_gold_reserve())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
