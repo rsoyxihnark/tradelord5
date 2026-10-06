@@ -4400,7 +4400,7 @@ chk("1.14.2", "the ladders are dropped when a scan starts, given back when it fi
                                              "internal static class Priced"),
                                      "internal static void Forget()"))
 
-chk("1.14.3", "a market whose merchant has no gold is no destination in any list the mod ranks, not just the route scan",
+chk("1.14.3", "with Live world prices on, a market whose merchant has no gold is no destination in any list the mod ranks, not just the route scan",
     (lambda body: "if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold," in body
               and "s.IsVillage) <= 0) continue;" in body
               and ordered(body, "if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold,",
@@ -4410,8 +4410,10 @@ chk("1.14.3", "a market whose merchant has no gold is no destination in any list
         buy_pass() and
     "var markets = EverySell(item);" in
         method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest") and
-    "int purse = TradeRules.WhatTheTillCanPay(mark.SettlementComponent.Gold, mark.IsVillage);" in
+    "int purse = Marker.PurseOf(mark);" in
         sell_pass() and
+    "? TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold, s.IsVillage)" in
+        between(S['Marker.cs'], "internal static int PurseOf(Settlement s) =>", ";") and
     "if (!TradeMath.OutOfReach(ride) && purse > 0)" in
         sell_pass())
 
@@ -9381,8 +9383,8 @@ def the_marker_reads_your_cargo_once_and_prices_each_market_once():
                     "_cargo = cargo;")
             and ordered(asked, "while (_rungs.Count <= taken) _rungs.Add(Next());",
                         "return _rungs[taken];")
-            and "_flat = Priced.At(_market, _el, _party, true);" in
-                method_body(S['Marker.cs'], "private int Next()")
+            and ordered(method_body(S['Marker.cs'], "private int Next()"),
+                        "_flat = Options.Current.Omniscient", "? Priced.At(_market, _el, _party, true)")
             and "_prices" not in S['Marker.cs']
             and "_priceStamp" not in S['Marker.cs']
             and "PriceShelfHours" not in S['Marker.cs']
@@ -9396,7 +9398,7 @@ def the_marker_reads_your_cargo_once_and_prices_each_market_once():
             and '"VersionNo"' in COMPAT)
 
 
-chk("1.90.0", "the market marked on your map reads what you carry once an hour and reads it again the moment your cargo can have moved, and asks every market its price live rather than keeping one it read earlier",
+chk("1.90.0", "the market marked on your map reads what you carry once an hour and reads it again the moment your cargo can have moved, and with Live world prices on asks every market its price live rather than keeping one it read earlier",
     the_marker_reads_your_cargo_once_and_prices_each_market_once())
 
 
@@ -10367,7 +10369,9 @@ def a_village_keeps_the_coin_that_keeps_its_shop_open():
             and "till = TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0," in
                 method_body(ledger, "private List<TradeRoute> ScanRoutes()")
             and "TradeRules.WhatTheTillCanPay(market.Gold, town.IsVillage) > 0;" in ledger
-            and "int purse = TradeRules.WhatTheTillCanPay(market.Gold, s.IsVillage);" in S['Marker.cs']
+            and "? TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold, s.IsVillage)" in
+                between(S['Marker.cs'], "internal static int PurseOf(Settlement s) =>", ";")
+            and "int purse = PurseOf(s);" in S['Marker.cs']
             and "reachable.Add((s, market, purse, ride));" in S['Marker.cs']
             and code_only(S['Trading.cs']).count("pass.TillNow") == 2
             and "A_village_is_left_its_last_coin" in SELLPASSTESTS
@@ -13776,7 +13780,7 @@ def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
             and "got.Rungs = landing ?? new Ladder(site, item, true, quoted, 0);" in walk
             and "elsewhere.rungs ?? new Ladder(buyer, Item(at), true, price, 0)," in buy_pass()
             and "!On ? 0" in between(S['Forecast.cs'], "internal static int WorthShiftAsItHasHeld", "private static int PriceShift")
-            and ordered(step, "_flat = Priced.At(_market, _el, _party, true);",
+            and ordered(step, "? Priced.At(_market, _el, _party, true)",
                         "? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);",
                         "? null : Bulk.AsItLands(_site, _el, true, _flat, landed);")
             and "Paying pays = WhatThatMarketPays(site, market, item, party, ride);" in fetch
@@ -18081,6 +18085,40 @@ def every_russian_line_marks_a_setting_it_names():
 
 chk("1.103.4", "every Russian line that names a setting the way the settings screen writes it puts the name in \u00ab\u00bb, as the hints on the settings screen do",
     every_russian_line_marks_a_setting_it_names())
+
+def with_live_world_prices_off_the_marker_goes_only_on_prices_you_have_seen():
+    marker = S['Marker.cs']
+    nxt = method_body(marker, "private int Next()")
+    seen = method_body(S['Ledger.cs'], "internal int SeenSellPrice(EquipmentElement el, Settlement town)")
+    best = method_body(marker, "private static Settlement BestSellTownForCargo")
+    left = method_body(marker, "private static string TheMarkLeftOut")
+    why = method_body(marker, "private static string Why")
+    return (nxt and seen and best and left and why
+            and ordered(nxt, "_flat = Options.Current.Omniscient", "? Priced.At(_market, _el, _party, true)",
+                        ": LedgerBehavior.Instance?.SeenSellPrice(_el, _site) ?? 0;")
+            and ordered(seen, "if (el.Item == null || el.ItemModifier != null || town == null) return 0;",
+                        "if (!_ledger.TryGetValue(el.Item.StringId, out var byTown)) return 0;",
+                        "seen.SellPrice > 0", "? seen.SellPrice")
+            and "internal const int PurseUnread = int.MaxValue;" in marker
+            and ordered(between(marker, "internal static int PurseOf(Settlement s) =>", ";"),
+                        "Options.Current.Omniscient",
+                        "? TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold, s.IsVillage)",
+                        ": PurseUnread")
+            and ordered(best, "how.Weighed++;",
+                        "if (!Options.Current.Omniscient && !SeenAnyOf(cargo, s)) { how.Unseen++; continue; }",
+                        "int purse = PurseOf(s);", "if (purse <= 0) { how.NoTill++; continue; }")
+            and ordered(left, "if (!Options.Current.Omniscient && !SeenAnyOf(cargo, holder))",
+                        "int purse = PurseOf(holder);")
+            and "int purse = Marker.PurseOf(mark);" in sell_pass()
+            and marker.count("Priced.At(") == 1
+            and marker.count(".Gold") == 2
+            and '", its purse left unread as Live world prices is off"' in why
+            and "OFF: only prices you have seen in person are used." in spoken(ENGLISH)['TL301']
+            and ("With Live world prices off, it weighs only the markets where you have seen a price for what "
+                 "you carry, at that price, and never reads their purse") in README)
+
+chk("1.103.5", "with Live world prices off, the map marker and Hold cargo for the best market go only on Sell prices you have seen, never on a unit with a modifier, and never read a market's purse",
+    with_live_world_prices_off_the_marker_goes_only_on_prices_you_have_seen())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

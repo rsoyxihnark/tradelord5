@@ -1460,6 +1460,15 @@ namespace TradeLord
                            : TradeMath.Drift(seen.BuyPrice, seen.WasBuyPrice);
         }
 
+        internal int SeenSellPrice(EquipmentElement el, Settlement town)
+        {
+            if (el.Item == null || el.ItemModifier != null || town == null) return 0;
+            if (!_ledger.TryGetValue(el.Item.StringId, out var byTown)) return 0;
+            return byTown.TryGetValue(town.StringId, out PriceObservation seen) && seen.SellPrice > 0
+                ? seen.SellPrice
+                : 0;
+        }
+
         public float ObservationAgeDays(ItemObject item, Settlement town)
         {
             if (item == null || town == null) return -1f;
