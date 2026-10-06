@@ -23,10 +23,10 @@ else
   echo "could not work out who the owner is, so set user.name and user.email before committing"
 fi
 
-git fetch --quiet origin main >/dev/null 2>&1 || true
-
-LATEST=$(git rev-parse --verify --quiet FETCH_HEAD 2>/dev/null || true)
-[ -n "${LATEST:-}" ] || LATEST=$(git rev-parse --verify --quiet refs/remotes/origin/main 2>/dev/null || true)
+LATEST=""
+if git fetch --quiet origin main >/dev/null 2>&1; then
+  LATEST=$(git rev-parse --verify --quiet FETCH_HEAD 2>/dev/null || true)
+fi
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
 WAS=$(git rev-parse --short HEAD 2>/dev/null || true)
@@ -39,7 +39,9 @@ elif ! git diff --quiet || ! git diff --cached --quiet; then
 elif [ "${HERE:-}" = "$LATEST" ] && [ "$BRANCH" = "main" ]; then
   echo "the checkout is on main at origin/main, $WAS, which is the source to work from"
 elif { git checkout main >/dev/null 2>&1 || git checkout -B main "$LATEST" >/dev/null 2>&1; } && git reset --hard "$LATEST" >/dev/null 2>&1; then
-  echo "the checkout was on ${BRANCH:-HEAD} at $WAS and has been put on main at origin/main, $(git rev-parse --short HEAD), which is the source to work from; $WAS is still reachable through git reflog, and ${BRANCH:-HEAD} was left exactly as it was"
+  LEFT=""
+  case "${BRANCH:-HEAD}" in main|HEAD) ;; *) LEFT=", and $BRANCH was left exactly as it was" ;; esac
+  echo "the checkout was on ${BRANCH:-HEAD} at $WAS and has been put on main at origin/main, $(git rev-parse --short HEAD), which is the source to work from; $WAS is still reachable through git reflog$LEFT"
 else
   echo "the checkout could not be put on origin/main, so it is still on ${BRANCH:-HEAD} at ${WAS:-an unknown commit}; bring it up to date yourself before changing anything"
 fi

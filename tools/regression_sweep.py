@@ -3736,6 +3736,9 @@ def the_hook_moves_an_assigned_branch_onto_the_one_branch():
             and 'still reachable through git reflog' in HOOK
             and 'left exactly as it was' in HOOK
             and 'has uncommitted work' in HOOK
+            and 'if git fetch --quiet origin main >/dev/null 2>&1; then' in HOOK
+            and 'refs/remotes/origin/main' not in HOOK
+            and 'case "${BRANCH:-HEAD}" in main|HEAD) ;; *) LEFT=", and $BRANCH was left exactly as it was" ;; esac' in HOOK
             and '`.claude/hooks/session-start.sh` exists it has already moved the checkout' in RULES
             and 'restores the owner\'s signature for the session and moves the checkout to `main`' in RULES)
 
