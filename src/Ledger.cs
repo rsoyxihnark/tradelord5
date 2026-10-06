@@ -655,9 +655,9 @@ namespace TradeLord
             int percent = (int)Math.Round(used * 100f);
             if (!learn || walkIns <= 0 || percent == _resaleSafetySaid) return;
             _resaleSafetySaid = percent;
-            Log.Write("resale safety: the prices at the markets you walked into have come " + Scoring.Share(held) +
-                      " close to the Sell price the ledger promised, a price above it missing as much as one " +
-                      "below it, over " + walkIns + " walk-in(s), so a price " +
+            Log.Write("resale safety: the prices at the markets you walked into have held at " + Scoring.Share(held) +
+                      " of the Sell price the ledger promised, counting a price above it as the promise, over " +
+                      walkIns + " walk-in(s), so a price " +
                       "elsewhere counts at " + percent + "% when TradeLord buys, where Resale safety factor " +
                       "starts it at " + (int)Math.Round(setting * 100f) + "%");
         }

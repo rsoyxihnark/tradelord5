@@ -7716,6 +7716,9 @@ GLOSSARY = {
     'ledger': {'T\u00fcrk\u00e7e': r'defter',
                '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': r'\u043a\u043d\u0438\u0433',
                '\u7b80\u4f53\u4e2d\u6587': r'\u8d26\u7c3f'},
+    'unique and crafted': {'T\u00fcrk\u00e7e': r'e\u015fsiz ve d\u00f6v\u00fclm\u00fc\u015f',
+                           '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': r'\u0443\u043d\u0438\u043a\u0430\u043b\u044c\w* \u0438 \u043a\u043e\u0432\u0430\u043d',
+                           '\u7b80\u4f53\u4e2d\u6587': r'\u72ec\u7279\u7269\u54c1\u548c\u81ea\u5236\u7269\u54c1'},
 }
 
 def one_word_for_one_thing_in_every_language():
@@ -17988,6 +17991,96 @@ def a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve():
 
 chk("1.103.3", "a party down to less than a day of food buys its food, and a haul animal to carry it, past Max spend per visit, never past the gold reserve, and TradeLord.log says so",
     a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve())
+
+def the_map_marker_hint_says_it_marks_the_most_profit_per_day():
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    return (marker
+            and ordered(marker, "long earned = total - took.Cost;", "float rate = TradeMath.PerDay(earned, ride);",
+                        "float weighed = TradeMath.RateTheMarkHolds(rate, s == holder);", "if (weighed > bar)")
+            and "{=TL345}Marks the market that earns the most a day on the cargo it would really sell there," in M
+            and "en \u00e7ok g\u00fcnl\u00fck k\u00e2r getiren pazar\u0131" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL345']
+            and "\u0441 \u043d\u0430\u0438\u0431\u043e\u043b\u044c\u0448\u0435\u0439 \u043f\u0440\u0438\u0431\u044b\u043b\u044c\u044e \u0432 \u0434\u0435\u043d\u044c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL345']
+            and "\u6bcf\u5929\u5229\u6da6\u6700\u9ad8\u7684\u5e02\u573a" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL345'])
+
+chk("1.103.4", "the hint for Auto-mark best sell market on map says it marks the market that earns the most a day, the way the map marker ranks them, in every language",
+    the_map_marker_hint_says_it_marks_the_most_profit_per_day())
+
+def what_this_means_says_a_score_is_lowered_only_for_paying_less_than_promised():
+    kept = method_body(S['Hindsight.cs'], "private static void Kept")
+    return (kept
+            and ordered(kept, "paidTotal += TradeMath.UpToThePromise(held);",
+                        "LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(paidTotal, scored));")
+            and "public static float UpToThePromise(float held) => held > 1f ? 1f : held;" in S['TradeMath.cs']
+            and '"{=TL445} | Score is lowered for a market that has paid less than this panel promised"' in S['Panel.cs']
+            and "s\u00f6z verdi\u011finden az \u00f6demi\u015f bir pazar" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL445']
+            and "\u043f\u043b\u0430\u0442\u0438\u0432\u0448\u0435\u0433\u043e \u043c\u0435\u043d\u044c\u0448\u0435 \u043e\u0431\u0435\u0449\u0430\u043d\u043d\u043e\u0433\u043e" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL445']
+            and "\u652f\u4ed8\u4f4e\u4e8e\u672c\u9762\u677f\u627f\u8bfa\u7684\u5e02\u573a" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL445'])
+
+chk("1.103.4", "What this means says a market's Score is lowered for paying less than the panel promised, never more, as a market's record counts a price over its promise as the promise",
+    what_this_means_says_a_score_is_lowered_only_for_paying_less_than_promised())
+
+def the_carv_column_is_said_to_count_caravans_at_or_heading_for_those_towns():
+    pressure = method_body(S['Ledger.cs'], "internal static Dictionary<Settlement, int> CaravanPressure")
+    return (pressure
+            and ordered(pressure, "Settlement at = p.CurrentSettlement, to = p.TargetSettlement;",
+                        "if (at != null) Bump(map, at);", "if (to != null && to != at) Bump(map, to);")
+            and "| Carv. = caravans at or heading for those towns\").ToString()" in S['Panel.cs']
+            and "ya da o \u015fehirlere giden kervanlar" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL70']
+            and "\u0438\u043b\u0438 \u043d\u0430 \u043f\u0443\u0442\u0438 \u043a \u043d\u0438\u043c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL70']
+            and "\u6216\u6b63\u524d\u5f80\u90a3\u91cc\u7684\u5546\u961f" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL70'])
+
+chk("1.103.4", "What this means says Carv. counts the caravans at or heading for a route's two towns, as the route scan counts them, in every language",
+    the_carv_column_is_said_to_count_caravans_at_or_heading_for_those_towns())
+
+def the_resale_safety_line_counts_a_price_above_the_promise_as_the_promise():
+    said = method_body(S['Ledger.cs'], "private void SayTheResaleSafety")
+    return (said
+            and "kept += rec.Held;" in method_body(S['Ledger.cs'], "private void TallyTheWalkIns")
+            and '" of the Sell price the ledger promised, counting a price above it as the promise, over "' in said
+            and "missing as much as one" not in said)
+
+chk("1.103.4", "TradeLord.log's resale safety line counts a price above the promised Sell price as the promise, as the record it reads does",
+    the_resale_safety_line_counts_a_price_above_the_promise_as_the_promise())
+
+def the_turkish_lines_name_your_party_and_a_town_as_the_others_do():
+    tr = spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])
+    return (tr['TL351'].startswith("B\u00f6l\u00fc\u011f\u00fcn\u00fcz bir maldan")
+            and "B\u00f6l\u00fc\u011f\u00fcn\u00fcz\u00fcn bir g\u00fcnden az yiyece\u011fi" in tr['TL337']
+            and not any(re.search(r'\bpartiniz', said, re.I) for said in tr.values())
+            and not any("kasaba" in said.lower() for said in tr.values())
+            and not any("\u2019" in said for said in tr.values()))
+
+chk("1.103.4", "the Turkish hints for Stop buying at this many held and Max spend per visit call your party b\u00f6l\u00fck, no Turkish line calls a town a kasaba, and no Turkish apostrophe is curly",
+    the_turkish_lines_name_your_party_and_a_town_as_the_others_do())
+
+def no_chinese_line_calls_the_gold_reserve_by_another_name():
+    cn = spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])
+    return ("\u91d1\u94b1\u50a8\u5907" in cn['TL321']
+            and not any("\u9ec4\u91d1\u50a8\u5907" in said for said in cn.values()))
+
+chk("1.103.4", "the Chinese hint for Restock and keep food (days of supply) calls Gold reserve by its name on the settings screen, as every other Chinese line does",
+    no_chinese_line_calls_the_gold_reserve_by_another_name())
+
+def the_chinese_food_hints_mark_the_setting_they_name():
+    cn = spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])
+    marked = '\u201c' + cn['TL221'] + '\u201d'
+    return marked in cn['TL361'] and marked in cn['TL362']
+
+chk("1.103.4", "the Chinese hints for Keep some of every kind of food and How many of each kind of food to keep put Restock and keep food (days of supply) in \u201c\u201d",
+    the_chinese_food_hints_mark_the_setting_they_name())
+
+def every_russian_line_marks_a_setting_it_names():
+    ru = spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])
+    ids = re.findall(r'SettingProperty(?!Group)\w*\("\{=(TL\d+)\}', M)
+    named = {one: re.sub(r'\s*\([^)]*\)$', '', ru[one]) for one in ids}
+    named = {one: name for one, name in named.items() if len(name.split()) > 1}
+    loose = [(where, one) for one, name in named.items() for where, said in ru.items() if where not in ids
+             for found in re.finditer(re.escape(name), said)
+             if found.start() == 0 or said[found.start() - 1] != '\u00ab']
+    return len(named) > 40 and loose == []
+
+chk("1.103.4", "every Russian line that names a setting the way the settings screen writes it puts the name in \u00ab\u00bb, as the hints on the settings screen do",
+    every_russian_line_marks_a_setting_it_names())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

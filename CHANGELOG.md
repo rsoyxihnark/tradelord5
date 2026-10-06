@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.103.4
+
+- Fixed the hint for Auto-mark best sell market on map saying it marks the market paying most, not the one that earns the most a day
+- Fixed What this means in the TradeLord ledger saying Carv. counts only the caravans in a route's two towns, not those heading there
+- Fixed the Turkish hint for Stop buying at this many held calling your party a caravan
+- Fixed the Turkish hint for Max spend per visit calling your party by another name
+- Fixed the Turkish and Chinese hints for Always sell calling Protect unique and crafted items by another name
+- Fixed the Turkish hint for Count what is on its way to a market using a different word for town than every other Turkish line
+- Fixed the Chinese hint for Restock and keep food (days of supply) calling Gold reserve by another name
+- Fixed the Russian and Chinese hints naming Restock and keep food (days of supply) without marking it as a setting
+- Fixed the Russian hints for Protect unique and crafted items and the Reset button not marking the item lists they name
+- Fixed a Russian line in What this means in the TradeLord ledger not marking Bulk price simulation as a setting
+- Fixed a curly apostrophe in the Turkish warning about your gold reserve when buying a workshop
+
 ## 1.103.3
 
 - The profit in the Sold line is now golden yellow, with a denar coin in place of the word denars
