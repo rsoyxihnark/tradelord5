@@ -45,18 +45,6 @@ namespace TradeLord
             return p != 0 ? p : xDays.CompareTo(yDays);
         }
 
-        internal static void Keep<T>(List<Reach<T>> kept, Reach<T> one, bool selling)
-        {
-            if (kept.Count == TopCacheSize &&
-                Rank(selling, one.Price, one.Straight,
-                     kept[TopCacheSize - 1].Price, kept[TopCacheSize - 1].Straight) >= 0) return;
-            int at = kept.Count;
-            while (at > 0 && Rank(selling, one.Price, one.Straight,
-                                  kept[at - 1].Price, kept[at - 1].Straight) < 0) at--;
-            kept.Insert(at, one);
-            if (kept.Count > TopCacheSize) kept.RemoveAt(TopCacheSize);
-        }
-
         internal static List<Reach<T>> Settled<T>(List<Reach<T>> kept, bool selling)
         {
             var top = new List<Reach<T>>(kept);
