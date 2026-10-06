@@ -46,7 +46,9 @@ namespace TradeLord
             if (!_asked)
             {
                 _asked = true;
-                _flat = Priced.At(_market, _el, _party, true);
+                _flat = Options.Current.Omniscient
+                    ? Priced.At(_market, _el, _party, true)
+                    : LedgerBehavior.Instance?.SeenSellPrice(_el, _site) ?? 0;
                 int landed = _el.Item == null || _flat <= 0
                     ? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);
                 _landed = landed;
@@ -218,6 +220,7 @@ namespace TradeLord
             internal int Told;
             internal int Left;
             internal int NoTill;
+            internal int Unseen;
             internal int PastCeiling;
             internal int NoRoad;
             internal int Shut;
@@ -496,6 +499,9 @@ namespace TradeLord
                        "clear Minimum profit margin, " + how.NoRoad + " have no road it could find, " +
                        how.PastCeiling + " are past your travel ceilings and " + how.NoTill +
                        " have no gold at all" +
+                       (how.Unseen > 0
+                           ? ", " + how.Unseen + " have no price you have seen for anything you carry"
+                           : "") +
                        (how.CameBackTo != null
                            ? ", and it leaves out " + how.CameBackTo.Name + ", " + TheMarketLeftAlone
                            : "");
@@ -504,7 +510,9 @@ namespace TradeLord
                    (how.Value - how.Cost) + " of it profit" +
                    (how.PurseCapped
                        ? ", which is all that " + MarketKind(how.Best) + "'s purse of " + how.Purse + " can take"
-                       : " against a " + MarketKind(how.Best) + " purse of " + how.Purse) +
+                       : how.Purse == PurseUnread
+                           ? ", its purse left unread as Live world prices is off"
+                           : " against a " + MarketKind(how.Best) + " purse of " + how.Purse) +
                    ", about " + how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away" +
                    (how.CeilingPassed > 0f
                        ? ", past your travel ceiling of " +
@@ -599,7 +607,9 @@ namespace TradeLord
                          how.Rate.ToString("0") + " gold a day, in " +
                          how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms");
                 said.Add("  ultralog: left out before pricing, " + how.NoTill +
-                         " with nothing in the till, " + how.PastCeiling + " past your travel ceilings, " +
+                         " with nothing in the till, " +
+                         (how.Unseen > 0 ? how.Unseen + " with no price you have seen, " : "") +
+                         how.PastCeiling + " past your travel ceilings, " +
                          how.NoRoad + " with no road it could find, " + how.Shut +
                          " under siege, raided or shut, " + how.AtWar + " at war with you" +
                          (how.CameBackTo != null
@@ -788,6 +798,23 @@ namespace TradeLord
             return back;
         }
 
+        internal const int PurseUnread = int.MaxValue;
+
+        internal static int PurseOf(Settlement s) =>
+            Options.Current.Omniscient
+                ? TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold, s.IsVillage)
+                : PurseUnread;
+
+        private static bool SeenAnyOf(
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo, Settlement s)
+        {
+            LedgerBehavior ledger = LedgerBehavior.Instance;
+            if (ledger == null) return false;
+            foreach (var (item, _, _, _) in cargo)
+                if (ledger.SeenSellPrice(item, s) > 0) return true;
+            return false;
+        }
+
         private static Settlement BestSellTownForCargo(out Reckoning how, Settlement holder)
         {
             how = default(Reckoning);
@@ -811,7 +838,8 @@ namespace TradeLord
                 if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s))
                 { how.AtWar++; continue; }
                 how.Weighed++;
-                int purse = TradeRules.WhatTheTillCanPay(market.Gold, s.IsVillage);
+                if (!Options.Current.Omniscient && !SeenAnyOf(cargo, s)) { how.Unseen++; continue; }
+                int purse = PurseOf(s);
                 if (purse <= 0) { how.NoTill++; continue; }
                 float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == holder);
                 if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) { how.PastCeiling++; continue; }
@@ -925,7 +953,9 @@ namespace TradeLord
                        (holder.Village.VillageState == Village.VillageStates.Looted ? "looted" : holder.Village.VillageState.ToString());
             if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(holder))
                 return holder.Name + " is at war with you";
-            int purse = TradeRules.WhatTheTillCanPay(market.Gold, holder.IsVillage);
+            if (!Options.Current.Omniscient && !SeenAnyOf(cargo, holder))
+                return holder.Name + " has no price you have seen for anything you carry";
+            int purse = PurseOf(holder);
             if (purse <= 0) return holder.Name + "'s purse is empty, " + market.Gold + " gold";
             float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(holder), true);
             float straight = Travel.StraightDaysFromParty(holder);

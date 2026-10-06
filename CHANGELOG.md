@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.103.5
+
+- Fixed the map marker and Hold cargo for the best market going on prices you have not seen while Live world prices is off
+
 ## 1.103.4
 
 - Fixed the hint for Auto-mark best sell market on map saying it marks the market paying most, not the one that earns the most a day

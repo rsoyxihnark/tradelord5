@@ -1839,7 +1839,7 @@ namespace TradeLord
                     if (mark != null)
                     {
                         float ride = Travel.EstimateDaysFromParty(mark);
-                        int purse = TradeRules.WhatTheTillCanPay(mark.SettlementComponent.Gold, mark.IsVillage);
+                        int purse = Marker.PurseOf(mark);
                         if (!TradeMath.OutOfReach(ride) && purse > 0)
                         {
                             _mark = mark;
