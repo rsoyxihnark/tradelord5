@@ -302,6 +302,9 @@ namespace TradeLord
 
         internal static bool PurseClearsTheFloor(int purse, int floor) => floor <= 0 || purse > floor;
 
+        internal static bool PurseClearsTheFloor(int purse, int floor, bool starving) =>
+            starving || PurseClearsTheFloor(purse, floor);
+
         internal const int ItemsASpareMountCarries = 2;
 
         internal static float CargoASpareMountAdds(int averageWeight, float addedUp, float capacity)

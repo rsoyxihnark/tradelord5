@@ -166,11 +166,22 @@ namespace TradeLord.Tests
             Assert.True(Herding.PurseClearsTheFloor(50, -1));
         }
 
+        [Fact]
+        public void A_party_down_to_less_than_a_day_of_food_buys_its_haul_animal_below_the_floor()
+        {
+            Assert.True(Herding.PurseClearsTheFloor(1500, 2000, starving: true));
+            Assert.False(Herding.PurseClearsTheFloor(1500, 2000, starving: false));
+            Assert.False(Herding.PurseClearsTheFloor(2000, 2000, starving: false));
+            Assert.True(Herding.PurseClearsTheFloor(2100, 2000, starving: false));
+            Assert.True(Herding.PurseClearsTheFloor(0, 0, starving: false));
+            Assert.Equal((3, 1200), HaulAnimalsBoughtAboveTheFloor(2100, 2000, 300, 3, starving: true));
+        }
+
         private static (int hauled, int purse) HaulAnimalsBoughtAboveTheFloor(int purse, int floor, int price,
-                                                                              int wanted)
+                                                                              int wanted, bool starving = false)
         {
             int hauled = 0;
-            while (hauled < wanted && Herding.PurseClearsTheFloor(purse - price, floor))
+            while (hauled < wanted && Herding.PurseClearsTheFloor(purse - price, floor, starving))
             {
                 hauled++;
                 purse -= price;

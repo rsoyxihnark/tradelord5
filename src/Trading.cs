@@ -2536,7 +2536,10 @@ namespace TradeLord
             if (!Options.Current.BuyHaulAnimals || unfitted.weight <= 0f || unfitted.cost <= 0) return false;
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return false;
-            if (PurseBelowTheHaulAnimalFloor(pass)) return false;
+            bool starving = unfitted.food && TradeMath.FoodShortOfADay(
+                TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),
+                TradePolicy.FoodForADay()) > 0;
+            if (!starving && PurseBelowTheHaulAnimalFloor(pass)) return false;
 
             int herdRoom = Drove.RoomForLivestock(pass.Party);
             herdRoom -= pass.Books.HerdTaken(pass.Sim);
@@ -2572,10 +2575,8 @@ namespace TradeLord
             float leastFilled = Herding.LeastFilledFor(unfitted.food,
                 TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),
                 TradePolicy.FoodForADay());
-            bool starving = unfitted.food && TradeMath.FoodShortOfADay(
-                TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),
-                TradePolicy.FoodForADay()) > 0;
             bool pastTheCap = false;
+            bool pastTheFloor = false;
 
             var stable = CheapestFirst(pass, it => TradePolicy.MayHaul(it, pass.Locked),
                                        Options.Current.HaulAnimalPriceTolerance);
@@ -2606,7 +2607,7 @@ namespace TradeLord
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (price <= 0 || price > ceiling) break;
                         int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);
-                        if (!Herding.PurseClearsTheFloor(purse - price, floor))
+                        if (!Herding.PurseClearsTheFloor(purse - price, floor, starving))
                         {
                             floored = true;
                             purseAtTheFloor = purse;
@@ -2633,6 +2634,7 @@ namespace TradeLord
                         }
 
                         bool overTheCap = starving && pass.WouldReachYourReserve(price);
+                        bool underTheFloor = starving && !Herding.PurseClearsTheFloor(purse - price, floor);
                         if (pass.Sim)
                         {
                             simSpent += price;
@@ -2656,6 +2658,7 @@ namespace TradeLord
                         held++;
                         pass.Tally(item, 1, price);
                         if (overTheCap) pastTheCap = true;
+                        if (underTheFloor) pastTheFloor = true;
                     }
                 }
             });
@@ -2687,6 +2690,10 @@ namespace TradeLord
                       carrying.ToString("0", System.Globalization.CultureInfo.InvariantCulture) +
                       " that your full cargo left behind and the gold left can still buy" +
                       (pastTheCap ? ", past Max spend per visit as your party has less than a day of food" : "") +
+                      (pastTheFloor
+                          ? (pastTheCap ? ", and" : ", as your party has less than a day of food,") +
+                            " below Gold before it buys a haul animal"
+                          : "") +
                       (floored
                           ? ", stopping there as the next, at " + priceAtTheFloor + ", would leave your purse at " +
                             (purseAtTheFloor - priceAtTheFloor) + ", not above the " + floor +

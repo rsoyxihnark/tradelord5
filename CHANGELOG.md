@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.103.6
+
+- Fixed a party down to less than a day of food getting no haul animal for its food with your purse under Gold before it buys a haul animal
+- The hint for Gold before it buys a haul animal now says a party down to less than a day of food may go below it
+- The hint for Max spend per visit now says a haul animal to carry food for a party down to less than a day of it may go past it
+- Fixed the Turkish hint for Livestock policy and the Turkish Nothing bought here message calling your party by another name
+- Fixed the Russian and Chinese names of Share of the hold one good may fill writing 0 = off differently from the other settings
+- Fixed the Russian name of Gold before it buys a haul animal writing 0 = off differently from the other settings
+- Fixed the Chinese hints for Trust a market by what it has paid and Learn the resale safety factor missing a space before TradeLord
+- Fixed the Turkish warning about your gold reserve when buying a workshop misspelling gold reserve
+
 ## 1.103.5
 
 - Fixed the map marker and Hold cargo for the best market going on prices you have not seen while Live world prices is off
