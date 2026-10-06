@@ -591,7 +591,7 @@ namespace TradeLord.Mcm
         public float TradeXpMultiplier { get => _o.TradeXpMultiplier; set { _o.TradeXpMultiplier = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL245}Auto-mark best sell market on map", Order = 14, RequireRestart = false,
-            HintText = "{=TL345}Marks the market paying most for the cargo it would really sell there, within the travel ceilings; a village only while Trade with villages is on. It skips the market TradeLord last traded at until you return. ON by default.")]
+            HintText = "{=TL345}Marks the market that earns the most a day on the cargo it would really sell there, within the travel ceilings; a village only while Trade with villages is on. It skips the market TradeLord last traded at until you return. ON by default.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public bool MarkBestSellTownOnMap { get => _o.MarkBestSellTownOnMap; set { _o.MarkBestSellTownOnMap = value; Options.Bump(); } }
 

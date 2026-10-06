@@ -56,7 +56,7 @@
 		<string id="TL67" text="No profitable routes in reach"/>
 		<string id="TL68" text="{COUNT} profitable routes, best first"/>
 		<string id="TL69" text="No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."/>
-		<string id="TL70" text="Click a town name to jump to it and pin or unpin it | Days = you -&gt; buy town -&gt; sell town | Carv. = caravans at those towns"/>
+		<string id="TL70" text="Click a town name to jump to it and pin or unpin it | Days = you -&gt; buy town -&gt; sell town | Carv. = caravans at or heading for those towns"/>
 		<string id="TL71" text=" | Score = profit per day discounted by Conf"/>
 		<string id="TL72" text=" | Score = profit per day"/>
 		<string id="TL73" text=" | resale safety factor applied"/>
@@ -202,7 +202,7 @@
 		<string id="TL342" text="Reports what TradeLord would sell and buy without trading. Treat it as a best case: nothing moves, so every unit is priced at today's opening price and a real pass usually trades less. Every cap and the merchant's gold are modelled exactly."/>
 		<string id="TL343" text="No TradeLord trading before this campaign day, from the menu or on entry. Prices in a new campaign have not settled yet."/>
 		<string id="TL344" text="Scales the Trade XP awarded for automated profit. 0 disables XP."/>
-		<string id="TL345" text="Marks the market paying most for the cargo it would really sell there, within the travel ceilings; a village only while Trade with villages is on. It skips the market TradeLord last traded at until you return. ON by default."/>
+		<string id="TL345" text="Marks the market that earns the most a day on the cargo it would really sell there, within the travel ceilings; a village only while Trade with villages is on. It skips the market TradeLord last traded at until you return. ON by default."/>
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
 		<string id="TL348" text="Name the goods in the one-line trade summary, largest first, e.g. 'Sold 8 Olives, 3 Wine for 240 denars, 90 profit', instead of a bare item count. The full list is always written to TradeLord.log."/>
 		<string id="TL349" text="Auto trading, both as you enter a market and when you meet a caravan or a party of villagers on the road, reports only to TradeLord.log. Warnings still show on screen: cargo full, purse below Gold reserve, a list entry that matches no good."/>
@@ -275,7 +275,7 @@
 		<string id="TL442" text="Today"/>
 		<string id="TL443" text="Trust a market by what it has paid"/>
 		<string id="TL444" text="A market paying under what the TradeLord ledger promised scores lower, its routes falling in the list after you have walked into it five times, by a quarter of a route's Score at most. Needs Rank routes by confidence. ON by default."/>
-		<string id="TL445" text=" | Score is lowered for a market that has paid less or more than this panel promised"/>
+		<string id="TL445" text=" | Score is lowered for a market that has paid less than this panel promised"/>
 		<string id="TL446" text="?"/>
 		<string id="TL447" text=" | stock counts what caravans, workshops and the town add and take before you arrive | prices need Bulk price simulation to count it"/>
 		<string id="TL448" text="Trade XP: {AMOUNT}" />
