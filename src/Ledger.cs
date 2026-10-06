@@ -34,8 +34,6 @@ namespace TradeLord
         public bool StillComing;
         public int Caravans;
 
-        public float DataAgeDays = -1f;
-
         public float RunsOutInDays = Projection.NeverRunsOut;
 
         public TradeLord.Confidence.Parts Parts;
@@ -1680,7 +1678,7 @@ namespace TradeLord
                             Quantity = q.Units,
                             TravelDays = days, TotalProfit = profit, ProfitPerDay = perDay,
                             Confidence = confidence, Score = score,
-                            Simulated = q.Simulated, Caravans = caravans, DataAgeDays = age,
+                            Simulated = q.Simulated, Caravans = caravans,
                             Parts = Confidence.PartsOf(q.Simulated, flat, profit, shelf, q.Units, days, caravans, age,
                                                        runsOut, toBuy),
                             StillComing = TradeMath.StillComing(q.Units, onTheShelfNow),
