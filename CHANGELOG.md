@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.103.7
+
+- Fixed Mark a market rising or falling still marking markets in the tooltip while Live world prices is on
+- Fixed the Turkish hint for the Reset button misnaming the Always sell and Always buy lists
+- Fixed the Turkish and Chinese text calling workshops by two different names
+- The hint for Village travel ceiling now says it never takes a village past the Town travel ceiling, which villages follow at 0
+- The hint for Pick where to sell on the whole load now says it is on by default
+- Fixed the Russian hints naming Live world prices without marking it as a setting
+- Fixed the hints about minimum stock and Bulk price simulation calling Live world prices by another name
+
 ## 1.103.6
 
 - Fixed a party down to less than a day of food getting no haul animal for its food with your purse under Gold before it buys a haul animal

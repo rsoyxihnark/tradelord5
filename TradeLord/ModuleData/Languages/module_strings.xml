@@ -165,11 +165,11 @@
 		<string id="TL249" text="Silence trade messages" />
 		<string id="TL301" text="ON (default): prices are read live from the world economy, including markets you have not visited. OFF: only prices you have seen in person are used."/>
 		<string id="TL303" text="Never scan, suggest or auto-trade with settlements at war with you."/>
-		<string id="TL305" text="Best-buy hints require at least this many units in stock. 0 = off. Live-price mode only, because observed mode records prices, not stock levels."/>
+		<string id="TL305" text="Best-buy hints require at least this many units in stock. 0 = off. Live world prices only, because with it off TradeLord records prices, not stock levels."/>
 		<string id="TL306" text="How far TradeLord looks for a town, in travel days. Farther towns stay out of tooltips, routes and the map marker (a town already marked may pass it by a fifth). 0 lifts the limit: every town in Calradia is weighed, far slower. Default 2.4."/>
-		<string id="TL307" text="The same limit for villages, kept separate so you can hold them closer than towns. Default 1."/>
+		<string id="TL307" text="The same limit for villages, kept separate so you can hold them closer than towns. It never takes a village past the Town travel ceiling: at 0, villages follow that ceiling. Default 1."/>
 		<string id="TL308" text="Apply the resale safety factor to the sell side when ranking and totalling routes, so listed profit allows for prices drifting before you arrive. OFF shows raw margins. Either way a route must clear it to be listed, as a buying pass does."/>
-		<string id="TL309" text="Price a lot unit by unit through the game's own price model, so quantity and profit account for your own buying moving the price. OFF prices every unit at the first unit's price. Towns and live-price mode only."/>
+		<string id="TL309" text="Price a lot unit by unit through the game's own price model, so quantity and profit account for your own buying moving the price. OFF prices every unit at the first unit's price. Towns only, with Live world prices on."/>
 		<string id="TL310" text="Order the panel by profit per day, discounted by how likely that profit is to survive the trip: margin, stock depth, trip length, caravan traffic and price age. OFF ranks on raw profit per day."/>
 		<string id="TL311" text="Adds the best known buy and sell markets, with stock and travel time, to item tooltips."/>
 		<string id="TL312" text="Skips the vanilla merchandise rumor block so the tooltip shows one consistent set of price hints."/>
@@ -283,12 +283,12 @@
 		<string id="TL450" text="No market in reach stocks {COUNT} or more. | Minimum stock for buy suggestions asks for that. | Lower it to see where to buy this."/>
 		<string id="TL451" text="No market in reach holds {COUNT} of these, | nor {WORTH} denars' worth of them. | Lower Minimum stock for buy suggestions | or Minimum stock value for buy suggestions."/>
 		<string id="TL452" text="Minimum stock value for buy suggestions"/>
-		<string id="TL453" text="Counts a market as stocked when its stock of a good is worth at least this many denars at the good's worth, even under Minimum stock for buy suggestions. The dearer a good is, the fewer of it a market need hold. 0 = off. Live prices only."/>
+		<string id="TL453" text="Calls a market stocked when its stock of a good is worth at least this many denars at the good's worth, even under Minimum stock for buy suggestions. The dearer a good is, the fewer of it a market need hold. 0 = off. Live world prices only."/>
 		<string id="TL456" text="the market you would sell them in cannot pay for more"/>
 		<string id="TL457" text="Enable extended debug logging"/>
 		<string id="TL458" text="Writes its workings to TradeLord.log: what markets pay and charge for your goods, how the forecast and the panel's promises held up, and all the map marker weighed. Needs Count what is on its way to a market for the forecast. ON by default."/>
 		<string id="TL459" text="Pick where to sell on the whole load"/>
-		<string id="TL460" text="TradeLord buys each good for a market it means to sell in. OFF: that market is picked on one unit's price. ON: every market in reach is weighed again on what it would pay for the whole load. Takes a little time. ON while it is tried out."/>
+		<string id="TL460" text="TradeLord buys each good for a market it means to sell in. OFF: that market is picked on one unit's price. ON: every market in reach is weighed again on what it would pay for the whole load. Takes a little time. ON by default."/>
 		<string id="TL461" text="TradeLord left the villagers' offer to you: {GOLD} denars for goods it reckons it can sell on for {RESALE}, short of your Minimum profit margin."/>
 		<string id="TL462" text="TradeLord left the villagers' offer to you: they ask {GOLD} denars, and {SPEND} of your purse is free to spend."/>
 		<string id="TL463" text="TradeLord left the villagers' offer to you because of the {GOOD} in it: {REASON}."/>

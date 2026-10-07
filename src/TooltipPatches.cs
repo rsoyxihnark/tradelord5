@@ -214,6 +214,7 @@ namespace TradeLord
         private static string Drifted(ItemObject item, Settlement town, bool selling)
         {
             if (!Options.Current.MarkPriceDirection) return "";
+            if (Options.Current.Omniscient) return "";
             int way = LedgerBehavior.Instance?.PriceDrift(item, town, selling) ?? 0;
             if (way == 0) return "";
             return "  " + Tongue.Text(way > 0 ? "{=TL404}rising" : "{=TL405}falling").ToString();
