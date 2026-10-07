@@ -82,7 +82,7 @@
 - ✅ A trade with caravans or villagers on the road frees the market TradeLord made its last trade at, so arriving there trades as usual
 - ✅ A deal you take from Staged Trading counts as TradeLord's last trade at that market
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
-- ✅ Tops your food back up to three days of supply, buying the cheapest food the market has at up to 1.5 times the cheapest price it knows of for it, or up to twice that for one day of food when your party is about to go hungry
+- ✅ Tops your food back up to three days of supply, buying the cheapest food the market has at up to 1.5 times the cheapest price it knows of for it, or up to twice the cheapest price for one day of food when your party is about to go hungry
 - ✅ A food is never passed over for its price while it costs no more than twice its value in the game
 - ✅ When your party is down to less than a day of food, the food it buys and a haul animal to carry it may go past Max spend per visit, never past your gold reserve
 - ✅ Food you bought to trade is counted last toward those days, so it sells where it pays once your own food fills them
@@ -114,7 +114,7 @@
 - ✅ When your cargo room or your gold runs short, it buys first the good that makes the most for each unit of room or each denar it uses
 - ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it. On out of the box
 - ✅ Adaptive spend limit holds at Max spend per visit until your purse is five times that, then grows by one more Max spend per visit for every doubling of the purse, so 10000 in the purse allows 2000 and 20000 allows 3000
-- ✅ Pick where to sell on the whole load, on while it is being tried out: every market in reach is weighed on what it would pay for the whole load rather than on what it pays for one unit
+- ✅ Pick where to sell on the whole load, on out of the box: every market in reach is weighed on what it would pay for the whole load rather than on what it pays for one unit
 - ✅ The whole load is only what your caps, your gold, your cargo and your herd let it buy, and a market is weighed only on what its own purse can pay for
 - ✅ When the gold left after the goods before it buys fewer units than a good was weighed on, the market is picked again for what it can still buy
 - ✅ Holds trade goods and livestock you never paid for, the ones a town event hands you or a quest leaves in your bags, until a market beats what the cheapest market it knows would have charged for them by your margin
@@ -190,6 +190,7 @@
 
 - ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, newly marks on your map or holds your cargo for is further than you care to ride
 - ✅ Either ceiling set to 0 takes that limit off, and the Town travel ceiling at 0 weighs every town in Calradia, which is the slowest TradeLord runs
+- ✅ The Village travel ceiling only ever holds villages closer: at 0, or set past the Town travel ceiling, villages go as far as the Town travel ceiling
 - ✅ A minimum stock before it calls something worth buying
 - ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the workshops and what the town uses up into a route's price
 - ✅ Count what is on its way to a market also goes into where TradeLord means to sell what it buys, into the market marked on your map and into Hold cargo for the best market

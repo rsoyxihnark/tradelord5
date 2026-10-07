@@ -405,12 +405,12 @@ namespace TradeLord.Mcm
         public int ObservationShelfLifeDays { get => _o.ObservationShelfLifeDays; set { _o.ObservationShelfLifeDays = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL205}Minimum stock for buy suggestions", 0, 100, Order = 3, RequireRestart = false,
-            HintText = "{=TL305}Best-buy hints require at least this many units in stock. 0 = off. Live-price mode only, because observed mode records prices, not stock levels.")]
+            HintText = "{=TL305}Best-buy hints require at least this many units in stock. 0 = off. Live world prices only, because with it off TradeLord records prices, not stock levels.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public int MinTownStock { get => _o.MinTownStock; set { _o.MinTownStock = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL452}Minimum stock value for buy suggestions", 0, 20000, Order = 4, RequireRestart = false,
-            HintText = "{=TL453}Counts a market as stocked when its stock of a good is worth at least this many denars at the good's worth, even under Minimum stock for buy suggestions. The dearer a good is, the fewer of it a market need hold. 0 = off. Live prices only.")]
+            HintText = "{=TL453}Calls a market stocked when its stock of a good is worth at least this many denars at the good's worth, even under Minimum stock for buy suggestions. The dearer a good is, the fewer of it a market need hold. 0 = off. Live world prices only.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public int MinTownStockWorth { get => _o.MinTownStockWorth; set { _o.MinTownStockWorth = value; Options.Bump(); } }
 
@@ -420,7 +420,7 @@ namespace TradeLord.Mcm
         public bool ConservativeRouteProjection { get => _o.ConservativeRouteProjection; set { _o.ConservativeRouteProjection = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL209}Bulk price simulation", Order = 7, RequireRestart = false,
-            HintText = "{=TL309}Price a lot unit by unit through the game's own price model, so quantity and profit account for your own buying moving the price. OFF prices every unit at the first unit's price. Towns and live-price mode only.")]
+            HintText = "{=TL309}Price a lot unit by unit through the game's own price model, so quantity and profit account for your own buying moving the price. OFF prices every unit at the first unit's price. Towns only, with Live world prices on.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool BulkSimulation { get => _o.BulkSimulation; set { _o.BulkSimulation = value; Options.Bump(); } }
 
@@ -515,7 +515,7 @@ namespace TradeLord.Mcm
         public float MaxTravelDaysTown { get => _o.MaxTravelDaysTown; set { _o.MaxTravelDaysTown = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL207}Village travel ceiling (days, 0 = off)", 0f, 10f, "0.0", Order = 4, RequireRestart = false,
-            HintText = "{=TL307}The same limit for villages, kept separate so you can hold them closer than towns. Default 1.")]
+            HintText = "{=TL307}The same limit for villages, kept separate so you can hold them closer than towns. It never takes a village past the Town travel ceiling: at 0, villages follow that ceiling. Default 1.")]
         [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
         public float MaxTravelDaysVillage { get => _o.MaxTravelDaysVillage; set { _o.MaxTravelDaysVillage = value; Options.Bump(); } }
 
@@ -775,7 +775,7 @@ namespace TradeLord.Mcm
         public float MaxCargoShare { get => _o.MaxCargoShare; set { _o.MaxCargoShare = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL459}Pick where to sell on the whole load", Order = 18, RequireRestart = false,
-            HintText = "{=TL460}TradeLord buys each good for a market it means to sell in. OFF: that market is picked on one unit's price. ON: every market in reach is weighed again on what it would pay for the whole load. Takes a little time. ON while it is tried out.")]
+            HintText = "{=TL460}TradeLord buys each good for a market it means to sell in. OFF: that market is picked on one unit's price. ON: every market in reach is weighed again on what it would pay for the whole load. Takes a little time. ON by default.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public bool PickTheBuyerOnTheWholeStack
         { get => _o.PickTheBuyerOnTheWholeStack; set { _o.PickTheBuyerOnTheWholeStack = value; Options.Bump(); } }

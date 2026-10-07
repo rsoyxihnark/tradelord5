@@ -11702,7 +11702,7 @@ chk("1.90.14", "the trade entry shows while Staged Trading holds trading back as
 def the_turkish_text_speaks_to_you_as_siz_throughout():
     turkish = spoken(TRANSLATIONS['Türkçe'])
     letter = '[\\wçğıöşüÇĞİÖŞÜ]'
-    informal = re.compile('(?<!' + letter + ')(sen|senin|sana|seni|senden|sende|kesen|kesende|işyerin|kademen|'
+    informal = re.compile('(?<!' + letter + ')(sen|senin|sana|seni|senden|sende|kesen|kesende|işyerin|atölyen|kademen|'
                           'kampanyan|partin|baktığın|yazdığın|girdiğin|taşıdığın|satacağın|olabileceğin|'
                           'kaydettiğin|ödediğin|yoldaşlarının)(?!' + letter + ')', re.I)
     dry = [one for one in turkish.values() if one.startswith('[Benzetim')]
@@ -17446,7 +17446,7 @@ def a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price():
             and larder.count("TradeMath.HungryFoodTolerance") == 1
             and "A_party_short_of_a_day_of_food_may_pay_up_to_twice_the_cheapest_price" in MATHTESTS
             and "Only_the_food_short_of_one_day_is_bought_above_the_cheapest_price" in MATHTESTS
-            and "or up to twice that for one day of food when your party is about to go hungry" in README)
+            and "or up to twice the cheapest price for one day of food when your party is about to go hungry" in README)
 
 chk("1.101.3", "a party short of a day's food buys one day of it at up to twice the cheapest price TradeLord knows, still inside your gold reserve, your buying caps and your cargo room",
     a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price())
@@ -18203,6 +18203,97 @@ def the_chinese_text_sets_tradelord_apart_and_the_turkish_names_the_gold_reserve
 
 chk("1.103.6", "the Chinese text sets TradeLord apart with a space after a character, and the Turkish workshop warning writes gold reserve the way the setting does",
     the_chinese_text_sets_tradelord_apart_and_the_turkish_names_the_gold_reserve())
+
+def the_rising_or_falling_mark_stays_off_while_live_world_prices_is_on():
+    tip = method_body(S['TooltipPatches.cs'], "private static string Drifted(ItemObject item, Settlement town, bool selling)")
+    return (tip
+            and ordered(tip, 'if (!Options.Current.MarkPriceDirection) return "";',
+                        'if (Options.Current.Omniscient) return "";',
+                        "PriceDrift(item, town, selling)")
+            and "Only does anything with Live world prices off" in spoken(ENGLISH)['TL407'])
+
+chk("1.103.7", "the tooltip marks no market rising or falling while Live world prices is on, as the hint for Mark a market rising or falling says, even with prices recorded before it was switched on",
+    the_rising_or_falling_mark_stays_off_while_live_world_prices_is_on())
+
+
+def the_turkish_reset_hint_names_the_four_lists_as_the_settings_screen_does():
+    tr = spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])
+    names = [tr[k].split(' (')[0] for k in ('TL231', 'TL232', 'TL240', 'TL252')]
+    return (names == ["Asla satma", "Her zaman sat", "Asla alma", "Her zaman al"]
+            and ", ".join(names[:3]) + " ve " + names[3] + " listeleriniz de bo\u015fal\u0131r" in tr['TL376'])
+
+chk("1.103.7", "the Turkish hint for the Reset button names the Never sell, Always sell, Never buy and Always buy lists the way the settings screen does",
+    the_turkish_reset_hint_names_the_four_lists_as_the_settings_screen_does())
+
+
+def a_workshop_is_called_by_one_word_in_every_language():
+    lines = [k for k, said in spoken(ENGLISH).items() if 'workshop' in said.lower()]
+    wanted = {'T\u00fcrk\u00e7e': ('at\u00f6lye', '[i\u0130]\u015fyer'),
+              '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': ('\u043c\u0430\u0441\u0442\u0435\u0440\u0441\u043a', None),
+              '\u7b80\u4f53\u4e2d\u6587': ('\u4f5c\u574a', '\u5de5\u574a')}
+    for tag, (word, stray) in wanted.items():
+        said = spoken(TRANSLATIONS[tag])
+        if not all(word in said[k].lower() for k in lines):
+            return False
+        if stray and any(re.search(stray, one) for one in said.values()):
+            return False
+    return len(lines) >= 15
+
+
+chk("1.103.7", "a workshop is called by one word in every line of every language that names one",
+    a_workshop_is_called_by_one_word_in_every_language())
+
+
+def the_village_ceiling_hint_says_it_never_takes_a_village_past_the_town_ceiling():
+    en = spoken(ENGLISH)
+    return ("It never takes a village past the Town travel ceiling: at 0, villages follow that ceiling." in en['TL307']
+            and 'HintText = "{=TL307}' + en['TL307'] + '"' in M
+            and said_in_every_language('TL307')
+            and all(spoken(f)['TL206'].split(' (')[0].split('\uff08')[0] in spoken(f)['TL307']
+                    for f in [ENGLISH] + list(TRANSLATIONS.values()))
+            and "if (village && vcap > 0f && (cap <= 0f || vcap < cap)) cap = vcap;" in S['Ranking.cs']
+            and "The Village travel ceiling only ever holds villages closer" in README)
+
+chk("1.103.7", "the hint for Village travel ceiling says it never takes a village past the Town travel ceiling and that at 0 villages follow it, in every language",
+    the_village_ceiling_hint_says_it_never_takes_a_village_past_the_town_ceiling())
+
+
+def the_whole_load_switch_says_it_is_on_by_default():
+    said = [spoken(f)['TL460'] for f in [ENGLISH] + list(TRANSLATIONS.values())]
+    return (said[0].endswith("ON by default.")
+            and 'HintText = "{=TL460}' + said[0] + '"' in M
+            and not any(trial in one for one in said
+                        for trial in ("tried out", "\u0438\u0441\u043f\u044b\u0442", "\u8bd5\u884c", "Dene")))
+
+chk("1.103.7", "the hint for Pick where to sell on the whole load says it is on by default, in every language",
+    the_whole_load_switch_says_it_is_on_by_default())
+
+
+def the_russian_hints_mark_live_world_prices_when_they_name_it():
+    ru = spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])
+    return all("\u00ab\u0416\u0438\u0432\u044b\u0445 \u0446\u0435\u043d\u0430\u0445 \u043c\u0438\u0440\u0430\u00bb" in ru[k]
+               for k in ('TL407', 'TL408'))
+
+chk("1.103.7", "the Russian hints for Mark a market rising or falling and Days to keep a price you recorded put Live world prices in \u00ab\u00bb, as the Russian hint under Count what is on its way to a market does",
+    the_russian_hints_mark_live_world_prices_when_they_name_it())
+
+
+def the_stock_and_bulk_price_hints_name_live_world_prices():
+    en = spoken(ENGLISH)
+    return (all("Live world prices" in en[k] and 'HintText = "{=' + k + '}' + en[k] + '"' in M
+                for k in ('TL305', 'TL309', 'TL453'))
+            and not any(re.search(r'live-price|Live prices only|observed mode', said, re.I) for said in en.values())
+            and not any(re.search(stray, said, re.I)
+                        for stray in ('canlı fiyat', 'gözlem kip',
+                                      'режим\\w* живых',
+                                      'режим\\w* наблюдений',
+                                      'Живые цены\\.',
+                                      '实时价格模式', '亲历模式')
+                        for path in TRANSLATIONS.values() for said in spoken(path).values()))
+
+chk("1.103.7", "the hints for Minimum stock for buy suggestions, Minimum stock value for buy suggestions and Bulk price simulation name Live world prices the way the settings screen does",
+    the_stock_and_bulk_price_hints_name_live_world_prices())
+
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
