@@ -7,7 +7,6 @@ namespace TradeLord
     {
         internal T Where;
         internal int Price;
-        internal float Straight;
         internal float Days;
     }
 
