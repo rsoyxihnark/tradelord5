@@ -6,8 +6,8 @@ namespace TradeLord.Tests
 {
     public class MarketRankTests
     {
-        private static Reach<string> At(string town, int price, float straight, float days) =>
-            new Reach<string> { Where = town, Price = price, Straight = straight, Days = days };
+        private static Reach<string> At(string town, int price, float days) =>
+            new Reach<string> { Where = town, Price = price, Days = days };
 
         private static List<string> Named(List<Reach<string>> reached)
         {
@@ -22,23 +22,23 @@ namespace TradeLord.Tests
         [Fact]
         public void Selling_puts_the_market_that_pays_most_first()
         {
-            List<Reach<string>> kept = Offered(At("a", 100, 1f, 1f), At("b", 300, 1f, 1f),
-                                               At("c", 200, 1f, 1f));
+            List<Reach<string>> kept = Offered(At("a", 100, 1f), At("b", 300, 1f),
+                                               At("c", 200, 1f));
             Assert.Equal(new[] { "b", "c", "a" }, Named(MarketRank.Settled(kept, true)));
         }
 
         [Fact]
         public void Buying_puts_the_market_that_charges_least_first()
         {
-            List<Reach<string>> kept = Offered(At("a", 100, 1f, 1f), At("b", 300, 1f, 1f),
-                                               At("c", 200, 1f, 1f));
+            List<Reach<string>> kept = Offered(At("a", 100, 1f), At("b", 300, 1f),
+                                               At("c", 200, 1f));
             Assert.Equal(new[] { "a", "c", "b" }, Named(MarketRank.Settled(kept, false)));
         }
 
         [Fact]
         public void Two_markets_at_the_same_price_are_split_by_the_nearer_one()
         {
-            List<Reach<string>> kept = Offered(At("far", 200, 9f, 9f), At("near", 200, 2f, 2f));
+            List<Reach<string>> kept = Offered(At("far", 200, 9f), At("near", 200, 2f));
             Assert.Equal(new[] { "near", "far" }, Named(MarketRank.Settled(kept, true)));
             Assert.Equal(0, MarketRank.Rank(true, 200, 3f, 200, 3f));
         }
@@ -47,15 +47,15 @@ namespace TradeLord.Tests
         public void Markets_at_the_same_price_are_ordered_on_the_real_ride_not_the_straight_line()
         {
             List<Reach<string>> kept = Offered(
-                At("overland", 200, straight: 1f, days: 9f),
-                At("coastal", 200, straight: 8f, days: 2f));
+                At("overland", 200, days: 9f),
+                At("coastal", 200, days: 2f));
             Assert.Equal(new[] { "coastal", "overland" }, Named(MarketRank.Settled(kept, true)));
         }
 
         [Fact]
         public void Settling_the_order_leaves_what_was_kept_alone()
         {
-            List<Reach<string>> kept = Offered(At("a", 100, 1f, 5f), At("b", 300, 1f, 1f));
+            List<Reach<string>> kept = Offered(At("a", 100, 5f), At("b", 300, 1f));
             List<string> before = Named(kept);
             MarketRank.Settled(kept, true);
             Assert.Equal(before, Named(kept));

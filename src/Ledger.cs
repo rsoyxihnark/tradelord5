@@ -1232,13 +1232,12 @@ namespace TradeLord
             return held;
         }
 
-        private static bool Eligible(Settlement s, out float lower)
+        private static bool Eligible(Settlement s)
         {
-            lower = 0f;
             if (!TradeActionBehavior.IsMarket(s)) return false;
             if (UnderAttack(s) || VillageShut(s)) return false;
             if (Options.Current.ExcludeHostileTowns && IsHostile(s)) return false;
-            lower = Travel.StraightDaysFromParty(s);
+            float lower = Travel.StraightDaysFromParty(s);
             return WithinTravelCeiling(s, lower);
         }
 
@@ -1253,7 +1252,7 @@ namespace TradeLord
             = new Dictionary<(string, bool), (Stamp, string, List<(Settlement, int)>)>();
 
         private Stamp _candStamp;
-        private List<(Settlement s, float days)> _candidates;
+        private List<Settlement> _candidates;
 
         private Stamp _routeStamp;
         private List<TradeRoute> _routes;
@@ -1302,16 +1301,16 @@ namespace TradeLord
             ForgetMarketRankings();
         }
 
-        private List<(Settlement s, float days)> LiveCandidates(int hour)
+        private List<Settlement> LiveCandidates(int hour)
         {
             if (_candidates != null && Freshness.Fresh(ref _candStamp, hour)) return _candidates;
 
-            var list = new List<(Settlement, float)>();
+            var list = new List<Settlement>();
             foreach (Settlement s in Settlement.All)
             {
                 if (s.SettlementComponent == null) continue;
-                if (!Eligible(s, out float lower)) continue;
-                list.Add((s, lower));
+                if (!Eligible(s)) continue;
+                list.Add(s);
             }
             _candidates = list;
             Freshness.Taken(ref _candStamp, hour);
@@ -1329,7 +1328,7 @@ namespace TradeLord
                            "roughly.");
         }
 
-        private static List<(Settlement, int)> Rerank(List<(Settlement s, int price, float days)> all, bool selling)
+        private static List<(Settlement, int)> Rerank(List<(Settlement s, int price)> all, bool selling)
         {
             var kept = new List<Reach<Settlement>>(MarketRank.TopCacheSize + 1);
             for (int i = 0; i < all.Count; i++)
@@ -1338,7 +1337,7 @@ namespace TradeLord
                 if (!WithinTravelCeiling(all[i].s, days)) continue;
                 var one = new Reach<Settlement>
                 {
-                    Where = all[i].s, Price = all[i].price, Straight = all[i].days, Days = days
+                    Where = all[i].s, Price = all[i].price, Days = days
                 };
                 kept.Add(one);
             }
@@ -1357,7 +1356,7 @@ namespace TradeLord
         private void PrimeLiveRankings(List<ItemObject> wanted, int hour)
         {
             if (!Options.Current.Omniscient || wanted.Count == 0) return;
-            List<(Settlement s, float days)> candidates = LiveCandidates(hour);
+            List<Settlement> candidates = LiveCandidates(hour);
             if (candidates.Count == 0) return;
             int minStock = Options.Current.MinTownStock;
             int minWorth = Options.Current.MinTownStockWorth;
@@ -1372,8 +1371,7 @@ namespace TradeLord
             }
             for (int t = 0; t < candidates.Count; t++)
             {
-                Settlement town = candidates[t].s;
-                float straight = candidates[t].days;
+                Settlement town = candidates[t];
                 float days = Travel.EstimateDaysFromParty(town);
                 if (!WithinTravelCeiling(town, days)) continue;
                 SettlementComponent market = town.SettlementComponent;
@@ -1386,7 +1384,7 @@ namespace TradeLord
                     {
                         int price = Priced.At(market, item, me, true);
                         if (price > 0) sells[i].Add(new Reach<Settlement>
-                        { Where = town, Price = price, Straight = straight, Days = days });
+                        { Where = town, Price = price, Days = days });
                     }
                     int stocked = 0;
                     if (onTheShelf == null ||
@@ -1395,7 +1393,7 @@ namespace TradeLord
                     {
                         int price = Priced.At(market, item, me, false);
                         if (price > 0) buys[i].Add(new Reach<Settlement>
-                        { Where = town, Price = price, Straight = straight, Days = days });
+                        { Where = town, Price = price, Days = days });
                     }
                 }
             }
@@ -1434,8 +1432,8 @@ namespace TradeLord
         {
             int minStock = Options.Current.MinTownStock;
             int minWorth = Options.Current.MinTownStockWorth;
-            var all = new List<(Settlement s, int price, float days)>();
-            foreach (var (s, lower) in LiveCandidates(hour))
+            var all = new List<(Settlement s, int price)>();
+            foreach (Settlement s in LiveCandidates(hour))
             {
                 if (selling && TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold,
                                                            s.IsVillage) <= 0) continue;
@@ -1443,7 +1441,7 @@ namespace TradeLord
                                                             minStock, minWorth)) continue;
                 int price = Priced.At(s.SettlementComponent, item, MobileParty.MainParty, selling);
                 if (price <= 0) continue;
-                all.Add((s, price, lower));
+                all.Add((s, price));
             }
             return Rerank(all, selling);
         }
@@ -1501,14 +1499,14 @@ namespace TradeLord
         {
             if (!_ledger.TryGetValue(item.StringId, out var byTown) || byTown.Count == 0)
                 return new List<(Settlement, int)>();
-            var found = new List<(Settlement s, int price, float days)>();
+            var found = new List<(Settlement s, int price)>();
             foreach (var o in byTown.Values)
             {
                 Settlement town = Settlement.Find(o.TownId);
-                if (town == null || !Eligible(town, out float lower)) continue;
+                if (town == null || !Eligible(town)) continue;
                 int price = selling ? o.SellPrice : o.BuyPrice;
                 if (price <= 0) continue;
-                found.Add((town, price, lower));
+                found.Add((town, price));
             }
             return Rerank(found, selling);
         }

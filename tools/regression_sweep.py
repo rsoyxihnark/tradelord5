@@ -1583,7 +1583,7 @@ chk("1.3.2", "how far a scan reaches is the two travel ceilings alone, and the s
     "ScanRadius" not in S['Options.cs'] and "ScanRadius" not in M and
     '"ScanRadius"' in S['Migrate.cs'] and
     "return WithinTravelCeiling(s, lower);" in method_body(S['Ledger.cs'], "private static bool Eligible") and
-    "!Eligible(town, out float lower)" in S['Ledger.cs'])
+    "!Eligible(town)" in S['Ledger.cs'])
 chk("1.13.0", "no switch quietly writes another one, so what you set is what is kept",
     "EnableBuying" not in M and "EnableBuying" not in S['Options.cs'] and
     "EnableBuying" not in S['Trading.cs'] and "Loaded" not in M and
@@ -2048,9 +2048,9 @@ chk("1.3.29", "one buy-side margin rule, for the planner and the executor alike"
     S['Passes.cs'].count("TradeMath.BuyAcceptable(") == 5 and
     S['Passes.cs'].count("Options.Current") == 0)
 chk("1.3.29", "both knowledge modes filter markets through one eligibility rule",
-    S['Ledger.cs'].count("private static bool Eligible(Settlement s, out float lower)") == 1 and
-    "!Eligible(s, out float lower)" in method_body(S['Ledger.cs'], "private List<(Settlement s, float days)> LiveCandidates") and
-    "!Eligible(town, out float lower)" in method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopObserved"))
+    S['Ledger.cs'].count("private static bool Eligible(Settlement s)") == 1 and
+    "!Eligible(s)" in method_body(S['Ledger.cs'], "private List<Settlement> LiveCandidates") and
+    "!Eligible(town)" in method_body(S['Ledger.cs'], "private List<(Settlement, int)> TopObserved"))
 chk("1.3.29", "one definition of what counts as a market, for scans and for trading",
     S['Trading.cs'].count("internal static bool IsMarket(Settlement s)") == 1 and
     "if (!TradeActionBehavior.IsMarket(s)) return false;" in method_body(S['Ledger.cs'], "private static bool Eligible"))
@@ -11141,7 +11141,7 @@ def the_town_ceiling_says_what_turning_it_off_costs():
     for path in TRANSLATIONS.values():
         if '0' not in spoken(path).get('TL306', ''):
             return False
-    live = method_body(S['Ledger.cs'], "private List<(Settlement s, float days)> LiveCandidates")
+    live = method_body(S['Ledger.cs'], "private List<Settlement> LiveCandidates")
     warn = method_body(S['Ledger.cs'], "private static void SayIfTheTownCeilingIsOff")
     return (live and warn
             and "SayIfTheTownCeilingIsOff(list.Count);" in live
