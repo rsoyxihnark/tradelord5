@@ -203,28 +203,7 @@ namespace TradeLord
 
     internal static class MapButton
     {
-        internal const float Pad = 6f;
-
-        internal static bool BoundsReadable(float screenW, float screenH, float width, float height) =>
-            screenW >= 1f && screenH >= 1f && width >= 1f && height >= 1f &&
-            width <= screenW && height <= screenH;
-
-        internal static bool Over(float x, float y, float screenW, float screenH,
-                                  float width, float height, float marginRight)
-        {
-            if (!BoundsReadable(screenW, screenH, width, height)) return false;
-            float padX = Pad / screenW, padY = Pad / screenH;
-            float right = 1f - marginRight / screenW;
-            float left = right - width / screenW;
-            float half = height / screenH * 0.5f;
-            return x >= left - padX && x <= right + padX &&
-                   y >= 0.5f - half - padY && y <= 0.5f + half + padY;
-        }
-
-        internal static bool TakesTheMouse(bool windowOpen, bool buttonOn, bool overButton) =>
-            windowOpen || (buttonOn && overButton);
-
-        internal static bool TakesTheWheel(bool windowOpen) => windowOpen;
+        internal static bool TakesTheMouse(bool windowOpen) => windowOpen;
     }
 
     internal static class Ranks
