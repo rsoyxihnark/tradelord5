@@ -127,9 +127,9 @@ namespace TradeLord
         internal static float TrustEarned()
         {
             LedgerBehavior kept = LedgerBehavior.Instance;
-            if (kept == null || !kept.ForecastScore(out int scored, out float cameTrue))
-                return TradeMath.TrustInTheForecast(0, 0f);
-            return TradeMath.TrustInTheForecast(scored, cameTrue);
+            if (kept == null || !kept.ForecastScore(out _, out long weighed, out float cameTrue))
+                return TradeMath.TrustInTheForecast(0L, 0f);
+            return TradeMath.TrustInTheForecast(weighed, cameTrue);
         }
 
         internal static int WorthShiftAsItHasHeld(Settlement site, ItemObject item, float withinDays) =>

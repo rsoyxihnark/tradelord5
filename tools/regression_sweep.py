@@ -2183,7 +2183,8 @@ chk("1.4.1", "quick-buy prices the shelf only when there is a budget to spend",
                        "ItemRoster shopRoster = _pass.Stock;")
            and "internal ItemRoster Stock => Site != null ? Site.ItemRoster : Met.ItemRoster;"
                in S['Trading.cs']
-           and S['Trading.cs'].count("pass.Stock") == 2)
+           and S['Trading.cs'].count("pass.Stock") == 3
+           and "ItemRoster shelf = pass.Stock;" in method_body(S['Trading.cs'], "private static string WhyNoHaulAnimalHere"))
     (buy_pass()))
 chk("1.4.1", "a pass the gold-direction guard stopped does not blame the trade policy",
     S['Trading.cs'].count("else if (!pass.DirectionError)") == 2 and
@@ -5559,10 +5560,12 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
                 "                                           herdRank != TradeRules.RankLivestock);" in sell
             and t.count("pass.Books.NoteHerdTaken();") == 1
             and S['Passes.cs'].count("books.NoteHerdTaken();") == 2
-            and t.count("pass.Books.Sold(pass.Sim,") == 1
+            and t.count("pass.Books.Sold(pass.Sim,") == 2
             and S['Passes.cs'].count("books.Sold(sim, good.Id)") == 1
             and "pass.Books.Sold(pass.Sim, it.StringId)" in method_body(t,
                     "private static List<(ItemRosterElement el, Good good, int price, int ceiling)> CheapestFirst")
+            and "if (pass.Books.Sold(pass.Sim, it.StringId)) continue;" in method_body(t,
+                    "private static string WhyNoHaulAnimalHere")
             and "CheapestFirst(" in larder and "CheapestFirst(" in haul
             and S['Passes.cs'].count("books.Bought(sim, market.IdAt(at))") == 1
             and S['Passes.cs'].count("bool boughtHere = books.Bought(sim, id);") == 1
@@ -6096,7 +6099,9 @@ def every_market_pass_is_opened_and_carried_by_one_object():
             and t.count("Priced.At(Market,") == 1
             and "Priced.At(Market, what, Party, selling)" in
                 between(t, "internal int Price(", "Road.GetPrice")
-            and t.count("pass.Price(el.EquipmentElement, selling: ") == 7
+            and t.count("pass.Price(el.EquipmentElement, selling: ") == 8
+            and "int price = pass.Price(el.EquipmentElement, selling: false);" in
+                method_body(t, "private static string WhyNoHaulAnimalHere")
             and "_pass.Price(_plan[at].EquipmentElement, selling: true)" in t
             and "_pass.Price(Shelf[at].EquipmentElement, selling: false)" in t
             and "TradeActionBehavior.Tally(Detail, item, count, gold)" in
@@ -6753,7 +6758,8 @@ def one_stack_of_a_good_never_spends_what_another_stack_holds():
                  "                                LedgerBehavior.InAll(Stock, item)"
                  " - Books.Stocked(Sim, item.StringId));") in held
             and t.count("pass.YoursToSell(el)") == 2
-            and t.count("pass.TheirsToSell(el)") == 4
+            and t.count("pass.TheirsToSell(el)") == 5
+            and "int units = pass.TheirsToSell(el);" in method_body(t, "private static string WhyNoHaulAnimalHere")
             and "_pass.YoursToSell(_plan[at])" in t
             and "_pass.TheirsToSell(Shelf[at])" in t
             and len(counted) == 3
@@ -9383,10 +9389,11 @@ def the_marker_reads_your_cargo_once_and_prices_each_market_once():
             and "PriceShelfHours" not in S['Marker.cs']
             and ordered(carry, "_cargo = null;", "_cargoStamp.Stale();", "_cargoVersion = -1;")
             and forget.count("ForgetWhatYouCarry();") == 1
-            and t.count("Marker.ForgetWhatYouCarry();") == 2
+            and t.count("Marker.ForgetWhatYouCarry();") == 3
             and all("Marker.ForgetWhatYouCarry();" in method_body(t, where)
                     for where in ("private static void ResetVisit",
-                                  "private void OnSettlementLeft"))
+                                  "private void OnSettlementLeft",
+                                  "internal static void WatchTheTradeScreen"))
             and "Marker.Forget();" in method_body(t, "internal static void ForgetVisit")
             and '"VersionNo"' in COMPAT)
 
@@ -11336,7 +11343,7 @@ def what_is_on_its_way_is_counted_at_the_trust_it_has_earned():
     floor = re.search(r'public const float LeastOfAMoveThatCounts = (-[\d.]+)f;', S['TradeMath.cs'])
     most = re.search(r'public const float MostOfAMoveThatCounts = ([\d.]+)f;', S['TradeMath.cs'])
     older = method_body(S['Ledger.cs'], "private void ReadTheOlderRecords")
-    enough = re.search(r'public const int EnoughForecasts = (\d+);', S['TradeMath.cs'])
+    enough = re.search(r'public const long EnoughForecastWorth = (\d+)L;', S['TradeMath.cs'])
     return (miss and share and trust and held and earned and shift and priced and kept and read and written and scan
             and curve
             and most is not None and float(most.group(1)) == 1
@@ -11352,15 +11359,18 @@ def what_is_on_its_way_is_counted_at_the_trust_it_has_earned():
             and "if (!(weighed > 0f) || float.IsNaN(cameTrue) || float.IsInfinity(cameTrue)) return NoShareToGive;" in share
             and "return share < 0f ? 0f : share;" in share
             and "float earned = cameTrue > 1f ? 1f : cameTrue;" in trust
-            and "float weight = (float)scored / (scored + EnoughForecasts);" in trust
+            and "float weight = (float)(weighed / ((double)weighed + EnoughForecastWorth));" in trust
+            and "scored" not in trust
             and "float trust = TrustBeforeAnyCheck + (earned - TrustBeforeAnyCheck) * weight;" in trust
-            and ordered(trust, "if (scored <= 0 || cameTrue < 0f || float.IsNaN(cameTrue) || float.IsInfinity(cameTrue))",
+            and ordered(trust, "if (weighed <= 0L || cameTrue < 0f || float.IsNaN(cameTrue) || float.IsInfinity(cameTrue))",
                         "return TrustBeforeAnyCheck;")
             and "public const float TrustBeforeAnyCheck = 0.5f;" in S['TradeMath.cs']
-            and "return TradeMath.TrustInTheForecast(0, 0f);" in earned
+            and "return TradeMath.TrustInTheForecast(0L, 0f);" in earned
             and "return 1f;" not in earned
             and "long held = (long)((double)shift * trust);" in held
-            and "return TradeMath.TrustInTheForecast(scored, cameTrue);" in earned
+            and "return TradeMath.TrustInTheForecast(weighed, cameTrue);" in earned
+            and "!kept.ForecastScore(out _, out long weighed, out float cameTrue)" in earned
+            and "weighed = _forecastWeighed;" in read
             and ordered(shift, "TradeMath.WorthShiftTrusted(PriceShift(", "item, withinDays),", "TrustEarned())")
             and ordered_last(priced, "shift = WorthShift(site, item, withinDays);", "_shifts[key] = shift;",
                              "return shift;")
@@ -15587,7 +15597,7 @@ def a_forecast_is_held_to_what_it_said_by_the_day_you_walked_in():
                         '", and of the worth it said would move, " +',
                         "Share(TradeMath.ShareThatCameTrue(weighed, cameTrue))",
                         '"  over this campaign: of the worth it said would move, " + Share(held) +',
-                        "Share(TradeMath.TrustInTheForecast(figures, held))")
+                        "Share(TradeMath.TrustInTheForecast(judged, held))")
             and "TradeMath.MeanOf(shareTotal, shared)" not in written
             and "MissThatCounts" not in S['TradeMath.cs'] and "MissThatCounts" not in written
             and '"TradeLord_ForecastsScoredEveryRun"' not in method_body(ledger, "public override void SyncData")
@@ -16060,7 +16070,9 @@ def what_is_on_its_way_is_trusted_by_size():
             and ordered(ledger, "if (dataStore.IsLoading && _unsquaredForecasts > 0)",
                         '"fractions were set aside, so how far to trust what is on its way to a market is learned "')
             and ordered(written, '"  over this campaign: of the worth it said would move, " + Share(held) +',
-                        '" came true over " + figures + " figure(s) checked, so what is on its way is counted at " +')
+                        '" came true over " + figures + " figure(s) checked, which said " + judged +',
+                        '" denars would move in all, so what is on its way is counted at " +',
+                        "Share(TradeMath.TrustInTheForecast(judged, held))")
             and "missing as much as a smaller one" not in written
             and "least squares" not in written
             and all(one in MATHTESTS for one in
@@ -17417,10 +17429,11 @@ def a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price():
     return ("public const float HungryFoodTolerance = 2f;" in math
             and "day <= 0 || held >= day ? 0 : day - (held < 0 ? 0 : held)" in
                 between(math, "public static int FoodShortOfADay(int held, int day) =>", ";")
-            and "bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall + traded,\n                                                    TradePolicy.FoodForADay()) > 0;" in larder
+            and "bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,\n                                                    TradePolicy.FoodForADay()) > 0;" in larder
+            and larder.count("TradePolicy.FoodWanted() - shortfall,") == 2
             and "if (larder.Count == 0 && !hungry)" in larder
             and ordered(larder, "foreach (var (el, good, _, ceiling) in larder)",
-                        "int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall + traded,",
+                        "int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,",
                         "TradePolicy.FoodForADay());",
                         "if (hunger <= 0 || pass.DirectionError) return;",
                         "TradeMath.HungryFoodTolerance);",
@@ -17436,7 +17449,7 @@ def a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price():
             and larder.count("TradeMath.HungryFoodTolerance") == 1
             and "A_party_short_of_a_day_of_food_may_pay_up_to_twice_the_cheapest_price" in MATHTESTS
             and "Only_the_food_short_of_one_day_is_bought_above_the_cheapest_price" in MATHTESTS
-            and "or up to twice the cheapest price for one day of food when your party is about to go hungry" in README)
+            and "or up to twice that price for one day of food when your party has under a day of its own" in README)
 
 chk("1.101.3", "a party short of a day's food buys one day of it at up to twice the cheapest price TradeLord knows, still inside your gold reserve, your buying caps and your cargo room",
     a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price())
@@ -17980,12 +17993,15 @@ def a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve():
                         "bool overTheCap = starving && pass.WouldReachYourReserve(price);",
                         "pass.Tally(item, 1, price);", "if (overTheCap) pastTheCap = true;",
                         '", past Max spend per visit as your party has less than a day of food"')
-            and "Food for a party down to less than a day of it, and a haul animal to carry it, may go past it." in en['TL337']
-            and "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food for a party down to less than a day of it, and a haul animal to carry it, may go past it." in M
-            and "bir g\u00fcnden az yiyece\u011fi" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL337']
+            and "Food may go past it once your party has under a day of its own, and a haul animal once all its food is that low." in en['TL337']
+            and "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food may go past it once your party has under a day of its own, and a haul animal once all its food is that low." in M
+            and "kendi yiyece\u011fi bir g\u00fcnden aza inince" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL337']
+            and "TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim)," in
+                between(haul, "bool starving = unfitted.food && TradeMath.FoodShortOfADay(", ";")
             and "\u043c\u0435\u043d\u044c\u0448\u0435 \u0447\u0435\u043c \u043d\u0430 \u0434\u0435\u043d\u044c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL337']
             and "\u4e0d\u8db3\u4e00\u5929" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL337']
-            and "When your party is down to less than a day of food, the food it buys and a haul animal to carry it may go past Max spend per visit, never past your gold reserve" in README)
+            and "When your party is down to less than a day of its own food, the food it buys may go past Max spend per visit, never past your gold reserve" in README
+            and "When all the food your party carries, food bought to trade included, is down to less than a day, a haul animal to carry more may go past Max spend per visit too" in README)
 
 chk("1.103.3", "a party down to less than a day of food buys its food, and a haul animal to carry it, past Max spend per visit, never past the gold reserve, and TradeLord.log says so",
     a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve())
@@ -18043,7 +18059,7 @@ chk("1.103.4", "TradeLord.log's resale safety line counts a price above the prom
 def the_turkish_lines_name_your_party_and_a_town_as_the_others_do():
     tr = spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])
     return (tr['TL351'].startswith("B\u00f6l\u00fc\u011f\u00fcn\u00fcz bir maldan")
-            and "B\u00f6l\u00fc\u011f\u00fcn\u00fcz\u00fcn bir g\u00fcnden az yiyece\u011fi" in tr['TL337']
+            and "B\u00f6l\u00fc\u011f\u00fcn\u00fcz\u00fcn kendi yiyece\u011fi bir g\u00fcnden aza inince" in tr['TL337']
             and not any(re.search(r'\bpartiniz', said, re.I) for said in tr.values())
             and not any("kasaba" in said.lower() for said in tr.values())
             and not any("\u2019" in said for said in tr.values()))
@@ -18148,11 +18164,11 @@ chk("1.103.6", "a party down to less than a day of food may buy a haul animal to
 def the_visit_cap_hint_lets_a_haul_animal_carry_a_starving_partys_food_past_it():
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    return (en['TL337'].endswith("Food for a party down to less than a day of it, and a haul animal to carry it, may go past it.")
+    return (en['TL337'].endswith("and a haul animal once all its food is that low.")
             and 'HintText = "{=TL337}' + en['TL337'] + '"' in M
-            and "yiyecek ve yük hayvanı bu sınırı aşabilir" in tr['TL337']
-            and "еда и вьючное животное могут выйти за предел" in ru['TL337']
-            and "买食物和用来驮食物的驮兽都可以超出这个上限" in cn['TL337']
+            and "tüm yiyeceği inince yük hayvanı sınırı aşabilir" in tr['TL337']
+            and "а когда так мало всей еды, то и вьючное животное" in ru['TL337']
+            and "全部食物都不足一天时，驮食物的驮兽也可以" in cn['TL337']
             and "bool overTheCap = starving && pass.WouldReachYourReserve(price);" in S['Trading.cs'])
 
 chk("1.103.6", "the hint for Max spend per visit says a haul animal to carry food for a party down to less than a day of it may go past it, in every language",
@@ -18618,6 +18634,106 @@ def a_cursor_note_says_what_else_was_going_on():
 chk("1.103.10", "a map cursor note says whether the map still works out the cursor, which layers lie under the mouse, whether the mouse is shown, and when the ledger panel hotkey was let go",
     a_cursor_note_says_what_else_was_going_on())
 
+
+
+def a_party_is_hungry_once_its_own_food_runs_short():
+    t = S['Trading.cs']
+    larder = method_body(t, "public static void ExecuteResupply")
+    haul = method_body(t, "public static bool ExecuteHaulage")
+    hungry = between(larder, "bool hungry = TradeMath.FoodShortOfADay(", ";")
+    hunger = between(larder, "int hunger = TradeMath.FoodShortOfADay(", ";")
+    starving = between(haul, "bool starving = unfitted.food && TradeMath.FoodShortOfADay(", ";")
+    en = spoken(ENGLISH)
+    tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
+    return (larder and haul and hungry and hunger and starving
+            and "int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);" in larder
+            and "- pass.Books.FoodHeld(pass.Sim) + traded;" in larder
+            and "TradePolicy.FoodWanted() - shortfall," in hungry and "traded" not in hungry
+            and "TradePolicy.FoodWanted() - shortfall," in hunger and "traded" not in hunger
+            and "TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim)," in starving
+            and "FoodBoughtToTrade" not in starving
+            and larder.count('"your party had less than a day of its own food, so "') == 2
+            and '"resupply: your party has less than a day of its own food, and none is on sale at " +' in larder
+            and "less than a day of food" not in larder
+            and ordered(larder, "foreach (var (el, good, _, ceiling) in lean)", "if (hungryUnits > 0)",
+                        "string missed = lean.Count == 0 ? _foodMissed : null;",
+                        '(missed == null ? "" : ": the cheapest on sale is " + missed));')
+            and "once your party has under a day of its own" in en['TL337']
+            and 'HintText = "{=TL337}' + en['TL337'] + '"' in M
+            and "kendi yiyeceği" in tr['TL337'] and "своей еды" in ru['TL337'] and "自己的食物" in cn['TL337'])
+
+chk("1.103.11", "a party is hungry once its own food is down to less than a day, so food bought to trade no longer keeps the food it needs from going past Max spend per visit, while a haul animal still waits for all its food to run that low",
+    a_party_is_hungry_once_its_own_food_runs_short())
+
+
+def a_deal_laid_out_moves_the_marker_only_once_the_screen_closes():
+    t = S['Trading.cs']
+    watch = method_body(t, "internal static void WatchTheTradeScreen")
+    return (watch
+            and ordered(t, "TextObject laid = Counter.Settle();",
+                        "if (laid != null) Notices.Say(laid, Notices.Note);",
+                        'else Guard.Run("Action.MarkerAfterTradingByHand", Marker.Update);')
+            and t.count('Guard.Run("Action.MarkerAfterTradingByHand", Marker.Update);') == 1
+            and ordered(watch, "if (closed == null) return;", "Notices.Say(closed, Notices.Note);",
+                        "Marker.ForgetWhatYouCarry();", 'Guard.Run("Action.MarkerAfterTheDeal", Marker.Update);')
+            and "if (_logic == null) return null;" in method_body(S['Counter.cs'], "internal static TextObject Settle()"))
+
+chk("1.103.11", "a deal Staged Trading lays out leaves the map marker alone until the trade screen closes, and the marker then reads your cargo afresh, so goods the deal bought are weighed at what you paid",
+    a_deal_laid_out_moves_the_marker_only_once_the_screen_closes())
+
+
+def a_haul_animal_left_alone_for_its_price_says_how_far_off_it_was():
+    t = S['Trading.cs']
+    haul = method_body(t, "public static bool ExecuteHaulage")
+    why = method_body(t, "private static string WhyNoHaulAnimalHere")
+    cheapest = method_body(t, "private static List<(ItemRosterElement el, Good good, int price, int ceiling)> CheapestFirst")
+    en = spoken(ENGLISH)
+    tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
+    return (haul and why and cheapest
+            and '"haul animals are left alone at " + settlement.Name + ": " + WhyNoHaulAnimalHere(pass));' in haul
+            and "none is on sale here, or none" not in t
+            and ordered(cheapest, "int worth = TradePolicy.UnpaidWorth(it);",
+                        "int ceiling = TradeMath.MostToPayOverTheCheapest(worth, tolerance);")
+            and ordered(why, "if (el.Amount <= 0 || !TradePolicy.MayHaul(it, pass.Locked)) continue;",
+                        "if (pass.Books.Sold(pass.Sim, it.StringId)) continue;",
+                        "int units = pass.TheirsToSell(el);",
+                        "int price = pass.Price(el.EquipmentElement, selling: false);",
+                        "onSale += units;",
+                        'if (pick == null) return "none is on sale here";',
+                        "var known = LedgerBehavior.Instance?.BestBuy(pick) ?? (null, 0);",
+                        "int worth = TradePolicy.UnpaidWorth(pick);",
+                        "int bar = TradeMath.MostToPayOverTheCheapest(worth, Options.Current.HaulAnimalPriceTolerance);",
+                        "Travel.EstimateDaysFromParty(known.Item1)",
+                        '"the cheapest of the " + onSale + " on sale here is " + pick.Name + " at " + cheapest +',
+                        '", against a bar of " + bar + ", which Most it will pay for a haul animal sets on " + from;')
+            and en['TL428'].endswith("The cheapest is sought within your travel ceilings.")
+            and 'HintText = "{=TL428}' + en['TL428'] + '"' in M
+            and tr['TL428'].endswith("En ucuz fiyat yol süresi sınırlarınız içinde aranır.")
+            and ru['TL428'].endswith("Самая дешёвая цена ищется в ваших пределах пути.")
+            and cn['TL428'].endswith("最低价只在行程上限之内寻找。"))
+
+chk("1.103.11", "a haul animal left alone for its price names the cheapest on sale, its price, the bar, the price the bar is set on with where and how far that is, and how many are on sale, and the hint says the cheapest is sought within your travel ceilings",
+    a_haul_animal_left_alone_for_its_price_says_how_far_off_it_was())
+
+
+def what_is_on_its_way_earns_trust_by_the_gold_it_was_about():
+    math = S['TradeMath.cs']
+    trust = method_body(math, "public static float TrustInTheForecast")
+    earned = method_body(S['Forecast.cs'], "internal static float TrustEarned")
+    written = method_body(S['Hindsight.cs'], "private static void Written")
+    worth = re.search(r'public const long EnoughForecastWorth = (\d+)L;', math)
+    return (trust and earned and written and worth is not None and int(worth.group(1)) == 3000
+            and "public static float TrustInTheForecast(long weighed, float cameTrue)" in math
+            and "EnoughForecasts" not in math
+            and "float weight = (float)(weighed / ((double)weighed + EnoughForecastWorth));" in trust
+            and "internal bool ForecastScore(out int scored, out long weighed, out float cameTrue)" in S['Ledger.cs']
+            and "return TradeMath.TrustInTheForecast(weighed, cameTrue);" in earned
+            and '" denars would move in all, so what is on its way is counted at " +' in written
+            and all(one in MATHTESTS for one in ("A_few_small_forecasts_that_came_true_cannot_lift_the_trust_far",
+                                                 "The_trust_in_a_forecast_never_overflows_however_much_it_has_judged")))
+
+chk("1.103.11", "how far to trust what is on its way grows with the gold the checked figures said would move, not with how many there were, so a few small figures that came true cannot lift it far, and the log says that gold",
+    what_is_on_its_way_earns_trust_by_the_gold_it_was_about())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

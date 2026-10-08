@@ -401,10 +401,11 @@ namespace TradeLord
                                 Share(TradeMath.ShareThatCameTrue(weighed, cameTrue)) + " came true, over " +
                                 shared + " good(s)"));
                 if (LedgerBehavior.Instance != null &&
-                    LedgerBehavior.Instance.ForecastScore(out int figures, out float held))
+                    LedgerBehavior.Instance.ForecastScore(out int figures, out long judged, out float held))
                     lines.Add("  over this campaign: of the worth it said would move, " + Share(held) +
-                              " came true over " + figures + " figure(s) checked, so what is on its way is counted at " +
-                              Share(TradeMath.TrustInTheForecast(figures, held)) + " of what it says");
+                              " came true over " + figures + " figure(s) checked, which said " + judged +
+                              " denars would move in all, so what is on its way is counted at " +
+                              Share(TradeMath.TrustInTheForecast(judged, held)) + " of what it says");
             }
             if (scored + stale == 0)
             {
