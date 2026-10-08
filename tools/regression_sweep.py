@@ -1,5 +1,7 @@
 import io, os, re, sys
 
+sys.stdout.reconfigure(encoding='utf-8')
+
 NEVER_DELETED = ['CHANGELOG.md', 'CLAUDE.md', '.github/workflows/build.yml',
                  '.claude/settings.json', '.claude/hooks/session-start.sh',
                  '.claude/hooks/no-new-branch.sh']
@@ -18441,6 +18443,13 @@ def no_russian_amount_of_denars_takes_the_wrong_form():
 
 chk("1.103.8", "the Russian text writes an amount of denars in its short form, so no amount ending in 1 to 4 reads in the wrong form, and the hint for Detailed trade summary shows the Sold line that way",
     no_russian_amount_of_denars_takes_the_wrong_form())
+
+
+def the_source_checks_write_every_letter_the_same_on_every_machine():
+    return ordered(SWEEP, "\nsys.stdout.reconfigure(encoding='utf-8')\n", "print(")
+
+chk("1.103.8", "the source checks write UTF-8 before their first line, so a Turkish, Russian or Chinese letter in the wording of a check can no longer stop a version going out on the Windows build",
+    the_source_checks_write_every_letter_the_same_on_every_machine())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
