@@ -963,7 +963,7 @@ namespace TradeLord
                             {
                                 TextObject laid = Counter.Settle();
                                 if (laid != null) Notices.Say(laid, Notices.Note);
-                                Guard.Run("Action.MarkerAfterTradingByHand", Marker.Update);
+                                else Guard.Run("Action.MarkerAfterTradingByHand", Marker.Update);
                             }
                         }),
                         false, 6);
@@ -1230,6 +1230,7 @@ namespace TradeLord
             TextObject closed = Counter.Watch();
             if (closed == null) return;
             Notices.Say(closed, Notices.Note);
+            Marker.ForgetWhatYouCarry();
             Guard.Run("Action.MarkerAfterTheDeal", Marker.Update);
         }
 
@@ -2014,7 +2015,7 @@ namespace TradeLord
             var larder = CheapestFirst(pass,
                 it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true),
                 TradeMath.ShortFoodTolerance);
-            bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall + traded,
+            bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,
                                                     TradePolicy.FoodForADay()) > 0;
             if (larder.Count == 0 && !hungry)
             {
@@ -2098,7 +2099,7 @@ namespace TradeLord
                     }
                 }
 
-                int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall + traded,
+                int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,
                                                        TradePolicy.FoodForADay());
                 if (hunger <= 0 || pass.DirectionError) return;
                 int hungryUnits = 0, hungryGold = 0;
@@ -2156,19 +2157,23 @@ namespace TradeLord
                 }
                 if (hungryUnits > 0)
                     Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") +
-                              "your party had less than a day of food, so " + hungryUnits + " item(s) were bought for " +
+                              "your party had less than a day of its own food, so " + hungryUnits + " item(s) were bought for " +
                               hungryGold + " gold at up to twice the cheapest price TradeLord knows or twice their value at " +
                               settlement.Name);
                 else
+                {
+                    string missed = lean.Count == 0 ? _foodMissed : null;
                     Log.Repeatable("resupply hungry", settlement.StringId,
-                                   "resupply: your party has less than a day of food, and none is on sale at " +
+                                   "resupply: your party has less than a day of its own food, and none is on sale at " +
                                    settlement.Name + " at up to twice the cheapest price TradeLord knows or twice its " +
-                                   "value, within your gold reserve, your buying caps and your cargo room");
+                                   "value, within your gold reserve, your buying caps and your cargo room" +
+                                   (missed == null ? "" : ": the cheapest on sale is " + missed));
+                }
             });
 
             if (pastTheCapUnits > 0)
                 Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") +
-                          "your party had less than a day of food, so " + pastTheCapUnits + " item(s) for " +
+                          "your party had less than a day of its own food, so " + pastTheCapUnits + " item(s) for " +
                           pastTheCapGold + " gold were bought past Max spend per visit at " + settlement.Name +
                           ", still within your gold reserve");
             if (shortfall > 0 && firstLeft.HasValue && !pass.DirectionError)
@@ -2195,6 +2200,39 @@ namespace TradeLord
                       ", still short " + (shortfall > 0 ? shortfall : 0) + " unit(s) of food");
             pass.Logged(selling: false, "restocking the larder");
             if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, stocked, spent);
+        }
+
+        private static string WhyNoHaulAnimalHere(Pass pass)
+        {
+            ItemRoster shelf = pass.Stock;
+            int onSale = 0, cheapest = int.MaxValue;
+            ItemObject pick = null;
+            for (int i = 0; shelf != null && i < shelf.Count; i++)
+            {
+                ItemRosterElement el = shelf.GetElementCopyAtIndex(i);
+                ItemObject it = el.EquipmentElement.Item;
+                if (el.Amount <= 0 || !TradePolicy.MayHaul(it, pass.Locked)) continue;
+                if (pass.Books.Sold(pass.Sim, it.StringId)) continue;
+                int units = pass.TheirsToSell(el);
+                if (units <= 0) continue;
+                int price = pass.Price(el.EquipmentElement, selling: false);
+                if (price <= 0) continue;
+                onSale += units;
+                if (price >= cheapest) continue;
+                cheapest = price;
+                pick = it;
+            }
+            if (pick == null) return "none is on sale here";
+            var known = LedgerBehavior.Instance?.BestBuy(pick) ?? (null, 0);
+            int worth = TradePolicy.UnpaidWorth(pick);
+            int bar = TradeMath.MostToPayOverTheCheapest(worth, Options.Current.HaulAnimalPriceTolerance);
+            string from = known.Item1 == null || known.Item2 <= 0
+                ? worth + ", its value, as TradeLord knows no price for it"
+                : "the " + worth + " it knows at " + known.Item1.Name + ", about " +
+                  Travel.EstimateDaysFromParty(known.Item1).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) +
+                  " day(s) away";
+            return "the cheapest of the " + onSale + " on sale here is " + pick.Name + " at " + cheapest +
+                   ", against a bar of " + bar + ", which Most it will pay for a haul animal sets on " + from;
         }
 
         private static (float weight, int cost) FoodTheHoldLeftBehind(Pass pass, ItemRosterElement el, in Good good,
@@ -2585,8 +2623,7 @@ namespace TradeLord
             if (stable.Count == 0)
             {
                 Log.Repeatable("haul animal none on sale", settlement.StringId,
-                               "haul animals are left alone at " + settlement.Name + ": none is on sale here, or none " +
-                               "within Most it will pay for a haul animal");
+                               "haul animals are left alone at " + settlement.Name + ": " + WhyNoHaulAnimalHere(pass));
                 return false;
             }
 

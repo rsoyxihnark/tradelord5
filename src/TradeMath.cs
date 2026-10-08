@@ -1421,16 +1421,16 @@ namespace TradeLord
             return share <= 0d ? 0f : share >= 1d ? 1f : (float)share;
         }
 
-        public const int EnoughForecasts = 5;
+        public const long EnoughForecastWorth = 3000L;
 
         public const float TrustBeforeAnyCheck = 0.5f;
 
-        public static float TrustInTheForecast(int scored, float cameTrue)
+        public static float TrustInTheForecast(long weighed, float cameTrue)
         {
-            if (scored <= 0 || cameTrue < 0f || float.IsNaN(cameTrue) || float.IsInfinity(cameTrue))
+            if (weighed <= 0L || cameTrue < 0f || float.IsNaN(cameTrue) || float.IsInfinity(cameTrue))
                 return TrustBeforeAnyCheck;
             float earned = cameTrue > 1f ? 1f : cameTrue;
-            float weight = (float)scored / (scored + EnoughForecasts);
+            float weight = (float)(weighed / ((double)weighed + EnoughForecastWorth));
             float trust = TrustBeforeAnyCheck + (earned - TrustBeforeAnyCheck) * weight;
             if (trust < 0f) return 0f;
             return trust > 1f ? 1f : trust;

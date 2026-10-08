@@ -1801,32 +1801,32 @@ namespace TradeLord.Tests
         public void A_forecast_that_has_never_been_checked_is_taken_at_half()
         {
             Assert.Equal(0.5f, TradeMath.TrustBeforeAnyCheck);
-            Assert.Equal(TradeMath.TrustBeforeAnyCheck, TradeMath.TrustInTheForecast(0, 0.9f));
-            Assert.Equal(TradeMath.TrustBeforeAnyCheck, TradeMath.TrustInTheForecast(-3, 0.9f));
-            Assert.Equal(TradeMath.TrustBeforeAnyCheck, TradeMath.TrustInTheForecast(50, TradeMath.NoShareToGive));
+            Assert.Equal(TradeMath.TrustBeforeAnyCheck, TradeMath.TrustInTheForecast(0L, 0.9f));
+            Assert.Equal(TradeMath.TrustBeforeAnyCheck, TradeMath.TrustInTheForecast(-3L, 0.9f));
+            Assert.Equal(TradeMath.TrustBeforeAnyCheck, TradeMath.TrustInTheForecast(15000L, TradeMath.NoShareToGive));
         }
 
         [Fact]
         public void A_forecast_that_keeps_missing_is_believed_less_and_less()
         {
-            float few = TradeMath.TrustInTheForecast(2, 0.3f);
-            float many = TradeMath.TrustInTheForecast(80, 0.3f);
+            float few = TradeMath.TrustInTheForecast(600L, 0.3f);
+            float many = TradeMath.TrustInTheForecast(240000L, 0.3f);
             Assert.True(few > many);
             Assert.True(many > 0.3f && many < 0.32f);
-            Assert.True(TradeMath.TrustInTheForecast(80, 0f) < many);
-            Assert.Equal(0.5f, TradeMath.TrustInTheForecast(3, 0.5f), 4);
+            Assert.True(TradeMath.TrustInTheForecast(240000L, 0f) < many);
+            Assert.Equal(0.5f, TradeMath.TrustInTheForecast(900L, 0.5f), 4);
         }
 
         [Fact]
         public void A_forecast_that_keeps_coming_true_is_believed_more_and_more_but_never_past_full()
         {
-            float few = TradeMath.TrustInTheForecast(2, 1f);
-            float many = TradeMath.TrustInTheForecast(80, 1f);
+            float few = TradeMath.TrustInTheForecast(600L, 1f);
+            float many = TradeMath.TrustInTheForecast(240000L, 1f);
             Assert.True(few > TradeMath.TrustBeforeAnyCheck);
             Assert.True(many > few);
-            Assert.Equal(0.75f, TradeMath.TrustInTheForecast(5, 1f), 4);
+            Assert.Equal(0.75f, TradeMath.TrustInTheForecast(TradeMath.EnoughForecastWorth, 1f), 4);
             Assert.True(many > 0.95f && many < 1f);
-            Assert.Equal(many, TradeMath.TrustInTheForecast(80, 1.7f), 4);
+            Assert.Equal(many, TradeMath.TrustInTheForecast(240000L, 1.7f), 4);
         }
 
         [Fact]
@@ -1875,10 +1875,27 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_few_small_forecasts_that_came_true_cannot_lift_the_trust_far()
+        {
+            float small = TradeMath.TrustInTheForecast(447L, 1f);
+            Assert.True(small > TradeMath.TrustBeforeAnyCheck && small < 0.6f);
+            Assert.True(TradeMath.TrustInTheForecast(25000L, 1f) > 0.9f);
+            Assert.True(TradeMath.TrustInTheForecast(1249L, 0f) > 0.3f);
+            Assert.True(TradeMath.TrustInTheForecast(25000L, 0f) < 0.1f);
+        }
+
+        [Fact]
+        public void The_trust_in_a_forecast_never_overflows_however_much_it_has_judged()
+        {
+            Assert.Equal(1f, TradeMath.TrustInTheForecast(long.MaxValue, 1f), 4);
+            Assert.Equal(0f, TradeMath.TrustInTheForecast(long.MaxValue, 0f), 4);
+        }
+
+        [Fact]
         public void A_forecast_that_has_been_missing_moves_a_shelf_less_than_one_that_has_not()
         {
             int wild = TradeMath.WorthShift(0, 8000);
-            int held = TradeMath.WorthShiftTrusted(wild, TradeMath.TrustInTheForecast(80, 0.5f));
+            int held = TradeMath.WorthShiftTrusted(wild, TradeMath.TrustInTheForecast(240000L, 0.5f));
             Assert.True(held > wild);
             Assert.Equal(5000, TradeMath.ShelfAfterLanding(10000, wild));
             Assert.True(TradeMath.ShelfAfterLanding(10000, held) > 5000);

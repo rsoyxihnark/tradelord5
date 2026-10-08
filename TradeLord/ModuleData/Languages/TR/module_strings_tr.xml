@@ -192,7 +192,7 @@
 		<string id="TL334" text="Harcarken bu kadar altının altına asla inmez. Varsayılan 300; bu, iki düşman karşılaşmasından pazarlıkla çıkmaya ve alışveriş sonrası bir maaş ödemesini karşılamaya yeter."/>
 		<string id="TL335" text="TradeLord'un bir ziyarette bir maldan aldığı en fazla birim. 0 = sayıda sınır yok. Varsayılan 32."/>
 		<string id="TL336" text="Ziyaret başına mal başına harcamayı dinar olarak da sınırlar."/>
-		<string id="TL337" text="TradeLord'un yerleşim ziyareti başına harcayabileceği toplam dinar. Varsayılan 1000. Aşağıdaki Uyarlanan harcama sınırı keseniz büyüdükçe bunu yükseltir. Bölüğünüzün bir günden az yiyeceği kaldığında yiyecek ve yük hayvanı bu sınırı aşabilir."/>
+		<string id="TL337" text="TradeLord'un bir ziyarette harcayabileceği toplam dinar. Varsayılan 1000. Aşağıdaki Uyarlanan harcama sınırı kese büyüdükçe bunu yükseltir. Bölüğünüzün kendi yiyeceği bir günden aza inince yiyecek, tüm yiyeceği inince yük hayvanı sınırı aşabilir."/>
 		<string id="TL338" text="En iyi satış fiyatının yalnızca bu oranının siz varana kadar duracağını varsayar. Yeniden satış güvenlik payını öğren açıkken TradeLord buradan başlar ve bunu pazar girişlerinizin gösterdiğine göre yalnızca düşürür."/>
 		<string id="TL339" text="Tahıl ağır ve kâr payı düşüktür, bu yüzden almak yükü az getiriyle doldurur. Satış ve yiyecek rezervi etkilenmez. Varsayılan AÇIK."/>
 		<string id="TL340" text="TradeLord'un asla almaması gereken mallar. Yukarıdaki gibi eşya kimliğiyle veya oyunun gösterdiği adla, virgülle ayrılmış. Satışları etkilenmez."/>
@@ -258,7 +258,7 @@
 		<string id="TL425" text="Yük hayvanı almadan önce gereken altın (0 = kapalı)"/>
 		<string id="TL426" text="Yük hayvanını ancak parası ödendikten sonra keseniz bunun üzerinde kalıyorsa alır, ne kadar ucuz olursa olsun, böylece erken altın mala gider. Bölüğünüzün bir günden az yiyeceği kaldıysa altına inebilir. 0 ile ilk dinardan alır. Varsayılan 2000."/>
 		<string id="TL427" text="Bir yük hayvanı için ödeyeceği en yüksek tutar"/>
-		<string id="TL428" text="O hayvan için bildiği en ucuz fiyatın ne kadar üstüne kadar TradeLord yine de öder. %100 yalnızca en ucuz fiyata demektir. Varsayılan %125, yani en ucuzun dörtte biri kadar üstüne kadar öder."/>
+		<string id="TL428" text="O hayvan için bildiği en ucuz fiyatın ne kadar üstüne kadar TradeLord yine de öder. %100 yalnızca en ucuz fiyata demektir. Varsayılan %125, yani en ucuzun dörtte biri kadar üstüne kadar öder. En ucuz fiyat yol süresi sınırlarınız içinde aranır."/>
 		<string id="TL429" text="Sahip olabileceğiniz en fazla atölye (0 = oyunun kendi sınırı)"/>
 		<string id="TL430" text="Oyunun kaç atölyeye sahip olabileceğinize koyduğu sınırı kaldırır. 200, hiç sınır yok demekle aynı kapıya çıkar. 0 kararı oyuna geri bırakır; oyun klan kademeniz yükseldikçe daha fazlasına izin verir. Varsayılan 200."/>
 		<string id="TL431" text="Atölyeleri uzaktan satın al"/>

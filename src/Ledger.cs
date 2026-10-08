@@ -145,9 +145,10 @@ namespace TradeLord
             _forecastMatched = TradeMath.AddedUp(_forecastMatched, TradeMath.SizedShareThatCameTrue(said, share));
         }
 
-        internal bool ForecastScore(out int scored, out float cameTrue)
+        internal bool ForecastScore(out int scored, out long weighed, out float cameTrue)
         {
             scored = _forecastsJudged;
+            weighed = _forecastWeighed;
             cameTrue = TradeMath.ShareBySize(_forecastWeighed, _forecastMatched);
             return scored > 0;
         }

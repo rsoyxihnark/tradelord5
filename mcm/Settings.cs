@@ -710,7 +710,7 @@ namespace TradeLord.Mcm
         public int MaxHeldPerItem { get => _o.MaxHeldPerItem; set { _o.MaxHeldPerItem = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL237}Max spend per visit (0 = unlimited)", 0, 100000, Order = 5, RequireRestart = false,
-            HintText = "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food for a party down to less than a day of it, and a haul animal to carry it, may go past it.")]
+            HintText = "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food may go past it once your party has under a day of its own, and a haul animal once all its food is that low.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int MaxSpendPerVisit { get => _o.MaxSpendPerVisit; set { _o.MaxSpendPerVisit = value; Options.Bump(); } }
 
@@ -760,7 +760,7 @@ namespace TradeLord.Mcm
         public int HaulAnimalGoldFloor { get => _o.HaulAnimalGoldFloor; set { _o.HaulAnimalGoldFloor = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL427}Most it will pay for a haul animal", 1f, 3f, "#0%", Order = 15, RequireRestart = false,
-            HintText = "{=TL428}How far above the cheapest price TradeLord knows for that animal it will still pay. 100% means only at the cheapest. 125% by default, so it pays up to a quarter more than the cheapest.")]
+            HintText = "{=TL428}How far above the cheapest price TradeLord knows for that animal it will still pay. 100% means only at the cheapest. 125% by default, so it pays up to a quarter more than the cheapest. The cheapest is sought within your travel ceilings.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public float HaulAnimalPriceTolerance { get => _o.HaulAnimalPriceTolerance; set { _o.HaulAnimalPriceTolerance = value; Options.Bump(); } }
 
