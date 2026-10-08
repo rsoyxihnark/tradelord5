@@ -203,7 +203,7 @@ namespace TradeLord
 
     internal static class MapButton
     {
-        internal static bool TakesTheMouse(bool windowOpen) => windowOpen;
+        internal static (bool showsMouse, bool takesWheel) LayerTakes(bool windowOpen) => (windowOpen, windowOpen);
     }
 
     internal static class Ranks

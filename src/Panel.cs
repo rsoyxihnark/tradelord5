@@ -703,7 +703,6 @@ namespace TradeLord
             {
                 Hide();
             }
-            CursorWatch.Watch(map, _layer);
         }
 
         private static bool TypingOnScreen(ScreenBase screen)
@@ -720,18 +719,24 @@ namespace TradeLord
 
         private static bool _idleMouseActive;
 
+        internal static ScreenLayer OwnLayer => _layer;
+
+        internal static bool AnyWindowOpen => _vm != null && (_vm.IsVisible || _vm.IsTradesVisible);
+
         private static void UpdateIdleInput()
         {
-            bool wantMouse = MapButton.TakesTheMouse(_vm.IsTradesVisible);
-            if (wantMouse == _idleMouseActive) return;
-            _idleMouseActive = wantMouse;
-            if (wantMouse)
-            {
-                _layer.ActiveCursor = CursorType.Default;
-                _layer.InputRestrictions.SetInputRestrictions(true, InputUsageMask.Mouse);
-            }
-            else
-                _layer.InputRestrictions.SetInputRestrictions(false, InputUsageMask.MouseButtons);
+            bool open = _vm.IsTradesVisible;
+            if (open == _idleMouseActive) return;
+            _idleMouseActive = open;
+            TakeTheMouse(open);
+        }
+
+        private static void TakeTheMouse(bool windowOpen)
+        {
+            var takes = MapButton.LayerTakes(windowOpen);
+            if (takes.showsMouse) _layer.ActiveCursor = CursorType.Default;
+            _layer.InputRestrictions.SetInputRestrictions(takes.showsMouse,
+                takes.takesWheel ? InputUsageMask.Mouse : InputUsageMask.MouseButtons);
         }
 
         private static string _keySource;
@@ -800,7 +805,7 @@ namespace TradeLord
         {
             if (_layer == null) return;
             _idleMouseActive = false;
-            _layer.InputRestrictions.SetInputRestrictions(false, InputUsageMask.MouseButtons);
+            TakeTheMouse(false);
         }
 
         private static void Setup(MapScreen map)
@@ -942,7 +947,6 @@ namespace TradeLord
             _loggedArmed = false;
             _idleMouseActive = false;
             _keySource = null;
-            CursorWatch.Forget();
         }
 
         internal static void Cleanup()
@@ -976,31 +980,70 @@ namespace TradeLord
         private const float LongEnough = 3f;
         private const float FarEnough = 0.25f;
         private const float JustBefore = 1f;
+        private const float LookAgain = 0.5f;
+        private const float QuickClick = 0.4f;
+        private const float StillEnough = 12f;
         private const int MostTimesTold = 12;
+        private const int MostClicksTold = 40;
+        private const int MostRunsKept = 64;
 
+        private struct Run
+        {
+            internal float From;
+            internal ScreenLayer Top;
+            internal CursorType Drawn;
+            internal CursorType MapAsked;
+        }
+
+        private sealed class Ground
+        {
+            internal string Said;
+            internal bool SignIsRight;
+        }
+
+        private static readonly Ground Unread = new Ground { Said = "could not be read" };
+        private static readonly List<Run> _runs = new List<Run>();
+
+        private static MapScreen _map;
         private static bool _showing;
         private static bool _told;
         private static bool _dead;
         private static float _since;
         private static float _travelled;
         private static Vec2 _was;
+        private static float _lookedAt = -1f;
         private static int _timesTold;
+        private static int _clicksTold;
         private static string _lastButton;
         private static float _lastButtonAt;
+        private static float _rightDownAt = -1f;
+        private static float _rightMoved;
+        private static string _beforeRight;
+        private static float _hotkeyAt = -1f;
+        private static bool _windowOpen;
+        private static float _windowAt = -1f;
 
         internal static void Forget()
         {
+            _runs.Clear();
+            _map = null;
             _showing = false;
             _told = false;
             _dead = false;
             _timesTold = 0;
+            _clicksTold = 0;
             _lastButton = null;
+            _rightDownAt = -1f;
+            _beforeRight = null;
+            _hotkeyAt = -1f;
+            _windowOpen = false;
+            _windowAt = -1f;
         }
 
-        internal static void Watch(MapScreen map, ScreenLayer ours)
+        internal static void Tick()
         {
-            if (_dead || map == null) return;
-            try { WatchCore(map, ours); }
+            if (_dead) return;
+            try { TickCore(); }
             catch (Exception e)
             {
                 _dead = true;
@@ -1008,16 +1051,94 @@ namespace TradeLord
             }
         }
 
-        private static void WatchCore(MapScreen map, ScreenLayer ours)
+        private static void TickCore()
         {
+            MapScreen map = ScreenManager.TopScreen as MapScreen;
+            if (map == null && _map == null) return;
             float now = TaleWorlds.Engine.Time.ApplicationTime;
-            NoteButtons(now);
-            ScreenLayer top = ScreenManager.FirstHitLayer ?? map.SceneLayer;
+            if (map != _map)
+            {
+                Left(now);
+                _map = map;
+                _runs.Clear();
+                _rightDownAt = -1f;
+                if (map == null) return;
+            }
+            ScreenLayer top = ScreenManager.FirstHitLayer;
+            Note(now, top, map.SceneLayer);
+            NoteKeys(now, map);
+            Watch(now, map, top);
+        }
+
+        private static void Left(float now)
+        {
+            if (_showing && _told)
+                Log.Write("map cursor: the campaign map was left after " + Seconds(now - _since) +
+                          " seconds with the forbidden sign still on, for " +
+                          (ScreenManager.TopScreen?.GetType().Name ?? "no screen at all"));
+            _showing = false;
+            _told = false;
+        }
+
+        private static void Note(float now, ScreenLayer top, ScreenLayer map)
+        {
+            CursorType drawn = top?.ActiveCursor ?? CursorType.Default;
+            CursorType asked = map?.ActiveCursor ?? CursorType.Default;
+            int last = _runs.Count - 1;
+            if (last < 0 || _runs[last].Top != top || _runs[last].Drawn != drawn || _runs[last].MapAsked != asked)
+                _runs.Add(new Run { From = now, Top = top, Drawn = drawn, MapAsked = asked });
+            while (_runs.Count > 1 && (_runs[1].From <= now - JustBefore || _runs.Count > MostRunsKept))
+                _runs.RemoveAt(0);
+        }
+
+        private static void NoteKeys(float now, MapScreen map)
+        {
+            if (Input.IsKeyReleased(LedgerPanel.PanelKey())) _hotkeyAt = now;
+            bool open = LedgerPanel.AnyWindowOpen;
+            if (open != _windowOpen)
+            {
+                _windowOpen = open;
+                _windowAt = now;
+            }
+            NoteButton(now, InputKey.LeftMouseButton, "left");
+            NoteButton(now, InputKey.MiddleMouseButton, "middle");
+            NoteButton(now, InputKey.RightMouseButton, "right");
+            if (Input.IsKeyPressed(InputKey.RightMouseButton))
+            {
+                _rightDownAt = now;
+                _rightMoved = 0f;
+                _beforeRight = Guard.Read("map cursor watch: before a right click", now, BeforeTheClick, "could not be read");
+            }
+            else if (_rightDownAt >= 0f && Input.IsKeyDown(InputKey.RightMouseButton))
+                _rightMoved += Math.Abs(Input.MouseMoveX) + Math.Abs(Input.MouseMoveY);
+            else if (_rightDownAt >= 0f)
+            {
+                float held = now - _rightDownAt;
+                _rightDownAt = -1f;
+                if (Input.IsKeyReleased(InputKey.RightMouseButton) && held <= QuickClick &&
+                    _rightMoved <= StillEnough && !_windowOpen && _clicksTold < MostClicksTold)
+                {
+                    _clicksTold++;
+                    Log.WriteMany(AQuickRightClick(map, held));
+                }
+            }
+        }
+
+        private static void NoteButton(float now, InputKey button, string name)
+        {
+            if (Input.IsKeyPressed(button)) _lastButton = name + " mouse button went down";
+            else if (Input.IsKeyReleased(button)) _lastButton = name + " mouse button came up";
+            else return;
+            _lastButtonAt = now;
+        }
+
+        private static void Watch(float now, MapScreen map, ScreenLayer top)
+        {
             if (top == null || top.ActiveCursor != CursorType.Disabled)
             {
                 if (_showing && _told)
                     Log.Write("map cursor: the forbidden sign went away after " + Seconds(now - _since) +
-                              " seconds, " + WhatWasPressed(now));
+                              " seconds, " + WhatTheButtonsDid(now) + ", and the game now draws " + Drawn(top));
                 _showing = false;
                 _told = false;
                 return;
@@ -1030,96 +1151,190 @@ namespace TradeLord
                 _since = now;
                 _travelled = 0f;
                 _was = at;
-                _lastButton = null;
+                _lookedAt = -1f;
                 return;
             }
             _travelled += at.Distance(_was);
             _was = at;
             if (_told || _timesTold >= MostTimesTold) return;
             if (now - _since < LongEnough || _travelled < FarEnough * Input.Resolution.x) return;
+            if (_lookedAt >= 0f && now - _lookedAt < LookAgain) return;
+            _lookedAt = now;
+            Ground ground = Guard.Read("map cursor watch: under the mouse", map, Look, Unread);
+            if (ground.SignIsRight) return;
             _told = true;
             _timesTold++;
-            Log.WriteMany(WhatTheMapIsDoing(map, top, ours, now - _since));
+            Log.WriteMany(WhatTheMapIsDoing(map, top, now, ground));
         }
 
-        private static void NoteButtons(float now)
+        private static string WhatTheButtonsDid(float now)
         {
-            string pressed = Input.IsKeyPressed(InputKey.RightMouseButton) ? "right mouse button"
-                : Input.IsKeyPressed(InputKey.LeftMouseButton) ? "left mouse button"
-                : Input.IsKeyPressed(InputKey.MiddleMouseButton) ? "middle mouse button" : null;
-            if (pressed == null) return;
-            _lastButton = pressed;
-            _lastButtonAt = now;
+            string held = Input.IsKeyDown(InputKey.RightMouseButton) ? "right"
+                : Input.IsKeyDown(InputKey.LeftMouseButton) ? "left"
+                : Input.IsKeyDown(InputKey.MiddleMouseButton) ? "middle" : null;
+            if (held != null) return "while the " + held + " mouse button was held down";
+            return _lastButton != null && now - _lastButtonAt <= JustBefore
+                ? "right after the " + _lastButton
+                : "with no mouse button touched in the second before";
         }
 
-        private static string WhatWasPressed(float now) =>
-            _lastButton != null && now - _lastButtonAt <= JustBefore
-                ? "right after the " + _lastButton + " went down"
-                : "with no mouse button pressed in the second before";
+        private static string Drawn(ScreenLayer top) =>
+            top == null ? "no cursor, with the mouse outside the game's window" : top.ActiveCursor + " from " + Named(top);
 
-        private static List<string> WhatTheMapIsDoing(MapScreen map, ScreenLayer top, ScreenLayer ours, float held)
+        private static string BeforeTheClick(float now) =>
+            TheSecondBefore(now) + "; the game " + (ScreenManager.GetMouseVisibility() ? "showed" : "hid") +
+            " the mouse and the engine " + (EngineShowsTheMouse() ? "showed it" : "hid it") +
+            (Input.IsGamepadActive ? ", a gamepad in use" : "") +
+            ", keyboard on " + Named(ScreenManager.FocusedLayer) + ", " + TheHotkey(now);
+
+        private static string TheSecondBefore(float now)
+        {
+            var parts = new List<string>();
+            for (int i = 0; i < _runs.Count; i++)
+            {
+                bool latest = i + 1 == _runs.Count;
+                float from = Math.Max(_runs[i].From, now - JustBefore);
+                float to = latest ? now : _runs[i + 1].From;
+                if (to <= from && !latest) continue;
+                Run run = _runs[i];
+                parts.Add((run.Top == null
+                              ? "no cursor, the mouse outside the game's window"
+                              : run.Drawn + " from " + run.Top.Name +
+                                (run.MapAsked == run.Drawn ? "" : " while the map's own layer asked for " + run.MapAsked)) +
+                          " for " + Seconds(to - from, "0.00") + " s");
+            }
+            return parts.Count == 0 ? "nothing was seen" : string.Join(", then ", parts.ToArray());
+        }
+
+        private static string TheHotkey(float now) =>
+            "the ledger panel hotkey " + LedgerPanel.PanelKey() +
+            (_hotkeyAt < 0f ? " not let go on the campaign map yet" : " last let go " + Seconds(now - _hotkeyAt) + " seconds before") +
+            (_windowAt < 0f ? "" : ", a TradeLord window " + (_windowOpen ? "opened " : "closed ") + Seconds(now - _windowAt) +
+                                   " seconds before");
+
+        private static bool EngineShowsTheMouse() =>
+            ScreenManager.IsMouseCursorActive() || ScreenManager.IsMouseCursorHidden();
+
+        private static List<string> AQuickRightClick(MapScreen map, float held) => new List<string>
+        {
+            "map cursor: a quick right click of " + Seconds(held, "0.00") + " s at " + Spot(Input.MousePositionPixel) +
+                " with TradeLord's windows closed; in the second before it " + _beforeRight,
+            "  right after it the game draws " + Drawn(ScreenManager.FirstHitLayer) +
+                ", and under the mouse: " + Guard.Read("map cursor watch: under the mouse", map, Look, Unread).Said
+        };
+
+        private static List<string> WhatTheMapIsDoing(MapScreen map, ScreenLayer top, float now, Ground ground)
         {
             return new List<string>
             {
-                "map cursor: the forbidden sign has stayed on for " + Seconds(held) + " seconds while the mouse moved " +
-                    (int)_travelled + " pixels; the game drew it from " + Named(ScreenManager.FirstHitLayer) +
+                "map cursor: the forbidden sign has stayed on for " + Seconds(now - _since) + " seconds while the mouse moved " +
+                    (int)_travelled + " pixels; the game drew it from " + Named(top) +
                     ", and the campaign map's own layer asks for " + map.SceneLayer?.ActiveCursor,
-                "  under the mouse: " + UnderTheMouse(map),
-                "  your party: " + YourParty(),
-                "  the map: " + TheMap(map),
-                "  input: " + WhoHasTheInput(map, ours)
+                "  under the mouse: " + ground.Said,
+                "  your party: " + Guard.Read("map cursor watch: your party", map, YourParty, "could not be read"),
+                "  the map: " + Guard.Read("map cursor watch: the map", map, TheMap, "could not be read"),
+                "  input: " + Guard.Read("map cursor watch: the input", map, WhoHasTheInput, "could not be read") +
+                    ", " + TheHotkey(now)
             };
         }
 
-        private static string UnderTheMouse(MapScreen map)
+        private static Ground Look(MapScreen map)
         {
-            var scene = map.SceneLayer;
-            if (scene?.SceneView == null) return "the map has no scene to look into";
+            var view = map.SceneLayer?.SceneView;
+            MobileParty party = MobileParty.MainParty;
+            if (view == null || party == null) return new Ground { Said = "the map has no scene or no party to look from" };
             Vec3 near = Vec3.Zero, far = Vec3.Zero;
-            scene.SceneView.TranslateMouse(ref near, ref far, -1f);
-            PathFaceRecord face = PathFaceRecord.NullFaceRecord;
-            map.GetCursorIntersectionPoint(ref near, ref far, out _, out Vec3 point, ref face, out bool onLand);
-            bool reach = Helpers.NavigationHelper.CanPlayerNavigateToPosition(new CampaignVec2(point.AsVec2, onLand), out _);
-            return "the ground at " + Spot(point.AsVec2) + (onLand ? " on land" : " at sea") +
-                   (face.IsValid() ? "" : " with no path face") +
-                   ", and the game's own check says your party " + (reach ? "can" : "cannot") + " travel there";
+            view.TranslateMouse(ref near, ref far, -1f);
+            Vec3 along = far - near;
+            along.Normalize();
+            Vec3 point = Vec3.Zero;
+            if (view.RayCastForClosestEntityOrTerrain(near, far, out float distance, out Vec3 _))
+                point = near + along * distance;
+            var land = new CampaignVec2(point.AsVec2, true);
+            bool onLand = land.Face.IsValid();
+            CampaignVec2 spot = onLand ? land : new CampaignVec2(point.AsVec2, false);
+            bool face = spot.Face.IsValid();
+            bool atSea = party.IsCurrentlyAtSea;
+            bool? closed = (!face || (!atSea && !onLand)) ? true : atSea ? false : WalkingIsShut(spot);
+            bool reach = Helpers.NavigationHelper.CanPlayerNavigateToPosition(spot, out _);
+            bool home = Helpers.NavigationHelper.CanPlayerNavigateToPosition(party.Position, out _);
+            return new Ground
+            {
+                Said = "the ground at " + Spot(point.AsVec2) + (onLand ? " on land" : " at sea") +
+                       (face ? "" : " with no path face") +
+                       (closed == true ? ", which your party cannot cross"
+                           : closed == false ? ", which your party can cross" : ", whose kind could not be read") +
+                       ", and the game's own check says your party " + (reach ? "can" : "cannot") +
+                       " travel there; the same check on the spot your party stands on says " +
+                       (home ? "it can be there" : "it cannot"),
+                SignIsRight = !reach && closed == true && home
+            };
         }
 
-        private static string YourParty()
+        private static bool? WalkingIsShut(CampaignVec2 spot)
+        {
+            try { return Shut(spot); }
+            catch { return null; }
+        }
+
+        private static bool Shut(CampaignVec2 spot)
+        {
+            int[] shut = Campaign.Current.Models.PartyNavigationModel
+                .GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Default);
+            return shut != null && Array.IndexOf(shut, spot.Face.FaceGroupIndex) >= 0;
+        }
+
+        private static string YourParty(MapScreen map)
         {
             MobileParty party = MobileParty.MainParty;
             if (party == null) return "none";
-            bool reach = Helpers.NavigationHelper.CanPlayerNavigateToPosition(party.Position, out _);
             return (party.IsCurrentlyAtSea ? "at sea" : "on land") + " at " + Spot(party.Position.ToVec2()) +
                    (party.CurrentSettlement != null ? ", inside " + party.CurrentSettlement.Name : "") +
                    (party.Army != null ? ", in an army" : "") +
                    (Hero.MainHero?.IsPrisoner == true ? ", held prisoner" : "") +
-                   (TaleWorlds.CampaignSystem.Encounters.PlayerEncounter.Current != null ? ", in an encounter" : "") +
-                   ", and the same check on the spot it stands on says " + (reach ? "it can be there" : "it cannot");
+                   (TaleWorlds.CampaignSystem.Encounters.PlayerEncounter.Current != null ? ", in an encounter" : "");
         }
 
-        private static string TheMap(MapScreen map) =>
-            (map.IsReady ? "ready" : "not ready") +
-            (map.IsInMenu ? ", a menu is open" : "") +
-            (map.IsEscapeMenuOpened ? ", the escape menu is open" : "") +
-            (TaleWorlds.Core.GameStateManager.Current?.ActiveStateDisabledByUser == true ? ", held still by another window" : "") +
-            (map.MapCameraView?.CameraAnimationInProgress == true ? ", the camera is on a set move" : "") +
-            (ScreenManager.TopScreen == map ? "" : ", not the screen on top");
-
-        private static string WhoHasTheInput(MapScreen map, ScreenLayer ours)
+        private static string TheMap(MapScreen map)
         {
+            var stopped = new List<string>();
+            if (MobileParty.MainParty == null || PartyBase.MainParty?.IsValid != true) stopped.Add("your party is not counted as valid");
+            if (map.MapCameraView?.CameraAnimationInProgress == true) stopped.Add("the camera is on a set move");
+            if (!map.IsReady) stopped.Add("the map is not ready");
+            if (Campaign.Current?.GameStarted != true) stopped.Add("the campaign has not started");
+            return (stopped.Count == 0 ? "works out the cursor every frame"
+                       : "has stopped working out the cursor, as " + string.Join(", ", stopped.ToArray())) +
+                   (map.IsInMenu ? ", a menu is open" : "") +
+                   (map.IsEscapeMenuOpened ? ", the escape menu is open" : "") +
+                   (TaleWorlds.Core.GameStateManager.Current?.ActiveStateDisabledByUser == true ? ", held still by another window" : "") +
+                   (ScreenManager.TopScreen == map ? "" : ", not the screen on top");
+        }
+
+        private static string WhoHasTheInput(MapScreen map)
+        {
+            var under = new List<string>();
             var showing = new List<string>();
             List<ScreenLayer> layers = ScreenManager.SortedLayers;
-            for (int i = 0; layers != null && i < layers.Count; i++)
-                if (layers[i] != null && layers[i].IsActive && layers[i].InputRestrictions.MouseVisibility)
-                    showing.Add(Named(layers[i]));
-            var scene = map.SceneLayer;
+            for (int i = (layers?.Count ?? 0) - 1; i >= 0; i--)
+            {
+                ScreenLayer layer = layers[i];
+                if (layer == null || !layer.IsActive) continue;
+                if (layer.HitTest()) under.Add(layer.Name + " " + layer.ActiveCursor);
+                if (layer.InputRestrictions.MouseVisibility) showing.Add(Named(layer));
+            }
+            ScreenLayer ours = LedgerPanel.OwnLayer;
+            ScreenLayer scene = map.SceneLayer;
             return "keyboard on " + Named(ScreenManager.FocusedLayer) +
+                   ", under the mouse from the top: " + (under.Count == 0 ? "nothing" : string.Join(", ", under.ToArray())) +
                    ", asking the game to show the mouse: " + (showing.Count == 0 ? "none" : string.Join(", ", showing.ToArray())) +
+                   ", the game " + (ScreenManager.GetMouseVisibility() ? "shows" : "hides") + " the mouse and the engine " +
+                   (EngineShowsTheMouse() ? "shows it" : "hides it") +
+                   (Input.IsGamepadActive ? ", a gamepad in use" : "") +
                    ", the map's own layer " + (scene != null && scene.IsHitThisFrame ? "gets" : "does not get") +
                    " the mouse this frame" +
-                   (ours == null ? "" : ", TradeLord's layer takes " + ours.InputRestrictions.InputUsageMask +
-                                        (ours.InputRestrictions.MouseVisibility ? " and asks to show the mouse" : " and leaves the mouse alone"));
+                   (ours == null ? ", TradeLord's layer is not on the map"
+                       : ", TradeLord's layer takes " + ours.InputRestrictions.InputUsageMask +
+                         (ours.InputRestrictions.MouseVisibility ? " and asks to show the mouse" : " and leaves the mouse alone"));
         }
 
         private static string Named(ScreenLayer layer) =>
@@ -1127,6 +1342,7 @@ namespace TradeLord
 
         private static string Spot(Vec2 at) => (int)at.x + ", " + (int)at.y;
 
-        private static string Seconds(float s) => s.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+        private static string Seconds(float s, string shape = "0.0") =>
+            s.ToString(shape, System.Globalization.CultureInfo.InvariantCulture);
     }
 }

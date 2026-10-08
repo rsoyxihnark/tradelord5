@@ -6,6 +6,7 @@ from nexus_changelog import sections
 REPO = 'rsoyxihnark/tradelord5'
 
 OUTSTANDING = {
+    '1.103.9': 'entries reworded in the changelog, and the release note is synced once this lands',
 }
 
 
