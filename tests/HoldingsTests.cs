@@ -400,5 +400,16 @@ namespace TradeLord.Tests
             Assert.True(Holdings.SoonestToPayBackFirst((50000, 1000), (100000, 2000)) > 0);
             Assert.Equal(0, Holdings.SoonestToPayBackFirst((50000, 1000), (50000, 1000)));
         }
+
+        [Fact]
+        public void Only_the_Trade_skill_holds_you_back_while_you_earn_workshops_short_of_your_ceiling()
+        {
+            int earned = Holdings.WorkshopsYouEarn(2, 200, 60);
+            Assert.Equal(4, earned);
+            Assert.True(Holdings.TheTradeSkillHoldsYouBack(true, earned, 200));
+            Assert.False(Holdings.TheTradeSkillHoldsYouBack(false, Holdings.WorkshopsYouMayOwn(2, 200), 200));
+            Assert.False(Holdings.TheTradeSkillHoldsYouBack(true, Holdings.WorkshopsYouEarn(2, 3, 200), 3));
+            Assert.False(Holdings.TheTradeSkillHoldsYouBack(true, Holdings.WorkshopsYouEarn(2, 0, 200), 0));
+        }
     }
 }

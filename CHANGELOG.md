@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.103.8
+
+- Fixed TradeLord leaving the villagers' offer to you when it held gear within Sell loot up to tier, such as a Commoner Tunic
+- Fixed TradeLord still selling to caravans with Auto sell off, and still buying from caravans and villagers with Auto buy off
+- Fixed Buy Workshops Remotely telling you to raise Most workshops you may own when your Trade skill has not yet earned another workshop
+- Fixed the hint for Protect unique and crafted items saying only an always-sell entry can move a haul animal
+- The hints for Auto sell and Auto buy now say they cover trading on the road too
+- The hint for Economy settling delay now says it holds trading on the road back too
+- Fixed English text writing a count of one as many, such as 1 more days, 1 items and 1 profitable routes
+- Fixed Russian text getting the word form wrong after a count of goods, workshops, price checks, walk-ins or recent trades, such as 1 or 2
+- Fixed Russian text writing denars in the wrong form after amounts such as 21 or 104
+- Fixed a Russian tooltip line about Minimum stock for buy suggestions referring to the setting with the wrong gender
+- Fixed the Chinese names of Share of the hold one good may fill and Share of the hold TradeLord may fill using two words for the hold
+- Fixed the Turkish text calling the campaign, the smithy, the cargo, the hold and the margin by two different names each
+
 ## 1.103.7
 
 - Fixed Mark a market rising or falling still marking markets in the tooltip while Live world prices is on

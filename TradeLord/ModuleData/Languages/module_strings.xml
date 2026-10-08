@@ -14,11 +14,11 @@
 		<string id="TL09" text="Close"/>
 		<string id="TL11" text="Consult the TradeLord ledger"/>
 		<string id="TL26" text="Trade here now (TradeLord)"/>
-		<string id="TL31" text="{COUNT} items"/>
+		<string id="TL31" text="{COUNT} item(s)"/>
 		<string id="TL13" text="[Simulated, best case] Would sell {ITEMS} for {GOLD} denars, {PROFIT} profit."/>
 		<string id="TL14" text="[Simulated, best case] Would buy {ITEMS} for {GOLD} denars."/>
 		<string id="TL15" text="+{PCT}% if sold there instead"/>
-		<string id="TL18" text="The market is still settling ({DAYS} more days)."/>
+		<string id="TL18" text="The market is still settling ({DAYS} more day(s))."/>
 		<string id="TL32" text="Nothing sold here - {REASON}."/>
 		<string id="TL33" text="Nothing bought here - {REASON}."/>
 		<string id="TL381" text="it is on your never-sell or never-buy list"/>
@@ -54,7 +54,7 @@
 		<string id="TL65" text="Speed: {SPEED}"/>
 		<string id="TL66" text="TradeLord profit: {AMOUNT}"/>
 		<string id="TL67" text="No profitable routes in reach"/>
-		<string id="TL68" text="{COUNT} profitable routes, best first"/>
+		<string id="TL68" text="{COUNT} profitable route(s), best first"/>
 		<string id="TL69" text="No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."/>
 		<string id="TL70" text="Click a town name to jump to it and pin or unpin it | Days = you -&gt; buy town -&gt; sell town | Carv. = caravans at or heading for those towns"/>
 		<string id="TL71" text=" | Score = profit per day discounted by Conf"/>
@@ -62,13 +62,13 @@
 		<string id="TL73" text=" | resale safety factor applied"/>
 		<string id="TL77" text="Profit: +{PCT}%"/>
 		<string id="TL78" text="Stock: {COUNT}"/>
-		<string id="TL79" text="~{DAYS} days"/>
+		<string id="TL79" text="~{DAYS} day(s)"/>
 		<string id="TL82" text="Cargo is full. Recruit more men, buy more horses, or sell goods manually."/>
 		<string id="TL93" text="you are already carrying as many of these as you allow"/>
 		<string id="TL94" text="Nothing traded here - {REASON}."/>
 		<string id="TL95" text="Nothing sold here - {REASON}, and nothing bought - {SECOND}."/>
 		<string id="TL83" text="the village is down to its last of each good"/>
-		<string id="TL84" text="{ITEM}: buy {FROM} ({BUY} denars) -&gt; sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} days from here"/>
+		<string id="TL84" text="{ITEM}: buy {FROM} ({BUY} denars) -&gt; sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} day(s) from here"/>
 		<string id="TL85" text="Hold cargo for the best market keeps your cargo for the marked market"/>
 		<string id="TL86" text="your party cannot drive any more livestock"/>
 		<string id="TL89" text="No profitable routes within your travel ceilings, from the prices you have recorded so far. Walk more markets, or raise the ceilings in the Trade Pool settings."/>
@@ -177,14 +177,14 @@
 		<string id="TL314" text="Key that opens the ledger panel on the campaign map. One key name such as T, Y or F5, optionally with Ctrl, Alt or Shift in front, such as Ctrl+T. A bare key the game also uses triggers both actions. Anything unknown falls back to T." />
 		<string id="TL315" text="Two clickable buttons on the right edge of the campaign map: TradeLord opens the ledger panel, and Recent trades below it opens the last twenty buys and sells. Turn OFF if they interfere with map clicks."/>
 		<string id="TL316" text="TradeLord's trade entry in town and village menus: it sells what you never bought, loot included, then what you bought, then buys. Turn it off to trade only on arrival. While Staged Trading holds that trading back, the entry shows anyway."/>
-		<string id="TL317" text="Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu."/>
-		<string id="TL318" text="Buys the moment you walk into a market, after any selling. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
+		<string id="TL317" text="Sells whatever your rules allow the moment you walk into a market or meet a caravan on the road, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu."/>
+		<string id="TL318" text="Buys the moment you walk into a market, after any selling. It buys from a caravan or villagers you meet on the road too. With this off, TradeLord buys only when you pick its trade entry in the menu."/>
 		<string id="TL320" text="The margin every trade must clear, both ways. Sell only if the price beats your cost basis by this much. Buy or list a route only if the far market beats the local price by this much after the resale safety factor. Raising it trades less."/>
 		<string id="TL321" text="Days of food kept from selling, trade food last, topped up cheapest first up to 1.5x the lowest price known (2x if short a day) or 2x its value. Never-buy holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
 		<string id="TL322" text="What automated trading may do with food. The days-of-supply food reserve is separate and still applies."/>
 		<string id="TL323" text="What automated trading may do with charcoal, hardwood, iron ore and ingots. Pick Leave alone to keep smithing stock out of automated trading entirely."/>
 		<string id="TL324" text="What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Haul animals and riding mounts have their own settings."/>
-		<string id="TL325" text="Never auto-trade unique or player-crafted items. A haul animal is never sold by policy whatever you set here, and only an explicit always-sell entry can move one."/>
+		<string id="TL325" text="Never auto-trade unique or player-crafted items. A haul animal is never sold by policy whatever you set here, and only an explicit always-sell entry can sell one for profit."/>
 		<string id="TL326" text="Locked items in the inventory screen are never auto-traded. Selling matches a lock the way the game stores it, by item and quality. Buying matches by item alone, so a lock on a good stops TradeLord buying more of it whatever its quality."/>
 		<string id="TL327" text="What a sale has to beat by your margin, while a trade good or livestock you never bought has to beat the cheapest market you know. Profit is what each unit fetched over what it cost you, and Trade XP is what the game gives for that sale."/>
 		<string id="TL328" text="Also sells weapons and armor of this tier and below. Starts at tier 1, which is the gear looters and bandits drop. Locks and protections still apply."/>
@@ -200,7 +200,7 @@
 		<string id="TL340" text="Goods TradeLord must never buy. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected."/>
 		<string id="TL341" text="TradeLord trades in village menus and villages join the price scans."/>
 		<string id="TL342" text="Reports what TradeLord would sell and buy without trading. Treat it as a best case: nothing moves, so every unit is priced at today's opening price and a real pass usually trades less. Every cap and the merchant's gold are modelled exactly."/>
-		<string id="TL343" text="No TradeLord trading before this campaign day, from the menu or on entry. Prices in a new campaign have not settled yet."/>
+		<string id="TL343" text="No TradeLord trading before this campaign day, from the menu, on entry or on the road. Prices in a new campaign have not settled yet."/>
 		<string id="TL344" text="Scales the Trade XP awarded for automated profit. 0 disables XP."/>
 		<string id="TL345" text="Marks the market that earns the most a day on the cargo it would really sell there, within the travel ceilings; a village only while Trade with villages is on. It skips the market TradeLord last traded at until you return. ON by default."/>
 		<string id="TL347" text="Play a coin sound when a pass actually moves something. A pass that trades nothing stays silent."/>
@@ -328,5 +328,6 @@
 		<string id="TL500" text=" (+{XP} Trade XP, Trade is now {LEVEL})"/>
 		<string id="TL501" text="What was sold added {XP} Trade XP."/>
 		<string id="TL502" text="What was sold added {XP} Trade XP, and Trade is now {LEVEL}."/>
+		<string id="TL503" text="You already own {OWNED} workshop(s). Every 25 points of your Trade skill earns one more slot."/>
 	</strings>
 </base>

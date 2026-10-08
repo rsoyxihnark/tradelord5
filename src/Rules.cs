@@ -645,6 +645,7 @@ namespace TradeLord
                 return false;
             }
             if (good.IsTradeGood) return true;
+            if (wholeOffer && TakenAsLoot(good, s)) return true;
             why = Block.NotTradable;
             return false;
         }
@@ -941,6 +942,9 @@ namespace TradeLord
             int earned = gameSays + (tradeSkill > 0 ? tradeSkill / TradeSkillPerWorkshop : 0);
             return earned < ceiling ? earned : ceiling;
         }
+
+        public static bool TheTradeSkillHoldsYouBack(bool earning, int mayOwn, int youAsked) =>
+            earning && mayOwn < youAsked;
 
         public const int MostWorkshopsYouMayAskFor = 200;
 

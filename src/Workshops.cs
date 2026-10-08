@@ -218,7 +218,10 @@ namespace TradeLord
             }
             if (why == Block.HeldEnough)
             {
-                TextObject full = Tongue.Text("{=TL435}You already own {OWNED} workshop(s), which is all Most workshops you may own allows. Raise it in TradeLord's settings to buy another.");
+                TextObject full = Holdings.TheTradeSkillHoldsYouBack(Options.Current.EarnWorkshopsWithTrade && RoomIsKept, mayOwn,
+                                                                     Options.Current.MaxWorkshopsOwned)
+                    ? Tongue.Text("{=TL503}You already own {OWNED} workshop(s). Every 25 points of your Trade skill earns one more slot.")
+                    : Tongue.Text("{=TL435}You already own {OWNED} workshop(s), which is all Most workshops you may own allows. Raise it in TradeLord's settings to buy another.");
                 full.SetTextVariable("OWNED", owned.ToString("N0"));
                 return full;
             }

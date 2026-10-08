@@ -1129,7 +1129,7 @@ namespace TradeLord
             if (!Settling.StillHolding(wait, elapsed, out int daysLeft)) return false;
             if (!quiet)
             {
-                TextObject msg = Tongue.Text("{=TL18}The market is still settling ({DAYS} more days).");
+                TextObject msg = Tongue.Text("{=TL18}The market is still settling ({DAYS} more day(s)).");
                 msg.SetTextVariable("DAYS", daysLeft);
                 Notices.Say(msg);
             }
@@ -1538,7 +1538,7 @@ namespace TradeLord
         {
             if (!Options.Current.DetailedTradeSummary)
             {
-                TextObject count = Tongue.Text("{=TL31}{COUNT} items");
+                TextObject count = Tongue.Text("{=TL31}{COUNT} item(s)");
                 count.SetTextVariable("COUNT", totalItems);
                 return count.ToString();
             }
@@ -2353,6 +2353,8 @@ namespace TradeLord
         {
             if (!Options.Current.TradeWithCaravans) return;
             if (!RoadPartyReachable(met)) return;
+            bool selling = Options.Current.AutoSellOnEntry && !met.IsVillager, buying = Options.Current.AutoBuyOnEntry;
+            if (!selling && !buying) return;
             if (StillSettling(Muted(automated: true))) return;
             IMarketData road = PricedOnTheRoad(met);
             if (road == null) return;
@@ -2367,12 +2369,12 @@ namespace TradeLord
                 LotPass(Pass.Meet(met, road, books, party), why);
             else
             {
-                SellPass(Pass.Meet(met, road, books, party),
-                         "loot sale on the road", "selling loot on the road", "Road loot selling", why, loot: true);
-                SellPass(Pass.Meet(met, road, books, party),
-                         "sale on the road", "selling on the road", "Road trading", why, loot: false);
-                BuyPass(Pass.Meet(met, road, books, party),
-                        "purchase on the road", "buying on the road", "Road buying", why);
+                if (selling) SellPass(Pass.Meet(met, road, books, party),
+                                      "loot sale on the road", "selling loot on the road", "Road loot selling", why, loot: true);
+                if (selling) SellPass(Pass.Meet(met, road, books, party),
+                                      "sale on the road", "selling on the road", "Road trading", why, loot: false);
+                if (buying) BuyPass(Pass.Meet(met, road, books, party),
+                                    "purchase on the road", "buying on the road", "Road buying", why);
             }
             NoteARoadTrade(met, books, movesBefore);
             EndTheRound();
@@ -2935,7 +2937,7 @@ namespace TradeLord
                 Settlement buyer = elsewhere.town;
                 if (buyer == null) return false;
                 ItemObject good = Item(at);
-                if (good != null)
+                if (good != null && !(_theirOffer && TradeRules.TakenAsLoot(GoodAt(at), Options.Current)))
                     _pass.Aimed[good] = (Tongue.Named(buyer.Name, buyer.StringId), price);
                 if (_resale == null)
                     _resale = new Dictionary<int, (Settlement, Ladder, int)>();
@@ -3039,7 +3041,7 @@ namespace TradeLord
                 foreach (var r in routes)
                 {
                     TextObject line = Tongue.Text(
-                        "{=TL84}{ITEM}: buy {FROM} ({BUY} denars) -> sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} days from here");
+                        "{=TL84}{ITEM}: buy {FROM} ({BUY} denars) -> sell {TO} ({SELL})  x{QTY} = +{PROFIT} denars, ~{DAYS} day(s) from here");
                     line.SetTextVariable("ITEM", r.Item.Name);
                     line.SetTextVariable("FROM", r.From.Name);
                     line.SetTextVariable("BUY", r.BuyPrice);
