@@ -134,6 +134,9 @@ namespace TradeLord.Tests
         private static Good Mount(string id) =>
             new Good { Id = id, Name = id, HasHorse = true, IsMountable = true, IsAnimal = true, Value = 300 };
 
+        private static Good Gear(string id, int tier) =>
+            new Good { Id = id, Name = id, Tier = tier, Weight = 1f, Value = 40 };
+
         private static Offer Villagers() => new Offer();
 
         private static Block Judge(Offer offer, out Lot lot) =>
@@ -157,6 +160,40 @@ namespace TradeLord.Tests
             Assert.Equal(0, offer.Stalls[1].Amount);
             Assert.Equal((6, 240), offer.Ledger.Purchases(false, "hides"));
             Assert.Equal((4, 80), offer.Ledger.Purchases(false, "clay"));
+        }
+
+        [Fact]
+        public void Gear_within_Sell_loot_up_to_tier_is_taken_with_the_offer()
+        {
+            var offer = Villagers();
+            offer.Add(Cargo("hides"), amount: 6, price: 40, resale: 90);
+            offer.Add(Gear("tunic", tier: 0), amount: 1, price: 30, resale: 0).Elsewhere = false;
+            Assert.Equal(Block.None, Judge(offer, out Lot lot));
+            Assert.Equal(7, lot.Units);
+            Assert.Equal(6 * 40 + 30, lot.Price);
+
+            Traded moved = TradePass.TakeTheLot(offer, offer.Ledger, sim: false);
+            Assert.Equal(7, moved.Units);
+            Assert.Contains("tunic", offer.Taken);
+        }
+
+        [Fact]
+        public void Gear_past_Sell_loot_up_to_tier_keeps_the_offer_off()
+        {
+            var offer = Villagers();
+            offer.Add(Cargo("hides"), amount: 6, price: 40, resale: 90);
+            offer.Add(Gear("helmet", tier: 2), amount: 1, price: 30, resale: 0).Elsewhere = false;
+            Assert.Equal(Block.NotTradable, Judge(offer, out Lot lot));
+            Assert.Equal(1, lot.Stopper);
+
+            var off = Villagers();
+            off.Rules.MaxLootTier = 0;
+            off.Add(Cargo("hides"), amount: 6, price: 40, resale: 90);
+            off.Add(Gear("tunic", tier: 0), amount: 1, price: 30, resale: 0).Elsewhere = false;
+            Assert.Equal(Block.NotTradable, Judge(off, out _));
+
+            Assert.False(TradeRules.MayBuy(Gear("tunic", tier: 0), false, new Options(), default(Says), out Block why));
+            Assert.Equal(Block.NotTradable, why);
         }
 
         [Fact]

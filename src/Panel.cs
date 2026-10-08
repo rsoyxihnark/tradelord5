@@ -469,7 +469,7 @@ namespace TradeLord
             bool empty = rows.Count == 0;
             StatusText = empty
                 ? Tongue.Text("{=TL67}No profitable routes in reach").ToString()
-                : Line("{=TL68}{COUNT} profitable routes, best first", "COUNT", rows.Count.ToString());
+                : Line("{=TL68}{COUNT} profitable route(s), best first", "COUNT", rows.Count.ToString());
             LegendText = (empty
                 ? Tongue.Text(Options.Current.Omniscient
                     ? "{=TL69}No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."

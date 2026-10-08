@@ -1312,7 +1312,6 @@ def the_ledger_keeps_no_second_copy_of_the_cost_basis_rules():
                 'return TradeMath.UnitsBoughtToTrade(rec);',
                 'long number = TradeMath.NumberASaleTakes(rec, unitPaid);',
                 '_nextUnitNumber = TradeMath.NumberEveryUnit(every, _nextUnitNumber, out long numbered);',
-                'TradeMath.DrainSale(rec, count);',
                 'TradeMath.DrainSale(rec, count, unitPaid);',
                 'foreach (TradeMath.SoldUnit one in TradeMath.DrainHandSale(rec, fetched, WhatAHandSaleCovers(rec), laidOut))',
                 'return TradeMath.MadeOnAHandSale(rec, fetched, WhatAHandSaleCovers(rec), laidOut);',
@@ -2729,7 +2728,7 @@ chk("1.5.8", "every panel line is localizable",
 chk("1.5.8", "tooltip row suffixes carry localization markers",
     'Tongue.Text("{=TL77}Profit: +{PCT}%")' in S['TooltipPatches.cs'] and
     'Tongue.Text("{=TL78}Stock: {COUNT}")' in S['TooltipPatches.cs'] and
-    'Tongue.Text("{=TL79}~{DAYS} days")' in S['Travel.cs'])
+    'Tongue.Text("{=TL79}~{DAYS} day(s)")' in S['Travel.cs'])
 chk("1.5.8", "each language-file entry matches the source fallback text",
     shipped_text_matches_the_fallback())
 chk("1.5.9", "panel-owned map pins survive a save/load cycle",
@@ -12657,7 +12656,7 @@ def the_villagers_offer_is_one_deal_that_no_cap_and_no_grain_switch_splits():
             and "MaxSpendPerVisit" not in between(t, "internal static int PurseForTheirOffer", ";")
             and "out Block why, bool wholeOffer = false)" in buy
             and "if (!always && !toFeed && s.NeverBuyGrain && good.IsGrain && !wholeOffer)" in buy
-            and S['Rules.cs'].count("wholeOffer") == 2
+            and S['Rules.cs'].count("wholeOffer") == 3
             and "out why, wholeOffer);" in S['Policy.cs']
             and t.count("wholeOffer: _theirOffer") == 1
             and t.count("theirOffer: true") == 1
@@ -14137,7 +14136,7 @@ def hold_cargo_and_the_marker_floor_count_what_is_on_its_way():
             and "Toplu fiyat benzetimi açıkken de rota ve ipucu fiyatlarını" in tr['TL396'] and "ve nerede satacağını belirler" in tr['TL396']
             and "до приезда привезут или увезут караваны и мастерские" in ru['TL396']
             and "在你到达之前给市场带来或带走的东西" in cn['TL396']
-            and "siz oraya dönene kadar atlar" in tr['TL345'] and "Orada gerçekten satacağı kargoya" in tr['TL345']
+            and "siz oraya dönene kadar atlar" in tr['TL345'] and "Orada gerçekten satacağı yüke" in tr['TL345']
             and "oraya yoldakileri de sayar" in tr['TL329']
             and "«Расчёт цены по единицам» и цены маршрутов, подсказок" in ru['TL396'] and "и где продавать" in ru['TL396']
             and "пока вы туда не вернётесь" in ru['TL345'] and "что там действительно будет продан" in ru['TL345']
@@ -14579,7 +14578,7 @@ def the_hold_texts_read_plainly_in_every_language():
     return (en['TL329'].startswith("On the way, sell a good you bought for at least this share")
             and ru['TL329'].startswith("В пути продаёт купленное не ниже этой доли")
             and "yolda ancak işaretli pazarın" in tr['TL329'] and "ancak," not in tr['TL329']
-            and tr['TL85'] == "Yükü en iyi pazar için tut ayarı kargonuzu işaretli pazar için saklıyor"
+            and tr['TL85'] == "Yükü en iyi pazar için tut ayarı yükünüzü işaretli pazar için saklıyor"
             and ru['TL85'] == "«Придерживать груз до лучшего рынка» бережёт груз для отмеченного рынка"
             and cn['TL85'] == "“为最好的市场留住货物”正把货物留给标出的市场"
             and len(en['TL85']) <= 70
@@ -18293,6 +18292,155 @@ def the_stock_and_bulk_price_hints_name_live_world_prices():
 
 chk("1.103.7", "the hints for Minimum stock for buy suggestions, Minimum stock value for buy suggestions and Bulk price simulation name Live world prices the way the settings screen does",
     the_stock_and_bulk_price_hints_name_live_world_prices())
+
+
+def gear_within_sell_loot_up_to_tier_never_keeps_the_villagers_offer_off():
+    buy = buy_rule()
+    resale = method_body(S['Trading.cs'], "public bool ResaleMarket(int at, int paid, int units, out int price)")
+    return (buy and resale
+            and ordered(buy, "if (good.IsTradeGood) return true;",
+                        "if (wholeOffer && TakenAsLoot(good, s)) return true;",
+                        "why = Block.NotTradable;")
+            and ordered(resale, "if (good != null && !(_theirOffer && TradeRules.TakenAsLoot(GoodAt(at), Options.Current)))",
+                        "_pass.Aimed[good] = (Tongue.Named(buyer.Name, buyer.StringId), price);")
+            and all(name in LOTTESTS for name in (
+                "Gear_within_Sell_loot_up_to_tier_is_taken_with_the_offer",
+                "Gear_past_Sell_loot_up_to_tier_keeps_the_offer_off")))
+
+chk("1.103.8", "gear in a villagers' offer within Sell loot up to tier no longer keeps TradeLord from taking the offer, while gear past it still does, and the Bought detail in the log never calls such gear meant for a market",
+    gear_within_sell_loot_up_to_tier_never_keeps_the_villagers_offer_off())
+
+
+def the_protect_hint_leaves_only_profit_to_the_always_sell_list():
+    en = spoken(ENGLISH)
+    tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
+    return (en['TL325'].endswith("only an explicit always-sell entry can sell one for profit.")
+            and 'HintText = "{=TL325}' + en['TL325'] + '"' in M
+            and said_in_every_language('TL325')
+            and "kârla satabilir" in tr['TL325'] and "продать его с прибылью" in ru['TL325']
+            and "卖出利润" in cn['TL325']
+            and "the only way to move one" not in README)
+
+chk("1.103.8", "the hint for Protect unique and crafted items and the feature list say only an always-sell entry can sell a haul animal for profit, as the hint for Always sell does, in every language",
+    the_protect_hint_leaves_only_profit_to_the_always_sell_list())
+
+
+def auto_sell_auto_buy_and_the_settling_delay_hold_on_the_road():
+    en = spoken(ENGLISH)
+    tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
+    road = method_body(S['Trading.cs'], "public static void ExecuteRoadTrade")
+    return (road
+            and ordered(road, "if (!Options.Current.TradeWithCaravans) return;",
+                        "if (!RoadPartyReachable(met)) return;",
+                        "bool selling = Options.Current.AutoSellOnEntry && !met.IsVillager, buying = Options.Current.AutoBuyOnEntry;",
+                        "if (!selling && !buying) return;",
+                        "if (StillSettling(Muted(automated: true))) return;",
+                        "if (met.IsVillager)", "LotPass(Pass.Meet(met, road, books, party), why);",
+                        "if (selling) SellPass(Pass.Meet(met, road, books, party),",
+                        "if (buying) BuyPass(Pass.Meet(met, road, books, party),")
+            and road.count("if (selling) SellPass(Pass.Meet(met, road, books, party),") == 2
+            and road.count("SellPass(") == 2 and road.count("BuyPass(") == 1 and road.count("LotPass(") == 1
+            and "the moment you walk into a market or meet a caravan on the road, without being asked." in en['TL317']
+            and "It buys from a caravan or villagers you meet on the road too." in en['TL318']
+            and en['TL317'].endswith("With this off, TradeLord sells only when you pick its trade entry in the menu.")
+            and en['TL318'].endswith("With this off, TradeLord buys only when you pick its trade entry in the menu.")
+            and "from the menu, on entry or on the road." in en['TL343']
+            and all('HintText = "{=' + k + '}' + en[k] + '"' in M for k in ('TL317', 'TL318', 'TL343'))
+            and all(said_in_every_language(k) for k in ('TL317', 'TL318', 'TL343'))
+            and "ya da yolda bir kervanla karşılaştığınız anda" in tr['TL317']
+            and "Yolda karşılaştığınız bir kervandan ya da köylülerden de alır." in tr['TL318']
+            and "или встречаете караван в пути" in ru['TL317']
+            and "Покупает и у каравана или крестьян, встреченных в пути." in ru['TL318']
+            and "或在路上遇到商队" in cn['TL317'] and "在路上遇到商队或村民时也会买。" in cn['TL318']
+            and "girişte ya da yolda" in tr['TL343'] and "ни в пути" in ru['TL343'] and "路上也不做" in cn['TL343']
+            and "Auto sell and Auto buy hold on the road as they do in a market" in README)
+
+chk("1.103.8", "Auto sell and Auto buy hold for caravans and villagers on the road as they do in a market, and their hints and the hint for Economy settling delay say so, in every language",
+    auto_sell_auto_buy_and_the_settling_delay_hold_on_the_road())
+
+
+def a_count_of_one_never_reads_as_many():
+    en = spoken(ENGLISH)
+    ru = spoken(TRANSLATIONS['Русский'])
+    return (en['TL18'] == "The market is still settling ({DAYS} more day(s))."
+            and en['TL31'] == "{COUNT} item(s)"
+            and en['TL68'] == "{COUNT} profitable route(s), best first"
+            and en['TL79'] == "~{DAYS} day(s)"
+            and en['TL84'].endswith(", ~{DAYS} day(s) from here")
+            and ru['TL31'] == "{COUNT} шт."
+            and ru['TL435'].startswith("Мастерских у вас уже: {OWNED},")
+            and ru['TL399'].endswith("; проверок: {COUNT}")
+            and ru['TL485'].endswith(", сдвинули приходы: {COUNT}")
+            and ru['TL418'] == "Недавние сделки (показано: {COUNT})"
+            and ru['TL451'].startswith("Ни на одном рынке поблизости нет {COUNT} шт. таких, |"))
+
+chk("1.103.8", "a count of one never reads as many in English, and the Russian lines that count goods, workshops, price checks, walk-ins and recent trades never put a count before a word it would have to agree with",
+    a_count_of_one_never_reads_as_many())
+
+
+def a_full_workshop_count_names_what_holds_you_back():
+    why = method_body(S['Workshops.cs'], "private static TextObject WhyNot")
+    rule = between(S['Rules.cs'], "public static bool TheTradeSkillHoldsYouBack", ";")
+    return (why and rule
+            and "earning && mayOwn < youAsked" in rule
+            and ordered(why, "if (why == Block.HeldEnough)",
+                        "Holdings.TheTradeSkillHoldsYouBack(Options.Current.EarnWorkshopsWithTrade && RoomIsKept, mayOwn,",
+                        "{=TL503}", "{=TL435}", 'full.SetTextVariable("OWNED", owned.ToString("N0"));')
+            and said_in_every_language("TL503")
+            and spoken(ENGLISH)['TL503'] == "You already own {OWNED} workshop(s). Every 25 points of your Trade skill earns one more slot."
+            and "Only_the_Trade_skill_holds_you_back_while_you_earn_workshops_short_of_your_ceiling" in HOLDINGTESTS)
+
+chk("1.103.8", "with Earn workshops with Trade skill on, a full workshop count says your Trade skill is what holds you back, not Most workshops you may own, in every language",
+    a_full_workshop_count_names_what_holds_you_back())
+
+
+def the_turkish_text_calls_the_campaign_and_the_smithy_by_one_word():
+    en = spoken(ENGLISH)
+    tr = spoken(TRANSLATIONS['Türkçe'])
+    campaign = [k for k, said in en.items() if 'campaign' in said.lower()]
+    smithy = [k for k, said in en.items() if 'smithy' in said.lower()]
+    cargo = [k for k, said in en.items() if 'cargo' in said.lower()]
+    margin = [k for k, said in en.items() if 'margin' in said.lower()]
+    return (len(campaign) >= 4 and len(smithy) >= 2 and len(cargo) >= 10 and len(margin) >= 10
+            and all('sefer' in tr[k].lower() for k in campaign)
+            and all('demirhane' in tr[k].lower() for k in smithy)
+            and all('yük' in tr[k].lower() for k in cargo)
+            and all('kâr payı' in tr[k].lower() for k in margin)
+            and not any(re.search('kampanya|demirci ocağ|kargo|ambar|marj', said.lower()) for said in tr.values()))
+
+chk("1.103.8", "the Turkish text calls the campaign sefer, the smithy demirhane, the cargo yük and the margin kâr payı in every line that names one, and no Turkish line calls the cargo kargo, the hold ambar or the margin marj",
+    the_turkish_text_calls_the_campaign_and_the_smithy_by_one_word())
+
+
+def the_russian_minimum_stock_line_calls_the_setting_by_its_gender():
+    ru = spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])
+    return ("«" + ru['TL205'] + "»" in ru['TL450']
+            and ru['TL450'].endswith("| Уменьшите его, чтобы увидеть, где покупать.")
+            and "Уменьшите её" not in ru['TL450'])
+
+chk("1.103.8", "the Russian tooltip line about Minimum stock for buy suggestions refers to the setting in the masculine, as its head noun запас is",
+    the_russian_minimum_stock_line_calls_the_setting_by_its_gender())
+
+
+def the_chinese_names_of_the_two_hold_settings_call_the_hold_by_one_word():
+    cn = spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])
+    return (all("载重比例" in cn[k] for k in ('TL274', 'TL410'))
+            and "载货" not in cn['TL274']
+            and cn['TL274'].endswith("（0 = 关闭）"))
+
+chk("1.103.8", "the Chinese names of Share of the hold one good may fill and Share of the hold TradeLord may fill call the hold by one word",
+    the_chinese_names_of_the_two_hold_settings_call_the_hold_by_one_word())
+
+
+def no_russian_amount_of_denars_takes_the_wrong_form():
+    ru = spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])
+    amounts = [k for k, said in ru.items() if re.search(r'\{[A-Z]+\} ден\.', said)]
+    return (len(amounts) >= 20
+            and not any(re.search(r'\{[A-Z]+\} денар', said) for said in ru.values())
+            and "за 240 ден., прибыль 90" in ru['TL348'])
+
+chk("1.103.8", "the Russian text writes an amount of denars as ден., so no amount ending in 1 to 4 reads in the wrong form, and the hint for Detailed trade summary shows the Sold line that way",
+    no_russian_amount_of_denars_takes_the_wrong_form())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

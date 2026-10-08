@@ -470,12 +470,12 @@ namespace TradeLord.Mcm
         public bool MarkPriceDirection { get => _o.MarkPriceDirection; set { _o.MarkPriceDirection = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL217}Auto sell", Order = 0, RequireRestart = false,
-            HintText = "{=TL317}Sells whatever your rules allow the moment you walk into a market, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu.")]
+            HintText = "{=TL317}Sells whatever your rules allow the moment you walk into a market or meet a caravan on the road, without being asked. Trade XP is awarded. With this off, TradeLord sells only when you pick its trade entry in the menu.")]
         [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 1)]
         public bool AutoSellOnEntry { get => _o.AutoSellOnEntry; set { _o.AutoSellOnEntry = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL218}Auto buy", Order = 1, RequireRestart = false,
-            HintText = "{=TL318}Buys the moment you walk into a market, after any selling. With this off, TradeLord buys only when you pick its trade entry in the menu.")]
+            HintText = "{=TL318}Buys the moment you walk into a market, after any selling. It buys from a caravan or villagers you meet on the road too. With this off, TradeLord buys only when you pick its trade entry in the menu.")]
         [SettingPropertyGroup("{=TL104}Automation", GroupOrder = 1)]
         public bool AutoBuyOnEntry { get => _o.AutoBuyOnEntry; set { _o.AutoBuyOnEntry = value; Options.Bump(); } }
 
@@ -581,7 +581,7 @@ namespace TradeLord.Mcm
         public bool SimulationMode { get => _o.SimulationMode; set { _o.SimulationMode = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL243}Economy settling delay (days, 0 = off)", 0, 100, Order = 12, RequireRestart = false,
-            HintText = "{=TL343}No TradeLord trading before this campaign day, from the menu or on entry. Prices in a new campaign have not settled yet.")]
+            HintText = "{=TL343}No TradeLord trading before this campaign day, from the menu, on entry or on the road. Prices in a new campaign have not settled yet.")]
         [SettingPropertyGroup("{=TL106}General", GroupOrder = 5)]
         public int EconomySettlingDays { get => _o.EconomySettlingDays; set { _o.EconomySettlingDays = value; Options.Bump(); } }
 
@@ -646,7 +646,7 @@ namespace TradeLord.Mcm
         public int KeepPerFoodKind { get => _o.KeepPerFoodKind; set { _o.KeepPerFoodKind = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL225}Protect unique and crafted items", Order = 3, RequireRestart = false,
-            HintText = "{=TL325}Never auto-trade unique or player-crafted items. A haul animal is never sold by policy whatever you set here, and only an explicit always-sell entry can move one.")]
+            HintText = "{=TL325}Never auto-trade unique or player-crafted items. A haul animal is never sold by policy whatever you set here, and only an explicit always-sell entry can sell one for profit.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public bool ProtectSpecial { get => _o.ProtectSpecial; set { _o.ProtectSpecial = value; Options.Bump(); } }
 

@@ -144,6 +144,7 @@
 - ✅ A caravan is traded with at the prices of the town you are in, or else the nearest town, which is what the game's own trade screen charges you with a caravan
 - ✅ A caravan on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, and your looted gear
 - ✅ Hold cargo for the best market, the herd speed penalty and the settling delay hold for a caravan on the road as they do in a market
+- ✅ Auto sell and Auto buy hold on the road as they do in a market: with Auto sell off it sells nothing to a caravan, and with Auto buy off it buys nothing from a caravan or from villagers
 - ✅ Meeting that same party again straight away counts as the same meeting, so it never buys back what it has just sold them and what it spent still counts against its caps, while meeting them again later starts afresh
 - ✅ Once the goods have changed hands you can say so, and the trader answers
 - ✅ Counts sea legs and appears in port menus if you have the War Sails DLC
@@ -168,7 +169,7 @@
 - ✅ Anything you locked in the inventory screen
 - ✅ Anything an active quest of yours is waiting on, whether it is an animal, a trade good, a raw material or the weapons a gang leader asked for, held back from every pass that sells until the quest is done with it
 - ✅ Unique and player-crafted gear, and quest items
-- ✅ Your haul animals are never sold for profit either, though it will buy them for you, and naming one on your always-sell list is the only way to move one by hand
+- ✅ Your haul animals are never sold for profit either, though it will buy them for you, and naming one on your always-sell list is the only way to sell one for profit
 - ✅ An animal that carries nothing for you and is not livestock is no haul animal, so it is sold like any other cargo rather than sitting in your bags for good
 - ✅ Weapons the smithy can break down for parts, so a smithing playthrough keeps its raw material. Three ways to play it, and it sells them out of the box
 - ✅ Keep every one holds anything built from smithing parts, forged or looted off a bandit alike

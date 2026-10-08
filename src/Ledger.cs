@@ -900,8 +900,6 @@ namespace TradeLord
             return prices;
         }
 
-        public void RecordPurchase(string itemId, IList<int> paid) => RecordPurchase(itemId, paid, TradeMath.FromAMarket);
-
         public void RecordPurchase(string itemId, IList<int> paid, int from, bool traded = false)
         {
             if (itemId == null || paid == null || paid.Count == 0) return;
@@ -913,11 +911,6 @@ namespace TradeLord
             }
             TradeMath.AddPurchase(rec, paid, _nextUnitNumber, (float)CampaignTime.Now.ToDays, from, traded);
             _nextUnitNumber += paid.Count;
-        }
-
-        public void RecordSale(string itemId, int count)
-        {
-            if (Paid.TryGetValue(itemId, out var rec)) TradeMath.DrainSale(rec, count);
         }
 
         public long RecordSale(string itemId, int count, int unitPaid) => RecordSale(itemId, count, unitPaid, out _);

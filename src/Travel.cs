@@ -214,7 +214,7 @@ namespace TradeLord
             if (target == null || target == Settlement.CurrentSettlement) return "";
             float days = EstimateDaysFromParty(target);
             if (days < 0.05f || TradeMath.OutOfReach(days)) return "";
-            TextObject label = Tongue.Text("{=TL79}~{DAYS} days");
+            TextObject label = Tongue.Text("{=TL79}~{DAYS} day(s)");
             label.SetTextVariable("DAYS", days.ToString("0.#"));
             return label.ToString();
         }
