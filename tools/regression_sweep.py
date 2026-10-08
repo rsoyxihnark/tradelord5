@@ -18408,7 +18408,7 @@ def the_turkish_text_calls_the_campaign_and_the_smithy_by_one_word():
             and all('kâr payı' in tr[k].lower() for k in margin)
             and not any(re.search('kampanya|demirci ocağ|kargo|ambar|marj', said.lower()) for said in tr.values()))
 
-chk("1.103.8", "the Turkish text calls the campaign sefer, the smithy demirhane, the cargo yük and the margin kâr payı in every line that names one, and no Turkish line calls the cargo kargo, the hold ambar or the margin marj",
+chk("1.103.8", "the Turkish text calls the campaign sefer, the smithy demirhane and the cargo yük wherever it names them, every margin line uses the word of Minimum profit margin, and no Turkish line says kargo, ambar or marj",
     the_turkish_text_calls_the_campaign_and_the_smithy_by_one_word())
 
 
@@ -18418,7 +18418,7 @@ def the_russian_minimum_stock_line_calls_the_setting_by_its_gender():
             and ru['TL450'].endswith("| Уменьшите его, чтобы увидеть, где покупать.")
             and "Уменьшите её" not in ru['TL450'])
 
-chk("1.103.8", "the Russian tooltip line about Minimum stock for buy suggestions refers to the setting in the masculine, as its head noun запас is",
+chk("1.103.8", "the Russian tooltip line about Minimum stock for buy suggestions refers to the setting in the masculine, as the head noun of its name is",
     the_russian_minimum_stock_line_calls_the_setting_by_its_gender())
 
 
@@ -18439,7 +18439,7 @@ def no_russian_amount_of_denars_takes_the_wrong_form():
             and not any(re.search(r'\{[A-Z]+\} денар', said) for said in ru.values())
             and "за 240 ден., прибыль 90" in ru['TL348'])
 
-chk("1.103.8", "the Russian text writes an amount of denars as ден., so no amount ending in 1 to 4 reads in the wrong form, and the hint for Detailed trade summary shows the Sold line that way",
+chk("1.103.8", "the Russian text writes an amount of denars in its short form, so no amount ending in 1 to 4 reads in the wrong form, and the hint for Detailed trade summary shows the Sold line that way",
     no_russian_amount_of_denars_takes_the_wrong_form())
 
 
