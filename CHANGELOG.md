@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.103.11
+
+- Fixed your party eating food bought to trade because Max spend per visit left no room to buy food of its own
+- The hint for Max spend per visit now says food may go past it once your party has less than a day of its own food
+- TradeLord.log now names the cheapest food on sale when your party is short of a day of its own food and finds none it may buy
+- Fixed the map marker pointing at the wrong market for a moment after you took a deal Staged Trading laid out
+- TradeLord.log now names the cheapest haul animal on sale and the price bar it missed when TradeLord buys none
+- The hint for Most it will pay for a haul animal now says the cheapest price is looked for within your travel ceilings
+- Fixed a few small forecasts that came true early in a campaign making TradeLord trust what is on its way far too much
+- TradeLord.log now says how much gold the checked forecasts were about when it says how far it trusts what is on its way
+
 ## 1.103.10
 
 - TradeLord.log now writes down what the campaign map's cursor was doing when you give the map a quick right click

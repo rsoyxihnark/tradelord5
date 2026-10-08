@@ -82,9 +82,10 @@
 - ✅ A trade with caravans or villagers on the road frees the market TradeLord made its last trade at, so arriving there trades as usual
 - ✅ A deal you take from Staged Trading counts as TradeLord's last trade at that market
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
-- ✅ Tops your food back up to three days of supply, buying the cheapest food the market has at up to 1.5 times the cheapest price it knows of for it, or up to twice the cheapest price for one day of food when your party is about to go hungry
+- ✅ Tops your food back up to three days of supply, buying the cheapest food the market has at up to 1.5 times the cheapest price it knows of for it, or up to twice that price for one day of food when your party has under a day of its own
 - ✅ A food is never passed over for its price while it costs no more than twice its value in the game
-- ✅ When your party is down to less than a day of food, the food it buys and a haul animal to carry it may go past Max spend per visit, never past your gold reserve
+- ✅ When your party is down to less than a day of its own food, the food it buys may go past Max spend per visit, never past your gold reserve
+- ✅ When all the food your party carries, food bought to trade included, is down to less than a day, a haul animal to carry more may go past Max spend per visit too
 - ✅ Food you bought to trade is counted last toward those days, so it sells where it pays once your own food fills them
 - ✅ Your party eats its own food before food bought to trade, while any of its own is left
 - ✅ Food Staged Trading lays out on the trade screen to sell on counts as food bought to trade, never as your party's own
