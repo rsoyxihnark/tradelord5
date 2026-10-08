@@ -1830,11 +1830,11 @@ chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has 
     method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty"))
 chk("1.3.11", "the panel hands back the movie and the mouse, and honours the modifier keys",
     "layer.ReleaseMovie(movie)" in method_body(S['Panel.cs'], "internal static void Cleanup") and
-    "SetInputRestrictions(false, InputUsageMask.All)" in
+    "SetInputRestrictions(false, InputUsageMask.MouseButtons)" in
     method_body(S['Panel.cs'], "private static void ApplyIdleInput") and
     (lambda b: ordered(b, "if (wantMouse)", "_layer.ActiveCursor = CursorType.Default;",
-                       "SetInputRestrictions(true, wantWheel ? InputUsageMask.Mouse : InputUsageMask.MouseButtons)",
-                       "else", "SetInputRestrictions(false, InputUsageMask.All)"))
+                       "SetInputRestrictions(true, InputUsageMask.Mouse)",
+                       "else", "SetInputRestrictions(false, InputUsageMask.MouseButtons)"))
     (method_body(S['Panel.cs'], "private static void UpdateIdleInput")) and
     "SetInputRestrictions(true, InputUsageMask.Mouse)" in
     method_body(S['Panel.cs'], "private static void Show") and
@@ -2907,14 +2907,13 @@ chk("1.6.7", "the panel's own pin list, not the map's marker state, decides what
                and "CheckTracked(" not in b)
     (method_body(S['Panel.cs'], "private static void ToggleMarker")))
 
-chk("1.90.1", "the map button reserves the mouse over the button and nowhere else, with no guessed region standing in for it",
+chk("1.90.1", "the map button takes clicks over the button and nowhere else, with no region of TradeLord's own standing in for where the game finds it",
     "OverTheStripInstead" not in S['Rules.cs'] and "OverAssumedBounds" not in S['Panel.cs'] and
     "0.90f" not in S['Rules.cs'] and
-    "0.90f" not in method_body(S['Panel.cs'], "private static bool OverButtonBounds") and
-    "0.90f" not in method_body(S['Panel.cs'], "private static Widget TheMapButton") and
-    "if (button == null) return false;" in
-        method_body(S['Panel.cs'], "private static bool OverButtonBounds") and
-    "No_part_of_the_map_is_reserved_when_the_button_cannot_be_measured" in MAPBUTTONTESTS)
+    "0.90f" not in method_body(S['Panel.cs'], "private static void UpdateIdleInput") and
+    "OverButtonBounds" not in S['Panel.cs'] and "MousePositionRanged" not in S['Panel.cs'] and
+    "Input." not in method_body(S['Panel.cs'], "private static void UpdateIdleInput") and
+    "With_no_window_open_the_map_layer_takes_nothing_beyond_the_clicks_the_game_finds_on_the_button" in MAPBUTTONTESTS)
 chk("1.6.8", "the food reserve is spent only on goods the sell rules would actually move",
     (lambda b: ordered(b, "said.Why = Block.NotTradable; return said;",
                        "int reserved = DrawKeepBack(amount - said.KeepCount, facts.FoodHeld, out bool fed);"))
@@ -2926,28 +2925,19 @@ chk("1.6.8", "another mod handles its own notification before TradeLord may hold
 chk("1.6.9", "every setting name, hint and group heading carries a translation marker",
     every_setting_line_is_translatable())
 
-chk("1.6.10", "the button's own measured size decides the reserved region, so it holds at any aspect ratio",
-    (lambda b: "Screen.RealScreenResolutionWidth" in b and "button.ScaledSuggestedWidth" in b
-           and "button.ScaledMarginRight" in b and "0.90f" not in b
-           and "return MapButton.Over(m.x, m.y," in b)
-    (method_body(S['Panel.cs'], "private static bool OverButtonBounds")) and
-    "The_region_holds_at_any_aspect_ratio" in MAPBUTTONTESTS)
-chk("1.6.10", "the prefab carries the id the panel looks the button up by",
-    'Id="TradeLordMapButton"' in PREFAB and 'MapButtonId = "TradeLordMapButton"' in S['Panel.cs'])
+chk("1.6.10", "the game's own hit test of the button decides where it takes clicks, so it holds at any aspect ratio and any interface scale",
+    "RealScreenResolution" not in S['Panel.cs'] and "ScaledSuggestedWidth" not in S['Panel.cs'] and
+    "ScaledMarginRight" not in S['Panel.cs'] and "internal static bool Over(" not in S['Rules.cs'] and
+    re.search(r'Id="TradeLordMapButton"[\s\S]{0,400}?WidthSizePolicy="Fixed"', PREFAB) is not None)
+chk("1.6.10", "the prefab carries the id the checks find the map button by, and the panel no longer looks the button up itself",
+    PREFAB.count('Id="TradeLordMapButton"') == 1 and "TradeLordMapButton" not in S['Panel.cs'])
 chk("1.6.10", "the button still sits flush right and centred, which is what the reserved region assumes",
     re.search(r'Id="TradeLordMapButton"[\s\S]{0,400}?HorizontalAlignment="Right"', PREFAB) is not None and
     re.search(r'Id="TradeLordMapButton"[\s\S]{0,400}?VerticalAlignment="Center"', PREFAB) is not None)
-chk("1.90.1", "a button the panel has not read yet reserves nothing, and the panel keeps looking for it rather than giving up after one try",
-    (lambda hunt: hunt
-        and "if (_mapButton != null) return _mapButton;" in hunt
-        and "if (_huntIn > 0) { _huntIn--; return null; }" in hunt
-        and "_huntIn = BetweenButtonHunts;" in hunt
-        and "_mapButton = FindMapButton(_layer.UIContext?.Root);" in hunt)
-    (method_body(S['Panel.cs'], "private static Widget TheMapButton")) and
-    "Widget button = TheMapButton();" in
-        method_body(S['Panel.cs'], "private static bool OverButtonBounds") and
-    S['Panel.cs'].count("FindMapButton(") == 2 and
-    "_mapButton = null; _huntIn = 0;" in method_body(S['Panel.cs'], "internal static void Cleanup"))
+chk("1.90.1", "a button the game has not laid out yet takes nothing, because the panel never hunts for the button and reserves no part of the map itself",
+    "FindMapButton" not in S['Panel.cs'] and "_huntIn" not in S['Panel.cs'] and
+    "GetAllChildrenAndThisRecursive" not in S['Panel.cs'] and
+    ordered(method_body(S['Panel.cs'], "private static void Setup"), "_mapScreen.AddLayer(_layer);", "ApplyIdleInput();"))
 
 chk("1.6.11", "a purchase record with nothing left in it is dropped rather than saved forever",
     re.search(r'PruneSettledPurchases\(\) =>\s*_purchases\?\.RemoveAll\(rec => rec == null \|\| '
@@ -3462,8 +3452,8 @@ def quiet_automation_leaves_the_cargo_warning_alone():
 def a_second_campaign_starts_the_panel_from_scratch():
     reset = method_body(S['Panel.cs'], "internal static void Reset")
     return all(f in reset for f in
-               ("_loggedArmed = false;", "_loggedButtonMissing = false;",
-                "_idleMouseActive = false;", "_keySource = null;"))
+               ("_loggedArmed = false;", "_idleMouseActive = false;",
+                "_keySource = null;", "CursorWatch.Forget();"))
 
 def the_item_list_reading_is_covered_by_tests_the_build_runs():
     return ("A_name_with_a_space_in_it_is_kept_whole" in ROUTETESTS and
@@ -8674,29 +8664,19 @@ chk("1.71.2", "which band a route row falls in, and where in the list it ranks, 
     which_band_a_route_row_falls_in_is_worked_out_where_a_test_can_ask())
 
 
-def where_the_map_button_catches_the_mouse_is_worked_out_where_a_test_can_ask():
+def when_the_map_layer_takes_the_mouse_is_worked_out_where_a_test_can_ask():
     r = S['Rules.cs']
-    over = method_body(r, "internal static bool Over")
     return ("internal static class MapButton" in r
-            and "internal const float Pad = 6f;" in r
+            and "internal static bool TakesTheMouse(bool windowOpen) => windowOpen;" in r
             and "TaleWorlds" not in r and "Widget" not in r
-            and "if (!BoundsReadable(screenW, screenH, width, height)) return false;" in over
-            and "float padX = Pad / screenW, padY = Pad / screenH;" in over
-            and "float right = 1f - marginRight / screenW;" in over
-            and "6f / screenW" not in S['Panel.cs']
+            and "internal static bool Over(" not in r and "Pad = " not in r
             and all(one in MAPBUTTONTESTS for one in
-                    ("The_middle_of_the_button_is_over_the_button",
-                     "The_middle_of_the_map_is_not",
-                     "The_button_sits_flush_right_and_centred",
-                     "A_cursor_just_outside_is_still_caught_and_one_further_out_is_not",
-                     "A_screen_or_a_button_the_game_cannot_measure_is_not_readable",
-                     "Nothing_is_over_a_button_that_cannot_be_measured",
-                     "No_part_of_the_map_is_reserved_when_the_button_cannot_be_measured",
-                     "The_region_holds_at_any_aspect_ratio")))
+                    ("A_window_open_over_the_map_takes_the_mouse_wherever_the_cursor_is",
+                     "With_no_window_open_the_map_layer_takes_nothing_beyond_the_clicks_the_game_finds_on_the_button")))
 
 
-chk("1.71.2", "where the map button catches the mouse is worked out where a test can ask",
-    where_the_map_button_catches_the_mouse_is_worked_out_where_a_test_can_ask())
+chk("1.71.2", "when the map layer takes the mouse is worked out where a test can ask, and where the button catches clicks is left to the game",
+    when_the_map_layer_takes_the_mouse_is_worked_out_where_a_test_can_ask())
 
 
 def which_of_the_twins_wins_is_worked_out_where_a_test_can_ask():
@@ -10100,12 +10080,9 @@ def a_window_a_map_button_opens_can_be_reached_with_the_mouse():
     idle = method_body(S['Panel.cs'], "private static void UpdateIdleInput")
     return ('ExecuteOpenTrades' in opens
             and PREFAB.count('Command.Click="ExecuteOpenTrades"') == 1
-            and 'internal static bool TakesTheMouse(bool windowOpen, bool buttonOn, bool overButton) =>\n'
-                '            windowOpen || (buttonOn && overButton);' in S['Rules.cs']
-            and 'MapButton.TakesTheMouse(\n'
-                '                _vm.IsTradesVisible, buttonOn, OverButtonBounds(Input.MousePositionRanged))'
-                in idle
-            and 'buttonOn && OverButtonBounds' not in S['Panel.cs']
+            and 'internal static bool TakesTheMouse(bool windowOpen) => windowOpen;' in S['Rules.cs']
+            and 'bool wantMouse = MapButton.TakesTheMouse(_vm.IsTradesVisible);' in idle
+            and 'OverButtonBounds' not in S['Panel.cs']
             and S['Panel.cs'].count('MapButton.TakesTheMouse') == 1
             and 'if (_vm.IsTradesVisible && map.IsEscapeMenuOpened) _vm.IsTradesVisible = false;'
                 in S['Panel.cs']
@@ -17942,15 +17919,15 @@ chk("1.103.3", "a Recent trades row is as tall as its tallest text, never as tal
 def the_recent_trades_window_takes_the_mouse_wheel():
     idle = method_body(S['Panel.cs'], "private static void UpdateIdleInput")
     return (idle
-            and "internal static bool TakesTheWheel(bool windowOpen) => windowOpen;" in S['Rules.cs']
-            and ordered(idle, "bool wantWheel = wantMouse && MapButton.TakesTheWheel(_vm.IsTradesVisible);",
-                        "if (wantMouse == _idleMouseActive && wantWheel == _idleWheelTaken) return;",
-                        "_idleWheelTaken = wantWheel;",
-                        "SetInputRestrictions(true, wantWheel ? InputUsageMask.Mouse : InputUsageMask.MouseButtons)")
-            and S['Panel.cs'].count("_idleWheelTaken = false;") == 2
+            and ordered(idle, "if (wantMouse == _idleMouseActive) return;",
+                        "_idleMouseActive = wantMouse;",
+                        "SetInputRestrictions(true, InputUsageMask.Mouse)",
+                        "SetInputRestrictions(false, InputUsageMask.MouseButtons)")
+            and "SetInputRestrictions(false, InputUsageMask.MouseButtons)" in
+                method_body(S['Panel.cs'], "private static void ApplyIdleInput")
+            and "_idleWheelTaken" not in S['Panel.cs']
             and S['Panel.cs'].count("_idleMouseActive = false;") == 2
-            and "The_mouse_wheel_is_taken_only_while_a_window_is_open_so_the_map_still_zooms_over_the_button"
-                in T['MapButtonTests.cs'])
+            and "A_window_open_over_the_map_takes_the_mouse_wherever_the_cursor_is" in T['MapButtonTests.cs'])
 
 chk("1.103.3", "the mouse wheel scrolls the Recent trades window while it is open and zooms the map again once it closes, and the cursor over the map button takes only clicks",
     the_recent_trades_window_takes_the_mouse_wheel())
@@ -18450,6 +18427,44 @@ def the_source_checks_write_every_letter_the_same_on_every_machine():
 
 chk("1.103.8", "the source checks write UTF-8 before their first line, so a Turkish, Russian or Chinese letter in the wording of a check can no longer stop a version going out on the Windows build",
     the_source_checks_write_every_letter_the_same_on_every_machine())
+
+
+def the_map_layer_never_shows_the_mouse_while_no_window_is_open():
+    p = S['Panel.cs']
+    idle = method_body(p, "private static void UpdateIdleInput")
+    return (idle
+            and ordered(idle, "if (wantMouse)", "SetInputRestrictions(true, InputUsageMask.Mouse)",
+                        "else", "SetInputRestrictions(false, InputUsageMask.MouseButtons)")
+            and "SetInputRestrictions(false, InputUsageMask.MouseButtons)" in
+                method_body(p, "private static void ApplyIdleInput")
+            and p.count("SetInputRestrictions(true") == 2
+            and p.count("SetInputRestrictions(true, InputUsageMask.Mouse)") == 2
+            and "SetInputRestrictions(true, InputUsageMask.Mouse)" in method_body(p, "private static void Show"))
+
+chk("1.103.9", "while no TradeLord window is open the map layer takes only clicks and never asks the game to show the mouse, as the game's own map buttons never do",
+    the_map_layer_never_shows_the_mouse_while_no_window_is_open())
+
+
+def the_map_cursor_watch_names_what_drew_a_forbidden_sign_that_stays_on():
+    p = S['Panel.cs']
+    watch = method_body(p, "internal static void Watch(MapScreen map, ScreenLayer ours)")
+    core = method_body(p, "private static void WatchCore(MapScreen map, ScreenLayer ours)")
+    under = method_body(p, "private static string UnderTheMouse(MapScreen map)")
+    return (watch and core and under
+            and "internal static class CursorWatch" in p
+            and ordered(watch, "if (_dead || map == null) return;", "try { WatchCore(map, ours); }",
+                        "catch (Exception e)", "_dead = true;")
+            and "ScreenLayer top = ScreenManager.FirstHitLayer ?? map.SceneLayer;" in core
+            and "top.ActiveCursor != CursorType.Disabled" in core
+            and ordered(core, "if (_told || _timesTold >= MostTimesTold) return;",
+                        "if (now - _since < LongEnough || _travelled < FarEnough * Input.Resolution.x) return;",
+                        "Log.WriteMany(WhatTheMapIsDoing(map, top, ours, now - _since));")
+            and "Helpers.NavigationHelper.CanPlayerNavigateToPosition(new CampaignVec2(point.AsVec2, onLand), out _)" in under
+            and "CursorWatch.Watch(map, _layer);" in method_body(p, "private static void TickCore")
+            and "CursorWatch.Forget();" in method_body(p, "internal static void Reset"))
+
+chk("1.103.9", "TradeLord.log writes down which layer drew a forbidden sign that stays on while the mouse moves, what the game's own reach check says under the mouse, and what made it go away",
+    the_map_cursor_watch_names_what_drew_a_forbidden_sign_that_stays_on())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

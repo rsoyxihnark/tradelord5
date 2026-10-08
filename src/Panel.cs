@@ -6,7 +6,6 @@ using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.CampaignSystem.Settlements.Workshops;
 using TaleWorlds.Engine.GauntletUI;
-using TaleWorlds.GauntletUI.BaseTypes;
 using TaleWorlds.InputSystem;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
@@ -696,7 +695,7 @@ namespace TradeLord
                 if (_vm.IsMapButtonVisible != button)
                     _vm.IsMapButtonVisible = button;
                 if (_vm.IsTradesVisible && map.IsEscapeMenuOpened) _vm.IsTradesVisible = false;
-                UpdateIdleInput(button);
+                UpdateIdleInput();
                 if (!map.IsEscapeMenuOpened && HotkeyReleased() && !TypingOnScreen(map))
                     Guard.Run("Panel.Show", Show);
             }
@@ -704,6 +703,7 @@ namespace TradeLord
             {
                 Hide();
             }
+            CursorWatch.Watch(map, _layer);
         }
 
         private static bool TypingOnScreen(ScreenBase screen)
@@ -719,64 +719,19 @@ namespace TradeLord
         }
 
         private static bool _idleMouseActive;
-        private static bool _idleWheelTaken;
-        private static Widget _mapButton;
-        private const string MapButtonId = "TradeLordMapButton";
-        private static int _huntIn;
-        private const int BetweenButtonHunts = 60;
-        private static bool _loggedButtonMissing;
 
-        private static Widget FindMapButton(Widget root)
+        private static void UpdateIdleInput()
         {
-            if (root == null) return null;
-            var all = root.GetAllChildrenAndThisRecursive();
-            for (int i = 0; i < all.Count; i++)
-                if (all[i] != null && all[i].Id == MapButtonId) return all[i];
-            return null;
-        }
-
-        private static Widget TheMapButton()
-        {
-            if (_mapButton != null) return _mapButton;
-            if (_layer == null) return null;
-            if (_huntIn > 0) { _huntIn--; return null; }
-            _huntIn = BetweenButtonHunts;
-            _mapButton = FindMapButton(_layer.UIContext?.Root);
-            if (_mapButton == null && !_loggedButtonMissing)
-            {
-                _loggedButtonMissing = true;
-                Log.Write("map button not found on the panel yet - TradeLord keeps looking for it and " +
-                          "reserves none of the map until it has read where the button really is");
-            }
-            return _mapButton;
-        }
-
-        private static bool OverButtonBounds(Vec2 m)
-        {
-            Widget button = TheMapButton();
-            if (button == null) return false;
-            return MapButton.Over(m.x, m.y,
-                                  TaleWorlds.Engine.Screen.RealScreenResolutionWidth,
-                                  TaleWorlds.Engine.Screen.RealScreenResolutionHeight,
-                                  button.ScaledSuggestedWidth, button.ScaledSuggestedHeight,
-                                  button.ScaledMarginRight);
-        }
-
-        private static void UpdateIdleInput(bool buttonOn)
-        {
-            bool wantMouse = MapButton.TakesTheMouse(
-                _vm.IsTradesVisible, buttonOn, OverButtonBounds(Input.MousePositionRanged));
-            bool wantWheel = wantMouse && MapButton.TakesTheWheel(_vm.IsTradesVisible);
-            if (wantMouse == _idleMouseActive && wantWheel == _idleWheelTaken) return;
+            bool wantMouse = MapButton.TakesTheMouse(_vm.IsTradesVisible);
+            if (wantMouse == _idleMouseActive) return;
             _idleMouseActive = wantMouse;
-            _idleWheelTaken = wantWheel;
             if (wantMouse)
             {
                 _layer.ActiveCursor = CursorType.Default;
-                _layer.InputRestrictions.SetInputRestrictions(true, wantWheel ? InputUsageMask.Mouse : InputUsageMask.MouseButtons);
+                _layer.InputRestrictions.SetInputRestrictions(true, InputUsageMask.Mouse);
             }
             else
-                _layer.InputRestrictions.SetInputRestrictions(false, InputUsageMask.All);
+                _layer.InputRestrictions.SetInputRestrictions(false, InputUsageMask.MouseButtons);
         }
 
         private static string _keySource;
@@ -845,8 +800,7 @@ namespace TradeLord
         {
             if (_layer == null) return;
             _idleMouseActive = false;
-            _idleWheelTaken = false;
-            _layer.InputRestrictions.SetInputRestrictions(false, InputUsageMask.All);
+            _layer.InputRestrictions.SetInputRestrictions(false, InputUsageMask.MouseButtons);
         }
 
         private static void Setup(MapScreen map)
@@ -986,10 +940,9 @@ namespace TradeLord
             _setupCooldown = 0;
             _dead = false;
             _loggedArmed = false;
-            _loggedButtonMissing = false;
             _idleMouseActive = false;
-            _idleWheelTaken = false;
             _keySource = null;
+            CursorWatch.Forget();
         }
 
         internal static void Cleanup()
@@ -999,7 +952,7 @@ namespace TradeLord
             GauntletMovieIdentifier movie = _movie;
             LedgerPanelVM vm = _vm;
             MapView escape = _escape;
-            _mapScreen = null; _layer = null; _movie = null; _vm = null; _mapButton = null; _huntIn = 0;
+            _mapScreen = null; _layer = null; _movie = null; _vm = null;
             _escape = null;
             if (map != null && escape != null) { try { map.RemoveMapView(escape); } catch { } }
             if (layer != null)
@@ -1016,5 +969,164 @@ namespace TradeLord
             }
             if (vm != null) { try { vm.OnFinalize(); } catch { } }
         }
+    }
+
+    internal static class CursorWatch
+    {
+        private const float LongEnough = 3f;
+        private const float FarEnough = 0.25f;
+        private const float JustBefore = 1f;
+        private const int MostTimesTold = 12;
+
+        private static bool _showing;
+        private static bool _told;
+        private static bool _dead;
+        private static float _since;
+        private static float _travelled;
+        private static Vec2 _was;
+        private static int _timesTold;
+        private static string _lastButton;
+        private static float _lastButtonAt;
+
+        internal static void Forget()
+        {
+            _showing = false;
+            _told = false;
+            _dead = false;
+            _timesTold = 0;
+            _lastButton = null;
+        }
+
+        internal static void Watch(MapScreen map, ScreenLayer ours)
+        {
+            if (_dead || map == null) return;
+            try { WatchCore(map, ours); }
+            catch (Exception e)
+            {
+                _dead = true;
+                Log.Error(e, "map cursor watch (stopped for this campaign, the map itself is unaffected)");
+            }
+        }
+
+        private static void WatchCore(MapScreen map, ScreenLayer ours)
+        {
+            float now = TaleWorlds.Engine.Time.ApplicationTime;
+            NoteButtons(now);
+            ScreenLayer top = ScreenManager.FirstHitLayer ?? map.SceneLayer;
+            if (top == null || top.ActiveCursor != CursorType.Disabled)
+            {
+                if (_showing && _told)
+                    Log.Write("map cursor: the forbidden sign went away after " + Seconds(now - _since) +
+                              " seconds, " + WhatWasPressed(now));
+                _showing = false;
+                _told = false;
+                return;
+            }
+            Vec2 at = Input.MousePositionPixel;
+            if (!_showing)
+            {
+                _showing = true;
+                _told = false;
+                _since = now;
+                _travelled = 0f;
+                _was = at;
+                _lastButton = null;
+                return;
+            }
+            _travelled += at.Distance(_was);
+            _was = at;
+            if (_told || _timesTold >= MostTimesTold) return;
+            if (now - _since < LongEnough || _travelled < FarEnough * Input.Resolution.x) return;
+            _told = true;
+            _timesTold++;
+            Log.WriteMany(WhatTheMapIsDoing(map, top, ours, now - _since));
+        }
+
+        private static void NoteButtons(float now)
+        {
+            string pressed = Input.IsKeyPressed(InputKey.RightMouseButton) ? "right mouse button"
+                : Input.IsKeyPressed(InputKey.LeftMouseButton) ? "left mouse button"
+                : Input.IsKeyPressed(InputKey.MiddleMouseButton) ? "middle mouse button" : null;
+            if (pressed == null) return;
+            _lastButton = pressed;
+            _lastButtonAt = now;
+        }
+
+        private static string WhatWasPressed(float now) =>
+            _lastButton != null && now - _lastButtonAt <= JustBefore
+                ? "right after the " + _lastButton + " went down"
+                : "with no mouse button pressed in the second before";
+
+        private static List<string> WhatTheMapIsDoing(MapScreen map, ScreenLayer top, ScreenLayer ours, float held)
+        {
+            return new List<string>
+            {
+                "map cursor: the forbidden sign has stayed on for " + Seconds(held) + " seconds while the mouse moved " +
+                    (int)_travelled + " pixels; the game drew it from " + Named(ScreenManager.FirstHitLayer) +
+                    ", and the campaign map's own layer asks for " + map.SceneLayer?.ActiveCursor,
+                "  under the mouse: " + UnderTheMouse(map),
+                "  your party: " + YourParty(),
+                "  the map: " + TheMap(map),
+                "  input: " + WhoHasTheInput(map, ours)
+            };
+        }
+
+        private static string UnderTheMouse(MapScreen map)
+        {
+            var scene = map.SceneLayer;
+            if (scene?.SceneView == null) return "the map has no scene to look into";
+            Vec3 near = Vec3.Zero, far = Vec3.Zero;
+            scene.SceneView.TranslateMouse(ref near, ref far, -1f);
+            PathFaceRecord face = PathFaceRecord.NullFaceRecord;
+            map.GetCursorIntersectionPoint(ref near, ref far, out _, out Vec3 point, ref face, out bool onLand);
+            bool reach = Helpers.NavigationHelper.CanPlayerNavigateToPosition(new CampaignVec2(point.AsVec2, onLand), out _);
+            return "the ground at " + Spot(point.AsVec2) + (onLand ? " on land" : " at sea") +
+                   (face.IsValid() ? "" : " with no path face") +
+                   ", and the game's own check says your party " + (reach ? "can" : "cannot") + " travel there";
+        }
+
+        private static string YourParty()
+        {
+            MobileParty party = MobileParty.MainParty;
+            if (party == null) return "none";
+            bool reach = Helpers.NavigationHelper.CanPlayerNavigateToPosition(party.Position, out _);
+            return (party.IsCurrentlyAtSea ? "at sea" : "on land") + " at " + Spot(party.Position.ToVec2()) +
+                   (party.CurrentSettlement != null ? ", inside " + party.CurrentSettlement.Name : "") +
+                   (party.Army != null ? ", in an army" : "") +
+                   (Hero.MainHero?.IsPrisoner == true ? ", held prisoner" : "") +
+                   (TaleWorlds.CampaignSystem.Encounters.PlayerEncounter.Current != null ? ", in an encounter" : "") +
+                   ", and the same check on the spot it stands on says " + (reach ? "it can be there" : "it cannot");
+        }
+
+        private static string TheMap(MapScreen map) =>
+            (map.IsReady ? "ready" : "not ready") +
+            (map.IsInMenu ? ", a menu is open" : "") +
+            (map.IsEscapeMenuOpened ? ", the escape menu is open" : "") +
+            (TaleWorlds.Core.GameStateManager.Current?.ActiveStateDisabledByUser == true ? ", held still by another window" : "") +
+            (map.MapCameraView?.CameraAnimationInProgress == true ? ", the camera is on a set move" : "") +
+            (ScreenManager.TopScreen == map ? "" : ", not the screen on top");
+
+        private static string WhoHasTheInput(MapScreen map, ScreenLayer ours)
+        {
+            var showing = new List<string>();
+            List<ScreenLayer> layers = ScreenManager.SortedLayers;
+            for (int i = 0; layers != null && i < layers.Count; i++)
+                if (layers[i] != null && layers[i].IsActive && layers[i].InputRestrictions.MouseVisibility)
+                    showing.Add(Named(layers[i]));
+            var scene = map.SceneLayer;
+            return "keyboard on " + Named(ScreenManager.FocusedLayer) +
+                   ", asking the game to show the mouse: " + (showing.Count == 0 ? "none" : string.Join(", ", showing.ToArray())) +
+                   ", the map's own layer " + (scene != null && scene.IsHitThisFrame ? "gets" : "does not get") +
+                   " the mouse this frame" +
+                   (ours == null ? "" : ", TradeLord's layer takes " + ours.InputRestrictions.InputUsageMask +
+                                        (ours.InputRestrictions.MouseVisibility ? " and asks to show the mouse" : " and leaves the mouse alone"));
+        }
+
+        private static string Named(ScreenLayer layer) =>
+            layer == null ? "nothing" : layer.Name + " (" + layer.GetType().Name + ", order " + layer.InputRestrictions.Order + ")";
+
+        private static string Spot(Vec2 at) => (int)at.x + ", " + (int)at.y;
+
+        private static string Seconds(float s) => s.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
     }
 }
