@@ -78,12 +78,14 @@ namespace TradeLord
             Guard.Run("Tick.Counter", TradeActionBehavior.WatchTheTradeScreen);
             Guard.Run("Tick.Parley", Parley.HangWhereTheBandAnswers);
             LedgerPanel.Tick();
+            Guard.Run("Tick.CursorWatch", CursorWatch.Tick);
         }
 
         public override void OnGameEnd(Game game)
         {
             base.OnGameEnd(game);
             Guard.Run("GameEnd.Panel", LedgerPanel.Reset);
+            Guard.Run("GameEnd.CursorWatch", CursorWatch.Forget);
             Guard.Run("GameEnd.Travel", Travel.Forget);
             Guard.Run("GameEnd.Bulk", Bulk.Forget);
             Guard.Run("GameEnd.ScreenMarkets", ScreenMarkets.Forget);

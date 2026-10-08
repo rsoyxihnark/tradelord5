@@ -6,15 +6,19 @@ namespace TradeLord.Tests
     public class MapButtonTests
     {
         [Fact]
-        public void A_window_open_over_the_map_takes_the_mouse_wherever_the_cursor_is()
+        public void A_window_open_over_the_map_shows_the_mouse_and_takes_the_wheel_wherever_the_cursor_is()
         {
-            Assert.True(MapButton.TakesTheMouse(windowOpen: true));
+            var takes = MapButton.LayerTakes(windowOpen: true);
+            Assert.True(takes.showsMouse);
+            Assert.True(takes.takesWheel);
         }
 
         [Fact]
-        public void With_no_window_open_the_map_layer_takes_nothing_beyond_the_clicks_the_game_finds_on_the_button()
+        public void With_no_window_open_TradeLords_layer_never_shows_the_mouse_and_leaves_the_wheel_to_the_map()
         {
-            Assert.False(MapButton.TakesTheMouse(windowOpen: false));
+            var takes = MapButton.LayerTakes(windowOpen: false);
+            Assert.False(takes.showsMouse);
+            Assert.False(takes.takesWheel);
         }
     }
 }

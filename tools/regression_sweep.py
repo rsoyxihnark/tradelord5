@@ -1830,12 +1830,13 @@ chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has 
     method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty"))
 chk("1.3.11", "the panel hands back the movie and the mouse, and honours the modifier keys",
     "layer.ReleaseMovie(movie)" in method_body(S['Panel.cs'], "internal static void Cleanup") and
-    "SetInputRestrictions(false, InputUsageMask.MouseButtons)" in
-    method_body(S['Panel.cs'], "private static void ApplyIdleInput") and
-    (lambda b: ordered(b, "if (wantMouse)", "_layer.ActiveCursor = CursorType.Default;",
-                       "SetInputRestrictions(true, InputUsageMask.Mouse)",
-                       "else", "SetInputRestrictions(false, InputUsageMask.MouseButtons)"))
-    (method_body(S['Panel.cs'], "private static void UpdateIdleInput")) and
+    "TakeTheMouse(false);" in method_body(S['Panel.cs'], "private static void ApplyIdleInput") and
+    "TakeTheMouse(open);" in method_body(S['Panel.cs'], "private static void UpdateIdleInput") and
+    (lambda b: ordered(b, "var takes = MapButton.LayerTakes(windowOpen);",
+                       "if (takes.showsMouse) _layer.ActiveCursor = CursorType.Default;",
+                       "SetInputRestrictions(takes.showsMouse,",
+                       "takes.takesWheel ? InputUsageMask.Mouse : InputUsageMask.MouseButtons);"))
+    (method_body(S['Panel.cs'], "private static void TakeTheMouse")) and
     "SetInputRestrictions(true, InputUsageMask.Mouse)" in
     method_body(S['Panel.cs'], "private static void Show") and
     "if (!Input.IsKeyDown(_modifiers[i].left) && !Input.IsKeyDown(_modifiers[i].right)) return false;" in
@@ -2910,10 +2911,10 @@ chk("1.6.7", "the panel's own pin list, not the map's marker state, decides what
 chk("1.90.1", "the map button takes clicks over the button and nowhere else, with no region of TradeLord's own standing in for where the game finds it",
     "OverTheStripInstead" not in S['Rules.cs'] and "OverAssumedBounds" not in S['Panel.cs'] and
     "0.90f" not in S['Rules.cs'] and
-    "0.90f" not in method_body(S['Panel.cs'], "private static void UpdateIdleInput") and
+    all("0.90f" not in method_body(S['Panel.cs'], m) and "Input." not in method_body(S['Panel.cs'], m)
+        for m in ("private static void UpdateIdleInput", "private static void TakeTheMouse")) and
     "OverButtonBounds" not in S['Panel.cs'] and "MousePositionRanged" not in S['Panel.cs'] and
-    "Input." not in method_body(S['Panel.cs'], "private static void UpdateIdleInput") and
-    "With_no_window_open_the_map_layer_takes_nothing_beyond_the_clicks_the_game_finds_on_the_button" in MAPBUTTONTESTS)
+    "With_no_window_open_TradeLords_layer_never_shows_the_mouse_and_leaves_the_wheel_to_the_map" in MAPBUTTONTESTS)
 chk("1.6.8", "the food reserve is spent only on goods the sell rules would actually move",
     (lambda b: ordered(b, "said.Why = Block.NotTradable; return said;",
                        "int reserved = DrawKeepBack(amount - said.KeepCount, facts.FoodHeld, out bool fed);"))
@@ -2928,13 +2929,17 @@ chk("1.6.9", "every setting name, hint and group heading carries a translation m
 chk("1.6.10", "the game's own hit test of the button decides where it takes clicks, so it holds at any aspect ratio and any interface scale",
     "RealScreenResolution" not in S['Panel.cs'] and "ScaledSuggestedWidth" not in S['Panel.cs'] and
     "ScaledMarginRight" not in S['Panel.cs'] and "internal static bool Over(" not in S['Rules.cs'] and
+    'new GauntletLayer("TradeLordPanel", 250)' in method_body(S['Panel.cs'], "private static void Setup") and
+    "takes.takesWheel ? InputUsageMask.Mouse : InputUsageMask.MouseButtons" in
+        method_body(S['Panel.cs'], "private static void TakeTheMouse"))
+chk("1.6.10", "the button keeps a fixed width, so where the game finds it is the button itself and never a strip across the map",
     re.search(r'Id="TradeLordMapButton"[\s\S]{0,400}?WidthSizePolicy="Fixed"', PREFAB) is not None)
 chk("1.6.10", "the prefab carries the id the checks find the map button by, and the panel no longer looks the button up itself",
     PREFAB.count('Id="TradeLordMapButton"') == 1 and "TradeLordMapButton" not in S['Panel.cs'])
-chk("1.6.10", "the button still sits flush right and centred, which is what the reserved region assumes",
+chk("1.6.10", "the button still sits flush right and centred on the campaign map",
     re.search(r'Id="TradeLordMapButton"[\s\S]{0,400}?HorizontalAlignment="Right"', PREFAB) is not None and
     re.search(r'Id="TradeLordMapButton"[\s\S]{0,400}?VerticalAlignment="Center"', PREFAB) is not None)
-chk("1.90.1", "a button the game has not laid out yet takes nothing, because the panel never hunts for the button and reserves no part of the map itself",
+chk("1.90.1", "the panel never hunts for the button or reserves a part of the map, and its layer takes only clicks from the moment it is added",
     "FindMapButton" not in S['Panel.cs'] and "_huntIn" not in S['Panel.cs'] and
     "GetAllChildrenAndThisRecursive" not in S['Panel.cs'] and
     ordered(method_body(S['Panel.cs'], "private static void Setup"), "_mapScreen.AddLayer(_layer);", "ApplyIdleInput();"))
@@ -3451,9 +3456,10 @@ def quiet_automation_leaves_the_cargo_warning_alone():
 
 def a_second_campaign_starts_the_panel_from_scratch():
     reset = method_body(S['Panel.cs'], "internal static void Reset")
-    return all(f in reset for f in
-               ("_loggedArmed = false;", "_idleMouseActive = false;",
-                "_keySource = null;", "CursorWatch.Forget();"))
+    return (all(f in reset for f in
+                ("_loggedArmed = false;", "_idleMouseActive = false;", "_keySource = null;"))
+            and 'Guard.Run("GameEnd.CursorWatch", CursorWatch.Forget);' in
+                method_body(S['SubModule.cs'], "public override void OnGameEnd"))
 
 def the_item_list_reading_is_covered_by_tests_the_build_runs():
     return ("A_name_with_a_space_in_it_is_kept_whole" in ROUTETESTS and
@@ -8664,19 +8670,24 @@ chk("1.71.2", "which band a route row falls in, and where in the list it ranks, 
     which_band_a_route_row_falls_in_is_worked_out_where_a_test_can_ask())
 
 
-def when_the_map_layer_takes_the_mouse_is_worked_out_where_a_test_can_ask():
+def what_tradelords_layer_takes_is_worked_out_where_a_test_can_ask():
     r = S['Rules.cs']
     return ("internal static class MapButton" in r
-            and "internal static bool TakesTheMouse(bool windowOpen) => windowOpen;" in r
+            and "internal static (bool showsMouse, bool takesWheel) LayerTakes(bool windowOpen) => (windowOpen, windowOpen);" in r
             and "TaleWorlds" not in r and "Widget" not in r
             and "internal static bool Over(" not in r and "Pad = " not in r
+            and "var takes = MapButton.LayerTakes(windowOpen);" in
+                method_body(S['Panel.cs'], "private static void TakeTheMouse")
+            and S['Panel.cs'].count("MapButton.LayerTakes(") == 1
             and all(one in MAPBUTTONTESTS for one in
-                    ("A_window_open_over_the_map_takes_the_mouse_wherever_the_cursor_is",
-                     "With_no_window_open_the_map_layer_takes_nothing_beyond_the_clicks_the_game_finds_on_the_button")))
+                    ("A_window_open_over_the_map_shows_the_mouse_and_takes_the_wheel_wherever_the_cursor_is",
+                     "With_no_window_open_TradeLords_layer_never_shows_the_mouse_and_leaves_the_wheel_to_the_map",
+                     "Assert.False(takes.showsMouse);", "Assert.False(takes.takesWheel);",
+                     "Assert.True(takes.showsMouse);", "Assert.True(takes.takesWheel);")))
 
 
-chk("1.71.2", "when the map layer takes the mouse is worked out where a test can ask, and where the button catches clicks is left to the game",
-    when_the_map_layer_takes_the_mouse_is_worked_out_where_a_test_can_ask())
+chk("1.71.2", "whether TradeLord's layer shows the mouse and takes the wheel is worked out where a test can ask, and where the button catches clicks is left to the game",
+    what_tradelords_layer_takes_is_worked_out_where_a_test_can_ask())
 
 
 def which_of_the_twins_wins_is_worked_out_where_a_test_can_ask():
@@ -10080,14 +10091,15 @@ def a_window_a_map_button_opens_can_be_reached_with_the_mouse():
     idle = method_body(S['Panel.cs'], "private static void UpdateIdleInput")
     return ('ExecuteOpenTrades' in opens
             and PREFAB.count('Command.Click="ExecuteOpenTrades"') == 1
-            and 'internal static bool TakesTheMouse(bool windowOpen) => windowOpen;' in S['Rules.cs']
-            and 'bool wantMouse = MapButton.TakesTheMouse(_vm.IsTradesVisible);' in idle
+            and 'internal static (bool showsMouse, bool takesWheel) LayerTakes(bool windowOpen) => (windowOpen, windowOpen);'
+                in S['Rules.cs']
+            and ordered(idle, 'bool open = _vm.IsTradesVisible;', 'TakeTheMouse(open);')
             and 'OverButtonBounds' not in S['Panel.cs']
-            and S['Panel.cs'].count('MapButton.TakesTheMouse') == 1
+            and S['Panel.cs'].count('MapButton.LayerTakes(') == 1
             and 'if (_vm.IsTradesVisible && map.IsEscapeMenuOpened) _vm.IsTradesVisible = false;'
                 in S['Panel.cs']
-            and 'MapButton.TakesTheMouse(windowOpen: true' in T['MapButtonTests.cs']
-            and 'MapButton.TakesTheMouse(windowOpen: false' in T['MapButtonTests.cs'])
+            and 'MapButton.LayerTakes(windowOpen: true' in T['MapButtonTests.cs']
+            and 'MapButton.LayerTakes(windowOpen: false' in T['MapButtonTests.cs'])
 
 
 chk("1.80.2", "a window a button on the campaign map opens holds the mouse while it is up, wherever the cursor is, so it can be scrolled and closed, and it gives the mouse back when the escape menu opens",
@@ -17918,16 +17930,19 @@ chk("1.103.3", "a Recent trades row is as tall as its tallest text, never as tal
 
 def the_recent_trades_window_takes_the_mouse_wheel():
     idle = method_body(S['Panel.cs'], "private static void UpdateIdleInput")
-    return (idle
-            and ordered(idle, "if (wantMouse == _idleMouseActive) return;",
-                        "_idleMouseActive = wantMouse;",
-                        "SetInputRestrictions(true, InputUsageMask.Mouse)",
-                        "SetInputRestrictions(false, InputUsageMask.MouseButtons)")
-            and "SetInputRestrictions(false, InputUsageMask.MouseButtons)" in
-                method_body(S['Panel.cs'], "private static void ApplyIdleInput")
+    takes = method_body(S['Panel.cs'], "private static void TakeTheMouse")
+    return (idle and takes
+            and ordered(idle, "if (open == _idleMouseActive) return;",
+                        "_idleMouseActive = open;",
+                        "TakeTheMouse(open);")
+            and "takes.takesWheel ? InputUsageMask.Mouse : InputUsageMask.MouseButtons" in takes
+            and "TakeTheMouse(false);" in method_body(S['Panel.cs'], "private static void ApplyIdleInput")
             and "_idleWheelTaken" not in S['Panel.cs']
             and S['Panel.cs'].count("_idleMouseActive = false;") == 2
-            and "A_window_open_over_the_map_takes_the_mouse_wherever_the_cursor_is" in T['MapButtonTests.cs'])
+            and "A_window_open_over_the_map_shows_the_mouse_and_takes_the_wheel_wherever_the_cursor_is"
+                in T['MapButtonTests.cs']
+            and "Assert.True(takes.takesWheel);" in T['MapButtonTests.cs']
+            and "Assert.False(takes.takesWheel);" in T['MapButtonTests.cs'])
 
 chk("1.103.3", "the mouse wheel scrolls the Recent trades window while it is open and zooms the map again once it closes, and the cursor over the map button takes only clicks",
     the_recent_trades_window_takes_the_mouse_wheel())
@@ -18429,42 +18444,179 @@ chk("1.103.8", "the source checks write UTF-8 before their first line, so a Turk
     the_source_checks_write_every_letter_the_same_on_every_machine())
 
 
-def the_map_layer_never_shows_the_mouse_while_no_window_is_open():
+def tradelords_layer_never_shows_the_mouse_while_no_window_is_open():
     p = S['Panel.cs']
-    idle = method_body(p, "private static void UpdateIdleInput")
-    return (idle
-            and ordered(idle, "if (wantMouse)", "SetInputRestrictions(true, InputUsageMask.Mouse)",
-                        "else", "SetInputRestrictions(false, InputUsageMask.MouseButtons)")
-            and "SetInputRestrictions(false, InputUsageMask.MouseButtons)" in
-                method_body(p, "private static void ApplyIdleInput")
-            and p.count("SetInputRestrictions(true") == 2
-            and p.count("SetInputRestrictions(true, InputUsageMask.Mouse)") == 2
-            and "SetInputRestrictions(true, InputUsageMask.Mouse)" in method_body(p, "private static void Show"))
+    takes = method_body(p, "private static void TakeTheMouse")
+    return (takes
+            and "TakeTheMouse(false);" in method_body(p, "private static void ApplyIdleInput")
+            and "TakeTheMouse(open);" in method_body(p, "private static void UpdateIdleInput")
+            and "SetInputRestrictions(takes.showsMouse," in takes
+            and p.count("SetInputRestrictions(true") == 1
+            and "SetInputRestrictions(true, InputUsageMask.Mouse)" in method_body(p, "private static void Show")
+            and "internal static (bool showsMouse, bool takesWheel) LayerTakes(bool windowOpen) => (windowOpen, windowOpen);"
+                in S['Rules.cs']
+            and "Assert.False(takes.showsMouse);" in T['MapButtonTests.cs'])
 
-chk("1.103.9", "while no TradeLord window is open the map layer takes only clicks and never asks the game to show the mouse, as the game's own map buttons never do",
-    the_map_layer_never_shows_the_mouse_while_no_window_is_open())
+chk("1.103.9", "while no TradeLord window is open TradeLord's layer takes only clicks and never asks the game to show the mouse, as the game's own map buttons never do",
+    tradelords_layer_never_shows_the_mouse_while_no_window_is_open())
+
+
+def cursor_watch():
+    return method_body(S['Panel.cs'], "internal static class CursorWatch")
 
 
 def the_map_cursor_watch_names_what_drew_a_forbidden_sign_that_stays_on():
-    p = S['Panel.cs']
-    watch = method_body(p, "internal static void Watch(MapScreen map, ScreenLayer ours)")
-    core = method_body(p, "private static void WatchCore(MapScreen map, ScreenLayer ours)")
-    under = method_body(p, "private static string UnderTheMouse(MapScreen map)")
-    return (watch and core and under
-            and "internal static class CursorWatch" in p
-            and ordered(watch, "if (_dead || map == null) return;", "try { WatchCore(map, ours); }",
-                        "catch (Exception e)", "_dead = true;")
-            and "ScreenLayer top = ScreenManager.FirstHitLayer ?? map.SceneLayer;" in core
-            and "top.ActiveCursor != CursorType.Disabled" in core
-            and ordered(core, "if (_told || _timesTold >= MostTimesTold) return;",
+    w = cursor_watch()
+    tick = method_body(w, "internal static void Tick()")
+    watch = method_body(w, "private static void Watch(float now, MapScreen map, ScreenLayer top)")
+    look = method_body(w, "private static Ground Look(MapScreen map)")
+    return (w and tick and watch and look
+            and ordered(tick, "if (_dead) return;", "try { TickCore(); }", "catch (Exception e)", "_dead = true;")
+            and "if (top == null || top.ActiveCursor != CursorType.Disabled)" in watch
+            and ordered(watch, "if (_told || _timesTold >= MostTimesTold) return;",
                         "if (now - _since < LongEnough || _travelled < FarEnough * Input.Resolution.x) return;",
-                        "Log.WriteMany(WhatTheMapIsDoing(map, top, ours, now - _since));")
-            and "Helpers.NavigationHelper.CanPlayerNavigateToPosition(new CampaignVec2(point.AsVec2, onLand), out _)" in under
-            and "CursorWatch.Watch(map, _layer);" in method_body(p, "private static void TickCore")
-            and "CursorWatch.Forget();" in method_body(p, "internal static void Reset"))
+                        "Log.WriteMany(WhatTheMapIsDoing(map, top, now, ground));")
+            and '"map cursor: the forbidden sign went away after "' in watch
+            and "bool reach = Helpers.NavigationHelper.CanPlayerNavigateToPosition(spot, out _);" in look)
 
 chk("1.103.9", "TradeLord.log writes down which layer drew a forbidden sign that stays on while the mouse moves, what the game's own reach check says under the mouse, and what made it go away",
     the_map_cursor_watch_names_what_drew_a_forbidden_sign_that_stays_on())
+
+
+def a_quick_right_click_writes_down_what_the_cursor_did_just_before_it():
+    w = cursor_watch()
+    keys = method_body(w, "private static void NoteKeys(float now, MapScreen map)")
+    return (keys
+            and ordered(keys, "if (Input.IsKeyPressed(InputKey.RightMouseButton))", "_rightDownAt = now;",
+                        "_beforeRight = Guard.Read(",
+                        "else if (_rightDownAt >= 0f && Input.IsKeyDown(InputKey.RightMouseButton))",
+                        "_rightMoved += Math.Abs(Input.MouseMoveX) + Math.Abs(Input.MouseMoveY);",
+                        "if (Input.IsKeyReleased(InputKey.RightMouseButton) && held <= QuickClick &&",
+                        "_rightMoved <= StillEnough && !_windowOpen && _clicksTold < MostClicksTold)",
+                        "Log.WriteMany(AQuickRightClick(map, held));")
+            and "private const float QuickClick = 0.4f;" in w
+            and "private const int MostClicksTold = 40;" in w
+            and 'TheSecondBefore(now) + "; the game " + (ScreenManager.GetMouseVisibility() ?' in w
+            and "ScreenManager.IsMouseCursorActive() || ScreenManager.IsMouseCursorHidden()" in w
+            and ordered(method_body(w, "private static void TickCore()"),
+                        "ScreenLayer top = ScreenManager.FirstHitLayer;", "Note(now, top, map.SceneLayer);",
+                        "NoteKeys(now, map);", "Watch(now, map, top);"))
+
+chk("1.103.10", "a quick right click on the campaign map, with no TradeLord window open, writes down what the game drew in the second before it, so a sign held on below what the game asks for is caught too",
+    a_quick_right_click_writes_down_what_the_cursor_did_just_before_it())
+
+
+def the_watch_spends_nothing_on_ground_your_party_really_cannot_cross():
+    w = cursor_watch()
+    watch = method_body(w, "private static void Watch(float now, MapScreen map, ScreenLayer top)")
+    look = method_body(w, "private static Ground Look(MapScreen map)")
+    return (watch and look
+            and ordered(watch, "if (_lookedAt >= 0f && now - _lookedAt < LookAgain) return;",
+                        'Ground ground = Guard.Read("map cursor watch: under the mouse", map, Look, Unread);',
+                        "if (ground.SignIsRight) return;", "_told = true;", "_timesTold++;")
+            and "bool? closed = (!face || (!atSea && !onLand)) ? true : atSea ? false : WalkingIsShut(spot);" in look
+            and "bool home = Helpers.NavigationHelper.CanPlayerNavigateToPosition(party.Position, out _);" in look
+            and "SignIsRight = !reach && closed == true && home" in look
+            and "GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Default)" in
+                method_body(w, "private static bool Shut(CampaignVec2 spot)")
+            and "catch { return null; }" in method_body(w, "private static bool? WalkingIsShut(CampaignVec2 spot)"))
+
+chk("1.103.10", "the forbidden sign over sea or ground your party really cannot cross is never written down while your party's own spot checks out, so the dozen notes go to the sign that is wrong",
+    the_watch_spends_nothing_on_ground_your_party_really_cannot_cross())
+
+
+def the_watch_only_reads_the_campaign_map():
+    w = cursor_watch()
+    look = method_body(w, "private static Ground Look(MapScreen map)")
+    return (w and look
+            and "view.RayCastForClosestEntityOrTerrain(near, far, out float distance, out Vec3 _)" in look
+            and all(touch not in w for touch in
+                    ("GetCursorIntersectionPoint", "ActiveCursor =", "SetInputRestrictions", "SetMouseVisible",
+                     "MapCursor", "IsFocusLayer", "TrySetFocus")))
+
+chk("1.103.10", "the map cursor watch casts a ray of its own and sets nothing, so it never changes where the campaign map thinks the mouse points",
+    the_watch_only_reads_the_campaign_map())
+
+
+def the_watch_says_what_ended_a_forbidden_sign():
+    w = cursor_watch()
+    tick = method_body(w, "private static void TickCore()")
+    left = method_body(w, "private static void Left(float now)")
+    did = method_body(w, "private static string WhatTheButtonsDid(float now)")
+    note = method_body(w, "private static void NoteButton(float now, InputKey button, string name)")
+    watch = method_body(w, "private static void Watch(float now, MapScreen map, ScreenLayer top)")
+    return (tick and left and did and note and watch
+            and ordered(tick, "if (map != _map)", "Left(now);", "_map = map;")
+            and '"map cursor: the campaign map was left after "' in left
+            and ordered(did, "Input.IsKeyDown(InputKey.RightMouseButton)",
+                        '"while the " + held + " mouse button was held down"', '"right after the " + _lastButton')
+            and ordered(note, "if (Input.IsKeyPressed(button))", '" mouse button went down"',
+                        "else if (Input.IsKeyReleased(button))", '" mouse button came up"')
+            and ordered(watch, "WhatTheButtonsDid(now)", '", and the game now draws " + Drawn(top)'))
+
+chk("1.103.10", "when the forbidden sign goes away the log says which mouse button was held or let go and what the game draws now, and leaving the map with the sign on is written down",
+    the_watch_says_what_ended_a_forbidden_sign())
+
+
+def the_mouse_outside_the_window_is_no_forbidden_sign():
+    w = cursor_watch()
+    return (w
+            and "ScreenManager.FirstHitLayer ??" not in w
+            and "if (top == null || top.ActiveCursor != CursorType.Disabled)" in
+                method_body(w, "private static void Watch(float now, MapScreen map, ScreenLayer top)")
+            and 'top == null ? "no cursor, with the mouse outside the game\'s window"' in w)
+
+chk("1.103.10", "with no layer under the mouse the game draws no cursor, so the mouse outside the game's window never counts as the forbidden sign",
+    the_mouse_outside_the_window_is_no_forbidden_sign())
+
+
+def every_part_of_a_cursor_note_is_read_on_its_own():
+    w = cursor_watch()
+    what = method_body(w, "private static List<string> WhatTheMapIsDoing(MapScreen map, ScreenLayer top, float now, Ground ground)")
+    return (what
+            and all('Guard.Read("map cursor watch: ' + part + '", map, ' + fn + ', "could not be read")' in what
+                    for part, fn in (("your party", "YourParty"), ("the map", "TheMap"), ("the input", "WhoHasTheInput")))
+            and w.count('Guard.Read("map cursor watch: under the mouse", map, Look, Unread)') == 2
+            and 'Guard.Read("map cursor watch: before a right click", now, BeforeTheClick, "could not be read")' in w
+            and "catch { return null; }" in method_body(w, "private static bool? WalkingIsShut(CampaignVec2 spot)"))
+
+chk("1.103.10", "every part of a map cursor note is read on its own, so one value that cannot be read leaves the rest of the note and the watch going",
+    every_part_of_a_cursor_note_is_read_on_its_own())
+
+
+def the_watch_runs_on_its_own():
+    p = S['Panel.cs']
+    panel = p[:p.index("internal static class CursorWatch")]
+    return ('Guard.Run("Tick.CursorWatch", CursorWatch.Tick);' in
+                method_body(S['SubModule.cs'], "protected override void OnApplicationTick")
+            and 'Guard.Run("GameEnd.CursorWatch", CursorWatch.Forget);' in
+                method_body(S['SubModule.cs'], "public override void OnGameEnd")
+            and "CursorWatch" not in panel
+            and "MapScreen map = ScreenManager.TopScreen as MapScreen;" in
+                method_body(cursor_watch(), "private static void TickCore()"))
+
+chk("1.103.10", "the map cursor watch runs from TradeLord's own tick, so it keeps watching when the ledger panel or its buttons could not be set up",
+    the_watch_runs_on_its_own())
+
+
+def a_cursor_note_says_what_else_was_going_on():
+    w = cursor_watch()
+    the_map = method_body(w, "private static string TheMap(MapScreen map)")
+    inp = method_body(w, "private static string WhoHasTheInput(MapScreen map)")
+    what = method_body(w, "private static List<string> WhatTheMapIsDoing(MapScreen map, ScreenLayer top, float now, Ground ground)")
+    return (the_map and inp and what
+            and all(x in the_map for x in ("PartyBase.MainParty?.IsValid != true",
+                                           "map.MapCameraView?.CameraAnimationInProgress == true",
+                                           "if (!map.IsReady)", "Campaign.Current?.GameStarted != true"))
+            and all(x in inp for x in ("if (layer.HitTest()) under.Add(layer.Name + \" \" + layer.ActiveCursor);",
+                                       "ScreenManager.GetMouseVisibility()", "EngineShowsTheMouse()",
+                                       "Input.IsGamepadActive"))
+            and '", " + TheHotkey(now)' in what
+            and "if (Input.IsKeyReleased(LedgerPanel.PanelKey())) _hotkeyAt = now;" in
+                method_body(w, "private static void NoteKeys(float now, MapScreen map)"))
+
+chk("1.103.10", "a map cursor note says whether the map still works out the cursor, which layers lie under the mouse, whether the mouse is shown, and when the ledger panel hotkey was let go",
+    a_cursor_note_says_what_else_was_going_on())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

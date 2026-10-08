@@ -1,9 +1,23 @@
 # Changelog
 
+## 1.103.10
+
+- TradeLord.log now writes down what the campaign map's cursor was doing when you give the map a quick right click
+- TradeLord.log no longer writes down the forbidden sign over sea or ground your party really cannot cross
+- TradeLord.log now says which mouse button was held down or let go when the forbidden sign went away
+- TradeLord.log now notes when you leave the campaign map while the forbidden sign is still under the mouse
+- TradeLord.log now keeps watching the forbidden sign even when the ledger panel could not be set up
+- TradeLord.log's forbidden sign notes now say whether the campaign map was still working out the cursor
+- TradeLord.log's forbidden sign notes now name everything under the mouse and say whether the mouse was shown
+- TradeLord.log's forbidden sign notes now say when the Ledger panel hotkey (map screen) was last let go
+- TradeLord.log's forbidden sign notes now only look at the campaign map and change nothing on it
+- Fixed one unreadable detail stopping the forbidden sign notes in TradeLord.log for the rest of a campaign
+- Fixed TradeLord.log counting the forbidden sign as still on while the mouse was outside the game's window
+
 ## 1.103.9
 
-- Fixed the mouse pointer staying on screen while you turn the camera with the right mouse button right beside the TradeLord button
-- TradeLord.log now writes down what the campaign map was doing whenever the forbidden sign stays under the mouse as you move it
+- Fixed the mouse pointer staying on screen as you turn the camera with the right mouse button near the TradeLord or Recent trades button
+- TradeLord.log now writes down what the campaign map was doing when the forbidden sign stays on for a few seconds as you move the mouse
 
 ## 1.103.8
 
