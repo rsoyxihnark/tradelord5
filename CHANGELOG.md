@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.103.9
+
+- Fixed the mouse pointer staying on screen while you turn the camera with the right mouse button right beside the TradeLord button
+- TradeLord.log now writes down what the campaign map was doing whenever the forbidden sign stays under the mouse as you move it
+
 ## 1.103.8
 
 - Fixed TradeLord leaving the villagers' offer to you when it held gear within Sell loot up to tier, such as a Commoner Tunic
