@@ -175,7 +175,7 @@ namespace TradeLord.Compat
 
             var versions = new List<string> { BuiltAgainst() };
             foreach (string v in args) if (!versions.Contains(v)) versions.Add(v);
-            if (versions.Count == 1)
+            if (args.Length == 0)
             {
                 Console.WriteLine("usage: dotnet run --project tools/compat -- <game version> [more versions]");
                 Console.WriteLine("       the version in src/TradeLord.csproj is always the baseline");
@@ -202,8 +202,9 @@ namespace TradeLord.Compat
             }
 
             Console.WriteLine();
-            Console.WriteLine("baseline " + versions[0] + ", compared against "
-                              + string.Join(", ", versions.Skip(1)));
+            Console.WriteLine("baseline " + versions[0] + (versions.Count == 1
+                ? ", the one version checked"
+                : ", compared against " + string.Join(", ", versions.Skip(1))));
             Console.WriteLine();
 
             CheckAssemblyIdentity(versions);
