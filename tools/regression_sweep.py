@@ -79,7 +79,6 @@ WORKFLOW = io.open('.github/workflows/build.yml', encoding='utf-8').read()
 PROJ = [io.open(f, encoding='utf-8').read() for f in
         ['src/TradeLord.csproj', 'mcm/TradeLord.MCM.csproj']]
 PREFAB = io.open('TradeLord/GUI/Prefabs/TradeLordPanel.xml', encoding='utf-8').read()
-GAME_VERSION_BETA = '1.5.3.122374'
 COMPAT = io.open('tools/compat/Program.cs', encoding='utf-8').read()
 SWEEP = io.open('tools/regression_sweep.py', encoding='utf-8').read()
 NEXUS = io.open('tools/nexus_changelog.py', encoding='utf-8').read()
@@ -232,21 +231,22 @@ def refusal_reasons_are_named():
     phrase = method_body(S['Reasons.cs'], 'internal static TextObject Phrase')
     return promised <= set(re.findall(r'case Block\.(\w+):', phrase))
 
-def projects_pin_one_reference_assembly():
-    used = set(re.findall(r'"Bannerlord\.ReferenceAssemblies" Version="([0-9.]+)"', "\n".join(PROJ)))
-    return len(PROJ) == 2 and len(used) == 1
+def pinned_reference_assemblies():
+    return set(re.findall(r'"Bannerlord\.ReferenceAssemblies" Version="([0-9][0-9.]*(?:-beta)?)"',
+                          "\n".join(PROJ)))
 
-def the_readme_names_the_game_versions_the_mod_was_checked_against():
-    used = set(re.findall(r'"Bannerlord\.ReferenceAssemblies" Version="([0-9.]+)"', "\n".join(PROJ)))
+def projects_pin_one_reference_assembly():
+    return len(PROJ) == 2 and len(pinned_reference_assemblies()) == 1
+
+def the_readme_names_the_one_game_version_the_mod_is_built_on():
+    used = pinned_reference_assemblies()
     if len(used) != 1:
         return False
-    built = used.pop()
-    also = GAME_VERSION_BETA
-    supported = 'The mod is supported on ' + built + ' and ' + also
-    return (README.count(built) >= 2
-            and README.count(also) >= 2
-            and 'Built on Bannerlord ' + built in README
-            and README.count(supported) == 2)
+    built = used.pop().split('-')[0]
+    supported = 'The mod is supported on ' + built + ' only'
+    return ('Built on Bannerlord ' + built + '.' in README
+            and README.count(supported) == 2
+            and len(re.findall(r'supported on \d', README)) == 2)
 
 def one_hard_dependency():
     required = re.findall(r'<DependedModuleMetadata id="([^"]+)" order="[^"]+" optional="false"/>',
@@ -2442,8 +2442,8 @@ chk("1.5.3", "every declared Harmony patch is installed",
     every_declared_patch_is_installed())
 chk("1.5.3", "both projects pin the same reference-assembly version",
     projects_pin_one_reference_assembly())
-chk("1.30.2", "the feature list and what it needs both name the game version the mod is built on and the beta it also runs on",
-    the_readme_names_the_game_versions_the_mod_was_checked_against())
+chk("1.30.2", "the feature list and what it needs both name the one game version the mod is built on and supported on",
+    the_readme_names_the_one_game_version_the_mod_is_built_on())
 chk("1.5.3", "the manifest declares exactly one required dependency, Harmony",
     one_hard_dependency())
 chk("1.5.3", "the release workflow reads its version from SubModule.xml",
@@ -3259,9 +3259,10 @@ chk("1.6.22", "a menu id the mod does not guard fails the run, and a guarded one
     a_menu_id_the_mod_does_not_guard_fails_the_run())
 chk("1.6.22", "with no game install named, the menu-id check is skipped rather than failed",
     the_menu_id_check_is_skipped_rather_than_failed_when_unset())
-chk("1.34.0", "the build runs the compatibility tool, on the built assemblies, against the other game version the feature list claims",
-    "dotnet run --project tools/compat" in WORKFLOW and
-    GAME_VERSION_BETA + "-beta" in WORKFLOW and
+chk("1.34.0", "the build runs the compatibility tool, on the built assemblies, against the one game version the feature list claims",
+    len(pinned_reference_assemblies()) == 1 and
+    "dotnet run --project tools/compat -c Release -- " + min(pinned_reference_assemblies() or {""}) + "\n" in WORKFLOW and
+    "if (args.Length == 0)" in COMPAT and
     WORKFLOW.index("dotnet build mcm/TradeLord.MCM.csproj") <
     WORKFLOW.index("dotnet run --project tools/compat") <
     WORKFLOW.index("Assemble the module folder"))
