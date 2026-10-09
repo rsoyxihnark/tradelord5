@@ -18489,7 +18489,7 @@ def the_map_cursor_watch_names_what_drew_a_forbidden_sign_that_stays_on():
     return (w and tick and watch and look
             and ordered(tick, "if (_dead) return;", "try { TickCore(); }", "catch (Exception e)", "_dead = true;")
             and "if (top == null || top.ActiveCursor != CursorType.Disabled)" in watch
-            and ordered(watch, "if (_told || _timesTold >= MostTimesTold) return;",
+            and ordered(watch, "if (_told) return;",
                         "if (now - _since < LongEnough || _travelled < FarEnough * Input.Resolution.x) return;",
                         "Log.WriteMany(WhatTheMapIsDoing(map, top, now, ground));")
             and '"map cursor: the forbidden sign went away after "' in watch
@@ -18508,10 +18508,9 @@ def a_quick_right_click_writes_down_what_the_cursor_did_just_before_it():
                         "else if (_rightDownAt >= 0f && Input.IsKeyDown(InputKey.RightMouseButton))",
                         "_rightMoved += Math.Abs(Input.MouseMoveX) + Math.Abs(Input.MouseMoveY);",
                         "if (Input.IsKeyReleased(InputKey.RightMouseButton) && held <= QuickClick &&",
-                        "_rightMoved <= StillEnough && !_windowOpen && _clicksTold < MostClicksTold)",
+                        "_rightMoved <= StillEnough && !_windowOpen)",
                         "Log.WriteMany(AQuickRightClick(map, held));")
             and "private const float QuickClick = 0.4f;" in w
-            and "private const int MostClicksTold = 40;" in w
             and 'TheSecondBefore(now) + "; the game " + (ScreenManager.GetMouseVisibility() ?' in w
             and "ScreenManager.IsMouseCursorActive() || ScreenManager.IsMouseCursorHidden()" in w
             and ordered(method_body(w, "private static void TickCore()"),
@@ -18529,7 +18528,8 @@ def the_watch_spends_nothing_on_ground_your_party_really_cannot_cross():
     return (watch and look
             and ordered(watch, "if (_lookedAt >= 0f && now - _lookedAt < LookAgain) return;",
                         'Ground ground = Guard.Read("map cursor watch: under the mouse", map, Look, Unread);',
-                        "if (ground.SignIsRight) return;", "_told = true;", "_timesTold++;")
+                        "if (ground.SignIsRight) return;", "_told = true;",
+                        "Log.WriteMany(WhatTheMapIsDoing(map, top, now, ground));")
             and "bool? closed = (!face || (!atSea && !onLand)) ? true : atSea ? false : WalkingIsShut(spot);" in look
             and "bool home = Helpers.NavigationHelper.CanPlayerNavigateToPosition(party.Position, out _);" in look
             and "SignIsRight = !reach && closed == true && home" in look
@@ -18537,7 +18537,7 @@ def the_watch_spends_nothing_on_ground_your_party_really_cannot_cross():
                 method_body(w, "private static bool Shut(CampaignVec2 spot)")
             and "catch { return null; }" in method_body(w, "private static bool? WalkingIsShut(CampaignVec2 spot)"))
 
-chk("1.103.10", "the forbidden sign over sea or ground your party really cannot cross is never written down while your party's own spot checks out, so the dozen notes go to the sign that is wrong",
+chk("1.103.10", "the forbidden sign over sea or ground your party really cannot cross is never written down while your party's own spot checks out, so the notes go to the sign that is wrong",
     the_watch_spends_nothing_on_ground_your_party_really_cannot_cross())
 
 
@@ -18633,6 +18633,18 @@ def a_cursor_note_says_what_else_was_going_on():
 
 chk("1.103.10", "a map cursor note says whether the map still works out the cursor, which layers lie under the mouse, whether the mouse is shown, and when the ledger panel hotkey was let go",
     a_cursor_note_says_what_else_was_going_on())
+
+
+def the_watch_keeps_no_count_of_its_notes():
+    w = cursor_watch()
+    return (w
+            and all(count not in w for count in
+                    ("MostTimesTold", "_timesTold", "MostClicksTold", "_clicksTold", "MostRunsKept"))
+            and "while (_runs.Count > 1 && _runs[1].From <= now - JustBefore)" in
+                method_body(w, "private static void Note(float now, ScreenLayer top, ScreenLayer map)"))
+
+chk("1.103.11", "the map cursor watch keeps no count of its notes, so every stretch of a wrong forbidden sign and every quick right click is written down, with the whole second before it",
+    the_watch_keeps_no_count_of_its_notes())
 
 
 
