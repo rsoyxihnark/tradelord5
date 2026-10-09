@@ -247,7 +247,7 @@
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM, with a Reset button at the top of it that puts every setting back to the value TradeLord ships with and empties your four item lists
 - ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting
 - ✅ Its trade messages, ledger panel, price tooltips, town menu entries, the lines it adds when you meet a caravan or a band of bandits, and the settings screen itself all take the new language the moment you pick it, with no restart and no reload
-- ✅ Built on Bannerlord 1.4.8.119303. The mod is supported on 1.4.8.119303 and 1.5.3.122374
+- ✅ Built on Bannerlord 1.5.4.123627. The mod is supported on 1.5.4.123627 only
 - ✅ Enable extended debug logging, on out of the box, one switch for everything TradeLord writes about its own working in `TradeLord.log`
 - ✅ The same switch writes what the market you are standing in pays and charges for every good you carry, read four ways before anything is traded, named alongside the price model the game is running and any other mod changing it
 - ✅ The same switch writes what it quoted for every good it traded next to what the market actually paid, and after every route scan how many prices it opened and how long it took
@@ -294,4 +294,4 @@ what you set.
 
 - **Harmony** (`Bannerlord.Harmony`), required. TradeLord does not load without it. Put it above TradeLord in the launcher's load order.
 - **MCM** (`Bannerlord.MBOptionScreen`), optional, and what the settings screen is built on. TradeLord writes a `TradeLord.ini` beside its log whether MCM is there or not, and every setting above can be changed by editing that file instead.
-- The mod is supported on 1.4.8.119303 and 1.5.3.122374. War Sails is optional: with it, TradeLord counts sea legs and appears in port menus.
+- The mod is supported on 1.5.4.123627 only. War Sails is optional: with it, TradeLord counts sea legs and appears in port menus.

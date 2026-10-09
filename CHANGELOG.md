@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.103.12
+
+- The mod is supported on Bannerlord 1.5.4.123627 only
+
 ## 1.103.11
 
 - Fixed your party eating food bought to trade because Max spend per visit left no room to buy food of its own
