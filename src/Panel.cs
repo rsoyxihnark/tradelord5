@@ -983,9 +983,6 @@ namespace TradeLord
         private const float LookAgain = 0.5f;
         private const float QuickClick = 0.4f;
         private const float StillEnough = 12f;
-        private const int MostTimesTold = 12;
-        private const int MostClicksTold = 40;
-        private const int MostRunsKept = 64;
 
         private struct Run
         {
@@ -1012,8 +1009,6 @@ namespace TradeLord
         private static float _travelled;
         private static Vec2 _was;
         private static float _lookedAt = -1f;
-        private static int _timesTold;
-        private static int _clicksTold;
         private static string _lastButton;
         private static float _lastButtonAt;
         private static float _rightDownAt = -1f;
@@ -1030,8 +1025,6 @@ namespace TradeLord
             _showing = false;
             _told = false;
             _dead = false;
-            _timesTold = 0;
-            _clicksTold = 0;
             _lastButton = null;
             _rightDownAt = -1f;
             _beforeRight = null;
@@ -1087,7 +1080,7 @@ namespace TradeLord
             int last = _runs.Count - 1;
             if (last < 0 || _runs[last].Top != top || _runs[last].Drawn != drawn || _runs[last].MapAsked != asked)
                 _runs.Add(new Run { From = now, Top = top, Drawn = drawn, MapAsked = asked });
-            while (_runs.Count > 1 && (_runs[1].From <= now - JustBefore || _runs.Count > MostRunsKept))
+            while (_runs.Count > 1 && _runs[1].From <= now - JustBefore)
                 _runs.RemoveAt(0);
         }
 
@@ -1116,11 +1109,8 @@ namespace TradeLord
                 float held = now - _rightDownAt;
                 _rightDownAt = -1f;
                 if (Input.IsKeyReleased(InputKey.RightMouseButton) && held <= QuickClick &&
-                    _rightMoved <= StillEnough && !_windowOpen && _clicksTold < MostClicksTold)
-                {
-                    _clicksTold++;
+                    _rightMoved <= StillEnough && !_windowOpen)
                     Log.WriteMany(AQuickRightClick(map, held));
-                }
             }
         }
 
@@ -1156,14 +1146,13 @@ namespace TradeLord
             }
             _travelled += at.Distance(_was);
             _was = at;
-            if (_told || _timesTold >= MostTimesTold) return;
+            if (_told) return;
             if (now - _since < LongEnough || _travelled < FarEnough * Input.Resolution.x) return;
             if (_lookedAt >= 0f && now - _lookedAt < LookAgain) return;
             _lookedAt = now;
             Ground ground = Guard.Read("map cursor watch: under the mouse", map, Look, Unread);
             if (ground.SignIsRight) return;
             _told = true;
-            _timesTold++;
             Log.WriteMany(WhatTheMapIsDoing(map, top, now, ground));
         }
 
