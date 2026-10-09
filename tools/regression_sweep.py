@@ -7144,8 +7144,8 @@ def a_dialogue_line_is_spoken_in_the_language_in_force_when_it_is_offered():
             and caravan.count("Tongue.Slot(") == 2 and caravan.count("Tongue.Spoken(") == 2
             and bandit.count("Tongue.Slot(") == 2 and bandit.count("Tongue.Spoken(") == 2
             and "Tongue.Text(" not in caravan and "Tongue.Text(" not in bandit
-            and S['Encounters.cs'].count("Tongue.Slot(") == 4
-            and S['Encounters.cs'].count("Tongue.Spoken(") == 4
+            and S['Encounters.cs'].count("Tongue.Slot(") == 6
+            and S['Encounters.cs'].count("Tongue.Spoken(") == 6
             and all(("{=" + said + "}") in caravan + bandit
                     for said in ("TL114", "TL115", "TL387", "TL113")))
 
@@ -18646,6 +18646,30 @@ def the_watch_keeps_no_count_of_its_notes():
 
 chk("1.103.11", "the map cursor watch keeps no count of its notes, so every stretch of a wrong forbidden sign and every quick right click is written down, with the whole second before it",
     the_watch_keeps_no_count_of_its_notes())
+
+
+def villagers_offer_that_was_a_nice_trade_after_a_trade_that_landed():
+    enc = S['Encounters.cs']
+    lines = method_body(enc, "private static void AddVillagerLines")
+    met = method_body(enc, "private static bool VillagersMet")
+    return (lines and met
+            and "AddVillagerLines(starter);" in method_body(enc, "internal static void Lines")
+            and 'starter.AddPlayerLine("tradelord_villagers_done", "village_farmer_talk", "tradelord_villagers_reply",'
+                in lines
+            and 'starter.AddDialogLine("tradelord_villagers_reply", "tradelord_villagers_reply", "close_window",'
+                in lines
+            and "{=TL114}" in lines and "{=TL115}" in lines
+            and lines.count("Tongue.Slot(") == 2 and lines.count("Tongue.Spoken(") == 2
+            and "Tongue.Text(" not in lines
+            and "&& VillagersMet(), null, 200);" in lines
+            and "() => Tongue.Spoken(answered), null, 200);" in lines
+            and "if (!Options.Current.TradeWithCaravans || villagers == null || !villagers.IsVillager) return false;"
+                in met
+            and ordered(met, "TradeOnce(villagers);", "return TradeActionBehavior.RoadTradeLanded;")
+            and "return true;" not in met)
+
+chk("1.104.0", "villagers met on the road offer That was a nice trade, in the language in force, only once TradeLord really bought their offer",
+    villagers_offer_that_was_a_nice_trade_after_a_trade_that_landed())
 
 
 

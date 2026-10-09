@@ -246,7 +246,7 @@
 
 - ✅ A settings screen with every switch explained on hover, translatable, through MCM, with a Reset button at the top of it that puts every setting back to the value TradeLord ships with and empties your four item lists
 - ✅ English, Turkish, Russian and Simplified Chinese, picked in TradeLord's own Language setting
-- ✅ Its trade messages, ledger panel, price tooltips, town menu entries, the lines it adds when you meet a caravan or a band of bandits, and the settings screen itself all take the new language the moment you pick it, with no restart and no reload
+- ✅ Its trade messages, ledger panel, price tooltips, town menu entries, the lines it adds when you meet caravans, villagers or bandits, and the settings screen all take the new language the moment you pick it, with no restart and no reload
 - ✅ Built on Bannerlord 1.5.4.123627. The mod is supported on 1.5.4.123627 only
 - ✅ Enable extended debug logging, on out of the box, one switch for everything TradeLord writes about its own working in `TradeLord.log`
 - ✅ The same switch writes what the market you are standing in pays and charges for every good you carry, read four ways before anything is traded, named alongside the price model the game is running and any other mod changing it

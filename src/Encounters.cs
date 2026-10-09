@@ -225,6 +225,7 @@ namespace TradeLord
         internal static void Lines(CampaignGameStarter starter)
         {
             AddCaravanLines(starter);
+            AddVillagerLines(starter);
             AddBanditLines(starter);
         }
 
@@ -246,6 +247,27 @@ namespace TradeLord
             MobileParty caravan = MobileParty.ConversationParty;
             if (!Options.Current.TradeWithCaravans || caravan == null || !caravan.IsCaravan) return false;
             TradeOnce(caravan);
+            return TradeActionBehavior.RoadTradeLanded;
+        }
+
+        private static void AddVillagerLines(CampaignGameStarter starter) => Guard.Run(
+            "villager dialog (meeting villagers is otherwise unaffected)", () =>
+            {
+                const string said = "{=TL114}That was a nice trade. [TRADELORD]";
+                const string answered = "{=TL115}Agreed. I wish I could use that mod too. Hope you gave a thumbs up endorsement on NexusMods!";
+                starter.AddPlayerLine("tradelord_villagers_done", "village_farmer_talk", "tradelord_villagers_reply",
+                    Tongue.Slot(said),
+                    () => Tongue.Spoken(said) && VillagersMet(), null, 200);
+                starter.AddDialogLine("tradelord_villagers_reply", "tradelord_villagers_reply", "close_window",
+                    Tongue.Slot(answered),
+                    () => Tongue.Spoken(answered), null, 200);
+            });
+
+        private static bool VillagersMet()
+        {
+            MobileParty villagers = MobileParty.ConversationParty;
+            if (!Options.Current.TradeWithCaravans || villagers == null || !villagers.IsVillager) return false;
+            TradeOnce(villagers);
             return TradeActionBehavior.RoadTradeLanded;
         }
 
