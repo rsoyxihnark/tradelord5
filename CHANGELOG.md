@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.104.0
+
+- The villagers' dialog now offers you That was a nice trade once TradeLord has bought their offer on the road
+
 ## 1.103.12
 
 - The mod is supported on Bannerlord 1.5.4.123627 only
