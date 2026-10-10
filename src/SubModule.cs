@@ -40,6 +40,8 @@ namespace TradeLord
             Patcher.TryPatch(harmony, typeof(Patch_VillagerOfferTaken));
             Patcher.TryPatch(harmony, typeof(Patch_ChatLineShowsTheProfit));
             Patcher.TryPatch(harmony, typeof(Patch_YourOwnFoodIsEatenFirst));
+            Patcher.TryPatch(harmony, typeof(Patch_ThePointerTheEngineIsTold));
+            Patcher.TryPatch(harmony, typeof(Patch_APointerSetElsewhere));
 
             Guard.Run("McmLoader", McmLoader.TryLoad);
             Config.Follow();

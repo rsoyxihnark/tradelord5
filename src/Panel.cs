@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using HarmonyLib;
 using SandBox.View.Map;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.CampaignSystem.Settlements.Workshops;
+using TaleWorlds.Engine;
 using TaleWorlds.Engine.GauntletUI;
 using TaleWorlds.InputSystem;
 using TaleWorlds.Library;
@@ -386,15 +390,36 @@ namespace TradeLord
 
         public void Hide() => IsVisible = false;
 
-        public void ExecuteClose() => _onClose?.Invoke();
+        public void ExecuteClose()
+        {
+            LedgerPanel.Noted("with its Close button");
+            _onClose?.Invoke();
+        }
+
+        public void ExecuteCloseFromOutside()
+        {
+            LedgerPanel.Noted("by a click outside it");
+            _onClose?.Invoke();
+        }
 
         public void ExecuteOpenTrades() => Guard.Run("Panel.OpenTrades", () =>
         {
+            LedgerPanel.Noted("with the Recent trades button");
             RefreshTrades();
             IsTradesVisible = true;
         });
 
-        public void ExecuteCloseTrades() => IsTradesVisible = false;
+        public void ExecuteCloseTrades()
+        {
+            LedgerPanel.Noted("with its Close button");
+            IsTradesVisible = false;
+        }
+
+        public void ExecuteCloseTradesFromOutside()
+        {
+            LedgerPanel.Noted("by a click outside it");
+            IsTradesVisible = false;
+        }
 
         public void ExecuteOpenLegend() => IsLegendVisible = true;
 
@@ -697,13 +722,37 @@ namespace TradeLord
                 if (_vm.IsTradesVisible && map.IsEscapeMenuOpened) _vm.IsTradesVisible = false;
                 UpdateIdleInput();
                 if (!map.IsEscapeMenuOpened && HotkeyReleased() && !TypingOnScreen(map))
+                {
+                    Noted("with the Ledger panel hotkey (map screen), " + _keyLabel);
                     Guard.Run("Panel.Show", Show);
+                }
             }
             else if (map.IsEscapeMenuOpened || (HotkeyReleased() && !TypingOnScreen(map)))
             {
+                Noted(map.IsEscapeMenuOpened ? "as the game's menu opened" : "with the Ledger panel hotkey (map screen), " + _keyLabel);
                 Hide();
             }
         }
+
+        private static string _how;
+        private static float _howAt;
+        private const float StillFresh = 1f;
+
+        internal static void Noted(string how)
+        {
+            _how = how;
+            _howAt = TaleWorlds.Engine.Time.ApplicationTime;
+        }
+
+        internal static string HowItChanged(float now)
+        {
+            string how = _how != null && now - _howAt <= StillFresh ? _how : null;
+            _how = null;
+            return how;
+        }
+
+        internal static string OpenWindow =>
+            _vm == null ? null : _vm.IsVisible ? "the ledger panel" : _vm.IsTradesVisible ? "the Recent trades window" : null;
 
         private static bool TypingOnScreen(ScreenBase screen)
         {
@@ -846,6 +895,7 @@ namespace TradeLord
             try
             {
                 if (_dead || _vm == null || _layer == null) return false;
+                if (_vm.IsVisible || _vm.IsTradesVisible) Noted("with Esc");
                 if (_vm.IsVisible) { Hide(); return true; }
                 if (_vm.IsTradesVisible) { _vm.IsTradesVisible = false; return true; }
                 return false;
@@ -857,7 +907,7 @@ namespace TradeLord
             }
         }
 
-        private static void ShowFromButton() => Guard.Run("Panel.MapButton", Show);
+        private static void ShowFromButton() => Guard.Run("Panel.MapButton", OpenWithTheButton);
 
         private static void Show()
         {
@@ -867,9 +917,16 @@ namespace TradeLord
             _layer.InputRestrictions.SetInputRestrictions(true, InputUsageMask.Mouse);
         }
 
+        private static void OpenWithTheButton()
+        {
+            Noted("with the TradeLord button");
+            Show();
+        }
+
         internal static bool TryShowFromMenu()
         {
             if (_dead || _vm == null || _layer == null || _mapScreen == null) return false;
+            Noted("with Consult the TradeLord ledger");
             try { Show(); return true; }
             catch (Exception e)
             {
@@ -887,6 +944,7 @@ namespace TradeLord
 
         private static void CenterOn(Settlement settlement)
         {
+            Noted("by a click on " + (settlement?.Name?.ToString() ?? "a market") + " in it, which moves the camera there");
             Hide();
             if (_mapScreen == null || settlement == null) return;
             try { _mapScreen.FastMoveCameraToPosition(new CampaignVec2(settlement.GetPosition2D, true)); }
@@ -950,6 +1008,7 @@ namespace TradeLord
             _loggedArmed = false;
             _idleMouseActive = false;
             _keySource = null;
+            _how = null;
         }
 
         internal static void Cleanup()
@@ -986,6 +1045,12 @@ namespace TradeLord
         private const float LookAgain = 0.5f;
         private const float QuickClick = 0.4f;
         private const float StillEnough = 12f;
+        private const float Settle = 0.1f;
+        private const float HeldFor = 0.5f;
+        private const float AfterTheClick = 0.5f;
+        private const float BlindAfter = 10f;
+        private const string KeptTheLayer = "nothing, the game keeping the layer it found the frame before";
+        private const string NoLayer = "nothing, with no layer under the mouse";
 
         private struct Run
         {
@@ -993,6 +1058,22 @@ namespace TradeLord
             internal ScreenLayer Top;
             internal CursorType Drawn;
             internal CursorType MapAsked;
+        }
+
+        private struct Telling
+        {
+            internal float From;
+            internal ScreenLayer By;
+            internal CursorType Shape;
+            internal string Nothing;
+        }
+
+        private struct OnScreen
+        {
+            internal float From;
+            internal bool Over;
+            internal bool Showing;
+            internal IntPtr Handle;
         }
 
         private sealed class Ground
@@ -1003,6 +1084,9 @@ namespace TradeLord
 
         private static readonly Ground Unread = new Ground { Said = "could not be read" };
         private static readonly List<Run> _runs = new List<Run>();
+        private static readonly List<Telling> _tellings = new List<Telling>();
+        private static readonly List<OnScreen> _onScreen = new List<OnScreen>();
+        private static readonly PointerLooks _looks = new PointerLooks();
 
         private static MapScreen _map;
         private static bool _showing;
@@ -1017,9 +1101,45 @@ namespace TradeLord
         private static float _rightDownAt = -1f;
         private static float _rightMoved;
         private static string _beforeRight;
+        private static string _beforeRightOnScreen;
         private static float _hotkeyAt = -1f;
         private static bool _windowOpen;
         private static float _windowAt = -1f;
+        private static string _windowWhich;
+        private static string _windowSeen;
+        private static string _windowHow;
+        private static float _afterRightAt = -1f;
+
+        private static bool _inScreens;
+        private static bool _keptTheLayer;
+        private static bool _tellingDead;
+        private static bool _silentSaid;
+        private static int _setElsewhere;
+        private static CursorType _setElsewhereShape;
+        private static float _setElsewhereAt;
+        private static string _setElsewhereBy;
+        private static string _otherHands;
+
+        private static bool _askedAny;
+        private static CursorType _asked;
+        private static float _askedSince;
+        private static float _signFrom = -1f;
+        private static float _signTo = -1f;
+        private static string _signBy;
+        private static string _signAt;
+        private static string _signOver;
+        private static float _signLookedAt = -1f;
+
+        private static float _heldFrom = -1f;
+        private static float _heldSince;
+        private static long _heldLook;
+        private static bool _heldSaid;
+        private static List<string> _heldBefore;
+        private static float _hiddenFor;
+        private static float _hiddenAt = -1f;
+        private static bool _windowsSeen;
+        private static bool _blindSaid;
+        private static float _blindFrom = -1f;
 
         internal static void Forget()
         {
@@ -1031,9 +1151,24 @@ namespace TradeLord
             _lastButton = null;
             _rightDownAt = -1f;
             _beforeRight = null;
+            _beforeRightOnScreen = null;
             _hotkeyAt = -1f;
             _windowOpen = false;
             _windowAt = -1f;
+            _windowWhich = null;
+            _windowSeen = null;
+            _windowHow = null;
+            _afterRightAt = -1f;
+            _askedAny = false;
+            _signFrom = -1f;
+            _signTo = -1f;
+            _signAt = null;
+            _signOver = null;
+            _signLookedAt = -1f;
+            _heldFrom = -1f;
+            _heldBefore = null;
+            _hiddenAt = -1f;
+            _onScreen.Clear();
         }
 
         internal static void Tick()
@@ -1062,8 +1197,83 @@ namespace TradeLord
             }
             ScreenLayer top = ScreenManager.FirstHitLayer;
             Note(now, top, map.SceneLayer);
+            NoteAsked(now, map, top);
             NoteKeys(now, map);
             Watch(now, map, top);
+            WatchWhatWindowsShows(now, top);
+            WatchTheSilence(now);
+            if (_afterRightAt >= 0f && now >= _afterRightAt)
+            {
+                _afterRightAt = -1f;
+                Log.Write(Guard.Read("map cursor watch: after a right click", now, HalfASecondAfter,
+                                     "map cursor: half a second after the quick right click the pointer could not be read"));
+            }
+        }
+
+        internal static void BeforeTheScreens()
+        {
+            if (_tellingDead) return;
+            _inScreens = true;
+            _keptTheLayer = ScreenManager.FirstHitLayer != null;
+        }
+
+        internal static void AfterTheScreens()
+        {
+            if (_tellingDead) return;
+            _inScreens = false;
+            try { NoteTheTelling(TaleWorlds.Engine.Time.ApplicationTime); }
+            catch (Exception e) { StopTelling(e); }
+        }
+
+        internal static void SetElsewhere(CursorType shape)
+        {
+            if (_inScreens || _tellingDead) return;
+            try { NoteSetElsewhere(TaleWorlds.Engine.Time.ApplicationTime, shape); }
+            catch (Exception e) { StopTelling(e); }
+        }
+
+        private static void StopTelling(Exception e)
+        {
+            _tellingDead = true;
+            _inScreens = false;
+            Log.Error(e, "map cursor watch: the pointer the engine is told (stopped for this session, the game is unaffected)");
+        }
+
+        private static void NoteTheTelling(float now)
+        {
+            ScreenLayer by = _keptTheLayer ? null : ScreenManager.FirstHitLayer;
+            string nothing = by != null ? null : _keptTheLayer ? KeptTheLayer : NoLayer;
+            CursorType shape = by == null ? CursorType.Default : by.ActiveCursor;
+            int last = _tellings.Count - 1;
+            if (last >= 0 && _tellings[last].By == by && _tellings[last].Shape == shape && _tellings[last].Nothing == nothing)
+                return;
+            _tellings.Add(new Telling { From = now, By = by, Shape = shape, Nothing = nothing });
+            while (_tellings.Count > 1 && _tellings[1].From <= now - JustBefore)
+                _tellings.RemoveAt(0);
+        }
+
+        private static void NoteSetElsewhere(float now, CursorType shape)
+        {
+            bool named = _setElsewhereBy != null && shape == _setElsewhereShape && now - _setElsewhereAt <= JustBefore;
+            _setElsewhere++;
+            _setElsewhereShape = shape;
+            _setElsewhereAt = now;
+            if (!named) _setElsewhereBy = Caller();
+        }
+
+        private static string Caller()
+        {
+            var trace = new System.Diagnostics.StackTrace(1, false);
+            for (int i = 0; i < trace.FrameCount; i++)
+            {
+                MethodBase method = trace.GetFrame(i)?.GetMethod();
+                Type type = method?.DeclaringType;
+                if (type == null || type.Assembly.IsDynamic || type.Assembly == typeof(CursorWatch).Assembly ||
+                    type == typeof(MouseManager) || type.Assembly == typeof(Harmony).Assembly)
+                    continue;
+                return type.FullName + "." + method.Name + " in " + type.Assembly.GetName().Name;
+            }
+            return "code TradeLord could not name";
         }
 
         private static void Left(float now)
@@ -1074,6 +1284,14 @@ namespace TradeLord
                           (ScreenManager.TopScreen?.GetType().Name ?? "no screen at all"));
             _showing = false;
             _told = false;
+            if (_heldFrom >= 0f && _heldSaid)
+                Log.Write("map cursor: the campaign map was left " + Seconds(now - _heldSince) + " seconds after Windows began to show " +
+                          Looks(_heldLook) + " where the game asks for " + Shape(_asked) + ", and it still did, for " +
+                          (ScreenManager.TopScreen?.GetType().Name ?? "no screen at all"));
+            _heldFrom = -1f;
+            _hiddenAt = -1f;
+            _askedAny = false;
+            _onScreen.Clear();
         }
 
         private static void Note(float now, ScreenLayer top, ScreenLayer map)
@@ -1087,6 +1305,39 @@ namespace TradeLord
                 _runs.RemoveAt(0);
         }
 
+        private static void NoteAsked(float now, MapScreen map, ScreenLayer top)
+        {
+            if (top == null) return;
+            CursorType asked = top.ActiveCursor;
+            if (_askedAny && asked == _asked) return;
+            if (_askedAny && _asked == CursorType.Disabled) _signTo = now;
+            _askedAny = true;
+            _asked = asked;
+            _askedSince = now;
+            if (asked != CursorType.Disabled) return;
+            _signFrom = now;
+            _signTo = -1f;
+            _signBy = Named(top);
+            _signAt = Spot(Input.MousePositionPixel);
+            if (_signLookedAt >= 0f && now - _signLookedAt < LookAgain)
+            {
+                _signOver = null;
+                return;
+            }
+            _signLookedAt = now;
+            _signOver = Guard.Read("map cursor watch: where the forbidden sign was asked for", map, Look, Unread).Said +
+                        Guard.Read("map cursor watch: what the map counts as under the mouse", map, Hovered, "");
+        }
+
+        private static string Hovered(MapScreen map)
+        {
+            var visual = map.CurrentVisualOfTooltip;
+            return visual == null
+                ? ", with nothing the map counts as a party or a place under the mouse"
+                : ", with a " + visual.GetType().Name + " under the mouse that the map says " +
+                  (visual.IsInteractable() ? "can" : "cannot") + " be clicked";
+        }
+
         private static void NoteKeys(float now, MapScreen map)
         {
             if (Input.IsKeyReleased(LedgerPanel.PanelKey())) _hotkeyAt = now;
@@ -1095,7 +1346,11 @@ namespace TradeLord
             {
                 _windowOpen = open;
                 _windowAt = now;
+                _windowWhich = open ? LedgerPanel.OpenWindow : _windowSeen;
+                _windowHow = LedgerPanel.HowItChanged(now) ??
+                             (!open && map.IsEscapeMenuOpened ? "as the game's menu opened" : null);
             }
+            if (open) _windowSeen = LedgerPanel.OpenWindow;
             NoteButton(now, InputKey.LeftMouseButton, "left");
             NoteButton(now, InputKey.MiddleMouseButton, "middle");
             NoteButton(now, InputKey.RightMouseButton, "right");
@@ -1104,6 +1359,8 @@ namespace TradeLord
                 _rightDownAt = now;
                 _rightMoved = 0f;
                 _beforeRight = Guard.Read("map cursor watch: before a right click", now, BeforeTheClick, "could not be read");
+                _beforeRightOnScreen = Guard.Read("map cursor watch: the pointer before a right click", now, TheSecondOnScreen,
+                                                  "the pointer could not be read");
             }
             else if (_rightDownAt >= 0f && Input.IsKeyDown(InputKey.RightMouseButton))
                 _rightMoved += Math.Abs(Input.MouseMoveX) + Math.Abs(Input.MouseMoveY);
@@ -1113,7 +1370,10 @@ namespace TradeLord
                 _rightDownAt = -1f;
                 if (Input.IsKeyReleased(InputKey.RightMouseButton) && held <= QuickClick &&
                     _rightMoved <= StillEnough && !_windowOpen)
+                {
                     Log.WriteMany(AQuickRightClick(map, held));
+                    _afterRightAt = now + AfterTheClick;
+                }
             }
         }
 
@@ -1159,6 +1419,142 @@ namespace TradeLord
             Log.WriteMany(WhatTheMapIsDoing(map, top, now, ground));
         }
 
+        private static void WatchWhatWindowsShows(float now, ScreenLayer top)
+        {
+            if (!WindowsPointer.Read(out bool over, out bool showing, out IntPtr handle)) return;
+            int last = _onScreen.Count - 1;
+            if (last < 0 || _onScreen[last].Over != over || _onScreen[last].Showing != showing || _onScreen[last].Handle != handle)
+                _onScreen.Add(new OnScreen { From = now, Over = over, Showing = showing, Handle = handle });
+            while (_onScreen.Count > 1 && _onScreen[1].From <= now - JustBefore)
+                _onScreen.RemoveAt(0);
+            if (!over || top == null || !_askedAny) return;
+            NoteBlind(now, showing);
+            if (!showing)
+            {
+                if (_heldFrom >= 0f && _hiddenAt < 0f) _hiddenAt = now;
+                return;
+            }
+            float shownSince = _onScreen[_onScreen.Count - 1].From;
+            long look = handle.ToInt64();
+            _looks.See((int)_asked, look, now, _askedSince, shownSince, Settle);
+            Hold(now, look, PointerLooks.Settled(now, _askedSince, Settle), shownSince);
+        }
+
+        private static void Hold(float now, long look, bool settled, float shownSince)
+        {
+            if (_hiddenAt >= 0f)
+            {
+                _hiddenFor += now - _hiddenAt;
+                _hiddenAt = -1f;
+            }
+            bool known = _looks.Known((int)_asked, out long wanted);
+            bool wrong = PointerHeld.Wrong(settled, known, look, wanted);
+            if (_heldFrom >= 0f)
+            {
+                if (PointerHeld.Still(look, _heldLook, settled, known, wanted))
+                {
+                    if (_heldSaid || !wrong || now - _heldFrom < HeldFor) return;
+                    _heldSaid = true;
+                    Log.WriteMany(Held(now));
+                    return;
+                }
+                if (_heldSaid)
+                    Log.Write(Guard.Read("map cursor watch: as Windows let go of a pointer", look, Ended,
+                                         "map cursor: Windows let go of a pointer it held, and what it shows now could not be read"));
+                _heldFrom = -1f;
+            }
+            if (!wrong) return;
+            _heldFrom = now;
+            _heldSince = Math.Max(_askedSince, shownSince);
+            _heldLook = look;
+            _heldSaid = false;
+            _hiddenFor = 0f;
+            _hiddenAt = -1f;
+            _heldBefore = Guard.Read("map cursor watch: as Windows held on to a pointer", now, HowItBegan, null);
+        }
+
+        private static List<string> Held(float now)
+        {
+            var said = new List<string>
+            {
+                "map cursor: for " + Seconds(now - _heldSince) + " seconds Windows has shown " + Looks(_heldLook) +
+                    " over the campaign map while the game asks for " + Shape(_asked)
+            };
+            if (_heldBefore != null) said.AddRange(_heldBefore);
+            return said;
+        }
+
+        private static List<string> HowItBegan(float now) => new List<string>
+        {
+            "  in the second before it " + TheSecondOnScreen(now),
+            "  " + TheSignLastAsked(now),
+            "  input: " + WhatTheButtonsDid(now) + ", keyboard on " + Named(ScreenManager.FocusedLayer) + ", " +
+                WindowsPointer.WhoHasTheMouse() + ", " + TheHotkey(now),
+            "  " + Elsewhere(now) + "; " + OtherHands()
+        };
+
+        private static string Ended(long look)
+        {
+            float now = TaleWorlds.Engine.Time.ApplicationTime;
+            bool fits = _looks.Known((int)_asked, out long wanted) && wanted == look;
+            return "map cursor: after " + Seconds(now - _heldSince) + " seconds Windows let go of " + Looks(_heldLook) + " " +
+                   (look == _heldLook ? "as the game itself now asks for it" : WhatTheButtonsDid(now)) +
+                   (_hiddenFor > 0f ? ", once Windows had hidden the pointer for " + Seconds(_hiddenFor, "0.00") + " s" : "") +
+                   ", and now shows " + Looks(look) +
+                   (fits ? ", the pointer the game asks for" : ", while the game asks for " + Shape(_asked));
+        }
+
+        private static string HalfASecondAfter(float now)
+        {
+            string said = "map cursor: half a second after the quick right click the game asks for " +
+                          (_askedAny ? Shape(_asked) : "no pointer TradeLord saw") + ", and Windows shows ";
+            if (!WindowsPointer.Read(out bool over, out bool showing, out IntPtr handle))
+                return said + "a pointer TradeLord cannot read";
+            if (!over) return said + "the pointer of another window, as the mouse is not over the game";
+            if (!showing) return said + "no pointer at all";
+            long look = handle.ToInt64();
+            if (!_askedAny || !_looks.Known((int)_asked, out long wanted))
+                return said + Looks(look) + ", which TradeLord has not yet seen the game draw for it";
+            return said + Looks(look) + (wanted == look ? ", the same pointer" : ", another pointer");
+        }
+
+        private static void WatchTheSilence(float now)
+        {
+            int last = _tellings.Count - 1;
+            if (last < 0 || _tellings[last].Nothing != KeptTheLayer)
+            {
+                _silentSaid = false;
+                return;
+            }
+            if (_silentSaid || now - _tellings[last].From < HeldFor) return;
+            _silentSaid = true;
+            Log.Write("map cursor: for " + Seconds(now - _tellings[last].From) + " seconds the game has told the engine no " +
+                      "pointer at all, as it kept the layer it found the frame before; " +
+                      Guard.Read("map cursor watch: the pointer while the engine is told nothing", now, TheSecondOnScreen,
+                                 "the pointer could not be read"));
+        }
+
+        private static void NoteBlind(float now, bool showing)
+        {
+            if (_blindSaid || _windowsSeen) return;
+            if (showing)
+            {
+                _windowsSeen = true;
+                return;
+            }
+            if (!ScreenManager.GetMouseVisibility())
+            {
+                _blindFrom = -1f;
+                return;
+            }
+            if (_blindFrom < 0f) _blindFrom = now;
+            if (now - _blindFrom < BlindAfter) return;
+            _blindSaid = true;
+            Log.Write("map cursor watch: Windows has shown no pointer of its own over the game for " + Seconds(BlindAfter) +
+                      " seconds while the game shows the mouse, so the game draws its pointer itself and " +
+                      "TradeLord.log cannot read which one is on the screen");
+        }
+
         private static string WhatTheButtonsDid(float now)
         {
             string held = Input.IsKeyDown(InputKey.RightMouseButton) ? "right"
@@ -1198,22 +1594,125 @@ namespace TradeLord
             return parts.Count == 0 ? "nothing was seen" : string.Join(", then ", parts.ToArray());
         }
 
+        private static string TheSecondOnScreen(float now) =>
+            "the engine was told " + WhatTheEngineWasTold(now) + ", and Windows showed " + WhatWindowsShowed(now);
+
+        private static string WhatTheEngineWasTold(float now)
+        {
+            if (_tellingDead || !Patcher.Holds(nameof(Patch_ThePointerTheEngineIsTold))) return "a pointer TradeLord cannot see";
+            var parts = new List<string>();
+            for (int i = 0; i < _tellings.Count; i++)
+            {
+                bool latest = i + 1 == _tellings.Count;
+                float from = Math.Max(_tellings[i].From, now - JustBefore);
+                float to = latest ? now : _tellings[i + 1].From;
+                if (to <= from && !latest) continue;
+                Telling one = _tellings[i];
+                parts.Add((one.Nothing ?? Shape(one.Shape) + " by " + Named(one.By)) + " for " + Seconds(to - from, "0.00") + " s");
+            }
+            return parts.Count == 0 ? "nothing yet" : string.Join(", then ", parts.ToArray());
+        }
+
+        private static string WhatWindowsShowed(float now)
+        {
+            if (!WindowsPointer.Readable) return "a pointer TradeLord cannot read";
+            var parts = new List<string>();
+            for (int i = 0; i < _onScreen.Count; i++)
+            {
+                bool latest = i + 1 == _onScreen.Count;
+                float from = Math.Max(_onScreen[i].From, now - JustBefore);
+                float to = latest ? now : _onScreen[i + 1].From;
+                if (to <= from && !latest) continue;
+                OnScreen one = _onScreen[i];
+                parts.Add((!one.Over ? "the pointer of another window" : !one.Showing ? "no pointer" : Looks(one.Handle.ToInt64())) +
+                          " for " + Seconds(to - from, "0.00") + " s");
+            }
+            return parts.Count == 0 ? "nothing yet" : string.Join(", then ", parts.ToArray());
+        }
+
+        private static string Looks(long look) =>
+            _looks.ShapeOf(look, out int shape)
+                ? Shape((CursorType)shape)
+                : WindowsPointer.Named(new IntPtr(look)) ?? "a pointer TradeLord has not yet seen the game ask for";
+
+        private static string Shape(CursorType shape) =>
+            shape == CursorType.Default ? "the normal pointer"
+            : shape == CursorType.Disabled ? "the forbidden sign"
+            : "the " + shape + " pointer";
+
+        private static string TheSignLastAsked(float now) =>
+            _signFrom < 0f
+                ? "the forbidden sign was not asked for on the campaign map since TradeLord began watching it"
+                : "the forbidden sign was last asked for " + Seconds(now - _signFrom) + " seconds before, by " + _signBy +
+                  (_signTo < _signFrom ? ", and still is" : ", for " + Seconds(_signTo - _signFrom, "0.00") + " s") +
+                  ", with the mouse at " + _signAt + (_signOver == null ? "" : ", over " + _signOver);
+
+        private static string Elsewhere(float now) =>
+            !Patcher.Holds(nameof(Patch_APointerSetElsewhere)) || _tellingDead
+                ? "a pointer set outside the game's screens cannot be seen"
+                : _setElsewhere == 0
+                    ? "no pointer was set outside the game's screens this session"
+                    : _setElsewhere + " pointer(s) were set outside the game's screens this session, the last " +
+                      Shape(_setElsewhereShape) + " " + Seconds(now - _setElsewhereAt) + " seconds before, by " + _setElsewhereBy;
+
+        private static string OtherHands()
+        {
+            if (_otherHands != null) return _otherHands;
+            var others = new List<string>();
+            OthersChanging(others, "MapScreen.HandleMouse",
+                typeof(MapScreen).GetMethod("HandleMouse", BindingFlags.Instance | BindingFlags.NonPublic));
+            OthersChanging(others, "MapScreen.CheckCursorState",
+                typeof(MapScreen).GetMethod("CheckCursorState", BindingFlags.Instance | BindingFlags.NonPublic));
+            OthersChanging(others, "ScreenManager.EarlyUpdate",
+                typeof(ScreenManager).GetMethod("EarlyUpdate", BindingFlags.Static | BindingFlags.Public));
+            OthersChanging(others, "ScreenManager.LateUpdate",
+                typeof(ScreenManager).GetMethod("LateUpdate", BindingFlags.Static | BindingFlags.NonPublic));
+            OthersChanging(others, "MouseManager.ActivateMouseCursor",
+                typeof(MouseManager).GetMethod("ActivateMouseCursor", BindingFlags.Static | BindingFlags.Public));
+            _otherHands = others.Count == 0
+                ? "no other mod changes the game's own pointer code"
+                : "the game's own pointer code: " + string.Join("; ", others.ToArray());
+            return _otherHands;
+        }
+
+        private static void OthersChanging(List<string> others, string what, MethodBase method)
+        {
+            if (method == null)
+            {
+                others.Add(what + " could not be found on this game version");
+                return;
+            }
+            Patches found = Harmony.GetPatchInfo(method);
+            if (found?.Owners == null) return;
+            var owners = new List<string>();
+            foreach (string owner in found.Owners)
+                if (owner != SubModule.HarmonyId && !owners.Contains(owner)) owners.Add(owner);
+            if (owners.Count > 0) others.Add(what + " is changed by " + string.Join(", ", owners.ToArray()));
+        }
+
         private static string TheHotkey(float now) =>
             "the ledger panel hotkey " + LedgerPanel.PanelKey() +
             (_hotkeyAt < 0f ? " not let go on the campaign map yet" : " last let go " + Seconds(now - _hotkeyAt) + " seconds before") +
-            (_windowAt < 0f ? "" : ", a TradeLord window " + (_windowOpen ? "opened " : "closed ") + Seconds(now - _windowAt) +
-                                   " seconds before");
+            (_windowAt < 0f ? "" : ", " + (_windowWhich ?? "a TradeLord window") + (_windowOpen ? " opened " : " closed ") +
+                                   Seconds(now - _windowAt) + " seconds before" + (_windowHow == null ? "" : ", " + _windowHow));
 
         private static bool EngineShowsTheMouse() =>
             ScreenManager.IsMouseCursorActive() || ScreenManager.IsMouseCursorHidden();
 
-        private static List<string> AQuickRightClick(MapScreen map, float held) => new List<string>
+        private static List<string> AQuickRightClick(MapScreen map, float held)
         {
-            "map cursor: a quick right click of " + Seconds(held, "0.00") + " s at " + Spot(Input.MousePositionPixel) +
-                " with TradeLord's windows closed; in the second before it " + _beforeRight,
-            "  right after it the game draws " + Drawn(ScreenManager.FirstHitLayer) +
-                ", and under the mouse: " + Guard.Read("map cursor watch: under the mouse", map, Look, Unread).Said
-        };
+            float now = TaleWorlds.Engine.Time.ApplicationTime;
+            return new List<string>
+            {
+                "map cursor: a quick right click of " + Seconds(held, "0.00") + " s at " + Spot(Input.MousePositionPixel) +
+                    " with TradeLord's windows closed; in the second before it " + _beforeRight,
+                "  in the second before it " + _beforeRightOnScreen,
+                "  right after it the game draws " + Drawn(ScreenManager.FirstHitLayer) +
+                    ", and under the mouse: " + Guard.Read("map cursor watch: under the mouse", map, Look, Unread).Said,
+                "  " + TheSignLastAsked(now),
+                "  " + Elsewhere(now) + "; " + OtherHands()
+            };
+        }
 
         private static List<string> WhatTheMapIsDoing(MapScreen map, ScreenLayer top, float now, Ground ground)
         {
@@ -1336,5 +1835,156 @@ namespace TradeLord
 
         private static string Seconds(float s, string shape = "0.0") =>
             s.ToString(shape, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    internal static class WindowsPointer
+    {
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Point
+        {
+            public int X;
+            public int Y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct PointerInfo
+        {
+            public int Size;
+            public int Flags;
+            public IntPtr Handle;
+            public Point At;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Box
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct ThreadInput
+        {
+            public int Size;
+            public int Flags;
+            public IntPtr Active;
+            public IntPtr Focus;
+            public IntPtr Capture;
+            public IntPtr MenuOwner;
+            public IntPtr MoveSize;
+            public IntPtr Caret;
+            public Box CaretBox;
+        }
+
+        private const int Showing = 1;
+        private const int Unavailable = 32648;
+        private const int Arrow = 32512;
+        private static readonly int PointerInfoSize = Marshal.SizeOf(typeof(PointerInfo));
+        private static readonly int ThreadInputSize = Marshal.SizeOf(typeof(ThreadInput));
+
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorInfo(ref PointerInfo info);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr WindowFromPoint(Point at);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern bool GetGUIThreadInfo(uint thread, ref ThreadInput info);
+
+        [DllImport("user32.dll", EntryPoint = "LoadCursorW")]
+        private static extern IntPtr LoadCursor(IntPtr module, IntPtr name);
+
+        private static bool _gone;
+        private static uint _game;
+        private static bool _systemRead;
+        private static IntPtr _unavailable;
+        private static IntPtr _arrow;
+
+        internal static bool Readable => !_gone;
+
+        internal static bool Read(out bool over, out bool showing, out IntPtr handle)
+        {
+            over = false;
+            showing = false;
+            handle = IntPtr.Zero;
+            if (_gone) return false;
+            try
+            {
+                var info = new PointerInfo { Size = PointerInfoSize };
+                if (!GetCursorInfo(ref info)) return false;
+                handle = info.Handle;
+                showing = (info.Flags & Showing) != 0 && handle != IntPtr.Zero;
+                over = TheGames(WindowFromPoint(info.At));
+                return true;
+            }
+            catch (Exception e)
+            {
+                _gone = true;
+                Log.Write("map cursor watch: the pointer Windows shows cannot be read here (" + e.GetType().Name +
+                          "), so TradeLord.log leaves it out");
+                return false;
+            }
+        }
+
+        private static bool TheGames(IntPtr window)
+        {
+            if (window == IntPtr.Zero) return false;
+            if (_game == 0) _game = (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+            GetWindowThreadProcessId(window, out uint owner);
+            return owner == _game;
+        }
+
+        internal static string Named(IntPtr handle)
+        {
+            if (_gone || handle == IntPtr.Zero) return null;
+            try
+            {
+                if (!_systemRead)
+                {
+                    _systemRead = true;
+                    _unavailable = LoadCursor(IntPtr.Zero, new IntPtr(Unavailable));
+                    _arrow = LoadCursor(IntPtr.Zero, new IntPtr(Arrow));
+                }
+                return handle == _unavailable ? "Windows' own unavailable sign" : handle == _arrow ? "Windows' own arrow" : null;
+            }
+            catch { return null; }
+        }
+
+        internal static string WhoHasTheMouse()
+        {
+            if (_gone) return "which window has the mouse cannot be read";
+            try
+            {
+                IntPtr front = GetForegroundWindow();
+                if (!TheGames(front)) return front == IntPtr.Zero ? "no window is in front" : "another program's window is in front";
+                var input = new ThreadInput { Size = ThreadInputSize };
+                if (!GetGUIThreadInfo(0, ref input)) return "the game's window is in front";
+                return "the game's window is in front and " + (input.Capture == IntPtr.Zero ? "does not hold" : "holds") +
+                       " the mouse capture";
+            }
+            catch { return "which window has the mouse cannot be read"; }
+        }
+    }
+
+    [HarmonyPatch(typeof(ScreenManager), "EarlyUpdate")]
+    internal static class Patch_ThePointerTheEngineIsTold
+    {
+        private static void Prefix() => CursorWatch.BeforeTheScreens();
+
+        private static void Postfix() => CursorWatch.AfterTheScreens();
+    }
+
+    [HarmonyPatch(typeof(MouseManager), "ActivateMouseCursor")]
+    internal static class Patch_APointerSetElsewhere
+    {
+        private static void Prefix(CursorType __0) => CursorWatch.SetElsewhere(__0);
     }
 }
