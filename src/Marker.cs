@@ -685,6 +685,9 @@ namespace TradeLord
             Takings took = default(Takings);
             bool eachAtItsOwnCost = Options.Current.CostBasisMode == Options.CostOfEachUnit;
             var order = new List<(Paying pays, long gain, int at)>(cargo.Count);
+            var paying = new Paying[cargo.Count];
+            var stacks = new int[cargo.Count];
+            var unbought = new int[cargo.Count];
             for (int at = 0; at < cargo.Count; at++)
             {
                 Paying pays = WhatThatMarketPays(site, market, cargo[at].item, party, ride);
@@ -693,23 +696,66 @@ namespace TradeLord
                 int held = stack >= 0 ? party.ItemRoster.GetElementNumber(stack) : cargo[at].amount;
                 long gain = first > 0 ? ((long)first - cargo[at].worth) * held : 0L;
                 order.Add((pays, gain > 0L ? gain : 0L, at));
+                paying[at] = pays;
+                stacks[at] = held;
+                unbought[at] = System.Math.Max(0, cargo[at].amount - (held - cargo[at].floors.Unknown));
             }
-            order.Sort((x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain) : x.at.CompareTo(y.at));
+            order.Sort(TheStackThatMakesTheMostFirst);
+            var lines = new Share[cargo.Count];
+            var sold = new List<int>(cargo.Count);
             foreach (var (pays, _, at) in order)
             {
+                if (unbought[at] <= 0) continue;
+                int loose = TradePolicy.WorthToBeatUnbought(cargo[at].item);
+                long fetched = 0L;
+                int moved = 0;
+                for (int u = 0; u < unbought[at]; u++)
+                {
+                    int price = pays.At(u);
+                    if (price <= 0) break;
+                    if (!TradeMath.ProfitAcceptable(loose, price, Options.Current.MinProfitMargin)) break;
+                    if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }
+                    if (moved == 0) lines[at].Price = price;
+                    lines[at].Last = price;
+                    fetched += price;
+                    moved++;
+                }
+                if (moved == 0) continue;
+                long cost = (long)loose * moved;
+                took.Value += fetched;
+                took.Cost += cost;
+                took.Units += moved;
+                lines[at].Moved = moved;
+                lines[at].Cost = cost;
+                lines[at].Fetched = fetched;
+                sold.Add(at);
+            }
+            var resorted = new List<(Paying pays, long gain, int at)>(order.Count);
+            foreach (var (pays, _, at) in order)
+            {
+                int taken = lines[at].Moved;
+                int next = pays.At(taken);
+                long gain = next > 0 ? ((long)next - cargo[at].worth) * (stacks[at] - taken) : 0L;
+                resorted.Add((pays, gain > 0L ? gain : 0L, at));
+            }
+            resorted.Sort(TheStackThatMakesTheMostFirst);
+            foreach (var (pays, _, at) in resorted)
+            {
                 var (item, amount, worth, floors) = cargo[at];
-                TradeMath.DearFirst walk = floors;
+                TradeMath.DearFirst walk = floors.WithoutTheUnknown();
+                int from = lines[at].Moved;
+                int paidFor = amount - unbought[at];
                 long fetched = 0L, booked = 0L;
-                int moved = 0, opening = 0, last = 0;
-                for (int u = 0; u < amount; u++)
+                int moved = 0;
+                for (int u = from; u < from + paidFor; u++)
                 {
                     int price = pays.At(u);
                     if (price <= 0) break;
                     if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;
                     if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }
                     booked += walk.Took();
-                    if (moved == 0) opening = price;
-                    last = price;
+                    if (from + moved == 0) lines[at].Price = price;
+                    lines[at].Last = price;
                     fetched += price;
                     moved++;
                 }
@@ -718,22 +764,35 @@ namespace TradeLord
                 took.Value += fetched;
                 took.Cost += cost;
                 took.Units += moved;
+                if (from == 0) sold.Add(at);
+                lines[at].Moved += moved;
+                lines[at].Cost += cost;
+                lines[at].Fetched += fetched;
+            }
+            foreach (int at in sold)
+            {
                 took.Kinds++;
+                Paying pays = paying[at];
+                Share line = lines[at];
+                EquipmentElement item = cargo[at].item;
                 bill?.Add(new Share
                 {
                     Good = item.Item == null ? "" : Tongue.Named(item.Item.Name, item.Item.StringId),
-                    Amount = amount,
-                    Moved = moved,
-                    Price = opening,
-                    Last = last,
+                    Amount = cargo[at].amount,
+                    Moved = line.Moved,
+                    Price = line.Price,
+                    Last = line.Last,
                     Today = pays.OnItsWay ? pays.Today : 0,
-                    Paid = eachAtItsOwnCost ? (int)System.Math.Round((double)booked / moved) : worth,
-                    Cost = cost,
-                    Fetched = fetched
+                    Paid = (int)System.Math.Round((double)line.Cost / line.Moved),
+                    Cost = line.Cost,
+                    Fetched = line.Fetched
                 });
             }
             return took;
         }
+
+        private static readonly System.Comparison<(Paying pays, long gain, int at)> TheStackThatMakesTheMostFirst =
+            (x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain) : x.at.CompareTo(y.at);
 
         private static readonly
             System.Comparison<(Settlement s, SettlementComponent market, int gold, float days)>

@@ -450,7 +450,7 @@ def the_feature_list_calls_a_setting_what_the_settings_screen_calls_it():
             and not re.search(r'honest[- ]merchant', README, re.I))
 
 def the_feature_list_says_a_pin_comes_off_a_town_it_traded_in():
-    return ('and a pin comes off by itself once TradeLord has traded in that town' in README
+    return ('and a pin comes off by itself once TradeLord has traded in that market' in README
             and 'LedgerPanel.Unpin(Site)' in S['Trading.cs'])
 
 def the_selling_rules_stand_clear_of_the_game():
@@ -793,9 +793,15 @@ def the_log_is_held_open_and_pushed_out_a_line_at_a_time():
             and 'File.AppendAllText(candidate, "");' in resolve
             and S['Support.cs'].count("File.AppendAllText(") == 2)
 
+def marker_passes():
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    return (between(fetch, "foreach (var (pays, _, at) in order)", "var resorted = "),
+            between(fetch, "foreach (var (pays, _, at) in resorted)", "foreach (int at in sold)"))
+
 def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    unbought, bought = marker_passes()
     return (ordered(marker, "reachable.Sort(FastestPurseFirst);",
                     "TheMarkedTownFirst(reachable, holder);",
                     "float bar = 0f;",
@@ -809,8 +815,13 @@ def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
             and ordered(fetch, "for (int at = 0; at < cargo.Count; at++)",
                         "Paying pays = WhatThatMarketPays(site, market, cargo[at].item, party, ride);",
                         "foreach (var (pays, _, at) in order)",
-                        "var (item, amount, worth, floors) = cargo[at];",
-                        "for (int u = 0; u < amount; u++)",
+                        "foreach (var (pays, _, at) in resorted)")
+            and ordered(unbought, "for (int u = 0; u < unbought[at]; u++)",
+                        "int price = pays.At(u);",
+                        "if (!TradeMath.ProfitAcceptable(loose, price, Options.Current.MinProfitMargin)) break;",
+                        "if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }")
+            and ordered(bought, "var (item, amount, worth, floors) = cargo[at];",
+                        "for (int u = from; u < from + paidFor; u++)",
                         "int price = pays.At(u);",
                         "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
                         "if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }",
@@ -851,7 +862,12 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
             and worth.count("UnpaidWorth(el.Item)") == 1
             and ordered(method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch"),
                         "Paying pays = WhatThatMarketPays(site, market, cargo[at].item, party, ride);",
-                        "int price = pays.At(u);",
+                        "foreach (var (pays, _, at) in order)",
+                        "foreach (var (pays, _, at) in resorted)")
+            and ordered(marker_passes()[0], "int price = pays.At(u);",
+                        "if (!TradeMath.ProfitAcceptable(loose, price, Options.Current.MinProfitMargin)) break;",
+                        "took.Value += fetched;")
+            and ordered(marker_passes()[1], "int price = pays.At(u);",
                         "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
                         "took.Value += fetched;")
             and "if (took.Value <= 0L) { how.Refused++; continue; }" in marker
@@ -4322,7 +4338,7 @@ def a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till():
             and all(said in en.get('TL375', '') and said in README for said in
                     ('then your haul animals, and your war horses and noble horses last of all',
                      'keeps enough haul animals to carry what you are already carrying'))
-            and 'How much gold the town you would sell to actually has' in README)
+            and 'How much gold the market you would sell to actually has' in README)
 
 chk("1.23.0", "nothing a player reads calls a haul animal a beast, a town's gold a till, or an overpayment a premium",
     a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till())
@@ -6493,7 +6509,7 @@ chk("1.41.7", "the rules that decide a sale stand clear of the game, so a test c
     the_selling_rules_stand_clear_of_the_game())
 chk("1.41.6", "the feature list names the live-price setting the way the settings screen names it, and never calls it honest-merchant mode",
     the_feature_list_calls_a_setting_what_the_settings_screen_calls_it())
-chk("1.41.6", "the feature list says a pin comes off a town once TradeLord has traded there",
+chk("1.41.6", "the feature list says a pin comes off a market once TradeLord has traded there",
     the_feature_list_says_a_pin_comes_off_a_town_it_traded_in())
 chk("1.41.4", "the price tooltip and the profit colouring hand their state to the guard rather than closing over it",
     the_tooltip_patches_hand_their_state_over_instead_of_capturing_it())
@@ -8900,7 +8916,7 @@ def how_long_a_shelf_lasts_now_counts_towards_the_route_score():
                         ": 1f / (1f + Math.Max(caravans, 0) * 0.15f);")
             and "float c = resilience * depth * haste * quiet * fresh;" in of
             and ordered(scan, "float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);",
-                        "runsOut, toBuy);", "RunsOutInDays = runsOut")
+                        "lasts, toBuy);", "RunsOutInDays = runsOut")
             and scan.count("Forecast.RunsOutIn(") == 1
             and '{=TL417}' in S['Panel.cs']
             and 'lowers Conf' in english_string('TL417')
@@ -10738,14 +10754,20 @@ chk("1.85.0", "the market marked on your map is the one that leaves you the most
 
 def the_marker_walks_the_price_down_the_way_a_sale_really_would():
     asked = method_body(S['Marker.cs'], "internal int At(int taken)")
-    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    unbought, bought = marker_passes()
     step = method_body(S['Marker.cs'], "private int Next()")
     return ("? null : Bulk.AsItLands(_site, _el, true, _flat, landed);" in step
             and "? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);" in step
             and "_walk = walk != null && (walk.Walkable || landed != 0) ? walk : null;" in step
             and "return _walk != null ? _walk.At(_rungs.Count) : _flat;" in step
             and "while (_rungs.Count <= taken) _rungs.Add(Next());" in asked
-            and ordered(fetch, "for (int u = 0; u < amount; u++)",
+            and ordered(unbought, "for (int u = 0; u < unbought[at]; u++)",
+                        "int price = pays.At(u);", "if (price <= 0) break;",
+                        "if (!TradeMath.ProfitAcceptable(loose, price, Options.Current.MinProfitMargin)) break;",
+                        "fetched += price;", "moved++;",
+                        "if (moved == 0) continue;", "took.Value += fetched;",
+                        "took.Units += moved;")
+            and ordered(bought, "for (int u = from; u < from + paidFor; u++)",
                         "int price = pays.At(u);", "if (price <= 0) break;",
                         "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
                         "fetched += price;", "moved++;",
@@ -11263,7 +11285,9 @@ def a_ladder_stops_where_the_margin_goes():
             and "(long)paid * units" not in far
             and "while (_rungs.Count <= taken) _rungs.Add(Next());" in paid
             and "_asked = true;" in step
-            and ordered(fetch, "for (int u = 0; u < amount; u++)", "int price = pays.At(u);",
+            and ordered(marker_passes()[0], "for (int u = 0; u < unbought[at]; u++)", "int price = pays.At(u);",
+                        "if (!TradeMath.ProfitAcceptable(loose, price, Options.Current.MinProfitMargin)) break;")
+            and ordered(marker_passes()[1], "for (int u = from; u < from + paidFor; u++)", "int price = pays.At(u);",
                         "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;")
             and "upTo" not in S['Marker.cs'])
 
@@ -15778,7 +15802,8 @@ def a_unit_bought_dear_sells_at_the_average_and_is_booked_at_its_own_cost():
                         "bool bought = basis.SoldOne();",
                         "bool paidFor = basis.SoldOne();",
                         "if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays);")
-            and ordered(fetch, "TradeMath.DearFirst walk = floors;", "walk.Clears(price, Options.Current.MinProfitMargin)",
+            and ordered(marker_passes()[1], "TradeMath.DearFirst walk = floors.WithoutTheUnknown();",
+                        "walk.Clears(price, Options.Current.MinProfitMargin)",
                         "booked += walk.Took();", "long cost = eachAtItsOwnCost ? booked : (long)worth * moved;",
                         "took.Cost += cost;")
             and all(one in MATHTESTS for one in
@@ -18045,12 +18070,12 @@ def the_carv_column_is_said_to_count_caravans_at_or_heading_for_those_towns():
     return (pressure
             and ordered(pressure, "Settlement at = p.CurrentSettlement, to = p.TargetSettlement;",
                         "if (at != null) Bump(map, at);", "if (to != null && to != at) Bump(map, to);")
-            and "| Carv. = caravans at or heading for those towns\").ToString()" in S['Panel.cs']
-            and "ya da o \u015fehirlere giden kervanlar" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL70']
+            and "| Carv. = caravans at or heading for those markets\").ToString()" in S['Panel.cs']
+            and "ya da o pazarlara giden kervanlar" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL70']
             and "\u0438\u043b\u0438 \u043d\u0430 \u043f\u0443\u0442\u0438 \u043a \u043d\u0438\u043c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL70']
             and "\u6216\u6b63\u524d\u5f80\u90a3\u91cc\u7684\u5546\u961f" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL70'])
 
-chk("1.103.4", "What this means says Carv. counts the caravans at or heading for a route's two towns, as the route scan counts them, in every language",
+chk("1.103.4", "What this means says Carv. counts the caravans at or heading for a route's two markets, as the route scan counts them, in every language",
     the_carv_column_is_said_to_count_caravans_at_or_heading_for_those_towns())
 
 def the_resale_safety_line_counts_a_price_above_the_promise_as_the_promise():
@@ -18782,7 +18807,11 @@ def the_marker_counts_only_what_the_merchant_can_pay_for_whole():
     fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     out = method_body(S['Marker.cs'], "private static string TheMarkLeftOut")
-    return (ordered(fetch, "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
+    unbought, bought = marker_passes()
+    return (ordered(unbought, "if (!TradeMath.ProfitAcceptable(loose, price, Options.Current.MinProfitMargin)) break;",
+                    "if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }",
+                    "fetched += price;", "moved++;", "if (moved == 0) continue;")
+            and ordered(bought, "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
                     "if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }",
                     "booked += walk.Took();", "fetched += price;", "moved++;",
                     "if (moved == 0) continue;")
@@ -18809,8 +18838,9 @@ def the_marker_weighs_your_goods_in_the_order_the_sale_sells_them():
                     "int held = stack >= 0 ? party.ItemRoster.GetElementNumber(stack) : cargo[at].amount;",
                     "long gain = first > 0 ? ((long)first - cargo[at].worth) * held : 0L;",
                     "order.Add((pays, gain > 0L ? gain : 0L, at));",
-                    "order.Sort((x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain) : x.at.CompareTo(y.at));",
+                    "order.Sort(TheStackThatMakesTheMostFirst);",
                     "foreach (var (pays, _, at) in order)")
+            and "TheStackThatMakesTheMostFirst =\n            (x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain) : x.at.CompareTo(y.at);" in S['Marker.cs']
             and "continue" not in between(fetch, "for (int at = 0; at < cargo.Count; at++)", "order.Sort(")
             and "order.Sort((x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain)" in plan
             and ": x.at.CompareTo(y.at));" in plan
@@ -18819,6 +18849,94 @@ def the_marker_weighs_your_goods_in_the_order_the_sale_sells_them():
 
 chk("1.104.1", "the map marker weighs your goods at a market in the order the sale there sells them, the whole stack that makes the most first, so a merchant short of gold is weighed on the goods TradeLord would really sell him",
     the_marker_weighs_your_goods_in_the_order_the_sale_sells_them())
+
+def a_shelf_the_forecast_sees_holding_is_not_marked_down_for_caravans():
+    conf = S['Confidence.cs']
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    return ("public static float Lasts(float runsOutInDays, bool forecastOn) =>" in conf
+            and "forecastOn && !(runsOutInDays >= 0f) ? float.MaxValue : runsOutInDays;" in conf
+            and ordered(scan, "float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);",
+                        "float lasts = Confidence.Lasts(runsOut, Forecast.On);",
+                        "lasts, toBuy);", "lasts, toBuy),", "RunsOutInDays = runsOut")
+            and "A_shelf_the_forecast_sees_holding_is_not_marked_down_for_caravans" in EXPIRYTESTS)
+
+chk("1.104.3", "a route whose shelf the forecast sees holding is weighed as a shelf that lasts, so caravans no longer lower its Conf below a route whose shelf empties, and Left stays blank for it",
+    a_shelf_the_forecast_sees_holding_is_not_marked_down_for_caravans())
+
+def the_turkish_tooltip_and_ledger_report_call_a_market_a_market():
+    tr = spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])
+    return (tr['TL24'].startswith("{TOWN} pazar\u0131nda daha ucuz")
+            and "{FROM} pazar\u0131ndan al" in tr['TL84'] and "{TO} pazar\u0131nda sat" in tr['TL84']
+            and not re.search("\u015fehi?r", tr['TL24'].lower()) and not re.search("\u015fehi?r", tr['TL84'].lower()))
+
+chk("1.104.3", "the Turkish price tooltip and ledger report name a cheaper market or a route's two ends as a market, never as a town, since either can be a village",
+    the_turkish_tooltip_and_ledger_report_call_a_market_a_market())
+
+def what_this_means_calls_a_route_end_a_market_in_every_language():
+    words = {'English': ('market', 'town'), 'T\u00fcrk\u00e7e': ('pazar', '\u015fehi?r'),
+             '\u0420\u0443\u0441\u0441\u043a\u0438\u0439': ('\u0440\u044b\u043d', '\u0433\u043e\u0440\u043e\u0434'),
+             '\u7b80\u4f53\u4e2d\u6587': ('\u5e02\u573a', '\u57ce\u9547')}
+    for language, (market, town) in words.items():
+        said = (english_string('TL70') if language == 'English'
+                else spoken(TRANSLATIONS[language])['TL70']).lower()
+        if market not in said or re.search(town, said):
+            return False
+    return ("{=TL70}Click a market's name to jump to it and pin or unpin it" in S['Panel.cs']
+            and "\u70b9\u51fb\u5e02\u573a\u540d" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL345']
+            and "\u70b9\u51fb\u57ce\u9547" not in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL345'])
+
+chk("1.104.3", "What this means in the TradeLord ledger names a route's two ends as markets in every language, since either can be a village, and the Chinese marker hint says a market's name is clicked to pin it",
+    what_this_means_calls_a_route_end_a_market_in_every_language())
+
+def the_marker_weighs_what_you_never_bought_first_as_the_loot_sale_sells_it():
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    unbought, bought = marker_passes()
+    loose = method_body(S['Policy.cs'], "internal static int WorthToBeatUnbought(EquipmentElement el)")
+    walk = method_body(S['TradeMath.cs'], "public struct DearFirst")
+    basis = method_body(S['Passes.cs'], "internal struct Basis")
+    return (fetch and unbought and bought and loose and walk and basis
+            and ordered(fetch, "unbought[at] = System.Math.Max(0, cargo[at].amount - (held - cargo[at].floors.Unknown));",
+                        "order.Sort(TheStackThatMakesTheMostFirst);",
+                        "foreach (var (pays, _, at) in order)",
+                        "var resorted = new List<(Paying pays, long gain, int at)>(order.Count);",
+                        "int taken = lines[at].Moved;",
+                        "int next = pays.At(taken);",
+                        "long gain = next > 0 ? ((long)next - cargo[at].worth) * (stacks[at] - taken) : 0L;",
+                        "resorted.Add((pays, gain > 0L ? gain : 0L, at));",
+                        "resorted.Sort(TheStackThatMakesTheMostFirst);",
+                        "foreach (var (pays, _, at) in resorted)",
+                        "foreach (int at in sold)",
+                        "took.Kinds++;",
+                        "Paid = (int)System.Math.Round((double)line.Cost / line.Moved),")
+            and ordered(unbought, "if (unbought[at] <= 0) continue;",
+                        "int loose = TradePolicy.WorthToBeatUnbought(cargo[at].item);",
+                        "for (int u = 0; u < unbought[at]; u++)",
+                        "long cost = (long)loose * moved;",
+                        "sold.Add(at);")
+            and ordered(bought, "TradeMath.DearFirst walk = floors.WithoutTheUnknown();",
+                        "int from = lines[at].Moved;",
+                        "int paidFor = amount - unbought[at];",
+                        "for (int u = from; u < from + paidFor; u++)",
+                        "if (from == 0) sold.Add(at);",
+                        "lines[at].Moved += moved;")
+            and "took.Kinds++;" not in unbought and "took.Kinds++;" not in bought
+            and "int paid = Options.Current.CostBasisMode == 2 ? CostBasis(el) : 0;" in loose
+            and "TradeRules.WorthIsWhatYouPaid(good, paid)" in loose
+            and ": TradeRules.WorthToBeat(good, paid, UnpaidWorth(el.Item));" in loose
+            and "int worth = FromMarket || PaidLeft > 0 ? Paid : 0;" in basis
+            and "loot ? PaidLeft <= 0 || SetTheBoughtUnitsAside(ref remaining)" in basis
+            and "public int Unknown => _unknown;" in walk
+            and ordered(method_body(walk, "public DearFirst WithoutTheUnknown()"),
+                        "DearFirst known = this;", "known._unknown = 0;", "return known;")
+            and ordered(S['Trading.cs'], "ExecuteLootSale(Settlement.CurrentSettlement);",
+                        "ExecuteQuickSell(Settlement.CurrentSettlement);")
+            and ordered(S['Trading.cs'], "if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);",
+                        "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);")
+            and "A_walk_without_the_unknown_units_sells_only_the_units_with_a_price_paid" in MATHTESTS
+            and "Each_at_its_own_cost_a_walk_without_the_unknown_units_never_sells_one_at_the_worth" in MATHTESTS)
+
+chk("1.104.3", "the map marker weighs what you never bought first, at the floor the loot sale holds it to, then what you bought, re-sorted as the sale re-sorts it once the loot is sold, all against one purse",
+    the_marker_weighs_what_you_never_bought_first_as_the_loot_sale_sells_it())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

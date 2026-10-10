@@ -7,7 +7,7 @@
 		<string id="TL21" text="En iyi alış fiyatları"/>
 		<string id="TL22" text="* Bunu satmak için en iyi pazar!"/>
 		<string id="TL23" text="* Bunu almak için en ucuz pazar!"/>
-		<string id="TL24" text="{TOWN} şehrinde daha ucuz: {PRICE}{GOLD}"/>
+		<string id="TL24" text="{TOWN} pazarında daha ucuz: {PRICE}{GOLD}"/>
 		<string id="TL06" text="{ITEMS} {GOLD} dinara alındı."/>
 		<string id="TL07" text="TradeLord defteri"/>
 		<string id="TL08" text="Yol süresi sınırlarınız içinde kârlı bir rota yok. Ticaret havuzu ayarlarından sınırları yükseltin ya da daha çok pazarın yakınına gidin."/>
@@ -56,7 +56,7 @@
 		<string id="TL67" text="Menzilde kârlı rota yok"/>
 		<string id="TL68" text="{COUNT} kârlı rota, en iyisi başta"/>
 		<string id="TL69" text="Yol süresi sınırlarınız içinde rota yok. | Ticaret havuzu ayarlarından sınırları yükseltin ya da daha çok pazarın yakınına gidin."/>
-		<string id="TL70" text="Bir şehir adına tıklayarak oraya gidin ve işaretini koyun ya da kaldırın | Gün = siz -&gt; alış şehri -&gt; satış şehri | Kerv. = o şehirlerdeki ya da o şehirlere giden kervanlar"/>
+		<string id="TL70" text="Bir pazarın adına tıklayarak oraya gidin ve işaretini koyun ya da kaldırın | Gün = siz -&gt; alış pazarı -&gt; satış pazarı | Kerv. = o pazarlardaki ya da o pazarlara giden kervanlar"/>
 		<string id="TL71" text=" | Puan = Güven değerine göre indirilmiş günlük kâr"/>
 		<string id="TL72" text=" | Puan = günlük kâr"/>
 		<string id="TL73" text=" | yeniden satış güvenlik payı uygulandı"/>
@@ -68,7 +68,7 @@
 		<string id="TL94" text="Burada ticaret yapılmadı: {REASON}."/>
 		<string id="TL95" text="Burada bir şey satılmadı: {REASON}, bir şey de alınmadı: {SECOND}."/>
 		<string id="TL83" text="köyün her maldan son parçası kaldı"/>
-		<string id="TL84" text="{ITEM}: {FROM} şehrinden al ({BUY} dinar) -&gt; {TO} şehrinde sat ({SELL})  x{QTY} = +{PROFIT} dinar, buradan ~{DAYS} gün"/>
+		<string id="TL84" text="{ITEM}: {FROM} pazarından al ({BUY} dinar) -&gt; {TO} pazarında sat ({SELL})  x{QTY} = +{PROFIT} dinar, buradan ~{DAYS} gün"/>
 		<string id="TL85" text="Yükü en iyi pazar için tut ayarı yükünüzü işaretli pazar için saklıyor"/>
 		<string id="TL86" text="bölüğünüz daha fazla hayvan güdemez"/>
 		<string id="TL89" text="Şimdiye dek kaydettiğiniz fiyatlarla, yol süresi sınırlarınız içinde kârlı rota yok. Daha çok pazar gezin ya da Ticaret havuzu ayarlarından sınırları yükseltin."/>

@@ -56,7 +56,7 @@
 		<string id="TL67" text="No profitable routes in reach"/>
 		<string id="TL68" text="{COUNT} profitable route(s), best first"/>
 		<string id="TL69" text="No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."/>
-		<string id="TL70" text="Click a town name to jump to it and pin or unpin it | Days = you -&gt; buy town -&gt; sell town | Carv. = caravans at or heading for those towns"/>
+		<string id="TL70" text="Click a market's name to jump to it and pin or unpin it | Days = you -&gt; buy market -&gt; sell market | Carv. = caravans at or heading for those markets"/>
 		<string id="TL71" text=" | Score = profit per day discounted by Conf"/>
 		<string id="TL72" text=" | Score = profit per day"/>
 		<string id="TL73" text=" | resale safety factor applied"/>
