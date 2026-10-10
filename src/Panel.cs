@@ -712,6 +712,9 @@ namespace TradeLord
                 MBReadOnlyList<ScreenLayer> layers = screen?.Layers;
                 for (int i = 0; layers != null && i < layers.Count; i++)
                     if (layers[i] != null && layers[i].IsFocusedOnInput()) return true;
+                List<ScreenLayer> shown = ScreenManager.SortedLayers;
+                for (int i = 0; shown != null && i < shown.Count; i++)
+                    if (shown[i] != null && shown[i].IsFocusedOnInput()) return true;
             }
             catch (Exception e) { Log.Error(e, "panel hotkey text-field check (hotkey left as it was)"); }
             return false;

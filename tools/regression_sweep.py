@@ -18938,5 +18938,10 @@ def the_marker_weighs_what_you_never_bought_first_as_the_loot_sale_sells_it():
 chk("1.104.3", "the map marker weighs what you never bought first, at the floor the loot sale holds it to, then what you bought, re-sorted as the sale re-sorts it once the loot is sold, all against one purse",
     the_marker_weighs_what_you_never_bought_first_as_the_loot_sale_sells_it())
 
+chk("1.104.4", "the panel hotkey is also ignored while a box in a popup over the map, such as a new clan's name, has the keyboard",
+    "List<ScreenLayer> shown = ScreenManager.SortedLayers;" in method_body(S['Panel.cs'], "private static bool TypingOnScreen")
+    and ordered(method_body(S['Panel.cs'], "private static bool TypingOnScreen"),
+                "layers[i].IsFocusedOnInput()", "shown[i].IsFocusedOnInput()", "catch (Exception e) { Log.Error(e,"))
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
