@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.104.1
+
+- Fixed the map marker weighing a market whose merchant is short of gold on other goods than the ones TradeLord would really sell there
+- TradeLord.log's breakdown of the marked market now adds up to its total when the merchant cannot pay for all your cargo
+- TradeLord.log now says when a market's merchant has too little gold for one unit of anything that clears Minimum profit margin
+
 ## 1.104.0
 
 - The villagers' dialog now offers you That was a nice trade once TradeLord has bought their offer on the road
