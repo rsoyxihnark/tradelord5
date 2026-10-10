@@ -16227,12 +16227,14 @@ def trade_xp_is_what_the_game_gives_for_the_same_sale():
 chk("1.97.5", "Trade XP for what TradeLord sells is what the game gives for the same sale on its trade screen: a visit's sales are put together good by good as that screen does and handed to the game's own reckoning once, before any save",
     trade_xp_is_what_the_game_gives_for_the_same_sale())
 
-DOCS_NEVER_WRITTEN = ("feature list", "mod description", "mod page", "readme", "comparison")
+DOCS_NEVER_WRITTEN = ("feature list", "mod description", "mod page", "nexus description", "nexus page",
+                      "store description", "store page", "readme", "comparison")
 
 
 def a_change_to_the_readme_or_the_comparison_is_never_written_up():
     entries = [line[2:].lower() for line in CHANGES.split('\n') if line.startswith('- ')]
-    refused = r"grep -qiE '^\+- .*(feature list|mod description|mod page|readme|comparison)'"
+    refused = (r"grep -qiE '^\+- .*(feature list|mod description|mod page|nexus description|nexus page|"
+               r"store description|store page|readme|comparison)'")
     return (len(entries) > 300
             and not [one for one in entries if any(word in one for word in DOCS_NEVER_WRITTEN)]
             and refused in WORKFLOW

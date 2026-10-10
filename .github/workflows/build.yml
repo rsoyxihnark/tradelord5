@@ -55,9 +55,9 @@ jobs:
           esac
           NOTES=$(git diff "$GITHUB_SHA^" "$GITHUB_SHA" -- CHANGELOG.md 2>/dev/null \
                   || git show --pretty=format: "$GITHUB_SHA" -- CHANGELOG.md)
-          if printf '%s\n' "$NOTES" | grep -qiE '^\+- .*(feature list|mod description|mod page|readme|comparison)'; then
+          if printf '%s\n' "$NOTES" | grep -qiE '^\+- .*(feature list|mod description|mod page|nexus description|nexus page|store description|store page|readme|comparison)'; then
             echo "this commit writes a change to the README or the comparison into the changelog, which is never written:"
-            printf '%s\n' "$NOTES" | grep -iE '^\+- .*(feature list|mod description|mod page|readme|comparison)'
+            printf '%s\n' "$NOTES" | grep -iE '^\+- .*(feature list|mod description|mod page|nexus description|nexus page|store description|store page|readme|comparison)'
             exit 1
           fi
           if printf '%s\n' "$CHANGED" | grep -qx 'CHANGELOG.md'; then
