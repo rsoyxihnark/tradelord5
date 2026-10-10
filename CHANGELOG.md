@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.104.4
+
+- Fixed the Ledger panel hotkey (map screen) opening or closing the ledger panel while you type a clan or kingdom name
+
 ## 1.104.3
 
 - Fixed a route whose Left is blank getting a lower Conf than one whose shelf empties first, when caravans head for its markets
