@@ -41,6 +41,8 @@ namespace TradeLord.Compat
                 "conversation_player_decided_to_buy_on_consequence", null),
             ("TaleWorlds.MountAndBlade.GauntletUI.Widgets.Chat.ChatLogItemWidget", "set_OneLineTextWidget", null),
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.FoodConsumptionBehavior", "MakeFoodConsumption", null),
+            ("TaleWorlds.ScreenSystem.ScreenManager", "EarlyUpdate", null),
+            ("TaleWorlds.Engine.MouseManager", "ActivateMouseCursor", null),
         };
 
         private static readonly (string type, string member)[] ReflectedMethods =
@@ -53,6 +55,11 @@ namespace TradeLord.Compat
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.WorkshopsCampaignBehavior", "AddNewWorkshopData"),
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.WorkshopsCampaignBehavior", "GetWarehouseRoster"),
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.WorkshopsCampaignBehavior", "AddNewWarehouseDataIfNeeded"),
+            ("SandBox.View.Map.MapScreen", "HandleMouse"),
+            ("SandBox.View.Map.MapScreen", "CheckCursorState"),
+            ("TaleWorlds.ScreenSystem.ScreenManager", "EarlyUpdate"),
+            ("TaleWorlds.ScreenSystem.ScreenManager", "LateUpdate"),
+            ("TaleWorlds.Engine.MouseManager", "ActivateMouseCursor"),
         };
 
         private static readonly (string type, string member, string why)[] LotShape =
