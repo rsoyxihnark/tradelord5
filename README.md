@@ -28,7 +28,8 @@
 - ✅ Every route priced unit by unit through the game's own model, so the profit is the one you will really get
 - ✅ A route whose prices could not be walked that way is marked on its confidence figure
 - ✅ A confidence score on each route, which starts at profit per day and is marked down by everything that could eat it
-- ✅ What marks it down: how much of the margin survives unit by unit pricing, how much of the good the seller has in stock, how long the trip is, how old the prices are, and how many NPC caravans are sitting at or heading for those two towns
+- ✅ What marks it down: how much of the margin survives unit by unit pricing, how much of the good the seller has in stock, how long the trip is, how old the prices are, and how soon the shelf empties under Left
+- ✅ With Live world prices or Count what is on its way to a market off, the NPC caravans sitting at or heading for those two markets mark it down in place of Left
 - ✅ The panel keeps its own score, writing down the Sell price it promised you and holding it against what that market really pays when you walk in near the time it said
 - ✅ What this means says how close the price has come to that promised Sell price, above or below, over how many prices it has checked, and the tally carries on across your campaign
 - ✅ The panel learns from that, and a market that has paid less than it promised is scored lower, so routes selling there fall down the list
@@ -48,15 +49,15 @@
 - ✅ Counted at each end of a route, by what arrives before you would, a load landing within a quarter day of you counted in part, so a route is priced on the market you will actually walk into
 - ✅ Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
-- ✅ How much gold the town you would sell to actually has, counted in, so it never plans a sale nobody can pay for
+- ✅ How much gold the market you would sell to actually has, counted in, so it never plans a sale nobody can pay for
 - ✅ It reads that purse live, so with Live world prices off it plans on the stock alone
 - ✅ A route listed whether or not your purse could pay for it today, or your herd is already as large as your men can drive, so the panel always shows you where the profit is
 - ✅ What this means says when your gold reserve is what is stopping you buying
-- ✅ Click any town to jump the camera there and pin a marker on it, and a pin comes off by itself once TradeLord has traded in that town
+- ✅ Click any market to jump the camera there and pin a marker on it, and a pin comes off by itself once TradeLord has traded in that market
 - ✅ The best market for the cargo you are carrying, a town or a village, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement
 - ✅ It counts only the goods it would really sell there, the ones that clear Minimum profit margin, so it never sends you somewhere it will then refuse to sell
 - ✅ With Live world prices on, it works through the richest markets first and stops as soon as none of the rest could outpay the one it has found, so riding across Calradia costs it very little
-- ✅ With Live world prices on, it reads every market's price live each time it weighs one, so the marker is never pointing at a town on a price it read hours ago
+- ✅ With Live world prices on, it reads every market's price live each time it weighs one, so the marker is never pointing at a market on a price it read hours ago
 - ✅ With Live world prices off, it weighs only the markets where you have seen a price for what you carry, at that price, and never reads their purse
 - ✅ With Count what is on its way to a market and Bulk price simulation on, it prices each market as it will be when you get there, the same way the ledger does
 - ✅ It leaves out the market TradeLord made its last trade at until you come back to it

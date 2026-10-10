@@ -1651,9 +1651,10 @@ namespace TradeLord
                                         ? (int)TradePolicy.Realizable(flatSell)
                                         : flatSell) - q.OpeningBuyPrice * q.Units;
                         float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);
+                        float lasts = Confidence.Lasts(runsOut, Forecast.On);
                         float confidence = Confidence.Of(q.Simulated, flat, profit, shelf,
                                                          q.Units, days, caravans, age,
-                                                         runsOut, toBuy);
+                                                         lasts, toBuy);
                         float perDay = TradeMath.PerDay(profit, days);
                         float score = perDay * confidence;
                         if (trustWhatItPaid &&
@@ -1672,7 +1673,7 @@ namespace TradeLord
                             Confidence = confidence, Score = score,
                             Simulated = q.Simulated, Caravans = caravans,
                             Parts = Confidence.PartsOf(q.Simulated, flat, profit, shelf, q.Units, days, caravans, age,
-                                                       runsOut, toBuy),
+                                                       lasts, toBuy),
                             StillComing = TradeMath.StillComing(q.Units, onTheShelfNow),
                             RunsOutInDays = runsOut
                         };

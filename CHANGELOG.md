@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.104.3
+
+- Fixed a route whose Left is blank getting a lower Conf than one whose shelf empties first, when caravans head for its markets
+- Fixed the map marker weighing a market as if TradeLord sold your bought goods there before what you never bought
+- Fixed the Turkish item tooltip and route list calling a village a town
+- Fixed What this means in the TradeLord ledger and the Chinese hint for Auto-mark best sell market on map calling a village a town
+
 ## 1.104.2
 
 - The mod is supported on Bannerlord 1.5.5.124170 only

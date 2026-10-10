@@ -74,6 +74,18 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_shelf_the_forecast_sees_holding_is_not_marked_down_for_caravans()
+        {
+            Assert.Equal(Confidence.NotKnown, Confidence.Lasts(Projection.NeverRunsOut, false));
+            Assert.Equal(12f, Confidence.Lasts(12f, true));
+            float holds = Confidence.Of(false, 0, 0, 100, 10, 2f, 6, -1f,
+                                        Confidence.Lasts(Projection.NeverRunsOut, true), 1f);
+            float empties = Confidence.Of(false, 0, 0, 100, 10, 2f, 6, -1f, 12f, 1f);
+            Assert.True(holds > empties);
+            Assert.Equal(1f, Confidence.Holds(Confidence.Lasts(Projection.NeverRunsOut, true), 1f));
+        }
+
+        [Fact]
         public void A_route_whose_shelf_empties_first_scores_below_one_that_lasts()
         {
             float dies = Confidence.Of(false, 0, 0, 100, 10, 2f, 0, -1f, 1f, 3f);

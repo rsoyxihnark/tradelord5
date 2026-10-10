@@ -863,6 +863,8 @@ namespace TradeLord
 
             public int AgedLeft => _aged - _agedTaken > 0 ? _aged - _agedTaken : 0;
 
+            public int Unknown => _unknown;
+
             public bool KeepOnlyTheAged()
             {
                 if (AgedLeft <= 0) return false;
@@ -878,6 +880,13 @@ namespace TradeLord
                 fresh._only = NoneOfTheAged;
                 fresh._unknown = 0;
                 return fresh;
+            }
+
+            public DearFirst WithoutTheUnknown()
+            {
+                DearFirst known = this;
+                known._unknown = 0;
+                return known;
             }
 
             public bool Clears(int price, float margin)
