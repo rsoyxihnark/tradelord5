@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.104.2
+
+- The mod is supported on Bannerlord 1.5.5.124170 only
+
 ## 1.104.1
 
 - Fixed the map marker weighing a market whose merchant is short of gold on other goods than the ones TradeLord would really sell there

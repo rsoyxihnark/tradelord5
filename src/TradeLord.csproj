@@ -9,7 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all"/>
     <PackageReference Include="Lib.Harmony" Version="2.4.2"/>
-    <PackageReference Include="Bannerlord.ReferenceAssemblies" Version="1.5.4.123627-beta"/>
+    <PackageReference Include="Bannerlord.ReferenceAssemblies" Version="1.5.5.124170-beta"/>
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="TradeLord.MCM"/>
