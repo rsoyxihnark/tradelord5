@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.104.6
+
+- TradeLord.log now notes when the forbidden sign stays on the screen while the campaign map asks for the normal pointer, and what ended it
+- TradeLord.log now says which part of the game last asked for the forbidden sign, and where the mouse was then
+- TradeLord.log now says which mouse pointer was really on the screen in the second before a quick right click on the campaign map
+- TradeLord.log now says, half a second after a quick right click on the campaign map, whether the forbidden sign is still on the screen
+- TradeLord.log's cursor notes now say how the last TradeLord window was opened or closed, such as with Esc or a click outside it
+- TradeLord.log's cursor notes now name any other mod that sets the mouse pointer or changes how the game picks it
+- TradeLord.log now notes when the game goes half a second without picking a mouse pointer on the campaign map
+- TradeLord.log now says once when it cannot read which mouse pointer is on the screen
+
 ## 1.104.5
 
 - Fixed the profit in the Sold line showing in the same colour as the rest of the line instead of golden yellow

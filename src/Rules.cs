@@ -206,6 +206,60 @@ namespace TradeLord
         internal static (bool showsMouse, bool takesWheel) LayerTakes(bool windowOpen) => (windowOpen, windowOpen);
     }
 
+    internal sealed class PointerLooks
+    {
+        internal const int KnownAfter = 10;
+        internal const int MostCounted = 1000;
+
+        private readonly Dictionary<int, Dictionary<long, int>> _seen = new Dictionary<int, Dictionary<long, int>>();
+
+        internal static bool Settled(float now, float since, float settle) => now - since >= settle;
+
+        internal void See(int shape, long look, float now, float askedSince, float shownSince, float settle)
+        {
+            if (!Settled(now, askedSince, settle) || !Settled(now, shownSince, settle) || shownSince < askedSince) return;
+            if (!_seen.TryGetValue(shape, out Dictionary<long, int> counts))
+                _seen[shape] = counts = new Dictionary<long, int>();
+            if (Known(shape, out long known) && known != look) return;
+            counts.TryGetValue(look, out int seen);
+            if (seen < MostCounted) counts[look] = seen + 1;
+        }
+
+        internal bool Known(int shape, out long look)
+        {
+            look = 0L;
+            if (!_seen.TryGetValue(shape, out Dictionary<long, int> counts)) return false;
+            int most = 0;
+            foreach (KeyValuePair<long, int> one in counts)
+                if (one.Value > most)
+                {
+                    most = one.Value;
+                    look = one.Key;
+                }
+            return most >= KnownAfter;
+        }
+
+        internal bool ShapeOf(long look, out int shape)
+        {
+            foreach (int one in _seen.Keys)
+                if (Known(one, out long known) && known == look)
+                {
+                    shape = one;
+                    return true;
+                }
+            shape = 0;
+            return false;
+        }
+    }
+
+    internal static class PointerHeld
+    {
+        internal static bool Wrong(bool settled, bool known, long look, long wanted) => settled && known && look != wanted;
+
+        internal static bool Still(long look, long held, bool settled, bool known, long wanted) =>
+            look == held && (!settled || !known || look != wanted);
+    }
+
     internal static class Ranks
     {
         internal const int Bands = 5;

@@ -46,7 +46,7 @@
                 Sprite="BlankWhiteSquare_9" Color="#00000066" DoNotAcceptEvents="true" />
         <ButtonWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                       DoNotPassEventsToChildren="true"
-                      Command.Click="ExecuteClose" />
+                      Command.Click="ExecuteCloseFromOutside" />
 
         <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
                    SuggestedWidth="960" SuggestedHeight="670"
@@ -392,7 +392,7 @@
                     Sprite="BlankWhiteSquare_9" Color="#000000AA" DoNotAcceptEvents="true" />
             <ButtonWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent"
                           DoNotPassEventsToChildren="true"
-                          Command.Click="ExecuteCloseTrades" />
+                          Command.Click="ExecuteCloseTradesFromOutside" />
 
             <ListPanel WidthSizePolicy="Fixed" HeightSizePolicy="Fixed"
                        SuggestedWidth="900" SuggestedHeight="560"
