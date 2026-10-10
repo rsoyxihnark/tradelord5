@@ -26,7 +26,7 @@ namespace TradeLord
 
         internal static void LetTheProfitShow(RichTextWidget line)
         {
-            Brush brush = line?.Brush;
+            Brush brush = line?.Context?.GetBrush(ProfitMark.ChatBrush);
             if (brush == null || brush.GetStyle(ProfitMark.Style) != null) return;
             var style = new Style(brush.Layers) { Name = ProfitMark.Style, DefaultStyle = brush.DefaultStyle };
             style.FontColor = Golden;

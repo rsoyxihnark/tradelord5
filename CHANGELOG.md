@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.104.5
+
+- Fixed the profit in the Sold line showing in the same colour as the rest of the line instead of golden yellow
+
 ## 1.104.4
 
 - Fixed the Ledger panel hotkey (map screen) opening or closing the ledger panel while you type a clan or kingdom name

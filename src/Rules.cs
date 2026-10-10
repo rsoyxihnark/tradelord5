@@ -398,6 +398,8 @@ namespace TradeLord
     {
         internal const string Style = "TradeLord.Profit";
 
+        internal const string ChatBrush = "ChatLog.Text";
+
         internal const string Coin = "<img src=\"General\\Icons\\Coin@2x\" extend=\"6\">";
 
         internal static string Shown(int profit, bool styled) =>
