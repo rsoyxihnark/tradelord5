@@ -488,6 +488,15 @@ namespace TradeLord
                 : TradeRules.WorthToBeat(good, paid, UnpaidWorth(el.Item));
         }
 
+        internal static int WorthToBeatUnbought(EquipmentElement el)
+        {
+            Good good = Describe(el.Item);
+            int paid = Options.Current.CostBasisMode == 2 ? CostBasis(el) : 0;
+            return TradeRules.WorthIsWhatYouPaid(good, paid)
+                ? paid
+                : TradeRules.WorthToBeat(good, paid, UnpaidWorth(el.Item));
+        }
+
         internal static bool CouldBeSold(ItemRosterElement el, ISet<string> lockedKeys)
         {
             ItemObject item = el.EquipmentElement.Item;

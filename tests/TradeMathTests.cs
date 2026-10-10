@@ -874,6 +874,28 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_walk_without_the_unknown_units_sells_only_the_units_with_a_price_paid()
+        {
+            var walk = new TradeMath.DearFirst(Costs(100, 100), 115, 100, 3);
+            TradeMath.DearFirst known = walk.WithoutTheUnknown();
+            Assert.Equal(3, walk.Unknown);
+            Assert.Equal(0, known.Unknown);
+            Assert.Equal(new[] { 100, 100, 100, 100, 100 }, Walked(walk, 5, u => 116).ToArray());
+            Assert.Equal(new[] { 100, 100 }, Walked(known, 5, u => 116).ToArray());
+        }
+
+        [Fact]
+        public void Each_at_its_own_cost_a_walk_without_the_unknown_units_never_sells_one_at_the_worth()
+        {
+            var walk = TradeMath.DearFirst.EachAtItsOwnCost(Costs(300), 200, 2, 0.15f);
+            TradeMath.DearFirst known = walk.WithoutTheUnknown();
+            Assert.Equal(2, walk.Unknown);
+            Assert.Equal(new[] { 200, 200 }, Walked(walk, 3, u => 250).ToArray());
+            Assert.Empty(Walked(known, 3, u => 250));
+            Assert.Equal(new[] { 300 }, Walked(known, 3, u => 400).ToArray());
+        }
+
+        [Fact]
         public void Dear_units_a_dry_run_already_drew_are_left_out_one_for_one()
         {
             Batch[] dearer = Costs(500, 836, 836);

@@ -473,7 +473,7 @@ namespace TradeLord
                 ? Tongue.Text(Options.Current.Omniscient
                     ? "{=TL69}No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."
                     : "{=TL90}No routes are within your travel ceilings, from the prices you have recorded so far. | Walk more markets, or raise the ceilings in the Trade Pool settings.").ToString()
-                : Tongue.Text("{=TL70}Click a town name to jump to it and pin or unpin it | Days = you -> buy town -> sell town | Carv. = caravans at or heading for those towns").ToString()
+                : Tongue.Text("{=TL70}Click a market's name to jump to it and pin or unpin it | Days = you -> buy market -> sell market | Carv. = caravans at or heading for those markets").ToString()
                   + Tongue.Text("{=TL476} | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit").ToString()
                   + (Options.Current.ConfidenceRanking
                         ? Tongue.Text("{=TL71} | Score = profit per day discounted by Conf").ToString()
