@@ -216,6 +216,7 @@ namespace TradeLord
             internal int Carried;
             internal int Weighed;
             internal int Refused;
+            internal int TooPoor;
             internal bool PurseCapped;
             internal int Told;
             internal int Left;
@@ -243,6 +244,7 @@ namespace TradeLord
             internal int HolderKinds;
             internal int HolderPurse;
             internal bool HolderPurseCapped;
+            internal bool HolderTooPoor;
             internal List<Share> HolderBill;
             internal bool HolderPastAllowance;
             internal bool PastAllowance;
@@ -496,7 +498,9 @@ namespace TradeLord
             if (how.Best == null)
                 return "of the " + how.Weighed + " market(s) it looked at, " + how.Refused +
                        " would pay too little for any of the " + how.Carried + " good(s) you carry to " +
-                       "clear Minimum profit margin, " + how.NoRoad + " have no road it could find, " +
+                       "clear Minimum profit margin, " + how.TooPoor +
+                       " have too little gold for one unit of any that does, " +
+                       how.NoRoad + " have no road it could find, " +
                        how.PastCeiling + " are past your travel ceilings and " + how.NoTill +
                        " have no gold at all" +
                        (how.Unseen > 0
@@ -580,7 +584,7 @@ namespace TradeLord
                          " is what it cost you, so it marked on the " + (how.Value - how.Cost) +
                          (how.PurseCapped
                              ? ", which is all that " + MarketKind(how.Best) + "'s purse of " + how.Purse +
-                               " can take, so the lines above come to more"
+                               " can take"
                              : ""));
             }
             if (board && how.Board != null && how.Board.Count > 0)
@@ -602,7 +606,8 @@ namespace TradeLord
             if (how.Carried > 0)
             {
                 said.Add("  ultralog: " + how.Weighed + " market(s) weighed, " + how.Told +
-                         " priced, " + how.Refused + " would pay too little for anything you carry, " +
+                         " priced, " + how.Refused + " would pay too little for anything you carry, " + how.TooPoor +
+                         " have too little gold for one unit of anything that clears your margin, " +
                          how.Left + " left unpriced once no purse left could beat " +
                          how.Rate.ToString("0") + " gold a day, in " +
                          how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms");
@@ -679,9 +684,20 @@ namespace TradeLord
         {
             Takings took = default(Takings);
             bool eachAtItsOwnCost = Options.Current.CostBasisMode == Options.CostOfEachUnit;
-            foreach (var (item, amount, worth, floors) in cargo)
+            var order = new List<(Paying pays, long gain, int at)>(cargo.Count);
+            for (int at = 0; at < cargo.Count; at++)
             {
-                Paying pays = WhatThatMarketPays(site, market, item, party, ride);
+                Paying pays = WhatThatMarketPays(site, market, cargo[at].item, party, ride);
+                int first = pays.At(0);
+                int stack = party.ItemRoster.FindIndexOfElement(cargo[at].item);
+                int held = stack >= 0 ? party.ItemRoster.GetElementNumber(stack) : cargo[at].amount;
+                long gain = first > 0 ? ((long)first - cargo[at].worth) * held : 0L;
+                order.Add((pays, gain > 0L ? gain : 0L, at));
+            }
+            order.Sort((x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain) : x.at.CompareTo(y.at));
+            foreach (var (pays, _, at) in order)
+            {
+                var (item, amount, worth, floors) = cargo[at];
                 TradeMath.DearFirst walk = floors;
                 long fetched = 0L, booked = 0L;
                 int moved = 0, opening = 0, last = 0;
@@ -690,12 +706,12 @@ namespace TradeLord
                     int price = pays.At(u);
                     if (price <= 0) break;
                     if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;
+                    if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }
                     booked += walk.Took();
                     if (moved == 0) opening = price;
                     last = price;
                     fetched += price;
                     moved++;
-                    if (took.Value + fetched >= gold) { took.PurseCapped = true; break; }
                 }
                 if (moved == 0) continue;
                 long cost = eachAtItsOwnCost ? booked : (long)worth * moved;
@@ -715,7 +731,6 @@ namespace TradeLord
                     Cost = cost,
                     Fetched = fetched
                 });
-                if (took.PurseCapped) break;
             }
             return took;
         }
@@ -864,6 +879,12 @@ namespace TradeLord
                 if (TradeMath.PerDay(gold, ride) <= bar) break;
                 how.Told++;
                 Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);
+                if (took.Value <= 0L && took.PurseCapped)
+                {
+                    how.TooPoor++;
+                    if (s == holder) how.HolderTooPoor = true;
+                    continue;
+                }
                 if (took.Value <= 0L) { how.Refused++; continue; }
                 long total = took.Value > gold ? gold : took.Value;
                 long earned = total - took.Cost;
@@ -934,7 +955,10 @@ namespace TradeLord
         {
             for (int at = 0; at < reachable.Count; at++)
                 if (reachable[at].s == holder)
-                    return holder.Name + " would pay too little for anything you carry to clear Minimum profit margin";
+                    return how.HolderTooPoor
+                        ? holder.Name + "'s purse of " + reachable[at].gold +
+                          " cannot pay for one unit of anything you carry that clears Minimum profit margin"
+                        : holder.Name + " would pay too little for anything you carry to clear Minimum profit margin";
             SettlementComponent market = holder.SettlementComponent;
             if (market == null) return holder.Name + " has no market";
             if (holder == party.CurrentSettlement || TradeActionBehavior.StillTheSameArrival(holder))

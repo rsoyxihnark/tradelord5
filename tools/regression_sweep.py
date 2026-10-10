@@ -806,11 +806,15 @@ def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
                     "float rate = TradeMath.PerDay(earned, ride);",
                     "float weighed = TradeMath.RateTheMarkHolds(rate, s == holder);",
                     "if (weighed > bar)")
-            and ordered(fetch, "foreach (var (item, amount, worth, floors) in cargo)",
-                        "Paying pays = WhatThatMarketPays(site, market, item, party, ride);",
+            and ordered(fetch, "for (int at = 0; at < cargo.Count; at++)",
+                        "Paying pays = WhatThatMarketPays(site, market, cargo[at].item, party, ride);",
+                        "foreach (var (pays, _, at) in order)",
+                        "var (item, amount, worth, floors) = cargo[at];",
                         "for (int u = 0; u < amount; u++)",
                         "int price = pays.At(u);",
-                        "if (took.Value + fetched >= gold) { took.PurseCapped = true; break; }")
+                        "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
+                        "if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }",
+                        "booked += walk.Took();")
             and "float faster = TradeMath.PerDay(x.gold, x.days);" in S['Marker.cs']
             and "return faster != slower ? slower.CompareTo(faster)" in S['Marker.cs']
             and "string.CompareOrdinal(x.s.StringId, y.s.StringId);" in S['Marker.cs']
@@ -846,7 +850,7 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
             and ": TradeRules.WorthToBeat(good, paid, UnpaidWorth(el.Item));" in worth
             and worth.count("UnpaidWorth(el.Item)") == 1
             and ordered(method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch"),
-                        "Paying pays = WhatThatMarketPays(site, market, item, party, ride);",
+                        "Paying pays = WhatThatMarketPays(site, market, cargo[at].item, party, ride);",
                         "int price = pays.At(u);",
                         "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
                         "took.Value += fetched;")
@@ -9594,7 +9598,7 @@ def the_marker_walks_the_richest_purses_first_and_stops_at_a_town_till():
             and "continue;" not in between(marker, "if (TradeMath.PerDay(gold, ride)", "\n")
             and marker.find("float cap = LedgerBehavior.TravelCeiling(s);") <
                 marker.find("reachable.Sort(FastestPurseFirst);")
-            and "if (took.Value + fetched >= gold) { took.PurseCapped = true; break; }" in
+            and "if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }" in
                 method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
             and "how.PurseCapped = took.PurseCapped;" in marker
             and 'string why = on ? Why(how) : "the map marker is switched off";' in update
@@ -13785,7 +13789,7 @@ def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
             and ordered(step, "? Priced.At(_market, _el, _party, true)",
                         "? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);",
                         "? null : Bulk.AsItLands(_site, _el, true, _flat, landed);")
-            and "Paying pays = WhatThatMarketPays(site, market, item, party, ride);" in fetch
+            and "Paying pays = WhatThatMarketPays(site, market, cargo[at].item, party, ride);" in fetch
             and "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);" in marker
             and "WhatItWouldFetch(how.Best, how.Best.SettlementComponent, party, how.Days, cargo, how.Purse, how.Bill);"
                 in marker
@@ -18773,6 +18777,48 @@ def what_is_on_its_way_earns_trust_by_the_gold_it_was_about():
 
 chk("1.103.11", "how far to trust what is on its way grows with the gold the checked figures said would move, not with how many there were, so a few small figures that came true cannot lift it far, and the log says that gold",
     what_is_on_its_way_earns_trust_by_the_gold_it_was_about())
+
+def the_marker_counts_only_what_the_merchant_can_pay_for_whole():
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    out = method_body(S['Marker.cs'], "private static string TheMarkLeftOut")
+    return (ordered(fetch, "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
+                    "if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }",
+                    "booked += walk.Took();", "fetched += price;", "moved++;",
+                    "if (moved == 0) continue;")
+            and "took.Value + fetched >= gold" not in fetch
+            and "if (took.PurseCapped) break;" not in fetch
+            and "so the lines above come to more" not in S['Marker.cs']
+            and ordered(marker, "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);",
+                        "if (took.Value <= 0L && took.PurseCapped)", "how.TooPoor++;",
+                        "if (s == holder) how.HolderTooPoor = true;",
+                        "if (took.Value <= 0L) { how.Refused++; continue; }")
+            and ordered(out, "return how.HolderTooPoor",
+                        '" cannot pay for one unit of anything you carry that clears Minimum profit margin"',
+                        '" would pay too little for anything you carry to clear Minimum profit margin"'))
+
+chk("1.104.1", "the map marker counts a unit only while the purse it has left can pay for that unit whole, as the sale does, goes on to the next good when the purse cuts one short, and the log says when a purse cannot pay for one unit of anything",
+    the_marker_counts_only_what_the_merchant_can_pay_for_whole())
+
+def the_marker_weighs_your_goods_in_the_order_the_sale_sells_them():
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    plan = method_body(S['Trading.cs'], "internal SellingFrom(Pass pass, string what, string named)")
+    return (ordered(fetch, "var order = new List<(Paying pays, long gain, int at)>(cargo.Count);",
+                    "int first = pays.At(0);",
+                    "int stack = party.ItemRoster.FindIndexOfElement(cargo[at].item);",
+                    "int held = stack >= 0 ? party.ItemRoster.GetElementNumber(stack) : cargo[at].amount;",
+                    "long gain = first > 0 ? ((long)first - cargo[at].worth) * held : 0L;",
+                    "order.Add((pays, gain > 0L ? gain : 0L, at));",
+                    "order.Sort((x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain) : x.at.CompareTo(y.at));",
+                    "foreach (var (pays, _, at) in order)")
+            and "continue" not in between(fetch, "for (int at = 0; at < cargo.Count; at++)", "order.Sort(")
+            and "order.Sort((x, y) => x.gain != y.gain ? y.gain.CompareTo(x.gain)" in plan
+            and ": x.at.CompareTo(y.at));" in plan
+            and "long gain = ((long)price - TradePolicy.WorthToBeat(held.EquipmentElement)) * held.Amount;"
+                in method_body(S['Trading.cs'], "private static int WhatThisStackWouldMake"))
+
+chk("1.104.1", "the map marker weighs your goods at a market in the order the sale there sells them, the whole stack that makes the most first, so a merchant short of gold is weighed on the goods TradeLord would really sell him",
+    the_marker_weighs_your_goods_in_the_order_the_sale_sells_them())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
