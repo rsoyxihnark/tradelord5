@@ -2167,10 +2167,6 @@
 - Fixed an English footnote sitting in an otherwise translated window
 - Every comment was taken out of the C# sources
 
-## 1.5.3
-
-- The Nexus description of what the four Harmony patches do is corrected
-
 ## 1.5.2
 
 - Fixed the panel listing round trips it could only half make, when a category was set to buy only
@@ -2273,7 +2269,6 @@
 ## 1.3.26
 
 - Fixed the new route search asking the game's pathfinder about every pair it considered
-- The store page now lists the per visit spend cap alongside the other route caps
 
 ## 1.3.25
 
