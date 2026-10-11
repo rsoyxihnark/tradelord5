@@ -19199,7 +19199,7 @@ def a_right_click_on_the_campaign_map_no_longer_leaves_the_pointer_frozen():
             and "private const float LetGoFor = 1f;" in held
             and ordered(tick, "if (_off || !(ScreenManager.TopScreen is MapScreen)) return;",
                         "if (Input.IsKeyReleased(InputKey.RightMouseButton)) _upAt = now;",
-                        "if (_upAt < 0f || now - _upAt > LetGoFor || Input.IsKeyDown(InputKey.LeftMouseButton) ||",
+                        "if (_upAt < 0f || now - _upAt < SettleFor || now - _upAt > LetGoFor || Input.IsKeyDown(InputKey.LeftMouseButton) ||",
                         "Input.IsKeyDown(InputKey.RightMouseButton) || Input.IsKeyDown(InputKey.MiddleMouseButton)) return;",
                         "IntPtr window = WindowsPointer.HoldingTheMouse();",
                         "catch (Exception e)", "_off = true;")
@@ -19229,6 +19229,43 @@ def the_games_own_window_is_asked_to_let_go_of_the_mouse_it_holds():
 
 chk("1.104.10", "the game's own window is asked once per right click to let go of the mouse it still holds, as Windows asks a window, without waiting on it, only where the window holding the mouse is the game's, never from TradeLord's own thread",
     the_games_own_window_is_asked_to_let_go_of_the_mouse_it_holds())
+
+
+def the_game_window_is_asked_to_let_go_only_once_the_pointer_after_a_right_click_has_settled():
+    held = method_body(S['Panel.cs'], "internal static class HeldMouse")
+    tick = method_body(held, "internal static void Tick()")
+    return (held and tick
+            and "private const float SettleFor = 0.2f;" in held
+            and "internal static float AskedAt { get; private set; } = -1f;" in held
+            and "now - _upAt < SettleFor || now - _upAt > LetGoFor" in tick
+            and ordered(tick, "if (window == IntPtr.Zero || !PostMessage(window, CancelMode, IntPtr.Zero, IntPtr.Zero)) return;",
+                        "_upAt = -1f;", "AskedAt = now;", "catch (Exception e)"))
+
+chk("1.104.11", "the game's window is asked to let go of the mouse a fifth of a second after the right mouse button comes up, once the pointer the game wants after the click has settled, so Windows redraws that pointer and not the one before",
+    the_game_window_is_asked_to_let_go_only_once_the_pointer_after_a_right_click_has_settled())
+
+
+def where_the_pointer_comes_back_after_a_right_click_is_only_read_and_written_down():
+    p = S['Panel.cs']
+    back = method_body(p, "internal static class PointerReturn")
+    tick = method_body(back, "internal static void Tick()")
+    sub = method_body(S['SubModule.cs'], "protected override void OnApplicationTick(float dt)")
+    return (back and tick and sub
+            and 'Guard.Run("Tick.PointerReturn", PointerReturn.Tick);' in sub
+            and "private const float FarEnough = 48f;" in back
+            and ordered(tick, "if (_off) return;", "if (Input.IsKeyPressed(InputKey.RightMouseButton))",
+                        "_from = Input.MousePositionPixel;",
+                        "_heldAll &= map.SceneLayer.IsHitThisFrame;",
+                        "if (!WindowsPointer.Read(out bool over, out bool showing, out IntPtr _) || !over || !showing) return;",
+                        "if (at.Distance(_from) >= FarEnough) Log.Write(CameBack(now, at));",
+                        "catch (Exception e)", "_off = true;")
+            and all(touch not in back for touch in
+                    ("SetCursorPos", "SetMousePosition", "ShowCursor", "SetCursor", "SetCapture", "ReleaseCapture",
+                     "PostMessage", "SetMouseVisible", "SetInputRestrictions", "LockCursor", "DontChangeCursorPos",
+                     "ActiveCursor =")))
+
+chk("1.104.11", "where the pointer comes back after a right click on the campaign map is only read, and written into TradeLord.log only when it lands far from where the button went down; a fault in it stops only that line",
+    where_the_pointer_comes_back_after_a_right_click_is_only_read_and_written_down())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
