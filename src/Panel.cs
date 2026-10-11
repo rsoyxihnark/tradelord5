@@ -1749,6 +1749,8 @@ namespace TradeLord
             bool? closed = (!face || (!atSea && !onLand)) ? true : atSea ? false : WalkingIsShut(spot);
             bool reach = Helpers.NavigationHelper.CanPlayerNavigateToPosition(spot, out _);
             bool home = Helpers.NavigationHelper.CanPlayerNavigateToPosition(party.Position, out _);
+            var over = map.CurrentVisualOfTooltip;
+            bool onAPlace = over != null && !over.IsMobileEntity;
             return new Ground
             {
                 Said = "the ground at " + Spot(point.AsVec2) + (onLand ? " on land" : " at sea") +
@@ -1758,7 +1760,7 @@ namespace TradeLord
                        ", and the game's own check says your party " + (reach ? "can" : "cannot") +
                        " travel there; the same check on the spot your party stands on says " +
                        (home ? "it can be there" : "it cannot"),
-                SignIsRight = !reach && closed == true && home
+                SignIsRight = MapSign.TheMapAsksForIt(onAPlace, onAPlace && over.IsInteractable(), reach) && home
             };
         }
 
