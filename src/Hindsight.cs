@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Helpers;
+using System.Reflection;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -41,8 +41,8 @@ namespace TradeLord
 
         private static readonly BandTally _bands = new BandTally();
 
-        private static readonly Dictionary<string, Settlement> _nearestTown =
-            new Dictionary<string, Settlement>(StringComparer.Ordinal);
+        private static readonly MethodInfo TheGamesNearestTown =
+            typeof(VillageMarketData).GetMethod("get_ClosestTown", BindingFlags.Instance | BindingFlags.NonPublic);
 
         internal static bool Writing => Options.Current.ExtendedDebugLogging;
 
@@ -53,7 +53,6 @@ namespace TradeLord
             _said.Forget();
             _promised.Forget();
             _bands.Forget();
-            _nearestTown.Clear();
         }
 
         internal static void Note(TradeRoute route)
@@ -132,12 +131,9 @@ namespace TradeLord
             Village village = site.Village;
             if (village == null) return null;
             if (village.TradeBound != null) return village.TradeBound;
-            if (_nearestTown.TryGetValue(site.StringId, out Settlement near)) return near;
-            MobileParty villagers = village.VillagerPartyComponent?.MobileParty;
-            near = SettlementHelper.FindNearestTownToSettlement(
-                site, villagers != null ? villagers.NavigationCapability : MobileParty.NavigationType.All)?.Settlement;
-            _nearestTown[site.StringId] = near;
-            return near;
+            if (village.MarketData == null || TheGamesNearestTown == null) return null;
+            return Guard.Read("Hindsight.PricedFrom", village.MarketData,
+                              market => TheGamesNearestTown.Invoke(market, null) as Settlement, null);
         }
 
         private static void Promise(TradeRoute route)

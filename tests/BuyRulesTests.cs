@@ -294,5 +294,23 @@ namespace TradeLord.Tests
             Assert.False(TradeRules.NoRoomForOneMore(
                 new Good { Id = "note", Name = "note", Weight = 0f }, roomLeft: 0f));
         }
+
+        [Fact]
+        public void A_purse_is_owed_back_what_the_game_took_out_of_what_you_paid_it()
+        {
+            Assert.Equal(70, TradeRules.OwedToThePurse(100, 5000, 5030));
+            Assert.Equal(100, TradeRules.OwedToThePurse(100, 800, 800));
+            Assert.Equal(5, TradeRules.OwedToThePurse(100, 800, 895));
+            Assert.Equal(0, TradeRules.OwedToThePurse(100, 800, 900));
+        }
+
+        [Fact]
+        public void A_purse_is_never_owed_more_than_you_paid_it_nor_less_than_nothing()
+        {
+            Assert.Equal(0, TradeRules.OwedToThePurse(100, 800, 950));
+            Assert.Equal(100, TradeRules.OwedToThePurse(100, 800, 700));
+            Assert.Equal(0, TradeRules.OwedToThePurse(0, 800, 800));
+            Assert.Equal(100, TradeRules.OwedToThePurse(100, int.MaxValue, 0));
+        }
     }
 }

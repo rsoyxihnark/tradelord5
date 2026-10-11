@@ -169,6 +169,8 @@ namespace TradeLord
 
         internal static PartyBase TradingWith => _tradingWith;
 
+        private static (Settlement at, int paid, int putBack, int untaxed) _purse;
+
         private static bool _saidPricesAreNotReal;
 
         internal static bool PricesAreReal()
@@ -196,15 +198,45 @@ namespace TradeLord
                                         string what, string pass, out int gold)
         {
             int before = Hero.MainHero.Gold;
+            Settlement paidInto = selling ? null : merchant?.Settlement;
+            int pursed = paidInto?.SettlementComponent?.Gold ?? 0;
+            int taxed = paidInto?.Town?.TradeTaxAccumulated ?? 0;
             _tradingWith = merchant;
             OpenTransaction();
             try { swap(); }
             finally { CloseTransaction(); _tradingWith = null; }
             gold = selling ? Hero.MainHero.Gold - before : before - Hero.MainHero.Gold;
-            if (gold >= 0) return true;
+            if (gold >= 0)
+            {
+                int paid = gold;
+                if (paidInto?.SettlementComponent != null)
+                    Guard.Run("paying the purse in full", () => PayThePurseInFull(paidInto, paid, pursed, taxed));
+                return true;
+            }
             Log.Write("ERROR: " + what + (selling ? " removed " : " added ") + (-gold) +
                       " gold - transaction direction changed on this game version. " + pass + " aborted.");
             return false;
+        }
+
+        private static void PayThePurseInFull(Settlement at, int paid, int pursed, int taxed)
+        {
+            SettlementComponent purse = at.SettlementComponent;
+            int owed = TradeRules.OwedToThePurse(paid, pursed, purse.Gold);
+            if (owed > 0) purse.ChangeGold(owed);
+            int booked = at.Town == null ? 0 : at.Town.TradeTaxAccumulated - taxed;
+            if (booked > 0) at.Town.TradeTaxAccumulated = taxed;
+            _purse = (at, _purse.paid + paid, _purse.putBack + owed, _purse.untaxed + Math.Max(0, booked));
+        }
+
+        private static void ReportThePurse()
+        {
+            var (at, paid, putBack, untaxed) = _purse;
+            _purse = default;
+            if (at == null || putBack + untaxed == 0) return;
+            Log.Write("  " + at.Name + "'s purse keeps all " + paid + " gold TradeLord paid it, as buying at the trade " +
+                      "screen leaves it: the " + putBack + " gold the game's sale took out of it as tax went back in" +
+                      (untaxed > 0 ? ", and the " + untaxed + " gold of trade tax it booked for " + at.Name +
+                                     "'s owner was taken back" : ""));
         }
 
         private static void InAPass(Action work)
@@ -217,6 +249,7 @@ namespace TradeLord
                 _transactionDepth = 0;
                 _tradingWith = null;
                 ReportSilenced();
+                ReportThePurse();
             }
         }
 

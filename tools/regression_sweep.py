@@ -1652,7 +1652,7 @@ chk("1.3.2", "a good one half of the pass moved here is left alone by the other 
     (between(S['Books.cs'], "internal bool Bought(bool sim, string id) =>", ";")))
 chk("1.3.2", "a transaction that moves gold the wrong way stops the pass instead of draining the purse",
     (lambda b: ordered(b, "gold = selling ? Hero.MainHero.Gold - before : before - Hero.MainHero.Gold;",
-                       "if (gold >= 0) return true;",
+                       "if (gold >= 0)\n            {", "int paid = gold;", "return true;\n            }",
                        "transaction direction changed on this game version",
                        "return false;"))
     (method_body(S['Trading.cs'], "private static bool SwapOneUnit")) and
@@ -11814,12 +11814,10 @@ def a_promise_your_own_trading_moved_is_set_aside_rather_than_scored():
             and "said.YourTradeMovedIt = true;" in aside
             and ordered(priced, "if (site.IsTown) return site;",
                         "if (village.TradeBound != null) return village.TradeBound;",
-                        "if (_nearestTown.TryGetValue(site.StringId, out Settlement near)) return near;",
-                        "MobileParty villagers = village.VillagerPartyComponent?.MobileParty;",
-                        "SettlementHelper.FindNearestTownToSettlement(",
-                        "villagers != null ? villagers.NavigationCapability : MobileParty.NavigationType.All",
-                        "_nearestTown[site.StringId] = near;")
-            and "_nearestTown.Clear();" in method_body(h, "internal static void Forget")
+                        "if (village.MarketData == null || TheGamesNearestTown == null) return null;",
+                        'return Guard.Read("Hindsight.PricedFrom", village.MarketData,',
+                        "market => TheGamesNearestTown.Invoke(market, null) as Settlement, null);")
+            and 'typeof(VillageMarketData).GetMethod("get_ClosestTown", BindingFlags.Instance | BindingFlags.NonPublic);' in h
             and ordered(kept, "if (Scoring.TooOldToSay(said.WithinDays, said.AtHours, now, out float since))",
                         "stale++;", "if (said.YourTradeMovedIt)", "yours++;",
                         "int found = Priced.At(market, said.Item, MobileParty.MainParty, true);")
@@ -18556,24 +18554,24 @@ chk("1.103.10", "a quick right click on the campaign map, with no TradeLord wind
     a_quick_right_click_writes_down_what_the_cursor_did_just_before_it())
 
 
-def the_watch_spends_nothing_on_ground_your_party_really_cannot_cross():
+def every_forbidden_sign_that_stays_on_is_written_down():
     w = cursor_watch()
     watch = method_body(w, "private static void Watch(float now, MapScreen map, ScreenLayer top)")
     look = method_body(w, "private static Ground Look(MapScreen map)")
     return (watch and look
             and ordered(watch, "if (_lookedAt >= 0f && now - _lookedAt < LookAgain) return;",
                         'Ground ground = Guard.Read("map cursor watch: under the mouse", map, Look, Unread);',
-                        "if (ground.SignIsRight) return;", "_told = true;",
+                        "_told = true;",
                         "Log.WriteMany(WhatTheMapIsDoing(map, top, now, ground));")
+            and "SignIsRight" not in w
             and "bool? closed = (!face || (!atSea && !onLand)) ? true : atSea ? false : WalkingIsShut(spot);" in look
             and "bool home = Helpers.NavigationHelper.CanPlayerNavigateToPosition(party.Position, out _);" in look
-            and "SignIsRight = !reach && closed == true && home" in look
             and "GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Default)" in
                 method_body(w, "private static bool Shut(CampaignVec2 spot)")
             and "catch { return null; }" in method_body(w, "private static bool? WalkingIsShut(CampaignVec2 spot)"))
 
-chk("1.103.10", "the forbidden sign over sea or ground your party really cannot cross is never written down while your party's own spot checks out, so the notes go to the sign that is wrong",
-    the_watch_spends_nothing_on_ground_your_party_really_cannot_cross())
+chk("1.104.8", "every forbidden sign that stays on while the mouse moves is written down, over sea and ground your party cannot cross too, and the note still says what kind of ground it was and whether your party could be there",
+    every_forbidden_sign_that_stays_on_is_written_down())
 
 
 def the_watch_only_reads_the_campaign_map():
@@ -19137,10 +19135,57 @@ def the_price_trace_names_the_town_a_village_really_takes_its_prices_from():
             and "village.TradeBound ?? village.Bound" not in S['Market.cs']
             and ordered(method_body(S['Hindsight.cs'], "internal static Settlement PricedFrom(Settlement site)"),
                         "if (village.TradeBound != null) return village.TradeBound;",
-                        "SettlementHelper.FindNearestTownToSettlement("))
+                        "market => TheGamesNearestTown.Invoke(market, null) as Settlement, null);"))
 
 chk("1.104.7", "TradeLord.log's price trace names the town a village's prices really come from, its trade town or else the nearest town, as the game's own village market reads them",
     the_price_trace_names_the_town_a_village_really_takes_its_prices_from())
+
+
+def a_village_with_no_town_to_trade_with_is_weighed_against_the_town_the_game_itself_picked():
+    h = S['Hindsight.cs']
+    priced = method_body(h, "internal static Settlement PricedFrom(Settlement site)")
+    return (priced
+            and 'typeof(VillageMarketData).GetMethod("get_ClosestTown", BindingFlags.Instance | BindingFlags.NonPublic);' in h
+            and "market => TheGamesNearestTown.Invoke(market, null) as Settlement, null);" in priced
+            and "FindNearestTownToSettlement" not in h
+            and "NavigationCapability" not in h
+            and "_nearestTown" not in h
+            and "VillageMarketData.get_ClosestTown" in (compat_list('ReflectedMethods') or []))
+
+chk("1.104.8", "a castle's village with no town to trade with is weighed against the very town the game's own village market picked as nearest, read from the game rather than worked out again",
+    a_village_with_no_town_to_trade_with_is_weighed_against_the_town_the_game_itself_picked())
+
+
+def what_tradelord_pays_a_town_or_a_village_stays_in_its_purse_as_at_the_trade_screen():
+    t = S['Trading.cs']
+    swap = method_body(t, "private static bool SwapOneUnit(bool selling, Action swap, PartyBase merchant,")
+    full = method_body(t, "private static void PayThePurseInFull(Settlement at, int paid, int pursed, int taxed)")
+    told = method_body(t, "private static void ReportThePurse()")
+    passing = method_body(t, "private static void InAPass(Action work)")
+    buy = method_body(t, "internal bool BuyOne(ItemRosterElement el, int price, string what, string named, out int gold)")
+    return (swap and full and told and passing and buy
+            and "SellItemsAction.Apply(Shop, Me, _unit, 1, Site)" in buy
+            and ordered(swap, "Settlement paidInto = selling ? null : merchant?.Settlement;",
+                        "int pursed = paidInto?.SettlementComponent?.Gold ?? 0;",
+                        "int taxed = paidInto?.Town?.TradeTaxAccumulated ?? 0;",
+                        "try { swap(); }",
+                        "gold = selling ? Hero.MainHero.Gold - before : before - Hero.MainHero.Gold;",
+                        "if (gold >= 0)", "int paid = gold;",
+                        "PayThePurseInFull(paidInto, paid, pursed, taxed)", "return true;")
+            and ordered(full, "int owed = TradeRules.OwedToThePurse(paid, pursed, purse.Gold);",
+                        "if (owed > 0) purse.ChangeGold(owed);",
+                        "int booked = at.Town == null ? 0 : at.Town.TradeTaxAccumulated - taxed;",
+                        "if (booked > 0) at.Town.TradeTaxAccumulated = taxed;")
+            and "_purse = default;" in told
+            and ordered(passing, "ReportSilenced();", "ReportThePurse();")
+            and ("internal static int OwedToThePurse(int paid, int before, int after) =>\n"
+                 "            (int)Math.Max(0L, Math.Min(paid, paid - ((long)after - before)));") in S['Rules.cs']
+            and all(one in BUYRULETESTS for one in
+                    ("A_purse_is_owed_back_what_the_game_took_out_of_what_you_paid_it",
+                     "A_purse_is_never_owed_more_than_you_paid_it_nor_less_than_nothing")))
+
+chk("1.104.8", "what TradeLord pays a town or a village for a purchase all stays in its purse, as buying at the trade screen leaves it, and no trade tax is booked for the town's owner on it",
+    what_tradelord_pays_a_town_or_a_village_stays_in_its_purse_as_at_the_trade_screen())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
