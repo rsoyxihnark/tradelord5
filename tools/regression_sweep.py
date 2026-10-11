@@ -5261,6 +5261,7 @@ EVER_SHIPPED = {
     "MaxCargoShare": "float", "PartyTradeXpShare": "float",
     "MarkPriceDirection": "bool", "PriceTrace": "bool",
     "MaxWorkshopsOwned": "int", "Ultralog": "bool", "ExtendedDebugLogging": "bool",
+    "ExtensiveCursorDebugLogging": "bool",
     "PickTheBuyerOnTheWholeStack": "bool",
     "HoldCargoForBestMarket": "float",
     "EarnWorkshopsWithTrade": "bool",
@@ -10713,7 +10714,9 @@ def every_extra_line_is_behind_the_one_log_switch_that_ships_on():
             and re.search(r'\{=TL457\}Enable extended debug logging', M) is not None
             and '[SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]\n'
                 '        public bool ExtendedDebugLogging' in M
-            and M.count("[SettingPropertyGroup(\"{=TL107}Debug\"") == 1
+            and M.count("[SettingPropertyGroup(\"{=TL107}Debug\"") == 2
+            and '[SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]\n'
+                '        public bool ExtensiveCursorDebugLogging' in M
             and screen.count("_o.ExtendedDebugLogging") == 2
             and marker.count("Options.Current.ExtendedDebugLogging") == 4
             and all("if (!Options.Current.ExtendedDebugLogging) return;" in method_body(marker, one)
@@ -18985,7 +18988,7 @@ def a_pointer_set_outside_the_screens_is_named_with_its_code():
     return (elsewhere and caller and hands and owners
             and '[HarmonyPatch(typeof(MouseManager), "ActivateMouseCursor")]\n    internal static class Patch_APointerSetElsewhere' in p
             and "private static void Prefix(CursorType __0) => CursorWatch.SetElsewhere(__0);" in p
-            and "if (_inScreens || _tellingDead) return;" in elsewhere
+            and "if (_inScreens || _tellingDead || !Options.Current.ExtensiveCursorDebugLogging) return;" in elsewhere
             and ordered(caller, "if (type == null || type.Assembly.IsDynamic || type.Assembly == typeof(CursorWatch).Assembly ||",
                         'return type.FullName + "." + method.Name + " in " + type.Assembly.GetName().Name;')
             and "Patcher.TryPatch(harmony, typeof(Patch_APointerSetElsewhere));" in S['SubModule.cs']
@@ -19291,6 +19294,39 @@ def a_pointer_the_map_held_in_place_is_put_back_where_the_button_went_down():
 
 chk("1.104.12", "after a right or middle click the campaign map held the pointer for, TradeLord puts the pointer back where the button went down if the game left it elsewhere, once, as it shows again, and never after a click the map did not hold",
     a_pointer_the_map_held_in_place_is_put_back_where_the_button_went_down())
+
+
+def every_cursor_note_waits_on_its_own_switch_that_ships_off():
+    p = S['Panel.cs']
+    w = cursor_watch()
+    tick = method_body(w, "internal static void Tick()")
+    watching = method_body(w, "private static bool Watching()")
+    before = method_body(w, "internal static void BeforeTheScreens()")
+    after = method_body(w, "internal static void AfterTheScreens()")
+    back = method_body(method_body(p, "internal static class PointerReturn"), "internal static void Tick()")
+    fixes = [method_body(p, "internal static class HeldMouse"), method_body(p, "internal static class PointerHome"),
+             between(p, "internal static class WindowsPointer", "[HarmonyPatch(typeof(ScreenManager)")]
+    gate = "if (Options.Current.ExtensiveCursorDebugLogging)"
+    screen = method_body(M, "public bool ExtensiveCursorDebugLogging")
+    return (tick and watching and before and after and back and all(fixes) and screen
+            and option_default("ExtensiveCursorDebugLogging") == "false"
+            and EVER_SHIPPED.get("ExtensiveCursorDebugLogging") == "bool"
+            and '{=TL504}Extensive cursor debug logging", Order = 1,' in M
+            and ordered(M, "public bool ExtendedDebugLogging", "public bool ExtensiveCursorDebugLogging")
+            and screen.count("_o.ExtensiveCursorDebugLogging") == 2
+            and ordered(tick, "if (_dead) return;", "if (!Watching()) return;", "try { TickCore(); }")
+            and ordered(watching, "bool on = Options.Current.ExtensiveCursorDebugLogging;", "if (on && !_watching)",
+                        "Forget();", "_tellings.Clear();", "_blindFrom = -1f;", "_watching = on;", "return on;")
+            and "if (_tellingDead || !Options.Current.ExtensiveCursorDebugLogging) return;" in before
+            and "if (_tellingDead || !_inScreens) return;" in after
+            and ordered(back, "if (_off) return;", "if (!Options.Current.ExtensiveCursorDebugLogging)",
+                        "_down = false;", "_beforeAt = -1f;", "MapScreen map = ScreenManager.TopScreen as MapScreen;")
+            and all(one.count("ExtensiveCursorDebugLogging") == one.count("Log.Write(")
+                    == len(re.findall(re.escape(gate) + r'\s*Log\.Write\(', one)) > 0 for one in fixes)
+            and "Log.WriteMany(" not in "".join(fixes))
+
+chk("1.104.13", "TradeLord.log writes its cursor notes only with Extensive cursor debug logging on, which ships off under Enable extended debug logging, and with it off the pointer fixes still work and write nothing",
+    every_cursor_note_waits_on_its_own_switch_that_ships_off())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

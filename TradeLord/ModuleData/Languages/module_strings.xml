@@ -329,5 +329,7 @@
 		<string id="TL501" text="What was sold added {XP} Trade XP."/>
 		<string id="TL502" text="What was sold added {XP} Trade XP, and Trade is now {LEVEL}."/>
 		<string id="TL503" text="You already own {OWNED} workshop(s). Every 25 points of your Trade skill earns one more slot."/>
+		<string id="TL504" text="Extensive cursor debug logging"/>
+		<string id="TL505" text="Writes all TradeLord sees of the mouse on the campaign map to TradeLord.log: which pointer the game asks for, which one is really on the screen, and where the pointer comes back after a click. OFF by default."/>
 	</strings>
 </base>
