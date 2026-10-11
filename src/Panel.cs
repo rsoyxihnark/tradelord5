@@ -1951,6 +1951,76 @@ namespace TradeLord
         private static string Seconds(float s) => s.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    internal static class PointerHome
+    {
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Spot
+        {
+            public int X;
+            public int Y;
+        }
+
+        private const int FarEnough = 8;
+        private const float WaitFor = 1f;
+        private static Spot _seen = new Spot { X = int.MinValue };
+        private static Spot _home;
+        private static bool _down;
+        private static bool _held;
+        private static bool _off;
+        private static float _upAt = -1f;
+
+        [DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out Spot at);
+
+        [DllImport("user32.dll")]
+        private static extern bool SetCursorPos(int x, int y);
+
+        internal static void Tick()
+        {
+            MapScreen map = ScreenManager.TopScreen as MapScreen;
+            if (_off || map == null)
+            {
+                _seen.X = int.MinValue;
+                _down = false;
+                _upAt = -1f;
+                return;
+            }
+            try
+            {
+                float now = TaleWorlds.Engine.Time.ApplicationTime;
+                if (Input.IsKeyDown(InputKey.RightMouseButton) || Input.IsKeyDown(InputKey.MiddleMouseButton))
+                {
+                    if (!_down) _home = _seen;
+                    _held = (_held || !_down) && _home.X != int.MinValue && map.SceneLayer.IsHitThisFrame;
+                    _down = true;
+                    _upAt = -1f;
+                    return;
+                }
+                if (_down) _upAt = _held ? now : -1f;
+                _down = false;
+                if (!GetCursorPos(out Spot at)) return;
+                if (_upAt >= 0f && (now - _upAt > WaitFor || (WindowsPointer.Read(out bool _, out bool showing, out IntPtr _) && showing)))
+                {
+                    if (now - _upAt <= WaitFor && Math.Abs(at.X - _home.X) + Math.Abs(at.Y - _home.Y) > FarEnough &&
+                        SetCursorPos(_home.X, _home.Y))
+                    {
+                        Log.Write("map cursor: put the pointer back where the mouse button went down, at " + _home.X + ", " + _home.Y +
+                                  " on Windows' own scale, as the game had left it at " + at.X + ", " + at.Y);
+                        at = _home;
+                    }
+                    _upAt = -1f;
+                }
+                if (_upAt < 0f) _seen = at;
+            }
+            catch (Exception e)
+            {
+                _off = true;
+                Log.Write("map cursor: the pointer cannot be put back here (" + e.GetType().Name +
+                          "), so it is left where the game puts it");
+            }
+        }
+    }
+
     internal static class WindowsPointer
     {
         [StructLayout(LayoutKind.Sequential)]
