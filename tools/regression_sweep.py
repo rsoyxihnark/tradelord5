@@ -19268,5 +19268,30 @@ chk("1.104.11", "where the pointer comes back after a right click on the campaig
     where_the_pointer_comes_back_after_a_right_click_is_only_read_and_written_down())
 
 
+def a_pointer_the_map_held_in_place_is_put_back_where_the_button_went_down():
+    home = method_body(S['Panel.cs'], "internal static class PointerHome")
+    tick = method_body(home, "internal static void Tick()")
+    sub = method_body(S['SubModule.cs'], "protected override void OnApplicationTick(float dt)")
+    return (home and tick and sub
+            and 'Guard.Run("Tick.PointerHome", PointerHome.Tick);' in sub
+            and "private const int FarEnough = 8;" in home
+            and ordered(tick, "if (Input.IsKeyDown(InputKey.RightMouseButton) || Input.IsKeyDown(InputKey.MiddleMouseButton))",
+                        "if (!_down) _home = _seen;",
+                        "_held = (_held || !_down) && _home.X != int.MinValue && map.SceneLayer.IsHitThisFrame;",
+                        "if (_down) _upAt = _held ? now : -1f;",
+                        "if (!GetCursorPos(out Spot at)) return;",
+                        "SetCursorPos(_home.X, _home.Y))",
+                        "at = _home;",
+                        "if (_upAt < 0f) _seen = at;",
+                        "catch (Exception e)", "_off = true;")
+            and home.count("SetCursorPos(") == 2
+            and all(touch not in home for touch in
+                    ("SetCapture", "ReleaseCapture", "PostMessage", "ShowCursor", "ClipCursor", "SetMouseVisible",
+                     "SetMousePosition", "DontChangeCursorPos", "ActiveCursor =", "HarmonyPatch")))
+
+chk("1.104.12", "after a right or middle click the campaign map held the pointer for, TradeLord puts the pointer back where the button went down if the game left it elsewhere, once, as it shows again, and never after a click the map did not hold",
+    a_pointer_the_map_held_in_place_is_put_back_where_the_button_went_down())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

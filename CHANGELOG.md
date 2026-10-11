@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.104.12
+
+- Fixed the campaign map's pointer jumping somewhere else after a right or middle click
+
 ## 1.104.11
 
 - Fixed the campaign map's pointer sometimes staying on the forbidden sign after a right click until you moved the mouse
