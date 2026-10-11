@@ -81,6 +81,7 @@ namespace TradeLord
             Guard.Run("Tick.Parley", Parley.HangWhereTheBandAnswers);
             LedgerPanel.Tick();
             Guard.Run("Tick.HeldMouse", HeldMouse.Tick);
+            Guard.Run("Tick.PointerReturn", PointerReturn.Tick);
             Guard.Run("Tick.CursorWatch", CursorWatch.Tick);
         }
 

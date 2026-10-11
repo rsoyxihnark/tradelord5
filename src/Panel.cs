@@ -1837,9 +1837,12 @@ namespace TradeLord
     internal static class HeldMouse
     {
         private const float LetGoFor = 1f;
+        private const float SettleFor = 0.2f;
         private const int CancelMode = 0x1F;
         private static float _upAt = -1f;
         private static bool _off;
+
+        internal static float AskedAt { get; private set; } = -1f;
 
         [DllImport("user32.dll", EntryPoint = "PostMessageW")]
         private static extern bool PostMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
@@ -1849,7 +1852,7 @@ namespace TradeLord
             if (_off || !(ScreenManager.TopScreen is MapScreen)) return;
             float now = TaleWorlds.Engine.Time.ApplicationTime;
             if (Input.IsKeyReleased(InputKey.RightMouseButton)) _upAt = now;
-            if (_upAt < 0f || now - _upAt > LetGoFor || Input.IsKeyDown(InputKey.LeftMouseButton) ||
+            if (_upAt < 0f || now - _upAt < SettleFor || now - _upAt > LetGoFor || Input.IsKeyDown(InputKey.LeftMouseButton) ||
                 Input.IsKeyDown(InputKey.RightMouseButton) || Input.IsKeyDown(InputKey.MiddleMouseButton)) return;
             try
             {
@@ -1859,6 +1862,7 @@ namespace TradeLord
                           (now - _upAt).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) +
                           " seconds after the right mouse button came up, as a left click does, so the pointer follows the map again");
                 _upAt = -1f;
+                AskedAt = now;
             }
             catch (Exception e)
             {
@@ -1867,6 +1871,84 @@ namespace TradeLord
                           "), so the pointer is left as the game sets it");
             }
         }
+    }
+
+    internal static class PointerReturn
+    {
+        private const float FarEnough = 48f;
+        private static bool _down;
+        private static bool _off;
+        private static bool _heldAll;
+        private static Vec2 _from;
+        private static Vec2 _before;
+        private static float _downAt = -1f;
+        private static float _beforeAt = -1f;
+        private static float _moved;
+
+        internal static void Tick()
+        {
+            if (_off) return;
+            MapScreen map = ScreenManager.TopScreen as MapScreen;
+            if (map == null)
+            {
+                _down = false;
+                return;
+            }
+            try
+            {
+                float now = TaleWorlds.Engine.Time.ApplicationTime;
+                if (Input.IsKeyPressed(InputKey.RightMouseButton))
+                {
+                    _down = true;
+                    _from = Input.MousePositionPixel;
+                    _downAt = now;
+                    _moved = 0f;
+                    _heldAll = true;
+                    return;
+                }
+                if (!_down) return;
+                _moved += Math.Abs(Input.MouseMoveX) + Math.Abs(Input.MouseMoveY);
+                if (Input.IsKeyDown(InputKey.RightMouseButton))
+                {
+                    _heldAll &= map.SceneLayer.IsHitThisFrame;
+                    return;
+                }
+                if (!WindowsPointer.Read(out bool over, out bool showing, out IntPtr _) || !over || !showing) return;
+                _down = false;
+                Vec2 at = Input.MousePositionPixel;
+                if (at.Distance(_from) >= FarEnough) Log.Write(CameBack(now, at));
+                _before = _from;
+                _beforeAt = _downAt;
+            }
+            catch (Exception e)
+            {
+                _off = true;
+                Log.Write("map cursor watch: where the pointer comes back after a right click cannot be read here (" +
+                          e.GetType().Name + "), so TradeLord.log leaves it out");
+            }
+        }
+
+        private static string CameBack(float now, Vec2 at)
+        {
+            Vec2 middle = Input.Resolution * 0.5f;
+            return "map cursor: the pointer came back at " + Spot(at) + ", " + Far(at, _from) + " pixels from " + Spot(_from) +
+                   " where the right mouse button went down " + Seconds(now - _downAt) + " s before, while the mouse moved " +
+                   (int)_moved +
+                   (_heldAll ? ", the map holding the pointer in place all along"
+                       : ", the map not holding the pointer in place, as its own layer did not get the mouse all along") +
+                   "; the middle of the screen is " + Far(at, middle) + " pixels away" +
+                   (_beforeAt < 0f ? ""
+                       : ", the right click before went down " + Far(at, _before) + " pixels away, at " + Spot(_before) +
+                         (HeldMouse.AskedAt > _beforeAt
+                             ? ", and TradeLord has had the game's window let go of the mouse since"
+                             : ", and TradeLord has not asked the game's window to let go of the mouse since"));
+        }
+
+        private static string Spot(Vec2 at) => (int)at.x + ", " + (int)at.y;
+
+        private static int Far(Vec2 a, Vec2 b) => (int)a.Distance(b);
+
+        private static string Seconds(float s) => s.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     internal static class WindowsPointer

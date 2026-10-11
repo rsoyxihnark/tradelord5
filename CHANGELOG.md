@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.104.11
+
+- Fixed the campaign map's pointer sometimes staying on the forbidden sign after a right click until you moved the mouse
+- TradeLord.log now says where the pointer comes back when it lands somewhere else after a right click on the campaign map
+
 ## 1.104.10
 
 - Fixed the campaign map's pointer still freezing after a right click, e.g. staying on the forbidden sign in the town menu
