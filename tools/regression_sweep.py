@@ -18567,7 +18567,7 @@ def the_watch_spends_nothing_on_ground_your_party_really_cannot_cross():
                         "Log.WriteMany(WhatTheMapIsDoing(map, top, now, ground));")
             and "bool? closed = (!face || (!atSea && !onLand)) ? true : atSea ? false : WalkingIsShut(spot);" in look
             and "bool home = Helpers.NavigationHelper.CanPlayerNavigateToPosition(party.Position, out _);" in look
-            and "SignIsRight = MapSign.TheMapAsksForIt(onAPlace, onAPlace && over.IsInteractable(), reach) && home" in look
+            and "SignIsRight = !reach && closed == true && home" in look
             and "GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Default)" in
                 method_body(w, "private static bool Shut(CampaignVec2 spot)")
             and "catch { return null; }" in method_body(w, "private static bool? WalkingIsShut(CampaignVec2 spot)"))
@@ -19141,20 +19141,6 @@ def the_price_trace_names_the_town_a_village_really_takes_its_prices_from():
 
 chk("1.104.7", "TradeLord.log's price trace names the town a village's prices really come from, its trade town or else the nearest town, as the game's own village market reads them",
     the_price_trace_names_the_town_a_village_really_takes_its_prices_from())
-
-
-def the_forbidden_sign_is_written_down_only_where_the_map_would_not_ask_for_it():
-    look = method_body(cursor_watch(), "private static Ground Look(MapScreen map)")
-    rule = method_body(S['Rules.cs'], "internal static class MapSign")
-    return (look and rule
-            and ordered(look, "bool reach = Helpers.NavigationHelper.CanPlayerNavigateToPosition(spot, out _);",
-                        "var over = map.CurrentVisualOfTooltip;",
-                        "bool onAPlace = over != null && !over.IsMobileEntity;",
-                        "SignIsRight = MapSign.TheMapAsksForIt(onAPlace, onAPlace && over.IsInteractable(), reach) && home")
-            and "overAPlace ? !placeClickable : !partyCanGoThere;" in rule)
-
-chk("1.104.7", "the forbidden sign is written down only where the campaign map itself would not ask for it: over a place it asks for the sign when that place cannot be clicked, elsewhere when its own check says your party cannot go there",
-    the_forbidden_sign_is_written_down_only_where_the_map_would_not_ask_for_it())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

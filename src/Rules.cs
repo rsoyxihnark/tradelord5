@@ -252,12 +252,6 @@ namespace TradeLord
         }
     }
 
-    internal static class MapSign
-    {
-        internal static bool TheMapAsksForIt(bool overAPlace, bool placeClickable, bool partyCanGoThere) =>
-            overAPlace ? !placeClickable : !partyCanGoThere;
-    }
-
     internal static class PointerHeld
     {
         internal static bool Wrong(bool settled, bool known, long look, long wanted) => settled && known && look != wanted;
