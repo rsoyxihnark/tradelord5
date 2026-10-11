@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.104.10
+
+- Fixed the campaign map's pointer still freezing after a right click, e.g. staying on the forbidden sign in the town menu
+
 ## 1.104.9
 
 - Fixed the campaign map's pointer freezing after a right click, keeping the forbidden sign over land or the normal pointer over sea
