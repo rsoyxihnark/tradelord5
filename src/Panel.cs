@@ -1079,7 +1079,6 @@ namespace TradeLord
         private sealed class Ground
         {
             internal string Said;
-            internal bool SignIsRight;
         }
 
         private static readonly Ground Unread = new Ground { Said = "could not be read" };
@@ -1414,7 +1413,6 @@ namespace TradeLord
             if (_lookedAt >= 0f && now - _lookedAt < LookAgain) return;
             _lookedAt = now;
             Ground ground = Guard.Read("map cursor watch: under the mouse", map, Look, Unread);
-            if (ground.SignIsRight) return;
             _told = true;
             Log.WriteMany(WhatTheMapIsDoing(map, top, now, ground));
         }
@@ -1757,8 +1755,7 @@ namespace TradeLord
                            : closed == false ? ", which your party can cross" : ", whose kind could not be read") +
                        ", and the game's own check says your party " + (reach ? "can" : "cannot") +
                        " travel there; the same check on the spot your party stands on says " +
-                       (home ? "it can be there" : "it cannot"),
-                SignIsRight = !reach && closed == true && home
+                       (home ? "it can be there" : "it cannot")
             };
         }
 

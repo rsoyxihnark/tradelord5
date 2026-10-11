@@ -60,6 +60,7 @@ namespace TradeLord.Compat
             ("TaleWorlds.ScreenSystem.ScreenManager", "EarlyUpdate"),
             ("TaleWorlds.ScreenSystem.ScreenManager", "LateUpdate"),
             ("TaleWorlds.Engine.MouseManager", "ActivateMouseCursor"),
+            ("TaleWorlds.CampaignSystem.Settlements.VillageMarketData", "get_ClosestTown"),
         };
 
         private static readonly (string type, string member, string why)[] LotShape =

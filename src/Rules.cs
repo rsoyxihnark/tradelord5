@@ -863,6 +863,9 @@ namespace TradeLord
             return Math.Max(0, reach - drawnBefore);
         }
 
+        internal static int OwedToThePurse(int paid, int before, int after) =>
+            (int)Math.Max(0L, Math.Min(paid, paid - ((long)after - before)));
+
         internal const int VillagePurse = 1000;
 
         internal static int PutBackIntoAnEmptyPurse(int gold) =>

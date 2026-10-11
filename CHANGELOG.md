@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.104.8
+
+- Fixed most of the gold TradeLord spends in a town going to the town's owner instead of into the town's purse
+- Fixed the gold TradeLord spends in a village not going into the village's purse
+- Fixed TradeLord sometimes weighing a castle's village that has no town to trade with against another town than the trade screen uses
+
 ## 1.104.7
 
 - Fixed TradeLord buying and selling at prices the trade screen never offers in a castle's village that has no town to trade with
@@ -63,7 +69,6 @@
 ## 1.103.10
 
 - TradeLord.log now writes down what the campaign map's cursor was doing when you give the map a quick right click
-- TradeLord.log no longer writes down the forbidden sign over sea or ground your party really cannot cross
 - TradeLord.log now says which mouse button was held down or let go when the forbidden sign went away
 - TradeLord.log now notes when you leave the campaign map while the forbidden sign is still under the mouse
 - TradeLord.log now keeps watching the forbidden sign even when the ledger panel could not be set up
