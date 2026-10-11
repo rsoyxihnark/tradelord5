@@ -4,7 +4,6 @@
 
 - Fixed TradeLord buying and selling at prices the trade screen never offers in a castle's village that has no town to trade with
 - TradeLord.log's price trace now names the town a castle's village really takes its prices from when it has no town to trade with
-- TradeLord.log no longer writes down the forbidden sign over land your party cannot reach, or over a place on the map you cannot click
 
 ## 1.104.6
 

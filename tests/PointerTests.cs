@@ -100,19 +100,5 @@ namespace TradeLord.Tests
             Assert.False(PointerHeld.Still(NormalLook, ForbiddenLook, settled: true, known: true, NormalLook));
             Assert.False(PointerHeld.Still(ForbiddenLook, ForbiddenLook, settled: true, known: true, ForbiddenLook));
         }
-
-        [Fact]
-        public void The_map_asks_for_the_forbidden_sign_wherever_its_own_check_says_your_party_cannot_go()
-        {
-            Assert.True(MapSign.TheMapAsksForIt(overAPlace: false, placeClickable: false, partyCanGoThere: false));
-            Assert.False(MapSign.TheMapAsksForIt(overAPlace: false, placeClickable: false, partyCanGoThere: true));
-        }
-
-        [Fact]
-        public void Over_a_place_the_map_asks_for_the_forbidden_sign_only_when_that_place_cannot_be_clicked()
-        {
-            Assert.True(MapSign.TheMapAsksForIt(overAPlace: true, placeClickable: false, partyCanGoThere: true));
-            Assert.False(MapSign.TheMapAsksForIt(overAPlace: true, placeClickable: true, partyCanGoThere: false));
-        }
     }
 }
