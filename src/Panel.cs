@@ -1837,14 +1837,12 @@ namespace TradeLord
     internal static class HeldMouse
     {
         private const float LetGoFor = 1f;
+        private const int CancelMode = 0x1F;
         private static float _upAt = -1f;
         private static bool _off;
 
-        [DllImport("user32.dll")]
-        private static extern IntPtr GetCapture();
-
-        [DllImport("user32.dll")]
-        private static extern bool ReleaseCapture();
+        [DllImport("user32.dll", EntryPoint = "PostMessageW")]
+        private static extern bool PostMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
 
         internal static void Tick()
         {
@@ -1855,15 +1853,17 @@ namespace TradeLord
                 Input.IsKeyDown(InputKey.RightMouseButton) || Input.IsKeyDown(InputKey.MiddleMouseButton)) return;
             try
             {
-                if (GetCapture() == IntPtr.Zero || !ReleaseCapture()) return;
-                Log.Write("map cursor: let go of the mouse the game's window still held " +
+                IntPtr window = WindowsPointer.HoldingTheMouse();
+                if (window == IntPtr.Zero || !PostMessage(window, CancelMode, IntPtr.Zero, IntPtr.Zero)) return;
+                Log.Write("map cursor: asked the game's window to let go of the mouse it still held " +
                           (now - _upAt).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) +
                           " seconds after the right mouse button came up, as a left click does, so the pointer follows the map again");
+                _upAt = -1f;
             }
             catch (Exception e)
             {
                 _off = true;
-                Log.Write("map cursor: the mouse the game's window holds cannot be let go here (" + e.GetType().Name +
+                Log.Write("map cursor: the game's window cannot be asked to let go of the mouse here (" + e.GetType().Name +
                           "), so the pointer is left as the game sets it");
             }
         }
@@ -2003,6 +2003,13 @@ namespace TradeLord
                        " the mouse capture";
             }
             catch { return "which window has the mouse cannot be read"; }
+        }
+
+        internal static IntPtr HoldingTheMouse()
+        {
+            if (_gone) return IntPtr.Zero;
+            var input = new ThreadInput { Size = ThreadInputSize };
+            return GetGUIThreadInfo(0, ref input) && TheGames(input.Capture) ? input.Capture : IntPtr.Zero;
         }
     }
 

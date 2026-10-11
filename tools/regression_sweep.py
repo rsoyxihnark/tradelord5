@@ -19201,15 +19201,34 @@ def a_right_click_on_the_campaign_map_no_longer_leaves_the_pointer_frozen():
                         "if (Input.IsKeyReleased(InputKey.RightMouseButton)) _upAt = now;",
                         "if (_upAt < 0f || now - _upAt > LetGoFor || Input.IsKeyDown(InputKey.LeftMouseButton) ||",
                         "Input.IsKeyDown(InputKey.RightMouseButton) || Input.IsKeyDown(InputKey.MiddleMouseButton)) return;",
-                        "if (GetCapture() == IntPtr.Zero || !ReleaseCapture()) return;",
+                        "IntPtr window = WindowsPointer.HoldingTheMouse();",
                         "catch (Exception e)", "_off = true;")
             and all(touch not in held for touch in
                     ("SetCapture", "SetCursor", "ShowCursor", "ClipCursor", "SetMouseVisible", "ActiveCursor"))
-            and p.count("ReleaseCapture") == 2
             and "GetCapture" not in method_body(p, "internal static class CursorWatch"))
 
-chk("1.104.9", "a right click on the campaign map no longer leaves the pointer frozen: within a second of the right mouse button coming up, with no button held, TradeLord lets go of the mouse the game's window still holds, as a left click does, and only there",
+chk("1.104.9", "a right click on the campaign map no longer leaves the pointer frozen: within a second of the right mouse button coming up, with no button held, TradeLord has the game's window let go of the mouse it still holds, and only there",
     a_right_click_on_the_campaign_map_no_longer_leaves_the_pointer_frozen())
+
+
+def the_games_own_window_is_asked_to_let_go_of_the_mouse_it_holds():
+    p = S['Panel.cs']
+    held = method_body(p, "internal static class HeldMouse")
+    tick = method_body(held, "internal static void Tick()")
+    win = between(p, "internal static class WindowsPointer", "[HarmonyPatch(typeof(ScreenManager)")
+    holding = method_body(win, "internal static IntPtr HoldingTheMouse()")
+    return (held and tick and holding
+            and "private const int CancelMode = 0x1F;" in held
+            and '[DllImport("user32.dll", EntryPoint = "PostMessageW")]' in held
+            and ordered(tick, "IntPtr window = WindowsPointer.HoldingTheMouse();",
+                        "if (window == IntPtr.Zero || !PostMessage(window, CancelMode, IntPtr.Zero, IntPtr.Zero)) return;",
+                        "Log.Write(", "_upAt = -1f;", "catch (Exception e)")
+            and ordered(holding, "if (_gone) return IntPtr.Zero;",
+                        "return GetGUIThreadInfo(0, ref input) && TheGames(input.Capture) ? input.Capture : IntPtr.Zero;")
+            and all(call not in p for call in ("GetCapture", "ReleaseCapture", "SendMessage", "AttachThreadInput")))
+
+chk("1.104.10", "the game's own window is asked once per right click to let go of the mouse it still holds, as Windows asks a window, without waiting on it, only where the window holding the mouse is the game's, never from TradeLord's own thread",
+    the_games_own_window_is_asked_to_let_go_of_the_mouse_it_holds())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
