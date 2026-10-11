@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.104.7
+
+- Fixed TradeLord buying and selling at prices the trade screen never offers in a castle's village that has no town to trade with
+- TradeLord.log's price trace now names the town a castle's village really takes its prices from when it has no town to trade with
+- TradeLord.log no longer writes down the forbidden sign over land your party cannot reach, or over a place on the map you cannot click
+
 ## 1.104.6
 
 - TradeLord.log now notes when the forbidden sign stays on the screen while the campaign map asks for the normal pointer, and what ended it

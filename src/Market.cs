@@ -348,6 +348,15 @@ namespace TradeLord
 
         internal static PartyBase Merchant(Settlement site) => site?.Party;
 
+        internal static Village SoldOffTheCastlesShelves(TownMarketData asked, PartyBase merchant)
+        {
+            if (asked == null || merchant == null || !ReferenceEquals(merchant, TradeActionBehavior.TradingWith))
+                return null;
+            Village village = merchant.Settlement?.Village;
+            if (village == null || village.TradeBound != null || village.MarketData == null) return null;
+            return ReferenceEquals(asked, village.Bound?.Town?.MarketData) ? village : null;
+        }
+
         internal static int At(SettlementComponent market, ItemObject item, MobileParty who, bool selling) =>
             item == null ? 0 : At(market, new EquipmentElement(item), who, selling);
 
@@ -478,8 +487,7 @@ namespace TradeLord
 
         private static string LeansOn(Settlement site)
         {
-            Village village = site.IsVillage ? site.Village : null;
-            Settlement town = village == null ? null : village.TradeBound ?? village.Bound;
+            Settlement town = site.IsVillage ? Hindsight.PricedFrom(site) : null;
             return town == null ? "" : ", which trades through " + town.Name;
         }
 
@@ -538,9 +546,14 @@ namespace TradeLord
         new[] { typeof(EquipmentElement), typeof(MobileParty), typeof(bool), typeof(PartyBase) })]
     internal static class Patch_TownMarketData_GetPrice
     {
-        private static void Prefix(ref PartyBase merchantParty)
+        private static bool Prefix(TownMarketData __instance, EquipmentElement __0, MobileParty __1, bool __2,
+                                   ref PartyBase merchantParty, ref int __result)
         {
             if (merchantParty == null) merchantParty = TradeActionBehavior.TradingWith;
+            Village village = Priced.SoldOffTheCastlesShelves(__instance, merchantParty);
+            if (village == null) return true;
+            __result = village.MarketData.GetPrice(__0, __1, __2, merchantParty);
+            return false;
         }
     }
 }
