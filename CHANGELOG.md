@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.104.9
+
+- Fixed the campaign map's pointer freezing after a right click, keeping the forbidden sign over land or the normal pointer over sea
+
 ## 1.104.8
 
 - Fixed most of the gold TradeLord spends in a town going to the town's owner instead of into the town's purse

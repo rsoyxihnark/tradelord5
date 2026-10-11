@@ -1834,6 +1834,41 @@ namespace TradeLord
             s.ToString(shape, System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    internal static class HeldMouse
+    {
+        private const float LetGoFor = 1f;
+        private static float _upAt = -1f;
+        private static bool _off;
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetCapture();
+
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        internal static void Tick()
+        {
+            if (_off || !(ScreenManager.TopScreen is MapScreen)) return;
+            float now = TaleWorlds.Engine.Time.ApplicationTime;
+            if (Input.IsKeyReleased(InputKey.RightMouseButton)) _upAt = now;
+            if (_upAt < 0f || now - _upAt > LetGoFor || Input.IsKeyDown(InputKey.LeftMouseButton) ||
+                Input.IsKeyDown(InputKey.RightMouseButton) || Input.IsKeyDown(InputKey.MiddleMouseButton)) return;
+            try
+            {
+                if (GetCapture() == IntPtr.Zero || !ReleaseCapture()) return;
+                Log.Write("map cursor: let go of the mouse the game's window still held " +
+                          (now - _upAt).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) +
+                          " seconds after the right mouse button came up, as a left click does, so the pointer follows the map again");
+            }
+            catch (Exception e)
+            {
+                _off = true;
+                Log.Write("map cursor: the mouse the game's window holds cannot be let go here (" + e.GetType().Name +
+                          "), so the pointer is left as the game sets it");
+            }
+        }
+    }
+
     internal static class WindowsPointer
     {
         [StructLayout(LayoutKind.Sequential)]

@@ -19188,5 +19188,29 @@ chk("1.104.8", "what TradeLord pays a town or a village for a purchase all stays
     what_tradelord_pays_a_town_or_a_village_stays_in_its_purse_as_at_the_trade_screen())
 
 
+def a_right_click_on_the_campaign_map_no_longer_leaves_the_pointer_frozen():
+    p = S['Panel.cs']
+    held = method_body(p, "internal static class HeldMouse")
+    tick = method_body(held, "internal static void Tick()")
+    sub = method_body(S['SubModule.cs'], "protected override void OnApplicationTick(float dt)")
+    return (held and tick and sub
+            and ordered(sub, 'Guard.Run("Tick.HeldMouse", HeldMouse.Tick);',
+                        'Guard.Run("Tick.CursorWatch", CursorWatch.Tick);')
+            and "private const float LetGoFor = 1f;" in held
+            and ordered(tick, "if (_off || !(ScreenManager.TopScreen is MapScreen)) return;",
+                        "if (Input.IsKeyReleased(InputKey.RightMouseButton)) _upAt = now;",
+                        "if (_upAt < 0f || now - _upAt > LetGoFor || Input.IsKeyDown(InputKey.LeftMouseButton) ||",
+                        "Input.IsKeyDown(InputKey.RightMouseButton) || Input.IsKeyDown(InputKey.MiddleMouseButton)) return;",
+                        "if (GetCapture() == IntPtr.Zero || !ReleaseCapture()) return;",
+                        "catch (Exception e)", "_off = true;")
+            and all(touch not in held for touch in
+                    ("SetCapture", "SetCursor", "ShowCursor", "ClipCursor", "SetMouseVisible", "ActiveCursor"))
+            and p.count("ReleaseCapture") == 2
+            and "GetCapture" not in method_body(p, "internal static class CursorWatch"))
+
+chk("1.104.9", "a right click on the campaign map no longer leaves the pointer frozen: within a second of the right mouse button coming up, with no button held, TradeLord lets go of the mouse the game's window still holds, as a left click does, and only there",
+    a_right_click_on_the_campaign_map_no_longer_leaves_the_pointer_frozen())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
