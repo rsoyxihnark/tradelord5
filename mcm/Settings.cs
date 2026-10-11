@@ -785,5 +785,11 @@ namespace TradeLord.Mcm
         [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
         public bool ExtendedDebugLogging
         { get => _o.ExtendedDebugLogging; set { _o.ExtendedDebugLogging = value; Options.Bump(); } }
+
+        [SettingPropertyBool("{=TL504}Extensive cursor debug logging", Order = 1, RequireRestart = false,
+            HintText = "{=TL505}Writes all TradeLord sees of the mouse on the campaign map to TradeLord.log: which pointer the game asks for, which one is really on the screen, and where the pointer comes back after a click. OFF by default.")]
+        [SettingPropertyGroup("{=TL107}Debug", GroupOrder = 8)]
+        public bool ExtensiveCursorDebugLogging
+        { get => _o.ExtensiveCursorDebugLogging; set { _o.ExtensiveCursorDebugLogging = value; Options.Bump(); } }
     }
 }

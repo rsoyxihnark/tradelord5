@@ -1139,6 +1139,7 @@ namespace TradeLord
         private static bool _windowsSeen;
         private static bool _blindSaid;
         private static float _blindFrom = -1f;
+        private static bool _watching;
 
         internal static void Forget()
         {
@@ -1173,12 +1174,26 @@ namespace TradeLord
         internal static void Tick()
         {
             if (_dead) return;
+            if (!Watching()) return;
             try { TickCore(); }
             catch (Exception e)
             {
                 _dead = true;
                 Log.Error(e, "map cursor watch (stopped for this campaign, the map itself is unaffected)");
             }
+        }
+
+        private static bool Watching()
+        {
+            bool on = Options.Current.ExtensiveCursorDebugLogging;
+            if (on && !_watching)
+            {
+                Forget();
+                _tellings.Clear();
+                _blindFrom = -1f;
+            }
+            _watching = on;
+            return on;
         }
 
         private static void TickCore()
@@ -1211,14 +1226,14 @@ namespace TradeLord
 
         internal static void BeforeTheScreens()
         {
-            if (_tellingDead) return;
+            if (_tellingDead || !Options.Current.ExtensiveCursorDebugLogging) return;
             _inScreens = true;
             _keptTheLayer = ScreenManager.FirstHitLayer != null;
         }
 
         internal static void AfterTheScreens()
         {
-            if (_tellingDead) return;
+            if (_tellingDead || !_inScreens) return;
             _inScreens = false;
             try { NoteTheTelling(TaleWorlds.Engine.Time.ApplicationTime); }
             catch (Exception e) { StopTelling(e); }
@@ -1226,7 +1241,7 @@ namespace TradeLord
 
         internal static void SetElsewhere(CursorType shape)
         {
-            if (_inScreens || _tellingDead) return;
+            if (_inScreens || _tellingDead || !Options.Current.ExtensiveCursorDebugLogging) return;
             try { NoteSetElsewhere(TaleWorlds.Engine.Time.ApplicationTime, shape); }
             catch (Exception e) { StopTelling(e); }
         }
@@ -1858,17 +1873,19 @@ namespace TradeLord
             {
                 IntPtr window = WindowsPointer.HoldingTheMouse();
                 if (window == IntPtr.Zero || !PostMessage(window, CancelMode, IntPtr.Zero, IntPtr.Zero)) return;
-                Log.Write("map cursor: asked the game's window to let go of the mouse it still held " +
-                          (now - _upAt).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) +
-                          " seconds after the right mouse button came up, as a left click does, so the pointer follows the map again");
+                if (Options.Current.ExtensiveCursorDebugLogging)
+                    Log.Write("map cursor: asked the game's window to let go of the mouse it still held " +
+                              (now - _upAt).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) +
+                              " seconds after the right mouse button came up, as a left click does, so the pointer follows the map again");
                 _upAt = -1f;
                 AskedAt = now;
             }
             catch (Exception e)
             {
                 _off = true;
-                Log.Write("map cursor: the game's window cannot be asked to let go of the mouse here (" + e.GetType().Name +
-                          "), so the pointer is left as the game sets it");
+                if (Options.Current.ExtensiveCursorDebugLogging)
+                    Log.Write("map cursor: the game's window cannot be asked to let go of the mouse here (" + e.GetType().Name +
+                              "), so the pointer is left as the game sets it");
             }
         }
     }
@@ -1888,6 +1905,12 @@ namespace TradeLord
         internal static void Tick()
         {
             if (_off) return;
+            if (!Options.Current.ExtensiveCursorDebugLogging)
+            {
+                _down = false;
+                _beforeAt = -1f;
+                return;
+            }
             MapScreen map = ScreenManager.TopScreen as MapScreen;
             if (map == null)
             {
@@ -2004,8 +2027,9 @@ namespace TradeLord
                     if (now - _upAt <= WaitFor && Math.Abs(at.X - _home.X) + Math.Abs(at.Y - _home.Y) > FarEnough &&
                         SetCursorPos(_home.X, _home.Y))
                     {
-                        Log.Write("map cursor: put the pointer back where the mouse button went down, at " + _home.X + ", " + _home.Y +
-                                  " on Windows' own scale, as the game had left it at " + at.X + ", " + at.Y);
+                        if (Options.Current.ExtensiveCursorDebugLogging)
+                            Log.Write("map cursor: put the pointer back where the mouse button went down, at " + _home.X + ", " + _home.Y +
+                                      " on Windows' own scale, as the game had left it at " + at.X + ", " + at.Y);
                         at = _home;
                     }
                     _upAt = -1f;
@@ -2015,8 +2039,9 @@ namespace TradeLord
             catch (Exception e)
             {
                 _off = true;
-                Log.Write("map cursor: the pointer cannot be put back here (" + e.GetType().Name +
-                          "), so it is left where the game puts it");
+                if (Options.Current.ExtensiveCursorDebugLogging)
+                    Log.Write("map cursor: the pointer cannot be put back here (" + e.GetType().Name +
+                              "), so it is left where the game puts it");
             }
         }
     }
@@ -2112,8 +2137,9 @@ namespace TradeLord
             catch (Exception e)
             {
                 _gone = true;
-                Log.Write("map cursor watch: the pointer Windows shows cannot be read here (" + e.GetType().Name +
-                          "), so TradeLord.log leaves it out");
+                if (Options.Current.ExtensiveCursorDebugLogging)
+                    Log.Write("map cursor watch: the pointer Windows shows cannot be read here (" + e.GetType().Name +
+                              "), so TradeLord.log leaves it out");
                 return false;
             }
         }

@@ -329,5 +329,7 @@
 		<string id="TL501" text="Satılanlar {XP} Ticaret tecrübesi kazandırdı."/>
 		<string id="TL502" text="Satılanlar {XP} Ticaret tecrübesi kazandırdı, Ticaret artık {LEVEL}."/>
 		<string id="TL503" text="Zaten {OWNED} atölyeniz var. Ticaret yeteneğinizin her 25 puanı bir atölye hakkı daha kazandırır."/>
+		<string id="TL504" text="Kapsamlı imleç hata ayıklama günlüğü"/>
+		<string id="TL505" text="TradeLord'un sefer haritasında fareye dair gördüğü her şeyi TradeLord.log'a yazar: oyunun hangi imleci istediğini, ekranda gerçekte hangisinin göründüğünü ve bir tıklamadan sonra imlecin nereye döndüğünü. Varsayılan KAPALI."/>
 	</strings>
 </base>

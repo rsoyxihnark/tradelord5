@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.104.13
+
+- TradeLord.log's cursor notes now only appear with Extensive cursor debug logging on, a new setting under Debug that is off by default
+
 ## 1.104.12
 
 - Fixed the campaign map's pointer jumping somewhere else after a right or middle click

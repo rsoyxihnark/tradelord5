@@ -154,6 +154,7 @@ namespace TradeLord
         public bool TradeWithCaravans = true;
         public bool SimulationMode = false;
         public bool ExtendedDebugLogging = true;
+        public bool ExtensiveCursorDebugLogging = false;
         public bool StagedTrading = false;
         public int EconomySettlingDays = 0;
         public float TradeXpMultiplier = 1f;

@@ -329,5 +329,7 @@
 		<string id="TL501" text="卖出的货物增加了 {XP} 点交易经验。"/>
 		<string id="TL502" text="卖出的货物增加了 {XP} 点交易经验，交易现为 {LEVEL}。"/>
 		<string id="TL503" text="你已经有 {OWNED} 家作坊。交易技能每 25 点多给一个作坊名额。"/>
+		<string id="TL504" text="详细光标调试日志"/>
+		<string id="TL505" text="把 TradeLord 在战役地图上看到的鼠标情况全部写入 TradeLord.log：游戏要的是哪个指针，屏幕上实际显示的是哪个，以及点击后指针回到了哪里。默认关闭。"/>
 	</strings>
 </base>
