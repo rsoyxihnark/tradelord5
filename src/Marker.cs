@@ -971,9 +971,12 @@ namespace TradeLord
                 if (weighed > bar)
                 {
                     bar = weighed;
-                    how.RunnerUp = how.Best;
-                    how.RunnerUpValue = how.Value;
-                    how.RunnerUpRate = how.Rate;
+                    if (how.Best != null && how.Rate > how.RunnerUpRate)
+                    {
+                        how.RunnerUp = how.Best;
+                        how.RunnerUpValue = how.Value;
+                        how.RunnerUpRate = how.Rate;
+                    }
                     how.Rate = rate;
                     how.Value = total;
                     how.Best = s;

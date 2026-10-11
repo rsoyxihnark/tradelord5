@@ -17,7 +17,7 @@
 - ✅ Which way each market is going, marked beside its price once you switch Mark a market rising or falling on, whenever it has moved 5% or more since the last day you looked there
 - ✅ Mark a market rising or falling needs Live world prices off, since that is when TradeLord records prices at all, and it ships off itself
 - ✅ Travel time to each of them, from wherever you are
-- ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying
+- ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed by day with the cargo you are carrying
 - ✅ Stock counts, so you know the deal is actually there
 - ✅ What you paid for a good, per unit, on its own tooltip once you have bought one, so you can see at a glance whether the market in front of you is beating it
 - ✅ Inventory rows tinted good to bad against the best price known
@@ -186,6 +186,7 @@
 - ✅ More livestock than your party can drive, so a purchase never slows you down
 - ✅ Markets belonging to a faction you are at war with
 - ✅ Caravans and villagers at war with you, since the game offers them no trade, whatever Exclude hostile markets says
+- ✅ Caravans and villagers in a fight, since the game offers them no trade until it is over
 - ✅ The game's economy: it trades at the game's own prices, through the game's own buying and selling
 - ✅ On the road, where there is no market to sell to, it moves the goods and the gold itself, at the prices the game's own trade screen or the villagers' own offer would charge you
 

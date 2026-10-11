@@ -134,6 +134,7 @@ namespace TradeLord.Compat
             (Issues + "GangLeaderNeedsWeaponsIssueQuestBehavior+GangLeaderNeedsWeaponsIssueQuest", "_requestedWeaponClass"),
             (Issues + "GangLeaderNeedsWeaponsIssueQuestBehavior+GangLeaderNeedsWeaponsIssueQuest", "_requestedWeaponAmount"),
             ("TaleWorlds.CampaignSystem.GameComponents.DefaultInventoryCapacityModel", "_textPackAnimals"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_night"),
             ("TaleWorlds.CampaignSystem.Conversation.ConversationManager", "_sentences"),
             ("TaleWorlds.CampaignSystem.Inventory.InventoryLogic", "_transactionHistory"),
             ("TaleWorlds.CampaignSystem.Inventory.InventoryLogic+TransactionHistory", "_transactionLogs"),

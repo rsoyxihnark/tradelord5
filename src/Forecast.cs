@@ -431,7 +431,7 @@ namespace TradeLord
             WorkshopRuns.Follow(lines, book, TradeMath.NextDailyTickIn(CampaignTime.Now.ToDays - lastRun), watch,
                                 arriving, bought, price, made, taken);
             foreach (Landing one in made)
-                Note(site, null, kinds[one.Category], one.Units, one.Worth, one.Days);
+                Note(site, standing[one.Category].stands.StringId, kinds[one.Category], one.Units, one.Worth, one.Days);
             foreach (Draw one in taken)
                 NoteADraw(site, kinds[one.Category], one.Worth, one.Days);
         }

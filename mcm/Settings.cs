@@ -425,7 +425,7 @@ namespace TradeLord.Mcm
         public bool BulkSimulation { get => _o.BulkSimulation; set { _o.BulkSimulation = value; Options.Bump(); } }
 
         [SettingPropertyBool("{=TL210}Rank routes by confidence", Order = 9, RequireRestart = false,
-            HintText = "{=TL310}Order the panel by profit per day, discounted by how likely that profit is to survive the trip: margin, stock depth, trip length, caravan traffic and price age. OFF ranks on raw profit per day.")]
+            HintText = "{=TL310}Order the panel by profit per day, discounted by how likely it survives the trip: margin, stock depth, trip length, price age and Left (caravans if Live world prices or Count what is on its way to a market is off). OFF: raw profit per day.")]
         [SettingPropertyGroup("{=TL101}Knowledge", GroupOrder = 3)]
         public bool ConfidenceRanking { get => _o.ConfidenceRanking; set { _o.ConfidenceRanking = value; Options.Bump(); } }
 

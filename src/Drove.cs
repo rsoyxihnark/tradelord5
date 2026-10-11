@@ -252,7 +252,7 @@ namespace TradeLord
             }
         }
 
-        internal static int HaulAnimalsCargoCanSpare(MobileParty party)
+        internal static int HaulAnimalsCargoCanSpare(MobileParty party, float roomTakenOnPaper = 0f)
         {
             int held = HaulAnimalsHeld(party);
             if (held <= 0) return 0;
@@ -263,7 +263,7 @@ namespace TradeLord
                 bool atSea = Carry.Sailing();
                 if (atSea) return held;
                 ExplainedNumber capacity = model.CalculateInventoryCapacity(party, atSea, true);
-                float carried = model.CalculateTotalWeightCarried(party, atSea).ResultNumber;
+                float carried = model.CalculateTotalWeightCarried(party, atSea).ResultNumber + roomTakenOnPaper;
                 int packAnimals = party.ItemRoster.NumberOfPackAnimals;
                 if (!PackAnimalsLine(capacity, out float carries) && !atSea && packAnimals > 0)
                 {

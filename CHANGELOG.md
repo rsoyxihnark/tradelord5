@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.104.14
+
+- Fixed Left, Qty and Conf in the TradeLord ledger leaving out what the buy town's own workshops make
+- Fixed TradeLord trading with a caravan or villagers on the road while they are in a fight
+- Fixed Staged Trading laying out a second deal in the same visit as if the first one had never been taken
+- Fixed travel times in the TradeLord ledger, the tooltips and the map marker running a third longer at night
+- Fixed Free passage from bandits holding off only the band you spoke to and not the other bands that would have joined in
+- Fixed Nothing sold here or Nothing bought here showing after TradeLord sold animals or bought food in that market
+- Fixed Never sell, Always sell, Never buy and Always buy not splitting names typed with a Chinese comma
+- Fixed Simulation mode (dry run) selling haul animals that the goods it bought on paper would have needed
+- Fixed the hint for Rank routes by confidence naming caravan traffic where Left is what lowers Conf
+- Fixed TradeLord.log naming the wrong next best market when the map marker moves
+
 ## 1.104.13
 
 - TradeLord.log's cursor notes now only appear with Extensive cursor debug logging on, a new setting under Debug that is off by default

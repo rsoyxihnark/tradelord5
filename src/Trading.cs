@@ -672,6 +672,14 @@ namespace TradeLord
                 (_capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity) + Books.CapacityAdded(Sim) -
                 CapacitySoldOnPaper();
 
+            internal float RoomTakenOnPaper()
+            {
+                int mounts = Books.MountsShed(Sim);
+                if (mounts > 0 && _eachMount < 0f) _eachMount = Drove.CargoASpareMountAdds(Party);
+                float lost = mounts > 0 ? mounts * _eachMount : 0f;
+                return Books.Weight(Sim) - Books.CapacityAdded(Sim) + lost;
+            }
+
             private float CapacitySoldOnPaper()
             {
                 int hauls = Books.HaulsShed(Sim), mounts = Books.MountsShed(Sim);
@@ -1207,6 +1215,8 @@ namespace TradeLord
                         el.EquipmentElement, prices,
                         TheVisit.DearDrawn(true, LedgerBehavior.PaidKey(el.EquipmentElement))) ?? 0;
                 pass.Tally(item, count, said);
+                if (selling) pass.Books.NoteSold(item.StringId);
+                else foreach (int paid in prices) pass.Books.NoteBought(item.StringId, paid);
             }
             took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);
             return took;
@@ -2226,6 +2236,7 @@ namespace TradeLord
                 return;
             }
 
+            _buyStalled = null;
             int spent = pass.Spent(simSpent);
             pass.Moved(gold: spent, selling: false);
             Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") + stocked +
@@ -2384,6 +2395,12 @@ namespace TradeLord
                           "so TradeLord leaves it alone");
                 return false;
             }
+            if (met.MapEvent != null)
+            {
+                Log.Write(met.Name + " are in a fight, and the game offers no trade to a party in the middle of " +
+                          "one, so TradeLord stays out of it");
+                return false;
+            }
             IFaction mine = Hero.MainHero?.MapFaction;
             if (mine == null || met.MapFaction == null || !FactionManager.IsAtWarAgainstFaction(met.MapFaction, mine))
                 return true;
@@ -2527,7 +2544,7 @@ namespace TradeLord
                     {
                         if (rank != RankLivestock && rank != RankHaulAnimal && mountsLeft <= 0) break;
                         if (rank == RankHaulAnimal && haulsLeft < 0)
-                            haulsLeft = Math.Max(0, Drove.HaulAnimalsCargoCanSpare(pass.Party) - pass.Books.HaulsShed(pass.Sim));
+                            haulsLeft = Math.Max(0, Drove.HaulAnimalsCargoCanSpare(pass.Party, pass.RoomTakenOnPaper()) - pass.Books.HaulsShed(pass.Sim));
                         if (rank == RankHaulAnimal && haulsLeft <= 0) break;
                         int price = pass.Price(el.EquipmentElement, selling: true);
                         if (price <= 0) break;
@@ -2581,6 +2598,7 @@ namespace TradeLord
 
             if (sold <= 0) return;
 
+            _sellStalled = null;
             int gained = pass.Gained(simGold);
             pass.Moved(profit, gained, selling: true);
             Log.Write((pass.Sim ? "herd relief (simulated, best case): " : "herd relief: ") + sold +

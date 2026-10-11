@@ -1475,6 +1475,25 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_ride_is_priced_at_the_speed_the_party_has_by_day()
+        {
+            Assert.Equal(5f, TradeMath.SpeedByDay(3.75f, 3.75f, 5f), 4);
+            Assert.Equal(6f, TradeMath.SpeedByDay(4.5f, 3.75f, 5f), 4);
+            Assert.Equal(4f, TradeMath.SpeedByDay(4f, 4f, 4f));
+        }
+
+        [Fact]
+        public void The_speed_by_day_never_slows_a_party_down_or_trusts_a_reading_that_is_not_a_number()
+        {
+            Assert.Equal(4f, TradeMath.SpeedByDay(4f, 4f, 3f));
+            Assert.Equal(4f, TradeMath.SpeedByDay(4f, 0f, 5f));
+            Assert.Equal(4f, TradeMath.SpeedByDay(4f, 3.75f, float.NaN));
+            Assert.Equal(4f, TradeMath.SpeedByDay(4f, 3.75f, float.PositiveInfinity));
+            Assert.Equal(0f, TradeMath.SpeedByDay(0f, 3.75f, 5f));
+            Assert.True(float.IsNaN(TradeMath.SpeedByDay(float.NaN, 3.75f, 5f)));
+        }
+
+        [Fact]
         public void A_fleet_sails_between_its_average_and_its_slowest_ship()
         {
             Assert.Equal(5f, TradeMath.FleetSpeed(18f, 3, 4f));

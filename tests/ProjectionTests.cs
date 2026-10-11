@@ -155,6 +155,24 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_workshop_run_written_against_the_good_the_town_holds_keeps_that_shelf_up()
+        {
+            var made = new List<Landing>();
+            var unnamed = new List<Landing>();
+            for (int day = 1; day <= 6; day++)
+            {
+                made.Add(Coming("wine", "wine", 2, 100, day));
+                unnamed.Add(Coming(null, "wine", 2, 100, day));
+            }
+            var kept = Projection.ShelfAhead(made, null, null, 0f, "wine", "wine", 50, 12, 0.4f, null, 100);
+            Assert.Equal(new[] { (1f, 12), (6f, 12), (7f, 10) }, new[] { kept[0], kept[5], kept[6] });
+            Assert.Equal(7f, Projection.RunsOutOf(kept, 11));
+            Assert.Equal(1f, Projection.RunsOutOf(
+                Projection.ShelfAhead(unnamed, null, null, 0f, "wine", "wine", 50, 12, 0.4f, null, 100), 11));
+            Assert.Equal(Projection.WorthLanding(unnamed, "wine", 3f), Projection.WorthLanding(made, "wine", 3f));
+        }
+
+        [Fact]
         public void Worth_landing_keeps_the_window_and_the_quarter_day_too()
         {
             var listed = new List<Landing>

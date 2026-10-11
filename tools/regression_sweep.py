@@ -4941,7 +4941,7 @@ def the_herd_gives_up_its_animals_in_the_order_the_player_set():
             and "int mountsLeft = Drove.SpareMounts(pass.Party);" in relief
             and "int haulsLeft = -1;" in relief
             and "if (rank == RankHaulAnimal && haulsLeft < 0)\n"
-                "                            haulsLeft = Math.Max(0, Drove.HaulAnimalsCargoCanSpare(pass.Party)"
+                "                            haulsLeft = Math.Max(0, Drove.HaulAnimalsCargoCanSpare(pass.Party, pass.RoomTakenOnPaper())"
                 " - pass.Books.HaulsShed(pass.Sim));" in relief
             and "if (rank != RankLivestock && rank != RankHaulAnimal && mountsLeft <= 0) break;" in relief
             and "if (rank == RankHaulAnimal && haulsLeft <= 0) break;" in relief
@@ -5567,7 +5567,7 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and "TradePolicy.FoodHeld(pass.Party.ItemRoster) - pass.Books.FoodHeld(pass.Sim) + traded;" in larder
             and "shed -= pass.Books.Shed(pass.Sim);" in relief
             and "mountsLeft -= pass.Books.MountsShed(pass.Sim);" in relief
-            and "Math.Max(0, Drove.HaulAnimalsCargoCanSpare(pass.Party) - pass.Books.HaulsShed(pass.Sim));" in relief
+            and "Math.Max(0, Drove.HaulAnimalsCargoCanSpare(pass.Party, pass.RoomTakenOnPaper()) - pass.Books.HaulsShed(pass.Sim));" in relief
             and "herdRoom -= pass.Books.HerdTaken(pass.Sim);" in haul
             and "herdRoom = Math.Max(0, market.HerdRoom() - books.HerdTaken(sim));" in buy
             and "int remaining = market.YoursToSell(at) - keep;" in sell
@@ -5678,7 +5678,7 @@ def every_pass_hands_one_place_the_trade_and_the_visits_books():
             and t.count("int before = Hero.MainHero.Gold;") == 1
             and t.count("transaction direction changed on this game version") == 1
             and t.count("LedgerBehavior.Instance?.RecordPurchase(LedgerBehavior.PaidKey(") == 4
-            and t.count("pass.Books.NoteBought(item.StringId,") == 3
+            and t.count("pass.Books.NoteBought(item.StringId,") == 4
             and S['Passes.cs'].count("books.NoteBought(good.Id, cost);") == 2
             and "_paid += price;" in books
             and S['Books.cs'].count("_paid +=") == 1
@@ -7504,14 +7504,17 @@ def what_lands_after_you_arrive_is_not_counted():
                      "A_landing_a_little_later_or_sooner_moves_its_share_only_a_little",
                      "What_lands_on_a_day_is_counted_by_the_moment_that_day_rounds_up_to")))
 
-def a_workshop_run_moves_the_price_of_its_kind_and_never_the_stock_of_one_good():
+def a_workshop_run_moves_the_price_of_its_kind_and_the_stock_of_the_good_the_town_holds():
     shops = method_body(S['Forecast.cs'], "private static void FollowTheShops")
-    return ("Note(site, null, kinds[one.Category], one.Units, one.Worth, one.Days);" in shops
+    return ("Note(site, standing[one.Category].stands.StringId, kinds[one.Category], one.Units, one.Worth, one.Days);"
+            in shops
+            and "ItemObject stands = StandsForAt(site, one.Value);" in shops
             and "if (landing.Item != item) continue;" in
                 method_body(S['Projection.cs'], "internal static int UnitsLanding")
             and "if (landing.Category != category) continue;" in
                 method_body(S['Projection.cs'], "internal static int WorthLanding")
             and "Worth_landing_goes_by_the_kind_of_good_not_the_good" in PROJECTIONTESTS
+            and "A_workshop_run_written_against_the_good_the_town_holds_keeps_that_shelf_up" in PROJECTIONTESTS
             and "TradeRules.InputsHeld(_needs, held)" in S['Forecast.cs']
             and "int pick = TradeRules.RunsSoonest(ready);" in S['Forecast.cs'])
 
@@ -7549,8 +7552,8 @@ chk("1.60.0", "a caravan standing in a market has already unloaded, so only the 
     a_caravan_already_in_the_market_is_not_counted_twice())
 chk("1.60.0", "cargo counts against a market as it lands before you do, each end to its own travel time, and where a price is reckoned a load landing within a quarter day of you counts in part, so a wobble of an hour never flips a whole caravan",
     what_lands_after_you_arrive_is_not_counted())
-chk("1.60.0", "a workshop run moves the price of the kind of good it makes and never the stock of one good",
-    a_workshop_run_moves_the_price_of_its_kind_and_never_the_stock_of_one_good())
+chk("1.60.0", "a workshop run moves the price of the kind of good it makes and the stock of the good of that kind the town holds",
+    a_workshop_run_moves_the_price_of_its_kind_and_the_stock_of_the_good_the_town_holds())
 chk("1.60.0", "the unit-by-unit walk starts from what the market will hold when you arrive, and a ladder is kept per landing",
     the_walk_starts_from_what_the_market_will_hold_when_you_get_there())
 chk("1.60.0", "what is on the road is read once an hour, again when a setting moves, and forgotten with the campaign",
@@ -12460,7 +12463,7 @@ def a_caravan_the_game_would_not_trade_with_is_left_alone():
                     "if (met.IsCaravan && met.Party?.Owner == Hero.MainHero)",
                     "if (met.IsCaravan && (met.IsInRaftState || !Meetings.CarriesGoods(met)))",
                     "if (mine == null || met.MapFaction == null || !FactionManager.IsAtWarAgainstFaction(met.MapFaction, mine))")
-            and reach.count("return false;") == 4
+            and reach.count("return false;") == 5
             and "if (goods.GetElementNumber(at) > 0) return true;" in
                 method_body(S['Encounters.cs'], "internal static bool CarriesGoods"))
 
@@ -12488,7 +12491,7 @@ def the_larder_is_restocked_whatever_the_food_policy_says():
             and "Restocking_the_larder_answers_to_the_days_of_supply_not_to_the_food_policy" in BUYRULETESTS)
 
 
-def free_passage_holds_off_the_band_and_nobody_else_for_longer_than_the_game_does():
+def free_passage_holds_off_the_bandits_who_let_you_go_and_nobody_else_for_longer_than_the_game_does():
     go = method_body(S['Encounters.cs'], "private static void LetPlayerGo")
     return ("private const int GetawayHours = 4;" in S['Encounters.cs']
             and "band?.Ai?.SetDoNotAttackMainParty(GetawayHours);" in go
@@ -12560,8 +12563,8 @@ chk("1.91.6", "buying answers to the buy policy and the always-buy list, and onl
     buying_answers_to_the_buy_policy_and_a_route_to_both())
 chk("1.91.6", "the larder is restocked to the days of supply whatever the food policy says, and never past a never list or a lock",
     the_larder_is_restocked_whatever_the_food_policy_says())
-chk("1.91.6", "free passage keeps that band off you for four hours, while every other party passes you over only for the hour the game gives anyone leaving an encounter",
-    free_passage_holds_off_the_band_and_nobody_else_for_longer_than_the_game_does())
+chk("1.91.6", "free passage keeps the bandits who let you go off you for four hours, while every other party passes you over only for the hour the game gives anyone leaving an encounter",
+    free_passage_holds_off_the_bandits_who_let_you_go_and_nobody_else_for_longer_than_the_game_does())
 chk("1.91.6", "a trade TradeLord makes for you is written into the game's own record of what you paid, all but a purchase from villagers, which the game never writes down either, so the game's Trade XP for a later sale by hand is counted right",
     a_trade_tradelord_makes_is_written_into_the_games_own_trade_record())
 chk("1.91.6", "the Trade XP in the ledger is the XP the skill really took, and a companion learns from a share of the profit at the rate the game turns your profit into XP",
@@ -19327,6 +19330,169 @@ def every_cursor_note_waits_on_its_own_switch_that_ships_off():
 
 chk("1.104.13", "TradeLord.log writes its cursor notes only with Extensive cursor debug logging on, which ships off under Enable extended debug logging, and with it off the pointer fixes still work and write nothing",
     every_cursor_note_waits_on_its_own_switch_that_ships_off())
+
+
+def a_party_in_a_fight_is_never_traded_with_on_the_road():
+    t = S['Trading.cs']
+    reach = method_body(t, "private static bool RoadPartyReachable")
+    return (reach
+            and ordered(reach, "if (met.IsCaravan && (met.IsInRaftState || !Meetings.CarriesGoods(met)))",
+                        "if (met.MapEvent != null)",
+                        '" are in a fight, and the game offers no trade to a party in the middle of "',
+                        '"one, so TradeLord stays out of it");\n                return false;',
+                        "IFaction mine = Hero.MainHero?.MapFaction;")
+            and "if (!RoadPartyReachable(met)) return;" in method_body(t, "public static void ExecuteRoadTrade")
+            and "if (IsRoadTrader(met)) TradeOnce(met);" in method_body(S['Encounters.cs'], "internal static void Watch()")
+            and ordered(method_body(S['Encounters.cs'], "private static void TradeOnce"),
+                        "_tradedWith = met;", "TradeActionBehavior.ExecuteRoadTrade(met)",
+                        "if (met.MapEvent != null) _tradedWith = null;")
+            and "Caravans and villagers in a fight, since the game offers them no trade until it is over" in README)
+
+chk("1.104.14", "a caravan or villagers in a fight are never traded with on the road, since the game offers no trade until it is over, TradeLord.log says why, and the next meeting trades as usual",
+    a_party_in_a_fight_is_never_traded_with_on_the_road())
+
+
+def a_deal_you_took_is_written_into_the_visit_like_any_trade():
+    t = S['Trading.cs']
+    reckon = method_body(t, "private static Took Reckon")
+    return (reckon
+            and ordered(reckon, "pass.Tally(item, count, said);",
+                        "if (selling) pass.Books.NoteSold(item.StringId);",
+                        "else foreach (int paid in prices) pass.Books.NoteBought(item.StringId, paid);",
+                        "took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);")
+            and ordered(method_body(t, "internal static void TookTheDeal"),
+                        "Took got = Reckon(selling, sold, soldAt, true);",
+                        "Took paid = Reckon(buying, bought, boughtAt, false);")
+            and "if (books.Sold(sim, good.Id)) { tally.Note(Block.TradedHereAlready); continue; }" in S['Passes.cs']
+            and "internal int PaidOut(bool sim) => _paid + (sim ? _spent : 0);" in S['Books.cs']
+            and "_paid" not in method_body(S['Books.cs'], "internal void ForgetTheDryRun")
+            and "internal static void StartAFreshDryRun() => Visit.ForgetTheDryRun();" in t)
+
+chk("1.104.14", "a deal you take from Staged Trading is written into the visit like a trade TradeLord makes, so a second deal there keeps to Max spend per visit and buys back nothing the first one sold",
+    a_deal_you_took_is_written_into_the_visit_like_any_trade())
+
+
+def a_sale_for_the_herd_or_a_buy_for_the_larder_drops_the_empty_line():
+    t = S['Trading.cs']
+    relief = method_body(t, "public static void ExecuteHerdRelief")
+    larder = method_body(t, "public static void ExecuteResupply")
+    return (relief and larder
+            and ordered(relief, "if (sold <= 0) return;", "_sellStalled = null;",
+                        "pass.Moved(profit, gained, selling: true);")
+            and ordered(larder, "if (stocked <= 0)", "_buyStalled = null;", "pass.Moved(gold: spent, selling: false);")
+            and relief.count("_sellStalled") == 1 and larder.count("_buyStalled") == 1
+            and "in one line for a market where nothing changed hands at all" in README)
+
+chk("1.104.14", "an animal sold to get the party back up to speed and food bought for the larder each count as something changing hands, so no line then says nothing was sold or bought there",
+    a_sale_for_the_herd_or_a_buy_for_the_larder_drops_the_empty_line())
+
+
+def an_item_list_reads_the_commas_a_chinese_keyboard_types():
+    return ("internal static readonly char[] EntryMarks = { ',', ';', '\\uFF0C', '\\uFF1B', '\\u3001' };" in S['Options.cs']
+            and "Split(EntryMarks" in method_body(S['Options.cs'], "private static ItemList Parsed")
+            and S['Policy.cs'].count("Split(Options.EntryMarks") == 2
+            and "An_item_list_typed_with_chinese_punctuation_is_read_entry_by_entry" in ROUTETESTS)
+
+chk("1.104.14", "the item lists split names at a Chinese comma, enumeration comma or semicolon as they do at a plain comma or semicolon",
+    an_item_list_reads_the_commas_a_chinese_keyboard_types())
+
+
+def the_confidence_hint_names_left_and_the_settings_that_bring_caravans_back():
+    told = [spoken(path) for path in [ENGLISH] + list(TRANSLATIONS.values())]
+    return (len(told) == 4
+            and all(one.get('TL416') and one['TL416'] in one.get('TL310', '') for one in told)
+            and all(one.get('TL279') and one['TL279'] in one.get('TL310', '') for one in told)
+            and "caravan traffic" not in told[0]['TL310']
+            and '{=TL310}' + told[0]['TL310'] + '")]' in M)
+
+chk("1.104.14", "the hint for Rank routes by confidence names Left as what lowers Conf, and caravans only with Live world prices or Count what is on its way to a market off, in every language",
+    the_confidence_hint_names_left_and_the_settings_that_bring_caravans_back())
+
+
+def the_next_best_market_named_is_the_one_that_earns_the_most_after_the_mark():
+    walk = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    return (walk
+            and ordered(walk, "if (weighed > bar)", "bar = weighed;",
+                        "if (how.Best != null && how.Rate > how.RunnerUpRate)",
+                        "how.RunnerUp = how.Best;", "how.Best = s;", "else if (rate > how.RunnerUpRate)")
+            and walk.count("how.RunnerUp = how.Best;") == 1
+            and walk.count("how.RunnerUp = s;") == 1)
+
+chk("1.104.14", "the next best market TradeLord.log names is the one that earns the most a day after the marked one, never a held mark that a market it priced earns more than",
+    the_next_best_market_named_is_the_one_that_earns_the_most_after_the_mark())
+
+
+def left_qty_and_conf_count_what_the_buy_towns_workshops_make():
+    led = S['Ledger.cs']
+    return (a_workshop_run_moves_the_price_of_its_kind_and_the_stock_of_the_good_the_town_holds()
+            and "Forecast.UnitsLanding(from, item, toBuy)," in led
+            and "float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);" in led
+            and "UnitsLanding(listed, item, days), taken)));" in
+                method_body(S['Projection.cs'], "internal static List<(float days, int shelf)> ShelfAhead"))
+
+chk("1.104.14", "Left, Qty and Conf count what the buy town's own workshops put on the shelf, as they count what the town and its workshops take off it",
+    left_qty_and_conf_count_what_the_buy_towns_workshops_make())
+
+
+def a_ride_is_priced_at_the_speed_the_party_makes_by_day():
+    tr = S['Travel.cs']
+    land = method_body(tr, "private static float LandSpeed()")
+    day = method_body(tr, "private static float LandSpeedByDay(float now)")
+    rule = method_body(S['TradeMath.cs'], "public static float SpeedByDay")
+    return (land and day and rule
+            and "TradeMath.SpeedsInEffect(LandSpeed(), SeaSpeed(), out land, out sea);" in
+                method_body(tr, "private static void Speeds")
+            and ordered(land, "float now = MobileParty.MainParty.Speed;",
+                        "try { return LandSpeedByDay(now); } catch { return now; }")
+            and ordered(day, "if (Campaign.Current == null || !Campaign.Current.IsNight || party.IsCurrentlyAtSea) return now;",
+                        "typeof(DefaultPartySpeedCalculatingModel).GetField(", '"_night"',
+                        "DefaultPerks.Scouting.NightRunner?.Name?.ToString();",
+                        "foreach (var (name, number) in speed.GetLines())",
+                        "if (name == dark || name == runner) night += number;",
+                        "PerkHelper.AddPerkBonusForParty(DefaultPerks.Scouting.DayTraveler, party, true, ref daylight);",
+                        "whole += speed.BaseNumber * daylight.SumOfFactors;",
+                        "return TradeMath.SpeedByDay(now, speed.ResultNumber,")
+            and "if (!(now > 0f) || !(atNight > 0f) || !(byDay > atNight)) return now;" in rule
+            and "A_ride_is_priced_at_the_speed_the_party_has_by_day" in MATHTESTS
+            and "The_speed_by_day_never_slows_a_party_down_or_trusts_a_reading_that_is_not_a_number" in MATHTESTS
+            and "at your party's real speed by day with the cargo you are carrying" in README)
+
+chk("1.104.14", "every ride is priced at the speed the party makes by day, so travel times, the travel ceilings and the map marker hold steady through the night",
+    a_ride_is_priced_at_the_speed_the_party_makes_by_day())
+
+
+def free_passage_holds_off_every_band_in_that_encounter():
+    go = method_body(S['Encounters.cs'], "private static void LetPlayerGo")
+    others = method_body(S['Encounters.cs'], "private static List<string> HoldOffTheOtherBands")
+    return (go and others
+            and ordered(go, "band?.Ai?.SetDoNotAttackMainParty(GetawayHours);",
+                        'List<string> others = Guard.Read("FreePassage.Others", band, HoldOffTheOtherBands, new List<string>());',
+                        "PlayerEncounter.ProtectPlayerSide();")
+            and ordered(others, "if (PlayerEncounter.Current == null) return held;",
+                        "PlayerEncounter.Current.FindAllNpcPartiesWhoWillJoinEvent(withYou, against);",
+                        "if (other == null || other == band || !other.IsBandit) continue;",
+                        "other.IgnoreForHours(GetawayHours);", "other.Ai?.SetDoNotAttackMainParty(GetawayHours);"))
+
+chk("1.104.14", "free passage holds off every band of bandits that would join that encounter, read before your party is moved out of it, and no other party",
+    free_passage_holds_off_every_band_in_that_encounter())
+
+
+def a_dry_run_keeps_the_haul_animals_its_paper_cargo_needs():
+    t = S['Trading.cs']
+    room = method_body(t, "internal float RoomTakenOnPaper()")
+    spared = method_body(S['Drove.cs'], "internal static int HaulAnimalsCargoCanSpare")
+    return (room and spared
+            and "return Books.Weight(Sim) - Books.CapacityAdded(Sim) + lost;" in room
+            and "if (mounts > 0 && _eachMount < 0f) _eachMount = Drove.CargoASpareMountAdds(Party);" in room
+            and "internal static int HaulAnimalsCargoCanSpare(MobileParty party, float roomTakenOnPaper = 0f)" in S['Drove.cs']
+            and "float carried = model.CalculateTotalWeightCarried(party, atSea).ResultNumber + roomTakenOnPaper;" in spared
+            and "Drove.HaulAnimalsCargoCanSpare(pass.Party, pass.RoomTakenOnPaper())" in
+                method_body(t, "public static void ExecuteHerdRelief")
+            and ALL.count("HaulAnimalsCargoCanSpare(") == 2
+            and "private bool OnPaper(bool sim) => sim && !LaidOut;" in S['Books.cs'])
+
+chk("1.104.14", "a dry run keeps the haul animals the cargo it bought on paper needs, counting the room its paper trades took or freed, and a real visit is unchanged",
+    a_dry_run_keeps_the_haul_animals_its_paper_cargo_needs())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

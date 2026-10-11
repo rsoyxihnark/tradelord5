@@ -1,6 +1,11 @@
 using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using Helpers;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.CharacterDevelopment;
+using TaleWorlds.CampaignSystem.ComponentInterfaces;
+using TaleWorlds.CampaignSystem.GameComponents;
 using TaleWorlds.CampaignSystem.Naval;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -78,6 +83,35 @@ namespace TradeLord
                 MobileParty.MainParty.NavigationCapability, out landRatio);
         }
 
+        private static float LandSpeed()
+        {
+            float now = MobileParty.MainParty.Speed;
+            try { return LandSpeedByDay(now); } catch { return now; }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static float LandSpeedByDay(float now)
+        {
+            MobileParty party = MobileParty.MainParty;
+            if (Campaign.Current == null || !Campaign.Current.IsNight || party.IsCurrentlyAtSea) return now;
+            string dark = (typeof(DefaultPartySpeedCalculatingModel).GetField(
+                               "_night", BindingFlags.Static | BindingFlags.NonPublic)
+                               ?.GetValue(null) as TextObject)?.ToString();
+            if (string.IsNullOrEmpty(dark)) return now;
+            string runner = DefaultPerks.Scouting.NightRunner?.Name?.ToString();
+            PartySpeedModel model = Campaign.Current.Models.PartySpeedCalculatingModel;
+            ExplainedNumber speed = model.CalculateFinalSpeed(party, model.CalculateBaseSpeed(party, true));
+            float night = 0f;
+            foreach (var (name, number) in speed.GetLines())
+                if (name == dark || name == runner) night += number;
+            float whole = speed.BaseNumber + speed.BaseNumber * speed.SumOfFactors;
+            ExplainedNumber daylight = new ExplainedNumber(1f);
+            PerkHelper.AddPerkBonusForParty(DefaultPerks.Scouting.DayTraveler, party, true, ref daylight);
+            whole += speed.BaseNumber * daylight.SumOfFactors;
+            return TradeMath.SpeedByDay(now, speed.ResultNumber,
+                                        MathF.Clamp(whole - night, speed.LimitMinValue, speed.LimitMaxValue));
+        }
+
         private static int _speedHour = -1;
         private static float _landSpeed, _seaSpeed;
 
@@ -85,7 +119,7 @@ namespace TradeLord
         {
             int hour = (int)CampaignTime.Now.ToHours;
             if (hour == _speedHour) { land = _landSpeed; sea = _seaSpeed; return; }
-            TradeMath.SpeedsInEffect(MobileParty.MainParty.Speed, SeaSpeed(), out land, out sea);
+            TradeMath.SpeedsInEffect(LandSpeed(), SeaSpeed(), out land, out sea);
             _speedHour = hour;
             _landSpeed = land;
             _seaSpeed = sea;

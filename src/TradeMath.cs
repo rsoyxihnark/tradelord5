@@ -1167,6 +1167,13 @@ namespace TradeLord
             sea = fleetSpeed <= StandingStill ? land : fleetSpeed;
         }
 
+        public static float SpeedByDay(float now, float atNight, float byDay)
+        {
+            if (!(now > 0f) || !(atNight > 0f) || !(byDay > atNight)) return now;
+            float day = Finite(now * (byDay / atNight), now);
+            return day > now ? day : now;
+        }
+
         public static float FleetSpeed(float total, int count, float slowest) =>
             count <= 0 ? 0f : Finite((total / count + slowest) * 0.5f, 0f);
 
