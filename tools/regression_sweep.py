@@ -1825,7 +1825,7 @@ def a_caravan_leaves_what_the_town_will_take_and_a_villager_leaves_the_lot():
             and "bool caravan = party.IsCaravan;" in road
             and "if (!caravan && !party.IsVillager) continue;" in road
             and "if (caravan) NoteAPurse(bound, party.PartyTradeGold, days);" in road
-            and "int landing = caravan ? WhatACaravanLeavesHere(bound, item, amount) : amount;" in road
+            and "int landing = caravan ? WhatACaravanLeavesHere(bound, party, item, amount) : amount;" in road
             and "TradeMath.WorthOf(landing, item.Value), days);" in road
             and "where.MarketData.GetPriceFactor(category)" in leaves
             and "CalculateDailySettlementBudgetForItemCategory(where, demand, category)" in leaves
@@ -12943,7 +12943,7 @@ def a_party_on_the_road_lands_its_load_only_at_a_town():
             and ordered(road, "Settlement bound = party.TargetSettlement;",
                         "if (bound == null || !bound.IsTown) continue;",
                         "if (caravan) NoteAPurse(bound, party.PartyTradeGold, days);",
-                        "int landing = caravan ? WhatACaravanLeavesHere(bound, item, amount) : amount;")
+                        "int landing = caravan ? WhatACaravanLeavesHere(bound, party, item, amount) : amount;")
             and "bound.IsVillage" not in road)
 
 chk("1.93.4", "a caravan or a party of villagers is counted as landing its load only where it is bound for a town, so what villagers carry back home to their village is never counted as reaching a market",
@@ -19493,6 +19493,23 @@ def a_dry_run_keeps_the_haul_animals_its_paper_cargo_needs():
 
 chk("1.104.14", "a dry run keeps the haul animals the cargo it bought on paper needs, counting the room its paper trades took or freed, and a real visit is unchanged",
     a_dry_run_keeps_the_haul_animals_its_paper_cargo_needs())
+
+
+def a_caravan_is_counted_at_the_price_that_caravan_gets():
+    road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
+    leaves = method_body(S['Forecast.cs'], "private static int WhatACaravanLeavesHere")
+    return (road and leaves
+            and "private static int WhatACaravanLeavesHere(Settlement bound, MobileParty caravan, ItemObject item, int carried)"
+                in S['Forecast.cs']
+            and "int landing = caravan ? WhatACaravanLeavesHere(bound, party, item, amount) : amount;" in road
+            and ordered(leaves, "CalculateDailySettlementBudgetForItemCategory(where, demand, category);",
+                        "int price = Priced.At(where.Settlement.SettlementComponent, item,\n"
+                        "                                      caravan, selling: true);",
+                        "return TradeMath.WhatACaravanUnloads(carried, priceFactor, budget, price);")
+            and "MainParty" not in leaves)
+
+chk("1.104.15", "what a caravan is counted as leaving in a town is priced for that caravan, never at the price you would get",
+    a_caravan_is_counted_at_the_price_that_caravan_gets())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

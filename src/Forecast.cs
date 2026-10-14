@@ -298,7 +298,7 @@ namespace TradeLord
                     ItemObject item = carried.GetItemAtIndex(k);
                     int amount = carried.GetElementNumber(k);
                     if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;
-                    int landing = caravan ? WhatACaravanLeavesHere(bound, item, amount) : amount;
+                    int landing = caravan ? WhatACaravanLeavesHere(bound, party, item, amount) : amount;
                     if (landing <= 0) continue;
                     Note(bound, item.StringId, item.ItemCategory, landing,
                          TradeMath.WorthOf(landing, item.Value), days);
@@ -306,7 +306,7 @@ namespace TradeLord
             }
         }
 
-        private static int WhatACaravanLeavesHere(Settlement bound, ItemObject item, int carried)
+        private static int WhatACaravanLeavesHere(Settlement bound, MobileParty caravan, ItemObject item, int carried)
         {
             Town town = bound.IsTown ? bound.Town : null;
             ItemCategory category = item.ItemCategory;
@@ -318,7 +318,7 @@ namespace TradeLord
                 float budget = Campaign.Current.Models.SettlementEconomyModel
                     .CalculateDailySettlementBudgetForItemCategory(where, demand, category);
                 int price = Priced.At(where.Settlement.SettlementComponent, item,
-                                      MobileParty.MainParty, selling: true);
+                                      caravan, selling: true);
                 return TradeMath.WhatACaravanUnloads(carried, priceFactor, budget, price);
             }, 0);
         }

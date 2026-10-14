@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.104.15
+
+- Fixed Count what is on its way to a market working out what a caravan sells in a town at your prices instead of the caravan's
+
 ## 1.104.14
 
 - Fixed Left, Qty and Conf in the TradeLord ledger leaving out what the buy town's own workshops make
