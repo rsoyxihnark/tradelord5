@@ -20,7 +20,7 @@ namespace TradeLord
         {
             if (rec == null || rec.Count <= 0 || prices == null || prices.Count == 0) return 0;
             long made = 0L;
-            foreach (SoldUnit one in TakeAHandSale(CopyOfTheBatches(rec), prices, covers, laidOut))
+            foreach (SoldUnit one in WhatAHandSaleTook(rec, prices, covers, laidOut))
                 if (one.Bought) made += (long)one.Price - one.Cost;
             return made > int.MaxValue ? int.MaxValue : made < int.MinValue ? int.MinValue : (int)made;
         }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.104.16
+
+- Fixed leaving a market you loaded a save in and walking straight back in not counting as the same visit, so TradeLord traded there again
+- Fixed the map marker pointing at the market you loaded a save in as soon as you walked out of it
+- Fixed TradeLord trading on arrival at the market it last traded at after you load a save, instead of leaving it alone the first time back
+- Fixed the map marker pointing at the market TradeLord last traded at after you load a save
+- Fixed TradeLord selling animals as you leave the market it made its last trade at, on your first time back, after loading a save made there
+- The hint for Livestock policy now says Sell animals that slow you down still sells sheep, cattle and hogs to lift the herd speed penalty
+
 ## 1.104.15
 
 - Fixed Count what is on its way to a market working out what a caravan sells in a town at your prices instead of the caravan's

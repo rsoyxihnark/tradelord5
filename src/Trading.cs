@@ -329,6 +329,14 @@ namespace TradeLord
             Marker.Tracked = tracked;
             dataStore.SyncData("TradeLord_PanelPins", ref _pinnedTowns);
             if (_pinnedTowns == null) _pinnedTowns = "";
+            string lastTraded = null;
+            if (!dataStore.IsLoading)
+                Guard.Run("Visit.LastTradedForSave", () => lastTraded = LastTradedAtOnceYouLeave());
+            dataStore.SyncData("TradeLord_LastTradedAt", ref lastTraded);
+            if (dataStore.IsLoading) _lastTradedAt = lastTraded;
+            string heldBack = dataStore.IsLoading ? null : _heldBackAt;
+            dataStore.SyncData("TradeLord_HeldBackAt", ref heldBack);
+            if (dataStore.IsLoading) _heldBackAt = heldBack;
         }
 
         public override void RegisterEvents()
@@ -960,6 +968,8 @@ namespace TradeLord
                 Settlement inside = MobileParty.MainParty?.CurrentSettlement;
                 if (inside != null) _visitTradeAllowed = CanTradeHere(inside);
                 if (inside != null) Marker.NoteALoadInside(inside);
+                if (inside != null) _lastArrivalAt = inside.StringId;
+                if (inside != null) StillTheSameSitting(inside);
                 Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));
                 Guard.Run("Action.RestoreMarker", Marker.Update);
                 Guard.Run("Shops.MendTheGamesRecords", Shops.MendTheGamesRecords);

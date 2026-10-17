@@ -5847,7 +5847,7 @@ def a_save_is_never_failed_by_the_mods_own_bookkeeping():
                         "_freeText = LedgerCodec.WritePurchases(_free);",
                         "LedgerCodec.WritePromises(new List<PromiseRecord>(_promises.Values));",
                         'dataStore.SyncData("TradeLord_LedgerText"')
-            and trade.count("dataStore.SyncData(") == 2
+            and trade.count("dataStore.SyncData(") == 4
             and ledger.count("dataStore.SyncData(") == 15)
 
 def every_choice_the_screen_offers_sits_inside_the_limit_the_file_keeps():
@@ -6395,7 +6395,7 @@ def a_market_you_step_back_into_inside_the_hour_is_the_same_visit():
             and "private static void ResetVisit(bool sameSitting = false)" in t
             and "if (sameSitting) Visit.ForgetTheDryRun(); else Visit.Forget();" in reset
             and "ResetVisit(StillTheSameSitting(settlement));" in entered
-            and t.count("StillTheSameSitting(") == 3
+            and t.count("StillTheSameSitting(") == 4
             and "_sittingAt = null;" in forget
             and "_sittingHours = -1d;" in forget)
 
@@ -12641,7 +12641,7 @@ def the_deal_you_took_credits_goods_you_never_paid_for_as_a_pass_does():
             and "UnpaidWorth" not in reckon
             and "HasCostBasis(el) ? (LedgerBehavior.Instance?.GetCostBasis(el) ?? el.Item.Value) : 0;" in basis
             and ordered(hand, "if (rec == null || rec.Count <= 0 || prices == null || prices.Count == 0) return 0;",
-                        "foreach (SoldUnit one in TakeAHandSale(CopyOfTheBatches(rec), prices, covers, laidOut))",
+                        "foreach (SoldUnit one in WhatAHandSaleTook(rec, prices, covers, laidOut))",
                         "if (one.Bought) made += (long)one.Price - one.Cost;")
             and ordered(method_body(S['TradeMath.cs'], "private static List<SoldUnit> TakeAHandSale"),
                         "if (batches.Count == 0)", "sold.Add(new SoldUnit { Price = price });", "continue;")
@@ -13732,12 +13732,12 @@ def the_first_time_back_at_the_last_market_traded_is_left_alone():
                         "Notices.Say(FirstTimeBackNote(), Notices.Note);")
             and "_heldBackAt = null;" in method_body(t, "private static void NoteThisArrival(Settlement settlement)")
             and "_heldBackAt = null;" in forget
-            and t.count("_heldBackAt") == 5
+            and t.count("_heldBackAt") == 7
             and ordered(noted, "bool traded = Visit.Moves(Simulating) > _movesAtArrival;",
                         "_lastTradedAt = Arrivals.LastTradedAt(settlement?.StringId, traded, _lastTradedAt);")
             and "_lastTradedAt = null;" in forget
             and "_movesAtArrival = Visit.Moves(Simulating);" in forget
-            and t.count("_lastTradedAt") == 14
+            and t.count("_lastTradedAt") == 15
             and t.count("_movesAtArrival") == 5
             and "internal static bool FirstTimeBack(string here, string lastTradedAt) =>\n"
                 "            here != null && here == lastTradedAt;" in rules
@@ -16135,7 +16135,7 @@ def profit_reads_what_each_unit_really_cost():
             and ordered(unit, "if (!bought) return 0;", "long made = (long)price - (unitCost > 0 ? unitCost : 0);")
             and ordered(hand, "if (rec == null || rec.Count <= 0 || prices == null || prices.Count == 0) return 0;",
                         "long made = 0L;",
-                        "foreach (SoldUnit one in TakeAHandSale(CopyOfTheBatches(rec), prices, covers, laidOut))",
+                        "foreach (SoldUnit one in WhatAHandSaleTook(rec, prices, covers, laidOut))",
                         "if (one.Bought) made += (long)one.Price - one.Cost;")
             and ordered(sell, "bool bought = basis.SoldOne();",
                         "int credited = TradeMath.MadeOnAUnit(price, bought, basis.SoldAt);",
@@ -16258,7 +16258,7 @@ def trade_xp_is_what_the_game_gives_for_the_same_sale():
             and "Credits your Trade skill with what the game gives for the same sale made on its trade screen, at a rate you set" in README
             and "earns only the Trade XP the game itself would give for it, which is usually none" in README
             and "Goods bought from villagers show their profit but earn only the Trade XP the game itself would give for them" in README
-            and "All it puts in a save is six strings, nine numbers, a switch and a settlement reference" in README)
+            and "All it puts in a save is eight strings, nine numbers, a switch and a settlement reference" in README)
 
 chk("1.97.5", "Trade XP for what TradeLord sells is what the game gives for the same sale on its trade screen: a visit's sales are put together good by good as that screen does and handed to the game's own reckoning once, before any save",
     trade_xp_is_what_the_game_gives_for_the_same_sale())
@@ -19510,6 +19510,73 @@ def a_caravan_is_counted_at_the_price_that_caravan_gets():
 
 chk("1.104.15", "what a caravan is counted as leaving in a town is priced for that caravan, never at the price you would get",
     a_caravan_is_counted_at_the_price_that_caravan_gets())
+
+
+def a_save_loaded_inside_a_market_counts_as_arriving_there():
+    launched = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+    return (ordered(launched, "if (inside != null) Marker.NoteALoadInside(inside);",
+                    "if (inside != null) _lastArrivalAt = inside.StringId;",
+                    "if (inside != null) StillTheSameSitting(inside);")
+            and "NoteThisArrival(" not in launched)
+
+chk("1.104.16", "a save loaded inside a town or village counts as arriving there, so leaving and walking straight back in leaves that market alone and keeps the visit",
+    a_save_loaded_inside_a_market_counts_as_arriving_there())
+
+
+def a_first_time_back_is_kept_in_the_save():
+    sync = method_body(S['Trading.cs'], "public override void SyncData")
+    return ordered(sync, "string lastTraded = null;",
+                   'Guard.Run("Visit.LastTradedForSave", () => lastTraded = LastTradedAtOnceYouLeave());',
+                   'dataStore.SyncData("TradeLord_LastTradedAt", ref lastTraded);',
+                   "if (dataStore.IsLoading) _lastTradedAt = lastTraded;",
+                   "string heldBack = dataStore.IsLoading ? null : _heldBackAt;",
+                   'dataStore.SyncData("TradeLord_HeldBackAt", ref heldBack);',
+                   "if (dataStore.IsLoading) _heldBackAt = heldBack;")
+
+chk("1.104.16", "the market TradeLord last traded at, and the one it leaves alone on your first time back, are kept in the save, so a save you load leaves that market alone as before",
+    a_first_time_back_is_kept_in_the_save())
+
+
+def the_livestock_policy_hint_says_herd_relief_still_sells_livestock():
+    en = spoken(ENGLISH)
+    tr = spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])
+    ru = spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])
+    cn = spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])
+    return ("Sell animals that slow you down still sells them to lift it" in en['TL324']
+            and 'HintText = "{=TL324}' + en['TL324'] + '"' in M
+            and "Sizi yavaşlatan hayvanları sat ayarı onları yine de satar" in tr['TL324']
+            and "«Продавать животных, которые вас замедляют» всё равно их продаёт" in ru['TL324']
+            and "“卖掉拖慢你的牲口”依然会卖掉它们" in cn['TL324']
+            and "PolicyFor" not in shed_rule() and "ResaleAllowed" not in shed_rule())
+
+chk("1.104.16", "the hint for Livestock policy says Sell animals that slow you down still sells livestock, in every language, as herd relief asks no policy",
+    the_livestock_policy_hint_says_herd_relief_still_sells_livestock())
+
+
+def a_run_that_ships_nothing_says_so_instead_of_naming_a_version_it_ships():
+    main = between(RELEASED, "def main(argv):", "\n    first = min(live")
+    return (ordered(main, "agreed = theMessageSaysWhatTheChangelogSays(shipping, said)",
+                    "subject, _, _ = thisCommit()",
+                    "marked = subject is not None and subject.startswith('[no release]')",
+                    "rows, how = asked()")
+            and "'and this commit ships no version, so this run does not settle it' if marked else" in RELEASED
+            and ordered(RELEASED, "if shipping and marked:", "so this run does not check that it is out",
+                        "elif shipping:", "is the version this commit ships, so it is not expected out yet"))
+
+chk("1.104.16", "a run for a commit that ships no version says the version the source carries is not checked there, rather than calling it the version that commit ships",
+    a_run_that_ships_nothing_says_so_instead_of_naming_a_version_it_ships())
+
+
+def a_hand_sale_is_reckoned_through_the_one_place_that_says_what_it_took():
+    hand = method_body(S['TradeMath.cs'], "public static int MadeOnAHandSale")
+    took = method_body(S['TradeMath.cs'], "public static List<SoldUnit> WhatAHandSaleTook")
+    return (hand and took
+            and "foreach (SoldUnit one in WhatAHandSaleTook(rec, prices, covers, laidOut))" in hand
+            and "TakeAHandSale(" not in hand
+            and S['TradeMath.cs'].count("TakeAHandSale(CopyOfTheBatches(rec), prices, covers, laidOut)") == 1)
+
+chk("1.104.16", "the profit on a hand sale is added up from what the hand sale took, so the units it names and the profit it books come from one place",
+    a_hand_sale_is_reckoned_through_the_one_place_that_says_what_it_took())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

@@ -7,7 +7,7 @@
 ## Everything it does
 
 - ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
-- ✅ It declares no save types of its own. All it puts in a save is six strings, nine numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
+- ✅ It declares no save types of its own. All it puts in a save is eight strings, nine numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
