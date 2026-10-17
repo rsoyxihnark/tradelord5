@@ -2067,7 +2067,7 @@
 ## 1.6.26
 
 - The never sell, always sell and never buy lists now take the name a good is shown under, such as Iron Ore, as well as its item id
-- An entry on one of those lists that matches no good in the game is now named on screen and in the log, instead of quietly doing nothing
+- A Never sell, Always sell or Never buy entry that matches no good is now named on screen and in the log, instead of quietly doing nothing
 - Added a quiet automation setting that keeps trading done on entry to the log, off your screen
 - Starting a second campaign without closing the game now logs the ledger panel's hotkey and map button again
 
