@@ -2054,6 +2054,26 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_ride_shorter_than_three_hours_is_still_a_ride_and_never_reads_as_no_time_at_all()
+        {
+            var rng = new System.Random(5517);
+            for (int round = 0; round < 20000; round++)
+            {
+                float days = (float)(rng.NextDouble() * 0.125d);
+                if (days <= 0f) continue;
+                Assert.Equal(0f, TradeMath.ToTheQuarterDay(days), 4);
+                Assert.Equal(TradeMath.HorizonStep, TradeMath.ARideToTheQuarterDay(days), 4);
+            }
+            Assert.Equal(TradeMath.HorizonStep, TradeMath.ARideToTheQuarterDay(float.Epsilon), 4);
+            Assert.Equal(0f, TradeMath.ARideToTheQuarterDay(0f), 4);
+            Assert.Equal(0f, TradeMath.ARideToTheQuarterDay(-3f), 4);
+            Assert.Equal(0f, TradeMath.ARideToTheQuarterDay(float.NaN), 4);
+            Assert.Equal(0f, TradeMath.ARideToTheQuarterDay(float.PositiveInfinity), 4);
+            Assert.Equal(0.25f, TradeMath.ARideToTheQuarterDay(0.3f), 4);
+            Assert.Equal(2.5f, TradeMath.ARideToTheQuarterDay(2.4f), 4);
+        }
+
+        [Fact]
         public void Two_trips_that_land_within_the_same_quarter_day_are_read_as_one_horizon()
         {
             Assert.Equal(TradeMath.ToTheQuarterDay(2.38f), TradeMath.ToTheQuarterDay(2.45f), 4);

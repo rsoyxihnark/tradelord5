@@ -142,7 +142,7 @@ namespace TradeLord
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
             Build();
-            var key = (site.StringId, item.ItemCategory.StringId, TradeMath.ToTheQuarterDay(withinDays));
+            var key = (site.StringId, item.ItemCategory.StringId, TradeMath.ARideToTheQuarterDay(withinDays));
             if (_shifts.TryGetValue(key, out int shift)) return shift;
             shift = WorthShift(site, item, withinDays);
             _shifts[key] = shift;

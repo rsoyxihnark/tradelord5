@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.104.17
+
+- Fixed Count what is on its way to a market leaving out everything on the road once a market was less than three hours away
+- Fixed TradeLord.log saying no food was on sale at a village when the only food left was the last unit TradeLord never takes
+- The marker check in TradeLord.log now also weighs the sale against what the map marker said as you walked out of the last market
+
 ## 1.104.16
 
 - Fixed leaving a market you loaded a save in and walking straight back in not counting as the same visit, so TradeLord traded there again

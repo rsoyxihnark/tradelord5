@@ -133,6 +133,17 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_load_an_hour_from_the_shelf_counts_while_you_are_still_minutes_away()
+        {
+            var listed = new List<Landing> { Coming("jewelry", "jewelry", 10, 8000, 1f / 24f) };
+            Assert.Equal(10, Projection.UnitsLanding(listed, "jewelry", 0.12f, graded: true));
+            Assert.Equal(8000, Projection.WorthLanding(listed, "jewelry", 0.12f, graded: true));
+            Assert.Equal(10, Projection.UnitsLanding(listed, "jewelry", 0.13f, graded: true));
+            var coming = new List<Spending> { Purse(1000, 1f / 24f) };
+            Assert.Equal(1000, Projection.PurseLanding(coming, 0.12f, graded: true));
+        }
+
+        [Fact]
         public void Nothing_read_and_nothing_asked_about_land_nothing()
         {
             Assert.Equal(0, Projection.UnitsLanding(null, "grain", 2f));

@@ -1349,6 +1349,12 @@ namespace TradeLord
             return steps <= 0d ? 0f : Finite((float)(steps * HorizonStep), days);
         }
 
+        public static float ARideToTheQuarterDay(float days)
+        {
+            float quartered = ToTheQuarterDay(days);
+            return quartered <= 0f && Finite(days, 0f) > 0f ? HorizonStep : quartered;
+        }
+
         public static float UpToTheQuarterDay(float days)
         {
             days = Finite(days, 0f);

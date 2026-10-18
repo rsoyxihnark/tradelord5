@@ -150,7 +150,7 @@ namespace TradeLord
         private static (float weight, int cost, float profit, bool food) _unfitted;
         private static Block? _sellStalled;
         private static Block? _buyStalled;
-        private static (int units, int gold, Settlement at) _soldThisRound;
+        private static (int units, int gold, int profit, Settlement at) _soldThisRound;
         private static int _boughtThisRound;
         private static readonly OneLineEach<ItemObject> _told = new OneLineEach<ItemObject>();
 
@@ -412,6 +412,7 @@ namespace TradeLord
                 CloseWhatMoved();
             });
             Guard.Run("Action.NoteWhereItTraded", () => NoteWhereItTraded(settlement));
+            if (HasAMarket(settlement)) Marker.NoteTheWayOut(settlement);
             Guard.Run("Action.OnSettlementLeft", Marker.Update);
         }
 
@@ -1639,7 +1640,7 @@ namespace TradeLord
         {
             var sold = _soldThisRound;
             if (sold.at != null)
-                Guard.Run("Marker.Check", () => Marker.ScoreTheMark(sold.at, sold.units, sold.gold));
+                Guard.Run("Marker.Check", () => Marker.ScoreTheMark(sold.at, sold.units, sold.gold, sold.profit));
             CloseWhatMoved();
             ReportStalledPasses();
         }
@@ -1761,6 +1762,7 @@ namespace TradeLord
             int profit = moved.Profit;
             int goldGained = pass.Gained(moved.SimGold);
             _soldThisRound = (_soldThisRound.units + soldItems, _soldThisRound.gold + goldGained,
+                              _soldThisRound.profit + profit,
                               pass.Site != null && !pass.Sim ? pass.Site : _soldThisRound.at);
 
             if (soldItems > 0)
@@ -2080,7 +2082,7 @@ namespace TradeLord
                                (missed == null ? ", nor any it may buy at all" : ": the cheapest on sale is " + missed));
                 return;
             }
-            string stopped = null;
+            string stopped = null, hungryStopped = null;
             int pastTheCapUnits = 0, pastTheCapGold = 0;
 
             pass.CountFrom();
@@ -2118,7 +2120,7 @@ namespace TradeLord
                             stopped = "your buying caps for it are reached";
                             break;
                         }
-                        if (settlement.IsVillage && remaining <= 1) { stopped = "a village keeps its last unit"; break; }
+                        if (settlement.IsVillage && remaining <= 1) { stopped = TheVillageLastUnit; break; }
                         if (NoRoomForOneMore(good, pass.Room() - simWeight))
                         {
                             stopped = "your cargo has no room for it";
@@ -2174,11 +2176,27 @@ namespace TradeLord
                     while (hunger > 0 && remaining > 0)
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
-                        if (price <= 0 || price > ceiling) break;
-                        if (pass.WouldReachYourReserveToFeed(price, hungry)) break;
-                        if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;
-                        if (settlement.IsVillage && remaining <= 1) break;
-                        if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;
+                        if (price <= 0 || price > ceiling)
+                        {
+                            hungryStopped = "its price is above both twice the cheapest TradeLord knows and twice its value";
+                            break;
+                        }
+                        if (pass.WouldReachYourReserveToFeed(price, hungry))
+                        {
+                            hungryStopped = "buying it would reach your gold reserve";
+                            break;
+                        }
+                        if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None)
+                        {
+                            hungryStopped = "your buying caps for it are reached";
+                            break;
+                        }
+                        if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }
+                        if (NoRoomForOneMore(good, pass.Room() - simWeight))
+                        {
+                            hungryStopped = "your cargo has no room for it";
+                            break;
+                        }
                         bool pastTheCap = hungry && pass.WouldReachYourReserve(price);
 
                         if (pass.Sim)
@@ -2213,6 +2231,10 @@ namespace TradeLord
                               "your party had less than a day of its own food, so " + hungryUnits + " item(s) were bought for " +
                               hungryGold + " gold at up to twice the cheapest price TradeLord knows or twice their value at " +
                               settlement.Name);
+                else if (hungryStopped != null)
+                    Log.Repeatable("resupply hungry", settlement.StringId + "/" + hungryStopped,
+                                   "resupply: your party has less than a day of its own food, and nothing more was " +
+                                   "bought at " + settlement.Name + ": " + hungryStopped);
                 else
                 {
                     string missed = lean.Count == 0 ? _foodMissed : null;
@@ -2255,6 +2277,9 @@ namespace TradeLord
             pass.Logged(selling: false, "restocking the larder");
             if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, stocked, spent);
         }
+
+        private const string TheVillageLastUnit =
+            "a village is left its last unit of each good, so the game's own buy products option always has stock to show";
 
         private static string WhyNoHaulAnimalHere(Pass pass)
         {

@@ -1687,7 +1687,9 @@ chk("1.3.4", "village last-unit clamp leaves one unit on the shelf",
     "market.Village && remaining <= 1, s);" in
         buy_pass() and
     "public bool Village => _pass.Site != null && _pass.Site.IsVillage;" in buy_pass() and
-    'if (settlement.IsVillage && remaining <= 1) { stopped = "a village keeps its last unit"; break; }' in
+    'if (settlement.IsVillage && remaining <= 1) { stopped = TheVillageLastUnit; break; }' in
+        method_body(S['Trading.cs'], "public static void ExecuteResupply") and
+    'if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }' in
         method_body(S['Trading.cs'], "public static void ExecuteResupply") and
     "if (settlement.IsVillage && remaining <= 1) break;" in
         method_body(S['Trading.cs'], "public static bool ExecuteHaulage"))
@@ -7981,7 +7983,7 @@ def the_pull_across_a_market_is_added_up_once_an_hour():
 
 def two_routes_that_land_within_a_few_hours_share_one_price_ladder():
     f = S['Projection.cs']
-    quartered = "withinDays = TradeMath.ToTheQuarterDay(withinDays);"
+    quartered = "withinDays = TradeMath.ARideToTheQuarterDay(withinDays);"
     return (f.count(quartered) == 4
             and all(quartered in method_body(f, sig)
                     for sig in ("internal static int UnitsLanding",
@@ -10754,7 +10756,7 @@ def the_marker_goes_on_what_you_keep_not_on_what_the_market_pays():
             and "internal long Earned;" in method_body(S['Marker.cs'], "private struct Weighing")
             and '" of it profit"' in why
             and '" is what it cost you, so it marked on the "' in ultra
-            and '" of it profit, "' in method_body(S['Marker.cs'], "internal static void ScoreTheMark"))
+            and '" of it profit, "' in method_body(S['Marker.cs'], "private static void ScoreTheFigureItHeld"))
 
 
 chk("1.85.0", "the market marked on your map is the one that leaves you the most a day after what the cargo cost you, not the one that takes the most off you a day",
@@ -10964,7 +10966,7 @@ chk("1.84.0", "the ultralog writes a line when the marker weighs your cargo agai
 
 
 def the_mark_is_scored_against_what_that_market_really_paid():
-    score = method_body(S['Marker.cs'], "internal static void ScoreTheMark")
+    score = method_body(S['Marker.cs'], "private static void ScoreTheFigureItHeld")
     sell = method_body(S['Trading.cs'], "private static void SellPass")
     return (ordered(score, "site.StringId != _markedId", "if (_markedValue <= 0L) return;",
                     "_markedValue = 0L;", "TradeMath.DaysSince(_markedAt, Freshness.Hour)",
@@ -10975,12 +10977,13 @@ def the_mark_is_scored_against_what_that_market_really_paid():
             and '" of what it marked on"' in score
             and ordered(sell, "int goldGained = pass.Gained(moved.SimGold);",
                         "_soldThisRound = (_soldThisRound.units + soldItems, _soldThisRound.gold + goldGained,",
+                        "_soldThisRound.profit + profit,",
                         "pass.Site != null && !pass.Sim ? pass.Site : _soldThisRound.at);")
             and "Marker.ScoreTheMark(" not in sell
             and "_soldThisRound = default;" in method_body(S['Trading.cs'], "private static void BeginTheRound")
             and ordered(method_body(S['Trading.cs'], "private static void EndTheRound"),
                         "var sold = _soldThisRound;", "if (sold.at != null)",
-                        'Guard.Run("Marker.Check", () => Marker.ScoreTheMark(sold.at, sold.units, sold.gold));')
+                        'Guard.Run("Marker.Check", () => Marker.ScoreTheMark(sold.at, sold.units, sold.gold, sold.profit));')
             and S['Trading.cs'].count("Marker.ScoreTheMark(") == 1
             and S['Trading.cs'].count("EndTheRound();") == 3)
 
@@ -11901,7 +11904,7 @@ chk("1.90.16", "a forecast figure walked in on before half of the time it was fo
 def the_marker_check_weighs_a_sale_against_the_first_figure_for_what_you_carry():
     m = S['Marker.cs']
     remember = method_body(m, "private static void Remember")
-    score = method_body(m, "internal static void ScoreTheMark")
+    score = method_body(m, "private static void ScoreTheFigureItHeld")
     carry = method_body(m, "internal static void ForgetWhatYouCarry")
     carried = method_body(m, "private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> "
                              "WhatYouCarryToSell")
@@ -12652,7 +12655,7 @@ def the_marker_writes_its_days_the_same_way_in_every_language():
     marker = S['Marker.cs']
     return ("using System.Globalization;" in marker
             and re.search(r'ToString\("0\.[#0]+"\)', marker) is None
-            and marker.count('Days.ToString("0.#", CultureInfo.InvariantCulture)') == 3
+            and marker.count('Days.ToString("0.#", CultureInfo.InvariantCulture)') == 4
             and 'how.CeilingPassed.ToString("0.#", CultureInfo.InvariantCulture)' in marker
             and 'one.Days.ToString("0.00", CultureInfo.InvariantCulture)' in marker)
 
@@ -13060,7 +13063,7 @@ def a_village_is_priced_through_the_town_it_trades_with_when_the_forecast_moves_
             and "PriceShift(site != null && site.IsVillage ? Hindsight.PricedFrom(site) : site," in held
             and ordered(shift, "if (!On || site == null || item == null || item.ItemCategory == null) return 0;",
                         "Build();",
-                        "var key = (site.StringId, item.ItemCategory.StringId, TradeMath.ToTheQuarterDay(withinDays));",
+                        "var key = (site.StringId, item.ItemCategory.StringId, TradeMath.ARideToTheQuarterDay(withinDays));",
                         "if (_shifts.TryGetValue(key, out int shift)) return shift;")
             and "_shifts.Clear();" in method_body(f, "internal static void Forget")
             and "_shifts.Clear();" in method_body(f, "private static void Build")
@@ -13132,7 +13135,7 @@ def what_a_town_uses_up_and_its_workshops_take_leave_its_shelf_in_the_forecast()
             and ordered(method_body(p, "private static bool RunOnce"),
                         "town.Units.TryGetValue(kind, out int have);", "if (have < count) return false;",
                         "Stock(town, kind, -count);", "Tally(taken, kind, count);")
-            and ordered(worth, "withinDays = TradeMath.ToTheQuarterDay(withinDays);",
+            and ordered(worth, "withinDays = TradeMath.ARideToTheQuarterDay(withinDays);",
                         "double used = usedADay > 0 ? (double)usedADay * withinDays : 0d;",
                         "float share = Landed(draw.Days, withinDays, graded);", "used += draw.Worth * (double)share;",
                         "return used >= most ? most : (int)used;")
@@ -13370,7 +13373,7 @@ chk("1.93.6", "a promise walked in on before half its time waits for a later wal
 
 
 def the_marker_check_says_nothing_of_a_walk_in_made_too_soon():
-    score = method_body(S['Marker.cs'], "internal static void ScoreTheMark")
+    score = method_body(S['Marker.cs'], "private static void ScoreTheFigureItHeld")
     return (score
             and ordered(score, "_markedValue = 0L;",
                         "float since = TradeMath.DaysSince(_markedAt, Freshness.Hour);",
@@ -16059,7 +16062,7 @@ def the_haul_animal_and_food_passes_say_why_they_bought_nothing():
                                             'Log.Repeatable("haul animal no room", settlement.StringId,',
                                             'Log.Repeatable("haul animal none on sale", settlement.StringId,'))
             and ordered(food, "if (shortfall <= 0) return;", 'Log.Repeatable("resupply none on sale", settlement.StringId,',
-                        "string stopped = null;",
+                        "string stopped = null, hungryStopped = null;",
                         'if (shortfall > 0 && stopped != null && !pass.DirectionError)',
                         'Log.Repeatable("resupply none bought", settlement.StringId + "/" + stopped,'))
 
@@ -17478,11 +17481,11 @@ def a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price():
                         "TradeMath.HungryFoodTolerance);",
                         "foreach (var (el, good, _, ceiling) in lean)",
                         "while (hunger > 0 && remaining > 0)",
-                        "if (price <= 0 || price > ceiling) break;",
-                        "if (pass.WouldReachYourReserveToFeed(price, hungry)) break;",
-                        "if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;",
-                        "if (settlement.IsVillage && remaining <= 1) break;",
-                        "if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;",
+                        'hungryStopped = "its price is above both twice the cheapest TradeLord knows and twice its value";',
+                        'hungryStopped = "buying it would reach your gold reserve";',
+                        'hungryStopped = "your buying caps for it are reached";',
+                        "if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }",
+                        'hungryStopped = "your cargo has no room for it";',
                         "hunger -= fed;",
                         "at up to twice the cheapest price TradeLord knows or twice their value at ")
             and larder.count("TradeMath.HungryFoodTolerance") == 1
@@ -18018,7 +18021,7 @@ def a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve():
                         "if (pastTheCapUnits > 0)", '" gold were bought past Max spend per visit at "',
                         "settlement.IsVillage, hungry);")
             and ordered(between(larder, "while (hunger > 0 && remaining > 0)", "if (hungryUnits > 0)"),
-                        "if (pass.WouldReachYourReserveToFeed(price, hungry)) break;",
+                        "if (pass.WouldReachYourReserveToFeed(price, hungry))",
                         "bool pastTheCap = hungry && pass.WouldReachYourReserve(price);",
                         "if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }")
             and larder.count("bool pastTheCap = hungry && pass.WouldReachYourReserve(price);") == 2
@@ -19577,6 +19580,85 @@ def a_hand_sale_is_reckoned_through_the_one_place_that_says_what_it_took():
 
 chk("1.104.16", "the profit on a hand sale is added up from what the hand sale took, so the units it names and the profit it books come from one place",
     a_hand_sale_is_reckoned_through_the_one_place_that_says_what_it_took())
+
+
+def the_marker_check_also_weighs_a_sale_against_what_it_said_on_the_way_out():
+    m = S['Marker.cs']
+    t = S['Trading.cs']
+    front = method_body(m, "internal static void ScoreTheMark")
+    note = method_body(m, "internal static void NoteTheWayOut")
+    kept = method_body(m, "private static void WhatItSaidOnTheWayOut")
+    out = method_body(m, "private static void ScoreWhatItSaidOnTheWayOut")
+    update = method_body(m, "internal static void Update")
+    forget = method_body(m, "internal static void Forget()")
+    return (front and note and kept and out and update and forget
+            and ordered(front, "if (!Options.Current.ExtendedDebugLogging) return;",
+                        "ScoreTheFigureItHeld(site, units, gold);",
+                        "ScoreWhatItSaidOnTheWayOut(site, units, gold, profit);")
+            and ordered(note, "if (from == null) return;", "_walkedOutOf = from;", "_justWalkedOut = true;")
+            and ordered(kept, "if (!_justWalkedOut) return;", "_justWalkedOut = false;",
+                        "_outMarkId = target == null ? null : target.StringId;",
+                        "_outValue = target == null ? 0L : how.Value;",
+                        "_outEarned = target == null ? 0L : how.Value - how.Cost;",
+                        "_outRate = how.Rate;", "_outDays = how.Days;", "_outAt = Freshness.Hour;")
+            and ordered(update, "WhatItSaidOnTheWayOut(target, how);", "if (target == _picked)")
+            and ordered(out, "if (site.StringId != _outMarkId || _outValue <= 0L) return;", "_outValue = 0L;",
+                        "float ride = TradeMath.DaysSince(_outAt, Freshness.Hour);",
+                        "float aDay = TradeMath.PerDay(profit, ride);",
+                        '"marker check on the way out of "', '" of the gold it said"',
+                        "Scoring.Share(aDay / _outRate)", '" of the gold a day it said"')
+            and all(one in forget for one in ("_walkedOutOf = null;", "_justWalkedOut = false;",
+                                              "_outMarkId = null;", "_outAt = -1;"))
+            and "if (HasAMarket(settlement)) Marker.NoteTheWayOut(settlement);" in
+                method_body(t, "private void OnSettlementLeft")
+            and t.count("Marker.NoteTheWayOut(") == 1
+            and "private static (int units, int gold, int profit, Settlement at) _soldThisRound;" in t)
+
+chk("1.104.17", "the marker check weighs a sale against what the map marker said as you walked out of the last market as well as against the figure it held, so a mark that moved on the road never reads as a promise kept",
+    the_marker_check_also_weighs_a_sale_against_what_it_said_on_the_way_out())
+
+
+def a_ride_too_short_to_round_up_is_still_a_ride_the_forecast_counts():
+    t = S['TradeMath.cs']
+    ride = method_body(t, "public static float ARideToTheQuarterDay")
+    quarter = method_body(t, "public static float ToTheQuarterDay")
+    return (ride and quarter
+            and ordered(ride, "float quartered = ToTheQuarterDay(days);",
+                        "return quartered <= 0f && Finite(days, 0f) > 0f ? HorizonStep : quartered;")
+            and "return steps <= 0d ? 0f : Finite((float)(steps * HorizonStep), days);" in quarter
+            and S['Projection.cs'].count("TradeMath.ARideToTheQuarterDay(withinDays);") == 4
+            and "TradeMath.ToTheQuarterDay(" not in S['Projection.cs']
+            and "TradeMath.ARideToTheQuarterDay(withinDays)" in
+                method_body(S['Forecast.cs'], "private static int PriceShift")
+            and "TradeMath.ToTheQuarterDay(" not in S['Forecast.cs']
+            and "TradeMath.ToTheQuarterDay(since)" in S['Scoring.cs']
+            and "A_ride_shorter_than_three_hours_is_still_a_ride_and_never_reads_as_no_time_at_all" in MATHTESTS
+            and "A_load_an_hour_from_the_shelf_counts_while_you_are_still_minutes_away" in PROJECTIONTESTS
+            and "A_walk_in_before_the_first_quarter_day_is_held_to_nothing_moving" in SCORINGTESTS)
+
+chk("1.104.17", "a ride of under three hours is read as a quarter day rather than as no time at all, so what is on the road to a market close by is still counted, while a forecast figure walked in on within the hour is scored as before",
+    a_ride_too_short_to_round_up_is_still_a_ride_the_forecast_counts())
+
+
+def a_food_restock_says_the_village_keeps_its_last_unit_rather_than_nothing_being_on_sale():
+    t = S['Trading.cs']
+    larder = method_body(t, "public static void ExecuteResupply")
+    return (larder
+            and 'private const string TheVillageLastUnit =\n'
+                '            "a village is left its last unit of each good, so the game\'s own buy products option '
+                'always has stock to show";' in t
+            and t.count("TheVillageLastUnit") == 3
+            and ordered(larder,
+                        "if (settlement.IsVillage && remaining <= 1) { stopped = TheVillageLastUnit; break; }",
+                        "if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }",
+                        "else if (hungryStopped != null)",
+                        'Log.Repeatable("resupply hungry", settlement.StringId + "/" + hungryStopped,',
+                        '"resupply: your party has less than a day of its own food, and nothing more was "',
+                        '"bought at " + settlement.Name + ": " + hungryStopped);',
+                        '"resupply: your party has less than a day of its own food, and none is on sale at "'))
+
+chk("1.104.17", "a food restock that stops at a village's last unit says so in TradeLord.log, instead of saying no food was on sale there",
+    a_food_restock_says_the_village_keeps_its_last_unit_rather_than_nothing_being_on_sale())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

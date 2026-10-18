@@ -30,7 +30,7 @@ namespace TradeLord
         internal static int UnitsLanding(IList<Landing> listed, string item, float withinDays, bool graded = false)
         {
             if (listed == null || item == null) return 0;
-            withinDays = TradeMath.ToTheQuarterDay(withinDays);
+            withinDays = TradeMath.ARideToTheQuarterDay(withinDays);
             int units = 0;
             for (int i = 0; i < listed.Count; i++)
             {
@@ -47,7 +47,7 @@ namespace TradeLord
                                          bool graded = false)
         {
             if (listed == null || category == null) return 0;
-            withinDays = TradeMath.ToTheQuarterDay(withinDays);
+            withinDays = TradeMath.ARideToTheQuarterDay(withinDays);
             int worth = 0;
             for (int i = 0; i < listed.Count; i++)
             {
@@ -63,7 +63,7 @@ namespace TradeLord
         internal static int PurseLanding(IList<Spending> coming, float withinDays, bool graded = false)
         {
             if (coming == null) return 0;
-            withinDays = TradeMath.ToTheQuarterDay(withinDays);
+            withinDays = TradeMath.ARideToTheQuarterDay(withinDays);
             int purse = 0;
             for (int i = 0; i < coming.Count; i++)
             {
@@ -94,7 +94,7 @@ namespace TradeLord
                                         int most, bool graded = false)
         {
             if (category == null || most <= 0) return 0;
-            withinDays = TradeMath.ToTheQuarterDay(withinDays);
+            withinDays = TradeMath.ARideToTheQuarterDay(withinDays);
             double used = usedADay > 0 ? (double)usedADay * withinDays : 0d;
             for (int i = 0; drawn != null && i < drawn.Count; i++)
             {
