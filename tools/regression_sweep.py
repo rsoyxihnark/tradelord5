@@ -11070,7 +11070,7 @@ WITHDRAWN_NEVER_WRITTEN = (
 def a_trial_that_was_taken_back_out_is_left_in_no_writing():
     said = CHANGES.lower()
     return (not [one for one in WITHDRAWN_NEVER_WRITTEN if one.lower() in said]
-            and "Something tried and then taken back out leaves the player nothing" in RULES
+            and "Something tried and then taken back out leaves the user nothing" in RULES
             and "the entry that announced it, the entries that changed it while it was there, "
                 "and the entry that took it away" in RULES
             and "Out of the changelog, out of the release notes, out of the commit subjects "
