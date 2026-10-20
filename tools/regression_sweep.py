@@ -1844,7 +1844,9 @@ chk("1.81.11", "a caravan is counted as leaving only what the town it is calling
     a_caravan_leaves_what_the_town_will_take_and_a_villager_leaves_the_lot())
 
 chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has moved",
-    "float days = Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs);" in
+    "float hours = (landLeg / landSpeed + seaLeg / seaSpeed) * HoursAPartyTakesToCoverItsSpeed;" in
+    method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
+    "float days = Finite(hours / 24f, FurthestThereIs);" in
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
     "return OutOfReach(days) ? FurthestThereIs : days;" in
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
@@ -1852,6 +1854,12 @@ chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has 
     method_body(S['Travel.cs'], "internal static float Days") and
     "if (hour != _partyHour || at.DistanceSquared(_partyAt) > 100f)" in
     method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty"))
+chk("1.104.18", "a ride, the quick estimate of one and a caravan's ride are each timed at the 1.2 hours the game's clock runs while it moves a party as far as its speed",
+    "public const float HoursAPartyTakesToCoverItsSpeed = 1.2f;" in S['TradeMath.cs'] and
+    "* HoursAPartyTakesToCoverItsSpeed;" in method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
+    "* HoursAPartyTakesToCoverItsSpeed;" in method_body(S['TradeMath.cs'], "public static float DaysAtBestSpeed") and
+    "* HoursAPartyTakesToCoverItsSpeed / 24f" in method_body(S['TradeMath.cs'], "public static float EtaDays") and
+    "A_party_rides_twenty_times_its_speed_in_a_game_day" in MATHTESTS)
 chk("1.3.11", "the panel hands back the movie and the mouse, and honours the modifier keys",
     "layer.ReleaseMovie(movie)" in method_body(S['Panel.cs'], "internal static void Cleanup") and
     "TakeTheMouse(false);" in method_body(S['Panel.cs'], "private static void ApplyIdleInput") and
@@ -2525,14 +2533,18 @@ def csharp_comment_spans(src):
         if src.startswith("//", i):
             j = src.find("\n", i)
             j = n if j < 0 else j
-            out.append(line); i = j; continue
+            if not a_run_lesson(src[i + 2:j]): out.append(line)
+            i = j; continue
         if src.startswith("/*", i):
             j = src.find("*/", i + 2)
             j = n if j < 0 else j + 2
-            out.append(line)
+            if not a_run_lesson(src[i + 2:j]): out.append(line)
             line += src.count("\n", i, j); i = j; continue
         i += 1
     return out
+
+def a_run_lesson(said):
+    return said.lstrip().startswith("Valuable-Run-Lesson:")
 
 def csharp_texts(src, lists=()):
     out, calls, i, n, name, dot = [], [], 0, len(src), '', False
@@ -2630,7 +2642,7 @@ def no_tracked_source_carries_a_comment():
             try:
                 with io.open(name, "rb") as fh:
                     found += [(name, t.start[0]) for t in tokenize.tokenize(fh.readline)
-                              if t.type == tokenize.COMMENT]
+                              if t.type == tokenize.COMMENT and not a_run_lesson(t.string[1:])]
             except (tokenize.TokenError, IndentationError, SyntaxError):
                 return False
         elif name.endswith((".xml", ".csproj")):
@@ -2641,8 +2653,19 @@ def no_tracked_source_carries_a_comment():
                       if line.strip().startswith("#") and not line.strip().startswith("#!")]
     return found == []
 
-chk("1.5.4", "the source carries no comments",
+chk("1.5.4", "the source carries no comments, a note starting Valuable-Run-Lesson: aside",
     no_tracked_source_carries_a_comment())
+
+def only_a_run_lesson_is_let_through():
+    plain = "class A\n{\n    // a comment\n    int x;\n}\n"
+    noted = "class A\n{\n    // Valuable-Run-Lesson: seen in a run\n    int x;\n}\n"
+    both = "class A\n{\n    /* Valuable-Run-Lesson: seen in a run */\n    /* a comment */\n}\n"
+    late = "class A\n{\n    // a comment, Valuable-Run-Lesson: seen in a run\n}\n"
+    return (csharp_comment_spans(plain) == [3] and csharp_comment_spans(noted) == []
+            and csharp_comment_spans(both) == [4] and csharp_comment_spans(late) == [3])
+
+chk("1.104.18", "a comment in the source is still caught, and only a note that starts Valuable-Run-Lesson: goes through",
+    only_a_run_lesson_is_let_through())
 
 chk("1.5.5", "simulation mode mutates no per-visit state",
     between(sell_pass(),
@@ -8324,9 +8347,9 @@ def no_travel_or_price_rule_hands_back_a_number_that_is_not_one():
     return ("public const float FurthestThereIs = float.MaxValue;" in t
             and "public static float Finite(float value, float ifNot) =>" in t
             and "float.IsNaN(value) || float.IsInfinity(value) ? ifNot : value;" in t
-            and "Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs)" in t
-            and "Finite(distance / (Math.Max(landSpeed, seaSpeed) * 24f), FurthestThereIs)" in t
-            and "Finite(distance / (pace * 24f), FurthestThereIs)" in t
+            and "float days = Finite(hours / 24f, FurthestThereIs);" in method_body(t, "public static float DaysAtSpeed")
+            and "float days = Finite(hours / 24f, FurthestThereIs);" in method_body(t, "public static float DaysAtBestSpeed")
+            and "Finite(distance / pace * HoursAPartyTakesToCoverItsSpeed / 24f, FurthestThereIs)" in t
             and "days = Finite(days, 0f);" in method_body(t, "public static float ToTheQuarterDay")
             and "float progress = TradeMath.Finite(line.Progress, 0f);" in method_body(S['Projection.cs'], "internal static void Follow")
             and "if (double.IsNaN(daysSinceTheLastRun) || daysSinceTheLastRun < 0d ||" in method_body(t, "public static float NextDailyTickIn")

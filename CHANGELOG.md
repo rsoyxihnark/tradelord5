@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.104.18
+
+- Fixed travel times in the TradeLord ledger, the tooltips and the map marker coming out shorter than the ride really takes
+- Fixed the TradeLord ledger, the tooltips and the map marker offering markets past your Town travel ceiling and Village travel ceiling
+- Fixed Count what is on its way to a market expecting caravans and villagers to arrive sooner than they do
+
 ## 1.104.17
 
 - Fixed Count what is on its way to a market leaving out everything on the road once a market was less than three hours away

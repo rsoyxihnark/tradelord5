@@ -1512,19 +1512,28 @@ namespace TradeLord.Tests
         [Fact]
         public void A_journey_all_on_land_is_its_distance_at_the_land_speed()
         {
-            Assert.Equal(2f, TradeMath.DaysAtSpeed(240f, 1f, 5f, 10f), 4);
+            Assert.Equal(2.4f, TradeMath.DaysAtSpeed(240f, 1f, 5f, 10f), 4);
         }
 
         [Fact]
         public void A_journey_all_at_sea_is_its_distance_at_the_sea_speed()
         {
-            Assert.Equal(1f, TradeMath.DaysAtSpeed(240f, 0f, 5f, 10f), 4);
+            Assert.Equal(1.2f, TradeMath.DaysAtSpeed(240f, 0f, 5f, 10f), 4);
         }
 
         [Fact]
         public void A_journey_with_a_sea_leg_counts_each_leg_at_its_own_speed()
         {
-            Assert.Equal(1.5f, TradeMath.DaysAtSpeed(240f, 0.5f, 5f, 10f), 4);
+            Assert.Equal(1.8f, TradeMath.DaysAtSpeed(240f, 0.5f, 5f, 10f), 4);
+        }
+
+        [Fact]
+        public void A_party_rides_twenty_times_its_speed_in_a_game_day()
+        {
+            Assert.Equal(1.2f, TradeMath.HoursAPartyTakesToCoverItsSpeed);
+            Assert.Equal(1f, TradeMath.DaysAtSpeed(100f, 1f, 5f, 5f), 4);
+            Assert.Equal(1f, TradeMath.DaysAtBestSpeed(100f, 5f, 5f), 4);
+            Assert.Equal(1f, TradeMath.EtaDays(100f, 5f), 4);
         }
 
         [Fact]
@@ -1683,7 +1692,7 @@ namespace TradeLord.Tests
         public void A_party_crawling_along_is_still_credited_with_a_walking_pace()
         {
             Assert.Equal(0f, TradeMath.EtaDays(0f, 4f));
-            Assert.Equal(1f, TradeMath.EtaDays(120f, 5f), 4);
+            Assert.Equal(1.2f, TradeMath.EtaDays(120f, 5f), 4);
             Assert.Equal(TradeMath.EtaDays(120f, TradeMath.WalkingPace),
                          TradeMath.EtaDays(120f, 0f), 4);
         }
@@ -2237,15 +2246,17 @@ namespace TradeLord.Tests
             Assert.Equal(TradeMath.FurthestThereIs, TradeMath.DaysAtSpeed(100f, float.NaN, 5f, 5f));
             Assert.Equal(TradeMath.FurthestThereIs, TradeMath.DaysAtBestSpeed(float.NaN, 5f, 5f));
             Assert.Equal(TradeMath.FurthestThereIs, TradeMath.EtaDays(float.NaN, 5f));
-            Assert.Equal(100f / (TradeMath.WalkingPace * 24f), TradeMath.EtaDays(100f, float.NaN), 5);
+            Assert.Equal(100f / TradeMath.WalkingPace * TradeMath.HoursAPartyTakesToCoverItsSpeed / 24f,
+                         TradeMath.EtaDays(100f, float.NaN), 5);
         }
 
         [Fact]
         public void A_travel_time_the_game_can_work_out_is_left_exactly_as_it_was()
         {
-            Assert.Equal(120f / (5f * 24f), TradeMath.DaysAtSpeed(120f, 1f, 5f, 9f), 5);
-            Assert.Equal(120f / (9f * 24f), TradeMath.DaysAtBestSpeed(120f, 5f, 9f), 5);
-            Assert.Equal(120f / (5f * 24f), TradeMath.EtaDays(120f, 5f), 5);
+            float hours = TradeMath.HoursAPartyTakesToCoverItsSpeed;
+            Assert.Equal(120f / 5f * hours / 24f, TradeMath.DaysAtSpeed(120f, 1f, 5f, 9f), 5);
+            Assert.Equal(120f / 9f * hours / 24f, TradeMath.DaysAtBestSpeed(120f, 5f, 9f), 5);
+            Assert.Equal(120f / 5f * hours / 24f, TradeMath.EtaDays(120f, 5f), 5);
             Assert.Equal(0f, TradeMath.DaysAtSpeed(0f, 1f, 5f, 5f));
             Assert.Equal(0f, TradeMath.EtaDays(-5f, 5f));
         }
@@ -2380,7 +2391,8 @@ namespace TradeLord.Tests
             Assert.True(TradeMath.OutOfReach(float.PositiveInfinity));
             Assert.True(TradeMath.DaysAtSpeed(float.MaxValue, 1f, 4.8f, 4.8f) == TradeMath.FurthestThereIs);
             Assert.True(TradeMath.DaysAtBestSpeed(float.MaxValue, 4.8f, 4.8f) == TradeMath.FurthestThereIs);
-            Assert.True(TradeMath.DaysAtSpeed(240f, 1f, 10f, 10f) == 1f);
+            Assert.True(TradeMath.DaysAtSpeed(240f, 1f, 10f, 10f) ==
+                        240f / 10f * TradeMath.HoursAPartyTakesToCoverItsSpeed / 24f);
         }
 
         [Fact]

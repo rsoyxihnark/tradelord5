@@ -1160,6 +1160,9 @@ namespace TradeLord
 
         public const float WalkingPace = 5f;
 
+        // Valuable-Run-Lesson: the game's clock runs 1.2 hours each time it moves a party as far as its Speed, and every ride in a 1.104.17 test ran 25 to 40% past distance over Speed taken as hours.
+        public const float HoursAPartyTakesToCoverItsSpeed = 1.2f;
+
         public static void SpeedsInEffect(float partySpeed, float fleetSpeed,
                                           out float land, out float sea)
         {
@@ -1183,14 +1186,16 @@ namespace TradeLord
             if (distance <= 0f) return 0f;
             float landLeg = distance * landRatio;
             float seaLeg = distance * (1f - landRatio);
-            float days = Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs);
+            float hours = (landLeg / landSpeed + seaLeg / seaSpeed) * HoursAPartyTakesToCoverItsSpeed;
+            float days = Finite(hours / 24f, FurthestThereIs);
             return OutOfReach(days) ? FurthestThereIs : days;
         }
 
         public static float DaysAtBestSpeed(float distance, float landSpeed, float seaSpeed)
         {
             if (distance <= 0f) return 0f;
-            float days = Finite(distance / (Math.Max(landSpeed, seaSpeed) * 24f), FurthestThereIs);
+            float hours = distance / Math.Max(landSpeed, seaSpeed) * HoursAPartyTakesToCoverItsSpeed;
+            float days = Finite(hours / 24f, FurthestThereIs);
             return OutOfReach(days) ? FurthestThereIs : days;
         }
 
@@ -1558,7 +1563,7 @@ namespace TradeLord
             if (distance <= 0f) return 0f;
             float pace = Finite(speed, WalkingPace);
             if (pace <= StandingStill) pace = WalkingPace;
-            return Finite(distance / (pace * 24f), FurthestThereIs);
+            return Finite(distance / pace * HoursAPartyTakesToCoverItsSpeed / 24f, FurthestThereIs);
         }
 
         public static int Budget(int gold, int goldReserve, int maxSpendPerVisit,
