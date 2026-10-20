@@ -85,14 +85,18 @@ namespace TradeLord
 
         private static float LandSpeed()
         {
-            float now = MobileParty.MainParty.Speed;
-            try { return LandSpeedByDay(now); } catch { return now; }
+            return SpeedByDay(MobileParty.MainParty);
+        }
+
+        internal static float SpeedByDay(MobileParty party)
+        {
+            float now = party.Speed;
+            try { return LandSpeedByDay(party, now); } catch { return now; }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static float LandSpeedByDay(float now)
+        private static float LandSpeedByDay(MobileParty party, float now)
         {
-            MobileParty party = MobileParty.MainParty;
             if (Campaign.Current == null || !Campaign.Current.IsNight || party.IsCurrentlyAtSea) return now;
             string dark = (typeof(DefaultPartySpeedCalculatingModel).GetField(
                                "_night", BindingFlags.Static | BindingFlags.NonPublic)

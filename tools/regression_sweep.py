@@ -2065,7 +2065,10 @@ chk("1.3.27", "both shipped assemblies compile with warnings as errors",
     all("<TreatWarningsAsErrors>true</TreatWarningsAsErrors>" in p for p in PROJ))
 
 chk("1.3.28", "both travel estimates take their speeds from one definition",
-    S['Travel.cs'].count("MobileParty.MainParty.Speed") == 1 and
+    S['Travel.cs'].count("MobileParty.MainParty.Speed") == 0 and
+    S['Travel.cs'].count(".Speed;") == 1 and
+    "float now = party.Speed;" in method_body(S['Travel.cs'], "internal static float SpeedByDay(MobileParty party)") and
+    "return SpeedByDay(MobileParty.MainParty);" in method_body(S['Travel.cs'], "private static float LandSpeed()") and
     S['Travel.cs'].count("TradeMath.SpeedsInEffect(") == 1 and
     S['TradeMath.cs'].count("land = partySpeed <= StandingStill ? WalkingPace : partySpeed;") == 1 and
     S['TradeMath.cs'].count("sea = fleetSpeed <= StandingStill ? land : fleetSpeed;") == 1 and
@@ -19463,13 +19466,15 @@ chk("1.104.14", "Left, Qty and Conf count what the buy town's own workshops put 
 def a_ride_is_priced_at_the_speed_the_party_makes_by_day():
     tr = S['Travel.cs']
     land = method_body(tr, "private static float LandSpeed()")
-    day = method_body(tr, "private static float LandSpeedByDay(float now)")
+    party = method_body(tr, "internal static float SpeedByDay(MobileParty party)")
+    day = method_body(tr, "private static float LandSpeedByDay(MobileParty party, float now)")
     rule = method_body(S['TradeMath.cs'], "public static float SpeedByDay")
-    return (land and day and rule
+    return (land and party and day and rule
             and "TradeMath.SpeedsInEffect(LandSpeed(), SeaSpeed(), out land, out sea);" in
                 method_body(tr, "private static void Speeds")
-            and ordered(land, "float now = MobileParty.MainParty.Speed;",
-                        "try { return LandSpeedByDay(now); } catch { return now; }")
+            and "return SpeedByDay(MobileParty.MainParty);" in land
+            and ordered(party, "float now = party.Speed;",
+                        "try { return LandSpeedByDay(party, now); } catch { return now; }")
             and ordered(day, "if (Campaign.Current == null || !Campaign.Current.IsNight || party.IsCurrentlyAtSea) return now;",
                         "typeof(DefaultPartySpeedCalculatingModel).GetField(", '"_night"',
                         "DefaultPerks.Scouting.NightRunner?.Name?.ToString();",
@@ -19485,6 +19490,15 @@ def a_ride_is_priced_at_the_speed_the_party_makes_by_day():
 
 chk("1.104.14", "every ride is priced at the speed the party makes by day, so travel times, the travel ceilings and the map marker hold steady through the night",
     a_ride_is_priced_at_the_speed_the_party_makes_by_day())
+
+def a_caravan_on_its_way_is_timed_by_day_as_your_own_ride_is():
+    road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
+    return (road
+            and "party.GetPosition2D.Distance(bound.GetPosition2D), Travel.SpeedByDay(party));" in road
+            and "party.Speed)" not in road)
+
+chk("1.104.19", "a caravan or villagers on their way to a market are timed at the speed they make by day, as your own ride is, so a load landing just before you is still counted at night",
+    a_caravan_on_its_way_is_timed_by_day_as_your_own_ride_is())
 
 
 def free_passage_holds_off_every_band_in_that_encounter():

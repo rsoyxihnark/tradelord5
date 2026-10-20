@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.104.19
+
+- Fixed Count what is on its way to a market expecting caravans and villagers to arrive a third later than they do at night
+
 ## 1.104.18
 
 - Fixed travel times in the TradeLord ledger, the tooltips and the map marker coming out shorter than the ride really takes

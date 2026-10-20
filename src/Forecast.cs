@@ -291,7 +291,7 @@ namespace TradeLord
                 ItemRoster carried = party.ItemRoster;
                 if (carried == null) continue;
                 float days = TradeMath.EtaDays(
-                    party.GetPosition2D.Distance(bound.GetPosition2D), party.Speed);
+                    party.GetPosition2D.Distance(bound.GetPosition2D), Travel.SpeedByDay(party));
                 if (caravan) NoteAPurse(bound, party.PartyTradeGold, days);
                 for (int k = 0; k < carried.Count; k++)
                 {
