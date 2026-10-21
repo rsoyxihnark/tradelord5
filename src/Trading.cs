@@ -2205,6 +2205,8 @@ namespace TradeLord
                         if (NoRoomForOneMore(good, pass.Room() - simWeight))
                         {
                             hungryStopped = "your cargo has no room for it";
+                            if (firstLeft == null)
+                                firstLeft = (el, good, fed, ceiling, remaining, (countThis, spentThis), held);
                             break;
                         }
                         bool pastTheCap = hungry && pass.WouldReachYourReserve(price);

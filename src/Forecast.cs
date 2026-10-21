@@ -292,17 +292,31 @@ namespace TradeLord
                 if (carried == null) continue;
                 float days = Travel.DaysFor(party, bound);
                 if (caravan) NoteAPurse(bound, party.PartyTradeGold, days);
+                ItemObject ridden = caravan ? null : ThePackAnimalVillagersKeep(carried);
                 for (int k = 0; k < carried.Count; k++)
                 {
                     ItemObject item = carried.GetItemAtIndex(k);
                     int amount = carried.GetElementNumber(k);
                     if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;
+                    if (item == ridden) amount -= (int)(0.5f * party.MemberRoster.TotalManCount);
                     int landing = caravan ? WhatACaravanLeavesHere(bound, party, item, amount) : amount;
                     if (landing <= 0) continue;
                     Note(bound, item.StringId, item.ItemCategory, landing,
                          TradeMath.WorthOf(landing, item.Value), days);
                 }
             }
+        }
+
+        private static ItemObject ThePackAnimalVillagersKeep(ItemRoster carried)
+        {
+            ItemObject kept = null;
+            for (int k = 0; k < carried.Count; k++)
+            {
+                ItemObject item = carried.GetItemAtIndex(k);
+                if (item?.ItemCategory == DefaultItemCategories.PackAnimal && item.Value < (kept?.Value ?? 10000))
+                    kept = item;
+            }
+            return kept;
         }
 
         private static int WhatACaravanLeavesHere(Settlement bound, MobileParty caravan, ItemObject item, int carried)

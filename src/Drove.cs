@@ -76,7 +76,7 @@ namespace TradeLord
             if (_lookupFailed) return null;
             var models = Campaign.Current?.Models;
             if (models == null) return null;
-            var model = models.PartySpeedCalculatingModel as DefaultPartySpeedCalculatingModel;
+            var model = Travel.UnderWarSails(models.PartySpeedCalculatingModel) as DefaultPartySpeedCalculatingModel;
             if (model == null)
             {
                 _lookupFailed = true;

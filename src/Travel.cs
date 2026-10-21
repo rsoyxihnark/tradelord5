@@ -295,16 +295,16 @@ namespace TradeLord
 
         private static float Factor(float value) => value.ApproximatelyEqualsTo(0f) ? 0f : value;
 
-        private static bool TheGamesOwn(PartySpeedModel model)
+        internal static PartySpeedModel UnderWarSails(PartySpeedModel model)
         {
-            if (model == null) return false;
-            Type type = model.GetType();
-            if (type == typeof(DefaultPartySpeedCalculatingModel)) return true;
-            if (type.FullName != NavalSpeedModel) return false;
+            if (model?.GetType().FullName != NavalSpeedModel) return model;
             MethodInfo under = typeof(PartySpeedModel).GetMethod("get_BaseModel",
                                                                  BindingFlags.Instance | BindingFlags.NonPublic);
-            return under?.Invoke(model, null)?.GetType() == typeof(DefaultPartySpeedCalculatingModel);
+            return under?.Invoke(model, null) as PartySpeedModel;
         }
+
+        private static bool TheGamesOwn(PartySpeedModel model) =>
+            UnderWarSails(model)?.GetType() == typeof(DefaultPartySpeedCalculatingModel);
 
         private static MapWeatherModel TheGamesOwnWeather(MapWeatherModel model)
         {
@@ -1117,6 +1117,7 @@ namespace TradeLord
                     _partyDist[target.StringId] = hit;
                 }
             }
+            else _roadsFound++;
             return RideFromParty(hit);
         }
 

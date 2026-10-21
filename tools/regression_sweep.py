@@ -8224,7 +8224,7 @@ def asking_the_herd_early_never_switches_livestock_off_for_the_session():
     return (ordered(herd, "if (_lookupFailed) return null;",
                     "var models = Campaign.Current?.Models;",
                     "if (models == null) return null;",
-                    "var model = models.PartySpeedCalculatingModel as DefaultPartySpeedCalculatingModel;",
+                    "var model = Travel.UnderWarSails(models.PartySpeedCalculatingModel) as DefaultPartySpeedCalculatingModel;",
                     "_lookupFailed = true;")
             and "Campaign.Current?.Models?.PartySpeedCalculatingModel" not in S['Trading.cs']
             and S['Drove.cs'].count("_lookupFailed = false;") == 1
@@ -20222,6 +20222,80 @@ def a_party_standing_still_keeps_the_roads_it_walked_and_markets_keep_theirs_for
 
 chk("1.105.1", "a road walked from where your party stands is kept for as long as it stands there, and a road between two markets is walked once a session, in the direction it is ridden",
     a_party_standing_still_keeps_the_roads_it_walked_and_markets_keep_theirs_for_the_session())
+
+def the_herd_guard_reads_the_games_own_speed_model_under_war_sails():
+    tr = S['Travel.cs']
+    under = method_body(tr, "internal static PartySpeedModel UnderWarSails(PartySpeedModel model)")
+    model = method_body(S['Drove.cs'], "private static DefaultPartySpeedCalculatingModel Model")
+    return (under and model
+            and "if (model?.GetType().FullName != NavalSpeedModel) return model;" in under
+            and "return under?.Invoke(model, null) as PartySpeedModel;" in under
+            and "UnderWarSails(model)?.GetType() == typeof(DefaultPartySpeedCalculatingModel);" in tr
+            and "var model = Travel.UnderWarSails(models.PartySpeedCalculatingModel) as DefaultPartySpeedCalculatingModel;"
+                in model
+            and S['Drove.cs'].count("PartySpeedCalculatingModel as DefaultPartySpeedCalculatingModel") == 0)
+
+
+chk("1.105.2", "with War Sails the herd guard reads the game's own speed model under the War Sails one, as travel times do, so livestock, haul animals and herd relief still work",
+    the_herd_guard_reads_the_games_own_speed_model_under_war_sails())
+
+
+def esc_closes_what_this_means_or_buy_workshops_remotely_before_the_ledger():
+    close = method_body(S['Panel.cs'], "internal static bool CloseOnEscape()")
+    return (close
+            and ordered(close, "if (_dead || _vm == null || _layer == null) return false;",
+                        "if (_vm.IsShopsVisible) { _vm.IsShopsVisible = false; return true; }",
+                        "if (_vm.IsLegendVisible) { _vm.IsLegendVisible = false; return true; }",
+                        'if (_vm.IsVisible || _vm.IsTradesVisible) Noted("with Esc");',
+                        "if (_vm.IsVisible) { Hide(); return true; }")
+            and PREFAB.count('Command.Click="ExecuteCloseLegend"') == 2
+            and PREFAB.count('Command.Click="ExecuteCloseShops"') == 2)
+
+
+chk("1.105.2", "Esc closes What this means or Buy Workshops Remotely when one is open over the ledger, as a click outside it does, and only then the ledger",
+    esc_closes_what_this_means_or_buy_workshops_remotely_before_the_ledger())
+
+def a_road_kept_from_an_earlier_hour_still_counts_as_found():
+    party = method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty")
+    return (party
+            and ordered(party, "if (!_partyDist.TryGetValue(target.StringId, out Road hit))",
+                        "_partyDist[target.StringId] = hit;", "else _roadsFound++;", "return RideFromParty(hit);")
+            and "internal static bool LostTheRoad => _roadsLost > 0 && _roadsFound == 0;" in S['Travel.cs'])
+
+
+chk("1.105.2", "a road your party kept from an earlier hour counts as found, so one market with no road no longer stops the ledger, tooltips and marker keeping their work for the hour",
+    a_road_kept_from_an_earlier_hour_still_counts_as_found())
+
+def a_full_cargo_that_leaves_hungry_food_behind_tells_haulage_about_it():
+    supply = method_body(S['Trading.cs'], "public static void ExecuteResupply")
+    return (supply
+            and supply.count("firstLeft = (el, good, fed, ceiling, remaining, (countThis, spentThis), held);") == 2
+            and ('hungryStopped = "your cargo has no room for it";\n'
+                 '                            if (firstLeft == null)\n'
+                 '                                firstLeft = (el, good, fed, ceiling, remaining, (countThis, spentThis), held);\n'
+                 '                            break;') in supply
+            and ordered(supply, "var lean = CheapestFirst(pass,", 'hungryStopped = "your cargo has no room for it";',
+                        "if (shortfall > 0 && firstLeft.HasValue && !pass.DirectionError)",
+                        "_unfitted = (food.weight, food.cost, 0f, true);"))
+
+
+chk("1.105.2", "food a full cargo leaves behind while your party is down to less than a day of food is handed to the haul animal pass, from the hungry search as from the first one",
+    a_full_cargo_that_leaves_hungry_food_behind_tells_haulage_about_it())
+
+def villagers_keep_their_own_pack_animals_out_of_the_forecast():
+    road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad()")
+    kept = method_body(S['Forecast.cs'], "private static ItemObject ThePackAnimalVillagersKeep(ItemRoster carried)")
+    return (road and kept
+            and ordered(road, "ItemObject ridden = caravan ? null : ThePackAnimalVillagersKeep(carried);",
+                        "if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;",
+                        "if (item == ridden) amount -= (int)(0.5f * party.MemberRoster.TotalManCount);",
+                        "int landing = caravan ? WhatACaravanLeavesHere(bound, party, item, amount) : amount;",
+                        "if (landing <= 0) continue;")
+            and "item?.ItemCategory == DefaultItemCategories.PackAnimal && item.Value < (kept?.Value ?? 10000)" in kept)
+
+
+chk("1.105.2", "villagers bound for a town keep their own pack animals, as the game has them do, so those animals are no longer forecast as landing there",
+    villagers_keep_their_own_pack_animals_out_of_the_forecast())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.105.2
+
+- Fixed TradeLord buying no livestock and no haul animals with War Sails installed
+- Fixed TradeLord never selling animals to get your party back up to speed with War Sails installed
+- Fixed TradeLord leaving the villagers' offer to you whenever it held livestock with War Sails installed
+- Fixed Esc closing the whole TradeLord ledger instead of only What this means or Buy Workshops Remotely when one of them was open
+- Fixed a party down to less than a day of food getting no haul animal for food costing over 1.5 times the cheapest price TradeLord knows
+- Fixed the TradeLord ledger, the tooltips and the map marker slowing the game down while your party waits and a market has no road to it
+- Fixed Count what is on its way to a market expecting villagers to sell the haul animals they keep for themselves
+
 ## 1.105.1
 
 - Fixed travel times jumping up and down as your party crosses forests, rivers and fords
