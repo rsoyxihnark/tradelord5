@@ -109,7 +109,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Only_the_units_the_marked_market_would_buy_are_held_and_only_below_the_floor()
+        public void Only_the_units_the_best_buyer_would_buy_are_held_and_only_below_the_floor()
         {
             Assert.False(TradeRules.HeldForTheMark(price: 150, floor: 0, boughtLeft: 3, holdFor: 3));
             Assert.False(TradeRules.HeldForTheMark(price: 150, floor: 187, boughtLeft: 5, holdFor: 3));
@@ -119,7 +119,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_floor_for_the_units_left_is_your_share_of_what_the_mark_pays_for_the_last_of_them()
+        public void The_floor_for_the_units_left_is_your_share_of_what_the_best_buyer_pays_for_the_last_of_them()
         {
             int[] rungs = { 300, 280, 260 };
             Assert.Equal(195, TradeRules.FloorForTheLast(rungs, 3, 0.75f));
@@ -137,7 +137,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_purse_of_the_marked_market_goes_to_the_units_this_market_pays_least_for_against_it()
+        public void The_purse_of_the_best_buyer_goes_to_the_units_this_market_pays_least_for_against_it()
         {
             var rungs = new[] { new[] { 250, 250, 250, 250 }, new[] { 400, 400 }, null };
             var here = new[] { Flat(180, 4), Flat(120, 2), null };
@@ -154,7 +154,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Goods_that_ride_to_the_marked_market_anyway_are_paid_for_first()
+        public void Goods_that_ride_to_the_best_buyer_anyway_are_paid_for_first()
         {
             var rungs = new[] { new[] { 250, 250, 250 }, new[] { 400, 400 } };
             var here = new[] { Flat(180, 3), new int[0] };
@@ -178,6 +178,24 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Each_best_buyer_spends_only_its_own_purse_on_the_goods_held_for_it()
+        {
+            var rungs = new[] { new[] { 250, 250, 250, 250 }, new[] { 400, 400 }, new[] { 300, 300 }, null };
+            var here = new[] { Flat(180, 4), Flat(120, 2), Flat(100, 2), null };
+            var bought = new[] { 4, 2, 2, 0 };
+            Assert.Equal(new[] { 2, 2, 0, 0 },
+                         TradeRules.SharePurses(new[] { "a", "a", "b", null }, new[] { 1300, 1300, 0, 0 }, rungs, here,
+                                                bought, 0.75f));
+            Assert.Equal(new[] { 2, 2, 2, 0 },
+                         TradeRules.SharePurses(new[] { "a", "a", "b", null }, new[] { 1300, 1300, 600, 0 }, rungs, here,
+                                                bought, 0.75f));
+            Assert.Equal(new[] { 4, 2, 0, 0 },
+                         TradeRules.SharePurses(new[] { "a", "b", "c", null }, new[] { 1000, 800, 0, 0 }, rungs, here,
+                                                bought, 0.75f));
+            Assert.Empty(TradeRules.SharePurses(null, null, null, null, null, 0.75f));
+        }
+
+        [Fact]
         public void No_purse_or_no_share_holds_nothing()
         {
             var rungs = new[] { new[] { 300 } };
@@ -198,7 +216,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_marked_market_is_asked_past_the_units_another_quality_already_took()
+        public void The_best_buyer_is_asked_past_the_units_another_quality_already_took()
         {
             Assert.Equal(new[] { 100, 90 }, TradeRules.PastTheFirst(new[] { 300, 200, 100, 90 }, 2));
             Assert.Empty(TradeRules.PastTheFirst(new[] { 300 }, 1));

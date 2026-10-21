@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.105.0
+
+- Hold cargo for the best market now holds each good for whichever market within your travel ceilings pays most for it, not the marked market
+- Hold cargo for the best market now also holds a good in the marked market, and with Auto-mark best sell market on map off
+- Fixed the map marker choosing a market that clears Minimum profit margin but pays far less than another market within your travel ceilings
+- With Enable extended debug logging on, TradeLord.log now names each good the map marker expects Hold cargo for the best market to keep
+- The hint for Hold cargo for the best market now names the best other market within your travel ceilings, in every language
+- When TradeLord holds your cargo, the message now says it keeps it for a better market instead of the marked market
+
 ## 1.104.20
 
 - Every line in TradeLord.log now starts with the campaign day and the time of day, marked night while parties travel slower

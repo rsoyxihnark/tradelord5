@@ -808,7 +808,7 @@ def the_marker_skips_a_town_that_cannot_outpay_the_best_one_yet():
                     "TheMarkedTownFirst(reachable, holder);",
                     "float bar = 0f;",
                     "if (TradeMath.PerDay(gold, ride) <= bar) break;",
-                    "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);",
+                    "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null, buyers);",
                     "long total = took.Value > gold ? gold : took.Value;",
                     "long earned = total - took.Cost;",
                     "float rate = TradeMath.PerDay(earned, ride);",
@@ -874,8 +874,24 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
                         "took.Value += fetched;")
             and "if (took.Value <= 0L) { how.Refused++; continue; }" in marker
             and "BestMarketFloor" not in S['Marker.cs']
-            and "HoldCargoForBestMarket" not in S['Marker.cs']
-            and "markId != null && markId != hereId &&" in S['Rules.cs']
+            and ordered(marker, "var cargo = WhatYouCarryToSell(party);", "Buyers[] buyers = BuyersFor(cargo);",
+                        "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null, buyers);")
+            and "buyers[at] = BestBuyersOf(cargo[at].item, cargo[at].amount);" in
+                method_body(S['Marker.cs'], "private static Buyers[] BuyersFor")
+            and "Marker.BestBuyersOf(new EquipmentElement(item), units).Besides(_pass.Site);" in sell_pass()
+            and ordered(marker_passes()[1],
+                        "Buyer other = buyers == null || share <= 0f ? default(Buyer) : buyers[at].Besides(site);",
+                        "int[] there = WhatTheBestOtherBuyerTakes(other, paidFor - walk.AgedLeft, walk, worth, eachAtItsOwnCost);",
+                        "int price = pays.At(u);",
+                        "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
+                        "int fresh = paidFor - moved - walk.AgedLeft;",
+                        "int floor = TradeRules.FloorForTheLast(there, fresh, share);",
+                        "if (!walk.PickedHasAged && TradeRules.HeldForTheMark(price, floor, fresh, there?.Length ?? 0))",
+                        "if (!walk.KeepOnlyTheAged() || !walk.Clears(price, Options.Current.MinProfitMargin)) break;",
+                        "if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }")
+            and ordered(sell_pass(), "int floor = TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket);",
+                        "if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))",
+                        "if (basis.KeepOnlyTheAged()) continue;")
             and S['Trading.cs'].count("TradePolicy.WorthToBeat(") == 1
             and S['Marker.cs'].count("TradePolicy.WorthToBeat(") == 1)
 
@@ -1107,7 +1123,7 @@ def readme_defaults_match_the_shipped_ones():
     share = str(round(float(option_default('MaxHeldShare').rstrip('f')) * 100))
     hold = str(round(float(option_default('HoldCargoForBestMarket').rstrip('f')) * 100))
     claims = ['which ships at ' + share + '% so one cheap good cannot take your whole cargo',
-              'sells it on the way only for at least ' + hold + '% of what that market pays',
+              'sells it only for at least ' + hold + '% of what the best other market within your travel ceilings pays',
               'hotkey **' + option_default('PanelKey').strip('"') + '**',
               'gold reserve of ' + option_default('GoldReserve') + ' denars',
               'back up to ' + said('KeepFoodDays') + ' days of supply',
@@ -1962,8 +1978,8 @@ chk("1.3.16", "the hold-for-best-market floor is tested against every unit as th
              "With_no_floor_in_force_nothing_is_ever_held_back_for_a_better_market",
              "Selling_stops_at_the_first_unit_that_falls_under_the_floor",
              "A_lower_tolerance_never_holds_back_more_than_a_higher_one",
-             "Only_the_units_the_marked_market_would_buy_are_held_and_only_below_the_floor",
-             "The_floor_for_the_units_left_is_your_share_of_what_the_mark_pays_for_the_last_of_them",
+             "Only_the_units_the_best_buyer_would_buy_are_held_and_only_below_the_floor",
+             "The_floor_for_the_units_left_is_your_share_of_what_the_best_buyer_pays_for_the_last_of_them",
              "new Random(5540)")))
 chk("1.3.16", "food branch falls through to the sell rules",
     ordered(sell_rule(),
@@ -2260,7 +2276,7 @@ chk("1.4.3", "cost basis uses recorded purchase prices, not current market quote
     "HasPurchaseRecord(el) ?? false)" in
     method_body(S['Policy.cs'], "private static bool HasCostBasis") and
     "item.IsTradeGood ||" not in method_body(S['Policy.cs'], "private static bool HasCostBasis"))
-chk("1.21.0", "the sell-side floor is Hold cargo for the best market and nothing else, so it binds every unit you bought against what the marked market pays for it, up to as many as that market would buy, or none",
+chk("1.21.0", "the sell-side floor is Hold cargo for the best market and nothing else, so it binds every unit you bought against what the best other market pays for it, up to as many as that market would buy, or none",
     "ForTheMark[] holding = !loot && s.HoldCargoForBestMarket > 0f ? WhatTheMarkKeeps(market, books, sim, s) : null;" in
         sell_pass() and
     "if (units <= 0 || basis.Paid <= 0) continue;" in sell_pass() and
@@ -3096,7 +3112,7 @@ chk("1.21.0", "loot goes to the first market that can pay, since nothing but Hol
             "if (paidLeft <= 0 || remaining <= paidLeft) return false;",
             "remaining -= paidLeft;", "paidLeft = 0;") and
     "if (!basis.SetTheBoughtUnitsAside(ref remaining)) break;" in sell_pass() and
-    "Loot_is_never_held_for_the_marked_market" in SELLPASSTESTS and
+    "Loot_is_never_held_for_the_best_buyer" in SELLPASSTESTS and
     "In_a_stack_of_bought_and_looted_units_the_bought_ones_are_held_and_the_loot_goes" in SELLPASSTESTS and
     S['Passes.cs'].count("s.HoldCargoForBestMarket") == 3)
 chk("1.6.12", "that worth is looked up once per good, not once per unit sold",
@@ -4343,9 +4359,11 @@ def the_hold_hint_says_what_the_share_holds_and_when_it_holds_nothing():
     hold = en.get('TL329', '')
     said = [spoken(path).get('TL329', '') for path in TRANSLATIONS.values()]
     shipped = str(round(float(option_default('HoldCargoForBestMarket').rstrip('f')) * 100))
-    return ("On the way, sell a good you bought for at least this share of the marked market's price" in hold
+    return ("Sells a good you bought only for at least this share of what the best other market in your travel ceilings would pay"
+                in hold
             and "holding only what it would buy." in hold
-            and "No loot is held, nor anything in it or with no marker." in hold
+            and "Loot is never held." in hold
+            and "marked" not in hold and "marker" not in hold
             and "0% is off." in hold
             and hold.endswith(shipped + "% by default.")
             and "OFF by default" not in hold
@@ -4373,7 +4391,7 @@ def a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till():
 chk("1.23.0", "nothing a player reads calls a haul animal a beast, a town's gold a till, or an overpayment a premium",
     a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till())
 
-chk("1.21.0", "the hold hint says the share holds back only goods you bought, only as many as the marked market would buy, and nothing at 0%, in the marked market or while that marker is off",
+chk("1.21.0", "the hold hint says the share holds back only goods you bought, only as many as the best other market in your travel ceilings would buy, never loot, and nothing at 0%",
     the_hold_hint_says_what_the_share_holds_and_when_it_holds_nothing())
 
 def the_panel_relabels_every_line_it_speaks():
@@ -4459,12 +4477,17 @@ chk("1.14.3", "with Live world prices on, a market whose merchant has no gold is
         buy_pass() and
     "var markets = EverySell(item);" in
         method_body(S['Ledger.cs'], "internal (Settlement town, int price, Ladder rungs) WhereThisEarnsFastest") and
-    "int purse = Marker.PurseOf(mark);" in
+    "Marker.BestBuyersOf(new EquipmentElement(item), units).Besides(_pass.Site);" in
         sell_pass() and
+    (lambda best: ordered(best, "if (TradeMath.OutOfReach(ride)) continue;",
+                          "int purse = PurseOf(town);",
+                          "Total = TradeMath.WhatALadderPays(pays.At, units, purse)",
+                          "if (one.First <= 0 || one.Total <= 0L) continue;"))
+    (method_body(S['Marker.cs'], "internal static Buyers BestBuyersOf")) and
+    "if (price <= 0 || paid + price > purse) break;" in
+        method_body(S['TradeMath.cs'], "public static long WhatALadderPays") and
     "? TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold, s.IsVillage)" in
-        between(S['Marker.cs'], "internal static int PurseOf(Settlement s) =>", ";") and
-    "if (!TradeMath.OutOfReach(ride) && purse > 0)" in
-        sell_pass())
+        between(S['Marker.cs'], "internal static int PurseOf(Settlement s) =>", ";"))
 
 chk("1.14.4", "the sell pass names a stopping rule only when one fired, so a cargo it may not sell never reads as a market with nothing to trade",
     (lambda sell: "Block stopped = tally.Dominant();" in sell
@@ -7433,7 +7456,7 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
                      "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) { how.Shut++; continue; }",
                      "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == holder);",
                      "if (TradeMath.PerDay(gold, ride) <= bar) break;",
-                     "WhatItWouldFetch(s, market, party, ride, cargo, gold, null)")
+                     "WhatItWouldFetch(s, market, party, ride, cargo, gold, null, buyers)")
              and "Town.AllTowns" not in marker
              and "town.Gold" not in marker)
     gated = ("s.IsVillage && Options.Current.TradeWithVillages" in pool
@@ -9957,13 +9980,19 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 29
+            and ALL.count("Tongue.Named(") == 31
             and 'return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +'
                 in method_body(S['Ledger.cs'], "private string WriteDownFree")
             and "if (adding <= 0 || el.Item == null) return null;" in method_body(S['Ledger.cs'], "private string WriteDownFree")
             and 'Tongue.Named(el.Item.Name, el.Item.StringId) + ", " + TradeMath.WhereFreeFrom(from) +'
                 in method_body(S['Ledger.cs'], "internal void RecordFreeSale")
-            and "_pass.Held[item] = (Tongue.Named(_mark.Name, _mark.StringId), units, there, here);" in S['Trading.cs']
+            and ordered(method_body(S['Trading.cs'], "public void HeldBack"),
+                        "if (item == null || buyer == null || units <= 0) return;",
+                        "_pass.Held[item] = (Tongue.Named(buyer.Name, buyer.StringId), units, there, here);")
+            and ordered(S['Marker.cs'], "if (share.HeldFor != null)",
+                        '" you carry held for " + Tongue.Named(share.HeldFor.Name, share.HeldFor.StringId) +')
+            and ordered(S['Marker.cs'], "if (line.Held <= 0 || line.HeldFor == null || item.Item == null) continue;",
+                        "Good = Tongue.Named(item.Item.Name, item.Item.StringId),")
             and "(Tongue.Named(one.Where.Name, one.Where.StringId), one.Units, one.Value)" in S['Marker.cs']
             and "string row = Tongue.Named(one.Where.Name, id)" in S['Marker.cs']
             and '_route.Item == null ? "" : Tongue.Named(_route.Item.Name, _route.Item.StringId)'
@@ -11643,7 +11672,9 @@ def every_stack_of_a_good_is_counted_rather_than_the_first():
             and "return InAll(s.ItemRoster, item);" in method_body(l, "internal static int StockOf")
             and "held[item] = had + shelf.GetElementNumber(i);" in stocks
             and "int took = Math.Min(paid.Count, InAll(carried, el));" in l
-            and S['Trading.cs'].count("LedgerBehavior.InAll(") == 6
+            and S['Trading.cs'].count("LedgerBehavior.InAll(") == 7
+            and "int units = Math.Max(1, LedgerBehavior.InAll(_pass.Party.ItemRoster, item));" in
+                method_body(S['Trading.cs'], "private Buyer BuyerFor(int at)")
             and "GetItemNumber(" not in ALL + "\n" + M)
 
 
@@ -12250,8 +12281,12 @@ def every_best_market_comparison_prices_the_quality_you_carry():
     step = method_body(S['Marker.cs'], "private int Next()")
     colour = method_body(S['TooltipPatches.cs'], "private static void Coloured")
     return ("long priced = (long)plainPrice * qualityValue / plainValue;" in scale
-            and "rungs = Marker.WhatTheMarkTakes(_mark, _plan[at].EquipmentElement, units, worth," in resale
+            and "rungs = Marker.WhatTheMarkTakes(buyer.Town, _plan[at].EquipmentElement, units, worth," in resale
             and "Paying pays = WhatThatMarketPays(mark, mark.SettlementComponent, el, party, ride);" in takes
+            and "Paying pays = WhatThatMarketPays(town, market, el, party, ride);" in
+                method_body(S['Marker.cs'], "internal static Buyers BestBuyersOf")
+            and "buyers[at] = BestBuyersOf(cargo[at].item, cargo[at].amount);" in
+                method_body(S['Marker.cs'], "private static Buyers[] BuyersFor")
             and "Bulk.AsItLands(_site, _el, true, _flat, landed);" in step
             and colour.count("TradeMath.AtThisQuality(best.price, item.Value, held.ItemValue)") == 2
             and all(one in FLOORTESTS for one in
@@ -13850,9 +13885,11 @@ def the_buyer_and_the_marker_count_what_is_on_its_way_like_the_panel():
                         "? 0 : Forecast.WorthShiftAsItHasHeld(_site, _el.Item, _ride);",
                         "? null : Bulk.AsItLands(_site, _el, true, _flat, landed);")
             and "Paying pays = WhatThatMarketPays(site, market, cargo[at].item, party, ride);" in fetch
-            and "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);" in marker
-            and "WhatItWouldFetch(how.Best, how.Best.SettlementComponent, party, how.Days, cargo, how.Purse, how.Bill);"
-                in marker
+            and "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null, buyers);" in marker
+            and ("WhatItWouldFetch(how.Best, how.Best.SettlementComponent, party, how.Days, cargo, how.Purse, how.Bill,\n"
+                 "                                 buyers);") in marker
+            and "Paying pays = WhatThatMarketPays(town, market, el, party, ride);" in
+                method_body(S['Marker.cs'], "internal static Buyers BestBuyersOf")
             and "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);" in S['Ledger.cs']
             and "if (landed == 0 || !rung.Walkable) return rung;" in S['Market.cs']
             and "if (landed == 0 || site == null || item == null) return quoted;" in
@@ -14181,13 +14218,15 @@ chk("1.93.14", "the map marker rewrites its weighing when its fetch, units or ho
 
 def hold_cargo_and_the_marker_floor_count_what_is_on_its_way():
     resale = method_body(S['Trading.cs'], "public bool ResaleMarket(int at, int units, int worth, out int[] rungs)")
-    mark = method_body(S['Trading.cs'], "private Settlement TheMark()")
+    best = method_body(S['Marker.cs'], "internal static Buyers BestBuyersOf")
     takes = method_body(S['Marker.cs'], "internal static int[] WhatTheMarkTakes")
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
     return ("BestSellAsItLands" not in ALL
-            and "float ride = Travel.EstimateDaysFromParty(mark);" in mark
-            and "_markRide, _markPurse);" in resale
+            and ordered(best, "float ride = Travel.EstimateDaysFromParty(town);",
+                        "Paying pays = WhatThatMarketPays(town, market, el, party, ride);",
+                        "Town = town, Days = ride, Purse = purse, First = pays.At(0), Pays = pays,")
+            and "buyer.Days, buyer.Purse);" in resale
             and ordered(takes, "Paying pays = WhatThatMarketPays(mark, mark.SettlementComponent, el, party, ride);",
                         "return TradeMath.WhatTheMarkTakes(pays.At, carried, worth, Options.Current.MinProfitMargin, purse);")
             and "BestSell(held.Item)" not in S['Marker.cs'] and "BestSell(Item(at))" not in S['Trading.cs']
@@ -14213,7 +14252,7 @@ def hold_cargo_and_the_marker_floor_count_what_is_on_its_way():
             and "into the market marked on your map and into Hold cargo for the best market" in README)
 
 
-chk("1.93.15", "Hold cargo for the best market prices the marked market as it will be when you get there, counting what is on its way as the map marker does, and the hints say so in every language, route and tooltip prices needing Bulk price simulation",
+chk("1.93.15", "Hold cargo for the best market prices the best other market as it will be when you get there, counting what is on its way as the map marker does, and the hints say so in every language, route and tooltip prices needing Bulk price simulation",
     hold_cargo_and_the_marker_floor_count_what_is_on_its_way())
 
 
@@ -14242,7 +14281,7 @@ def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
             and method_body(S['Marker.cs'], "private static Settlement OutEarnsTheMark(") == ('private static Settlement OutEarnsTheMark(\n'
                 '            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, Settlement holder,\n'
                 '            MobileParty party, List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,\n'
-                '            List<string> compared)\n'
+                '            List<string> compared, Buyers[] buyers)\n'
                 '        {\n'
                 '            int mine = -1;\n'
                 '            for (int at = 0; at < reachable.Count; at++)\n'
@@ -14257,8 +14296,8 @@ def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
                 '                if (!_owedAFairLook.Contains(s.StringId)) continue;\n'
                 '                compared.Add(s.StringId);\n'
                 '                if (mine < 0) continue;\n'
-                '                if (!priced) { marked = RateThere(reachable[mine], party, cargo); priced = true; }\n'
-                '                float rate = RateThere(reachable[at], party, cargo);\n'
+                '                if (!priced) { marked = RateThere(reachable[mine], party, cargo, buyers); priced = true; }\n'
+                '                float rate = RateThere(reachable[at], party, cargo, buyers);\n'
                 '                if (!Marks.OutEarns(rate, marked) || (back != null && rate <= best)) continue;\n'
                 '                best = rate;\n'
                 '                back = s;\n'
@@ -14267,9 +14306,10 @@ def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
                 '        }')
             and method_body(S['Marker.cs'], "private static float RateThere(") == ('private static float RateThere((Settlement s, SettlementComponent market, int gold, float days) one,\n'
                 '                                       MobileParty party,\n'
-                '                                       List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)\n'
+                '                                       List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,\n'
+                '                                       Buyers[] buyers)\n'
                 '        {\n'
-                '            Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null);\n'
+                '            Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null, buyers);\n'
                 '            if (took.Value <= 0L) return 0f;\n'
                 '            long total = took.Value > one.gold ? one.gold : took.Value;\n'
                 '            return TradeMath.PerDay(total - took.Cost, one.days);\n'
@@ -14291,7 +14331,7 @@ def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
             and ordered(marker, "reachable.Sort(FastestPurseFirst);",
                         "if (holder != null && _owedAFairLook.Count > 0)\n            {\n"
                         "                how.Compared = new List<string>();\n"
-                        "                how.Afresh = OutEarnsTheMark(reachable, holder, party, cargo, how.Compared);\n            }",
+                        "                how.Afresh = OutEarnsTheMark(reachable, holder, party, cargo, how.Compared, buyers);\n            }",
                         "TheMarkedTownFirst(reachable, holder);")
             and marker.count("how.Afresh") == 1 and marker.count("how.Compared") == 2
             and "if (on) target = TheMarkFairlyWeighed(out how);" in update
@@ -14387,7 +14427,7 @@ def hold_cargo_is_one_share_on_at_three_quarters():
             and '"BestSellTownTolerance", new double[]' not in S['Migrate.cs']
             and en.get('TL229') == "Hold cargo for the best market"
             and all('TL230' not in spoken(path) for path in [ENGLISH] + list(TRANSLATIONS.values()))
-            and "Three_quarters_of_what_the_marked_market_pays_is_where_the_hold_lets_go" in SELLPASSTESTS
+            and "Three_quarters_of_what_the_best_buyer_pays_is_where_the_hold_lets_go" in SELLPASSTESTS
             and "A_share_of_nothing_holds_nothing" in SELLPASSTESTS
             and "TheShareIsHeldBetweenNothingAndAll" in MIGRATIONTESTS)
 
@@ -14412,49 +14452,47 @@ chk("1.94.0", "a settings file that still carries the old Hold cargo switch or i
     an_old_hold_setting_is_dropped_and_the_share_starts_at_what_tradelord_ships_with())
 
 
-def the_hold_is_asked_only_of_the_mark_and_never_inside_it():
-    mark = method_body(S['Marker.cs'], "internal static Settlement TheMarkToHoldFor")
-    walk = method_body(S['Marker.cs'], "internal static void NoteTheWalkIn")
-    load = method_body(S['Marker.cs'], "internal static void NoteALoadInside")
-    forget = method_body(S['Marker.cs'], "internal static void Forget()")
-    entered = method_body(S['Trading.cs'], "private void OnSettlementEntered")
-    launched = method_body(S['Trading.cs'], "private void OnSessionLaunched")
+def the_hold_is_asked_of_the_best_other_buyer_in_reach():
+    best = method_body(S['Marker.cs'], "internal static Buyers BestBuyersOf")
+    besides = between(S['Marker.cs'], "internal Buyer Besides(Settlement here) =>", ";")
+    eligible = method_body(S['Ledger.cs'], "private static bool Eligible(Settlement s)")
+    rerank = method_body(S['Ledger.cs'], "private static List<(Settlement, int)> Rerank")
+    buyer = method_body(S['Trading.cs'], "private Buyer BuyerFor(int at)")
     resale = method_body(S['Trading.cs'], "public bool ResaleMarket(int at, int units, int worth, out int[] rungs)")
-    themark = method_body(S['Trading.cs'], "private Settlement TheMark()")
-    holds = between(S['Rules.cs'], "internal static bool HoldsFor(string markId, string hereId, string walkedIntoId, string markedOnTheWayInId) =>", ";")
-    return (ordered(mark, "Settlement mark = _picked;",
-                    "if (!Options.Current.MarkBestSellTownOnMap || mark?.SettlementComponent == null) return null;",
-                    "if (!TradeActionBehavior.IsMarket(mark)) return null;",
-                    "if (!Marks.HoldsFor(mark.StringId, here?.StringId, _walkedInto, _markedOnTheWayIn)) return null;",
-                    "if (LedgerBehavior.UnderAttack(mark) || LedgerBehavior.VillageShut(mark)) return null;",
-                    "if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(mark)) return null;",
-                    "return mark;")
-            and "markId != null && markId != hereId &&" in holds
-            and "!(hereId != null && hereId == walkedIntoId && markedOnTheWayInId == hereId)" in holds
-            and ordered(walk, "_walkedInto = at?.StringId;", "_markedOnTheWayIn = _picked?.StringId;")
-            and ordered(load, "_walkedInto = at?.StringId;", "_markedOnTheWayIn = at?.StringId;")
-            and ordered(forget, "_walkedInto = null;", "_markedOnTheWayIn = null;")
-            and ordered(entered, "if (party != MobileParty.MainParty) return;",
-                        "if (!StillTheSameArrival(settlement)) Marker.NoteTheWalkIn(settlement);",
-                        "Counter.Forget();")
-            and ordered(launched, "Marker.ForgetTheRead();",
-                        "if (inside != null) Marker.NoteALoadInside(inside);",
-                        'Guard.Run("Action.RestoreMarker", Marker.Update);')
-            and S['Trading.cs'].count("Marker.NoteTheWalkIn(") == 1
-            and S['Trading.cs'].count("Marker.NoteALoadInside(") == 1
-            and ordered(themark, "if (!_markRead)", "_markRead = true;",
-                        "Settlement mark = Marker.TheMarkToHoldFor(_pass.Site);",
-                        "if (!TradeMath.OutOfReach(ride) && purse > 0)",
-                        "return _mark;")
-            and ordered(resale, "if (TheMark() == null) return false;", "return rungs.Length > 0;")
-            and "public int ResalePurse() => TheMark() == null ? 0 : _markPurse;" in S['Trading.cs']
-            and all(one in SCORINGTESTS for one in
-                    ("Cargo_is_held_for_a_marked_market_you_are_not_standing_in",
-                     "Walking_into_the_marked_market_frees_the_whole_visit_even_once_the_mark_moves_on",
-                     "A_save_loaded_inside_a_market_holds_nothing_there_for_that_visit")))
+    sell = sell_pass()
+    return (ordered(best, "LedgerBehavior.Instance?.EverySell(el.Item);",
+                    "float ride = Travel.EstimateDaysFromParty(town);",
+                    "if (TradeMath.OutOfReach(ride)) continue;",
+                    "int purse = PurseOf(town);",
+                    "if (one.First <= 0 || one.Total <= 0L) continue;",
+                    "TradeMath.PaysMore(one.Total, one.First, one.Days, found.Best.Total, found.Best.First, found.Best.Days)")
+            and "Best.Town != null && Best.Town == here ? Next : Best" in besides
+            and "TakeN(TopMarkets(item, true), int.MaxValue)" in
+                between(S['Ledger.cs'], "public List<(Settlement town, int price)> EverySell(ItemObject item) =>", ";")
+            and ordered(eligible, "if (!TradeActionBehavior.IsMarket(s)) return false;",
+                        "if (UnderAttack(s) || VillageShut(s)) return false;",
+                        "if (Options.Current.ExcludeHostileTowns && IsHostile(s)) return false;",
+                        "return WithinTravelCeiling(s, lower);")
+            and "if (!WithinTravelCeiling(all[i].s, days)) continue;" in rerank
+            and ordered(buyer, "if (!_pass.Elsewhere.TryGetValue(item, out Buyer buyer))",
+                        "int units = Math.Max(1, LedgerBehavior.InAll(_pass.Party.ItemRoster, item));",
+                        "buyer = Marker.BestBuyersOf(new EquipmentElement(item), units).Besides(_pass.Site);",
+                        "_pass.Elsewhere[item] = buyer;", "return buyer;")
+            and "public int ResalePurse(int at) => BuyerFor(at).Town == null ? 0 : BuyerFor(at).Purse;" in S['Trading.cs']
+            and "public string ResaleBuyer(int at) => BuyerFor(at).Town?.StringId;" in S['Trading.cs']
+            and ordered(resale, "Buyer buyer = BuyerFor(at);", "if (buyer.Town == null) return false;",
+                        "rungs = Marker.WhatTheMarkTakes(buyer.Town, _plan[at].EquipmentElement, units, worth,",
+                        "buyer.Days, buyer.Purse);", "return rungs.Length > 0;")
+            and "MarkBestSellTownOnMap" not in sell
+            and "TheMarkToHoldFor" not in ALL and "NoteTheWalkIn" not in ALL and "NoteALoadInside" not in ALL
+            and "HoldsFor(" not in ALL and "_walkedInto" not in ALL and "_markedOnTheWayIn" not in ALL
+            and all(one in SELLPASSTESTS for one in
+                    ("Holding_out_for_the_best_buyer_keeps_the_cargo_you_bought",
+                     "Each_good_is_held_for_its_own_best_buyer_and_draws_only_on_that_buyer_s_gold",
+                     "A_best_buyer_with_no_gold_holds_nothing")))
 
-chk("1.94.0", "Hold cargo for the best market holds only for the marked market: never in it, for the rest of a visit into it, on a save loaded in a market, or while that market is unmarked, raided, shut, hostile, out of reach, out of gold or no longer traded with",
-    the_hold_is_asked_only_of_the_mark_and_never_inside_it())
+chk("1.94.0", "Hold cargo for the best market holds each good for the best other buyer within your travel ceilings, map marker on or off, never for one raided, shut, hostile, out of reach, out of gold or no longer traded with",
+    the_hold_is_asked_of_the_best_other_buyer_in_reach())
 
 
 def the_hold_counts_only_what_the_mark_would_buy_of_what_you_bought():
@@ -14484,41 +14522,40 @@ def the_hold_counts_only_what_the_mark_would_buy_of_what_you_bought():
                         "Array.Resize(ref taken, count);")
             and "bool ResaleMarket(int at, int units, int worth, out int[] rungs);" in S['Passes.cs']
             and all(one in MATHTESTS for one in
-                    ("The_marked_market_takes_the_units_that_clear_your_margin_at_what_it_pays_for_each",
-                     "The_marked_market_takes_no_more_than_its_purse_or_than_you_carry",
-                     "A_marked_market_that_pays_nothing_or_misses_your_margin_takes_nothing"))
+                    ("The_best_buyer_takes_the_units_that_clear_your_margin_at_what_it_pays_for_each",
+                     "The_best_buyer_takes_no_more_than_its_purse_or_than_you_carry",
+                     "A_best_buyer_that_pays_nothing_or_misses_your_margin_takes_nothing"))
             and all(one in SELLPASSTESTS for one in
-                    ("Only_as_many_as_the_marked_market_would_buy_are_held",
+                    ("Only_as_many_as_the_best_buyer_would_buy_are_held",
                      "Units_kept_back_from_a_bought_stack_never_let_the_rest_go_under_the_floor",
-                     "The_marked_market_is_asked_about_the_bought_units_at_the_margin_they_are_sold_against",
+                     "The_best_buyer_is_asked_about_the_bought_units_at_the_margin_they_are_sold_against",
                      "Your_margin_still_binds_where_the_hold_would_let_a_sale_through",
                      "A_unit_that_misses_both_is_named_as_missing_your_margin")))
 
-chk("1.94.0", "Hold cargo for the best market weighs a good against what the marked market pays for the units you bought that it would take within your margin and its gold, holds only that many, and never stands in for your margin",
+chk("1.94.0", "Hold cargo for the best market weighs a good against what the best other market pays for the units you bought that it would take within your margin and its gold, holds only that many, and never stands in for your margin",
     the_hold_counts_only_what_the_mark_would_buy_of_what_you_bought())
 
 
 def the_hold_is_named_and_described_as_it_now_works():
     en = spoken(ENGLISH)
-    return (en.get('TL85') == "Hold cargo for the best market keeps your cargo for the marked market"
+    return (en.get('TL85') == "Hold cargo for the best market keeps your cargo for a better market"
             and 'Tongue.Text("{=TL85}' + en['TL85'] + '")' in S['Reasons.cs']
             and said_in_every_language('TL85')
             and all(spoken(path).get('TL85') != en['TL85'] for path in TRANSLATIONS.values())
             and len(en.get('TL329', '')) <= 248
-            and "Holds a good you bought for the market marked on your map rather than selling it one town short for much less" in README
-            and "Hold cargo for the best market holds only as many as the marked market would buy, 0% holds nothing, and looted gear goes to the first market that can pay for it" in README
-            and "Hold cargo for the best market holds nothing in the marked market itself, or while Auto-mark best sell market on map is off" in README
+            and "Holds a good you bought for a better market rather than selling it for much less" in README
+            and "Hold cargo for the best market holds only as many as the best other market would buy with its own gold, 0% holds nothing, and looted gear goes to the first market that can pay for it" in README
+            and "Hold cargo for the best market holds in every market, the marked one included, and with Auto-mark best sell market on map on or off" in README
             and "once you switch it on" not in README
             and "BestSellAsItLands" not in ALL)
 
-chk("1.94.0", "the reason given when cargo is held names Hold cargo for the best market and the marked market in every language, and the feature list says what the share holds",
+chk("1.94.0", "the reason given when cargo is held names Hold cargo for the best market and a better market in every language, and the feature list says what the share holds",
     the_hold_is_named_and_described_as_it_now_works())
 
 def the_marked_market_s_gold_is_shared_across_every_good_you_carry():
     keeps = method_body(S['Passes.cs'], "internal static ForTheMark[] WhatTheMarkKeeps")
     share = method_body(S['Rules.cs'], "internal static int[] SharePurse")
-    return (ordered(keeps, "int purse = market.ResalePurse();", "if (purse <= 0) return null;",
-                    "int till = TradeRules.WhatTheTillCanPay(sim ? market.Till() : market.TillNow(), market.Village);",
+    return (ordered(keeps, "int till = TradeRules.WhatTheTillCanPay(sim ? market.Till() : market.TillNow(), market.Village);",
                     "bool boughtHere = books.Bought(sim, id);",
                     "int yours = market.HoldableUnits(at);",
                     "Basis basis = Basis.For(market.CostBasis(at), market.PurchasedUnits(at), market.PaidKeyAt(at),",
@@ -14528,14 +14565,25 @@ def the_marked_market_s_gold_is_shared_across_every_good_you_carry():
                     "? new int[0]",
                     ": TradeRules.WhatSellsHere(market.PricesHere(at), units, basis.Paid, s.MinProfitMargin, ref till);",
                     "asked.TryGetValue(id, out int before);",
+                    "int purse = market.ResalePurse(at);",
+                    "if (purse <= 0) continue;",
                     "if (!market.ResaleMarket(at, before + units, eachAtItsOwn ? fresh.LeastItAsks() : basis.Paid,",
                     "rungs[at] = TradeRules.PastTheFirst(ladder, before);",
                     "asked[id] = before + rungs[at].Length;",
                     "bought[at] = units;",
                     "here[at] = sells;",
+                    'buyers[at] = market.ResaleBuyer(at) ?? "";',
+                    "purses[at] = purse;",
                     "if (!any) return null;",
-                    "int[] kept = TradeRules.SharePurse(purse, rungs, here, bought, s.HoldCargoForBestMarket);",
+                    "int[] kept = TradeRules.SharePurses(buyers, purses, rungs, here, bought, s.HoldCargoForBestMarket);",
                     "holding[at].Rungs = rungs[at];", "holding[at].Units = kept[at];")
+            and ordered(method_body(S['Rules.cs'], "internal static int[] SharePurses"),
+                        "string buyer = buyers != null && g < buyers.Length ? buyers[g] : null;",
+                        "if (rungs[g] == null || buyer == null || !shared.Add(buyer)) continue;",
+                        "if (rungs[other] != null && buyers[other] == buyer) theirs[other] = rungs[other];",
+                        "int purse = purses != null && g < purses.Length ? purses[g] : 0;",
+                        "int[] took = SharePurse(purse, theirs, here, bought, share);",
+                        "if (theirs[other] != null) kept[other] = took[other];")
             and "market.MaySell(" not in keeps and "market.GoodAt(" not in keeps
             and "market.UnpaidWorth(" not in keeps
             and ordered(share, "if (purse <= 0 || share <= 0f) return kept;",
@@ -14547,30 +14595,32 @@ def the_marked_market_s_gold_is_shared_across_every_good_you_carry():
                         "if (shut[g] || u != kept[g]) continue;",
                         "if (rungs[g][u] > left) { shut[g] = true; continue; }",
                         "left -= rungs[g][u];", "kept[g]++;")
-            and "public int ResalePurse() => TheMark() == null ? 0 : _markPurse;" in S['Trading.cs']
-            and "int ResalePurse();" in S['Passes.cs']
+            and "public int ResalePurse(int at) => BuyerFor(at).Town == null ? 0 : BuyerFor(at).Purse;" in S['Trading.cs']
+            and "int ResalePurse(int at);" in S['Passes.cs'] and "string ResaleBuyer(int at);" in S['Passes.cs']
             and all(one in FLOORTESTS for one in
-                    ("The_purse_of_the_marked_market_goes_to_the_units_this_market_pays_least_for_against_it",
+                    ("The_purse_of_the_best_buyer_goes_to_the_units_this_market_pays_least_for_against_it",
+                     "Each_best_buyer_spends_only_its_own_purse_on_the_goods_held_for_it",
                      "A_unit_this_market_pays_your_share_for_is_the_last_to_draw_on_the_purse",
-                     "Goods_that_ride_to_the_marked_market_anyway_are_paid_for_first",
+                     "Goods_that_ride_to_the_best_buyer_anyway_are_paid_for_first",
                      "A_unit_too_dear_for_what_is_left_shuts_its_good_and_cheaper_ones_still_fit",
                      "No_purse_or_no_share_holds_nothing",
                      "Units_this_market_cannot_take_ride_first_and_the_ones_it_pays_least_for_come_next",
                      "This_market_is_walked_until_your_margin_or_its_gold_runs_out",
-                     "The_marked_market_is_asked_past_the_units_another_quality_already_took"))
+                     "The_best_buyer_is_asked_past_the_units_another_quality_already_took"))
             and all(one in SELLPASSTESTS for one in
-                    ("The_marked_market_spends_its_gold_first_on_the_good_it_pays_most_for_over_this_market",
-                     "Goods_that_miss_your_margin_here_draw_first_on_the_gold_of_the_marked_market",
-                     "No_more_is_held_than_the_marked_market_has_the_gold_to_buy",
-                     "A_marked_market_with_no_gold_holds_nothing",
-                     "Units_this_market_cannot_take_count_against_the_gold_of_the_marked_market",
-                     "Goods_bought_here_this_visit_count_against_the_gold_of_the_marked_market",
-                     "Two_qualities_of_one_good_share_what_the_marked_market_would_buy"))
+                    ("The_best_buyer_spends_its_gold_first_on_the_good_it_pays_most_for_over_this_market",
+                     "Goods_that_miss_your_margin_here_draw_first_on_the_gold_of_the_best_buyer",
+                     "No_more_is_held_than_the_best_buyer_has_the_gold_to_buy",
+                     "A_best_buyer_with_no_gold_holds_nothing",
+                     "Units_this_market_cannot_take_count_against_the_gold_of_the_best_buyer",
+                     "Goods_bought_here_this_visit_count_against_the_gold_of_the_best_buyer",
+                     "Two_qualities_of_one_good_share_what_the_best_buyer_would_buy",
+                     "Two_goods_with_the_same_best_buyer_still_share_its_gold"))
             and "public Func<int, int> PricesHere(int at) => _pass.SellingPricesAhead(_plan[at].EquipmentElement);" in S['Trading.cs']
             and ordered(method_body(S['Trading.cs'], "internal Func<int, int> SellingPricesAhead(EquipmentElement what)"),
                         "int now = Price(what, selling: true);", "var rungs = new Ladder(Site, what, true, now, 0);"))
 
-chk("1.94.1", "Hold cargo for the best market shares the marked market's gold first to what rides there anyway, was bought here or cannot sell here, then to what this market pays least for, walking its prices, gold and margin, two qualities sharing one count",
+chk("1.94.1", "Hold cargo for the best market shares each best other market's gold first to what rides there anyway, was bought here or cannot sell here, then to what this market pays least for, walking its prices, gold and margin, qualities sharing one count",
     the_marked_market_s_gold_is_shared_across_every_good_you_carry())
 
 
@@ -14582,12 +14632,12 @@ def each_unit_is_weighed_against_what_the_mark_pays_for_the_last_one_it_keeps():
             and "bestMarketFloor" not in S['Passes.cs'] and "floorKnown" not in S['Passes.cs']
             and "average" not in method_body(S['TradeMath.cs'], "public static int[] WhatTheMarkTakes")
             and all(one in SELLPASSTESTS for one in
-                    ("The_units_the_marked_market_pays_most_for_are_held_and_the_rest_sell_here",
-                     "The_units_the_marked_market_pays_little_for_sell_here_even_when_its_average_is_high",
+                    ("The_units_the_best_buyer_pays_most_for_are_held_and_the_rest_sell_here",
+                     "The_units_the_best_buyer_pays_little_for_sell_here_even_when_its_average_is_high",
                      "A_price_that_falls_as_the_stack_sells_is_held_once_it_drops_under_your_share"))
-            and "The_floor_for_the_units_left_is_your_share_of_what_the_mark_pays_for_the_last_of_them" in FLOORTESTS)
+            and "The_floor_for_the_units_left_is_your_share_of_what_the_best_buyer_pays_for_the_last_of_them" in FLOORTESTS)
 
-chk("1.94.1", "Hold cargo for the best market weighs each unit you bought against your share of what the marked market pays for the last unit it would keep, so the units it pays most for are held and the ones it pays little for sell here",
+chk("1.94.1", "Hold cargo for the best market weighs each unit you bought against your share of what the best other market pays for the last unit it would keep, so the units it pays most for are held and the ones it pays little for sell here",
     each_unit_is_weighed_against_what_the_mark_pays_for_the_last_one_it_keeps())
 
 
@@ -14604,7 +14654,7 @@ def the_look_ahead_leaves_the_food_reserve_and_quest_goods_to_the_sale():
             and "TradePolicy.MaySell(good, _plan[at], _pass.Locked, _keepBack, _awaited," in t
             and "int HoldableUnits(int at);" in S['Passes.cs'])
 
-chk("1.94.1", "the look ahead that shares out the gold of the marked market reads the food reserve and the goods a quest waits on from copies, so the sale that follows still keeps every one of them",
+chk("1.94.1", "the look ahead that shares out the gold of each best other market reads the food reserve and the goods a quest waits on from copies, so the sale that follows still keeps every one of them",
     the_look_ahead_leaves_the_food_reserve_and_quest_goods_to_the_sale())
 
 
@@ -14614,10 +14664,11 @@ def the_log_names_what_the_hold_kept():
     held = method_body(t, "public void HeldBack(int at, int units, int there, int here)")
     said = method_body(t, "internal List<string> HeldFor()")
     return ("internal readonly Dictionary<ItemObject, (string where, int units, int there, int here)> Held =" in t
-            and ordered(held, "if (item == null || _mark == null || units <= 0) return;",
+            and ordered(held, "Settlement buyer = BuyerFor(at).Town;",
+                        "if (item == null || buyer == null || units <= 0) return;",
                         "if (_pass.Held.TryGetValue(item, out var was))",
                         "units += was.units;", "there = Math.Min(there, was.there);",
-                        "_pass.Held[item] = (Tongue.Named(_mark.Name, _mark.StringId), units, there, here);")
+                        "_pass.Held[item] = (Tongue.Named(buyer.Name, buyer.StringId), units, there, here);")
             and ordered(said, "foreach (var kv in Held)",
                         'said.Add("held " + kv.Value.units + " " + kv.Key.StringId + " for " + kv.Value.where +',
                         '", which pays at least " + kv.Value.there + " each for them, against " + kv.Value.here +',
@@ -14641,22 +14692,24 @@ chk("1.94.1", "TradeLord.log names each good Hold cargo for the best market kept
 def the_hold_texts_read_plainly_in_every_language():
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    return (en['TL329'].startswith("On the way, sell a good you bought for at least this share")
-            and ru['TL329'].startswith("В пути продаёт купленное не ниже этой доли")
-            and "yolda ancak işaretli pazarın" in tr['TL329'] and "ancak," not in tr['TL329']
-            and tr['TL85'] == "Yükü en iyi pazar için tut ayarı yükünüzü işaretli pazar için saklıyor"
-            and ru['TL85'] == "«Придерживать груз до лучшего рынка» бережёт груз для отмеченного рынка"
-            and cn['TL85'] == "“为最好的市场留住货物”正把货物留给标出的市场"
+    return (en['TL329'].startswith("Sells a good you bought only for at least this share")
+            and ru['TL329'].startswith("Продаёт купленное не ниже этой доли")
+            and "ancak yol süresi sınırlarınız içindeki en iyi diğer pazarın" in tr['TL329'] and "ancak," not in tr['TL329']
+            and tr['TL85'] == "Yükü en iyi pazar için tut ayarı yükünüzü daha iyi bir pazar için saklıyor"
+            and ru['TL85'] == "«Придерживать груз до лучшего рынка» бережёт груз для рынка, что платит больше"
+            and cn['TL85'] == "“为最好的市场留住货物”正把货物留给出价更高的市场"
             and len(en['TL85']) <= 70
             and en['TL329'] in M)
 
-chk("1.94.1", "the hint for Hold cargo for the best market says it is on the way that a good you bought is held, the Turkish hint has no stray comma, and the reason shown when cargo is held is short in every language",
+chk("1.94.1", "the hint for Hold cargo for the best market says a good you bought is held for the best other market in your travel ceilings, the Turkish hint has no stray comma, and the reason shown when cargo is held is short in every language",
     the_hold_texts_read_plainly_in_every_language())
 
 
-def the_hold_hint_names_the_marker_setting_and_calls_loot_what_sell_loot_up_to_tier_does():
+def the_hold_hint_names_the_travel_ceilings_and_calls_loot_what_sell_loot_up_to_tier_does():
     _, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    return ("под меткой настройки «" + ru['TL245'] + "»" in ru['TL329']
+    return (ru['TL206'].startswith("Предел пути") and "в ваших пределах пути" in ru['TL329']
+            and cn['TL206'].startswith("城镇行程上限") and "行程上限之内" in cn['TL329']
+            and ru['TL245'] not in ru['TL329'] and cn['TL245'] not in cn['TL329']
             and ru['TL228'].startswith("Продавать трофеи ")
             and "Трофеи не держит" in ru['TL329']
             and "Добыча" not in ru['TL329']
@@ -14664,8 +14717,8 @@ def the_hold_hint_names_the_marker_setting_and_calls_loot_what_sell_loot_up_to_t
             and cn['TL329'].count("战利品从不留着") == 1
             and "缴获" not in cn['TL329'])
 
-chk("1.94.3", "the Russian hint for Hold cargo for the best market names the setting that marks the market, and the Russian and Chinese hints call loot what Sell loot up to tier calls it",
-    the_hold_hint_names_the_marker_setting_and_calls_loot_what_sell_loot_up_to_tier_does())
+chk("1.94.3", "the Russian and Chinese hints for Hold cargo for the best market name the travel ceilings as the Trade Pool settings do, and call loot what Sell loot up to tier calls it",
+    the_hold_hint_names_the_travel_ceilings_and_calls_loot_what_sell_loot_up_to_tier_does())
 
 
 def the_two_sales_each_take_only_their_own_units():
@@ -14748,10 +14801,10 @@ def the_look_ahead_counts_every_good_you_bought_that_this_market_takes():
                     "if (!market.ResaleMarket(at, before + units, eachAtItsOwn ? fresh.LeastItAsks() : basis.Paid,",
                     "here[at] = sells;")
             and keeps.count("TradeRules.WhatSellsHere(") == 2
-            and "A_good_you_bought_that_the_marked_market_does_not_want_counts_against_this_market_s_gold"
+            and "A_good_you_bought_that_no_other_buyer_wants_counts_against_this_market_s_gold"
                 in SELLPASSTESTS)
 
-chk("1.95.0", "Hold cargo for the best market counts the gold this market pays for every good you bought, the ones the marked market does not want included, before it shares out the marked market's gold",
+chk("1.95.0", "Hold cargo for the best market counts the gold this market pays for every good you bought, the ones no other market wants included, before it shares out each best other market's gold",
     the_look_ahead_counts_every_good_you_bought_that_this_market_takes())
 
 
@@ -16594,7 +16647,7 @@ def every_unit_keeps_a_number_of_its_own_and_sells_at_its_own_price():
                     ("Each_unit_at_its_own_cost_sells_the_dearest_the_price_clears_by_your_margin_and_keeps_the_rest",
                      "Each_unit_at_its_own_cost_goes_down_the_ladder_from_the_dearest_as_the_price_falls",
                      "Each_unit_at_its_own_cost_sells_nothing_when_no_unit_clears_your_margin",
-                     "Each_unit_at_its_own_cost_also_has_to_fetch_three_quarters_of_what_the_marked_market_pays",
+                     "Each_unit_at_its_own_cost_also_has_to_fetch_three_quarters_of_what_the_best_buyer_pays",
                      "Assert.Equal(Options.CostOfEachUnit, market.Rules.CostBasisMode);"))
             and all(one in TESTS for one in
                     ("Every_unit_number_survives_a_save_and_a_load",
@@ -16669,13 +16722,13 @@ def every_unit_keeps_a_row_and_an_age_and_may_sell_at_cost_once_it_has_waited():
                      "A_unit_past_its_age_sells_at_what_it_cost_while_Hold_cargo_for_the_best_market_keeps_the_rest",
                      "With_Sell_at_cost_after_at_0_a_unit_never_skips_its_margin_however_long_it_waited",
                      "A_unit_past_its_age_still_never_sells_for_less_than_it_cost",
-                     "The_marked_market_is_counted_unit_by_unit_so_a_unit_it_would_not_take_at_a_profit_is_never_held_for_it",
-                     "A_unit_past_its_age_is_never_held_for_the_marked_market"))
+                     "The_best_buyer_is_counted_unit_by_unit_so_a_unit_it_would_not_take_at_a_profit_is_never_held_for_it",
+                     "A_unit_past_its_age_is_never_held_for_the_best_buyer"))
             and "Every unit keeps a row of its own with the day you bought it" in README
             and "Sell at cost after, which ships at 30 days" in README
             and "Hold cargo for the best market counts unit by unit" in README)
 
-chk("1.99.0", "every unit keeps a row of its own with the day it was bought, a unit that waited past Sell at cost after may sell at what it cost with no margin and no Hold cargo for the best market, and the marked market is counted unit by unit",
+chk("1.99.0", "every unit keeps a row of its own with the day it was bought, a unit that waited past Sell at cost after may sell at what it cost with no margin and no Hold cargo for the best market, and the best other market is counted unit by unit",
     every_unit_keeps_a_row_and_an_age_and_may_sell_at_cost_once_it_has_waited())
 
 def a_sale_is_booked_against_the_dearest_unit_its_price_covers_and_food_kept_back_never_skips_the_mark():
@@ -16696,7 +16749,7 @@ def a_sale_is_booked_against_the_dearest_unit_its_price_covers_and_food_kept_bac
     return (all((walk, floor, took, passed, added, hand, covers, sell))
             and "int boughtLeft = Math.Min(remaining, basis.PaidLeft - basis.AgedLeft);" in sell
             and "Math.Min(remaining, basis.PaidLeft) - basis.AgedLeft" not in passes
-            and "Food_kept_back_with_units_past_their_age_sells_the_aged_units_and_holds_the_fresh_ones_for_the_marked_market" in SELLPASSTESTS
+            and "Food_kept_back_with_units_past_their_age_sells_the_aged_units_and_holds_the_fresh_ones_for_the_best_buyer" in SELLPASSTESTS
             and ordered(floor, "if (_ownCost) return TheDearestThatClears(price);", "_picked = NotPicked;",
                         "for (int at = _top; at >= _dearLow; at--)",
                         "if (LeftIn(at) <= 0 || price < _costs[at].Unit) continue;",
@@ -17720,7 +17773,7 @@ def the_log_says_why_the_mark_left_its_market_and_a_market_past_its_ceiling_wait
                         "string left = on ? LeftBecause(was, target, how, lostBefore, hour, cargoSame) : null;",
                         '" from " + was.Name + " because " + left', '"map marker taken off " + was.Name + " because " + left')
             and ordered(marker, "TheMarkedTownFirst(reachable, holder);", "if (holder != null && !how.HolderPriced)",
-                        "how.HolderLost = TheMarkLeftOut(holder, party, cargo, reachable, ref how);",
+                        "how.HolderLost = TheMarkLeftOut(holder, party, cargo, reachable, ref how, buyers);",
                         "how.Held = how.Best != null")
             and ordered(out, '" would pay too little for anything you carry to clear Minimum profit margin"',
                         "holder == party.CurrentSettlement || TradeActionBehavior.StillTheSameArrival(holder)",
@@ -17729,7 +17782,7 @@ def the_log_says_why_the_mark_left_its_market_and_a_market_past_its_ceiling_wait
                         "LedgerBehavior.VillageShut(holder)", "LedgerBehavior.IsHostile(holder)",
                         "if (purse <= 0)", "TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(holder), true)",
                         "if (!road)", "if (!Marks.WaitsPastTheCeiling(cap, straight, ride, road)) return null;",
-                        "Takings took = WhatItWouldFetch(holder, market, party, ride, cargo, purse, null);",
+                        "Takings took = WhatItWouldFetch(holder, market, party, ride, cargo, purse, null, buyers);",
                         "how.HolderPriced = true;", "how.HolderPastAllowance = true;",
                         '" day(s) the marked market may go"')
             and "how.Best = " not in out and "bar" not in out
@@ -18187,7 +18240,10 @@ def with_live_world_prices_off_the_marker_goes_only_on_prices_you_have_seen():
                         "int purse = PurseOf(s);", "if (purse <= 0) { how.NoTill++; continue; }")
             and ordered(left, "if (!Options.Current.Omniscient && !SeenAnyOf(cargo, holder))",
                         "int purse = PurseOf(holder);")
-            and "int purse = Marker.PurseOf(mark);" in sell_pass()
+            and "Marker.BestBuyersOf(new EquipmentElement(item), units).Besides(_pass.Site);" in sell_pass()
+            and "int purse = PurseOf(town);" in method_body(marker, "internal static Buyers BestBuyersOf")
+            and "Paying pays = WhatThatMarketPays(town, market, el, party, ride);" in
+                method_body(marker, "internal static Buyers BestBuyersOf")
             and marker.count("Priced.At(") == 1
             and marker.count(".Gold") == 2
             and '", its purse left unread as Live world prices is off"' in why
@@ -18854,7 +18910,7 @@ def the_marker_counts_only_what_the_merchant_can_pay_for_whole():
             and "took.Value + fetched >= gold" not in fetch
             and "if (took.PurseCapped) break;" not in fetch
             and "so the lines above come to more" not in S['Marker.cs']
-            and ordered(marker, "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);",
+            and ordered(marker, "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null, buyers);",
                         "if (took.Value <= 0L && took.PurseCapped)", "how.TooPoor++;",
                         "if (s == holder) how.HolderTooPoor = true;",
                         "if (took.Value <= 0L) { how.Refused++; continue; }")
@@ -19554,7 +19610,7 @@ chk("1.104.15", "what a caravan is counted as leaving in a town is priced for th
 
 def a_save_loaded_inside_a_market_counts_as_arriving_there():
     launched = method_body(S['Trading.cs'], "private void OnSessionLaunched")
-    return (ordered(launched, "if (inside != null) Marker.NoteALoadInside(inside);",
+    return (ordered(launched, "if (inside != null) _visitTradeAllowed = CanTradeHere(inside);",
                     "if (inside != null) _lastArrivalAt = inside.StringId;",
                     "if (inside != null) StillTheSameSitting(inside);")
             and "NoteThisArrival(" not in launched)
@@ -19738,6 +19794,102 @@ def a_sale_names_the_best_other_buyer_within_the_travel_ceilings():
 
 chk("1.104.20", "each good sold is written up with the best other buyer within your travel ceilings, its price a unit and how far away it is",
     a_sale_names_the_best_other_buyer_within_the_travel_ceilings())
+
+
+def each_good_is_held_for_its_own_best_other_market():
+    keeps = method_body(S['Passes.cs'], "internal static ForTheMark[] WhatTheMarkKeeps")
+    shares = method_body(S['Rules.cs'], "internal static int[] SharePurses")
+    return (keeps and shares
+            and "int[] kept = TradeRules.SharePurses(buyers, purses, rungs, here, bought, s.HoldCargoForBestMarket);" in keeps
+            and "SharePurse(purse, rungs" not in keeps
+            and ordered(shares, "var shared = new HashSet<string>(StringComparer.Ordinal);",
+                        "if (rungs[g] == null || buyer == null || !shared.Add(buyer)) continue;",
+                        "var theirs = new int[goods][];",
+                        "if (rungs[other] != null && buyers[other] == buyer) theirs[other] = rungs[other];",
+                        "int[] took = SharePurse(purse, theirs, here, bought, share);",
+                        "if (theirs[other] != null) kept[other] = took[other];", "return kept;")
+            and "Each_best_buyer_spends_only_its_own_purse_on_the_goods_held_for_it" in FLOORTESTS
+            and all(one in SELLPASSTESTS for one in
+                    ("Each_good_is_held_for_its_own_best_buyer_and_draws_only_on_that_buyer_s_gold",
+                     "Two_goods_with_the_same_best_buyer_still_share_its_gold")))
+
+chk("1.105.0", "Hold cargo for the best market holds each good for its own best other market, and spends each market's gold only on the goods held for that market",
+    each_good_is_held_for_its_own_best_other_market())
+
+
+def the_marker_weighs_a_market_on_what_the_hold_lets_it_sell_there():
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    buyers = method_body(S['Marker.cs'], "private static Buyers[] BuyersFor")
+    other = method_body(S['Marker.cs'], "private static int[] WhatTheBestOtherBuyerTakes")
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    unbought, bought = marker_passes()
+    return (marker and buyers and other and fetch and bought
+            and ordered(marker, "Buyers[] buyers = BuyersFor(cargo);",
+                        "how.Afresh = OutEarnsTheMark(reachable, holder, party, cargo, how.Compared, buyers);",
+                        "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null, buyers);",
+                        "how.HolderLost = TheMarkLeftOut(holder, party, cargo, reachable, ref how, buyers);")
+            and len(re.findall(r'(?<!Takings )WhatItWouldFetch\(([^;]*)\);', S['Marker.cs'])) == 5
+            and all(re.sub(r'\s+', ' ', call).endswith(", buyers")
+                    for call in re.findall(r'(?<!Takings )WhatItWouldFetch\(([^;]*)\);', S['Marker.cs']))
+            and ordered(buyers, "if (Options.Current.HoldCargoForBestMarket <= 0f) return null;",
+                        "buyers[at] = BestBuyersOf(cargo[at].item, cargo[at].amount);")
+            and ordered(other, "if (other.Town == null || other.Pays == null || units <= 0) return null;",
+                        "TradeMath.DearFirst fresh = walk.WithoutTheAged();",
+                        "int least = eachAtItsOwnCost ? fresh.LeastItAsks() : worth;",
+                        "int[] there = TradeMath.WhatTheMarkTakes(other.Pays.At, units, least, margin, other.Purse);",
+                        "return eachAtItsOwnCost ? TradeRules.WhatTheWalkTakes(there, fresh, margin) : there;")
+            and "float share = Options.Current.HoldCargoForBestMarket;" in fetch
+            and "buyers[at]" not in unbought
+            and ordered(bought, "if (!walk.PickedHasAged && TradeRules.HeldForTheMark(price, floor, fresh, there?.Length ?? 0))",
+                        "lines[at].Held = fresh;", "lines[at].HeldFor = other.Town;",
+                        "lines[at].There = there[fresh - 1];", "lines[at].Here = price;",
+                        "if (!walk.KeepOnlyTheAged() || !walk.Clears(price, Options.Current.MinProfitMargin)) break;",
+                        "if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }",
+                        "booked += walk.Took();")
+            and ordered(sell_pass(), "if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))",
+                        "market.HeldBack(at, boughtLeft, there[boughtLeft - 1], price);",
+                        "if (basis.KeepOnlyTheAged()) continue;"))
+
+chk("1.105.0", "the map marker weighs each market only on what Hold cargo for the best market lets it sell there against the best other market in your travel ceilings, still selling the units past Sell at cost after",
+    the_marker_weighs_a_market_on_what_the_hold_lets_it_sell_there())
+
+
+def the_marker_log_names_what_the_hold_keeps_from_the_marked_market():
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    ultra = method_body(S['Marker.cs'], "private static void Ultra")
+    return (fetch and ultra
+            and ordered(fetch, "foreach (int at in sold)",
+                        "for (int at = 0; bill != null && at < cargo.Count; at++)",
+                        "if (line.Held <= 0 || line.HeldFor == null || item.Item == null) continue;",
+                        "Held = line.Held,", "HeldFor = line.HeldFor,", "There = line.There,", "Here = line.Here",
+                        "return took;")
+            and ordered(ultra, "Share share = how.Bill[i];", "if (share.HeldFor != null)",
+                        '" you carry held for " + Tongue.Named(share.HeldFor.Name, share.HeldFor.StringId) +',
+                        '", which pays at least " + share.There + " each for them, against " + share.Here +',
+                        '" here (Hold cargo for the best market)");', "continue;"))
+
+chk("1.105.0", "the good by good breakdown of the marked market in TradeLord.log names each good Hold cargo for the best market keeps, how many, for which market and at what price",
+    the_marker_log_names_what_the_hold_keeps_from_the_marked_market())
+
+
+def the_marker_prices_each_market_once_a_weighing():
+    update = method_body(S['Marker.cs'], "internal static void Update")
+    pays = method_body(S['Marker.cs'], "private static Paying WhatThatMarketPays")
+    return (update and pays
+            and "private static Dictionary<(string site, string good), Paying> _priced;" in S['Marker.cs']
+            and ordered(update, "_priced = new Dictionary<(string site, string good), Paying>();",
+                        "try { if (on) target = TheMarkFairlyWeighed(out how); }",
+                        "finally { _priced = null; }")
+            and S['Marker.cs'].count("_priced = ") == 2
+            and ordered(pays, "if (_priced == null || el.Item == null) return new Paying(site, market, el, party, ride);",
+                        'string good = el.ItemModifier == null ? el.Item.StringId : el.Item.StringId + "@" + el.ItemModifier.StringId;',
+                        "if (!_priced.TryGetValue((site.StringId, good), out Paying pays))",
+                        "_priced[(site.StringId, good)] = pays = new Paying(site, market, el, party, ride);",
+                        "return pays;")
+            and S['Marker.cs'].count("new Paying(") == 2)
+
+chk("1.105.0", "the map marker prices each market for each good once a weighing, however often the best other market is asked for, and drops those prices once the weighing ends",
+    the_marker_prices_each_market_once_a_weighing())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

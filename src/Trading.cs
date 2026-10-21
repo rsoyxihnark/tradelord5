@@ -976,7 +976,6 @@ namespace TradeLord
                 Marker.ForgetTheRead();
                 Settlement inside = MobileParty.MainParty?.CurrentSettlement;
                 if (inside != null) _visitTradeAllowed = CanTradeHere(inside);
-                if (inside != null) Marker.NoteALoadInside(inside);
                 if (inside != null) _lastArrivalAt = inside.StringId;
                 if (inside != null) StillTheSameSitting(inside);
                 Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));
@@ -1056,7 +1055,6 @@ namespace TradeLord
             if (party != MobileParty.MainParty) return;
             Guard.Run("Action.OnSettlementEntered", () =>
             {
-                if (!StillTheSameArrival(settlement)) Marker.NoteTheWalkIn(settlement);
                 Counter.Forget();
                 PriceTrace.Say(settlement, "walked in, before anything was traded");
                 Hindsight.Score(settlement);
@@ -1883,10 +1881,6 @@ namespace TradeLord
 
             public int UnpaidWorth(int at) => TradePolicy.UnpaidWorth(Item(at));
 
-            private bool _markRead;
-            private Settlement _mark;
-            private float _markRide;
-            private int _markPurse;
             private bool _aheadCopied;
             private Dictionary<ItemObject, int> _keepBackAhead;
             private Dictionary<ItemObject, int> _awaitedAhead;
@@ -1905,35 +1899,30 @@ namespace TradeLord
                 return Math.Max(0, YoursToSell(at) - keep);
             }
 
-            private Settlement TheMark()
+            private Buyer BuyerFor(int at)
             {
-                if (!_markRead)
+                ItemObject item = Item(at);
+                if (item == null) return default(Buyer);
+                if (!_pass.Elsewhere.TryGetValue(item, out Buyer buyer))
                 {
-                    _markRead = true;
-                    Settlement mark = Marker.TheMarkToHoldFor(_pass.Site);
-                    if (mark != null)
-                    {
-                        float ride = Travel.EstimateDaysFromParty(mark);
-                        int purse = Marker.PurseOf(mark);
-                        if (!TradeMath.OutOfReach(ride) && purse > 0)
-                        {
-                            _mark = mark;
-                            _markRide = ride;
-                            _markPurse = purse;
-                        }
-                    }
+                    int units = Math.Max(1, LedgerBehavior.InAll(_pass.Party.ItemRoster, item));
+                    buyer = Marker.BestBuyersOf(new EquipmentElement(item), units).Besides(_pass.Site);
+                    _pass.Elsewhere[item] = buyer;
                 }
-                return _mark;
+                return buyer;
             }
 
-            public int ResalePurse() => TheMark() == null ? 0 : _markPurse;
+            public int ResalePurse(int at) => BuyerFor(at).Town == null ? 0 : BuyerFor(at).Purse;
+
+            public string ResaleBuyer(int at) => BuyerFor(at).Town?.StringId;
 
             public bool ResaleMarket(int at, int units, int worth, out int[] rungs)
             {
                 rungs = null;
-                if (TheMark() == null) return false;
-                rungs = Marker.WhatTheMarkTakes(_mark, _plan[at].EquipmentElement, units, worth,
-                                                _markRide, _markPurse);
+                Buyer buyer = BuyerFor(at);
+                if (buyer.Town == null) return false;
+                rungs = Marker.WhatTheMarkTakes(buyer.Town, _plan[at].EquipmentElement, units, worth,
+                                                buyer.Days, buyer.Purse);
                 return rungs.Length > 0;
             }
 
@@ -1942,13 +1931,14 @@ namespace TradeLord
             public void HeldBack(int at, int units, int there, int here)
             {
                 ItemObject item = Item(at);
-                if (item == null || _mark == null || units <= 0) return;
+                Settlement buyer = BuyerFor(at).Town;
+                if (item == null || buyer == null || units <= 0) return;
                 if (_pass.Held.TryGetValue(item, out var was))
                 {
                     units += was.units;
                     there = Math.Min(there, was.there);
                 }
-                _pass.Held[item] = (Tongue.Named(_mark.Name, _mark.StringId), units, there, here);
+                _pass.Held[item] = (Tongue.Named(buyer.Name, buyer.StringId), units, there, here);
             }
 
             public int PriceToSell(int at) => _pass.Price(_plan[at].EquipmentElement, selling: true);
@@ -1983,6 +1973,7 @@ namespace TradeLord
                 long number = ledger == null ? 0L : ledger.RecordSale(PaidKeyAt(at), 1, unitPaid, out bought, out from);
                 ItemObject item = Item(at);
                 if (item == null) return;
+                Settlement buyer = bestPays > 0 ? BuyerFor(at).Town : null;
                 float margin = Options.Current.MinProfitMargin;
                 float share = Options.Current.HoldCargoForBestMarket;
                 int waited = bought > 0f ? (int)Math.Floor(Today - bought) : -1;
@@ -1999,10 +1990,10 @@ namespace TradeLord
                                   ? ", at least the " + TradeMath.LeastThatClears(unitPaid, margin) +
                                     " it needed to clear your margin"
                                   : "") +
-                          (bestPays > 0 && _mark != null
+                          (bestPays > 0 && buyer != null
                               ? ", and at least the " + TradeRules.BestMarketFloor(bestPays, share) + " that is " +
                                 Math.Round(share * 100f) + "% of the " + bestPays + " " +
-                                Tongue.Named(_mark.Name, _mark.StringId) + " would pay for it"
+                                Tongue.Named(buyer.Name, buyer.StringId) + " would pay for it"
                               : "") +
                           LedgerBehavior.TradeXpNote(from, _plan[at].EquipmentElement));
             }

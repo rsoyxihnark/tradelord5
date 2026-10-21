@@ -137,10 +137,6 @@ namespace TradeLord
             if (leftOutNow != null) owed.Add(leftOutNow);
         }
 
-        internal static bool HoldsFor(string markId, string hereId, string walkedIntoId, string markedOnTheWayInId) =>
-            markId != null && markId != hereId &&
-            !(hereId != null && hereId == walkedIntoId && markedOnTheWayInId == hereId);
-
         internal static bool WorthSayingAgain(long value, int units, bool held,
                                               long saidValue, int saidUnits, bool saidHeld) =>
             value != saidValue || units != saidUnits || held != saidHeld;
@@ -845,6 +841,27 @@ namespace TradeLord
                 if (rungs[g][u] > left) { shut[g] = true; continue; }
                 left -= rungs[g][u];
                 kept[g]++;
+            }
+            return kept;
+        }
+
+        internal static int[] SharePurses(string[] buyers, int[] purses, int[][] rungs, int[][] here, int[] bought,
+                                          float share)
+        {
+            int goods = rungs == null ? 0 : rungs.Length;
+            var kept = new int[goods];
+            var shared = new HashSet<string>(StringComparer.Ordinal);
+            for (int g = 0; g < goods; g++)
+            {
+                string buyer = buyers != null && g < buyers.Length ? buyers[g] : null;
+                if (rungs[g] == null || buyer == null || !shared.Add(buyer)) continue;
+                var theirs = new int[goods][];
+                for (int other = g; other < goods && other < buyers.Length; other++)
+                    if (rungs[other] != null && buyers[other] == buyer) theirs[other] = rungs[other];
+                int purse = purses != null && g < purses.Length ? purses[g] : 0;
+                int[] took = SharePurse(purse, theirs, here, bought, share);
+                for (int other = g; other < goods; other++)
+                    if (theirs[other] != null) kept[other] = took[other];
             }
             return kept;
         }

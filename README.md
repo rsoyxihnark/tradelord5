@@ -55,7 +55,7 @@
 - ✅ What this means says when your gold reserve is what is stopping you buying
 - ✅ Click any market to jump the camera there and pin a marker on it, and a pin comes off by itself once TradeLord has traded in that market
 - ✅ The best market for the cargo you are carrying, a town or a village, marked on the map for you, and the marker keeps up with you as you ride rather than waiting until you next enter or leave a settlement
-- ✅ It counts only the goods it would really sell there, the ones that clear Minimum profit margin, so it never sends you somewhere it will then refuse to sell
+- ✅ It counts only the goods it would really sell there, the ones that clear Minimum profit margin and Hold cargo for the best market, so it never sends you somewhere it will then refuse to sell
 - ✅ With Live world prices on, it works through the richest markets first and stops as soon as none of the rest could outpay the one it has found, so riding across Calradia costs it very little
 - ✅ With Live world prices on, it reads every market's price live each time it weighs one, so the marker is never pointing at a market on a price it read hours ago
 - ✅ With Live world prices off, it weighs only the markets where you have seen a price for what you carry, at that price, and never reads their purse
@@ -121,9 +121,9 @@
 - ✅ When the gold left after the goods before it buys fewer units than a good was weighed on, the market is picked again for what it can still buy
 - ✅ Holds trade goods and livestock you never paid for, the ones a town event hands you or a quest leaves in your bags, until a market beats what the cheapest market it knows would have charged for them by your margin
 - ✅ Goods you never paid for are never given away at the first stall that will take them
-- ✅ Holds a good you bought for the market marked on your map rather than selling it one town short for much less: Hold cargo for the best market sells it on the way only for at least 75% of what that market pays
-- ✅ Hold cargo for the best market holds only as many as the marked market would buy, 0% holds nothing, and looted gear goes to the first market that can pay for it
-- ✅ Hold cargo for the best market holds nothing in the marked market itself, or while Auto-mark best sell market on map is off
+- ✅ Holds a good you bought for a better market rather than selling it for much less: Hold cargo for the best market sells it only for at least 75% of what the best other market within your travel ceilings pays
+- ✅ Hold cargo for the best market holds only as many as the best other market would buy with its own gold, 0% holds nothing, and looted gear goes to the first market that can pay for it
+- ✅ Hold cargo for the best market holds in every market, the marked one included, and with Auto-mark best sell market on map on or off
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose
 - ✅ What you never bought, loot included, is sold first and what you bought after it, so the merchant's gold goes to the loot first
 - ✅ It buys only once both are sold, so the cargo room and gold they free go straight into what it buys
@@ -216,7 +216,7 @@
 - ✅ With Each unit's own price, the dearest unit the price beats by your margin sells first, then the next dearest, and a unit the price cannot beat stays in your cargo
 - ✅ With Each unit's own price, of two units bought at one price the older one sells first
 - ✅ With Each unit's own price, Sell at cost after, which ships at 30 days, lets a unit that has waited that long sell for what it cost you, with no margin and no Hold cargo for the best market
-- ✅ With Each unit's own price, Hold cargo for the best market counts unit by unit which of your units the marked market would take at a profit, and never holds a unit waiting past Sell at cost after
+- ✅ With Each unit's own price, Hold cargo for the best market counts unit by unit which of your units the best other market would take at a profit, and never holds a unit waiting past Sell at cost after
 - ✅ TradeLord.log names every unit TradeLord sells by its number, with what it cost, how many days it waited, what it fetched and the least it had to fetch
 - ✅ TradeLord.log also names every unit you sell on the trade screen by its number, with what it cost and what it fetched
 - ✅ The profit reported is what each unit you bought fetched over what that unit cost you, whichever cost you pick

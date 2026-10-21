@@ -36,6 +36,7 @@ namespace TradeLord.Tests
             internal bool Modified;
             internal int Reserved;
             internal int Falls;
+            internal string Buyer = "best";
         }
 
         private sealed class FakeMarket : ISellingMarket
@@ -57,7 +58,8 @@ namespace TradeLord.Tests
             internal int WorthAsked;
             internal int AskedFor;
             internal int AskedWorth;
-            internal int MarkPurse = 1000000;
+            internal int BuyerPurse = 1000000;
+            internal readonly Dictionary<string, int> Purses = new Dictionary<string, int>();
             internal readonly List<(string good, int units, int there, int here)> Held =
                 new List<(string good, int units, int there, int here)>();
 
@@ -149,7 +151,10 @@ namespace TradeLord.Tests
                 return said.Allowed ? Math.Max(0, YoursToSell(at) - said.KeepCount) : 0;
             }
 
-            public int ResalePurse() => MarkPurse;
+            public int ResalePurse(int at) =>
+                Purses.TryGetValue(Cargo[at].Buyer, out int purse) ? purse : BuyerPurse;
+
+            public string ResaleBuyer(int at) => Cargo[at].Buyer;
 
             public bool ResaleMarket(int at, int units, int worth, out int[] rungs)
             {
@@ -162,7 +167,7 @@ namespace TradeLord.Tests
                     int price = Cargo[at].Ladder != null
                         ? (u < Cargo[at].Ladder.Length ? Cargo[at].Ladder[u] : 0)
                         : (u < Cargo[at].Takes ? Cargo[at].Resale : 0);
-                    if (price <= 0 || paid + price > MarkPurse) break;
+                    if (price <= 0 || paid + price > ResalePurse(at)) break;
                     paid += price;
                     took.Add(price);
                 }
@@ -378,7 +383,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Holding_out_for_the_marked_market_keeps_the_cargo_you_bought()
+        public void Holding_out_for_the_best_buyer_keeps_the_cargo_you_bought()
         {
             var market = new FakeMarket();
             Bought(market, 3, price: 200, paid: 100, there: 300);
@@ -396,7 +401,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Three_quarters_of_what_the_marked_market_pays_is_where_the_hold_lets_go()
+        public void Three_quarters_of_what_the_best_buyer_pays_is_where_the_hold_lets_go()
         {
             Assert.Equal(0.75f, new Options().HoldCargoForBestMarket);
             var at = new FakeMarket();
@@ -430,7 +435,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Loot_is_never_held_for_the_marked_market()
+        public void Loot_is_never_held_for_the_best_buyer()
         {
             var market = new FakeMarket();
             Load load = market.Add(Cargo("iron"), amount: 3, price: 200);
@@ -441,7 +446,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Only_as_many_as_the_marked_market_would_buy_are_held()
+        public void Only_as_many_as_the_best_buyer_would_buy_are_held()
         {
             var market = new FakeMarket();
             Bought(market, 5, price: 200, paid: 100, there: 300).Takes = 2;
@@ -484,7 +489,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_marked_market_is_asked_about_the_bought_units_at_the_margin_they_are_sold_against()
+        public void The_best_buyer_is_asked_about_the_bought_units_at_the_margin_they_are_sold_against()
         {
             var market = new FakeMarket();
             Bought(market, 10, price: 200, paid: 100, there: 300).Takes = 6;
@@ -505,7 +510,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_units_the_marked_market_pays_most_for_are_held_and_the_rest_sell_here()
+        public void The_units_the_best_buyer_pays_most_for_are_held_and_the_rest_sell_here()
         {
             var market = new FakeMarket();
             Bought(market, 10, price: 160, paid: 100, there: 0).Ladder =
@@ -527,7 +532,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_units_the_marked_market_pays_little_for_sell_here_even_when_its_average_is_high()
+        public void The_units_the_best_buyer_pays_little_for_sell_here_even_when_its_average_is_high()
         {
             var market = new FakeMarket();
             Bought(market, 10, price: 180, paid: 100, there: 0).Ladder =
@@ -538,9 +543,9 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_marked_market_spends_its_gold_first_on_the_good_it_pays_most_for_over_this_market()
+        public void The_best_buyer_spends_its_gold_first_on_the_good_it_pays_most_for_over_this_market()
         {
-            var market = new FakeMarket { MarkPurse = 5000 };
+            var market = new FakeMarket { BuyerPurse = 5000 };
             BoughtAs(market, "iron", 20, price: 180, paid: 100, there: 250);
             BoughtAs(market, "velvet", 10, price: 120, paid: 100, there: 400);
             Run run = Sell(market);
@@ -550,9 +555,9 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Goods_that_miss_your_margin_here_draw_first_on_the_gold_of_the_marked_market()
+        public void Goods_that_miss_your_margin_here_draw_first_on_the_gold_of_the_best_buyer()
         {
-            var market = new FakeMarket { MarkPurse = 5000 };
+            var market = new FakeMarket { BuyerPurse = 5000 };
             BoughtAs(market, "iron", 20, price: 180, paid: 100, there: 250);
             BoughtAs(market, "velvet", 10, price: 110, paid: 100, there: 400);
             Run run = Sell(market);
@@ -562,9 +567,9 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void No_more_is_held_than_the_marked_market_has_the_gold_to_buy()
+        public void No_more_is_held_than_the_best_buyer_has_the_gold_to_buy()
         {
-            var market = new FakeMarket { MarkPurse = 3000 };
+            var market = new FakeMarket { BuyerPurse = 3000 };
             BoughtAs(market, "iron", 10, price: 150, paid: 100, there: 250);
             BoughtAs(market, "tools", 10, price: 150, paid: 100, there: 250);
             Run run = Sell(market);
@@ -575,18 +580,46 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_marked_market_with_no_gold_holds_nothing()
+        public void Each_good_is_held_for_its_own_best_buyer_and_draws_only_on_that_buyer_s_gold()
         {
-            var market = new FakeMarket { MarkPurse = 0 };
+            var market = new FakeMarket();
+            market.Purses["town_A"] = 750;
+            market.Purses["town_B"] = 750;
+            BoughtAs(market, "iron", 10, price: 150, paid: 100, there: 250).Buyer = "town_A";
+            BoughtAs(market, "tools", 10, price: 150, paid: 100, there: 250).Buyer = "town_B";
+            Run run = Sell(market);
+            Assert.Equal(14, run.Units);
+            Assert.Contains(("iron", 3, 250, 150), market.Held);
+            Assert.Contains(("tools", 3, 250, 150), market.Held);
+        }
+
+        [Fact]
+        public void Two_goods_with_the_same_best_buyer_still_share_its_gold()
+        {
+            var market = new FakeMarket();
+            market.Purses["town_A"] = 750;
+            BoughtAs(market, "iron", 10, price: 150, paid: 100, there: 250).Buyer = "town_A";
+            BoughtAs(market, "tools", 10, price: 150, paid: 100, there: 250).Buyer = "town_A";
+            Run run = Sell(market);
+            Assert.Equal(17, run.Units);
+            int held = 0;
+            foreach (var one in market.Held) held += one.units;
+            Assert.Equal(3, held);
+        }
+
+        [Fact]
+        public void A_best_buyer_with_no_gold_holds_nothing()
+        {
+            var market = new FakeMarket { BuyerPurse = 0 };
             Bought(market, 3, price: 200, paid: 100, there: 300);
             Assert.Equal(3, Sell(market).Units);
             Assert.Empty(market.Held);
         }
 
         [Fact]
-        public void Units_this_market_cannot_take_count_against_the_gold_of_the_marked_market()
+        public void Units_this_market_cannot_take_count_against_the_gold_of_the_best_buyer()
         {
-            var market = new FakeMarket { MarkPurse = 2500 };
+            var market = new FakeMarket { BuyerPurse = 2500 };
             BoughtAs(market, "iron", 10, price: 200, paid: 100, there: 250).Falls = 20;
             BoughtAs(market, "tools", 10, price: 150, paid: 100, there: 250);
             Run run = Sell(market);
@@ -596,11 +629,11 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Goods_bought_here_this_visit_count_against_the_gold_of_the_marked_market()
+        public void Goods_bought_here_this_visit_count_against_the_gold_of_the_best_buyer()
         {
             var books = new Books();
             books.NoteBought("velvet", 100);
-            var market = new FakeMarket { MarkPurse = 3000 };
+            var market = new FakeMarket { BuyerPurse = 3000 };
             BoughtAs(market, "velvet", 10, price: 120, paid: 100, there: 300);
             BoughtAs(market, "iron", 10, price: 150, paid: 100, there: 250);
             Run run = Sell(market, books: books);
@@ -609,7 +642,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Two_qualities_of_one_good_share_what_the_marked_market_would_buy()
+        public void Two_qualities_of_one_good_share_what_the_best_buyer_would_buy()
         {
             var market = new FakeMarket();
             int[] ladder = { 300, 300, 300, 300, 300, 100, 100, 100, 100, 100 };
@@ -658,7 +691,7 @@ namespace TradeLord.Tests
         [Fact]
         public void What_you_bought_is_sold_only_with_the_gold_this_market_has_left_after_the_loot()
         {
-            var market = new FakeMarket { MarkPurse = 1250, Till = 2190 };
+            var market = new FakeMarket { BuyerPurse = 1250, Till = 2190 };
             Load loot = market.Add(Cargo("sword"), 10, 200);
             loot.Worth = 100;
             Load iron = BoughtAs(market, "iron", 10, price: 200, paid: 100, there: 250);
@@ -674,9 +707,9 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_good_you_bought_that_the_marked_market_does_not_want_counts_against_this_market_s_gold()
+        public void A_good_you_bought_that_no_other_buyer_wants_counts_against_this_market_s_gold()
         {
-            var market = new FakeMarket { MarkPurse = 1250, Till = 2190 };
+            var market = new FakeMarket { BuyerPurse = 1250, Till = 2190 };
             BoughtAs(market, "grain", 10, price: 200, paid: 100, there: 250).Elsewhere = false;
             BoughtAs(market, "iron", 10, price: 200, paid: 100, there: 250);
             Load tools = BoughtAs(market, "tools", 5, price: 150, paid: 100, there: 250);
@@ -1149,7 +1182,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Each_unit_at_its_own_cost_also_has_to_fetch_three_quarters_of_what_the_marked_market_pays()
+        public void Each_unit_at_its_own_cost_also_has_to_fetch_three_quarters_of_what_the_best_buyer_pays()
         {
             var market = new FakeMarket();
             Load cloth = Bought(market, 3, price: 240, paid: 100, there: 300);
@@ -1243,7 +1276,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_marked_market_is_counted_unit_by_unit_so_a_unit_it_would_not_take_at_a_profit_is_never_held_for_it()
+        public void The_best_buyer_is_counted_unit_by_unit_so_a_unit_it_would_not_take_at_a_profit_is_never_held_for_it()
         {
             var market = new FakeMarket { Day = 100f };
             Load lemonade = market.Add(Cargo("lemonade"), amount: 3, price: 20);
@@ -1260,7 +1293,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void Food_kept_back_with_units_past_their_age_sells_the_aged_units_and_holds_the_fresh_ones_for_the_marked_market()
+        public void Food_kept_back_with_units_past_their_age_sells_the_aged_units_and_holds_the_fresh_ones_for_the_best_buyer()
         {
             var market = new FakeMarket { Day = 100f };
             Load cheese = market.Add(Ration("cheese"), amount: 10, price: 200);
@@ -1282,7 +1315,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_unit_past_its_age_is_never_held_for_the_marked_market()
+        public void A_unit_past_its_age_is_never_held_for_the_best_buyer()
         {
             var market = new FakeMarket { Day = 100f };
             Load lemonade = market.Add(Cargo("lemonade"), amount: 3, price: 20);

@@ -2790,14 +2790,14 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_marked_market_takes_the_units_that_clear_your_margin_at_what_it_pays_for_each()
+        public void The_best_buyer_takes_the_units_that_clear_your_margin_at_what_it_pays_for_each()
         {
             int[] rungs = { 415, 400, 380, 300, 110 };
             Assert.Equal(new[] { 415, 400, 380, 300 }, TradeMath.WhatTheMarkTakes(u => rungs[u], 5, 100, 0.15f, -1));
         }
 
         [Fact]
-        public void The_marked_market_takes_no_more_than_its_purse_or_than_you_carry()
+        public void The_best_buyer_takes_no_more_than_its_purse_or_than_you_carry()
         {
             int[] rungs = { 415, 400, 380, 300 };
             Assert.Equal(new[] { 415, 400 }, TradeMath.WhatTheMarkTakes(u => rungs[u], 4, 100, 0.15f, 1000));
@@ -2805,7 +2805,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_marked_market_that_pays_nothing_or_misses_your_margin_takes_nothing()
+        public void A_best_buyer_that_pays_nothing_or_misses_your_margin_takes_nothing()
         {
             Assert.Empty(TradeMath.WhatTheMarkTakes(u => 0, 3, 100, 0.15f, -1));
             Assert.Empty(TradeMath.WhatTheMarkTakes(u => 114, 3, 100, 0.15f, -1));

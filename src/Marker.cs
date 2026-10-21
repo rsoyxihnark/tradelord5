@@ -86,9 +86,6 @@ namespace TradeLord
 
         private static readonly HashSet<string> _owedAFairLook = new HashSet<string>(System.StringComparer.Ordinal);
 
-        private static string _walkedInto;
-        private static string _markedOnTheWayIn;
-
         private static int _hour = -1;
         private static Vec2 _at;
         private const float MovedFar = 100f;
@@ -168,8 +165,6 @@ namespace TradeLord
             _tracked = null;
             _picked = null;
             _owedAFairLook.Clear();
-            _walkedInto = null;
-            _markedOnTheWayIn = null;
             _hour = -1;
             _markedId = null;
             _markedValue = 0L;
@@ -213,6 +208,10 @@ namespace TradeLord
             internal int Paid;
             internal long Cost;
             internal long Fetched;
+            internal int Held;
+            internal Settlement HeldFor;
+            internal int There;
+            internal int Here;
         }
 
         private struct Weighing
@@ -295,7 +294,9 @@ namespace TradeLord
             Reckoning how = default(Reckoning);
             bool on = Options.Current.MarkBestSellTownOnMap;
             long started = System.Diagnostics.Stopwatch.GetTimestamp();
-            if (on) target = TheMarkFairlyWeighed(out how);
+            _priced = new Dictionary<(string site, string good), Paying>();
+            try { if (on) target = TheMarkFairlyWeighed(out how); }
+            finally { _priced = null; }
             how.Took = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /
                        System.Diagnostics.Stopwatch.Frequency;
 
@@ -651,6 +652,14 @@ namespace TradeLord
                     for (int i = 0; i < how.Bill.Count; i++)
                     {
                         Share share = how.Bill[i];
+                        if (share.HeldFor != null)
+                        {
+                            said.Add("    " + share.Good + ": " + share.Held + " of the " + share.Amount +
+                                     " you carry held for " + Tongue.Named(share.HeldFor.Name, share.HeldFor.StringId) +
+                                     ", which pays at least " + share.There + " each for them, against " + share.Here +
+                                     " here (Hold cargo for the best market)");
+                            continue;
+                        }
                         said.Add("    " + share.Good + ": " + share.Moved + " of the " + share.Amount +
                                  " you carry, " + (share.Last == share.Price
                                      ? share.Price + " a unit"
@@ -756,9 +765,37 @@ namespace TradeLord
             return held;
         }
 
+        private static Dictionary<(string site, string good), Paying> _priced;
+
         private static Paying WhatThatMarketPays(Settlement site, SettlementComponent market,
-                                                 EquipmentElement el, MobileParty party, float ride) =>
-            new Paying(site, market, el, party, ride);
+                                                 EquipmentElement el, MobileParty party, float ride)
+        {
+            if (_priced == null || el.Item == null) return new Paying(site, market, el, party, ride);
+            string good = el.ItemModifier == null ? el.Item.StringId : el.Item.StringId + "@" + el.ItemModifier.StringId;
+            if (!_priced.TryGetValue((site.StringId, good), out Paying pays))
+                _priced[(site.StringId, good)] = pays = new Paying(site, market, el, party, ride);
+            return pays;
+        }
+
+        private static Buyers[] BuyersFor(
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)
+        {
+            if (Options.Current.HoldCargoForBestMarket <= 0f) return null;
+            var buyers = new Buyers[cargo.Count];
+            for (int at = 0; at < cargo.Count; at++) buyers[at] = BestBuyersOf(cargo[at].item, cargo[at].amount);
+            return buyers;
+        }
+
+        private static int[] WhatTheBestOtherBuyerTakes(Buyer other, int units, TradeMath.DearFirst walk, int worth,
+                                                        bool eachAtItsOwnCost)
+        {
+            if (other.Town == null || other.Pays == null || units <= 0) return null;
+            TradeMath.DearFirst fresh = walk.WithoutTheAged();
+            float margin = Options.Current.MinProfitMargin;
+            int least = eachAtItsOwnCost ? fresh.LeastItAsks() : worth;
+            int[] there = TradeMath.WhatTheMarkTakes(other.Pays.At, units, least, margin, other.Purse);
+            return eachAtItsOwnCost ? TradeRules.WhatTheWalkTakes(there, fresh, margin) : there;
+        }
 
         internal static Buyers BestBuyersOf(EquipmentElement el, int units)
         {
@@ -797,10 +834,11 @@ namespace TradeLord
         private static Takings WhatItWouldFetch(
             Settlement site, SettlementComponent market, MobileParty party, float ride,
             List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
-            int gold, List<Share> bill)
+            int gold, List<Share> bill, Buyers[] buyers)
         {
             Takings took = default(Takings);
             bool eachAtItsOwnCost = Options.Current.CostBasisMode == Options.CostOfEachUnit;
+            float share = Options.Current.HoldCargoForBestMarket;
             var order = new List<(Paying pays, long gain, int at)>(cargo.Count);
             var paying = new Paying[cargo.Count];
             var stacks = new int[cargo.Count];
@@ -862,6 +900,8 @@ namespace TradeLord
                 TradeMath.DearFirst walk = floors.WithoutTheUnknown();
                 int from = lines[at].Moved;
                 int paidFor = amount - unbought[at];
+                Buyer other = buyers == null || share <= 0f ? default(Buyer) : buyers[at].Besides(site);
+                int[] there = WhatTheBestOtherBuyerTakes(other, paidFor - walk.AgedLeft, walk, worth, eachAtItsOwnCost);
                 long fetched = 0L, booked = 0L;
                 int moved = 0;
                 for (int u = from; u < from + paidFor; u++)
@@ -869,6 +909,16 @@ namespace TradeLord
                     int price = pays.At(u);
                     if (price <= 0) break;
                     if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;
+                    int fresh = paidFor - moved - walk.AgedLeft;
+                    int floor = TradeRules.FloorForTheLast(there, fresh, share);
+                    if (!walk.PickedHasAged && TradeRules.HeldForTheMark(price, floor, fresh, there?.Length ?? 0))
+                    {
+                        lines[at].Held = fresh;
+                        lines[at].HeldFor = other.Town;
+                        lines[at].There = there[fresh - 1];
+                        lines[at].Here = price;
+                        if (!walk.KeepOnlyTheAged() || !walk.Clears(price, Options.Current.MinProfitMargin)) break;
+                    }
                     if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }
                     booked += walk.Took();
                     if (from + moved == 0) lines[at].Price = price;
@@ -903,6 +953,21 @@ namespace TradeLord
                     Paid = (int)System.Math.Round((double)line.Cost / line.Moved),
                     Cost = line.Cost,
                     Fetched = line.Fetched
+                });
+            }
+            for (int at = 0; bill != null && at < cargo.Count; at++)
+            {
+                Share line = lines[at];
+                EquipmentElement item = cargo[at].item;
+                if (line.Held <= 0 || line.HeldFor == null || item.Item == null) continue;
+                bill.Add(new Share
+                {
+                    Good = Tongue.Named(item.Item.Name, item.Item.StringId),
+                    Amount = cargo[at].amount,
+                    Held = line.Held,
+                    HeldFor = line.HeldFor,
+                    There = line.There,
+                    Here = line.Here
                 });
             }
             return took;
@@ -954,9 +1019,10 @@ namespace TradeLord
 
         private static float RateThere((Settlement s, SettlementComponent market, int gold, float days) one,
                                        MobileParty party,
-                                       List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)
+                                       List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
+                                       Buyers[] buyers)
         {
-            Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null);
+            Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null, buyers);
             if (took.Value <= 0L) return 0f;
             long total = took.Value > one.gold ? one.gold : took.Value;
             return TradeMath.PerDay(total - took.Cost, one.days);
@@ -965,7 +1031,7 @@ namespace TradeLord
         private static Settlement OutEarnsTheMark(
             List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, Settlement holder,
             MobileParty party, List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
-            List<string> compared)
+            List<string> compared, Buyers[] buyers)
         {
             int mine = -1;
             for (int at = 0; at < reachable.Count; at++)
@@ -980,8 +1046,8 @@ namespace TradeLord
                 if (!_owedAFairLook.Contains(s.StringId)) continue;
                 compared.Add(s.StringId);
                 if (mine < 0) continue;
-                if (!priced) { marked = RateThere(reachable[mine], party, cargo); priced = true; }
-                float rate = RateThere(reachable[at], party, cargo);
+                if (!priced) { marked = RateThere(reachable[mine], party, cargo, buyers); priced = true; }
+                float rate = RateThere(reachable[at], party, cargo, buyers);
                 if (!Marks.OutEarns(rate, marked) || (back != null && rate <= best)) continue;
                 best = rate;
                 back = s;
@@ -1015,6 +1081,7 @@ namespace TradeLord
             var cargo = WhatYouCarryToSell(party);
             how.Carried = cargo.Count;
             if (cargo.Count == 0) return null;
+            Buyers[] buyers = BuyersFor(cargo);
 
             var reachable = new List<(Settlement s, SettlementComponent market, int gold, float days)>();
             foreach (Settlement s in Settlement.All)
@@ -1043,7 +1110,7 @@ namespace TradeLord
             if (holder != null && _owedAFairLook.Count > 0)
             {
                 how.Compared = new List<string>();
-                how.Afresh = OutEarnsTheMark(reachable, holder, party, cargo, how.Compared);
+                how.Afresh = OutEarnsTheMark(reachable, holder, party, cargo, how.Compared, buyers);
             }
             TheMarkedTownFirst(reachable, holder);
             if (ultra) how.Board = new List<Weighing>();
@@ -1054,7 +1121,7 @@ namespace TradeLord
                 var (s, market, gold, ride) = reachable[at];
                 if (TradeMath.PerDay(gold, ride) <= bar) break;
                 how.Told++;
-                Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);
+                Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null, buyers);
                 if (took.Value <= 0L && took.PurseCapped)
                 {
                     how.TooPoor++;
@@ -1110,19 +1177,20 @@ namespace TradeLord
                 { how.RunnerUpRate = rate; how.RunnerUpValue = total; how.RunnerUp = s; }
             }
             if (holder != null && !how.HolderPriced)
-                how.HolderLost = TheMarkLeftOut(holder, party, cargo, reachable, ref how);
+                how.HolderLost = TheMarkLeftOut(holder, party, cargo, reachable, ref how, buyers);
             how.Held = how.Best != null && how.Best == holder && how.RunnerUpRate > how.Rate;
             how.Left = reachable.Count - how.Told;
             if (ultra && how.Best != null)
             {
                 how.Bill = new List<Share>();
-                WhatItWouldFetch(how.Best, how.Best.SettlementComponent, party, how.Days, cargo, how.Purse, how.Bill);
+                WhatItWouldFetch(how.Best, how.Best.SettlementComponent, party, how.Days, cargo, how.Purse, how.Bill,
+                                 buyers);
             }
             if (ultra && how.HolderPriced && how.Best != holder)
             {
                 how.HolderBill = new List<Share>();
                 WhatItWouldFetch(holder, holder.SettlementComponent, party, how.HolderDays, cargo, how.HolderPurse,
-                                 how.HolderBill);
+                                 how.HolderBill, buyers);
             }
             return how.Best;
         }
@@ -1130,7 +1198,8 @@ namespace TradeLord
         private static string TheMarkLeftOut(
             Settlement holder, MobileParty party,
             List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
-            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, ref Reckoning how)
+            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, ref Reckoning how,
+            Buyers[] buyers)
         {
             for (int at = 0; at < reachable.Count; at++)
                 if (reachable[at].s == holder)
@@ -1166,7 +1235,7 @@ namespace TradeLord
             bool road = !TradeMath.OutOfReach(ride);
             if (!road) return "no road to " + holder.Name + " could be found";
             if (!Marks.WaitsPastTheCeiling(cap, straight, ride, road)) return null;
-            Takings took = WhatItWouldFetch(holder, market, party, ride, cargo, purse, null);
+            Takings took = WhatItWouldFetch(holder, market, party, ride, cargo, purse, null, buyers);
             if (took.Value > 0L)
             {
                 long total = took.Value > purse ? purse : took.Value;
@@ -1186,29 +1255,6 @@ namespace TradeLord
             float away = ride > cap ? ride : straight;
             return holder.Name + " is " + away.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away, past the " +
                    cap.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) the marked market may go";
-        }
-
-        internal static void NoteTheWalkIn(Settlement at)
-        {
-            _walkedInto = at?.StringId;
-            _markedOnTheWayIn = _picked?.StringId;
-        }
-
-        internal static void NoteALoadInside(Settlement at)
-        {
-            _walkedInto = at?.StringId;
-            _markedOnTheWayIn = at?.StringId;
-        }
-
-        internal static Settlement TheMarkToHoldFor(Settlement here)
-        {
-            Settlement mark = _picked;
-            if (!Options.Current.MarkBestSellTownOnMap || mark?.SettlementComponent == null) return null;
-            if (!TradeActionBehavior.IsMarket(mark)) return null;
-            if (!Marks.HoldsFor(mark.StringId, here?.StringId, _walkedInto, _markedOnTheWayIn)) return null;
-            if (LedgerBehavior.UnderAttack(mark) || LedgerBehavior.VillageShut(mark)) return null;
-            if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(mark)) return null;
-            return mark;
         }
 
         internal static int[] WhatTheMarkTakes(Settlement mark, EquipmentElement el, int carried,
