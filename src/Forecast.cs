@@ -290,8 +290,7 @@ namespace TradeLord
                 if (bound == null || !bound.IsTown) continue;
                 ItemRoster carried = party.ItemRoster;
                 if (carried == null) continue;
-                float days = TradeMath.EtaDays(
-                    party.GetPosition2D.Distance(bound.GetPosition2D), Travel.SpeedByDay(party));
+                float days = Travel.DaysFor(party, bound);
                 if (caravan) NoteAPurse(bound, party.PartyTradeGold, days);
                 for (int k = 0; k < carried.Count; k++)
                 {

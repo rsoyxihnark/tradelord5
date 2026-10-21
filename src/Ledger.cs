@@ -1608,7 +1608,7 @@ namespace TradeLord
                         float soonest = toBuy + Travel.StraightDaysBetween(from, to);
                         if (cap > 0f && soonest > cap) continue;
 
-                        float days = toBuy + Travel.EstimateDaysBetween(from, to);
+                        float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);
                         if (TradeMath.OutOfReach(days)) continue;
                         if (cap > 0f && days > cap) continue;
 

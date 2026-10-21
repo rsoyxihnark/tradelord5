@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.105.1
+
+- Fixed travel times jumping up and down as your party crosses forests, rivers and fords
+- Fixed travel times jumping up and down as snow or rain falls where your party stands
+- Fixed travel times leaving out the nights on the way
+- Fixed travel times counting a whole ride at the speed your party has while Disorganized
+- Fixed travel times leaving out the forests, rivers, fords and deserts on the road your party would take to each market
+- Fixed travel times leaving out the rain and snow that will fall on the road your party would take
+- Fixed Days in the TradeLord ledger timing the ride from Buy From to Sell At as if you set off now instead of once you reach Buy From
+- Fixed Count what is on its way to a market timing caravans and villagers in a straight line instead of along the road they ride
+- Fixed the TradeLord ledger and the map marker leaving out a market just inside your Town travel ceiling or Village travel ceiling
+- With Enable extended debug logging on, TradeLord.log now breaks the marked market's travel time down by ground, weather and night
+- With Enable extended debug logging on, TradeLord.log now says each hour how many caravans and villagers were timed along their road
+
 ## 1.105.0
 
 - Hold cargo for the best market now holds each good for whichever market within your travel ceilings pays most for it, not the marked market

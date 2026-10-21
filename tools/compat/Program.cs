@@ -61,6 +61,8 @@ namespace TradeLord.Compat
             ("TaleWorlds.ScreenSystem.ScreenManager", "LateUpdate"),
             ("TaleWorlds.Engine.MouseManager", "ActivateMouseCursor"),
             ("TaleWorlds.CampaignSystem.Settlements.VillageMarketData", "get_ClosestTown"),
+            ("TaleWorlds.CampaignSystem.ComponentInterfaces.PartySpeedModel", "get_BaseModel"),
+            ("TaleWorlds.CampaignSystem.ComponentInterfaces.MapWeatherModel", "get_BaseModel"),
         };
 
         private static readonly (string type, string member, string why)[] LotShape =
@@ -88,6 +90,10 @@ namespace TradeLord.Compat
         {
             ("TaleWorlds.CampaignSystem.Settlements.FakeMarketData",
              "TaleWorlds.CampaignSystem.Settlements.IMarketData"),
+            ("NavalDLC.GameComponents.NavalDLCPartySpeedCalculationModel",
+             "TaleWorlds.CampaignSystem.ComponentInterfaces.PartySpeedModel"),
+            ("NavalDLC.GameComponents.NavalDLCMapWeatherModel",
+             "TaleWorlds.CampaignSystem.ComponentInterfaces.MapWeatherModel"),
         };
 
         private static readonly (string type, string member)[] McmMembers =
@@ -135,6 +141,29 @@ namespace TradeLord.Compat
             (Issues + "GangLeaderNeedsWeaponsIssueQuestBehavior+GangLeaderNeedsWeaponsIssueQuest", "_requestedWeaponAmount"),
             ("TaleWorlds.CampaignSystem.GameComponents.DefaultInventoryCapacityModel", "_textPackAnimals"),
             ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_night"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_movingInForest"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_fordEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_desert"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_snow"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_textCavalryWeatherPenalty"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel",
+             "_textMountedFootmenWeatherPenalty"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_textDisorganized"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MovingAtForestEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MovingAtWaterEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MovingAtNightEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MovingOnSnowEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MovingInDesertEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "DisorganizedEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_textCavalry"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_textMountedFootmen"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "CavalryEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MountedFootMenEffect"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.MapWeatherCampaignBehavior",
+             "_weatherNodeDataShuffledIndices"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.MapWeatherCampaignBehavior", "_lastUpdatedNodeIndex"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.MapWeatherCampaignBehavior", "_weatherTickEvent"),
+            ("TaleWorlds.CampaignSystem.MBCampaignEvent", "NextTriggerTime"),
             ("TaleWorlds.CampaignSystem.Conversation.ConversationManager", "_sentences"),
             ("TaleWorlds.CampaignSystem.Inventory.InventoryLogic", "_transactionHistory"),
             ("TaleWorlds.CampaignSystem.Inventory.InventoryLogic+TransactionHistory", "_transactionLogs"),

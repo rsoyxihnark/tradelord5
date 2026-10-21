@@ -1866,15 +1866,25 @@ chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has 
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
     "return OutOfReach(days) ? FurthestThereIs : days;" in
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
-    "return TradeMath.DaysAtSpeed(distance, landRatio, land, sea);" in
-    method_body(S['Travel.cs'], "internal static float Days") and
-    "if (hour != _partyHour || at.DistanceSquared(_partyAt) > 100f)" in
-    method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty"))
+    "if (pace.Even) return TradeMath.DaysAtSpeed(road.Length, road.LandRatio, pace.Base, pace.Sea);" in
+    method_body(S['Travel.cs'], "private static float Ride(") and
+    "if (ground == GroundSea) return Finite(Sea, 0f);" in
+    method_body(S['TradeMath.cs'], "public float On(int ground, bool dark, bool snow, bool wet, bool slow)") and
+    "TradeMath.AddRun(runs, TradeMath.GroundSea, TradeMath.Unread, TradeMath.Unread, length * (1f - land));" in
+    method_body(S['Travel.cs'], "private static List<TradeMath.Run> Unwalked") and
+    "pace.OnGround[ground] = ground == TradeMath.GroundSea ? 0f : g.On(ground);" in
+    method_body(S['Travel.cs'], "private static string ReadPace") and
+    "StandWhereYouAre(party);" in method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty") and
+    ordered(method_body(S['Travel.cs'], "private static void StandWhereYouAre"),
+            "if (hour == _partyHour && at.DistanceSquared(_partyAt) <= 100f) return;",
+            "if (at.DistanceSquared(_partyAt) > StoodStill)", "_partyDist.Clear();", "_unwalkable.Clear();",
+            "_moment = CampaignTime.Now;"))
 chk("1.104.18", "a ride, the quick estimate of one and a caravan's ride are each timed at the 1.2 hours the game's clock runs while it moves a party as far as its speed",
     "public const float HoursAPartyTakesToCoverItsSpeed = 1.2f;" in S['TradeMath.cs'] and
     "* HoursAPartyTakesToCoverItsSpeed;" in method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
     "* HoursAPartyTakesToCoverItsSpeed;" in method_body(S['TradeMath.cs'], "public static float DaysAtBestSpeed") and
     "* HoursAPartyTakesToCoverItsSpeed / 24f" in method_body(S['TradeMath.cs'], "public static float EtaDays") and
+    "/ (double)HoursAPartyTakesToCoverItsSpeed;" in method_body(S['TradeMath.cs'], "public static float DaysAlong") and
     "A_party_rides_twenty_times_its_speed_in_a_game_day" in MATHTESTS)
 chk("1.3.11", "the panel hands back the movie and the mouse, and honours the modifier keys",
     "layer.ReleaseMovie(movie)" in method_body(S['Panel.cs'], "internal static void Cleanup") and
@@ -2072,8 +2082,8 @@ chk("1.3.26", "a route's whole trip stays inside the travel ceiling, on the stra
     (method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")))
 chk("1.3.26", "both straight-line estimates share one implementation",
     S['Travel.cs'].count("private static float StraightDays(float distance)") == 1 and
-    "return StraightDays(party.GetPosition2D.Distance(target.GetPosition2D));" in S['Travel.cs'] and
-    "StraightDays(a.GetPosition2D.Distance(b.GetPosition2D))" in S['Travel.cs'])
+    "return StraightDays(Nearest(party.GetPosition2D, target));" in S['Travel.cs'] and
+    "StraightDays(Nearest(a, b))" in S['Travel.cs'])
 
 chk("1.3.27", "tooltip postfix declares only the arguments it uses",
     "private static void Postfix(ItemMenuVM __instance, ItemVM item)" in S['TooltipPatches.cs'])
@@ -2083,12 +2093,21 @@ chk("1.3.27", "both shipped assemblies compile with warnings as errors",
 chk("1.3.28", "both travel estimates take their speeds from one definition",
     S['Travel.cs'].count("MobileParty.MainParty.Speed") == 0 and
     S['Travel.cs'].count(".Speed;") == 1 and
+    S['Travel.cs'].count(".Speed : ") == 1 and
     "float now = party.Speed;" in method_body(S['Travel.cs'], "internal static float SpeedByDay(MobileParty party)") and
+    "float held = party.IsActive ? party.Speed : fresh;" in method_body(S['Travel.cs'], "private static string ReadPace") and
     "return SpeedByDay(MobileParty.MainParty);" in method_body(S['Travel.cs'], "private static float LandSpeed()") and
     S['Travel.cs'].count("TradeMath.SpeedsInEffect(") == 1 and
     S['TradeMath.cs'].count("land = partySpeed <= StandingStill ? WalkingPace : partySpeed;") == 1 and
     S['TradeMath.cs'].count("sea = fleetSpeed <= StandingStill ? land : fleetSpeed;") == 1 and
-    "Speeds(out float land, out float sea);" in method_body(S['Travel.cs'], "internal static float Days") and
+    "TradeMath.SpeedsInEffect(LandSpeed(), SeaSpeed(), out float land, out float sea);" in
+    method_body(S['Travel.cs'], "private static TradeMath.Pace PartyPace()") and
+    S['Travel.cs'].count("PartyPace()") == 5 and
+    "TradeMath.Pace pace = PartyPace();" in method_body(S['Travel.cs'], "private static void Speeds") and
+    "road.Days = Ride(road, PartyPace(), _moment, 0d, false, null);" in
+    method_body(S['Travel.cs'], "private static float RideFromParty") and
+    "return Ride(road, PartyPace(), _moment, later, fresh, null);" in
+    method_body(S['Travel.cs'], "private static float RideBetween") and
     "Speeds(out float land, out float sea);" in method_body(S['Travel.cs'], "private static float StraightDays"))
 
 chk("1.3.29", "one buy-side margin rule, for the planner and the executor alike",
@@ -2189,10 +2208,14 @@ chk("1.3.34", "one naval gate for both map-distance calls",
     S['Travel.cs'].count("HasPort && naval") == 2 and
     "target.HasPort && NavalActive" in S['Travel.cs'])
 chk("1.3.34", "both travel caches hold geometry and re-time it at the current speed",
-    "return Days(hit.dist, hit.landRatio);" in
+    "return RideFromParty(hit);" in
     method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty") and
-    "return Days(hit.dist, hit.landRatio);" in
-    method_body(S['Travel.cs'], "internal static float EstimateDaysBetween"))
+    ordered(method_body(S['Travel.cs'], "private static float RideFromParty"),
+            "if (road.Hour == hour) return road.Days;", "road.Days = Ride(", "road.Hour = hour;") and
+    "float days = RideBetween(PairRoad(a, b), after, true);" in
+    method_body(S['Travel.cs'], "internal static float EstimateDaysBetween") and
+    ": RideBetween(PairRoad(inside, target), 0f, false);" in
+    method_body(S['Travel.cs'], "private static float FromWhereYouStand"))
 chk("1.11.1", "one naval invalidation rule, read by every travel estimate it feeds",
     S['Travel.cs'].count("DropIfNavalChanged();") == 3 and
     "DropIfNavalChanged();" in method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty") and
@@ -3577,8 +3600,10 @@ def a_tie_between_reasons_is_broken_the_same_way_every_time():
             "x.Key.CompareTo(y.Key)" in summary)
 
 def the_party_speeds_are_read_once_an_hour():
-    body = method_body(S['Travel.cs'], "private static void Speeds")
-    return ("if (hour == _speedHour) { land = _landSpeed; sea = _seaSpeed; return; }" in body and
+    body = method_body(S['Travel.cs'], "private static TradeMath.Pace PartyPace()")
+    return ("if (hour == _speedHour && _pace != null) return _pace;" in body and
+            ordered(body, "if (hour == _speedHour && _pace != null) return _pace;",
+                    "string why;", "_speedHour = hour;", "_pace = pace;") and
             "_speedHour = -1;" in method_body(S['Travel.cs'], "internal static void Forget") and
             "_speedHour = -1;" in method_body(S['Travel.cs'], "private static void DropIfNavalChanged"))
 
@@ -7514,7 +7539,7 @@ def a_caravan_already_in_the_market_is_not_counted_twice():
                     "if (!caravan && !party.IsVillager) continue;",
                     "if (party.CurrentSettlement != null) continue;",
                     "Settlement bound = party.TargetSettlement;",
-                    "TradeMath.EtaDays(",
+                    "float days = Travel.DaysFor(party, bound);",
                     "if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;")
             and "CurrentSettlement" not in method_body(
                     S['Forecast.cs'], "private static void ReadWhatTheShopsWillMake"))
@@ -9980,7 +10005,9 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 31
+            and ALL.count("Tongue.Named(") == 32
+            and "string name = Tongue.Named(target.Name, target.StringId);" in
+                method_body(S['Travel.cs'], "internal static string TheRideTo")
             and 'return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +'
                 in method_body(S['Ledger.cs'], "private string WriteDownFree")
             and "if (adding <= 0 || el.Item == null) return null;" in method_body(S['Ledger.cs'], "private string WriteDownFree")
@@ -10141,7 +10168,7 @@ def the_ceiling_and_the_quote_read_one_forecast_at_one_arrival():
             and ordered(scan,
                         "int landedAtBuyTown = Forecast.WorthShiftAsItHasHeld(from, item, toBuy);",
                         "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown)",
-                        "float days = toBuy + Travel.EstimateDaysBetween(from, to);",
+                        "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);",
                         "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);",
                         "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown)",
                         "float ceiling =",
@@ -13327,13 +13354,21 @@ def a_market_the_road_was_lost_to_is_asked_again_rather_than_kept_out_of_reach()
     return (party and here and top and prime and why
             and "internal static bool LostTheRoad => _roadsLost > 0 && _roadsFound == 0;" in tr
             and tr.count("_roadsLost = 0;") == 3 and tr.count("_roadsFound = 0;") == 3
-            and ordered(party, "float dist = FromParty(target, out float landRatio);",
-                        "if (TradeMath.OutOfReach(Days(dist, landRatio)))",
+            and ordered(party, "hit = RoadFromParty(party, target);",
+                        "if (TradeMath.OutOfReach(RideFromParty(hit)))",
                         "float fromHere = FromWhereYouStand(party, target);",
                         "if (!TradeMath.OutOfReach(fromHere))", "_roadsFound++;", "return fromHere;",
                         "_roadsLost++;", "_partyDist[target.StringId] = hit;")
             and party.count("_partyDist[target.StringId] = hit;") == 1
-            and "return inside == null ? TradeMath.FurthestThereIs : EstimateDaysBetween(inside, target);" in here
+            and "return inside == null ? TradeMath.FurthestThereIs : RideBetween(PairRoad(inside, target), 0f, false);" in here
+            and "if (!atSea && landRatio >= AllOnLand && !_unwalkable.Contains(target.StringId))" in
+                method_body(tr, "private static Road RoadFromParty")
+            and "if (!road.Walked) _unwalkable.Add(target.StringId);" in method_body(tr, "private static Road RoadFromParty")
+            and tr.count("_unwalkable.Clear();") == 3
+            and "_unwalkable.Clear();" in method_body(tr, "internal static void Forget")
+            and "_unwalkable.Clear();" in method_body(tr, "private static void DropIfNavalChanged")
+            and "StandWhereYouAre(party);" in party
+            and "_unwalkable.Clear();" in method_body(tr, "private static void StandWhereYouAre")
             and "if (!Travel.LostTheRoad) _marketCache[key] = (Freshness.At(hour), KindOf(item), result);" in top
             and "if (Travel.LostTheRoad) return;" in prime
             and "if (Travel.LostTheRoad) _routeStamp.Stale();" in S['Ledger.cs']
@@ -19519,15 +19554,34 @@ chk("1.104.14", "Left, Qty and Conf count what the buy town's own workshops put 
     left_qty_and_conf_count_what_the_buy_towns_workshops_make())
 
 
-def a_ride_is_priced_at_the_speed_the_party_makes_by_day():
+def no_ride_is_priced_at_night_speed_from_end_to_end_because_you_look_at_night():
     tr = S['Travel.cs']
+    m = S['TradeMath.cs']
+    read = method_body(tr, "private static string ReadPace")
+    lines = method_body(tr, "private static SpeedLines Lines()")
+    pace = method_body(tr, "private static TradeMath.Pace PartyPace()")
+    along = method_body(m, "public static float DaysAlong")
+    on = method_body(m, "public float On(int ground, bool dark, bool snow, bool wet, bool slow)")
     land = method_body(tr, "private static float LandSpeed()")
     party = method_body(tr, "internal static float SpeedByDay(MobileParty party)")
     day = method_body(tr, "private static float LandSpeedByDay(MobileParty party, float now)")
-    rule = method_body(S['TradeMath.cs'], "public static float SpeedByDay")
-    return (land and party and day and rule
-            and "TradeMath.SpeedsInEffect(LandSpeed(), SeaSpeed(), out land, out sea);" in
-                method_body(tr, "private static void Speeds")
+    rule = method_body(m, "public static float SpeedByDay")
+    return (read and lines and pace and along and on and land and party and day and rule
+            and "TradeMath.SpeedsInEffect(LandSpeed(), SeaSpeed(), out float land, out float sea);" in pace
+            and "if (why != null) pace = TradeMath.Pace.AllAt(land, sea);" in pace
+            and '_lines.NightLine = LineName(own.GetField("_night", Hidden));' in lines
+            and "string nightLine = lines.NightLine, snowLine = lines.SnowLine, slowLine = lines.SlowLine;" in read
+            and "else if (name == nightLine || name == nightRunner || name == dayTraveler) time += f;" in read
+            and "float timeNow = dark ? g.Night : g.Day;" in read
+            and "float rest = speed.SumOfFactors - g.On(under) - timeNow - snowNow - wetFactorNow - slowFactorNow - chaseNow;"
+                in read
+            and "pace.Night = g.Night;" in read
+            and "float sum = Rest + OnGround[g] + (dark ? Night : Day) + (snow ? Snow : 0f) + (wet ? Wet : 0f) +" in on
+            and "bool dark = DarkAt(start, sunrise, sunset);" in along
+            and ordered(along, "if (t >= turn)", "dark = !dark;", "double turned = turnAt;",
+                        "turnAt = NextTurnOfLight(turned, sunrise, sunset);")
+            and "A_ride_looked_at_by_night_is_slowed_only_until_sunrise" in MATHTESTS
+            and "A_ride_into_the_night_slows_down_at_sunset" in MATHTESTS
             and "return SpeedByDay(MobileParty.MainParty);" in land
             and ordered(party, "float now = party.Speed;",
                         "try { return LandSpeedByDay(party, now); } catch { return now; }")
@@ -19542,19 +19596,38 @@ def a_ride_is_priced_at_the_speed_the_party_makes_by_day():
             and "if (!(now > 0f) || !(atNight > 0f) || !(byDay > atNight)) return now;" in rule
             and "A_ride_is_priced_at_the_speed_the_party_has_by_day" in MATHTESTS
             and "The_speed_by_day_never_slows_a_party_down_or_trusts_a_reading_that_is_not_a_number" in MATHTESTS
-            and "at your party's real speed by day with the cargo you are carrying" in README)
+            and "at your party's real speed with the cargo you are carrying" in README)
 
-chk("1.104.14", "every ride is priced at the speed the party makes by day, so travel times, the travel ceilings and the map marker hold steady through the night",
-    a_ride_is_priced_at_the_speed_the_party_makes_by_day())
+chk("1.104.14", "no ride is priced at night speed from end to end because you look at night: only its night hours are slowed, or it is priced at your speed by day where the ground cannot be read, so travel times and the map marker hold steady at night",
+    no_ride_is_priced_at_night_speed_from_end_to_end_because_you_look_at_night())
 
-def a_caravan_on_its_way_is_timed_by_day_as_your_own_ride_is():
+def a_caravan_on_its_way_is_timed_along_the_road_it_rides():
     road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
-    return (road
-            and "party.GetPosition2D.Distance(bound.GetPosition2D), Travel.SpeedByDay(party));" in road
-            and "party.Speed)" not in road)
+    tr = S['Travel.cs']
+    days = method_body(tr, "internal static float DaysFor")
+    along = method_body(tr, "private static float AlongItsRoad")
+    its = method_body(tr, "private static bool WalkItsRoad")
+    return (road and days and along and its
+            and "float days = Travel.DaysFor(party, bound);" in road
+            and "party.Speed)" not in road
+            and ordered(days, "try { days = AlongItsRoad(party, bound); }", "if (!float.IsNaN(days)) return days;",
+                        "_othersGuessed++;",
+                        "return TradeMath.EtaDays(party.GetPosition2D.Distance(bound.GetPosition2D), SpeedByDay(party));")
+            and ordered(along, "if (party.IsCurrentlyAtSea || party.IsTargetingPort) return float.NaN;",
+                        "if (ReadPace(party, pace) != null) return float.NaN;",
+                        "bool sails = party.NavigationCapability != MobileParty.NavigationType.Default;",
+                        "bool walked = WalkItsRoad(party, bound, road.Runs, !sails, out _, out bool own);",
+                        "if (run.Face == TradeMath.Unread) return float.NaN;",
+                        "float days = Ride(road, pace, CampaignTime.Now, 0d, false, null);")
+            and ordered(its, "if (face.FaceIndex == gateFace.FaceIndex)",
+                        "if (path == null || party.AttachedTo != null || party.PathLastFace.FaceIndex != gateFace.FaceIndex ||",
+                        "party.NextTargetPosition.ToVec2().DistanceSquared(path[party.PathBegin]) > ReachedSquared)",
+                        "return mayPathAfresh && WalkTheRoad(party, face, at, gate, runs, ref length);",
+                        "for (int i = party.PathBegin; i < path.Size; i++)",
+                        "return mayPathAfresh && face.IsValid() && WalkTheRoad(party, face, at, gate, runs, ref length);"))
 
-chk("1.104.19", "a caravan or villagers on their way to a market are timed at the speed they make by day, as your own ride is, so a load landing just before you is still counted at night",
-    a_caravan_on_its_way_is_timed_by_day_as_your_own_ride_is())
+chk("1.104.19", "a caravan or villagers on their way to a market are timed along the road they ride with its ground, weather and nights, or at the speed they make by day where that cannot be read",
+    a_caravan_on_its_way_is_timed_along_the_road_it_rides())
 
 
 def free_passage_holds_off_every_band_in_that_encounter():
@@ -19891,6 +19964,264 @@ def the_marker_prices_each_market_once_a_weighing():
 chk("1.105.0", "the map marker prices each market for each good once a weighing, however often the best other market is asked for, and drops those prices once the weighing ends",
     the_marker_prices_each_market_once_a_weighing())
 
+
+def a_ride_is_timed_over_the_ground_the_game_would_walk_it_on():
+    tr = S['Travel.cs']
+    m = S['TradeMath.cs']
+    read = method_body(tr, "private static string ReadPace")
+    ground = method_body(tr, "private static GroundFactors GroundFor")
+    walk = method_body(tr, "private static bool WalkTheRoad")
+    probe = method_body(tr, "private static float Probe")
+    region = method_body(tr, "private static long RegionAt")
+    kind = method_body(tr, "private static int GroundOf")
+    along = method_body(m, "public static void RegionsAlong")
+    edges = method_body(m, "private static void Edges")
+    return (read and ground and walk and probe and region and kind and along and edges
+            and "ExplainedNumber speed = model.CalculateFinalSpeed(party, model.CalculateBaseSpeed(party, true));" in read
+            and "if (!TheGamesOwn(model))" in read
+            and "if (Math.Abs(terrain - terrainNow) > LinesAgreeWithin)" in read
+            and "pace.Least = speed.LimitMinValue;" in read
+            and "pace.Most = speed.LimitMaxValue;" in read
+            and "Forest = kin ? forest * -DefaultPerks.Scouting.ForestKin.PrimaryBonus : forest," in ground
+            and "? DefaultCulturalFeats.BattanianForestSpeedFeat.EffectBonus * -forest : 0f," in ground
+            and "Desert = (PartyBaseHelper.HasFeat(party.Party, DefaultCulturalFeats.AseraiDesertFeat) ? 0f : desert) +" in ground
+            and "Plain = PerkFactor(DefaultPerks.Scouting.Pathfinder, party, true)," in ground
+            and ordered(kind, "case TerrainType.Forest:", "case TerrainType.Water:", "case TerrainType.River:",
+                        "case TerrainType.UnderBridge:", "case TerrainType.Bridge:", "case TerrainType.Fording:",
+                        "case TerrainType.Desert:", "case TerrainType.Dune:", "case TerrainType.Plain:",
+                        "case TerrainType.Steppe:")
+            and ordered(walk, "bool found = map.GetPathBetweenAIFaces(fromFace, toFace, from, end, 0.3f, _path, barred, 2f, seaToLand,",
+                        "landToSea);", "if (!found || _path.Size <= 0) return false;",
+                        "if (at.DistanceSquared(from) <= ReachedSquared) return false;")
+            and "GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Default);" in walk
+            and "if (!WalkItsRoad(party, target, runs, true, out float length, out _)) return;" in
+                method_body(tr, "private static void WalkFromParty")
+            and "private const float Stride = 1f;" in tr
+            and "TradeMath.RegionsAlong(length, Stride, along => RegionAt(map, from + step * along), _pieces);" in probe
+            and "PathFaceRecord face = map.GetFaceIndex(new CampaignVec2(at, true));" in region
+            and "_groundOfFace[face.FaceIndex] = GroundOf(map.GetFaceTerrainType(face));" in region
+            and "return TradeMath.RegionOf(face.FaceIndex, CellOf(at));" in region
+            and "if (there != region) Edges(at, region, next, there, regionAt, ref from, pieces, 0);" in along
+            and ordered(edges, "if (high - low <= LeastStepOnARoad || splits >= MostSplitsOfAStep)",
+                        "long between = regionAt(middle);",
+                        "if (between != below) Edges(low, below, middle, between, regionAt, ref from, pieces, splits + 1);",
+                        "if (between != above) Edges(middle, between, high, above, regionAt, ref from, pieces, splits + 1);")
+            and "public const float LeastStepOnARoad = 0.01f;" in m
+            and "Every_face_a_straight_leg_crosses_is_found_to_within_a_hundredth_of_a_step" in MATHTESTS
+            and "The_forest_slows_the_party_down_only_on_the_stretch_that_runs_through_it" in MATHTESTS
+            and "Where_the_night_falls_on_the_road_changes_how_long_the_ride_takes" in MATHTESTS
+            and "through every forest, river, desert, rainfall, snowfall and night on the way" in README)
+
+
+chk("1.105.1", "a ride is timed over the road the game's own pathfinding would take, face by face, at the party's own speed read from the game's speed model, with its forest, ford and desert effects where the road crosses them",
+    a_ride_is_timed_over_the_ground_the_game_would_walk_it_on())
+
+
+def the_speed_is_read_from_the_game_for_any_party_and_checked_line_by_line():
+    tr = S['Travel.cs']
+    read = method_body(tr, "private static string ReadPace")
+    ground = method_body(tr, "private static GroundFactors GroundFor")
+    pace = method_body(tr, "private static TradeMath.Pace PartyPace()")
+    return (read and ground and pace
+            and "private static string ReadPace(MobileParty party, TradeMath.Pace pace)" in tr
+            and "try { why = ReadPace(MobileParty.MainParty, pace); }" in pace
+            and "if (ReadPace(party, pace) != null) return float.NaN;" in
+                method_body(tr, "private static float AlongItsRoad")
+            and ordered(method_body(tr, "private static SpeedLines Lines()"),
+                        "if (_lines.Hour == hour) return _lines.Whole ? _lines : null;",
+                        '_lines.Horses = Effect(own.GetField("CavalryEffect", Hidden));',
+                        '_lines.Spare = Effect(own.GetField("MountedFootMenEffect", Hidden));',
+                        '_lines.CavalryLine = LineName(own.GetField("_textCavalry", Hidden));',
+                        '_lines.FootmenLine = LineName(own.GetField("_textMountedFootmen", Hidden));',
+                        "_lines.Whole = !float.IsNaN(_lines.Forest) && !float.IsNaN(_lines.Water) && !float.IsNaN(_lines.Night) &&")
+            and "_lines.Hour = -1;" in method_body(tr, "internal static void Forget")
+            and ordered(ground, "float desert = lines.Desert, slow = lines.Slow, horses = lines.Horses, spare = lines.Spare;",
+                        "foreach (MobileParty attached in party.AttachedParties)",
+                        "float cavalry = men == 0 || mounted == 0 ? 0f : horses * (float)mounted / (float)men;",
+                        "int riding = Math.Min(walking, mounts);",
+                        "float footmen = men == 0 || riding == 0 ? 0f : spare * (float)riding / (float)men;",
+                        "Wet = Factor(0f - cavalry * WetGroundTakesFromRiders) + Factor(0f - footmen * WetGroundTakesFromRiders)")
+            and "private const float WetGroundTakesFromRiders = 0.3f;" in tr
+            and ordered(read, "if (Math.Abs(cavalry - g.Cavalry) > LinesAgreeWithin)",
+                        "if (Math.Abs(footmen - g.Footmen) > LinesAgreeWithin)",
+                        "if (Math.Abs(wet - wetFactorNow) > LinesAgreeWithin)",
+                        "if (Math.Abs(slow - slowFactorNow) > LinesAgreeWithin)")
+            and "chaseNow = PerkFactor(DefaultPerks.Scouting.Tracker, party, false);" in read
+            and "pace.SlowHours = slowNow ? Math.Max(0d, party.DisorganizedUntilTime.RemainingHoursFromNow) : 0d;" in read
+            and "pace.ReadAt = CampaignTime.Now.ToHours;" in read
+            and ordered(read, "float held = party.IsActive ? party.Speed : fresh;",
+                        "pace.SnowAtStart = Math.Abs(held - fresh) > SpeedsAgreeWithin && Math.Abs(held - flipped) <= SpeedsAgreeWithin")
+            and "if (why != null) pace = TradeMath.Pace.AllAt(land, sea);" in pace)
+
+
+chk("1.105.1", "the party's speed is read from the game's own speed model for any party, cavalry and footmen on horses included, and checked line by line, so a ride falls back to the speed by day where they disagree",
+    the_speed_is_read_from_the_game_for_any_party_and_checked_line_by_line())
+
+
+def every_night_on_the_way_is_counted_on_the_game_clock():
+    m = S['TradeMath.cs']
+    tr = S['Travel.cs']
+    along = method_body(m, "public static float DaysAlong")
+    ride = method_body(tr, "private static float Ride(")
+    return (along and ride
+            and "double perHour = pace.On(road[i].Ground, dark, snow, wet, slow) / (double)HoursAPartyTakesToCoverItsSpeed;"
+                in along
+            and "double turnAt = NextTurnOfLight(start, sunrise, sunset);" in along
+            and "return !(hour >= sunrise && hour < sunset);" in method_body(m, "public static bool DarkAt")
+            and ordered(ride, "double start = moment.ToHours + after;",
+                        "TradeMath.DaysAlong(road.Runs, pace.After(start - pace.ReadAt), sky, start, CampaignTime.SunRise,",
+                        "CampaignTime.SunSet, fresh, tally);")
+            and "double later = TradeMath.Finite(after, 0f) > 0f ? after * 24d : 0d;" in
+                method_body(tr, "private static float RideBetween")
+            and "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);" in
+                method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+            and "later.SlowHours = SlowHours > hours ? SlowHours - hours : 0d;" in
+                method_body(m, "public Pace After(double hours)")
+            and "if (TradeMath.OutOfReach(after)) return TradeMath.FurthestThereIs;" in
+                method_body(tr, "internal static float EstimateDaysBetween")
+            and "if (!(turnAt > start)) turnAt = double.PositiveInfinity;" in along
+            and "if (!(turnAt > turned)) turnAt = double.PositiveInfinity;" in along
+            and "A_ride_set_off_at_a_clock_too_far_ahead_to_tell_the_hours_apart_keeps_one_light_the_whole_way" in MATHTESTS
+            and "A_ride_of_several_days_counts_every_night_on_the_way" in MATHTESTS
+            and "A_ride_that_starts_disorganized_is_slowed_only_while_it_lasts" in MATHTESTS
+            and "A_second_leg_starts_with_only_what_is_left_of_the_disorganized_hours" in MATHTESTS
+            and "Every_ride_hands_back_a_real_number_whatever_it_is_handed" in MATHTESTS)
+
+
+chk("1.105.1", "a ride counts each night it rides through from the moment it sets off, and the ride from Buy From to Sell At sets off when the ride to Buy From arrives, both on the game's own clock",
+    every_night_on_the_way_is_counted_on_the_game_clock())
+
+
+def a_ride_changes_speed_when_the_game_would():
+    along = method_body(S['TradeMath.cs'], "public static float DaysAlong")
+    return (along
+            and "bool snow = freshAtStart ? snowyHere : pace.SnowAtStart;" in along
+            and ordered(along, "if (road[i].Cell != cell)", "if (wetThere != wet)", "wet = wetThere;", "snow = snowyHere;",
+                        "if (road[i].Face != road[was].Face) snow = snowyHere;")
+            and ordered(along, "if (t >= change)", "sky.Read(cell, t, out bool wetNow, out snowyHere, out change);",
+                        "if (wetNow != wet)", "wet = wetNow;", "if (t >= slowEnds)", "if (afresh) snow = snowyHere;")
+            and ordered(along, "if (t >= turn)", "dark = !dark;", "afresh = true;", "if (t >= change)")
+            and "Snow_that_falls_on_ground_already_wet_slows_the_party_from_the_next_face_as_the_game_does" in MATHTESTS
+            and "Snow_that_falls_on_dry_ground_slows_the_party_at_once" in MATHTESTS
+            and "Rain_that_falls_on_the_road_slows_a_mounted_party_from_the_moment_it_falls" in MATHTESTS
+            and "Riding_into_a_snowy_stretch_on_the_same_wet_ground_waits_for_the_next_face" in MATHTESTS
+            and "A_party_whose_snow_slowdown_has_not_caught_up_yet_keeps_its_speed_until_the_next_face" in MATHTESTS)
+
+
+chk("1.105.1", "a ride follows the game's rules for when a party's speed changes: ground at each new face, night at sunset and sunrise, rain the moment it falls, snow on ground already wet only from the next face",
+    a_ride_changes_speed_when_the_game_would())
+
+
+def the_weather_on_the_road_is_worked_out_the_way_the_game_will_bring_it():
+    tr = S['Travel.cs']
+    build = method_body(tr, "private static string BuildTheSkies")
+    work = method_body(tr, "private static byte WorkOut")
+    look = method_body(tr, "private static Outlook OutlookOf")
+    extend = method_body(tr, "private static void Extend")
+    read = method_body(tr, "private static void ReadTheSky")
+    own = method_body(tr, "private static MapWeatherModel TheGamesOwnWeather")
+    cell = method_body(tr, "private static int CellOf")
+    grid = method_body(tr, "private static void Grid")
+    return (build and work and look and extend and read and own and cell and grid
+            and ordered(build, "MapWeatherModel game = TheGamesOwnWeather(model);",
+                        "campaign.GetCampaignBehavior<MapWeatherCampaignBehavior>();",
+                        '"_weatherNodeDataShuffledIndices"', '"_lastUpdatedNodeIndex"', '"_weatherTickEvent"',
+                        '"NextTriggerTime"', "if (!Writers(nodes, shuffled))",
+                        "if (every != model.WeatherUpdateFrequency || !(every.ToHours > 0d))",
+                        "var ahead = new DefaultMapWeatherModel();", "ahead.InitializeCaches();",
+                        "Round = Times(every, nodes.Length),")
+            and ordered(work, "skies.Ahead.UpdateWeatherForPosition(place.Position, at);",
+                        "skies.Ahead.GetWeatherEffectOnTerrainForPosition(place.Position.ToVec2()) ==")
+            and ordered(build, "var skyNow = new byte[nodes.Length];",
+                        "for (int cell = 0; cell < skyNow.Length; cell++) skyNow[cell] = SkyNow(game, PlaceIn(cell, nodes));",
+                        "Now = skyNow")
+            and ordered(work, "if (_worked.TryGetValue(key, out byte known)) return known;",
+                        "if (_worked.Count >= MostWeatherTurnsKept) _worked.Clear();", "_worked[key] = worked;")
+            and "_worked.Clear();" in method_body(tr, "internal static void Forget")
+            and "catch { SkyAsItIs.Held.Read(cell, hours, out wet, out snowy, out changes); }" in tr
+            and ordered(look, "byte now = skies.Now[cell];",
+                        "int turns = TradeMath.TurnsUntil(_slotOf[writers[i]], skies.Last, skies.Count);",
+                        "outlook.Due[i] = skies.Next + Times(skies.Every, turns);",
+                        "CampaignTime before = outlook.Due[0] - skies.Round;",
+                        "if (before >= _firstSky && before <= skies.Taken)",
+                        "if (WorkOut(skies, writers[0], before) == now) skies.Agreed++;")
+            and ordered(extend, "if (outlook.Due[i] < outlook.Due[soonest]) soonest = i;",
+                        "byte sky = WorkOut(skies, outlook.Writers[soonest], due);", "outlook.At.Add(hours);",
+                        "outlook.Sky.Add(sky);", "outlook.Due[soonest] = due + skies.Round;")
+            and ordered(read, "while (!outlook.Done && outlook.At[outlook.At.Count - 1] - from <= hours) Extend(_skies, outlook);",
+                        "int k = TradeMath.LastAtOrBefore(outlook.At, from, hours);",
+                        "if (k + 1 < outlook.At.Count) changes = outlook.At[k + 1] - from;")
+            and "if (type.FullName != NavalWeatherModel) return null;" in own
+            and "int x = (int)(at.x / _cellWide);" in cell
+            and "float wide = size.X / (float)dim;" in grid
+            and "The_weather_comes_round_to_each_place_in_the_order_the_game_updates_it" in MATHTESTS
+            and "A_weather_turn_handed_to_a_ride_is_always_found_again_at_the_moment_it_was_handed" in MATHTESTS)
+
+
+chk("1.105.1", "the weather on the road is worked out ahead with the game's own weather model, for each place at the times the game updates it, and checked against the weather the game has there now",
+    the_weather_on_the_road_is_worked_out_the_way_the_game_will_bring_it())
+
+
+def the_quick_distance_check_never_drops_a_market_the_full_travel_time_keeps():
+    tr = S['Travel.cs']
+    near = method_body(tr, "private static float Nearest(Vec2 from, Settlement to)")
+    pair = method_body(tr, "private static float Nearest(Settlement a, Settlement b)")
+    best = method_body(S['TradeMath.cs'], "public float BestOnLand")
+    return (near and pair and best
+            and "float gate = from.Distance(to.GatePosition.ToVec2());" in near
+            and "return to.HasPort ? Math.Min(gate, from.Distance(to.PortPosition.ToVec2())) : gate;" in near
+            and "return a.HasPort ? Math.Min(gate, Nearest(a.PortPosition.ToVec2(), b)) : gate;" in pair
+            and "land = pace.BestOnLand;" in method_body(tr, "private static void Speeds")
+            and "for (int c = 0; c < 16; c++)" in best
+            and "best = Math.Max(best, On(g, (c & 1) != 0, (c & 2) != 0, (c & 4) != 0, (c & 8) != 0));" in best
+            and "The_quick_estimate_never_says_a_road_takes_longer_than_riding_it_does" in MATHTESTS)
+
+
+chk("1.105.1", "the quick distance check measures to the gate or port a road really ends at and rides at the party's fastest pace on any ground by day or night, so it never leaves out a market the full travel time would keep",
+    the_quick_distance_check_never_drops_a_market_the_full_travel_time_keeps())
+
+
+def the_marker_says_how_it_timed_the_ride_to_the_market_it_marked():
+    ultra = method_body(S['Marker.cs'], "private static void Ultra")
+    told = method_body(S['Travel.cs'], "internal static string TheRideTo")
+    others = method_body(S['Travel.cs'], "internal static string TheRoadsOthersRide")
+    return (ultra and told and others
+            and ordered(ultra, 'said.Add("  ultralog: what it marked " + how.Best.Name + " on");',
+                        'said.Add("    " + Travel.TheRideTo(how.Best));',
+                        'said.Add("    " + Travel.TheRoadsOthersRide());')
+            and ordered(told, '" forest, "', '" water and fords, "', '" desert, "', '" night hour(s), "',
+                        '" hour(s) on wet ground, "', '" hour(s) in snow, "', '" hour(s) Disorganized"',
+                        '" road(s) walked from your party, "', '" for caravans and villagers, "',
+                        '" pathfinding call(s) in "', '" ground probe(s) in "', '" weather turn(s) worked out in "',
+                        '" ride(s) timed in "', '" ms, the slowest walk "')
+            and '"matching the forecast in " + skies.Agreed + " of " + skies.Checked + " place(s) checked this hour"' in told
+            and ordered(others, '" timed along their road ("', '" on the path they follow, "',
+                        '" on a path found for them) and "'))
+
+
+chk("1.105.1", "with extended debug logging on, the marker's ultralog breaks the marked market's travel time down into base speed, ground, night, wet, snow and Disorganized hours, the weather check and what walking the roads cost",
+    the_marker_says_how_it_timed_the_ride_to_the_market_it_marked())
+
+
+def a_party_standing_still_keeps_the_roads_it_walked_and_markets_keep_theirs_for_the_session():
+    tr = S['Travel.cs']
+    stand = method_body(tr, "private static void StandWhereYouAre")
+    pair = method_body(tr, "internal static float EstimateDaysBetween")
+    return (stand and pair
+            and ordered(stand, "if (hour == _partyHour && at.DistanceSquared(_partyAt) <= 100f) return;",
+                        "if (at.DistanceSquared(_partyAt) > StoodStill)", "_partyDist.Clear();",
+                        "_unwalkable.Clear();", "_speedHour = -1;", "_moment = CampaignTime.Now;")
+            and "float days = RideBetween(PairRoad(a, b), after, true);" in pair
+            and "if (_pairDays.TryGetValue(key, out var known) && known.Moment == _moment && known.After == after)" in pair
+            and "var key = (a.StringId, b.StringId);" in method_body(tr, "private static Road PairRoad")
+            and ordered(method_body(tr, "private static Road PairRoad"), "hit = RoadBetween(a, b);",
+                        "_pairDist[key] = hit;", "return hit;")
+            and "_pairDist.Clear();" in method_body(tr, "internal static void Forget")
+            and "_pairDays.Clear();" in method_body(tr, "internal static void Forget"))
+
+
+chk("1.105.1", "a road walked from where your party stands is kept for as long as it stands there, and a road between two markets is walked once a session, in the direction it is ridden",
+    a_party_standing_still_keeps_the_roads_it_walked_and_markets_keep_theirs_for_the_session())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
