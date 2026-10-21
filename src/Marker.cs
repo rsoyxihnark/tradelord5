@@ -60,6 +60,24 @@ namespace TradeLord
         }
     }
 
+    internal struct Buyer
+    {
+        internal Settlement Town;
+        internal float Days;
+        internal int Purse;
+        internal int First;
+        internal long Total;
+        internal Paying Pays;
+    }
+
+    internal struct Buyers
+    {
+        internal Buyer Best;
+        internal Buyer Next;
+
+        internal Buyer Besides(Settlement here) => Best.Town != null && Best.Town == here ? Next : Best;
+    }
+
     internal static class Marker
     {
         private static Settlement _tracked;
@@ -741,6 +759,40 @@ namespace TradeLord
         private static Paying WhatThatMarketPays(Settlement site, SettlementComponent market,
                                                  EquipmentElement el, MobileParty party, float ride) =>
             new Paying(site, market, el, party, ride);
+
+        internal static Buyers BestBuyersOf(EquipmentElement el, int units)
+        {
+            Buyers found = default(Buyers);
+            MobileParty party = MobileParty.MainParty;
+            List<(Settlement town, int price)> markets =
+                el.Item == null || units <= 0 || party == null ? null : LedgerBehavior.Instance?.EverySell(el.Item);
+            for (int i = 0; markets != null && i < markets.Count; i++)
+            {
+                Settlement town = markets[i].town;
+                SettlementComponent market = town?.SettlementComponent;
+                if (market == null) continue;
+                float ride = Travel.EstimateDaysFromParty(town);
+                if (TradeMath.OutOfReach(ride)) continue;
+                int purse = PurseOf(town);
+                Paying pays = WhatThatMarketPays(town, market, el, party, ride);
+                var one = new Buyer
+                {
+                    Town = town, Days = ride, Purse = purse, First = pays.At(0), Pays = pays,
+                    Total = TradeMath.WhatALadderPays(pays.At, units, purse)
+                };
+                if (one.First <= 0 || one.Total <= 0L) continue;
+                if (found.Best.Town == null ||
+                    TradeMath.PaysMore(one.Total, one.First, one.Days, found.Best.Total, found.Best.First, found.Best.Days))
+                {
+                    found.Next = found.Best;
+                    found.Best = one;
+                }
+                else if (found.Next.Town == null ||
+                         TradeMath.PaysMore(one.Total, one.First, one.Days, found.Next.Total, found.Next.First, found.Next.Days))
+                    found.Next = one;
+            }
+            return found;
+        }
 
         private static Takings WhatItWouldFetch(
             Settlement site, SettlementComponent market, MobileParty party, float ride,

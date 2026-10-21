@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace TradeLord
 {
@@ -47,6 +48,24 @@ namespace TradeLord
             if (double.IsNaN(least) || least <= 1d) return 1;
             return least >= int.MaxValue ? int.MaxValue : (int)least;
         }
+
+        public static long WhatALadderPays(Func<int, int> rungAt, int units, int purse)
+        {
+            if (rungAt == null || units <= 0) return 0L;
+            long paid = 0L;
+            for (int u = 0; u < units; u++)
+            {
+                int price = rungAt(u);
+                if (price <= 0 || paid + price > purse) break;
+                paid += price;
+            }
+            return paid;
+        }
+
+        public static bool PaysMore(long total, int first, float days, long otherTotal, int otherFirst, float otherDays) =>
+            total != otherTotal ? total > otherTotal
+            : first != otherFirst ? first > otherFirst
+            : days < otherDays;
 
         public static int[] WhatTheMarkTakes(Func<int, int> rungAt, int carried, int worth,
                                              float margin, int purse)
@@ -1556,6 +1575,20 @@ namespace TradeLord
         {
             float days = Finite((nowHours - thenHours) / 24f, 0f);
             return days < 0f ? 0f : days;
+        }
+
+        public const int GameClockWidth = 20;
+
+        public static readonly string NoGameClock = "no campaign".PadRight(GameClockWidth);
+
+        public static string GameClock(int day, float hourInDay, bool night)
+        {
+            float hour = Finite(hourInDay, 0f);
+            int minutes = hour <= 0f ? 0 : (int)Math.Min(hour * 60f, 24f * 60f - 1f);
+            string clock = "day " + day.ToString(CultureInfo.InvariantCulture) + " " +
+                           (minutes / 60).ToString("00", CultureInfo.InvariantCulture) + ":" +
+                           (minutes % 60).ToString("00", CultureInfo.InvariantCulture) + (night ? " night" : "");
+            return clock.PadRight(GameClockWidth);
         }
 
         public static float EtaDays(float distance, float speed)

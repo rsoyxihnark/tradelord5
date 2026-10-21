@@ -5136,8 +5136,8 @@ def every_animal_that_moves_is_named_with_its_reason():
             and '" - " + why + "; TradeLord counts it as " + TradePolicy.AnimalGroup(item)' in moved
             and "LogAnimalMoved(lines, selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);" in detail
             and 'lines.Add("  animal " + (selling ? "out: " : "in: ")' in moved
-            and "LogDetail(selling, Sim, Detail, Quoted, Aimed, why)" in
-                between(src, "internal void Logged(", ";")
+            and "LogDetail(selling, Sim, Detail, Quoted, Aimed, Elsewhere, why);" in
+                method_body(src, "internal void Logged(bool selling, string why)")
             and src.count("pass.Logged(selling:") == 8
             and src.count("LogDetail(selling:") == 0
             and all(r in src for r in reasons))
@@ -9957,7 +9957,7 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 28
+            and ALL.count("Tongue.Named(") == 29
             and 'return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +'
                 in method_body(S['Ledger.cs'], "private string WriteDownFree")
             and "if (adding <= 0 || el.Item == null) return null;" in method_body(S['Ledger.cs'], "private string WriteDownFree")
@@ -10896,7 +10896,7 @@ def the_log_says_which_market_a_good_was_bought_for():
     return ('if (selling || item == null || !Options.Current.ExtendedDebugLogging) return "";' in meant
             and 'if (!aimed.TryGetValue(item, out var far) || far.where == null) return "";' in meant
             and '", meant for " + far.where + " at " + far.price + " a unit";' in meant
-            and "MeantFor(selling, aimed, kv.Key));" in detail
+            and "MeantFor(selling, aimed, kv.Key) +" in detail
             and "internal readonly Dictionary<ItemObject, (string where, int price)> Aimed =" in t
             and ordered(resale, "Settlement buyer = elsewhere.town;",
                         "if (buyer == null) return false;",
@@ -19696,6 +19696,48 @@ def a_food_restock_says_the_village_keeps_its_last_unit_rather_than_nothing_bein
 
 chk("1.104.17", "a food restock that stops at a village's last unit says so in TradeLord.log, instead of saying no food was on sale there",
     a_food_restock_says_the_village_keeps_its_last_unit_rather_than_nothing_being_on_sale())
+
+
+def every_log_line_carries_the_campaign_day_and_clock():
+    put = method_body(S['Support.cs'], "private static void Put(string message)")
+    now = method_body(S['Support.cs'], "private static string GameTimeNow()")
+    clock = method_body(S['TradeMath.cs'], "public static string GameClock")
+    return (put and now and clock
+            and 'string line = DateTime.Now.ToString("s") + "  " + GameTime() + "  " + message;' in put
+            and "try { return GameTimeNow(); } catch { return TradeMath.NoGameClock; }" in S['Support.cs']
+            and ordered(now, "if (model == null) return TradeMath.NoGameClock;",
+                        "int day = (int)Math.Floor(now.ToDays) - (int)Math.Floor(model.CampaignStartTime.ToDays);",
+                        "return TradeMath.GameClock(day, now.CurrentHourInDay, campaign.IsNight);")
+            and '(night ? " night" : "")' in clock
+            and "Every_log_line_reads_the_campaign_day_and_the_clock_and_says_when_it_is_night" in MATHTESTS)
+
+chk("1.104.20", "every line in TradeLord.log starts with the campaign day and the clock, and says night while the game slows parties for it",
+    every_log_line_carries_the_campaign_day_and_clock())
+
+
+def a_sale_names_the_best_other_buyer_within_the_travel_ceilings():
+    t = S['Trading.cs']
+    best = method_body(S['Marker.cs'], "internal static Buyers BestBuyersOf")
+    said = method_body(t, "private static string BestElsewhere")
+    logged = method_body(t, "internal void Logged(bool selling, string why)")
+    return (best and said and logged
+            and ordered(best, "LedgerBehavior.Instance?.EverySell(el.Item);",
+                        "float ride = Travel.EstimateDaysFromParty(town);",
+                        "Paying pays = WhatThatMarketPays(town, market, el, party, ride);",
+                        "Total = TradeMath.WhatALadderPays(pays.At, units, purse)",
+                        "if (one.First <= 0 || one.Total <= 0L) continue;")
+            and "internal Buyer Besides(Settlement here) => Best.Town != null && Best.Town == here ? Next : Best;" in S['Marker.cs']
+            and ordered(logged, "if (selling && Options.Current.ExtendedDebugLogging)",
+                        "Elsewhere[kv.Key] = Marker.BestBuyersOf(new EquipmentElement(kv.Key), kv.Value.count)",
+                        ".Besides(Site);",
+                        "LogDetail(selling, Sim, Detail, Quoted, Aimed, Elsewhere, why);")
+            and '"; no other market within your travel ceilings buys it"' in said
+            and '"; the best other buyer within your travel ceilings is " +' in said
+            and "BestElsewhere(selling, elsewhere, kv.Key));" in method_body(t, "private static void LogDetail")
+            and "A_buyer_is_ranked_on_what_it_pays_for_every_unit_its_purse_can_take" in MATHTESTS)
+
+chk("1.104.20", "each good sold is written up with the best other buyer within your travel ceilings, its price a unit and how far away it is",
+    a_sale_names_the_best_other_buyer_within_the_travel_ceilings())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

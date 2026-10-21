@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.104.20
+
+- Every line in TradeLord.log now starts with the campaign day and the time of day, marked night while parties travel slower
+- TradeLord.log now names, for each good sold, the best other buyer within your travel ceilings, its price a unit and how far away it is
+
 ## 1.104.19
 
 - Fixed Count what is on its way to a market expecting caravans and villagers to arrive a third later than they do at night

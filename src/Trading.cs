@@ -579,6 +579,7 @@ namespace TradeLord
                 new Dictionary<ItemObject, (string where, int price)>();
             internal readonly Dictionary<ItemObject, (string where, int units, int there, int here)> Held =
                 new Dictionary<ItemObject, (string where, int units, int there, int here)>();
+            internal readonly Dictionary<ItemObject, Buyer> Elsewhere = new Dictionary<ItemObject, Buyer>();
 
             internal bool DirectionError;
 
@@ -848,8 +849,15 @@ namespace TradeLord
                 if (Site != null) LedgerBehavior.Instance?.CaptureSettlement(Site);
             }
 
-            internal void Logged(bool selling, string why) =>
-                LogDetail(selling, Sim, Detail, Quoted, Aimed, why);
+            internal void Logged(bool selling, string why)
+            {
+                if (selling && Options.Current.ExtendedDebugLogging)
+                    foreach (var kv in Detail)
+                        if (kv.Key != null && !Elsewhere.ContainsKey(kv.Key))
+                            Elsewhere[kv.Key] = Marker.BestBuyersOf(new EquipmentElement(kv.Key), kv.Value.count)
+                                                      .Besides(Site);
+                LogDetail(selling, Sim, Detail, Quoted, Aimed, Elsewhere, why);
+            }
 
             internal List<string> HeldFor()
             {
@@ -1555,9 +1563,19 @@ namespace TradeLord
             return ", meant for " + far.where + " at " + far.price + " a unit";
         }
 
+        private static string BestElsewhere(bool selling, Dictionary<ItemObject, Buyer> elsewhere, ItemObject item)
+        {
+            if (!selling || item == null || elsewhere == null || !elsewhere.TryGetValue(item, out Buyer other)) return "";
+            if (other.Town == null) return "; no other market within your travel ceilings buys it";
+            return "; the best other buyer within your travel ceilings is " +
+                   Tongue.Named(other.Town.Name, other.Town.StringId) + " at " + other.First + " a unit, about " +
+                   Scoring.Figure(other.Days) + " day(s) away";
+        }
+
         private static void LogDetail(bool selling, bool sim, Dictionary<ItemObject, (int count, int gold)> detail,
                                       Dictionary<ItemObject, (int count, int gold)> quoted,
-                                      Dictionary<ItemObject, (string where, int price)> aimed, string why)
+                                      Dictionary<ItemObject, (string where, int price)> aimed,
+                                      Dictionary<ItemObject, Buyer> elsewhere, string why)
         {
             var lines = new List<string>();
             foreach (var kv in detail)
@@ -1565,7 +1583,8 @@ namespace TradeLord
                 lines.Add((selling ? "  sold " : "  bought ") + kv.Value.count + " " +
                           kv.Key.StringId + " for " + kv.Value.gold + (sim ? Counter.Aside : "") +
                           Quotation(quoted, kv.Key, kv.Value.gold) +
-                          MeantFor(selling, aimed, kv.Key));
+                          MeantFor(selling, aimed, kv.Key) +
+                          BestElsewhere(selling, elsewhere, kv.Key));
                 LogAnimalMoved(lines, selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);
             }
             Log.WriteMany(lines);

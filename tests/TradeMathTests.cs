@@ -1537,6 +1537,35 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_buyer_is_ranked_on_what_it_pays_for_every_unit_its_purse_can_take()
+        {
+            Func<int, int> falling = u => 50 - u * 5;
+            Assert.Equal(50L + 45L + 40L, TradeMath.WhatALadderPays(falling, 3, int.MaxValue));
+            Assert.Equal(50L + 45L, TradeMath.WhatALadderPays(falling, 3, 100));
+            Assert.Equal(0L, TradeMath.WhatALadderPays(falling, 3, 49));
+            Assert.Equal(50L + 45L + 40L + 35L + 30L + 25L + 20L + 15L + 10L + 5L,
+                         TradeMath.WhatALadderPays(falling, 20, int.MaxValue));
+            Assert.Equal(0L, TradeMath.WhatALadderPays(null, 3, int.MaxValue));
+            Assert.Equal(0L, TradeMath.WhatALadderPays(falling, 0, int.MaxValue));
+            Assert.True(TradeMath.PaysMore(900L, 30, 2f, 800L, 60, 0.5f));
+            Assert.True(TradeMath.PaysMore(900L, 60, 2f, 900L, 50, 0.5f));
+            Assert.True(TradeMath.PaysMore(900L, 60, 0.5f, 900L, 60, 2f));
+            Assert.False(TradeMath.PaysMore(900L, 60, 2f, 900L, 60, 2f));
+        }
+
+        [Fact]
+        public void Every_log_line_reads_the_campaign_day_and_the_clock_and_says_when_it_is_night()
+        {
+            Assert.Equal("day 14 20:24".PadRight(TradeMath.GameClockWidth), TradeMath.GameClock(14, 20.4f, false));
+            Assert.Equal("day 3 23:59 night".PadRight(TradeMath.GameClockWidth), TradeMath.GameClock(3, 23.9999f, true));
+            Assert.Equal("day 0 00:00 night".PadRight(TradeMath.GameClockWidth), TradeMath.GameClock(0, 0f, true));
+            Assert.Equal("day 7 00:00".PadRight(TradeMath.GameClockWidth), TradeMath.GameClock(7, float.NaN, false));
+            Assert.Equal("day 7 00:00".PadRight(TradeMath.GameClockWidth), TradeMath.GameClock(7, -3f, false));
+            Assert.Equal(TradeMath.GameClockWidth, TradeMath.NoGameClock.Length);
+            Assert.Equal(TradeMath.GameClockWidth, TradeMath.GameClock(1234, 12.5f, true).Length);
+        }
+
+        [Fact]
         public void A_journey_of_no_distance_takes_no_days()
         {
             Assert.Equal(0f, TradeMath.DaysAtSpeed(0f, 1f, 5f, 10f));
