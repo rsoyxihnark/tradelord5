@@ -95,6 +95,7 @@ namespace TradeLord
             Guard.Run("GameEnd.Bulk", Bulk.Forget);
             Guard.Run("GameEnd.ScreenMarkets", ScreenMarkets.Forget);
             Guard.Run("GameEnd.Forecast", Forecast.Forget);
+            Guard.Run("GameEnd.Holds", Holds.Forget);
             Guard.Run("GameEnd.Hindsight", Hindsight.Forget);
             Guard.Run("GameEnd.Counter", Counter.Forget);
             Guard.Run("GameEnd.Visit", TradeActionBehavior.ForgetVisit);

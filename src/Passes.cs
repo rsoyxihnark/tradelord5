@@ -194,13 +194,15 @@ namespace TradeLord
         bool ResaleMarket(int at, int units, int worth, out int[] rungs);
         Func<int, int> PricesHere(int at);
         void HeldBack(int at, int units, int there, int here);
+        float HoldLine(int at, float share, int left);
+        void HoldDecided(int at, HoldChoice choice);
         int PriceToSell(int at);
         bool OfAQuality(int at);
         int Till();
         int TillNow();
         void Staged(int at, int price);
         bool Give(int at, int price, out int proceeds);
-        void RecordedSale(int at, int unitPaid, int price, int bestPays);
+        void RecordedSale(int at, int unitPaid, int price, int bestPays, float line);
         void RecordedFreeSale(int at, int price);
         float Today { get; }
     }
@@ -670,6 +672,7 @@ namespace TradeLord
 
                 int[] there = holding?[at].Rungs;
                 int holdFor = holding?[at].Units ?? 0;
+                var choice = default(HoldChoice);
 
                 while (remaining > 0)
                 {
@@ -691,16 +694,20 @@ namespace TradeLord
                         continue;
                     }
                     int boughtLeft = Math.Min(remaining, basis.PaidLeft - basis.AgedLeft);
-                    int floor = TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket);
+                    float line = there == null ? s.HoldCargoForBestMarket
+                                               : market.HoldLine(at, s.HoldCargoForBestMarket, boughtLeft);
+                    int floor = TradeRules.FloorForTheLast(there, boughtLeft, line);
                     int bestPays = !aged && floor > 0 && boughtLeft <= holdFor ? there[boughtLeft - 1] : 0;
                     if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))
                     {
+                        choice.Note(boughtLeft, held: true);
                         tally.Note(Block.BelowBestMarket);
                         market.HeldBack(at, boughtLeft, there[boughtLeft - 1], price);
                         if (basis.KeepOnlyTheAged()) continue;
                         if (!basis.SetTheBoughtUnitsAside(ref remaining)) break;
                         continue;
                     }
+                    if (bestPays > 0) choice.Note(boughtLeft, held: false);
                     if (TradeRules.WhatTheTillCanPay(sim ? simTill : market.TillNow(),
                                                      market.Village) < price)
                     { tally.Note(Block.MerchantTillEmpty); break; }
@@ -732,7 +739,7 @@ namespace TradeLord
                     if (proceeds == 0) break;
 
                     bool paidFor = basis.SoldOne();
-                    if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays);
+                    if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays, line);
                     else market.RecordedFreeSale(at, proceeds);
                     books.NoteSold(good.Id);
                     moved.Units++;
@@ -740,6 +747,7 @@ namespace TradeLord
                     moved.Profit += earned;
                     remaining--;
                 }
+                if (choice.Made) market.HoldDecided(at, choice);
             }
             return moved;
         }

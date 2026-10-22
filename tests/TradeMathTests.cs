@@ -2111,43 +2111,6 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_good_that_is_cheap_at_a_market_pulls_a_traders_gold_and_a_dear_one_does_not()
-        {
-            Assert.Equal(0.4f, TradeMath.PullOfAPrice(0.6f), 4);
-            Assert.Equal(0f, TradeMath.PullOfAPrice(1f));
-            Assert.Equal(0f, TradeMath.PullOfAPrice(1.8f));
-            Assert.Equal(1f, TradeMath.PullOfAPrice(0f));
-            Assert.Equal(1f, TradeMath.PullOfAPrice(-3f));
-        }
-
-        [Fact]
-        public void A_purse_is_split_across_a_market_by_how_cheap_each_good_is()
-        {
-            Assert.Equal(750, TradeMath.ShareOfAPurse(1000, 0.6f, 0.8f));
-            Assert.Equal(250, TradeMath.ShareOfAPurse(1000, 0.2f, 0.8f));
-            Assert.Equal(1000, TradeMath.ShareOfAPurse(1000, 0.5f, 0.5f));
-        }
-
-        [Fact]
-        public void The_shares_of_one_purse_never_add_up_to_more_than_the_purse()
-        {
-            float[] pulls = { 0.5f, 0.3f, 0.2f };
-            float across = 1f;
-            int spread = 0;
-            foreach (float pull in pulls) spread += TradeMath.ShareOfAPurse(900, pull, across);
-            Assert.True(spread <= 900);
-        }
-
-        [Fact]
-        public void A_purse_nobody_would_spend_here_moves_nothing()
-        {
-            Assert.Equal(0, TradeMath.ShareOfAPurse(0, 0.5f, 1f));
-            Assert.Equal(0, TradeMath.ShareOfAPurse(1000, 0f, 1f));
-            Assert.Equal(0, TradeMath.ShareOfAPurse(1000, 0.5f, 0f));
-            Assert.Equal(0, TradeMath.ShareOfAPurse(-50, 0.5f, 1f));
-        }
-
-        [Fact]
         public void What_a_market_will_hold_is_what_lands_less_what_is_bought_off_it()
         {
             Assert.Equal(400, TradeMath.WorthShift(1000, 600));
@@ -2681,7 +2644,7 @@ namespace TradeLord.Tests
             Assert.Equal(0f, TradeMath.ToTheQuarterDay(float.PositiveInfinity));
             Assert.Equal(TradeMath.TickTimeUnknown, TradeMath.NextDailyTickIn(double.NaN));
             Assert.Equal(TradeMath.TickTimeUnknown, TradeMath.NextDailyTickIn(double.PositiveInfinity));
-            Assert.Equal(0f, TradeMath.PullOfAPrice(float.NaN));
+            Assert.Equal(0f, TradeMath.WhatACaravanThinksAKindIsWorth(1f, float.NaN, 0, 4f, 50f, 1f, 1f, false, false));
             Assert.Equal(0f, TradeMath.MeanOf(float.NaN, 4));
             Assert.Equal(0f, TradeMath.DaysSince(float.PositiveInfinity, float.PositiveInfinity));
             Assert.Equal(0f, TradeMath.Realizable(100, float.NaN));
@@ -2706,7 +2669,8 @@ namespace TradeLord.Tests
                     Assert.False(float.IsInfinity(TradeMath.ToTheQuarterDay(a)));
                     Assert.False(float.IsNaN(TradeMath.NextDailyTickIn(a)));
                     Assert.False(float.IsNaN(TradeMath.DaysSince(a, b)));
-                    Assert.False(float.IsNaN(TradeMath.PullOfAPrice(a)));
+                    Assert.False(float.IsNaN(TradeMath.WhatACaravanThinksAKindIsWorth(a, b, 0, a, b, 1f, 1f, false, false)));
+                    Assert.False(float.IsNaN(TradeMath.ACaravansRoomFactor(a, 1000)));
                     Assert.False(float.IsNaN(TradeMath.MeanOf(a, 3)));
                 }
         }
@@ -2883,23 +2847,102 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_caravan_passing_a_town_that_pays_no_more_than_usual_leaves_nothing()
+        public void A_caravan_sells_nothing_where_a_kind_sells_below_its_limit_against_the_average()
         {
-            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 1.0f, 500f, 10));
-            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, TradeMath.ACaravanSellsAbove, 500f, 10));
-            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 0.5f, 500f, 10));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 1.0f, 1.0f, 0.8f, 0, 1000f, 100, 100, false, false));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 0.8f, 1.0f, 0.8f, 0, 1000f, 100, 100, false, false));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 1.2f, 1.2f, 1.0f, 0, 1000f, 100, 100, false, false));
         }
 
         [Fact]
-        public void A_caravan_leaves_no_more_than_the_town_daily_purse_for_that_kind_can_pay_for()
+        public void A_caravan_laden_with_a_kind_sells_it_even_where_it_fetches_no_more_than_usual()
         {
-            Assert.Equal(30, TradeMath.WhatACaravanUnloads(100, 1.2f, 1000f, 10));
-            Assert.Equal(100, TradeMath.WhatACaravanUnloads(100, 2.0f, 1000f, 10));
-            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 1.2f, 0f, 10));
-            Assert.Equal(0, TradeMath.WhatACaravanUnloads(0, 2.0f, 1000f, 10));
-            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 2.0f, 1000f, 0));
-            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, float.NaN, 1000f, 10));
-            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 1.2f, float.NaN, 10));
+            Assert.Equal(12, TradeMath.WhatACaravanUnloads(100, 1.0f, 1.0f, 0.8f, 5000, 1000f, 100, 100, false, false));
+            Assert.Equal(5, TradeMath.WhatACaravanUnloads(100, 1.0f, 1.0f, 0.8f, 1250, 1000f, 100, 100, false, false));
+            Assert.Equal(4, TradeMath.WhatACaravanUnloads(100, 0.8f, 1.0f, 0.8f, 5000, 1000f, 100, 100, false, false));
+            Assert.Equal(0.4f, TradeMath.WhatHoldingAKindTakesOff(9000), 4);
+            Assert.Equal(0f, TradeMath.WhatHoldingAKindTakesOff(0));
+        }
+
+        [Fact]
+        public void A_convoy_sells_five_thirds_of_what_a_caravan_does_and_haul_animals_half_again_as_much()
+        {
+            Assert.Equal(6, TradeMath.WhatACaravanUnloads(100, 1.2f, 1.0f, 0.8f, 0, 1000f, 100, 100, false, false));
+            Assert.Equal(10, TradeMath.WhatACaravanUnloads(100, 1.2f, 1.0f, 0.8f, 0, 1000f, 100, 100, true, false));
+            Assert.Equal(9, TradeMath.WhatACaravanUnloads(100, 1.2f, 1.0f, 0.8f, 0, 1000f, 100, 100, false, true));
+        }
+
+        [Fact]
+        public void A_caravan_unloads_no_more_than_it_carries_and_reads_nothing_it_cannot()
+        {
+            Assert.Equal(5, TradeMath.WhatACaravanUnloads(5, 1.5f, 1.0f, 0.8f, 0, 1000f, 100, 100, false, false));
+            Assert.Equal(1, TradeMath.WhatACaravanUnloads(100, 1.2f, 1.0f, 0.8f, 0, 0f, 100, 100, false, false));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(0, 2.0f, 1.0f, 0.8f, 0, 1000f, 100, 100, false, false));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 2.0f, 1.0f, 0.8f, 0, 1000f, 100, 0, false, false));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, float.NaN, 1.0f, 0.8f, 0, 1000f, 100, 100, false, false));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 1.2f, float.NaN, 0.8f, 0, 1000f, 100, 100, false, false));
+            Assert.Equal(0, TradeMath.WhatACaravanUnloads(100, 1.2f, 0f, 0.8f, 0, 1000f, 100, 100, false, false));
+        }
+
+        [Fact]
+        public void A_caravan_sells_off_the_animals_it_drives_past_three_for_every_five_men()
+        {
+            Assert.Equal(4, TradeMath.AnimalsACaravanSellsOff(10, 10));
+            Assert.Equal(1, TradeMath.AnimalsACaravanSellsOff(7, 10));
+            Assert.Equal(0, TradeMath.AnimalsACaravanSellsOff(6, 10));
+            Assert.Equal(0, TradeMath.AnimalsACaravanSellsOff(2, 10));
+        }
+
+        [Fact]
+        public void A_caravan_wants_a_kind_by_how_far_under_the_average_it_sells()
+        {
+            float budget = TradeMath.ACaravansBudgetFactor(10000), room = TradeMath.ACaravansRoomFactor(0f, 1000);
+            Assert.Equal(23.5714f, TradeMath.WhatACaravanThinksAKindIsWorth(0.7f, 1f, 0, 4f, 50f, budget, room, false, false), 3);
+            Assert.Equal(25.9286f, TradeMath.WhatACaravanThinksAKindIsWorth(0.7f, 1f, 0, 4f, 50f, budget, room, true, false), 3);
+            Assert.Equal(35.3571f, TradeMath.WhatACaravanThinksAKindIsWorth(0.7f, 1f, 0, 4f, 50f, budget, room, false, true), 3);
+            Assert.Equal(132f, TradeMath.WhatACaravanThinksAKindIsWorth(0.5f, 1f, 0, 9f, 200f, budget, room, false, false), 3);
+            Assert.Equal(0f, TradeMath.WhatACaravanThinksAKindIsWorth(1f, 1f, 0, 4f, 50f, budget, room, false, false));
+            Assert.Equal(0f, TradeMath.WhatACaravanThinksAKindIsWorth(0.7f, 1f, 5000, 4f, 50f, budget, room, false, false));
+            Assert.Equal(0f, TradeMath.WhatACaravanThinksAKindIsWorth(float.NaN, 1f, 0, 4f, 50f, budget, room, false, false));
+        }
+
+        [Fact]
+        public void A_caravan_wants_more_with_a_fuller_purse_and_less_with_a_fuller_cargo()
+        {
+            Assert.Equal(0.1f, TradeMath.ACaravansBudgetFactor(0), 4);
+            Assert.Equal(0.6f, TradeMath.ACaravansBudgetFactor(2500), 4);
+            Assert.Equal(1.1f, TradeMath.ACaravansBudgetFactor(5000), 4);
+            Assert.Equal(1.1f, TradeMath.ACaravansBudgetFactor(20000), 4);
+            Assert.Equal(1.1f, TradeMath.ACaravansRoomFactor(0f, 1000), 4);
+            Assert.Equal(0.6504f, TradeMath.ACaravansRoomFactor(500f, 1000), 3);
+            Assert.Equal(0.1f, TradeMath.ACaravansRoomFactor(5000f, 1000), 4);
+            Assert.Equal(1.1f, TradeMath.ACaravansRoomFactor(float.NaN, 1000), 4);
+        }
+
+        [Fact]
+        public void A_caravan_spends_at_most_half_its_purse_half_again_what_a_kind_is_worth_and_the_most_on_one_kind()
+        {
+            Assert.Equal(1500, TradeMath.WhatACaravanSpendsOnAKind(10000, 2000f, 1500));
+            Assert.Equal(1000, TradeMath.WhatACaravanSpendsOnAKind(2000, 2000f, 1500));
+            Assert.Equal(600, TradeMath.WhatACaravanSpendsOnAKind(10000, 400f, 1500));
+            Assert.Equal(0, TradeMath.WhatACaravanSpendsOnAKind(10000, 6.9f, 1500));
+            Assert.Equal(0, TradeMath.WhatACaravanSpendsOnAKind(0, 2000f, 1500));
+            Assert.Equal(0, TradeMath.WhatACaravanSpendsOnAKind(10000, float.NaN, 1500));
+            Assert.Equal(0, TradeMath.WhatACaravanSpendsOnAKind(10000, 2000f, 0));
+        }
+
+        [Fact]
+        public void A_caravan_takes_what_it_spends_for_within_the_shelf_its_limit_and_its_cargo()
+        {
+            Assert.Equal(30, TradeMath.WhatACaravanTakesOfAKind(1500, 50, 100, 300, 1f, 0f, 1000, false));
+            Assert.Equal(20, TradeMath.WhatACaravanTakesOfAKind(1500, 50, 20, 300, 1f, 0f, 1000, false));
+            Assert.Equal(300, TradeMath.WhatACaravanTakesOfAKind(1500, 2, 1000, 300, 1f, 0f, 1000, false));
+            Assert.Equal(10, TradeMath.WhatACaravanTakesOfAKind(1500, 50, 100, 300, 10f, 800f, 1000, false));
+            Assert.Equal(30, TradeMath.WhatACaravanTakesOfAKind(1500, 50, 100, 300, 10f, 800f, 1000, true));
+            Assert.Equal(0, TradeMath.WhatACaravanTakesOfAKind(1500, 50, 100, 300, 10f, 950f, 1000, false));
+            Assert.Equal(0, TradeMath.WhatACaravanTakesOfAKind(0, 50, 100, 300, 1f, 0f, 1000, false));
+            Assert.Equal(0, TradeMath.WhatACaravanTakesOfAKind(1500, 0, 100, 300, 1f, 0f, 1000, false));
+            Assert.Equal(0, TradeMath.WhatACaravanTakesOfAKind(1500, 50, 100, -3, 1f, 0f, 1000, false));
         }
 
         [Fact]

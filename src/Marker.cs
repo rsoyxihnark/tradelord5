@@ -904,6 +904,8 @@ namespace TradeLord
                 int paidFor = amount - unbought[at];
                 Buyer other = buyers == null || share <= 0f ? default(Buyer) : buyers[at].Besides(site);
                 int[] there = WhatTheBestOtherBuyerTakes(other, paidFor - walk.AgedLeft, walk, worth, eachAtItsOwnCost);
+                string key = there == null ? null : LedgerBehavior.PaidKey(item);
+                var choice = default(HoldChoice);
                 long fetched = 0L, booked = 0L;
                 int moved = 0;
                 for (int u = from; u < from + paidFor; u++)
@@ -912,15 +914,18 @@ namespace TradeLord
                     if (price <= 0) break;
                     if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;
                     int fresh = paidFor - moved - walk.AgedLeft;
-                    int floor = TradeRules.FloorForTheLast(there, fresh, share);
+                    float line = there == null ? share : Holds.LineFor(key, site.StringId, share, fresh, Freshness.Hour);
+                    int floor = TradeRules.FloorForTheLast(there, fresh, line);
                     if (!walk.PickedHasAged && TradeRules.HeldForTheMark(price, floor, fresh, there?.Length ?? 0))
                     {
+                        choice.Note(fresh, held: true);
                         lines[at].Held = fresh;
                         lines[at].HeldFor = other.Town;
                         lines[at].There = there[fresh - 1];
                         lines[at].Here = price;
                         if (!walk.KeepOnlyTheAged() || !walk.Clears(price, Options.Current.MinProfitMargin)) break;
                     }
+                    else if (!walk.PickedHasAged && floor > 0) choice.Note(fresh, held: false);
                     if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }
                     booked += walk.Took();
                     if (from + moved == 0) lines[at].Price = price;
@@ -928,6 +933,7 @@ namespace TradeLord
                     fetched += price;
                     moved++;
                 }
+                Holds.Decided(key, site.StringId, choice, Freshness.Hour);
                 if (moved == 0) continue;
                 long cost = eachAtItsOwnCost ? booked : (long)worth * moved;
                 took.Value += fetched;

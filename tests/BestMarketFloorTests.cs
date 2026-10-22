@@ -129,6 +129,80 @@ namespace TradeLord.Tests
             Assert.Equal(0, TradeRules.FloorForTheLast(null, 1, 0.75f));
         }
 
+        [Fact]
+        public void A_hold_decided_before_turns_only_three_points_past_the_line()
+        {
+            var choice = new HoldChoice { SoldFrom = 20, SoldTo = 11, HeldFrom = 10 };
+            Assert.Equal(0.75f, choice.LineAt(0.75f, 21), 4);
+            Assert.Equal(0.72f, choice.LineAt(0.75f, 20), 4);
+            Assert.Equal(0.72f, choice.LineAt(0.75f, 11), 4);
+            Assert.Equal(0.78f, choice.LineAt(0.75f, 10), 4);
+            Assert.Equal(0.78f, choice.LineAt(0.75f, 1), 4);
+            Assert.Equal(0.75f, default(HoldChoice).LineAt(0.75f, 5), 4);
+            var unsold = new HoldChoice { SoldFrom = 20, SoldTo = 11 };
+            Assert.Equal(0.75f, unsold.LineAt(0.75f, 10), 4);
+            Assert.Equal(0f, choice.LineAt(0f, 5));
+            Assert.Equal(0f, unsold.LineAt(0.02f, 15));
+        }
+
+        [Fact]
+        public void A_hold_choice_notes_the_units_it_sold_and_the_unit_it_held_from()
+        {
+            var choice = default(HoldChoice);
+            Assert.False(choice.Made);
+            choice.Note(0, held: false);
+            Assert.False(choice.Made);
+            choice.Note(8, held: false);
+            choice.Note(7, held: false);
+            choice.Note(6, held: true);
+            choice.Note(5, held: true);
+            Assert.True(choice.Made);
+            Assert.Equal((8, 7, 6), (choice.SoldFrom, choice.SoldTo, choice.HeldFrom));
+            var held = default(HoldChoice);
+            held.Note(4, held: true);
+            Assert.True(held.Made);
+            Assert.Equal((0, 0, 4), (held.SoldFrom, held.SoldTo, held.HeldFrom));
+        }
+
+        [Fact]
+        public void A_hold_decision_is_remembered_for_a_day_for_that_good_at_that_market_alone()
+        {
+            Holds.Forget();
+            var held = new HoldChoice { HeldFrom = 5 };
+            Holds.Decided("oil", "ortysia", held, 100);
+            Assert.Equal(5, Holds.Recalled("oil", "ortysia", 110).HeldFrom);
+            Assert.Equal(5, Holds.Recalled("oil", "ortysia", 124).HeldFrom);
+            Assert.False(Holds.Recalled("oil", "ortysia", 125).Made);
+            Assert.False(Holds.Recalled("oil", "ortysia", 99).Made);
+            Assert.False(Holds.Recalled("oil", "poros", 110).Made);
+            Assert.False(Holds.Recalled("salt", "ortysia", 110).Made);
+            Assert.Equal(0.78f, Holds.LineFor("oil", "ortysia", 0.75f, 5, 110), 4);
+            Assert.Equal(0.75f, Holds.LineFor("oil", "ortysia", 0.75f, 6, 110), 4);
+            Holds.Decided("oil", "ortysia", new HoldChoice { SoldFrom = 5, SoldTo = 1 }, 111);
+            Assert.Equal(0.72f, Holds.LineFor("oil", "ortysia", 0.75f, 5, 112), 4);
+            Holds.Decided("oil", "ortysia", default(HoldChoice), 112);
+            Assert.Equal(0.72f, Holds.LineFor("oil", "ortysia", 0.75f, 5, 112), 4);
+            Holds.Decided(null, "ortysia", held, 111);
+            Assert.False(Holds.Recalled(null, "ortysia", 111).Made);
+            Assert.Equal(0.75f, Holds.LineFor(null, "ortysia", 0.75f, 5, 111), 4);
+            Holds.Forget();
+            Assert.False(Holds.Recalled("oil", "ortysia", 112).Made);
+        }
+
+        [Fact]
+        public void The_hold_memory_lets_old_decisions_go_before_it_grows_too_big()
+        {
+            Holds.Forget();
+            var held = new HoldChoice { HeldFrom = 1 };
+            for (int i = 0; i < Holds.MostRemembered - 1; i++) Holds.Decided("good" + i, "market", held, 0);
+            Holds.Decided("fresh", "market", held, 100);
+            Holds.Decided("fresher", "market", held, 100);
+            Assert.False(Holds.Recalled("good0", "market", 10).Made);
+            Assert.True(Holds.Recalled("fresh", "market", 100).Made);
+            Assert.True(Holds.Recalled("fresher", "market", 100).Made);
+            Holds.Forget();
+        }
+
         private static int[] Flat(int price, int units)
         {
             var sold = new int[units];

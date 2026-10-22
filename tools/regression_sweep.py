@@ -698,15 +698,15 @@ def what_is_on_the_road_is_added_up_where_a_test_can_ask_it():
             and "ItemCategory" not in p and "Options.Current" not in p
             and "internal struct Landing" in p and "internal struct Spending" in p
             and "internal static class Projection" in p
-            and "pull != null && across > 0f;" in p
+            and "internal static int WorthBought(IList<Spending> coming, string category, float withinDays," in p
             and 'Projection.cs' in TESTPROJ
             and "Landing" not in S['Forecast.cs'].split("namespace TradeLord")[0]
             and "Projection.UnitsLanding(Read(site), item.StringId, withinDays, graded: true);" in S['Forecast.cs']
             and "Projection.WorthLanding(Read(site), item.ItemCategory.StringId, withinDays, graded: true);"
                 in S['Forecast.cs']
             and "Units_landing_add_up_only_for_the_good_asked_about" in PROJECTIONTESTS
-            and "An_empty_purse_leaves_nothing_whatever_the_pull_says" in PROJECTIONTESTS
-            and "A_purse_split_across_a_market_never_hands_out_more_than_the_purse" in PROJECTIONTESTS)
+            and "A_caravan_that_buys_nothing_of_a_kind_takes_none_of_it" in PROJECTIONTESTS
+            and "What_caravans_buy_never_adds_up_to_more_than_they_were_noted_to_buy" in PROJECTIONTESTS)
 
 def how_a_forecast_and_a_promise_held_is_scored_where_a_test_can_ask_it():
     c = S['Scoring.cs']
@@ -885,11 +885,12 @@ def the_marker_counts_only_what_the_selling_rules_would_really_move():
                         "int price = pays.At(u);",
                         "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
                         "int fresh = paidFor - moved - walk.AgedLeft;",
-                        "int floor = TradeRules.FloorForTheLast(there, fresh, share);",
+                        "float line = there == null ? share : Holds.LineFor(key, site.StringId, share, fresh, Freshness.Hour);",
+                        "int floor = TradeRules.FloorForTheLast(there, fresh, line);",
                         "if (!walk.PickedHasAged && TradeRules.HeldForTheMark(price, floor, fresh, there?.Length ?? 0))",
                         "if (!walk.KeepOnlyTheAged() || !walk.Clears(price, Options.Current.MinProfitMargin)) break;",
                         "if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }")
-            and ordered(sell_pass(), "int floor = TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket);",
+            and ordered(sell_pass(), "int floor = TradeRules.FloorForTheLast(there, boughtLeft, line);",
                         "if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))",
                         "if (basis.KeepOnlyTheAged()) continue;")
             and S['Trading.cs'].count("TradePolicy.WorthToBeat(") == 1
@@ -1832,31 +1833,33 @@ def a_caravan_leaves_what_the_town_will_take_and_a_villager_leaves_the_lot():
     m = S['TradeMath.cs']
     unloads = method_body(m, "public static int WhatACaravanUnloads")
     road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
-    leaves = method_body(S['Forecast.cs'], "private static int WhatACaravanLeavesHere")
-    return ("public const float ACaravanSellsAbove = 1.1f;" in m
+    follow = method_body(S['Forecast.cs'], "private static void FollowACaravan")
+    return (unloads and road and follow
+            and "public const float ACaravanSellsAbove = 1.1f;" in m
             and "public const float ACaravanSellsThisEagerly = 3f;" in m
-            and "float over = Finite(priceFactor, 0f) - ACaravanSellsAbove;" in unloads
-            and "if (over <= 0f || budget <= 0f) return 0;" in unloads
-            and "float units = budget * over * ACaravanSellsThisEagerly / unitPrice;" in unloads
-            and "return units >= carried ? carried : (int)units;" in unloads
+            and "public const float AConvoySellsThisEagerly = 5f;" in m
+            and "public const float ALadenCaravanSellsLowerBy = 0.4f;" in m
+            and ordered(unloads, "float limit = ACaravanSellsAbove - WhatHoldingAKindTakesOff(heldWorth);",
+                        "if (againstTheAverage < limit) return 0;", "if (factor < floor) return 0;",
+                        "return units >= carried ? carried : (int)Math.Round(units, MidpointRounding.AwayFromZero);")
             and "WhatACaravanLeavesAtOneStop" not in m
             and "bool caravan = party.IsCaravan;" in road
             and "if (!caravan && !party.IsVillager) continue;" in road
-            and "if (caravan) NoteAPurse(bound, party.PartyTradeGold, days);" in road
-            and "int landing = caravan ? WhatACaravanLeavesHere(bound, party, item, amount) : amount;" in road
-            and "TradeMath.WorthOf(landing, item.Value), days);" in road
-            and "where.MarketData.GetPriceFactor(category)" in leaves
-            and "CalculateDailySettlementBudgetForItemCategory(where, demand, category)" in leaves
-            and "A_caravan_passing_a_town_that_pays_no_more_than_usual_leaves_nothing" in MATHTESTS
-            and "A_caravan_leaves_no_more_than_the_town_daily_purse_for_that_kind_can_pay_for"
-                in MATHTESTS)
+            and 'Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days));' in road
+            and "Note(bound, item.StringId, item.ItemCategory, amount, TradeMath.WorthOf(amount, item.Value), days);" in road
+            and ordered(follow, "town.GetItemCategoryPriceIndex(kind), index.average, index.lowest, worth,",
+                        "economy.CalculateDailySettlementBudgetForItemCategory(town, town.MarketData.GetDemand(kind),",
+                        "units = Math.Min(units, Math.Min(amount, till / price));",
+                        "Note(bound, item.StringId, kind, units, TradeMath.WorthOf(units, item.Value), days);")
+            and "A_caravan_sells_nothing_where_a_kind_sells_below_its_limit_against_the_average" in MATHTESTS
+            and "A_caravan_laden_with_a_kind_sells_it_even_where_it_fetches_no_more_than_usual" in MATHTESTS)
 
 
 chk("1.81.10", "a market the game could not find a road to is turned away and shows no travel time, whatever the travel ceilings are set to",
     a_market_the_game_cannot_reach_is_never_offered_or_timed())
 chk("1.81.10", "what a market is forecast to pay is held within reach of what it pays today, so a bad forecast can no longer show a price nothing would ever take",
     a_forecast_may_not_move_a_shown_price_out_of_all_recognition())
-chk("1.81.11", "a caravan is counted as leaving only what the town it is calling at will actually take off it, and only where that town pays above the usual, while a villager party is counted as leaving its whole load at the town its village trades through",
+chk("1.81.11", "a caravan is counted as leaving only what the game's own caravans sell in the town it calls at, judged against what that kind fetches across the towns, while villagers leave their whole load there, bar the pack animals they keep",
     a_caravan_leaves_what_the_town_will_take_and_a_villager_leaves_the_lot())
 
 chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has moved",
@@ -1975,7 +1978,7 @@ chk("1.3.16", "the hold-for-best-market floor is tested against every unit as th
     and "floor > 0 && boughtLeft > 0 && boughtLeft <= holdFor && BelowTheBestMarket(price, floor);" in S['Rules.cs']
     and ordered(method_body(S['Passes.cs'], "internal static Traded SellThem"),
                 "while (remaining > 0)",
-                "int floor = TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket);",
+                "int floor = TradeRules.FloorForTheLast(there, boughtLeft, line);",
                 "if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))")
     and "? 0 : BestMarketFloor(rungs[boughtLeft - 1], share);" in S['Rules.cs']
     and "(int)(there * s.HoldCargoForBestMarket)" not in S['Passes.cs']
@@ -2167,7 +2170,7 @@ chk("1.36.0", "a trade on the road moves one unit and its price itself, because 
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
     S['Trading.cs'].count("[Simulated, best case]") == 2 and
-    S['Trading.cs'].count("(simulated, best case): ") == 5 and
+    S['Trading.cs'].count("(simulated, best case): ") == 6 and
     'internal string Headed(string label) => label + (Sim ? Counter.Heading : ": ");'
         in S['Trading.cs'] and
     'internal static string Heading => Staging ? " (laid out): " : " (simulated, best case): ";'
@@ -2318,7 +2321,7 @@ chk("1.5.5", "a stack pays its purchased basis only for the units that were purc
     ordered(method_body(S['Passes.cs'], "internal bool SoldOne()"),
             "if (PaidLeft <= 0) return false;", "PaidLeft--;", "return true;") and
     S['Passes.cs'].count("bool paidFor = basis.SoldOne();") == 1 and
-    S['Passes.cs'].count("if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays);") == 1 and
+    S['Passes.cs'].count("market.RecordedSale(at, basis.SoldAt, proceeds, bestPays, line);") == 1 and
     "else LedgerBehavior.Instance?.RecordSale(paidKey, 1, basis.SoldAt);" in
         method_body(S['Trading.cs'], "public static void ExecuteHerdRelief") and
     S['Passes.cs'].count("PaidLeft--;") == 1 and
@@ -3137,7 +3140,7 @@ chk("1.21.0", "loot goes to the first market that can pay, since nothing but Hol
     "if (!basis.SetTheBoughtUnitsAside(ref remaining)) break;" in sell_pass() and
     "Loot_is_never_held_for_the_best_buyer" in SELLPASSTESTS and
     "In_a_stack_of_bought_and_looted_units_the_bought_ones_are_held_and_the_loot_goes" in SELLPASSTESTS and
-    S['Passes.cs'].count("s.HoldCargoForBestMarket") == 3)
+    S['Passes.cs'].count("s.HoldCargoForBestMarket") == 4)
 chk("1.6.12", "that worth is looked up once per good, not once per unit sold",
     "askTheMarket = worth == 0 && UnpaidWorth < 0;" in
         method_body(S['Passes.cs'], "internal int Unit(out bool askTheMarket)") and
@@ -4384,9 +4387,10 @@ def the_hold_hint_says_what_the_share_holds_and_when_it_holds_nothing():
     hold = en.get('TL329', '')
     said = [spoken(path).get('TL329', '') for path in TRANSLATIONS.values()]
     shipped = str(round(float(option_default('HoldCargoForBestMarket').rstrip('f')) * 100))
-    return ("Sells a good you bought only for at least this share of what the best other market in your travel ceilings would pay"
+    return ("Sells what you bought for at least this share of what the best other market in your travel ceilings pays"
                 in hold
-            and "holding only what it would buy." in hold
+            and "holding only what it buys." in hold
+            and "A choice turns 3 points past it." in hold
             and "Loot is never held." in hold
             and "marked" not in hold and "marker" not in hold
             and "0% is off." in hold
@@ -4853,7 +4857,7 @@ def a_caravan_trade_obeys_every_rule_a_market_visit_does():
             and "TradePolicy.MaySell(good, _plan[at], _pass.Locked, _keepBack, _awaited," in sell
             and "TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin)" in sell
             and "s.HoldCargoForBestMarket > 0f" in sell
-            and "TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket)" in sell
+            and "TradeRules.FloorForTheLast(there, boughtLeft, line)" in sell
             and ordered(sell, "if (aged ? price < mustBeat : !TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))",
                         "if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;",
                         "TradeMath.SkipTheUnitsYouPaidFor(FromMarket, ref remaining, ref PaidLeft)",
@@ -5640,7 +5644,8 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and "TillNow - Books.TillDrawn(Sim)" in between(t, "internal int Till =>", ";")
             and t.count("float simWeight = pass.Books.Weight(pass.Sim);") == 1
             and "float simWeight = books.Weight(sim);" in S['Passes.cs']
-            and "TradePolicy.FoodHeld(pass.Party.ItemRoster) - pass.Books.FoodHeld(pass.Sim) + traded;" in larder
+            and "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);" in larder
+            and "FoodHeld(roster) + books.FoodHeld(sim) - FoodBoughtToTrade(roster, books, sim);" in S['Policy.cs']
             and "shed -= pass.Books.Shed(pass.Sim);" in relief
             and "mountsLeft -= pass.Books.MountsShed(pass.Sim);" in relief
             and "Math.Max(0, Drove.HaulAnimalsCargoCanSpare(pass.Party, pass.RoomTakenOnPaper()) - pass.Books.HaulsShed(pass.Sim));" in relief
@@ -6350,7 +6355,7 @@ def the_venue_is_the_only_thing_a_pass_asks_where_it_is():
     held = method_body(t, "private sealed class Pass")
     return (sell.count("pass.Site") == 5 and buy.count("pass.Site") == 4
             and sell.count("pass.Reports") == 0 and buy.count("pass.Reports") == 2
-            and sell.count("pass.Key") == 1 and buy.count("pass.Key") == 1
+            and sell.count("pass.Key") == 3 and buy.count("pass.Key") == 1
             and "Site" not in method_body(t, "public static void ExecuteRoadTrade")
             and all(one in held for one in (
                 "internal bool Reports => Site != null;",
@@ -6596,7 +6601,7 @@ chk("1.41.4", "a market ranking sorts through one comparison for selling and one
     a_market_ranking_sorts_through_one_comparison_for_each_way())
 chk("1.68.0", "which market is best, and how far is too far, stand clear of the game so a test can run them",
     which_market_is_best_is_worked_out_where_a_test_can_ask_it())
-chk("1.68.0", "what is on the road and what a purse will take off the shelf stand clear of the game so a test can run them",
+chk("1.68.0", "what is on the road and what caravans will take off the shelf stand clear of the game so a test can run them",
     what_is_on_the_road_is_added_up_where_a_test_can_ask_it())
 chk("1.68.0", "the forecast score, the promise score and the store that holds them stand clear of the game so a test can run them",
     how_a_forecast_and_a_promise_held_is_scored_where_a_test_can_ask_it())
@@ -7159,7 +7164,7 @@ def a_dry_run_draws_the_price_you_paid_down_the_way_a_real_pass_does():
             and ordered(sell, "bool bought = basis.SoldOne();",
                         "if (bought) books.NotePaidDrawn(market.PaidKeyAt(at), basis.SoldAt);")
             and ordered(sell, "bool paidFor = basis.SoldOne();",
-                        "if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays);")
+                        "if (paidFor)", "market.RecordedSale(at, basis.SoldAt, proceeds, bestPays, line);")
             and "long number = ledger == null ? 0L : ledger.RecordSale(PaidKeyAt(at), 1, unitPaid, out bought, out from);" in sell
             and ordered(herd, "bool bought = basis.SoldOne();", "if (bought)",
                         "if (pass.Sim) pass.Books.NotePaidDrawn(paidKey, basis.SoldAt);",
@@ -7547,7 +7552,7 @@ def a_caravan_already_in_the_market_is_not_counted_twice():
 def what_lands_after_you_arrive_is_not_counted():
     units = method_body(S['Projection.cs'], "internal static int UnitsLanding")
     worth = method_body(S['Projection.cs'], "internal static int WorthLanding")
-    purse = method_body(S['Projection.cs'], "internal static int PurseLanding")
+    purse = method_body(S['Projection.cs'], "internal static int WorthBought")
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
     landed = between(S['Projection.cs'], "private static float Landed(float etaDays, float withinDays, bool graded) =>", ";")
     share = method_body(S['TradeMath.cs'], "public static float ShareThatLands")
@@ -7558,7 +7563,7 @@ def what_lands_after_you_arrive_is_not_counted():
             and ordered(worth, "float share = Landed(landing.Days, withinDays, graded);", "if (share <= 0f) continue;",
                         "worth = TradeMath.ShelfAfterLanding(worth, PartOf(landing.Worth, share));")
             and ordered(purse, "float share = Landed(spending.Days, withinDays, graded);", "if (share <= 0f) continue;",
-                        "purse += PartOf(spending.Gold, share);")
+                        "worth = TradeMath.AddedUp(worth, PartOf(spending.Worth, share));")
             and ordered(landed, "graded ? TradeMath.ShareThatLands(etaDays, withinDays)",
                         ": TradeMath.LandsInTime(etaDays, withinDays) ? 1f : 0f")
             and ordered(share, "float reach = horizonDays / 2f < HorizonStep ? horizonDays / 2f : HorizonStep;",
@@ -7572,7 +7577,7 @@ def what_lands_after_you_arrive_is_not_counted():
             and "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);" in scan
             and "Forecast.UnitsLanding(from, item, toBuy)" in scan
             and "A_load_still_on_the_road_past_the_window_is_left_out" in PROJECTIONTESTS
-            and "The_purse_on_the_road_adds_up_within_the_window" in PROJECTIONTESTS
+            and "What_caravans_buy_on_the_road_adds_up_within_the_window" in PROJECTIONTESTS
             and "On_the_price_path_a_load_landing_near_your_arrival_counts_in_part" in PROJECTIONTESTS
             and all(one in MATHTESTS for one in
                     ("A_landing_counts_in_full_well_before_you_arrive_in_part_near_it_and_not_at_all_well_after",
@@ -7639,37 +7644,47 @@ chk("1.60.0", "the workshop list says what each one will make next, and the pane
 
 
 
-def a_purse_on_its_way_is_spent_on_what_is_cheap_at_that_market():
+def a_caravans_gold_goes_on_the_kinds_the_game_has_it_buy():
     leaving = method_body(S['Forecast.cs'], "private static int WorthBought")
-    picked = method_body(S['Forecast.cs'], "private static Dictionary<string, float> WhatATraderWouldPickAt")
-    road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
-    across = method_body(S['Projection.cs'], "internal static float PullAcross")
-    share = method_body(S['Projection.cs'], "internal static int WorthLeaving")
-    return (ordered(leaving,
-                    "int purse = Projection.PurseLanding(coming, withinDays, graded: true);",
-                    "if (!PullAt(site, out Dictionary<string, float> pull, out float across)) return 0;",
-                    "return Projection.WorthLeaving(purse, pull, across, item.ItemCategory.StringId);")
+    follow = method_body(S['Forecast.cs'], "private static void FollowACaravan")
+    worth = method_body(S['TradeMath.cs'], "public static float WhatACaravanThinksAKindIsWorth")
+    return (leaving and follow and worth
+            and "Projection.WorthBought(coming, item.ItemCategory.StringId, withinDays, graded: true)" in leaving
             and "int bought = WorthBought(site, item, withinDays);" in
                 method_body(S['Forecast.cs'], "internal static int WorthLeaving")
-            and ordered(share,
-                        "if (!pull.TryGetValue(category, out float mine)) return 0;",
-                        "return TradeMath.ShareOfAPurse(purse, mine, across);")
-            and "foreach (float one in pull.Values) total += one;" in across
-            and "NoteAPurse(bound, party.PartyTradeGold, days);" in road
-            and "TradeMath.PullOfAPrice(town.MarketData.GetPriceFactor(category))" in picked
-            and "Town town = site.IsTown ? site.Town : null;" in picked
-            and "What_leaves_the_shelf_is_the_purse_share_the_kind_of_good_pulls" in PROJECTIONTESTS)
+            and ordered(follow, "if (kind == null || (!kind.IsTradeGood && !kind.IsAnimal)) continue;",
+                        "if (town.MarketData.GetItemCountOfCategory(kind) <= 0) continue;",
+                        "float wants = TradeMath.WhatACaravanThinksAKindIsWorth(",
+                        "wanted.Sort((x, y) => x.worth != y.worth ? y.worth.CompareTo(x.worth) : x.at.CompareTo(y.at));",
+                        "int kindsBought = convoy ? TradeMath.AConvoyBuysThisManyKinds : TradeMath.ACaravanBuysThisManyKinds;",
+                        "for (int i = 0; i < kindsBought && i < wanted.Count; i++) Buy(wanted[i].kind);")
+            and "NoteWhatACaravanBuys(bound, kind, TradeMath.WorthOf(units, stands.Value), days);" in follow
+            and "float under = average * (1f - WhatHoldingAKindTakesOff(heldWorth)) - factor;" in worth
+            and "if (under < 0f) return 0f;" in worth
+            and "public const int ACaravanBuysThisManyKinds = 5;" in S['TradeMath.cs']
+            and "public const int AConvoyBuysThisManyKinds = 10;" in S['TradeMath.cs']
+            and "PullOfAPrice" not in ALL and "ShareOfAPurse" not in ALL
+            and "Only_the_kind_a_caravan_buys_leaves_the_shelf" in PROJECTIONTESTS
+            and "A_caravan_wants_a_kind_by_how_far_under_the_average_it_sells" in MATHTESTS)
 
-def a_purse_is_never_counted_twice_and_never_beyond_what_it_holds():
+def a_caravan_spends_kind_by_kind_within_the_games_own_limits():
     shift = method_body(S['Forecast.cs'], "internal static int WorthShift")
-    share = method_body(S['TradeMath.cs'], "public static int ShareOfAPurse")
-    pull = method_body(S['TradeMath.cs'], "public static float PullOfAPrice")
-    return ("TradeMath.WorthShift(WorthLanding(site, item, withinDays)," in shift
+    spends = method_body(S['TradeMath.cs'], "public static int WhatACaravanSpendsOnAKind")
+    takes = method_body(S['TradeMath.cs'], "public static int WhatACaravanTakesOfAKind")
+    follow = method_body(S['Forecast.cs'], "private static void FollowACaravan")
+    return (shift and spends and takes and follow
+            and "TradeMath.WorthShift(WorthLanding(site, item, withinDays)," in shift
             and "WorthLeaving(site, item, withinDays));" in shift
-            and "if (purse <= 0 || pull <= 0f || pullAcrossTheMarket <= 0f) return 0;" in share
-            and "(double)purse * pull / pullAcrossTheMarket" in share
-            and "float pull = 1f - Finite(priceFactor, 1f);" in pull
-            and "return pull < 0f ? 0f : (pull > 1f ? 1f : pull);" in pull)
+            and "if (gold <= 0 || mostOnAKind <= 0 || !(kindWorth >= ACaravanLeavesAKindWorthUnder)) return 0;" in spends
+            and "gold * (double)ACaravanSpendsAtMostThisShareOnAKind," in spends
+            and "kindWorth * (double)ACaravanSpendsAtMostThisTimesAKindsWorth)," in spends
+            and "Math.Min(onTheShelf, mostUnits));" in takes
+            and "GetMaxGoldToSpendOnOneItemCategory(caravan, kind)" in follow
+            and "MaxNumberOfItemsToBuyFromSingleCategory" in follow
+            and "gold -= units * price;" in follow
+            and "int gold = (int)Math.Min(int.MaxValue, caravan.PartyTradeGold + earned);" in follow
+            and "A_caravan_spends_at_most_half_its_purse_half_again_what_a_kind_is_worth_and_the_most_on_one_kind"
+                in MATHTESTS)
 
 def what_a_market_will_hold_nets_the_buying_off_against_the_landing():
     return ("public static int WorthShift(int landing, int leaving)" in S['TradeMath.cs']
@@ -7678,10 +7693,10 @@ def what_a_market_will_hold_nets_the_buying_off_against_the_landing():
             and "_inStoreValue = TradeMath.ShelfAfterLanding(data.InStoreValue, landed);" in S['Market.cs'])
 
 
-chk("1.61.0", "the gold a caravan brings is aimed at the goods that are cheap at that market, weighted by how cheap each one is",
-    a_purse_on_its_way_is_spent_on_what_is_cheap_at_that_market())
-chk("1.61.0", "a purse is split across a market rather than counted whole against every good, and never read as more than it holds",
-    a_purse_is_never_counted_twice_and_never_beyond_what_it_holds())
+chk("1.61.0", "the gold a caravan brings is spent on the kinds the game's own caravans buy at that market, the five they want most and ten for a convoy, ranked the way the game ranks them",
+    a_caravans_gold_goes_on_the_kinds_the_game_has_it_buy())
+chk("1.61.0", "a caravan's purse is spent kind by kind, never past half of what is left, half again what the kind is worth to it or the most the game lets it spend on one kind",
+    a_caravan_spends_kind_by_kind_within_the_games_own_limits())
 chk("1.61.0", "what a market will hold when you get there is what lands there less what the purses take off the shelf",
     what_a_market_will_hold_nets_the_buying_off_against_the_landing())
 
@@ -8042,18 +8057,20 @@ chk("1.64.0", "every Conf figure falls in one of the four bands the log splits t
     every_confidence_sits_in_one_band_and_the_bands_are_counted_in_one_place())
 
 
-def the_pull_across_a_market_is_added_up_once_an_hour():
+def what_each_kind_fetches_across_the_towns_is_read_once_an_hour():
     f = S['Forecast.cs']
-    at = method_body(f, "private static bool PullAt")
+    build = method_body(f, "private static void Build")
+    follow = method_body(f, "private static void FollowACaravan")
     leaving = method_body(f, "internal static int WorthLeaving")
-    return ("private static readonly Dictionary<string, float> _across =" in f
-            and ordered(at, "if (!_pull.TryGetValue(site.StringId, out pull))",
-                        "_across[site.StringId] = Projection.PullAcross(read);")
-            and "_across.Clear();" in method_body(f, "private static void Build")
-            and "_across.Clear();" in method_body(f, "internal static void Forget")
-            and "foreach" not in leaving
-            and S['Projection.cs'].count("total += one;") == 1
-            and "A_market_with_no_pull_at_all_is_not_read" in PROJECTIONTESTS)
+    return (build and follow and leaving
+            and "private static readonly Dictionary<string, (float average, float lowest)> _indexes =" in f
+            and ordered(build, "_indexes.Clear();", "_coastIndexes.Clear();",
+                        'Guard.Run("Forecast.PriceIndexes", ReadThePriceIndexes);',
+                        'Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);')
+            and "_indexes.Clear();" in method_body(f, "internal static void Forget")
+            and "Town.AllTowns" not in follow
+            and "if (!indexes.TryGetValue(kind.StringId, out var index)) continue;" in follow
+            and "foreach" not in leaving)
 
 def two_routes_that_land_within_a_few_hours_share_one_price_ladder():
     f = S['Projection.cs']
@@ -8062,13 +8079,13 @@ def two_routes_that_land_within_a_few_hours_share_one_price_ladder():
             and all(quartered in method_body(f, sig)
                     for sig in ("internal static int UnitsLanding",
                                 "internal static int WorthLanding",
-                                "internal static int PurseLanding",
+                                "internal static int WorthBought",
                                 "internal static int WorthUsedUp"))
             and "public const float HorizonStep = 0.25f;" in S['TradeMath.cs']
             and "days / HorizonStep + 0.5d" in method_body(S['TradeMath.cs'], "public static float ToTheQuarterDay")
             and "TradeMath.ToTheQuarterDay" in MATHTESTS
             and "The_window_is_read_to_the_nearest_quarter_day" in PROJECTIONTESTS
-            and "The_purse_window_is_read_to_the_nearest_quarter_day_as_well" in PROJECTIONTESTS)
+            and "The_window_for_what_caravans_buy_is_read_to_the_nearest_quarter_day_as_well" in PROJECTIONTESTS)
 
 def a_workshop_run_lands_by_how_far_along_it_already_is():
     f = S['Forecast.cs']
@@ -8124,8 +8141,8 @@ def reading_what_the_shops_will_make_leaves_nothing_behind_to_clear_away():
 chk("1.81.5", "an hour's reading of what the workshops will make builds up no list or key of its own to be cleared away afterwards",
     reading_what_the_shops_will_make_leaves_nothing_behind_to_clear_away())
 
-chk("1.64.1", "how much a market pulls in all is added up once an hour rather than once for every good priced",
-    the_pull_across_a_market_is_added_up_once_an_hour())
+chk("1.64.1", "what each kind fetches on average across the towns is read once an hour rather than once for every caravan or good priced",
+    what_each_kind_fetches_across_the_towns_is_read_once_an_hour())
 chk("1.64.1", "the days to a market are read to the nearest quarter day, so two routes that land together share one price ladder",
     two_routes_that_land_within_a_few_hours_share_one_price_ladder())
 chk("1.64.1", "a workshop run lands at the town's daily tick once the progress the game reports and the line's own pace make a whole run, the tick read off the last time a workshop there ran",
@@ -8407,7 +8424,7 @@ def no_travel_or_price_rule_hands_back_a_number_that_is_not_one():
             and "float days = Finite((nowHours - thenHours) / 24f, 0f);" in t
             and "Finite(total / counted, 0f)" in t
             and "Finite(farSellPrice * safetyFactor, 0f)" in t
-            and "float pull = 1f - Finite(priceFactor, 1f);" in t
+            and t.count("float factor = Finite(priceFactor, 0f), average = Finite(averageIndex, 0f);") == 2
             and "TradeMath.Finite(s.MaxTravelDaysTown, 0f)" in S['Ranking.cs']
             and "TradeMath.Finite(s.MaxTravelDaysVillage, 0f)" in S['Ranking.cs']
             and all(one in MATHTESTS for one in
@@ -8554,14 +8571,12 @@ def how_long_a_shelf_holds_a_deal_is_worked_out_where_a_test_can_ask_it():
             and "internal const float NeverRunsOut = -1f;" in p
             and "RunsOutAt" not in p
             and "return Projection.RunsOutOf(ShelfAhead(site, item, stockNow, afterDays), wanted);" in ask
-            and ("Projection.RunsOutOf(Projection.ShelfAhead(listed, coming, pull, across, item, category,\n"
+            and ("Projection.RunsOutOf(Projection.ShelfAhead(listed, coming, item, category,\n"
                  "                                                       unitValue, stockNow, afterDays), wanted);")
                 in PROJECTIONTESTS
             and "if (item == null || unitValue <= 0) return curve;" in curve
             and ordered(curve, "int used = WorthUsedUp(drawn, category, days, usedADay,",
-                        "int taken = UnitsLeaving(\n"
-                        "                    TradeMath.AddedUp(WorthLeaving(PurseLanding(coming, days), pull, across, category), used),\n"
-                        "                    unitValue);")
+                        "int taken = UnitsLeaving(TradeMath.AddedUp(WorthBought(coming, category, days), used), unitValue);")
             and "UnitsLanding(listed, item, days), taken)));" in curve
             and "wanted" not in curve
             and "if (curve == null || wanted <= 0) return NeverRunsOut;" in reads
@@ -8574,8 +8589,8 @@ def how_long_a_shelf_holds_a_deal_is_worked_out_where_a_test_can_ask_it():
                 method_body(S['TradeMath.cs'], "public static float UpToTheQuarterDay")
             and all(one in PROJECTIONTESTS for one in
                     ("A_shelf_nobody_is_coming_for_never_runs_out",
-                     "A_shelf_runs_out_at_the_moment_a_purse_takes_the_last_of_it",
-                     "A_load_landing_first_holds_the_shelf_up_past_a_purse",
+                     "A_shelf_runs_out_at_the_moment_a_caravan_takes_the_last_of_it",
+                     "A_load_landing_first_holds_the_shelf_up_past_a_caravan_buying",
                      "Nothing_that_lands_before_you_arrive_can_expire_the_deal",
                      "Every_moment_counted_is_after_you_arrive_and_on_the_quarter_day",
                      "A_shelf_that_runs_out_never_reports_a_moment_you_have_already_passed",
@@ -8594,7 +8609,7 @@ def a_route_says_how_long_its_buy_market_holds_that_quantity():
             and "return Projection.RunsOutOf(ShelfAhead(site, item, stockNow, afterDays), wanted);" in ask
             and "if (_shelfAhead.TryGetValue(key, out List<(float days, int shelf)> curve)) return curve;"
                 in kept
-            and "curve = Projection.ShelfAhead(listed, coming, pull, across, item.StringId," in kept
+            and "curve = Projection.ShelfAhead(listed, coming, item.StringId, item.ItemCategory.StringId," in kept
             and "_shelfAhead.Clear();" in method_body(S['Forecast.cs'], "private static void Build")
             and "public float RunsOutInDays = Projection.NeverRunsOut;" in S['Ledger.cs']
             and "float runsOut = Forecast.RunsOutIn(from, item, onTheShelfNow, q.Units, toBuy);" in scan
@@ -13033,8 +13048,8 @@ def a_party_on_the_road_lands_its_load_only_at_a_town():
     return (road
             and ordered(road, "Settlement bound = party.TargetSettlement;",
                         "if (bound == null || !bound.IsTown) continue;",
-                        "if (caravan) NoteAPurse(bound, party.PartyTradeGold, days);",
-                        "int landing = caravan ? WhatACaravanLeavesHere(bound, party, item, amount) : amount;")
+                        'Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days));',
+                        "Note(bound, item.StringId, item.ItemCategory, amount, TradeMath.WorthOf(amount, item.Value), days);")
             and "bound.IsVillage" not in road)
 
 chk("1.93.4", "a caravan or a party of villagers is counted as landing its load only where it is bound for a town, so what villagers carry back home to their village is never counted as reaching a market",
@@ -13662,17 +13677,16 @@ def food_gets_a_haul_animal_it_would_fill_less_than_half_of_only_on_its_last_day
             and ("internal static float LeastFilledFor(bool food, int foodHeld, int foodForADay) =>\n"
                  "            food && foodHeld < foodForADay ? 0f : LeastAHaulAnimalIsFilled;") in S['Rules.cs']
             and "internal static int FoodForADay() => (int)Math.Ceiling(AppetitePerDay());" in S['Policy.cs']
-            and ("float leastFilled = Herding.LeastFilledFor(unfitted.food,\n"
-                 "                TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),\n"
-                 "                TradePolicy.FoodForADay());") in haul
-            and '"and your party still has a day of food or more"' in haul
+            and ordered(haul, "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);",
+                        "float leastFilled = Herding.LeastFilledFor(unfitted.food, own, TradePolicy.FoodForADay());")
+            and '"and your party still has a day of its own food or more"' in haul
             and "Food_gets_a_haul_animal_it_would_fill_less_than_half_of_only_once_the_party_is_down_to_its_last_day"
                 in HERDTESTS
-            and "It buys one for food only when the food would fill at least half of it, or when your party is down to its last day of food"
+            and "It buys one for food only when the food would fill at least half of it, or when your party is down to its last day of its own food"
                 in README)
 
 
-chk("1.93.8", "food a full cargo left behind gets a haul animal it would fill less than half of only once the food your party carries is down to its last day, and TradeLord.log says when the food was too little",
+chk("1.93.8", "food a full cargo left behind gets a haul animal it would fill less than half of only once your party's own food is down to its last day, and TradeLord.log says when the food was too little",
     food_gets_a_haul_animal_it_would_fill_less_than_half_of_only_on_its_last_day())
 
 
@@ -14265,7 +14279,7 @@ def hold_cargo_and_the_marker_floor_count_what_is_on_its_way():
             and ordered(takes, "Paying pays = WhatThatMarketPays(mark, mark.SettlementComponent, el, party, ride);",
                         "return TradeMath.WhatTheMarkTakes(pays.At, carried, worth, Options.Current.MinProfitMargin, purse);")
             and "BestSell(held.Item)" not in S['Marker.cs'] and "BestSell(Item(at))" not in S['Trading.cs']
-            and "counting what is on its way there," in en['TL329']
+            and "counting goods on the way," in en['TL329']
             and "It sets route stock and, with Bulk price simulation on, route and tooltip prices and where to sell." in en['TL396']
             and "the cargo it would really sell there" in en['TL345']
             and "skips the market TradeLord last traded at until you return" in en['TL345']
@@ -14540,7 +14554,7 @@ def the_hold_counts_only_what_the_mark_would_buy_of_what_you_bought():
                     "if (aged ? price < mustBeat : !TradeMath.ProfitAcceptable(mustBeat, price, s.MinProfitMargin))",
                     "if (!basis.SkipTheUnitsYouPaidFor(ref remaining)) break;",
                     "int boughtLeft = Math.Min(remaining, basis.PaidLeft - basis.AgedLeft);",
-                    "int floor = TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket);",
+                    "int floor = TradeRules.FloorForTheLast(there, boughtLeft, line);",
                     "if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))",
                     "tally.Note(Block.BelowBestMarket);",
                     "if (!basis.SetTheBoughtUnitsAside(ref remaining)) break;",
@@ -14663,7 +14677,7 @@ def each_unit_is_weighed_against_what_the_mark_pays_for_the_last_one_it_keeps():
     return ("internal static int FloorForTheLast(int[] rungs, int boughtLeft, float share) =>" in S['Rules.cs']
             and "rungs == null || boughtLeft <= 0 || boughtLeft > rungs.Length" in S['Rules.cs']
             and "? 0 : BestMarketFloor(rungs[boughtLeft - 1], share);" in S['Rules.cs']
-            and "int floor = TradeRules.FloorForTheLast(there, boughtLeft, s.HoldCargoForBestMarket);" in S['Passes.cs']
+            and "int floor = TradeRules.FloorForTheLast(there, boughtLeft, line);" in S['Passes.cs']
             and "bestMarketFloor" not in S['Passes.cs'] and "floorKnown" not in S['Passes.cs']
             and "average" not in method_body(S['TradeMath.cs'], "public static int[] WhatTheMarkTakes")
             and all(one in SELLPASSTESTS for one in
@@ -14727,7 +14741,7 @@ chk("1.94.1", "TradeLord.log names each good Hold cargo for the best market kept
 def the_hold_texts_read_plainly_in_every_language():
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    return (en['TL329'].startswith("Sells a good you bought only for at least this share")
+    return (en['TL329'].startswith("Sells what you bought for at least this share")
             and ru['TL329'].startswith("Продаёт купленное не ниже этой доли")
             and "ancak yol süresi sınırlarınız içindeki en iyi diğer pazarın" in tr['TL329'] and "ancak," not in tr['TL329']
             and tr['TL85'] == "Yükü en iyi pazar için tut ayarı yükünüzü daha iyi bir pazar için saklıyor"
@@ -15925,7 +15939,7 @@ def a_unit_bought_dear_sells_at_the_average_and_is_booked_at_its_own_cost():
                         "int mustBeat = TradeRules.WorthToBeat(good, basis.Floor(worth, price),",
                         "bool bought = basis.SoldOne();",
                         "bool paidFor = basis.SoldOne();",
-                        "if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays);")
+                        "if (paidFor)", "market.RecordedSale(at, basis.SoldAt, proceeds, bestPays, line);")
             and ordered(marker_passes()[1], "TradeMath.DearFirst walk = floors.WithoutTheUnknown();",
                         "walk.Clears(price, Options.Current.MinProfitMargin)",
                         "booked += walk.Took();", "long cost = eachAtItsOwnCost ? booked : (long)worth * moved;",
@@ -16599,7 +16613,7 @@ def every_unit_keeps_a_number_of_its_own_and_sells_at_its_own_price():
     sold = method_body(ledger, "public long RecordSale(string itemId, int count, int unitPaid, out float bought, out int from)")
     hand = method_body(ledger, "private static int WhatAHandSaleCovers")
     made = method_body(S['Passes.cs'], "internal static Basis For")
-    row = method_body(S['Trading.cs'], "public void RecordedSale(int at, int unitPaid, int price, int bestPays)")
+    row = method_body(S['Trading.cs'], "public void RecordedSale(int at, int unitPaid, int price, int bestPays, float line)")
     return (all((walk, clears, took, numbered, taken, added, restore, bought, sold, hand, made, row))
             and "public long First;" in method_body(codec, "public struct Batch")
             and ordered(method_body(codec, "public static string WritePurchases"),
@@ -16660,7 +16674,7 @@ def every_unit_keeps_a_number_of_its_own_and_sells_at_its_own_price():
             and "int bestPays = !aged && floor > 0 && boughtLeft <= holdFor ? there[boughtLeft - 1] : 0;" in S['Passes.cs']
             and ordered(row, "long number = ledger == null ? 0L : ledger.RecordSale(PaidKeyAt(at), 1, unitPaid, out bought, out from);",
                         'Log.Write("unit "', "TradeMath.LeastThatClears(unitPaid, margin)",
-                        "TradeRules.BestMarketFloor(bestPays, share)")
+                        "TradeRules.BestMarketFloor(bestPays, line)")
             and "public static int LeastThatClears(int costBasis, float margin)" in math
             and all(one in MATHTESTS for one in
                     ("Each_unit_at_its_own_cost_sells_the_dearest_the_price_clears_by_your_margin_first",
@@ -16704,7 +16718,7 @@ def every_unit_keeps_a_row_and_an_age_and_may_sell_at_cost_once_it_has_waited():
     clears = method_body(math, "private int TheDearestThatClears")
     sell = method_body(passes, "internal static Traded SellThem")
     keeps = method_body(passes, "internal static ForTheMark[] WhatTheMarkKeeps")
-    row = method_body(S['Trading.cs'], "public void RecordedSale(int at, int unitPaid, int price, int bestPays)")
+    row = method_body(S['Trading.cs'], "public void RecordedSale(int at, int unitPaid, int price, int bestPays, float line)")
     launched = method_body(ledger, "private void OnSessionLaunched")
     restore = method_body(ledger, "private void RestoreSaved")
     en = spoken(ENGLISH)
@@ -17585,12 +17599,11 @@ def a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price():
     return ("public const float HungryFoodTolerance = 2f;" in math
             and "day <= 0 || held >= day ? 0 : day - (held < 0 ? 0 : held)" in
                 between(math, "public static int FoodShortOfADay(int held, int day) =>", ";")
-            and "bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,\n                                                    TradePolicy.FoodForADay()) > 0;" in larder
-            and larder.count("TradePolicy.FoodWanted() - shortfall,") == 2
+            and "bool hungry = TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()) > 0;" in larder
+            and larder.count("TradeMath.FoodShortOfADay(own") == 3
             and "if (larder.Count == 0 && !hungry)" in larder
             and ordered(larder, "foreach (var (el, good, _, ceiling) in larder)",
-                        "int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,",
-                        "TradePolicy.FoodForADay());",
+                        "int hunger = TradeMath.FoodShortOfADay(own + wanted - shortfall, TradePolicy.FoodForADay());",
                         "if (hunger <= 0 || pass.DirectionError) return;",
                         "TradeMath.HungryFoodTolerance);",
                         "foreach (var (el, good, _, ceiling) in lean)",
@@ -17686,8 +17699,9 @@ def food_bought_to_trade_is_counted_last_and_the_restock_pays_half_again():
             and "From = one.From, Traded = one.Traded" in apart
             and "if (one.Traded && one.Count > 0) units += one.Count;" in count
             and "int units = kept.UnitsBoughtToTrade(el.EquipmentElement);" in trade
-            and ordered(larder, "int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);",
-                        "int shortfall = TradePolicy.FoodWanted() -", "+ traded;", "if (shortfall <= 0) return;",
+            and "FoodHeld(roster) + books.FoodHeld(sim) - FoodBoughtToTrade(roster, books, sim);" in S['Policy.cs']
+            and ordered(larder, "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);",
+                        "int shortfall = TradePolicy.FoodWanted() - own;", "if (shortfall <= 0) return;",
                         "TradeMath.ShortFoodTolerance);", '" at up to 1.5 times the cheapest price it "',
                         '"its price is above both 1.5 times the cheapest TradeLord knows and twice its value"')
             and all(one in FOODTESTS for one in
@@ -17852,7 +17866,7 @@ def the_restock_pays_up_to_twice_a_foods_value_and_counts_laid_out_trade_food_ap
             and "public const float FoodValueTolerance = 2f;" in S['TradeMath.cs']
             and "Math.Max(ceiling, MostToPayOverTheCheapest(value, FoodValueTolerance))" in
                 between(S['TradeMath.cs'], "public static int AtLeastTwiceItsValue(int ceiling, int value) =>", ";")
-            and ordered(larder, "int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);",
+            and ordered(larder, "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);",
                         "var larder = CheapestFirst(pass,", "string missed = _foodMissed;",
                         '": the cheapest on sale is " + missed')
             and ordered(trade, "int units = kept.UnitsBoughtToTrade(el.EquipmentElement);",
@@ -18148,18 +18162,18 @@ def a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve():
                         "if (pass.WouldReachYourReserveToFeed(price, starving)) break;",
                         "bool overTheCap = starving && pass.WouldReachYourReserve(price);",
                         "pass.Tally(item, 1, price);", "if (overTheCap) pastTheCap = true;",
-                        '", past Max spend per visit as your party has less than a day of food"')
-            and "Food may go past it once your party has under a day of its own, and a haul animal once all its food is that low." in en['TL337']
-            and "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food may go past it once your party has under a day of its own, and a haul animal once all its food is that low." in M
+                        '", past Max spend per visit as your party has less than a day of its own food"')
+            and "Once your party has under a day of its own food, food and a haul animal to carry it may go past it." in en['TL337']
+            and "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Once your party has under a day of its own food, food and a haul animal to carry it may go past it." in M
             and "kendi yiyece\u011fi bir g\u00fcnden aza inince" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL337']
-            and "TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim)," in
+            and "own, TradePolicy.FoodForADay()) > 0" in
                 between(haul, "bool starving = unfitted.food && TradeMath.FoodShortOfADay(", ";")
             and "\u043c\u0435\u043d\u044c\u0448\u0435 \u0447\u0435\u043c \u043d\u0430 \u0434\u0435\u043d\u044c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL337']
             and "\u4e0d\u8db3\u4e00\u5929" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL337']
             and "When your party is down to less than a day of its own food, the food it buys may go past Max spend per visit, never past your gold reserve" in README
-            and "When all the food your party carries, food bought to trade included, is down to less than a day, a haul animal to carry more may go past Max spend per visit too" in README)
+            and "When your party is down to less than a day of its own food, a haul animal to carry more may go past Max spend per visit too" in README)
 
-chk("1.103.3", "a party down to less than a day of food buys its food, and a haul animal to carry it, past Max spend per visit, never past the gold reserve, and TradeLord.log says so",
+chk("1.103.3", "a party down to less than a day of its own food buys its food, and a haul animal to carry it, past Max spend per visit, never past the gold reserve, and TradeLord.log says so",
     a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve())
 
 def the_map_marker_hint_says_it_marks_the_most_profit_per_day():
@@ -18294,7 +18308,7 @@ def a_party_short_of_a_days_food_buys_its_haul_animal_below_the_floor():
     haul = method_body(S['Trading.cs'], "public static bool ExecuteHaulage")
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    said = "A party down to less than a day of food may go below it."
+    said = "A party down to less than a day of its own food may go below it."
     return (haul
             and ("internal static bool PurseClearsTheFloor(int purse, int floor, bool starving) =>\n"
                  "            starving || PurseClearsTheFloor(purse, floor);") in S['Rules.cs']
@@ -18311,23 +18325,23 @@ def a_party_short_of_a_days_food_buys_its_haul_animal_below_the_floor():
             and "A_party_down_to_less_than_a_day_of_food_buys_its_haul_animal_below_the_floor" in HERDTESTS
             and said in en['TL426']
             and 'HintText = "{=TL426}' + en['TL426'] + '"' in M
-            and "Bölüğünüzün bir günden az yiyeceği kaldıysa altına inebilir." in tr['TL426']
-            and "Если еды у отряда меньше чем на день, можно и ниже." in ru['TL426']
-            and "队伍的食物不足一天时可以低于它。" in cn['TL426']
-            and "so early gold goes on goods instead, unless your party is down to less than a day of food" in README)
+            and "Bölüğünüzün bir günden az kendi yiyeceği kaldıysa altına inebilir." in tr['TL426']
+            and "Если своей еды у отряда меньше чем на день, можно и ниже." in ru['TL426']
+            and "队伍自己的食物不足一天时可以低于它。" in cn['TL426']
+            and "so early gold goes on goods instead, unless your party is down to less than a day of its own food" in README)
 
-chk("1.103.6", "a party down to less than a day of food may buy a haul animal to carry its food below Gold before it buys a haul animal, never past the gold reserve, and the hint and TradeLord.log say so",
+chk("1.103.6", "a party down to less than a day of its own food may buy a haul animal to carry its food below Gold before it buys a haul animal, never past the gold reserve, and the hint and TradeLord.log say so",
     a_party_short_of_a_days_food_buys_its_haul_animal_below_the_floor())
 
 
 def the_visit_cap_hint_lets_a_haul_animal_carry_a_starving_partys_food_past_it():
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    return (en['TL337'].endswith("and a haul animal once all its food is that low.")
+    return (en['TL337'].endswith("food and a haul animal to carry it may go past it.")
             and 'HintText = "{=TL337}' + en['TL337'] + '"' in M
-            and "tüm yiyeceği inince yük hayvanı sınırı aşabilir" in tr['TL337']
-            and "а когда так мало всей еды, то и вьючное животное" in ru['TL337']
-            and "全部食物都不足一天时，驮食物的驮兽也可以" in cn['TL337']
+            and "yiyecek ve onu taşıyacak yük hayvanı sınırı aşabilir" in tr['TL337']
+            and "за предел может выйти еда и вьючное животное, чтобы её везти" in ru['TL337']
+            and "买食物和驮这些食物的驮兽都可以超出这个上限" in cn['TL337']
             and "bool overTheCap = starving && pass.WouldReachYourReserve(price);" in S['Trading.cs'])
 
 chk("1.103.6", "the hint for Max spend per visit says a haul animal to carry food for a party down to less than a day of it may go past it, in every language",
@@ -18841,23 +18855,23 @@ def a_party_is_hungry_once_its_own_food_runs_short():
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
     return (larder and haul and hungry and hunger and starving
-            and "int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);" in larder
-            and "- pass.Books.FoodHeld(pass.Sim) + traded;" in larder
-            and "TradePolicy.FoodWanted() - shortfall," in hungry and "traded" not in hungry
-            and "TradePolicy.FoodWanted() - shortfall," in hunger and "traded" not in hunger
-            and "TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim)," in starving
-            and "FoodBoughtToTrade" not in starving
+            and "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);" in larder and "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);" in haul
+            and "FoodHeld(roster) + books.FoodHeld(sim) - FoodBoughtToTrade(roster, books, sim);" in S['Policy.cs']
+            and "own, TradePolicy.FoodForADay()" in hungry
+            and "own + wanted - shortfall, TradePolicy.FoodForADay()" in hunger
+            and "own, TradePolicy.FoodForADay()) > 0" in starving
+            and "FoodHeld(pass.Party.ItemRoster)" not in larder and "FoodHeld(pass.Party.ItemRoster)" not in haul
             and larder.count('"your party had less than a day of its own food, so "') == 2
             and '"resupply: your party has less than a day of its own food, and none is on sale at " +' in larder
             and "less than a day of food" not in larder
             and ordered(larder, "foreach (var (el, good, _, ceiling) in lean)", "if (hungryUnits > 0)",
                         "string missed = lean.Count == 0 ? _foodMissed : null;",
                         '(missed == null ? "" : ": the cheapest on sale is " + missed));')
-            and "once your party has under a day of its own" in en['TL337']
+            and "Once your party has under a day of its own food" in en['TL337']
             and 'HintText = "{=TL337}' + en['TL337'] + '"' in M
             and "kendi yiyeceği" in tr['TL337'] and "своей еды" in ru['TL337'] and "自己的食物" in cn['TL337'])
 
-chk("1.103.11", "a party is hungry once its own food is down to less than a day, so food bought to trade no longer keeps the food it needs from going past Max spend per visit, while a haul animal still waits for all its food to run that low",
+chk("1.103.11", "a party is hungry once its own food is down to less than a day, so food bought to trade no longer keeps the food it needs, or a haul animal to carry it, from going past Max spend per visit",
     a_party_is_hungry_once_its_own_food_runs_short())
 
 
@@ -19666,16 +19680,14 @@ chk("1.104.14", "a dry run keeps the haul animals the cargo it bought on paper n
 
 def a_caravan_is_counted_at_the_price_that_caravan_gets():
     road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
-    leaves = method_body(S['Forecast.cs'], "private static int WhatACaravanLeavesHere")
-    return (road and leaves
-            and "private static int WhatACaravanLeavesHere(Settlement bound, MobileParty caravan, ItemObject item, int carried)"
-                in S['Forecast.cs']
-            and "int landing = caravan ? WhatACaravanLeavesHere(bound, party, item, amount) : amount;" in road
-            and ordered(leaves, "CalculateDailySettlementBudgetForItemCategory(where, demand, category);",
-                        "int price = Priced.At(where.Settlement.SettlementComponent, item,\n"
-                        "                                      caravan, selling: true);",
-                        "return TradeMath.WhatACaravanUnloads(carried, priceFactor, budget, price);")
-            and "MainParty" not in leaves)
+    follow = method_body(S['Forecast.cs'], "private static void FollowACaravan")
+    return (road and follow
+            and "private static void FollowACaravan(MobileParty caravan, Settlement bound, float days)" in S['Forecast.cs']
+            and 'Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days));' in road
+            and ordered(follow, "int price = Priced.At(town, item, caravan, selling: true);",
+                        "item.Value, price, convoy, haul);")
+            and "int price = Priced.At(town, stands, caravan, selling: false);" in follow
+            and "MainParty" not in follow)
 
 chk("1.104.15", "what a caravan is counted as leaving in a town is priced for that caravan, never at the price you would get",
     a_caravan_is_counted_at_the_price_that_caravan_gets())
@@ -20286,16 +20298,102 @@ def villagers_keep_their_own_pack_animals_out_of_the_forecast():
     road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad()")
     kept = method_body(S['Forecast.cs'], "private static ItemObject ThePackAnimalVillagersKeep(ItemRoster carried)")
     return (road and kept
-            and ordered(road, "ItemObject ridden = caravan ? null : ThePackAnimalVillagersKeep(carried);",
+            and ordered(road, "ItemObject ridden = ThePackAnimalVillagersKeep(carried);",
                         "if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;",
                         "if (item == ridden) amount -= (int)(0.5f * party.MemberRoster.TotalManCount);",
-                        "int landing = caravan ? WhatACaravanLeavesHere(bound, party, item, amount) : amount;",
-                        "if (landing <= 0) continue;")
+                        "if (amount <= 0) continue;",
+                        "Note(bound, item.StringId, item.ItemCategory, amount, TradeMath.WorthOf(amount, item.Value), days);")
             and "item?.ItemCategory == DefaultItemCategories.PackAnimal && item.Value < (kept?.Value ?? 10000)" in kept)
 
 
 chk("1.105.2", "villagers bound for a town keep their own pack animals, as the game has them do, so those animals are no longer forecast as landing there",
     villagers_keep_their_own_pack_animals_out_of_the_forecast())
+
+def a_caravan_is_followed_through_its_whole_visit_as_the_game_runs_it():
+    follow = method_body(S['Forecast.cs'], "private static void FollowACaravan")
+    return (follow
+            and "caravan.CaravanPartyComponent.CanHaveNavalNavigationCapability ? _coastIndexes : _indexes;" in follow
+            and "if (!town.Settlement.HasPort) continue;" in method_body(S['Forecast.cs'], "private static void ReadThePriceIndexes")
+            and ordered(follow, "for (int horses = 0; horses < 2; horses++)",
+                        "for (int k = carried.Count - 1; k >= 0; k--)",
+                        "if ((horses == 1) != (item.HasHorseComponent || haul)) continue;",
+                        "if (haul && onLand && haulOver <= 0) continue;",
+                        "int units = onLand && haul ? haulOver",
+                        ": onLand && livestock && herdOver > 0 ? herdOver",
+                        "int gold = (int)Math.Min(int.MaxValue, caravan.PartyTradeGold + earned);",
+                        "float weight = caravan.TotalWeightCarried - shed;",
+                        "float budget = TradeMath.ACaravansBudgetFactor(gold);",
+                        "Buy(DefaultItemCategories.Grain);", "Buy(DefaultItemCategories.Fish);",
+                        "else if (hauling + herd < men * 2f && hauling < men && gold > 1000)",
+                        "Buy(DefaultItemCategories.PackAnimal);")
+            and "if (!kind.IsAnimal && weight / capacity > TradeMath.ACaravanBuysNoGoodsPastThisFull) return;" in follow
+            and "public static int AnimalsACaravanSellsOff(int animals, int men) =>" in S['TradeMath.cs']
+            and "A_caravan_sells_off_the_animals_it_drives_past_three_for_every_five_men" in MATHTESTS
+            and "A_caravan_takes_what_it_spends_for_within_the_shelf_its_limit_and_its_cargo" in MATHTESTS)
+
+
+chk("1.105.3", "a caravan on its way is followed through its visit as the game runs it, selling first and buying with what it sold, a convoy on coastal prices, and animals past what its men drive sold off",
+    a_caravan_is_followed_through_its_whole_visit_as_the_game_runs_it())
+
+def a_hungry_party_buys_its_day_of_food_before_any_trade_good():
+    t = S['Trading.cs']
+    larder = method_body(t, "public static void ExecuteResupply")
+    return (larder
+            and "public static void ExecuteResupply(Settlement settlement, bool quiet = false, bool aDayFirst = false)" in t
+            and ordered(larder, "int shortfall = TradePolicy.FoodWanted() - own;",
+                        "if (aDayFirst) shortfall = Math.Min(shortfall, TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()));",
+                        "if (shortfall <= 0) return;", "int wanted = shortfall;",
+                        'so a day of it is bought before any trade good at " + settlement.Name);')
+            and ordered(t, "ExecuteQuickSell(Settlement.CurrentSettlement);",
+                        "ExecuteResupply(Settlement.CurrentSettlement, aDayFirst: true);",
+                        "ExecuteQuickBuy(Settlement.CurrentSettlement);")
+            and ordered(t, "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);",
+                        "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true, aDayFirst: true);",
+                        "if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);")
+            and t.count("aDayFirst: true") == 2
+            and "When your party is down to less than a day of its own food, a day of food is bought before any trade good" in README)
+
+
+chk("1.105.3", "a party down to less than a day of its own food buys a day of food before any trade good, on arrival and with Trade here now, and the rest of its days after trading as before",
+    a_hungry_party_buys_its_day_of_food_before_any_trade_good())
+
+def a_hold_decided_turns_only_three_points_past_the_line():
+    rules = S['Rules.cs']
+    choice = between(rules, "internal struct HoldChoice", "internal static class Holds")
+    holds = between(rules, "internal static class Holds", "internal static void Forget() => _decided.Clear();")
+    sell = method_body(S['Passes.cs'], "internal static Traded SellThem")
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    floors = io.open('tests/BestMarketFloorTests.cs', encoding='utf-8').read()
+    return (choice and holds and sell and fetch
+            and "internal const float AHoldTurnsOnlyThisFarPastTheLine = 0.03f;" in rules
+            and "float line = left <= HeldFrom ? share + TradeRules.AHoldTurnsOnlyThisFarPastTheLine" in choice
+            and ": left <= SoldFrom && left >= SoldTo ? share - TradeRules.AHoldTurnsOnlyThisFarPastTheLine" in choice
+            and "internal const int RememberedForHours = 24;" in holds
+            and "hour >= one.hour && hour - one.hour <= RememberedForHours" in holds
+            and ordered(sell, "float line = there == null ? s.HoldCargoForBestMarket",
+                        ": market.HoldLine(at, s.HoldCargoForBestMarket, boughtLeft);",
+                        "int floor = TradeRules.FloorForTheLast(there, boughtLeft, line);",
+                        "if (!aged && TradeRules.HeldForTheMark(price, floor, boughtLeft, holdFor))",
+                        "choice.Note(boughtLeft, held: true);",
+                        "if (bestPays > 0) choice.Note(boughtLeft, held: false);",
+                        "if (choice.Made) market.HoldDecided(at, choice);")
+            and ordered(fetch, "float line = there == null ? share : Holds.LineFor(key, site.StringId, share, fresh, Freshness.Hour);",
+                        "choice.Note(fresh, held: true);",
+                        "else if (!walk.PickedHasAged && floor > 0) choice.Note(fresh, held: false);",
+                        "Holds.Decided(key, site.StringId, choice, Freshness.Hour);")
+            and "Holds.LineFor(PaidKeyAt(at), _pass.Key, share, left, Freshness.Hour);" in S['Trading.cs']
+            and "Holds.Decided(PaidKeyAt(at), _pass.Key, choice, Freshness.Hour);" in S['Trading.cs']
+            and 'Guard.Run("GameEnd.Holds", Holds.Forget);' in S['SubModule.cs']
+            and "A choice turns 3 points past it." in spoken(ENGLISH)['TL329']
+            and "A_hold_decided_before_turns_only_three_points_past_the_line" in floors
+            and "A_hold_choice_notes_the_units_it_sold_and_the_unit_it_held_from" in floors
+            and "A_hold_decision_is_remembered_for_a_day_for_that_good_at_that_market_alone" in floors
+            and "A_good_held_here_last_time_stays_held_until_its_price_is_three_points_over_the_line" in SELLPASSTESTS
+            and "A_second_pass_at_the_same_market_keeps_holding_what_the_first_pass_held" in SELLPASSTESTS)
+
+
+chk("1.105.3", "Hold cargo for the best market keeps its last choice for a good at a market until the price is 3 points past the line, in the sell pass and on the map marker alike, for a day",
+    a_hold_decided_turns_only_three_points_past_the_line())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

@@ -5,7 +5,8 @@ namespace TradeLord
 {
     internal struct Spending
     {
-        internal int Gold;
+        internal string Category;
+        internal int Worth;
         internal float Days;
     }
 
@@ -60,19 +61,21 @@ namespace TradeLord
             return worth;
         }
 
-        internal static int PurseLanding(IList<Spending> coming, float withinDays, bool graded = false)
+        internal static int WorthBought(IList<Spending> coming, string category, float withinDays,
+                                        bool graded = false)
         {
-            if (coming == null) return 0;
+            if (coming == null || category == null) return 0;
             withinDays = TradeMath.ARideToTheQuarterDay(withinDays);
-            int purse = 0;
+            int worth = 0;
             for (int i = 0; i < coming.Count; i++)
             {
                 Spending spending = coming[i];
+                if (spending.Category != category || spending.Worth <= 0) continue;
                 float share = Landed(spending.Days, withinDays, graded);
                 if (share <= 0f) continue;
-                purse += PartOf(spending.Gold, share);
+                worth = TradeMath.AddedUp(worth, PartOf(spending.Worth, share));
             }
-            return purse;
+            return worth;
         }
 
         private static float Landed(float etaDays, float withinDays, bool graded) =>
@@ -81,14 +84,6 @@ namespace TradeLord
 
         private static int PartOf(int whole, float share) =>
             share >= 1f ? whole : (int)Math.Round(whole * (double)share, MidpointRounding.AwayFromZero);
-
-        internal static int WorthLeaving(int purse, IDictionary<string, float> pull, float across,
-                                         string category)
-        {
-            if (purse <= 0 || pull == null || category == null) return 0;
-            if (!pull.TryGetValue(category, out float mine)) return 0;
-            return TradeMath.ShareOfAPurse(purse, mine, across);
-        }
 
         internal static int WorthUsedUp(IList<Draw> drawn, string category, float withinDays, int usedADay,
                                         int most, bool graded = false)
@@ -143,7 +138,6 @@ namespace TradeLord
 
         internal static List<(float days, int shelf)> ShelfAhead(
             IList<Landing> listed, IList<Spending> coming,
-            IDictionary<string, float> pull, float across,
             string item, string category, int unitValue, int stockNow, float afterDays,
             IList<Draw> drawn = null, int usedADay = 0)
         {
@@ -156,9 +150,7 @@ namespace TradeLord
                 float days = when[i];
                 int used = WorthUsedUp(drawn, category, days, usedADay,
                                        TradeMath.AddedUp(most, WorthLanding(listed, category, days)));
-                int taken = UnitsLeaving(
-                    TradeMath.AddedUp(WorthLeaving(PurseLanding(coming, days), pull, across, category), used),
-                    unitValue);
+                int taken = UnitsLeaving(TradeMath.AddedUp(WorthBought(coming, category, days), used), unitValue);
                 curve.Add((days, TradeMath.StockAfterShift(stockNow,
                                UnitsLanding(listed, item, days), taken)));
             }
@@ -172,17 +164,6 @@ namespace TradeLord
                 if (curve[i].shelf < wanted) return curve[i].days;
             return NeverRunsOut;
         }
-
-        internal static float PullAcross(IDictionary<string, float> pull)
-        {
-            float total = 0f;
-            if (pull == null) return total;
-            foreach (float one in pull.Values) total += one;
-            return total;
-        }
-
-        internal static bool PullReadable(IDictionary<string, float> pull, float across) =>
-            pull != null && across > 0f;
 
         internal static string Named(IList<(string name, int count)> made)
         {

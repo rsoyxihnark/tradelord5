@@ -1007,6 +1007,7 @@ namespace TradeLord
                                 BeginTheRound();
                                 ExecuteLootSale(Settlement.CurrentSettlement);
                                 ExecuteQuickSell(Settlement.CurrentSettlement);
+                                ExecuteResupply(Settlement.CurrentSettlement, aDayFirst: true);
                                 ExecuteQuickBuy(Settlement.CurrentSettlement);
                                 if (ExecuteHaulage(Settlement.CurrentSettlement))
                                     ExecuteQuickBuy(Settlement.CurrentSettlement);
@@ -1113,6 +1114,7 @@ namespace TradeLord
                 BeginTheRound();
                 if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
+                if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true, aDayFirst: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))
                     ExecuteQuickBuy(settlement, quiet: true);
@@ -1965,7 +1967,13 @@ namespace TradeLord
 
             public float Today => (float)CampaignTime.Now.ToDays;
 
-            public void RecordedSale(int at, int unitPaid, int price, int bestPays)
+            public float HoldLine(int at, float share, int left) =>
+                Holds.LineFor(PaidKeyAt(at), _pass.Key, share, left, Freshness.Hour);
+
+            public void HoldDecided(int at, HoldChoice choice) =>
+                Holds.Decided(PaidKeyAt(at), _pass.Key, choice, Freshness.Hour);
+
+            public void RecordedSale(int at, int unitPaid, int price, int bestPays, float line)
             {
                 LedgerBehavior ledger = LedgerBehavior.Instance;
                 float bought = 0f;
@@ -1975,7 +1983,6 @@ namespace TradeLord
                 if (item == null) return;
                 Settlement buyer = bestPays > 0 ? BuyerFor(at).Town : null;
                 float margin = Options.Current.MinProfitMargin;
-                float share = Options.Current.HoldCargoForBestMarket;
                 int waited = bought > 0f ? (int)Math.Floor(Today - bought) : -1;
                 int agedAfter = Options.Current.SellAtCostAfterDays;
                 bool eachAtItsOwn = Options.Current.CostBasisMode == Options.CostOfEachUnit;
@@ -1991,8 +1998,8 @@ namespace TradeLord
                                     " it needed to clear your margin"
                                   : "") +
                           (bestPays > 0 && buyer != null
-                              ? ", and at least the " + TradeRules.BestMarketFloor(bestPays, share) + " that is " +
-                                Math.Round(share * 100f) + "% of the " + bestPays + " " +
+                              ? ", and at least the " + TradeRules.BestMarketFloor(bestPays, line) + " that is " +
+                                Math.Round(line * 100f) + "% of the " + bestPays + " " +
                                 Tongue.Named(buyer.Name, buyer.StringId) + " would pay for it"
                               : "") +
                           LedgerBehavior.TradeXpNote(from, _plan[at].EquipmentElement));
@@ -2059,17 +2066,21 @@ namespace TradeLord
             return found;
         }
 
-        public static void ExecuteResupply(Settlement settlement, bool quiet = false)
+        public static void ExecuteResupply(Settlement settlement, bool quiet = false, bool aDayFirst = false)
         {
             _unfitted = default;
             if (Options.Current.KeepFoodDays <= 0) return;
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
 
-            int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);
-            int shortfall = TradePolicy.FoodWanted() -
-                            TradePolicy.FoodHeld(pass.Party.ItemRoster) - pass.Books.FoodHeld(pass.Sim) + traded;
+            int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);
+            int shortfall = TradePolicy.FoodWanted() - own;
+            if (aDayFirst) shortfall = Math.Min(shortfall, TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()));
             if (shortfall <= 0) return;
+            int wanted = shortfall;
+            if (aDayFirst)
+                Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") + "your party has less than " +
+                          "a day of its own food, so a day of it is bought before any trade good at " + settlement.Name);
 
             int stocked = 0, simSpent = 0;
             float simWeight = pass.Books.Weight(pass.Sim);
@@ -2080,8 +2091,7 @@ namespace TradeLord
             var larder = CheapestFirst(pass,
                 it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true),
                 TradeMath.ShortFoodTolerance);
-            bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,
-                                                    TradePolicy.FoodForADay()) > 0;
+            bool hungry = TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()) > 0;
             if (larder.Count == 0 && !hungry)
             {
                 string missed = _foodMissed;
@@ -2164,8 +2174,7 @@ namespace TradeLord
                     }
                 }
 
-                int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,
-                                                       TradePolicy.FoodForADay());
+                int hunger = TradeMath.FoodShortOfADay(own + wanted - shortfall, TradePolicy.FoodForADay());
                 if (hunger <= 0 || pass.DirectionError) return;
                 int hungryUnits = 0, hungryGold = 0;
                 var lean = CheapestFirst(pass,
@@ -2674,9 +2683,8 @@ namespace TradeLord
             if (!Options.Current.BuyHaulAnimals || unfitted.weight <= 0f || unfitted.cost <= 0) return false;
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return false;
-            bool starving = unfitted.food && TradeMath.FoodShortOfADay(
-                TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),
-                TradePolicy.FoodForADay()) > 0;
+            int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);
+            bool starving = unfitted.food && TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()) > 0;
             if (!starving && PurseBelowTheHaulAnimalFloor(pass)) return false;
 
             int herdRoom = Drove.RoomForLivestock(pass.Party);
@@ -2710,9 +2718,7 @@ namespace TradeLord
             int hauled = 0, simSpent = 0;
             bool enough = false, tooLittle = false, floored = false;
             int floor = Options.Current.HaulAnimalGoldFloor, purseAtTheFloor = 0, priceAtTheFloor = 0;
-            float leastFilled = Herding.LeastFilledFor(unfitted.food,
-                TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),
-                TradePolicy.FoodForADay());
+            float leastFilled = Herding.LeastFilledFor(unfitted.food, own, TradePolicy.FoodForADay());
             bool pastTheCap = false;
             bool pastTheFloor = false;
 
@@ -2811,7 +2817,7 @@ namespace TradeLord
                     Log.Repeatable("haul animal too little", settlement.StringId,
                                    "haul animals are left alone at " + settlement.Name + (unfitted.food
                                        ? ": the food your full cargo left behind would fill less than half of one, " +
-                                         "and your party still has a day of food or more"
+                                         "and your party still has a day of its own food or more"
                                        : ": the goods your full cargo left behind that the gold left can buy would " +
                                          "fill less than half of one and make less than it costs"));
                 return false;
@@ -2826,9 +2832,9 @@ namespace TradeLord
                       (unfitted.food ? "food" : "goods") + " weighing " +
                       carrying.ToString("0", System.Globalization.CultureInfo.InvariantCulture) +
                       " that your full cargo left behind and the gold left can still buy" +
-                      (pastTheCap ? ", past Max spend per visit as your party has less than a day of food" : "") +
+                      (pastTheCap ? ", past Max spend per visit as your party has less than a day of its own food" : "") +
                       (pastTheFloor
-                          ? (pastTheCap ? ", and" : ", as your party has less than a day of food,") +
+                          ? (pastTheCap ? ", and" : ", as your party has less than a day of its own food,") +
                             " below Gold before it buys a haul animal"
                           : "") +
                       (floored

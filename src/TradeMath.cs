@@ -1161,18 +1161,124 @@ namespace TradeLord
 
         public const float ACaravanSellsAbove = 1.1f;
 
+        public const int ACaravanFeelsLadenAtWorth = 5000;
+
+        public const float ALadenCaravanSellsLowerBy = 0.4f;
+
+        public const float ACaravanLeansOnTheAverageBy = 0.8f;
+
+        public const int ACaravanAddsUnitValuesToTheBudget = 2;
+
         public const float ACaravanSellsThisEagerly = 3f;
 
-        public static int WhatACaravanUnloads(int carried, float priceFactor, float dailyBudget,
-                                              int unitPrice)
+        public const float AConvoySellsThisEagerly = 5f;
+
+        public const float AHaulAnimalSellsThisEagerly = 1.5f;
+
+        public const float ACaravanDrivesThisManyAnimalsAMan = 0.6f;
+
+        public static float WhatHoldingAKindTakesOff(int heldWorth)
+        {
+            if (heldWorth <= 0) return 0f;
+            double laden = Math.Min(heldWorth, ACaravanFeelsLadenAtWorth) / (double)ACaravanFeelsLadenAtWorth;
+            return (float)Math.Sqrt(laden) * ALadenCaravanSellsLowerBy;
+        }
+
+        public static int WhatACaravanUnloads(int carried, float priceFactor, float averageIndex, float lowestIndex,
+                                              int heldWorth, float dailyBudget, int unitValue, int unitPrice,
+                                              bool convoy, bool haulAnimal)
         {
             if (carried <= 0 || unitPrice <= 0) return 0;
-            float over = Finite(priceFactor, 0f) - ACaravanSellsAbove;
-            float budget = Finite(dailyBudget, 0f);
-            if (over <= 0f || budget <= 0f) return 0;
-            float units = budget * over * ACaravanSellsThisEagerly / unitPrice;
-            if (units <= 0f) return 0;
-            return units >= carried ? carried : (int)units;
+            float factor = Finite(priceFactor, 0f), average = Finite(averageIndex, 0f);
+            if (factor <= 0f || average <= 0f) return 0;
+            float limit = ACaravanSellsAbove - WhatHoldingAKindTakesOff(heldWorth);
+            float againstTheAverage = factor / average;
+            if (againstTheAverage < limit) return 0;
+            float floor = (ACaravanLeansOnTheAverageBy * average +
+                           (1f - ACaravanLeansOnTheAverageBy) * Finite(lowestIndex, average)) * limit;
+            if (factor < floor) return 0;
+            double units = (Finite(dailyBudget, 0f) + (double)ACaravanAddsUnitValuesToTheBudget * unitValue) *
+                           (factor - floor) * againstTheAverage *
+                           (haulAnimal ? AHaulAnimalSellsThisEagerly : 1f) *
+                           (convoy ? AConvoySellsThisEagerly : ACaravanSellsThisEagerly) / unitPrice;
+            if (!(units >= 0.5d)) return 0;
+            return units >= carried ? carried : (int)Math.Round(units, MidpointRounding.AwayFromZero);
+        }
+
+        public static int AnimalsACaravanSellsOff(int animals, int men) =>
+            Math.Max(0, (int)(animals - men * ACaravanDrivesThisManyAnimalsAMan));
+
+        public const int ACaravanBuysThisManyKinds = 5;
+
+        public const int AConvoyBuysThisManyKinds = 10;
+
+        public const int ACaravanFeelsRichAt = 5000;
+
+        public const float ACaravanWeighsDemandBy = 0.1f;
+
+        public const float ACaravanWeighsRoomBy = 200f;
+
+        public const float ACaravanWantsHaulAnimalsBy = 1.5f;
+
+        public const float ACaravanWantsFoodBy = 1.1f;
+
+        public const float ACaravanLeavesAKindWorthUnder = 7f;
+
+        public const float ACaravanSpendsAtMostThisShareOnAKind = 0.5f;
+
+        public const float ACaravanSpendsAtMostThisTimesAKindsWorth = 1.5f;
+
+        public const float ACaravanBuysNoGoodsPastThisFull = 0.9f;
+
+        public const float APoorCaravanStillBuysBy = 0.1f;
+
+        public const float AnEmptyCaravanBuysBy = 1.1f;
+
+        public const float ACaravansLoadWeighsBy = 0.9f;
+
+        public static float ACaravansBudgetFactor(int gold) =>
+            APoorCaravanStillBuysBy + (gold <= 0 ? 0f : Math.Min(1f, gold / (float)ACaravanFeelsRichAt));
+
+        public static float ACaravansRoomFactor(float weight, int capacity)
+        {
+            float load = Finite(weight, 0f) / (capacity + 1f) * ACaravansLoadWeighsBy;
+            return AnEmptyCaravanBuysBy - (load <= 0f ? 0f : load >= 1f ? 1f : load);
+        }
+
+        public static float WhatACaravanThinksAKindIsWorth(float priceFactor, float averageIndex, int heldWorth,
+                                                          float demand, float averageValue, float budgetFactor,
+                                                          float roomFactor, bool food, bool haulAnimalOnLand)
+        {
+            float factor = Finite(priceFactor, 0f), average = Finite(averageIndex, 0f);
+            if (factor <= 0f || average <= 0f) return 0f;
+            float under = average * (1f - WhatHoldingAKindTakesOff(heldWorth)) - factor;
+            if (under < 0f) return 0f;
+            double worth = (haulAnimalOnLand ? ACaravanWantsHaulAnimalsBy : 1f) * (food ? ACaravanWantsFoodBy : 1f) *
+                           (average / factor) * ACaravanWeighsDemandBy * Math.Sqrt(Math.Max(0f, Finite(demand, 0f))) *
+                           (under * (double)Finite(averageValue, 0f) * budgetFactor +
+                            under * (double)ACaravanWeighsRoomBy * roomFactor);
+            return worth > 0d && worth < float.MaxValue ? (float)worth : 0f;
+        }
+
+        public static int WhatACaravanSpendsOnAKind(int gold, float kindWorth, int mostOnAKind)
+        {
+            if (gold <= 0 || mostOnAKind <= 0 || !(kindWorth >= ACaravanLeavesAKindWorthUnder)) return 0;
+            double spend = Math.Min(Math.Min(gold * (double)ACaravanSpendsAtMostThisShareOnAKind,
+                                             kindWorth * (double)ACaravanSpendsAtMostThisTimesAKindsWorth),
+                                    mostOnAKind);
+            return spend >= 1d ? (int)spend : 0;
+        }
+
+        public static int WhatACaravanTakesOfAKind(int spend, int unitPrice, int onTheShelf, int mostUnits,
+                                                  float unitWeight, float weight, int capacity, bool weightless)
+        {
+            if (spend <= 0 || unitPrice <= 0 || onTheShelf <= 0 || mostUnits <= 0) return 0;
+            int units = (int)Math.Min(Math.Round(spend / (double)unitPrice, MidpointRounding.AwayFromZero),
+                                      Math.Min(onTheShelf, mostUnits));
+            float carried = Finite(weight, 0f);
+            if (!weightless && unitWeight > 0f && carried + units * unitWeight > capacity)
+                units = (int)((capacity * ACaravanBuysNoGoodsPastThisFull - carried) / unitWeight);
+            return units > 0 ? units : 0;
         }
 
         public const float StandingStill = 0.01f;
@@ -1657,20 +1763,6 @@ namespace TradeLord
                          (leavingUnits < 0 ? 0 : leavingUnits);
             if (after < 0L) return 0;
             return after > int.MaxValue ? int.MaxValue : (int)after;
-        }
-
-        public static float PullOfAPrice(float priceFactor)
-        {
-            float pull = 1f - Finite(priceFactor, 1f);
-            return pull < 0f ? 0f : (pull > 1f ? 1f : pull);
-        }
-
-        public static int ShareOfAPurse(int purse, float pull, float pullAcrossTheMarket)
-        {
-            if (purse <= 0 || pull <= 0f || pullAcrossTheMarket <= 0f) return 0;
-            double share = (double)purse * pull / pullAcrossTheMarket;
-            if (share > int.MaxValue) return int.MaxValue;
-            return share < 0d ? 0 : (int)share;
         }
 
         public static int WorthShift(int landing, int leaving)

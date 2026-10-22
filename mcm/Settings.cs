@@ -665,7 +665,7 @@ namespace TradeLord.Mcm
         public int MaxLootTier { get => _o.MaxLootTier; set { _o.MaxLootTier = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL229}Hold cargo for the best market", 0f, 1f, "#0%", Order = 6, RequireRestart = false,
-            HintText = "{=TL329}Sells a good you bought only for at least this share of what the best other market in your travel ceilings would pay, counting what is on its way there, holding only what it would buy. Loot is never held. 0% is off. 75% by default.")]
+            HintText = "{=TL329}Sells what you bought for at least this share of what the best other market in your travel ceilings pays, counting goods on the way, holding only what it buys. A choice turns 3 points past it. Loot is never held. 0% is off. 75% by default.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public float HoldCargoForBestMarket { get => _o.HoldCargoForBestMarket; set { _o.HoldCargoForBestMarket = value; Options.Bump(); } }
 
@@ -710,7 +710,7 @@ namespace TradeLord.Mcm
         public int MaxHeldPerItem { get => _o.MaxHeldPerItem; set { _o.MaxHeldPerItem = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL237}Max spend per visit (0 = unlimited)", 0, 100000, Order = 5, RequireRestart = false,
-            HintText = "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food may go past it once your party has under a day of its own, and a haul animal once all its food is that low.")]
+            HintText = "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Once your party has under a day of its own food, food and a haul animal to carry it may go past it.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int MaxSpendPerVisit { get => _o.MaxSpendPerVisit; set { _o.MaxSpendPerVisit = value; Options.Bump(); } }
 
@@ -755,7 +755,7 @@ namespace TradeLord.Mcm
         public bool BuyHaulAnimals { get => _o.BuyHaulAnimals; set { _o.BuyHaulAnimals = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL425}Gold before it buys a haul animal (0 = off)", 0, 100000, Order = 14, RequireRestart = false,
-            HintText = "{=TL426}Buy a haul animal only while your purse stays above this once it is paid for, however cheap, so early gold goes on goods. A party down to less than a day of food may go below it. 0 lets it buy from the first denar. Default 2000.")]
+            HintText = "{=TL426}Buy a haul animal only while your purse stays above this once it is paid for, however cheap, so early gold goes on goods. A party down to less than a day of its own food may go below it. 0 lets it buy from the first denar. Default 2000.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int HaulAnimalGoldFloor { get => _o.HaulAnimalGoldFloor; set { _o.HaulAnimalGoldFloor = value; Options.Bump(); } }
 

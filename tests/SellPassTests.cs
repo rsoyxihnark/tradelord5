@@ -184,6 +184,14 @@ namespace TradeLord.Tests
             public void HeldBack(int at, int units, int there, int here) =>
                 Held.Add((Cargo[at].Good.Id, units, there, here));
 
+            internal readonly Dictionary<int, HoldChoice> Before = new Dictionary<int, HoldChoice>();
+            internal readonly List<(int at, HoldChoice choice)> Decided = new List<(int at, HoldChoice choice)>();
+
+            public float HoldLine(int at, float share, int left) =>
+                (Before.TryGetValue(at, out HoldChoice choice) ? choice : default(HoldChoice)).LineAt(share, left);
+
+            public void HoldDecided(int at, HoldChoice choice) => Decided.Add((at, choice));
+
             public int PriceToSell(int at) => Cargo[at].Price;
 
             public bool OfAQuality(int at) => Cargo[at].Modified;
@@ -221,8 +229,11 @@ namespace TradeLord.Tests
             internal readonly List<int> RecordedPaid = new List<int>();
             internal readonly List<int> RecordedBest = new List<int>();
 
-            public void RecordedSale(int at, int unitPaid, int price, int bestPays)
+            internal readonly List<float> RecordedLine = new List<float>();
+
+            public void RecordedSale(int at, int unitPaid, int price, int bestPays, float line)
             {
+                RecordedLine.Add(line);
                 Recorded.Add(Cargo[at].Good.Id);
                 RecordedPaid.Add(unitPaid);
                 RecordedBest.Add(bestPays);
@@ -410,6 +421,68 @@ namespace TradeLord.Tests
             var under = new FakeMarket();
             Bought(under, 1, price: 186, paid: 100, there: 250);
             Assert.Equal(0, Sell(under).Units);
+        }
+
+        [Fact]
+        public void A_good_that_sold_here_last_time_sells_until_its_price_is_three_points_under_the_line()
+        {
+            var sold = new FakeMarket();
+            Bought(sold, 1, price: 182, paid: 100, there: 250);
+            sold.Before[0] = new HoldChoice { SoldFrom = 1, SoldTo = 1 };
+            Assert.Equal(1, Sell(sold).Units);
+            Assert.Equal(0.72f, sold.RecordedLine[0], 4);
+            var under = new FakeMarket();
+            Bought(under, 1, price: 179, paid: 100, there: 250);
+            under.Before[0] = new HoldChoice { SoldFrom = 1, SoldTo = 1 };
+            Assert.Equal(0, Sell(under).Units);
+        }
+
+        [Fact]
+        public void A_good_held_here_last_time_stays_held_until_its_price_is_three_points_over_the_line()
+        {
+            var held = new FakeMarket();
+            Bought(held, 1, price: 190, paid: 100, there: 250);
+            held.Before[0] = new HoldChoice { HeldFrom = 1 };
+            Assert.Equal(0, Sell(held).Units);
+            var over = new FakeMarket();
+            Bought(over, 1, price: 195, paid: 100, there: 250);
+            over.Before[0] = new HoldChoice { HeldFrom = 1 };
+            Assert.Equal(1, Sell(over).Units);
+        }
+
+        [Fact]
+        public void The_pass_remembers_how_many_units_it_sold_and_from_how_many_left_it_held()
+        {
+            var sold = new FakeMarket();
+            Bought(sold, 2, price: 240, paid: 100, there: 250);
+            Sell(sold);
+            Assert.Single(sold.Decided);
+            Assert.Equal((2, 1, 0), (sold.Decided[0].choice.SoldFrom, sold.Decided[0].choice.SoldTo,
+                                     sold.Decided[0].choice.HeldFrom));
+            var held = new FakeMarket();
+            Bought(held, 2, price: 150, paid: 100, there: 250);
+            Sell(held);
+            Assert.Single(held.Decided);
+            Assert.Equal((0, 0, 2), (held.Decided[0].choice.SoldFrom, held.Decided[0].choice.SoldTo,
+                                     held.Decided[0].choice.HeldFrom));
+            var loot = new FakeMarket();
+            loot.Add(Cargo("iron"), amount: 2, price: 150).Worth = 100;
+            Sell(loot);
+            Assert.Empty(loot.Decided);
+        }
+
+        [Fact]
+        public void A_second_pass_at_the_same_market_keeps_holding_what_the_first_pass_held()
+        {
+            var first = new FakeMarket();
+            Bought(first, 4, price: 200, paid: 100, there: 250).Falls = 8;
+            Assert.Equal(2, Sell(first).Units);
+            HoldChoice choice = first.Decided[0].choice;
+            Assert.Equal((4, 3, 2), (choice.SoldFrom, choice.SoldTo, choice.HeldFrom));
+            var again = new FakeMarket();
+            Bought(again, 2, price: 190, paid: 100, there: 250);
+            again.Before[0] = choice;
+            Assert.Equal(0, Sell(again).Units);
         }
 
         [Fact]

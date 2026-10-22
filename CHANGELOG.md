@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.105.3
+
+- Fixed Count what is on its way to a market getting wrong how much of each good a caravan sells when it reaches a town
+- Fixed Count what is on its way to a market expecting caravans to sell the haul animals they keep for themselves
+- Fixed Count what is on its way to a market expecting caravans to buy other goods than the ones the game has them buy
+- Fixed Count what is on its way to a market expecting a caravan to spend its whole purse instead of at most 1500 denars on each good it buys
+- When your party has less than a day of its own food, TradeLord now buys a day of food before any trade good
+- Fixed TradeLord counting food you bought to trade as your party's own when it buys a haul animal to carry food
+- Hold cargo for the best market now turns a choice to hold or sell a good at a market only once the price is 3 points past the line
+- Fixed the map marker moving back and forth overnight as prices drifted around the Hold cargo for the best market line
+- The hint for Hold cargo for the best market now says a choice turns only 3 points past the line, in every language
+- The hints for Max spend per visit and Gold before it buys a haul animal now say they look at your party's own food, in every language
+- TradeLord.log now says when a day of food is bought before any trade good because your party has less than a day of its own food
+- TradeLord.log now shows each sale against the Hold cargo for the best market line it really had to reach
+
 ## 1.105.2
 
 - Fixed TradeLord buying no livestock and no haul animals with War Sails installed

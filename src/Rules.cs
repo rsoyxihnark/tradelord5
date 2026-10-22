@@ -752,6 +752,8 @@ namespace TradeLord
             rungs == null || boughtLeft <= 0 || boughtLeft > rungs.Length
                 ? 0 : BestMarketFloor(rungs[boughtLeft - 1], share);
 
+        internal const float AHoldTurnsOnlyThisFarPastTheLine = 0.03f;
+
         internal static int[] PastTheFirst(int[] ladder, int skipped)
         {
             if (ladder == null || skipped >= ladder.Length) return new int[0];
@@ -1058,5 +1060,70 @@ namespace TradeLord
             int soonest = ((double)x.cost / x.aDay).CompareTo((double)y.cost / y.aDay);
             return soonest != 0 ? soonest : y.aDay.CompareTo(x.aDay);
         }
+    }
+
+    internal struct HoldChoice
+    {
+        internal int SoldFrom, SoldTo, HeldFrom;
+
+        internal bool Made => SoldFrom > 0 || HeldFrom > 0;
+
+        internal void Note(int left, bool held)
+        {
+            if (left <= 0) return;
+            if (held)
+            {
+                if (HeldFrom == 0) HeldFrom = left;
+                return;
+            }
+            if (SoldFrom == 0) SoldFrom = left;
+            SoldTo = left;
+        }
+
+        internal float LineAt(float share, int left)
+        {
+            if (share <= 0f || left <= 0) return share;
+            float line = left <= HeldFrom ? share + TradeRules.AHoldTurnsOnlyThisFarPastTheLine
+                       : left <= SoldFrom && left >= SoldTo ? share - TradeRules.AHoldTurnsOnlyThisFarPastTheLine
+                       : share;
+            return line > 0f ? line : 0f;
+        }
+    }
+
+    internal static class Holds
+    {
+        internal const int RememberedForHours = 24;
+
+        internal const int MostRemembered = 16384;
+
+        private static readonly Dictionary<(string good, string market), (HoldChoice choice, int hour)> _decided =
+            new Dictionary<(string, string), (HoldChoice, int)>();
+
+        internal static float LineFor(string good, string market, float share, int left, int hour) =>
+            Recalled(good, market, hour).LineAt(share, left);
+
+        internal static HoldChoice Recalled(string good, string market, int hour) =>
+            good != null && market != null && _decided.TryGetValue((good, market), out var one) &&
+            hour >= one.hour && hour - one.hour <= RememberedForHours
+                ? one.choice
+                : default(HoldChoice);
+
+        internal static void Decided(string good, string market, HoldChoice choice, int hour)
+        {
+            if (good == null || market == null || !choice.Made) return;
+            if (_decided.Count >= MostRemembered) LetGoOfTheOld(hour);
+            _decided[(good, market)] = (choice, hour);
+        }
+
+        private static void LetGoOfTheOld(int hour)
+        {
+            var old = new List<(string, string)>();
+            foreach (var one in _decided)
+                if (hour < one.Value.hour || hour - one.Value.hour > RememberedForHours) old.Add(one.Key);
+            foreach (var key in old) _decided.Remove(key);
+            if (_decided.Count >= MostRemembered) _decided.Clear();
+        }
+
+        internal static void Forget() => _decided.Clear();
     }
 }
