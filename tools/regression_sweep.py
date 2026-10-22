@@ -3946,6 +3946,8 @@ chk("no release", "the one branch kept beside main is named once, in the reposit
 def the_release_check_holds_main_against_every_release():
     loop = between(RELEASED, "    for version in sorted(live, key=order):\n", "        if version == shipping and (row['draft']")
     carried = between(RELEASED, "def tagsCarried():", "\n\n\n")
+    read_gh = between(RELEASED, "def byGh():", "\ndef ")
+    read_api = between(RELEASED, "def byApi():", "\ndef ")
     return ("    aside = os.environ.get('GITHUB_REF', 'refs/heads/main') != 'refs/heads/main'\n" in RELEASED
             and "    tagged, carried = tagsCarried() if aside else (None, None)\n" in RELEASED
             and "the tags could not be read, so this branch was not held against the releases" in RELEASED
@@ -3954,11 +3956,18 @@ def the_release_check_holds_main_against_every_release():
                                 "        if aside and version != shipping and row['tag'] not in tagged:\n")
             and ordered(loop, "' is not here to read')",
                         "if aside and version != shipping and row['tag'] not in carried:", "elsewhere += 1")
-            and loop.count("            continue\n") == 2
-            and RELEASED.count('aside') == 5
-            and 'releases were published from commits this branch does not carry' in RELEASED)
+            and loop.count("            continue\n") == 3
+            and RELEASED.count('aside') == 6
+            and 'releases were published from commits this branch does not carry' in RELEASED
+            and "DEBUG_BUILD = '_debugbuild'\n" in RELEASED
+            and "name: .name" in read_gh and "pre: .prerelease" in read_gh
+            and "'name': one.get('name') or ''" in read_api and "'pre': one.get('prerelease') or False" in read_api
+            and ordered(loop, "if aside and version != shipping and row['tag'] not in carried:",
+                        "if not aside and row.get('pre') and (row.get('name') or '').endswith(DEBUG_BUILD):",
+                        "debug += 1")
+            and 'debug builds were published as pre-releases from the branch kept beside main' in RELEASED)
 
-chk("no release", "on main every release is held against the changelog, and only a push to another branch leaves out the releases its own history does not carry, failing on a tag it cannot read",
+chk("no release", "on main every release but the kept branch's debug builds is held against the changelog, and a push to another branch leaves out the releases its history does not carry, failing on a tag it cannot read",
     the_release_check_holds_main_against_every_release())
 chk("1.7.0", "the cost-basis arithmetic lives beside the other money rules and needs nothing from the game",
     the_ledger_keeps_no_second_copy_of_the_cost_basis_rules())

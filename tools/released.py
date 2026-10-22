@@ -4,6 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from nexus_changelog import sections
 
 REPO = 'rsoyxihnark/tradelord5'
+DEBUG_BUILD = '_debugbuild'
 
 OUTSTANDING = {
 }
@@ -24,7 +25,7 @@ def byGh():
     try:
         run = subprocess.run(
             ['gh', 'api', 'repos/{owner}/{repo}/releases', '--paginate', '--jq',
-             '.[] | {tag: .tag_name, draft: .draft, body: .body, files: (.assets | length)}'],
+             '.[] | {tag: .tag_name, name: .name, draft: .draft, pre: .prerelease, body: .body, files: (.assets | length)}'],
             capture_output=True, encoding='utf-8')
     except OSError as missing:
         return None, str(missing)
@@ -46,7 +47,8 @@ def byApi():
         if not batch:
             break
         for one in batch:
-            found.append({'tag': one['tag_name'], 'draft': one['draft'],
+            found.append({'tag': one['tag_name'], 'name': one.get('name') or '', 'draft': one['draft'],
+                          'pre': one.get('prerelease') or False,
                           'body': one.get('body') or '', 'files': len(one.get('assets') or [])})
         page += 1
     return found, None
@@ -179,7 +181,7 @@ def main(argv):
         return 1
 
     first = min(live, key=order)
-    faults, skipped, outstanding, elsewhere = [], 0, [], 0
+    faults, skipped, outstanding, elsewhere, debug = [], 0, [], 0, 0
 
     for version in sorted(live, key=order):
         row = live[version]
@@ -188,6 +190,9 @@ def main(argv):
             continue
         if aside and version != shipping and row['tag'] not in carried:
             elsewhere += 1
+            continue
+        if not aside and row.get('pre') and (row.get('name') or '').endswith(DEBUG_BUILD):
+            debug += 1
             continue
         if version == shipping and (row['draft'] or row['files'] == 0):
             print('  note     ' + version + ' is part-published from an attempt that did not finish, ' +
@@ -224,6 +229,9 @@ def main(argv):
     if elsewhere:
         print('  note     ' + str(elsewhere) + ' releases were published from commits this branch does not carry, ' +
               'so they are not held against the changelog of this branch')
+    if debug:
+        print('  note     ' + str(debug) + ' debug builds were published as pre-releases from the branch kept beside main, ' +
+              'so they are not held against the changelog of main')
     if shipping and marked:
         print('  ' + shipping + ' is the version the source carries, and this commit ships none, '
               'so this run does not check that it is out')
