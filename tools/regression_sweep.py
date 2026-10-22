@@ -1687,7 +1687,9 @@ chk("1.3.4", "village last-unit clamp leaves one unit on the shelf",
     "market.Village && remaining <= 1, s);" in
         buy_pass() and
     "public bool Village => _pass.Site != null && _pass.Site.IsVillage;" in buy_pass() and
-    'if (settlement.IsVillage && remaining <= 1) { stopped = "a village keeps its last unit"; break; }' in
+    'if (settlement.IsVillage && remaining <= 1) { stopped = TheVillageLastUnit; break; }' in
+        method_body(S['Trading.cs'], "public static void ExecuteResupply") and
+    'if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }' in
         method_body(S['Trading.cs'], "public static void ExecuteResupply") and
     "if (settlement.IsVillage && remaining <= 1) break;" in
         method_body(S['Trading.cs'], "public static bool ExecuteHaulage"))
@@ -2121,7 +2123,7 @@ chk("1.36.0", "a trade on the road moves one unit and its price itself, because 
 
 chk("1.3.32", "a dry run reports itself as a best case, in the toast, the log and the hint",
     S['Trading.cs'].count("[Simulated, best case]") == 2 and
-    S['Trading.cs'].count("(simulated, best case): ") == 5 and
+    S['Trading.cs'].count("(simulated, best case): ") == 7 and
     'internal string Headed(string label) => label + (Sim ? Counter.Heading : ": ");'
         in S['Trading.cs'] and
     'internal static string Heading => Staging ? " (laid out): " : " (simulated, best case): ";'
@@ -5631,7 +5633,8 @@ def a_dry_run_prices_the_whole_visit_and_not_each_pass_on_its_own():
             and "TillNow - Books.TillDrawn(Sim)" in between(t, "internal int Till =>", ";")
             and t.count("float simWeight = pass.Books.Weight(pass.Sim);") == 1
             and "float simWeight = books.Weight(sim);" in S['Passes.cs']
-            and "TradePolicy.FoodHeld(pass.Party.ItemRoster) - pass.Books.FoodHeld(pass.Sim) + traded;" in larder
+            and "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);" in larder
+            and "FoodHeld(roster) + books.FoodHeld(sim) - FoodBoughtToTrade(roster, books, sim);" in S['Policy.cs']
             and "shed -= pass.Books.Shed(pass.Sim);" in relief
             and "mountsLeft -= pass.Books.MountsShed(pass.Sim);" in relief
             and "Math.Max(0, Drove.HaulAnimalsCargoCanSpare(pass.Party, pass.RoomTakenOnPaper()) - pass.Books.HaulsShed(pass.Sim));" in relief
@@ -5995,7 +5998,7 @@ def the_larder_and_the_stable_leave_the_gold_reserve_whole():
     capped = cap_rule()
     said = "it stops before your gold reaches your reserve"
     reserve = between(S['Trading.cs'], "internal bool WouldReachYourReserve", ";")
-    return ('if (pass.WouldReachYourReserveToFeed(price, hungry))\n'
+    return ('if (!aDayShort && pass.WouldReachYourReserveToFeed(price, hungry))\n'
             '                        {\n'
             '                            stopped = hungry ? "buying it would reach your gold reserve"\n'
             '                                             : "buying it would reach your gold reserve or spending cap";\n'
@@ -6014,12 +6017,12 @@ def the_larder_and_the_stable_leave_the_gold_reserve_whole():
                 '', stable)
             and "if (price > pass.Spendable()) break;" not in S['Trading.cs']
             and "if (price > budget) return Block.BudgetSpent;" in capped
-            and said in re.search(r'\{=TL321\}([^"]*)"', M).group(1)
+            and "only a missing day may dip below your reserve" in re.search(r'\{=TL321\}([^"]*)"', M).group(1)
             and said in re.search(r'\{=TL367\}([^"]*)"', M).group(1)
-            and said in spoken(ENGLISH).get('TL321', '')
+            and "only a missing day may dip below your reserve" in spoken(ENGLISH).get('TL321', '')
             and said in spoken(ENGLISH).get('TL367', ''))
 
-chk("1.40.0", "restocking and buying a haul animal stop before your gold reaches your reserve, word for word as their own settings promise, and buying for profit is the one pass that may spend down to it",
+chk("1.40.0", "restocking and buying a haul animal stop before your gold reaches your reserve, but for one day of food a party short of it buys, word for word as their own settings promise, and buying for profit is the one pass that may spend down to it",
     the_larder_and_the_stable_leave_the_gold_reserve_whole())
 
 def an_always_sell_entry_cannot_release_an_animal_a_quest_is_waiting_on():
@@ -13641,17 +13644,16 @@ def food_gets_a_haul_animal_it_would_fill_less_than_half_of_only_on_its_last_day
             and ("internal static float LeastFilledFor(bool food, int foodHeld, int foodForADay) =>\n"
                  "            food && foodHeld < foodForADay ? 0f : LeastAHaulAnimalIsFilled;") in S['Rules.cs']
             and "internal static int FoodForADay() => (int)Math.Ceiling(AppetitePerDay());" in S['Policy.cs']
-            and ("float leastFilled = Herding.LeastFilledFor(unfitted.food,\n"
-                 "                TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),\n"
-                 "                TradePolicy.FoodForADay());") in haul
-            and '"and your party still has a day of food or more"' in haul
+            and ordered(haul, "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);",
+                        "float leastFilled = Herding.LeastFilledFor(unfitted.food, own, TradePolicy.FoodForADay());")
+            and '"and your party still has a day of its own food or more"' in haul
             and "Food_gets_a_haul_animal_it_would_fill_less_than_half_of_only_once_the_party_is_down_to_its_last_day"
                 in HERDTESTS
-            and "It buys one for food only when the food would fill at least half of it, or when your party is down to its last day of food"
+            and "It buys one for food only when the food would fill at least half of it, or when your party is down to its last day of its own food"
                 in README)
 
 
-chk("1.93.8", "food a full cargo left behind gets a haul animal it would fill less than half of only once the food your party carries is down to its last day, and TradeLord.log says when the food was too little",
+chk("1.93.8", "food a full cargo left behind gets a haul animal it would fill less than half of only once your party's own food is down to its last day, and TradeLord.log says when the food was too little",
     food_gets_a_haul_animal_it_would_fill_less_than_half_of_only_on_its_last_day())
 
 
@@ -15511,8 +15513,8 @@ def the_food_hint_says_what_the_larder_pays():
                 method_body(S['TradeMath.cs'], "public static int MostToPayOverTheCheapest")
             and "trade food last, topped up cheapest first up to 1.5x the lowest price known (2x if short a day) or 2x its value" in en['TL321']
             and option_default('KeepFoodDays') == '3' and "Default 3." in en['TL321']
-            and "ticaret yiyeceği en son sayılır. En ucuzdan, bilinen en düşük fiyatın 1,5 katına (bir günlükten azsa 2 katına) ya da değerinin 2 katına" in tr['TL321']
-            and "купленная для торговли считается последней. Докупает самую дешёвую до 1,5x низшей известной цены (2x при запасе меньше дня) или 2x её стоимости" in ru['TL321']
+            and "ticari yiyecek en son sayılır. Ucuzdan, bilinen en düşük fiyatın 1,5 katına (bir günden azsa 2) ya da değerinin 2 katına" in tr['TL321']
+            and "торговая еда идёт последней. Докупает дешёвую до 1,5x низшей известной цены (2x при запасе меньше дня) или 2x её стоимости" in ru['TL321']
             and "为交易买的食物最后才算进去" in cn['TL321']
             and "出价不高于它所知最低价的 1.5 倍（食物不足一天时为 2 倍）或该食物价值的 2 倍" in cn['TL321'])
 
@@ -16141,7 +16143,7 @@ def the_haul_animal_and_food_passes_say_why_they_bought_nothing():
                                             'Log.Repeatable("haul animal no room", settlement.StringId,',
                                             'Log.Repeatable("haul animal none on sale", settlement.StringId,'))
             and ordered(food, "if (shortfall <= 0) return;", 'Log.Repeatable("resupply none on sale", settlement.StringId,',
-                        "string stopped = null;",
+                        "string stopped = null, hungryStopped = null;",
                         'if (shortfall > 0 && stopped != null && !pass.DirectionError)',
                         'Log.Repeatable("resupply none bought", settlement.StringId + "/" + stopped,'))
 
@@ -17551,21 +17553,20 @@ def a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price():
     return ("public const float HungryFoodTolerance = 2f;" in math
             and "day <= 0 || held >= day ? 0 : day - (held < 0 ? 0 : held)" in
                 between(math, "public static int FoodShortOfADay(int held, int day) =>", ";")
-            and "bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,\n                                                    TradePolicy.FoodForADay()) > 0;" in larder
-            and larder.count("TradePolicy.FoodWanted() - shortfall,") == 2
+            and "bool hungry = TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()) > 0;" in larder
+            and larder.count("TradeMath.FoodShortOfADay(own") == 4
             and "if (larder.Count == 0 && !hungry)" in larder
             and ordered(larder, "foreach (var (el, good, _, ceiling) in larder)",
-                        "int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,",
-                        "TradePolicy.FoodForADay());",
+                        "int hunger = TradeMath.FoodShortOfADay(own + wanted - shortfall, TradePolicy.FoodForADay());",
                         "if (hunger <= 0 || pass.DirectionError) return;",
                         "TradeMath.HungryFoodTolerance);",
                         "foreach (var (el, good, _, ceiling) in lean)",
                         "while (hunger > 0 && remaining > 0)",
-                        "if (price <= 0 || price > ceiling) break;",
-                        "if (pass.WouldReachYourReserveToFeed(price, hungry)) break;",
-                        "if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;",
-                        "if (settlement.IsVillage && remaining <= 1) break;",
-                        "if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;",
+                        'hungryStopped = "its price is above both twice the cheapest TradeLord knows and twice its value";',
+                        'hungryStopped = "your purse cannot pay for it";',
+                        'hungryStopped = "your buying caps for it are reached";',
+                        "if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }",
+                        'hungryStopped = "your cargo has no room for it";',
                         "hunger -= fed;",
                         "at up to twice the cheapest price TradeLord knows or twice their value at ")
             and larder.count("TradeMath.HungryFoodTolerance") == 1
@@ -17573,7 +17574,7 @@ def a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price():
             and "Only_the_food_short_of_one_day_is_bought_above_the_cheapest_price" in MATHTESTS
             and "or up to twice that price for one day of food when your party has under a day of its own" in README)
 
-chk("1.101.3", "a party short of a day's food buys one day of it at up to twice the cheapest price TradeLord knows, still inside your gold reserve, your buying caps and your cargo room",
+chk("1.101.3", "a party short of a day's food buys one day of it at up to twice the cheapest price TradeLord knows, inside what your purse can pay, your buying caps and your cargo room",
     a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price())
 
 def each_confidence_band_counts_a_price_above_its_promise_as_a_miss():
@@ -17652,8 +17653,9 @@ def food_bought_to_trade_is_counted_last_and_the_restock_pays_half_again():
             and "From = one.From, Traded = one.Traded" in apart
             and "if (one.Traded && one.Count > 0) units += one.Count;" in count
             and "int units = kept.UnitsBoughtToTrade(el.EquipmentElement);" in trade
-            and ordered(larder, "int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);",
-                        "int shortfall = TradePolicy.FoodWanted() -", "+ traded;", "if (shortfall <= 0) return;",
+            and "FoodHeld(roster) + books.FoodHeld(sim) - FoodBoughtToTrade(roster, books, sim);" in S['Policy.cs']
+            and ordered(larder, "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);",
+                        "int shortfall = TradePolicy.FoodWanted() - own;", "if (shortfall <= 0) return;",
                         "TradeMath.ShortFoodTolerance);", '" at up to 1.5 times the cheapest price it "',
                         '"its price is above both 1.5 times the cheapest TradeLord knows and twice its value"')
             and all(one in FOODTESTS for one in
@@ -17818,7 +17820,7 @@ def the_restock_pays_up_to_twice_a_foods_value_and_counts_laid_out_trade_food_ap
             and "public const float FoodValueTolerance = 2f;" in S['TradeMath.cs']
             and "Math.Max(ceiling, MostToPayOverTheCheapest(value, FoodValueTolerance))" in
                 between(S['TradeMath.cs'], "public static int AtLeastTwiceItsValue(int ceiling, int value) =>", ";")
-            and ordered(larder, "int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);",
+            and ordered(larder, "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);",
                         "var larder = CheapestFirst(pass,", "string missed = _foodMissed;",
                         '": the cheapest on sale is " + missed')
             and ordered(trade, "int units = kept.UnitsBoughtToTrade(el.EquipmentElement);",
@@ -18082,7 +18084,7 @@ def the_recent_trades_window_takes_the_mouse_wheel():
 chk("1.103.3", "the mouse wheel scrolls the Recent trades window while it is open and zooms the map again once it closes, and the cursor over the map button takes only clicks",
     the_recent_trades_window_takes_the_mouse_wheel())
 
-def a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve():
+def a_starving_party_feeds_past_the_visit_cap_and_only_its_one_day_of_food_below_the_gold_reserve():
     t = S['Trading.cs']
     larder = method_body(t, "public static void ExecuteResupply")
     food = method_body(t, "private static (float weight, int cost) FoodTheHoldLeftBehind")
@@ -18093,20 +18095,30 @@ def a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve():
                 between(t, "internal static int SpendableToFeed(Books books, bool sim, bool starving) =>", ";")
             and "internal int SpendableToFeed(bool starving) => TradeActionBehavior.SpendableToFeed(Books, Sim, starving);" in t
             and "internal bool WouldReachYourReserveToFeed(int price, bool starving) => price >= SpendableToFeed(starving);" in t
-            and ordered(larder, "bool hungry = TradeMath.FoodShortOfADay(", "int pastTheCapUnits = 0, pastTheCapGold = 0;",
-                        "if (pass.WouldReachYourReserveToFeed(price, hungry))",
-                        "bool pastTheCap = hungry && pass.WouldReachYourReserve(price);",
+            and "internal bool WouldEmptyYourPurse(int price) => price > TradeActionBehavior.WholePurse(Books, Sim);" in t
+            and "internal static int WholePurse(Books books, bool sim) => Math.Max(0, Hero.MainHero.Gold + books.Purse(sim));" in t
+            and ordered(larder, "bool hungry = TradeMath.FoodShortOfADay(",
+                        "int pastTheCapUnits = 0, pastTheCapGold = 0, belowTheReserveUnits = 0, belowTheReserveGold = 0;",
+                        "bool aDayShort = TradeMath.FoodShortOfADay(own + wanted - shortfall, TradePolicy.FoodForADay()) > 0;",
+                        "if (aDayShort && pass.WouldEmptyYourPurse(price))",
+                        "bool belowTheReserve = aDayShort && pass.WouldReachYourReserveToFeed(price, hungry);",
+                        "if (!aDayShort && pass.WouldReachYourReserveToFeed(price, hungry))",
+                        "bool pastTheCap = hungry && !belowTheReserve && pass.WouldReachYourReserve(price);",
                         "if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }",
+                        "if (belowTheReserve) { belowTheReserveUnits++; belowTheReserveGold += price; }",
                         "while (hunger > 0 && remaining > 0)", "if (hungryUnits > 0)",
                         "if (pastTheCapUnits > 0)", '" gold were bought past Max spend per visit at "',
+                        "if (belowTheReserveUnits > 0)", '" gold of that one day of food were bought below your gold reserve at "',
                         "settlement.IsVillage, hungry);")
             and ordered(between(larder, "while (hunger > 0 && remaining > 0)", "if (hungryUnits > 0)"),
-                        "if (pass.WouldReachYourReserveToFeed(price, hungry)) break;",
-                        "bool pastTheCap = hungry && pass.WouldReachYourReserve(price);",
-                        "if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }")
-            and larder.count("bool pastTheCap = hungry && pass.WouldReachYourReserve(price);") == 2
+                        "if (pass.WouldEmptyYourPurse(price))",
+                        "bool belowTheReserve = pass.WouldReachYourReserveToFeed(price, hungry);",
+                        "bool pastTheCap = hungry && !belowTheReserve && pass.WouldReachYourReserve(price);",
+                        "if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }",
+                        "if (belowTheReserve) { belowTheReserveUnits++; belowTheReserveGold += price; }")
+            and larder.count("bool pastTheCap = hungry && !belowTheReserve && pass.WouldReachYourReserve(price);") == 2
             and larder.count("if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }") == 2
-            and larder.count("pass.WouldReachYourReserveToFeed(price, hungry)") == 2
+            and larder.count("pass.WouldReachYourReserveToFeed(price, hungry)") == 3
             and "pass.WouldReachYourReserve(price))" not in larder
             and "int budget = pass.SpendableToFeed(starving);" in food
             and ordered(haul, "bool starving = unfitted.food && TradeMath.FoodShortOfADay(",
@@ -18114,19 +18126,19 @@ def a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve():
                         "if (pass.WouldReachYourReserveToFeed(price, starving)) break;",
                         "bool overTheCap = starving && pass.WouldReachYourReserve(price);",
                         "pass.Tally(item, 1, price);", "if (overTheCap) pastTheCap = true;",
-                        '", past Max spend per visit as your party has less than a day of food"')
-            and "Food may go past it once your party has under a day of its own, and a haul animal once all its food is that low." in en['TL337']
-            and "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Food may go past it once your party has under a day of its own, and a haul animal once all its food is that low." in M
+                        '", past Max spend per visit as your party has less than a day of its own food"')
+            and "Once your party has under a day of its own food, food and a haul animal to carry it may go past it." in en['TL337']
+            and "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Once your party has under a day of its own food, food and a haul animal to carry it may go past it." in M
             and "kendi yiyece\u011fi bir g\u00fcnden aza inince" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL337']
-            and "TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim)," in
+            and "own, TradePolicy.FoodForADay()) > 0" in
                 between(haul, "bool starving = unfitted.food && TradeMath.FoodShortOfADay(", ";")
             and "\u043c\u0435\u043d\u044c\u0448\u0435 \u0447\u0435\u043c \u043d\u0430 \u0434\u0435\u043d\u044c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL337']
             and "\u4e0d\u8db3\u4e00\u5929" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL337']
-            and "When your party is down to less than a day of its own food, the food it buys may go past Max spend per visit, never past your gold reserve" in README
-            and "When all the food your party carries, food bought to trade included, is down to less than a day, a haul animal to carry more may go past Max spend per visit too" in README)
+            and "When your party is down to less than a day of its own food, the food it buys may go past Max spend per visit, and that one day of food may go below your gold reserve" in README
+            and "When your party is down to less than a day of its own food, a haul animal to carry more may go past Max spend per visit too" in README)
 
-chk("1.103.3", "a party down to less than a day of food buys its food, and a haul animal to carry it, past Max spend per visit, never past the gold reserve, and TradeLord.log says so",
-    a_starving_party_feeds_past_the_visit_cap_never_past_the_gold_reserve())
+chk("1.103.3", "a party down to less than a day of its own food buys its food, and a haul animal to carry it, past Max spend per visit, only that one day of food below the gold reserve, and TradeLord.log says so",
+    a_starving_party_feeds_past_the_visit_cap_and_only_its_one_day_of_food_below_the_gold_reserve())
 
 def the_map_marker_hint_says_it_marks_the_most_profit_per_day():
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
@@ -18257,7 +18269,7 @@ def a_party_short_of_a_days_food_buys_its_haul_animal_below_the_floor():
     haul = method_body(S['Trading.cs'], "public static bool ExecuteHaulage")
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    said = "A party down to less than a day of food may go below it."
+    said = "A party down to less than a day of its own food may go below it."
     return (haul
             and ("internal static bool PurseClearsTheFloor(int purse, int floor, bool starving) =>\n"
                  "            starving || PurseClearsTheFloor(purse, floor);") in S['Rules.cs']
@@ -18274,23 +18286,23 @@ def a_party_short_of_a_days_food_buys_its_haul_animal_below_the_floor():
             and "A_party_down_to_less_than_a_day_of_food_buys_its_haul_animal_below_the_floor" in HERDTESTS
             and said in en['TL426']
             and 'HintText = "{=TL426}' + en['TL426'] + '"' in M
-            and "Bölüğünüzün bir günden az yiyeceği kaldıysa altına inebilir." in tr['TL426']
-            and "Если еды у отряда меньше чем на день, можно и ниже." in ru['TL426']
-            and "队伍的食物不足一天时可以低于它。" in cn['TL426']
-            and "so early gold goes on goods instead, unless your party is down to less than a day of food" in README)
+            and "Bölüğünüzün bir günden az kendi yiyeceği kaldıysa altına inebilir." in tr['TL426']
+            and "Если своей еды у отряда меньше чем на день, можно и ниже." in ru['TL426']
+            and "队伍自己的食物不足一天时可以低于它。" in cn['TL426']
+            and "so early gold goes on goods instead, unless your party is down to less than a day of its own food" in README)
 
-chk("1.103.6", "a party down to less than a day of food may buy a haul animal to carry its food below Gold before it buys a haul animal, never past the gold reserve, and the hint and TradeLord.log say so",
+chk("1.103.6", "a party down to less than a day of its own food may buy a haul animal to carry its food below Gold before it buys a haul animal, never past the gold reserve, and the hint and TradeLord.log say so",
     a_party_short_of_a_days_food_buys_its_haul_animal_below_the_floor())
 
 
 def the_visit_cap_hint_lets_a_haul_animal_carry_a_starving_partys_food_past_it():
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
-    return (en['TL337'].endswith("and a haul animal once all its food is that low.")
+    return (en['TL337'].endswith("food and a haul animal to carry it may go past it.")
             and 'HintText = "{=TL337}' + en['TL337'] + '"' in M
-            and "tüm yiyeceği inince yük hayvanı sınırı aşabilir" in tr['TL337']
-            and "а когда так мало всей еды, то и вьючное животное" in ru['TL337']
-            and "全部食物都不足一天时，驮食物的驮兽也可以" in cn['TL337']
+            and "yiyecek ve onu taşıyacak yük hayvanı sınırı aşabilir" in tr['TL337']
+            and "за предел может выйти еда и вьючное животное, чтобы её везти" in ru['TL337']
+            and "买食物和驮这些食物的驮兽都可以超出这个上限" in cn['TL337']
             and "bool overTheCap = starving && pass.WouldReachYourReserve(price);" in S['Trading.cs'])
 
 chk("1.103.6", "the hint for Max spend per visit says a haul animal to carry food for a party down to less than a day of it may go past it, in every language",
@@ -18804,23 +18816,23 @@ def a_party_is_hungry_once_its_own_food_runs_short():
     en = spoken(ENGLISH)
     tr, ru, cn = (spoken(TRANSLATIONS[k]) for k in TRANSLATIONS)
     return (larder and haul and hungry and hunger and starving
-            and "int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);" in larder
-            and "- pass.Books.FoodHeld(pass.Sim) + traded;" in larder
-            and "TradePolicy.FoodWanted() - shortfall," in hungry and "traded" not in hungry
-            and "TradePolicy.FoodWanted() - shortfall," in hunger and "traded" not in hunger
-            and "TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim)," in starving
-            and "FoodBoughtToTrade" not in starving
-            and larder.count('"your party had less than a day of its own food, so "') == 2
+            and "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);" in larder and "int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);" in haul
+            and "FoodHeld(roster) + books.FoodHeld(sim) - FoodBoughtToTrade(roster, books, sim);" in S['Policy.cs']
+            and "own, TradePolicy.FoodForADay()" in hungry
+            and "own + wanted - shortfall, TradePolicy.FoodForADay()" in hunger
+            and "own, TradePolicy.FoodForADay()) > 0" in starving
+            and "FoodHeld(pass.Party.ItemRoster)" not in larder and "FoodHeld(pass.Party.ItemRoster)" not in haul
+            and larder.count('"your party had less than a day of its own food, so "') == 3
             and '"resupply: your party has less than a day of its own food, and none is on sale at " +' in larder
             and "less than a day of food" not in larder
             and ordered(larder, "foreach (var (el, good, _, ceiling) in lean)", "if (hungryUnits > 0)",
                         "string missed = lean.Count == 0 ? _foodMissed : null;",
                         '(missed == null ? "" : ": the cheapest on sale is " + missed));')
-            and "once your party has under a day of its own" in en['TL337']
+            and "Once your party has under a day of its own food" in en['TL337']
             and 'HintText = "{=TL337}' + en['TL337'] + '"' in M
             and "kendi yiyeceği" in tr['TL337'] and "своей еды" in ru['TL337'] and "自己的食物" in cn['TL337'])
 
-chk("1.103.11", "a party is hungry once its own food is down to less than a day, so food bought to trade no longer keeps the food it needs from going past Max spend per visit, while a haul animal still waits for all its food to run that low",
+chk("1.103.11", "a party is hungry once its own food is down to less than a day, so food bought to trade no longer keeps the food it needs, or a haul animal to carry it, from going past Max spend per visit",
     a_party_is_hungry_once_its_own_food_runs_short())
 
 
@@ -19670,6 +19682,28 @@ chk("1.104.17", "the marker check weighs a sale against what the map marker said
     the_marker_check_also_weighs_a_sale_against_what_it_said_on_the_way_out())
 
 
+def a_food_restock_says_the_village_keeps_its_last_unit_rather_than_nothing_being_on_sale():
+    t = S['Trading.cs']
+    larder = method_body(t, "public static void ExecuteResupply")
+    return (larder
+            and 'private const string TheVillageLastUnit =\n'
+                '            "a village is left its last unit of each good, so the game\'s own buy products option '
+                'always has stock to show";' in t
+            and t.count("TheVillageLastUnit") == 3
+            and ordered(larder,
+                        "if (settlement.IsVillage && remaining <= 1) { stopped = TheVillageLastUnit; break; }",
+                        "if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }",
+                        "else if (hungryStopped != null)",
+                        'Log.Repeatable("resupply hungry", settlement.StringId + "/" + hungryStopped,',
+                        '"resupply: your party has less than a day of its own food, and nothing more was "',
+                        '"bought at " + settlement.Name + ": " + hungryStopped);',
+                        '"resupply: your party has less than a day of its own food, and none is on sale at "'))
+
+
+chk("1.104.17", "a food restock that stops at a village's last unit says so in TradeLord.log, instead of saying no food was on sale there",
+    a_food_restock_says_the_village_keeps_its_last_unit_rather_than_nothing_being_on_sale())
+
+
 def a_ride_too_short_to_round_up_is_still_a_ride_the_forecast_counts():
     t = S['TradeMath.cs']
     ride = method_body(t, "public static float ARideToTheQuarterDay")
@@ -19767,6 +19801,24 @@ def esc_closes_what_this_means_or_buy_workshops_remotely_before_the_ledger():
 chk("1.105.2", "Esc closes What this means or Buy Workshops Remotely when one is open over the ledger, as a click outside it does, and only then the ledger",
     esc_closes_what_this_means_or_buy_workshops_remotely_before_the_ledger())
 
+
+def a_full_cargo_that_leaves_hungry_food_behind_tells_haulage_about_it():
+    supply = method_body(S['Trading.cs'], "public static void ExecuteResupply")
+    return (supply
+            and supply.count("firstLeft = (el, good, fed, ceiling, remaining, (countThis, spentThis), held);") == 2
+            and ('hungryStopped = "your cargo has no room for it";\n'
+                 '                            if (firstLeft == null)\n'
+                 '                                firstLeft = (el, good, fed, ceiling, remaining, (countThis, spentThis), held);\n'
+                 '                            break;') in supply
+            and ordered(supply, "var lean = CheapestFirst(pass,", 'hungryStopped = "your cargo has no room for it";',
+                        "if (shortfall > 0 && firstLeft.HasValue && !pass.DirectionError)",
+                        "_unfitted = (food.weight, food.cost, 0f, true);"))
+
+
+
+chk("1.105.2", "food a full cargo leaves behind while your party is down to less than a day of food is handed to the haul animal pass, from the hungry search as from the first one",
+    a_full_cargo_that_leaves_hungry_food_behind_tells_haulage_about_it())
+
 def villagers_keep_their_own_pack_animals_out_of_the_forecast():
     road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad()")
     kept = method_body(S['Forecast.cs'], "private static ItemObject ThePackAnimalVillagersKeep(ItemRoster carried)")
@@ -19807,6 +19859,30 @@ def a_caravan_is_followed_through_its_whole_visit_as_the_game_runs_it():
 
 chk("1.105.3", "a caravan on its way is followed through its visit as the game runs it, selling first and buying with what it sold, a convoy on coastal prices, and animals past what its men drive sold off",
     a_caravan_is_followed_through_its_whole_visit_as_the_game_runs_it())
+
+
+def a_hungry_party_buys_its_day_of_food_before_any_trade_good():
+    t = S['Trading.cs']
+    larder = method_body(t, "public static void ExecuteResupply")
+    return (larder
+            and "public static void ExecuteResupply(Settlement settlement, bool quiet = false, bool aDayFirst = false)" in t
+            and ordered(larder, "int shortfall = TradePolicy.FoodWanted() - own;",
+                        "if (aDayFirst) shortfall = Math.Min(shortfall, TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()));",
+                        "if (shortfall <= 0) return;", "int wanted = shortfall;",
+                        'so a day of it is bought before any trade good at " + settlement.Name);')
+            and ordered(t, "ExecuteQuickSell(Settlement.CurrentSettlement);",
+                        "ExecuteResupply(Settlement.CurrentSettlement, aDayFirst: true);",
+                        "ExecuteQuickBuy(Settlement.CurrentSettlement);")
+            and ordered(t, "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);",
+                        "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true, aDayFirst: true);",
+                        "if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);")
+            and t.count("aDayFirst: true") == 2
+            and "When your party is down to less than a day of its own food, a day of food is bought before any trade good" in README)
+
+
+
+chk("1.105.3", "a party down to less than a day of its own food buys a day of food before any trade good, on arrival and with Trade here now, and the rest of its days after trading as before",
+    a_hungry_party_buys_its_day_of_food_before_any_trade_good())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

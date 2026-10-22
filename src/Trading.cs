@@ -678,6 +678,8 @@ namespace TradeLord
 
             internal bool WouldReachYourReserveToFeed(int price, bool starving) => price >= SpendableToFeed(starving);
 
+            internal bool WouldEmptyYourPurse(int price) => price > TradeActionBehavior.WholePurse(Books, Sim);
+
             internal float Capacity =>
                 (_capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity) + Books.CapacityAdded(Sim) -
                 CapacitySoldOnPaper();
@@ -903,6 +905,8 @@ namespace TradeLord
         internal static int SpendableToFeed(Books books, bool sim, bool starving) =>
             starving ? PurseForTheirOffer(books, sim) : Spendable(books, sim);
 
+        internal static int WholePurse(Books books, bool sim) => Math.Max(0, Hero.MainHero.Gold + books.Purse(sim));
+
         internal static int PurseForAVisit()
         {
             int purse = Hero.MainHero.Gold;
@@ -1008,6 +1012,7 @@ namespace TradeLord
                                 BeginTheRound();
                                 ExecuteLootSale(Settlement.CurrentSettlement);
                                 ExecuteQuickSell(Settlement.CurrentSettlement);
+                                ExecuteResupply(Settlement.CurrentSettlement, aDayFirst: true);
                                 ExecuteQuickBuy(Settlement.CurrentSettlement);
                                 if (ExecuteHaulage(Settlement.CurrentSettlement))
                                     ExecuteQuickBuy(Settlement.CurrentSettlement);
@@ -1115,6 +1120,7 @@ namespace TradeLord
                 BeginTheRound();
                 if (Options.Current.AutoSellOnEntry) ExecuteLootSale(settlement, quiet: true);
                 if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);
+                if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true, aDayFirst: true);
                 if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);
                 if (Options.Current.AutoBuyOnEntry && ExecuteHaulage(settlement, quiet: true))
                     ExecuteQuickBuy(settlement, quiet: true);
@@ -2068,17 +2074,21 @@ namespace TradeLord
             return found;
         }
 
-        public static void ExecuteResupply(Settlement settlement, bool quiet = false)
+        public static void ExecuteResupply(Settlement settlement, bool quiet = false, bool aDayFirst = false)
         {
             _unfitted = default;
             if (Options.Current.KeepFoodDays <= 0) return;
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
 
-            int traded = TradePolicy.FoodBoughtToTrade(pass.Party.ItemRoster, pass.Books, pass.Sim);
-            int shortfall = TradePolicy.FoodWanted() -
-                            TradePolicy.FoodHeld(pass.Party.ItemRoster) - pass.Books.FoodHeld(pass.Sim) + traded;
+            int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);
+            int shortfall = TradePolicy.FoodWanted() - own;
+            if (aDayFirst) shortfall = Math.Min(shortfall, TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()));
             if (shortfall <= 0) return;
+            int wanted = shortfall;
+            if (aDayFirst)
+                Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") + "your party has less than " +
+                          "a day of its own food, so a day of it is bought before any trade good at " + settlement.Name);
 
             int stocked = 0, simSpent = 0;
             float simWeight = pass.Books.Weight(pass.Sim);
@@ -2089,8 +2099,7 @@ namespace TradeLord
             var larder = CheapestFirst(pass,
                 it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true),
                 TradeMath.ShortFoodTolerance);
-            bool hungry = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,
-                                                    TradePolicy.FoodForADay()) > 0;
+            bool hungry = TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()) > 0;
             if (larder.Count == 0 && !hungry)
             {
                 string missed = _foodMissed;
@@ -2101,8 +2110,8 @@ namespace TradeLord
                                (missed == null ? ", nor any it may buy at all" : ": the cheapest on sale is " + missed));
                 return;
             }
-            string stopped = null;
-            int pastTheCapUnits = 0, pastTheCapGold = 0;
+            string stopped = null, hungryStopped = null;
+            int pastTheCapUnits = 0, pastTheCapGold = 0, belowTheReserveUnits = 0, belowTheReserveGold = 0;
 
             pass.CountFrom();
             InAPass(() =>
@@ -2127,19 +2136,26 @@ namespace TradeLord
                             stopped = "its price is above both 1.5 times the cheapest TradeLord knows and twice its value";
                             break;
                         }
-                        if (pass.WouldReachYourReserveToFeed(price, hungry))
+                        bool aDayShort = TradeMath.FoodShortOfADay(own + wanted - shortfall, TradePolicy.FoodForADay()) > 0;
+                        if (aDayShort && pass.WouldEmptyYourPurse(price))
+                        {
+                            stopped = "your purse cannot pay for it";
+                            break;
+                        }
+                        bool belowTheReserve = aDayShort && pass.WouldReachYourReserveToFeed(price, hungry);
+                        if (!aDayShort && pass.WouldReachYourReserveToFeed(price, hungry))
                         {
                             stopped = hungry ? "buying it would reach your gold reserve"
                                              : "buying it would reach your gold reserve or spending cap";
                             break;
                         }
-                        bool pastTheCap = hungry && pass.WouldReachYourReserve(price);
+                        bool pastTheCap = hungry && !belowTheReserve && pass.WouldReachYourReserve(price);
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None)
                         {
                             stopped = "your buying caps for it are reached";
                             break;
                         }
-                        if (settlement.IsVillage && remaining <= 1) { stopped = "a village keeps its last unit"; break; }
+                        if (settlement.IsVillage && remaining <= 1) { stopped = TheVillageLastUnit; break; }
                         if (NoRoomForOneMore(good, pass.Room() - simWeight))
                         {
                             stopped = "your cargo has no room for it";
@@ -2170,11 +2186,11 @@ namespace TradeLord
                         held++;
                         pass.Tally(item, 1, price);
                         if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }
+                        if (belowTheReserve) { belowTheReserveUnits++; belowTheReserveGold += price; }
                     }
                 }
 
-                int hunger = TradeMath.FoodShortOfADay(TradePolicy.FoodWanted() - shortfall,
-                                                       TradePolicy.FoodForADay());
+                int hunger = TradeMath.FoodShortOfADay(own + wanted - shortfall, TradePolicy.FoodForADay());
                 if (hunger <= 0 || pass.DirectionError) return;
                 int hungryUnits = 0, hungryGold = 0;
                 var lean = CheapestFirst(pass,
@@ -2195,12 +2211,31 @@ namespace TradeLord
                     while (hunger > 0 && remaining > 0)
                     {
                         int price = pass.Price(el.EquipmentElement, selling: false);
-                        if (price <= 0 || price > ceiling) break;
-                        if (pass.WouldReachYourReserveToFeed(price, hungry)) break;
-                        if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None) break;
-                        if (settlement.IsVillage && remaining <= 1) break;
-                        if (NoRoomForOneMore(good, pass.Room() - simWeight)) break;
-                        bool pastTheCap = hungry && pass.WouldReachYourReserve(price);
+                        if (price <= 0 || price > ceiling)
+                        {
+                            hungryStopped = "its price is above both twice the cheapest TradeLord knows and twice its value";
+                            break;
+                        }
+                        if (pass.WouldEmptyYourPurse(price))
+                        {
+                            hungryStopped = "your purse cannot pay for it";
+                            break;
+                        }
+                        bool belowTheReserve = pass.WouldReachYourReserveToFeed(price, hungry);
+                        if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None)
+                        {
+                            hungryStopped = "your buying caps for it are reached";
+                            break;
+                        }
+                        if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }
+                        if (NoRoomForOneMore(good, pass.Room() - simWeight))
+                        {
+                            hungryStopped = "your cargo has no room for it";
+                            if (firstLeft == null)
+                                firstLeft = (el, good, fed, ceiling, remaining, (countThis, spentThis), held);
+                            break;
+                        }
+                        bool pastTheCap = hungry && !belowTheReserve && pass.WouldReachYourReserve(price);
 
                         if (pass.Sim)
                         {
@@ -2227,6 +2262,7 @@ namespace TradeLord
                         hungryGold += price;
                         pass.Tally(item, 1, price);
                         if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }
+                        if (belowTheReserve) { belowTheReserveUnits++; belowTheReserveGold += price; }
                     }
                 }
                 if (hungryUnits > 0)
@@ -2234,13 +2270,17 @@ namespace TradeLord
                               "your party had less than a day of its own food, so " + hungryUnits + " item(s) were bought for " +
                               hungryGold + " gold at up to twice the cheapest price TradeLord knows or twice their value at " +
                               settlement.Name);
+                else if (hungryStopped != null)
+                    Log.Repeatable("resupply hungry", settlement.StringId + "/" + hungryStopped,
+                                   "resupply: your party has less than a day of its own food, and nothing more was " +
+                                   "bought at " + settlement.Name + ": " + hungryStopped);
                 else
                 {
                     string missed = lean.Count == 0 ? _foodMissed : null;
                     Log.Repeatable("resupply hungry", settlement.StringId,
                                    "resupply: your party has less than a day of its own food, and none is on sale at " +
                                    settlement.Name + " at up to twice the cheapest price TradeLord knows or twice its " +
-                                   "value, within your gold reserve, your buying caps and your cargo room" +
+                                   "value, within what your purse can pay, your buying caps and your cargo room" +
                                    (missed == null ? "" : ": the cheapest on sale is " + missed));
                 }
             });
@@ -2250,6 +2290,11 @@ namespace TradeLord
                           "your party had less than a day of its own food, so " + pastTheCapUnits + " item(s) for " +
                           pastTheCapGold + " gold were bought past Max spend per visit at " + settlement.Name +
                           ", still within your gold reserve");
+            if (belowTheReserveUnits > 0)
+                Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") +
+                          "your party had less than a day of its own food, so " + belowTheReserveUnits + " item(s) for " +
+                          belowTheReserveGold + " gold of that one day of food were bought below your gold reserve at " +
+                          settlement.Name);
             if (shortfall > 0 && firstLeft.HasValue && !pass.DirectionError)
             {
                 var left = firstLeft.Value;
@@ -2276,6 +2321,9 @@ namespace TradeLord
             pass.Logged(selling: false, "restocking the larder");
             if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, stocked, spent);
         }
+
+        private const string TheVillageLastUnit =
+            "a village is left its last unit of each good, so the game's own buy products option always has stock to show";
 
         private static string WhyNoHaulAnimalHere(Pass pass)
         {
@@ -2658,9 +2706,8 @@ namespace TradeLord
             if (!Options.Current.BuyHaulAnimals || unfitted.weight <= 0f || unfitted.cost <= 0) return false;
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return false;
-            bool starving = unfitted.food && TradeMath.FoodShortOfADay(
-                TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),
-                TradePolicy.FoodForADay()) > 0;
+            int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);
+            bool starving = unfitted.food && TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()) > 0;
             if (!starving && PurseBelowTheHaulAnimalFloor(pass)) return false;
 
             int herdRoom = Drove.RoomForLivestock(pass.Party);
@@ -2694,9 +2741,7 @@ namespace TradeLord
             int hauled = 0, simSpent = 0;
             bool enough = false, tooLittle = false, floored = false;
             int floor = Options.Current.HaulAnimalGoldFloor, purseAtTheFloor = 0, priceAtTheFloor = 0;
-            float leastFilled = Herding.LeastFilledFor(unfitted.food,
-                TradePolicy.FoodHeld(pass.Party.ItemRoster) + pass.Books.FoodHeld(pass.Sim),
-                TradePolicy.FoodForADay());
+            float leastFilled = Herding.LeastFilledFor(unfitted.food, own, TradePolicy.FoodForADay());
             bool pastTheCap = false;
             bool pastTheFloor = false;
 
@@ -2795,7 +2840,7 @@ namespace TradeLord
                     Log.Repeatable("haul animal too little", settlement.StringId,
                                    "haul animals are left alone at " + settlement.Name + (unfitted.food
                                        ? ": the food your full cargo left behind would fill less than half of one, " +
-                                         "and your party still has a day of food or more"
+                                         "and your party still has a day of its own food or more"
                                        : ": the goods your full cargo left behind that the gold left can buy would " +
                                          "fill less than half of one and make less than it costs"));
                 return false;
@@ -2810,9 +2855,9 @@ namespace TradeLord
                       (unfitted.food ? "food" : "goods") + " weighing " +
                       carrying.ToString("0", System.Globalization.CultureInfo.InvariantCulture) +
                       " that your full cargo left behind and the gold left can still buy" +
-                      (pastTheCap ? ", past Max spend per visit as your party has less than a day of food" : "") +
+                      (pastTheCap ? ", past Max spend per visit as your party has less than a day of its own food" : "") +
                       (pastTheFloor
-                          ? (pastTheCap ? ", and" : ", as your party has less than a day of food,") +
+                          ? (pastTheCap ? ", and" : ", as your party has less than a day of its own food,") +
                             " below Gold before it buys a haul animal"
                           : "") +
                       (floored

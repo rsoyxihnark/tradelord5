@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.2
+
+- Fixed TradeLord.log saying no food was on sale at a village when the only food left was the last unit TradeLord never takes
+- Fixed a party down to less than a day of food getting no haul animal for food costing over 1.5 times the cheapest price TradeLord knows
+- When your party has less than a day of its own food, TradeLord now buys a day of food before any trade good
+- Fixed TradeLord counting food you bought to trade as your party's own when it buys a haul animal to carry food
+- The hints for Max spend per visit and Gold before it buys a haul animal now say they look at your party's own food, in every language
+- TradeLord.log now says when a day of food is bought before any trade good because your party has less than a day of its own food
+- When your party has less than a day of its own food, TradeLord now buys that one day of food even below your Gold reserve
+- The hint for Restock and keep food (days of supply) now says only a missing day of food may go below your Gold reserve, in every language
+- TradeLord.log now says when a day of food is bought below your Gold reserve
+
 ## 2.0.1
 
 - Fixed Left, Qty and Conf in the TradeLord ledger leaving out what the buy town's own workshops make
