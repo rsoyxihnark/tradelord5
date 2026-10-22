@@ -84,6 +84,7 @@ namespace TradeLord
             Guard.Run("Tick.PointerReturn", PointerReturn.Tick);
             Guard.Run("Tick.PointerHome", PointerHome.Tick);
             Guard.Run("Tick.CursorWatch", CursorWatch.Tick);
+            Guard.Run("Tick.RoadAtlas", Travel.FillTheAtlas);
         }
 
         public override void OnGameEnd(Game game)
@@ -91,6 +92,7 @@ namespace TradeLord
             base.OnGameEnd(game);
             Guard.Run("GameEnd.Panel", LedgerPanel.Reset);
             Guard.Run("GameEnd.CursorWatch", CursorWatch.Forget);
+            Guard.Run("GameEnd.RoadAtlas", () => Travel.KeepTheAtlas(wait: true));
             Guard.Run("GameEnd.Travel", Travel.Forget);
             Guard.Run("GameEnd.Bulk", Bulk.Forget);
             Guard.Run("GameEnd.ScreenMarkets", ScreenMarkets.Forget);

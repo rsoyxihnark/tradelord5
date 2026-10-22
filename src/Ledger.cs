@@ -195,6 +195,7 @@ namespace TradeLord
         public override void SyncData(IDataStore dataStore)
         {
             if (!dataStore.IsLoading) PruneExpired();
+            if (dataStore.IsSaving) Guard.Run("Ledger.RoadAtlas", () => Travel.KeepTheAtlas(wait: false));
             if (dataStore.IsSaving)
                 Guard.Run("Ledger.WriteForSave", () =>
                 {
@@ -1294,6 +1295,8 @@ namespace TradeLord
             _rankedAt = at;
             ForgetMarketRankings();
         }
+
+        internal List<Settlement> MarketsInReach() => LiveCandidates((int)CampaignTime.Now.ToHours);
 
         private List<Settlement> LiveCandidates(int hour)
         {

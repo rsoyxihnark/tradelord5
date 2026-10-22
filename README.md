@@ -197,6 +197,9 @@
 
 - ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, newly marks on your map or holds your cargo for is further than you care to ride
 - ✅ Either ceiling set to 0 takes that limit off, and the Town travel ceiling at 0 weighs every town in Calradia, which is the slowest TradeLord runs
+- ✅ Each road between two markets is walked once for your map and kept in TradeLord.roads next to TradeLord.log, so later sessions and campaigns on that map never walk it again
+- ✅ While you are on the campaign map it walks those roads in the background, nearest markets first, a few milliseconds a frame, so a route scan finds them ready
+- ✅ TradeLord.roads starts afresh by itself when the map or the way the game finds its roads changes, so a road it reads is the road the game would take today
 - ✅ The Village travel ceiling only ever holds villages closer: at 0, or set past the Town travel ceiling, villages go as far as the Town travel ceiling
 - ✅ A minimum stock before it calls something worth buying
 - ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the workshops and what the town uses up into a route's price

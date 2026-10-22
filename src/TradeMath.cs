@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.IO.Compression;
+using System.Text;
 
 namespace TradeLord
 {
@@ -1382,8 +1385,8 @@ namespace TradeLord
         }
 
         public const float LeastStepOnARoad = 0.01f;
-        private const int MostProbesOnALeg = 100000;
-        private const int MostSplitsOfAStep = 32;
+        internal const int MostProbesOnALeg = 100000;
+        internal const int MostSplitsOfAStep = 32;
 
         private static void AddPiece(List<Piece> pieces, float length, long region)
         {
@@ -2041,6 +2044,307 @@ namespace TradeLord
             return maxSpendPerVisit > 0
                 ? Math.Min(left, maxSpendPerVisit - spentThisVisit)
                 : left;
+        }
+    }
+
+    public static class RoadAtlas
+    {
+        public const int Format = 1;
+
+        public const int MostRoads = 4000000;
+
+        public const int MostRunsOnARoad = 1000000;
+
+        public const int MostBarred = 4096;
+
+        private const uint Mark = 0x41524c54;
+
+        private const int Buffered = 1 << 16;
+
+        public struct Key
+        {
+            public uint NavigationMesh;
+            public uint Scene;
+            public int Grid;
+            public float CellWide;
+            public float CellHigh;
+            public float Stride;
+            public uint Way;
+            public int SeaToLand;
+            public int LandToSea;
+            public int[] Barred;
+
+            public bool SameAs(Key other)
+            {
+                if (NavigationMesh != other.NavigationMesh || Scene != other.Scene || Grid != other.Grid ||
+                    !CellWide.Equals(other.CellWide) || !CellHigh.Equals(other.CellHigh) ||
+                    !Stride.Equals(other.Stride) || Way != other.Way || SeaToLand != other.SeaToLand ||
+                    LandToSea != other.LandToSea)
+                    return false;
+                int[] mine = Barred ?? new int[0], theirs = other.Barred ?? new int[0];
+                if (mine.Length != theirs.Length) return false;
+                for (int i = 0; i < mine.Length; i++)
+                    if (mine[i] != theirs[i]) return false;
+                return true;
+            }
+        }
+
+        public sealed class Road
+        {
+            public string From;
+            public string To;
+            public float FromX, FromY, ToX, ToY;
+            public bool Walked;
+            public float Length;
+            public List<TradeMath.Run> Runs;
+
+            public bool Between(float fromX, float fromY, float toX, float toY) =>
+                FromX.Equals(fromX) && FromY.Equals(fromY) && ToX.Equals(toX) && ToY.Equals(toY);
+        }
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
+        private struct Bits
+        {
+            [System.Runtime.InteropServices.FieldOffset(0)] internal float Single;
+            [System.Runtime.InteropServices.FieldOffset(0)] internal uint Whole;
+        }
+
+        private struct Tally
+        {
+            internal ulong Sum;
+
+            internal void Add(uint value)
+            {
+                ulong sum = Sum == 0ul ? 14695981039346656037ul : Sum;
+                sum = ((sum << 5) | (sum >> 59)) ^ value;
+                Sum = unchecked(sum * 1099511628211ul);
+            }
+
+            internal void Add(int value) => Add(unchecked((uint)value));
+
+            internal void Add(float value) => Add(new Bits { Single = value }.Whole);
+
+            internal void Add(string value)
+            {
+                string text = value ?? "";
+                Add(text.Length);
+                for (int i = 0; i < text.Length; i++) Add((int)text[i]);
+            }
+        }
+
+        public const int RoadsAreWalkedThisWay = 1;
+
+        public static uint TheWayRoadsAreWalked(int mostPaths, float reached, float radius, float switchCost)
+        {
+            var tally = new Tally();
+            tally.Add(RoadsAreWalkedThisWay);
+            tally.Add(TradeMath.LeastStepOnARoad);
+            tally.Add(TradeMath.MostProbesOnALeg);
+            tally.Add(TradeMath.MostSplitsOfAStep);
+            tally.Add(mostPaths);
+            tally.Add(reached);
+            tally.Add(radius);
+            tally.Add(switchCost);
+            return unchecked((uint)(tally.Sum ^ (tally.Sum >> 32)));
+        }
+
+        public static uint ZigZag(int n) => unchecked((uint)((n << 1) ^ (n >> 31)));
+
+        public static int Unzig(uint z) => unchecked((int)(z >> 1) ^ -(int)(z & 1u));
+
+        private static void WriteCount(BinaryWriter w, uint value)
+        {
+            while (value >= 0x80u)
+            {
+                w.Write((byte)(value | 0x80u));
+                value >>= 7;
+            }
+            w.Write((byte)value);
+        }
+
+        private static uint ReadCount(BinaryReader r)
+        {
+            uint value = 0u;
+            for (int shift = 0; shift < 35; shift += 7)
+            {
+                byte b = r.ReadByte();
+                value |= (uint)(b & 0x7f) << shift;
+                if ((b & 0x80) == 0) return value;
+            }
+            throw new InvalidDataException("a count runs past five bytes");
+        }
+
+        private static void Counted(ref Tally tally, Road road, bool walked)
+        {
+            tally.Add(road.From);
+            tally.Add(road.To);
+            tally.Add(road.FromX);
+            tally.Add(road.FromY);
+            tally.Add(road.ToX);
+            tally.Add(road.ToY);
+            tally.Add(walked ? 1 : 0);
+            if (!walked) return;
+            tally.Add(road.Length);
+            tally.Add(road.Runs.Count);
+            for (int k = 0; k < road.Runs.Count; k++)
+            {
+                tally.Add(road.Runs[k].Ground);
+                tally.Add(road.Runs[k].Face);
+                tally.Add(road.Runs[k].Cell);
+                tally.Add(road.Runs[k].Length);
+            }
+        }
+
+        public static void Write(Stream to, Key key, IList<Road> roads)
+        {
+            using (var zip = new GZipStream(to, CompressionLevel.Fastest, true))
+            using (var buffered = new BufferedStream(zip, Buffered))
+            using (var w = new BinaryWriter(buffered, Encoding.UTF8, true))
+            {
+                w.Write(Mark);
+                w.Write(Format);
+                w.Write(key.NavigationMesh);
+                w.Write(key.Scene);
+                w.Write(key.Grid);
+                w.Write(key.CellWide);
+                w.Write(key.CellHigh);
+                w.Write(key.Stride);
+                w.Write(key.Way);
+                w.Write(key.SeaToLand);
+                w.Write(key.LandToSea);
+                int[] barred = key.Barred ?? new int[0];
+                w.Write(barred.Length);
+                for (int i = 0; i < barred.Length; i++) w.Write(barred[i]);
+                int count = roads?.Count ?? 0;
+                w.Write(count);
+                var tally = new Tally();
+                for (int i = 0; i < count; i++)
+                {
+                    Road road = roads[i];
+                    w.Write(road.From ?? "");
+                    w.Write(road.To ?? "");
+                    w.Write(road.FromX);
+                    w.Write(road.FromY);
+                    w.Write(road.ToX);
+                    w.Write(road.ToY);
+                    bool walked = road.Walked && road.Runs != null;
+                    w.Write(walked);
+                    Counted(ref tally, road, walked);
+                    if (!walked) continue;
+                    w.Write(road.Length);
+                    WriteCount(w, (uint)road.Runs.Count);
+                    int face = 0, cell = 0;
+                    for (int k = 0; k < road.Runs.Count; k++)
+                    {
+                        TradeMath.Run run = road.Runs[k];
+                        WriteCount(w, ZigZag(run.Ground));
+                        WriteCount(w, ZigZag(unchecked(run.Face - face)));
+                        WriteCount(w, ZigZag(unchecked(run.Cell - cell)));
+                        w.Write(run.Length);
+                        face = run.Face;
+                        cell = run.Cell;
+                    }
+                }
+                w.Write(tally.Sum);
+                w.Write(Mark);
+            }
+        }
+
+        public static bool Read(Stream from, Key expected, out List<Road> roads, out string why)
+        {
+            roads = null;
+            try
+            {
+                using (var zip = new GZipStream(from, CompressionMode.Decompress, true))
+                using (var buffered = new BufferedStream(zip, Buffered))
+                using (var r = new BinaryReader(buffered, Encoding.UTF8, true))
+                {
+                    if (r.ReadUInt32() != Mark)
+                    {
+                        why = "it is not a road atlas";
+                        return false;
+                    }
+                    int format = r.ReadInt32();
+                    if (format != Format)
+                    {
+                        why = "it was written in another format (" + format + ")";
+                        return false;
+                    }
+                    var key = new Key
+                    {
+                        NavigationMesh = r.ReadUInt32(), Scene = r.ReadUInt32(), Grid = r.ReadInt32(),
+                        CellWide = r.ReadSingle(), CellHigh = r.ReadSingle(), Stride = r.ReadSingle(),
+                        Way = r.ReadUInt32(), SeaToLand = r.ReadInt32(), LandToSea = r.ReadInt32()
+                    };
+                    int barred = r.ReadInt32();
+                    if (barred < 0 || barred > MostBarred)
+                    {
+                        why = "it is damaged";
+                        return false;
+                    }
+                    key.Barred = new int[barred];
+                    for (int i = 0; i < barred; i++) key.Barred[i] = r.ReadInt32();
+                    if (!key.SameAs(expected))
+                    {
+                        why = "it was made for another map, or for roads walked another way";
+                        return false;
+                    }
+                    int count = r.ReadInt32();
+                    if (count < 0 || count > MostRoads)
+                    {
+                        why = "it is damaged";
+                        return false;
+                    }
+                    var read = new List<Road>(count);
+                    var tally = new Tally();
+                    for (int i = 0; i < count; i++)
+                    {
+                        var road = new Road
+                        {
+                            From = r.ReadString(), To = r.ReadString(),
+                            FromX = r.ReadSingle(), FromY = r.ReadSingle(), ToX = r.ReadSingle(), ToY = r.ReadSingle(),
+                            Walked = r.ReadBoolean()
+                        };
+                        if (road.Walked)
+                        {
+                            road.Length = r.ReadSingle();
+                            uint runs = ReadCount(r);
+                            if (runs > MostRunsOnARoad)
+                            {
+                                why = "it is damaged";
+                                return false;
+                            }
+                            road.Runs = new List<TradeMath.Run>((int)runs);
+                            int face = 0, cell = 0;
+                            for (uint k = 0; k < runs; k++)
+                            {
+                                int ground = Unzig(ReadCount(r));
+                                face = unchecked(face + Unzig(ReadCount(r)));
+                                cell = unchecked(cell + Unzig(ReadCount(r)));
+                                road.Runs.Add(new TradeMath.Run
+                                {
+                                    Ground = ground, Face = face, Cell = cell, Length = r.ReadSingle()
+                                });
+                            }
+                        }
+                        Counted(ref tally, road, road.Walked);
+                        read.Add(road);
+                    }
+                    if (r.ReadUInt64() != tally.Sum || r.ReadUInt32() != Mark || buffered.ReadByte() != -1)
+                    {
+                        why = "it ends early or is damaged";
+                        return false;
+                    }
+                    roads = read;
+                    why = null;
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                why = "it could not be read (" + e.GetType().Name + ")";
+                return false;
+            }
         }
     }
 }

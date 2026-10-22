@@ -2,14 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Helpers;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CampaignBehaviors;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.ComponentInterfaces;
 using TaleWorlds.CampaignSystem.GameComponents;
+using TaleWorlds.CampaignSystem.GameState;
 using TaleWorlds.CampaignSystem.Map;
 using TaleWorlds.CampaignSystem.Naval;
 using TaleWorlds.CampaignSystem.Party;
@@ -18,6 +21,7 @@ using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
+using TaleWorlds.MountAndBlade;
 
 namespace TradeLord
 {
@@ -256,6 +260,7 @@ namespace TradeLord
 
         private static int _meterHour = -1;
         private static int _partyWalks, _pairWalks, _otherWalks, _paths, _probes, _forecasts, _rides;
+        private static int _walkedBehind, _atlasTaken;
         private static int _othersOnTheirPath, _othersOnAFreshPath, _othersGuessed;
         private static long _walkTicks, _pathTicks, _forecastTicks, _rideTicks, _slowestWalk;
 
@@ -825,6 +830,8 @@ namespace TradeLord
             _othersOnTheirPath = 0;
             _othersOnAFreshPath = 0;
             _othersGuessed = 0;
+            _walkedBehind = 0;
+            _atlasTaken = 0;
             _walkTicks = 0L;
             _pathTicks = 0L;
             _forecastTicks = 0L;
@@ -978,10 +985,17 @@ namespace TradeLord
             if (landRatio >= AllOnLand && a != b)
             {
                 StartTheMeter();
-                long started = Stopwatch.GetTimestamp();
-                try { WalkBetween(a, b, road); }
-                catch { road.Walked = false; }
-                StopTheMeter(started, ref _pairWalks);
+                if (!FromTheAtlas(a, b, road))
+                {
+                    long started = Stopwatch.GetTimestamp();
+                    bool threw = false;
+                    try { WalkBetween(a, b, road); }
+                    catch { road.Walked = false; threw = true; }
+                    StopTheMeter(started, ref _pairWalks);
+                    _justWalked = true;
+                    if (_behind) _walkedBehind++;
+                    if (!threw) IntoTheAtlas(a, b, road);
+                }
             }
             if (!road.Walked)
             {
@@ -990,6 +1004,332 @@ namespace TradeLord
                 road.Runs = Unwalked(dist, landRatio, false);
             }
             return road;
+        }
+
+        private const string AtlasFileName = "TradeLord.roads";
+        private const double AtlasMsAFrame = 3d;
+        private const int AtlasLooksAFrame = 4000;
+        private const int AtlasWaitMs = 20000;
+        private static readonly TimeSpan AtlasKeptAtMostEvery = TimeSpan.FromMinutes(5);
+
+        private static Dictionary<(string, string), RoadAtlas.Road> _atlas;
+        private static RoadAtlas.Key _atlasKey;
+        private static string _atlasPath;
+        private static Task<(List<RoadAtlas.Road> roads, string why, double ms)> _atlasReading;
+        private static Task<string> _atlasWriting;
+        private static bool _atlasWritingSaid = true;
+        private static bool _atlasOff, _atlasDirty, _behind, _justWalked, _fillBroken;
+        private static int _atlasTriedHour = -1;
+        private static DateTime _atlasKeptAt = DateTime.MinValue;
+        private static List<Settlement> _fillFor, _fillOrder;
+        private static int _fillShell, _fillStep, _fillWalked;
+        private static long _fillTicks;
+        private static bool _fillDone;
+
+        private static double MsOf(long ticks) => ticks * 1000d / Stopwatch.Frequency;
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static bool AtlasKeyNow(out RoadAtlas.Key key)
+        {
+            key = default(RoadAtlas.Key);
+            Campaign campaign = Campaign.Current;
+            MobileParty party = MobileParty.MainParty;
+            if (campaign?.MapSceneWrapper == null || party == null) return false;
+            Grid();
+            if (_dim <= 0) return false;
+            IMapScene map = campaign.MapSceneWrapper;
+            int[] barred = (int[])(campaign.Models.PartyNavigationModel
+                .GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Default) ?? new int[0]).Clone();
+            Array.Sort(barred);
+            key = new RoadAtlas.Key
+            {
+                NavigationMesh = map.GetSceneNavigationMeshCrc(),
+                Scene = map.GetSceneXmlCrc(),
+                Grid = _dim,
+                CellWide = _cellWide,
+                CellHigh = _cellHigh,
+                Stride = Stride,
+                Way = RoadAtlas.TheWayRoadsAreWalked(MostPathsToOneRoad, ReachedSquared, 0.3f, 2f),
+                SeaToLand = party.GetRegionSwitchCostFromSeaToLand(),
+                LandToSea = party.GetRegionSwitchCostFromLandToSea(),
+                Barred = barred
+            };
+            return true;
+        }
+
+        private static (List<RoadAtlas.Road> roads, string why, double ms) ReadTheAtlas(string path, RoadAtlas.Key key)
+        {
+            long started = Stopwatch.GetTimestamp();
+            try
+            {
+                if (!File.Exists(path)) return (null, "there is none there yet", 0d);
+                using (FileStream file = File.OpenRead(path))
+                {
+                    bool read = RoadAtlas.Read(file, key, out List<RoadAtlas.Road> roads, out string why);
+                    return (read ? roads : null, why, MsOf(Stopwatch.GetTimestamp() - started));
+                }
+            }
+            catch (Exception e)
+            {
+                return (null, "it could not be opened (" + e.GetType().Name + ")", MsOf(Stopwatch.GetTimestamp() - started));
+            }
+        }
+
+        private static bool AtlasReady(bool wait)
+        {
+            if (_atlas != null) return true;
+            if (_atlasOff) return false;
+            if (_atlasReading == null)
+            {
+                int hour = (int)CampaignTime.Now.ToHours;
+                if (hour == _atlasTriedHour) return false;
+                _atlasTriedHour = hour;
+                bool keyed;
+                RoadAtlas.Key key;
+                try { keyed = AtlasKeyNow(out key); }
+                catch (Exception e)
+                {
+                    _atlasOff = true;
+                    Log.Write("road atlas: left off for this session, as the map's roads could not be read (" +
+                              e.GetType().Name + "), so roads between markets are walked as they are needed");
+                    return false;
+                }
+                if (!keyed) return false;
+                string path = Log.Beside(AtlasFileName, mustExist: false);
+                if (path == null)
+                {
+                    _atlasOff = true;
+                    Log.Write("road atlas: left off for this session, as no folder for " + AtlasFileName +
+                              " could be found next to TradeLord.log");
+                    return false;
+                }
+                _atlasKey = key;
+                _atlasPath = path;
+                _atlasReading = Task.Run(() => ReadTheAtlas(path, key));
+            }
+            if (!_atlasReading.IsCompleted)
+            {
+                if (!wait) return false;
+                try { _atlasReading.Wait(AtlasWaitMs); }
+                catch { }
+                if (!_atlasReading.IsCompleted) return false;
+            }
+            TakeTheAtlas();
+            return _atlas != null;
+        }
+
+        private static void TakeTheAtlas()
+        {
+            (List<RoadAtlas.Road> roads, string why, double ms) read;
+            try { read = _atlasReading.Result; }
+            catch (Exception e) { read = (null, "it could not be read (" + e.GetType().Name + ")", 0d); }
+            _atlas = new Dictionary<(string, string), RoadAtlas.Road>();
+            if (read.roads == null)
+            {
+                Log.Write("road atlas: nothing read from " + _atlasPath + " because " + read.why +
+                          ", so roads between markets are walked as they are needed and kept there for next time");
+                return;
+            }
+            foreach (RoadAtlas.Road road in read.roads)
+                if (road.From != null && road.To != null) _atlas[(road.From, road.To)] = road;
+            Log.Write("road atlas: " + _atlas.Count + " road(s) between markets read from " + _atlasPath + " in " +
+                      read.ms.ToString("0", CultureInfo.InvariantCulture) + " ms, so none of them is walked again");
+        }
+
+        private static bool FromTheAtlas(Settlement a, Settlement b, Road road)
+        {
+            if (!AtlasReady(wait: true)) return false;
+            var key = (a.StringId, b.StringId);
+            if (!_atlas.TryGetValue(key, out RoadAtlas.Road kept)) return false;
+            Vec2 from = a.GatePosition.ToVec2(), to = b.GatePosition.ToVec2();
+            if (!kept.Between(from.x, from.y, to.x, to.y))
+            {
+                _atlas.Remove(key);
+                _atlasDirty = true;
+                return false;
+            }
+            _atlasTaken++;
+            if (!kept.Walked || kept.Runs == null) return true;
+            road.Runs = kept.Runs;
+            road.Length = kept.Length;
+            road.LandRatio = 1f;
+            road.Walked = true;
+            return true;
+        }
+
+        private static void IntoTheAtlas(Settlement a, Settlement b, Road road)
+        {
+            if (_atlas == null) return;
+            Vec2 from = a.GatePosition.ToVec2(), to = b.GatePosition.ToVec2();
+            _atlas[(a.StringId, b.StringId)] = new RoadAtlas.Road
+            {
+                From = a.StringId, To = b.StringId, FromX = from.x, FromY = from.y, ToX = to.x, ToY = to.y,
+                Walked = road.Walked, Length = road.Walked ? road.Length : 0f, Runs = road.Walked ? road.Runs : null
+            };
+            _atlasDirty = true;
+        }
+
+        private static string WriteTheAtlas(string path, RoadAtlas.Key key, List<RoadAtlas.Road> roads)
+        {
+            long started = Stopwatch.GetTimestamp();
+            string fresh = path + ".new";
+            try
+            {
+                using (FileStream file = File.Create(fresh)) RoadAtlas.Write(file, key, roads);
+                long size = new FileInfo(fresh).Length;
+                if (File.Exists(path)) File.Delete(path);
+                File.Move(fresh, path);
+                return "road atlas: " + roads.Count + " road(s) between markets kept in " + path + ", " + size / 1024 +
+                       " KB, in " + MsOf(Stopwatch.GetTimestamp() - started).ToString("0", CultureInfo.InvariantCulture) +
+                       " ms, for the next time this map is played";
+            }
+            catch (Exception e)
+            {
+                try { if (File.Exists(fresh)) File.Delete(fresh); }
+                catch { }
+                return "road atlas: the roads between markets could not be kept in " + path + " (" + e.GetType().Name +
+                       "), so they are walked again next time";
+            }
+        }
+
+        private static void SayHowTheAtlasWasKept()
+        {
+            Task<string> writing = _atlasWriting;
+            if (_atlasWritingSaid || writing == null || !writing.IsCompleted) return;
+            _atlasWritingSaid = true;
+            string said;
+            try { said = writing.Result; }
+            catch (Exception e) { said = "road atlas: the roads between markets could not be kept (" + e.GetType().Name + ")"; }
+            Log.Write(said);
+        }
+
+        internal static void KeepTheAtlas(bool wait) => KeepTheAtlas(wait, true);
+
+        private static void KeepTheAtlas(bool wait, bool now)
+        {
+            if (_atlasWriting != null && !_atlasWriting.IsCompleted)
+            {
+                if (!wait) return;
+                try { _atlasWriting.Wait(AtlasWaitMs); }
+                catch { }
+            }
+            SayHowTheAtlasWasKept();
+            if (_atlas == null || !_atlasDirty || _atlasPath == null) return;
+            if (_atlasWriting != null && !_atlasWriting.IsCompleted) return;
+            if (!now && DateTime.UtcNow - _atlasKeptAt < AtlasKeptAtMostEvery) return;
+            _atlasKeptAt = DateTime.UtcNow;
+            var known = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Settlement s in Settlement.All)
+                if (s?.StringId != null) known.Add(s.StringId);
+            var roads = new List<RoadAtlas.Road>(_atlas.Count);
+            foreach (RoadAtlas.Road one in _atlas.Values)
+                if (known.Contains(one.From) && known.Contains(one.To)) roads.Add(one);
+            string path = _atlasPath;
+            RoadAtlas.Key key = _atlasKey;
+            _atlasDirty = false;
+            _atlasWritingSaid = false;
+            _atlasWriting = Task.Run(() => WriteTheAtlas(path, key, roads));
+            if (!wait) return;
+            try { _atlasWriting.Wait(AtlasWaitMs); }
+            catch { }
+            SayHowTheAtlasWasKept();
+        }
+
+        private static void ForgetTheAtlas()
+        {
+            if (_atlasReading != null && !_atlasReading.IsCompleted)
+            {
+                try { _atlasReading.Wait(AtlasWaitMs); }
+                catch { }
+            }
+            _atlas = null;
+            _atlasReading = null;
+            _atlasPath = null;
+            _atlasOff = false;
+            _atlasDirty = false;
+            _behind = false;
+            _fillBroken = false;
+            _atlasTriedHour = -1;
+            _fillFor = null;
+            _fillOrder = null;
+            _fillDone = false;
+        }
+
+        private static bool OnTheMap() =>
+            Campaign.Current != null && MobileParty.MainParty != null && Mission.Current == null &&
+            Game.Current?.GameStateManager?.ActiveState is MapState;
+
+        internal static void FillTheAtlas()
+        {
+            if (_fillBroken) return;
+            try { FillTheAtlasNow(); }
+            catch (Exception e)
+            {
+                _fillBroken = true;
+                _behind = false;
+                Log.Error(e, "road atlas: the roads between markets are no longer walked in the background this " +
+                             "session, and are walked as they are needed instead");
+            }
+        }
+
+        private static void FillTheAtlasNow()
+        {
+            SayHowTheAtlasWasKept();
+            if (!OnTheMap() || !AtlasReady(wait: false)) return;
+            List<Settlement> reach = LedgerBehavior.Instance?.MarketsInReach();
+            if (reach == null) return;
+            if (!ReferenceEquals(reach, _fillFor))
+            {
+                _fillFor = reach;
+                var order = new List<(Settlement s, float days)>(reach.Count);
+                foreach (Settlement s in reach)
+                    if (s != null) order.Add((s, StraightDaysFromParty(s)));
+                order.Sort((x, y) => x.days.CompareTo(y.days));
+                _fillOrder = new List<Settlement>(order.Count);
+                foreach (var one in order) _fillOrder.Add(one.s);
+                _fillShell = 0;
+                _fillStep = 0;
+                _fillWalked = 0;
+                _fillTicks = 0L;
+                _fillDone = false;
+            }
+            if (_fillDone) return;
+            float cap = Options.Current.MaxTravelDaysTown;
+            long started = Stopwatch.GetTimestamp();
+            long budget = (long)(AtlasMsAFrame * Stopwatch.Frequency / 1000d);
+            int n = _fillOrder.Count;
+            for (int looks = 0; looks < AtlasLooksAFrame; looks++)
+            {
+                if (_fillShell >= n)
+                {
+                    _fillDone = true;
+                    if (_fillWalked > 0)
+                        Log.Write("road atlas: every road between the " + n + " market(s) within your travel ceilings " +
+                                  "is ready, " + _fillWalked + " of them walked in the background in " +
+                                  MsOf(_fillTicks).ToString("0", CultureInfo.InvariantCulture) +
+                                  " ms spread over the frames while you were on the map");
+                    KeepTheAtlas(false, false);
+                    return;
+                }
+                int step = _fillStep;
+                Settlement from = step < _fillShell ? _fillOrder[_fillShell] : _fillOrder[step - _fillShell];
+                Settlement to = step < _fillShell ? _fillOrder[step] : _fillOrder[_fillShell];
+                if (++_fillStep > 2 * _fillShell)
+                {
+                    _fillShell++;
+                    _fillStep = 0;
+                }
+                if (from == to || _pairDist.ContainsKey((from.StringId, to.StringId))) continue;
+                if (cap > 0f && StraightDaysFromParty(from) + StraightDaysBetween(from, to) > cap) continue;
+                long before = Stopwatch.GetTimestamp();
+                _justWalked = false;
+                _behind = true;
+                try { PairRoad(from, to); }
+                finally { _behind = false; }
+                if (_justWalked) _fillWalked++;
+                _fillTicks += Stopwatch.GetTimestamp() - before;
+                if (Stopwatch.GetTimestamp() - started >= budget) return;
+            }
         }
 
         private static readonly Dictionary<string, Road> _partyDist = new Dictionary<string, Road>();
@@ -1020,6 +1360,7 @@ namespace TradeLord
 
         internal static void Forget()
         {
+            ForgetTheAtlas();
             _partyDist.Clear();
             _unwalkable.Clear();
             _partyHour = -1;
@@ -1272,7 +1613,10 @@ namespace TradeLord
                          tally.Slow.ToString("0.0", inv) + " hour(s) Disorganized") +
                    "; " + sky + "; this hour " +
                    (metered ? _partyWalks : 0) + " road(s) walked from your party, " + (metered ? _pairWalks : 0) +
-                   " between markets and " + (metered ? _otherWalks : 0) + " for caravans and villagers, " +
+                   " between markets" +
+                   (metered && _walkedBehind > 0 ? ", " + _walkedBehind + " of them in the background" : "") +
+                   (metered && _atlasTaken > 0 ? ", " + _atlasTaken + " more between markets taken from the road atlas" : "") +
+                   " and " + (metered ? _otherWalks : 0) + " for caravans and villagers, " +
                    (metered ? _paths : 0) + " pathfinding call(s) in " + Ms(metered ? _pathTicks : 0L) + " ms, " +
                    (metered ? _probes : 0) + " ground probe(s) in " +
                    Ms(metered ? _walkTicks - _pathTicks : 0L) + " ms, " +

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.105.5
+
+- Fixed the game freezing for many seconds the first time TradeLord looks for routes with Town travel ceiling at 0
+- TradeLord now keeps the roads it walks between markets in TradeLord.roads next to TradeLord.log, so no road on your map is walked twice
+- On the campaign map, TradeLord now walks the roads between the markets within your travel ceilings in the background, nearest first
+- TradeLord.log now says how many roads TradeLord.roads held for your map, how many it kept and how many were walked in the background
+
 ## 1.105.4
 
 - When your party has less than a day of its own food, TradeLord now buys that one day of food even below your Gold reserve

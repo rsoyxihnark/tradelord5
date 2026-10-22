@@ -20456,5 +20456,60 @@ def a_thin_purse_counts_for_less_on_the_map_marker():
 chk("1.105.4", "the map marker counts a market whose purse holds less than twice the sale for less a day, in step with how thin it is, and TradeLord.log says so",
     a_thin_purse_counts_for_less_on_the_map_marker())
 
+def the_roads_between_markets_are_walked_once_a_map_and_kept_in_the_road_atlas():
+    t = S['Travel.cs']
+    m = S['TradeMath.cs']
+    between = method_body(t, "private static Road RoadBetween(Settlement a, Settlement b)")
+    key = method_body(t, "private static bool AtlasKeyNow(out RoadAtlas.Key key)")
+    taken = method_body(t, "private static bool FromTheAtlas(Settlement a, Settlement b, Road road)")
+    fill = method_body(t, "private static void FillTheAtlasNow()")
+    walk = method_body(t, "private static bool WalkTheRoad(")
+    return (between and key and taken and fill and walk
+            and 'private const string AtlasFileName = "TradeLord.roads";' in t
+            and ordered(between, "if (landRatio >= AllOnLand && a != b)", "StartTheMeter();",
+                        "if (!FromTheAtlas(a, b, road))", "try { WalkBetween(a, b, road); }",
+                        "catch { road.Walked = false; threw = true; }", "if (!threw) IntoTheAtlas(a, b, road);",
+                        "if (!road.Walked)")
+            and all(one in key for one in ("NavigationMesh = map.GetSceneNavigationMeshCrc(),",
+                                           "Scene = map.GetSceneXmlCrc(),", "Grid = _dim,", "CellWide = _cellWide,",
+                                           "CellHigh = _cellHigh,", "Stride = Stride,",
+                                           "Way = RoadAtlas.TheWayRoadsAreWalked(MostPathsToOneRoad, ReachedSquared, 0.3f, 2f),",
+                                           "SeaToLand = party.GetRegionSwitchCostFromSeaToLand(),",
+                                           "LandToSea = party.GetRegionSwitchCostFromLandToSea(),",
+                                           "GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Default)"))
+            and "map.GetPathBetweenAIFaces(fromFace, toFace, from, end, 0.3f, _path, barred, 2f, seaToLand," in walk
+            and ordered(taken, "if (!AtlasReady(wait: true)) return false;",
+                        "if (!kept.Between(from.x, from.y, to.x, to.y))", "_atlas.Remove(key);",
+                        "if (!kept.Walked || kept.Runs == null) return true;", "road.Runs = kept.Runs;",
+                        "road.Walked = true;")
+            and "_atlasReading = Task.Run(() => ReadTheAtlas(path, key));" in t
+            and "_atlasWriting = Task.Run(() => WriteTheAtlas(path, key, roads));" in t
+            and ordered(fill, "if (!OnTheMap() || !AtlasReady(wait: false)) return;",
+                        "List<Settlement> reach = LedgerBehavior.Instance?.MarketsInReach();",
+                        "order.Sort((x, y) => x.days.CompareTo(y.days));",
+                        "if (from == to || _pairDist.ContainsKey((from.StringId, to.StringId))) continue;",
+                        "if (cap > 0f && StraightDaysFromParty(from) + StraightDaysBetween(from, to) > cap) continue;",
+                        "try { PairRoad(from, to); }",
+                        "if (Stopwatch.GetTimestamp() - started >= budget) return;")
+            and "private const double AtlasMsAFrame = 3d;" in t
+            and "Game.Current?.GameStateManager?.ActiveState is MapState;" in t
+            and 'Guard.Run("Tick.RoadAtlas", Travel.FillTheAtlas);' in S['SubModule.cs']
+            and ordered(S['SubModule.cs'], 'Guard.Run("GameEnd.RoadAtlas", () => Travel.KeepTheAtlas(wait: true));',
+                        'Guard.Run("GameEnd.Travel", Travel.Forget);')
+            and 'if (dataStore.IsSaving) Guard.Run("Ledger.RoadAtlas", () => Travel.KeepTheAtlas(wait: false));' in S['Ledger.cs']
+            and "if (r.ReadUInt64() != tally.Sum || r.ReadUInt32() != Mark || buffered.ReadByte() != -1)" in m
+            and all(one in MATHTESTS for one in
+                    ("The_road_atlas_reads_back_every_road_exactly_as_it_was_walked",
+                     "A_road_atlas_made_for_another_map_is_never_read",
+                     "A_cut_short_damaged_or_foreign_road_atlas_never_reads_back_a_wrong_road",
+                     "An_empty_road_atlas_reads_back_empty",
+                     "Signed_steps_survive_the_road_atlas_count_coding"))
+            and "Each road between two markets is walked once for your map and kept in TradeLord.roads next to TradeLord.log" in README
+            and "TradeLord.roads starts afresh by itself when the map or the way the game finds its roads changes" in README)
+
+
+chk("1.105.5", "each road between two markets is walked once a map and kept in TradeLord.roads, keyed to the map and the way roads are walked, read and written off the main thread, and filled in the background on the campaign map",
+    the_roads_between_markets_are_walked_once_a_map_and_kept_in_the_road_atlas())
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

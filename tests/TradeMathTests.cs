@@ -2336,6 +2336,160 @@ namespace TradeLord.Tests
             Assert.True(TradeMath.RateTheMarkHolds(700f, false) > marked);
         }
 
+        private static RoadAtlas.Key AMap() => new RoadAtlas.Key
+        {
+            NavigationMesh = 3141592653u, Scene = 2718281828u, Grid = 128, CellWide = 4.5f, CellHigh = 3.25f,
+            Stride = 1f, Way = RoadAtlas.TheWayRoadsAreWalked(8, 0.0001f, 0.3f, 2f), SeaToLand = 25, LandToSea = 40,
+            Barred = new[] { 1, 4, 11 }
+        };
+
+        private static List<RoadAtlas.Road> TwoRoads() => new List<RoadAtlas.Road>
+        {
+            new RoadAtlas.Road
+            {
+                From = "town_V1", To = "village_V1_2", FromX = 101.25f, FromY = 330.5f, ToX = 88.125f, ToY = 341.75f,
+                Walked = true, Length = 17.333334f,
+                Runs = new List<TradeMath.Run>
+                {
+                    new TradeMath.Run { Ground = TradeMath.GroundPlain, Face = 81234, Cell = 9055, Length = 3.1f },
+                    new TradeMath.Run { Ground = TradeMath.GroundForest, Face = 81240, Cell = 9055, Length = 0.0123f },
+                    new TradeMath.Run { Ground = TradeMath.GroundWater, Face = 79001, Cell = 9183, Length = 12.5f },
+                    new TradeMath.Run { Ground = TradeMath.GroundElse, Face = TradeMath.Unread, Cell = TradeMath.Unread, Length = 1.7210001f }
+                }
+            },
+            new RoadAtlas.Road
+            {
+                From = "village_V1_2", To = "town_S3", FromX = 88.125f, FromY = 341.75f, ToX = 512f, ToY = 77f,
+                Walked = false
+            }
+        };
+
+        private static byte[] Written(RoadAtlas.Key key, List<RoadAtlas.Road> roads)
+        {
+            using (var kept = new System.IO.MemoryStream())
+            {
+                RoadAtlas.Write(kept, key, roads);
+                return kept.ToArray();
+            }
+        }
+
+        [Fact]
+        public void The_road_atlas_reads_back_every_road_exactly_as_it_was_walked()
+        {
+            List<RoadAtlas.Road> roads = TwoRoads();
+            byte[] bytes = Written(AMap(), roads);
+            Assert.True(RoadAtlas.Read(new System.IO.MemoryStream(bytes), AMap(), out List<RoadAtlas.Road> back, out string why), why);
+            Assert.Null(why);
+            Assert.Equal(2, back.Count);
+            RoadAtlas.Road walked = back[0];
+            Assert.Equal("town_V1", walked.From);
+            Assert.Equal("village_V1_2", walked.To);
+            Assert.True(walked.Between(101.25f, 330.5f, 88.125f, 341.75f));
+            Assert.False(walked.Between(101.25f, 330.5f, 88.125f, 341.7f));
+            Assert.True(walked.Walked);
+            Assert.Equal(roads[0].Length, walked.Length);
+            Assert.Equal(roads[0].Runs.Count, walked.Runs.Count);
+            for (int i = 0; i < walked.Runs.Count; i++)
+            {
+                Assert.Equal(roads[0].Runs[i].Ground, walked.Runs[i].Ground);
+                Assert.Equal(roads[0].Runs[i].Face, walked.Runs[i].Face);
+                Assert.Equal(roads[0].Runs[i].Cell, walked.Runs[i].Cell);
+                Assert.Equal(BitConverter.SingleToInt32Bits(roads[0].Runs[i].Length),
+                             BitConverter.SingleToInt32Bits(walked.Runs[i].Length));
+            }
+            Assert.False(back[1].Walked);
+            Assert.Null(back[1].Runs);
+            Assert.Equal("town_S3", back[1].To);
+        }
+
+        [Fact]
+        public void A_road_atlas_made_for_another_map_is_never_read()
+        {
+            byte[] bytes = Written(AMap(), TwoRoads());
+            RoadAtlas.Key other = AMap();
+            other.NavigationMesh++;
+            Assert.False(RoadAtlas.Read(new System.IO.MemoryStream(bytes), other, out var back, out string why));
+            Assert.Null(back);
+            Assert.Contains("another map", why);
+            RoadAtlas.Key barred = AMap();
+            barred.Barred = new[] { 1, 4 };
+            Assert.False(RoadAtlas.Read(new System.IO.MemoryStream(bytes), barred, out _, out _));
+            RoadAtlas.Key grid = AMap();
+            grid.CellWide = 4.75f;
+            Assert.False(RoadAtlas.Read(new System.IO.MemoryStream(bytes), grid, out _, out _));
+            RoadAtlas.Key walked = AMap();
+            walked.Way = RoadAtlas.TheWayRoadsAreWalked(9, 0.0001f, 0.3f, 2f);
+            Assert.NotEqual(AMap().Way, walked.Way);
+            Assert.False(RoadAtlas.Read(new System.IO.MemoryStream(bytes), walked, out _, out _));
+            Assert.NotEqual(AMap().Way, RoadAtlas.TheWayRoadsAreWalked(8, 0.0001f, 0.35f, 2f));
+            Assert.Equal(AMap().Way, RoadAtlas.TheWayRoadsAreWalked(8, 0.0001f, 0.3f, 2f));
+        }
+
+        private static bool TheSameRoads(List<RoadAtlas.Road> kept, List<RoadAtlas.Road> back)
+        {
+            if (back == null || back.Count != kept.Count) return false;
+            for (int i = 0; i < kept.Count; i++)
+            {
+                RoadAtlas.Road a = kept[i], b = back[i];
+                if (a.From != b.From || a.To != b.To || !b.Between(a.FromX, a.FromY, a.ToX, a.ToY) || a.Walked != b.Walked)
+                    return false;
+                if (!a.Walked) continue;
+                if (!a.Length.Equals(b.Length) || a.Runs.Count != b.Runs.Count) return false;
+                for (int k = 0; k < a.Runs.Count; k++)
+                    if (a.Runs[k].Ground != b.Runs[k].Ground || a.Runs[k].Face != b.Runs[k].Face ||
+                        a.Runs[k].Cell != b.Runs[k].Cell || !a.Runs[k].Length.Equals(b.Runs[k].Length))
+                        return false;
+            }
+            return true;
+        }
+
+        [Fact]
+        public void A_cut_short_damaged_or_foreign_road_atlas_never_reads_back_a_wrong_road()
+        {
+            List<RoadAtlas.Road> roads = TwoRoads();
+            byte[] bytes = Written(AMap(), roads);
+            int refused = 0;
+            for (int cut = 1; cut < bytes.Length; cut++)
+            {
+                var part = new byte[cut];
+                Array.Copy(bytes, part, cut);
+                if (RoadAtlas.Read(new System.IO.MemoryStream(part), AMap(), out var back, out string why))
+                    Assert.True(TheSameRoads(roads, back), cut + " of " + bytes.Length);
+                else
+                {
+                    refused++;
+                    Assert.Null(back);
+                    Assert.False(string.IsNullOrEmpty(why));
+                }
+            }
+            Assert.True(refused > bytes.Length / 2);
+            for (int at = 10; at < bytes.Length - 8; at++)
+            {
+                var spoilt = (byte[])bytes.Clone();
+                spoilt[at] ^= 0x10;
+                if (RoadAtlas.Read(new System.IO.MemoryStream(spoilt), AMap(), out var back, out _))
+                    Assert.True(TheSameRoads(roads, back), "byte " + at + " of " + bytes.Length);
+            }
+            Assert.False(RoadAtlas.Read(new System.IO.MemoryStream(System.Text.Encoding.UTF8.GetBytes("[TradeLord]")),
+                                        AMap(), out _, out string foreign));
+            Assert.False(string.IsNullOrEmpty(foreign));
+        }
+
+        [Fact]
+        public void An_empty_road_atlas_reads_back_empty()
+        {
+            byte[] bytes = Written(AMap(), new List<RoadAtlas.Road>());
+            Assert.True(RoadAtlas.Read(new System.IO.MemoryStream(bytes), AMap(), out var back, out _));
+            Assert.Empty(back);
+        }
+
+        [Fact]
+        public void Signed_steps_survive_the_road_atlas_count_coding()
+        {
+            foreach (int n in new[] { 0, 1, -1, 63, -64, 64, int.MaxValue, int.MinValue, -81234, 81234 })
+                Assert.Equal(n, RoadAtlas.Unzig(RoadAtlas.ZigZag(n)));
+        }
+
         [Fact]
         public void A_purse_is_trusted_in_full_once_it_holds_twice_the_sale()
         {
