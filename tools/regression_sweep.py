@@ -3833,40 +3833,59 @@ def kept_branch_named():
     return re.findall(r'keeps one more branch beside `main`: `([A-Za-z0-9._-]*)`', RULES)
 
 
-def the_kept_branch_is_named_once_and_publishes_nothing():
+def the_kept_branch_is_named_once_and_publishes_only_debug_builds():
     named = kept_branch_named()
     if len(named) != 1 or named[0] == 'main':
         return False
     kept = named[0]
     section = RULES[RULES.find('\n## This repository\n'):]
+    where = between(WORKFLOW, "- name: Where this publishes", "- name: Publish release")
+    publish = between(WORKFLOW, "- name: Publish release", "could not publish")
     return (RULES.find('\n## This repository\n') > 0
             and 'keeps one more branch beside `main`: `' + kept + '`' in section
-            and '`' + kept + '` publishes nothing.' in section
-            and 'publishes from `main` alone' in section
+            and '`' + kept + '` publishes debug builds alone.' in section
+            and 'whose name ends in `_debugbuild`, and a `[no release]` commit publishes nothing.' in section
+            and 'the game refuses to load a mod whose version carries anything else' in section
             and '`git push -u origin HEAD:' + kept + '`' in section
-            and "        if: github.ref == 'refs/heads/main'\n" in WORKFLOW
+            and ("KEPT=$(sed -n 's/.*keeps one more branch beside `main`: `\\([A-Za-z0-9._-]*\\)`.*/\\1/p' CLAUDE.md | head -1)"
+                 in where)
+            and ordered(where, 'if [ "$GITHUB_REF" = "refs/heads/main" ]; then',
+                        'a push to main publishes its version as a release',
+                        'elif [ -n "$KEPT" ] && [ "$GITHUB_REF" = "refs/heads/$KEPT" ]; then',
+                        'echo "debug=true" >> "$GITHUB_OUTPUT"',
+                        'publishes its version as a debug build, marked as a pre-release', 'publishes nothing')
+            and where.count('echo "publish=true" >> "$GITHUB_OUTPUT"') == 2
+            and ordered(publish, "if: steps.where.outputs.publish == 'true'",
+                        'DEBUGBUILD: ${{ steps.where.outputs.debug }}',
+                        'TITLE="TradeLord ${VERSION#v}"', 'if [ "$DEBUGBUILD" = "true" ]; then',
+                        'TITLE="${TITLE}_debugbuild"', 'AS="--prerelease"',
+                        '--title "$TITLE" $AS')
             and ("name=$(sed -n 's/.*keeps one more branch beside `main`: `\\([A-Za-z0-9._-]*\\)`.*/\\1/p' \\\n"
                  '         "${CLAUDE_PROJECT_DIR:-${0%/*}/../..}/CLAUDE.md" 2>/dev/null | head -1)') in GUARD
             and '[ -n "$name" ] && [ "$name" != main ] && { [ "$1" = "$name" ] || [ "$1" = "refs/heads/$name" ]; }' in GUARD
             and '         ! kept "$FIRST" &&\n' in GUARD
             and GUARD.count('kept "') == 2)
 
-chk("no release", "the one branch kept beside main is named once, in the repository section, where the branch guard reads it, and the workflow publishes from main alone",
-    the_kept_branch_is_named_once_and_publishes_nothing())
+chk("no release", "the one branch kept beside main is named once, in the repository section, where the branch guard and the workflow read it, and it publishes only pre-releases named as debug builds",
+    the_kept_branch_is_named_once_and_publishes_only_debug_builds())
 
 
 def the_release_check_holds_main_against_every_release():
-    loop = between(RELEASED, "    for version in sorted(live, key=order):\n", "        if row['draft']:")
-    return ("    aside = os.environ.get('GITHUB_REF', 'refs/heads/main') != 'refs/heads/main' and numbered(shipping)\n"
-            in RELEASED
-            and loop.startswith("        if aside and order(version) > order(shipping):\n"
-                                "            ahead += 1\n"
-                                "            continue\n"
-                                "        row = live[version]\n")
-            and RELEASED.count('aside') == 2
-            and 'were published from main, so they are not held against the changelog of this branch' in RELEASED)
+    loop = between(RELEASED, "    for version in sorted(live, key=order):\n", "        if version == shipping and (row['draft']")
+    carried = between(RELEASED, "def tagsCarried():", "\n\n\n")
+    return ("    aside = os.environ.get('GITHUB_REF', 'refs/heads/main') != 'refs/heads/main'\n" in RELEASED
+            and "    tagged, carried = tagsCarried() if aside else (None, None)\n" in RELEASED
+            and "the tags could not be read, so this branch was not held against the releases" in RELEASED
+            and ordered(carried, "['git', 'tag', '--list']", "['git', 'tag', '--merged', sha]")
+            and loop.startswith("        row = live[version]\n"
+                                "        if aside and version != shipping and row['tag'] not in tagged:\n")
+            and ordered(loop, "' is not here to read')",
+                        "if aside and version != shipping and row['tag'] not in carried:", "elsewhere += 1")
+            and loop.count("            continue\n") == 2
+            and RELEASED.count('aside') == 5
+            and 'releases were published from commits this branch does not carry' in RELEASED)
 
-chk("no release", "on main every release is held against the changelog, and only a push to another branch leaves out the releases newer than the version it carries",
+chk("no release", "on main every release is held against the changelog, and only a push to another branch leaves out the releases its own history does not carry, failing on a tag it cannot read",
     the_release_check_holds_main_against_every_release())
 chk("1.7.0", "the cost-basis arithmetic lives beside the other money rules and needs nothing from the game",
     the_ledger_keeps_no_second_copy_of_the_cost_basis_rules())
@@ -14994,10 +15013,14 @@ chk("1.95.2", "every commit a push carries is held to the changelog gate and the
 
 def a_release_is_published_from_main_and_nowhere_else():
     step = between(WORKFLOW, "- name: Publish release", "run: |")
-    return ("        if: github.ref == 'refs/heads/main'\n" in step
-            and "workflow_dispatch" not in step)
+    where = between(WORKFLOW, "- name: Where this publishes", "- name: Publish release")
+    return ("        if: steps.where.outputs.publish == 'true'\n" in step
+            and "github.ref" not in step
+            and where.count('echo "publish=true" >> "$GITHUB_OUTPUT"') == 2
+            and where.count('echo "debug=true" >> "$GITHUB_OUTPUT"') == 1
+            and "workflow_dispatch" not in step and "workflow_dispatch" not in where)
 
-chk("1.95.2", "a release is only ever published from main, whether the run came from a push or was started by hand",
+chk("1.95.2", "a release is published from main, and from the branch kept beside it only as a debug pre-release, whether the run came from a push or was started by hand",
     a_release_is_published_from_main_and_nowhere_else())
 
 

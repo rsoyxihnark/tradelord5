@@ -112,6 +112,18 @@ def thisCommit():
     return subject.strip(), body, None
 
 
+def tagsCarried():
+    sha = os.environ.get('GITHUB_SHA') or 'HEAD'
+    try:
+        every = subprocess.run(['git', 'tag', '--list'], capture_output=True, encoding='utf-8')
+        merged = subprocess.run(['git', 'tag', '--merged', sha], capture_output=True, encoding='utf-8')
+    except OSError:
+        return None, None
+    if every.returncode != 0 or merged.returncode != 0:
+        return None, None
+    return set(every.stdout.split()), set(merged.stdout.split())
+
+
 def theMessageSaysWhatTheChangelogSays(shipping, said):
     subject, body, why = thisCommit()
     if subject is None:
@@ -151,7 +163,11 @@ def main(argv):
     agreed = theMessageSaysWhatTheChangelogSays(shipping, said)
     subject, _, _ = thisCommit()
     marked = subject is not None and subject.startswith('[no release]')
-    aside = os.environ.get('GITHUB_REF', 'refs/heads/main') != 'refs/heads/main' and numbered(shipping)
+    aside = os.environ.get('GITHUB_REF', 'refs/heads/main') != 'refs/heads/main'
+    tagged, carried = tagsCarried() if aside else (None, None)
+    if aside and tagged is None:
+        print('  BROKEN   the tags could not be read, so this branch was not held against the releases')
+        return 1
     rows, how = asked()
     if rows is None:
         return 1
@@ -163,13 +179,16 @@ def main(argv):
         return 1
 
     first = min(live, key=order)
-    faults, skipped, outstanding, ahead = [], 0, [], 0
+    faults, skipped, outstanding, elsewhere = [], 0, [], 0
 
     for version in sorted(live, key=order):
-        if aside and order(version) > order(shipping):
-            ahead += 1
-            continue
         row = live[version]
+        if aside and version != shipping and row['tag'] not in tagged:
+            faults.append(version + ' is published and its tag ' + row['tag'] + ' is not here to read')
+            continue
+        if aside and version != shipping and row['tag'] not in carried:
+            elsewhere += 1
+            continue
         if version == shipping and (row['draft'] or row['files'] == 0):
             print('  note     ' + version + ' is part-published from an attempt that did not finish, ' +
                   ('and this commit ships no version, so this run does not settle it' if marked else
@@ -202,9 +221,9 @@ def main(argv):
 
     print('  read ' + str(len(live)) + ' releases through ' + how + ', ' + str(len(versions)) +
           ' versions in the changelog, ' + first + ' the first ever published')
-    if ahead:
-        print('  note     ' + str(ahead) + ' releases are newer than the ' + shipping + ' this branch carries and ' +
-              'were published from main, so they are not held against the changelog of this branch')
+    if elsewhere:
+        print('  note     ' + str(elsewhere) + ' releases were published from commits this branch does not carry, ' +
+              'so they are not held against the changelog of this branch')
     if shipping and marked:
         print('  ' + shipping + ' is the version the source carries, and this commit ships none, '
               'so this run does not check that it is out')
