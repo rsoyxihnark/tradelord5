@@ -17,7 +17,7 @@ S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Drove.cs', 'Marker.cs', 'Notices.cs', 'Passes.cs', 'Ranking.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
       'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
       'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs', 'Projection.cs', 'Hindsight.cs',
-      'Scoring.cs', 'Counter.cs', 'Workshops.cs', 'Nightfall.cs', 'RideCheck.cs']}
+      'Scoring.cs', 'Counter.cs', 'Workshops.cs', 'Nightfall.cs', 'RideCheck.cs', 'Weather.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -1853,8 +1853,8 @@ chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has 
     "return OutOfReach(days) ? FurthestThereIs : days;" in
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
     "float seaHours = distance * (1f - landRatio) / seaSpeed * HoursAPartyTakesToCoverItsSpeed;" in
-    method_body(S['TradeMath.cs'], "public static float DaysOnTheClock") and
-    "return TradeMath.DaysOnTheClock(distance, landRatio, _landSpeed, _nightPace, _seaSpeed, start," in
+    method_body(S['TradeMath.cs'], "public static float DaysAlongTheRoad") and
+    "float days = TradeMath.DaysAlongTheRoad(distance, landRatio, _landSpeed, _seaSpeed, pieces, _paces," in
     method_body(S['Travel.cs'], "private static float Days(float distance, float landRatio, float afterDays") and
     "if (hour != _partyHour || at.DistanceSquared(_partyAt) > 100f)" in
     method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty"))
@@ -2074,7 +2074,7 @@ chk("1.3.28", "both travel estimates take their speeds from one definition",
     "float now = party.Speed;" in method_body(S['Travel.cs'], "private static void Refresh") and
     "float now = party.Speed;" in method_body(S['Travel.cs'], "internal static float CaravanDays") and
     S['Travel.cs'].count("TradeMath.SpeedsInEffect(") == 1 and
-    "TradeMath.SpeedsInEffect(byDay, SeaSpeed(), out _landSpeed, out _seaSpeed);" in
+    "TradeMath.SpeedsInEffect(now * toClearDay, SeaSpeed(), out _landSpeed, out _seaSpeed);" in
     method_body(S['Travel.cs'], "private static void Refresh") and
     S['TradeMath.cs'].count("land = partySpeed <= StandingStill ? WalkingPace : partySpeed;") == 1 and
     S['TradeMath.cs'].count("sea = fleetSpeed <= StandingStill ? land : fleetSpeed;") == 1 and
@@ -2180,10 +2180,12 @@ chk("1.3.34", "one naval gate for both map-distance calls",
     S['Travel.cs'].count("HasPort && naval") == 2 and
     "target.HasPort && NavalActive" in S['Travel.cs'])
 chk("1.3.34", "both travel caches hold geometry and re-time it at the current speed",
-    "return Days(hit.dist, hit.landRatio);" in
+    "float days = Days(hit.dist, hit.landRatio, 0f, SetOffAtSea(), PartyPieces(party, target), out _);" in
     method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty") and
-    "return Days(hit.dist, hit.landRatio, afterDays, false, out _);" in
-    method_body(S['Travel.cs'], "internal static float EstimateDaysBetween"))
+    "float days = Days(hit.dist, hit.landRatio, later, false, PairPieces(a, b), out _);" in
+    method_body(S['Travel.cs'], "internal static float EstimateDaysBetween") and
+    ordered(method_body(S['Travel.cs'], "private static void Refresh"), "if (hour == _speedHour) return;",
+            "_rides.Clear();", "_partyRides.Clear();", "_speedHour = hour;"))
 chk("1.11.1", "one naval invalidation rule, read by every travel estimate it feeds",
     S['Travel.cs'].count("DropIfNavalChanged();") == 4 and
     "DropIfNavalChanged();" in method_body(S['Travel.cs'], "internal static Ride TheRideFromParty") and
@@ -13378,7 +13380,7 @@ def a_market_the_road_was_lost_to_is_asked_again_rather_than_kept_out_of_reach()
             and "internal static bool LostTheRoad => _roadsLost > 0 && _roadsFound == 0;" in tr
             and tr.count("_roadsLost = 0;") == 3 and tr.count("_roadsFound = 0;") == 3
             and ordered(party, "float dist = FromParty(target, out float landRatio);",
-                        "if (TradeMath.OutOfReach(Days(dist, landRatio)))",
+                        "if (TradeMath.OutOfReach(TradeMath.DaysAtSpeed(dist, landRatio, _landSpeed, _seaSpeed)))",
                         "float fromHere = FromWhereYouStand(party, target);",
                         "if (!TradeMath.OutOfReach(fromHere))", "_roadsFound++;", "return fromHere;",
                         "_roadsLost++;", "_partyDist[target.StringId] = hit;")
@@ -17919,7 +17921,7 @@ def your_own_food_is_eaten_first_and_food_bought_to_trade_last():
                         "if (j != i && own[j] > 0 && (take < 0 || own[j] > own[take])) take = j;",
                         "if (take < 0) return swaps;")
             and "Patcher.TryPatch(harmony, typeof(Patch_YourOwnFoodIsEatenFirst));" in S['SubModule.cs']
-            and S['SubModule.cs'].count("Patcher.TryPatch(harmony, typeof(") == 16
+            and S['SubModule.cs'].count("Patcher.TryPatch(harmony, typeof(") == 17
             and all(one in FOODTESTS for one in (
                 "A_unit_of_trade_food_eaten_is_swapped_for_one_of_your_own_while_any_is_left",
                 "Your_own_units_of_a_food_are_counted_eaten_before_its_units_bought_to_trade",
@@ -19919,18 +19921,17 @@ chk("1.105.3", "a party down to less than a day of its own food buys a day of fo
 
 def a_ride_is_timed_on_the_game_s_own_clock():
     m = S['TradeMath.cs']
-    clock = method_body(m, "public static float HoursOnTheClock")
+    clock = method_body(m, "public static float HoursAlongTheRoad")
     days = method_body(S['Travel.cs'], "private static float Days(float distance, float landRatio, float afterDays")
     return (clock
-            and "bool day = hour >= sunRise && hour < sunSet;" in clock
-            and "float rate = day ? 1f : pace;" in clock
-            and "if (!day) nightHours += spent;" in clock
-            and ordered(clock, "float clock = seaFirst ? sea : 0f;", "if (!seaFirst) clock += sea;")
-            and "HoursOnTheClock(startHourOfDay, landHours, seaHours, nightPace, sunRise, sunSet," in
-                method_body(m, "public static float DaysOnTheClock")
-            and "CampaignTime.SunRise, CampaignTime.SunSet, seaFirst, out nightHours);" in days
+            and "bool night = sun && !(hour >= sunRise && hour < sunSet);" in clock
+            and "float rate = paces == null || paces.Length < Weathers ? 1f : paces[WeatherIndex(night, snowy, wet)];" in clock
+            and "if (night) tally.Night += (float)spent;" in clock
+            and ordered(clock, "double clock = seaFirst ? sea : 0d;", "if (!seaFirst) clock += sea;")
+            and "float hours = HoursAlongTheRoad(startHourOfDay, landHours, pieces, seaHours, seaFirst, paces, sky," in
+                method_body(m, "public static float DaysAlongTheRoad")
+            and "Skies.From(startAt), start, CampaignTime.SunRise, CampaignTime.SunSet," in days
             and "float start = CampaignTime.Now.CurrentHourInDay + later * 24f;" in days
-            and "Days(distance, landRatio, 0f, SetOffAtSea(), out _);" in S['Travel.cs']
             and "A_ride_into_the_night_counts_its_night_hours_at_the_night_pace" in MATHTESTS
             and "A_ride_of_many_days_comes_out_the_same_as_one_walked_an_instant_at_a_time" in MATHTESTS
             and "A_sea_leg_is_never_slowed_by_the_night_and_keeps_its_place_in_the_ride" in MATHTESTS
@@ -19942,14 +19943,15 @@ chk("2.0.3", "a ride is timed on the game's own clock, its hours by day at the d
 
 
 def the_night_pace_is_read_from_the_game_never_put_together_from_perks():
-    travel, night = S['Travel.cs'], S['Nightfall.cs']
-    pace = method_body(travel, "private static float PaceAtNightCore")
+    travel, night, weather = S['Travel.cs'], S['Nightfall.cs'], S['Weather.cs']
+    pace = method_body(travel, "private static float ReadThePacesCore")
     party = method_body(night, "private static void ReadTheParty")
-    return (all(word not in travel + night
+    return (all(word not in travel + night + weather
                 for word in ("DefaultPerks", "NightRunner", "DayTraveler", "GetLines", "_night\"", "BindingFlags",
                              "PerkHelper"))
             and "ExplainedNumber speed = model.CalculateFinalSpeed(party, model.CalculateBaseSpeed(party));" in pace
-            and "Nightfall.PartyStep, Campaign.Current.IsNight);" in pace
+            and "float nightStep = Nightfall.PartyStep, snowStep = Skies.PartySnowStep, wetStep = Skies.PartyWetStep;" in pace
+            and "float clear = speed.SumOfFactors - (night ? nightStep : 0f) - (snowy ? snowStep : 0f) - (wet ? wetStep : 0f);" in pace
             and "float step = why == null ? TradeMath.NightStepFrom(_party.Speed, after, speed.SumOfFactors, nightFell) : float.NaN;" in party
             and ordered(party, "if (!_party.Held)", "else if (main.CurrentNavigationFace.FaceIndex != _party.Face)",
                         "else if (WeatherAt(main) != _party.Weather)", "PartyStep = step;")
@@ -19970,9 +19972,11 @@ def caravans_are_timed_on_the_same_clock():
     days = method_body(S['Travel.cs'], "internal static float CaravanDays")
     caravans = method_body(S['Nightfall.cs'], "private static void ReadTheCaravans")
     return (ordered(days, "if (AtSea(party)) return TradeMath.EtaDays(distance, now);",
-                    "float pace = TradeMath.NightPaceKept(Nightfall.CaravanPace);",
-                    "float byDay = Campaign.Current.IsNight ? now / pace : now;",
-                    "return TradeMath.EtaOnTheClock(distance, byDay, pace, CampaignTime.Now.CurrentHourInDay,")
+                    "float share = _caravanPaces[TradeMath.WeatherIndex(Campaign.Current.IsNight, snowy, wet)];",
+                    "float byDay = share > 0f ? now / share : now;",
+                    "float days = TradeMath.EtaAlongTheRoad(distance, byDay, Skies.CellsBetween(from, to, null), _caravanPaces,")
+            and "_caravanPaces = TradeMath.PacesFromShares(Nightfall.CaravanPace, Skies.CaravanSnowShare, Skies.CaravanWetShare);" in
+                method_body(S['Travel.cs'], "private static void Refresh")
             and "kept.Add(nightFell ? after / before : before / after);" in caravans
             and "float middle = TradeMath.Quantile(kept, 0.5f);" in caravans
             and "CaravanPace = TradeMath.NightPaceKept(middle);" in caravans
@@ -19987,8 +19991,9 @@ chk("2.0.3", "caravans and villagers on their way are timed on the same clock as
 
 def no_night_shuts_out_a_market_the_full_time_lets_in():
     refresh = method_body(S['Travel.cs'], "private static void Refresh")
-    return ("bool slowedNow = Campaign.Current.IsNight && !AtSea(party);" in refresh
-            and "float byDay = slowedNow ? now / _nightPace : now;" in refresh
+    return ("float toClearDay = AtSea(party) ? 1f : ReadThePaces(party);" in refresh
+            and "return paceNow > 0f && paceClear > 0f ? paceClear / paceNow : 1f;" in
+                method_body(S['Travel.cs'], "private static float ReadThePacesCore")
             and "return TradeMath.DaysAtBestSpeed(distance, land, sea);" in method_body(S['Travel.cs'], "private static float StraightDays")
             and "Assert.True(TradeMath.DaysAtBestSpeed(100f, 5f, 5f) <= clocked);" in MATHTESTS
             and "float soonest = toBuy + Travel.StraightDaysBetween(from, to);" in S['Ledger.cs']
@@ -20023,7 +20028,7 @@ def every_ride_is_judged_in_the_log_against_what_tradelord_said():
             and "CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);" in ride
             and "if (!Writing || party == null)" in tick
             and "_ride.Moved += party.Speed * dt;" in tick
-            and "if (Campaign.Current.IsNight && !party.IsCurrentlyAtSea) _ride.NightMoving += step;" in tick
+            and ordered(tick, "if (party.IsCurrentlyAtSea) return;", "if (Campaign.Current.IsNight) _ride.NightMoving += step;")
             and "Travel.Ride said = Travel.TheRideFromParty(to);" in method_body(ride, "private static void SetOff")
             and ordered(reached, "float off = TradeMath.RideOffBy(_ride.SaidHours, moving);",
                         '"  night: TradeLord counted "', '"  road: TradeLord put the road at "',
@@ -20051,6 +20056,122 @@ def the_log_says_what_the_game_did_at_every_nightfall_and_daybreak():
 
 chk("2.0.3", "TradeLord.log says at every nightfall and daybreak how far the game slowed or sped your party and the caravans against what TradeLord counted on, and once a day how many hours the game's clock runs to a Speed",
     the_log_says_what_the_game_did_at_every_nightfall_and_daybreak())
+
+def the_forecast_runs_the_game_s_own_weather_on_a_copy_of_its_own():
+    w = S['Weather.cs']
+    build = method_body(w, "private static string Build")
+    before = method_body(w, "internal static void Before")
+    return (build and before
+            and ordered(build, "WeatherNode[] nodes = campaign.GetCampaignBehavior<MapWeatherCampaignBehavior>()?.AllWeatherNodes;",
+                        "var twin = new DefaultMapWeatherModel();", "twin.InitializeCaches();", "_twin = twin;")
+            and "MapWeatherModel.WeatherEvent sky = _twin.UpdateWeatherForPosition(position, at);" in w
+            and "if (model == null || model == _twin) return;" in before
+            and all(word not in w for word in ("BindingFlags", "GetField(", "_weatherDataCache", "_weatherNodeDataShuffledIndices",
+                                               "_lastUpdatedNodeIndex", "Traverse"))
+            and "if (!Ready()) return pieces;" in method_body(w, "internal static List<TradeMath.RoadPiece> CellsBetween"))
+
+
+chk("2.0.4", "the weather ahead is worked out by the game's own weather code, run on a copy TradeLord keeps for itself, so the weather the game shows is never touched and no hidden field is read",
+    the_forecast_runs_the_game_s_own_weather_on_a_copy_of_its_own())
+
+
+def the_turn_of_every_weather_cell_is_learned_by_listening_to_the_game():
+    w = S['Weather.cs']
+    after = method_body(w, "internal static void After")
+    read = method_body(w, "internal static void Read")
+    return ('[HarmonyPatch(typeof(DefaultMapWeatherModel), "UpdateWeatherForPosition")]' in w
+            and "Patcher.TryPatch(harmony, typeof(Patch_WeatherCellRefreshed));" in S['SubModule.cs']
+            and ordered(after, "if (_ticking && Ready())", "if (corner) _phase[turn.Cell] = at;", "_refreshed[turn.Cell] = at;")
+            and "_nodes[turn.Cell].Position.ToVec2().DistanceSquared(position.ToVec2()) < 1e-6f;" in after
+            and "_ticking = true;" in method_body(w, "internal static void Tick")
+            and ordered(read, "double turns = Math.Floor((hours - phase) / _period);", "from = phase + turns * _period;",
+                        "hoursToChange = phase + (turns + 1d) * _period - hours;")
+            and 'Guard.Run("Skies.Tick", Skies.Tick);' in S['RideCheck.cs']
+            and 'Guard.Run("GameEnd.Skies", Skies.Forget);' in S['SubModule.cs'])
+
+
+chk("2.0.4", "when each weather cell turns is learned by listening to the game as it refreshes each one, never from the session's opening refresh, so the weather ahead is the weather the game will show",
+    the_turn_of_every_weather_cell_is_learned_by_listening_to_the_game())
+
+
+def snow_and_wet_ground_are_measured_from_the_game_and_taken_off_the_pace_now():
+    w = S['Weather.cs']
+    party = method_body(w, "private static void PartyTurned")
+    pace = method_body(S['Travel.cs'], "private static float ReadThePacesCore")
+    return (party and pace
+            and "Felt now = Feel(before.Party);" in party
+            and "TradeMath.WeatherSteps(snowyBefore, wetBefore, snowyAfter, wetAfter, before.Factors, now.Factors," in party
+            and ordered(party, "PartySnowStep = snow;", "PartyWetStep = wet;")
+            and "turn.Party = Feel(main);" in method_body(w, "internal static void Before")
+            and "Skies.LiveSkyAt(party.GetPosition2D, out bool snowy, out bool wet);" in pace
+            and "_paces = TradeMath.PacesFromTheGame(speed.BaseNumber, clear, least, most, nightStep, snowStep, wetStep);" in pace
+            and "public const float UsualSnowStep = -0.125f;" in S['TradeMath.cs']
+            and "A_weather_step_is_read_only_from_a_turn_that_changed_that_weather_alone" in MATHTESTS
+            and "Night_snow_and_wet_ground_add_up_the_way_the_game_adds_them" in MATHTESTS)
+
+
+chk("2.0.4", "the slowing of snow and wet ground is read from the game the moment the weather over your party turns, and the weather where your party stands is taken off its pace, so travel times no longer jump as it starts or stops",
+    snow_and_wet_ground_are_measured_from_the_game_and_taken_off_the_pace_now())
+
+
+def every_ride_counts_the_weather_on_each_cell_of_its_road():
+    t = S['Travel.cs']
+    clock = method_body(S['TradeMath.cs'], "public static float HoursAlongTheRoad")
+    return (clock
+            and "above.Read(cell, clock, out bool snowy, out bool wet, out double untilSky);" in clock
+            and "double step = Math.Min(untilSun, untilSky);" in clock
+            and "float days = Days(hit.dist, hit.landRatio, 0f, SetOffAtSea(), PartyPieces(party, target), out _);" in t
+            and "float days = Days(hit.dist, hit.landRatio, later, false, PairPieces(a, b), out _);" in t
+            and "TradeMath.CellsAlong(from.x, from.y, to.x, to.y, _cellWide, _cellHigh, _dim, pieces);" in S['Weather.cs']
+            and "public void Read(int cell, double clockHours, out bool snowy, out bool wet, out double hoursToChange) =>" in S['Weather.cs']
+            and all(one in MATHTESTS for one in ("A_road_through_snow_is_slowed_only_where_it_snows",
+                                                 "A_sky_that_turns_partway_is_read_from_the_hour_it_turns",
+                                                 "A_clear_road_is_timed_exactly_as_the_night_clock_alone",
+                                                 "A_straight_road_is_cut_into_the_weather_cells_it_crosses")))
+
+
+chk("2.0.4", "the ledger, the tooltips and the map marker time a ride through the weather each weather cell of its road will have when you get there, from where you stand and from Buy From on",
+    every_ride_counts_the_weather_on_each_cell_of_its_road())
+
+
+def caravans_count_the_weather_on_their_road_too():
+    days = method_body(S['Travel.cs'], "internal static float CaravanDays")
+    caravans = method_body(S['Weather.cs'], "private static void CaravansTurned")
+    return (days and caravans
+            and "Skies.LiveSkyAt(from, out bool snowy, out bool wet);" in days
+            and "Skies.CellsBetween(from, to, null), _caravanPaces," in days
+            and "float share = TradeMath.WeatherShare(into, was.Factors, now.Factors);" in caravans
+            and "List<float> kept = snowTurned ? _snowShares : _wetShares;" in caravans
+            and "Travel.ReadThePaceAgain();" not in caravans)
+
+
+chk("2.0.4", "caravans and villagers on their way count the weather on their road the same way, their slowing in snow and on wet ground read from them as the weather over them turns",
+    caravans_count_the_weather_on_their_road_too())
+
+
+def the_log_weighs_the_weather_forecast_and_what_it_costs():
+    w = S['Weather.cs']
+    day = method_body(w, "internal static void SayTheDay")
+    ride = S['RideCheck.cs']
+    return (day
+            and ordered(day, '"weather check over the last day: "', '"  weather steps: your party "',
+                        '"weather cost over the last "', '" on the weather");', "Log.WriteMany(lines);")
+            and "if (turn.Twin == after) _twinAgreed++;" in w
+            and "if (_worked.TryGetValue(key, out byte said) && said == after) _cameTrue++;" in w
+            and "Skies.Walked(started);" in method_body(S['Travel.cs'], "private static float Days(float distance, float landRatio, float afterDays")
+            and "Skies.Walked(started);" in method_body(S['Travel.cs'], "internal static float CaravanDays")
+            and "if (_frameTicks > _busiestFrame) _busiestFrame = _frameTicks;" in method_body(w, "internal static void Tick")
+            and w.count("Listened(started);") == 3
+            and 'Guard.Run("Skies.Daily", Skies.SayTheDay);' in ride
+            and '"  weather: TradeLord counted "' in method_body(ride, "private static void Reached")
+            and ordered(method_body(ride, "internal static void Tick"), "Skies.LiveSkyAt(party.GetPosition2D, out bool snowy, out bool wet);",
+                        "if (snowy) _ride.SnowMoving += step;", "if (wet) _ride.WetMoving += step;")
+            and "int storms = Skies.StormsAlong(party.GetPosition2D, to.GetPosition2D);" in method_body(ride, "private static void SetOff")
+            and "== MapWeatherModel.WeatherEvent.Storm) storms++;" in method_body(w, "internal static int StormsAlong"))
+
+
+chk("2.0.4", "with Enable extended debug logging on, TradeLord.log says each day how often the weather forecast came true and how much time it took, weighs each ride's snow and wet ground, and notes a storm over the road",
+    the_log_weighs_the_weather_forecast_and_what_it_costs())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
