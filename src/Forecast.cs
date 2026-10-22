@@ -245,6 +245,7 @@ namespace TradeLord
         {
             MBReadOnlyList<MobileParty> all = MobileParty.All;
             if (all == null) return;
+            var timed = new Timed();
             for (int i = 0; i < all.Count; i++)
             {
                 MobileParty party = all[i];
@@ -256,7 +257,9 @@ namespace TradeLord
                 if (bound == null || !bound.IsTown) continue;
                 ItemRoster carried = party.ItemRoster;
                 if (carried == null) continue;
-                float days = Travel.CaravanDays(party, bound, out _);
+                long started = System.Diagnostics.Stopwatch.GetTimestamp();
+                float days = Travel.CaravanDays(party, bound, out TradeMath.RoadTally tally);
+                timed.Add(caravan, System.Diagnostics.Stopwatch.GetTimestamp() - started, tally);
                 RideCheck.Saw(party, bound, days);
                 if (caravan)
                 {
@@ -274,6 +277,37 @@ namespace TradeLord
                     Note(bound, item.StringId, item.ItemCategory, amount, TradeMath.WorthOf(amount, item.Value), days);
                 }
             }
+            if (Options.Current.ExtendedDebugLogging) timed.Say();
+        }
+
+        private sealed class Timed
+        {
+            private int _caravans, _villagers, _snow, _wet, _slowed;
+            private long _ticks, _slowest;
+
+            internal void Add(bool caravan, long ticks, TradeMath.RoadTally tally)
+            {
+                if (caravan) _caravans++;
+                else _villagers++;
+                _ticks += ticks;
+                if (ticks > _slowest) _slowest = ticks;
+                if (tally.Snow > 0f) _snow++;
+                if (tally.Wet > 0f) _wet++;
+                if (tally.Slowed > 0f) _slowed++;
+            }
+
+            internal void Say()
+            {
+                Log.Write("forecast: " + _caravans + " caravan(s) and " + _villagers + " villager(s) on their way to a town were " +
+                          "timed along the weather cells of their road in " + Ms(_ticks) + " (slowest " + Ms(_slowest) + "); " +
+                          _snow + " of them meet snow and " + _wet + " wet ground on the way, and " + _slowed +
+                          " are still Disorganized; they keep " + Nightfall.Share(Nightfall.CaravanPace) + " of their pace at night, " +
+                          Nightfall.Share(Skies.CaravanSnowShare) + " in snow and " + Nightfall.Share(Skies.CaravanWetShare) +
+                          " on wet ground");
+            }
+
+            private static string Ms(long ticks) =>
+                (ticks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " ms";
         }
 
         private static void ReadThePriceIndexes()

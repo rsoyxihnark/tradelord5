@@ -1526,7 +1526,7 @@ namespace TradeLord.Tests
                                    out float night)
         {
             float hours = TradeMath.HoursAlongTheRoad(start, land, null, sea, seaFirst, TradeMath.PacesFromShares(pace, 1f, 1f),
-                                                      TradeMath.ClearSky.Always, dawn, dusk, out TradeMath.RoadTally tally);
+                                                      TradeMath.ClearSky.Always, 0f, dawn, dusk, out TradeMath.RoadTally tally);
             night = tally.Night;
             return hours;
         }
@@ -1536,7 +1536,7 @@ namespace TradeLord.Tests
         {
             float days = TradeMath.DaysAlongTheRoad(distance, landRatio, dayPace, sea, null,
                                                     TradeMath.PacesFromShares(pace, 1f, 1f), TradeMath.ClearSky.Always,
-                                                    start, Dawn, Dusk, false, out TradeMath.RoadTally tally);
+                                                    0f, start, Dawn, Dusk, false, out TradeMath.RoadTally tally);
             night = tally.Night;
             return days;
         }
@@ -1568,7 +1568,7 @@ namespace TradeLord.Tests
                 new TradeMath.RoadPiece { Cell = 0, Share = 0.5f }, new TradeMath.RoadPiece { Cell = 1, Share = 0.5f }
             };
             float hours = TradeMath.HoursAlongTheRoad(8f, 10f, pieces, 0f, false, TradeMath.PacesFromShares(0.75f, 0.8f, 1f),
-                                                      sky, Dawn, Dusk, out TradeMath.RoadTally tally);
+                                                      sky, 0f, Dawn, Dusk, out TradeMath.RoadTally tally);
             Assert.Equal(5f + 5f / 0.8f, hours, 4);
             Assert.Equal(5f / 0.8f, tally.Snow, 4);
             Assert.Equal(5f / 0.8f, tally.Wet, 4);
@@ -1580,7 +1580,7 @@ namespace TradeLord.Tests
         {
             var sky = new Sky((cell, at) => at < 2d ? (true, true, 2d - at) : (false, false, double.PositiveInfinity));
             float hours = TradeMath.HoursAlongTheRoad(8f, 6f, null, 0f, false, TradeMath.PacesFromShares(0.75f, 0.5f, 1f),
-                                                      sky, Dawn, Dusk, out TradeMath.RoadTally tally);
+                                                      sky, 0f, Dawn, Dusk, out TradeMath.RoadTally tally);
             Assert.Equal(7f, hours, 4);
             Assert.Equal(2f, tally.Snow, 4);
         }
@@ -1593,13 +1593,13 @@ namespace TradeLord.Tests
                 foreach (float land in new[] { 3f, 46f })
                     Assert.Equal(Clock(start, land, 0f, 0.75f, false, out _),
                                  TradeMath.HoursAlongTheRoad(start, land, null, 0f, false, TradeMath.PacesFromShares(0.75f, 1f, 1f),
-                                                             sky, Dawn, Dusk, out _), 3);
+                                                             sky, 0f, Dawn, Dusk, out _), 3);
         }
 
         [Fact]
         public void Night_snow_and_wet_ground_add_up_the_way_the_game_adds_them()
         {
-            float[] paces = TradeMath.PacesFromTheGame(5f, 0f, 1f, 100f, -0.25f, -0.125f, -0.05f);
+            float[] paces = TradeMath.PacesFromTheGame(5f, 0f, 1f, 100f, -0.25f, -0.125f, -0.05f, -0.4f);
             Assert.Equal(1f, paces[TradeMath.WeatherIndex(false, false, false)], 4);
             Assert.Equal(0.75f, paces[TradeMath.WeatherIndex(true, false, false)], 4);
             Assert.Equal(0.875f, paces[TradeMath.WeatherIndex(false, true, false)], 4);
@@ -1608,6 +1608,35 @@ namespace TradeLord.Tests
             float[] shares = TradeMath.PacesFromShares(0.75f, 0.8f, 0.9f);
             Assert.Equal(0.75f * 0.8f * 0.9f, shares[TradeMath.WeatherIndex(true, true, true)], 4);
             Assert.Equal(TradeMath.SnowShareUnread, TradeMath.PacesFromShares(0.75f, float.NaN, 1f)[TradeMath.WeatherIndex(false, true, false)], 4);
+        }
+
+        [Fact]
+        public void A_disorganized_party_is_slowed_only_for_the_hours_it_has_left()
+        {
+            float[] paces = TradeMath.PacesFromShares(0.75f, 1f, 1f, 0.6f);
+            float hours = TradeMath.HoursAlongTheRoad(8f, 10f, null, 0f, false, paces, TradeMath.ClearSky.Always, 2f,
+                                                      Dawn, Dusk, out TradeMath.RoadTally tally);
+            Assert.Equal(2f + (10f - 2f * 0.6f), hours, 4);
+            Assert.Equal(2f, tally.Slowed, 4);
+            Assert.Equal(TradeMath.HoursAlongTheRoad(8f, 10f, null, 0f, false, paces, TradeMath.ClearSky.Always, 0f, Dawn, Dusk, out _),
+                         TradeMath.HoursAlongTheRoad(8f, 10f, null, 0f, false, paces, TradeMath.ClearSky.Always, -3f, Dawn, Dusk, out _), 4);
+            Assert.Equal(10f, TradeMath.HoursAlongTheRoad(8f, 10f, null, 0f, false, paces, TradeMath.ClearSky.Always, 0f,
+                                                          Dawn, Dusk, out _), 4);
+            float atSea = TradeMath.HoursAlongTheRoad(8f, 4f, null, 3f, true, paces, TradeMath.ClearSky.Always, 2f, Dawn, Dusk,
+                                                      out TradeMath.RoadTally sea);
+            Assert.Equal(7f, atSea, 4);
+            Assert.Equal(0f, sea.Slowed, 4);
+        }
+
+        [Fact]
+        public void Disorganized_adds_to_night_snow_and_wet_ground_the_way_the_game_adds_it()
+        {
+            float[] paces = TradeMath.PacesFromTheGame(5f, 0f, 0.1f, 100f, -0.25f, -0.125f, -0.05f, -0.4f);
+            Assert.Equal(0.6f, paces[TradeMath.WeatherIndex(false, false, false, true)], 4);
+            Assert.Equal(0.35f, paces[TradeMath.WeatherIndex(true, false, false, true)], 4);
+            Assert.Equal(0.175f, paces[TradeMath.WeatherIndex(true, true, true, true)], 4);
+            Assert.Equal(0.6f * 0.75f, TradeMath.PacesFromShares(0.75f, 1f, 1f, 0.6f)[TradeMath.WeatherIndex(true, false, false, true)], 4);
+            Assert.Equal(TradeMath.WeatherIndex(true, true, true), TradeMath.WeatherIndex(true, true, true, false));
         }
 
         [Fact]
@@ -1740,7 +1769,7 @@ namespace TradeLord.Tests
             Assert.Equal(TradeMath.DaysAtSpeed(240f, 0.5f, 5f, 10f),
                          ClockDays(240f, 0.5f, 5f, 1f, 10f, 23f, out _), 4);
             Assert.Equal(TradeMath.EtaDays(120f, 5f),
-                         TradeMath.EtaAlongTheRoad(120f, 5f, null, TradeMath.PacesFromShares(1f, 1f, 1f), TradeMath.ClearSky.Always, 21f, Dawn, Dusk, out _), 4);
+                         TradeMath.EtaAlongTheRoad(120f, 5f, null, TradeMath.PacesFromShares(1f, 1f, 1f), TradeMath.ClearSky.Always, 0f, 21f, Dawn, Dusk, out _), 4);
             Assert.Equal(0f, ClockDays(0f, 1f, 5f, 0.75f, 10f, 13f, out _));
             Assert.Equal(TradeMath.FurthestThereIs,
                          ClockDays(float.MaxValue, 1f, 5f, 0.75f, 10f, 13f, out _));
@@ -1762,7 +1791,7 @@ namespace TradeLord.Tests
         {
             int night = TradeMath.WeatherIndex(true, false, false);
             Func<float, float, float, float, float, float> nightOf = (b, clear, least, most, step) =>
-                TradeMath.PacesFromTheGame(b, clear, least, most, step, TradeMath.UsualSnowStep, 0f)[night];
+                TradeMath.PacesFromTheGame(b, clear, least, most, step, TradeMath.UsualSnowStep, 0f, TradeMath.UsualSlowStep)[night];
             Assert.Equal(0.75f, nightOf(5f, 0f, 1f, 100f, -0.25f), 4);
             Assert.Equal(0.55f / 0.8f, nightOf(5f, -0.2f, 1f, 100f, -0.25f), 4);
             Assert.Equal(0.875f, nightOf(4f, 0f, 1f, 100f, -0.125f), 4);

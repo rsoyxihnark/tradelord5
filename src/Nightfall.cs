@@ -33,6 +33,28 @@ namespace TradeLord
 
         internal static float CaravanPace { get; private set; } = TradeMath.NightPaceUnread;
 
+        internal static float PartySlowStep { get; private set; } = TradeMath.UsualSlowStep;
+
+        private struct SlowBefore
+        {
+            internal float Factors;
+            internal float Base;
+            internal int Face;
+            internal int Sky;
+            internal bool Night;
+        }
+
+        private static SlowBefore _slowBefore;
+        private static bool _wasSlowed, _slowWatching;
+        private static string _slowStepFrom = "";
+
+        internal static string PartySlowSaid =>
+            Step(PartySlowStep) + (_slowStepFrom.Length == 0 ? " (the game's usual Disorganized, not yet read this session)"
+                                                             : " (read " + _slowStepFrom + ")");
+
+        internal static float SlowHoursLeft(MobileParty party) =>
+            party != null && party.IsDisorganized ? Math.Max(0f, party.DisorganizedUntilTime.RemainingHoursFromNow) : 0f;
+
         private static string _partyStepFrom = "", _caravanPaceFrom = "";
         private static bool? _wasNight;
         private static PartyBefore _party;
@@ -64,6 +86,11 @@ namespace TradeLord
             _clockFrom = -1d;
             _movedFor = 0d;
             _clockSaid = float.NaN;
+            PartySlowStep = TradeMath.UsualSlowStep;
+            _slowStepFrom = "";
+            _slowBefore = default(SlowBefore);
+            _wasSlowed = false;
+            _slowWatching = false;
         }
 
         internal static void Tick(float dt)
@@ -85,6 +112,7 @@ namespace TradeLord
                 Travel.ReadThePaceAgain();
             }
             _wasNight = night;
+            Guard.Run("Nightfall.Disorder", WatchTheDisorder);
             float hour = CampaignTime.Now.CurrentHourInDay;
             if (NearlyTurning(hour))
             {
@@ -97,6 +125,70 @@ namespace TradeLord
                 _party.Held = false;
                 _caravans.Clear();
             }
+        }
+
+        private static void WatchTheDisorder()
+        {
+            MobileParty main = MobileParty.MainParty;
+            bool slowed = main.IsDisorganized;
+            if (_wasSlowed && !slowed && _slowWatching) ReadTheEndOfDisorder(main);
+            _wasSlowed = slowed;
+            _slowWatching = slowed && main.DisorganizedUntilTime.RemainingHoursFromNow <= Watch && RememberTheDisorder(main);
+        }
+
+        private static bool RememberTheDisorder(MobileParty main)
+        {
+            if (!Steady(main)) return false;
+            ExplainedNumber speed = Explained(main);
+            _slowBefore = new SlowBefore
+            {
+                Factors = speed.SumOfFactors,
+                Base = speed.BaseNumber,
+                Face = main.CurrentNavigationFace.FaceIndex,
+                Sky = SkyOver(main),
+                Night = Campaign.Current.IsNight
+            };
+            return true;
+        }
+
+        private static void ReadTheEndOfDisorder(MobileParty main)
+        {
+            string why = null;
+            if (!Steady(main)) why = "your party went to sea, into a fight or into an army as it wore off";
+            else if (main.CurrentNavigationFace.FaceIndex != _slowBefore.Face) why = "your party crossed onto other ground as it wore off";
+            else if (Campaign.Current.IsNight != _slowBefore.Night) why = "night fell or day broke as it wore off";
+            else if (SkyOver(main) != _slowBefore.Sky) why = "the weather over your party turned as it wore off";
+            ExplainedNumber speed = why == null ? Explained(main) : default(ExplainedNumber);
+            if (why == null && Math.Abs(speed.BaseNumber - _slowBefore.Base) > 1e-4f) why = "your party's own pace changed as it wore off";
+            float step = why == null ? _slowBefore.Factors - speed.SumOfFactors : float.NaN;
+            if (why == null && !TradeMath.LikeAStep(step)) why = "the change did not look like Disorganized alone";
+            if (why != null)
+            {
+                if (Writing)
+                    Log.Write("disorder check: Disorganized wore off, but its step was not read, because " + why +
+                              ", so TradeLord keeps " + PartySlowSaid);
+                return;
+            }
+            if (Writing)
+                Log.Write("disorder check: Disorganized wore off; the game took your party's pace from a sum of " +
+                          Step(_slowBefore.Factors) + " to " + Step(speed.SumOfFactors) + ", a Disorganized step of " + Step(step) +
+                          "; TradeLord had counted on " + PartySlowSaid);
+            PartySlowStep = step;
+            _slowStepFrom = "as it wore off on " + Today();
+            Travel.ReadThePaceAgain();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static ExplainedNumber Explained(MobileParty party)
+        {
+            PartySpeedModel model = Campaign.Current.Models.PartySpeedCalculatingModel;
+            return model.CalculateFinalSpeed(party, model.CalculateBaseSpeed(party));
+        }
+
+        private static int SkyOver(MobileParty party)
+        {
+            Skies.LiveSkyAt(party.GetPosition2D, out bool snowy, out bool wet);
+            return (snowy ? 2 : 0) | (wet ? 1 : 0);
         }
 
         private static bool NearlyTurning(float hour)

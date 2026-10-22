@@ -1608,6 +1608,7 @@ namespace TradeLord
                         float soonest = toBuy + Travel.StraightDaysBetween(from, to);
                         if (cap > 0f && soonest > cap) continue;
 
+                        // Intended-Behavior: Days runs from where your party stands to Buy From and on to Sell At, as the developer chose; it is not to be raised again.
                         float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);
                         if (TradeMath.OutOfReach(days)) continue;
                         if (cap > 0f && days > cap) continue;

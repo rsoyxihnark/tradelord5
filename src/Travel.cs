@@ -103,13 +103,22 @@ namespace TradeLord
             sea = _seaSpeed;
         }
 
+        private static bool _memoSlowed;
+
         private static void Refresh()
         {
+            MobileParty party = MobileParty.MainParty;
+            bool slowed = party != null && party.IsDisorganized;
+            if (slowed != _memoSlowed)
+            {
+                _memoSlowed = slowed;
+                _rides.Clear();
+                _partyRides.Clear();
+            }
             int hour = (int)CampaignTime.Now.ToHours;
             if (hour == _speedHour) return;
             _rides.Clear();
             _partyRides.Clear();
-            MobileParty party = MobileParty.MainParty;
             float now = party.Speed;
             float toClearDay = AtSea(party) ? 1f : ReadThePaces(party);
             TradeMath.SpeedsInEffect(now * toClearDay, SeaSpeed(), out _landSpeed, out _seaSpeed);
@@ -138,10 +147,13 @@ namespace TradeLord
             ExplainedNumber speed = model.CalculateFinalSpeed(party, model.CalculateBaseSpeed(party));
             bool night = Campaign.Current.IsNight;
             Skies.LiveSkyAt(party.GetPosition2D, out bool snowy, out bool wet);
+            bool slowed = party.IsDisorganized;
             float nightStep = Nightfall.PartyStep, snowStep = Skies.PartySnowStep, wetStep = Skies.PartyWetStep;
-            float clear = speed.SumOfFactors - (night ? nightStep : 0f) - (snowy ? snowStep : 0f) - (wet ? wetStep : 0f);
+            float slowStep = Nightfall.PartySlowStep;
+            float clear = speed.SumOfFactors - (night ? nightStep : 0f) - (snowy ? snowStep : 0f) - (wet ? wetStep : 0f) -
+                          (slowed ? slowStep : 0f);
             float least = speed.LimitMinValue, most = speed.LimitMaxValue;
-            _paces = TradeMath.PacesFromTheGame(speed.BaseNumber, clear, least, most, nightStep, snowStep, wetStep);
+            _paces = TradeMath.PacesFromTheGame(speed.BaseNumber, clear, least, most, nightStep, snowStep, wetStep, slowStep);
             float paceNow = TradeMath.WithinLimits(speed.BaseNumber * (1f + speed.SumOfFactors), least, most);
             float paceClear = TradeMath.WithinLimits(speed.BaseNumber * (1f + clear), least, most);
             return paceNow > 0f && paceClear > 0f ? paceClear / paceNow : 1f;
@@ -165,9 +177,10 @@ namespace TradeLord
             float later = TradeMath.OutOfReach(afterDays) ? 0f : Math.Max(0f, TradeMath.Finite(afterDays, 0f));
             double startAt = CampaignTime.Now.ToHours + later * 24d;
             float start = CampaignTime.Now.CurrentHourInDay + later * 24f;
+            float slow = Math.Max(0f, Nightfall.SlowHoursLeft(MobileParty.MainParty) - later * 24f);
             long started = Stopwatch.GetTimestamp();
             float days = TradeMath.DaysAlongTheRoad(distance, landRatio, _landSpeed, _seaSpeed, pieces, _paces,
-                                                    Skies.From(startAt), start, CampaignTime.SunRise, CampaignTime.SunSet,
+                                                    Skies.From(startAt), slow, start, CampaignTime.SunRise, CampaignTime.SunSet,
                                                     seaFirst, out tally);
             Skies.Walked(started);
             return days;
@@ -203,14 +216,30 @@ namespace TradeLord
             if (AtSea(party)) return TradeMath.EtaDays(distance, now);
             Refresh();
             Skies.LiveSkyAt(from, out bool snowy, out bool wet);
-            float share = _caravanPaces[TradeMath.WeatherIndex(Campaign.Current.IsNight, snowy, wet)];
+            float slow = Nightfall.SlowHoursLeft(party);
+            float[] paces = slow > 0f ? CaravanPacesWhileSlowed(party) : _caravanPaces;
+            float share = paces[TradeMath.WeatherIndex(Campaign.Current.IsNight, snowy, wet, slow > 0f)];
             float byDay = share > 0f ? now / share : now;
             long started = Stopwatch.GetTimestamp();
-            float days = TradeMath.EtaAlongTheRoad(distance, byDay, Skies.CellsBetween(from, to, null), _caravanPaces,
-                                                   Skies.From(CampaignTime.Now.ToHours), CampaignTime.Now.CurrentHourInDay,
+            float days = TradeMath.EtaAlongTheRoad(distance, byDay, Skies.CellsBetween(from, to, null), paces,
+                                                   Skies.From(CampaignTime.Now.ToHours), slow, CampaignTime.Now.CurrentHourInDay,
                                                    CampaignTime.SunRise, CampaignTime.SunSet, out tally);
             Skies.Walked(started);
             return days;
+        }
+
+        private static float[] CaravanPacesWhileSlowed(MobileParty party)
+        {
+            try { return CaravanPacesWhileSlowedCore(party); } catch { return _caravanPaces; }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static float[] CaravanPacesWhileSlowedCore(MobileParty party)
+        {
+            PartySpeedModel model = Campaign.Current.Models.PartySpeedCalculatingModel;
+            ExplainedNumber speed = model.CalculateFinalSpeed(party, model.CalculateBaseSpeed(party));
+            float share = TradeMath.WeatherShare(true, speed.SumOfFactors - Nightfall.PartySlowStep, speed.SumOfFactors);
+            return TradeMath.PacesFromShares(Nightfall.CaravanPace, Skies.CaravanSnowShare, Skies.CaravanWetShare, share);
         }
 
         internal struct Ride
@@ -219,6 +248,7 @@ namespace TradeLord
             internal float NightHours;
             internal float SnowHours;
             internal float WetHours;
+            internal float SlowedHours;
             internal float Distance;
             internal float LandRatio;
         }
@@ -236,7 +266,25 @@ namespace TradeLord
             ride.NightHours = tally.Night;
             ride.SnowHours = tally.Snow;
             ride.WetHours = tally.Wet;
+            ride.SlowedHours = tally.Slowed;
             return ride;
+        }
+
+        internal static string TheRideSaid(Settlement target)
+        {
+            Ride ride = TheRideFromParty(target);
+            if (ride.Days <= 0f || TradeMath.OutOfReach(ride.Days)) return "the ride there could not be timed";
+            float clear = ride.Distance * ride.LandRatio / _landSpeed * TradeMath.HoursAPartyTakesToCoverItsSpeed +
+                          ride.Distance * (1f - ride.LandRatio) / _seaSpeed * TradeMath.HoursAPartyTakesToCoverItsSpeed;
+            return "the ride there: " + Nightfall.Figure(ride.Days) + " day(s), " + Nightfall.Figure(ride.Days * 24f) +
+                   " h on the clock, of which " + Nightfall.Figure(clear) + " h would be the ride on a clear day; " +
+                   Nightfall.Figure(ride.NightHours) + " h fall at night, " + Nightfall.Figure(ride.SnowHours) + " h in snow, " +
+                   Nightfall.Figure(ride.WetHours) + " h on wet ground and " + Nightfall.Figure(ride.SlowedHours) +
+                   " h while still Disorganized; at a clear day Speed of " + Nightfall.Figure(_landSpeed) + ", keeping " +
+                   Nightfall.Share(PaceIn(true, false, false)) + " of it at night, " + Nightfall.Share(PaceIn(false, true, true)) +
+                   " in snow, " + Nightfall.Share(PaceIn(false, false, true)) + " on wet ground and " +
+                   Nightfall.Share(_paces[TradeMath.WeatherIndex(false, false, false, true)]) +
+                   " while Disorganized; the ground on the way is not counted";
         }
 
         private static readonly Dictionary<string, (float dist, float landRatio)> _partyDist
