@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.5
+
+- Fixed travel times counting a whole ride at the speed your party has while Disorganized
+- Fixed Days in the TradeLord ledger counting Disorganized on the ride from Buy From to Sell At when it wears off before you reach Buy From
+- Fixed Count what is on its way to a market expecting Disorganized caravans and villagers to stay slow for their whole ride
+- The Village travel ceiling now starts at 1 day
+- With Enable extended debug logging on, TradeLord.log now says how much Disorganized slowed your party each time it wears off
+- With Enable extended debug logging on, TradeLord.log now breaks the marked market's travel time down by night, snow, wet ground and Disorganized
+- With Enable extended debug logging on, TradeLord.log now says each hour how many caravans and villagers were timed along their road, and in how long
+
 ## 2.0.4
 
 - Fixed travel times jumping up and down as snow or rain falls where your party stands

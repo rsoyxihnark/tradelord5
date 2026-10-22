@@ -647,6 +647,7 @@ namespace TradeLord
             if (how.Best != null)
             {
                 said.Add("  ultralog: what it marked " + how.Best.Name + " on");
+                said.Add("    " + Travel.TheRideSaid(how.Best));
                 if (how.Bill != null)
                     for (int i = 0; i < how.Bill.Count; i++)
                     {

@@ -1332,7 +1332,9 @@ namespace TradeLord
 
         public const float SnowShareUnread = 1f + UsualSnowStep;
 
-        public const int Weathers = 8;
+        public const float UsualSlowStep = -0.4f;
+
+        public const int Weathers = 16;
 
         public const int MostTurnsOnTheRoad = 4096;
 
@@ -1364,19 +1366,22 @@ namespace TradeLord
             public float Night;
             public float Snow;
             public float Wet;
+            public float Slowed;
             public int Turns;
         }
 
-        public static int WeatherIndex(bool night, bool snowy, bool wet) => (night ? 4 : 0) | (snowy ? 2 : 0) | (wet ? 1 : 0);
+        public static int WeatherIndex(bool night, bool snowy, bool wet, bool slowed = false) =>
+            (slowed ? 8 : 0) | (night ? 4 : 0) | (snowy ? 2 : 0) | (wet ? 1 : 0);
 
         public static float[] PacesFromTheGame(float baseSpeed, float clearFactors, float least, float most,
-                                               float nightStep, float snowStep, float wetStep)
+                                               float nightStep, float snowStep, float wetStep, float slowStep)
         {
             var paces = new float[Weathers];
             float clear = WithinLimits(baseSpeed * (1f + clearFactors), least, most);
             for (int i = 0; i < Weathers; i++)
             {
-                float factors = clearFactors + ((i & 4) != 0 ? Finite(nightStep, UsualNightStep) : 0f) +
+                float factors = clearFactors + ((i & 8) != 0 ? Finite(slowStep, UsualSlowStep) : 0f) +
+                                ((i & 4) != 0 ? Finite(nightStep, UsualNightStep) : 0f) +
                                 ((i & 2) != 0 ? Finite(snowStep, UsualSnowStep) : 0f) + ((i & 1) != 0 ? Finite(wetStep, 0f) : 0f);
                 float pace = WithinLimits(baseSpeed * (1f + factors), least, most);
                 paces[i] = clear > 0f && pace > 0f ? NightPaceKept(pace / clear) : 1f;
@@ -1385,20 +1390,22 @@ namespace TradeLord
             return paces;
         }
 
-        public static float[] PacesFromShares(float night, float snow, float wet)
+        public static float[] PacesFromShares(float night, float snow, float wet, float slow = 1f)
         {
             var paces = new float[Weathers];
             float n = NightPaceKept(night);
             float s = Math.Min(Math.Max(Finite(snow, SnowShareUnread), SlowestNightPace), FastestNightPace);
             float w = Math.Min(Math.Max(Finite(wet, 1f), SlowestNightPace), FastestNightPace);
+            float d = Math.Min(Math.Max(Finite(slow, 1f), SlowestNightPace), FastestNightPace);
             for (int i = 0; i < Weathers; i++)
-                paces[i] = NightPaceKept(((i & 4) != 0 ? n : 1f) * ((i & 2) != 0 ? s : 1f) * ((i & 1) != 0 ? w : 1f));
+                paces[i] = NightPaceKept(((i & 8) != 0 ? d : 1f) * ((i & 4) != 0 ? n : 1f) * ((i & 2) != 0 ? s : 1f) *
+                                         ((i & 1) != 0 ? w : 1f));
             paces[0] = 1f;
             return paces;
         }
 
         public static float HoursAlongTheRoad(float startHourOfDay, float landHoursByDay, IList<RoadPiece> pieces,
-                                              float seaHours, bool seaFirst, float[] paces, ISky sky,
+                                              float seaHours, bool seaFirst, float[] paces, ISky sky, float slowHours,
                                               int sunRise, int sunSet, out RoadTally tally)
         {
             tally = default(RoadTally);
@@ -1413,6 +1420,7 @@ namespace TradeLord
             bool whole = pieces == null || pieces.Count == 0;
             int count = whole ? 1 : pieces.Count;
             double start = Finite(startHourOfDay, 0f);
+            double slow = Math.Max(0f, Finite(slowHours, 0f));
             double clock = seaFirst ? sea : 0d;
             for (int p = 0; p < count && land > 0f; p++)
             {
@@ -1431,17 +1439,20 @@ namespace TradeLord
                     bool night = sun && !(hour >= sunRise && hour < sunSet);
                     double untilSun = !sun ? double.PositiveInfinity
                         : !night ? sunSet - hour : hour >= sunSet ? 24d - hour + sunRise : sunRise - hour;
+                    bool slowed = clock < slow;
+                    double untilSlow = slowed ? slow - clock : double.PositiveInfinity;
                     above.Read(cell, clock, out bool snowy, out bool wet, out double untilSky);
                     if (double.IsNaN(untilSky) || untilSky < 1e-4) untilSky = 1e-4;
-                    float rate = paces == null || paces.Length < Weathers ? 1f : paces[WeatherIndex(night, snowy, wet)];
+                    float rate = paces == null || paces.Length < Weathers ? 1f : paces[WeatherIndex(night, snowy, wet, slowed)];
                     if (!(rate > 0f)) rate = 1f;
-                    double step = Math.Min(untilSun, untilSky);
+                    double step = Math.Min(Math.Min(untilSun, untilSky), untilSlow);
                     double spent = left / rate <= step ? left / rate : step;
                     clock += spent;
                     left -= spent * rate;
                     if (night) tally.Night += (float)spent;
                     if (snowy) tally.Snow += (float)spent;
                     if (wet) tally.Wet += (float)spent;
+                    if (slowed) tally.Slowed += (float)spent;
                 }
             }
             if (!seaFirst) clock += sea;
@@ -1449,28 +1460,29 @@ namespace TradeLord
         }
 
         public static float DaysAlongTheRoad(float distance, float landRatio, float dayPace, float seaSpeed,
-                                             IList<RoadPiece> pieces, float[] paces, ISky sky, float startHourOfDay,
-                                             int sunRise, int sunSet, bool seaFirst, out RoadTally tally)
+                                             IList<RoadPiece> pieces, float[] paces, ISky sky, float slowHours,
+                                             float startHourOfDay, int sunRise, int sunSet, bool seaFirst, out RoadTally tally)
         {
             tally = default(RoadTally);
             if (distance <= 0f) return 0f;
             if (OutOfReach(DaysAtSpeed(distance, landRatio, dayPace, seaSpeed))) return FurthestThereIs;
             float landHours = distance * landRatio / dayPace * HoursAPartyTakesToCoverItsSpeed;
             float seaHours = distance * (1f - landRatio) / seaSpeed * HoursAPartyTakesToCoverItsSpeed;
-            float hours = HoursAlongTheRoad(startHourOfDay, landHours, pieces, seaHours, seaFirst, paces, sky,
+            float hours = HoursAlongTheRoad(startHourOfDay, landHours, pieces, seaHours, seaFirst, paces, sky, slowHours,
                                             sunRise, sunSet, out tally);
             float days = Finite(hours / 24f, FurthestThereIs);
             return OutOfReach(days) ? FurthestThereIs : days;
         }
 
         public static float EtaAlongTheRoad(float distance, float dayPace, IList<RoadPiece> pieces, float[] paces,
-                                            ISky sky, float startHourOfDay, int sunRise, int sunSet, out RoadTally tally)
+                                            ISky sky, float slowHours, float startHourOfDay, int sunRise, int sunSet,
+                                            out RoadTally tally)
         {
             tally = default(RoadTally);
             float byDay = EtaDays(distance, dayPace);
             if (byDay <= 0f || OutOfReach(byDay)) return byDay;
-            float hours = HoursAlongTheRoad(startHourOfDay, byDay * 24f, pieces, 0f, false, paces, sky, sunRise, sunSet,
-                                            out tally);
+            float hours = HoursAlongTheRoad(startHourOfDay, byDay * 24f, pieces, 0f, false, paces, sky, slowHours,
+                                            sunRise, sunSet, out tally);
             return Finite(hours / 24f, FurthestThereIs);
         }
 

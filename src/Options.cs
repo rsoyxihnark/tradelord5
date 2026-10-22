@@ -61,7 +61,7 @@ namespace TradeLord
         public int MinTownStockWorth = 500;
 
         public float MaxTravelDaysTown = 3f;
-        public float MaxTravelDaysVillage = 1.3f;
+        public float MaxTravelDaysVillage = 1f;
 
         public bool ConservativeRouteProjection = true;
 

@@ -515,7 +515,7 @@ namespace TradeLord.Mcm
         public float MaxTravelDaysTown { get => _o.MaxTravelDaysTown; set { _o.MaxTravelDaysTown = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL207}Village travel ceiling (days, 0 = off)", 0f, 10f, "0.0", Order = 4, RequireRestart = false,
-            HintText = "{=TL307}The same limit for villages, kept separate so you can hold them closer than towns. It never takes a village past the Town travel ceiling: at 0, villages follow that ceiling. Default 1.3.")]
+            HintText = "{=TL307}The same limit for villages, kept separate so you can hold them closer than towns. It never takes a village past the Town travel ceiling: at 0, villages follow that ceiling. Default 1.")]
         [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
         public float MaxTravelDaysVillage { get => _o.MaxTravelDaysVillage; set { _o.MaxTravelDaysVillage = value; Options.Bump(); } }
 
