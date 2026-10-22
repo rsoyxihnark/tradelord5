@@ -150,6 +150,7 @@ namespace TradeLord.Compat
             "Helpers.InventoryScreenHelper+InventoryMode",
             "TaleWorlds.CampaignSystem.Settlements.Village+VillageStates",
             "TaleWorlds.CampaignSystem.Party.MobileParty+NavigationType",
+            "TaleWorlds.CampaignSystem.Party.AiBehavior",
             "TaleWorlds.Core.ItemObject+ItemTiers",
             "TaleWorlds.Core.ViewModelCollection.Information.TooltipProperty+TooltipPropertyFlags",
             "TaleWorlds.InputSystem.InputKey",

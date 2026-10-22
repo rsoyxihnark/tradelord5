@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.0.3
+
+- Fixed travel times in the TradeLord ledger, the tooltips and the map marker running a third longer at night
+- Fixed travel times leaving out the nights on the way
+- Fixed travel times in the TradeLord ledger, the tooltips and the map marker coming out shorter than the ride really takes
+- Fixed the TradeLord ledger, the tooltips and the map marker offering markets past your Town travel ceiling and Village travel ceiling
+- The Town travel ceiling now starts at 3.0 days and the Village travel ceiling at 1.3 days, so as many markets stay in reach as before
+- Days in the TradeLord ledger now counts the nights on the way from Buy From to Sell At from the time you reach Buy From
+- Fixed Count what is on its way to a market expecting caravans and villagers to arrive sooner than they do
+- Fixed Count what is on its way to a market expecting caravans and villagers to arrive a third later than they do at night
+- With Enable extended debug logging on, TradeLord.log now weighs every ride you set off on against the travel time TradeLord gave for it
+- With Enable extended debug logging on, TradeLord.log now says once a day how close Count what is on its way came to when caravans arrived
+- With Enable extended debug logging on, TradeLord.log now says at nightfall and daybreak how much the night slows your party and caravans
+- With Enable extended debug logging on, TradeLord.log now checks once a day how many hours the game takes to move a party as far as its Speed
+
 ## 2.0.2
 
 - Fixed TradeLord.log saying no food was on sale at a village when the only food left was the last unit TradeLord never takes

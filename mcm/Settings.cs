@@ -510,12 +510,12 @@ namespace TradeLord.Mcm
         public bool TradeWithCaravans { get => _o.TradeWithCaravans; set { _o.TradeWithCaravans = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL206}Town travel ceiling (days, 0 = off)", 0f, 20f, "0.0", Order = 3, RequireRestart = false,
-            HintText = "{=TL306}How far TradeLord looks for a town, in travel days. Farther towns stay out of tooltips, routes and the map marker (a town already marked may pass it by a fifth). 0 lifts the limit: every town in Calradia is weighed, far slower. Default 2.4.")]
+            HintText = "{=TL306}How far TradeLord looks for a town, in travel days. Farther towns stay out of tooltips, routes and the map marker (a town already marked may pass it by a fifth). 0 lifts the limit: every town in Calradia is weighed, far slower. Default 3.0.")]
         [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
         public float MaxTravelDaysTown { get => _o.MaxTravelDaysTown; set { _o.MaxTravelDaysTown = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL207}Village travel ceiling (days, 0 = off)", 0f, 10f, "0.0", Order = 4, RequireRestart = false,
-            HintText = "{=TL307}The same limit for villages, kept separate so you can hold them closer than towns. It never takes a village past the Town travel ceiling: at 0, villages follow that ceiling. Default 1.")]
+            HintText = "{=TL307}The same limit for villages, kept separate so you can hold them closer than towns. It never takes a village past the Town travel ceiling: at 0, villages follow that ceiling. Default 1.3.")]
         [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
         public float MaxTravelDaysVillage { get => _o.MaxTravelDaysVillage; set { _o.MaxTravelDaysVillage = value; Options.Bump(); } }
 
