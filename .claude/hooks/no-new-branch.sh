@@ -28,6 +28,13 @@ ours() {
   [ "$1" -ef "$0" ] || [ "$1" -ef "${0%/*}/session-start.sh" ]
 }
 
+kept() {
+  local name
+  name=$(sed -n 's/.*keeps one more branch beside `main`: `\([A-Za-z0-9._-]*\)`.*/\1/p' \
+         "${CLAUDE_PROJECT_DIR:-${0%/*}/../..}/CLAUDE.md" 2>/dev/null | head -1)
+  [ -n "$name" ] && [ "$name" != main ] && { [ "$1" = "$name" ] || [ "$1" = "refs/heads/$name" ]; }
+}
+
 INPUT=$(cat)
 
 TOOL=""
@@ -335,6 +342,7 @@ while IFS= read -r segment; do
         esac
       done
       if [ -n "$FIRST" ] && [ "$FIRST" != main ] && [ "$FIRST" != HEAD ] && [ "$DETACH" = 0 ] && [ "$GUESS" = 1 ] &&
+         ! kept "$FIRST" &&
          ! git show-ref --verify --quiet "refs/heads/$FIRST" 2>/dev/null &&
          [ -n "$(git for-each-ref --format='%(refname)' "refs/remotes/*/$FIRST" 2>/dev/null)" ]; then
         { [ "$SUB" = checkout ] && [ -e "$FIRST" ]; } ||
@@ -450,7 +458,7 @@ while IFS= read -r segment; do
         refuse "git branch with a name starts a new branch" ;;
 
     push)
-      DELETING=0; TAGS=0; REMOTE=0; TOMAIN=0; SKIP=0; WRONG=""
+      DELETING=0; TAGS=0; REMOTE=0; TOMAIN=0; TOKEPT=0; SKIP=0; WRONG=""
       for token in "$@"; do
         if [ "$SKIP" = 1 ]; then SKIP=0; continue; fi
         case "$token" in
@@ -472,7 +480,7 @@ while IFS= read -r segment; do
               esac
               case "${token##*:}" in
                 main|refs/heads/main) TOMAIN=1 ;;
-                *) WRONG=${token##*:} ;;
+                *) if kept "${token##*:}"; then TOKEPT=1; else WRONG=${token##*:}; fi ;;
               esac
             fi ;;
         esac
@@ -481,8 +489,8 @@ while IFS= read -r segment; do
         refuse "that push would delete main from the remote"
       if [ "$DELETING" = 0 ]; then
         [ -n "$WRONG" ] && refuse "that push would create the remote branch $WRONG"
-        [ "$TOMAIN" = 0 ] && [ "$TAGS" = 0 ] &&
-          refuse "a push has to name where it goes, and main is the only place it may go"
+        [ "$TOMAIN" = 0 ] && [ "$TOKEPT" = 0 ] && [ "$TAGS" = 0 ] &&
+          refuse "a push has to name where it goes, and main is the only place it may go, save the branch the rules keep beside it"
       fi ;;
   esac
 done <<<"$SEGMENTS"

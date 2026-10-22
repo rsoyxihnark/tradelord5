@@ -3813,8 +3813,11 @@ def the_signature_is_written_in_one_place_and_is_the_noreply_address():
             and 'never by Claude' in RULES)
 
 def the_rules_keep_one_branch():
-    return ('`main` is the only branch this repository keeps' in RULES
-            and 'Never start another one' in RULES
+    return ('`main` is the only branch this repository keeps, save one more where the `## This repository` '
+            'section names it. Never start another one' in RULES
+            and 'A branch the `## This repository` section names as kept is the one exception to this section.' in RULES
+            and 'It never reaches `main` and never publishes until he says how.' in RULES
+            and '- Normal: `main` itself, a kept branch the `## This repository` section names,' in RULES
             and 'no-new-branch.sh' in RULES
             and 'move the checkout to `main` and commit there' in RULES
             and 'Leave the assigned branch exactly as you found it, and never push it.' in RULES
@@ -3861,7 +3864,9 @@ def a_git_command_that_would_start_a_branch_is_refused():
 def only_main_may_be_pushed():
     return ('main|refs/heads/main' in GUARD
             and 'would create the remote branch' in GUARD
-            and 'main is the only place it may go' in GUARD
+            and 'main is the only place it may go, save the branch the rules keep beside it' in GUARD
+            and '*) if kept "${token##*:}"; then TOKEPT=1; else WRONG=${token##*:}; fi ;;' in GUARD
+            and '[ "$TOMAIN" = 0 ] && [ "$TOKEPT" = 0 ] && [ "$TAGS" = 0 ] &&' in GUARD
             and '--delete|-d) DELETING=1' in GUARD
             and ':*|+:*)' in GUARD
             and GUARD.count('refuse "that push would delete main from the remote"') == 2
@@ -3883,7 +3888,7 @@ chk("1.7.0", "the session signature comes from the one place in the working rule
     the_hook_falls_back_to_the_signature_the_rules_name())
 chk("1.7.0", "the commit signature is the noreply address, written in one place and nowhere else",
     the_signature_is_written_in_one_place_and_is_the_noreply_address())
-chk("1.7.0", "the rules keep one branch and move an assigned branch's work onto it, leaving that branch alone",
+chk("1.7.0", "the rules keep main and at most one more branch the repository section names, and move an assigned branch's work onto main, leaving that branch alone",
     the_rules_keep_one_branch())
 chk("1.7.0", "the rules read the checkout against origin/main before anything else, and never make that a question",
     the_rules_work_from_the_remote_rather_than_the_container())
@@ -3893,8 +3898,34 @@ chk("1.7.0", "the working rules name no program of their own, so they carry to a
     the_rules_name_no_program_of_their_own())
 chk("1.7.0", "a git command that would start a branch is refused before it runs",
     a_git_command_that_would_start_a_branch_is_refused())
-chk("1.7.0", "a push may name main and nothing else, and deleting a branch is still allowed, save main itself",
+chk("1.7.0", "a push may name main or the one branch the rules keep beside it and nothing else, and deleting a branch is still allowed, save main itself",
     only_main_may_be_pushed())
+
+
+def kept_branch_named():
+    return re.findall(r'keeps one more branch beside `main`: `([A-Za-z0-9._-]*)`', RULES)
+
+
+def the_kept_branch_is_named_once_and_publishes_nothing():
+    named = kept_branch_named()
+    if len(named) != 1 or named[0] == 'main':
+        return False
+    kept = named[0]
+    section = RULES[RULES.find('\n## This repository\n'):]
+    return (RULES.find('\n## This repository\n') > 0
+            and 'keeps one more branch beside `main`: `' + kept + '`' in section
+            and '`' + kept + '` publishes nothing.' in section
+            and 'publishes from `main` alone' in section
+            and '`git push -u origin HEAD:' + kept + '`' in section
+            and "        if: github.ref == 'refs/heads/main'\n" in WORKFLOW
+            and ("name=$(sed -n 's/.*keeps one more branch beside `main`: `\\([A-Za-z0-9._-]*\\)`.*/\\1/p' \\\n"
+                 '         "${CLAUDE_PROJECT_DIR:-${0%/*}/../..}/CLAUDE.md" 2>/dev/null | head -1)') in GUARD
+            and '[ -n "$name" ] && [ "$name" != main ] && { [ "$1" = "$name" ] || [ "$1" = "refs/heads/$name" ]; }' in GUARD
+            and '         ! kept "$FIRST" &&\n' in GUARD
+            and GUARD.count('kept "') == 2)
+
+chk("no release", "the one branch kept beside main is named once, in the repository section, where the branch guard reads it, and the workflow publishes from main alone",
+    the_kept_branch_is_named_once_and_publishes_nothing())
 chk("1.7.0", "the cost-basis arithmetic lives beside the other money rules and needs nothing from the game",
     the_ledger_keeps_no_second_copy_of_the_cost_basis_rules())
 chk("1.7.0", "a good with no price you paid still falls through to the cheapest market known",
@@ -17320,6 +17351,7 @@ GUARD_KEPT_BLOCKS = (
         '        esac',
         '      done',
         '      if [ -n "$FIRST" ] && [ "$FIRST" != main ] && [ "$FIRST" != HEAD ] && [ "$DETACH" = 0 ] && [ "$GUESS" = 1 ] &&',
+        '         ! kept "$FIRST" &&',
         '         ! git show-ref --verify --quiet "refs/heads/$FIRST" 2>/dev/null &&',
         '         [ -n "$(git for-each-ref --format=\'%(refname)\' "refs/remotes/*/$FIRST" 2>/dev/null)" ]; then',
         '        { [ "$SUB" = checkout ] && [ -e "$FIRST" ]; } ||',
@@ -17394,7 +17426,7 @@ GUARD_KEPT_BLOCKS = (
     ),
     (
         '    push)',
-        '      DELETING=0; TAGS=0; REMOTE=0; TOMAIN=0; SKIP=0; WRONG=""',
+        '      DELETING=0; TAGS=0; REMOTE=0; TOMAIN=0; TOKEPT=0; SKIP=0; WRONG=""',
         '      for token in "$@"; do',
         '        if [ "$SKIP" = 1 ]; then SKIP=0; continue; fi',
         '        case "$token" in',
@@ -17416,7 +17448,7 @@ GUARD_KEPT_BLOCKS = (
         '              esac',
         '              case "${token##*:}" in',
         '                main|refs/heads/main) TOMAIN=1 ;;',
-        '                *) WRONG=${token##*:} ;;',
+        '                *) if kept "${token##*:}"; then TOKEPT=1; else WRONG=${token##*:}; fi ;;',
         '              esac',
         '            fi ;;',
         '        esac',
@@ -17425,8 +17457,8 @@ GUARD_KEPT_BLOCKS = (
         '        refuse "that push would delete main from the remote"',
         '      if [ "$DELETING" = 0 ]; then',
         '        [ -n "$WRONG" ] && refuse "that push would create the remote branch $WRONG"',
-        '        [ "$TOMAIN" = 0 ] && [ "$TAGS" = 0 ] &&',
-        '          refuse "a push has to name where it goes, and main is the only place it may go"',
+        '        [ "$TOMAIN" = 0 ] && [ "$TOKEPT" = 0 ] && [ "$TAGS" = 0 ] &&',
+        '          refuse "a push has to name where it goes, and main is the only place it may go, save the branch the rules keep beside it"',
         '      fi ;;',
         '  esac',
         'done <<<"$SEGMENTS"',
