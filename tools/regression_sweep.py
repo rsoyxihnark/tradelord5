@@ -3926,6 +3926,21 @@ def the_kept_branch_is_named_once_and_publishes_nothing():
 
 chk("no release", "the one branch kept beside main is named once, in the repository section, where the branch guard reads it, and the workflow publishes from main alone",
     the_kept_branch_is_named_once_and_publishes_nothing())
+
+
+def the_release_check_holds_main_against_every_release():
+    loop = between(RELEASED, "    for version in sorted(live, key=order):\n", "        if row['draft']:")
+    return ("    aside = os.environ.get('GITHUB_REF', 'refs/heads/main') != 'refs/heads/main' and numbered(shipping)\n"
+            in RELEASED
+            and loop.startswith("        if aside and order(version) > order(shipping):\n"
+                                "            ahead += 1\n"
+                                "            continue\n"
+                                "        row = live[version]\n")
+            and RELEASED.count('aside') == 2
+            and 'were published from main, so they are not held against the changelog of this branch' in RELEASED)
+
+chk("no release", "on main every release is held against the changelog, and only a push to another branch leaves out the releases newer than the version it carries",
+    the_release_check_holds_main_against_every_release())
 chk("1.7.0", "the cost-basis arithmetic lives beside the other money rules and needs nothing from the game",
     the_ledger_keeps_no_second_copy_of_the_cost_basis_rules())
 chk("1.7.0", "a good with no price you paid still falls through to the cheapest market known",
