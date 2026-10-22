@@ -149,6 +149,9 @@ def main(argv):
     said = {head: entries for head, entries in
             sections(io.open('CHANGELOG.md', encoding='utf-8').read())}
     agreed = theMessageSaysWhatTheChangelogSays(shipping, said)
+    subject, _, _ = thisCommit()
+    marked = subject is not None and subject.startswith('[no release]')
+    aside = os.environ.get('GITHUB_REF', 'refs/heads/main') != 'refs/heads/main' and numbered(shipping)
     rows, how = asked()
     if rows is None:
         return 1
@@ -160,13 +163,17 @@ def main(argv):
         return 1
 
     first = min(live, key=order)
-    faults, skipped, outstanding = [], 0, []
+    faults, skipped, outstanding, ahead = [], 0, [], 0
 
     for version in sorted(live, key=order):
+        if aside and order(version) > order(shipping):
+            ahead += 1
+            continue
         row = live[version]
         if version == shipping and (row['draft'] or row['files'] == 0):
-            print('  note     ' + version + ' is part-published from an attempt that did not finish, '
-                  'and this run publishes it, so it is left to the publish step to settle')
+            print('  note     ' + version + ' is part-published from an attempt that did not finish, ' +
+                  ('and this commit ships no version, so this run does not settle it' if marked else
+                   'and this run publishes it, so it is left to the publish step to settle'))
             continue
         if row['draft']:
             faults.append(version + ' is still a draft release')
@@ -195,7 +202,13 @@ def main(argv):
 
     print('  read ' + str(len(live)) + ' releases through ' + how + ', ' + str(len(versions)) +
           ' versions in the changelog, ' + first + ' the first ever published')
-    if shipping:
+    if ahead:
+        print('  note     ' + str(ahead) + ' releases are newer than the ' + shipping + ' this branch carries and ' +
+              'were published from main, so they are not held against the changelog of this branch')
+    if shipping and marked:
+        print('  ' + shipping + ' is the version the source carries, and this commit ships none, '
+              'so this run does not check that it is out')
+    elif shipping:
         print('  ' + shipping + ' is the version this commit ships, so it is not expected out yet')
     if skipped:
         print('  ' + str(skipped) + ' releases predate the rule that notes are written as entries, ' +
