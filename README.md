@@ -18,6 +18,8 @@
 - ✅ Mark a market rising or falling needs Live world prices off, since that is when TradeLord records prices at all, and it ships off itself
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out along the road the game's own pathfinding would take, at your party's real speed with the cargo you are carrying, through every forest, river, desert, rainfall, snowfall and night on the way
+- ✅ With War Sails, a ride all at sea is timed along the course your ships would sail, with the wind the map lays out on every stretch of it
+- ✅ A wind from behind adds up to 1.5 times its strength to your ships' speed, as War Sails has it, fading to nothing 120 degrees off, with Fair Winds on top and storms left out
 - ✅ Stock counts, so you know the deal is actually there
 - ✅ What you paid for a good, per unit, on its own tooltip once you have bought one, so you can see at a glance whether the market in front of you is beating it
 - ✅ Inventory rows tinted good to bad against the best price known

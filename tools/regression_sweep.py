@@ -1869,8 +1869,9 @@ chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has 
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
     "return OutOfReach(days) ? FurthestThereIs : days;" in
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
-    "if (pace.Even) return TradeMath.DaysAtSpeed(road.Length, road.LandRatio, pace.Base, pace.Sea);" in
-    method_body(S['Travel.cs'], "private static float Ride(") and
+    ordered(method_body(S['Travel.cs'], "private static float Ride("), "if (pace.Even)",
+            "? TradeMath.DaysOnTheWinds(road.Runs, road.Push, road.Fair, pace)",
+            ": TradeMath.DaysAtSpeed(road.Length, road.LandRatio, pace.Base, pace.Sea);") and
     "if (ground == GroundSea) return Finite(Sea, 0f);" in
     method_body(S['TradeMath.cs'], "public float On(int ground, bool dark, bool snow, bool wet, bool slow)") and
     "TradeMath.AddRun(runs, TradeMath.GroundSea, TradeMath.Unread, TradeMath.Unread, length * (1f - land));" in
@@ -20086,13 +20087,13 @@ def every_night_on_the_way_is_counted_on_the_game_clock():
     along = method_body(m, "public static float DaysAlong")
     ride = method_body(tr, "private static float Ride(")
     return (along and ride
-            and "double perHour = pace.On(road[i].Ground, dark, snow, wet, slow) / (double)HoursAPartyTakesToCoverItsSpeed;"
+            and ": pace.On(road[i].Ground, dark, snow, wet, slow)) / (double)HoursAPartyTakesToCoverItsSpeed;"
                 in along
             and "double turnAt = NextTurnOfLight(start, sunrise, sunset);" in along
             and "return !(hour >= sunrise && hour < sunset);" in method_body(m, "public static bool DarkAt")
             and ordered(ride, "double start = moment.ToHours + after;",
                         "TradeMath.DaysAlong(road.Runs, pace.After(start - pace.ReadAt), sky, start, CampaignTime.SunRise,",
-                        "CampaignTime.SunSet, fresh, tally);")
+                        "CampaignTime.SunSet, fresh, tally, road.Push, road.Fair);")
             and "double later = TradeMath.Finite(after, 0f) > 0f ? after * 24d : 0d;" in
                 method_body(tr, "private static float RideBetween")
             and "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);" in
@@ -20461,14 +20462,16 @@ def the_roads_between_markets_are_walked_once_a_map_and_kept_in_the_road_atlas()
     m = S['TradeMath.cs']
     between = method_body(t, "private static Road RoadBetween(Settlement a, Settlement b)")
     key = method_body(t, "private static bool AtlasKeyNow(out RoadAtlas.Key key)")
-    taken = method_body(t, "private static bool FromTheAtlas(Settlement a, Settlement b, Road road)")
+    taken = method_body(t, "private static bool FromTheAtlas(Settlement a, Settlement b, Road road, bool sea, Vec2 from, Vec2 to)")
     fill = method_body(t, "private static void FillTheAtlasNow()")
     walk = method_body(t, "private static bool WalkTheRoad(")
     return (between and key and taken and fill and walk
             and 'private const string AtlasFileName = "TradeLord.roads";' in t
-            and ordered(between, "if (landRatio >= AllOnLand && a != b)", "StartTheMeter();",
-                        "if (!FromTheAtlas(a, b, road))", "try { WalkBetween(a, b, road); }",
-                        "catch { road.Walked = false; threw = true; }", "if (!threw) IntoTheAtlas(a, b, road);",
+            and ordered_last(between, "if (landRatio >= AllOnLand && a != b)", "StartTheMeter();",
+                        "if (!FromTheAtlas(a, b, road, false, a.GatePosition.ToVec2(), b.GatePosition.ToVec2()))",
+                        "try { WalkBetween(a, b, road); }",
+                        "catch { road.Walked = false; threw = true; }",
+                        "if (!threw) IntoTheAtlas(a, b, road, false, a.GatePosition.ToVec2(), b.GatePosition.ToVec2());",
                         "if (!road.Walked)")
             and all(one in key for one in ("NavigationMesh = map.GetSceneNavigationMeshCrc(),",
                                            "Scene = map.GetSceneXmlCrc(),", "Grid = _dim,", "CellWide = _cellWide,",
@@ -20479,7 +20482,7 @@ def the_roads_between_markets_are_walked_once_a_map_and_kept_in_the_road_atlas()
                                            "GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Default)"))
             and "map.GetPathBetweenAIFaces(fromFace, toFace, from, end, 0.3f, _path, barred, 2f, seaToLand," in walk
             and ordered(taken, "if (!AtlasReady(wait: true)) return false;",
-                        "if (!kept.Between(from.x, from.y, to.x, to.y))", "_atlas.Remove(key);",
+                        "if (!kept.Between(from.x, from.y, to.x, to.y) ||", "_atlas.Remove(key);",
                         "if (!kept.Walked || kept.Runs == null) return true;", "road.Runs = kept.Runs;",
                         "road.Walked = true;")
             and "_atlasReading = Task.Run(() => ReadTheAtlas(path, key));" in t
@@ -20510,6 +20513,57 @@ def the_roads_between_markets_are_walked_once_a_map_and_kept_in_the_road_atlas()
 
 chk("1.105.5", "each road between two markets is walked once a map and kept in TradeLord.roads, keyed to the map and the way roads are walked, read and written off the main thread, and filled in the background on the campaign map",
     the_roads_between_markets_are_walked_once_a_map_and_kept_in_the_road_atlas())
+
+def a_ride_all_at_sea_is_timed_along_its_course_with_the_war_sails_wind():
+    t = S['Travel.cs']
+    m = S['TradeMath.cs']
+    between = method_body(t, "private static Road RoadBetween(Settlement a, Settlement b)")
+    party = method_body(t, "private static Road RoadFromParty(MobileParty party, Settlement target)")
+    sail = method_body(t, "private static bool SailTheSea(")
+    along = method_body(t, "private static void WindAlong(")
+    why = method_body(t, "private static string WhyNoWinds()")
+    behind = method_body(m, "public static float WindBehind(")
+    wind = method_body(m, "public static void WindOnTheMap(")
+    return (between and party and sail and along and why and behind and wind
+            and ordered(between, "if (a != b && a.HasPort && b.HasPort && AllAtSea(landRatio) && WindsBlow())",
+                        "if (!FromTheAtlas(a, b, road, true, port, other))", "try { SailBetween(a, b, road); }",
+                        "if (!threw) IntoTheAtlas(a, b, road, true, port, other);", "if (road.Walked) return road;",
+                        "if (landRatio >= AllOnLand && a != b)")
+            and ordered(party, "if (AllAtSea(landRatio) && target.HasPort && WindsBlow())",
+                        "Road sailed = SailedFromParty(party, target, atSea);", "if (sailed != null) return sailed;",
+                        "if (!atSea && landRatio >= AllOnLand && !_unwalkable.Contains(target.StringId))")
+            and "private static bool AllAtSea(float landRatio) => landRatio >= 0f && landRatio <= 1f - AllOnLand;" in t
+            and ".GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Naval);" in sail
+            and "length += ProbeAtSea(winds, at, _path[i], runs, push, fair);" in sail
+            and "fromFace = map.GetFaceIndex(new CampaignVec2(at, false));" in sail
+            and "TradeMath.AddRunOnTheWinds(runs, push, fair, TradeMath.GroundSea, TradeMath.Unread, TradeMath.Unread, length," in method_body(t, "private static float ProbeAtSea(")
+            and ordered(along, "Vec2 flow = winds.GetWindAtPosition(from + heading * (each * (k + 0.5f)));",
+                        "TradeMath.WindOnTheMap(flow.x, flow.y, out float windX, out float windY);",
+                        "float push = TradeMath.WindBehind(heading.x, heading.y, windX, windY, out bool before);",
+                        "time += each / (1d + push);", "lift = time > 0d ? (float)(length / time - 1d) : 0f;")
+            and "if (speed != NavalSpeedModel)" in why and "if (weather != NavalWeatherModel)" in why
+            and "if (!(campaign.MapSceneWrapper is MapScene map))" in why
+            and "return party.HasPerk(perk, BattleEnvironment.Naval, out _) ? perk.PrimaryBonus : 0f;" in t
+            and "pace.FairWinds = FairWindsAtSea();" in method_body(t, "private static TradeMath.Pace PartyPace()")
+            and "float angle = Math.Abs((float)Math.Atan2(-bearingX, bearingY) - (float)Math.Atan2(-windX, windY)) * 57.29578f;" in behind
+            and "if (!(angle < AWindPushesWithin)) return 0f;" in behind
+            and "float strength = length < WindAtLeast ? WindAtLeast : length > WindAtMost ? WindAtMost : length;" in wind
+            and "public const float WindAtLeast = 1f / 15f;" in m and "public const float WindAtMost = 0.46f;" in m
+            and "public const float AWindPushesAtMostBy = 1.5f;" in m and "public const float ASailIsNeverFasterThan = 10f;" in m
+            and "CampaignTime.SunSet, fresh, tally, road.Push, road.Fair);" in method_body(t, "private static float Ride(")
+            and all(one in MATHTESTS for one in
+                    ("The_wind_on_the_map_is_read_the_way_War_Sails_reads_it_with_no_storm",
+                     "A_wind_behind_the_ships_pushes_them_by_up_to_one_and_a_half_times_its_strength",
+                     "The_angle_to_the_wind_is_not_wrapped_round_just_as_War_Sails_leaves_it",
+                     "Ships_sail_faster_with_the_wind_and_Fair_Winds_but_never_past_ten",
+                     "Sea_stretches_joined_into_one_run_take_as_long_as_they_did_apart",
+                     "A_sea_leg_with_the_wind_behind_takes_less_time_and_one_without_takes_what_it_did",
+                     "The_road_atlas_keeps_a_sea_road_with_its_winds"))
+            and "With War Sails, a ride all at sea is timed along the course your ships would sail" in README)
+
+
+chk("1.106.0", "with War Sails a ride all at sea is timed along the course the ships would sail, each stretch with the wind the map lays out as War Sails weighs it, Fair Winds on top and storms left out",
+    a_ride_all_at_sea_is_timed_along_its_course_with_the_war_sails_wind())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

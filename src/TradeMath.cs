@@ -1490,6 +1490,7 @@ namespace TradeLord
             public double ReadAt;
             public bool SnowAtStart;
             public float Sea;
+            public float FairWinds;
             public bool Even;
 
             public static Pace AllAt(float land, float sea) => new Pace { Base = land, Sea = sea, Even = true };
@@ -1500,6 +1501,16 @@ namespace TradeLord
                 var later = (Pace)MemberwiseClone();
                 later.SlowHours = SlowHours > hours ? SlowHours - hours : 0d;
                 return later;
+            }
+
+            public float AtSea(float push, float fair)
+            {
+                float sea = Finite(Sea, 0f);
+                float lift = Finite(push, 0f) + Finite(fair, 0f) * Finite(FairWinds, 0f);
+                if (!(lift > 0f)) return sea;
+                float most = sea > ASailIsNeverFasterThan ? sea : ASailIsNeverFasterThan;
+                float speed = sea * (1f + lift);
+                return speed > most ? most : Finite(speed, sea);
             }
 
             public float On(int ground, bool dark, bool snow, bool wet, bool slow)
@@ -1584,8 +1595,97 @@ namespace TradeLord
             return i;
         }
 
+        public const float WindAtLeast = 1f / 15f;
+
+        public const float WindAtMost = 0.46f;
+
+        public const float AWindPushesWithin = 120f;
+
+        public const float AWindPushesAtMostBy = 1.5f;
+
+        public const float ASailIsNeverFasterThan = 10f;
+
+        public static void WindOnTheMap(float flowX, float flowY, out float windX, out float windY)
+        {
+            float length = (float)Math.Sqrt(flowX * flowX + flowY * flowY);
+            float strength = length < WindAtLeast ? WindAtLeast : length > WindAtMost ? WindAtMost : length;
+            float x = flowX, y = flowY;
+            if (length > 1E-05f)
+            {
+                x /= length;
+                y /= length;
+            }
+            else
+            {
+                x = 0f;
+                y = 1f;
+            }
+            float s = strength < 1E-05f ? 1E-05f : strength > 1f ? 1f : strength;
+            windX = x * s;
+            windY = y * s;
+        }
+
+        public static float WindBehind(float bearingX, float bearingY, float windX, float windY, out bool astern)
+        {
+            astern = false;
+            float strength = (float)Math.Sqrt(windX * windX + windY * windY);
+            if (!(strength > 0f) || float.IsInfinity(strength)) return 0f;
+            float angle = Math.Abs((float)Math.Atan2(-bearingX, bearingY) - (float)Math.Atan2(-windX, windY)) * 57.29578f;
+            if (!(angle < AWindPushesWithin)) return 0f;
+            astern = true;
+            float mapped = (angle < 0f ? 0f : angle) * (0f - strength) / AWindPushesWithin + strength;
+            float push = mapped * AWindPushesAtMostBy;
+            return push < 0f ? 0f : push > AWindPushesAtMostBy ? AWindPushesAtMostBy : push;
+        }
+
+        public static void AddRunOnTheWinds(List<Run> road, List<float> push, List<float> fair, int ground, int face,
+                                            int cell, float length, float lift, float astern)
+        {
+            if (road == null || push == null || fair == null || !(length > 0f) || float.IsInfinity(length)) return;
+            bool sea = ground == GroundSea;
+            float up = sea ? Finite(lift, 0f) : 0f;
+            float behind = sea ? Finite(astern, 0f) : 0f;
+            int last = road.Count - 1;
+            if (last >= 0 && road[last].Ground == ground && road[last].Face == face && road[last].Cell == cell)
+            {
+                Run joined = road[last];
+                float before = joined.Length;
+                joined.Length += length;
+                road[last] = joined;
+                if (sea)
+                {
+                    double time = before / (1d + push[last]) + length / (1d + up);
+                    push[last] = time > 0d ? (float)(joined.Length / time - 1d) : 0f;
+                    fair[last] = (before * fair[last] + length * behind) / joined.Length;
+                }
+                return;
+            }
+            road.Add(new Run { Length = length, Ground = ground, Face = face, Cell = cell });
+            push.Add(up);
+            fair.Add(behind);
+        }
+
+        public static float DaysOnTheWinds(IList<Run> road, IList<float> push, IList<float> fair, Pace pace)
+        {
+            if (road == null || pace == null) return 0f;
+            double hours = 0d;
+            for (int i = 0; i < road.Count; i++)
+            {
+                float length = road[i].Length;
+                if (float.IsNaN(length) || float.IsInfinity(length)) return FurthestThereIs;
+                if (!(length > 0f)) continue;
+                float speed = road[i].Ground == GroundSea
+                    ? pace.AtSea(push != null && i < push.Count ? push[i] : 0f, fair != null && i < fair.Count ? fair[i] : 0f)
+                    : Finite(pace.Base, 0f);
+                if (!(speed > 0f)) return FurthestThereIs;
+                hours += length / speed * HoursAPartyTakesToCoverItsSpeed;
+            }
+            float days = Finite((float)(hours / 24d), FurthestThereIs);
+            return OutOfReach(days) ? FurthestThereIs : days;
+        }
+
         public static float DaysAlong(IList<Run> road, Pace pace, ISky sky, double startClock, int sunrise, int sunset,
-                                      bool freshAtStart, Tally tally)
+                                      bool freshAtStart, Tally tally, IList<float> push = null, IList<float> fair = null)
         {
             if (road == null || pace == null) return 0f;
             for (int k = 0; k < road.Count; k++)
@@ -1608,7 +1708,9 @@ namespace TradeLord
             for (int steps = 0; ; steps++)
             {
                 if (steps >= MostStepsOnARoad) return FurthestThereIs;
-                double perHour = pace.On(road[i].Ground, dark, snow, wet, slow) / (double)HoursAPartyTakesToCoverItsSpeed;
+                double perHour = (push != null && road[i].Ground == GroundSea && i < push.Count
+                                     ? pace.AtSea(push[i], fair != null && i < fair.Count ? fair[i] : 0f)
+                                     : pace.On(road[i].Ground, dark, snow, wet, slow)) / (double)HoursAPartyTakesToCoverItsSpeed;
                 if (!(perHour > 0d) || double.IsInfinity(perHour)) return FurthestThereIs;
                 double next = Math.Min(turn, Math.Min(change, slowEnds));
                 double done = t + left / perHour;
@@ -2049,7 +2151,7 @@ namespace TradeLord
 
     public static class RoadAtlas
     {
-        public const int Format = 1;
+        public const int Format = 2;
 
         public const int MostRoads = 4000000;
 
@@ -2073,6 +2175,17 @@ namespace TradeLord
             public int SeaToLand;
             public int LandToSea;
             public int[] Barred;
+            public int[] BarredAtSea;
+
+            private static bool Same(int[] mine, int[] theirs)
+            {
+                mine = mine ?? new int[0];
+                theirs = theirs ?? new int[0];
+                if (mine.Length != theirs.Length) return false;
+                for (int i = 0; i < mine.Length; i++)
+                    if (mine[i] != theirs[i]) return false;
+                return true;
+            }
 
             public bool SameAs(Key other)
             {
@@ -2081,11 +2194,7 @@ namespace TradeLord
                     !Stride.Equals(other.Stride) || Way != other.Way || SeaToLand != other.SeaToLand ||
                     LandToSea != other.LandToSea)
                     return false;
-                int[] mine = Barred ?? new int[0], theirs = other.Barred ?? new int[0];
-                if (mine.Length != theirs.Length) return false;
-                for (int i = 0; i < mine.Length; i++)
-                    if (mine[i] != theirs[i]) return false;
-                return true;
+                return Same(Barred, other.Barred) && Same(BarredAtSea, other.BarredAtSea);
             }
         }
 
@@ -2095,8 +2204,11 @@ namespace TradeLord
             public string To;
             public float FromX, FromY, ToX, ToY;
             public bool Walked;
+            public bool Sea;
             public float Length;
             public List<TradeMath.Run> Runs;
+            public float[] Push;
+            public float[] Fair;
 
             public bool Between(float fromX, float fromY, float toX, float toY) =>
                 FromX.Equals(fromX) && FromY.Equals(fromY) && ToX.Equals(toX) && ToY.Equals(toY);
@@ -2132,7 +2244,7 @@ namespace TradeLord
             }
         }
 
-        public const int RoadsAreWalkedThisWay = 1;
+        public const int RoadsAreWalkedThisWay = 2;
 
         public static uint TheWayRoadsAreWalked(int mostPaths, float reached, float radius, float switchCost)
         {
@@ -2145,6 +2257,10 @@ namespace TradeLord
             tally.Add(reached);
             tally.Add(radius);
             tally.Add(switchCost);
+            tally.Add(TradeMath.WindAtLeast);
+            tally.Add(TradeMath.WindAtMost);
+            tally.Add(TradeMath.AWindPushesWithin);
+            tally.Add(TradeMath.AWindPushesAtMostBy);
             return unchecked((uint)(tally.Sum ^ (tally.Sum >> 32)));
         }
 
@@ -2174,7 +2290,7 @@ namespace TradeLord
             throw new InvalidDataException("a count runs past five bytes");
         }
 
-        private static void Counted(ref Tally tally, Road road, bool walked)
+        private static void Counted(ref Tally tally, Road road, bool walked, bool sea, bool winds)
         {
             tally.Add(road.From);
             tally.Add(road.To);
@@ -2183,6 +2299,8 @@ namespace TradeLord
             tally.Add(road.ToX);
             tally.Add(road.ToY);
             tally.Add(walked ? 1 : 0);
+            tally.Add(sea ? 1 : 0);
+            tally.Add(winds ? 1 : 0);
             if (!walked) return;
             tally.Add(road.Length);
             tally.Add(road.Runs.Count);
@@ -2192,6 +2310,9 @@ namespace TradeLord
                 tally.Add(road.Runs[k].Face);
                 tally.Add(road.Runs[k].Cell);
                 tally.Add(road.Runs[k].Length);
+                if (!winds || road.Runs[k].Ground != TradeMath.GroundSea) continue;
+                tally.Add(road.Push[k]);
+                tally.Add(road.Fair[k]);
             }
         }
 
@@ -2215,6 +2336,9 @@ namespace TradeLord
                 int[] barred = key.Barred ?? new int[0];
                 w.Write(barred.Length);
                 for (int i = 0; i < barred.Length; i++) w.Write(barred[i]);
+                int[] barredAtSea = key.BarredAtSea ?? new int[0];
+                w.Write(barredAtSea.Length);
+                for (int i = 0; i < barredAtSea.Length; i++) w.Write(barredAtSea[i]);
                 int count = roads?.Count ?? 0;
                 w.Write(count);
                 var tally = new Tally();
@@ -2228,8 +2352,13 @@ namespace TradeLord
                     w.Write(road.ToX);
                     w.Write(road.ToY);
                     bool walked = road.Walked && road.Runs != null;
+                    bool sea = road.Sea;
+                    bool winds = walked && sea && road.Push != null && road.Fair != null &&
+                                 road.Push.Length == road.Runs.Count && road.Fair.Length == road.Runs.Count;
                     w.Write(walked);
-                    Counted(ref tally, road, walked);
+                    w.Write(sea);
+                    w.Write(winds);
+                    Counted(ref tally, road, walked, sea, winds);
                     if (!walked) continue;
                     w.Write(road.Length);
                     WriteCount(w, (uint)road.Runs.Count);
@@ -2241,6 +2370,11 @@ namespace TradeLord
                         WriteCount(w, ZigZag(unchecked(run.Face - face)));
                         WriteCount(w, ZigZag(unchecked(run.Cell - cell)));
                         w.Write(run.Length);
+                        if (winds && run.Ground == TradeMath.GroundSea)
+                        {
+                            w.Write(road.Push[k]);
+                            w.Write(road.Fair[k]);
+                        }
                         face = run.Face;
                         cell = run.Cell;
                     }
@@ -2284,6 +2418,14 @@ namespace TradeLord
                     }
                     key.Barred = new int[barred];
                     for (int i = 0; i < barred; i++) key.Barred[i] = r.ReadInt32();
+                    int barredAtSea = r.ReadInt32();
+                    if (barredAtSea < 0 || barredAtSea > MostBarred)
+                    {
+                        why = "it is damaged";
+                        return false;
+                    }
+                    key.BarredAtSea = new int[barredAtSea];
+                    for (int i = 0; i < barredAtSea; i++) key.BarredAtSea[i] = r.ReadInt32();
                     if (!key.SameAs(expected))
                     {
                         why = "it was made for another map, or for roads walked another way";
@@ -2303,8 +2445,9 @@ namespace TradeLord
                         {
                             From = r.ReadString(), To = r.ReadString(),
                             FromX = r.ReadSingle(), FromY = r.ReadSingle(), ToX = r.ReadSingle(), ToY = r.ReadSingle(),
-                            Walked = r.ReadBoolean()
+                            Walked = r.ReadBoolean(), Sea = r.ReadBoolean()
                         };
+                        bool winds = r.ReadBoolean();
                         if (road.Walked)
                         {
                             road.Length = r.ReadSingle();
@@ -2315,6 +2458,11 @@ namespace TradeLord
                                 return false;
                             }
                             road.Runs = new List<TradeMath.Run>((int)runs);
+                            if (winds)
+                            {
+                                road.Push = new float[runs];
+                                road.Fair = new float[runs];
+                            }
                             int face = 0, cell = 0;
                             for (uint k = 0; k < runs; k++)
                             {
@@ -2325,9 +2473,19 @@ namespace TradeLord
                                 {
                                     Ground = ground, Face = face, Cell = cell, Length = r.ReadSingle()
                                 });
+                                if (winds && ground == TradeMath.GroundSea)
+                                {
+                                    road.Push[k] = r.ReadSingle();
+                                    road.Fair[k] = r.ReadSingle();
+                                }
                             }
                         }
-                        Counted(ref tally, road, road.Walked);
+                        else if (winds)
+                        {
+                            why = "it is damaged";
+                            return false;
+                        }
+                        Counted(ref tally, road, road.Walked, road.Sea, winds);
                         read.Add(road);
                     }
                     if (r.ReadUInt64() != tally.Sum || r.ReadUInt32() != Mark || buffered.ReadByte() != -1)

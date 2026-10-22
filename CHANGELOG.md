@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.106.0
+
+- With War Sails, travel times now count the wind on a ride all at sea, along the course your ships would sail, leaving storms out
+- With War Sails, travel times at sea now count the Fair Winds perk while the wind is behind you
+- TradeLord.roads now keeps the roads across the sea too, so a TradeLord.roads from 1.105.5 is set aside and walked afresh once
+- TradeLord.log now says how much of a ride is at sea and what the War Sails wind adds to your ships' speed there
+- TradeLord.log now says whether rides at sea are timed with the War Sails wind, and why not when they are not
+
 ## 1.105.5
 
 - Fixed the game freezing for many seconds the first time TradeLord looks for routes with Town travel ceiling at 0

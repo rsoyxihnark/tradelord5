@@ -2336,6 +2336,154 @@ namespace TradeLord.Tests
             Assert.True(TradeMath.RateTheMarkHolds(700f, false) > marked);
         }
 
+        private static (float x, float y) Heading(float degrees)
+        {
+            double r = degrees * Math.PI / 180d;
+            return ((float)-Math.Sin(r), (float)Math.Cos(r));
+        }
+
+        [Fact]
+        public void The_wind_on_the_map_is_read_the_way_War_Sails_reads_it_with_no_storm()
+        {
+            TradeMath.WindOnTheMap(0f, 0f, out float x, out float y);
+            Assert.Equal(0f, x);
+            Assert.Equal(1f / 15f, y, 6);
+            TradeMath.WindOnTheMap(0.01f, 0f, out x, out y);
+            Assert.Equal(1f / 15f, x, 6);
+            Assert.Equal(0f, y, 6);
+            TradeMath.WindOnTheMap(0f, -2f, out x, out y);
+            Assert.Equal(-0.46f, y, 6);
+            TradeMath.WindOnTheMap(0.18f, 0.24f, out x, out y);
+            Assert.Equal(0.18f, x, 5);
+            Assert.Equal(0.24f, y, 5);
+        }
+
+        [Fact]
+        public void A_wind_behind_the_ships_pushes_them_by_up_to_one_and_a_half_times_its_strength()
+        {
+            var (bx, by) = Heading(30f);
+            var (wx, wy) = Heading(30f);
+            Assert.Equal(0.46f * 1.5f, TradeMath.WindBehind(bx, by, wx * 0.46f, wy * 0.46f, out bool astern), 4);
+            Assert.True(astern);
+            var (sx, sy) = Heading(90f);
+            Assert.Equal(0.46f * 0.5f * 1.5f, TradeMath.WindBehind(bx, by, sx * 0.46f, sy * 0.46f, out astern), 4);
+            Assert.True(astern);
+            var (hx, hy) = Heading(150f);
+            Assert.Equal(0f, TradeMath.WindBehind(bx, by, hx * 0.46f, hy * 0.46f, out astern));
+            Assert.False(astern);
+            Assert.Equal(0f, TradeMath.WindBehind(bx, by, 0f, 0f, out astern));
+            Assert.False(astern);
+        }
+
+        [Fact]
+        public void The_angle_to_the_wind_is_not_wrapped_round_just_as_War_Sails_leaves_it()
+        {
+            var (bx, by) = Heading(170f);
+            var (wx, wy) = Heading(-170f);
+            Assert.Equal(0f, TradeMath.WindBehind(bx, by, wx * 0.3f, wy * 0.3f, out bool astern));
+            Assert.False(astern);
+            var (cx, cy) = Heading(-10f);
+            var (dx, dy) = Heading(10f);
+            Assert.True(TradeMath.WindBehind(cx, cy, dx * 0.3f, dy * 0.3f, out astern) > 0f);
+            Assert.True(astern);
+        }
+
+        [Fact]
+        public void Ships_sail_faster_with_the_wind_and_Fair_Winds_but_never_past_ten()
+        {
+            var pace = new TradeMath.Pace { Sea = 4f };
+            Assert.Equal(4f, pace.AtSea(0f, 0f));
+            Assert.Equal(6f, pace.AtSea(0.5f, 0f), 4);
+            pace.FairWinds = 0.1f;
+            Assert.Equal(6.4f, pace.AtSea(0.5f, 1f), 4);
+            Assert.Equal(6.2f, pace.AtSea(0.5f, 0.5f), 4);
+            Assert.Equal(10f, new TradeMath.Pace { Sea = 8f }.AtSea(0.69f, 0f), 4);
+            Assert.Equal(12f, new TradeMath.Pace { Sea = 12f }.AtSea(0.5f, 0f), 4);
+            Assert.Equal(0f, new TradeMath.Pace { Sea = 0f }.AtSea(0.5f, 0f));
+        }
+
+        [Fact]
+        public void Sea_stretches_joined_into_one_run_take_as_long_as_they_did_apart()
+        {
+            var runs = new List<TradeMath.Run>();
+            var push = new List<float>();
+            var fair = new List<float>();
+            TradeMath.AddRunOnTheWinds(runs, push, fair, Sea, 7, 3, 10f, 0f, 0f);
+            TradeMath.AddRunOnTheWinds(runs, push, fair, Sea, 7, 3, 10f, 1f, 1f);
+            Assert.Single(runs);
+            Assert.Equal(20f, runs[0].Length, 4);
+            Assert.Equal(1f / 3f, push[0], 4);
+            Assert.Equal(0.5f, fair[0], 4);
+            TradeMath.AddRunOnTheWinds(runs, push, fair, Sea, 8, 3, 5f, 0.2f, 1f);
+            Assert.Equal(2, runs.Count);
+            Assert.Equal(2, push.Count);
+            Assert.Equal(2, fair.Count);
+            Assert.Equal(0.2f, push[1], 4);
+            var land = new List<TradeMath.Run>();
+            var none = new List<float>();
+            var still = new List<float>();
+            TradeMath.AddRunOnTheWinds(land, none, still, Plain, 1, 2, 3f, 0.5f, 1f);
+            TradeMath.AddRunOnTheWinds(land, none, still, Plain, 1, 2, 4f, 0.5f, 1f);
+            TradeMath.AddRunOnTheWinds(land, none, still, Forest, 1, 2, 2f, 0.5f, 1f);
+            List<TradeMath.Run> plain = RoadOf((Plain, 1, 2, 3f), (Plain, 1, 2, 4f), (Forest, 1, 2, 2f));
+            Assert.Equal(plain.Count, land.Count);
+            for (int i = 0; i < plain.Count; i++)
+            {
+                Assert.Equal(plain[i].Length, land[i].Length);
+                Assert.Equal(plain[i].Ground, land[i].Ground);
+                Assert.Equal(0f, none[i]);
+                Assert.Equal(0f, still[i]);
+            }
+        }
+
+        [Fact]
+        public void A_sea_leg_with_the_wind_behind_takes_less_time_and_one_without_takes_what_it_did()
+        {
+            List<TradeMath.Run> road = RoadOf((Sea, 4, 0, 60f));
+            var pace = PaceOf(4f);
+            float calm = TradeMath.DaysAlong(road, pace, null, 3d, 2, 22, true, null);
+            Assert.Equal(calm, TradeMath.DaysAlong(road, pace, null, 3d, 2, 22, true, null, new[] { 0f }, new[] { 0f }));
+            float pushed = TradeMath.DaysAlong(road, pace, null, 3d, 2, 22, true, null, new[] { 0.5f }, new[] { 1f });
+            Assert.Equal(calm / 1.5f, pushed, 4);
+            pace.FairWinds = 0.1f;
+            Assert.Equal(calm / 1.6f, TradeMath.DaysAlong(road, pace, null, 3d, 2, 22, true, null, new[] { 0.5f }, new[] { 1f }), 4);
+            var even = TradeMath.Pace.AllAt(5f, 4f);
+            Assert.Equal(TradeMath.DaysAtSpeed(60f, 0f, 5f, 4f), TradeMath.DaysOnTheWinds(road, new[] { 0f }, new[] { 0f }, even), 5);
+            Assert.Equal(TradeMath.DaysAtSpeed(60f, 0f, 5f, 4f) / 1.5f,
+                         TradeMath.DaysOnTheWinds(road, new[] { 0.5f }, new[] { 0f }, even), 5);
+            List<TradeMath.Run> mixed = RoadOf((Plain, 1, 0, 50f), (Sea, 4, 0, 60f));
+            Assert.Equal(TradeMath.DaysAtSpeed(110f, 50f / 110f, 5f, 4f),
+                         TradeMath.DaysOnTheWinds(mixed, new[] { 0f, 0f }, new[] { 0f, 0f }, even), 4);
+        }
+
+        [Fact]
+        public void The_road_atlas_keeps_a_sea_road_with_its_winds()
+        {
+            var roads = new List<RoadAtlas.Road>
+            {
+                new RoadAtlas.Road
+                {
+                    From = "town_N1", To = "town_N4", FromX = 10f, FromY = 20f, ToX = 300f, ToY = 40f, Walked = true,
+                    Sea = true, Length = 250.5f,
+                    Runs = new List<TradeMath.Run>
+                    {
+                        new TradeMath.Run { Ground = Sea, Face = 901, Cell = 40, Length = 120.25f },
+                        new TradeMath.Run { Ground = Sea, Face = 905, Cell = 41, Length = 130.25f }
+                    },
+                    Push = new[] { 0.3125f, 0.0625f }, Fair = new[] { 1f, 0.25f }
+                }
+            };
+            RoadAtlas.Key key = AMap();
+            key.BarredAtSea = new[] { 2, 3 };
+            byte[] bytes = Written(key, roads);
+            Assert.True(RoadAtlas.Read(new System.IO.MemoryStream(bytes), key, out var back, out string why), why);
+            Assert.True(back[0].Sea);
+            Assert.Equal(new[] { 0.3125f, 0.0625f }, back[0].Push);
+            Assert.Equal(new[] { 1f, 0.25f }, back[0].Fair);
+            RoadAtlas.Key landOnly = AMap();
+            Assert.False(RoadAtlas.Read(new System.IO.MemoryStream(bytes), landOnly, out _, out _));
+        }
+
         private static RoadAtlas.Key AMap() => new RoadAtlas.Key
         {
             NavigationMesh = 3141592653u, Scene = 2718281828u, Grid = 128, CellWide = 4.5f, CellHigh = 3.25f,
