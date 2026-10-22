@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.105.4
+
+- When your party has less than a day of its own food, TradeLord now buys that one day of food even below your Gold reserve
+- The map marker now counts a market for less the thinner its purse is next to your sale, as that purse may run dry before you arrive
+- The hint for Restock and keep food (days of supply) now says only a missing day of food may go below your Gold reserve, in every language
+- TradeLord.log now says when a day of food is bought below your Gold reserve
+- TradeLord.log now says when the map marker counts a market for less because of its thin purse
+- TradeLord.log now names what the best other buyer would pay for the units each sale was weighed against, not just for the first unit
+
 ## 1.105.3
 
 - Fixed Count what is on its way to a market getting wrong how much of each good a caravan sells when it reaches a town

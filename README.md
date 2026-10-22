@@ -61,6 +61,7 @@
 - ✅ With Live world prices off, it weighs only the markets where you have seen a price for what you carry, at that price, and never reads their purse
 - ✅ With Count what is on its way to a market and Bulk price simulation on, it prices each market as it will be when you get there, the same way the ledger does
 - ✅ It leaves out the market TradeLord made its last trade at until you come back to it
+- ✅ A market whose purse is less than twice what you would sell there counts for less a day the thinner its purse, as that purse may run dry before you get there
 - ✅ The market already marked keeps its mark until it is a fifth past your travel ceiling, so a brief slow stretch of road does not flick the marker to another market and back
 - ✅ A marked market that drifts past even that keeps the mark one hour more, so one slow reading of the road cannot send the marker away and straight back
 - ✅ Another market takes the mark only once it has earned more on two weighings in different hours, so a caravan landing about when you would does not flick the marker back and forth
@@ -85,7 +86,7 @@
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
 - ✅ Tops your food back up to three days of supply, buying the cheapest food the market has at up to 1.5 times the cheapest price it knows of for it, or up to twice that price for one day of food when your party has under a day of its own
 - ✅ A food is never passed over for its price while it costs no more than twice its value in the game
-- ✅ When your party is down to less than a day of its own food, the food it buys may go past Max spend per visit, never past your gold reserve
+- ✅ When your party is down to less than a day of its own food, the food it buys may go past Max spend per visit, and that one day of food may go below your gold reserve
 - ✅ When your party is down to less than a day of its own food, a haul animal to carry more may go past Max spend per visit too
 - ✅ Food you bought to trade is counted last toward those days, so it sells where it pays once your own food fills them
 - ✅ Your party eats its own food before food bought to trade, while any of its own is left

@@ -2337,6 +2337,36 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_purse_is_trusted_in_full_once_it_holds_twice_the_sale()
+        {
+            Assert.Equal(1f, TradeMath.TrustInAPurse(243, 23311));
+            Assert.Equal(1f, TradeMath.TrustInAPurse(500, 1000));
+            Assert.Equal(270f / 456f, TradeMath.TrustInAPurse(228, 270), 4);
+            Assert.Equal(0.5f, TradeMath.TrustInAPurse(999, 999), 4);
+            Assert.Equal(1f, TradeMath.TrustInAPurse(0, 270));
+            Assert.Equal(1f, TradeMath.TrustInAPurse(228, 0));
+            Assert.Equal(1f, TradeMath.TrustInAPurse(228, int.MaxValue));
+        }
+
+        [Fact]
+        public void A_thin_purse_lets_a_market_with_a_deep_one_take_the_mark()
+        {
+            float thin = TradeMath.PerDay(198, 0.5f) * TradeMath.TrustInAPurse(228, 270);
+            float deep = TradeMath.PerDay(213, 0.55f) * TradeMath.TrustInAPurse(243, 23311);
+            Assert.True(TradeMath.PerDay(198, 0.5f) > TradeMath.PerDay(213, 0.55f));
+            Assert.True(deep > TradeMath.RateTheMarkHolds(thin, true));
+        }
+
+        [Fact]
+        public void A_rate_counted_down_for_a_thin_purse_is_read_back_at_what_the_sale_earns()
+        {
+            float trust = TradeMath.TrustInAPurse(228, 270);
+            Assert.Equal(396f, TradeMath.RateUntrusted(396f * trust, trust), 2);
+            Assert.Equal(396f, TradeMath.RateUntrusted(396f, 1f));
+            Assert.Equal(396f, TradeMath.RateUntrusted(396f, 0f));
+        }
+
+        [Fact]
         public void A_town_that_is_not_marked_is_weighed_at_what_it_pays()
         {
             Assert.Equal(500f, TradeMath.RateTheMarkHolds(500f, false));

@@ -242,6 +242,7 @@ namespace TradeLord
             internal long RunnerUpValue;
             internal long Cost;
             internal float Rate;
+            internal float Trust;
             internal float RunnerUpRate;
             internal float Days;
             internal float CeilingPassed;
@@ -273,6 +274,7 @@ namespace TradeLord
             internal long HolderValue;
             internal long HolderCost;
             internal float HolderRate;
+            internal float HolderTrust;
             internal float HolderDays;
             internal float HolderCeilingPassed;
             internal int HolderUnits;
@@ -364,6 +366,7 @@ namespace TradeLord
             how.Value = how.HolderValue;
             how.Cost = how.HolderCost;
             how.Rate = how.HolderRate;
+            how.Trust = how.HolderTrust;
             how.Days = how.HolderDays;
             how.CeilingPassed = how.HolderCeilingPassed;
             how.Units = how.HolderUnits;
@@ -488,7 +491,7 @@ namespace TradeLord
             _markedValue = target == null ? 0L : how.Value;
             _markedEarned = target == null ? 0L : how.Value - how.Cost;
             _markedUnits = how.Units;
-            _markedRate = how.Rate;
+            _markedRate = TradeMath.RateUntrusted(how.Rate, how.Trust);
             _markedDays = how.Days;
             _markedAt = Freshness.Hour;
         }
@@ -508,7 +511,7 @@ namespace TradeLord
             _outValue = target == null ? 0L : how.Value;
             _outEarned = target == null ? 0L : how.Value - how.Cost;
             _outUnits = how.Units;
-            _outRate = how.Rate;
+            _outRate = TradeMath.RateUntrusted(how.Rate, how.Trust);
             _outDays = how.Days;
             _outAt = Freshness.Hour;
         }
@@ -613,7 +616,7 @@ namespace TradeLord
                                ((TradeMath.TheMarkedTownHoldsBy - 1f) * 100f).ToString("0", CultureInfo.InvariantCulture) +
                                "% more the market already marked may go, so it keeps the mark for one hour only")
                        : "") +
-                   ", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how) +
+                   ", so " + how.Rate.ToString("0") + " gold a day" + TrustedLess(how) + TheNextBest(how) +
                    (how.Afresh != null && how.Unheld != null
                        ? ", marked afresh because " + how.Afresh.Name + ", left out while " + how.Unheld.Name +
                          " was marked, now earns more a day than it"
@@ -621,6 +624,14 @@ namespace TradeLord
         }
 
         private static string MarketKind(Settlement s) => s != null && s.IsVillage ? "village" : "town";
+
+        private static string TrustedLess(in Reckoning how)
+        {
+            if (!(how.Trust > 0f && how.Trust < 1f) || how.Purse <= 0 || how.Purse == PurseUnread) return "";
+            return ", counted at " + Scoring.Share(how.Trust) + " as the sale would take " +
+                   Scoring.Share(how.Value / (float)how.Purse) + " of that " + MarketKind(how.Best) +
+                   "'s purse, which may run dry before you get there";
+        }
 
         private static string TheNextBest(in Reckoning how)
         {
@@ -1033,7 +1044,7 @@ namespace TradeLord
             Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null, buyers);
             if (took.Value <= 0L) return 0f;
             long total = took.Value > one.gold ? one.gold : took.Value;
-            return TradeMath.PerDay(total - took.Cost, one.days);
+            return TradeMath.PerDay(total - took.Cost, one.days) * TradeMath.TrustInAPurse(total, one.gold);
         }
 
         private static Settlement OutEarnsTheMark(
@@ -1139,7 +1150,8 @@ namespace TradeLord
                 if (took.Value <= 0L) { how.Refused++; continue; }
                 long total = took.Value > gold ? gold : took.Value;
                 long earned = total - took.Cost;
-                float rate = TradeMath.PerDay(earned, ride);
+                float trust = TradeMath.TrustInAPurse(total, gold);
+                float rate = TradeMath.PerDay(earned, ride) * trust;
                 float weighed = TradeMath.RateTheMarkHolds(rate, s == holder);
                 if (s == holder)
                 {
@@ -1147,6 +1159,7 @@ namespace TradeLord
                     how.HolderValue = total;
                     how.HolderCost = took.Cost;
                     how.HolderRate = rate;
+                    how.HolderTrust = trust;
                     how.HolderDays = ride;
                     float flat = LedgerBehavior.TravelCeiling(s);
                     how.HolderCeilingPassed = flat > 0f && ride > flat ? flat : 0f;
@@ -1170,6 +1183,7 @@ namespace TradeLord
                         how.RunnerUpRate = how.Rate;
                     }
                     how.Rate = rate;
+                    how.Trust = trust;
                     how.Value = total;
                     how.Best = s;
                     how.Days = ride;
@@ -1251,7 +1265,8 @@ namespace TradeLord
                 how.HolderPastAllowance = true;
                 how.HolderValue = total;
                 how.HolderCost = took.Cost;
-                how.HolderRate = TradeMath.PerDay(total - took.Cost, ride);
+                how.HolderTrust = TradeMath.TrustInAPurse(total, purse);
+                how.HolderRate = TradeMath.PerDay(total - took.Cost, ride) * how.HolderTrust;
                 how.HolderDays = ride;
                 float flat = LedgerBehavior.TravelCeiling(holder);
                 how.HolderCeilingPassed = flat > 0f && ride > flat ? flat : 0f;

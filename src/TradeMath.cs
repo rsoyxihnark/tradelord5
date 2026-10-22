@@ -1119,6 +1119,18 @@ namespace TradeLord
 
         public const float TheMarkedTownHoldsBy = 1.2f;
 
+        public const float APurseIsTrustedInFullAtThisTimesTheSale = 2f;
+
+        public static float TrustInAPurse(long sale, int purse)
+        {
+            if (sale <= 0L || purse <= 0) return 1f;
+            double cover = purse / (APurseIsTrustedInFullAtThisTimesTheSale * (double)sale);
+            return cover >= 1d ? 1f : (float)cover;
+        }
+
+        public static float RateUntrusted(float rate, float trust) =>
+            trust > 0f && trust < 1f && !float.IsNaN(rate) ? rate / trust : rate;
+
         public static float RateTheMarkHolds(float rate, bool marked)
         {
             if (!marked || rate <= 0f || float.IsNaN(rate)) return rate;

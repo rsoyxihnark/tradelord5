@@ -631,7 +631,7 @@ namespace TradeLord.Mcm
         public bool EarnWorkshopsWithTrade { get => _o.EarnWorkshopsWithTrade; set { _o.EarnWorkshopsWithTrade = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL221}Restock and keep food (days of supply)", 0, 30, Order = 0, RequireRestart = false,
-            HintText = "{=TL321}Days of food kept from selling, trade food last, topped up cheapest first up to 1.5x the lowest price known (2x if short a day) or 2x its value. Never-buy holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3.")]
+            HintText = "{=TL321}Days of food kept from selling, trade food last, topped up cheapest first up to 1.5x the lowest price known (2x if short a day) or 2x its value. Never-buy holds; only a missing day may dip below your reserve. 0 turns both off. Default 3.")]
         [SettingPropertyGroup("{=TL103}Selling", GroupOrder = 6)]
         public int KeepFoodDays { get => _o.KeepFoodDays; set { _o.KeepFoodDays = value; Options.Bump(); } }
 

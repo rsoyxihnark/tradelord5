@@ -580,6 +580,8 @@ namespace TradeLord
             internal readonly Dictionary<ItemObject, (string where, int units, int there, int here)> Held =
                 new Dictionary<ItemObject, (string where, int units, int there, int here)>();
             internal readonly Dictionary<ItemObject, Buyer> Elsewhere = new Dictionary<ItemObject, Buyer>();
+            internal readonly Dictionary<ItemObject, (int units, long paid, int least, int most)> Weighed =
+                new Dictionary<ItemObject, (int units, long paid, int least, int most)>();
 
             internal bool DirectionError;
 
@@ -677,6 +679,8 @@ namespace TradeLord
             internal int SpendableToFeed(bool starving) => TradeActionBehavior.SpendableToFeed(Books, Sim, starving);
 
             internal bool WouldReachYourReserveToFeed(int price, bool starving) => price >= SpendableToFeed(starving);
+
+            internal bool WouldEmptyYourPurse(int price) => price > TradeActionBehavior.WholePurse(Books, Sim);
 
             internal float Capacity =>
                 (_capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity) + Books.CapacityAdded(Sim) -
@@ -856,7 +860,7 @@ namespace TradeLord
                         if (kv.Key != null && !Elsewhere.ContainsKey(kv.Key))
                             Elsewhere[kv.Key] = Marker.BestBuyersOf(new EquipmentElement(kv.Key), kv.Value.count)
                                                       .Besides(Site);
-                LogDetail(selling, Sim, Detail, Quoted, Aimed, Elsewhere, why);
+                LogDetail(selling, Sim, Detail, Quoted, Aimed, Elsewhere, Weighed, why);
             }
 
             internal List<string> HeldFor()
@@ -902,6 +906,8 @@ namespace TradeLord
 
         internal static int SpendableToFeed(Books books, bool sim, bool starving) =>
             starving ? PurseForTheirOffer(books, sim) : Spendable(books, sim);
+
+        internal static int WholePurse(Books books, bool sim) => Math.Max(0, Hero.MainHero.Gold + books.Purse(sim));
 
         internal static int PurseForAVisit()
         {
@@ -1563,19 +1569,30 @@ namespace TradeLord
             return ", meant for " + far.where + " at " + far.price + " a unit";
         }
 
-        private static string BestElsewhere(bool selling, Dictionary<ItemObject, Buyer> elsewhere, ItemObject item)
+        private static string BestElsewhere(bool selling, Dictionary<ItemObject, Buyer> elsewhere,
+                                            Dictionary<ItemObject, (int units, long paid, int least, int most)> weighed,
+                                            ItemObject item)
         {
             if (!selling || item == null || elsewhere == null || !elsewhere.TryGetValue(item, out Buyer other)) return "";
             if (other.Town == null) return "; no other market within your travel ceilings buys it";
-            return "; the best other buyer within your travel ceilings is " +
-                   Tongue.Named(other.Town.Name, other.Town.StringId) + " at " + other.First + " a unit, about " +
-                   Scoring.Figure(other.Days) + " day(s) away";
+            string named = Tongue.Named(other.Town.Name, other.Town.StringId);
+            string away = ", about " + Scoring.Figure(other.Days) + " day(s) away";
+            if (weighed == null || !weighed.TryGetValue(item, out var against) || against.units <= 0)
+                return "; the best other buyer within your travel ceilings is " + named + " at " + other.First +
+                       " for its first unit" + away;
+            return "; the best other buyer within your travel ceilings is " + named + ", which would pay " +
+                   Math.Round((double)against.paid / against.units) + " a unit on average for the " + against.units +
+                   " unit(s) weighed against it here (" +
+                   (against.least == against.most ? against.least.ToString() : against.least + " to " + against.most) +
+                   ", and " + other.First + " for its first unit)" + away;
         }
 
         private static void LogDetail(bool selling, bool sim, Dictionary<ItemObject, (int count, int gold)> detail,
                                       Dictionary<ItemObject, (int count, int gold)> quoted,
                                       Dictionary<ItemObject, (string where, int price)> aimed,
-                                      Dictionary<ItemObject, Buyer> elsewhere, string why)
+                                      Dictionary<ItemObject, Buyer> elsewhere,
+                                      Dictionary<ItemObject, (int units, long paid, int least, int most)> weighed,
+                                      string why)
         {
             var lines = new List<string>();
             foreach (var kv in detail)
@@ -1584,7 +1601,7 @@ namespace TradeLord
                           kv.Key.StringId + " for " + kv.Value.gold + (sim ? Counter.Aside : "") +
                           Quotation(quoted, kv.Key, kv.Value.gold) +
                           MeantFor(selling, aimed, kv.Key) +
-                          BestElsewhere(selling, elsewhere, kv.Key));
+                          BestElsewhere(selling, elsewhere, weighed, kv.Key));
                 LogAnimalMoved(lines, selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);
             }
             Log.WriteMany(lines);
@@ -1982,6 +1999,13 @@ namespace TradeLord
                 ItemObject item = Item(at);
                 if (item == null) return;
                 Settlement buyer = bestPays > 0 ? BuyerFor(at).Town : null;
+                if (buyer != null)
+                {
+                    _pass.Weighed.TryGetValue(item, out var was);
+                    _pass.Weighed[item] = (was.units + 1, was.paid + bestPays,
+                                           was.units == 0 ? bestPays : Math.Min(was.least, bestPays),
+                                           Math.Max(was.most, bestPays));
+                }
                 float margin = Options.Current.MinProfitMargin;
                 int waited = bought > 0f ? (int)Math.Floor(Today - bought) : -1;
                 int agedAfter = Options.Current.SellAtCostAfterDays;
@@ -2103,7 +2127,7 @@ namespace TradeLord
                 return;
             }
             string stopped = null, hungryStopped = null;
-            int pastTheCapUnits = 0, pastTheCapGold = 0;
+            int pastTheCapUnits = 0, pastTheCapGold = 0, belowTheReserveUnits = 0, belowTheReserveGold = 0;
 
             pass.CountFrom();
             InAPass(() =>
@@ -2128,13 +2152,20 @@ namespace TradeLord
                             stopped = "its price is above both 1.5 times the cheapest TradeLord knows and twice its value";
                             break;
                         }
-                        if (pass.WouldReachYourReserveToFeed(price, hungry))
+                        bool aDayShort = TradeMath.FoodShortOfADay(own + wanted - shortfall, TradePolicy.FoodForADay()) > 0;
+                        if (aDayShort && pass.WouldEmptyYourPurse(price))
+                        {
+                            stopped = "your purse cannot pay for it";
+                            break;
+                        }
+                        bool belowTheReserve = aDayShort && pass.WouldReachYourReserveToFeed(price, hungry);
+                        if (!aDayShort && pass.WouldReachYourReserveToFeed(price, hungry))
                         {
                             stopped = hungry ? "buying it would reach your gold reserve"
                                              : "buying it would reach your gold reserve or spending cap";
                             break;
                         }
-                        bool pastTheCap = hungry && pass.WouldReachYourReserve(price);
+                        bool pastTheCap = hungry && !belowTheReserve && pass.WouldReachYourReserve(price);
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None)
                         {
                             stopped = "your buying caps for it are reached";
@@ -2171,6 +2202,7 @@ namespace TradeLord
                         held++;
                         pass.Tally(item, 1, price);
                         if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }
+                        if (belowTheReserve) { belowTheReserveUnits++; belowTheReserveGold += price; }
                     }
                 }
 
@@ -2200,11 +2232,12 @@ namespace TradeLord
                             hungryStopped = "its price is above both twice the cheapest TradeLord knows and twice its value";
                             break;
                         }
-                        if (pass.WouldReachYourReserveToFeed(price, hungry))
+                        if (pass.WouldEmptyYourPurse(price))
                         {
-                            hungryStopped = "buying it would reach your gold reserve";
+                            hungryStopped = "your purse cannot pay for it";
                             break;
                         }
+                        bool belowTheReserve = pass.WouldReachYourReserveToFeed(price, hungry);
                         if (WhatCapsAGood(good, price, (countThis, spentThis), held, shareCap) != Block.None)
                         {
                             hungryStopped = "your buying caps for it are reached";
@@ -2218,7 +2251,7 @@ namespace TradeLord
                                 firstLeft = (el, good, fed, ceiling, remaining, (countThis, spentThis), held);
                             break;
                         }
-                        bool pastTheCap = hungry && pass.WouldReachYourReserve(price);
+                        bool pastTheCap = hungry && !belowTheReserve && pass.WouldReachYourReserve(price);
 
                         if (pass.Sim)
                         {
@@ -2245,6 +2278,7 @@ namespace TradeLord
                         hungryGold += price;
                         pass.Tally(item, 1, price);
                         if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }
+                        if (belowTheReserve) { belowTheReserveUnits++; belowTheReserveGold += price; }
                     }
                 }
                 if (hungryUnits > 0)
@@ -2262,7 +2296,7 @@ namespace TradeLord
                     Log.Repeatable("resupply hungry", settlement.StringId,
                                    "resupply: your party has less than a day of its own food, and none is on sale at " +
                                    settlement.Name + " at up to twice the cheapest price TradeLord knows or twice its " +
-                                   "value, within your gold reserve, your buying caps and your cargo room" +
+                                   "value, within what your purse can pay, your buying caps and your cargo room" +
                                    (missed == null ? "" : ": the cheapest on sale is " + missed));
                 }
             });
@@ -2272,6 +2306,11 @@ namespace TradeLord
                           "your party had less than a day of its own food, so " + pastTheCapUnits + " item(s) for " +
                           pastTheCapGold + " gold were bought past Max spend per visit at " + settlement.Name +
                           ", still within your gold reserve");
+            if (belowTheReserveUnits > 0)
+                Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") +
+                          "your party had less than a day of its own food, so " + belowTheReserveUnits + " item(s) for " +
+                          belowTheReserveGold + " gold of that one day of food were bought below your gold reserve at " +
+                          settlement.Name);
             if (shortfall > 0 && firstLeft.HasValue && !pass.DirectionError)
             {
                 var left = firstLeft.Value;
