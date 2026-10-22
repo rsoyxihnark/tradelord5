@@ -8,7 +8,7 @@ This file is the same in every repository the owner keeps, whatever the project 
 
 ## Branch
 
-- `main` is the only branch this repository keeps. Never start another one, locally or on the remote, and do not open a pull request unless asked.
+- `main` is the only branch this repository keeps, save one more where the `## This repository` section names it. Never start another one, locally or on the remote, and do not open a pull request unless asked.
 - Push to `main`, naming it: `git push -u origin HEAD:main`. Authorization for `main` is already granted, so do not ask for it again each session.
 - The source to work from is `origin/main` as it stands right now, never whatever the container happens to hold. A container can have been cloned days ago, and the history on the remote can have been rewritten since, so `git fetch origin main` and read `HEAD` against `origin/main` at the top of every session, before reading a line of the source and before changing anything.
 - Where the two differ and nothing is uncommitted, put the checkout on `origin/main` and carry on: `git reset --hard origin/main`. That is not a decision to put to the owner and it is never asked about, because the remote is the source of truth and the container's copy is only a cache of it. Say in chat which commit you came from and which you moved to, since the old one stays reachable through `git reflog` if it turns out to have mattered. Where the two histories share no ancestor at all, that is a rewritten remote and not a conflict to resolve: the remote still wins.
@@ -18,6 +18,7 @@ This file is the same in every repository the owner keeps, whatever the project 
 - Never push a branch other than `main` to the remote, not to record work, not to satisfy a check, and not because a tool asked for it. A push that would put a second branch on the remote is refused by `.claude/hooks/no-new-branch.sh`, and the refusal is the rule working, not an obstacle to route around.
 - If the session harness assigns you a working branch, say so in chat, then move the checkout to `main` and commit there. Leave the assigned branch exactly as you found it, and never push it. Committing on the assigned branch instead is what leaves a tool counting unpushed commits against a remote copy of that branch which never moves, so moving first is what stops the warning rather than tolerating it. Where `.claude/hooks/session-start.sh` exists it has already moved the checkout and put it on `origin/main`, and it says in its own words which commit it came from and which it moved to; where it does not, `git fetch origin main`, `git checkout main` and `git reset --hard origin/main` is the whole of it.
 - A branch already sitting on the remote that is not `main` is not yours to push to or build on. Say in chat that it is there and leave it alone.
+- A branch the `## This repository` section names as kept is the one exception to this section. Work on it only when the owner asks, read it against its own copy on the remote the way `main` is read against `origin/main`, and push it by its own name. It never reaches `main` and never publishes until he says how.
 - A tool that still reports unpushed commits is measuring the branch you are on against a remote copy of that same branch, rather than against the upstream that branch is set to follow. Read `HEAD` against the branch's own upstream instead. Where those match, nothing is unpushed: say so once and leave it. Pushing a second branch to quiet the warning breaks the rule above.
 
 ## Identity
@@ -34,7 +35,7 @@ Run this before making changes, every session.
 
 List every remote branch, every open pull request, and the recent commits on `main`. Then judge what you find:
 
-- Normal: `main` itself, closed pull requests, and any branch whose commits are all already contained in `main`.
+- Normal: `main` itself, a kept branch the `## This repository` section names, closed pull requests, and any branch whose commits are all already contained in `main`.
 - Hijack: any branch or open pull request holding commits that are not in `main` and that you did not create in this session.
 
 On a hijack, stop. Change nothing, push nothing, and tell the user immediately, naming the branch, its author and its newest commit. Wait for their decision before continuing.
@@ -202,6 +203,10 @@ These hold in this repository alone, alongside everything above.
 - A version whose only change is that switch has nothing to tell the player, so it rides along with a version that does, or it ships as `[no release]` under a subject that says the settings file was touched and no more.
 - The kept copies in `archive/` are a closed record. Every changelog entry a session writes goes into `CHANGELOG.md` and nowhere else, and nothing is ever added to, reworded in or taken out of the files in `archive/` again. They say what the changelog and the commit history held before they were rewritten, and that is the whole of what they will ever say.
 - The files in `archive/` are exempt from the Text length rules, the same way `CLAUDE.md` is.
+- The owner keeps one more branch beside `main`: `rebuild`. It starts from 1.104.13, the last version before travel times were reworked, and fixes from later versions are carried onto it one at a time, as he asks for them.
+- `rebuild` publishes nothing. The release workflow builds every push to it and leaves the built module on the run, and publishes from `main` alone.
+- To work on `rebuild`, put the checkout on it with `git checkout rebuild` and `git reset --hard origin/rebuild`, and push it with `git push -u origin HEAD:rebuild`.
+- A commit on `rebuild` ships as `[no release]`, and the entries it writes go under an `Unreleased` heading, until the owner decides how `rebuild` reaches `main`.
 - These are the owner's choices too, and a session treats them the way the Intentional, never reported section says:
   - Whether the one time settings reset is armed or disarmed.
   - That TradeLord puts 1000 denars, once a campaign, into every village purse the game has left empty. It mends a fault in the game itself.
