@@ -85,21 +85,22 @@
 - ✅ Leaving a market and walking straight back in counts as the same visit, so it never buys back what it has just sold you there, and your spending cap for the visit lasts the whole of it
 - ✅ Tops your food back up to three days of supply, buying the cheapest food the market has at up to 1.5 times the cheapest price it knows of for it, or up to twice that price for one day of food when your party has under a day of its own
 - ✅ A food is never passed over for its price while it costs no more than twice its value in the game
-- ✅ When your party is down to less than a day of its own food, the food it buys may go past Max spend per visit, never past your gold reserve
-- ✅ When all the food your party carries, food bought to trade included, is down to less than a day, a haul animal to carry more may go past Max spend per visit too
+- ✅ When your party is down to less than a day of its own food, the food it buys may go past Max spend per visit, and that one day of food may go below your gold reserve
+- ✅ When your party is down to less than a day of its own food, a haul animal to carry more may go past Max spend per visit too
 - ✅ Food you bought to trade is counted last toward those days, so it sells where it pays once your own food fills them
 - ✅ Your party eats its own food before food bought to trade, while any of its own is left
 - ✅ Food Staged Trading lays out on the trade screen to sell on counts as food bought to trade, never as your party's own
 - ✅ The larder is filled after it has traded for profit, so your gold and your cargo room go to the goods you came to trade first
+- ✅ When your party is down to less than a day of its own food, a day of food is bought before any trade good
 - ✅ Buys and sells livestock as ordinary goods, checking the game's own herding penalty against the men in your party first, so cattle never slow you down
 - ✅ A herd is never counted as food: it is not held back towards your days of supply, and it is never bought to restock them
 - ✅ Buys any haul animal, a Mule, a Sumpter Horse, a Work Horse, a Saddle Horse or a Pack Camel, paying up to a quarter more than the cheapest price it knows of for one, which you can set anywhere from the cheapest to three times it
 - ✅ It buys them only when your cargo is full and leaves behind goods worth buying or the food Restock and keep food (days of supply) asks for, only as many as the gold left after them can fill, and then buys what now fits
 - ✅ Haul animals are bought only once what you never bought and what you bought have sold, so none is bought for goods that would fit once those are gone
 - ✅ It buys no haul animal for goods that would fill less than half of one, unless those goods would make more than the animal costs
-- ✅ It buys one for food only when the food would fill at least half of it, or when your party is down to its last day of food
+- ✅ It buys one for food only when the food would fill at least half of it, or when your party is down to its last day of its own food
 - ✅ It buys none while your cargo is already fuller than Share of the hold TradeLord may fill allows, since the first animals would only carry what you already have
-- ✅ It never buys one that would leave your purse at 2000 denars or less, which you can set too, so early gold goes on goods instead, unless your party is down to less than a day of food
+- ✅ It never buys one that would leave your purse at 2000 denars or less, which you can set too, so early gold goes on goods instead, unless your party is down to less than a day of its own food
 - ✅ It buys no riding horses or camels at all, and it stops before your gold reaches your reserve
 - ✅ It never buys an animal that would push your party into the herd speed penalty, and a horse one of your unmounted men can ride does not count against that, because he rides it rather than driving it
 - ✅ Gets you out of the herd speed penalty by selling animals, and only as many as it takes to get out of it, never one you bought by hand in that town on the same visit

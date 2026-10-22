@@ -326,6 +326,9 @@ namespace TradeLord
             return traded + (books?.TradeFoodBought(sim) ?? 0);
         }
 
+        internal static int OwnFoodHeld(ItemRoster roster, Books books, bool sim) =>
+            FoodHeld(roster) + books.FoodHeld(sim) - FoodBoughtToTrade(roster, books, sim);
+
         internal static int FoodForADay() => (int)Math.Ceiling(AppetitePerDay());
 
         internal static int FoodWanted()
