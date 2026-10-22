@@ -256,8 +256,8 @@ namespace TradeLord
                 if (bound == null || !bound.IsTown) continue;
                 ItemRoster carried = party.ItemRoster;
                 if (carried == null) continue;
-                float days = TradeMath.EtaDays(
-                    party.GetPosition2D.Distance(bound.GetPosition2D), party.Speed);
+                float days = Travel.CaravanDays(party, bound, out _);
+                RideCheck.Saw(party, bound, days);
                 if (caravan)
                 {
                     Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days));

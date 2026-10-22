@@ -17,7 +17,7 @@ S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Drove.cs', 'Marker.cs', 'Notices.cs', 'Passes.cs', 'Ranking.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
       'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
       'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs', 'Projection.cs', 'Hindsight.cs',
-      'Scoring.cs', 'Counter.cs', 'Workshops.cs']}
+      'Scoring.cs', 'Counter.cs', 'Workshops.cs', 'Nightfall.cs', 'RideCheck.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -1846,14 +1846,24 @@ chk("1.81.11", "a caravan is counted as leaving only what the game's own caravan
     a_caravan_leaves_what_the_town_will_take_and_a_villager_leaves_the_lot())
 
 chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has moved",
-    "float days = Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs);" in
+    "float hours = (landLeg / landSpeed + seaLeg / seaSpeed) * HoursAPartyTakesToCoverItsSpeed;" in
+    method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
+    "float days = Finite(hours / 24f, FurthestThereIs);" in
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
     "return OutOfReach(days) ? FurthestThereIs : days;" in
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
-    "return TradeMath.DaysAtSpeed(distance, landRatio, land, sea);" in
-    method_body(S['Travel.cs'], "internal static float Days") and
+    "float seaHours = distance * (1f - landRatio) / seaSpeed * HoursAPartyTakesToCoverItsSpeed;" in
+    method_body(S['TradeMath.cs'], "public static float DaysOnTheClock") and
+    "return TradeMath.DaysOnTheClock(distance, landRatio, _landSpeed, _nightPace, _seaSpeed, start," in
+    method_body(S['Travel.cs'], "private static float Days(float distance, float landRatio, float afterDays") and
     "if (hour != _partyHour || at.DistanceSquared(_partyAt) > 100f)" in
     method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty"))
+chk("1.104.18", "a ride, the quick estimate of one and a caravan's ride are each timed at the 1.2 hours the game's clock runs while it moves a party as far as its speed",
+    "public const float HoursAPartyTakesToCoverItsSpeed = 1.2f;" in S['TradeMath.cs'] and
+    "* HoursAPartyTakesToCoverItsSpeed;" in method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
+    "* HoursAPartyTakesToCoverItsSpeed;" in method_body(S['TradeMath.cs'], "public static float DaysAtBestSpeed") and
+    "* HoursAPartyTakesToCoverItsSpeed / 24f" in method_body(S['TradeMath.cs'], "public static float EtaDays") and
+    "A_party_rides_twenty_times_its_speed_in_a_game_day" in MATHTESTS)
 chk("1.3.11", "the panel hands back the movie and the mouse, and honours the modifier keys",
     "layer.ReleaseMovie(movie)" in method_body(S['Panel.cs'], "internal static void Cleanup") and
     "TakeTheMouse(false);" in method_body(S['Panel.cs'], "private static void ApplyIdleInput") and
@@ -2059,11 +2069,17 @@ chk("1.3.27", "both shipped assemblies compile with warnings as errors",
     all("<TreatWarningsAsErrors>true</TreatWarningsAsErrors>" in p for p in PROJ))
 
 chk("1.3.28", "both travel estimates take their speeds from one definition",
-    S['Travel.cs'].count("MobileParty.MainParty.Speed") == 1 and
+    S['Travel.cs'].count("MobileParty.MainParty.Speed") == 0 and
+    S['Travel.cs'].count("float now = party.Speed;") == 2 and
+    "float now = party.Speed;" in method_body(S['Travel.cs'], "private static void Refresh") and
+    "float now = party.Speed;" in method_body(S['Travel.cs'], "internal static float CaravanDays") and
     S['Travel.cs'].count("TradeMath.SpeedsInEffect(") == 1 and
+    "TradeMath.SpeedsInEffect(byDay, SeaSpeed(), out _landSpeed, out _seaSpeed);" in
+    method_body(S['Travel.cs'], "private static void Refresh") and
     S['TradeMath.cs'].count("land = partySpeed <= StandingStill ? WalkingPace : partySpeed;") == 1 and
     S['TradeMath.cs'].count("sea = fleetSpeed <= StandingStill ? land : fleetSpeed;") == 1 and
-    "Speeds(out float land, out float sea);" in method_body(S['Travel.cs'], "internal static float Days") and
+    "Refresh();" in method_body(S['Travel.cs'], "private static float Days(float distance, float landRatio, float afterDays") and
+    "Refresh();" in method_body(S['Travel.cs'], "private static void Speeds") and
     "Speeds(out float land, out float sea);" in method_body(S['Travel.cs'], "private static float StraightDays"))
 
 chk("1.3.29", "one buy-side margin rule, for the planner and the executor alike",
@@ -2166,10 +2182,11 @@ chk("1.3.34", "one naval gate for both map-distance calls",
 chk("1.3.34", "both travel caches hold geometry and re-time it at the current speed",
     "return Days(hit.dist, hit.landRatio);" in
     method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty") and
-    "return Days(hit.dist, hit.landRatio);" in
+    "return Days(hit.dist, hit.landRatio, afterDays, false, out _);" in
     method_body(S['Travel.cs'], "internal static float EstimateDaysBetween"))
 chk("1.11.1", "one naval invalidation rule, read by every travel estimate it feeds",
-    S['Travel.cs'].count("DropIfNavalChanged();") == 3 and
+    S['Travel.cs'].count("DropIfNavalChanged();") == 4 and
+    "DropIfNavalChanged();" in method_body(S['Travel.cs'], "internal static Ride TheRideFromParty") and
     "DropIfNavalChanged();" in method_body(S['Travel.cs'], "internal static float EstimateDaysFromParty") and
     "DropIfNavalChanged();" in method_body(S['Travel.cs'], "internal static float EstimateDaysBetween") and
     "DropIfNavalChanged();" in method_body(S['Travel.cs'], "private static float StraightDays") and
@@ -2527,14 +2544,18 @@ def csharp_comment_spans(src):
         if src.startswith("//", i):
             j = src.find("\n", i)
             j = n if j < 0 else j
-            out.append(line); i = j; continue
+            if not a_run_lesson(src[i + 2:j]): out.append(line)
+            i = j; continue
         if src.startswith("/*", i):
             j = src.find("*/", i + 2)
             j = n if j < 0 else j + 2
-            out.append(line)
+            if not a_run_lesson(src[i + 2:j]): out.append(line)
             line += src.count("\n", i, j); i = j; continue
         i += 1
     return out
+
+def a_run_lesson(said):
+    return said.lstrip().startswith("Valuable-Run-Lesson:")
 
 def csharp_texts(src, lists=()):
     out, calls, i, n, name, dot = [], [], 0, len(src), '', False
@@ -2632,7 +2653,7 @@ def no_tracked_source_carries_a_comment():
             try:
                 with io.open(name, "rb") as fh:
                     found += [(name, t.start[0]) for t in tokenize.tokenize(fh.readline)
-                              if t.type == tokenize.COMMENT]
+                              if t.type == tokenize.COMMENT and not a_run_lesson(t.string[1:])]
             except (tokenize.TokenError, IndentationError, SyntaxError):
                 return False
         elif name.endswith((".xml", ".csproj")):
@@ -2643,8 +2664,19 @@ def no_tracked_source_carries_a_comment():
                       if line.strip().startswith("#") and not line.strip().startswith("#!")]
     return found == []
 
-chk("1.5.4", "the source carries no comments",
+chk("1.5.4", "the source carries no comments, a note starting Valuable-Run-Lesson: aside",
     no_tracked_source_carries_a_comment())
+
+def only_a_run_lesson_is_let_through():
+    plain = "class A\n{\n    // a comment\n    int x;\n}\n"
+    noted = "class A\n{\n    // Valuable-Run-Lesson: seen in a run\n    int x;\n}\n"
+    both = "class A\n{\n    /* Valuable-Run-Lesson: seen in a run */\n    /* a comment */\n}\n"
+    late = "class A\n{\n    // a comment, Valuable-Run-Lesson: seen in a run\n}\n"
+    return (csharp_comment_spans(plain) == [3] and csharp_comment_spans(noted) == []
+            and csharp_comment_spans(both) == [4] and csharp_comment_spans(late) == [3])
+
+chk("1.104.18", "a comment in the source is still caught, and only a note that starts Valuable-Run-Lesson: goes through",
+    only_a_run_lesson_is_let_through())
 
 chk("1.5.5", "simulation mode mutates no per-visit state",
     between(sell_pass(),
@@ -3537,8 +3569,9 @@ def a_tie_between_reasons_is_broken_the_same_way_every_time():
             "x.Key.CompareTo(y.Key)" in summary)
 
 def the_party_speeds_are_read_once_an_hour():
-    body = method_body(S['Travel.cs'], "private static void Speeds")
-    return ("if (hour == _speedHour) { land = _landSpeed; sea = _seaSpeed; return; }" in body and
+    body = method_body(S['Travel.cs'], "private static void Refresh")
+    return ("if (hour == _speedHour) return;" in body and
+            "Refresh();" in method_body(S['Travel.cs'], "private static void Speeds") and
             "_speedHour = -1;" in method_body(S['Travel.cs'], "internal static void Forget") and
             "_speedHour = -1;" in method_body(S['Travel.cs'], "private static void DropIfNavalChanged"))
 
@@ -7533,7 +7566,7 @@ def a_caravan_already_in_the_market_is_not_counted_twice():
                     "if (!caravan && !party.IsVillager) continue;",
                     "if (party.CurrentSettlement != null) continue;",
                     "Settlement bound = party.TargetSettlement;",
-                    "TradeMath.EtaDays(",
+                    "float days = Travel.CaravanDays(party, bound, out _);",
                     "if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;")
             and "CurrentSettlement" not in method_body(
                     S['Forecast.cs'], "private static void ReadWhatTheShopsWillMake"))
@@ -8404,9 +8437,9 @@ def no_travel_or_price_rule_hands_back_a_number_that_is_not_one():
     return ("public const float FurthestThereIs = float.MaxValue;" in t
             and "public static float Finite(float value, float ifNot) =>" in t
             and "float.IsNaN(value) || float.IsInfinity(value) ? ifNot : value;" in t
-            and "Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs)" in t
-            and "Finite(distance / (Math.Max(landSpeed, seaSpeed) * 24f), FurthestThereIs)" in t
-            and "Finite(distance / (pace * 24f), FurthestThereIs)" in t
+            and "float days = Finite(hours / 24f, FurthestThereIs);" in method_body(t, "public static float DaysAtSpeed")
+            and "float days = Finite(hours / 24f, FurthestThereIs);" in method_body(t, "public static float DaysAtBestSpeed")
+            and "Finite(distance / pace * HoursAPartyTakesToCoverItsSpeed / 24f, FurthestThereIs)" in t
             and "days = Finite(days, 0f);" in method_body(t, "public static float ToTheQuarterDay")
             and "float progress = TradeMath.Finite(line.Progress, 0f);" in method_body(S['Projection.cs'], "internal static void Follow")
             and "if (double.IsNaN(daysSinceTheLastRun) || daysSinceTheLastRun < 0d ||" in method_body(t, "public static float NextDailyTickIn")
@@ -10164,7 +10197,7 @@ def the_ceiling_and_the_quote_read_one_forecast_at_one_arrival():
             and ordered(scan,
                         "int landedAtBuyTown = Forecast.WorthShiftAsItHasHeld(from, item, toBuy);",
                         "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown)",
-                        "float days = toBuy + Travel.EstimateDaysBetween(from, to);",
+                        "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);",
                         "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);",
                         "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown)",
                         "float ceiling =",
@@ -19883,6 +19916,141 @@ def a_hungry_party_buys_its_day_of_food_before_any_trade_good():
 
 chk("1.105.3", "a party down to less than a day of its own food buys a day of food before any trade good, on arrival and with Trade here now, and the rest of its days after trading as before",
     a_hungry_party_buys_its_day_of_food_before_any_trade_good())
+
+def a_ride_is_timed_on_the_game_s_own_clock():
+    m = S['TradeMath.cs']
+    clock = method_body(m, "public static float HoursOnTheClock")
+    days = method_body(S['Travel.cs'], "private static float Days(float distance, float landRatio, float afterDays")
+    return (clock
+            and "bool day = hour >= sunRise && hour < sunSet;" in clock
+            and "float rate = day ? 1f : pace;" in clock
+            and "if (!day) nightHours += spent;" in clock
+            and ordered(clock, "float clock = seaFirst ? sea : 0f;", "if (!seaFirst) clock += sea;")
+            and "HoursOnTheClock(startHourOfDay, landHours, seaHours, nightPace, sunRise, sunSet," in
+                method_body(m, "public static float DaysOnTheClock")
+            and "CampaignTime.SunRise, CampaignTime.SunSet, seaFirst, out nightHours);" in days
+            and "float start = CampaignTime.Now.CurrentHourInDay + later * 24f;" in days
+            and "Days(distance, landRatio, 0f, SetOffAtSea(), out _);" in S['Travel.cs']
+            and "A_ride_into_the_night_counts_its_night_hours_at_the_night_pace" in MATHTESTS
+            and "A_ride_of_many_days_comes_out_the_same_as_one_walked_an_instant_at_a_time" in MATHTESTS
+            and "A_sea_leg_is_never_slowed_by_the_night_and_keeps_its_place_in_the_ride" in MATHTESTS
+            and "A_ride_with_no_slower_night_is_timed_exactly_as_before_the_clock" in MATHTESTS)
+
+
+chk("2.0.3", "a ride is timed on the game's own clock, its hours by day at the day pace and its hours between the game's sunset and sunrise at the night pace, with a sea leg never slowed by the night",
+    a_ride_is_timed_on_the_game_s_own_clock())
+
+
+def the_night_pace_is_read_from_the_game_never_put_together_from_perks():
+    travel, night = S['Travel.cs'], S['Nightfall.cs']
+    pace = method_body(travel, "private static float PaceAtNightCore")
+    party = method_body(night, "private static void ReadTheParty")
+    return (all(word not in travel + night
+                for word in ("DefaultPerks", "NightRunner", "DayTraveler", "GetLines", "_night\"", "BindingFlags",
+                             "PerkHelper"))
+            and "ExplainedNumber speed = model.CalculateFinalSpeed(party, model.CalculateBaseSpeed(party));" in pace
+            and "Nightfall.PartyStep, Campaign.Current.IsNight);" in pace
+            and "float step = why == null ? TradeMath.NightStepFrom(_party.Speed, after, speed.SumOfFactors, nightFell) : float.NaN;" in party
+            and ordered(party, "if (!_party.Held)", "else if (main.CurrentNavigationFace.FaceIndex != _party.Face)",
+                        "else if (WeatherAt(main) != _party.Weather)", "PartyStep = step;")
+            and ordered(method_body(night, "internal static void Tick"),
+                        "if (_wasNight.HasValue && night != _wasNight.Value)",
+                        'Guard.Run("Nightfall.Party", () => ReadTheParty(night));',
+                        "Travel.ReadThePaceAgain();", "_wasNight = night;", "if (NearlyTurning(hour))")
+            and "public const float UsualNightStep = -0.25f;" in S['TradeMath.cs']
+            and "The_night_step_is_read_from_the_pace_the_game_gives_either_side_of_the_turn" in MATHTESTS
+            and "The_night_pace_comes_from_the_game_s_own_speed_and_the_night_step_it_was_seen_to_take" in MATHTESTS)
+
+
+chk("2.0.3", "your party's pace at night is worked out from the game's own speed and the night step the game was seen to take at nightfall and daybreak, never put together from perks or line names",
+    the_night_pace_is_read_from_the_game_never_put_together_from_perks())
+
+
+def caravans_are_timed_on_the_same_clock():
+    days = method_body(S['Travel.cs'], "internal static float CaravanDays")
+    caravans = method_body(S['Nightfall.cs'], "private static void ReadTheCaravans")
+    return (ordered(days, "if (AtSea(party)) return TradeMath.EtaDays(distance, now);",
+                    "float pace = TradeMath.NightPaceKept(Nightfall.CaravanPace);",
+                    "float byDay = Campaign.Current.IsNight ? now / pace : now;",
+                    "return TradeMath.EtaOnTheClock(distance, byDay, pace, CampaignTime.Now.CurrentHourInDay,")
+            and "kept.Add(nightFell ? after / before : before / after);" in caravans
+            and "float middle = TradeMath.Quantile(kept, 0.5f);" in caravans
+            and "CaravanPace = TradeMath.NightPaceKept(middle);" in caravans
+            and "float days = Travel.CaravanDays(party, bound, out _);" in
+                method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
+            and "TradeMath.EtaDays(" not in method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad"))
+
+
+chk("2.0.3", "caravans and villagers on their way are timed on the same clock as your party, at 1.2 hours to their Speed, their night pace read from caravans and villagers on land at nightfall and daybreak",
+    caravans_are_timed_on_the_same_clock())
+
+
+def no_night_shuts_out_a_market_the_full_time_lets_in():
+    refresh = method_body(S['Travel.cs'], "private static void Refresh")
+    return ("bool slowedNow = Campaign.Current.IsNight && !AtSea(party);" in refresh
+            and "float byDay = slowedNow ? now / _nightPace : now;" in refresh
+            and "return TradeMath.DaysAtBestSpeed(distance, land, sea);" in method_body(S['Travel.cs'], "private static float StraightDays")
+            and "Assert.True(TradeMath.DaysAtBestSpeed(100f, 5f, 5f) <= clocked);" in MATHTESTS
+            and "float soonest = toBuy + Travel.StraightDaysBetween(from, to);" in S['Ledger.cs']
+            and "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);" in S['Ledger.cs'])
+
+
+chk("2.0.3", "the quick bound a market has to pass is timed at the day pace, so a ride at night never shuts out a market its full time lets in, and the ride from Buy From to Sell At counts its nights from when you reach Buy From",
+    no_night_shuts_out_a_market_the_full_time_lets_in())
+
+
+def the_travel_ceilings_ship_wider_by_the_time_rides_really_take():
+    said = {path: spoken(path) for path in [ENGLISH] + list(TRANSLATIONS.values())}
+    return ("public float MaxTravelDaysTown = 3f;" in S['Options.cs']
+            and "public float MaxTravelDaysVillage = 1.3f;" in S['Options.cs']
+            and all(words['TL306'].rstrip('.\u3002').endswith('3.0') for words in said.values())
+            and all(words['TL307'].rstrip('.\u3002').endswith('1.3') for words in said.values()))
+
+
+chk("2.0.3", "the Town travel ceiling ships at 3.0 days and the Village travel ceiling at 1.3, so with rides timed as long as they take as many markets are in reach as before, and every language says so",
+    the_travel_ceilings_ship_wider_by_the_time_rides_really_take())
+
+
+def every_ride_is_judged_in_the_log_against_what_tradelord_said():
+    ride = S['RideCheck.cs']
+    tick = method_body(ride, "internal static void Tick")
+    reached = method_body(ride, "private static void Reached")
+    return ("starter.AddBehavior(new RideWatchBehavior());" in S['SubModule.cs']
+            and 'Guard.Run("GameEnd.Nightfall", Nightfall.Forget);' in S['SubModule.cs']
+            and 'Guard.Run("GameEnd.RideCheck", RideCheck.Forget);' in S['SubModule.cs']
+            and "CampaignEvents.TickEvent.AddNonSerializedListener(this, OnTick);" in ride
+            and "CampaignEvents.SettlementEntered.AddNonSerializedListener(this, OnSettlementEntered);" in ride
+            and "CampaignEvents.DailyTickEvent.AddNonSerializedListener(this, OnDailyTick);" in ride
+            and "if (!Writing || party == null)" in tick
+            and "_ride.Moved += party.Speed * dt;" in tick
+            and "if (Campaign.Current.IsNight && !party.IsCurrentlyAtSea) _ride.NightMoving += step;" in tick
+            and "Travel.Ride said = Travel.TheRideFromParty(to);" in method_body(ride, "private static void SetOff")
+            and ordered(reached, "float off = TradeMath.RideOffBy(_ride.SaidHours, moving);",
+                        '"  night: TradeLord counted "', '"  road: TradeLord put the road at "',
+                        '"  ceiling: "', '"  this session: "', "Log.WriteMany(lines);")
+            and "RideCheck.Saw(party, bound, days);" in S['Forecast.cs']
+            and '"caravan ride check over the last day: "' in method_body(ride, "internal static void SayTheCaravans")
+            and "A_ride_check_weighs_the_time_taken_against_the_time_said" in MATHTESTS)
+
+
+chk("2.0.3", "with Enable extended debug logging on, TradeLord.log judges every ride you set off on, and every day the rides of caravans and villagers, against the time TradeLord said, its nights, its road and the travel ceilings",
+    every_ride_is_judged_in_the_log_against_what_tradelord_said())
+
+
+def the_log_says_what_the_game_did_at_every_nightfall_and_daybreak():
+    night = S['Nightfall.cs']
+    clock = method_body(night, "private static void WatchTheClock")
+    return ('"night check at " + turn + ": the game took your party from a Speed of "' in night
+            and '"night check at " + turn + ": the night step was not read, because "' in night
+            and '": the clock ran past the turn too fast to watch "' in night
+            and "float said = TradeMath.PaceAfterTheTurn(_party.Speed, speed.SumOfFactors, after, PartyStep, nightFell);" in night
+            and "if (dt > 0f) _movedFor += dt;" in clock
+            and "float seen = (float)(hours / _movedFor);" in clock
+            and "TradeMath.HoursAPartyTakesToCoverItsSpeed.ToString(" in clock)
+
+
+chk("2.0.3", "TradeLord.log says at every nightfall and daybreak how far the game slowed or sped your party and the caravans against what TradeLord counted on, and once a day how many hours the game's clock runs to a Speed",
+    the_log_says_what_the_game_did_at_every_nightfall_and_daybreak())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

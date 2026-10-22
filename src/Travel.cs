@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.ComponentInterfaces;
 using TaleWorlds.CampaignSystem.Naval;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Settlements;
@@ -79,23 +81,100 @@ namespace TradeLord
         }
 
         private static int _speedHour = -1;
-        private static float _landSpeed, _seaSpeed;
+        private static float _landSpeed, _seaSpeed, _nightPace = TradeMath.NightPaceUnread;
+
+        internal static float DayPace { get { Refresh(); return _landSpeed; } }
+
+        internal static float NightPace { get { Refresh(); return _nightPace; } }
 
         private static void Speeds(out float land, out float sea)
         {
-            int hour = (int)CampaignTime.Now.ToHours;
-            if (hour == _speedHour) { land = _landSpeed; sea = _seaSpeed; return; }
-            TradeMath.SpeedsInEffect(MobileParty.MainParty.Speed, SeaSpeed(), out land, out sea);
-            _speedHour = hour;
-            _landSpeed = land;
-            _seaSpeed = sea;
+            Refresh();
+            land = _landSpeed;
+            sea = _seaSpeed;
         }
 
-        internal static float Days(float distance, float landRatio)
+        private static void Refresh()
         {
+            int hour = (int)CampaignTime.Now.ToHours;
+            if (hour == _speedHour) return;
+            MobileParty party = MobileParty.MainParty;
+            float now = party.Speed;
+            bool slowedNow = Campaign.Current.IsNight && !AtSea(party);
+            if (!AtSea(party)) _nightPace = PaceAtNight(party, _nightPace);
+            float byDay = slowedNow ? now / _nightPace : now;
+            TradeMath.SpeedsInEffect(byDay, SeaSpeed(), out _landSpeed, out _seaSpeed);
+            _speedHour = hour;
+        }
+
+        private static bool AtSea(MobileParty party)
+        {
+            try { return IsAtSea(party); } catch { return false; }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static bool IsAtSea(MobileParty party) => party != null && party.IsCurrentlyAtSea;
+
+        private static float PaceAtNight(MobileParty party, float known)
+        {
+            try { return PaceAtNightCore(party); } catch { return known; }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static float PaceAtNightCore(MobileParty party)
+        {
+            PartySpeedModel model = Campaign.Current.Models.PartySpeedCalculatingModel;
+            ExplainedNumber speed = model.CalculateFinalSpeed(party, model.CalculateBaseSpeed(party));
+            return TradeMath.NightPace(speed.BaseNumber, speed.SumOfFactors, speed.LimitMinValue, speed.LimitMaxValue,
+                                       Nightfall.PartyStep, Campaign.Current.IsNight);
+        }
+
+        internal static void ReadThePaceAgain() => _speedHour = -1;
+
+        internal static float Days(float distance, float landRatio) =>
+            Days(distance, landRatio, 0f, SetOffAtSea(), out _);
+
+        private static float Days(float distance, float landRatio, float afterDays, bool seaFirst, out float nightHours)
+        {
+            nightHours = 0f;
             if (distance <= 0f) return 0f;
-            Speeds(out float land, out float sea);
-            return TradeMath.DaysAtSpeed(distance, landRatio, land, sea);
+            Refresh();
+            float later = TradeMath.OutOfReach(afterDays) ? 0f : Math.Max(0f, TradeMath.Finite(afterDays, 0f));
+            float start = CampaignTime.Now.CurrentHourInDay + later * 24f;
+            return TradeMath.DaysOnTheClock(distance, landRatio, _landSpeed, _nightPace, _seaSpeed, start,
+                                            CampaignTime.SunRise, CampaignTime.SunSet, seaFirst, out nightHours);
+        }
+
+        private static bool SetOffAtSea() => AtSea(MobileParty.MainParty);
+
+        internal static float CaravanDays(MobileParty party, Settlement bound, out float nightHours)
+        {
+            nightHours = 0f;
+            float distance = party.GetPosition2D.Distance(bound.GetPosition2D);
+            float now = party.Speed;
+            if (AtSea(party)) return TradeMath.EtaDays(distance, now);
+            float pace = TradeMath.NightPaceKept(Nightfall.CaravanPace);
+            float byDay = Campaign.Current.IsNight ? now / pace : now;
+            return TradeMath.EtaOnTheClock(distance, byDay, pace, CampaignTime.Now.CurrentHourInDay,
+                                           CampaignTime.SunRise, CampaignTime.SunSet, out nightHours);
+        }
+
+        internal struct Ride
+        {
+            internal float Days;
+            internal float NightHours;
+            internal float Distance;
+            internal float LandRatio;
+        }
+
+        internal static Ride TheRideFromParty(Settlement target)
+        {
+            Ride ride = default(Ride);
+            if (target == null || MobileParty.MainParty == null) return ride;
+            DropIfNavalChanged();
+            ride.Distance = FromParty(target, out ride.LandRatio);
+            ride.Days = Days(ride.Distance, ride.LandRatio, 0f, SetOffAtSea(), out ride.NightHours);
+            return ride;
         }
 
         private static readonly Dictionary<string, (float dist, float landRatio)> _partyDist
@@ -123,6 +202,7 @@ namespace TradeLord
 
         internal static void Forget()
         {
+            _nightPace = TradeMath.NightPaceUnread;
             _partyDist.Clear();
             _partyHour = -1;
             _pairDist.Clear();
@@ -193,7 +273,7 @@ namespace TradeLord
             return inside == null ? TradeMath.FurthestThereIs : EstimateDaysBetween(inside, target);
         }
 
-        internal static float EstimateDaysBetween(Settlement a, Settlement b)
+        internal static float EstimateDaysBetween(Settlement a, Settlement b, float afterDays = 0f)
         {
             if (a == null || b == null) return 0f;
             DropIfNavalChanged();
@@ -206,7 +286,7 @@ namespace TradeLord
                 _pairDist[key] = hit;
             }
 
-            return Days(hit.dist, hit.landRatio);
+            return Days(hit.dist, hit.landRatio, afterDays, false, out _);
         }
 
         internal static string EstimateLabel(Settlement target)

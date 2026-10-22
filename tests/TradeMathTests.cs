@@ -1493,19 +1493,178 @@ namespace TradeLord.Tests
         [Fact]
         public void A_journey_all_on_land_is_its_distance_at_the_land_speed()
         {
-            Assert.Equal(2f, TradeMath.DaysAtSpeed(240f, 1f, 5f, 10f), 4);
+            Assert.Equal(2.4f, TradeMath.DaysAtSpeed(240f, 1f, 5f, 10f), 4);
         }
 
         [Fact]
         public void A_journey_all_at_sea_is_its_distance_at_the_sea_speed()
         {
-            Assert.Equal(1f, TradeMath.DaysAtSpeed(240f, 0f, 5f, 10f), 4);
+            Assert.Equal(1.2f, TradeMath.DaysAtSpeed(240f, 0f, 5f, 10f), 4);
         }
 
         [Fact]
         public void A_journey_with_a_sea_leg_counts_each_leg_at_its_own_speed()
         {
-            Assert.Equal(1.5f, TradeMath.DaysAtSpeed(240f, 0.5f, 5f, 10f), 4);
+            Assert.Equal(1.8f, TradeMath.DaysAtSpeed(240f, 0.5f, 5f, 10f), 4);
+        }
+
+        [Fact]
+        public void A_party_rides_twenty_times_its_speed_in_a_game_day()
+        {
+            Assert.Equal(1.2f, TradeMath.HoursAPartyTakesToCoverItsSpeed);
+            Assert.Equal(1f, TradeMath.DaysAtSpeed(100f, 1f, 5f, 5f), 4);
+            Assert.Equal(1f, TradeMath.DaysAtBestSpeed(100f, 5f, 5f), 4);
+            Assert.Equal(1f, TradeMath.EtaDays(100f, 5f), 4);
+        }
+
+        private const int Dawn = 2, Dusk = 22;
+
+        private static float Walked(float start, float land, float sea, float pace, bool seaFirst, out float night)
+        {
+            night = 0f;
+            double clock = seaFirst ? sea : 0d, left = land, step = 0.0005d;
+            while (left > 1e-9)
+            {
+                double hour = ((start + clock) % 24d + 24d) % 24d;
+                bool day = hour >= Dawn && hour < Dusk;
+                double rate = day ? 1d : pace;
+                double spent = Math.Min(step, left / rate);
+                clock += spent;
+                left -= spent * rate;
+                if (!day) night += (float)spent;
+            }
+            return (float)(clock + (seaFirst ? 0d : sea));
+        }
+
+        [Fact]
+        public void A_ride_all_by_day_is_not_slowed_by_the_night()
+        {
+            Assert.Equal(6f, TradeMath.HoursOnTheClock(8f, 6f, 0f, 0.75f, Dawn, Dusk, false, out float night), 4);
+            Assert.Equal(0f, night, 4);
+        }
+
+        [Fact]
+        public void A_ride_into_the_night_counts_its_night_hours_at_the_night_pace()
+        {
+            Assert.Equal(2f + 2f / 0.75f, TradeMath.HoursOnTheClock(20f, 4f, 0f, 0.75f, Dawn, Dusk, false, out float night), 4);
+            Assert.Equal(2f / 0.75f, night, 4);
+        }
+
+        [Fact]
+        public void A_ride_that_sets_off_at_night_keeps_the_night_pace_until_daybreak()
+        {
+            Assert.Equal(3.75f, TradeMath.HoursOnTheClock(23f, 3f, 0f, 0.75f, Dawn, Dusk, false, out float night), 4);
+            Assert.Equal(3f, night, 4);
+        }
+
+        [Fact]
+        public void A_whole_day_on_the_road_holds_the_four_hours_of_night_the_game_has()
+        {
+            Assert.Equal(24f, TradeMath.HoursOnTheClock(8f, 20f + 4f * 0.75f, 0f, 0.75f, Dawn, Dusk, false, out float night), 3);
+            Assert.Equal(4f, night, 3);
+        }
+
+        [Fact]
+        public void A_ride_of_many_days_comes_out_the_same_as_one_walked_an_instant_at_a_time()
+        {
+            foreach (float start in new[] { 0f, 1.5f, 2f, 9.25f, 21.9f, 22f, 23.5f })
+                foreach (float land in new[] { 0.5f, 3f, 17f, 46f, 230f })
+                    foreach (float pace in new[] { 0.6f, 0.75f, 1f })
+                    {
+                        float said = TradeMath.HoursOnTheClock(start, land, 0f, pace, Dawn, Dusk, false, out float night);
+                        float walked = Walked(start, land, 0f, pace, false, out float walkedNight);
+                        Assert.Equal(walked, said, 1);
+                        Assert.Equal(walkedNight, night, 1);
+                    }
+        }
+
+        [Fact]
+        public void A_sea_leg_is_never_slowed_by_the_night_and_keeps_its_place_in_the_ride()
+        {
+            Assert.Equal(5f, TradeMath.HoursOnTheClock(22f, 0f, 5f, 0.75f, Dawn, Dusk, false, out float none), 4);
+            Assert.Equal(0f, none, 4);
+            Assert.Equal(4f, TradeMath.HoursOnTheClock(20f, 2f, 2f, 0.75f, Dawn, Dusk, false, out _), 4);
+            Assert.Equal(2f + 2f / 0.75f, TradeMath.HoursOnTheClock(20f, 2f, 2f, 0.75f, Dawn, Dusk, true, out float night), 4);
+            Assert.Equal(2f / 0.75f, night, 4);
+            Assert.Equal(Walked(20f, 2f, 2f, 0.75f, true, out _), TradeMath.HoursOnTheClock(20f, 2f, 2f, 0.75f, Dawn, Dusk, true, out _), 2);
+        }
+
+        [Fact]
+        public void A_clock_with_no_night_or_a_pace_that_is_not_a_number_never_breaks_a_ride()
+        {
+            Assert.Equal(7f, TradeMath.HoursOnTheClock(23f, 5f, 2f, 0.75f, 6, 6, false, out float none), 4);
+            Assert.Equal(0f, none);
+            Assert.Equal(TradeMath.HoursOnTheClock(20f, 4f, 0f, TradeMath.NightPaceUnread, Dawn, Dusk, false, out _),
+                         TradeMath.HoursOnTheClock(20f, 4f, 0f, float.NaN, Dawn, Dusk, false, out _), 4);
+            Assert.Equal(TradeMath.FurthestThereIs, TradeMath.HoursOnTheClock(8f, float.NaN, 0f, 0.75f, Dawn, Dusk, false, out _));
+            Assert.Equal(TradeMath.FurthestThereIs, TradeMath.HoursOnTheClock(8f, float.MaxValue, 0f, 0.75f, Dawn, Dusk, false, out _));
+            Assert.Equal(0f, TradeMath.HoursOnTheClock(8f, 0f, 0f, 0.75f, Dawn, Dusk, false, out _));
+        }
+
+        [Fact]
+        public void A_ride_with_no_slower_night_is_timed_exactly_as_before_the_clock()
+        {
+            Assert.Equal(TradeMath.DaysAtSpeed(240f, 1f, 5f, 10f),
+                         TradeMath.DaysOnTheClock(240f, 1f, 5f, 1f, 10f, 13f, Dawn, Dusk, false, out _), 4);
+            Assert.Equal(TradeMath.DaysAtSpeed(240f, 0.5f, 5f, 10f),
+                         TradeMath.DaysOnTheClock(240f, 0.5f, 5f, 1f, 10f, 23f, Dawn, Dusk, false, out _), 4);
+            Assert.Equal(TradeMath.EtaDays(120f, 5f),
+                         TradeMath.EtaOnTheClock(120f, 5f, 1f, 21f, Dawn, Dusk, out _), 4);
+            Assert.Equal(0f, TradeMath.DaysOnTheClock(0f, 1f, 5f, 0.75f, 10f, 13f, Dawn, Dusk, false, out _));
+            Assert.Equal(TradeMath.FurthestThereIs,
+                         TradeMath.DaysOnTheClock(float.MaxValue, 1f, 5f, 0.75f, 10f, 13f, Dawn, Dusk, false, out _));
+        }
+
+        [Fact]
+        public void A_ride_that_crosses_a_night_takes_longer_than_one_timed_all_by_day()
+        {
+            float byDay = TradeMath.DaysAtSpeed(100f, 1f, 5f, 5f);
+            float clocked = TradeMath.DaysOnTheClock(100f, 1f, 5f, 0.75f, 5f, 8f, Dawn, Dusk, false, out float night);
+            Assert.True(clocked > byDay);
+            Assert.Equal(4f, night, 3);
+            Assert.Equal((24f + 4f * 0.25f) / 24f, clocked, 3);
+            Assert.True(TradeMath.DaysAtBestSpeed(100f, 5f, 5f) <= clocked);
+        }
+
+        [Fact]
+        public void The_night_pace_comes_from_the_game_s_own_speed_and_the_night_step_it_was_seen_to_take()
+        {
+            Assert.Equal(0.75f, TradeMath.NightPace(5f, 0f, 1f, 100f, -0.25f, false), 4);
+            Assert.Equal(0.75f, TradeMath.NightPace(5f, -0.25f, 1f, 100f, -0.25f, true), 4);
+            Assert.Equal(0.55f / 0.8f, TradeMath.NightPace(5f, -0.2f, 1f, 100f, -0.25f, false), 4);
+            Assert.Equal(0.875f, TradeMath.NightPace(4f, 0f, 1f, 100f, -0.125f, false), 4);
+            Assert.Equal(1f / 4f, TradeMath.NightPace(4f, 0f, 1f, 100f, -0.9f, false), 4);
+            Assert.Equal(TradeMath.NightPaceUnread, TradeMath.NightPace(0f, 0f, 0f, 100f, -0.25f, false), 4);
+        }
+
+        [Fact]
+        public void The_night_step_is_read_from_the_pace_the_game_gives_either_side_of_the_turn()
+        {
+            Assert.Equal(-0.25f, TradeMath.NightStepFrom(5f, 3.75f, -0.25f, true), 4);
+            Assert.Equal(-0.25f, TradeMath.NightStepFrom(3.75f, 5f, 0f, false), 4);
+            Assert.Equal(-0.15f, TradeMath.NightStepFrom(6f, 5.1f, -0.15f, true), 4);
+            Assert.True(float.IsNaN(TradeMath.NightStepFrom(0f, 5f, 0f, false)));
+            Assert.True(TradeMath.LikeANightStep(-0.25f));
+            Assert.False(TradeMath.LikeANightStep(-0.95f));
+            Assert.False(TradeMath.LikeANightStep(float.NaN));
+            Assert.Equal(3.75f, TradeMath.PaceAfterTheTurn(5f, -0.25f, 3.75f, -0.25f, true), 4);
+            Assert.Equal(5f, TradeMath.PaceAfterTheTurn(3.75f, 0f, 5f, -0.25f, false), 4);
+            Assert.Equal(4f, TradeMath.PaceAfterTheTurn(5f, -0.25f, 3.75f, -0.2f, true), 4);
+            Assert.True(TradeMath.ClearOfLimits(5f, 1f, 100f));
+            Assert.False(TradeMath.ClearOfLimits(1f, 1f, 100f));
+        }
+
+        [Fact]
+        public void A_ride_check_weighs_the_time_taken_against_the_time_said()
+        {
+            Assert.Equal(0.1f, TradeMath.RideOffBy(10f, 11f), 4);
+            Assert.Equal(-0.2f, TradeMath.RideOffBy(10f, 8f), 4);
+            Assert.True(float.IsNaN(TradeMath.RideOffBy(0f, 8f)));
+            var sorted = new List<float> { -0.1f, 0f, 0.1f, 0.3f };
+            Assert.Equal(0.05f, TradeMath.Quantile(sorted, 0.5f), 4);
+            Assert.Equal(-0.025f, TradeMath.Quantile(sorted, 0.25f), 4);
+            Assert.Equal(0.3f, TradeMath.Quantile(sorted, 1f), 4);
+            Assert.True(float.IsNaN(TradeMath.Quantile(new List<float>(), 0.5f)));
         }
 
         [Fact]
@@ -1693,7 +1852,7 @@ namespace TradeLord.Tests
         public void A_party_crawling_along_is_still_credited_with_a_walking_pace()
         {
             Assert.Equal(0f, TradeMath.EtaDays(0f, 4f));
-            Assert.Equal(1f, TradeMath.EtaDays(120f, 5f), 4);
+            Assert.Equal(1.2f, TradeMath.EtaDays(120f, 5f), 4);
             Assert.Equal(TradeMath.EtaDays(120f, TradeMath.WalkingPace),
                          TradeMath.EtaDays(120f, 0f), 4);
         }
@@ -2210,15 +2369,17 @@ namespace TradeLord.Tests
             Assert.Equal(TradeMath.FurthestThereIs, TradeMath.DaysAtSpeed(100f, float.NaN, 5f, 5f));
             Assert.Equal(TradeMath.FurthestThereIs, TradeMath.DaysAtBestSpeed(float.NaN, 5f, 5f));
             Assert.Equal(TradeMath.FurthestThereIs, TradeMath.EtaDays(float.NaN, 5f));
-            Assert.Equal(100f / (TradeMath.WalkingPace * 24f), TradeMath.EtaDays(100f, float.NaN), 5);
+            Assert.Equal(100f / TradeMath.WalkingPace * TradeMath.HoursAPartyTakesToCoverItsSpeed / 24f,
+                         TradeMath.EtaDays(100f, float.NaN), 5);
         }
 
         [Fact]
         public void A_travel_time_the_game_can_work_out_is_left_exactly_as_it_was()
         {
-            Assert.Equal(120f / (5f * 24f), TradeMath.DaysAtSpeed(120f, 1f, 5f, 9f), 5);
-            Assert.Equal(120f / (9f * 24f), TradeMath.DaysAtBestSpeed(120f, 5f, 9f), 5);
-            Assert.Equal(120f / (5f * 24f), TradeMath.EtaDays(120f, 5f), 5);
+            float hours = TradeMath.HoursAPartyTakesToCoverItsSpeed;
+            Assert.Equal(120f / 5f * hours / 24f, TradeMath.DaysAtSpeed(120f, 1f, 5f, 9f), 5);
+            Assert.Equal(120f / 9f * hours / 24f, TradeMath.DaysAtBestSpeed(120f, 5f, 9f), 5);
+            Assert.Equal(120f / 5f * hours / 24f, TradeMath.EtaDays(120f, 5f), 5);
             Assert.Equal(0f, TradeMath.DaysAtSpeed(0f, 1f, 5f, 5f));
             Assert.Equal(0f, TradeMath.EtaDays(-5f, 5f));
         }
@@ -2354,7 +2515,8 @@ namespace TradeLord.Tests
             Assert.True(TradeMath.OutOfReach(float.PositiveInfinity));
             Assert.True(TradeMath.DaysAtSpeed(float.MaxValue, 1f, 4.8f, 4.8f) == TradeMath.FurthestThereIs);
             Assert.True(TradeMath.DaysAtBestSpeed(float.MaxValue, 4.8f, 4.8f) == TradeMath.FurthestThereIs);
-            Assert.True(TradeMath.DaysAtSpeed(240f, 1f, 10f, 10f) == 1f);
+            Assert.True(TradeMath.DaysAtSpeed(240f, 1f, 10f, 10f) ==
+                        240f / 10f * TradeMath.HoursAPartyTakesToCoverItsSpeed / 24f);
         }
 
         [Fact]

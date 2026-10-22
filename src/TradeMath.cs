@@ -1285,6 +1285,9 @@ namespace TradeLord
 
         public const float WalkingPace = 5f;
 
+        // Valuable-Run-Lesson: the game's clock runs 1.2 hours each time it moves a party as far as its Speed, and every ride in a 1.104.17 test ran 25 to 40% past distance over Speed taken as hours.
+        public const float HoursAPartyTakesToCoverItsSpeed = 1.2f;
+
         public static void SpeedsInEffect(float partySpeed, float fleetSpeed,
                                           out float land, out float sea)
         {
@@ -1301,15 +1304,165 @@ namespace TradeLord
             if (distance <= 0f) return 0f;
             float landLeg = distance * landRatio;
             float seaLeg = distance * (1f - landRatio);
-            float days = Finite((landLeg / landSpeed + seaLeg / seaSpeed) / 24f, FurthestThereIs);
+            float hours = (landLeg / landSpeed + seaLeg / seaSpeed) * HoursAPartyTakesToCoverItsSpeed;
+            float days = Finite(hours / 24f, FurthestThereIs);
             return OutOfReach(days) ? FurthestThereIs : days;
         }
 
         public static float DaysAtBestSpeed(float distance, float landSpeed, float seaSpeed)
         {
             if (distance <= 0f) return 0f;
-            float days = Finite(distance / (Math.Max(landSpeed, seaSpeed) * 24f), FurthestThereIs);
+            float hours = distance / Math.Max(landSpeed, seaSpeed) * HoursAPartyTakesToCoverItsSpeed;
+            float days = Finite(hours / 24f, FurthestThereIs);
             return OutOfReach(days) ? FurthestThereIs : days;
+        }
+
+        public const float UsualNightStep = -0.25f;
+
+        public const float NightPaceUnread = 1f + UsualNightStep;
+
+        public const float SlowestNightPace = 0.05f;
+
+        public const float FastestNightPace = 4f;
+
+        public static float NightPaceKept(float nightPace) =>
+            Math.Min(Math.Max(Finite(nightPace, NightPaceUnread), SlowestNightPace), FastestNightPace);
+
+        public static float HourOfDay(float hours)
+        {
+            float hour = Finite(hours, 0f) % 24f;
+            return hour < 0f ? hour + 24f : hour;
+        }
+
+        public static float HoursOnTheClock(float startHourOfDay, float landHoursByDay, float seaHours,
+                                            float nightPace, int sunRise, int sunSet, bool seaFirst,
+                                            out float nightHours)
+        {
+            nightHours = 0f;
+            float land = Finite(landHoursByDay, float.NaN);
+            float sea = Finite(seaHours, float.NaN);
+            if (float.IsNaN(land) || float.IsNaN(sea)) return FurthestThereIs;
+            land = Math.Max(0f, land);
+            sea = Math.Max(0f, sea);
+            if (OutOfReach(land / 24f) || OutOfReach(sea / 24f)) return FurthestThereIs;
+            float dayLength = sunSet - sunRise;
+            if (land <= 0f || sunRise < 0 || dayLength <= 0f || dayLength >= 24f) return land + sea;
+            float pace = NightPaceKept(nightPace);
+            float clock = seaFirst ? sea : 0f;
+            float hour = HourOfDay(startHourOfDay + clock);
+            float nightLength = 24f - dayLength;
+            float aDay = dayLength + nightLength * pace;
+            float left = land;
+            if (left > aDay * 2f)
+            {
+                float whole = (float)Math.Floor(left / aDay) - 1f;
+                clock += whole * 24f;
+                nightHours += whole * nightLength;
+                left -= whole * aDay;
+            }
+            for (int turn = 0; turn < 12 && left > 0f; turn++)
+            {
+                bool day = hour >= sunRise && hour < sunSet;
+                float until = day ? sunSet - hour : hour >= sunSet ? 24f - hour + sunRise : sunRise - hour;
+                float rate = day ? 1f : pace;
+                if (left <= until * rate)
+                {
+                    float spent = left / rate;
+                    clock += spent;
+                    if (!day) nightHours += spent;
+                    left = 0f;
+                    break;
+                }
+                clock += until;
+                if (!day) nightHours += until;
+                left -= until * rate;
+                hour = HourOfDay(hour + until);
+            }
+            clock += left;
+            if (!seaFirst) clock += sea;
+            return Finite(clock, FurthestThereIs);
+        }
+
+        public static float DaysOnTheClock(float distance, float landRatio, float dayPace, float nightPace,
+                                           float seaSpeed, float startHourOfDay, int sunRise, int sunSet,
+                                           bool seaFirst, out float nightHours)
+        {
+            nightHours = 0f;
+            if (distance <= 0f) return 0f;
+            if (OutOfReach(DaysAtSpeed(distance, landRatio, dayPace, seaSpeed))) return FurthestThereIs;
+            float landHours = distance * landRatio / dayPace * HoursAPartyTakesToCoverItsSpeed;
+            float seaHours = distance * (1f - landRatio) / seaSpeed * HoursAPartyTakesToCoverItsSpeed;
+            float hours = HoursOnTheClock(startHourOfDay, landHours, seaHours, nightPace, sunRise, sunSet,
+                                          seaFirst, out nightHours);
+            float days = Finite(hours / 24f, FurthestThereIs);
+            return OutOfReach(days) ? FurthestThereIs : days;
+        }
+
+        public static float EtaOnTheClock(float distance, float dayPace, float nightPace,
+                                          float startHourOfDay, int sunRise, int sunSet, out float nightHours)
+        {
+            nightHours = 0f;
+            float byDay = EtaDays(distance, dayPace);
+            if (byDay <= 0f || OutOfReach(byDay)) return byDay;
+            float hours = HoursOnTheClock(startHourOfDay, byDay * 24f, 0f, nightPace, sunRise, sunSet, false,
+                                          out nightHours);
+            return Finite(hours / 24f, FurthestThereIs);
+        }
+
+        public static float WithinLimits(float value, float least, float most)
+        {
+            float low = Finite(least, float.MinValue);
+            float high = Finite(most, float.MaxValue);
+            return value < low ? low : value > high ? high : value;
+        }
+
+        public static float NightPace(float baseSpeed, float factors, float least, float most,
+                                      float nightStep, bool nightNow)
+        {
+            float step = Finite(nightStep, UsualNightStep);
+            float byDay = WithinLimits(baseSpeed * (1f + factors - (nightNow ? step : 0f)), least, most);
+            float byNight = WithinLimits(baseSpeed * (1f + factors + (nightNow ? 0f : step)), least, most);
+            if (!(byDay > 0f) || !(byNight > 0f)) return NightPaceUnread;
+            return NightPaceKept(byNight / byDay);
+        }
+
+        public static bool ClearOfLimits(float speed, float least, float most) =>
+            speed > 0f && speed > Finite(least, float.MinValue) * 1.001f && speed < Finite(most, float.MaxValue) * 0.999f;
+
+        public static float NightStepFrom(float paceBefore, float paceAfter, float factorsAfter, bool nightFell)
+        {
+            if (!(paceBefore > 0f) || !(paceAfter > 0f)) return float.NaN;
+            float factorsBefore = (1f + factorsAfter) * (paceBefore / paceAfter) - 1f;
+            float step = nightFell ? factorsAfter - factorsBefore : factorsBefore - factorsAfter;
+            return float.IsNaN(step) || float.IsInfinity(step) ? float.NaN : step;
+        }
+
+        public static bool LikeANightStep(float step) => step > -0.9f && step < 0.5f;
+
+        public static float PaceAfterTheTurn(float paceBefore, float factorsAfter, float paceAfter,
+                                             float nightStep, bool nightFell)
+        {
+            if (!(paceBefore > 0f) || !(paceAfter > 0f)) return float.NaN;
+            float factorsBefore = (1f + factorsAfter) * (paceBefore / paceAfter) - 1f;
+            float onePlus = 1f + factorsBefore;
+            if (!(onePlus > 0f)) return float.NaN;
+            float turned = 1f + factorsBefore + (nightFell ? nightStep : -nightStep);
+            return Finite(paceBefore * turned / onePlus, float.NaN);
+        }
+
+        public static float Quantile(List<float> sorted, float share)
+        {
+            if (sorted == null || sorted.Count == 0) return float.NaN;
+            float at = Math.Min(Math.Max(Finite(share, 0.5f), 0f), 1f) * (sorted.Count - 1);
+            int below = (int)Math.Floor(at);
+            int above = Math.Min(below + 1, sorted.Count - 1);
+            return sorted[below] + (sorted[above] - sorted[below]) * (at - below);
+        }
+
+        public static float RideOffBy(float saidHours, float tookHours)
+        {
+            if (!(saidHours > 0f) || float.IsNaN(tookHours) || float.IsInfinity(tookHours)) return float.NaN;
+            return Finite((tookHours - saidHours) / saidHours, float.NaN);
         }
 
         public static int WorthUsedUpADay(float budget, int price, int unitValue)
@@ -1676,7 +1829,7 @@ namespace TradeLord
             if (distance <= 0f) return 0f;
             float pace = Finite(speed, WalkingPace);
             if (pace <= StandingStill) pace = WalkingPace;
-            return Finite(distance / (pace * 24f), FurthestThereIs);
+            return Finite(distance / pace * HoursAPartyTakesToCoverItsSpeed / 24f, FurthestThereIs);
         }
 
         public static int Budget(int gold, int goldReserve, int maxSpendPerVisit,

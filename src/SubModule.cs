@@ -66,6 +66,7 @@ namespace TradeLord
             {
                 starter.AddBehavior(new LedgerBehavior());
                 starter.AddBehavior(new TradeActionBehavior());
+                starter.AddBehavior(new RideWatchBehavior());
             }
         }
 
@@ -92,6 +93,8 @@ namespace TradeLord
             Guard.Run("GameEnd.Panel", LedgerPanel.Reset);
             Guard.Run("GameEnd.CursorWatch", CursorWatch.Forget);
             Guard.Run("GameEnd.Travel", Travel.Forget);
+            Guard.Run("GameEnd.Nightfall", Nightfall.Forget);
+            Guard.Run("GameEnd.RideCheck", RideCheck.Forget);
             Guard.Run("GameEnd.Bulk", Bulk.Forget);
             Guard.Run("GameEnd.ScreenMarkets", ScreenMarkets.Forget);
             Guard.Run("GameEnd.Forecast", Forecast.Forget);
