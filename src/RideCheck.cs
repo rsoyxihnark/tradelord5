@@ -20,6 +20,7 @@ namespace TradeLord
 
         private void OnTick(float dt)
         {
+            Guard.Run("Skies.Tick", Skies.Tick);
             Guard.Run("Nightfall.Tick", dt, Nightfall.Tick);
             Guard.Run("RideCheck.Tick", dt, RideCheck.Tick);
         }
@@ -30,7 +31,11 @@ namespace TradeLord
             Guard.Run("RideCheck.Arrived", () => RideCheck.Arrived(party, settlement));
         }
 
-        private void OnDailyTick() => Guard.Run("RideCheck.Daily", RideCheck.SayTheCaravans);
+        private void OnDailyTick()
+        {
+            Guard.Run("RideCheck.Daily", RideCheck.SayTheCaravans);
+            Guard.Run("Skies.Daily", Skies.SayTheDay);
+        }
     }
 
     internal static class RideCheck
@@ -48,6 +53,8 @@ namespace TradeLord
             internal double LastAt;
             internal float SaidHours;
             internal float SaidNight;
+            internal float SaidSnow;
+            internal float SaidWet;
             internal float SaidDistance;
             internal float DayPace;
             internal float NightPace;
@@ -55,6 +62,8 @@ namespace TradeLord
             internal double Moving;
             internal double Standing;
             internal double NightMoving;
+            internal double SnowMoving;
+            internal double WetMoving;
             internal float Moved;
             internal bool Fought;
         }
@@ -123,7 +132,11 @@ namespace TradeLord
             }
             _ride.Moving += step;
             _ride.Moved += party.Speed * dt;
-            if (Campaign.Current.IsNight && !party.IsCurrentlyAtSea) _ride.NightMoving += step;
+            if (party.IsCurrentlyAtSea) return;
+            if (Campaign.Current.IsNight) _ride.NightMoving += step;
+            Skies.LiveSkyAt(party.GetPosition2D, out bool snowy, out bool wet);
+            if (snowy) _ride.SnowMoving += step;
+            if (wet) _ride.WetMoving += step;
         }
 
         private static void SetOff(MobileParty party, Settlement to, double now)
@@ -137,6 +150,8 @@ namespace TradeLord
                 LastAt = now,
                 SaidHours = said.Days * 24f,
                 SaidNight = said.NightHours,
+                SaidSnow = said.SnowHours,
+                SaidWet = said.WetHours,
                 SaidDistance = said.Distance,
                 DayPace = Travel.DayPace,
                 NightPace = Travel.NightPace,
@@ -148,7 +163,13 @@ namespace TradeLord
                       (said.LandRatio < 0.999f ? " (" + Percent(1f - said.LandRatio) + " of it at sea)" : "") +
                       " at a Speed of " + Nightfall.Figure(_ride.DayPace) + " by day and " +
                       Nightfall.Figure(_ride.DayPace * _ride.NightPace) + " by night, your night step " +
-                      Nightfall.PartyStepSaid);
+                      Nightfall.PartyStepSaid + "; " + Hours(_ride.SaidSnow) + " h of it in snow and " + Hours(_ride.SaidWet) +
+                      " h on wet ground by the weather forecast, at " + Nightfall.Share(Travel.PaceIn(false, true, true)) +
+                      " and " + Nightfall.Share(Travel.PaceIn(false, false, true)) + " of your clear day pace");
+            int storms = Skies.StormsAlong(party.GetPosition2D, to.GetPosition2D);
+            if (storms > 0)
+                Log.Write("ride check: a War Sails storm stands over " + storms + " weather cell(s) of the road to " + to.Name +
+                          "; storms come by chance and move, so TradeLord's time for this ride leaves them out");
         }
 
         internal static void Arrived(MobileParty party, Settlement at)
@@ -197,7 +218,11 @@ namespace TradeLord
                 Longer(off) + " than said",
                 "  night: TradeLord counted " + Hours(_ride.SaidNight) + " h of the ride at night at " +
                 Nightfall.Share(_ride.NightPace) + " of your day pace, and " + Hours((float)_ride.NightMoving) +
-                " h of the ride on the move were at night"
+                " h of the ride on the move were at night",
+                "  weather: TradeLord counted " + Hours(_ride.SaidSnow) + " h in snow and " + Hours(_ride.SaidWet) +
+                " h on wet ground, and the ride on the move had " + Hours((float)_ride.SnowMoving) + " h in snow and " +
+                Hours((float)_ride.WetMoving) + " h on wet ground; your snow step " + Skies.PartySnowSaid +
+                ", your wet ground step " + Skies.PartyWetSaid
             };
             if (moving > 0f && _ride.Moved > 0f)
             {

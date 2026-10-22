@@ -43,6 +43,7 @@ namespace TradeLord.Compat
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.FoodConsumptionBehavior", "MakeFoodConsumption", null),
             ("TaleWorlds.ScreenSystem.ScreenManager", "EarlyUpdate", null),
             ("TaleWorlds.Engine.MouseManager", "ActivateMouseCursor", null),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultMapWeatherModel", "UpdateWeatherForPosition", null),
         };
 
         private static readonly (string type, string member)[] ReflectedMethods =
@@ -151,6 +152,8 @@ namespace TradeLord.Compat
             "TaleWorlds.CampaignSystem.Settlements.Village+VillageStates",
             "TaleWorlds.CampaignSystem.Party.MobileParty+NavigationType",
             "TaleWorlds.CampaignSystem.Party.AiBehavior",
+            "TaleWorlds.CampaignSystem.ComponentInterfaces.MapWeatherModel+WeatherEvent",
+            "TaleWorlds.CampaignSystem.ComponentInterfaces.MapWeatherModel+WeatherEventEffectOnTerrain",
             "TaleWorlds.Core.ItemObject+ItemTiers",
             "TaleWorlds.Core.ViewModelCollection.Information.TooltipProperty+TooltipPropertyFlags",
             "TaleWorlds.InputSystem.InputKey",

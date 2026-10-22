@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.4
+
+- Fixed travel times jumping up and down as snow or rain falls where your party stands
+- Fixed travel times leaving out the rain and snow that will fall on the road your party would take
+- Fixed Count what is on its way to a market leaving out the rain and snow on the road caravans and villagers take
+- With Enable extended debug logging on, TradeLord.log now says how much snow and wet ground slow your party each time the weather over it turns
+- With Enable extended debug logging on, TradeLord.log now says once a day how often its weather forecast came true
+- With Enable extended debug logging on, the ride check in TradeLord.log now weighs the snow and wet ground on the road against the forecast
+- With Enable extended debug logging on, TradeLord.log now notes a War Sails storm standing over the road you set off on
+- With Enable extended debug logging on, TradeLord.log now says once a day how much time the weather forecast took
+
 ## 2.0.3
 
 - Fixed travel times in the TradeLord ledger, the tooltips and the map marker running a third longer at night

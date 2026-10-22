@@ -156,7 +156,7 @@ namespace TradeLord
                                 !TradeMath.ClearOfLimits(_party.Speed, speed.LimitMinValue, speed.LimitMaxValue)))
                 why = "the game held your party's pace at its slowest or fastest";
             float step = why == null ? TradeMath.NightStepFrom(_party.Speed, after, speed.SumOfFactors, nightFell) : float.NaN;
-            if (why == null && !TradeMath.LikeANightStep(step)) why = "the change did not look like the night alone";
+            if (why == null && !TradeMath.LikeAStep(step)) why = "the change did not look like the night alone";
             if (why != null)
             {
                 if (Writing)
