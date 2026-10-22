@@ -61,6 +61,7 @@ namespace TradeLord.Compat
             ("TaleWorlds.ScreenSystem.ScreenManager", "LateUpdate"),
             ("TaleWorlds.Engine.MouseManager", "ActivateMouseCursor"),
             ("TaleWorlds.CampaignSystem.Settlements.VillageMarketData", "get_ClosestTown"),
+            ("TaleWorlds.CampaignSystem.ComponentInterfaces.PartySpeedModel", "get_BaseModel"),
         };
 
         private static readonly (string type, string member, string why)[] LotShape =
@@ -88,6 +89,8 @@ namespace TradeLord.Compat
         {
             ("TaleWorlds.CampaignSystem.Settlements.FakeMarketData",
              "TaleWorlds.CampaignSystem.Settlements.IMarketData"),
+            ("NavalDLC.GameComponents.NavalDLCPartySpeedCalculationModel",
+             "TaleWorlds.CampaignSystem.ComponentInterfaces.PartySpeedModel"),
         };
 
         private static readonly (string type, string member)[] McmMembers =

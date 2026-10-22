@@ -895,6 +895,8 @@ namespace TradeLord
             try
             {
                 if (_dead || _vm == null || _layer == null) return false;
+                if (_vm.IsShopsVisible) { _vm.IsShopsVisible = false; return true; }
+                if (_vm.IsLegendVisible) { _vm.IsLegendVisible = false; return true; }
                 if (_vm.IsVisible || _vm.IsTradesVisible) Noted("with Esc");
                 if (_vm.IsVisible) { Hide(); return true; }
                 if (_vm.IsTradesVisible) { _vm.IsTradesVisible = false; return true; }

@@ -170,7 +170,7 @@
 		<string id="TL307" text="The same limit for villages, kept separate so you can hold them closer than towns. It never takes a village past the Town travel ceiling: at 0, villages follow that ceiling. Default 1."/>
 		<string id="TL308" text="Apply the resale safety factor to the sell side when ranking and totalling routes, so listed profit allows for prices drifting before you arrive. OFF shows raw margins. Either way a route must clear it to be listed, as a buying pass does."/>
 		<string id="TL309" text="Price a lot unit by unit through the game's own price model, so quantity and profit account for your own buying moving the price. OFF prices every unit at the first unit's price. Towns only, with Live world prices on."/>
-		<string id="TL310" text="Order the panel by profit per day, discounted by how likely that profit is to survive the trip: margin, stock depth, trip length, caravan traffic and price age. OFF ranks on raw profit per day."/>
+		<string id="TL310" text="Order the panel by profit per day, discounted by how likely it survives the trip: margin, stock depth, trip length, price age and Left (caravans if Live world prices or Count what is on its way to a market is off). OFF: raw profit per day."/>
 		<string id="TL311" text="Adds the best known buy and sell markets, with stock and travel time, to item tooltips."/>
 		<string id="TL312" text="Skips the vanilla merchandise rumor block so the tooltip shows one consistent set of price hints."/>
 		<string id="TL313" text="Colors trade-good and animal rows in the inventory by how this market's price compares with the best known market."/>
@@ -183,7 +183,7 @@
 		<string id="TL321" text="Days of food kept from selling, trade food last, topped up cheapest first up to 1.5x the lowest price known (2x if short a day) or 2x its value. Never-buy holds; it stops before your gold reaches your reserve. 0 turns both off. Default 3."/>
 		<string id="TL322" text="What automated trading may do with food. The days-of-supply food reserve is separate and still applies."/>
 		<string id="TL323" text="What automated trading may do with charcoal, hardwood, iron ore and ingots. Pick Leave alone to keep smithing stock out of automated trading entirely."/>
-		<string id="TL324" text="What automated trading may do with sheep, cattle and hogs. Buying is capped by the game's own herding calculation, so it will not push the party into the herd speed penalty. Haul animals and riding mounts have their own settings."/>
+		<string id="TL324" text="What automated trading may do with sheep, cattle and hogs. Buying stops short of the game's herd speed penalty, and Sell animals that slow you down still sells them to lift it. Haul animals and riding mounts have their own settings."/>
 		<string id="TL325" text="Never auto-trade unique or player-crafted items. A haul animal is never sold by policy whatever you set here, and only an explicit always-sell entry can sell one for profit."/>
 		<string id="TL326" text="Locked items in the inventory screen are never auto-traded. Selling matches a lock the way the game stores it, by item and quality. Buying matches by item alone, so a lock on a good stops TradeLord buying more of it whatever its quality."/>
 		<string id="TL327" text="What a sale has to beat by your margin, while a trade good or livestock you never bought has to beat the cheapest market you know. Profit is what each unit fetched over what it cost you, and Trade XP is what the game gives for that sale."/>

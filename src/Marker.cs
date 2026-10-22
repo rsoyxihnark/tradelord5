@@ -60,6 +60,24 @@ namespace TradeLord
         }
     }
 
+    internal struct Buyer
+    {
+        internal Settlement Town;
+        internal float Days;
+        internal int Purse;
+        internal int First;
+        internal long Total;
+        internal Paying Pays;
+    }
+
+    internal struct Buyers
+    {
+        internal Buyer Best;
+        internal Buyer Next;
+
+        internal Buyer Besides(Settlement here) => Best.Town != null && Best.Town == here ? Next : Best;
+    }
+
     internal static class Marker
     {
         private static Settlement _tracked;
@@ -88,6 +106,15 @@ namespace TradeLord
         private static float _markedDays;
         private static int _markedAt = -1;
         private static List<(string good, int amount, bool food)> _markedCargo;
+        private static Settlement _walkedOutOf;
+        private static bool _justWalkedOut;
+        private static string _outMarkId;
+        private static long _outValue;
+        private static long _outEarned;
+        private static int _outUnits;
+        private static float _outRate;
+        private static float _outDays;
+        private static int _outAt = -1;
         private static long _lastValue;
         private static int _lastAt = -1;
 
@@ -152,6 +179,15 @@ namespace TradeLord
             _markedDays = 0f;
             _markedAt = -1;
             _markedCargo = null;
+            _walkedOutOf = null;
+            _justWalkedOut = false;
+            _outMarkId = null;
+            _outValue = 0L;
+            _outEarned = 0L;
+            _outUnits = 0;
+            _outRate = 0f;
+            _outDays = 0f;
+            _outAt = -1;
             _lastValue = 0L;
             _lastAt = -1;
             _saidValue = -1L;
@@ -279,6 +315,8 @@ namespace TradeLord
                 _lostAt = -1;
                 _heldCargo = _cargoHeld;
             }
+
+            WhatItSaidOnTheWayOut(target, how);
 
             if (target == _picked)
             {
@@ -454,9 +492,54 @@ namespace TradeLord
             _markedAt = Freshness.Hour;
         }
 
-        internal static void ScoreTheMark(Settlement site, int units, int gold)
+        internal static void NoteTheWayOut(Settlement from)
+        {
+            if (from == null) return;
+            _walkedOutOf = from;
+            _justWalkedOut = true;
+        }
+
+        private static void WhatItSaidOnTheWayOut(Settlement target, in Reckoning how)
+        {
+            if (!_justWalkedOut) return;
+            _justWalkedOut = false;
+            _outMarkId = target == null ? null : target.StringId;
+            _outValue = target == null ? 0L : how.Value;
+            _outEarned = target == null ? 0L : how.Value - how.Cost;
+            _outUnits = how.Units;
+            _outRate = how.Rate;
+            _outDays = how.Days;
+            _outAt = Freshness.Hour;
+        }
+
+        internal static void ScoreTheMark(Settlement site, int units, int gold, int profit)
         {
             if (!Options.Current.ExtendedDebugLogging) return;
+            ScoreTheFigureItHeld(site, units, gold);
+            ScoreWhatItSaidOnTheWayOut(site, units, gold, profit);
+        }
+
+        private static void ScoreWhatItSaidOnTheWayOut(Settlement site, int units, int gold, int profit)
+        {
+            if (site == null || _walkedOutOf == null || _outMarkId == null) return;
+            if (site.StringId != _outMarkId || _outValue <= 0L) return;
+            long said = _outValue;
+            _outValue = 0L;
+            float ride = TradeMath.DaysSince(_outAt, Freshness.Hour);
+            float held = TradeMath.HeldShare(said > int.MaxValue ? int.MaxValue : (int)said, gold);
+            float aDay = TradeMath.PerDay(profit, ride);
+            Log.Write("marker check on the way out of " + _walkedOutOf.Name + ": it marked " + site.Name + " for " +
+                      _outUnits + " unit(s) worth " + said + " gold, " + _outEarned + " of it profit, " +
+                      _outRate.ToString("0") + " gold a day, about " +
+                      _outDays.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away; the ride took " +
+                      Scoring.Figure(ride) + " day(s) and you sold " + units + " unit(s) for " + gold + " gold, " +
+                      profit + " of it profit, " + aDay.ToString("0") + " gold a day" +
+                      (held == TradeMath.NoShareToGive ? "" : ", " + Scoring.Share(held) + " of the gold it said") +
+                      (_outRate > 0f ? " and " + Scoring.Share(aDay / _outRate) + " of the gold a day it said" : ""));
+        }
+
+        private static void ScoreTheFigureItHeld(Settlement site, int units, int gold)
+        {
             if (site == null || _markedId == null || site.StringId != _markedId) return;
             if (_markedValue <= 0L) return;
             long said = _markedValue;
@@ -676,6 +759,40 @@ namespace TradeLord
         private static Paying WhatThatMarketPays(Settlement site, SettlementComponent market,
                                                  EquipmentElement el, MobileParty party, float ride) =>
             new Paying(site, market, el, party, ride);
+
+        internal static Buyers BestBuyersOf(EquipmentElement el, int units)
+        {
+            Buyers found = default(Buyers);
+            MobileParty party = MobileParty.MainParty;
+            List<(Settlement town, int price)> markets =
+                el.Item == null || units <= 0 || party == null ? null : LedgerBehavior.Instance?.EverySell(el.Item);
+            for (int i = 0; markets != null && i < markets.Count; i++)
+            {
+                Settlement town = markets[i].town;
+                SettlementComponent market = town?.SettlementComponent;
+                if (market == null) continue;
+                float ride = Travel.EstimateDaysFromParty(town);
+                if (TradeMath.OutOfReach(ride)) continue;
+                int purse = PurseOf(town);
+                Paying pays = WhatThatMarketPays(town, market, el, party, ride);
+                var one = new Buyer
+                {
+                    Town = town, Days = ride, Purse = purse, First = pays.At(0), Pays = pays,
+                    Total = TradeMath.WhatALadderPays(pays.At, units, purse)
+                };
+                if (one.First <= 0 || one.Total <= 0L) continue;
+                if (found.Best.Town == null ||
+                    TradeMath.PaysMore(one.Total, one.First, one.Days, found.Best.Total, found.Best.First, found.Best.Days))
+                {
+                    found.Next = found.Best;
+                    found.Best = one;
+                }
+                else if (found.Next.Town == null ||
+                         TradeMath.PaysMore(one.Total, one.First, one.Days, found.Next.Total, found.Next.First, found.Next.Days))
+                    found.Next = one;
+            }
+            return found;
+        }
 
         private static Takings WhatItWouldFetch(
             Settlement site, SettlementComponent market, MobileParty party, float ride,
@@ -971,9 +1088,12 @@ namespace TradeLord
                 if (weighed > bar)
                 {
                     bar = weighed;
-                    how.RunnerUp = how.Best;
-                    how.RunnerUpValue = how.Value;
-                    how.RunnerUpRate = how.Rate;
+                    if (how.Best != null && how.Rate > how.RunnerUpRate)
+                    {
+                        how.RunnerUp = how.Best;
+                        how.RunnerUpValue = how.Value;
+                        how.RunnerUpRate = how.Rate;
+                    }
                     how.Rate = rate;
                     how.Value = total;
                     how.Best = s;

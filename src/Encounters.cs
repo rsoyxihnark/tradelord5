@@ -301,6 +301,7 @@ namespace TradeLord
             _tradedIn = here;
             TradeActionBehavior.RoadTradeLanded = false;
             Guard.Run("Action.RoadTrade", () => TradeActionBehavior.ExecuteRoadTrade(met));
+            if (met.MapEvent != null) _tradedWith = null;
         }
 
         internal static bool IsRoadTrader(MobileParty party) =>
@@ -425,14 +426,33 @@ namespace TradeLord
             Log.Write("free passage taken against " + (named ?? "an unnamed party"));
             band?.IgnoreForHours(GetawayHours);
             band?.Ai?.SetDoNotAttackMainParty(GetawayHours);
+            List<string> others = Guard.Read("FreePassage.Others", band, HoldOffTheOtherBands, new List<string>());
             if (PlayerEncounter.Current != null)
             {
                 PlayerEncounter.ProtectPlayerSide();
                 PlayerEncounter.LeaveEncounter = true;
             }
-            Log.Write("free passage held for " + GetawayHours + " hours: " +
-                      (named ?? "that band") + " leaves your party alone, while every " +
-                      "other party passes you over only for the hour the game gives anyone leaving an encounter");
+            Log.Write("free passage held for " + GetawayHours + " hours: " + (named ?? "that band") +
+                      (others.Count == 0 ? " leaves" : " and " + string.Join(", ", others.ToArray()) + " leave") +
+                      " your party alone, while every other party passes you over only for the hour the game " +
+                      "gives anyone leaving an encounter");
+        }
+
+        private static List<string> HoldOffTheOtherBands(MobileParty band)
+        {
+            var held = new List<string>();
+            if (PlayerEncounter.Current == null) return held;
+            var withYou = new List<MobileParty>();
+            var against = new List<MobileParty>();
+            PlayerEncounter.Current.FindAllNpcPartiesWhoWillJoinEvent(withYou, against);
+            foreach (MobileParty other in against)
+            {
+                if (other == null || other == band || !other.IsBandit) continue;
+                other.IgnoreForHours(GetawayHours);
+                other.Ai?.SetDoNotAttackMainParty(GetawayHours);
+                held.Add(Guard.Read("FreePassage.Name", other, Named, other.StringId));
+            }
+            return held;
         }
     }
 
