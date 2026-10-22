@@ -7,7 +7,7 @@
 ## Everything it does
 
 - ✅ Install or remove it before, during or after a campaign, and load a save made with it or without it
-- ✅ It declares no save types of its own. All it puts in a save is six strings, nine numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
+- ✅ It declares no save types of its own. All it puts in a save is eight strings, nine numbers, a switch and a settlement reference, every one of them something vanilla already reads, so a save written with it still opens without it
 
 **What it tells you**
 
@@ -186,6 +186,7 @@
 - ✅ More livestock than your party can drive, so a purchase never slows you down
 - ✅ Markets belonging to a faction you are at war with
 - ✅ Caravans and villagers at war with you, since the game offers them no trade, whatever Exclude hostile markets says
+- ✅ Caravans and villagers in a fight, since the game offers them no trade until it is over
 - ✅ The game's economy: it trades at the game's own prices, through the game's own buying and selling
 - ✅ On the road, where there is no market to sell to, it moves the goods and the gold itself, at the prices the game's own trade screen or the villagers' own offer would charge you
 

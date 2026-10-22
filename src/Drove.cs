@@ -71,12 +71,22 @@ namespace TradeLord
         internal static string PenaltyRead() =>
             Model() == null ? "herd penalty not read" : "herd penalty read";
 
+        private const string NavalSpeedModel = "NavalDLC.GameComponents.NavalDLCPartySpeedCalculationModel";
+
+        internal static PartySpeedModel UnderWarSails(PartySpeedModel model)
+        {
+            if (model?.GetType().FullName != NavalSpeedModel) return model;
+            MethodInfo under = typeof(PartySpeedModel).GetMethod("get_BaseModel",
+                                                                 BindingFlags.Instance | BindingFlags.NonPublic);
+            return under?.Invoke(model, null) as PartySpeedModel;
+        }
+
         private static DefaultPartySpeedCalculatingModel Model()
         {
             if (_lookupFailed) return null;
             var models = Campaign.Current?.Models;
             if (models == null) return null;
-            var model = models.PartySpeedCalculatingModel as DefaultPartySpeedCalculatingModel;
+            var model = UnderWarSails(models.PartySpeedCalculatingModel) as DefaultPartySpeedCalculatingModel;
             if (model == null)
             {
                 _lookupFailed = true;
@@ -252,7 +262,7 @@ namespace TradeLord
             }
         }
 
-        internal static int HaulAnimalsCargoCanSpare(MobileParty party)
+        internal static int HaulAnimalsCargoCanSpare(MobileParty party, float roomTakenOnPaper = 0f)
         {
             int held = HaulAnimalsHeld(party);
             if (held <= 0) return 0;
@@ -263,7 +273,7 @@ namespace TradeLord
                 bool atSea = Carry.Sailing();
                 if (atSea) return held;
                 ExplainedNumber capacity = model.CalculateInventoryCapacity(party, atSea, true);
-                float carried = model.CalculateTotalWeightCarried(party, atSea).ResultNumber;
+                float carried = model.CalculateTotalWeightCarried(party, atSea).ResultNumber + roomTakenOnPaper;
                 int packAnimals = party.ItemRoster.NumberOfPackAnimals;
                 if (!PackAnimalsLine(capacity, out float carries) && !atSea && packAnimals > 0)
                 {

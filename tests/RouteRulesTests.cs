@@ -170,6 +170,19 @@ namespace TradeLord.Tests
             Assert.True(Read(written).HasId("grain"));
         }
 
+        [Theory]
+        [InlineData("谷物，铁矿石")]
+        [InlineData("谷物、铁矿石")]
+        [InlineData("谷物；铁矿石")]
+        [InlineData("谷物， 铁矿石，")]
+        public void An_item_list_typed_with_chinese_punctuation_is_read_entry_by_entry(string written)
+        {
+            ItemList list = new Options { NeverSellItems = written }.NeverSet;
+            Assert.Equal(2, list.Entries.Count);
+            Assert.True(list.HasName("谷物"));
+            Assert.True(list.HasName("铁矿石"));
+        }
+
         [Fact]
         public void Item_names_are_matched_whatever_the_casing()
         {

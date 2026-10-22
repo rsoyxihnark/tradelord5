@@ -175,7 +175,7 @@ namespace TradeLord
         private ItemList _never, _always, _neverBuy, _alwaysBuy;
         private string _nSrc, _aSrc, _nbSrc, _abSrc;
 
-        internal static readonly char[] EntryMarks = { ',', ';' };
+        internal static readonly char[] EntryMarks = { ',', ';', '\uFF0C', '\uFF1B', '\u3001' };
         internal static readonly char[] WordMarks = { ' ', '\t' };
 
         private static ItemList Parsed(string src, ref string seen, ref ItemList set)

@@ -10,8 +10,8 @@ namespace TradeLord.Tests
         private static Landing Coming(string item, string category, int units, int worth, float days) =>
             new Landing { Item = item, Category = category, Units = units, Worth = worth, Days = days };
 
-        private static Spending Purse(int gold, float days) =>
-            new Spending { Gold = gold, Days = days };
+        private static Spending Bought(string category, int worth, float days) =>
+            new Spending { Category = category, Worth = worth, Days = days };
 
         private static Draw Taken(string category, int worth, float days) =>
             new Draw { Category = category, Worth = worth, Days = days };
@@ -49,8 +49,7 @@ namespace TradeLord.Tests
         public void A_shelf_read_ahead_takes_off_what_the_town_uses_up_and_what_its_workshops_take()
         {
             var drawn = new List<Draw> { Taken("grain", 100, 1f) };
-            var curve = Projection.ShelfAhead(null, null, OnePull("grain"), 1f,
-                                              "grain", "grain", 10, 40, 0.5f, drawn, 50);
+            var curve = Projection.ShelfAhead(null, null,                       "grain", "grain", 10, 40, 0.5f, drawn, 50);
             Assert.Equal(new[] { (1f, 25), (2f, 20), (3f, 15), (4f, 10), (5f, 5), (6f, 0) },
                          curve.GetRange(0, 6).ToArray());
             Assert.Equal(new[] { 1f }, Projection.Moments(null, null, 0.5f, drawn).ToArray());
@@ -73,11 +72,9 @@ namespace TradeLord.Tests
         public void A_shelf_a_landing_keeps_up_still_runs_out_on_the_day_the_town_has_used_it_up()
         {
             var listed = new List<Landing> { Coming("grain", "grain", 30, 300, 1f) };
-            var curve = Projection.ShelfAhead(listed, null, OnePull("grain"), 1f,
-                                              "grain", "grain", 10, 40, 0.5f, null, 100);
+            var curve = Projection.ShelfAhead(listed, null,                       "grain", "grain", 10, 40, 0.5f, null, 100);
             Assert.Equal(6f, Projection.RunsOutOf(curve, 20));
-            var late = Projection.ShelfAhead(listed, null, OnePull("grain"), 1f,
-                                             "grain", "grain", 10, 40, 5.5f, null, 100);
+            var late = Projection.ShelfAhead(listed, null,                      "grain", "grain", 10, 40, 5.5f, null, 100);
             Assert.Equal(6f, Projection.RunsOutOf(late, 20));
         }
 
@@ -119,9 +116,9 @@ namespace TradeLord.Tests
             Assert.Equal(9, Projection.UnitsLanding(listed, "grain", 1f, graded: true));
             Assert.Equal(400, Projection.WorthLanding(listed, "grain", 1f));
             Assert.Equal(360, Projection.WorthLanding(listed, "grain", 1f, graded: true));
-            var coming = new List<Spending> { new Spending { Gold = 1000, Days = 1.1f } };
-            Assert.Equal(0, Projection.PurseLanding(coming, 1f));
-            Assert.Equal(300, Projection.PurseLanding(coming, 1f, graded: true));
+            var coming = new List<Spending> { Bought("grain", 1000, 1.1f) };
+            Assert.Equal(0, Projection.WorthBought(coming, "grain", 1f));
+            Assert.Equal(300, Projection.WorthBought(coming, "grain", 1f, graded: true));
         }
 
         [Fact]
@@ -130,6 +127,17 @@ namespace TradeLord.Tests
             var listed = new List<Landing> { Coming("grain", "grain", 20, 400, 0.6f) };
             Assert.Equal(0, Projection.UnitsLanding(listed, "grain", 0.6f));
             Assert.Equal(20, Projection.UnitsLanding(listed, "grain", 0.7f));
+        }
+
+        [Fact]
+        public void A_load_an_hour_from_the_shelf_counts_while_you_are_still_minutes_away()
+        {
+            var listed = new List<Landing> { Coming("jewelry", "jewelry", 10, 8000, 1f / 24f) };
+            Assert.Equal(10, Projection.UnitsLanding(listed, "jewelry", 0.12f, graded: true));
+            Assert.Equal(8000, Projection.WorthLanding(listed, "jewelry", 0.12f, graded: true));
+            Assert.Equal(10, Projection.UnitsLanding(listed, "jewelry", 0.13f, graded: true));
+            var coming = new List<Spending> { Bought("jewelry", 1000, 1f / 24f) };
+            Assert.Equal(1000, Projection.WorthBought(coming, "jewelry", 0.12f, graded: true));
         }
 
         [Fact]
@@ -152,6 +160,24 @@ namespace TradeLord.Tests
             };
             Assert.Equal(1000, Projection.WorthLanding(listed, "grain", 2f));
             Assert.Equal(500, Projection.WorthLanding(listed, "wine", 2f));
+        }
+
+        [Fact]
+        public void A_workshop_run_written_against_the_good_the_town_holds_keeps_that_shelf_up()
+        {
+            var made = new List<Landing>();
+            var unnamed = new List<Landing>();
+            for (int day = 1; day <= 6; day++)
+            {
+                made.Add(Coming("wine", "wine", 2, 100, day));
+                unnamed.Add(Coming(null, "wine", 2, 100, day));
+            }
+            var kept = Projection.ShelfAhead(made, null, "wine", "wine", 50, 12, 0.4f, null, 100);
+            Assert.Equal(new[] { (1f, 12), (6f, 12), (7f, 10) }, new[] { kept[0], kept[5], kept[6] });
+            Assert.Equal(7f, Projection.RunsOutOf(kept, 11));
+            Assert.Equal(1f, Projection.RunsOutOf(
+                Projection.ShelfAhead(unnamed, null, "wine", "wine", 50, 12, 0.4f, null, 100), 11));
+            Assert.Equal(Projection.WorthLanding(unnamed, "wine", 3f), Projection.WorthLanding(made, "wine", 3f));
         }
 
         [Fact]
@@ -183,57 +209,37 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_purse_on_the_road_adds_up_within_the_window()
+        public void What_caravans_buy_on_the_road_adds_up_within_the_window()
         {
-            var coming = new List<Spending> { Purse(500, 1f), Purse(300, 5f), Purse(200, 2f) };
-            Assert.Equal(700, Projection.PurseLanding(coming, 2f));
-            Assert.Equal(1000, Projection.PurseLanding(coming, 5f));
-            Assert.Equal(0, Projection.PurseLanding(null, 5f));
+            var coming = new List<Spending> { Bought("grain", 500, 1f), Bought("grain", 300, 5f), Bought("grain", 200, 2f) };
+            Assert.Equal(700, Projection.WorthBought(coming, "grain", 2f));
+            Assert.Equal(1000, Projection.WorthBought(coming, "grain", 5f));
+            Assert.Equal(0, Projection.WorthBought(null, "grain", 5f));
         }
 
         [Fact]
-        public void The_purse_window_is_read_to_the_nearest_quarter_day_as_well()
+        public void The_window_for_what_caravans_buy_is_read_to_the_nearest_quarter_day_as_well()
         {
-            var coming = new List<Spending> { Purse(500, 0.6f) };
-            Assert.Equal(0, Projection.PurseLanding(coming, 0.6f));
-            Assert.Equal(500, Projection.PurseLanding(coming, 0.7f));
+            var coming = new List<Spending> { Bought("grain", 500, 0.6f) };
+            Assert.Equal(0, Projection.WorthBought(coming, "grain", 0.6f));
+            Assert.Equal(500, Projection.WorthBought(coming, "grain", 0.7f));
         }
 
         [Fact]
-        public void What_leaves_the_shelf_is_the_purse_share_the_kind_of_good_pulls()
+        public void Only_the_kind_a_caravan_buys_leaves_the_shelf()
         {
-            var pull = new Dictionary<string, float> { { "grain", 0.6f }, { "wine", 0.2f } };
-            float across = Projection.PullAcross(pull);
-            Assert.Equal(0.8f, across, 4);
-            Assert.Equal(750, Projection.WorthLeaving(1000, pull, across, "grain"));
-            Assert.Equal(250, Projection.WorthLeaving(1000, pull, across, "wine"));
+            var coming = new List<Spending> { Bought("grain", 750, 1f), Bought("wine", 250, 1f) };
+            Assert.Equal(750, Projection.WorthBought(coming, "grain", 2f));
+            Assert.Equal(250, Projection.WorthBought(coming, "wine", 2f));
+            Assert.Equal(0, Projection.WorthBought(coming, "olives", 2f));
+            Assert.Equal(0, Projection.WorthBought(coming, null, 2f));
         }
 
         [Fact]
-        public void A_kind_of_good_no_trader_would_pick_has_nothing_leaving()
+        public void A_caravan_that_buys_nothing_of_a_kind_takes_none_of_it()
         {
-            var pull = new Dictionary<string, float> { { "grain", 0.6f } };
-            Assert.Equal(0, Projection.WorthLeaving(1000, pull, 0.6f, "olives"));
-            Assert.Equal(0, Projection.WorthLeaving(1000, pull, 0.6f, null));
-            Assert.Equal(0, Projection.WorthLeaving(1000, null, 0.6f, "grain"));
-        }
-
-        [Fact]
-        public void An_empty_purse_leaves_nothing_whatever_the_pull_says()
-        {
-            var pull = new Dictionary<string, float> { { "grain", 0.6f } };
-            Assert.Equal(0, Projection.WorthLeaving(0, pull, 0.6f, "grain"));
-            Assert.Equal(0, Projection.WorthLeaving(-500, pull, 0.6f, "grain"));
-        }
-
-        [Fact]
-        public void A_market_with_no_pull_at_all_is_not_read()
-        {
-            Assert.Equal(0f, Projection.PullAcross(null));
-            Assert.Equal(0f, Projection.PullAcross(new Dictionary<string, float>()));
-            Assert.False(Projection.PullReadable(null, 1f));
-            Assert.False(Projection.PullReadable(new Dictionary<string, float>(), 0f));
-            Assert.True(Projection.PullReadable(new Dictionary<string, float> { { "grain", 0.5f } }, 0.5f));
+            var coming = new List<Spending> { Bought("grain", 0, 1f), Bought("grain", -500, 1f), Bought(null, 900, 1f) };
+            Assert.Equal(0, Projection.WorthBought(coming, "grain", 2f));
         }
 
         [Fact]
@@ -276,14 +282,10 @@ namespace TradeLord.Tests
             }
         }
 
-        private static IDictionary<string, float> OnePull(string category) =>
-            new Dictionary<string, float> { { category, 1f } };
-
         private static float RunsOut(IList<Landing> listed, IList<Spending> coming,
-                                     IDictionary<string, float> pull, float across,
                                      string item, string category, int unitValue,
                                      int stockNow, int wanted, float afterDays) =>
-            Projection.RunsOutOf(Projection.ShelfAhead(listed, coming, pull, across, item, category,
+            Projection.RunsOutOf(Projection.ShelfAhead(listed, coming, item, category,
                                                        unitValue, stockNow, afterDays), wanted);
 
         [Fact]
@@ -291,60 +293,58 @@ namespace TradeLord.Tests
         {
             Assert.Equal(Projection.NeverRunsOut,
                 RunsOut(new List<Landing>(), new List<Spending>(),
-                        OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+                        "grain", "grain", 10, 40, 20, 0.5f));
         }
 
         [Fact]
-        public void A_shelf_runs_out_at_the_moment_a_purse_takes_the_last_of_it()
+        public void A_shelf_runs_out_at_the_moment_a_caravan_takes_the_last_of_it()
         {
-            var coming = new List<Spending> { Purse(150, 1f), Purse(150, 2f) };
+            var coming = new List<Spending> { Bought("grain", 150, 1f), Bought("grain", 150, 2f) };
             Assert.Equal(2f,
                 RunsOut(new List<Landing>(), coming,
-                        OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+                        "grain", "grain", 10, 40, 20, 0.5f));
         }
 
         [Fact]
-        public void A_load_landing_first_holds_the_shelf_up_past_a_purse()
+        public void A_load_landing_first_holds_the_shelf_up_past_a_caravan_buying()
         {
             var listed = new List<Landing> { Coming("grain", "grain", 30, 300, 0.75f) };
-            var coming = new List<Spending> { Purse(300, 1f) };
+            var coming = new List<Spending> { Bought("grain", 300, 1f) };
             Assert.Equal(Projection.NeverRunsOut,
                 RunsOut(listed, coming,
-                        OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+                        "grain", "grain", 10, 40, 20, 0.5f));
         }
 
         [Fact]
         public void Nothing_that_lands_before_you_arrive_can_expire_the_deal()
         {
-            var coming = new List<Spending> { Purse(5000, 0.25f) };
+            var coming = new List<Spending> { Bought("grain", 5000, 0.25f) };
             Assert.Equal(Projection.NeverRunsOut,
                 RunsOut(new List<Landing>(), coming,
-                        OnePull("grain"), 1f, "grain", "grain", 10, 40, 20, 0.5f));
+                        "grain", "grain", 10, 40, 20, 0.5f));
         }
 
         [Fact]
         public void A_deal_of_nothing_and_a_good_worth_nothing_never_expire()
         {
-            var coming = new List<Spending> { Purse(5000, 2f) };
+            var coming = new List<Spending> { Bought("grain", 5000, 2f) };
             Assert.Equal(Projection.NeverRunsOut,
-                RunsOut(null, coming, OnePull("grain"), 1f, "grain", "grain", 10, 40, 0, 0.5f));
+                RunsOut(null, coming, "grain", "grain", 10, 40, 0, 0.5f));
             Assert.Equal(Projection.NeverRunsOut,
-                RunsOut(null, coming, OnePull("grain"), 1f, "grain", "grain", 0, 40, 20, 0.5f));
+                RunsOut(null, coming, "grain", "grain", 0, 40, 20, 0.5f));
             Assert.Equal(Projection.NeverRunsOut,
-                RunsOut(null, coming, OnePull("grain"), 1f, null, "grain", 10, 40, 20, 0.5f));
+                RunsOut(null, coming, null, "grain", 10, 40, 20, 0.5f));
         }
 
         [Fact]
         public void The_shelf_a_town_will_hold_is_the_same_whatever_size_deal_asks_for_it()
         {
             var listed = new List<Landing> { Coming("grain", "grain", 30, 300, 1.5f) };
-            var coming = new List<Spending> { Purse(150, 1f), Purse(150, 2f) };
-            var once = Projection.ShelfAhead(listed, coming, OnePull("grain"), 1f,
-                                             "grain", "grain", 10, 40, 0.5f);
+            var coming = new List<Spending> { Bought("grain", 150, 1f), Bought("grain", 150, 2f) };
+            var once = Projection.ShelfAhead(listed, coming,                      "grain", "grain", 10, 40, 0.5f);
             for (int wanted = 1; wanted <= 60; wanted++)
                 Assert.Equal(
-                    RunsOut(listed, coming, OnePull("grain"), 1f,
-                            "grain", "grain", 10, 40, wanted, 0.5f),
+                    RunsOut(listed, coming,     "grain", "grain", 10, 40, wanted, 0.5f),
                     Projection.RunsOutOf(once, wanted));
         }
 
@@ -352,9 +352,8 @@ namespace TradeLord.Tests
         public void The_shelf_a_town_will_hold_is_read_once_for_every_moment_it_changes()
         {
             var listed = new List<Landing> { Coming("grain", "grain", 30, 300, 1.5f) };
-            var coming = new List<Spending> { Purse(150, 1f), Purse(150, 2f) };
-            var curve = Projection.ShelfAhead(listed, coming, OnePull("grain"), 1f,
-                                              "grain", "grain", 10, 40, 0.5f);
+            var coming = new List<Spending> { Bought("grain", 150, 1f), Bought("grain", 150, 2f) };
+            var curve = Projection.ShelfAhead(listed, coming,                       "grain", "grain", 10, 40, 0.5f);
             Assert.Equal(Projection.Moments(listed, coming, 0.5f).Count, curve.Count);
             for (int i = 0; i < curve.Count; i++) Assert.True(curve[i].days > 0.5f);
         }
@@ -363,7 +362,7 @@ namespace TradeLord.Tests
         public void A_shelf_read_ahead_that_never_dips_hands_back_no_moment_at_all()
         {
             var curve = Projection.ShelfAhead(new List<Landing>(), new List<Spending>(),
-                                              OnePull("grain"), 1f, "grain", "grain", 10, 40, 0.5f);
+                                              "grain", "grain", 10, 40, 0.5f);
             Assert.Empty(curve);
             Assert.Equal(Projection.NeverRunsOut, Projection.RunsOutOf(curve, 20));
             Assert.Equal(Projection.NeverRunsOut, Projection.RunsOutOf(null, 20));
@@ -372,15 +371,12 @@ namespace TradeLord.Tests
         [Fact]
         public void A_deal_of_nothing_never_expires_against_a_shelf_read_ahead()
         {
-            var coming = new List<Spending> { Purse(5000, 2f) };
-            var curve = Projection.ShelfAhead(null, coming, OnePull("grain"), 1f,
-                                              "grain", "grain", 10, 40, 0.5f);
+            var coming = new List<Spending> { Bought("grain", 5000, 2f) };
+            var curve = Projection.ShelfAhead(null, coming,                       "grain", "grain", 10, 40, 0.5f);
             Assert.Equal(Projection.NeverRunsOut, Projection.RunsOutOf(curve, 0));
             Assert.Equal(Projection.NeverRunsOut, Projection.RunsOutOf(curve, -3));
-            Assert.Empty(Projection.ShelfAhead(null, coming, OnePull("grain"), 1f,
-                                               "grain", "grain", 0, 40, 0.5f));
-            Assert.Empty(Projection.ShelfAhead(null, coming, OnePull("grain"), 1f,
-                                               null, "grain", 10, 40, 0.5f));
+            Assert.Empty(Projection.ShelfAhead(null, coming,                        "grain", "grain", 0, 40, 0.5f));
+            Assert.Empty(Projection.ShelfAhead(null, coming,                        null, "grain", 10, 40, 0.5f));
         }
 
         [Fact]
@@ -392,7 +388,7 @@ namespace TradeLord.Tests
                 Coming("grain", "grain", 5, 50, 0.8f),
                 Coming("grain", "grain", 5, 50, 2.3f)
             };
-            var coming = new List<Spending> { Purse(100, 0.8f), Purse(100, 3f) };
+            var coming = new List<Spending> { Bought("grain", 100, 0.8f), Bought("grain", 100, 3f) };
             var when = Projection.Moments(listed, coming, 0.5f);
             Assert.Equal(new List<float> { 1f, 2.5f, 3f }, when);
         }
@@ -405,7 +401,7 @@ namespace TradeLord.Tests
             for (int i = 0; i < 500; i++)
             {
                 listed.Add(Coming("grain", "grain", 1, 10, 1.2f));
-                coming.Add(Purse(10, 1.2f));
+                coming.Add(Bought("grain", 10, 1.2f));
             }
             listed.Add(Coming("grain", "grain", 1, 10, 4.1f));
             Assert.Equal(new List<float> { 1.25f, 4.25f }, Projection.Moments(listed, coming, 0.5f));
@@ -421,30 +417,34 @@ namespace TradeLord.Tests
                 var coming = new List<Spending>();
                 int purses = rng.Next(0, 5);
                 for (int i = 0; i < purses; i++)
-                    coming.Add(Purse(rng.Next(1, 4000), (float)(rng.NextDouble() * 6d)));
-                float at = RunsOut(null, coming, OnePull("grain"), 1f,
-                                   "grain", "grain", rng.Next(1, 200),
+                    coming.Add(Bought("grain", rng.Next(1, 4000), (float)(rng.NextDouble() * 6d)));
+                float at = RunsOut(null, coming,            "grain", "grain", rng.Next(1, 200),
                                    rng.Next(0, 200), rng.Next(1, 60), after);
                 Assert.True(at == Projection.NeverRunsOut || at > after);
             }
         }
 
         [Fact]
-        public void A_purse_split_across_a_market_never_hands_out_more_than_the_purse()
+        public void What_caravans_buy_never_adds_up_to_more_than_they_were_noted_to_buy()
         {
             var rng = new System.Random(3312);
             for (int round = 0; round < 20000; round++)
             {
-                var pull = new Dictionary<string, float>();
+                var coming = new List<Spending>();
+                long noted = 0;
                 int kinds = rng.Next(1, 8);
-                for (int i = 0; i < kinds; i++) pull["c" + i] = (float)rng.NextDouble();
-                float across = Projection.PullAcross(pull);
-                int purse = rng.Next(1, 2000000);
+                for (int i = 0; i < rng.Next(0, 12); i++)
+                {
+                    int worth = rng.Next(1, 200000);
+                    noted += worth;
+                    coming.Add(Bought("c" + rng.Next(0, kinds), worth, (float)(rng.NextDouble() * 6d)));
+                }
+                float within = (float)(rng.NextDouble() * 8d);
 
                 long handed = 0;
-                foreach (var kind in pull) handed += Projection.WorthLeaving(purse, pull, across, kind.Key);
+                for (int i = 0; i < kinds; i++) handed += Projection.WorthBought(coming, "c" + i, within, graded: true);
 
-                Assert.True(handed <= purse + kinds);
+                Assert.True(handed <= noted);
             }
         }
 

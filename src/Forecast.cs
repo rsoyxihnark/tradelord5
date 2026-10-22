@@ -10,6 +10,7 @@ using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.CampaignSystem.Settlements.Workshops;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
+using TaleWorlds.ObjectSystem;
 
 namespace TradeLord
 {
@@ -29,10 +30,13 @@ namespace TradeLord
         private static readonly Dictionary<(string site, string kind), int> _usedUp =
             new Dictionary<(string, string), int>();
 
-        private static readonly Dictionary<string, Dictionary<string, float>> _pull =
-            new Dictionary<string, Dictionary<string, float>>(StringComparer.Ordinal);
+        private static readonly Dictionary<string, (float average, float lowest)> _indexes =
+            new Dictionary<string, (float, float)>(StringComparer.Ordinal);
 
-        private static readonly Dictionary<string, float> _across =
+        private static readonly Dictionary<string, (float average, float lowest)> _coastIndexes =
+            new Dictionary<string, (float, float)>(StringComparer.Ordinal);
+
+        private static readonly Dictionary<string, float> _averageValues =
             new Dictionary<string, float>(StringComparer.Ordinal);
 
         private static readonly Dictionary<string, ItemObject> _standsFor =
@@ -61,8 +65,9 @@ namespace TradeLord
             _spending.Clear();
             _drawing.Clear();
             _usedUp.Clear();
-            _pull.Clear();
-            _across.Clear();
+            _indexes.Clear();
+            _coastIndexes.Clear();
+            _averageValues.Clear();
             _standsFor.Clear();
             _standsForAt.Clear();
             _shelfAhead.Clear();
@@ -101,12 +106,8 @@ namespace TradeLord
             _drawing.TryGetValue(site.StringId, out List<Draw> drawn);
             int usedADay = UsedUpADay(site, item.ItemCategory);
             if (listed != null || coming != null || drawn != null || usedADay > 0)
-            {
-                PullAt(site, out Dictionary<string, float> pull, out float across);
-                curve = Projection.ShelfAhead(listed, coming, pull, across, item.StringId,
-                                              item.ItemCategory.StringId, item.Value,
-                                              stockNow, afterDays, drawn, usedADay);
-            }
+                curve = Projection.ShelfAhead(listed, coming, item.StringId, item.ItemCategory.StringId,
+                                              item.Value, stockNow, afterDays, drawn, usedADay);
             _shelfAhead[key] = curve;
             return curve;
         }
@@ -142,7 +143,7 @@ namespace TradeLord
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
             Build();
-            var key = (site.StringId, item.ItemCategory.StringId, TradeMath.ToTheQuarterDay(withinDays));
+            var key = (site.StringId, item.ItemCategory.StringId, TradeMath.ARideToTheQuarterDay(withinDays));
             if (_shifts.TryGetValue(key, out int shift)) return shift;
             shift = WorthShift(site, item, withinDays);
             _shifts[key] = shift;
@@ -176,14 +177,10 @@ namespace TradeLord
             return UsedUpADay(site, item.ItemCategory);
         }
 
-        private static int WorthBought(Settlement site, ItemObject item, float withinDays)
-        {
-            if (!_spending.TryGetValue(site.StringId, out List<Spending> coming)) return 0;
-            int purse = Projection.PurseLanding(coming, withinDays, graded: true);
-            if (purse <= 0) return 0;
-            if (!PullAt(site, out Dictionary<string, float> pull, out float across)) return 0;
-            return Projection.WorthLeaving(purse, pull, across, item.ItemCategory.StringId);
-        }
+        private static int WorthBought(Settlement site, ItemObject item, float withinDays) =>
+            _spending.TryGetValue(site.StringId, out List<Spending> coming)
+                ? Projection.WorthBought(coming, item.ItemCategory.StringId, withinDays, graded: true)
+                : 0;
 
         private static int WorthUsedUp(Settlement site, ItemObject item, float withinDays, int most)
         {
@@ -211,38 +208,6 @@ namespace TradeLord
             return worth;
         }
 
-        private static bool PullAt(Settlement site, out Dictionary<string, float> pull, out float across)
-        {
-            if (!_pull.TryGetValue(site.StringId, out pull))
-            {
-                Dictionary<string, float> read = null;
-                Guard.Run("Forecast.Pull", () => read = WhatATraderWouldPickAt(site));
-                pull = read;
-                _pull[site.StringId] = read;
-                _across[site.StringId] = Projection.PullAcross(read);
-            }
-            _across.TryGetValue(site.StringId, out across);
-            return Projection.PullReadable(pull, across);
-        }
-
-        private static Dictionary<string, float> WhatATraderWouldPickAt(Settlement site)
-        {
-            Town town = site.IsTown ? site.Town : null;
-            ItemRoster stock = site.ItemRoster;
-            if (town == null || stock == null) return null;
-            var pull = new Dictionary<string, float>(StringComparer.Ordinal);
-            for (int i = 0; i < stock.Count; i++)
-            {
-                ItemObject item = stock.GetItemAtIndex(i);
-                ItemCategory category = item?.ItemCategory;
-                if (category == null || stock.GetElementNumber(i) <= 0) continue;
-                if (!TradePolicy.Priced(item) || pull.ContainsKey(category.StringId)) continue;
-                float appeal = TradeMath.PullOfAPrice(town.MarketData.GetPriceFactor(category));
-                if (appeal > 0f) pull[category.StringId] = appeal;
-            }
-            return pull;
-        }
-
         internal static string WillMake(Workshop shop)
         {
             if (!On || shop == null) return "";
@@ -266,11 +231,12 @@ namespace TradeLord
             _spending.Clear();
             _drawing.Clear();
             _usedUp.Clear();
-            _pull.Clear();
-            _across.Clear();
+            _indexes.Clear();
+            _coastIndexes.Clear();
             _standsForAt.Clear();
             _shelfAhead.Clear();
             _shifts.Clear();
+            Guard.Run("Forecast.PriceIndexes", ReadThePriceIndexes);
             Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);
             Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
         }
@@ -292,35 +258,205 @@ namespace TradeLord
                 if (carried == null) continue;
                 float days = TradeMath.EtaDays(
                     party.GetPosition2D.Distance(bound.GetPosition2D), party.Speed);
-                if (caravan) NoteAPurse(bound, party.PartyTradeGold, days);
+                if (caravan)
+                {
+                    Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days));
+                    continue;
+                }
+                ItemObject ridden = ThePackAnimalVillagersKeep(carried);
                 for (int k = 0; k < carried.Count; k++)
                 {
                     ItemObject item = carried.GetItemAtIndex(k);
                     int amount = carried.GetElementNumber(k);
                     if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;
-                    int landing = caravan ? WhatACaravanLeavesHere(bound, item, amount) : amount;
-                    if (landing <= 0) continue;
-                    Note(bound, item.StringId, item.ItemCategory, landing,
-                         TradeMath.WorthOf(landing, item.Value), days);
+                    if (item == ridden) amount -= (int)(0.5f * party.MemberRoster.TotalManCount);
+                    if (amount <= 0) continue;
+                    Note(bound, item.StringId, item.ItemCategory, amount, TradeMath.WorthOf(amount, item.Value), days);
                 }
             }
         }
 
-        private static int WhatACaravanLeavesHere(Settlement bound, ItemObject item, int carried)
+        private static void ReadThePriceIndexes()
+        {
+            MBReadOnlyList<Town> towns = Town.AllTowns;
+            MBReadOnlyList<ItemCategory> kinds = ItemCategories.All;
+            if (towns == null || kinds == null) return;
+            foreach (ItemCategory kind in kinds)
+            {
+                if (kind == null || (!kind.IsTradeGood && !kind.IsAnimal)) continue;
+                float all = 0f, lowest = 1000f, coast = 0f, coastLowest = 1000f;
+                int counted = 0, ports = 0;
+                foreach (Town town in towns)
+                {
+                    if (town?.Settlement == null) continue;
+                    float index = town.GetItemCategoryPriceIndex(kind);
+                    all += index;
+                    counted++;
+                    if (index < lowest) lowest = index;
+                    if (!town.Settlement.HasPort) continue;
+                    coast += index;
+                    ports++;
+                    if (index < coastLowest) coastLowest = index;
+                }
+                if (counted > 0) _indexes[kind.StringId] = (all / counted, lowest);
+                if (ports > 0) _coastIndexes[kind.StringId] = (coast / ports, coastLowest);
+            }
+        }
+
+        private static float AverageValueOf(ItemCategory kind)
+        {
+            if (_averageValues.Count == 0)
+            {
+                var added = new Dictionary<string, (float sum, int count)>(StringComparer.Ordinal);
+                foreach (ItemObject item in Items.All)
+                {
+                    if (item?.ItemCategory == null || !((MBObjectBase)item).IsReady) continue;
+                    added.TryGetValue(item.ItemCategory.StringId, out var had);
+                    added[item.ItemCategory.StringId] = (had.sum + Math.Min(500, item.Value), had.count + 1);
+                }
+                foreach (var one in added) _averageValues[one.Key] = one.Value.sum / one.Value.count;
+            }
+            return _averageValues.TryGetValue(kind.StringId, out float value) ? value : 1f;
+        }
+
+        private static void FollowACaravan(MobileParty caravan, Settlement bound, float days)
         {
             Town town = bound.IsTown ? bound.Town : null;
-            ItemCategory category = item.ItemCategory;
-            if (town == null || category == null) return 0;
-            return Guard.Read("Forecast.WhatACaravanLeaves", town, where =>
+            ItemRoster carried = caravan.ItemRoster;
+            if (town == null || carried == null) return;
+            bool convoy = caravan.HasNavalNavigationCapability;
+            bool onLand = caravan.HasLandNavigationCapability;
+            var indexes = caravan.CaravanPartyComponent != null &&
+                          caravan.CaravanPartyComponent.CanHaveNavalNavigationCapability ? _coastIndexes : _indexes;
+            int men = caravan.MemberRoster.TotalManCount;
+            int hauling = carried.NumberOfPackAnimals, herd = carried.NumberOfLivestockAnimals;
+            var held = new Dictionary<string, int>(StringComparer.Ordinal);
+            var sold = new int[carried.Count];
+            for (int k = 0; k < carried.Count; k++)
             {
-                float priceFactor = where.MarketData.GetPriceFactor(category);
-                float demand = where.MarketData.GetCategoryData(category).Demand;
-                float budget = Campaign.Current.Models.SettlementEconomyModel
-                    .CalculateDailySettlementBudgetForItemCategory(where, demand, category);
-                int price = Priced.At(where.Settlement.SettlementComponent, item,
-                                      MobileParty.MainParty, selling: true);
-                return TradeMath.WhatACaravanUnloads(carried, priceFactor, budget, price);
-            }, 0);
+                ItemObject item = carried.GetItemAtIndex(k);
+                if (item?.ItemCategory == null) continue;
+                held.TryGetValue(item.ItemCategory.StringId, out int had);
+                held[item.ItemCategory.StringId] = TradeMath.AddedUp(had, TradeMath.WorthOf(carried.GetElementNumber(k),
+                                                                                          item.Value + 10));
+            }
+
+            var economy = Campaign.Current.Models.SettlementEconomyModel;
+            int till = town.Gold;
+            long earned = 0L;
+            float shed = 0f;
+            for (int horses = 0; horses < 2; horses++)
+                for (int k = carried.Count - 1; k >= 0; k--)
+                {
+                    ItemObject item = carried.GetItemAtIndex(k);
+                    ItemCategory kind = item?.ItemCategory;
+                    int amount = carried.GetElementNumber(k);
+                    if (kind == null || amount <= 0) continue;
+                    bool haul = kind == DefaultItemCategories.PackAnimal;
+                    bool livestock = item.HorseComponent != null && item.HorseComponent.IsLiveStock;
+                    if ((horses == 1) != (item.HasHorseComponent || haul)) continue;
+                    if (!indexes.TryGetValue(kind.StringId, out var index)) continue;
+                    int haulOver = TradeMath.AnimalsACaravanSellsOff(hauling, men);
+                    int herdOver = TradeMath.AnimalsACaravanSellsOff(herd, men);
+                    if (haul && onLand && haulOver <= 0) continue;
+                    int price = Priced.At(town, item, caravan, selling: true);
+                    if (price <= 0) continue;
+                    held.TryGetValue(kind.StringId, out int worth);
+                    int units = onLand && haul ? haulOver
+                        : onLand && livestock && herdOver > 0 ? herdOver
+                        : TradeMath.WhatACaravanUnloads(
+                              amount, town.GetItemCategoryPriceIndex(kind), index.average, index.lowest, worth,
+                              economy.CalculateDailySettlementBudgetForItemCategory(town, town.MarketData.GetDemand(kind),
+                                                                                    kind),
+                              item.Value, price, convoy, haul);
+                    units = Math.Min(units, Math.Min(amount, till / price));
+                    if (units <= 0) continue;
+                    sold[k] = units;
+                    till -= units * price;
+                    earned += (long)units * price;
+                    shed += units * item.Weight;
+                    if (haul) hauling -= units;
+                    else if (livestock) herd -= units;
+                    if (TradePolicy.Priced(item))
+                        Note(bound, item.StringId, kind, units, TradeMath.WorthOf(units, item.Value), days);
+                }
+
+            for (int k = 0; k < carried.Count; k++)
+            {
+                ItemObject item = carried.GetItemAtIndex(k);
+                if (item?.ItemCategory == null || sold[k] <= 0) continue;
+                held[item.ItemCategory.StringId] -= TradeMath.WorthOf(sold[k], item.Value + 10);
+            }
+            int gold = (int)Math.Min(int.MaxValue, caravan.PartyTradeGold + earned);
+            float weight = caravan.TotalWeightCarried - shed;
+            int capacity = caravan.InventoryCapacity;
+            float budget = TradeMath.ACaravansBudgetFactor(gold);
+            float room = TradeMath.ACaravansRoomFactor(weight, capacity);
+            var worthOf = new Dictionary<string, float>(StringComparer.Ordinal);
+            var wanted = new List<(ItemCategory kind, float worth, int at)>();
+            MBReadOnlyList<ItemCategory> kinds = ItemCategories.All;
+            for (int at = 0; kinds != null && at < kinds.Count; at++)
+            {
+                ItemCategory kind = kinds[at];
+                if (kind == null || (!kind.IsTradeGood && !kind.IsAnimal)) continue;
+                if (!indexes.TryGetValue(kind.StringId, out var index)) continue;
+                if (town.MarketData.GetItemCountOfCategory(kind) <= 0) continue;
+                held.TryGetValue(kind.StringId, out int worth);
+                float wants = TradeMath.WhatACaravanThinksAKindIsWorth(
+                    town.GetItemCategoryPriceIndex(kind), index.average, worth, town.MarketData.GetDemand(kind),
+                    AverageValueOf(kind), budget, room, kind.Properties == ItemCategory.Property.BonusToFoodStores,
+                    onLand && kind == DefaultItemCategories.PackAnimal);
+                worthOf[kind.StringId] = wants;
+                wanted.Add((kind, wants, at));
+            }
+            wanted.Sort((x, y) => x.worth != y.worth ? y.worth.CompareTo(x.worth) : x.at.CompareTo(y.at));
+
+            void Buy(ItemCategory kind)
+            {
+                if (!worthOf.TryGetValue(kind.StringId, out float wants)) return;
+                if (!kind.IsAnimal && weight / capacity > TradeMath.ACaravanBuysNoGoodsPastThisFull) return;
+                int stocked = town.MarketData.GetItemCountOfCategory(kind);
+                ItemObject stands = StandsForAt(bound, kind);
+                if (stocked <= 0 || stands == null) return;
+                int spend = TradeMath.WhatACaravanSpendsOnAKind(
+                    gold, wants, Campaign.Current.Models.CaravanModel.GetMaxGoldToSpendOnOneItemCategory(caravan, kind));
+                int price = Priced.At(town, stands, caravan, selling: false);
+                int most = Campaign.Current.Models.CaravanModel.MaxNumberOfItemsToBuyFromSingleCategory;
+                bool livestock = stands.HorseComponent != null && stands.HorseComponent.IsLiveStock;
+                bool haul = stands.HorseComponent != null && stands.HorseComponent.IsPackAnimal;
+                if (onLand && livestock) most = Math.Min(most, (int)(men * TradeMath.ACaravanDrivesThisManyAnimalsAMan) - herd);
+                else if (onLand && haul) most = Math.Min(most, men - hauling);
+                int units = TradeMath.WhatACaravanTakesOfAKind(spend, price, stocked, most, stands.Weight, weight,
+                                                               capacity, kind.IsAnimal && onLand);
+                if (units <= 0) return;
+                gold -= units * price;
+                weight += units * stands.Weight;
+                if (onLand && livestock) herd += units;
+                else if (onLand && haul) hauling += units;
+                NoteWhatACaravanBuys(bound, kind, TradeMath.WorthOf(units, stands.Value), days);
+            }
+
+            int kindsBought = convoy ? TradeMath.AConvoyBuysThisManyKinds : TradeMath.ACaravanBuysThisManyKinds;
+            for (int i = 0; i < kindsBought && i < wanted.Count; i++) Buy(wanted[i].kind);
+            if (convoy)
+            {
+                Buy(DefaultItemCategories.Grain);
+                Buy(DefaultItemCategories.Fish);
+            }
+            else if (hauling + herd < men * 2f && hauling < men && gold > 1000)
+                Buy(DefaultItemCategories.PackAnimal);
+        }
+
+        private static ItemObject ThePackAnimalVillagersKeep(ItemRoster carried)
+        {
+            ItemObject kept = null;
+            for (int k = 0; k < carried.Count; k++)
+            {
+                ItemObject item = carried.GetItemAtIndex(k);
+                if (item?.ItemCategory == DefaultItemCategories.PackAnimal && item.Value < (kept?.Value ?? 10000))
+                    kept = item;
+            }
+            return kept;
         }
 
         private static void ReadWhatTheShopsWillMake()
@@ -417,21 +553,17 @@ namespace TradeLord
 
             _landing.TryGetValue(site.StringId, out List<Landing> arriving);
             var bought = new List<(float days, string category, int units)>();
-            if (_spending.TryGetValue(site.StringId, out List<Spending> coming) &&
-                PullAt(site, out Dictionary<string, float> pull, out float across))
-                foreach (Spending purse in coming)
-                    foreach (var one in standing)
-                        if (pull.TryGetValue(one.Key, out float share))
-                            bought.Add((purse.Days, one.Key,
-                                        Projection.UnitsLeaving(TradeMath.ShareOfAPurse(purse.Gold, share, across),
-                                                                book.UnitValue[one.Key])));
+            if (_spending.TryGetValue(site.StringId, out List<Spending> coming))
+                foreach (Spending one in coming)
+                    if (one.Category != null && standing.ContainsKey(one.Category))
+                        bought.Add((one.Days, one.Category, Projection.UnitsLeaving(one.Worth, book.UnitValue[one.Category])));
 
             var made = new List<Landing>();
             var taken = new List<Draw>();
             WorkshopRuns.Follow(lines, book, TradeMath.NextDailyTickIn(CampaignTime.Now.ToDays - lastRun), watch,
                                 arriving, bought, price, made, taken);
             foreach (Landing one in made)
-                Note(site, null, kinds[one.Category], one.Units, one.Worth, one.Days);
+                Note(site, standing[one.Category].stands.StringId, kinds[one.Category], one.Units, one.Worth, one.Days);
             foreach (Draw one in taken)
                 NoteADraw(site, kinds[one.Category], one.Worth, one.Days);
         }
@@ -593,15 +725,15 @@ namespace TradeLord
             drawn.Add(new Draw { Category = category.StringId, Worth = worth, Days = days });
         }
 
-        private static void NoteAPurse(Settlement site, int gold, float days)
+        private static void NoteWhatACaravanBuys(Settlement site, ItemCategory category, int worth, float days)
         {
-            if (site == null || gold <= 0) return;
+            if (site == null || category == null || worth <= 0) return;
             if (!_spending.TryGetValue(site.StringId, out List<Spending> coming))
             {
                 coming = new List<Spending>();
                 _spending[site.StringId] = coming;
             }
-            coming.Add(new Spending { Gold = gold, Days = days });
+            coming.Add(new Spending { Category = category.StringId, Worth = worth, Days = days });
         }
 
         private static void Note(Settlement site, string item, ItemCategory category,

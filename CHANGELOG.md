@@ -1,5 +1,37 @@
 # Changelog
 
+## 2.0.1
+
+- Fixed Left, Qty and Conf in the TradeLord ledger leaving out what the buy town's own workshops make
+- Fixed TradeLord trading with a caravan or villagers on the road while they are in a fight
+- Fixed Staged Trading laying out a second deal in the same visit as if the first one had never been taken
+- Fixed Free passage from bandits holding off only the band you spoke to and not the other bands that would have joined in
+- Fixed Nothing sold here or Nothing bought here showing after TradeLord sold animals or bought food in that market
+- Fixed Never sell, Always sell, Never buy and Always buy not splitting names typed with a Chinese comma
+- Fixed Simulation mode (dry run) selling haul animals that the goods it bought on paper would have needed
+- Fixed the hint for Rank routes by confidence naming caravan traffic where Left is what lowers Conf
+- Fixed TradeLord.log naming the wrong next best market when the map marker moves
+- Fixed Count what is on its way to a market working out what a caravan sells in a town at your prices instead of the caravan's
+- Fixed leaving a market you loaded a save in and walking straight back in not counting as the same visit, so TradeLord traded there again
+- Fixed the map marker pointing at the market you loaded a save in as soon as you walked out of it
+- Fixed TradeLord trading on arrival at the market it last traded at after you load a save, instead of leaving it alone the first time back
+- Fixed the map marker pointing at the market TradeLord last traded at after you load a save
+- Fixed TradeLord selling animals as you leave the market it made its last trade at, on your first time back, after loading a save made there
+- The hint for Livestock policy now says Sell animals that slow you down still sells sheep, cattle and hogs to lift the herd speed penalty
+- Fixed Count what is on its way to a market leaving out everything on the road once a market was less than three hours away
+- The marker check in TradeLord.log now also weighs the sale against what the map marker said as you walked out of the last market
+- Every line in TradeLord.log now starts with the campaign day and the time of day, marked night while parties travel slower
+- TradeLord.log now names, for each good sold, the best other buyer within your travel ceilings, its price a unit and how far away it is
+- Fixed TradeLord buying no livestock and no haul animals with War Sails installed
+- Fixed TradeLord never selling animals to get your party back up to speed with War Sails installed
+- Fixed TradeLord leaving the villagers' offer to you whenever it held livestock with War Sails installed
+- Fixed Esc closing the whole TradeLord ledger instead of only What this means or Buy Workshops Remotely when one of them was open
+- Fixed Count what is on its way to a market expecting villagers to sell the haul animals they keep for themselves
+- Fixed Count what is on its way to a market getting wrong how much of each good a caravan sells when it reaches a town
+- Fixed Count what is on its way to a market expecting caravans to sell the haul animals they keep for themselves
+- Fixed Count what is on its way to a market expecting caravans to buy other goods than the ones the game has them buy
+- Fixed Count what is on its way to a market expecting a caravan to spend its whole purse instead of at most 1500 denars on each good it buys
+
 ## 1.104.13
 
 - TradeLord.log's cursor notes now only appear with Extensive cursor debug logging on, a new setting under Debug that is off by default

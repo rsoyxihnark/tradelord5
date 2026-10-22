@@ -150,7 +150,7 @@ namespace TradeLord
         private static (float weight, int cost, float profit, bool food) _unfitted;
         private static Block? _sellStalled;
         private static Block? _buyStalled;
-        private static (int units, int gold, Settlement at) _soldThisRound;
+        private static (int units, int gold, int profit, Settlement at) _soldThisRound;
         private static int _boughtThisRound;
         private static readonly OneLineEach<ItemObject> _told = new OneLineEach<ItemObject>();
 
@@ -329,6 +329,14 @@ namespace TradeLord
             Marker.Tracked = tracked;
             dataStore.SyncData("TradeLord_PanelPins", ref _pinnedTowns);
             if (_pinnedTowns == null) _pinnedTowns = "";
+            string lastTraded = null;
+            if (!dataStore.IsLoading)
+                Guard.Run("Visit.LastTradedForSave", () => lastTraded = LastTradedAtOnceYouLeave());
+            dataStore.SyncData("TradeLord_LastTradedAt", ref lastTraded);
+            if (dataStore.IsLoading) _lastTradedAt = lastTraded;
+            string heldBack = dataStore.IsLoading ? null : _heldBackAt;
+            dataStore.SyncData("TradeLord_HeldBackAt", ref heldBack);
+            if (dataStore.IsLoading) _heldBackAt = heldBack;
         }
 
         public override void RegisterEvents()
@@ -404,6 +412,7 @@ namespace TradeLord
                 CloseWhatMoved();
             });
             Guard.Run("Action.NoteWhereItTraded", () => NoteWhereItTraded(settlement));
+            if (HasAMarket(settlement)) Marker.NoteTheWayOut(settlement);
             Guard.Run("Action.OnSettlementLeft", Marker.Update);
         }
 
@@ -570,6 +579,7 @@ namespace TradeLord
                 new Dictionary<ItemObject, (string where, int price)>();
             internal readonly Dictionary<ItemObject, (string where, int units, int there, int here)> Held =
                 new Dictionary<ItemObject, (string where, int units, int there, int here)>();
+            internal readonly Dictionary<ItemObject, Buyer> Elsewhere = new Dictionary<ItemObject, Buyer>();
 
             internal bool DirectionError;
 
@@ -671,6 +681,14 @@ namespace TradeLord
             internal float Capacity =>
                 (_capacity < 0f ? _capacity = Carry.Capacity(Party) : _capacity) + Books.CapacityAdded(Sim) -
                 CapacitySoldOnPaper();
+
+            internal float RoomTakenOnPaper()
+            {
+                int mounts = Books.MountsShed(Sim);
+                if (mounts > 0 && _eachMount < 0f) _eachMount = Drove.CargoASpareMountAdds(Party);
+                float lost = mounts > 0 ? mounts * _eachMount : 0f;
+                return Books.Weight(Sim) - Books.CapacityAdded(Sim) + lost;
+            }
 
             private float CapacitySoldOnPaper()
             {
@@ -831,8 +849,15 @@ namespace TradeLord
                 if (Site != null) LedgerBehavior.Instance?.CaptureSettlement(Site);
             }
 
-            internal void Logged(bool selling, string why) =>
-                LogDetail(selling, Sim, Detail, Quoted, Aimed, why);
+            internal void Logged(bool selling, string why)
+            {
+                if (selling && Options.Current.ExtendedDebugLogging)
+                    foreach (var kv in Detail)
+                        if (kv.Key != null && !Elsewhere.ContainsKey(kv.Key))
+                            Elsewhere[kv.Key] = Marker.BestBuyersOf(new EquipmentElement(kv.Key), kv.Value.count)
+                                                      .Besides(Site);
+                LogDetail(selling, Sim, Detail, Quoted, Aimed, Elsewhere, why);
+            }
 
             internal List<string> HeldFor()
             {
@@ -952,6 +977,8 @@ namespace TradeLord
                 Settlement inside = MobileParty.MainParty?.CurrentSettlement;
                 if (inside != null) _visitTradeAllowed = CanTradeHere(inside);
                 if (inside != null) Marker.NoteALoadInside(inside);
+                if (inside != null) _lastArrivalAt = inside.StringId;
+                if (inside != null) StillTheSameSitting(inside);
                 Guard.Run("Action.RestorePins", () => LedgerPanel.RestorePins(_pinnedTowns));
                 Guard.Run("Action.RestoreMarker", Marker.Update);
                 Guard.Run("Shops.MendTheGamesRecords", Shops.MendTheGamesRecords);
@@ -1207,6 +1234,8 @@ namespace TradeLord
                         el.EquipmentElement, prices,
                         TheVisit.DearDrawn(true, LedgerBehavior.PaidKey(el.EquipmentElement))) ?? 0;
                 pass.Tally(item, count, said);
+                if (selling) pass.Books.NoteSold(item.StringId);
+                else foreach (int paid in prices) pass.Books.NoteBought(item.StringId, paid);
             }
             took.Profit = Deals.NoMoreThanTheSale(took.Profit, took.Gold);
             return took;
@@ -1534,9 +1563,19 @@ namespace TradeLord
             return ", meant for " + far.where + " at " + far.price + " a unit";
         }
 
+        private static string BestElsewhere(bool selling, Dictionary<ItemObject, Buyer> elsewhere, ItemObject item)
+        {
+            if (!selling || item == null || elsewhere == null || !elsewhere.TryGetValue(item, out Buyer other)) return "";
+            if (other.Town == null) return "; no other market within your travel ceilings buys it";
+            return "; the best other buyer within your travel ceilings is " +
+                   Tongue.Named(other.Town.Name, other.Town.StringId) + " at " + other.First + " a unit, about " +
+                   Scoring.Figure(other.Days) + " day(s) away";
+        }
+
         private static void LogDetail(bool selling, bool sim, Dictionary<ItemObject, (int count, int gold)> detail,
                                       Dictionary<ItemObject, (int count, int gold)> quoted,
-                                      Dictionary<ItemObject, (string where, int price)> aimed, string why)
+                                      Dictionary<ItemObject, (string where, int price)> aimed,
+                                      Dictionary<ItemObject, Buyer> elsewhere, string why)
         {
             var lines = new List<string>();
             foreach (var kv in detail)
@@ -1544,7 +1583,8 @@ namespace TradeLord
                 lines.Add((selling ? "  sold " : "  bought ") + kv.Value.count + " " +
                           kv.Key.StringId + " for " + kv.Value.gold + (sim ? Counter.Aside : "") +
                           Quotation(quoted, kv.Key, kv.Value.gold) +
-                          MeantFor(selling, aimed, kv.Key));
+                          MeantFor(selling, aimed, kv.Key) +
+                          BestElsewhere(selling, elsewhere, kv.Key));
                 LogAnimalMoved(lines, selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);
             }
             Log.WriteMany(lines);
@@ -1619,7 +1659,7 @@ namespace TradeLord
         {
             var sold = _soldThisRound;
             if (sold.at != null)
-                Guard.Run("Marker.Check", () => Marker.ScoreTheMark(sold.at, sold.units, sold.gold));
+                Guard.Run("Marker.Check", () => Marker.ScoreTheMark(sold.at, sold.units, sold.gold, sold.profit));
             CloseWhatMoved();
             ReportStalledPasses();
         }
@@ -1741,6 +1781,7 @@ namespace TradeLord
             int profit = moved.Profit;
             int goldGained = pass.Gained(moved.SimGold);
             _soldThisRound = (_soldThisRound.units + soldItems, _soldThisRound.gold + goldGained,
+                              _soldThisRound.profit + profit,
                               pass.Site != null && !pass.Sim ? pass.Site : _soldThisRound.at);
 
             if (soldItems > 0)
@@ -2226,6 +2267,7 @@ namespace TradeLord
                 return;
             }
 
+            _buyStalled = null;
             int spent = pass.Spent(simSpent);
             pass.Moved(gold: spent, selling: false);
             Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") + stocked +
@@ -2384,6 +2426,12 @@ namespace TradeLord
                           "so TradeLord leaves it alone");
                 return false;
             }
+            if (met.MapEvent != null)
+            {
+                Log.Write(met.Name + " are in a fight, and the game offers no trade to a party in the middle of " +
+                          "one, so TradeLord stays out of it");
+                return false;
+            }
             IFaction mine = Hero.MainHero?.MapFaction;
             if (mine == null || met.MapFaction == null || !FactionManager.IsAtWarAgainstFaction(met.MapFaction, mine))
                 return true;
@@ -2527,7 +2575,7 @@ namespace TradeLord
                     {
                         if (rank != RankLivestock && rank != RankHaulAnimal && mountsLeft <= 0) break;
                         if (rank == RankHaulAnimal && haulsLeft < 0)
-                            haulsLeft = Math.Max(0, Drove.HaulAnimalsCargoCanSpare(pass.Party) - pass.Books.HaulsShed(pass.Sim));
+                            haulsLeft = Math.Max(0, Drove.HaulAnimalsCargoCanSpare(pass.Party, pass.RoomTakenOnPaper()) - pass.Books.HaulsShed(pass.Sim));
                         if (rank == RankHaulAnimal && haulsLeft <= 0) break;
                         int price = pass.Price(el.EquipmentElement, selling: true);
                         if (price <= 0) break;
@@ -2581,6 +2629,7 @@ namespace TradeLord
 
             if (sold <= 0) return;
 
+            _sellStalled = null;
             int gained = pass.Gained(simGold);
             pass.Moved(profit, gained, selling: true);
             Log.Write((pass.Sim ? "herd relief (simulated, best case): " : "herd relief: ") + sold +

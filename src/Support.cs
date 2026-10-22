@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.ComponentInterfaces;
 
 namespace TradeLord
 {
@@ -267,9 +269,25 @@ namespace TradeLord
             catch { LetGo(); }
         }
 
+        private static string GameTime()
+        {
+            try { return GameTimeNow(); } catch { return TradeMath.NoGameClock; }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static string GameTimeNow()
+        {
+            Campaign campaign = Campaign.Current;
+            CampaignTimeModel model = campaign?.Models?.CampaignTimeModel;
+            if (model == null) return TradeMath.NoGameClock;
+            CampaignTime now = CampaignTime.Now;
+            int day = (int)Math.Floor(now.ToDays) - (int)Math.Floor(model.CampaignStartTime.ToDays);
+            return TradeMath.GameClock(day, now.CurrentHourInDay, campaign.IsNight);
+        }
+
         private static void Put(string message)
         {
-            string line = DateTime.Now.ToString("s") + "  " + message;
+            string line = DateTime.Now.ToString("s") + "  " + GameTime() + "  " + message;
             StreamWriter held = Held();
             if (held != null)
             {
