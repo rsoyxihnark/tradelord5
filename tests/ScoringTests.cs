@@ -737,25 +737,19 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_marked_market_past_its_ceiling_with_a_road_is_priced_so_it_may_wait_one_hour()
+        public void A_marked_market_out_earned_keeps_the_mark_for_one_more_hour_and_no_more()
         {
-            Assert.True(Marks.WaitsPastTheCeiling(2.4f, 1.9f, 2.5f, true));
-            Assert.True(Marks.WaitsPastTheCeiling(2.4f, 2.6f, 2.5f, true));
-            Assert.False(Marks.WaitsPastTheCeiling(2.4f, 1.9f, 2.3f, true));
-            Assert.False(Marks.WaitsPastTheCeiling(2.4f, 1.9f, 2.5f, false));
-            Assert.False(Marks.WaitsPastTheCeiling(0f, 1.9f, 9f, true));
+            Assert.True(Marks.HoldsForASecondLook(true, false, true, -1, 100));
+            Assert.True(Marks.HoldsForASecondLook(true, false, true, 100, 100));
+            Assert.False(Marks.HoldsForASecondLook(true, false, true, 100, 101));
+            Assert.False(Marks.HoldsForASecondLook(true, false, false, -1, 100));
         }
 
         [Fact]
-        public void A_marked_market_past_its_ceiling_keeps_the_mark_for_one_hour_and_no_more()
+        public void A_marked_market_past_its_ceiling_is_not_priced_so_it_never_waits_for_a_second_look()
         {
-            bool priced = Marks.WaitsPastTheCeiling(2.4f, 2.0f, 2.5f, true);
-            Assert.True(Marks.HoldsForASecondLook(priced, false, true, -1, 100));
-            Assert.True(Marks.HoldsForASecondLook(priced, false, true, 100, 100));
-            Assert.False(Marks.HoldsForASecondLook(priced, false, true, 100, 101));
-            Assert.False(Marks.HoldsForASecondLook(priced, false, false, -1, 100));
-            bool noRoad = Marks.WaitsPastTheCeiling(2.4f, 2.0f, 2.5f, false);
-            Assert.False(Marks.HoldsForASecondLook(noRoad, false, true, -1, 100));
+            Assert.False(Marks.HoldsForASecondLook(false, false, true, -1, 100));
+            Assert.False(Marks.HoldsForASecondLook(false, false, true, 100, 100));
         }
 
         [Fact]

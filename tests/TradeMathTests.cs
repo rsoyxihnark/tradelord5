@@ -2285,17 +2285,17 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_marked_town_keeps_its_mark_a_little_past_your_travel_ceiling_and_no_other_town_does()
+        public void A_route_carries_only_as_many_units_as_fit_in_the_room_your_cargo_will_have()
         {
-            float held = TradeMath.CeilingTheMarkHolds(2.4f, true);
-            Assert.True(held > 2.4f);
-            Assert.True(2.45f <= held);
-            Assert.False(2.9f <= held);
-            Assert.Equal(2.4f, TradeMath.CeilingTheMarkHolds(2.4f, false));
-            Assert.Equal(0f, TradeMath.CeilingTheMarkHolds(0f, true));
-            Assert.Equal(-1f, TradeMath.CeilingTheMarkHolds(-1f, true));
-            Assert.Equal(float.MaxValue, TradeMath.CeilingTheMarkHolds(float.MaxValue, true));
-            Assert.True(float.IsNaN(TradeMath.CeilingTheMarkHolds(float.NaN, true)));
+            Assert.Equal(32, TradeMath.UnitsThatFit(80f, 2.5f));
+            Assert.Equal(1, TradeMath.UnitsThatFit(1.9f, 1f));
+            Assert.Equal(0, TradeMath.UnitsThatFit(0.9f, 1f));
+            Assert.Equal(0, TradeMath.UnitsThatFit(0f, 1f));
+            Assert.Equal(0, TradeMath.UnitsThatFit(-5f, 1f));
+            Assert.Equal(0, TradeMath.UnitsThatFit(float.NaN, 1f));
+            Assert.Equal(int.MaxValue, TradeMath.UnitsThatFit(10f, 0f));
+            Assert.Equal(int.MaxValue, TradeMath.UnitsThatFit(float.PositiveInfinity, 1f));
+            Assert.Equal(int.MaxValue, TradeMath.UnitsThatFit(10f, float.NaN));
         }
 
         [Fact]

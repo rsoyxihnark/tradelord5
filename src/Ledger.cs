@@ -35,6 +35,7 @@ namespace TradeLord
         public int Caravans;
 
         public float RunsOutInDays = Projection.NeverRunsOut;
+        public bool SizedToCargo;
 
         public TradeLord.Confidence.Parts Parts;
     }
@@ -1238,7 +1239,7 @@ namespace TradeLord
         internal static float TravelCeiling(Settlement s) =>
             MarketRank.Ceiling(s.IsVillage, Options.Current);
 
-        private static bool WithinTravelCeiling(Settlement s, float days) =>
+        internal static bool WithinTravelCeiling(Settlement s, float days) =>
             MarketRank.WithinCeiling(s.IsVillage, days, Options.Current);
 
         private const float MovedFar = 100f;
@@ -1551,7 +1552,6 @@ namespace TradeLord
             float safety = TradePolicy.ResaleSafety();
             var routes = new List<TradeRoute>();
             ISet<string> locked = TradePolicy.LockedKeys();
-            float cap = Options.Current.MaxTravelDaysTown;
             bool rankByScore = Options.Current.ConfidenceRanking;
             bool trustWhatItPaid = Options.Current.TrustWhatAMarketPaid;
             var pressure = CaravanPressure();
@@ -1563,9 +1563,13 @@ namespace TradeLord
                 wanted.Add(item);
             }
             PrimeLiveRankings(wanted, (int)CampaignTime.Now.ToHours);
+            float roomNow = MobileParty.MainParty == null ? float.PositiveInfinity : Carry.Room(MobileParty.MainParty);
+            var roomAt = new Dictionary<Settlement, float>();
+            int cargoShut = 0;
             for (int at = 0; at < wanted.Count; at++)
             {
                 ItemObject item = wanted[at];
+                float each = Carry.Weighs(item);
 
                 var buys = EveryBuy(item);
                 var sells = EverySell(item);
@@ -1578,6 +1582,8 @@ namespace TradeLord
                     if (buyPrice <= 0) continue;
 
                     float toBuy = Travel.EstimateDaysFromParty(from);
+                    if (!WithinTravelCeiling(from, toBuy)) continue;
+                    int fits = FitsAt(from, each, roomNow, roomAt);
                     int landedAtBuyTown = Forecast.WorthShiftAsItHasHeld(from, item, toBuy);
                     int openingBuy = Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);
                     int spendCap = Options.Current.BuyValueCapPerItem;
@@ -1606,12 +1612,12 @@ namespace TradeLord
                         }
 
                         float soonest = toBuy + Travel.StraightDaysBetween(from, to);
-                        if (cap > 0f && soonest > cap) continue;
+                        if (!WithinTravelCeiling(to, soonest)) continue;
 
                         // Intended-Behavior: Days runs from where your party stands to Buy From and on to Sell At, as the developer chose; it is not to be raised again.
                         float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);
                         if (TradeMath.OutOfReach(days)) continue;
-                        if (cap > 0f && days > cap) continue;
+                        if (!WithinTravelCeiling(to, days)) continue;
 
                         int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);
                         if (passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,
@@ -1628,6 +1634,9 @@ namespace TradeLord
 
                         int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;
                         if (qtyCap <= 0) { thrownAway++; continue; }
+                        if (fits <= 0) { thrownAway++; cargoShut++; continue; }
+                        bool sized = fits < qtyCap;
+                        if (sized) qtyCap = fits;
 
                         float ceiling = (float)(openingSell - openingBuy) * qtyCap;
                         if (best != null && TradeMath.PerDay(ceiling, days) <= bestKey)
@@ -1676,7 +1685,8 @@ namespace TradeLord
                             Parts = Confidence.PartsOf(q.Simulated, flat, profit, shelf, q.Units, days, caravans, age,
                                                        lasts, toBuy),
                             StillComing = TradeMath.StillComing(q.Units, onTheShelfNow),
-                            RunsOutInDays = runsOut
+                            RunsOutInDays = runsOut,
+                            SizedToCargo = sized && q.Units >= qtyCap
                         };
                     }
                 }
@@ -1687,10 +1697,24 @@ namespace TradeLord
             routes.Sort((x, y) => rankByScore
                 ? y.Score.CompareTo(x.Score)
                 : y.ProfitPerDay.CompareTo(x.ProfitPerDay));
+            NothingFitsYourCargo = routes.Count == 0 && cargoShut > 0;
             SayWhatTheScanCost(routes.Count, opened, thrownAway, passedOver,
                                System.Diagnostics.Stopwatch.GetTimestamp() - started);
             Bulk.Forget();
             return routes;
+        }
+
+        internal bool NothingFitsYourCargo { get; private set; }
+
+        private static int FitsAt(Settlement from, float each, float roomNow, Dictionary<Settlement, float> roomAt)
+        {
+            if (!(each > 0.01f)) return int.MaxValue;
+            if (!roomAt.TryGetValue(from, out float room))
+            {
+                room = roomNow + Guard.Read("Ledger.RoomItFrees", from, Marker.RoomItFrees, 0f);
+                roomAt[from] = room;
+            }
+            return TradeMath.UnitsThatFit(room, each);
         }
 
         private static void SayWhatTheScanCost(int found, int opened, int thrownAway, int passedOver, long ticks)

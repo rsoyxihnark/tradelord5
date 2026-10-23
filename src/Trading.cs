@@ -922,20 +922,24 @@ namespace TradeLord
 
         private static void SayWhatHoldsYourPurse(Pass pass)
         {
+            string said = ThePurseSaid(pass);
+            Log.Repeatable("purse " + pass.Key, said, "nothing is bought " + pass.Where + ": " + said);
+        }
+
+        private static string ThePurseSaid(Pass pass)
+        {
             int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);
             int held = GoldHeldBack(), flat = Options.Current.GoldReserve;
             int cap = SpendCap((long)purse + pass.Books.PaidOut(pass.Sim));
             int set = Options.Current.MaxSpendPerVisit;
-            Log.Repeatable("purse " + pass.Key, purse + "/" + held + "/" + pass.Spendable(),
-                           "nothing is bought " + pass.Where + ": your purse is " + purse +
-                           " and TradeLord holds " + held + " of it back, " + flat +
-                           " as your gold reserve and " + (held - flat) + " as " +
-                           Options.Current.KeepWageDays + " day(s) of your wage bill" +
-                           (cap > 0 ? ", with " + (cap - pass.Books.PaidOut(pass.Sim)) +
-                                      " left of the " + cap + " you allow per visit" +
-                                      (cap > set ? " (Max spend per visit " + set + ", raised by Adaptive spend " +
-                                                   "limit as your purse grew)" : "")
-                                    : ""));
+            return "your purse is " + purse + " and TradeLord holds " + held + " of it back, " + flat +
+                   " as your gold reserve and " + (held - flat) + " as " +
+                   Options.Current.KeepWageDays + " day(s) of your wage bill" +
+                   (cap > 0 ? ", with " + (cap - pass.Books.PaidOut(pass.Sim)) +
+                              " left of the " + cap + " you allow per visit" +
+                              (cap > set ? " (Max spend per visit " + set + ", raised by Adaptive spend " +
+                                           "limit as your purse grew)" : "")
+                            : "");
         }
 
         private static bool WarnPurseBelowReserve()
@@ -1921,7 +1925,7 @@ namespace TradeLord
                     {
                         float ride = Travel.EstimateDaysFromParty(mark);
                         int purse = Marker.PurseOf(mark);
-                        if (!TradeMath.OutOfReach(ride) && purse > 0)
+                        if (LedgerBehavior.WithinTravelCeiling(mark, ride) && purse > 0)
                         {
                             _mark = mark;
                             _markRide = ride;
@@ -2892,10 +2896,14 @@ namespace TradeLord
             var market = new BuyingAt(pass, what, named);
 
             LedgerBehavior.ForgetWhatPickingABuyerCost();
+            string purseSaid = null;
             var stock = new List<Pick>();
             if (pass.Spendable() > 0)
+            {
+                purseSaid = "before this pass " + ThePurseSaid(pass);
                 stock = TradePass.WhatToBuy(market, pass.Books, pass.Sim, shareCap,
                                             Options.Current, tally);
+            }
             else { tally.Note(Block.BudgetSpent); SayWhatHoldsYourPurse(pass); }
 
             Traded moved = default(Traded);
@@ -2922,12 +2930,14 @@ namespace TradeLord
                           " items, -" + spent + " gold " + pass.Where);
                 pass.Logged(selling: false, why);
                 if (tally.Any) Log.Write("  stopped on: " + tally.Summary());
+                if (purseSaid != null) Log.Write("  purse: " + purseSaid);
                 if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, bought, spent);
             }
             else if (!pass.DirectionError)
             {
                 if (tally.Any) Log.Repeatable(label + "-empty " + pass.Key, tally.Summary(),
-                    label + " moved nothing " + pass.Where + ": " + tally.Summary());
+                    label + " moved nothing " + pass.Where + ": " + tally.Summary() +
+                    (purseSaid != null && tally.Saw(Block.BudgetSpent) ? "; purse " + purseSaid : ""));
                 Block stopped = tally.Dominant();
                 if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);
             }

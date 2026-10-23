@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.7
+
+- Fixed the map marker keeping a market marked after the ride there runs past your travel ceilings
+- Fixed Hold cargo for the best market holding goods for a market past your travel ceilings
+- Fixed the TradeLord ledger offering a village as Sell At when the ride there runs past your Village travel ceiling
+- Fixed the TradeLord ledger offering more of a good than fits in your cargo once you sell at Buy From
+- The TradeLord ledger now says when its routes are sized to your cargo, and when no route fits at all
+- Fixed travel times running long when you set off from the middle of a road
+- TradeLord.log now says under each buying pass how much of your purse and of Max spend per visit was free to spend
+
 ## 2.0.6
 
 - Fixed Count what is on its way timing caravans and villagers along a straight line instead of the road they take

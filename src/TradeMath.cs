@@ -1126,13 +1126,6 @@ namespace TradeLord
             return float.IsInfinity(held) ? rate : held;
         }
 
-        public static float CeilingTheMarkHolds(float cap, bool marked)
-        {
-            if (!marked || cap <= 0f || float.IsNaN(cap)) return cap;
-            float held = cap * TheMarkedTownHoldsBy;
-            return float.IsInfinity(held) ? cap : held;
-        }
-
         public static int MostYouCouldTake(int unitPrice, float unitWeight, int stocked,
                                            int spendable, float room, int cap)
         {
@@ -1615,6 +1608,14 @@ namespace TradeLord
         {
             if (!(saidHours > 0f) || float.IsNaN(tookHours) || float.IsInfinity(tookHours)) return float.NaN;
             return Finite((tookHours - saidHours) / saidHours, float.NaN);
+        }
+
+        public static int UnitsThatFit(float room, float each)
+        {
+            if (!(each > 0.01f)) return int.MaxValue;
+            if (!(room > 0f)) return 0;
+            double fit = Math.Floor((double)room / each);
+            return fit >= int.MaxValue ? int.MaxValue : (int)fit;
         }
 
         public static float DetourOnTheRoad(float road, float span, float gone, float left)

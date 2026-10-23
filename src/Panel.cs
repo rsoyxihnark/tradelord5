@@ -491,14 +491,24 @@ namespace TradeLord
                         Ranks.Of(i, routes.Count), _centerMap));
             Routes = rows;
             bool empty = rows.Count == 0;
-            StatusText = empty
-                ? Tongue.Text("{=TL67}No profitable routes in reach").ToString()
-                : Line("{=TL68}{COUNT} profitable route(s), best first", "COUNT", rows.Count.ToString());
-            LegendText = (empty
+            bool nothingFits = empty && LedgerBehavior.Instance != null && LedgerBehavior.Instance.NothingFitsYourCargo;
+            bool sized = false;
+            for (int i = 0; routes != null && i < routes.Count && !sized; i++) sized = routes[i].SizedToCargo;
+            StatusText = nothingFits
+                ? Tongue.Text("{=TL507}No profitable route fits in your cargo").ToString()
+                : empty
+                    ? Tongue.Text("{=TL67}No profitable routes in reach").ToString()
+                    : sized
+                        ? Line("{=TL506}{COUNT} profitable route(s), best first, sized to your cargo", "COUNT", rows.Count.ToString())
+                        : Line("{=TL68}{COUNT} profitable route(s), best first", "COUNT", rows.Count.ToString());
+            LegendText = (nothingFits
+                ? Tongue.Text("{=TL508}Every profitable route needs room for cargo you will not have, even after selling at the buy market. | Sell some cargo, or make room with a haul animal.").ToString()
+                : empty
                 ? Tongue.Text(Options.Current.Omniscient
                     ? "{=TL69}No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."
                     : "{=TL90}No routes are within your travel ceilings, from the prices you have recorded so far. | Walk more markets, or raise the ceilings in the Trade Pool settings.").ToString()
                 : Tongue.Text("{=TL70}Click a market's name to jump to it and pin or unpin it | Days = you -> buy market -> sell market | Carv. = caravans at or heading for those markets").ToString()
+                  + Tongue.Text("{=TL509} | Qty = what fits in your cargo once you sell at the buy market").ToString()
                   + Tongue.Text("{=TL476} | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit").ToString()
                   + (Options.Current.ConfidenceRanking
                         ? Tongue.Text("{=TL71} | Score = profit per day discounted by Conf").ToString()

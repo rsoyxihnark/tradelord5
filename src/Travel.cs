@@ -50,9 +50,21 @@ namespace TradeLord
         {
             landRatio = 1f;
             if (target == null) return 0f;
+            float road = Guard.Read("Travel.MidRoad", target, MidRoad, 0f);
+            if (road > 0f) return road;
             try { return FromPartyCore(target, out landRatio); }
             catch { landRatio = 1f; }
             return MobileParty.MainParty.GetPosition2D.Distance(target.GetPosition2D);
+        }
+
+        private static float MidRoad(Settlement target)
+        {
+            MobileParty party = MobileParty.MainParty;
+            if (party == null || party.CurrentSettlement != null || AtSea(party)) return 0f;
+            Vec2 at = party.GetPosition2D;
+            float left = at.Distance(target.GetPosition2D);
+            float detour = DetourFromWhereItSetOff(party, target, at, left);
+            return detour > 0f ? left * detour : 0f;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -217,7 +229,7 @@ namespace TradeLord
             float now = party.Speed;
             if (AtSea(party)) return TradeMath.EtaDays(distance, now);
             Refresh();
-            if (byRoad) detour = CaravanDetour(party, bound, from, distance);
+            if (byRoad) detour = DetourFromWhereItSetOff(party, bound, from, distance);
             if (detour > 0f) distance *= detour;
             Skies.LiveSkyAt(from, out bool snowy, out bool wet);
             float slow = Nightfall.SlowHoursLeft(party);
@@ -232,31 +244,31 @@ namespace TradeLord
             return days;
         }
 
-        private static readonly Dictionary<(string, string, int), float> _caravanRoads = new Dictionary<(string, string, int), float>();
+        private static readonly Dictionary<(string, string, int), float> _tableRoads = new Dictionary<(string, string, int), float>();
 
-        private static float CaravanDetour(MobileParty party, Settlement bound, Vec2 at, float left)
+        private static float DetourFromWhereItSetOff(MobileParty party, Settlement bound, Vec2 at, float left)
         {
             Settlement setOff = party.LastVisitedSettlement;
             if (setOff == null || setOff == bound) return 0f;
             Vec2 start = setOff.GetPosition2D;
-            return TradeMath.DetourOnTheRoad(CaravanRoad(party, setOff, bound), start.Distance(bound.GetPosition2D),
+            return TradeMath.DetourOnTheRoad(RoadInTheGameTable(party, setOff, bound), start.Distance(bound.GetPosition2D),
                                              start.Distance(at), left);
         }
 
-        private static float CaravanRoad(MobileParty party, Settlement setOff, Settlement bound)
+        private static float RoadInTheGameTable(MobileParty party, Settlement setOff, Settlement bound)
         {
             MobileParty.NavigationType way = party.NavigationCapability;
             var key = (setOff.StringId, bound.StringId, (int)way);
-            if (_caravanRoads.TryGetValue(key, out float known)) return known;
+            if (_tableRoads.TryGetValue(key, out float known)) return known;
             float road;
-            try { road = CaravanRoadCore(setOff, bound, way); }
+            try { road = RoadInTheGameTableCore(setOff, bound, way); }
             catch { road = 0f; }
-            _caravanRoads[key] = road;
+            _tableRoads[key] = road;
             return road;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static float CaravanRoadCore(Settlement setOff, Settlement bound, MobileParty.NavigationType way)
+        private static float RoadInTheGameTableCore(Settlement setOff, Settlement bound, MobileParty.NavigationType way)
         {
             float road = Campaign.Current.Models.MapDistanceModel.GetDistance(setOff, bound, false, false, way, out float landRatio);
             return landRatio >= 0.999f ? road : 0f;
@@ -355,7 +367,7 @@ namespace TradeLord
             _partyRides.Clear();
             _partyPieces.Clear();
             _pairPieces.Clear();
-            _caravanRoads.Clear();
+            _tableRoads.Clear();
             _partyDist.Clear();
             _partyHour = -1;
             _pairDist.Clear();

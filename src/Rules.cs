@@ -123,9 +123,6 @@ namespace TradeLord
                                                  int hourNow) =>
             holderPriced && !afresh && cargoSame && (lostAt < 0 || lostAt >= hourNow);
 
-        internal static bool WaitsPastTheCeiling(float cap, float straight, float ride, bool roadFound) =>
-            cap > 0f && roadFound && (straight > cap || ride > cap);
-
         internal static void OweAFairLook(ISet<string> owed, IList<string> compared, string here, string leftOutNow,
                                           bool markMoved)
         {

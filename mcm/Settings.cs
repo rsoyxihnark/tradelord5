@@ -510,7 +510,7 @@ namespace TradeLord.Mcm
         public bool TradeWithCaravans { get => _o.TradeWithCaravans; set { _o.TradeWithCaravans = value; Options.Bump(); } }
 
         [SettingPropertyFloatingInteger("{=TL206}Town travel ceiling (days, 0 = off)", 0f, 20f, "0.0", Order = 3, RequireRestart = false,
-            HintText = "{=TL306}How far TradeLord looks for a town, in travel days. Farther towns stay out of tooltips, routes and the map marker (a town already marked may pass it by a fifth). 0 lifts the limit: every town in Calradia is weighed, far slower. Default 3.0.")]
+            HintText = "{=TL306}How far TradeLord looks for a town, in travel days. Farther towns stay out of tooltips, routes and the map marker. 0 lifts the limit: every town in Calradia is weighed, far slower. Default 3.0.")]
         [SettingPropertyGroup("{=TL108}Trade Pool", GroupOrder = 2)]
         public float MaxTravelDaysTown { get => _o.MaxTravelDaysTown; set { _o.MaxTravelDaysTown = value; Options.Bump(); } }
 

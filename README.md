@@ -61,7 +61,6 @@
 - ✅ With Live world prices off, it weighs only the markets where you have seen a price for what you carry, at that price, and never reads their purse
 - ✅ With Count what is on its way to a market and Bulk price simulation on, it prices each market as it will be when you get there, the same way the ledger does
 - ✅ It leaves out the market TradeLord made its last trade at until you come back to it
-- ✅ The market already marked keeps its mark until it is a fifth past your travel ceiling, so a brief slow stretch of road does not flick the marker to another market and back
 - ✅ A marked market that drifts past even that keeps the mark one hour more, so one slow reading of the road cannot send the marker away and straight back
 - ✅ Another market takes the mark only once it has earned more on two weighings in different hours, so a caravan landing about when you would does not flick the marker back and forth
 - ✅ Once the market TradeLord made its last trade at is back, it gets one look on the day's gold alone and takes the mark if it earns more a day than the market already marked
