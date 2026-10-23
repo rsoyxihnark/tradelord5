@@ -73,6 +73,18 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_sell_market_is_held_to_its_own_ceiling_on_the_ride_through_the_buy_market()
+        {
+            var s = new Options { MaxTravelDaysTown = 3f, MaxTravelDaysVillage = 1f };
+            float toBuy = 0.6f, onToSell = 0.7f;
+            Assert.True(MarketRank.WithinCeiling(true, toBuy, s));
+            Assert.False(MarketRank.WithinCeiling(true, toBuy + onToSell, s));
+            Assert.True(MarketRank.WithinCeiling(false, toBuy + onToSell, s));
+            Assert.False(MarketRank.WithinCeiling(false, 3.55f, s));
+            Assert.False(MarketRank.WithinCeiling(false, float.PositiveInfinity, s));
+        }
+
+        [Fact]
         public void A_village_ceiling_longer_than_the_town_one_never_stretches_a_village()
         {
             var s = new Options { MaxTravelDaysTown = 2f, MaxTravelDaysVillage = 5f };

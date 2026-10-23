@@ -164,7 +164,7 @@
 		<string id="TL301" text="AÇIK (varsayılan): fiyatlar dünya ekonomisinden canlı okunur, gitmediğiniz pazarlar dâhil. KAPALI: yalnızca kendi gözünüzle gördüğünüz fiyatlar kullanılır."/>
 		<string id="TL303" text="Sizinle savaşta olan yerleşimleri asla taramaz, önermez ve onlarla otomatik ticaret yapmaz."/>
 		<string id="TL305" text="En iyi alış ipuçları için stokta en az bu kadar parça olmalı. 0 = kapalı. Yalnızca Canlı dünya fiyatları açıkken: kapalıyken TradeLord fiyatları kaydeder, stok düzeylerini değil."/>
-		<string id="TL306" text="TradeLord'un bir şehri kaç günlük yola kadar aradığı. Daha uzak şehirler ipuçlarına, rotalara ve harita işaretine girmez (işaretli bir şehir sınırı beşte bir aşabilir). 0 sınırı kaldırır: her şehir tartılır, ama çok daha yavaştır. Varsayılan 3.0."/>
+		<string id="TL306" text="TradeLord'un bir şehri kaç günlük yola kadar aradığı. Daha uzak şehirler ipuçlarına, rotalara ve harita işaretine girmez. 0 sınırı kaldırır: her şehir tartılır, ama çok daha yavaştır. Varsayılan 3.0."/>
 		<string id="TL307" text="Köyler için aynı sınır, onları şehirlerden daha yakın tutabilmeniz için ayrı. Hiçbir köyü Şehir yol süresi sınırının ötesine taşımaz; 0'da köyler o sınıra uyar. Varsayılan 1."/>
 		<string id="TL308" text="Rotalar sıralanıp toplanırken yeniden satış güvenlik payını satış tarafına uygular, böylece listelenen kâr siz varmadan fiyatların kaymasını hesaba katar. KAPALI ham kâr payını gösterir. Rota her durumda, bir alım geçişi gibi, bu payı geçmelidir."/>
 		<string id="TL309" text="Bir yığını oyunun kendi fiyat modeliyle birim birim fiyatlar, böylece miktar ve kâr sizin alımınızın fiyatı oynatmasını hesaba katar. KAPALI her birimi ilk birimin fiyatından fiyatlar. Yalnızca şehirlerde, Canlı dünya fiyatları açıkken."/>
@@ -331,5 +331,9 @@
 		<string id="TL503" text="Zaten {OWNED} atölyeniz var. Ticaret yeteneğinizin her 25 puanı bir atölye hakkı daha kazandırır."/>
 		<string id="TL504" text="Kapsamlı imleç hata ayıklama günlüğü"/>
 		<string id="TL505" text="TradeLord'un sefer haritasında fareye dair gördüğü her şeyi TradeLord.log'a yazar: oyunun hangi imleci istediğini, ekranda gerçekte hangisinin göründüğünü ve bir tıklamadan sonra imlecin nereye döndüğünü. Varsayılan KAPALI."/>
+		<string id="TL506" text="{COUNT} kârlı rota, en iyisi başta, yükünüze göre"/>
+		<string id="TL507" text="Yükünüze sığan kârlı rota yok"/>
+		<string id="TL508" text="Her kârlı rota, alış pazarında sattıktan sonra bile sizde olmayacak bir yük yeri istiyor. | Biraz yük satın ya da bir yük hayvanıyla yer açın."/>
+		<string id="TL509" text=" | Adet = alış pazarında sattıktan sonra yükünüze sığan miktar"/>
 	</strings>
 </base>

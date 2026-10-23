@@ -540,7 +540,9 @@ def the_ledger_lists_a_route_you_could_not_take_this_second():
     size = method_body(S['Ledger.cs'], "private static int MostWorthShowing")
     return ("purse" not in scan
             and "herdRoom" not in scan
-            and "Carry." not in S['Ledger.cs']
+            and S['Ledger.cs'].count("Carry.") == 2
+            and "float roomNow = MobileParty.MainParty == null ? float.PositiveInfinity : Carry.Room(MobileParty.MainParty);" in scan
+            and "float each = Carry.Weighs(item);" in scan
             and "Capacity" not in S['Ledger.cs']
             and "HerdRoomForLivestock" not in S['Ledger.cs']
             and "Options.Current.BuyValueCapPerItem" in size
@@ -1976,9 +1978,11 @@ chk("1.3.16", "food branch falls through to the sell rules",
             "            said.Allowed = true;\n            return said;") and
     "reserve[item] = held - drawn;" in
         method_body(S['Policy.cs'], "private static void TakeBack"))
-chk("1.3.17", "the marker picks its town through the same ceiling as everything else, which only the market already marked may pass, and by a fifth at most",
+chk("1.3.17", "the marker picks its town through the same ceiling as everything else, the market already marked included",
     "WithinRadius" not in S['Trading.cs'] and
-    "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == holder);" in
+    "float cap = LedgerBehavior.TravelCeiling(s);" in
+        method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo") and
+    "if (!LedgerBehavior.WithinTravelCeiling(s, ride)) { how.PastCeiling++; continue; }" in
         method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo"))
 chk("1.3.17", "the haircut filters every route pair, on the prices that pair would really open at",
     "float realizable = TradePolicy.Realizable(openingSell);" in S['Ledger.cs'] and
@@ -2055,8 +2059,8 @@ chk("1.3.26", "the best route so far prunes a pair before it costs a walk throug
     S['Ledger.cs'].count("TradeMath.PerDay(ceiling, days)") == 1 and
     "Math.Max(soonest, 0.25f)" not in S['Ledger.cs'] and
     ordered(S['Ledger.cs'], "TradeMath.PerDay(ceiling, days)", "Bulk.Walk(from, to, item"))
-chk("1.3.26", "a route's whole trip stays inside the travel ceiling, on the straight line and on the real path",
-    (lambda b: ordered(b, "if (cap > 0f && soonest > cap) continue;", "if (cap > 0f && days > cap) continue;"))
+chk("1.3.26", "a route's whole trip, from where you stand through the buy market, stays inside the sell market's own travel ceiling, on the straight line and on the real path",
+    (lambda b: ordered(b, "if (!WithinTravelCeiling(to, soonest)) continue;", "if (!WithinTravelCeiling(to, days)) continue;"))
     (method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")))
 chk("1.3.26", "both straight-line estimates share one implementation",
     S['Travel.cs'].count("private static float StraightDays(float distance)") == 1 and
@@ -4542,7 +4546,7 @@ chk("1.14.3", "with Live world prices on, a market whose merchant has no gold is
         sell_pass() and
     "? TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold, s.IsVillage)" in
         between(S['Marker.cs'], "internal static int PurseOf(Settlement s) =>", ";") and
-    "if (!TradeMath.OutOfReach(ride) && purse > 0)" in
+    "if (LedgerBehavior.WithinTravelCeiling(mark, ride) && purse > 0)" in
         sell_pass())
 
 chk("1.14.4", "the sell pass names a stopping rule only when one fired, so a cargo it may not sell never reads as a market with nothing to trade",
@@ -6596,7 +6600,7 @@ chk("1.42.1", "the travel arithmetic stands clear of the game, so a test can ask
     the_travel_arithmetic_is_covered_by_tests_the_build_runs())
 chk("1.42.0", "trading with a caravan or villagers on the road says why nothing moved, the same as a market visit does",
     a_road_trade_that_moved_nothing_says_why())
-chk("1.42.0", "the ledger works a route out from your settings alone and never from what you are carrying, holding or able to spend right now, deliberately, so nothing you happen to be doing can hide a route from you",
+chk("1.42.0", "the ledger works a route out from your settings and the room your cargo will have, never from your purse or your herd, so an empty purse or a full herd hides no route",
     the_ledger_lists_a_route_you_could_not_take_this_second())
 chk("1.85.0", "every market a good could be sold at is put to the route scan and to the buying pass, so a market that pays less than the dearest eight is no longer out of their reach, while the tooltip still shows the dearest",
     every_market_a_good_could_be_sold_at_is_offered_to_the_route_scan())
@@ -7304,14 +7308,15 @@ def a_pass_that_can_spend_nothing_says_what_is_holding_your_purse():
     t = S['Trading.cs']
     buy = buy_pass()
     said = method_body(t, "private static void SayWhatHoldsYourPurse")
+    words = method_body(t, "private static string ThePurseSaid")
     return ("else { tally.Note(Block.BudgetSpent); SayWhatHoldsYourPurse(pass); }" in buy
             and t.count("SayWhatHoldsYourPurse(") == 2
-            and ordered(said, "int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);",
-                        "int held = GoldHeldBack(), flat = Options.Current.GoldReserve;",
-                        "Log.Repeatable(")
-            and "Options.Current.KeepWageDays" in said
-            and "Options.Current.MaxSpendPerVisit" in said
-            and "pass.Books.PaidOut(pass.Sim)" in said)
+            and ordered(said, "string said = ThePurseSaid(pass);", "Log.Repeatable(")
+            and ordered(words, "int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);",
+                        "int held = GoldHeldBack(), flat = Options.Current.GoldReserve;")
+            and "Options.Current.KeepWageDays" in words
+            and "Options.Current.MaxSpendPerVisit" in words
+            and "pass.Books.PaidOut(pass.Sim)" in words)
 
 
 chk("1.53.0", "a buying pass with nothing left to spend writes your purse, what is held back and what holds it to the log, rather than only that the budget was spent",
@@ -7511,7 +7516,7 @@ def a_village_can_carry_the_map_marker_when_the_trade_pool_holds_villages():
                      "if (market == null) continue;",
                      "if (!TradeActionBehavior.IsMarket(s)) continue;",
                      "if (LedgerBehavior.UnderAttack(s) || LedgerBehavior.VillageShut(s)) { how.Shut++; continue; }",
-                     "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == holder);",
+                     "float cap = LedgerBehavior.TravelCeiling(s);",
                      "if (TradeMath.PerDay(gold, ride) <= bar) break;",
                      "WhatItWouldFetch(s, market, party, ride, cargo, gold, null)")
              and "Town.AllTowns" not in marker
@@ -10561,11 +10566,11 @@ def nothing_out_of_reach_is_marked_on_the_map_or_offered_as_a_route():
     return ("float ride = Travel.EstimateDaysFromParty(s);" in marker
             and "if (TradeMath.OutOfReach(ride)) { how.NoRoad++; continue; }" in marker
             and marker.find("if (TradeMath.OutOfReach(ride)) { how.NoRoad++; continue; }") <
-                marker.find("if (cap > 0f && ride > cap) { how.PastCeiling++; continue; }")
+                marker.find("if (!LedgerBehavior.WithinTravelCeiling(s, ride)) { how.PastCeiling++; continue; }")
             and "if (cap > 0f)\n" not in marker
             and "if (TradeMath.OutOfReach(days)) continue;" in scan
             and scan.find("if (TradeMath.OutOfReach(days)) continue;") <
-                scan.find("if (cap > 0f && days > cap) continue;"))
+                scan.find("if (!WithinTravelCeiling(to, days)) continue;"))
 
 
 def an_empty_best_buy_list_says_why_it_is_empty():
@@ -11313,7 +11318,7 @@ def the_route_scan_says_what_it_cost():
             and "long started = System.Diagnostics.Stopwatch.GetTimestamp();" in scan
             and "int opened = 0, thrownAway = 0;" in scan
             and scan.count("opened++;") == 1
-            and scan.count("thrownAway++;") == 3
+            and scan.count("thrownAway++;") == 4
             and ordered(scan,
                         "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
                         "opened++;")
@@ -12407,7 +12412,7 @@ def the_feature_list_says_where_the_ledger_shows_what_it_shows():
     refresh = method_body(panel, "private void Refresh()")
     runs = method_body(panel, "public string RunsOut")
     road = method_body(S['Trading.cs'], "private static IMarketData PricedOnTheRoad")
-    return (ordered(refresh, "LegendText = (empty", "+ HowThePromiseHasHeld()",
+    return (ordered(refresh, "LegendText = (nothingFits", "+ HowThePromiseHasHeld()",
                     "NothingHereYouCouldBuy(hero)", "LegendText = OneClauseToALine(LegendText);")
             and "The line under the routes says" not in README
             and "It says under the routes" not in README
@@ -12772,7 +12777,8 @@ def the_marker_writes_its_days_the_same_way_in_every_language():
     return ("using System.Globalization;" in marker
             and re.search(r'ToString\("0\.[#0]+"\)', marker) is None
             and marker.count('Days.ToString("0.#", CultureInfo.InvariantCulture)') == 4
-            and 'how.CeilingPassed.ToString("0.#", CultureInfo.InvariantCulture)' in marker
+            and 'ride.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away, past your travel "' in marker
+            and 'LedgerBehavior.TravelCeiling(holder).ToString("0.#", CultureInfo.InvariantCulture)' in marker
             and 'one.Days.ToString("0.00", CultureInfo.InvariantCulture)' in marker)
 
 
@@ -13504,40 +13510,6 @@ chk("1.93.6", "the marker check says a walk-in came too soon to say anything whe
     the_marker_check_says_nothing_of_a_walk_in_made_too_soon())
 
 
-def the_marked_market_keeps_its_mark_a_fifth_past_the_travel_ceiling():
-    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
-    hold = method_body(S['TradeMath.cs'], "public static float CeilingTheMarkHolds")
-    why = method_body(S['Marker.cs'], "private static string Why")
-    en = spoken(ENGLISH)
-    return (marker and hold and why
-            and "if (!marked || cap <= 0f || float.IsNaN(cap)) return cap;" in hold
-            and "float held = cap * TheMarkedTownHoldsBy;" in hold
-            and "public const float TheMarkedTownHoldsBy = 1.2f;" in S['TradeMath.cs']
-            and ordered(marker,
-                        "float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == holder);",
-                        "if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) { how.PastCeiling++; continue; }",
-                        "float ride = Travel.EstimateDaysFromParty(s);",
-                        "if (cap > 0f && ride > cap) { how.PastCeiling++; continue; }",
-                        "float plain = LedgerBehavior.TravelCeiling(s);",
-                        "how.CeilingPassed = plain > 0f && ride > plain ? plain : 0f;")
-            and ordered(marker, "if (s == holder)", "float flat = LedgerBehavior.TravelCeiling(s);",
-                        "how.HolderCeilingPassed = flat > 0f && ride > flat ? flat : 0f;")
-            and marker.count("LedgerBehavior.TravelCeiling(s)") == 3
-            and ordered(why, '", past your travel ceiling of "', '" day(s) (the market already marked may pass it by "',
-                        "(TradeMath.TheMarkedTownHoldsBy - 1f) * 100f", '"%)"',
-                        '", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how) +')
-            and "(TradeMath.TheMarkedTownHoldsBy - 1f) * 100f" in why
-            and "(a town already marked may pass it by a fifth)" in en['TL306']
-            and "(a town already marked may pass it by a fifth)" in M
-            and "be\u015fte bir" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL306']
-            and "\u043f\u044f\u0442\u0443\u044e \u0447\u0430\u0441\u0442\u044c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL306']
-            and "\u4e94\u5206\u4e4b\u4e00" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL306']
-            and "The market already marked keeps its mark until it is a fifth past your travel ceiling" in README
-            and "The_marked_town_keeps_its_mark_a_little_past_your_travel_ceiling_and_no_other_town_does" in MATHTESTS)
-
-
-chk("1.93.6", "the market marked on your map keeps its mark until a fifth past your travel ceiling, the margin a better market must beat it by, so a slow stretch of road does not flick the marker away and back, while no market is newly marked past the ceiling",
-    the_marked_market_keeps_its_mark_a_fifth_past_the_travel_ceiling())
 
 def a_haul_animal_is_bought_only_while_your_purse_is_above_its_floor_before_every_animal():
     haul = method_body(S['Trading.cs'], "public static bool ExecuteHaulage")
@@ -14533,7 +14505,7 @@ def the_hold_is_asked_only_of_the_mark_and_never_inside_it():
             and S['Trading.cs'].count("Marker.NoteALoadInside(") == 1
             and ordered(themark, "if (!_markRead)", "_markRead = true;",
                         "Settlement mark = Marker.TheMarkToHoldFor(_pass.Site);",
-                        "if (!TradeMath.OutOfReach(ride) && purse > 0)",
+                        "if (LedgerBehavior.WithinTravelCeiling(mark, ride) && purse > 0)",
                         "return _mark;")
             and ordered(resale, "if (TheMark() == null) return false;", "return rungs.Length > 0;")
             and "public int ResalePurse() => TheMark() == null ? 0 : _markPurse;" in S['Trading.cs']
@@ -15433,7 +15405,7 @@ chk("1.95.3", "the game keeps a record for as many workshops as Most workshops y
 def left_counts_from_now_the_way_its_legend_says():
     scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
     en, tr, ru, cn = (spoken(p) for p in [ENGLISH] + list(TRANSLATIONS.values()))
-    return ("RunsOutInDays = runsOut\n" in scan
+    return ("RunsOutInDays = runsOut,\n" in scan
             and "LeftOnceYouArrive" not in ALL
             and "Fixed Left in the TradeLord ledger counting from now instead of from when you reach the buy town" not in CHANGES
             and "from now" in en['TL417'] and "once you arrive" not in en['TL417']
@@ -17050,12 +17022,12 @@ def every_line_of_what_this_means_fits_its_window():
     built = "".join(method_body(panel, one) for one in (
         "private void Refresh", "private static string HowThePromiseHasHeld",
         "private static string ResaleSafetyInUse", "private static string NothingHereYouCouldBuy"))
-    legend = refresh[refresh.find("LegendText = (empty"):refresh.find("LegendText = OneClauseToALine(LegendText);")]
+    legend = refresh[refresh.find("LegendText = (nothingFits"):refresh.find("LegendText = OneClauseToALine(LegendText);")]
     ids = sorted(set(re.findall(r'\{=(TL\d+)\}', legend + "".join(method_body(panel, one) for one in (
         "private static string HowThePromiseHasHeld", "private static string ResaleSafetyInUse",
         "private static string NothingHereYouCouldBuy")))), key=lambda one: int(one[2:]))
     measured = ['TL69', 'TL70', 'TL71', 'TL72', 'TL73', 'TL90', 'TL377', 'TL393', 'TL394', 'TL397', 'TL399',
-                'TL417', 'TL445', 'TL447', 'TL476', 'TL485']
+                'TL417', 'TL445', 'TL447', 'TL476', 'TL485', 'TL508', 'TL509']
     widest = {'{GOLD}': '123,456', '{RESERVE}': '12,345', '{FLAT}': '12,345', '{WAGES}': '12,345',
               '{USED}': '100%', '{SET}': '100%', '{COUNT}': '1,234', '{HELD}': '100%'}
     def width(clause):
@@ -17650,7 +17622,7 @@ def the_mark_moves_only_after_its_market_loses_two_weighings_in_different_hours(
     return (update and stays and nextbest and marker and rule
             and ordered(update, "int hour = (int)CampaignTime.Now.ToHours;",
                         "bool cargoSame = Marks.OnlyEatenFrom(_heldCargo, _cargoHeld);",
-                        "if (_picked != null && target != _picked && (target != null || how.HolderPastAllowance) &&",
+                        "if (_picked != null && target != _picked && target != null &&",
                         "Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null, cargoSame, _lostAt, hour))",
                         "if (_lostAt < 0) _lostAt = hour;", "TheHolderStays(ref how);", "target = _picked;",
                         "_lostAt = -1;", "_heldCargo = _cargoHeld;", "if (target == _picked)")
@@ -17800,18 +17772,16 @@ def gear_from_a_villagers_offer_you_take_goes_out_as_loot():
 chk("1.103.0", "gear from a villagers' offer you take, within Sell loot up to tier, is written down at no cost and sold as loot, while their trade goods count as bought to trade",
     gear_from_a_villagers_offer_you_take_goes_out_as_loot())
 
-def the_log_says_why_the_mark_left_its_market_and_a_market_past_its_ceiling_waits_one_hour():
+def the_log_says_why_the_mark_left_its_market():
     update = method_body(S['Marker.cs'], "internal static void Update")
     left = method_body(S['Marker.cs'], "private static string LeftBecause")
     out = method_body(S['Marker.cs'], "private static string TheMarkLeftOut")
     marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
-    stays = method_body(S['Marker.cs'], "private static void TheHolderStays")
-    why = method_body(S['Marker.cs'], "private static string Why")
-    return (update and left and out and marker and stays and why
+    return (update and left and out and marker
             and ordered(update, "Settlement was = _picked;", "int lostBefore = _lostAt;",
                         "bool cargoSame = Marks.OnlyEatenFrom(_heldCargo, _cargoHeld);",
                         "Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null,",
-                        "string left = on ? LeftBecause(was, target, how, lostBefore, hour, cargoSame) : null;",
+                        "string left = on ? LeftBecause(was, target, how, lostBefore, cargoSame) : null;",
                         '" from " + was.Name + " because " + left', '"map marker taken off " + was.Name + " because " + left')
             and ordered(marker, "TheMarkedTownFirst(reachable, holder);", "if (holder != null && !how.HolderPriced)",
                         "how.HolderLost = TheMarkLeftOut(holder, party, cargo, reachable, ref how);",
@@ -17821,24 +17791,13 @@ def the_log_says_why_the_mark_left_its_market_and_a_market_past_its_ceiling_wait
                         "!TradeActionBehavior.IsMarket(holder)", "TradeActionBehavior.MarkerLeavesItOut(holder)",
                         "holder.IsUnderSiege", "holder.SiegeEvent?.BesiegerCamp?.LeaderParty", "holder.IsUnderRaid",
                         "LedgerBehavior.VillageShut(holder)", "LedgerBehavior.IsHostile(holder)",
-                        "if (purse <= 0)", "TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(holder), true)",
-                        "if (!road)", "if (!Marks.WaitsPastTheCeiling(cap, straight, ride, road)) return null;",
-                        "Takings took = WhatItWouldFetch(holder, market, party, ride, cargo, purse, null);",
-                        "how.HolderPriced = true;", "how.HolderPastAllowance = true;",
-                        '" day(s) the marked market may go"')
+                        "if (purse <= 0)", '" could be found";', '" day(s) away, past your travel "')
             and "how.Best = " not in out and "bar" not in out
-            and ordered(left, "if (how.HolderLost != null)", 'return "your cargo changed and " + against;',
-                        '" for a second hour in a row"')
-            and "how.PastAllowance = how.HolderPastAllowance;" in stays
-            and '"% more the market already marked may go, so it keeps the mark for one hour only"' in why
-            and "cap > 0f && roadFound && (straight > cap || ride > cap)" in
-                between(S['Rules.cs'], "internal static bool WaitsPastTheCeiling(", ";")
-            and all(one in SCORINGTESTS for one in (
-                "A_marked_market_past_its_ceiling_with_a_road_is_priced_so_it_may_wait_one_hour",
-                "A_marked_market_past_its_ceiling_keeps_the_mark_for_one_hour_and_no_more")))
+            and ordered(left, "if (how.HolderLost != null) return how.HolderLost;",
+                        'return "your cargo changed and " + against;', '" for a second hour in a row"'))
 
-chk("1.103.0", "TradeLord.log says why the map marker left its market, with the values behind it, and a marked market that drifts past its travel ceiling keeps the mark one hour",
-    the_log_says_why_the_mark_left_its_market_and_a_market_past_its_ceiling_waits_one_hour())
+chk("1.103.0", "TradeLord.log says why the map marker left its market, with the values behind it",
+    the_log_says_why_the_mark_left_its_market())
 
 def the_restock_pays_up_to_twice_a_foods_value_and_counts_laid_out_trade_food_apart():
     t = S['Trading.cs']
@@ -18033,22 +17992,6 @@ def a_laid_out_sale_counts_as_trade_food_only_the_units_it_drew():
 chk("1.103.2", "a sale Staged Trading lays out counts as food bought to trade only the units it drew, whatever Price a sale must beat is set to",
     a_laid_out_sale_counts_as_trade_food_only_the_units_it_drew())
 
-def a_market_past_its_ceiling_keeps_the_mark_one_hour_with_no_other_market_to_move_to():
-    update = method_body(S['Marker.cs'], "internal static void Update")
-    out = method_body(S['Marker.cs'], "private static string TheMarkLeftOut")
-    left = method_body(S['Marker.cs'], "private static string LeftBecause")
-    nextbest = method_body(S['Marker.cs'], "private static string TheNextBest")
-    return (update and out and left and nextbest
-            and ordered(update, "if (_picked != null && target != _picked && (target != null || how.HolderPastAllowance) &&",
-                        "Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null, cargoSame, _lostAt, hour))",
-                        "TheHolderStays(ref how);", "target = _picked;", "if (target == _picked)")
-            and update.count("how.HolderPastAllowance") == 1
-            and ordered(out, "how.HolderPriced = true;", "how.HolderPastAllowance = true;")
-            and "how.HolderLost + (how.HolderPastAllowance ? hadItsHour : \"\")" in left
-            and ordered(nextbest, "if (how.RunnerUp == null)", '", and no other market it priced would take any of it"'))
-
-chk("1.103.2", "a marked market that drifts past its travel ceiling keeps the mark one hour also when no other market would take your cargo",
-    a_market_past_its_ceiling_keeps_the_mark_one_hour_with_no_other_market_to_move_to())
 
 def the_log_says_gear_from_a_villagers_offer_is_written_down_like_loot_and_promises_no_sale():
     took = method_body(S['Encounters.cs'], "internal static void YouTookTheirOffer")
@@ -20239,22 +20182,22 @@ chk("2.0.5", "the Village travel ceiling ships at 1 day in every language, and D
 
 def caravans_are_timed_along_the_game_road_from_where_they_set_off():
     days = method_body(S['Travel.cs'], "internal static float CaravanDays")
-    detour = method_body(S['Travel.cs'], "private static float CaravanDetour")
-    core = method_body(S['Travel.cs'], "private static float CaravanRoadCore")
+    detour = method_body(S['Travel.cs'], "private static float DetourFromWhereItSetOff")
+    core = method_body(S['Travel.cs'], "private static float RoadInTheGameTableCore")
     math = method_body(S['TradeMath.cs'], "public static float DetourOnTheRoad")
     return (days and detour and core and math
             and ordered(days, "if (AtSea(party)) return TradeMath.EtaDays(distance, now);",
-                        "if (byRoad) detour = CaravanDetour(party, bound, from, distance);",
+                        "if (byRoad) detour = DetourFromWhereItSetOff(party, bound, from, distance);",
                         "if (detour > 0f) distance *= detour;",
                         "float days = TradeMath.EtaAlongTheRoad(distance, byDay, Skies.CellsBetween(from, to, null), paces,")
             and ordered(detour, "Settlement setOff = party.LastVisitedSettlement;",
                         "if (setOff == null || setOff == bound) return 0f;",
-                        "return TradeMath.DetourOnTheRoad(CaravanRoad(party, setOff, bound), start.Distance(bound.GetPosition2D),")
+                        "return TradeMath.DetourOnTheRoad(RoadInTheGameTable(party, setOff, bound), start.Distance(bound.GetPosition2D),")
             and "Campaign.Current.Models.MapDistanceModel.GetDistance(setOff, bound, false, false, way, out float landRatio);" in core
             and "return landRatio >= 0.999f ? road : 0f;" in core
             and ordered(math, "if (road > span * MostRoadDetour || gone + left > road * OnTheRoadSlack) return 0f;",
                         "return Math.Max(road / span, 1f);")
-            and "_caravanRoads.Clear();" in method_body(S['Travel.cs'], "internal static void Forget")
+            and "_tableRoads.Clear();" in method_body(S['Travel.cs'], "internal static void Forget")
             and not [name for name, src in S.items() if "GetPathBetweenAIFaces" in src or "NavigationPath" in src]
             and all(one in MATHTESTS for one in (
                 "A_caravan_on_the_road_from_where_it_set_off_keeps_that_road_detour_and_one_off_it_keeps_the_straight_line",
@@ -20307,6 +20250,109 @@ def the_busiest_frame_counts_each_weather_cost_once():
 
 chk("2.0.6", "with Enable extended debug logging on, the busiest frame on the weather counts a weather cell read once, inside the ride time that read it",
     the_busiest_frame_counts_each_weather_cost_once())
+
+def every_market_is_held_to_its_own_ceiling_the_marked_one_included():
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    out = method_body(S['Marker.cs'], "private static string TheMarkLeftOut")
+    update = method_body(S['Marker.cs'], "internal static void Update")
+    themark = method_body(S['Trading.cs'], "private Settlement TheMark()")
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    said = {path: spoken(path) for path in [ENGLISH] + list(TRANSLATIONS.values())}
+    return (marker and out and update and themark and scan
+            and "CeilingTheMarkHolds" not in ALL and "WaitsPastTheCeiling" not in ALL
+            and "PastAllowance" not in S['Marker.cs'] and "CeilingPassed" not in S['Marker.cs']
+            and ordered(marker, "float cap = LedgerBehavior.TravelCeiling(s);",
+                        "if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) { how.PastCeiling++; continue; }",
+                        "float ride = Travel.EstimateDaysFromParty(s);",
+                        "if (TradeMath.OutOfReach(ride)) { how.NoRoad++; continue; }",
+                        "if (!LedgerBehavior.WithinTravelCeiling(s, ride)) { how.PastCeiling++; continue; }")
+            and ordered(out, "float ride = Travel.EstimateDaysFromParty(holder);",
+                        "if (LedgerBehavior.WithinTravelCeiling(holder, ride)) return null;",
+                        '" day(s) away, past your travel "')
+            and "WhatItWouldFetch" not in out and "how.HolderPriced = true;" not in out
+            and "if (_picked != null && target != _picked && target != null &&" in update
+            and "if (LedgerBehavior.WithinTravelCeiling(mark, ride) && purse > 0)" in themark
+            and ordered(scan, "float toBuy = Travel.EstimateDaysFromParty(from);",
+                        "if (!WithinTravelCeiling(from, toBuy)) continue;",
+                        "if (!WithinTravelCeiling(to, soonest)) continue;",
+                        "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);",
+                        "if (!WithinTravelCeiling(to, days)) continue;")
+            and "MaxTravelDaysTown" not in scan
+            and "internal static bool WithinTravelCeiling(Settlement s, float days) =>" in S['Ledger.cs']
+            and all("fifth" not in one['TL306'] and "be\u015fte bir" not in one['TL306']
+                    and "\u043f\u044f\u0442\u0443\u044e" not in one['TL306'] and "\u4e94\u5206\u4e4b\u4e00" not in one['TL306']
+                    for one in said.values())
+            and "a fifth" not in M and "a fifth past your travel ceiling" not in README
+            and "A_marked_market_past_its_ceiling_is_not_priced_so_it_never_waits_for_a_second_look" in SCORINGTESTS
+            and "A_sell_market_is_held_to_its_own_ceiling_on_the_ride_through_the_buy_market" in RANKTESTS)
+
+
+chk("2.0.7", "the map marker, Hold cargo for the best market and every route's buy and sell market are held to their own travel ceiling by the real ride, with no fifth more and no hour past it, and the Town travel ceiling hint says so in every language",
+    every_market_is_held_to_its_own_ceiling_the_marked_one_included())
+
+
+def the_ledger_sizes_each_route_to_the_room_your_cargo_will_have():
+    scan = method_body(S['Ledger.cs'], "private List<TradeRoute> ScanRoutes")
+    fits = method_body(S['Ledger.cs'], "private static int FitsAt")
+    frees = method_body(S['Marker.cs'], "internal static float RoomItFrees")
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch")
+    refresh = method_body(S['Panel.cs'], "private void Refresh()")
+    said = {path: spoken(path) for path in [ENGLISH] + list(TRANSLATIONS.values())}
+    return (scan and fits and frees and fetch and refresh
+            and ordered(scan, "int fits = FitsAt(from, each, roomNow, roomAt);",
+                        "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;",
+                        "if (fits <= 0) { thrownAway++; cargoShut++; continue; }",
+                        "bool sized = fits < qtyCap;", "if (sized) qtyCap = fits;",
+                        "RouteQuote q = Bulk.Walk(from, to, item, qtyCap,",
+                        "SizedToCargo = sized && q.Units >= qtyCap",
+                        "NothingFitsYourCargo = routes.Count == 0 && cargoShut > 0;")
+            and ordered(fits, "if (!(each > 0.01f)) return int.MaxValue;",
+                        'room = roomNow + Guard.Read("Ledger.RoomItFrees", from, Marker.RoomItFrees, 0f);',
+                        "return TradeMath.UnitsThatFit(room, each);")
+            and "return WhatItWouldFetch(site, market, party, ride, cargo, purse, null).Weight;" in frees
+            and fetch.count("took.Weight += moved * Carry.Weighs(") == 2
+            and ordered(refresh, '"{=TL507}No profitable route fits in your cargo"',
+                        '"{=TL506}{COUNT} profitable route(s), best first, sized to your cargo"',
+                        '"{=TL508}Every profitable route needs room for cargo you will not have',
+                        '"{=TL509} | Qty = what fits in your cargo once you sell at the buy market"')
+            and all(all(key in one for key in ('TL506', 'TL507', 'TL508', 'TL509')) for one in said.values())
+            and all('{COUNT}' in one['TL506'] for one in said.values())
+            and "A_route_carries_only_as_many_units_as_fit_in_the_room_your_cargo_will_have" in MATHTESTS)
+
+
+chk("2.0.7", "the TradeLord ledger offers each route only as many units as fit in your cargo once you sell at the buy market, leaves out a good none of fits, and says so above and under the routes in every language",
+    the_ledger_sizes_each_route_to_the_room_your_cargo_will_have())
+
+
+def your_ride_from_the_middle_of_a_road_follows_the_road_from_where_you_set_off():
+    party = method_body(S['Travel.cs'], "internal static float FromParty")
+    mid = method_body(S['Travel.cs'], "private static float MidRoad")
+    return (party and mid
+            and ordered(party, 'float road = Guard.Read("Travel.MidRoad", target, MidRoad, 0f);',
+                        "if (road > 0f) return road;", "try { return FromPartyCore(target, out landRatio); }",
+                        "catch { landRatio = 1f; }")
+            and ordered(mid, "if (party == null || party.CurrentSettlement != null || AtSea(party)) return 0f;",
+                        "float detour = DetourFromWhereItSetOff(party, target, at, left);",
+                        "return detour > 0f ? left * detour : 0f;")
+            and S['Travel.cs'].count("DetourFromWhereItSetOff(") == 3
+            and "CaravanDetour" not in ALL)
+
+
+chk("2.0.7", "your own ride from the middle of a road is timed along the game's road from where you set off, as caravans' rides are, and keeps the game's own answer once you are off that road",
+    your_ride_from_the_middle_of_a_road_follows_the_road_from_where_you_set_off())
+
+
+def every_buying_pass_says_what_was_free_to_spend():
+    buy = buy_pass()
+    return (ordered(buy, "string purseSaid = null;", "if (pass.Spendable() > 0)",
+                    'purseSaid = "before this pass " + ThePurseSaid(pass);',
+                    'if (purseSaid != null) Log.Write("  purse: " + purseSaid);',
+                    '(purseSaid != null && tally.Saw(Block.BudgetSpent) ? "; purse " + purseSaid : "")')
+            and S['Trading.cs'].count("ThePurseSaid(pass)") == 2)
+
+
+chk("2.0.7", "TradeLord.log says under every buying pass, and under one the spend limit stopped, what your purse held, what was held back and how much of Max spend per visit was left",
+    every_buying_pass_says_what_was_free_to_spend())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

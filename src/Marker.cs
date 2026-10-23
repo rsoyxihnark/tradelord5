@@ -229,6 +229,7 @@ namespace TradeLord
         {
             internal long Value;
             internal long Cost;
+            internal float Weight;
             internal int Units;
             internal int Kinds;
             internal bool PurseCapped;
@@ -245,7 +246,6 @@ namespace TradeLord
             internal float Rate;
             internal float RunnerUpRate;
             internal float Days;
-            internal float CeilingPassed;
             internal int Units;
             internal int Kinds;
             internal int Purse;
@@ -275,15 +275,12 @@ namespace TradeLord
             internal long HolderCost;
             internal float HolderRate;
             internal float HolderDays;
-            internal float HolderCeilingPassed;
             internal int HolderUnits;
             internal int HolderKinds;
             internal int HolderPurse;
             internal bool HolderPurseCapped;
             internal bool HolderTooPoor;
             internal List<Share> HolderBill;
-            internal bool HolderPastAllowance;
-            internal bool PastAllowance;
             internal string HolderLost;
         }
 
@@ -303,7 +300,7 @@ namespace TradeLord
             Settlement was = _picked;
             int lostBefore = _lostAt;
             bool cargoSame = Marks.OnlyEatenFrom(_heldCargo, _cargoHeld);
-            if (_picked != null && target != _picked && (target != null || how.HolderPastAllowance) &&
+            if (_picked != null && target != _picked && target != null &&
                 Marks.HoldsForASecondLook(how.HolderPriced, how.Afresh != null, cargoSame, _lostAt, hour))
             {
                 if (_lostAt < 0) _lostAt = hour;
@@ -342,7 +339,7 @@ namespace TradeLord
                 _tracked = target;
             }
             string why = on ? Why(how) : "the map marker is switched off";
-            string left = on ? LeftBecause(was, target, how, lostBefore, hour, cargoSame) : null;
+            string left = on ? LeftBecause(was, target, how, lostBefore, cargoSame) : null;
             Log.Write(target != null
                 ? "map marker moved to " + target.Name + (left == null ? "" : " from " + was.Name + " because " + left) +
                   ": " + why
@@ -364,25 +361,22 @@ namespace TradeLord
             how.Cost = how.HolderCost;
             how.Rate = how.HolderRate;
             how.Days = how.HolderDays;
-            how.CeilingPassed = how.HolderCeilingPassed;
             how.Units = how.HolderUnits;
             how.Kinds = how.HolderKinds;
             how.Purse = how.HolderPurse;
             how.PurseCapped = how.HolderPurseCapped;
             how.Bill = how.HolderBill;
-            how.PastAllowance = how.HolderPastAllowance;
             how.Held = false;
             how.HeldForASecondLook = true;
         }
 
         private static string LeftBecause(Settlement was, Settlement target, in Reckoning how, int lostBefore,
-                                             int hour, bool cargoSame)
+                                             bool cargoSame)
         {
             if (was == null || was == target) return null;
             if (how.Afresh != null && how.Unheld != null)
                 return "a market left out while it was marked was weighed again and earns more a day";
-            string hadItsHour = lostBefore >= 0 && lostBefore < hour ? ", and it already had its hour to hold the mark" : "";
-            if (how.HolderLost != null) return how.HolderLost + (how.HolderPastAllowance ? hadItsHour : "");
+            if (how.HolderLost != null) return how.HolderLost;
             if (!how.HolderPriced) return was.Name + " was not priced";
             if (target == null)
                 return was.Name + " would earn " + how.HolderRate.ToString("0") + " gold a day on what you carry";
@@ -601,17 +595,6 @@ namespace TradeLord
                            ? ", its purse left unread as Live world prices is off"
                            : " against a " + MarketKind(how.Best) + " purse of " + how.Purse) +
                    ", about " + how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away" +
-                   (how.CeilingPassed > 0f
-                       ? ", past your travel ceiling of " +
-                         how.CeilingPassed.ToString("0.#", CultureInfo.InvariantCulture) +
-                         (!how.PastAllowance
-                             ? " day(s) (the market already marked may pass it by " +
-                               ((TradeMath.TheMarkedTownHoldsBy - 1f) * 100f).ToString("0", CultureInfo.InvariantCulture) +
-                               "%)"
-                             : " day(s) and past the " +
-                               ((TradeMath.TheMarkedTownHoldsBy - 1f) * 100f).ToString("0", CultureInfo.InvariantCulture) +
-                               "% more the market already marked may go, so it keeps the mark for one hour only")
-                       : "") +
                    ", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how) +
                    (how.Afresh != null && how.Unheld != null
                        ? ", marked afresh because " + how.Afresh.Name + ", left out while " + how.Unheld.Name +
@@ -843,6 +826,7 @@ namespace TradeLord
                 took.Value += fetched;
                 took.Cost += cost;
                 took.Units += moved;
+                took.Weight += moved * Carry.Weighs(cargo[at].item.Item);
                 lines[at].Moved = moved;
                 lines[at].Cost = cost;
                 lines[at].Fetched = fetched;
@@ -882,6 +866,7 @@ namespace TradeLord
                 took.Value += fetched;
                 took.Cost += cost;
                 took.Units += moved;
+                took.Weight += moved * Carry.Weighs(item.Item);
                 if (from == 0) sold.Add(at);
                 lines[at].Moved += moved;
                 lines[at].Cost += cost;
@@ -1033,11 +1018,11 @@ namespace TradeLord
                 if (!Options.Current.Omniscient && !SeenAnyOf(cargo, s)) { how.Unseen++; continue; }
                 int purse = PurseOf(s);
                 if (purse <= 0) { how.NoTill++; continue; }
-                float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(s), s == holder);
+                float cap = LedgerBehavior.TravelCeiling(s);
                 if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) { how.PastCeiling++; continue; }
                 float ride = Travel.EstimateDaysFromParty(s);
                 if (TradeMath.OutOfReach(ride)) { how.NoRoad++; continue; }
-                if (cap > 0f && ride > cap) { how.PastCeiling++; continue; }
+                if (!LedgerBehavior.WithinTravelCeiling(s, ride)) { how.PastCeiling++; continue; }
                 reachable.Add((s, market, purse, ride));
             }
             reachable.Sort(FastestPurseFirst);
@@ -1074,8 +1059,6 @@ namespace TradeLord
                     how.HolderCost = took.Cost;
                     how.HolderRate = rate;
                     how.HolderDays = ride;
-                    float flat = LedgerBehavior.TravelCeiling(s);
-                    how.HolderCeilingPassed = flat > 0f && ride > flat ? flat : 0f;
                     how.HolderUnits = took.Units;
                     how.HolderKinds = took.Kinds;
                     how.HolderPurse = gold;
@@ -1099,8 +1082,6 @@ namespace TradeLord
                     how.Value = total;
                     how.Best = s;
                     how.Days = ride;
-                    float plain = LedgerBehavior.TravelCeiling(s);
-                    how.CeilingPassed = plain > 0f && ride > plain ? plain : 0f;
                     how.Units = took.Units;
                     how.Kinds = took.Kinds;
                     how.Purse = gold;
@@ -1161,32 +1142,11 @@ namespace TradeLord
                 return holder.Name + " has no price you have seen for anything you carry";
             int purse = PurseOf(holder);
             if (purse <= 0) return holder.Name + "'s purse is empty, " + market.Gold + " gold";
-            float cap = TradeMath.CeilingTheMarkHolds(LedgerBehavior.TravelCeiling(holder), true);
-            float straight = Travel.StraightDaysFromParty(holder);
             float ride = Travel.EstimateDaysFromParty(holder);
-            bool road = !TradeMath.OutOfReach(ride);
-            if (!road) return "no road to " + holder.Name + " could be found";
-            if (!Marks.WaitsPastTheCeiling(cap, straight, ride, road)) return null;
-            Takings took = WhatItWouldFetch(holder, market, party, ride, cargo, purse, null);
-            if (took.Value > 0L)
-            {
-                long total = took.Value > purse ? purse : took.Value;
-                how.HolderPriced = true;
-                how.HolderPastAllowance = true;
-                how.HolderValue = total;
-                how.HolderCost = took.Cost;
-                how.HolderRate = TradeMath.PerDay(total - took.Cost, ride);
-                how.HolderDays = ride;
-                float flat = LedgerBehavior.TravelCeiling(holder);
-                how.HolderCeilingPassed = flat > 0f && ride > flat ? flat : 0f;
-                how.HolderUnits = took.Units;
-                how.HolderKinds = took.Kinds;
-                how.HolderPurse = purse;
-                how.HolderPurseCapped = took.PurseCapped;
-            }
-            float away = ride > cap ? ride : straight;
-            return holder.Name + " is " + away.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away, past the " +
-                   cap.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) the marked market may go";
+            if (TradeMath.OutOfReach(ride)) return "no road to " + holder.Name + " could be found";
+            if (LedgerBehavior.WithinTravelCeiling(holder, ride)) return null;
+            return holder.Name + " is " + ride.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away, past your travel " +
+                   "ceiling of " + LedgerBehavior.TravelCeiling(holder).ToString("0.#", CultureInfo.InvariantCulture) + " day(s)";
         }
 
         internal static void NoteTheWalkIn(Settlement at)
@@ -1210,6 +1170,20 @@ namespace TradeLord
             if (LedgerBehavior.UnderAttack(mark) || LedgerBehavior.VillageShut(mark)) return null;
             if (Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(mark)) return null;
             return mark;
+        }
+
+        internal static float RoomItFrees(Settlement site)
+        {
+            MobileParty party = MobileParty.MainParty;
+            SettlementComponent market = site?.SettlementComponent;
+            if (party == null || market == null) return 0f;
+            var cargo = WhatYouCarryToSell(party);
+            if (cargo.Count == 0) return 0f;
+            int purse = PurseOf(site);
+            if (purse <= 0) return 0f;
+            float ride = Travel.EstimateDaysFromParty(site);
+            if (TradeMath.OutOfReach(ride)) return 0f;
+            return WhatItWouldFetch(site, market, party, ride, cargo, purse, null).Weight;
         }
 
         internal static int[] WhatTheMarkTakes(Settlement mark, EquipmentElement el, int carried,
