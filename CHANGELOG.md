@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.8
+
+- Fixed settings kept from an older TradeLord holding the Town travel ceiling at the old 2.4 days, so fewer towns stayed in reach
+- TradeLord.log now says when a Town travel ceiling of 2.4 days kept from an older TradeLord is moved to 3.0
+- Fixed the TradeLord ledger counting cargo room that Hold cargo for the best market keeps full at Buy From
+- Fixed travel times jumping up while rain falls where your party stands and running short on wet ground on the road
+- With Enable extended debug logging on, TradeLord.log now gives the wet ground step it works out from your riders until it reads one
+- Fixed TradeLord buying trade goods from a caravan on the road while your party has less than a day of its own food
+- Fixed TradeLord.log saying a day of food was bought before any trade good when none could be bought
+- Fixed Count what is on its way to a market expecting villagers to sell a town more than its gold can pay for
+- With Enable extended debug logging on, the ride check in TradeLord.log now says how the road of each ride was measured
+
 ## 2.0.7
 
 - Fixed the map marker keeping a market marked after the ride there runs past your travel ceilings
@@ -23,7 +35,6 @@
 - Fixed travel times counting a whole ride at the speed your party has while Disorganized
 - Fixed Days in the TradeLord ledger counting Disorganized on the ride from Buy From to Sell At when it wears off before you reach Buy From
 - Fixed Count what is on its way to a market expecting Disorganized caravans and villagers to stay slow for their whole ride
-- The Village travel ceiling now starts at 1 day
 - With Enable extended debug logging on, TradeLord.log now says how much Disorganized slowed your party each time it wears off
 - With Enable extended debug logging on, TradeLord.log now breaks the marked market's travel time down by night, snow, wet ground and Disorganized
 - With Enable extended debug logging on, TradeLord.log now says each hour how many caravans and villagers were timed along their road, and in how long
@@ -45,7 +56,7 @@
 - Fixed travel times leaving out the nights on the way
 - Fixed travel times in the TradeLord ledger, the tooltips and the map marker coming out shorter than the ride really takes
 - Fixed the TradeLord ledger, the tooltips and the map marker offering markets past your Town travel ceiling and Village travel ceiling
-- The Town travel ceiling now starts at 3.0 days and the Village travel ceiling at 1.3 days, so as many markets stay in reach as before
+- The Town travel ceiling now starts at 3.0 days, so as many towns stay in reach as before
 - Days in the TradeLord ledger now counts the nights on the way from Buy From to Sell At from the time you reach Buy From
 - Fixed Count what is on its way to a market expecting caravans and villagers to arrive sooner than they do
 - Fixed Count what is on its way to a market expecting caravans and villagers to arrive a third later than they do at night

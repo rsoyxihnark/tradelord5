@@ -30,6 +30,7 @@ namespace TradeLord
         private static Options _fileHeld;
         private static bool _fileOutranks;
         private static bool _fileScreenWrote;
+        private static int _shapeRead;
         private static readonly List<KeyValuePair<string, string>> _newerLines =
             new List<KeyValuePair<string, string>>();
         private static int _newerShape;
@@ -136,7 +137,10 @@ namespace TradeLord
             if (held == null || !_fileOutranks)
             {
                 if (held != null)
+                {
                     Log.Write("settings file: the settings screen was saved more recently, so this file is written to match it");
+                    TheScreenTakesTheNewTownCeiling();
+                }
                 SettleTheLearningSwitch(_fileSaidWhetherToLearn || ScreenSaidWhetherToLearn);
                 _dirty = true;
                 return;
@@ -150,6 +154,16 @@ namespace TradeLord
             McmLoader.Reseat?.Invoke();
             _lastSeen = Snapshot();
             if (_newerShape == 0) Write(_path, "made the settings screen match it");
+        }
+
+        private static void TheScreenTakesTheNewTownCeiling()
+        {
+            if (!Migration.OwesTheNewTownCeiling(_shapeRead, Options.Current.MaxTravelDaysTown)) return;
+            _shapeRead = Migration.Shape;
+            Options.Current.MaxTravelDaysTown = new Options().MaxTravelDaysTown;
+            Log.Write("settings screen: " + Migration.TheTownCeilingMoved(Options.Current.MaxTravelDaysTown));
+            Options.Bump();
+            McmLoader.Reseat?.Invoke();
         }
 
         internal static void Flush()
@@ -226,6 +240,7 @@ namespace TradeLord
             written.Remove(ChangedKey);
             written.Remove(WrittenByKey);
 
+            _shapeRead = shape;
             var notes = new List<string>();
             bool lifted = Migration.Lift(shape, written, notes);
             bool newer = shape > Migration.Shape;
@@ -259,6 +274,7 @@ namespace TradeLord
                               "was saved more recently, so the screen's settings are the ones kept");
                 Log.Write("settings file: the settings screen was saved more recently, so this file is written to match it");
                 SettleTheLearningSwitch(ScreenSaidWhetherToLearn);
+                TheScreenTakesTheNewTownCeiling();
                 Write(found, "made to match the settings screen");
                 return;
             }

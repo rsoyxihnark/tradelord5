@@ -496,7 +496,7 @@ namespace TradeLord.Tests
         public void TheReservedLinesAreNotSettingsAndNeverReachTheOptions()
         {
             Assert.Equal("SettingsVersion", Migration.ShapeKey);
-            Assert.Equal(19, Migration.Shape);
+            Assert.Equal(20, Migration.Shape);
             var written = File(Migration.ShapeKey, "1", "GoldReserve", "700");
             written.Remove(Migration.ShapeKey);
             Assert.False(Migration.Lift(1, written, new List<string>()));
@@ -653,6 +653,56 @@ namespace TradeLord.Tests
                                                                                 bool settled)
         {
             Assert.Equal(settled, Migration.LearnsOnceSettled(said, learning, factor));
+        }
+
+        [Theory]
+        [InlineData(19, "2.4")]
+        [InlineData(19, "2.40")]
+        [InlineData(7, "2.4")]
+        public void AnOlderFileHoldingTheOldTownCeilingTakesTheOneTradeLordShipsWithNow(int shape, string held)
+        {
+            var written = File("MaxTravelDaysTown", held, "GoldReserve", "800");
+            var notes = new List<string>();
+            Assert.True(Migration.Lift(shape, written, notes));
+            Assert.Equal("3", written["MaxTravelDaysTown"]);
+            Assert.Equal("800", written["GoldReserve"]);
+            Assert.Single(notes, one => one.Contains("Town travel ceiling of 2.4 days") && one.Contains("3.0 days now"));
+        }
+
+        [Fact]
+        public void TheOldTownCeilingUnderItsOldNameIsCarriedOverAndThenTakesTheNewOne()
+        {
+            var written = File("MaxTravelDays", "2.4");
+            Assert.True(Migration.Lift(1, written, new List<string>()));
+            Assert.False(written.ContainsKey("MaxTravelDays"));
+            Assert.Equal("3", written["MaxTravelDaysTown"]);
+        }
+
+        [Theory]
+        [InlineData(19, "2.5")]
+        [InlineData(19, "2.3")]
+        [InlineData(19, "3")]
+        [InlineData(19, "0")]
+        [InlineData(19, "not a number")]
+        [InlineData(20, "2.4")]
+        public void ATownCeilingOtherThanTheOldOneOrInTheNewShapeIsLeftAsItIs(int shape, string held)
+        {
+            var written = File("MaxTravelDaysTown", held);
+            Assert.False(Migration.Lift(shape, written, new List<string>()));
+            Assert.Equal(held, written["MaxTravelDaysTown"]);
+        }
+
+        [Fact]
+        public void TheSettingsScreenTakesTheNewTownCeilingOnlyFromTheOldOneAndOnlyForAnOlderFile()
+        {
+            Assert.Equal(3f, new Options().MaxTravelDaysTown);
+            Assert.True(Migration.OwesTheNewTownCeiling(19, 2.4f));
+            Assert.True(Migration.OwesTheNewTownCeiling(1, 2.4f));
+            Assert.False(Migration.OwesTheNewTownCeiling(Migration.Shape, 2.4f));
+            Assert.False(Migration.OwesTheNewTownCeiling(0, 2.4f));
+            Assert.False(Migration.OwesTheNewTownCeiling(19, 2.5f));
+            Assert.False(Migration.OwesTheNewTownCeiling(19, 3f));
+            Assert.False(Migration.OwesTheNewTownCeiling(19, float.NaN));
         }
 
         [Fact]

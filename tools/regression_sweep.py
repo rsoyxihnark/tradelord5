@@ -314,6 +314,11 @@ def code_only(src):
     _masked[src] = ''.join(out)
     return _masked[src]
 
+HANDED_ON = {
+    "public static void ExecuteResupply": ("Resupply(pass, aDayFirst);",
+                                           "private static void Resupply(Pass pass, bool aDayFirst)"),
+}
+
 def method_body(src, signature):
     i = src.find(signature)
     if i >= 0:
@@ -325,7 +330,12 @@ def method_body(src, signature):
                 if code[k] == '{': depth += 1
                 elif code[k] == '}':
                     depth -= 1
-                    if depth == 0: return src[i:k + 1]
+                    if depth == 0:
+                        body = src[i:k + 1]
+                        handed = HANDED_ON.get(signature)
+                        if handed and handed[0] in body:
+                            body += "\n" + method_body(src, handed[1])
+                        return body
     _lost.append(signature)
     return ''
 
@@ -1539,7 +1549,7 @@ def restocking_runs_after_the_trading_buy():
             and "int ceiling = TradeMath.MostToPayOverTheCheapest(worth, tolerance);" in body
             and "TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true),\n                TradeMath.ShortFoodTolerance);"
                 in method_body(S['Trading.cs'], "public static void ExecuteResupply")
-            and "settlement.IsVillage && remaining <= 1" in body
+            and "pass.Village && remaining <= 1" in body
             and "pass.Room() - simWeight" in body
             and "pass.Books.Sold(pass.Sim, it.StringId)" in body
             and "BuyAcceptable" not in body
@@ -1602,7 +1612,7 @@ chk("1.3.18", "neither pass trades before the settling delay is served, in a mar
     "MarketOpen(site, quiet)" not in S['Trading.cs'] and
     S['Trading.cs'].count("MarketOpen(") == 2 and
     S['Trading.cs'].count("Pass.Open(settlement, quiet)") == 8 and
-    S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 4)
+    S['Trading.cs'].count("Pass.Meet(met, road, books, party)") == 5)
 chk("1.3.2", "how far a scan reaches is the two travel ceilings alone, and the scan radius that used to narrow it is gone",
     "WithinRadius" not in S['Ledger.cs'] and "ScanRadius" not in S['Ledger.cs'] and
     "ScanRadius" not in S['Options.cs'] and "ScanRadius" not in M and
@@ -1689,9 +1699,9 @@ chk("1.3.4", "village last-unit clamp leaves one unit on the shelf",
     "market.Village && remaining <= 1, s);" in
         buy_pass() and
     "public bool Village => _pass.Site != null && _pass.Site.IsVillage;" in buy_pass() and
-    'if (settlement.IsVillage && remaining <= 1) { stopped = TheVillageLastUnit; break; }' in
+    'if (pass.Village && remaining <= 1) { stopped = TheVillageLastUnit; break; }' in
         method_body(S['Trading.cs'], "public static void ExecuteResupply") and
-    'if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }' in
+    'if (pass.Village && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }' in
         method_body(S['Trading.cs'], "public static void ExecuteResupply") and
     "if (settlement.IsVillage && remaining <= 1) break;" in
         method_body(S['Trading.cs'], "public static bool ExecuteHaulage"))
@@ -1831,7 +1841,7 @@ def a_caravan_leaves_what_the_town_will_take_and_a_villager_leaves_the_lot():
             and "bool caravan = party.IsCaravan;" in road
             and "if (!caravan && !party.IsVillager) continue;" in road
             and 'Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days));' in road
-            and "Note(bound, item.StringId, item.ItemCategory, amount, TradeMath.WorthOf(amount, item.Value), days);" in road
+            and "Note(bound, item.StringId, item.ItemCategory, units, TradeMath.WorthOf(units, item.Value), days);" in road
             and ordered(follow, "town.GetItemCategoryPriceIndex(kind), index.average, index.lowest, worth,",
                         "economy.CalculateDailySettlementBudgetForItemCategory(town, town.MarketData.GetDemand(kind),",
                         "units = Math.Min(units, Math.Min(amount, till / price));",
@@ -5394,7 +5404,7 @@ def no_setting_a_player_ever_saved_is_left_stranded():
 def a_settings_file_says_which_shape_it_is_in():
     read = method_body(S['Config.cs'], "private static void Read")
     write = method_body(S['Config.cs'], "private static void Write")
-    return ('public const int Shape = 19;' in S['Migrate.cs']
+    return ('public const int Shape = 20;' in S['Migrate.cs']
             and 'public const string ShapeKey = "SettingsVersion";' in S['Migrate.cs']
             and "written[line.Substring(0, mark).Trim()] = line.Substring(mark + 1).Trim();" in S['Migrate.cs']
             and ordered(read, "string[] lines = Lines(found);",
@@ -5517,10 +5527,11 @@ def the_shape_a_settings_file_declares_gates_every_step_of_the_lift():
                         "changed |= PayingOverTheOddsForAHaulAnimalIsGone(written, notes);",
                         "if (from < 6) changed |= TheAutoMarkerCeilingIsGone(written, notes);",
                         "if (from < 7) changed |= TheScanRadiusIsGone(written, notes);")
-            and lift.count("changed |=") == 11
+            and lift.count("changed |=") == 12
             and "if (from < 15) changed |= WhatToBuyFirstIsOneRuleNow(written, notes);" in lift
             and "if (from < 18) changed |= HoldCargoBecameOneShare(written, notes);" in lift
             and "if (from < 19) changed |= AResaleSafetyFactorYouSetIsUsedAsSet(written, notes);" in lift
+            and "if (from < 20) changed |= TheOldTownCeilingIsTheNewOne(written, notes);" in lift
             and "AResaleSafetyFactorYouSetYourselfIsUsedAsSetRatherThanLearnedOver" in MIGRATIONTESTS
             and "HoldCargoForTheBestMarketIsOneShareThatStartsAtWhatTradeLordShipsWith" in MIGRATIONTESTS
             and (("if (from < " + shape.group(1) + ")") in lift
@@ -5741,7 +5752,7 @@ def a_meeting_on_the_road_is_priced_as_one_meeting():
     t = S['Trading.cs']
     body = method_body(t, "public static void ExecuteRoadTrade")
     return ("Books books = BooksForTheMeeting(met);" in body
-            and body.count("books, party)") == 4
+            and body.count("books, party)") == 5
             and "new Books()" not in body
             and method_body(t, "private static Books BooksForTheMeeting").count("new Books()") == 1
             and t.count("new Books()") == 2
@@ -6372,7 +6383,7 @@ def a_market_and_a_meeting_on_the_road_run_the_same_two_passes():
             and 'BuyPass(Pass.Open(settlement, quiet), "quick-buy", "buying", "Buying", "the buying pass");' in t
             and road.count('SellPass(Pass.Meet(met, road, books, party),') == 2
             and 'BuyPass(Pass.Meet(met, road, books, party),' in road
-            and len(road.splitlines()) < 31
+            and len(road.splitlines()) < 32
             and all(word not in road for word in
                     ("ItemRoster", "Basis", "TradePolicy.", "WhatStopsBuying", "InAPass",
                      "Notices.Say(", "Log.Write", "SwapOneUnit", "simWeight", "herdRoom"))
@@ -6394,7 +6405,7 @@ def the_venue_is_the_only_thing_a_pass_asks_where_it_is():
                 'internal string Where => Site != null ? "at " + Site.Name : "from " + Met.Name;',
                 "internal ItemRoster Stock => Site != null ? Site.ItemRoster : Met.ItemRoster;",
                 "internal int TillNow => Site != null ? Market.Gold : Met.PartyTradeGold;"))
-            and t.count("pass.Where") == 8)
+            and t.count("pass.Where") == 17)
 
 
 chk("1.40.4", "a market visit and a meeting on the road sell and buy through the same two passes",
@@ -7577,7 +7588,7 @@ def a_caravan_already_in_the_market_is_not_counted_twice():
                     "if (party.CurrentSettlement != null) continue;",
                     "Settlement bound = party.TargetSettlement;",
                     "float days = Travel.CaravanDays(party, bound, out TradeMath.RoadTally tally, out float detour);",
-                    "if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;")
+                    "if (item == null || amount <= 0) continue;")
             and "CurrentSettlement" not in method_body(
                     S['Forecast.cs'], "private static void ReadWhatTheShopsWillMake"))
 
@@ -13068,7 +13079,7 @@ def a_party_on_the_road_lands_its_load_only_at_a_town():
             and ordered(road, "Settlement bound = party.TargetSettlement;",
                         "if (bound == null || !bound.IsTown) continue;",
                         'Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days));',
-                        "Note(bound, item.StringId, item.ItemCategory, amount, TradeMath.WorthOf(amount, item.Value), days);")
+                        "Note(bound, item.StringId, item.ItemCategory, units, TradeMath.WorthOf(units, item.Value), days);")
             and "bound.IsVillage" not in road)
 
 chk("1.93.4", "a caravan or a party of villagers is counted as landing its load only where it is bound for a town, so what villagers carry back home to their village is never counted as reaching a market",
@@ -13156,7 +13167,7 @@ def what_a_full_cargo_left_behind_is_counted_at_the_price_it_would_climb_to_good
                         "if (shortfall > 0 && firstLeft.HasValue && !pass.DirectionError)",
                         "var food = FoodTheHoldLeftBehind(pass, left.el, left.good, left.fed, left.ceiling, shortfall,",
                         "_unfitted = (food.weight, food.cost, 0f, true);", "if (stocked <= 0)",
-                        'Log.Repeatable("resupply none bought", settlement.StringId + "/" + stopped,',
+                        'Log.Repeatable("resupply none bought", pass.Key + "/" + stopped,',
                         '": " + stopped);\n                return;\n            }', "int spent = pass.Spent(simSpent);")
             and ordered(food, "Func<int, int> ahead = pass.PricesAhead(el.EquipmentElement);",
                         "int budget = pass.SpendableToFeed(starving);", "while (shortfall > 0 && remaining > 0)",
@@ -16038,7 +16049,7 @@ def the_learning_switch_keeps_a_resale_safety_factor_you_set_yourself():
                         "SettleTheLearningSwitch(_fileSaidWhetherToLearn);")
             and "Config.ScreenSaidWhetherToLearn = true;" in M
             and M.count("ScreenSaidWhetherToLearn") == 1
-            and "public const int CracksAt = 19;" in S['Migrate.cs']
+            and "public const int CracksAt = 20;" in S['Migrate.cs']
             and all(one in MIGRATIONTESTS for one in
                     ("AResaleSafetyFactorYouSetYourselfIsUsedAsSetRatherThanLearnedOver",
                      "TheResaleSafetyFactorTradeLordShipsWithLeavesLearningOn",
@@ -16152,10 +16163,10 @@ def the_haul_animal_and_food_passes_say_why_they_bought_nothing():
             and all(one in haul for one in ('Log.Repeatable("haul animal herd", settlement.StringId,',
                                             'Log.Repeatable("haul animal no room", settlement.StringId,',
                                             'Log.Repeatable("haul animal none on sale", settlement.StringId,'))
-            and ordered(food, "if (shortfall <= 0) return;", 'Log.Repeatable("resupply none on sale", settlement.StringId,',
+            and ordered(food, "if (shortfall <= 0) return;", 'Log.Repeatable("resupply none on sale", pass.Key,',
                         "string stopped = null, hungryStopped = null;",
                         'if (shortfall > 0 && stopped != null && !pass.DirectionError)',
-                        'Log.Repeatable("resupply none bought", settlement.StringId + "/" + stopped,'))
+                        'Log.Repeatable("resupply none bought", pass.Key + "/" + stopped,'))
 
 chk("1.97.1", "a haul animal pass or a food restock that buys nothing says in the log why, once for each town",
     the_haul_animal_and_food_passes_say_why_they_bought_nothing())
@@ -17575,10 +17586,10 @@ def a_hungry_party_buys_a_day_of_food_at_up_to_twice_the_cheapest_price():
                         'hungryStopped = "its price is above both twice the cheapest TradeLord knows and twice its value";',
                         'hungryStopped = "your purse cannot pay for it";',
                         'hungryStopped = "your buying caps for it are reached";',
-                        "if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }",
+                        "if (pass.Village && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }",
                         'hungryStopped = "your cargo has no room for it";',
                         "hunger -= fed;",
-                        "at up to twice the cheapest price TradeLord knows or twice their value at ")
+                        "at up to twice the cheapest price TradeLord knows or twice their value ")
             and larder.count("TradeMath.HungryFoodTolerance") == 1
             and "A_party_short_of_a_day_of_food_may_pay_up_to_twice_the_cheapest_price" in MATHTESTS
             and "Only_the_food_short_of_one_day_is_bought_above_the_cheapest_price" in MATHTESTS
@@ -18088,9 +18099,9 @@ def a_starving_party_feeds_past_the_visit_cap_and_only_its_one_day_of_food_below
                         "if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }",
                         "if (belowTheReserve) { belowTheReserveUnits++; belowTheReserveGold += price; }",
                         "while (hunger > 0 && remaining > 0)", "if (hungryUnits > 0)",
-                        "if (pastTheCapUnits > 0)", '" gold were bought past Max spend per visit at "',
-                        "if (belowTheReserveUnits > 0)", '" gold of that one day of food were bought below your gold reserve at "',
-                        "settlement.IsVillage, hungry);")
+                        "if (pastTheCapUnits > 0)", '" gold were bought past Max spend per visit " + pass.Where',
+                        "if (belowTheReserveUnits > 0)", '" gold of that one day of food were bought below your gold reserve " +',
+                        "pass.Village, hungry);")
             and ordered(between(larder, "while (hunger > 0 && remaining > 0)", "if (hungryUnits > 0)"),
                         "if (pass.WouldEmptyYourPurse(price))",
                         "bool belowTheReserve = pass.WouldReachYourReserveToFeed(price, hungry);",
@@ -18804,7 +18815,7 @@ def a_party_is_hungry_once_its_own_food_runs_short():
             and "own, TradePolicy.FoodForADay()) > 0" in starving
             and "FoodHeld(pass.Party.ItemRoster)" not in larder and "FoodHeld(pass.Party.ItemRoster)" not in haul
             and larder.count('"your party had less than a day of its own food, so "') == 3
-            and '"resupply: your party has less than a day of its own food, and none is on sale at " +' in larder
+            and '"resupply: your party has less than a day of its own food, and none is on sale " +' in larder
             and "less than a day of food" not in larder
             and ordered(larder, "foreach (var (el, good, _, ceiling) in lean)", "if (hungryUnits > 0)",
                         "string missed = lean.Count == 0 ? _foodMissed : null;",
@@ -19672,13 +19683,13 @@ def a_food_restock_says_the_village_keeps_its_last_unit_rather_than_nothing_bein
                 'always has stock to show";' in t
             and t.count("TheVillageLastUnit") == 3
             and ordered(larder,
-                        "if (settlement.IsVillage && remaining <= 1) { stopped = TheVillageLastUnit; break; }",
-                        "if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }",
+                        "if (pass.Village && remaining <= 1) { stopped = TheVillageLastUnit; break; }",
+                        "if (pass.Village && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }",
                         "else if (hungryStopped != null)",
-                        'Log.Repeatable("resupply hungry", settlement.StringId + "/" + hungryStopped,',
+                        'Log.Repeatable("resupply hungry", pass.Key + "/" + hungryStopped,',
                         '"resupply: your party has less than a day of its own food, and nothing more was "',
-                        '"bought at " + settlement.Name + ": " + hungryStopped);',
-                        '"resupply: your party has less than a day of its own food, and none is on sale at "'))
+                        '"bought " + pass.Where + ": " + hungryStopped);',
+                        '"resupply: your party has less than a day of its own food, and none is on sale "'))
 
 
 chk("1.104.17", "a food restock that stops at a village's last unit says so in TradeLord.log, instead of saying no food was on sale there",
@@ -19805,10 +19816,14 @@ def villagers_keep_their_own_pack_animals_out_of_the_forecast():
     kept = method_body(S['Forecast.cs'], "private static ItemObject ThePackAnimalVillagersKeep(ItemRoster carried)")
     return (road and kept
             and ordered(road, "ItemObject ridden = ThePackAnimalVillagersKeep(carried);",
-                        "if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;",
+                        "if (item == null || amount <= 0) continue;",
                         "if (item == ridden) amount -= (int)(0.5f * party.MemberRoster.TotalManCount);",
                         "if (amount <= 0) continue;",
-                        "Note(bound, item.StringId, item.ItemCategory, amount, TradeMath.WorthOf(amount, item.Value), days);")
+                        "int price = Priced.At(town, item, party, selling: true);",
+                        "int units = TradeMath.WhatVillagersSell(amount, till, price);",
+                        "till -= units * price;",
+                        "if (TradePolicy.Priced(item))",
+                        "Note(bound, item.StringId, item.ItemCategory, units, TradeMath.WorthOf(units, item.Value), days);")
             and "item?.ItemCategory == DefaultItemCategories.PackAnimal && item.Value < (kept?.Value ?? 10000)" in kept)
 
 
@@ -19850,14 +19865,15 @@ def a_hungry_party_buys_its_day_of_food_before_any_trade_good():
             and ordered(larder, "int shortfall = TradePolicy.FoodWanted() - own;",
                         "if (aDayFirst) shortfall = Math.Min(shortfall, TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()));",
                         "if (shortfall <= 0) return;", "int wanted = shortfall;",
-                        'so a day of it is bought before any trade good at " + settlement.Name);')
+                        "if (stocked <= 0)",
+                        'so a day of it was bought before any trade good " + pass.Where);')
             and ordered(t, "ExecuteQuickSell(Settlement.CurrentSettlement);",
                         "ExecuteResupply(Settlement.CurrentSettlement, aDayFirst: true);",
                         "ExecuteQuickBuy(Settlement.CurrentSettlement);")
             and ordered(t, "if (Options.Current.AutoSellOnEntry) ExecuteQuickSell(settlement, quiet: true);",
                         "if (Options.Current.AutoBuyOnEntry) ExecuteResupply(settlement, quiet: true, aDayFirst: true);",
                         "if (Options.Current.AutoBuyOnEntry) ExecuteQuickBuy(settlement, quiet: true);")
-            and t.count("aDayFirst: true") == 2
+            and t.count("aDayFirst: true") == 3
             and "When your party is down to less than a day of its own food, a day of food is bought before any trade good" in README)
 
 
@@ -19896,7 +19912,7 @@ def the_night_pace_is_read_from_the_game_never_put_together_from_perks():
                 for word in ("DefaultPerks", "NightRunner", "DayTraveler", "GetLines", "_night\"", "BindingFlags",
                              "PerkHelper"))
             and "ExplainedNumber speed = model.CalculateFinalSpeed(party, model.CalculateBaseSpeed(party));" in pace
-            and "float nightStep = Nightfall.PartyStep, snowStep = Skies.PartySnowStep, wetStep = Skies.PartyWetStep;" in pace
+            and "float nightStep = Nightfall.PartyStep, snowStep = Skies.PartySnowStep, wetStep = Skies.PartyWetStepFor(party);" in pace
             and "float clear = speed.SumOfFactors - (night ? nightStep : 0f) - (snowy ? snowStep : 0f) - (wet ? wetStep : 0f) -" in pace
             and "float step = why == null ? TradeMath.NightStepFrom(_party.Speed, after, speed.SumOfFactors, nightFell) : float.NaN;" in party
             and ordered(party, "if (!_party.Held)", "else if (main.CurrentNavigationFace.FaceIndex != _party.Face)",
@@ -20047,7 +20063,7 @@ def snow_and_wet_ground_are_measured_from_the_game_and_taken_off_the_pace_now():
     return (party and pace
             and "Felt now = Feel(before.Party);" in party
             and "TradeMath.WeatherSteps(snowyBefore, wetBefore, snowyAfter, wetAfter, before.Factors, now.Factors," in party
-            and ordered(party, "PartySnowStep = snow;", "PartyWetStep = wet;")
+            and ordered(party, "PartySnowStep = snow;", "_wetRead = wet;")
             and "turn.Party = Feel(main);" in method_body(w, "internal static void Before")
             and "Skies.LiveSkyAt(party.GetPosition2D, out bool snowy, out bool wet);" in pace
             and "_paces = TradeMath.PacesFromTheGame(speed.BaseNumber, clear, least, most, nightStep, snowStep, wetStep, slowStep);" in pace
@@ -20283,7 +20299,7 @@ def every_market_is_held_to_its_own_ceiling_the_marked_one_included():
                     and "\u043f\u044f\u0442\u0443\u044e" not in one['TL306'] and "\u4e94\u5206\u4e4b\u4e00" not in one['TL306']
                     for one in said.values())
             and "a fifth" not in M and "a fifth past your travel ceiling" not in README
-            and "A_marked_market_past_its_ceiling_is_not_priced_so_it_never_waits_for_a_second_look" in SCORINGTESTS
+            and "A_marked_market_whose_real_ride_runs_past_its_ceiling_is_out_of_reach_however_close_it_looks" in SCORINGTESTS
             and "A_sell_market_is_held_to_its_own_ceiling_on_the_ride_through_the_buy_market" in RANKTESTS)
 
 
@@ -20307,9 +20323,11 @@ def the_ledger_sizes_each_route_to_the_room_your_cargo_will_have():
                         "SizedToCargo = sized && q.Units >= qtyCap",
                         "NothingFitsYourCargo = routes.Count == 0 && cargoShut > 0;")
             and ordered(fits, "if (!(each > 0.01f)) return int.MaxValue;",
-                        'room = roomNow + Guard.Read("Ledger.RoomItFrees", from, Marker.RoomItFrees, 0f);',
+                        'room = roomNow + Guard.Read("Ledger.RoomItFrees", from,',
+                        'at => Marker.RoomItFrees(at, Options.Current.HoldCargoForBestMarket), 0f);',
                         "return TradeMath.UnitsThatFit(room, each);")
-            and "return WhatItWouldFetch(site, market, party, ride, cargo, purse, null).Weight;" in frees
+            and "return WhatItWouldFetch(site, market, party, ride, cargo, purse, null," in frees
+            and "WhatTheMarkWouldKeep(site, ride, cargo, holdShare), holdShare).Weight;" in frees
             and fetch.count("took.Weight += moved * Carry.Weighs(") == 2
             and ordered(refresh, '"{=TL507}No profitable route fits in your cargo"',
                         '"{=TL506}{COUNT} profitable route(s), best first, sized to your cargo"',
@@ -20334,7 +20352,7 @@ def your_ride_from_the_middle_of_a_road_follows_the_road_from_where_you_set_off(
             and ordered(mid, "if (party == null || party.CurrentSettlement != null || AtSea(party)) return 0f;",
                         "float detour = DetourFromWhereItSetOff(party, target, at, left);",
                         "return detour > 0f ? left * detour : 0f;")
-            and S['Travel.cs'].count("DetourFromWhereItSetOff(") == 3
+            and S['Travel.cs'].count("DetourFromWhereItSetOff(") == 4
             and "CaravanDetour" not in ALL)
 
 
@@ -20353,6 +20371,204 @@ def every_buying_pass_says_what_was_free_to_spend():
 
 chk("2.0.7", "TradeLord.log says under every buying pass, and under one the spend limit stopped, what your purse held, what was held back and how much of Max spend per visit was left",
     every_buying_pass_says_what_was_free_to_spend())
+
+def an_old_town_ceiling_of_two_point_four_takes_the_one_tradelord_ships_with():
+    lift = method_body(S['Migrate.cs'], "public static bool Lift")
+    step = method_body(S['Migrate.cs'], "private static bool TheOldTownCeilingIsTheNewOne")
+    read = method_body(S['Config.cs'], "private static void Read")
+    arrived = method_body(S['Config.cs'], "internal static void ScreenArrived")
+    screen = method_body(S['Config.cs'], "private static void TheScreenTakesTheNewTownCeiling")
+    return (lift and step and read and arrived and screen
+            and "public const int Shape = 20;" in S['Migrate.cs']
+            and "if (from < 20) changed |= TheOldTownCeilingIsTheNewOne(written, notes);" in lift
+            and ordered(step, "if (!written.TryGetValue(TownCeiling, out string held)) return false;",
+                        "!WasTheOldTownCeiling(set)) return false;",
+                        "float now = new Options().MaxTravelDaysTown;",
+                        'written[TownCeiling] = now.ToString("0.####", CultureInfo.InvariantCulture);',
+                        "notes?.Add(TheTownCeilingMoved(now));")
+            and "Math.Round(days * 100d) == Math.Round(OldTownCeiling * 100d);" in S['Migrate.cs']
+            and "shape > 0 && shape < TownCeilingCountsTheNightsAt && WasTheOldTownCeiling(days);" in S['Migrate.cs']
+            and "public const float OldTownCeiling = 2.4f;" in S['Migrate.cs']
+            and "public float MaxTravelDaysTown = 3f;" in S['Options.cs']
+            and ordered(read, "_shapeRead = shape;", "bool lifted = Migration.Lift(shape, written, notes);",
+                        "SettleTheLearningSwitch(ScreenSaidWhetherToLearn);", "TheScreenTakesTheNewTownCeiling();",
+                        'Write(found, "made to match the settings screen");')
+            and ordered(arrived, "if (held != null)",
+                        "TheScreenTakesTheNewTownCeiling();", "_dirty = true;")
+            and ordered(screen, "if (!Migration.OwesTheNewTownCeiling(_shapeRead, Options.Current.MaxTravelDaysTown)) return;",
+                        "_shapeRead = Migration.Shape;",
+                        "Options.Current.MaxTravelDaysTown = new Options().MaxTravelDaysTown;",
+                        "McmLoader.Reseat?.Invoke();")
+            and all(one in MIGRATIONTESTS for one in
+                    ("AnOlderFileHoldingTheOldTownCeilingTakesTheOneTradeLordShipsWithNow",
+                     "TheOldTownCeilingUnderItsOldNameIsCarriedOverAndThenTakesTheNewOne",
+                     "ATownCeilingOtherThanTheOldOneOrInTheNewShapeIsLeftAsItIs",
+                     "TheSettingsScreenTakesTheNewTownCeilingOnlyFromTheOldOneAndOnlyForAnOlderFile")))
+
+
+chk("2.0.8", "a Town travel ceiling of 2.4 days kept from an older TradeLord, in TradeLord.ini or on the settings screen, moves to the 3.0 TradeLord ships with, any other value stays, and the log says so",
+    an_old_town_ceiling_of_two_point_four_takes_the_one_tradelord_ships_with())
+
+
+def the_ledger_counts_no_room_that_hold_cargo_keeps_full():
+    fetch = method_body(S['Marker.cs'], "private static Takings WhatItWouldFetch(")
+    keep = method_body(S['Marker.cs'], "private static int[][] WhatTheMarkWouldKeep(")
+    bought = between(fetch, "for (int u = from; u < from + paidFor; u++)", "booked += walk.Took();")
+    return (fetch and keep and bought
+            and ordered(bought, "if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;",
+                        "if (keptFor != null && TradeRules.KeptForTheMark(price, keptFor[at], paidFor - moved, share)) break;",
+                        "if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }")
+            and fetch.count("KeptForTheMark") == 1
+            and ordered(keep, "if (!(holdShare > 0f)) return null;", "Settlement mark = TheMarkToHoldFor(site);",
+                        "if (mark == null || mark == site) return null;",
+                        "float onward = Travel.EstimateDaysBetween(site, mark, ride);",
+                        "if (!LedgerBehavior.WithinTravelCeiling(mark, onward) || purse <= 0) return null;",
+                        "rungs[at] = WhatTheMarkTakes(mark, cargo[at].item, cargo[at].amount, cargo[at].worth, ride + onward, purse);")
+            and "rungs != null && HeldForTheMark(price, FloorForTheLast(rungs, boughtLeft, share), boughtLeft, rungs.Length);"
+                in S['Rules.cs']
+            and "HoldCargoForBestMarket" not in S['Marker.cs']
+            and S['Marker.cs'].count("WhatTheMarkWouldKeep(") == 2
+            and "Units_the_marked_market_pays_well_past_this_one_for_are_kept_so_they_free_no_room_here" in FLOORTESTS
+            and "Units_past_what_the_marked_market_takes_or_with_no_mark_are_never_kept" in FLOORTESTS)
+
+
+chk("2.0.8", "the TradeLord ledger counts no cargo room for goods Hold cargo for the best market would keep at Buy From for a marked market in reach, and the map marker's own pick is untouched by it",
+    the_ledger_counts_no_room_that_hold_cargo_keeps_full())
+
+
+def wet_ground_is_worked_out_from_your_riders_until_the_game_is_seen_to_take_it():
+    pace = method_body(S['Travel.cs'], "private static float ReadThePacesCore")
+    wet = method_body(S['TradeMath.cs'], "public static float WetGroundStep")
+    drove = method_body(S['Drove.cs'], "internal static float WetGroundStep")
+    weather = S['Weather.cs']
+    return (pace and wet and drove
+            and "wetStep = Skies.PartyWetStepFor(party);" in pace
+            and ordered(wet, "if (men <= 0) return 0f;",
+                        "float cavalry = riders > 0 ? 0.3f * Math.Min(riders, men) / men : 0f;",
+                        "int onHorses = Math.Min(Math.Max(0, footmen), Math.Max(0, spareMounts));",
+                        "float footmenOnHorses = onHorses > 0 ? 0.15f * Math.Min(onHorses, men) / men : 0f;",
+                        "return -(cavalry * 0.3f) - footmenOnHorses * 0.3f;")
+            and ordered(drove, "if (!Tally(party, out int men, out _, out int mounts, out int foot)) return 0f;",
+                        "int riders = party.Party?.NumberOfMenWithHorse ?? 0;",
+                        "riders += attached[i]?.Party?.NumberOfMenWithHorse ?? 0;",
+                        "return TradeMath.WetGroundStep(men, riders, foot, mounts);")
+            and "internal static float PartyWetStep => _wetFrom.Length == 0 ? _wetWorkedOut : _wetRead;" in weather
+            and "if (_wetFrom.Length == 0) _wetWorkedOut = Drove.WetGroundStep(party);" in weather
+            and "_wetFrom.Length == 0 ? float.NaN : PartyWetStep, out float snow, out float wet);" in weather
+            and "worked out from your riders and footmen on horses the way the game does" in weather
+            and "Wet_ground_takes_three_tenths_of_what_riders_and_footmen_on_horses_add_to_the_pace_as_the_game_counts_it" in MATHTESTS
+            and "A_party_all_on_foot_or_with_no_men_is_not_slowed_by_wet_ground" in MATHTESTS)
+
+
+chk("2.0.8", "until the game is seen to take a wet ground step from your party, the step is worked out from your riders and footmen on horses the way the game does, rather than counted as nothing",
+    wet_ground_is_worked_out_from_your_riders_until_the_game_is_seen_to_take_it())
+
+
+def a_hungry_party_buys_a_day_of_food_from_a_caravan_before_any_trade_good():
+    t = S['Trading.cs']
+    road = method_body(t, "public static void ExecuteRoadTrade")
+    onroad = method_body(t, "private static void ADayOfFoodOnTheRoad")
+    entry = method_body(t, "public static void ExecuteResupply")
+    larder = method_body(t, "private static void Resupply(Pass pass, bool aDayFirst)")
+    return (road and onroad and entry and larder
+            and ordered(road, '"sale on the road", "selling on the road", "Road trading", why, loot: false);',
+                        "if (buying) ADayOfFoodOnTheRoad(Pass.Meet(met, road, books, party));",
+                        "if (buying) BuyPass(Pass.Meet(met, road, books, party),")
+            and ordered(road, "if (met.IsVillager)", "LotPass(", "else", "ADayOfFoodOnTheRoad(")
+            and ordered(onroad, "if (Options.Current.KeepFoodDays <= 0 || pass == null) return;",
+                        "Resupply(pass, aDayFirst: true);")
+            and ordered(entry, "_unfitted = default;", "Pass pass = Pass.Open(settlement, quiet);",
+                        "Resupply(pass, aDayFirst);")
+            and "settlement" not in larder
+            and "if (pass.Site != null) _unfitted = (food.weight, food.cost, 0f, true);" in larder
+            and "internal bool Village => Site != null && Site.IsVillage;" in t
+            and "a day of food is bought from a caravan on the road before any trade good, as in a market" in README)
+
+
+chk("2.0.8", "a party with less than a day of its own food buys a day of food from a caravan it meets on the road after selling and before any trade good, by the same restock a market visit runs",
+    a_hungry_party_buys_a_day_of_food_from_a_caravan_before_any_trade_good())
+
+
+def the_day_of_food_is_logged_only_once_it_was_bought():
+    larder = method_body(S['Trading.cs'], "private static void Resupply(Pass pass, bool aDayFirst)")
+    return (larder
+            and larder.count("so a day of it was bought before any trade good") == 1
+            and "a day of it is bought" not in S['Trading.cs']
+            and 'so a day of it was bought before any trade good " + pass.Where);' in
+                between(larder, "if (stocked <= 0)", "int spent = pass.Spent(simSpent);")
+            and "so a day of it" not in between(larder, "int wanted = shortfall;", "if (stocked <= 0)"))
+
+
+chk("2.0.8", "TradeLord.log says a day of food was bought before any trade good only once some food was bought",
+    the_day_of_food_is_logged_only_once_it_was_bought())
+
+
+def villagers_sell_a_town_only_what_its_gold_can_pay_for():
+    road = method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad()")
+    return (road
+            and ordered(road, "ItemObject ridden = ThePackAnimalVillagersKeep(carried);",
+                        "Town town = bound.Town;", "int till = town?.Gold ?? 0;",
+                        "for (int k = carried.Count - 1; k >= 0 && town != null; k--)",
+                        "int price = Priced.At(town, item, party, selling: true);",
+                        "int units = TradeMath.WhatVillagersSell(amount, till, price);",
+                        "if (units <= 0) continue;", "till -= units * price;",
+                        "if (TradePolicy.Priced(item))")
+            and "amount <= 0 || till <= 0 || price <= 0 ? 0 : Math.Min(amount, till / price);" in S['TradeMath.cs']
+            and "Villagers_sell_a_town_only_as_many_units_as_its_gold_can_pay_for" in MATHTESTS)
+
+
+chk("2.0.8", "Count what is on its way to a market has villagers sell a town only what its gold can pay for, last stack first, as the game does",
+    villagers_sell_a_town_only_what_its_gold_can_pay_for())
+
+
+def the_ride_check_says_how_each_road_was_measured():
+    said = method_body(S['Travel.cs'], "private static string HowTheRoadWasMeasured")
+    ride = method_body(S['Travel.cs'], "internal static Ride TheRideFromParty")
+    check = S['RideCheck.cs']
+    return (said and ride
+            and 'ride.Measured = Guard.Read("Travel.Measured", target, HowTheRoadWasMeasured, "");' in ride
+            and ordered(said, "if (party.CurrentSettlement != null)", "if (AtSea(party))",
+                        "float detour = DetourFromWhereItSetOff(party, target, at, left);",
+                        "if (detour > 0f)", "along the game's road from ", "already behind you",
+                        "by the game's own distance, as you are off the road from ")
+            and "Measured = said.Measured ?? \"\"," in check
+            and check.count('(!string.IsNullOrEmpty(_ride.Measured) ? ", measured " + _ride.Measured') == 2)
+
+
+chk("2.0.8", "the ride check in TradeLord.log says, as you set off and as you arrive, whether the road was measured along the game's road from where you set off or by the game's own distance",
+    the_ride_check_says_how_each_road_was_measured())
+
+
+def the_release_tools_hold_each_kept_branch_to_its_own_releases():
+    move = io.open('tools/move_tags.py', encoding='utf-8').read()
+    body = between(SYNC, "def main(argv):", "\nif __name__")
+    return (ordered(body, "stopped = drop(rows, book, wanted, tok, apply)", "here = carried()",
+                    "if not here:", "fetch the tags first",
+                    "rows = [r for r in rows if r['tag_name'] in here]", "absent = sorted(")
+            and "['git', 'tag', '--merged', 'HEAD']" in SYNC
+            and "fetch-depth: 0" in NOTESFLOW and "git fetch --force --tags origin" in NOTESFLOW
+            and "git('ls-remote', '--heads', 'origin')" in move
+            and "['git', 'merge-base', '--is-ancestor', sha, 'origin/' + name]" in move
+            and "git('log', '--format=%H %T %s', 'origin/' + here)" in move
+            and "'origin/main'" not in move
+            and ordered(between(move, "def main(argv):", "\nif __name__"),
+                        "other = kept_elsewhere(sha, here, live)", "elsewhere.append((name, other))",
+                        "to, why = target(name, sha, trees, versions, here)"))
+
+
+chk("2.0.8", "the release note sync and the tag mover each hold a kept branch only to the releases and tags it carries, and leave the other branch's alone",
+    the_release_tools_hold_each_kept_branch_to_its_own_releases())
+
+
+def the_feature_list_no_longer_promises_a_wait_that_is_gone():
+    return ("keeps the mark one hour more" not in README
+            and "newly marks on your map" not in README
+            and "That time counts the nights, the snow and wet ground on the way and the hours your party stays Disorganized" in README
+            and "The amount it quotes is what fits in your cargo once TradeLord has sold what it would sell at the buy market" in README)
+
+
+chk("2.0.8", "the feature list says no more about a marked market keeping its mark an hour past the ceiling, and names the nights, the weather and the cargo room",
+    the_feature_list_no_longer_promises_a_wait_that_is_gone())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

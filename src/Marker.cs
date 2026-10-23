@@ -781,7 +781,7 @@ namespace TradeLord
         private static Takings WhatItWouldFetch(
             Settlement site, SettlementComponent market, MobileParty party, float ride,
             List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
-            int gold, List<Share> bill)
+            int gold, List<Share> bill, int[][] keptFor = null, float share = 0f)
         {
             Takings took = default(Takings);
             bool eachAtItsOwnCost = Options.Current.CostBasisMode == Options.CostOfEachUnit;
@@ -854,6 +854,7 @@ namespace TradeLord
                     int price = pays.At(u);
                     if (price <= 0) break;
                     if (!walk.Clears(price, Options.Current.MinProfitMargin)) break;
+                    if (keptFor != null && TradeRules.KeptForTheMark(price, keptFor[at], paidFor - moved, share)) break;
                     if (took.Value + fetched + price > gold) { took.PurseCapped = true; break; }
                     booked += walk.Took();
                     if (from + moved == 0) lines[at].Price = price;
@@ -1172,7 +1173,7 @@ namespace TradeLord
             return mark;
         }
 
-        internal static float RoomItFrees(Settlement site)
+        internal static float RoomItFrees(Settlement site, float holdShare)
         {
             MobileParty party = MobileParty.MainParty;
             SettlementComponent market = site?.SettlementComponent;
@@ -1183,7 +1184,24 @@ namespace TradeLord
             if (purse <= 0) return 0f;
             float ride = Travel.EstimateDaysFromParty(site);
             if (TradeMath.OutOfReach(ride)) return 0f;
-            return WhatItWouldFetch(site, market, party, ride, cargo, purse, null).Weight;
+            return WhatItWouldFetch(site, market, party, ride, cargo, purse, null,
+                                    WhatTheMarkWouldKeep(site, ride, cargo, holdShare), holdShare).Weight;
+        }
+
+        private static int[][] WhatTheMarkWouldKeep(
+            Settlement site, float ride,
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo, float holdShare)
+        {
+            if (!(holdShare > 0f)) return null;
+            Settlement mark = TheMarkToHoldFor(site);
+            if (mark == null || mark == site) return null;
+            float onward = Travel.EstimateDaysBetween(site, mark, ride);
+            int purse = PurseOf(mark);
+            if (!LedgerBehavior.WithinTravelCeiling(mark, onward) || purse <= 0) return null;
+            var rungs = new int[cargo.Count][];
+            for (int at = 0; at < cargo.Count; at++)
+                rungs[at] = WhatTheMarkTakes(mark, cargo[at].item, cargo[at].amount, cargo[at].worth, ride + onward, purse);
+            return rungs;
         }
 
         internal static int[] WhatTheMarkTakes(Settlement mark, EquipmentElement el, int carried,

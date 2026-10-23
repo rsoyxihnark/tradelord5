@@ -71,7 +71,8 @@ namespace TradeLord
         private static readonly List<TradeMath.RoadPiece> _scratch = new List<TradeMath.RoadPiece>();
 
         internal static float PartySnowStep { get; private set; } = TradeMath.UsualSnowStep;
-        internal static float PartyWetStep { get; private set; }
+        internal static float PartyWetStep => _wetFrom.Length == 0 ? _wetWorkedOut : _wetRead;
+        private static float _wetRead, _wetWorkedOut;
         private static string _snowFrom = "", _wetFrom = "";
 
         private static int _refreshes, _twinChecked, _twinAgreed, _forecastSeen, _cameTrue, _turned;
@@ -90,7 +91,15 @@ namespace TradeLord
             Step(PartySnowStep) + (_snowFrom.Length == 0 ? " (the game's usual snow, not yet read this session)" : " (read " + _snowFrom + ")");
 
         internal static string PartyWetSaid =>
-            Step(PartyWetStep) + (_wetFrom.Length == 0 ? " (not yet read this session, so wet ground is counted as nothing)" : " (read " + _wetFrom + ")");
+            Step(PartyWetStep) + (_wetFrom.Length == 0
+                ? " (not yet read this session, so it is worked out from your riders and footmen on horses the way the game does)"
+                : " (read " + _wetFrom + ")");
+
+        internal static float PartyWetStepFor(MobileParty party)
+        {
+            if (_wetFrom.Length == 0) _wetWorkedOut = Drove.WetGroundStep(party);
+            return PartyWetStep;
+        }
 
         internal static void Forget()
         {
@@ -110,7 +119,8 @@ namespace TradeLord
             _snowShares.Clear();
             _wetShares.Clear();
             PartySnowStep = TradeMath.UsualSnowStep;
-            PartyWetStep = 0f;
+            _wetRead = 0f;
+            _wetWorkedOut = 0f;
             _snowFrom = "";
             _wetFrom = "";
             ForgetTheDay();
@@ -483,7 +493,7 @@ namespace TradeLord
             {
                 if (Writing)
                     Log.Write(said + ", a wet ground step of " + Step(wet) + "; TradeLord had counted on " + PartyWetSaid);
-                PartyWetStep = wet;
+                _wetRead = wet;
                 _wetFrom = "as " + turned + " on " + Today();
                 Travel.ReadThePaceAgain();
             }

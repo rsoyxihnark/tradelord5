@@ -1325,6 +1325,18 @@ namespace TradeLord
 
         public const float SnowShareUnread = 1f + UsualSnowStep;
 
+        public static int WhatVillagersSell(int amount, int till, int price) =>
+            amount <= 0 || till <= 0 || price <= 0 ? 0 : Math.Min(amount, till / price);
+
+        public static float WetGroundStep(int men, int riders, int footmen, int spareMounts)
+        {
+            if (men <= 0) return 0f;
+            float cavalry = riders > 0 ? 0.3f * Math.Min(riders, men) / men : 0f;
+            int onHorses = Math.Min(Math.Max(0, footmen), Math.Max(0, spareMounts));
+            float footmenOnHorses = onHorses > 0 ? 0.15f * Math.Min(onHorses, men) / men : 0f;
+            return -(cavalry * 0.3f) - footmenOnHorses * 0.3f;
+        }
+
         public const float UsualSlowStep = -0.4f;
 
         public const int Weathers = 16;

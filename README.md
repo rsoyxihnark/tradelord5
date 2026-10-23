@@ -18,6 +18,7 @@
 - ✅ Mark a market rising or falling needs Live world prices off, since that is when TradeLord records prices at all, and it ships off itself
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying
+- ✅ That time counts the nights, the snow and wet ground on the way and the hours your party stays Disorganized, the way the game slows you down
 - ✅ Stock counts, so you know the deal is actually there
 - ✅ What you paid for a good, per unit, on its own tooltip once you have bought one, so you can see at a glance whether the market in front of you is beating it
 - ✅ Inventory rows tinted good to bad against the best price known
@@ -48,6 +49,7 @@
 - ✅ Before it has checked a single forecast, it counts what is on its way at half, and its record moves that up or down from there
 - ✅ Counted at each end of a route, by what arrives before you would, a load landing within a quarter day of you counted in part, so a route is priced on the market you will actually walk into
 - ✅ Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
+- ✅ The amount it quotes is what fits in your cargo once TradeLord has sold what it would sell at the buy market, and a good none of which would fit is left out
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
 - ✅ How much gold the market you would sell to actually has, counted in, so it never plans a sale nobody can pay for
 - ✅ It reads that purse live, so with Live world prices off it plans on the stock alone
@@ -61,7 +63,6 @@
 - ✅ With Live world prices off, it weighs only the markets where you have seen a price for what you carry, at that price, and never reads their purse
 - ✅ With Count what is on its way to a market and Bulk price simulation on, it prices each market as it will be when you get there, the same way the ledger does
 - ✅ It leaves out the market TradeLord made its last trade at until you come back to it
-- ✅ A marked market that drifts past even that keeps the mark one hour more, so one slow reading of the road cannot send the marker away and straight back
 - ✅ Another market takes the mark only once it has earned more on two weighings in different hours, so a caravan landing about when you would does not flick the marker back and forth
 - ✅ Once the market TradeLord made its last trade at is back, it gets one look on the day's gold alone and takes the mark if it earns more a day than the market already marked
 - ✅ TradeLord.log says every time the marker moves, what the cargo would fetch there, that market's purse, how far away it is and the market it beat
@@ -145,6 +146,7 @@
 - ✅ When TradeLord leaves the villagers' offer to you, a message on screen says why: your margin, your purse, your cargo room, your herd, the good in it that kept it off or nowhere in reach to resell it
 - ✅ A caravan is traded with at the prices of the town you are in, or else the nearest town, which is what the game's own trade screen charges you with a caravan
 - ✅ A caravan on the road is held to every rule a market visit is: your margins, your caps on how many of a good you hold and what share of the hold it may fill, and your looted gear
+- ✅ When your party is down to less than a day of its own food, a day of food is bought from a caravan on the road before any trade good, as in a market
 - ✅ Hold cargo for the best market, the herd speed penalty and the settling delay hold for a caravan on the road as they do in a market
 - ✅ Auto sell and Auto buy hold on the road as they do in a market: with Auto sell off it sells nothing to a caravan, and with Auto buy off it buys nothing from a caravan or from villagers
 - ✅ Meeting that same party again straight away counts as the same meeting, so it never buys back what it has just sold them and what it spent still counts against its caps, while meeting them again later starts afresh
@@ -192,7 +194,7 @@
 
 **Settings, when you want to change anything**
 
-- ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, newly marks on your map or holds your cargo for is further than you care to ride
+- ✅ A town travel ceiling and a village travel ceiling, the only two things deciding how far it looks, so nothing it suggests, marks on your map or holds your cargo for is further than you care to ride
 - ✅ Either ceiling set to 0 takes that limit off, and the Town travel ceiling at 0 weighs every town in Calradia, which is the slowest TradeLord runs
 - ✅ The Village travel ceiling only ever holds villages closer: at 0, or set past the Town travel ceiling, villages go as far as the Town travel ceiling
 - ✅ A minimum stock before it calls something worth buying

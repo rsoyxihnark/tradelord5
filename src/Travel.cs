@@ -160,7 +160,7 @@ namespace TradeLord
             bool night = Campaign.Current.IsNight;
             Skies.LiveSkyAt(party.GetPosition2D, out bool snowy, out bool wet);
             bool slowed = party.IsDisorganized;
-            float nightStep = Nightfall.PartyStep, snowStep = Skies.PartySnowStep, wetStep = Skies.PartyWetStep;
+            float nightStep = Nightfall.PartyStep, snowStep = Skies.PartySnowStep, wetStep = Skies.PartyWetStepFor(party);
             float slowStep = Nightfall.PartySlowStep;
             float clear = speed.SumOfFactors - (night ? nightStep : 0f) - (snowy ? snowStep : 0f) - (wet ? wetStep : 0f) -
                           (slowed ? slowStep : 0f);
@@ -297,6 +297,7 @@ namespace TradeLord
             internal float SlowedHours;
             internal float Distance;
             internal float LandRatio;
+            internal string Measured;
         }
 
         internal static Ride TheRideFromParty(Settlement target)
@@ -306,6 +307,7 @@ namespace TradeLord
             if (target == null || party == null) return ride;
             DropIfNavalChanged();
             ride.Distance = FromParty(target, out ride.LandRatio);
+            ride.Measured = Guard.Read("Travel.Measured", target, HowTheRoadWasMeasured, "");
             ride.Days = Days(ride.Distance, ride.LandRatio, 0f, SetOffAtSea(),
                              Skies.CellsBetween(party.GetPosition2D, target.GetPosition2D, new List<TradeMath.RoadPiece>()),
                              out TradeMath.RoadTally tally);
@@ -314,6 +316,24 @@ namespace TradeLord
             ride.WetHours = tally.Wet;
             ride.SlowedHours = tally.Slowed;
             return ride;
+        }
+
+        private static string HowTheRoadWasMeasured(Settlement target)
+        {
+            MobileParty party = MobileParty.MainParty;
+            if (party == null) return "";
+            if (party.CurrentSettlement != null) return "by the game's own distance from " + party.CurrentSettlement.Name;
+            if (AtSea(party)) return "by the game's own distance, at sea";
+            Vec2 at = party.GetPosition2D;
+            float left = at.Distance(target.GetPosition2D);
+            Settlement setOff = party.LastVisitedSettlement;
+            float detour = DetourFromWhereItSetOff(party, target, at, left);
+            if (detour > 0f)
+                return "along the game's road from " + setOff.Name + ", " + Nightfall.Figure(detour) +
+                       " times the straight line of " + Nightfall.Figure(left) + " left, with " +
+                       Nightfall.Figure(at.Distance(setOff.GetPosition2D)) + " already behind you";
+            return "by the game's own distance, as you are off the road from " +
+                   (setOff == null ? (object)"anywhere you set off" : setOff.Name);
         }
 
         internal static string TheRideSaid(Settlement target)

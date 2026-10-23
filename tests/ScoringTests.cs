@@ -746,10 +746,14 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_marked_market_past_its_ceiling_is_not_priced_so_it_never_waits_for_a_second_look()
+        public void A_marked_market_whose_real_ride_runs_past_its_ceiling_is_out_of_reach_however_close_it_looks()
         {
-            Assert.False(Marks.HoldsForASecondLook(false, false, true, -1, 100));
-            Assert.False(Marks.HoldsForASecondLook(false, false, true, 100, 100));
+            var s = new Options { MaxTravelDaysTown = 3f, MaxTravelDaysVillage = 1f };
+            Assert.True(MarketRank.WithinCeiling(false, 2.5f, s));
+            Assert.False(MarketRank.WithinCeiling(false, 3.2f, s));
+            Assert.True(MarketRank.WithinCeiling(true, 0.8f, s));
+            Assert.False(MarketRank.WithinCeiling(true, 1.1f, s));
+            Assert.True(MarketRank.WithinCeiling(false, 3.2f, new Options { MaxTravelDaysTown = 0f }));
         }
 
         [Fact]

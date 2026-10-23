@@ -267,14 +267,21 @@ namespace TradeLord
                     continue;
                 }
                 ItemObject ridden = ThePackAnimalVillagersKeep(carried);
-                for (int k = 0; k < carried.Count; k++)
+                Town town = bound.Town;
+                int till = town?.Gold ?? 0;
+                for (int k = carried.Count - 1; k >= 0 && town != null; k--)
                 {
                     ItemObject item = carried.GetItemAtIndex(k);
                     int amount = carried.GetElementNumber(k);
-                    if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;
+                    if (item == null || amount <= 0) continue;
                     if (item == ridden) amount -= (int)(0.5f * party.MemberRoster.TotalManCount);
                     if (amount <= 0) continue;
-                    Note(bound, item.StringId, item.ItemCategory, amount, TradeMath.WorthOf(amount, item.Value), days);
+                    int price = Priced.At(town, item, party, selling: true);
+                    int units = TradeMath.WhatVillagersSell(amount, till, price);
+                    if (units <= 0) continue;
+                    till -= units * price;
+                    if (TradePolicy.Priced(item))
+                        Note(bound, item.StringId, item.ItemCategory, units, TradeMath.WorthOf(units, item.Value), days);
                 }
             }
             if (Options.Current.ExtendedDebugLogging) timed.Say();

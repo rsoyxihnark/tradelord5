@@ -219,5 +219,26 @@ namespace TradeLord.Tests
             Assert.False(TradeMath.SetTheBoughtUnitsAside(ref remaining, ref paidLeft));
             Assert.Equal(5, remaining);
         }
+
+        [Fact]
+        public void Units_the_marked_market_pays_well_past_this_one_for_are_kept_so_they_free_no_room_here()
+        {
+            int[] mark = { 100, 100, 100 };
+            Assert.True(TradeRules.KeptForTheMark(70, mark, 3, 0.75f));
+            Assert.True(TradeRules.KeptForTheMark(74, mark, 1, 0.75f));
+            Assert.False(TradeRules.KeptForTheMark(75, mark, 3, 0.75f));
+            Assert.False(TradeRules.KeptForTheMark(80, mark, 3, 0.75f));
+        }
+
+        [Fact]
+        public void Units_past_what_the_marked_market_takes_or_with_no_mark_are_never_kept()
+        {
+            int[] mark = { 100, 100, 100 };
+            Assert.False(TradeRules.KeptForTheMark(70, mark, 4, 0.75f));
+            Assert.False(TradeRules.KeptForTheMark(70, mark, 0, 0.75f));
+            Assert.False(TradeRules.KeptForTheMark(70, null, 3, 0.75f));
+            Assert.False(TradeRules.KeptForTheMark(70, new int[0], 1, 0.75f));
+            Assert.False(TradeRules.KeptForTheMark(70, mark, 3, 0f));
+        }
     }
 }

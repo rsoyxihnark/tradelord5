@@ -7,7 +7,7 @@ namespace TradeLord
 {
     public static class Migration
     {
-        public const int Shape = 19;
+        public const int Shape = 20;
 
         public const string ShapeKey = "SettingsVersion";
 
@@ -37,6 +37,7 @@ namespace TradeLord
             if (from < 16) changed |= ThreeLogSwitchesBecameOne(written, notes);
             if (from < 18) changed |= HoldCargoBecameOneShare(written, notes);
             if (from < 19) changed |= AResaleSafetyFactorYouSetIsUsedAsSet(written, notes);
+            if (from < 20) changed |= TheOldTownCeilingIsTheNewOne(written, notes);
             if (changed && notes != null)
                 notes.Add("your settings were written by an older TradeLord, so they have been brought forward from shape " +
                           from + " to shape " + Shape);
@@ -121,6 +122,34 @@ namespace TradeLord
                        "resale safety factor starts off and your factor is used exactly as you set it");
             return true;
         }
+
+        private const string TownCeiling = "MaxTravelDaysTown";
+
+        public const int TownCeilingCountsTheNightsAt = 20;
+
+        public const float OldTownCeiling = 2.4f;
+
+        private static bool TheOldTownCeilingIsTheNewOne(IDictionary<string, string> written, ICollection<string> notes)
+        {
+            if (!written.TryGetValue(TownCeiling, out string held)) return false;
+            if (!float.TryParse(held, NumberStyles.Float, CultureInfo.InvariantCulture, out float set) ||
+                !WasTheOldTownCeiling(set)) return false;
+            float now = new Options().MaxTravelDaysTown;
+            written[TownCeiling] = now.ToString("0.####", CultureInfo.InvariantCulture);
+            notes?.Add(TheTownCeilingMoved(now));
+            return true;
+        }
+
+        public static bool WasTheOldTownCeiling(float days) =>
+            !float.IsNaN(days) && !float.IsInfinity(days) && Math.Round(days * 100d) == Math.Round(OldTownCeiling * 100d);
+
+        public static bool OwesTheNewTownCeiling(int shape, float days) =>
+            shape > 0 && shape < TownCeilingCountsTheNightsAt && WasTheOldTownCeiling(days);
+
+        public static string TheTownCeilingMoved(float now) =>
+            "your Town travel ceiling of " + OldTownCeiling.ToString("0.0", CultureInfo.InvariantCulture) +
+            " days is the one TradeLord used to ship with, and travel times now count the nights, so it is " +
+            now.ToString("0.0", CultureInfo.InvariantCulture) + " days now, the ceiling TradeLord ships with";
 
         public static bool LearnsAtFirst(float factor) =>
             !float.IsNaN(factor) && !float.IsInfinity(factor) &&
@@ -286,7 +315,7 @@ namespace TradeLord
     {
         public const bool Armed = false;
 
-        public const int CracksAt = 19;
+        public const int CracksAt = 20;
 
         public static bool Cracks(bool armed, int cracksAt, int shipped, int shape) =>
             armed && cracksAt > 0 && cracksAt == shipped && shape < cracksAt;

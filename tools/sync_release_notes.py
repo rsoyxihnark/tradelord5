@@ -43,6 +43,16 @@ def releases(tok):
     return found
 
 
+def carried():
+    try:
+        run = subprocess.run(['git', 'tag', '--merged', 'HEAD'], capture_output=True, text=True)
+    except OSError:
+        return None
+    if run.returncode != 0:
+        return None
+    return set(run.stdout.split())
+
+
 def asked(argv):
     out, taking = [], False
     for arg in argv:
@@ -99,6 +109,16 @@ def main(argv):
             rows = releases(tok)
         else:
             rows = [r for r in rows if r['tag_name'].lstrip('v') not in wanted]
+    here = carried()
+    if not here:
+        sys.stderr.write('no tags could be read here, so the releases this branch carries cannot be told apart; '
+                         'fetch the tags first\n')
+        return 1
+    elsewhere = [r for r in rows if r['tag_name'] not in here]
+    rows = [r for r in rows if r['tag_name'] in here]
+    if elsewhere:
+        print(str(len(elsewhere)) + ' releases were published from commits this branch does not carry, '
+              'so they are left to the branch that does')
     absent = sorted(r['tag_name'] for r in rows if r['tag_name'].lstrip('v') not in book)
     if absent:
         sys.stderr.write('CHANGELOG.md carries no section for: ' + ', '.join(absent) + '\n')

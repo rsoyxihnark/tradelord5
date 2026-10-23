@@ -1711,7 +1711,8 @@ namespace TradeLord
             if (!(each > 0.01f)) return int.MaxValue;
             if (!roomAt.TryGetValue(from, out float room))
             {
-                room = roomNow + Guard.Read("Ledger.RoomItFrees", from, Marker.RoomItFrees, 0f);
+                room = roomNow + Guard.Read("Ledger.RoomItFrees", from,
+                                            at => Marker.RoomItFrees(at, Options.Current.HoldCargoForBestMarket), 0f);
                 roomAt[from] = room;
             }
             return TradeMath.UnitsThatFit(room, each);
