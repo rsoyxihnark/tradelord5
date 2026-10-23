@@ -644,6 +644,8 @@ namespace TradeLord
 
             internal string Where => Site != null ? "at " + Site.Name : "from " + Met.Name;
 
+            internal bool Village => Site != null && Site.IsVillage;
+
             internal string Place => Site != null
                 ? Tongue.Named(Site.Name, Site.StringId)
                 : Tongue.Named(Met.Name, Met.StringId);
@@ -2084,15 +2086,22 @@ namespace TradeLord
             if (Options.Current.KeepFoodDays <= 0) return;
             Pass pass = Pass.Open(settlement, quiet);
             if (pass == null) return;
+            Resupply(pass, aDayFirst);
+        }
 
+        private static void ADayOfFoodOnTheRoad(Pass pass)
+        {
+            if (Options.Current.KeepFoodDays <= 0 || pass == null) return;
+            Resupply(pass, aDayFirst: true);
+        }
+
+        private static void Resupply(Pass pass, bool aDayFirst)
+        {
             int own = TradePolicy.OwnFoodHeld(pass.Party.ItemRoster, pass.Books, pass.Sim);
             int shortfall = TradePolicy.FoodWanted() - own;
             if (aDayFirst) shortfall = Math.Min(shortfall, TradeMath.FoodShortOfADay(own, TradePolicy.FoodForADay()));
             if (shortfall <= 0) return;
             int wanted = shortfall;
-            if (aDayFirst)
-                Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") + "your party has less than " +
-                          "a day of its own food, so a day of it is bought before any trade good at " + settlement.Name);
 
             int stocked = 0, simSpent = 0;
             float simWeight = pass.Books.Weight(pass.Sim);
@@ -2107,9 +2116,9 @@ namespace TradeLord
             if (larder.Count == 0 && !hungry)
             {
                 string missed = _foodMissed;
-                Log.Repeatable("resupply none on sale", settlement.StringId,
+                Log.Repeatable("resupply none on sale", pass.Key,
                                "resupply: your party is short " + shortfall + " unit(s) of food, and no food TradeLord " +
-                               "may buy is on sale at " + settlement.Name + " at up to 1.5 times the cheapest price it " +
+                               "may buy is on sale " + pass.Where + " at up to 1.5 times the cheapest price it " +
                                "knows for it or twice its value" +
                                (missed == null ? ", nor any it may buy at all" : ": the cheapest on sale is " + missed));
                 return;
@@ -2159,7 +2168,7 @@ namespace TradeLord
                             stopped = "your buying caps for it are reached";
                             break;
                         }
-                        if (settlement.IsVillage && remaining <= 1) { stopped = TheVillageLastUnit; break; }
+                        if (pass.Village && remaining <= 1) { stopped = TheVillageLastUnit; break; }
                         if (NoRoomForOneMore(good, pass.Room() - simWeight))
                         {
                             stopped = "your cargo has no room for it";
@@ -2231,7 +2240,7 @@ namespace TradeLord
                             hungryStopped = "your buying caps for it are reached";
                             break;
                         }
-                        if (settlement.IsVillage && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }
+                        if (pass.Village && remaining <= 1) { hungryStopped = TheVillageLastUnit; break; }
                         if (NoRoomForOneMore(good, pass.Room() - simWeight))
                         {
                             hungryStopped = "your cargo has no room for it";
@@ -2272,18 +2281,18 @@ namespace TradeLord
                 if (hungryUnits > 0)
                     Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") +
                               "your party had less than a day of its own food, so " + hungryUnits + " item(s) were bought for " +
-                              hungryGold + " gold at up to twice the cheapest price TradeLord knows or twice their value at " +
-                              settlement.Name);
+                              hungryGold + " gold at up to twice the cheapest price TradeLord knows or twice their value " +
+                              pass.Where);
                 else if (hungryStopped != null)
-                    Log.Repeatable("resupply hungry", settlement.StringId + "/" + hungryStopped,
+                    Log.Repeatable("resupply hungry", pass.Key + "/" + hungryStopped,
                                    "resupply: your party has less than a day of its own food, and nothing more was " +
-                                   "bought at " + settlement.Name + ": " + hungryStopped);
+                                   "bought " + pass.Where + ": " + hungryStopped);
                 else
                 {
                     string missed = lean.Count == 0 ? _foodMissed : null;
-                    Log.Repeatable("resupply hungry", settlement.StringId,
-                                   "resupply: your party has less than a day of its own food, and none is on sale at " +
-                                   settlement.Name + " at up to twice the cheapest price TradeLord knows or twice its " +
+                    Log.Repeatable("resupply hungry", pass.Key,
+                                   "resupply: your party has less than a day of its own food, and none is on sale " +
+                                   pass.Where + " at up to twice the cheapest price TradeLord knows or twice its " +
                                    "value, within what your purse can pay, your buying caps and your cargo room" +
                                    (missed == null ? "" : ": the cheapest on sale is " + missed));
                 }
@@ -2292,35 +2301,38 @@ namespace TradeLord
             if (pastTheCapUnits > 0)
                 Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") +
                           "your party had less than a day of its own food, so " + pastTheCapUnits + " item(s) for " +
-                          pastTheCapGold + " gold were bought past Max spend per visit at " + settlement.Name +
+                          pastTheCapGold + " gold were bought past Max spend per visit " + pass.Where +
                           ", still within your gold reserve");
             if (belowTheReserveUnits > 0)
                 Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") +
                           "your party had less than a day of its own food, so " + belowTheReserveUnits + " item(s) for " +
-                          belowTheReserveGold + " gold of that one day of food were bought below your gold reserve at " +
-                          settlement.Name);
+                          belowTheReserveGold + " gold of that one day of food were bought below your gold reserve " +
+                          pass.Where);
             if (shortfall > 0 && firstLeft.HasValue && !pass.DirectionError)
             {
                 var left = firstLeft.Value;
                 var food = FoodTheHoldLeftBehind(pass, left.el, left.good, left.fed, left.ceiling, shortfall,
                                                  left.remaining, left.taken, left.held, shareCap,
-                                                 settlement.IsVillage, hungry);
-                _unfitted = (food.weight, food.cost, 0f, true);
+                                                 pass.Village, hungry);
+                if (pass.Site != null) _unfitted = (food.weight, food.cost, 0f, true);
             }
             if (stocked <= 0)
             {
                 if (shortfall > 0 && stopped != null && !pass.DirectionError)
-                    Log.Repeatable("resupply none bought", settlement.StringId + "/" + stopped,
+                    Log.Repeatable("resupply none bought", pass.Key + "/" + stopped,
                                    "resupply: your party is short " + shortfall + " unit(s) of food, and none was bought " +
-                                   "at " + settlement.Name + ": " + stopped);
+                                   pass.Where + ": " + stopped);
                 return;
             }
 
+            if (aDayFirst)
+                Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") + "your party had less than " +
+                          "a day of its own food, so a day of it was bought before any trade good " + pass.Where);
             _buyStalled = null;
             int spent = pass.Spent(simSpent);
             pass.Moved(gold: spent, selling: false);
             Log.Write((pass.Sim ? "resupply (simulated, best case): " : "resupply: ") + stocked +
-                      " items, -" + spent + " gold at " + settlement.Name +
+                      " items, -" + spent + " gold " + pass.Where +
                       ", still short " + (shortfall > 0 ? shortfall : 0) + " unit(s) of food");
             pass.Logged(selling: false, "restocking the larder");
             if (!pass.Muted) _told.Add(Told.Bought, pass.Sim, pass.Detail, stocked, spent);
@@ -2544,6 +2556,7 @@ namespace TradeLord
                                       "loot sale on the road", "selling loot on the road", "Road loot selling", why, loot: true);
                 if (selling) SellPass(Pass.Meet(met, road, books, party),
                                       "sale on the road", "selling on the road", "Road trading", why, loot: false);
+                if (buying) ADayOfFoodOnTheRoad(Pass.Meet(met, road, books, party));
                 if (buying) BuyPass(Pass.Meet(met, road, books, party),
                                     "purchase on the road", "buying on the road", "Road buying", why);
             }

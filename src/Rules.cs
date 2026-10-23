@@ -749,6 +749,9 @@ namespace TradeLord
         internal static bool HeldForTheMark(int price, int floor, int boughtLeft, int holdFor) =>
             floor > 0 && boughtLeft > 0 && boughtLeft <= holdFor && BelowTheBestMarket(price, floor);
 
+        internal static bool KeptForTheMark(int price, int[] rungs, int boughtLeft, float share) =>
+            rungs != null && HeldForTheMark(price, FloorForTheLast(rungs, boughtLeft, share), boughtLeft, rungs.Length);
+
         internal static int FloorForTheLast(int[] rungs, int boughtLeft, float share) =>
             rungs == null || boughtLeft <= 0 || boughtLeft > rungs.Length
                 ? 0 : BestMarketFloor(rungs[boughtLeft - 1], share);

@@ -56,6 +56,7 @@ namespace TradeLord
             internal float SaidSnow;
             internal float SaidWet;
             internal float SaidDistance;
+            internal string Measured;
             internal float DayPace;
             internal float NightPace;
             internal float Ceiling;
@@ -159,6 +160,7 @@ namespace TradeLord
                 SaidSnow = said.SnowHours,
                 SaidWet = said.WetHours,
                 SaidDistance = said.Distance,
+                Measured = said.Measured ?? "",
                 DayPace = Travel.DayPace,
                 NightPace = Travel.NightPace,
                 Ceiling = MarketRank.Ceiling(to.IsVillage, Options.Current)
@@ -167,6 +169,7 @@ namespace TradeLord
             Log.Write("ride check: set off for " + to.Name + "; TradeLord says " + Hours(_ride.SaidHours) + " h, " +
                       Hours(_ride.SaidNight) + " h of it at night, over a road of " + Nightfall.Figure(said.Distance) +
                       (said.LandRatio < 0.999f ? " (" + Percent(1f - said.LandRatio) + " of it at sea)" : "") +
+                      (!string.IsNullOrEmpty(_ride.Measured) ? ", measured " + _ride.Measured : "") +
                       " at a Speed of " + Nightfall.Figure(_ride.DayPace) + " by day and " +
                       Nightfall.Figure(_ride.DayPace * _ride.NightPace) + " by night, your night step " +
                       Nightfall.PartyStepSaid + "; " + Hours(_ride.SaidSnow) + " h of it in snow and " + Hours(_ride.SaidWet) +
@@ -264,6 +267,7 @@ namespace TradeLord
             {
                 float pace = _ride.Moved * TradeMath.HoursAPartyTakesToCoverItsSpeed / moving;
                 lines.Add("  road: TradeLord put the road at " + Nightfall.Figure(_ride.SaidDistance) +
+                          (!string.IsNullOrEmpty(_ride.Measured) ? ", measured " + _ride.Measured + "," : "") +
                           " and the game moved you " + Nightfall.Figure(_ride.Moved) + ", " +
                           Longer(TradeMath.RideOffBy(_ride.SaidDistance, _ride.Moved)) + "; your Speed on the move " +
                           "came to " + Nightfall.Figure(pace) + " where TradeLord counted " +

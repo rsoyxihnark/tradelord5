@@ -47,6 +47,20 @@ namespace TradeLord
             return men > 0;
         }
 
+        internal static float WetGroundStep(MobileParty party)
+        {
+            try
+            {
+                if (!Tally(party, out int men, out _, out int mounts, out int foot)) return 0f;
+                int riders = party.Party?.NumberOfMenWithHorse ?? 0;
+                var attached = party.AttachedParties;
+                for (int i = 0; attached != null && i < attached.Count; i++)
+                    riders += attached[i]?.Party?.NumberOfMenWithHorse ?? 0;
+                return TradeMath.WetGroundStep(men, riders, foot, mounts);
+            }
+            catch { return 0f; }
+        }
+
         internal static int RoomForLivestock(MobileParty party)
         {
             try

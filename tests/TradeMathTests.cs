@@ -2285,6 +2285,35 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Villagers_sell_a_town_only_as_many_units_as_its_gold_can_pay_for()
+        {
+            Assert.Equal(10, TradeMath.WhatVillagersSell(10, 5000, 100));
+            Assert.Equal(4, TradeMath.WhatVillagersSell(10, 450, 100));
+            Assert.Equal(0, TradeMath.WhatVillagersSell(10, 99, 100));
+            Assert.Equal(0, TradeMath.WhatVillagersSell(10, 0, 100));
+            Assert.Equal(0, TradeMath.WhatVillagersSell(10, 5000, 0));
+            Assert.Equal(0, TradeMath.WhatVillagersSell(0, 5000, 100));
+        }
+
+        [Fact]
+        public void Wet_ground_takes_three_tenths_of_what_riders_and_footmen_on_horses_add_to_the_pace_as_the_game_counts_it()
+        {
+            Assert.Equal(-0.09f, TradeMath.WetGroundStep(100, 100, 0, 0), 4);
+            Assert.Equal(-0.045f, TradeMath.WetGroundStep(100, 0, 100, 100), 4);
+            Assert.Equal(-0.054f, TradeMath.WetGroundStep(100, 50, 50, 20), 4);
+            Assert.Equal(-0.0225f, TradeMath.WetGroundStep(100, 0, 100, 50), 4);
+        }
+
+        [Fact]
+        public void A_party_all_on_foot_or_with_no_men_is_not_slowed_by_wet_ground()
+        {
+            Assert.Equal(0f, TradeMath.WetGroundStep(100, 0, 100, 0));
+            Assert.Equal(0f, TradeMath.WetGroundStep(0, 0, 0, 0));
+            Assert.Equal(0f, TradeMath.WetGroundStep(-5, 3, 3, 3));
+            Assert.Equal(-0.09f, TradeMath.WetGroundStep(10, 40, 0, 0), 4);
+        }
+
+        [Fact]
         public void A_route_carries_only_as_many_units_as_fit_in_the_room_your_cargo_will_have()
         {
             Assert.Equal(32, TradeMath.UnitsThatFit(80f, 2.5f));
