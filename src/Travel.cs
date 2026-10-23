@@ -207,14 +207,18 @@ namespace TradeLord
             return pieces;
         }
 
-        internal static float CaravanDays(MobileParty party, Settlement bound, out TradeMath.RoadTally tally)
+        internal static float CaravanDays(MobileParty party, Settlement bound, out TradeMath.RoadTally tally, out float detour,
+                                          bool byRoad = true)
         {
             tally = default(TradeMath.RoadTally);
+            detour = 0f;
             Vec2 from = party.GetPosition2D, to = bound.GetPosition2D;
             float distance = from.Distance(to);
             float now = party.Speed;
             if (AtSea(party)) return TradeMath.EtaDays(distance, now);
             Refresh();
+            if (byRoad) detour = CaravanDetour(party, bound, from, distance);
+            if (detour > 0f) distance *= detour;
             Skies.LiveSkyAt(from, out bool snowy, out bool wet);
             float slow = Nightfall.SlowHoursLeft(party);
             float[] paces = slow > 0f ? CaravanPacesWhileSlowed(party) : _caravanPaces;
@@ -226,6 +230,36 @@ namespace TradeLord
                                                    CampaignTime.SunRise, CampaignTime.SunSet, out tally);
             Skies.Walked(started);
             return days;
+        }
+
+        private static readonly Dictionary<(string, string, int), float> _caravanRoads = new Dictionary<(string, string, int), float>();
+
+        private static float CaravanDetour(MobileParty party, Settlement bound, Vec2 at, float left)
+        {
+            Settlement setOff = party.LastVisitedSettlement;
+            if (setOff == null || setOff == bound) return 0f;
+            Vec2 start = setOff.GetPosition2D;
+            return TradeMath.DetourOnTheRoad(CaravanRoad(party, setOff, bound), start.Distance(bound.GetPosition2D),
+                                             start.Distance(at), left);
+        }
+
+        private static float CaravanRoad(MobileParty party, Settlement setOff, Settlement bound)
+        {
+            MobileParty.NavigationType way = party.NavigationCapability;
+            var key = (setOff.StringId, bound.StringId, (int)way);
+            if (_caravanRoads.TryGetValue(key, out float known)) return known;
+            float road;
+            try { road = CaravanRoadCore(setOff, bound, way); }
+            catch { road = 0f; }
+            _caravanRoads[key] = road;
+            return road;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static float CaravanRoadCore(Settlement setOff, Settlement bound, MobileParty.NavigationType way)
+        {
+            float road = Campaign.Current.Models.MapDistanceModel.GetDistance(setOff, bound, false, false, way, out float landRatio);
+            return landRatio >= 0.999f ? road : 0f;
         }
 
         private static float[] CaravanPacesWhileSlowed(MobileParty party)
@@ -321,6 +355,7 @@ namespace TradeLord
             _partyRides.Clear();
             _partyPieces.Clear();
             _pairPieces.Clear();
+            _caravanRoads.Clear();
             _partyDist.Clear();
             _partyHour = -1;
             _pairDist.Clear();

@@ -258,8 +258,8 @@ namespace TradeLord
                 ItemRoster carried = party.ItemRoster;
                 if (carried == null) continue;
                 long started = System.Diagnostics.Stopwatch.GetTimestamp();
-                float days = Travel.CaravanDays(party, bound, out TradeMath.RoadTally tally);
-                timed.Add(caravan, System.Diagnostics.Stopwatch.GetTimestamp() - started, tally);
+                float days = Travel.CaravanDays(party, bound, out TradeMath.RoadTally tally, out float detour);
+                timed.Add(caravan, System.Diagnostics.Stopwatch.GetTimestamp() - started, tally, detour, RideCheck.Dodging(party));
                 RideCheck.Saw(party, bound, days);
                 if (caravan)
                 {
@@ -282,10 +282,11 @@ namespace TradeLord
 
         private sealed class Timed
         {
-            private int _caravans, _villagers, _snow, _wet, _slowed;
+            private int _caravans, _villagers, _snow, _wet, _slowed, _dodging;
             private long _ticks, _slowest;
+            private readonly List<float> _detours = new List<float>();
 
-            internal void Add(bool caravan, long ticks, TradeMath.RoadTally tally)
+            internal void Add(bool caravan, long ticks, TradeMath.RoadTally tally, float detour, bool dodging)
             {
                 if (caravan) _caravans++;
                 else _villagers++;
@@ -294,12 +295,20 @@ namespace TradeLord
                 if (tally.Snow > 0f) _snow++;
                 if (tally.Wet > 0f) _wet++;
                 if (tally.Slowed > 0f) _slowed++;
+                if (detour > 0f) _detours.Add(detour);
+                if (dodging) _dodging++;
             }
 
             internal void Say()
             {
+                _detours.Sort();
+                int straight = _caravans + _villagers - _detours.Count;
                 Log.Write("forecast: " + _caravans + " caravan(s) and " + _villagers + " villager(s) on their way to a town were " +
                           "timed along the weather cells of their road in " + Ms(_ticks) + " (slowest " + Ms(_slowest) + "); " +
+                          _detours.Count + " of them along the game's road from where they set off, which runs a median " +
+                          Nightfall.Share(TradeMath.Quantile(_detours, 0.5f)) + " times the straight line, and " + straight +
+                          " by the straight line, off that road or with none known; " + _dodging +
+                          " are fleeing, going around a band or fighting right now; " +
                           _snow + " of them meet snow and " + _wet + " wet ground on the way, and " + _slowed +
                           " are still Disorganized; they keep " + Nightfall.Share(Nightfall.CaravanPace) + " of their pace at night, " +
                           Nightfall.Share(Skies.CaravanSnowShare) + " in snow and " + Nightfall.Share(Skies.CaravanWetShare) +

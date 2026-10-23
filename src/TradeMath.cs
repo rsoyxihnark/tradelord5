@@ -1337,6 +1337,8 @@ namespace TradeLord
         public const int Weathers = 16;
 
         public const int MostTurnsOnTheRoad = 4096;
+        public const float MostRoadDetour = 3f;
+        public const float OnTheRoadSlack = 1.05f;
 
         public interface ISky
         {
@@ -1613,6 +1615,14 @@ namespace TradeLord
         {
             if (!(saidHours > 0f) || float.IsNaN(tookHours) || float.IsInfinity(tookHours)) return float.NaN;
             return Finite((tookHours - saidHours) / saidHours, float.NaN);
+        }
+
+        public static float DetourOnTheRoad(float road, float span, float gone, float left)
+        {
+            if (!(road > 0f) || !(span > 0f) || float.IsInfinity(road) || float.IsInfinity(span)) return 0f;
+            if (!(gone >= 0f) || !(left >= 0f) || float.IsInfinity(gone) || float.IsInfinity(left)) return 0f;
+            if (road > span * MostRoadDetour || gone + left > road * OnTheRoadSlack) return 0f;
+            return Math.Max(road / span, 1f);
         }
 
         public static int WorthUsedUpADay(float budget, int price, int unitValue)

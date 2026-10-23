@@ -294,9 +294,7 @@ namespace TradeLord
             }
             snowy = (sky & Snowy) != 0;
             wet = (sky & Wet) != 0;
-            long took = Stopwatch.GetTimestamp() - started;
-            _readTicks += took;
-            _frameTicks += took;
+            _readTicks += Stopwatch.GetTimestamp() - started;
         }
 
         private static byte WorkOut(int cell, double hours)
