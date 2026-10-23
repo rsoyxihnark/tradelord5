@@ -1830,6 +1830,38 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_caravan_on_the_road_from_where_it_set_off_keeps_that_road_detour_and_one_off_it_keeps_the_straight_line()
+        {
+            Assert.Equal(1.3f, TradeMath.DetourOnTheRoad(130f, 100f, 40f, 60f), 4);
+            Assert.Equal(1.3f, TradeMath.DetourOnTheRoad(130f, 100f, 0f, 100f), 4);
+            Assert.Equal(1.3f, TradeMath.DetourOnTheRoad(130f, 100f, 60f, 70f), 4);
+            Assert.Equal(0f, TradeMath.DetourOnTheRoad(130f, 100f, 80f, 70f));
+            Assert.Equal(1f, TradeMath.DetourOnTheRoad(98f, 100f, 40f, 58f), 4);
+            Assert.Equal(2.9f, TradeMath.DetourOnTheRoad(29f, 10f, 5f, 5f), 4);
+            Assert.Equal(0f, TradeMath.DetourOnTheRoad(1000f, 10f, 5f, 5f));
+            Assert.Equal(0f, TradeMath.DetourOnTheRoad(float.MaxValue, 10f, 5f, 5f));
+            Assert.Equal(0f, TradeMath.DetourOnTheRoad(0f, 100f, 10f, 90f));
+            Assert.Equal(0f, TradeMath.DetourOnTheRoad(130f, 0f, 0f, 0f));
+            Assert.Equal(0f, TradeMath.DetourOnTheRoad(float.NaN, 100f, 10f, 90f));
+            Assert.Equal(0f, TradeMath.DetourOnTheRoad(130f, 100f, float.PositiveInfinity, 1f));
+            Assert.Equal(0f, TradeMath.DetourOnTheRoad(130f, 100f, -1f, 60f));
+        }
+
+        [Fact]
+        public void A_caravan_halfway_along_a_bending_road_is_timed_closer_by_its_detour_than_by_the_straight_line()
+        {
+            float bend = (float)Math.Sqrt(50d * 50d + 30d * 30d);
+            float road = 2f * bend;
+            float gone = (float)Math.Sqrt(25d * 25d + 15d * 15d);
+            float left = (float)Math.Sqrt(75d * 75d + 15d * 15d);
+            float truth = gone + bend;
+            float detour = TradeMath.DetourOnTheRoad(road, 100f, gone, left);
+            Assert.True(detour > 1f);
+            Assert.True(Math.Abs(left * detour - truth) < Math.Abs(left - truth));
+            Assert.True(Math.Abs(left * detour - truth) / truth < 0.05f);
+        }
+
+        [Fact]
         public void A_buyer_is_ranked_on_what_it_pays_for_every_unit_its_purse_can_take()
         {
             Func<int, int> falling = u => 50 - u * 5;

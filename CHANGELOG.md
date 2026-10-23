@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.6
+
+- Fixed Count what is on its way timing caravans and villagers along a straight line instead of the road they take
+- With Enable extended debug logging on, the caravan ride check in TradeLord.log now sets aside caravans and villagers that fled or fought
+- With Enable extended debug logging on, the caravan ride check in TradeLord.log now weighs the same rides against a straight line too
+- With Enable extended debug logging on, TradeLord.log now says each hour how many caravans and villagers are on their road or fleeing
+- Fixed the weather cost line in TradeLord.log counting part of the busiest frame twice
+
 ## 2.0.5
 
 - Fixed travel times counting a whole ride at the speed your party has while Disorganized

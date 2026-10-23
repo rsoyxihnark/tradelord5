@@ -73,6 +73,8 @@ namespace TradeLord
             internal string To;
             internal double At;
             internal float SaidHours;
+            internal float StraightHours;
+            internal bool Dodged;
         }
 
         private static Open _ride;
@@ -82,6 +84,8 @@ namespace TradeLord
         private static float _offTotal;
         private static readonly Dictionary<string, Followed> _followed = new Dictionary<string, Followed>();
         private static readonly List<float> _arrived = new List<float>();
+        private static readonly List<float> _arrivedStraight = new List<float>();
+        private static readonly List<float> _dodged = new List<float>();
 
         internal static bool Writing => Options.Current.ExtendedDebugLogging;
 
@@ -96,6 +100,8 @@ namespace TradeLord
             _offTotal = 0f;
             _followed.Clear();
             _arrived.Clear();
+            _arrivedStraight.Clear();
+            _dodged.Clear();
         }
 
         internal static void Tick(float dt)
@@ -183,21 +189,51 @@ namespace TradeLord
             if (!_followed.TryGetValue(party.StringId, out Followed seen)) return;
             _followed.Remove(party.StringId);
             if (seen.To != at.StringId || !Writing) return;
-            float off = TradeMath.RideOffBy(seen.SaidHours, (float)(CampaignTime.Now.ToHours - seen.At));
-            if (!float.IsNaN(off)) _arrived.Add(off);
+            float took = (float)(CampaignTime.Now.ToHours - seen.At);
+            float off = TradeMath.RideOffBy(seen.SaidHours, took);
+            if (float.IsNaN(off)) return;
+            if (seen.Dodged)
+            {
+                _dodged.Add(off);
+                return;
+            }
+            _arrived.Add(off);
+            float straight = TradeMath.RideOffBy(seen.StraightHours, took);
+            if (!float.IsNaN(straight)) _arrivedStraight.Add(straight);
+        }
+
+        internal static bool Dodging(MobileParty party)
+        {
+            if (party == null) return false;
+            if (party.MapEvent != null) return true;
+            AiBehavior now = party.ShortTermBehavior;
+            return now == AiBehavior.FleeToPoint || now == AiBehavior.FleeToGate || now == AiBehavior.FleeToParty ||
+                   now == AiBehavior.GoAroundParty;
         }
 
         internal static void Saw(MobileParty party, Settlement bound, float days)
         {
             if (!Writing || party == null || bound == null) return;
+            bool dodging = Dodging(party);
+            if (_followed.TryGetValue(party.StringId, out Followed seen) && seen.To == bound.StringId)
+            {
+                if (dodging && !seen.Dodged)
+                {
+                    seen.Dodged = true;
+                    _followed[party.StringId] = seen;
+                }
+                return;
+            }
             float hours = days * 24f;
             if (hours < CaravanShortestJudged || TradeMath.OutOfReach(days)) return;
-            if (_followed.TryGetValue(party.StringId, out Followed seen) && seen.To == bound.StringId) return;
+            float straight = Travel.CaravanDays(party, bound, out _, out _, false);
             _followed[party.StringId] = new Followed
             {
                 To = bound.StringId,
                 At = CampaignTime.Now.ToHours,
-                SaidHours = hours
+                SaidHours = hours,
+                StraightHours = TradeMath.OutOfReach(straight) ? float.NaN : straight * 24f,
+                Dodged = dodging
             };
         }
 
@@ -274,22 +310,55 @@ namespace TradeLord
                     if (now - one.Value.At > CaravanKeptHours) stale.Add(one.Key);
                 for (int i = 0; i < stale.Count; i++) _followed.Remove(stale[i]);
             }
-            if (_arrived.Count == 0 || !Writing) return;
-            _arrived.Sort();
-            int late = 0, close = 0;
-            for (int i = 0; i < _arrived.Count; i++)
-            {
-                if (_arrived[i] > 0f) late++;
-                if (Math.Abs(_arrived[i]) <= CaravanCloseEnough) close++;
-            }
-            Log.Write("caravan ride check over the last day: " + _arrived.Count + " caravan(s) and villager(s) " +
-                      "reached the town Count what is on its way had them bound for; their ride from where it first " +
-                      "timed them ran a median " + Longer(TradeMath.Quantile(_arrived, 0.5f)) +
-                      " than it said, the middle half from " + Longer(TradeMath.Quantile(_arrived, 0.25f)) +
-                      " to " + Longer(TradeMath.Quantile(_arrived, 0.75f)) + ", " + close + " within " +
-                      Percent(CaravanCloseEnough) + " and " + late + " later than said; it counted their nights at " +
-                      Nightfall.CaravanPaceSaid + " of their day pace");
+            if (Writing && (_arrived.Count > 0 || _dodged.Count > 0)) Log.WriteMany(TheCaravansSaid());
             _arrived.Clear();
+            _arrivedStraight.Clear();
+            _dodged.Clear();
+        }
+
+        private static List<string> TheCaravansSaid()
+        {
+            _arrived.Sort();
+            _arrivedStraight.Sort();
+            _dodged.Sort();
+            var lines = new List<string>
+            {
+                "caravan ride check over the last day: " + _arrived.Count + " caravan(s) and villager(s) " +
+                "reached the town Count what is on its way had them bound for without fleeing or fighting on the way; " +
+                "their ride from where it first timed them ran a median " + Longer(TradeMath.Quantile(_arrived, 0.5f)) +
+                " than it said, the middle half from " + Longer(TradeMath.Quantile(_arrived, 0.25f)) +
+                " to " + Longer(TradeMath.Quantile(_arrived, 0.75f)) + ", " + Within(_arrived) + " within " +
+                Percent(CaravanCloseEnough) + " and " + Later(_arrived) + " later than said; it counted their nights at " +
+                Nightfall.CaravanPaceSaid + " of their day pace"
+            };
+            if (_arrivedStraight.Count > 0)
+                lines.Add("  straight line: timed by a straight line to the town, the same rides would have run a median " +
+                          Longer(TradeMath.Quantile(_arrivedStraight, 0.5f)) + " than said, the middle half from " +
+                          Longer(TradeMath.Quantile(_arrivedStraight, 0.25f)) + " to " +
+                          Longer(TradeMath.Quantile(_arrivedStraight, 0.75f)) + ", " + Within(_arrivedStraight) +
+                          " within " + Percent(CaravanCloseEnough) + " and " + Later(_arrivedStraight) + " later than said");
+            if (_dodged.Count > 0)
+                lines.Add("  set aside: " + _dodged.Count + " caravan(s) and villager(s) were seen fleeing, going around a " +
+                          "band or fighting on the way, and ran a median " + Longer(TradeMath.Quantile(_dodged, 0.5f)) +
+                          " than said, the middle half from " + Longer(TradeMath.Quantile(_dodged, 0.25f)) + " to " +
+                          Longer(TradeMath.Quantile(_dodged, 0.75f)));
+            return lines;
+        }
+
+        private static int Within(List<float> offs)
+        {
+            int close = 0;
+            for (int i = 0; i < offs.Count; i++)
+                if (Math.Abs(offs[i]) <= CaravanCloseEnough) close++;
+            return close;
+        }
+
+        private static int Later(List<float> offs)
+        {
+            int late = 0;
+            for (int i = 0; i < offs.Count; i++)
+                if (offs[i] > 0f) late++;
+            return late;
         }
 
         private static string Hours(float hours) => Nightfall.Figure(hours);

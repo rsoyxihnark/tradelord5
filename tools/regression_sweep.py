@@ -7571,7 +7571,7 @@ def a_caravan_already_in_the_market_is_not_counted_twice():
                     "if (!caravan && !party.IsVillager) continue;",
                     "if (party.CurrentSettlement != null) continue;",
                     "Settlement bound = party.TargetSettlement;",
-                    "float days = Travel.CaravanDays(party, bound, out TradeMath.RoadTally tally);",
+                    "float days = Travel.CaravanDays(party, bound, out TradeMath.RoadTally tally, out float detour);",
                     "if (item == null || amount <= 0 || !TradePolicy.Priced(item)) continue;")
             and "CurrentSettlement" not in method_body(
                     S['Forecast.cs'], "private static void ReadWhatTheShopsWillMake"))
@@ -19983,7 +19983,7 @@ def caravans_are_timed_on_the_same_clock():
             and "kept.Add(nightFell ? after / before : before / after);" in caravans
             and "float middle = TradeMath.Quantile(kept, 0.5f);" in caravans
             and "CaravanPace = TradeMath.NightPaceKept(middle);" in caravans
-            and "float days = Travel.CaravanDays(party, bound, out TradeMath.RoadTally tally);" in
+            and "float days = Travel.CaravanDays(party, bound, out TradeMath.RoadTally tally, out float detour);" in
                 method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
             and "TradeMath.EtaDays(" not in method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad"))
 
@@ -20035,7 +20035,9 @@ def every_ride_is_judged_in_the_log_against_what_tradelord_said():
                         '"  night: TradeLord counted "', '"  road: TradeLord put the road at "',
                         '"  ceiling: "', '"  this session: "', "Log.WriteMany(lines);")
             and "RideCheck.Saw(party, bound, days);" in S['Forecast.cs']
-            and '"caravan ride check over the last day: "' in method_body(ride, "internal static void SayTheCaravans")
+            and "if (Writing && (_arrived.Count > 0 || _dodged.Count > 0)) Log.WriteMany(TheCaravansSaid());" in
+                method_body(ride, "internal static void SayTheCaravans")
+            and '"caravan ride check over the last day: "' in method_body(ride, "private static List<string> TheCaravansSaid")
             and "A_ride_check_weighs_the_time_taken_against_the_time_said" in MATHTESTS)
 
 
@@ -20211,7 +20213,7 @@ def the_log_breaks_down_the_marked_ride_and_times_the_caravans():
             and 'said.Add("    " + Travel.TheRideSaid(how.Best));' in method_body(S['Marker.cs'], "private static void Ultra")
             and ordered(said, '" h fall at night, "', '" h in snow, "', '" h on wet ground and "', '" h while still Disorganized;',
                         '; the ground on the way is not counted"')
-            and "timed.Add(caravan, System.Diagnostics.Stopwatch.GetTimestamp() - started, tally);" in S['Forecast.cs']
+            and "timed.Add(caravan, System.Diagnostics.Stopwatch.GetTimestamp() - started, tally, detour, RideCheck.Dodging(party));" in S['Forecast.cs']
             and "if (Options.Current.ExtendedDebugLogging) timed.Say();" in S['Forecast.cs']
             and '" villager(s) on their way to a town were "' in timed)
 
@@ -20233,6 +20235,78 @@ def the_village_ceiling_ships_at_a_day_and_days_is_marked_as_chosen():
 
 chk("2.0.5", "the Village travel ceiling ships at 1 day in every language, and Days running from where your party stands to Buy From and on to Sell At is marked in the source as the developer's choice",
     the_village_ceiling_ships_at_a_day_and_days_is_marked_as_chosen())
+
+
+def caravans_are_timed_along_the_game_road_from_where_they_set_off():
+    days = method_body(S['Travel.cs'], "internal static float CaravanDays")
+    detour = method_body(S['Travel.cs'], "private static float CaravanDetour")
+    core = method_body(S['Travel.cs'], "private static float CaravanRoadCore")
+    math = method_body(S['TradeMath.cs'], "public static float DetourOnTheRoad")
+    return (days and detour and core and math
+            and ordered(days, "if (AtSea(party)) return TradeMath.EtaDays(distance, now);",
+                        "if (byRoad) detour = CaravanDetour(party, bound, from, distance);",
+                        "if (detour > 0f) distance *= detour;",
+                        "float days = TradeMath.EtaAlongTheRoad(distance, byDay, Skies.CellsBetween(from, to, null), paces,")
+            and ordered(detour, "Settlement setOff = party.LastVisitedSettlement;",
+                        "if (setOff == null || setOff == bound) return 0f;",
+                        "return TradeMath.DetourOnTheRoad(CaravanRoad(party, setOff, bound), start.Distance(bound.GetPosition2D),")
+            and "Campaign.Current.Models.MapDistanceModel.GetDistance(setOff, bound, false, false, way, out float landRatio);" in core
+            and "return landRatio >= 0.999f ? road : 0f;" in core
+            and ordered(math, "if (road > span * MostRoadDetour || gone + left > road * OnTheRoadSlack) return 0f;",
+                        "return Math.Max(road / span, 1f);")
+            and "_caravanRoads.Clear();" in method_body(S['Travel.cs'], "internal static void Forget")
+            and not [name for name, src in S.items() if "GetPathBetweenAIFaces" in src or "NavigationPath" in src]
+            and all(one in MATHTESTS for one in (
+                "A_caravan_on_the_road_from_where_it_set_off_keeps_that_road_detour_and_one_off_it_keeps_the_straight_line",
+                "A_caravan_halfway_along_a_bending_road_is_timed_closer_by_its_detour_than_by_the_straight_line")))
+
+
+chk("2.0.6", "a caravan or villagers on the road from where they set off are timed along the game's own road between the two, read from the game's table and never walked, and one off that road keeps the straight line",
+    caravans_are_timed_along_the_game_road_from_where_they_set_off())
+
+
+def the_caravan_ride_check_sets_aside_dodging_and_weighs_the_straight_line():
+    ride = S['RideCheck.cs']
+    dodging = method_body(ride, "internal static bool Dodging")
+    saw = method_body(ride, "internal static void Saw")
+    arrived = method_body(ride, "internal static void Arrived")
+    said = method_body(ride, "private static List<string> TheCaravansSaid")
+    timed = method_body(S['Forecast.cs'], "private sealed class Timed")
+    return (dodging and saw and arrived and said and timed
+            and "if (party.MapEvent != null) return true;" in dodging
+            and all("AiBehavior." + one in dodging for one in ("FleeToPoint", "FleeToGate", "FleeToParty", "GoAroundParty"))
+            and ordered(saw, "bool dodging = Dodging(party);", "seen.Dodged = true;",
+                        "float straight = Travel.CaravanDays(party, bound, out _, out _, false);", "Dodged = dodging")
+            and ordered(arrived, "if (seen.Dodged)", "_dodged.Add(off);", "_arrived.Add(off);", "_arrivedStraight.Add(straight);")
+            and ordered(said, '"caravan ride check over the last day: "', '"  straight line: timed by a straight line to the town',
+                        '"  set aside: "')
+            and all(one in method_body(ride, "internal static void Forget") for one in ("_arrivedStraight.Clear();", "_dodged.Clear();"))
+            and ordered(timed, "if (detour > 0f) _detours.Add(detour);", "if (dodging) _dodging++;",
+                        '" of them along the game\'s road from where they set off, which runs a median "',
+                        '" are fleeing, going around a band or fighting right now; "'))
+
+
+chk("2.0.6", "with Enable extended debug logging on, the caravan ride check sets aside caravans and villagers seen fleeing, going around a band or fighting, weighs the rest against the straight line, and the hourly forecast line says how each road was timed",
+    the_caravan_ride_check_sets_aside_dodging_and_weighs_the_straight_line())
+
+
+def the_busiest_frame_counts_each_weather_cost_once():
+    w = S['Weather.cs']
+    read = method_body(w, "internal static void Read(int cell, double hours")
+    days = method_body(S['Travel.cs'], "private static float Days(float distance, float landRatio, float afterDays")
+    caravans = method_body(S['Travel.cs'], "internal static float CaravanDays")
+    return (read and days and caravans
+            and "_frameTicks" not in read
+            and "_readTicks += Stopwatch.GetTimestamp() - started;" in read
+            and w.count("_frameTicks += took;") == 2
+            and "_frameTicks += took;" in method_body(w, "internal static void Walked")
+            and "_frameTicks += took;" in method_body(w, "private static void Listened")
+            and sum(src.count("Skies.From(") for src in S.values()) == 2
+            and all("Skies.From(" in one and "Skies.Walked(started);" in one for one in (days, caravans)))
+
+
+chk("2.0.6", "with Enable extended debug logging on, the busiest frame on the weather counts a weather cell read once, inside the ride time that read it",
+    the_busiest_frame_counts_each_weather_cost_once())
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
