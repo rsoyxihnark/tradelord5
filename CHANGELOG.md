@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2.1
+
+- Fixed Hold cargo for the best market holding a good for its Sell At when the marked market pays more for it
+- Fixed TradeLord.log giving the wrong reason when a sale had no Hold cargo for the best market line
+- Fixed the message when TradeLord holds your cargo naming only the Sell At when goods were kept for the marked market
+- The hint for Hold cargo for the best market now says it holds goods you bought for their Sell At, or the marked market where it pays more
+- Fixed a good from a villagers' offer getting a Sell At that does not pay your Min profit margin on it
+
 ## 2.2.0
 
 - Hold cargo for the best market now holds each good for the Sell At it was bought for, or else for the marked market

@@ -1930,8 +1930,8 @@ namespace TradeLord
 
             public int UnpaidWorth(int at) => TradePolicy.UnpaidWorth(Item(at));
 
-            private readonly Dictionary<ItemObject, (int mark, bool boughtFor)> _holdFor =
-                new Dictionary<ItemObject, (int mark, bool boughtFor)>();
+            private readonly Dictionary<ItemObject, (int mark, bool boughtFor, NoHold why)> _holdFor =
+                new Dictionary<ItemObject, (int mark, bool boughtFor, NoHold why)>();
             private readonly List<(Settlement where, float ride, int purse)> _marks =
                 new List<(Settlement where, float ride, int purse)>();
             private bool _aheadCopied;
@@ -1957,15 +1957,16 @@ namespace TradeLord
                 ItemObject item = Item(at);
                 if (item == null) return -1;
                 if (_holdFor.TryGetValue(item, out var known)) return known.mark;
-                Settlement where = Marker.HoldFor(item, _pass.Site, Travel.EstimateDaysFromParty,
-                                                  out float ride, out int purse, out bool boughtFor);
+                Settlement where = Marker.HoldFor(_plan[at].EquipmentElement, YoursToSell(at), _pass.Site,
+                                                  Travel.EstimateDaysFromParty, 0f,
+                                                  out float ride, out int purse, out bool boughtFor, out NoHold why);
                 int mark = where == null ? -1 : _marks.FindIndex(one => one.where == where);
                 if (where != null && mark < 0)
                 {
                     _marks.Add((where, ride, purse));
                     mark = _marks.Count - 1;
                 }
-                _holdFor[item] = (mark, boughtFor);
+                _holdFor[item] = (mark, boughtFor, why);
                 return mark;
             }
 
@@ -2063,7 +2064,7 @@ namespace TradeLord
             {
                 if (keptFor < 0) return "";
                 Settlement mark = MarkOf(at, out bool boughtFor);
-                if (mark == null) return ", with no market within your travel ceilings for Hold cargo for the best market to keep it for";
+                if (mark == null) return TradeRules.WhyNothingWasHeld(_holdFor.TryGetValue(Item(at), out var held) ? held.why : NoHold.NoMarket);
                 string named = Tongue.Named(mark.Name, mark.StringId) +
                                (boughtFor ? ", the Sell At it was bought for" : ", the marked market");
                 return bestPays > 0
@@ -3324,28 +3325,14 @@ namespace TradeLord
             {
                 price = 0;
                 ItemObject item = Item(at);
-                TradeRoute row = Plan.BestSale(item, null, units, 0, 0, units, _pass.Site, out Ladder rungs, out int till);
+                TradeRoute row = Plan.BestSale(item, paid > 0 ? (Func<int, int>)(ahead => paid) : null, units, 0, 0,
+                                               units, _pass.Site, out Ladder rungs, out int till);
+                bool clears = row?.To != null;
+                if (!clears) row = Plan.BestSale(item, null, units, 0, 0, units, _pass.Site, out rungs, out till);
                 if (row?.To == null) return false;
-                if (paid > 0)
-                {
-                    TradeRoute earns = Plan.BestSale(item, ahead => paid, units, 0, 0, units, _pass.Site,
-                                                     out Ladder earnsRungs, out int earnsTill);
-                    if (earns?.To != null)
-                    {
-                        row = earns;
-                        rungs = earnsRungs;
-                        till = earnsTill;
-                    }
-                    else
-                    {
-                        row.BuyPrice = paid;
-                        row.Cost = TradeMath.WorthOf(row.Quantity, paid);
-                        row.TotalProfit -= row.Cost;
-                    }
-                }
                 price = row.SellPrice;
                 Aim(at, row.To, price, rungs, till);
-                if (_theirOffer && TradeRules.TakenAsLoot(GoodAt(at), Options.Current)) return true;
+                if (!clears || (_theirOffer && TradeRules.TakenAsLoot(GoodAt(at), Options.Current))) return true;
                 if (_plans == null) _plans = new Dictionary<ItemObject, TradeRoute>();
                 _plans[item] = row;
                 return true;

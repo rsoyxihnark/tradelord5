@@ -37,6 +37,8 @@ namespace TradeLord
 
     internal enum Bound { None, Cargo, Purse, SpendLimit }
 
+    internal enum NoHold { None, MarkedMarket, ItsSellAt, NoMarket, OutOfReach }
+
     internal struct PlannedSale
     {
         internal int Qty;
@@ -879,6 +881,24 @@ namespace TradeLord
                 kept[g]++;
             }
             return kept;
+        }
+
+        internal static bool HoldForTheSellAt(bool sellAtInReach, bool markInReach, long sellAtPays, long markPays) =>
+            sellAtInReach && (!markInReach || markPays <= sellAtPays);
+
+        internal static string WhyNothingWasHeld(NoHold why)
+        {
+            switch (why)
+            {
+                case NoHold.MarkedMarket:
+                    return ", in the marked market, where Hold cargo for the best market holds nothing back";
+                case NoHold.ItsSellAt:
+                    return ", in the Sell At it was bought for, where Hold cargo for the best market holds nothing back";
+                case NoHold.OutOfReach:
+                    return ", with the market Hold cargo for the best market would keep it for past your travel ceilings, out of gold or closed to you";
+                default:
+                    return ", with no Sell At or marked market for Hold cargo for the best market to keep it for";
+            }
         }
 
         internal static int[] SharePurses(int[] purses, int[] heldFor, int[][] rungs, int[][] here, int[] bought,
