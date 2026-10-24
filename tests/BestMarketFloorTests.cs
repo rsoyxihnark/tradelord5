@@ -188,6 +188,41 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void Each_market_shares_out_only_its_own_purse_among_the_goods_held_for_it()
+        {
+            var rungs = new[] { new[] { 400, 400 }, new[] { 400, 400 }, new[] { 400 } };
+            var here = new[] { Flat(100, 2), Flat(100, 2), Flat(100, 1) };
+            Assert.Equal(new[] { 2, 2, 0 },
+                         TradeRules.SharePurses(new[] { 800, 800, 800 }, new[] { 0, 1, 0 }, rungs, here,
+                                                new[] { 2, 2, 1 }, 0.75f));
+            Assert.Equal(new[] { 2, 0, 0 },
+                         TradeRules.SharePurses(new[] { 800, 800, 800 }, new[] { 0, 0, 0 }, rungs, here,
+                                                new[] { 2, 2, 1 }, 0.75f));
+        }
+
+        [Fact]
+        public void A_good_held_for_no_market_keeps_nothing()
+        {
+            var rungs = new[] { new[] { 400 }, new[] { 400 } };
+            var here = new[] { Flat(100, 1), Flat(100, 1) };
+            Assert.Equal(new[] { 0, 1 },
+                         TradeRules.SharePurses(new[] { 0, 800 }, new[] { -1, 3 }, rungs, here, new[] { 1, 1 }, 0.75f));
+            Assert.Equal(new[] { 0, 0 },
+                         TradeRules.SharePurses(new[] { 800, 800 }, new[] { 0, 1 }, rungs, here, new[] { 1, 1 }, 0f));
+            Assert.Empty(TradeRules.SharePurses(null, null, null, null, null, 0.75f));
+        }
+
+        [Fact]
+        public void One_market_shares_its_purse_the_same_way_for_one_good_or_many()
+        {
+            var rungs = new[] { new[] { 250, 250, 250, 250 }, new[] { 400, 400 }, null };
+            var here = new[] { Flat(180, 4), Flat(120, 2), null };
+            var bought = new[] { 4, 2, 0 };
+            Assert.Equal(TradeRules.SharePurse(1300, rungs, here, bought, 0.75f),
+                         TradeRules.SharePurses(new[] { 1300, 1300, 0 }, new[] { 5, 5, -1 }, rungs, here, bought, 0.75f));
+        }
+
+        [Fact]
         public void This_market_is_walked_until_your_margin_or_its_gold_runs_out()
         {
             int till = 500;

@@ -156,7 +156,8 @@ namespace TradeLord
         Batch[] UnitCosts(int at);
         int UnpaidWorth(int at);
         int HoldableUnits(int at);
-        int ResalePurse();
+        int HeldFor(int at);
+        int ResalePurse(int at);
         bool ResaleMarket(int at, int units, int worth, out int[] rungs);
         Func<int, int> PricesHere(int at);
         void HeldBack(int at, int units, int there, int here);
@@ -166,7 +167,7 @@ namespace TradeLord
         int TillNow();
         void Staged(int at, int price);
         bool Give(int at, int price, out int proceeds);
-        void RecordedSale(int at, int unitPaid, int price, int bestPays);
+        void RecordedSale(int at, int unitPaid, int price, int bestPays, int keptFor);
         void RecordedFreeSale(int at, int price);
         float Today { get; }
     }
@@ -518,16 +519,20 @@ namespace TradeLord
 
         internal static ForTheMark[] WhatTheMarkKeeps(ISellingMarket market, Books books, bool sim, Options s)
         {
-            int purse = market.ResalePurse();
-            if (purse <= 0) return null;
+            bool anyMark = false;
+            for (int at = 0; at < market.Count && !anyMark; at++) anyMark = market.HeldFor(at) >= 0;
+            if (!anyMark) return null;
             var rungs = new int[market.Count][];
             var here = new int[market.Count][];
             var bought = new int[market.Count];
+            var heldFor = new int[market.Count];
+            var purses = new int[market.Count];
             var asked = new Dictionary<string, int>(StringComparer.Ordinal);
             int till = TradeRules.WhatTheTillCanPay(sim ? market.Till() : market.TillNow(), market.Village);
             bool any = false;
             for (int at = 0; at < market.Count; at++)
             {
+                heldFor[at] = -1;
                 string id = market.IdAt(at) ?? "";
                 bool boughtHere = books.Bought(sim, id);
                 int yours = market.HoldableUnits(at);
@@ -555,10 +560,12 @@ namespace TradeLord
                 asked[id] = before + rungs[at].Length;
                 bought[at] = units;
                 here[at] = sells;
+                heldFor[at] = market.HeldFor(at);
+                purses[at] = market.ResalePurse(at);
                 any = true;
             }
             if (!any) return null;
-            int[] kept = TradeRules.SharePurse(purse, rungs, here, bought, s.HoldCargoForBestMarket);
+            int[] kept = TradeRules.SharePurses(purses, heldFor, rungs, here, bought, s.HoldCargoForBestMarket);
             var holding = new ForTheMark[market.Count];
             for (int at = 0; at < holding.Length; at++)
             {
@@ -591,6 +598,7 @@ namespace TradeLord
 
                 int[] there = holding?[at].Rungs;
                 int holdFor = holding?[at].Units ?? 0;
+                int keptFor = !loot && s.HoldCargoForBestMarket > 0f ? holdFor : -1;
 
                 while (remaining > 0)
                 {
@@ -653,7 +661,7 @@ namespace TradeLord
                     if (proceeds == 0) break;
 
                     bool paidFor = basis.SoldOne();
-                    if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays);
+                    if (paidFor) market.RecordedSale(at, basis.SoldAt, proceeds, bestPays, keptFor);
                     else market.RecordedFreeSale(at, proceeds);
                     books.NoteSold(good.Id);
                     moved.Units++;

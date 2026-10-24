@@ -33,6 +33,7 @@ namespace TradeLord.Tests
             internal int Takes = 1000;
             internal int[] Ladder;
             internal bool Elsewhere;
+            internal int Mark;
             internal bool Modified;
             internal int Reserved;
             internal int Falls;
@@ -58,6 +59,7 @@ namespace TradeLord.Tests
             internal int AskedFor;
             internal int AskedWorth;
             internal int MarkPurse = 1000000;
+            internal readonly Dictionary<int, int> Purses = new Dictionary<int, int>();
             internal readonly List<(string good, int units, int there, int here)> Held =
                 new List<(string good, int units, int there, int here)>();
 
@@ -149,12 +151,17 @@ namespace TradeLord.Tests
                 return said.Allowed ? Math.Max(0, YoursToSell(at) - said.KeepCount) : 0;
             }
 
-            public int ResalePurse() => MarkPurse;
+            public int HeldFor(int at) => Cargo[at].Elsewhere ? Cargo[at].Mark : -1;
+
+            private int PurseOf(int mark) => Purses.TryGetValue(mark, out int purse) ? purse : MarkPurse;
+
+            public int ResalePurse(int at) => HeldFor(at) < 0 ? 0 : PurseOf(Cargo[at].Mark);
 
             public bool ResaleMarket(int at, int units, int worth, out int[] rungs)
             {
                 AskedFor = units;
                 AskedWorth = worth;
+                int purse = PurseOf(Cargo[at].Mark);
                 var took = new List<int>();
                 long paid = 0L;
                 for (int u = 0; u < units; u++)
@@ -162,7 +169,7 @@ namespace TradeLord.Tests
                     int price = Cargo[at].Ladder != null
                         ? (u < Cargo[at].Ladder.Length ? Cargo[at].Ladder[u] : 0)
                         : (u < Cargo[at].Takes ? Cargo[at].Resale : 0);
-                    if (price <= 0 || paid + price > MarkPurse) break;
+                    if (price <= 0 || paid + price > purse) break;
                     paid += price;
                     took.Add(price);
                 }
@@ -215,12 +222,14 @@ namespace TradeLord.Tests
 
             internal readonly List<int> RecordedPaid = new List<int>();
             internal readonly List<int> RecordedBest = new List<int>();
+            internal readonly List<int> RecordedKept = new List<int>();
 
-            public void RecordedSale(int at, int unitPaid, int price, int bestPays)
+            public void RecordedSale(int at, int unitPaid, int price, int bestPays, int keptFor)
             {
                 Recorded.Add(Cargo[at].Good.Id);
                 RecordedPaid.Add(unitPaid);
                 RecordedBest.Add(bestPays);
+                RecordedKept.Add(keptFor);
                 Cargo[at].Purchased--;
             }
 
@@ -502,6 +511,59 @@ namespace TradeLord.Tests
             load.Elsewhere = true;
             load.Resale = there;
             return load;
+        }
+
+        [Fact]
+        public void Each_good_is_held_for_its_own_market_out_of_that_markets_purse()
+        {
+            var market = new FakeMarket();
+            BoughtAs(market, "wine", 2, price: 200, paid: 100, there: 300).Mark = 0;
+            BoughtAs(market, "flax", 2, price: 200, paid: 100, there: 300).Mark = 1;
+            market.Purses[0] = 600;
+            market.Purses[1] = 600;
+            Run run = Sell(market);
+            Assert.Equal(0, run.Units);
+            Assert.Contains(market.Held, one => one.good == "wine" && one.units == 2);
+            Assert.Contains(market.Held, one => one.good == "flax" && one.units == 2);
+        }
+
+        [Fact]
+        public void Goods_held_for_the_same_market_share_its_purse()
+        {
+            var market = new FakeMarket();
+            BoughtAs(market, "wine", 2, price: 200, paid: 100, there: 300).Mark = 0;
+            BoughtAs(market, "flax", 2, price: 200, paid: 100, there: 300).Mark = 0;
+            market.Purses[0] = 600;
+            Run run = Sell(market);
+            Assert.Equal(2, run.Units);
+        }
+
+        [Fact]
+        public void A_good_with_no_market_to_hold_it_for_sells_while_another_is_held()
+        {
+            var market = new FakeMarket();
+            BoughtAs(market, "wine", 2, price: 200, paid: 100, there: 300);
+            Load flax = BoughtAs(market, "flax", 2, price: 200, paid: 100, there: 300);
+            flax.Elsewhere = false;
+            Run run = Sell(market);
+            Assert.Equal(2, run.Units);
+            Assert.All(market.Given, one => Assert.Equal("flax", one));
+            Assert.All(market.RecordedKept, kept => Assert.Equal(0, kept));
+        }
+
+        [Fact]
+        public void A_sale_is_told_how_many_units_the_hold_kept_and_nothing_with_the_hold_off()
+        {
+            var market = new FakeMarket();
+            Bought(market, 5, price: 200, paid: 100, there: 300).Takes = 2;
+            Sell(market);
+            Assert.Equal(new[] { 2, 2, 2 }, market.RecordedKept.ToArray());
+
+            var off = new FakeMarket();
+            off.Rules.HoldCargoForBestMarket = 0f;
+            Bought(off, 2, price: 200, paid: 100, there: 300);
+            Sell(off);
+            Assert.Equal(new[] { -1, -1 }, off.RecordedKept.ToArray());
         }
 
         [Fact]

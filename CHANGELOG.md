@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.0
+
+- Hold cargo for the best market now holds each good for the Sell At it was bought for, or else for the marked market
+- Hold cargo for the best market now holds a good for its Sell At even with Auto-mark best sell market on map off
+- When TradeLord holds your cargo, the message now says it keeps your goods for their Sell At instead of the marked market
+- The hint for Hold cargo for the best market now says a good is held for its Sell At, or else the marked market, in every language
+- TradeLord.log now says whether each held good was kept for the Sell At it was bought for or for the marked market
+- TradeLord.log now writes every sale against the Hold cargo for the best market line, or says why that sale had none
+- Fixed TradeLord.log naming a best other buyer past your travel ceilings after a sale
+- With Enable extended debug logging on, TradeLord.log now says what the best other buyer would pay for all the units of each sale
+
 ## 2.1.1
 
 - Fixed TradeLord picking where to sell goods from a villagers' offer by what they fetch instead of the profit a day over what you paid
