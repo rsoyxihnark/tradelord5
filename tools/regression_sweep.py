@@ -6442,7 +6442,7 @@ def the_venue_is_the_only_thing_a_pass_asks_where_it_is():
     sell = sell_pass()
     buy = buy_pass()
     held = method_body(t, "private sealed class Pass")
-    return (sell.count("pass.Site") == 6 and buy.count("pass.Site") == 7
+    return (sell.count("pass.Site") == 6 and buy.count("pass.Site") == 8
             and sell.count("pass.Reports") == 0 and buy.count("pass.Reports") == 2
             and sell.count("pass.Key") == 1 and buy.count("pass.Key") == 1
             and "Site" not in method_body(t, "public static void ExecuteRoadTrade")
@@ -21111,6 +21111,42 @@ def a_hungry_party_buys_food_that_sells_on_past_the_bar():
 
 chk("2.1.0", "with less than a day of its own food, your party buys food past its usual bar when the TradeLord ledger would sell it on at a profit",
     a_hungry_party_buys_food_that_sells_on_past_the_bar())
+
+
+
+def a_villagers_offer_sells_where_it_earns_most_a_day_over_what_you_paid():
+    resale = method_body(S['Trading.cs'], "public bool ResaleMarket(int at, int paid, int units, out int price)")
+    lot = method_body(S['Passes.cs'], "internal static Block WhatStopsTheLot(")
+    return (resale and lot
+            and ordered(resale, "TradeRoute row = Plan.BestSale(item, null, units, 0, 0, units, _pass.Site, out Ladder rungs, out int till);",
+                        "if (paid > 0)",
+                        "TradeRoute earns = Plan.BestSale(item, ahead => paid, units, 0, 0, units, _pass.Site,",
+                        "if (earns?.To != null)", "row = earns;",
+                        "row.TotalProfit -= row.Cost;",
+                        "Aim(at, row.To, price, rungs, till);")
+            and "if (paid > 0 && !TradePolicy.BuyAcceptable(paid, TradePolicy.Realizable(price))) break;" in best_sale()
+            and "if (!market.ResaleMarket(one.At, unit, from + units, out _)) continue;" in lot
+            and "if (!TradeMath.BuyAcceptable(lot.Price, lot.Resale, s.MinProfitMargin)) return Block.BelowMargin;" in lot)
+
+
+chk("2.1.1", "each good in a villagers' offer is meant for the market that earns most a day over what you pay, or what it fetches where none clears the margin, and the whole offer still meets Min profit margin",
+    a_villagers_offer_sells_where_it_earns_most_a_day_over_what_you_paid())
+
+
+def the_map_marker_learns_where_a_villagers_offer_was_bought_for():
+    resale = method_body(S['Trading.cs'], "public bool ResaleMarket(int at, int paid, int units, out int price)")
+    lot = method_body(S['Trading.cs'], "private static void LotPass(Pass pass, string why)")
+    return (resale and lot
+            and ordered(resale, "Aim(at, row.To, price, rungs, till);",
+                        "if (_theirOffer && TradeRules.TakenAsLoot(GoodAt(at), Options.Current)) return true;",
+                        "_plans[item] = row;")
+            and ordered(lot, "if (!pass.Sim) Meetings.TookTheirOffer(pass.Met);",
+                        "if (!pass.Sim || Counter.Staging) market.NoteWhatItWasBoughtFor(laidOut: Counter.Staging);",
+                        "pass.Moved(gold: spent, selling: false);"))
+
+
+chk("2.1.1", "the map marker learns the Sell At each good in a villagers' offer was bought for, while gear written down like loot is left out as before",
+    the_map_marker_learns_where_a_villagers_offer_was_bought_for())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

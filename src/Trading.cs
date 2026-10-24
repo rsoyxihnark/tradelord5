@@ -3101,6 +3101,7 @@ namespace TradeLord
             int spent = pass.Spent(moved.SimGold);
             if (bought <= 0) return;
             if (!pass.Sim) Meetings.TookTheirOffer(pass.Met);
+            if (!pass.Sim || Counter.Staging) market.NoteWhatItWasBoughtFor(laidOut: Counter.Staging);
             pass.Moved(gold: spent, selling: false);
             Log.Write(pass.Headed(label) + bought + " items, -" + spent + " gold " + pass.Where);
             pass.Logged(selling: false, why);
@@ -3302,8 +3303,28 @@ namespace TradeLord
                 ItemObject item = Item(at);
                 TradeRoute row = Plan.BestSale(item, null, units, 0, 0, units, _pass.Site, out Ladder rungs, out int till);
                 if (row?.To == null) return false;
+                if (paid > 0)
+                {
+                    TradeRoute earns = Plan.BestSale(item, ahead => paid, units, 0, 0, units, _pass.Site,
+                                                     out Ladder earnsRungs, out int earnsTill);
+                    if (earns?.To != null)
+                    {
+                        row = earns;
+                        rungs = earnsRungs;
+                        till = earnsTill;
+                    }
+                    else
+                    {
+                        row.BuyPrice = paid;
+                        row.Cost = TradeMath.WorthOf(row.Quantity, paid);
+                        row.TotalProfit -= row.Cost;
+                    }
+                }
                 price = row.SellPrice;
                 Aim(at, row.To, price, rungs, till);
+                if (_theirOffer && TradeRules.TakenAsLoot(GoodAt(at), Options.Current)) return true;
+                if (_plans == null) _plans = new Dictionary<ItemObject, TradeRoute>();
+                _plans[item] = row;
                 return true;
             }
 
