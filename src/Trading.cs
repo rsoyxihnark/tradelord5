@@ -593,8 +593,8 @@ namespace TradeLord
                 new Dictionary<ItemObject, (int count, int gold)>();
             internal readonly Dictionary<ItemObject, (string where, int price)> Aimed =
                 new Dictionary<ItemObject, (string where, int price)>();
-            internal readonly Dictionary<ItemObject, (string where, int units, int there, int here)> Held =
-                new Dictionary<ItemObject, (string where, int units, int there, int here)>();
+            internal readonly Dictionary<ItemObject, (string where, int units, int there, int here, bool boughtFor)> Held =
+                new Dictionary<ItemObject, (string where, int units, int there, int here, bool boughtFor)>();
             internal readonly Dictionary<ItemObject, Buyer> Elsewhere = new Dictionary<ItemObject, Buyer>();
 
             internal bool DirectionError;
@@ -884,6 +884,7 @@ namespace TradeLord
                 var said = new List<string>(Held.Count);
                 foreach (var kv in Held)
                     said.Add("held " + kv.Value.units + " " + kv.Key.StringId + " for " + kv.Value.where +
+                             (kv.Value.boughtFor ? ", the Sell At it was bought for" : ", the marked market") +
                              ", which pays at least " + kv.Value.there + " each for them, against " + kv.Value.here +
                              " here (Hold cargo for the best market)" + (Sim ? Counter.Aside : ""));
                 return said;
@@ -1603,13 +1604,17 @@ namespace TradeLord
             return ", meant for " + far.where + " at " + far.price + " a unit";
         }
 
-        private static string BestElsewhere(bool selling, Dictionary<ItemObject, Buyer> elsewhere, ItemObject item)
+        private static string BestElsewhere(bool selling, Dictionary<ItemObject, Buyer> elsewhere, ItemObject item,
+                                            int units)
         {
             if (!selling || item == null || elsewhere == null || !elsewhere.TryGetValue(item, out Buyer other)) return "";
             if (other.Town == null) return "; no other market within your travel ceilings buys it";
+            int last = units > 1 && other.Pays != null ? other.Pays.At(units - 1) : other.First;
             return "; the best other buyer within your travel ceilings is " +
-                   Tongue.Named(other.Town.Name, other.Town.StringId) + " at " + other.First + " a unit, about " +
-                   Scoring.Figure(other.Days) + " day(s) away";
+                   Tongue.Named(other.Town.Name, other.Town.StringId) + ", which would pay " + other.Total +
+                   " for the " + units + " unit(s) sold here, " + other.First +
+                   (last == other.First ? " a unit" : last < other.First ? " a unit down to " + last : " a unit up to " + last) +
+                   ", about " + Scoring.Figure(other.Days) + " day(s) away";
         }
 
         private static void LogDetail(bool selling, bool sim, Dictionary<ItemObject, (int count, int gold)> detail,
@@ -1624,7 +1629,7 @@ namespace TradeLord
                           kv.Key.StringId + " for " + kv.Value.gold + (sim ? Counter.Aside : "") +
                           Quotation(quoted, kv.Key, kv.Value.gold) +
                           MeantFor(selling, aimed, kv.Key) +
-                          BestElsewhere(selling, elsewhere, kv.Key));
+                          BestElsewhere(selling, elsewhere, kv.Key, kv.Value.count));
                 LogAnimalMoved(lines, selling, sim, kv.Key, kv.Value.count, kv.Value.gold, why);
             }
             Log.WriteMany(lines);
@@ -1925,10 +1930,10 @@ namespace TradeLord
 
             public int UnpaidWorth(int at) => TradePolicy.UnpaidWorth(Item(at));
 
-            private bool _markRead;
-            private Settlement _mark;
-            private float _markRide;
-            private int _markPurse;
+            private readonly Dictionary<ItemObject, (int mark, bool boughtFor)> _holdFor =
+                new Dictionary<ItemObject, (int mark, bool boughtFor)>();
+            private readonly List<(Settlement where, float ride, int purse)> _marks =
+                new List<(Settlement where, float ride, int purse)>();
             private bool _aheadCopied;
             private Dictionary<ItemObject, int> _keepBackAhead;
             private Dictionary<ItemObject, int> _awaitedAhead;
@@ -1947,35 +1952,43 @@ namespace TradeLord
                 return Math.Max(0, YoursToSell(at) - keep);
             }
 
-            private Settlement TheMark()
+            public int HeldFor(int at)
             {
-                if (!_markRead)
+                ItemObject item = Item(at);
+                if (item == null) return -1;
+                if (_holdFor.TryGetValue(item, out var known)) return known.mark;
+                Settlement where = Marker.HoldFor(item, _pass.Site, Travel.EstimateDaysFromParty,
+                                                  out float ride, out int purse, out bool boughtFor);
+                int mark = where == null ? -1 : _marks.FindIndex(one => one.where == where);
+                if (where != null && mark < 0)
                 {
-                    _markRead = true;
-                    Settlement mark = Marker.TheMarkToHoldFor(_pass.Site);
-                    if (mark != null)
-                    {
-                        float ride = Travel.EstimateDaysFromParty(mark);
-                        int purse = Marker.PurseOf(mark);
-                        if (LedgerBehavior.WithinTravelCeiling(mark, ride) && purse > 0)
-                        {
-                            _mark = mark;
-                            _markRide = ride;
-                            _markPurse = purse;
-                        }
-                    }
+                    _marks.Add((where, ride, purse));
+                    mark = _marks.Count - 1;
                 }
-                return _mark;
+                _holdFor[item] = (mark, boughtFor);
+                return mark;
             }
 
-            public int ResalePurse() => TheMark() == null ? 0 : _markPurse;
+            private Settlement MarkOf(int at, out bool boughtFor)
+            {
+                int mark = HeldFor(at);
+                boughtFor = mark >= 0 && _holdFor[Item(at)].boughtFor;
+                return mark < 0 ? null : _marks[mark].where;
+            }
+
+            public int ResalePurse(int at)
+            {
+                int mark = HeldFor(at);
+                return mark < 0 ? 0 : _marks[mark].purse;
+            }
 
             public bool ResaleMarket(int at, int units, int worth, out int[] rungs)
             {
                 rungs = null;
-                if (TheMark() == null) return false;
-                rungs = Marker.WhatTheMarkTakes(_mark, _plan[at].EquipmentElement, units, worth,
-                                                _markRide, _markPurse);
+                int mark = HeldFor(at);
+                if (mark < 0) return false;
+                var (where, ride, purse) = _marks[mark];
+                rungs = Marker.WhatTheMarkTakes(where, _plan[at].EquipmentElement, units, worth, ride, purse);
                 return rungs.Length > 0;
             }
 
@@ -1984,13 +1997,14 @@ namespace TradeLord
             public void HeldBack(int at, int units, int there, int here)
             {
                 ItemObject item = Item(at);
-                if (item == null || _mark == null || units <= 0) return;
+                Settlement mark = MarkOf(at, out bool boughtFor);
+                if (item == null || mark == null || units <= 0) return;
                 if (_pass.Held.TryGetValue(item, out var was))
                 {
                     units += was.units;
                     there = Math.Min(there, was.there);
                 }
-                _pass.Held[item] = (Tongue.Named(_mark.Name, _mark.StringId), units, there, here);
+                _pass.Held[item] = (Tongue.Named(mark.Name, mark.StringId), units, there, here, boughtFor);
             }
 
             public int PriceToSell(int at) => _pass.Price(_plan[at].EquipmentElement, selling: true);
@@ -2017,7 +2031,7 @@ namespace TradeLord
 
             public float Today => (float)CampaignTime.Now.ToDays;
 
-            public void RecordedSale(int at, int unitPaid, int price, int bestPays)
+            public void RecordedSale(int at, int unitPaid, int price, int bestPays, int keptFor)
             {
                 LedgerBehavior ledger = LedgerBehavior.Instance;
                 float bought = 0f;
@@ -2041,12 +2055,21 @@ namespace TradeLord
                                   ? ", at least the " + TradeMath.LeastThatClears(unitPaid, margin) +
                                     " it needed to clear your margin"
                                   : "") +
-                          (bestPays > 0 && _mark != null
-                              ? ", and at least the " + TradeRules.BestMarketFloor(bestPays, share) + " that is " +
-                                Math.Round(share * 100f) + "% of the " + bestPays + " " +
-                                Tongue.Named(_mark.Name, _mark.StringId) + " would pay for it"
-                              : "") +
+                          (aged ? "" : AgainstTheHoldLine(at, bestPays, keptFor, share)) +
                           LedgerBehavior.TradeXpNote(from, _plan[at].EquipmentElement));
+            }
+
+            private string AgainstTheHoldLine(int at, int bestPays, int keptFor, float share)
+            {
+                if (keptFor < 0) return "";
+                Settlement mark = MarkOf(at, out bool boughtFor);
+                if (mark == null) return ", with no market within your travel ceilings for Hold cargo for the best market to keep it for";
+                string named = Tongue.Named(mark.Name, mark.StringId) +
+                               (boughtFor ? ", the Sell At it was bought for" : ", the marked market");
+                return bestPays > 0
+                    ? ", and at least the " + TradeRules.BestMarketFloor(bestPays, share) + " that is " +
+                      Math.Round(share * 100f) + "% of the " + bestPays + " " + named + " would pay for it"
+                    : ", past the " + keptFor + " unit(s) Hold cargo for the best market keeps for " + named;
             }
 
             public void RecordedFreeSale(int at, int price) =>

@@ -881,6 +881,30 @@ namespace TradeLord
             return kept;
         }
 
+        internal static int[] SharePurses(int[] purses, int[] heldFor, int[][] rungs, int[][] here, int[] bought,
+                                          float share)
+        {
+            int goods = rungs == null ? 0 : rungs.Length;
+            var kept = new int[goods];
+            var done = new bool[goods];
+            for (int g = 0; g < goods; g++)
+            {
+                if (done[g] || heldFor == null || g >= heldFor.Length || heldFor[g] < 0) continue;
+                var theirs = new int[goods][];
+                for (int o = g; o < goods && o < heldFor.Length; o++)
+                {
+                    if (heldFor[o] != heldFor[g]) continue;
+                    theirs[o] = rungs[o];
+                    done[o] = true;
+                }
+                int purse = purses != null && g < purses.Length ? purses[g] : 0;
+                int[] shared = SharePurse(purse, theirs, here, bought, share);
+                for (int o = g; o < goods; o++)
+                    if (theirs[o] != null) kept[o] = shared[o];
+            }
+            return kept;
+        }
+
         internal const int VillageLastCoin = 1;
 
         internal static int WhatTheTillCanPay(int till, bool village) =>

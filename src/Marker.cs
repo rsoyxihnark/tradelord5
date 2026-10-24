@@ -907,7 +907,7 @@ namespace TradeLord
                 SettlementComponent market = town?.SettlementComponent;
                 if (market == null) continue;
                 float ride = Travel.EstimateDaysFromParty(town);
-                if (TradeMath.OutOfReach(ride)) continue;
+                if (TradeMath.OutOfReach(ride) || !LedgerBehavior.WithinTravelCeiling(town, ride)) continue;
                 int purse = PurseOf(town);
                 Paying pays = WhatThatMarketPays(town, market, el, party, ride);
                 var one = new Buyer
@@ -1334,6 +1334,50 @@ namespace TradeLord
             return mark;
         }
 
+        internal static Settlement HoldFor(ItemObject item, Settlement here, System.Func<Settlement, float> rideTo,
+                                           out float ride, out int purse, out bool boughtFor)
+        {
+            ride = 0f;
+            purse = 0;
+            boughtFor = false;
+            if (item == null || rideTo == null || InTheMarkedMarket(here)) return null;
+            Settlement meant = BoughtFor(item);
+            if (meant != null && meant == here) return null;
+            if (meant != null && MayHoldFor(meant) && InReach(meant, rideTo, out ride, out purse))
+            {
+                boughtFor = true;
+                return meant;
+            }
+            Settlement mark = TheMarkToHoldFor(here);
+            if (mark != null && InReach(mark, rideTo, out ride, out purse)) return mark;
+            ride = 0f;
+            purse = 0;
+            return null;
+        }
+
+        private static bool InTheMarkedMarket(Settlement here) =>
+            here != null && Options.Current.MarkBestSellTownOnMap &&
+            (_picked == here || (here.StringId == _walkedInto && _markedOnTheWayIn == here.StringId));
+
+        private static Settlement BoughtFor(ItemObject item)
+        {
+            if (item == null || !_intended.TryGetValue(item.StringId, out Meant meant) || meant.To == null) return null;
+            if (Scoring.TooOldToSay(meant.Days, meant.AtHours, (float)CampaignTime.Now.ToHours, out _)) return null;
+            return Settlement.Find(meant.To);
+        }
+
+        private static bool MayHoldFor(Settlement s) =>
+            s?.SettlementComponent != null && TradeActionBehavior.IsMarket(s) &&
+            !LedgerBehavior.UnderAttack(s) && !LedgerBehavior.VillageShut(s) &&
+            !(Options.Current.ExcludeHostileTowns && LedgerBehavior.IsHostile(s));
+
+        private static bool InReach(Settlement s, System.Func<Settlement, float> rideTo, out float ride, out int purse)
+        {
+            ride = rideTo(s);
+            purse = PurseOf(s);
+            return LedgerBehavior.WithinTravelCeiling(s, ride) && purse > 0;
+        }
+
         internal static (float room, int gold) WhatYourCargoFrees(Settlement site, float holdShare)
         {
             MobileParty party = MobileParty.MainParty;
@@ -1356,31 +1400,41 @@ namespace TradeLord
             List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo, float holdShare)
         {
             if (!(holdShare > 0f)) return null;
-            Settlement mark = TheMarkToHoldFor(site);
-            if (mark == null || mark == site) return null;
-            float onward = Travel.EstimateDaysBetween(site, mark, ride);
-            int purse = PurseOf(mark);
-            if (!LedgerBehavior.WithinTravelCeiling(mark, onward) || purse <= 0) return null;
             MobileParty party = MobileParty.MainParty;
             SettlementComponent market = site.SettlementComponent;
             if (party == null || market == null) return null;
             var rungs = new int[cargo.Count][];
             var here = new int[cargo.Count][];
             var bought = new int[cargo.Count];
+            var heldFor = new int[cargo.Count];
+            var purses = new int[cargo.Count];
+            var marks = new List<Settlement>();
+            System.Func<Settlement, float> onwardTo = to => Travel.EstimateDaysBetween(site, to, ride);
             int till = PurseOf(site);
             for (int at = 0; at < cargo.Count; at++)
             {
+                heldFor[at] = -1;
                 var (el, amount, worth, floors) = cargo[at];
                 int units = System.Math.Max(0, amount - floors.AgedLeft);
                 if (units <= 0) continue;
+                Settlement mark = HoldFor(el.Item, site, onwardTo, out float onward, out int purse, out _);
+                if (mark == null) continue;
                 int[] ladder = WhatTheMarkTakes(mark, el, units, worth, ride + onward, purse);
                 if (ladder.Length == 0) continue;
                 Paying pays = WhatThatMarketPays(site, market, el, party, ride);
                 here[at] = TradeRules.WhatSellsHere(pays.At, units, worth, Options.Current.MinProfitMargin, ref till);
                 rungs[at] = ladder;
                 bought[at] = units;
+                heldFor[at] = marks.IndexOf(mark);
+                if (heldFor[at] < 0)
+                {
+                    marks.Add(mark);
+                    heldFor[at] = marks.Count - 1;
+                }
+                purses[at] = purse;
             }
-            int[] kept = TradeRules.SharePurse(purse, rungs, here, bought, holdShare);
+            if (marks.Count == 0) return null;
+            int[] kept = TradeRules.SharePurses(purses, heldFor, rungs, here, bought, holdShare);
             for (int at = 0; at < cargo.Count; at++)
                 if (rungs[at] != null && kept[at] < rungs[at].Length) System.Array.Resize(ref rungs[at], kept[at]);
             return rungs;
