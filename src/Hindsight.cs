@@ -182,9 +182,17 @@ namespace TradeLord
         private static void Kept(Settlement site)
         {
             Dictionary<string, Promised> here = _promised.TakeAt(site.StringId);
-            if (here == null) return;
             SettlementComponent market = site.SettlementComponent;
             if (market == null) return;
+            if (here == null)
+            {
+                List<string> only = Writing ? Marker.WhatWasBoughtFor(site, market) : null;
+                if (only == null || only.Count == 0) return;
+                only.Insert(0, "promise check at " + site.Name + ", bought for " + site.Name +
+                               " on the TradeLord ledger's plan:");
+                Log.WriteMany(only);
+                return;
+            }
             float now = (float)CampaignTime.Now.ToHours;
             var lines = new List<string>();
             int scored = 0, stale = 0, unpriced = 0, yours = 0, early = 0;
@@ -233,13 +241,19 @@ namespace TradeLord
             foreach (KeyValuePair<string, Promised> one in stillToCome) _promised.Put(site.StringId, one.Key, one.Value);
             if (scored > 0)
                 LedgerBehavior.Instance?.KeepArrival(site.StringId, TradeMath.MeanOf(paidTotal, scored));
-            if (!Writing || scored + stale + yours + unpriced + early == 0) return;
+            List<string> boughtFor = Writing ? Marker.WhatWasBoughtFor(site, market) : null;
+            if (boughtFor != null && boughtFor.Count > 0)
+            {
+                lines.Add("  bought for " + site.Name + " on the TradeLord ledger's plan:");
+                lines.AddRange(boughtFor);
+            }
+            if (!Writing || scored + stale + yours + unpriced + early + (boughtFor?.Count ?? 0) == 0) return;
             lines.Insert(0, "promise check at " + site.Name + ", " + scored + " promise(s) scored" +
                       (stale == 0 ? "" : ", " + stale + " passed over as too old to say anything") +
                       (yours == 0 ? "" : ", " + yours + " set aside because your own trading has moved the price since it was promised") +
                       (unpriced == 0 ? "" : ", " + unpriced + " the market would put no price on") +
                       (early == 0 ? "" : ", " + early + " kept for a later walk-in as too soon to say anything"));
-            if (scored + stale + yours + unpriced == 0)
+            if (scored + stale + yours + unpriced == 0 && (boughtFor?.Count ?? 0) == 0)
             {
                 Log.Repeatable("promise check " + site.StringId, early.ToString(), lines[0]);
                 return;

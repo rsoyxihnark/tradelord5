@@ -19,6 +19,7 @@
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying
 - ✅ That time counts the nights, the snow and wet ground on the way and the hours your party stays Disorganized, the way the game slows you down
+- ✅ It counts the forests, rivers, fords, bridges and deserts on the way too, at the pace the game gives your party, caravans and villagers there
 - ✅ Stock counts, so you know the deal is actually there
 - ✅ What you paid for a good, per unit, on its own tooltip once you have bought one, so you can see at a glance whether the market in front of you is beating it
 - ✅ Inventory rows tinted good to bad against the best price known
@@ -50,6 +51,7 @@
 - ✅ Counted at each end of a route, by what arrives before you would, a load landing within a quarter day of you counted in part, so a route is priced on the market you will actually walk into
 - ✅ Where part of the amount it quotes is still on the road, the panel marks it Qty!, so a number larger than the shelf is never a surprise
 - ✅ The amount it quotes is what fits in your cargo once TradeLord has sold what it would sell at the buy market, and a good none of which would fit is left out
+- ✅ It also holds that amount to what your purse and what you may spend there leave for it after the better routes from the same market
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
 - ✅ How much gold the market you would sell to actually has, counted in, so it never plans a sale nobody can pay for
 - ✅ It reads that purse live, so with Live world prices off it plans on the stock alone
@@ -114,12 +116,13 @@
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ How much of a price elsewhere it counts on is learned: with Learn the resale safety factor on, it starts at Resale safety factor and only ever lowers it, toward how much of the promised Sell price really held when you walked in
 - ✅ What this means says what share of a price elsewhere it counts on once your walk-ins have lowered it
-- ✅ When your cargo room or your gold runs short, it buys first the good that makes the most for each unit of room or each denar it uses
+- ✅ It buys first what the TradeLord ledger offers at that market, then the good that makes the most profit a day for each unit of weight it carries
+- ✅ It buys each good up to the Qty the TradeLord ledger shows, for the Sell At the TradeLord ledger shows
 - ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it. On out of the box
 - ✅ Adaptive spend limit holds at Max spend per visit until your purse is five times that, then grows by one more Max spend per visit for every doubling of the purse, so 10000 in the purse allows 2000 and 20000 allows 3000
+- ✅ Where the TradeLord ledger expects more profit from a market's routes than that, it may spend up to that profit there
 - ✅ Pick where to sell on the whole load, on out of the box: every market in reach is weighed on what it would pay for the whole load rather than on what it pays for one unit
 - ✅ The whole load is only what your caps, your gold, your cargo and your herd let it buy, and a market is weighed only on what its own purse can pay for
-- ✅ When the gold left after the goods before it buys fewer units than a good was weighed on, the market is picked again for what it can still buy
 - ✅ Holds trade goods and livestock you never paid for, the ones a town event hands you or a quest leaves in your bags, until a market beats what the cheapest market it knows would have charged for them by your margin
 - ✅ Goods you never paid for are never given away at the first stall that will take them
 - ✅ Holds a good you bought for the market marked on your map rather than selling it one town short for much less: Hold cargo for the best market sells it on the way only for at least 75% of what that market pays

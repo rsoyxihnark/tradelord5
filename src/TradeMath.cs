@@ -62,11 +62,6 @@ namespace TradeLord
             return paid;
         }
 
-        public static bool PaysMore(long total, int first, float days, long otherTotal, int otherFirst, float otherDays) =>
-            total != otherTotal ? total > otherTotal
-            : first != otherFirst ? first > otherFirst
-            : days < otherDays;
-
         public static int[] WhatTheMarkTakes(Func<int, int> rungAt, int carried, int worth,
                                              float margin, int purse)
         {
@@ -1111,11 +1106,8 @@ namespace TradeLord
             return amount / over;
         }
 
-        public static float EarnedPerDay(int sellPrice, int paid, float days)
-        {
-            if (sellPrice <= 0 || sellPrice <= paid) return 0f;
-            return PerDay(sellPrice - paid, days);
-        }
+        public static float OneUnitRate(int sell, int paid, float days, bool conservative, float safety) =>
+            sell <= 0 ? 0f : PerDay((conservative ? (int)Realizable(sell, safety) : sell) - paid, days);
 
         public const float TheMarkedTownHoldsBy = 1.2f;
 
@@ -1124,24 +1116,6 @@ namespace TradeLord
             if (!marked || rate <= 0f || float.IsNaN(rate)) return rate;
             float held = rate * TheMarkedTownHoldsBy;
             return float.IsInfinity(held) ? rate : held;
-        }
-
-        public static int MostYouCouldTake(int unitPrice, float unitWeight, int stocked,
-                                           int spendable, float room, int cap)
-        {
-            if (unitPrice <= 0 || stocked <= 0 || spendable <= 0) return 0;
-            long take = stocked;
-            if (cap > 0 && cap < take) take = cap;
-            long affordable = spendable / unitPrice;
-            if (affordable < take) take = affordable;
-            if (unitWeight > 0.01f)
-            {
-                if (room <= 0f || float.IsNaN(room)) return 0;
-                long fits = (long)(room / unitWeight);
-                if (fits < take) take = fits;
-            }
-            if (take <= 0) return 0;
-            return take > int.MaxValue ? int.MaxValue : (int)take;
         }
 
         public static bool EnoughOnTheShelf(int stocked, int unitWorth, int minUnits, int minWorth)
@@ -1341,6 +1315,101 @@ namespace TradeLord
 
         public const int Weathers = 16;
 
+        public const int Grounds = 5;
+        public const int OpenGround = 0;
+        public const int PlainOrSteppe = 1;
+        public const int ForestGround = 2;
+        public const int WaterGround = 3;
+        public const int DesertGround = 4;
+
+        public static readonly float[] GameGroundSteps = { 0f, 0f, -0.2f, -0.3f, -0.1f };
+
+        public static byte GroundOf(int terrainType)
+        {
+            switch (terrainType)
+            {
+                case 1:
+                case 5:
+                    return PlainOrSteppe;
+                case 4:
+                    return ForestGround;
+                case 6:
+                case 10:
+                case 11:
+                case 17:
+                case 25:
+                    return WaterGround;
+                case 2:
+                case 16:
+                    return DesertGround;
+                default:
+                    return OpenGround;
+            }
+        }
+
+        public static float GroundStep(float[] steps, int ground) =>
+            ground <= OpenGround || ground >= Grounds
+                ? 0f
+                : steps != null && ground < steps.Length && !float.IsNaN(steps[ground]) && !float.IsInfinity(steps[ground])
+                    ? steps[ground]
+                    : GameGroundSteps[ground];
+
+        public static float[] WithGrounds(float[] paces, float[] groundShares)
+        {
+            if (paces == null || paces.Length < Weathers) return paces;
+            var all = new float[Weathers * Grounds];
+            for (int g = 0; g < Grounds; g++)
+            {
+                float share = g == OpenGround || groundShares == null || g >= groundShares.Length
+                    ? 1f
+                    : Math.Min(Math.Max(Finite(groundShares[g], 1f), SlowestNightPace), FastestNightPace);
+                for (int w = 0; w < Weathers; w++) all[g * Weathers + w] = NightPaceKept(paces[w] * share);
+            }
+            all[0] = 1f;
+            return all;
+        }
+
+        public static float[] GroundSharesFromSteps(float[] steps)
+        {
+            var shares = new float[Grounds];
+            for (int g = 0; g < Grounds; g++) shares[g] = 1f + GroundStep(steps, g);
+            return shares;
+        }
+
+        public static void GroundsAlong(IList<RoadPiece> pieces, float length, float every, Func<float, int> groundAt,
+                                        List<RoadPiece> into)
+        {
+            into.Clear();
+            if (pieces == null || pieces.Count == 0) return;
+            if (groundAt == null || !(length > 0f) || !(every > 0f) || float.IsInfinity(length))
+            {
+                into.AddRange(pieces);
+                return;
+            }
+            double step = Math.Max(every / length, 1d / MostGroundSamples);
+            double t = 0d;
+            for (int p = 0; p < pieces.Count; p++)
+            {
+                double end = t + Math.Max(0f, Finite(pieces[p].Share, 0f));
+                double at = t;
+                while (at < end - 1e-9)
+                {
+                    double next = Math.Min(end, at + step);
+                    byte ground = (byte)Math.Min(Math.Max(groundAt((float)((at + next) * 0.5d)), 0), Grounds - 1);
+                    float share = (float)(next - at);
+                    int last = into.Count - 1;
+                    if (last >= 0 && into[last].Cell == pieces[p].Cell && into[last].Ground == ground)
+                        into[last] = new RoadPiece { Cell = pieces[p].Cell, Share = into[last].Share + share, Ground = ground };
+                    else
+                        into.Add(new RoadPiece { Cell = pieces[p].Cell, Share = share, Ground = ground });
+                    at = next;
+                }
+                t = end;
+            }
+        }
+
+        public const int MostGroundSamples = 400;
+
         public const int MostTurnsOnTheRoad = 4096;
         public const float MostRoadDetour = 3f;
         public const float OnTheRoadSlack = 1.05f;
@@ -1366,6 +1435,7 @@ namespace TradeLord
         {
             public int Cell;
             public float Share;
+            public byte Ground;
         }
 
         public struct RoadTally
@@ -1374,6 +1444,9 @@ namespace TradeLord
             public float Snow;
             public float Wet;
             public float Slowed;
+            public float Forest;
+            public float Water;
+            public float Desert;
             public int Turns;
         }
 
@@ -1381,15 +1454,18 @@ namespace TradeLord
             (slowed ? 8 : 0) | (night ? 4 : 0) | (snowy ? 2 : 0) | (wet ? 1 : 0);
 
         public static float[] PacesFromTheGame(float baseSpeed, float clearFactors, float least, float most,
-                                               float nightStep, float snowStep, float wetStep, float slowStep)
+                                               float nightStep, float snowStep, float wetStep, float slowStep,
+                                               float[] groundSteps = null)
         {
-            var paces = new float[Weathers];
+            var paces = new float[Weathers * Grounds];
             float clear = WithinLimits(baseSpeed * (1f + clearFactors), least, most);
-            for (int i = 0; i < Weathers; i++)
+            for (int i = 0; i < paces.Length; i++)
             {
-                float factors = clearFactors + ((i & 8) != 0 ? Finite(slowStep, UsualSlowStep) : 0f) +
-                                ((i & 4) != 0 ? Finite(nightStep, UsualNightStep) : 0f) +
-                                ((i & 2) != 0 ? Finite(snowStep, UsualSnowStep) : 0f) + ((i & 1) != 0 ? Finite(wetStep, 0f) : 0f);
+                int w = i % Weathers;
+                float factors = clearFactors + GroundStep(groundSteps, i / Weathers) +
+                                ((w & 8) != 0 ? Finite(slowStep, UsualSlowStep) : 0f) +
+                                ((w & 4) != 0 ? Finite(nightStep, UsualNightStep) : 0f) +
+                                ((w & 2) != 0 ? Finite(snowStep, UsualSnowStep) : 0f) + ((w & 1) != 0 ? Finite(wetStep, 0f) : 0f);
                 float pace = WithinLimits(baseSpeed * (1f + factors), least, most);
                 paces[i] = clear > 0f && pace > 0f ? NightPaceKept(pace / clear) : 1f;
             }
@@ -1429,9 +1505,11 @@ namespace TradeLord
             double start = Finite(startHourOfDay, 0f);
             double slow = Math.Max(0f, Finite(slowHours, 0f));
             double clock = seaFirst ? sea : 0d;
+            bool grounded = paces != null && paces.Length >= Weathers * Grounds;
             for (int p = 0; p < count && land > 0f; p++)
             {
                 int cell = whole ? -1 : pieces[p].Cell;
+                int ground = whole ? OpenGround : Math.Min((int)pieces[p].Ground, Grounds - 1);
                 double left = whole ? land : land * (double)Math.Max(0f, Finite(pieces[p].Share, 0f));
                 while (left > 1e-9)
                 {
@@ -1450,7 +1528,8 @@ namespace TradeLord
                     double untilSlow = slowed ? slow - clock : double.PositiveInfinity;
                     above.Read(cell, clock, out bool snowy, out bool wet, out double untilSky);
                     if (double.IsNaN(untilSky) || untilSky < 1e-4) untilSky = 1e-4;
-                    float rate = paces == null || paces.Length < Weathers ? 1f : paces[WeatherIndex(night, snowy, wet, slowed)];
+                    float rate = paces == null || paces.Length < Weathers ? 1f
+                        : paces[WeatherIndex(night, snowy, wet, slowed) + (grounded ? ground * Weathers : 0)];
                     if (!(rate > 0f)) rate = 1f;
                     double step = Math.Min(Math.Min(untilSun, untilSky), untilSlow);
                     double spent = left / rate <= step ? left / rate : step;
@@ -1460,6 +1539,9 @@ namespace TradeLord
                     if (snowy) tally.Snow += (float)spent;
                     if (wet) tally.Wet += (float)spent;
                     if (slowed) tally.Slowed += (float)spent;
+                    if (ground == ForestGround) tally.Forest += (float)spent;
+                    else if (ground == WaterGround) tally.Water += (float)spent;
+                    else if (ground == DesertGround) tally.Desert += (float)spent;
                 }
             }
             if (!seaFirst) clock += sea;
@@ -1630,6 +1712,11 @@ namespace TradeLord
             return fit >= int.MaxValue ? int.MaxValue : (int)fit;
         }
 
+        public const float GateShare = 0.05f;
+
+        public static bool JustLeftTheGate(float gone, float span) =>
+            gone >= 0f && span > 0f && !float.IsInfinity(span) && gone <= span * GateShare;
+
         public static float DetourOnTheRoad(float road, float span, float gone, float left)
         {
             if (!(road > 0f) || !(span > 0f) || float.IsInfinity(road) || float.IsInfinity(span)) return 0f;
@@ -1680,6 +1767,62 @@ namespace TradeLord
             if (double.IsNaN(more) || more <= 0d) return baseCap;
             double cap = baseCap + Math.Floor(more);
             return cap >= int.MaxValue ? int.MaxValue : (int)cap;
+        }
+
+        public static int SpendLimit(int maxSpendPerVisit, long purseBeforeBuying, bool adaptive, long evidence)
+        {
+            int cap = AdaptiveSpendCap(maxSpendPerVisit, purseBeforeBuying, adaptive);
+            if (cap <= 0 || evidence <= cap) return cap;
+            return evidence >= int.MaxValue ? int.MaxValue : (int)evidence;
+        }
+
+        public const float LightestWeightCounted = 0.1f;
+
+        public static float Key(long profit, float confidence, float trust, bool rankByConfidence,
+                                float weightEach, int units, float days)
+        {
+            if (profit <= 0L || units <= 0 || float.IsNaN(days)) return 0f;
+            float weight = weightEach > LightestWeightCounted ? weightEach : LightestWeightCounted;
+            float over = days > NoTripCountsShorterThan ? days : NoTripCountsShorterThan;
+            double kept = rankByConfidence ? profit * (double)confidence * trust : profit;
+            return Finite((float)(kept / ((double)weight * units * over)), 0f);
+        }
+
+        public static float HerdWeight(float cargoRoom, int herded, int herdRoom)
+        {
+            long slots = (long)Math.Max(0, herded) + Math.Max(0, herdRoom);
+            if (slots <= 0L || !(cargoRoom > 0f) || float.IsInfinity(cargoRoom)) return 0f;
+            return (float)(cargoRoom / slots);
+        }
+
+        public static float PerDenarADay(long profit, int cost, float days) =>
+            cost <= 0 ? 0f : PerDay(profit, days) / cost;
+
+        public static long WhatTheMoneyBuys(IList<(int units, int cost, int profit, float days)> plans, int money,
+                                            bool byDenar)
+        {
+            if (plans == null || money <= 0) return 0L;
+            var order = new List<int>(plans.Count);
+            for (int i = 0; i < plans.Count; i++)
+                if (plans[i].units > 0 && plans[i].cost > 0) order.Add(i);
+            if (byDenar)
+                order.Sort((x, y) =>
+                {
+                    float a = PerDenarADay(plans[x].profit, plans[x].cost, plans[x].days);
+                    float b = PerDenarADay(plans[y].profit, plans[y].cost, plans[y].days);
+                    return a != b ? b.CompareTo(a) : x.CompareTo(y);
+                });
+            double left = money;
+            long made = 0L;
+            foreach (int i in order)
+            {
+                double each = (double)plans[i].cost / plans[i].units;
+                int take = (int)Math.Min(plans[i].units, Math.Floor(left / each));
+                if (take <= 0) continue;
+                made += (long)Math.Round((double)plans[i].profit * take / plans[i].units);
+                left -= each * take;
+            }
+            return made;
         }
 
         public static int PerUnit(int gold, int units) =>

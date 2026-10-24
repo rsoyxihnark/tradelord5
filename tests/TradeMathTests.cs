@@ -1872,10 +1872,6 @@ namespace TradeLord.Tests
                          TradeMath.WhatALadderPays(falling, 20, int.MaxValue));
             Assert.Equal(0L, TradeMath.WhatALadderPays(null, 3, int.MaxValue));
             Assert.Equal(0L, TradeMath.WhatALadderPays(falling, 0, int.MaxValue));
-            Assert.True(TradeMath.PaysMore(900L, 30, 2f, 800L, 60, 0.5f));
-            Assert.True(TradeMath.PaysMore(900L, 60, 2f, 900L, 50, 0.5f));
-            Assert.True(TradeMath.PaysMore(900L, 60, 0.5f, 900L, 60, 2f));
-            Assert.False(TradeMath.PaysMore(900L, 60, 2f, 900L, 60, 2f));
         }
 
         [Fact]
@@ -2981,69 +2977,21 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_thin_purse_holds_the_take_down_to_what_it_can_pay_for()
-        {
-            Assert.Equal(20, TradeMath.MostYouCouldTake(50, 1f, 100, 1000, 1000f, 0));
-            Assert.Equal(2, TradeMath.MostYouCouldTake(500, 1f, 100, 1000, 1000f, 0));
-            Assert.Equal(0, TradeMath.MostYouCouldTake(500, 1f, 100, 0, 1000f, 0));
-        }
-
-        [Fact]
-        public void The_buy_cap_per_item_holds_the_take_down_to_what_it_allows()
-        {
-            Assert.Equal(10, TradeMath.MostYouCouldTake(50, 1f, 100, 100000, 1000f, 10));
-            Assert.Equal(100, TradeMath.MostYouCouldTake(50, 1f, 100, 100000, 1000f, 0));
-            Assert.Equal(3, TradeMath.MostYouCouldTake(50, 1f, 3, 100000, 1000f, 10));
-        }
-
-        [Fact]
-        public void A_full_cargo_holds_the_take_down_to_what_still_fits()
-        {
-            Assert.Equal(10, TradeMath.MostYouCouldTake(50, 1f, 100, 100000, 10f, 0));
-            Assert.Equal(100, TradeMath.MostYouCouldTake(500, 0.1f, 100, 100000, 10f, 0));
-            Assert.Equal(0, TradeMath.MostYouCouldTake(50, 1f, 100, 100000, 0f, 0));
-        }
-
-        [Fact]
-        public void A_good_that_weighs_nothing_is_held_back_by_the_purse_alone()
-        {
-            Assert.Equal(20, TradeMath.MostYouCouldTake(500, 0f, 100, 10000, 0.0001f, 0));
-            Assert.Equal(0, TradeMath.MostYouCouldTake(500, 1f, 100, 10000, 0.0001f, 0));
-        }
-
-        [Fact]
-        public void Nothing_is_taken_of_a_good_with_no_price_none_on_the_shelf_no_room_or_too_dear_for_the_purse()
-        {
-            Assert.Equal(0, TradeMath.MostYouCouldTake(0, 1f, 10, 1000, 100f, 0));
-            Assert.Equal(0, TradeMath.MostYouCouldTake(50, 1f, 0, 1000, 100f, 0));
-            Assert.Equal(0, TradeMath.MostYouCouldTake(50, 1f, 10, 1000, float.NaN, 0));
-            Assert.Equal(0, TradeMath.MostYouCouldTake(500, 1f, 10, 100, 100f, 0));
-        }
-
-        [Fact]
-        public void A_nearer_buyer_paying_a_little_less_earns_more_a_day_than_a_far_one()
-        {
-            float near = TradeMath.EarnedPerDay(400, 300, 0.3f);
-            float far = TradeMath.EarnedPerDay(420, 300, 2.3f);
-            Assert.True(near > far);
-            Assert.Equal(100f / TradeMath.NoTripCountsShorterThan, near, 2);
-            Assert.Equal(120f / 2.3f, far, 2);
-        }
-
-        [Fact]
-        public void A_far_buyer_paying_much_more_still_wins()
-        {
-            Assert.True(TradeMath.EarnedPerDay(900, 300, 2.3f) >
-                        TradeMath.EarnedPerDay(310, 300, 0.3f));
-        }
-
-        [Fact]
         public void A_trip_shorter_than_half_a_day_counts_as_half_a_day()
         {
             Assert.Equal(0.5f, TradeMath.NoTripCountsShorterThan);
-            Assert.Equal(TradeMath.EarnedPerDay(400, 300, 0f),
-                         TradeMath.EarnedPerDay(400, 300, TradeMath.NoTripCountsShorterThan));
-            Assert.Equal(200f, TradeMath.EarnedPerDay(400, 300, 0.01f));
+            Assert.Equal(TradeMath.PerDay(100, 0f), TradeMath.PerDay(100, TradeMath.NoTripCountsShorterThan));
+            Assert.Equal(200f, TradeMath.PerDay(100, 0.01f));
+        }
+
+        [Fact]
+        public void With_the_whole_load_switch_off_a_market_is_weighed_on_its_first_unit_alone()
+        {
+            Assert.Equal(200f, TradeMath.OneUnitRate(400, 300, 0.3f, false, 0.9f));
+            Assert.Equal(100f, TradeMath.OneUnitRate(400, 300, 0.5f, true, 0.875f));
+            Assert.Equal(0f, TradeMath.OneUnitRate(300, 300, 1f, false, 1f));
+            Assert.Equal(0f, TradeMath.OneUnitRate(0, 0, 1f, false, 1f));
+            Assert.Equal(0f, TradeMath.OneUnitRate(400, 300, float.NaN, false, 1f));
         }
 
         [Fact]
@@ -3051,15 +2999,6 @@ namespace TradeLord.Tests
         {
             Assert.True(TradeMath.PerDay(349, 1.03f) > TradeMath.PerDay(154, 0.18f));
             Assert.True(TradeMath.PerDay(900, 1.03f) > TradeMath.PerDay(349, 1.03f));
-        }
-
-        [Fact]
-        public void A_buyer_paying_no_more_than_you_paid_earns_nothing_a_day()
-        {
-            Assert.Equal(0f, TradeMath.EarnedPerDay(300, 300, 1f));
-            Assert.Equal(0f, TradeMath.EarnedPerDay(200, 300, 1f));
-            Assert.Equal(0f, TradeMath.EarnedPerDay(0, 300, 1f));
-            Assert.Equal(0f, TradeMath.EarnedPerDay(400, 300, float.NaN));
         }
 
         [Fact]
@@ -3406,6 +3345,160 @@ namespace TradeLord.Tests
                 bestKey = key;
             }
             return (bestAt, bestKey);
+        }
+
+        [Fact]
+        public void The_key_is_profit_at_its_Conf_for_each_unit_of_weight_a_day()
+        {
+            Assert.Equal(2160f * 0.2f / (9f * 0.9f), TradeMath.Key(2160, 0.2f, 1f, true, 1f, 9, 0.9f), 3);
+            Assert.Equal(2160f / (9f * 0.9f), TradeMath.Key(2160, 0.2f, 1f, false, 1f, 9, 0.9f), 3);
+            Assert.Equal(2160f * 0.2f * 0.8f / (9f * 0.9f), TradeMath.Key(2160, 0.2f, 0.8f, true, 1f, 9, 0.9f), 3);
+            Assert.Equal(2 * TradeMath.Key(1000, 1f, 1f, true, 2f, 5, 1f), TradeMath.Key(1000, 1f, 1f, true, 1f, 5, 1f), 3);
+        }
+
+        [Fact]
+        public void The_key_floors_a_short_hop_at_half_a_day_and_a_feather_at_a_tenth_of_a_weight()
+        {
+            Assert.Equal(TradeMath.Key(100, 1f, 1f, true, 1f, 1, 0.5f), TradeMath.Key(100, 1f, 1f, true, 1f, 1, 0.05f));
+            Assert.Equal(TradeMath.Key(100, 1f, 1f, true, 0.1f, 1, 1f), TradeMath.Key(100, 1f, 1f, true, 0f, 1, 1f));
+            Assert.Equal(0f, TradeMath.Key(0, 1f, 1f, true, 1f, 1, 1f));
+            Assert.Equal(0f, TradeMath.Key(-50, 1f, 1f, true, 1f, 1, 1f));
+            Assert.Equal(0f, TradeMath.Key(100, 1f, 1f, true, 1f, 0, 1f));
+            Assert.Equal(0f, TradeMath.Key(100, 1f, 1f, true, 1f, 1, float.NaN));
+        }
+
+        [Fact]
+        public void A_herd_slot_counts_as_the_share_of_the_hold_it_stands_for()
+        {
+            Assert.Equal(10f, TradeMath.HerdWeight(220f, 2, 20));
+            Assert.Equal(0f, TradeMath.HerdWeight(220f, 0, 0));
+            Assert.Equal(0f, TradeMath.HerdWeight(0f, 3, 3));
+            Assert.Equal(0f, TradeMath.HerdWeight(float.PositiveInfinity, 3, 3));
+        }
+
+        [Fact]
+        public void The_spend_limit_is_Max_spend_per_visit_or_the_ledgers_expected_profit_whichever_is_more()
+        {
+            Assert.Equal(2111, TradeMath.SpendLimit(1000, 2644, true, 2111));
+            Assert.Equal(1000, TradeMath.SpendLimit(1000, 2644, true, 400));
+            Assert.Equal(TradeMath.AdaptiveSpendCap(1000, 40000, true), TradeMath.SpendLimit(1000, 40000, true, 900));
+            Assert.Equal(0, TradeMath.SpendLimit(0, 2644, true, 5000));
+            Assert.Equal(int.MaxValue, TradeMath.SpendLimit(1000, 2644, false, long.MaxValue));
+            Assert.Equal(2077, TradeMath.Budget(2610, 300, TradeMath.SpendLimit(1000, 2644, true, 2111), 34));
+        }
+
+        [Fact]
+        public void What_the_money_buys_is_weighed_the_same_way_for_both_orders()
+        {
+            var plans = new List<(int units, int cost, int profit, float days)>
+            {
+                (3, 1239, 774, 0.7f), (9, 1647, 2160, 0.9f), (9, 882, 1233, 0.8f)
+            };
+            Assert.Equal(774L + 960L + 137L, TradeMath.WhatTheMoneyBuys(plans, 2077, byDenar: false));
+            Assert.Equal(516L + 137L, TradeMath.WhatTheMoneyBuys(plans, 966, byDenar: false));
+            Assert.Equal(1233L, TradeMath.WhatTheMoneyBuys(plans, 966, byDenar: true));
+            Assert.True(TradeMath.WhatTheMoneyBuys(plans, 966, byDenar: true) >
+                        TradeMath.WhatTheMoneyBuys(plans, 966, byDenar: false));
+            Assert.Equal(0L, TradeMath.WhatTheMoneyBuys(plans, 0, byDenar: true));
+            Assert.Equal(0L, TradeMath.WhatTheMoneyBuys(null, 500, byDenar: true));
+            Assert.Equal(774L + 2160L + 1233L, TradeMath.WhatTheMoneyBuys(plans, 100000, byDenar: true));
+        }
+
+        [Fact]
+        public void A_profit_a_day_for_each_denar_is_the_profit_a_day_over_what_it_cost()
+        {
+            Assert.Equal(TradeMath.PerDay(960, 0.9f) / 732f, TradeMath.PerDenarADay(960, 732, 0.9f), 5);
+            Assert.Equal(0f, TradeMath.PerDenarADay(960, 0, 0.9f));
+        }
+
+        [Fact]
+        public void The_games_terrain_types_fall_into_five_grounds()
+        {
+            Assert.Equal(TradeMath.PlainOrSteppe, TradeMath.GroundOf(1));
+            Assert.Equal(TradeMath.PlainOrSteppe, TradeMath.GroundOf(5));
+            Assert.Equal(TradeMath.ForestGround, TradeMath.GroundOf(4));
+            foreach (int water in new[] { 6, 10, 11, 17, 25 }) Assert.Equal(TradeMath.WaterGround, TradeMath.GroundOf(water));
+            Assert.Equal(TradeMath.DesertGround, TradeMath.GroundOf(2));
+            Assert.Equal(TradeMath.DesertGround, TradeMath.GroundOf(16));
+            foreach (int open in new[] { 3, 7, 8, 13, 14, 15, 18, 19, 20, 21, 0 }) Assert.Equal(TradeMath.OpenGround, TradeMath.GroundOf(open));
+        }
+
+        [Fact]
+        public void A_forest_road_takes_longer_than_the_same_road_on_open_ground()
+        {
+            float[] paces = TradeMath.PacesFromTheGame(5f, 0f, 1f, 50f, -0.6f, -0.125f, 0f, -0.4f, null);
+            Assert.Equal(TradeMath.Weathers * TradeMath.Grounds, paces.Length);
+            Assert.Equal(1f, paces[0]);
+            Assert.Equal(0.8f, paces[TradeMath.ForestGround * TradeMath.Weathers], 4);
+            Assert.Equal(0.7f, paces[TradeMath.WaterGround * TradeMath.Weathers], 4);
+            Assert.Equal(0.9f, paces[TradeMath.DesertGround * TradeMath.Weathers], 4);
+            var open = new List<TradeMath.RoadPiece> { new TradeMath.RoadPiece { Cell = 0, Share = 1f } };
+            var forest = new List<TradeMath.RoadPiece> { new TradeMath.RoadPiece { Cell = 0, Share = 1f, Ground = TradeMath.ForestGround } };
+            float onOpen = TradeMath.HoursAlongTheRoad(12f, 10f, open, 0f, false, paces, null, 0f, -1, -1, out _);
+            float inForest = TradeMath.HoursAlongTheRoad(12f, 10f, forest, 0f, false, paces, null, 0f, -1, -1, out var tally);
+            Assert.Equal(10f, onOpen, 3);
+            Assert.Equal(12.5f, inForest, 3);
+            Assert.Equal(12.5f, tally.Forest, 3);
+            Assert.Equal(0f, tally.Water);
+        }
+
+        [Fact]
+        public void A_ground_step_read_from_your_party_replaces_the_games_usual_one()
+        {
+            var steps = new[] { float.NaN, 0.05f, -0.1f, float.NaN, float.NaN };
+            Assert.Equal(-0.1f, TradeMath.GroundStep(steps, TradeMath.ForestGround));
+            Assert.Equal(-0.3f, TradeMath.GroundStep(steps, TradeMath.WaterGround));
+            Assert.Equal(0.05f, TradeMath.GroundStep(steps, TradeMath.PlainOrSteppe));
+            Assert.Equal(0f, TradeMath.GroundStep(steps, TradeMath.OpenGround));
+            Assert.Equal(-0.2f, TradeMath.GroundStep(null, TradeMath.ForestGround));
+        }
+
+        [Fact]
+        public void Caravan_paces_keep_their_weather_and_take_the_grounds_on_top()
+        {
+            float[] weather = TradeMath.PacesFromShares(0.5f, 0.8f, 0.9f);
+            float[] all = TradeMath.WithGrounds(weather, TradeMath.GroundSharesFromSteps(null));
+            Assert.Equal(TradeMath.Weathers * TradeMath.Grounds, all.Length);
+            for (int w = 0; w < TradeMath.Weathers; w++) Assert.Equal(weather[w], all[w], 5);
+            Assert.Equal(weather[4] * 0.8f, all[TradeMath.ForestGround * TradeMath.Weathers + 4], 5);
+            Assert.Equal(weather[1] * 0.7f, all[TradeMath.WaterGround * TradeMath.Weathers + 1], 5);
+            Assert.Null(TradeMath.WithGrounds(null, null));
+        }
+
+        [Fact]
+        public void A_road_is_split_by_ground_and_keeps_its_cells_and_its_length()
+        {
+            var cells = new List<TradeMath.RoadPiece>
+            {
+                new TradeMath.RoadPiece { Cell = 3, Share = 0.5f }, new TradeMath.RoadPiece { Cell = 4, Share = 0.5f }
+            };
+            var split = new List<TradeMath.RoadPiece>();
+            TradeMath.GroundsAlong(cells, 10f, 0.5f, t => t > 0.3f && t < 0.7f ? TradeMath.ForestGround : TradeMath.OpenGround, split);
+            float whole = 0f, forest = 0f;
+            foreach (var piece in split)
+            {
+                whole += piece.Share;
+                if (piece.Ground == TradeMath.ForestGround) forest += piece.Share;
+            }
+            Assert.Equal(1f, whole, 4);
+            Assert.Equal(0.4f, forest, 4);
+            Assert.Equal(3, split[0].Cell);
+            Assert.Equal(4, split[split.Count - 1].Cell);
+            var again = new List<TradeMath.RoadPiece>();
+            TradeMath.GroundsAlong(cells, 10f, 0.5f, t => t > 0.3f && t < 0.7f ? TradeMath.ForestGround : TradeMath.OpenGround, again);
+            Assert.Equal(split, again);
+            TradeMath.GroundsAlong(cells, 10f, 0.5f, null, again);
+            Assert.Equal(cells, again);
+        }
+
+        [Fact]
+        public void Just_outside_the_gate_the_game_measures_the_road_itself()
+        {
+            Assert.True(TradeMath.JustLeftTheGate(2.47f, 100f));
+            Assert.True(TradeMath.JustLeftTheGate(0f, 100f));
+            Assert.False(TradeMath.JustLeftTheGate(30f, 100f));
+            Assert.False(TradeMath.JustLeftTheGate(1f, 0f));
+            Assert.False(TradeMath.JustLeftTheGate(-1f, 100f));
         }
 }
 }

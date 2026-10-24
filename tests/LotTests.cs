@@ -64,6 +64,13 @@ namespace TradeLord.Tests
 
             public int TheLedgerAsksFor(int at) => 0;
 
+            public bool Planned(int at, out PlannedSale plan, out Block why)
+            {
+                plan = default(PlannedSale);
+                why = Stalls[at].Elsewhere ? Block.None : Block.NoResaleMarket;
+                return Stalls[at].Elsewhere;
+            }
+
             public int TheirsToSell(int at) =>
                 System.Math.Min(Stalls[at].Amount,
                                 Stalls[at].Amount - Ledger.Stocked(Sim, Stalls[at].Good.Id));

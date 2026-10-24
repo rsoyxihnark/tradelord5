@@ -82,6 +82,16 @@ namespace TradeLord
             }
         }
 
+        internal static int DrivenNow(MobileParty party)
+        {
+            try
+            {
+                if (party == null || !Tally(party, out _, out int herd, out int mounts, out int foot)) return 0;
+                return Herding.DrivenInAll(herd, mounts, foot);
+            }
+            catch { return 0; }
+        }
+
         internal static string PenaltyRead() =>
             Model() == null ? "herd penalty not read" : "herd penalty read";
 

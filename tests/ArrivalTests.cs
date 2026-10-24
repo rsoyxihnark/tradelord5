@@ -154,5 +154,21 @@ namespace TradeLord.Tests
             Assert.True(Arrivals.FirstTimeBack("town_ES3", Arrivals.AfterTheRoad(false, last)));
             Assert.Null(Arrivals.AfterTheRoad(false, null));
         }
+
+        [Fact]
+        public void After_leaving_Poros_with_trading_on_arrival_on_its_routes_are_set_aside()
+        {
+            string lastTraded = Arrivals.LastTradedAt("town_EW1", true, null);
+            Assert.True(Arrivals.LeftAloneOnArrival("town_EW1", null, true, lastTraded));
+            Assert.False(Arrivals.LeftAloneOnArrival("town_EW1", null, false, lastTraded));
+            Assert.False(Arrivals.LeftAloneOnArrival("town_EV4", null, true, lastTraded));
+        }
+
+        [Fact]
+        public void The_market_you_stand_in_is_never_set_aside_even_after_trading_there()
+        {
+            Assert.False(Arrivals.LeftAloneOnArrival("town_EW1", "town_EW1", true, "town_EW1"));
+            Assert.True(Arrivals.LeftAloneOnArrival("town_EW1", "town_EV4", true, "town_EW1"));
+        }
     }
 }

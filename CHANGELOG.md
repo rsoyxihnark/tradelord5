@@ -1,10 +1,47 @@
 # Changelog
 
+## 2.1.0
+
+- Fixed TradeLord spending your purse on other goods before the ones the TradeLord ledger offered at that market
+- TradeLord now buys as many of a good as the TradeLord ledger's Qty shows, for the Sell At the TradeLord ledger shows
+- TradeLord now ranks trades by their profit a day for each unit of weight carried, or herd room taken, so light and costly goods come first
+- The TradeLord ledger's Score now shows profit a day for each unit of weight carried
+- TradeLord may now spend past Max spend per visit, up to the profit the TradeLord ledger expects from its routes out of that market
+- The hint for Max spend per visit now says the TradeLord ledger's expected profit can raise it, in every language
+- The TradeLord ledger now sizes each route's Qty to your purse and what you may spend there as well as your cargo
+- TradeLord now gives each route out of a market the money and cargo room left after the better routes above it from that market
+- The TradeLord ledger now says how many routes your cargo, your purse or what you may spend there held back
+- The TradeLord ledger's Qty now also counts herd room, Stop buying at this many held and Share of the hold one good may fill
+- The TradeLord ledger's Qty now also counts what you already carry and what TradeLord already bought there this visit
+- Pick where to sell on the whole load now also picks the TradeLord ledger's Sell At
+- Fixed the TradeLord ledger offering routes out of the market Auto sell and Auto buy leave alone the first time you come back
+- The TradeLord ledger now says how many routes it set aside from the market Auto sell and Auto buy leave alone the first time you come back
+- Fixed the TradeLord ledger keeping the routes it showed inside a market after you leave it
+- The map marker now starts from the Sell At your goods were bought for and moves only if your whole cargo earns more a day elsewhere
+- Fixed Hold cargo for the best market and the TradeLord ledger's cargo room disagreeing on what is kept for the marked market
+- In a tooltip, Best market to sell this! and if sold there instead now go by the market TradeLord would sell at
+- TradeLord now picks where to sell goods bought from a caravan on the road the way the TradeLord ledger does
+- The best other buyer TradeLord.log names after a sale is now the one the TradeLord ledger would pick
+- Travel times now count forests, rivers, fords, bridges and deserts on the way, for your party, caravans and villagers
+- Fixed travel times worked out just after you leave a town being off by up to 4%
+- When your party has less than a day of its own food, TradeLord now buys food past its usual bar if it would sell on at a profit
+- With Enable extended debug logging on, TradeLord.log now writes each buying plan and what TradeLord did about every good in it
+- With Enable extended debug logging on, TradeLord.log now says what buying by profit for each denar would have made when money ran out first
+- With Enable extended debug logging on, the promise check in TradeLord.log now names the market each good was bought for
+- With Enable extended debug logging on, TradeLord.log now says when the TradeLord ledger changes where a good sells best
+- With Enable extended debug logging on, TradeLord.log now says what the TradeLord ledger found when it scanned again as you left a market
+- With Enable extended debug logging on, the route scan line in TradeLord.log now says how many routes were held back or set aside
+- With Enable extended debug logging on, TradeLord.log now says when the map marker marks a market your goods were not bought for
+- With Enable extended debug logging on, the ride check in TradeLord.log now says how long you rode through forests, water and deserts
+- With Enable extended debug logging on, TradeLord.log now gives the forest, water and desert steps it reads from your party
+- With Enable extended debug logging on, TradeLord.log now says once a day whether buying ever went against the TradeLord ledger's Sell At
+- With Enable extended debug logging on, TradeLord.log now says when a hungry party buys food past its usual bar, and where it would sell on
+
 ## 2.0.8
 
 - Fixed settings kept from an older TradeLord holding the Town travel ceiling at the old 2.4 days, so fewer towns stayed in reach
 - TradeLord.log now says when a Town travel ceiling of 2.4 days kept from an older TradeLord is moved to 3.0
-- Fixed the TradeLord ledger counting cargo room that Hold cargo for the best market keeps full at Buy From
+- Fixed the TradeLord ledger offering more of a good than fits in your cargo when Hold cargo for the best market keeps your goods at Buy From
 - Fixed travel times jumping up while rain falls where your party stands and running short on wet ground on the road
 - With Enable extended debug logging on, TradeLord.log now gives the wet ground step it works out from your riders until it reads one
 - Fixed TradeLord buying trade goods from a caravan on the road while your party has less than a day of its own food
