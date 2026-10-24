@@ -55,6 +55,9 @@ namespace TradeLord
             internal float SaidNight;
             internal float SaidSnow;
             internal float SaidWet;
+            internal float SaidForest;
+            internal float SaidWater;
+            internal float SaidDesert;
             internal float SaidDistance;
             internal string Measured;
             internal float DayPace;
@@ -65,6 +68,9 @@ namespace TradeLord
             internal double NightMoving;
             internal double SnowMoving;
             internal double WetMoving;
+            internal double ForestMoving;
+            internal double WaterMoving;
+            internal double DesertMoving;
             internal float Moved;
             internal bool Fought;
         }
@@ -144,6 +150,10 @@ namespace TradeLord
             Skies.LiveSkyAt(party.GetPosition2D, out bool snowy, out bool wet);
             if (snowy) _ride.SnowMoving += step;
             if (wet) _ride.WetMoving += step;
+            int ground = Ground.PartyOn(party);
+            if (ground == TradeMath.ForestGround) _ride.ForestMoving += step;
+            else if (ground == TradeMath.WaterGround) _ride.WaterMoving += step;
+            else if (ground == TradeMath.DesertGround) _ride.DesertMoving += step;
         }
 
         private static void SetOff(MobileParty party, Settlement to, double now)
@@ -159,6 +169,9 @@ namespace TradeLord
                 SaidNight = said.NightHours,
                 SaidSnow = said.SnowHours,
                 SaidWet = said.WetHours,
+                SaidForest = said.ForestHours,
+                SaidWater = said.WaterHours,
+                SaidDesert = said.DesertHours,
                 SaidDistance = said.Distance,
                 Measured = said.Measured ?? "",
                 DayPace = Travel.DayPace,
@@ -261,7 +274,14 @@ namespace TradeLord
                 "  weather: TradeLord counted " + Hours(_ride.SaidSnow) + " h in snow and " + Hours(_ride.SaidWet) +
                 " h on wet ground, and the ride on the move had " + Hours((float)_ride.SnowMoving) + " h in snow and " +
                 Hours((float)_ride.WetMoving) + " h on wet ground; your snow step " + Skies.PartySnowSaid +
-                ", your wet ground step " + Skies.PartyWetSaid
+                ", your wet ground step " + Skies.PartyWetSaid,
+                "  ground: TradeLord counted " + Hours(_ride.SaidForest) + " h in forest, " + Hours(_ride.SaidWater) +
+                " h on water and " + Hours(_ride.SaidDesert) + " h in desert, and the ride on the move had " +
+                Hours((float)_ride.ForestMoving) + " h in forest, " + Hours((float)_ride.WaterMoving) + " h on water and " +
+                Hours((float)_ride.DesertMoving) + " h in desert; your forest step " +
+                Ground.PartyStepSaid(TradeMath.ForestGround) + ", your water step " +
+                Ground.PartyStepSaid(TradeMath.WaterGround) + ", your desert step " +
+                Ground.PartyStepSaid(TradeMath.DesertGround)
             };
             if (moving > 0f && _ride.Moved > 0f)
             {

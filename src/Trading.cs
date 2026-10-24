@@ -146,6 +146,10 @@ namespace TradeLord
         private static readonly Books Visit = new Books();
 
         internal static Books TheVisit => Visit;
+        internal static bool OnPaper => Options.Current.SimulationMode || Counter.Staging;
+        internal static int VisitNumber { get; private set; }
+        internal static bool SoldHereThisVisit { get; private set; }
+        private static int _limitThisVisit;
         private static bool _cargoWasFull;
         private static (float weight, int cost, float profit, bool food) _unfitted;
         private static Block? _sellStalled;
@@ -385,6 +389,7 @@ namespace TradeLord
             NoteTheGateBehind(party);
             NoteLeavingTheSitting(settlement);
             Marker.ForgetWhatYouCarry();
+            LedgerBehavior.Instance?.TheRoutesWentStale(settlement);
             Guard.Run("Action.HerdReliefOnLeaving", () =>
             {
                 if (HasAMarket(settlement)) Drove.LogState("leaving " + settlement.Name);
@@ -431,6 +436,10 @@ namespace TradeLord
 
         private static bool ArrivalTrades() =>
             (Options.Current.AutoSellOnEntry || Options.Current.AutoBuyOnEntry) && !Counter.HoldsBack();
+
+        internal static bool TradesOnArrival => ArrivalTrades();
+
+        internal static int LimitThisVisit => _limitThisVisit;
 
         private static bool _visitTradeAllowed;
 
@@ -524,7 +533,14 @@ namespace TradeLord
         {
             _visitTradeAllowed = false;
             Marker.ForgetWhatYouCarry();
+            Marker.ForgetTheLaidOutDeal();
             if (sameSitting) Visit.ForgetTheDryRun(); else Visit.Forget();
+            if (!sameSitting)
+            {
+                VisitNumber++;
+                SoldHereThisVisit = false;
+                _limitThisVisit = 0;
+            }
             _cargoWasFull = false;
             _unfitted = default;
             _sellStalled = null;
@@ -897,9 +913,19 @@ namespace TradeLord
             return TradeMath.Budget(purse, held, SpendCap((long)purse + paid), paid);
         }
 
-        internal static int SpendCap(long purseBeforeBuying) =>
-            TradeMath.AdaptiveSpendCap(Options.Current.MaxSpendPerVisit, purseBeforeBuying,
-                                       Options.Current.AdaptiveSpendLimit);
+        internal static int SpendCap(long purseBeforeBuying)
+        {
+            int cap = TradeMath.AdaptiveSpendCap(Options.Current.MaxSpendPerVisit, purseBeforeBuying,
+                                                 Options.Current.AdaptiveSpendLimit);
+            Settlement here = MobileParty.MainParty?.CurrentSettlement;
+            LedgerBehavior ledger = LedgerBehavior.Instance;
+            if (cap <= 0 || here == null || ledger == null) return cap;
+            long evidence = ledger.EvidenceAt(here).evidence;
+            int limit = TradeMath.SpendLimit(Options.Current.MaxSpendPerVisit, purseBeforeBuying,
+                                             Options.Current.AdaptiveSpendLimit, evidence);
+            if (limit > _limitThisVisit) _limitThisVisit = limit;
+            return Math.Max(cap, _limitThisVisit);
+        }
 
         internal static int PurseForTheirOffer(Books books, bool sim) =>
             TradeMath.Budget(Hero.MainHero.Gold + books.Purse(sim), GoldHeldBack(), 0, 0);
@@ -932,16 +958,28 @@ namespace TradeLord
         {
             int purse = Hero.MainHero.Gold + pass.Books.Purse(pass.Sim);
             int held = GoldHeldBack(), flat = Options.Current.GoldReserve;
-            int cap = SpendCap((long)purse + pass.Books.PaidOut(pass.Sim));
+            long before = (long)purse + pass.Books.PaidOut(pass.Sim);
+            int cap = SpendCap(before);
             int set = Options.Current.MaxSpendPerVisit;
+            int adaptive = TradeMath.AdaptiveSpendCap(set, before, Options.Current.AdaptiveSpendLimit);
             return "your purse is " + purse + " and TradeLord holds " + held + " of it back, " + flat +
                    " as your gold reserve and " + (held - flat) + " as " +
                    Options.Current.KeepWageDays + " day(s) of your wage bill" +
-                   (cap > 0 ? ", with " + (cap - pass.Books.PaidOut(pass.Sim)) +
-                              " left of the " + cap + " you allow per visit" +
-                              (cap > set ? " (Max spend per visit " + set + ", raised by Adaptive spend " +
-                                           "limit as your purse grew)" : "")
+                   (cap > 0 ? ", with " + (cap - pass.Books.PaidOut(pass.Sim)) + " left of the " + cap +
+                              (cap > adaptive ? " you may spend here" + WhatTheLedgerExpects(pass.Site, set, adaptive)
+                                              : " you allow per visit" +
+                                                (cap > set ? " (Max spend per visit " + set + ", raised by " +
+                                                             "Adaptive spend limit as your purse grew)" : ""))
                             : "");
+        }
+
+        private static string WhatTheLedgerExpects(Settlement here, int set, int adaptive)
+        {
+            var said = LedgerBehavior.Instance?.EvidenceAt(here) ?? (0L, 0L, 0);
+            return ": the TradeLord ledger expects " + said.evidence + " profit from " + said.routes +
+                   " route(s) out of here (" + said.atConf + " of it counted at their Conf), above Max spend " +
+                   "per visit " + set + (adaptive > set ? " raised to " + adaptive + " by Adaptive spend limit" : "") +
+                   ", and this visit keeps the most it has read";
         }
 
         private static bool WarnPurseBelowReserve()
@@ -958,16 +996,6 @@ namespace TradeLord
             msg.SetTextVariable("WAGES", held - flat);
             Notices.Say(msg, Notices.Alert);
             return true;
-        }
-
-        private static void SayWhatPickingABuyerCost()
-        {
-            if (!Options.Current.ExtendedDebugLogging || LedgerBehavior.BuyerWalks <= 0) return;
-            Log.Write("  picking a buyer walked " + LedgerBehavior.BuyerWalks + " price ladder(s), " +
-                      LedgerBehavior.BuyerRungs + " rung(s) in all, in " +
-                      (LedgerBehavior.BuyerTicks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString("0.0",
-                          System.Globalization.CultureInfo.InvariantCulture) + " ms");
-            LedgerBehavior.ForgetWhatPickingABuyerCost();
         }
 
         private static void WarnNoRoomToCarry()
@@ -1779,6 +1807,8 @@ namespace TradeLord
             if (pass == null) return;
 
             pass.Capture();
+            if (pass.Site != null && !loot) SoldHereThisVisit = true;
+            if (!loot && Options.Current.HoldCargoForBestMarket > 0f) EngineTally.HoldCargo++;
 
             var market = new SellingFrom(pass, what, named);
 
@@ -2034,8 +2064,30 @@ namespace TradeLord
 
         private static string _foodMissed;
 
+        private static readonly Dictionary<ItemObject, (int bar, string to, int sell)> _pastTheBar =
+            new Dictionary<ItemObject, (int bar, string to, int sell)>();
+
+        private static (int upTo, string to, int sell) WhatItSellsOnFor(Pass pass, ItemRosterElement el)
+        {
+            ItemObject item = el.EquipmentElement.Item;
+            TradeRoute row;
+            if (pass.Site != null)
+            {
+                LedgerBehavior ledger = LedgerBehavior.Instance;
+                row = ledger == null ? null : ledger.HereRow(pass.Site, item, out _);
+            }
+            else
+                row = Plan.BestSale(item, pass.PricesAhead(el.EquipmentElement), 1,
+                                    LedgerBehavior.InAll(pass.Party.ItemRoster, item) + pass.Books.Held(pass.Sim, item.StringId),
+                                    pass.Spendable(), 1, null, out _, out _);
+            if (row?.To == null || row.QtyUncut <= 0) return (0, null, 0);
+            return (TradeRules.HighestPriceThatSellsOn(row.SellPrice, TradePolicy.ResaleSafety(),
+                                                       Options.Current.MinProfitMargin),
+                    Tongue.Named(row.To.Name, row.To.StringId), row.SellPrice);
+        }
+
         private static List<(ItemRosterElement el, Good good, int price, int ceiling)> CheapestFirst(
-            Pass pass, Func<ItemObject, bool> wanted, float tolerance = 1f)
+            Pass pass, Func<ItemObject, bool> wanted, float tolerance = 1f, bool sellsOn = false)
         {
             var shelf = new List<(ItemRosterElement el, int price)>();
             var goods = new List<ItemObject>();
@@ -2056,6 +2108,7 @@ namespace TradeLord
 
             var found = new List<(ItemRosterElement el, Good good, int price, int ceiling)>();
             _foodMissed = null;
+            if (sellsOn) _pastTheBar.Clear();
             int missedAt = int.MaxValue;
             foreach (var (el, price) in shelf)
             {
@@ -2064,6 +2117,13 @@ namespace TradeLord
                 int ceiling = TradeMath.MostToPayOverTheCheapest(worth, tolerance);
                 bool food = TradePolicy.IsStorableFood(it);
                 if (food) ceiling = TradeMath.AtLeastTwiceItsValue(ceiling, it.Value);
+                var onward = price > ceiling && sellsOn ? WhatItSellsOnFor(pass, el) : (0, null, 0);
+                if (price > ceiling && TradeRules.AHungryPartyMayPay(price, ceiling, onward.upTo))
+                {
+                    _pastTheBar[it] = (ceiling, onward.to, onward.sell);
+                    found.Add((el, TradePolicy.Describe(it), price, onward.upTo));
+                    continue;
+                }
                 if (price > ceiling)
                 {
                     if (food && price < missedAt)
@@ -2208,7 +2268,8 @@ namespace TradeLord
                 int hungryUnits = 0, hungryGold = 0;
                 var lean = CheapestFirst(pass,
                     it => TradePolicy.IsStorableFood(it) && TradePolicy.MayBuy(it, pass.Locked, out _, toFeed: true),
-                    TradeMath.HungryFoodTolerance);
+                    TradeMath.HungryFoodTolerance, sellsOn: true);
+                var saidPastTheBar = new HashSet<ItemObject>();
                 foreach (var (el, good, _, ceiling) in lean)
                 {
                     if (pass.DirectionError || hunger <= 0) break;
@@ -2226,7 +2287,7 @@ namespace TradeLord
                         int price = pass.Price(el.EquipmentElement, selling: false);
                         if (price <= 0 || price > ceiling)
                         {
-                            hungryStopped = "its price is above both twice the cheapest TradeLord knows and twice its value";
+                            hungryStopped = "its price is above twice the cheapest TradeLord knows, twice its value and what it would sell on for";
                             break;
                         }
                         if (pass.WouldEmptyYourPurse(price))
@@ -2274,6 +2335,10 @@ namespace TradeLord
                         hungryUnits++;
                         hungryGold += price;
                         pass.Tally(item, 1, price);
+                        if (_pastTheBar.TryGetValue(item, out var past) && saidPastTheBar.Add(item))
+                            Log.Write("resupply: " + item.StringId + " at " + price + " is past the bar of " + past.bar +
+                                      ", but the TradeLord ledger would sell it on at " + past.to + " for " + past.sell +
+                                      ", so it is bought as your party's own food" + (pass.Sim ? Counter.Aside : ""));
                         if (pastTheCap) { pastTheCapUnits++; pastTheCapGold += price; }
                         if (belowTheReserve) { belowTheReserveUnits++; belowTheReserveGold += price; }
                     }
@@ -2908,10 +2973,10 @@ namespace TradeLord
             float shareCap = pass.ShareCap;
             var market = new BuyingAt(pass, what, named);
 
-            LedgerBehavior.ForgetWhatPickingABuyerCost();
             string purseSaid = null;
             var stock = new List<Pick>();
-            if (pass.Spendable() > 0)
+            int money = pass.Spendable();
+            if (money > 0)
             {
                 purseSaid = "before this pass " + ThePurseSaid(pass);
                 stock = TradePass.WhatToBuy(market, pass.Books, pass.Sim, shareCap,
@@ -2919,13 +2984,14 @@ namespace TradeLord
             }
             else { tally.Note(Block.BudgetSpent); SayWhatHoldsYourPurse(pass); }
 
+            var stoppedOn = new Dictionary<string, Block>(StringComparer.Ordinal);
+            float room = pass.Room();
             Traded moved = default(Traded);
             InAPass(() => moved =
                 TradePass.BuyThem(stock, market, pass.Books, pass.Sim, shareCap,
-                                  Options.Current, tally));
+                                  Options.Current, tally, stoppedOn));
 
             int bought = moved.Units;
-            SayWhatPickingABuyerCost();
 
             if (pass.Reports && tally.Saw(Block.CarryWeight)) _cargoWasFull = true;
             if (pass.Reports)
@@ -2938,6 +3004,7 @@ namespace TradeLord
             {
                 _buyStalled = null;
                 _boughtThisRound += bought;
+                if (!pass.Sim || Counter.Staging) market.NoteWhatItWasBoughtFor(laidOut: Counter.Staging);
                 pass.Moved(gold: spent, selling: false);
                 Log.Write(pass.Headed(label) + bought +
                           " items, -" + spent + " gold " + pass.Where);
@@ -2954,6 +3021,53 @@ namespace TradeLord
                 Block stopped = tally.Dominant();
                 if (stopped != Block.None && !pass.Muted) NoteStalled(selling: false, stopped);
             }
+            SayWhatBecameOfThePlan(pass, market, stock, stoppedOn, tally, money, room);
+        }
+
+        private static void SayWhatBecameOfThePlan(Pass pass, BuyingAt market, List<Pick> stock,
+                                                   Dictionary<string, Block> stoppedOn, BlockTally tally, int money,
+                                                   float room)
+        {
+            if (!Options.Current.ExtendedDebugLogging || stock.Count == 0) return;
+            var lines = new List<string>
+            {
+                "  buying plan " + pass.Where + ": " + money + " to spend and " + (int)room +
+                " cargo room, in the order TradeLord buys"
+            };
+            var plans = new List<(int units, int cost, int profit, float days)>(stock.Count);
+            for (int i = 0; i < stock.Count; i++)
+            {
+                Pick one = stock[i];
+                ItemObject item = market.ItemAt(one.At);
+                TradeRoute row = market.PlanFor(item);
+                if (item == null || row?.To == null) continue;
+                plans.Add((one.Weighed, one.Plan.Cost, one.Plan.Profit, row.TravelDays));
+                pass.Detail.TryGetValue(item, out var took);
+                stoppedOn.TryGetValue(one.Good.Id ?? "", out Block stop);
+                string why = stop != Block.None ? stop.ToString()
+                    : tally.Saw(Block.BudgetSpent) ? "not reached once your purse was spent" : "not reached";
+                lines.Add("    #" + (i + 1) + " " + one.Good.Id + " for " + row.To.Name + " at " + row.SellPrice +
+                          ", x" + one.Plan.Qty + " (up to " + one.Weighed + " before your cargo), +" + one.Plan.Profit +
+                          ", " + row.TravelDays.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) +
+                          " day(s), Conf " + Scoring.Share(row.Confidence) +
+                          (row.Trust < 1f ? ", trust " + Scoring.Share(row.Trust) : "") + ", " +
+                          one.Key.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) +
+                          " a day for each unit of weight, " +
+                          TradeMath.PerDenarADay(one.Plan.Profit, one.Plan.Cost, row.TravelDays)
+                                   .ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) +
+                          " a day for each denar" +
+                          (one.LedgerRank > 0 ? ", the TradeLord ledger's row " + one.LedgerRank : ", not a TradeLord ledger row here") +
+                          ": " + (took.count > 0
+                              ? "bought " + took.count + " for " + took.gold +
+                                (took.count < one.Plan.Qty ? ", " + (one.Plan.Qty - took.count) + " short of the plan on " + why : "")
+                              : "not bought, " + why));
+            }
+            if (tally.Saw(Block.BudgetSpent) && !tally.Saw(Block.CarryWeight) && plans.Count > 1)
+                lines.Add("    with the same " + money + ", buying by profit a day for each denar would have made +" +
+                          TradeMath.WhatTheMoneyBuys(plans, money, byDenar: true) + " against +" +
+                          TradeMath.WhatTheMoneyBuys(plans, money, byDenar: false) +
+                          " in this order, as your purse ran out before your cargo room");
+            Log.WriteMany(lines);
         }
 
         private static void LotPass(Pass pass, string why)
@@ -2963,9 +3077,7 @@ namespace TradeLord
             var market = new BuyingAt(pass, "buying the villagers' offer", "Taking the villagers' offer",
                                       theirOffer: true);
 
-            LedgerBehavior.ForgetWhatPickingABuyerCost();
             Block stops = TradePass.WhatStopsTheLot(market, pass.Books, pass.Sim, Options.Current, out Lot lot);
-            SayWhatPickingABuyerCost();
             if (lot.Units == 0) return;
             Log.Write(pass.Met.Name + " offer " + lot.Units + " goods for " + lot.Price + " gold" +
                       (lot.Weighed ? ", which TradeLord reckons it can sell on for " + (int)lot.Resale : "") +
@@ -3051,6 +3163,7 @@ namespace TradeLord
             private Dictionary<string, int> _asked;
             private Dictionary<int, (Settlement where, Ladder rungs, int till)> _resale;
             private Dictionary<ItemObject, (int units, int gold)> _resold;
+            private Dictionary<ItemObject, TradeRoute> _plans;
             private List<string> _gear;
 
             internal BuyingAt(Pass pass, string what, string named, bool theirOffer = false)
@@ -3078,6 +3191,8 @@ namespace TradeLord
             }
 
             private ItemObject Item(int at) => Shelf[at].EquipmentElement.Item;
+
+            internal ItemObject ItemAt(int at) => at >= 0 && at < Shelf.Length ? Item(at) : null;
 
             public int Count => Shelf.Length;
 
@@ -3116,23 +3231,79 @@ namespace TradeLord
                 LedgerBehavior.Instance?.PrimeMarketsFor(goods);
             }
 
-            public bool ResaleMarket(int at, int paid, int units, out int price)
+            public bool Planned(int at, out PlannedSale plan, out Block why)
             {
-                var elsewhere = LedgerBehavior.Instance?
-                    .WhereThisEarnsFastest(Item(at), paid, units, _pass.Site) ?? (null, 0, null);
-                price = elsewhere.price;
-                Settlement buyer = elsewhere.town;
-                if (buyer == null) return false;
+                plan = default(PlannedSale);
+                ItemObject item = Item(at);
+                if (item == null) { why = Block.NotMerchandise; return false; }
+                TradeRoute row;
+                Ladder rungs;
+                int till;
+                if (_pass.Site != null)
+                {
+                    why = Block.NoResaleMarket;
+                    LedgerBehavior ledger = LedgerBehavior.Instance;
+                    row = ledger == null ? null : ledger.HereRow(_pass.Site, item, out why);
+                    if (row == null) { if (why == Block.None) why = Block.NoResaleMarket; return false; }
+                    EngineTally.Planned++;
+                    TradeRoute listed = TheLedgerAsksFor(at) > 0 ? ledger.Listed(_pass.Site, item) : null;
+                    if (listed != null && listed.To != row.To) EngineTally.OffTheLedger++;
+                    rungs = Plan.SellLadder(row.Leg);
+                    till = row.Leg?.Till ?? 0;
+                }
+                else
+                {
+                    why = Block.NoResaleMarket;
+                    int theirs = TheirsToSell(at);
+                    row = Plan.BestSale(item, PricesAhead(at), theirs,
+                                        Carried(at) + _pass.Books.Held(_pass.Sim, item.StringId), Spendable(),
+                                        theirs, null, out rungs, out till);
+                    if (row == null) return false;
+                    EngineTally.OnTheRoad++;
+                }
+                why = Block.None;
+                plan = new PlannedSale
+                {
+                    Qty = row.Shown > 0 ? row.Shown : row.Quantity, QtyUncut = row.QtyUncut,
+                    Profit = row.TotalProfit, Cost = row.Cost, Key = row.Key
+                };
+                Aim(at, row.To, row.SellPrice, rungs, till);
+                if (_plans == null) _plans = new Dictionary<ItemObject, TradeRoute>();
+                _plans[item] = row;
+                return true;
+            }
+
+            private void Aim(int at, Settlement buyer, int price, Ladder rungs, int till)
+            {
                 ItemObject good = Item(at);
                 if (good != null && !(_theirOffer && TradeRules.TakenAsLoot(GoodAt(at), Options.Current)))
                     _pass.Aimed[good] = (Tongue.Named(buyer.Name, buyer.StringId), price);
                 if (_resale == null)
                     _resale = new Dictionary<int, (Settlement, Ladder, int)>();
-                _resale[at] = (buyer, elsewhere.rungs ?? new Ladder(buyer, Item(at), true, price, 0),
-                               Options.Current.Omniscient
-                                   ? TradeRules.WhatTheTillCanPay(buyer.SettlementComponent?.Gold ?? 0,
-                                                                  buyer.IsVillage)
-                                   : 0);
+                _resale[at] = (buyer, rungs ?? new Ladder(buyer, Item(at), true, price, 0), till);
+            }
+
+            internal void NoteWhatItWasBoughtFor(bool laidOut)
+            {
+                foreach (var kv in _pass.Detail)
+                {
+                    TradeRoute row = PlanFor(kv.Key);
+                    if (row?.To == null || kv.Value.count <= 0) continue;
+                    Marker.Intend(kv.Key, row, kv.Value.count, laidOut);
+                }
+            }
+
+            internal TradeRoute PlanFor(ItemObject item) =>
+                item != null && _plans != null && _plans.TryGetValue(item, out TradeRoute row) ? row : null;
+
+            public bool ResaleMarket(int at, int paid, int units, out int price)
+            {
+                price = 0;
+                ItemObject item = Item(at);
+                TradeRoute row = Plan.BestSale(item, null, units, 0, 0, units, _pass.Site, out Ladder rungs, out int till);
+                if (row?.To == null) return false;
+                price = row.SellPrice;
+                Aim(at, row.To, price, rungs, till);
                 return true;
             }
 

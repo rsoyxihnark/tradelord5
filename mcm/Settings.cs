@@ -710,7 +710,7 @@ namespace TradeLord.Mcm
         public int MaxHeldPerItem { get => _o.MaxHeldPerItem; set { _o.MaxHeldPerItem = value; Options.Bump(); } }
 
         [SettingPropertyInteger("{=TL237}Max spend per visit (0 = unlimited)", 0, 100000, Order = 5, RequireRestart = false,
-            HintText = "{=TL337}Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Once your party has under a day of its own food, food and a haul animal to carry it may go past it.")]
+            HintText = "{=TL337}Denars TradeLord may spend per visit, or the profit the TradeLord ledger expects from that market if more. Default 1000. Adaptive spend limit raises it. Under a day of your own food, food and a haul animal to carry it may go past it.")]
         [SettingPropertyGroup("{=TL105}Buying", GroupOrder = 7)]
         public int MaxSpendPerVisit { get => _o.MaxSpendPerVisit; set { _o.MaxSpendPerVisit = value; Options.Bump(); } }
 

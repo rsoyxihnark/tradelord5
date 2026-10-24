@@ -62,9 +62,18 @@ namespace TradeLord
             MobileParty party = MobileParty.MainParty;
             if (party == null || party.CurrentSettlement != null || AtSea(party)) return 0f;
             Vec2 at = party.GetPosition2D;
+            if (JustLeftTheGate(party, target, at)) return 0f;
             float left = at.Distance(target.GetPosition2D);
             float detour = DetourFromWhereItSetOff(party, target, at, left);
             return detour > 0f ? left * detour : 0f;
+        }
+
+        private static bool JustLeftTheGate(MobileParty party, Settlement bound, Vec2 at)
+        {
+            Settlement setOff = party.LastVisitedSettlement;
+            if (setOff == null || setOff == bound) return false;
+            Vec2 start = setOff.GetPosition2D;
+            return TradeMath.JustLeftTheGate(start.Distance(at), start.Distance(bound.GetPosition2D));
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -162,10 +171,14 @@ namespace TradeLord
             bool slowed = party.IsDisorganized;
             float nightStep = Nightfall.PartyStep, snowStep = Skies.PartySnowStep, wetStep = Skies.PartyWetStepFor(party);
             float slowStep = Nightfall.PartySlowStep;
-            float clear = speed.SumOfFactors - (night ? nightStep : 0f) - (snowy ? snowStep : 0f) - (wet ? wetStep : 0f) -
-                          (slowed ? slowStep : 0f);
+            float rest = speed.SumOfFactors - (night ? nightStep : 0f) - (snowy ? snowStep : 0f) - (wet ? wetStep : 0f) -
+                         (slowed ? slowStep : 0f);
+            int ground = Ground.PartyOn(party);
+            if (!party.IsCurrentlyAtSea) Ground.Learn(party, ground, rest);
+            float clear = rest - Ground.PartyStep(ground);
             float least = speed.LimitMinValue, most = speed.LimitMaxValue;
-            _paces = TradeMath.PacesFromTheGame(speed.BaseNumber, clear, least, most, nightStep, snowStep, wetStep, slowStep);
+            _paces = TradeMath.PacesFromTheGame(speed.BaseNumber, clear, least, most, nightStep, snowStep, wetStep, slowStep,
+                                                Ground.PartySteps);
             float paceNow = TradeMath.WithinLimits(speed.BaseNumber * (1f + speed.SumOfFactors), least, most);
             float paceClear = TradeMath.WithinLimits(speed.BaseNumber * (1f + clear), least, most);
             return paceNow > 0f && paceClear > 0f ? paceClear / paceNow : 1f;
@@ -233,8 +246,10 @@ namespace TradeLord
             if (detour > 0f) distance *= detour;
             Skies.LiveSkyAt(from, out bool snowy, out bool wet);
             float slow = Nightfall.SlowHoursLeft(party);
-            float[] paces = slow > 0f ? CaravanPacesWhileSlowed(party) : _caravanPaces;
-            float share = paces[TradeMath.WeatherIndex(Campaign.Current.IsNight, snowy, wet, slow > 0f)];
+            float[] paces = TradeMath.WithGrounds(slow > 0f ? CaravanPacesWhileSlowed(party) : _caravanPaces,
+                                                  Ground.CaravanShares(party));
+            float share = paces[TradeMath.WeatherIndex(Campaign.Current.IsNight, snowy, wet, slow > 0f) +
+                                TradeMath.Weathers * Ground.PartyOn(party)];
             float byDay = share > 0f ? now / share : now;
             long started = Stopwatch.GetTimestamp();
             float days = TradeMath.EtaAlongTheRoad(distance, byDay, Skies.CellsBetween(from, to, null), paces,
@@ -295,6 +310,9 @@ namespace TradeLord
             internal float SnowHours;
             internal float WetHours;
             internal float SlowedHours;
+            internal float ForestHours;
+            internal float WaterHours;
+            internal float DesertHours;
             internal float Distance;
             internal float LandRatio;
             internal string Measured;
@@ -315,6 +333,9 @@ namespace TradeLord
             ride.SnowHours = tally.Snow;
             ride.WetHours = tally.Wet;
             ride.SlowedHours = tally.Slowed;
+            ride.ForestHours = tally.Forest;
+            ride.WaterHours = tally.Water;
+            ride.DesertHours = tally.Desert;
             return ride;
         }
 
@@ -327,6 +348,8 @@ namespace TradeLord
             Vec2 at = party.GetPosition2D;
             float left = at.Distance(target.GetPosition2D);
             Settlement setOff = party.LastVisitedSettlement;
+            if (JustLeftTheGate(party, target, at))
+                return "by the game's own distance, as you have just left " + setOff.Name;
             float detour = DetourFromWhereItSetOff(party, target, at, left);
             if (detour > 0f)
                 return "along the game's road from " + setOff.Name + ", " + Nightfall.Figure(detour) +

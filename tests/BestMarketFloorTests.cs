@@ -240,5 +240,45 @@ namespace TradeLord.Tests
             Assert.False(TradeRules.KeptForTheMark(70, new int[0], 1, 0.75f));
             Assert.False(TradeRules.KeptForTheMark(70, mark, 3, 0f));
         }
+
+        [Fact]
+        public void The_ledgers_room_and_Hold_cargo_keep_the_same_units_once_the_marks_purse_is_shared()
+        {
+            var rng = new Random(5113);
+            for (int round = 0; round < 4000; round++)
+            {
+                int goods = rng.Next(1, 4);
+                var rungs = new int[goods][];
+                var here = new int[goods][];
+                var bought = new int[goods];
+                for (int g = 0; g < goods; g++)
+                {
+                    int units = rng.Next(1, 7);
+                    bought[g] = units;
+                    rungs[g] = new int[units];
+                    here[g] = new int[units];
+                    for (int u = 0; u < units; u++)
+                    {
+                        rungs[g][u] = rng.Next(50, 300);
+                        here[g][u] = rng.Next(20, 320);
+                    }
+                }
+                int purse = rng.Next(0, 1500);
+                float share = 0.5f + (float)rng.NextDouble() * 0.5f;
+                int[] kept = TradeRules.SharePurse(purse, rungs, here, bought, share);
+                for (int g = 0; g < goods; g++)
+                {
+                    int[] room = (int[])rungs[g].Clone();
+                    if (kept[g] < room.Length) Array.Resize(ref room, kept[g]);
+                    for (int left = 1; left <= bought[g]; left++)
+                    {
+                        int price = rng.Next(10, 320);
+                        bool holdCargo = TradeRules.HeldForTheMark(price,
+                            TradeRules.FloorForTheLast(rungs[g], left, share), left, kept[g]);
+                        Assert.Equal(holdCargo, TradeRules.KeptForTheMark(price, room, left, share));
+                    }
+                }
+            }
+        }
     }
 }

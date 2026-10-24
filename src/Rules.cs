@@ -35,6 +35,17 @@ namespace TradeLord
         internal bool IsGrain;
     }
 
+    internal enum Bound { None, Cargo, Purse, SpendLimit }
+
+    internal struct PlannedSale
+    {
+        internal int Qty;
+        internal int QtyUncut;
+        internal int Profit;
+        internal int Cost;
+        internal float Key;
+    }
+
     internal interface IWhatTheGameSays
     {
         bool Locked();
@@ -107,6 +118,9 @@ namespace TradeLord
 
         internal static bool FirstTimeBack(string here, string lastTradedAt) =>
             here != null && here == lastTradedAt;
+
+        internal static bool LeftAloneOnArrival(string from, string here, bool tradesOnArrival, string lastTradedAt) =>
+            from != here && tradesOnArrival && FirstTimeBack(from, lastTradedAt);
 
         internal static string LastTradedAt(string leaving, bool traded, string lastTradedAt) =>
             traded && leaving != null ? leaving : lastTradedAt;
@@ -722,6 +736,24 @@ namespace TradeLord
                 most = Math.Min(most, (long)Math.Floor(shareCap / good.Weight) - held);
             return most <= 0 ? 0 : (int)most;
         }
+
+        internal static int UnitsAPlanMayTake(in Good good, int price, (int count, int spent) taken, int held,
+                                              float shareCap, int herdRoom, int stock, Options s)
+        {
+            int most = UnitsTheCapsAllow(good, price, taken, held, shareCap, s);
+            if (good.IsLivestock) most = Math.Min(most, Math.Max(0, herdRoom));
+            return Math.Min(most, Math.Max(0, stock));
+        }
+
+        internal static int HighestPriceThatSellsOn(int sellOn, float safety, float margin)
+        {
+            if (sellOn <= 0) return 0;
+            float realizable = TradeMath.Realizable(sellOn, safety);
+            return TradeMath.MostThatHolds(sellOn, price => price == 0 || TradeMath.BuyAcceptable(price, realizable, margin));
+        }
+
+        internal static bool AHungryPartyMayPay(int price, int ceiling, int sellsOnUpTo) =>
+            price > 0 && (price <= ceiling || price <= sellsOnUpTo);
 
         internal static Block WhatStopsBuying(in Good good, int price, int budget,
                                               (int count, int spent) taken, int held, float shareCap,

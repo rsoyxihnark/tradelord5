@@ -213,6 +213,7 @@ namespace TradeLord
             pieces.Clear();
             if (!Ready()) return pieces;
             TradeMath.CellsAlong(from.x, from.y, to.x, to.y, _cellWide, _cellHigh, _dim, pieces);
+            Ground.Split(from, to, pieces);
             return pieces;
         }
 
@@ -564,9 +565,15 @@ namespace TradeLord
                       "), looking up " + _looks + " cell(s), " + _hits + " of them from memory, in " + Ms(_readTicks) +
                       "; listening to " + _listens + " of the game's weather refreshes took " + Ms(_listenTicks) +
                       ", reading the pace of your party " + _partyReads + " time(s) and of caravans and villagers " + _caravanReads +
-                      " time(s); the busiest frame spent " + Ms(_busiestFrame) + " on the weather");
+                      " time(s); the busiest frame spent " + Ms(_busiestFrame) + " on the weather; " + Ground.Cost);
+            lines.Add("  ground steps: your party " + Ground.PartyStepSaid(TradeMath.ForestGround) + " for forest, " +
+                      Ground.PartyStepSaid(TradeMath.WaterGround) + " on water, " +
+                      Ground.PartyStepSaid(TradeMath.DesertGround) + " in desert and " +
+                      Ground.PartyStepSaid(TradeMath.PlainOrSteppe) + " on plain or steppe; caravans and villagers take " +
+                      "the game's own steps with their culture's feats");
             Log.WriteMany(lines);
             ForgetTheDay();
+            Ground.ForgetTheDay();
             _costFrom = CampaignTime.Now.ToHours;
         }
 

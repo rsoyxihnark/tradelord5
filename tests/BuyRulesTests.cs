@@ -312,5 +312,19 @@ namespace TradeLord.Tests
             Assert.Equal(0, TradeRules.OwedToThePurse(0, 800, 800));
             Assert.Equal(100, TradeRules.OwedToThePurse(100, int.MaxValue, 0));
         }
+
+        [Fact]
+        public void A_hungry_party_may_pay_past_the_bar_only_up_to_what_still_sells_on_at_a_profit()
+        {
+            int upTo = TradeRules.HighestPriceThatSellsOn(46, 0.85f, 0.15f);
+            Assert.True(TradeMath.BuyAcceptable(upTo, TradeMath.Realizable(46, 0.85f), 0.15f));
+            Assert.False(TradeMath.BuyAcceptable(upTo + 1, TradeMath.Realizable(46, 0.85f), 0.15f));
+            Assert.True(TradeRules.AHungryPartyMayPay(25, 24, upTo));
+            Assert.False(TradeRules.AHungryPartyMayPay(upTo + 1, 24, upTo));
+            Assert.True(TradeRules.AHungryPartyMayPay(20, 24, 0));
+            Assert.False(TradeRules.AHungryPartyMayPay(25, 24, 0));
+            Assert.False(TradeRules.AHungryPartyMayPay(0, 24, upTo));
+            Assert.Equal(0, TradeRules.HighestPriceThatSellsOn(0, 0.85f, 0.15f));
+        }
     }
 }

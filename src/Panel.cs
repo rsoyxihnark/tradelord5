@@ -70,7 +70,7 @@ namespace TradeLord
             (int)Math.Round(_route.Confidence * 100f) + (_route.Simulated ? "%" : "%*");
 
         [DataSourceProperty] public string Score =>
-            ((int)(Options.Current.ConfidenceRanking ? _route.Score : _route.ProfitPerDay)).ToString();
+            _route.Key < 10f ? _route.Key.ToString("0.#") : ((int)_route.Key).ToString();
 
         public void ExecuteClickBuyTown() => _centerMap?.Invoke(_route.From);
         public void ExecuteClickSellTown() => _centerMap?.Invoke(_route.To);
@@ -491,15 +491,18 @@ namespace TradeLord
                         Ranks.Of(i, routes.Count), _centerMap));
             Routes = rows;
             bool empty = rows.Count == 0;
-            bool nothingFits = empty && LedgerBehavior.Instance != null && LedgerBehavior.Instance.NothingFitsYourCargo;
-            bool sized = false;
-            for (int i = 0; routes != null && i < routes.Count && !sized; i++) sized = routes[i].SizedToCargo;
+            LedgerBehavior ledger = LedgerBehavior.Instance;
+            bool nothingFits = empty && ledger != null && ledger.NothingFitsYourCargo;
+            bool nothingAffords = empty && ledger != null && ledger.NothingFitsYourPurse;
+            bool sized = ledger != null && ledger.HeldByCargo + ledger.HeldByPurse + ledger.HeldByLimit > 0;
             StatusText = nothingFits
                 ? Tongue.Text("{=TL507}No profitable route fits in your cargo").ToString()
+                : nothingAffords
+                    ? Tongue.Text("{=TL511}No profitable route fits your purse and what you may spend").ToString()
                 : empty
                     ? Tongue.Text("{=TL67}No profitable routes in reach").ToString()
                     : sized
-                        ? Line("{=TL506}{COUNT} profitable route(s), best first, sized to your cargo", "COUNT", rows.Count.ToString())
+                        ? Line("{=TL506}{COUNT} profitable route(s), best first, sized to your cargo and what you may spend", "COUNT", rows.Count.ToString())
                         : Line("{=TL68}{COUNT} profitable route(s), best first", "COUNT", rows.Count.ToString());
             LegendText = (nothingFits
                 ? Tongue.Text("{=TL508}Every profitable route needs room for cargo you will not have, even after selling at the buy market. | Sell some cargo, or make room with a haul animal.").ToString()
@@ -508,11 +511,13 @@ namespace TradeLord
                     ? "{=TL69}No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."
                     : "{=TL90}No routes are within your travel ceilings, from the prices you have recorded so far. | Walk more markets, or raise the ceilings in the Trade Pool settings.").ToString()
                 : Tongue.Text("{=TL70}Click a market's name to jump to it and pin or unpin it | Days = you -> buy market -> sell market | Carv. = caravans at or heading for those markets").ToString()
-                  + Tongue.Text("{=TL509} | Qty = what fits in your cargo once you sell at the buy market").ToString()
+                  + Tongue.Text("{=TL509} | Qty = what your cargo and what you may spend leave for it after the routes above it from the same market").ToString()
+                  + WhatHeldQtyBack(ledger)
+                  + WhatWasSetAside(ledger)
                   + Tongue.Text("{=TL476} | Price is the first unit's; Profit prices every unit in turn, so it is less than price x qty | Conf* = flat quote, not priced per unit").ToString()
                   + (Options.Current.ConfidenceRanking
-                        ? Tongue.Text("{=TL71} | Score = profit per day discounted by Conf").ToString()
-                        : Tongue.Text("{=TL72} | Score = profit per day").ToString())
+                        ? Tongue.Text("{=TL71} | Score = profit a day for each unit of weight carried or herd room taken, discounted by Conf").ToString()
+                        : Tongue.Text("{=TL72} | Score = profit a day for each unit of weight carried or herd room taken").ToString())
                   + (Options.Current.ConfidenceRanking && Options.Current.TrustWhatAMarketPaid
                         ? Tongue.Text("{=TL445} | Score is lowered for a market that has paid less than this panel promised").ToString()
                         : "")
@@ -585,6 +590,25 @@ namespace TradeLord
             return ago <= 0
                 ? Tongue.Text("{=TL442}Today").ToString()
                 : Line("{=TL420}{DAYS} day(s) ago", "DAYS", ago.ToString("N0"));
+        }
+
+        private static string WhatHeldQtyBack(LedgerBehavior ledger)
+        {
+            if (ledger == null || ledger.HeldByCargo + ledger.HeldByPurse + ledger.HeldByLimit == 0) return "";
+            TextObject line = Tongue.Text("{=TL510} | Qty held back by: cargo {CARGO}, purse {PURSE}, what you may spend there {LIMIT}");
+            line.SetTextVariable("CARGO", ledger.HeldByCargo.ToString());
+            line.SetTextVariable("PURSE", ledger.HeldByPurse.ToString());
+            line.SetTextVariable("LIMIT", ledger.HeldByLimit.ToString());
+            return line.ToString();
+        }
+
+        private static string WhatWasSetAside(LedgerBehavior ledger)
+        {
+            if (ledger == null || ledger.SetAsideRoutes <= 0 || ledger.SetAsideFrom == null) return "";
+            TextObject line = Tongue.Text("{=TL512} | {COUNT} route(s) from {MARKET} set aside: trading on arrival leaves it alone the first time you come back");
+            line.SetTextVariable("COUNT", ledger.SetAsideRoutes.ToString());
+            line.SetTextVariable("MARKET", Tongue.Named(ledger.SetAsideFrom.Name, ledger.SetAsideFrom.StringId));
+            return line.ToString();
         }
 
         private static string OneClauseToALine(string said) =>

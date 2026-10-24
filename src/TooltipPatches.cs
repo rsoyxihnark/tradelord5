@@ -171,12 +171,13 @@ namespace TradeLord
                 if (vm.IsPlayerItem && sells.Count > 0)
                 {
                     int local = Priced.At(market, held, MobileParty.MainParty, true);
-                    if (sells[0].town == here || local >= sells[0].price)
+                    var (best, there) = WhereTradeLordWouldSell(item, held, itemVm.ItemRosterElement.Amount, sells);
+                    if (best == here || local >= there)
                         AddLine(vm, "", Tongue.Text("{=TL22}* Best market to sell this!").ToString(), Good);
-                    else if (local > 0 && sells[0].price > local)
+                    else if (local > 0 && there > local)
                     {
                         TextObject w = Tongue.Text("{=TL15}+{PCT}% if sold there instead");
-                        w.SetTextVariable("PCT", (int)((sells[0].price - local) * 100f / local));
+                        w.SetTextVariable("PCT", (int)((there - local) * 100f / local));
                         AddLine(vm, "", w.ToString(), Warn);
                     }
                 }
@@ -195,6 +196,15 @@ namespace TradeLord
                     }
                 }
             }
+        }
+
+        private static (Settlement town, int price) WhereTradeLordWouldSell(
+            ItemObject item, EquipmentElement held, int amount, List<(Settlement town, int price)> sells)
+        {
+            EngineTally.Tooltips++;
+            TradeRoute best = Plan.BestSale(item, null, Math.Max(1, amount), 0, 0, 0, null, out _, out _);
+            if (best?.To == null) return sells.Count > 0 ? sells[0] : (null, 0);
+            return (best.To, TradeMath.AtThisQuality(best.SellPrice, item.Value, held.ItemValue));
         }
 
         private static void AsTheyWillBe(ItemObject item, List<(Settlement town, int price)> markets,

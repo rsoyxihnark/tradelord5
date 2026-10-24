@@ -12,14 +12,6 @@ using TaleWorlds.Core;
 
 namespace TradeLord
 {
-    internal struct Fetched
-    {
-        internal int Total;
-        internal int Units;
-        internal int Walked;
-        internal Ladder Rungs;
-    }
-
     internal struct RouteQuote
     {
         internal int Units;
@@ -28,6 +20,7 @@ namespace TradeLord
         internal int OpeningBuyPrice;
         internal int OpeningSellPrice;
         internal bool Simulated;
+        internal bool SpendCapped;
     }
 
     internal sealed class Shelf
@@ -252,7 +245,7 @@ namespace TradeLord
         internal static RouteQuote Walk(Settlement from, Settlement to, ItemObject item,
                                         int maxUnits, int merchantTill, int spendCap,
                                         int quotedBuyPrice, int quotedSellPrice,
-                                        int landedAtBuyTown, int landedAtSellTown)
+                                        int landedAtBuyTown, int landedAtSellTown, int sellFrom = 0)
         {
             RouteQuote q = default(RouteQuote);
             if (item == null || from == null || to == null || maxUnits <= 0) return q;
@@ -262,15 +255,16 @@ namespace TradeLord
             Ladder sell = Rung(to, item, selling: true, quoted: quotedSellPrice,
                                landed: landedAtSellTown);
             q.Simulated = buy.Walkable && sell.Walkable;
+            int drawnBefore = sellFrom > 0 ? sell.Through(sellFrom) : 0;
 
             for (int u = 0; u < maxUnits; u++)
             {
                 int buyPrice = buy.At(u);
-                int sellPrice = sell.At(u);
+                int sellPrice = sell.At(u + Math.Max(0, sellFrom));
                 if (buyPrice <= 0 || sellPrice <= 0) break;
                 if (!TradePolicy.BuyAcceptable(buyPrice, TradePolicy.Realizable(sellPrice))) break;
-                if (merchantTill > 0 && q.SellTotal + sellPrice > merchantTill) break;
-                if (spendCap > 0 && q.BuyTotal + buyPrice > spendCap) break;
+                if (merchantTill > 0 && (long)drawnBefore + q.SellTotal + sellPrice > merchantTill) break;
+                if (spendCap > 0 && q.BuyTotal + buyPrice > spendCap) { q.SpendCapped = true; break; }
 
                 if (q.Units == 0) { q.OpeningBuyPrice = buyPrice; q.OpeningSellPrice = sellPrice; }
                 q.BuyTotal += buyPrice;
@@ -278,27 +272,6 @@ namespace TradeLord
                 q.Units++;
             }
             return q;
-        }
-
-        internal static Fetched SellWalk(Settlement site, ItemObject item, int units, int quoted, Ladder landing,
-                                         int paid, int purse)
-        {
-            Fetched got = default(Fetched);
-            if (site == null || item == null || units <= 0) return got;
-            got.Rungs = landing ?? new Ladder(site, item, true, quoted, 0);
-            long total = 0;
-            for (int u = 0; u < units; u++)
-            {
-                int price = got.Rungs.At(u);
-                got.Walked++;
-                if (price <= 0) break;
-                if (paid > 0 && !TradePolicy.BuyAcceptable(paid, TradePolicy.Realizable(price))) break;
-                if (TradeRules.TheBuyerCouldNotPay((int)Math.Min(int.MaxValue, total + price), purse)) break;
-                total += price;
-                got.Units++;
-            }
-            got.Total = total > int.MaxValue ? int.MaxValue : (int)total;
-            return got;
         }
 
         internal static int FirstUnit(Settlement site, ItemObject item, bool selling, int quoted,

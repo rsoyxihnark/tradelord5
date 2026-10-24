@@ -57,8 +57,8 @@
 		<string id="TL68" text="{COUNT} profitable route(s), best first"/>
 		<string id="TL69" text="No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."/>
 		<string id="TL70" text="Click a market's name to jump to it and pin or unpin it | Days = you -&gt; buy market -&gt; sell market | Carv. = caravans at or heading for those markets"/>
-		<string id="TL71" text=" | Score = profit per day discounted by Conf"/>
-		<string id="TL72" text=" | Score = profit per day"/>
+		<string id="TL71" text=" | Score = profit a day for each unit of weight carried or herd room taken, discounted by Conf"/>
+		<string id="TL72" text=" | Score = profit a day for each unit of weight carried or herd room taken"/>
 		<string id="TL73" text=" | resale safety factor applied"/>
 		<string id="TL77" text="Profit: +{PCT}%"/>
 		<string id="TL78" text="Stock: {COUNT}"/>
@@ -194,7 +194,7 @@
 		<string id="TL334" text="Never spend below this much gold. Default 300, which is enough to barter your way out of two hostile encounters and still meet a wage payment after a shopping trip."/>
 		<string id="TL335" text="Most units of one good TradeLord buys per visit. 0 = no limit on the count. Default 32."/>
 		<string id="TL336" text="Also cap spending per item per visit in denars."/>
-		<string id="TL337" text="Total denars TradeLord may spend per settlement visit. Default 1000. Adaptive spend limit below raises it as your purse grows. Once your party has under a day of its own food, food and a haul animal to carry it may go past it."/>
+		<string id="TL337" text="Denars TradeLord may spend per visit, or the profit the TradeLord ledger expects from that market if more. Default 1000. Adaptive spend limit raises it. Under a day of your own food, food and a haul animal to carry it may go past it."/>
 		<string id="TL338" text="Assume only this share of the best sell price elsewhere is still there when you arrive. With Learn the resale safety factor on, TradeLord starts here and only ever lowers it, as your own walk-ins show."/>
 		<string id="TL339" text="Grain is heavy and low margin, so buying it fills the cargo for little return. Selling and the food reserve are unaffected. ON by default."/>
 		<string id="TL340" text="Goods TradeLord must never buy. Named by item id or by the name the game shows, comma separated, as above. Selling them is unaffected."/>
@@ -331,9 +331,12 @@
 		<string id="TL503" text="You already own {OWNED} workshop(s). Every 25 points of your Trade skill earns one more slot."/>
 		<string id="TL504" text="Extensive cursor debug logging"/>
 		<string id="TL505" text="Writes all TradeLord sees of the mouse on the campaign map to TradeLord.log: which pointer the game asks for, which one is really on the screen, and where the pointer comes back after a click. OFF by default."/>
-		<string id="TL506" text="{COUNT} profitable route(s), best first, sized to your cargo"/>
+		<string id="TL506" text="{COUNT} profitable route(s), best first, sized to your cargo and what you may spend"/>
 		<string id="TL507" text="No profitable route fits in your cargo"/>
 		<string id="TL508" text="Every profitable route needs room for cargo you will not have, even after selling at the buy market. | Sell some cargo, or make room with a haul animal."/>
-		<string id="TL509" text=" | Qty = what fits in your cargo once you sell at the buy market"/>
+		<string id="TL509" text=" | Qty = what your cargo and what you may spend leave for it after the routes above it from the same market"/>
+		<string id="TL510" text=" | Qty held back by: cargo {CARGO}, purse {PURSE}, what you may spend there {LIMIT}"/>
+		<string id="TL511" text="No profitable route fits your purse and what you may spend"/>
+		<string id="TL512" text=" | {COUNT} route(s) from {MARKET} set aside: trading on arrival leaves it alone the first time you come back"/>
 	</strings>
 </base>

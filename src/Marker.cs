@@ -67,6 +67,7 @@ namespace TradeLord
         internal int Purse;
         internal int First;
         internal long Total;
+        internal float Score;
         internal Paying Pays;
     }
 
@@ -85,6 +86,140 @@ namespace TradeLord
         private static Settlement _picked;
 
         private static readonly HashSet<string> _owedAFairLook = new HashSet<string>(System.StringComparer.Ordinal);
+
+        private sealed class Meant
+        {
+            internal ItemObject Item;
+            internal string To;
+            internal int Units;
+            internal int ProfitEach;
+            internal int Price;
+            internal int Shelf;
+            internal int Landed;
+            internal float Days;
+            internal float AtHours;
+        }
+
+        private static readonly Dictionary<string, Meant> _intended =
+            new Dictionary<string, Meant>(System.StringComparer.Ordinal);
+
+        private static readonly Dictionary<string, Meant> _laidOutFor =
+            new Dictionary<string, Meant>(System.StringComparer.Ordinal);
+
+        internal static void Intend(ItemObject item, TradeRoute row, int units, bool laidOut)
+        {
+            if (item == null || row?.To == null || units <= 0) return;
+            var into = laidOut ? _laidOutFor : _intended;
+            into.TryGetValue(item.StringId, out Meant was);
+            into[item.StringId] = new Meant
+            {
+                Item = item, To = row.To.StringId,
+                Units = (was != null && was.To == row.To.StringId ? was.Units : 0) + units,
+                ProfitEach = TradeMath.PerUnit(row.TotalProfit, row.Quantity), Price = row.SellPrice,
+                Shelf = LedgerBehavior.StockOf(row.To, item), Landed = row.Leg?.LandedAtSell ?? 0,
+                Days = row.TravelDays, AtHours = (float)CampaignTime.Now.ToHours
+            };
+        }
+
+        internal static void TheLaidOutBuyWasTaken(ItemObject item, int units)
+        {
+            if (item == null || units <= 0 || !_laidOutFor.TryGetValue(item.StringId, out Meant meant)) return;
+            _laidOutFor.Remove(item.StringId);
+            _intended.TryGetValue(item.StringId, out Meant was);
+            meant.Units = System.Math.Min(units, meant.Units) + (was != null && was.To == meant.To ? was.Units : 0);
+            _intended[item.StringId] = meant;
+        }
+
+        internal static void ForgetTheLaidOutDeal() => _laidOutFor.Clear();
+
+        internal static List<string> WhatWasBoughtFor(Settlement site, SettlementComponent market)
+        {
+            var lines = new List<string>();
+            if (site == null || market == null) return lines;
+            float now = (float)CampaignTime.Now.ToHours;
+            foreach (var kv in _intended)
+            {
+                Meant meant = kv.Value;
+                if (meant.To != site.StringId || meant.Item == null) continue;
+                int pays = Priced.At(market, meant.Item, MobileParty.MainParty, true);
+                lines.Add("  " + meant.Units + " " + kv.Key + " bought " +
+                          TradeMath.DaysSince(meant.AtHours, now).ToString("0.0", CultureInfo.InvariantCulture) +
+                          " day(s) ago for " + site.Name + " at " + meant.Price + " a unit: it pays " + pays +
+                          " now; the shelf held " + meant.Shelf + " and holds " + LedgerBehavior.StockOf(site, meant.Item) +
+                          (Forecast.On
+                              ? ", where Count what is on its way to a market counted goods of that kind worth " +
+                                meant.Landed + " denars landing by your arrival"
+                              : ""));
+            }
+            return lines;
+        }
+
+        private static Settlement IntendedTown(
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo,
+            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, MobileParty party,
+            out string goods)
+        {
+            goods = null;
+            if (_intended.Count == 0) return null;
+            var carried = new Dictionary<string, int>(System.StringComparer.Ordinal);
+            foreach (var one in cargo)
+            {
+                if (one.item.Item == null) continue;
+                carried.TryGetValue(one.item.Item.StringId, out int had);
+                carried[one.item.Item.StringId] = had + one.amount;
+            }
+            var open = new HashSet<string>(System.StringComparer.Ordinal);
+            foreach (var one in reachable) open.Add(one.s.StringId);
+            string inside = party?.CurrentSettlement?.StringId;
+            float now = (float)CampaignTime.Now.ToHours;
+            var gone = new List<string>();
+            var worth = new Dictionary<string, long>(System.StringComparer.Ordinal);
+            var named = new Dictionary<string, List<string>>(System.StringComparer.Ordinal);
+            foreach (var kv in _intended)
+            {
+                Meant meant = kv.Value;
+                bool stillThere = open.Contains(meant.To) || meant.To == inside;
+                if (!carried.TryGetValue(kv.Key, out int held) || held <= 0 || !stillThere ||
+                    Scoring.TooOldToSay(meant.Days, meant.AtHours, now, out _))
+                {
+                    gone.Add(kv.Key);
+                    continue;
+                }
+                if (!open.Contains(meant.To)) continue;
+                worth.TryGetValue(meant.To, out long sum);
+                worth[meant.To] = sum + (long)System.Math.Min(held, meant.Units) * System.Math.Max(0, meant.ProfitEach);
+                if (!named.TryGetValue(meant.To, out var list)) named[meant.To] = list = new List<string>();
+                list.Add(kv.Key);
+            }
+            foreach (string id in gone) _intended.Remove(id);
+            string best = null;
+            long most = -1L;
+            foreach (var kv in worth)
+                if (kv.Value > most || (kv.Value == most && string.CompareOrdinal(kv.Key, best) < 0))
+                {
+                    most = kv.Value;
+                    best = kv.Key;
+                }
+            if (best == null) return null;
+            goods = string.Join(", ", named[best].ToArray());
+            return Settlement.Find(best);
+        }
+
+        private static void TheIntendedTownNext(
+            List<(Settlement s, SettlementComponent market, int gold, float days)> reachable, Settlement intended,
+            Settlement holder)
+        {
+            if (intended == null || intended == holder) return;
+            int to = holder != null && reachable.Count > 0 && reachable[0].s == holder ? 1 : 0;
+            for (int at = to + 1; at < reachable.Count; at++)
+            {
+                if (reachable[at].s != intended) continue;
+                var meant = reachable[at];
+                reachable.RemoveAt(at);
+                reachable.Insert(to, meant);
+                return;
+            }
+        }
 
         private static string _walkedInto;
         private static string _markedOnTheWayIn;
@@ -165,6 +300,8 @@ namespace TradeLord
         internal static void Forget()
         {
             ForgetTheRead();
+            _intended.Clear();
+            _laidOutFor.Clear();
             _tracked = null;
             _picked = null;
             _owedAFairLook.Clear();
@@ -237,6 +374,9 @@ namespace TradeLord
 
         private struct Reckoning
         {
+            internal Settlement Intended;
+            internal string IntendedGoods;
+            internal float IntendedRate;
             internal Settlement Best;
             internal Settlement RunnerUp;
             internal bool Held;
@@ -314,6 +454,16 @@ namespace TradeLord
             }
 
             WhatItSaidOnTheWayOut(target, how);
+            if (on && how.Intended != null && target != null && target != how.Intended &&
+                Options.Current.ExtendedDebugLogging)
+                Log.Repeatable("marker intended", target.StringId + ">" + how.Intended.StringId,
+                               "map marker chose " + target.Name + " over " + how.Intended.Name +
+                               ", the Sell At the TradeLord ledger planned for your " + how.IntendedGoods + ": " +
+                               (int)how.Rate + " against " + (int)how.IntendedRate +
+                               " gold a day for your whole cargo" +
+                               (Options.Current.ConfidenceRanking
+                                   ? ", each weighed at the Conf of selling there"
+                                   : ""));
 
             if (target == _picked)
             {
@@ -750,6 +900,7 @@ namespace TradeLord
             MobileParty party = MobileParty.MainParty;
             List<(Settlement town, int price)> markets =
                 el.Item == null || units <= 0 || party == null ? null : LedgerBehavior.Instance?.EverySell(el.Item);
+            var pressure = markets == null ? null : LedgerBehavior.CaravanPressure();
             for (int i = 0; markets != null && i < markets.Count; i++)
             {
                 Settlement town = markets[i].town;
@@ -765,14 +916,14 @@ namespace TradeLord
                     Total = TradeMath.WhatALadderPays(pays.At, units, purse)
                 };
                 if (one.First <= 0 || one.Total <= 0L) continue;
-                if (found.Best.Town == null ||
-                    TradeMath.PaysMore(one.Total, one.First, one.Days, found.Best.Total, found.Best.First, found.Best.Days))
+                one.Score = Plan.SaleScore(el.Item, town, one.Total, (long)one.First * units, units, ride, true, 0,
+                                           pressure.TryGetValue(town, out int caravans) ? caravans : 0, out _, out _);
+                if (found.Best.Town == null || one.Score > found.Best.Score)
                 {
                     found.Next = found.Best;
                     found.Best = one;
                 }
-                else if (found.Next.Town == null ||
-                         TradeMath.PaysMore(one.Total, one.First, one.Days, found.Next.Total, found.Next.First, found.Next.Days))
+                else if (found.Next.Town == null || one.Score > found.Next.Score)
                     found.Next = one;
             }
             return found;
@@ -1002,6 +1153,7 @@ namespace TradeLord
             var cargo = WhatYouCarryToSell(party);
             how.Carried = cargo.Count;
             if (cargo.Count == 0) return null;
+            EngineTally.Marker++;
 
             var reachable = new List<(Settlement s, SettlementComponent market, int gold, float days)>();
             foreach (Settlement s in Settlement.All)
@@ -1033,6 +1185,11 @@ namespace TradeLord
                 how.Afresh = OutEarnsTheMark(reachable, holder, party, cargo, how.Compared);
             }
             TheMarkedTownFirst(reachable, holder);
+            how.Intended = IntendedTown(cargo, reachable, party, out how.IntendedGoods);
+            TheIntendedTownNext(reachable, how.Intended, holder);
+            bool oneBasis = how.Intended != null && Options.Current.ConfidenceRanking;
+            var pressure = oneBasis ? LedgerBehavior.CaravanPressure() : null;
+            ItemObject aged = cargo[0].item.Item;
             if (ultra) how.Board = new List<Weighing>();
 
             float bar = 0f;
@@ -1052,7 +1209,11 @@ namespace TradeLord
                 long total = took.Value > gold ? gold : took.Value;
                 long earned = total - took.Cost;
                 float rate = TradeMath.PerDay(earned, ride);
-                float weighed = TradeMath.RateTheMarkHolds(rate, s == holder);
+                if (s == how.Intended) how.IntendedRate = rate;
+                float judged = oneBasis
+                    ? rate * Plan.SellSide(aged, s, ride, true, pressure.TryGetValue(s, out int caravans) ? caravans : 0)
+                    : rate;
+                float weighed = TradeMath.RateTheMarkHolds(judged, s == holder);
                 if (s == holder)
                 {
                     how.HolderPriced = true;
@@ -1173,19 +1334,21 @@ namespace TradeLord
             return mark;
         }
 
-        internal static float RoomItFrees(Settlement site, float holdShare)
+        internal static (float room, int gold) WhatYourCargoFrees(Settlement site, float holdShare)
         {
             MobileParty party = MobileParty.MainParty;
             SettlementComponent market = site?.SettlementComponent;
-            if (party == null || market == null) return 0f;
+            if (party == null || market == null) return (0f, 0);
             var cargo = WhatYouCarryToSell(party);
-            if (cargo.Count == 0) return 0f;
+            if (cargo.Count == 0) return (0f, 0);
             int purse = PurseOf(site);
-            if (purse <= 0) return 0f;
+            if (purse <= 0) return (0f, 0);
             float ride = Travel.EstimateDaysFromParty(site);
-            if (TradeMath.OutOfReach(ride)) return 0f;
-            return WhatItWouldFetch(site, market, party, ride, cargo, purse, null,
-                                    WhatTheMarkWouldKeep(site, ride, cargo, holdShare), holdShare).Weight;
+            if (TradeMath.OutOfReach(ride)) return (0f, 0);
+            Takings took = WhatItWouldFetch(site, market, party, ride, cargo, purse, null,
+                                            WhatTheMarkWouldKeep(site, ride, cargo, holdShare), holdShare);
+            long gold = took.Value > purse ? purse : took.Value;
+            return (took.Weight, gold > 0L ? (int)gold : 0);
         }
 
         private static int[][] WhatTheMarkWouldKeep(
@@ -1198,9 +1361,28 @@ namespace TradeLord
             float onward = Travel.EstimateDaysBetween(site, mark, ride);
             int purse = PurseOf(mark);
             if (!LedgerBehavior.WithinTravelCeiling(mark, onward) || purse <= 0) return null;
+            MobileParty party = MobileParty.MainParty;
+            SettlementComponent market = site.SettlementComponent;
+            if (party == null || market == null) return null;
             var rungs = new int[cargo.Count][];
+            var here = new int[cargo.Count][];
+            var bought = new int[cargo.Count];
+            int till = PurseOf(site);
             for (int at = 0; at < cargo.Count; at++)
-                rungs[at] = WhatTheMarkTakes(mark, cargo[at].item, cargo[at].amount, cargo[at].worth, ride + onward, purse);
+            {
+                var (el, amount, worth, floors) = cargo[at];
+                int units = System.Math.Max(0, amount - floors.AgedLeft);
+                if (units <= 0) continue;
+                int[] ladder = WhatTheMarkTakes(mark, el, units, worth, ride + onward, purse);
+                if (ladder.Length == 0) continue;
+                Paying pays = WhatThatMarketPays(site, market, el, party, ride);
+                here[at] = TradeRules.WhatSellsHere(pays.At, units, worth, Options.Current.MinProfitMargin, ref till);
+                rungs[at] = ladder;
+                bought[at] = units;
+            }
+            int[] kept = TradeRules.SharePurse(purse, rungs, here, bought, holdShare);
+            for (int at = 0; at < cargo.Count; at++)
+                if (rungs[at] != null && kept[at] < rungs[at].Length) System.Array.Resize(ref rungs[at], kept[at]);
             return rungs;
         }
 

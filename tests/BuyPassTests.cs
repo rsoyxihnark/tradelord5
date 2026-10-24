@@ -48,6 +48,7 @@ namespace TradeLord.Tests
             internal int Described;
             internal int Ranked = -1;
             internal int Weighed = -1;
+            internal float ShareCap;
 
             internal Stall Add(Good good, int amount = 1, int price = 100, int resale = 200)
             {
@@ -84,10 +85,58 @@ namespace TradeLord.Tests
 
             public void PriceTheMarketsFor(List<Pick> shelf) => Ranked = shelf.Count;
 
+            internal readonly Dictionary<int, PlannedSale> Plans = new Dictionary<int, PlannedSale>();
+
+            public bool Planned(int at, out PlannedSale plan, out Block why)
+            {
+                if (Plans.TryGetValue(at, out plan)) { why = Block.None; return true; }
+                why = Block.NoResaleMarket;
+                if (!Stalls[at].Elsewhere) return false;
+                Good good = Stalls[at].Good;
+                int held = Stalls[at].Carried + Ledger.Held(Sim, good.Id);
+                var ahead = PricesAhead(at);
+                int theirs = TradeRules.UnitsAPlanMayTake(good, ahead(0), Ledger.Purchases(Sim, good.Id), held,
+                                                          ShareCap, Herd - Ledger.HerdTaken(Sim), TheirsToSell(at),
+                                                          Rules);
+                if (theirs <= 0)
+                {
+                    why = good.IsLivestock && Herd - Ledger.HerdTaken(Sim) <= 0
+                        ? Block.HerdFull
+                        : TradeRules.WhatCapsAGood(good, ahead(0), Ledger.Purchases(Sim, good.Id), held, ShareCap, Rules);
+                    if (why == Block.None) why = Block.NoStock;
+                    return false;
+                }
+                int units = 0, profit = 0, cost = 0;
+                while (units < theirs)
+                {
+                    int price = ahead(units);
+                    int sell = ResaleUpTo(at, held + units + 1) - ResaleUpTo(at, held + units);
+                    if (!TradeMath.BuyAcceptable(price, TradeMath.Realizable(sell, ResaleSafety()), Rules.MinProfitMargin)) break;
+                    if (Stalls[at].BuyerTill > 0 && ResaleUpTo(at, held + units + 1) > Stalls[at].BuyerTill) break;
+                    if (cost + price > Purse) break;
+                    profit += sell - price;
+                    cost += price;
+                    units++;
+                }
+                if (units == 0) { why = Block.BelowMargin; return false; }
+                Weighed = units;
+                Asked.Add((at, units));
+                plan = new PlannedSale
+                {
+                    Qty = units, QtyUncut = units, Profit = profit, Cost = cost,
+                    Key = TradeMath.Key(profit, 1f, 1f, false, Stalls[at].Good.Weight, units, 1f)
+                };
+                why = Block.None;
+                return true;
+            }
+
             internal readonly List<(int at, int units)> Asked = new List<(int at, int units)>();
+
+            internal int ResaleAsked;
 
             public bool ResaleMarket(int at, int paid, int units, out int price)
             {
+                ResaleAsked++;
                 Weighed = units;
                 Asked.Add((at, units));
                 price = Stalls[at].Resale;
@@ -173,6 +222,7 @@ namespace TradeLord.Tests
             var run = new Run { Tally = new BlockTally(), Books = books ?? new Books() };
             market.Ledger = run.Books;
             market.Sim = sim;
+            market.ShareCap = shareCap;
             var stock = new List<Pick>();
             if (market.Spendable() > 0)
                 stock = TradePass.WhatToBuy(market, run.Books, sim, shareCap, market.Rules, run.Tally);
@@ -180,6 +230,115 @@ namespace TradeLord.Tests
             run.Units = TradePass.BuyThem(stock, market, run.Books, sim, shareCap, market.Rules,
                                           run.Tally).Units;
             return run;
+        }
+
+        private static FakeMarket Poros(int purse)
+        {
+            var market = new FakeMarket { Purse = purse };
+            market.Add(Cargo("linen"), amount: 9, price: 183, resale: 1040).ResaleStep = 80;
+            market.Add(Cargo("velvet"), amount: 3, price: 413, resale: 1188).ResaleStep = 60;
+            market.Add(Cargo("wine"), amount: 9, price: 98, resale: 235).ResaleStep = 5;
+            market.Add(Cargo("flax"), amount: 32, price: 9, resale: 27);
+            return market;
+        }
+
+        private static readonly (float conf, float days)[] PorosRoutes =
+        {
+            (0.20f, 0.9f), (0.37f, 0.7f), (0.20f, 0.8f), (0.30f, 1.0f)
+        };
+
+        private static void TheLedgerPlans(FakeMarket market, bool ranked)
+        {
+            var keys = new List<(float key, int at)>();
+            for (int at = 0; at < market.Count; at++)
+            {
+                Assert.True(market.Planned(at, out PlannedSale plan, out _));
+                plan.Key = TradeMath.Key(plan.Profit, PorosRoutes[at].conf, 1f, true, market.Stalls[at].Good.Weight,
+                                         plan.QtyUncut, PorosRoutes[at].days);
+                market.Plans[at] = plan;
+                keys.Add((plan.Key, at));
+            }
+            market.Asked.Clear();
+            if (!ranked) return;
+            keys.Sort((x, y) => y.key.CompareTo(x.key));
+            for (int i = 0; i < keys.Count; i++) market.LedgerAsksFor[keys[i].at] = i + 1;
+        }
+
+        [Fact]
+        public void At_Poros_velvet_and_linen_outrank_wine_on_profit_for_each_unit_of_weight()
+        {
+            FakeMarket market = Poros(100000);
+            TheLedgerPlans(market, ranked: true);
+            Assert.Equal(1, market.LedgerAsksFor[1]);
+            Assert.Equal(2, market.LedgerAsksFor[0]);
+            Assert.Equal(3, market.LedgerAsksFor[2]);
+        }
+
+        [Fact]
+        public void At_Poros_with_966_to_spend_the_ledgers_order_is_bought_and_wine_waits_behind_velvet()
+        {
+            FakeMarket market = Poros(966);
+            TheLedgerPlans(market, ranked: true);
+            Run run = Buy(market);
+            Assert.Equal("velvet", market.Taken[0]);
+            Assert.Equal("velvet", market.Taken[1]);
+            Assert.DoesNotContain("linen", market.Taken);
+            Assert.Single(market.Taken.FindAll(id => id == "wine"));
+            Assert.True(run.Tally.Saw(Block.BudgetSpent));
+        }
+
+        [Fact]
+        public void At_Poros_with_the_ledgers_expected_profit_as_the_limit_linen_and_velvet_are_bought_before_wine()
+        {
+            int limit = TradeMath.SpendLimit(1000, 2610 + 34, true, 2111);
+            int left = TradeMath.Budget(2610, 300, limit, 34);
+            Assert.Equal(2111, limit);
+            Assert.Equal(2077, left);
+
+            FakeMarket market = Poros(left);
+            TheLedgerPlans(market, ranked: true);
+            Buy(market);
+            int lastLinen = market.Taken.LastIndexOf("linen");
+            int firstWine = market.Taken.IndexOf("wine");
+            Assert.Equal(new[] { "velvet", "velvet", "velvet" }, market.Taken.GetRange(0, 3).ToArray());
+            Assert.True(lastLinen > 2);
+            Assert.True(firstWine < 0 || firstWine > lastLinen);
+        }
+
+        [Fact]
+        public void At_Poros_the_pass_buys_on_the_ledgers_own_plan_and_never_asks_another_buyer()
+        {
+            FakeMarket market = Poros(2077);
+            TheLedgerPlans(market, ranked: true);
+            Run run = Buy(market);
+            Assert.Equal(0, market.ResaleAsked);
+            Assert.Contains("linen", market.Taken);
+            Assert.Contains("velvet", market.Taken);
+            Assert.False(run.Tally.Saw(Block.NoResaleMarket));
+        }
+
+        [Fact]
+        public void A_good_the_ledger_offers_here_is_never_bought_after_one_it_does_not()
+        {
+            FakeMarket market = Poros(100000);
+            TheLedgerPlans(market, ranked: false);
+            market.LedgerAsksFor[3] = 1;
+            Buy(market);
+            Assert.Equal("flax", market.Taken[0]);
+            int lastFlax = market.Taken.LastIndexOf("flax");
+            Assert.Equal(market.Taken.FindAll(id => id == "flax").Count - 1, lastFlax);
+        }
+
+        [Fact]
+        public void Nothing_is_bought_past_the_quantity_the_plan_shows()
+        {
+            FakeMarket market = Poros(100000);
+            TheLedgerPlans(market, ranked: true);
+            PlannedSale linen = market.Plans[0];
+            linen.QtyUncut = 2;
+            market.Plans[0] = linen;
+            Buy(market);
+            Assert.Equal(2, market.Taken.FindAll(id => id == "linen").Count);
         }
 
         [Fact]
@@ -269,13 +428,16 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_market_a_buy_is_aimed_at_is_asked_about_the_whole_stack()
+        public void The_plan_for_a_buy_walks_the_far_market_from_the_units_you_already_carry()
         {
             var market = new FakeMarket();
-            Stall stall = market.Add(Cargo("iron"), amount: 10, price: 100, resale: 200);
+            Stall stall = market.Add(Cargo("iron"), amount: 10, price: 100, resale: 300);
+            stall.ResaleStep = 10;
             stall.Carried = 4;
-            Buy(market);
-            Assert.Equal(14, market.Weighed);
+            Run run = Buy(market);
+            Assert.Equal(10, market.Weighed);
+            Assert.Equal(10, run.Units);
+            Assert.Equal((0, 10, 260 + 250 + 240 + 230 + 220 + 210 + 200 + 190 + 180 + 170), market.ResoldFor[0]);
         }
 
         [Fact]
@@ -286,7 +448,7 @@ namespace TradeLord.Tests
             Stall stall = market.Add(Cargo("iron"), amount: 10, price: 100, resale: 200);
             stall.Carried = 4;
             Buy(market);
-            Assert.Equal((0, 7), market.Asked[0]);
+            Assert.Equal((0, 3), market.Asked[0]);
         }
 
         [Fact]
@@ -300,13 +462,14 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_good_left_less_of_the_purse_by_an_earlier_one_is_weighed_again_on_what_it_can_still_take()
+        public void A_good_its_buyer_can_pay_for_only_in_part_is_planned_on_what_the_buyer_can_pay()
         {
             var market = new FakeMarket { Purse = 1300 };
             market.Add(Cargo("iron"), amount: 10, price: 100, resale: 200);
             market.Add(Cargo("silver"), amount: 10, price: 100, resale: 400).BuyerTill = 800;
             Run run = Buy(market);
-            Assert.Equal(new[] { (0, 10), (1, 10), (1, 3) }, market.Asked.ToArray());
+            Assert.Equal(new[] { (0, 10), (1, 2) }, market.Asked.ToArray());
+            Assert.Equal(new[] { "silver", "silver" }, market.Taken.GetRange(0, 2).ToArray());
             Assert.Equal(12, run.Units);
         }
 
@@ -395,7 +558,7 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_pick_is_worth_what_you_could_actually_take_of_it_not_its_percentage()
+        public void A_pick_goes_by_its_profit_for_each_unit_of_weight_however_many_of_it_you_could_take()
         {
             var few = new FakeMarket();
             few.Add(Cargo("wool"), amount: 3, price: 50, resale: 100);
@@ -407,7 +570,7 @@ namespace TradeLord.Tests
             many.Add(Cargo("wool"), amount: 10, price: 50, resale: 100);
             many.Add(Cargo("silver"), amount: 2, price: 500, resale: 700);
             Buy(many);
-            Assert.Equal("wool", many.Taken[0]);
+            Assert.Equal("silver", many.Taken[0]);
             Assert.Equal(12, many.Taken.Count);
         }
 
@@ -424,38 +587,37 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void When_the_purse_runs_short_the_good_that_makes_the_most_for_its_gold_goes_first()
+        public void When_the_purse_runs_short_the_good_with_the_most_profit_for_each_unit_of_weight_still_goes_first()
         {
             var market = new FakeMarket { Purse = 300 };
             market.Add(Cargo("velvet"), amount: 3, price: 100, resale: 170);
             market.Add(Cargo("wool"), amount: 15, price: 10, resale: 20);
             Run run = Buy(market);
-            Assert.Equal("wool", market.Taken[0]);
-            Assert.Equal(16, run.Units);
-            Assert.Equal("velvet", market.Taken[15]);
+            Assert.Equal("velvet", market.Taken[0]);
+            Assert.Equal(3, run.Units);
             Assert.True(run.Tally.Saw(Block.BudgetSpent));
         }
 
         [Fact]
-        public void When_everything_fits_the_pick_that_makes_the_most_still_goes_first()
+        public void When_everything_fits_the_pick_with_the_most_profit_for_each_unit_of_weight_still_goes_first()
         {
             var market = new FakeMarket();
             market.Add(Cargo("clay", weight: 2f), amount: 10, price: 20, resale: 40);
             market.Add(Cargo("jewelry", weight: 0.5f), amount: 2, price: 100, resale: 160);
             Buy(market);
-            Assert.Equal("clay", market.Taken[0]);
+            Assert.Equal("jewelry", market.Taken[0]);
             Assert.Equal(12, market.Taken.Count);
         }
 
         [Fact]
-        public void The_shelf_is_priced_once_for_every_good_that_survives_it()
+        public void The_plan_is_asked_once_for_every_good_that_survives_the_shelf()
         {
             var market = new FakeMarket();
             market.Add(Cargo("iron"));
             market.Add(Cargo("wool"));
             market.Add(Cargo("stone")).Amount = 0;
             Buy(market);
-            Assert.Equal(2, market.Ranked);
+            Assert.Equal(new[] { (0, 1), (1, 1) }, market.Asked.ToArray());
         }
 
         [Fact]
