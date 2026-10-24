@@ -315,5 +315,27 @@ namespace TradeLord.Tests
                 }
             }
         }
+
+        [Fact]
+        public void A_good_is_held_for_the_marked_market_only_when_it_pays_more_than_the_Sell_At()
+        {
+            Assert.False(TradeRules.HoldForTheSellAt(true, true, 1280L, 2697L));
+            Assert.True(TradeRules.HoldForTheSellAt(true, true, 2697L, 1280L));
+            Assert.True(TradeRules.HoldForTheSellAt(true, true, 1500L, 1500L));
+            Assert.True(TradeRules.HoldForTheSellAt(true, false, 0L, 0L));
+            Assert.False(TradeRules.HoldForTheSellAt(false, true, 0L, 0L));
+            Assert.False(TradeRules.HoldForTheSellAt(false, false, 0L, 0L));
+        }
+
+        [Fact]
+        public void A_sale_with_no_hold_line_gives_its_own_reason()
+        {
+            Assert.Contains("in the marked market", TradeRules.WhyNothingWasHeld(NoHold.MarkedMarket));
+            Assert.Contains("in the Sell At it was bought for", TradeRules.WhyNothingWasHeld(NoHold.ItsSellAt));
+            Assert.Contains("past your travel ceilings", TradeRules.WhyNothingWasHeld(NoHold.OutOfReach));
+            Assert.Contains("no Sell At or marked market", TradeRules.WhyNothingWasHeld(NoHold.NoMarket));
+            Assert.DoesNotContain("travel ceilings", TradeRules.WhyNothingWasHeld(NoHold.MarkedMarket));
+            Assert.DoesNotContain("travel ceilings", TradeRules.WhyNothingWasHeld(NoHold.ItsSellAt));
+        }
     }
 }

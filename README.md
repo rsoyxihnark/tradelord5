@@ -125,7 +125,8 @@
 - ✅ The whole load is only what your caps, your gold, your cargo and your herd let it buy, and a market is weighed only on what its own purse can pay for
 - ✅ Holds trade goods and livestock you never paid for, the ones a town event hands you or a quest leaves in your bags, until a market beats what the cheapest market it knows would have charged for them by your margin
 - ✅ Goods you never paid for are never given away at the first stall that will take them
-- ✅ Holds a good for the Sell At it was bought for, or else the market marked on your map, rather than selling it one town short for much less: Hold cargo for the best market sells it on the way only for at least 75% of what that market pays
+- ✅ Holds a good for the Sell At it was bought for, or the market marked on your map where that pays more for it, rather than selling it one town short for much less
+- ✅ Hold cargo for the best market sells such a good on the way only for at least 75% of what that market pays
 - ✅ Hold cargo for the best market holds only as many as that market would buy, 0% holds nothing, and looted gear goes to the first market that can pay for it
 - ✅ Hold cargo for the best market holds nothing in the marked market itself, and holds a good for its Sell At even while Auto-mark best sell market on map is off
 - ✅ Clears looted gear too, from tier 1 out of the box and up to any tier you choose

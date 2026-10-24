@@ -1334,25 +1334,54 @@ namespace TradeLord
             return mark;
         }
 
-        internal static Settlement HoldFor(ItemObject item, Settlement here, System.Func<Settlement, float> rideTo,
-                                           out float ride, out int purse, out bool boughtFor)
+        internal static Settlement HoldFor(EquipmentElement el, int units, Settlement here,
+                                           System.Func<Settlement, float> rideTo, float lead,
+                                           out float ride, out int purse, out bool boughtFor, out NoHold why)
         {
             ride = 0f;
             purse = 0;
             boughtFor = false;
-            if (item == null || rideTo == null || InTheMarkedMarket(here)) return null;
-            Settlement meant = BoughtFor(item);
-            if (meant != null && meant == here) return null;
-            if (meant != null && MayHoldFor(meant) && InReach(meant, rideTo, out ride, out purse))
+            why = NoHold.NoMarket;
+            if (el.Item == null || rideTo == null) return null;
+            if (InTheMarkedMarket(here)) { why = NoHold.MarkedMarket; return null; }
+            Settlement meant = BoughtFor(el.Item);
+            if (meant != null && meant == here) { why = NoHold.ItsSellAt; return null; }
+            float meantRide = 0f, markRide = 0f;
+            int meantPurse = 0, markPurse = 0;
+            bool meantHolds = meant != null && MayHoldFor(meant) && InReach(meant, rideTo, out meantRide, out meantPurse);
+            Settlement mark = TheMarkToHoldFor(here);
+            bool markHolds = mark != null && mark != meant && InReach(mark, rideTo, out markRide, out markPurse);
+            long meantPays = 0L, markPays = 0L;
+            if (meantHolds && markHolds)
             {
+                meantPays = PaysFor(meant, el, units, lead + meantRide, meantPurse);
+                markPays = PaysFor(mark, el, units, lead + markRide, markPurse);
+            }
+            if (TradeRules.HoldForTheSellAt(meantHolds, markHolds, meantPays, markPays))
+            {
+                ride = meantRide;
+                purse = meantPurse;
                 boughtFor = true;
+                why = NoHold.None;
                 return meant;
             }
-            Settlement mark = TheMarkToHoldFor(here);
-            if (mark != null && InReach(mark, rideTo, out ride, out purse)) return mark;
-            ride = 0f;
-            purse = 0;
+            if (markHolds)
+            {
+                ride = markRide;
+                purse = markPurse;
+                why = NoHold.None;
+                return mark;
+            }
+            if (meant != null || mark != null) why = NoHold.OutOfReach;
             return null;
+        }
+
+        private static long PaysFor(Settlement s, EquipmentElement el, int units, float ride, int purse)
+        {
+            MobileParty party = MobileParty.MainParty;
+            if (s?.SettlementComponent == null || party == null || units <= 0) return 0L;
+            Paying pays = WhatThatMarketPays(s, s.SettlementComponent, el, party, ride);
+            return TradeMath.WhatALadderPays(pays.At, units, purse);
         }
 
         private static bool InTheMarkedMarket(Settlement here) =>
@@ -1417,7 +1446,7 @@ namespace TradeLord
                 var (el, amount, worth, floors) = cargo[at];
                 int units = System.Math.Max(0, amount - floors.AgedLeft);
                 if (units <= 0) continue;
-                Settlement mark = HoldFor(el.Item, site, onwardTo, out float onward, out int purse, out _);
+                Settlement mark = HoldFor(el, units, site, onwardTo, ride, out float onward, out int purse, out _, out _);
                 if (mark == null) continue;
                 int[] ladder = WhatTheMarkTakes(mark, el, units, worth, ride + onward, purse);
                 if (ladder.Length == 0) continue;
