@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.1
+
+- Fixed TradeLord picking where to sell goods from a villagers' offer by what they fetch instead of the profit a day over what you paid
+- Fixed the map marker not starting from the Sell At that goods from a villagers' offer were bought for
+
 ## 2.1.0
 
 - Fixed TradeLord spending your purse on other goods before the ones the TradeLord ledger offered at that market
