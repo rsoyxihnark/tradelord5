@@ -240,7 +240,8 @@ namespace TradeLord
                           " day(s) at Conf " + Share(said.Confidence) +
                           (said.Parts.Haste > 0f ? " (" + Confidence.Spelled(said.Parts) + ")" : "") +
                           "; you walked in " + Figure(since) +
-                          " day(s) later and it pays " + found + ", " + Share(held) + " of what it promised" +
+                          " day(s) after it was promised and it pays " + found + ", " + Share(held) +
+                          " of what it promised" +
                           (said.Quoted > 0
                               ? "; the promise came off the " + said.Quoted +
                                 " a unit TradeLord had for that market, with goods of that kind worth " + said.Landed +

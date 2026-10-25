@@ -130,12 +130,14 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_promise_stays_worth_scoring_for_twice_the_ride_and_a_day()
+        public void A_promise_stays_worth_scoring_for_the_ride_it_said_and_a_day()
         {
-            Assert.False(Scoring.TooOldToSay(3f, 0f, 168f, out float since));
+            Assert.False(Scoring.TooOldToSay(3f, 0f, 96f, out float since));
+            Assert.Equal(4f, since, 4);
+            Assert.True(Scoring.TooOldToSay(3f, 0f, 120f, out since));
+            Assert.Equal(5f, since, 4);
+            Assert.True(Scoring.TooOldToSay(3f, 0f, 168f, out since));
             Assert.Equal(7f, since, 4);
-            Assert.True(Scoring.TooOldToSay(3f, 0f, 192f, out since));
-            Assert.Equal(8f, since, 4);
         }
 
         [Fact]
@@ -437,14 +439,14 @@ namespace TradeLord.Tests
         [Fact]
         public void A_figure_is_kept_for_every_day_it_can_still_be_judged_on()
         {
-            Assert.Equal(12, Scoring.StepsItIsReadOver(1f));
+            Assert.Equal(8, Scoring.StepsItIsReadOver(1f));
             Assert.Equal(4, Scoring.StepsItIsReadOver(0f));
             Assert.Equal(4, Scoring.StepsItIsReadOver(float.NaN));
             Assert.Equal((int)(Scoring.LongestAFigureIsRead / TradeMath.HorizonStep), Scoring.StepsItIsReadOver(40f));
             Assert.Equal(0.25f, Scoring.DaysAtStep(0));
             Assert.Equal(3f, Scoring.DaysAtStep(11));
             for (float within = 0.25f; within < 9f; within += 0.25f)
-                Assert.True(Scoring.DaysAtStep(Scoring.StepsItIsReadOver(within) - 1) >= within * 2f + TradeMath.GraceDays);
+                Assert.True(Scoring.DaysAtStep(Scoring.StepsItIsReadOver(within) - 1) >= within + TradeMath.GraceDays);
         }
 
         [Fact]
@@ -865,8 +867,8 @@ namespace TradeLord.Tests
         public void A_figure_still_to_be_judged_is_not_replaced_by_a_fresher_one()
         {
             Assert.True(Scoring.StillToBeJudged(1f, 0f, 12f));
-            Assert.True(Scoring.StillToBeJudged(1f, 0f, 72f));
-            Assert.False(Scoring.StillToBeJudged(1f, 0f, 73f));
+            Assert.True(Scoring.StillToBeJudged(1f, 0f, 48f));
+            Assert.False(Scoring.StillToBeJudged(1f, 0f, 49f));
             var keeps = new Keeps<Promise>();
             Assert.False(keeps.TryGet("lageta", "fish", out _));
             Assert.False(keeps.TryGet(null, "fish", out _));

@@ -2470,8 +2470,9 @@ namespace TradeLord.Tests
         public void A_promise_is_only_worth_scoring_while_you_arrived_near_when_it_said_you_would()
         {
             Assert.True(TradeMath.WorthScoring(2f, 2f));
-            Assert.True(TradeMath.WorthScoring(2f, 5f));
-            Assert.False(TradeMath.WorthScoring(2f, 5.01f));
+            Assert.True(TradeMath.WorthScoring(2f, 3f));
+            Assert.False(TradeMath.WorthScoring(2f, 3.01f));
+            Assert.False(TradeMath.WorthScoring(2f, 5f));
             Assert.True(TradeMath.WorthScoring(0f, 1f));
             Assert.False(TradeMath.WorthScoring(0f, 1.5f));
             Assert.True(TradeMath.WorthScoring(-3f, 0.5f));
