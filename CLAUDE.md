@@ -204,11 +204,11 @@ These hold in this repository alone, alongside everything above.
 - A version whose only change is that switch has nothing to tell the player, so it rides along with a version that does, or it ships as `[no release]` under a subject that says the settings file was touched and no more.
 - The kept copies in `archive/` are a closed record. Every changelog entry a session writes goes into `CHANGELOG.md` and nowhere else, and nothing is ever added to, reworded in or taken out of the files in `archive/` again. They say what the changelog and the commit history held before they were rewritten, and that is the whole of what they will ever say.
 - The files in `archive/` are exempt from the Text length rules, the same way `CLAUDE.md` is.
-- The owner keeps one more branch beside `main`: `rebuild`. It starts from 1.104.13, the last version before travel times were reworked, and fixes from later versions are carried onto it one at a time, as he asks for them.
-- `rebuild` publishes debug builds alone. A commit on it that carries a version publishes that version as a pre-release whose name ends in `_debugbuild`, and a `[no release]` commit publishes nothing.
-- The version in the source stays numbers alone, because the game refuses to load a mod whose version carries anything else, so `_debugbuild` is written only into the name of the release.
-- To work on `rebuild`, put the checkout on it with `git checkout rebuild` and `git reset --hard origin/rebuild`, and push it with `git push -u origin HEAD:rebuild`.
-- `rebuild` keeps a changelog of its own, whose version sections say what each debug build carries. How `rebuild` reaches `main` is the owner's to decide.
+- `main` is the only branch that publishes. A commit on it that carries a version publishes that version as a release, and a `[no release]` commit publishes nothing. No branch is named as a debug build publisher any more.
+- The version in the source stays numbers alone, because the game refuses to load a mod whose version carries anything else.
+- `legacy` holds the versions from 1.104.14 to 1.106.0, shipped from the old `main` after the branch that is now `main` had set off from 1.104.13.
+- `legacy` is never worked on, never pushed to and never published from. Say in chat that it is there and leave it alone.
+- The versions on `legacy` have no section in `main`'s changelog, so the release check holds a branch against the published releases its own history carries and sets the rest aside.
 - These are the owner's choices too, and a session treats them the way the Intentional, never reported section says:
   - Whether the one time settings reset is armed or disarmed.
   - That TradeLord puts 1000 denars, once a campaign, into every village purse the game has left empty. It mends a fault in the game itself.

@@ -163,9 +163,8 @@ def main(argv):
     agreed = theMessageSaysWhatTheChangelogSays(shipping, said)
     subject, _, _ = thisCommit()
     marked = subject is not None and subject.startswith('[no release]')
-    aside = os.environ.get('GITHUB_REF', 'refs/heads/main') != 'refs/heads/main'
-    tagged, carried = tagsCarried() if aside else (None, None)
-    if aside and tagged is None:
+    tagged, carried = tagsCarried()
+    if tagged is None:
         print('  BROKEN   the tags could not be read, so this branch was not held against the releases')
         return 1
     rows, how = asked()
@@ -183,10 +182,10 @@ def main(argv):
 
     for version in sorted(live, key=order):
         row = live[version]
-        if aside and version != shipping and row['tag'] not in tagged:
+        if version != shipping and row['tag'] not in tagged:
             faults.append(version + ' is published and its tag ' + row['tag'] + ' is not here to read')
             continue
-        if aside and version != shipping and row['tag'] not in carried:
+        if version != shipping and row['tag'] not in carried:
             elsewhere += 1
             continue
         if version == shipping and (row['draft'] or row['files'] == 0):
