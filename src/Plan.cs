@@ -237,6 +237,11 @@ namespace TradeLord
 
                 float soonest = toBuy + Travel.StraightDaysBetween(from, to);
                 if (!LedgerBehavior.WithinTravelCeiling(to, soonest)) continue;
+                if (_passOver && TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin))
+                {
+                    PassedOver++;
+                    continue;
+                }
                 if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))
                 {
                     PassedOver++;

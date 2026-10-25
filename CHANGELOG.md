@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.10
+
+- The ledger is worked out faster, as TradeLord now skips a market whose best possible price could never clear your Min profit margin
+
 ## 2.2.9
 
 - Fixed a promise counting as missed, and its market losing trust, when you walked in long after the day it said
