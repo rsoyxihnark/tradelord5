@@ -515,6 +515,66 @@ namespace TradeLord
             return null;
         }
 
+        internal struct Said
+        {
+            internal bool Known;
+            internal float Days;
+            internal float Length;
+            internal float LandRatio;
+            internal bool Walked;
+            internal float Forest, Water, Desert;
+            internal float Night, Snow, Wet, Slow;
+            internal float DayPace, NightPace;
+        }
+
+        internal static Said WhatWasSaidAbout(Settlement target)
+        {
+            var said = default(Said);
+            if (target == null) return said;
+            float days = EstimateDaysFromParty(target);
+            if (!(days > 0f) || TradeMath.OutOfReach(days)) return said;
+            if (!_partyDist.TryGetValue(target.StringId, out Road road)) return said;
+            TradeMath.Pace pace = PartyPace();
+            var tally = new TradeMath.Tally();
+            Ride(road, pace, _moment, 0d, false, tally);
+            said.Known = true;
+            said.Days = days;
+            said.Length = road.Length;
+            said.LandRatio = road.LandRatio;
+            said.Walked = road.Walked;
+            said.Forest = (float)tally.OnGround[TradeMath.GroundForest];
+            said.Water = (float)tally.OnGround[TradeMath.GroundWater];
+            said.Desert = (float)tally.OnGround[TradeMath.GroundDesert];
+            said.Night = (float)tally.Night;
+            said.Snow = (float)tally.Snow;
+            said.Wet = (float)tally.Wet;
+            said.Slow = (float)tally.Slow;
+            said.DayPace = pace.On(TradeMath.GroundPlain, false, false, false, false);
+            said.NightPace = pace.On(TradeMath.GroundPlain, true, false, false, false);
+            return said;
+        }
+
+        internal static int GroundUnder(MobileParty party)
+        {
+            if (party == null || Campaign.Current == null) return TradeMath.Unread;
+            try { return GroundOf(Campaign.Current.MapSceneWrapper.GetFaceTerrainType(party.CurrentNavigationFace)); }
+            catch { return TradeMath.Unread; }
+        }
+
+        internal static void SkyOver(MobileParty party, out bool wet, out bool snowy)
+        {
+            wet = false;
+            snowy = false;
+            if (party == null || Campaign.Current == null) return;
+            try
+            {
+                byte sky = SkyNow(Campaign.Current.Models.MapWeatherModel, party.Position.ToVec2());
+                wet = (sky & Wet) != 0;
+                snowy = (sky & Snowy) != 0;
+            }
+            catch { }
+        }
+
         internal static TradeMath.Pace PaceNow()
         {
             try { return PartyPace(); }

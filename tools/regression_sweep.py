@@ -17,7 +17,7 @@ S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Drove.cs', 'Marker.cs', 'Notices.cs', 'Passes.cs', 'Ranking.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
       'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
       'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs', 'Projection.cs', 'Hindsight.cs',
-      'Scoring.cs', 'Counter.cs', 'Workshops.cs', 'Plan.cs', 'SpeedCheck.cs']}
+      'Scoring.cs', 'Counter.cs', 'Workshops.cs', 'Plan.cs', 'SpeedCheck.cs', 'RideCheck.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -2142,7 +2142,7 @@ chk("1.3.28", "both travel estimates take their speeds from one definition",
     S['TradeMath.cs'].count("sea = fleetSpeed <= StandingStill ? land : fleetSpeed;") == 1 and
     "TradeMath.SpeedsInEffect(LandSpeed(), SeaSpeed(), out float land, out float sea);" in
     method_body(S['Travel.cs'], "private static TradeMath.Pace PartyPace()") and
-    S['Travel.cs'].count("PartyPace()") == 6 and
+    S['Travel.cs'].count("PartyPace()") == 7 and
     "TradeMath.Pace pace = PartyPace();" in method_body(S['Travel.cs'], "private static void Speeds") and
     "road.Days = Ride(road, PartyPace(), _moment, 0d, false, null);" in
     method_body(S['Travel.cs'], "private static float RideFromParty") and
@@ -10136,7 +10136,7 @@ def nothing_reads_a_name_without_asking_whether_it_has_one():
                 continue
             return False
     return (read == 7
-            and ALL.count("Tongue.Named(") == 32
+            and ALL.count("Tongue.Named(") == 35
             and 'return adding + " " + Tongue.Named(el.Item.Name, el.Item.StringId) + " as #" + first +'
                 in method_body(S['Ledger.cs'], "private string WriteDownFree")
             and "if (adding <= 0 || el.Item == null) return null;" in method_body(S['Ledger.cs'], "private string WriteDownFree")
@@ -21514,6 +21514,44 @@ def the_log_checks_the_speeds_it_read_against_what_the_game_does():
 
 chk("no release", "TradeLord.log checks the night step, the Disorganized step, the game clock and the ground steps against what TradeLord read from the game, and changes nothing by what it finds",
     the_log_checks_the_speeds_it_read_against_what_the_game_does())
+
+
+def every_ride_is_judged_in_the_log_against_what_tradelord_said():
+    check = S['RideCheck.cs']
+    tick = method_body(check, "internal static void Tick(float dt)")
+    off = method_body(check, "private static void SetOff(Settlement to, double now)")
+    reached = method_body(check, "private static void Reached(Settlement at)")
+    said = method_body(S['Travel.cs'], "internal static Said WhatWasSaidAbout(Settlement target)")
+    return (check and tick and off and reached and said
+            and 'starter.AddBehavior(new RideWatchBehavior());' in S['SubModule.cs']
+            and 'Guard.Run("GameEnd.RideCheck", RideCheck.Forget);' in S['SubModule.cs']
+            and "RideCheck.Saw(party, bound, days);" in
+                method_body(S['Forecast.cs'], "private static void ReadWhatIsOnTheRoad")
+            and ordered(said, "float days = EstimateDaysFromParty(target);",
+                        "if (!_partyDist.TryGetValue(target.StringId, out Road road)) return said;",
+                        "Ride(road, pace, _moment, 0d, false, tally);",
+                        "said.Forest = (float)tally.OnGround[TradeMath.GroundForest];",
+                        "said.Night = (float)tally.Night;")
+            and "if (ground >= 0 && ground < Grounds) OnGround[ground] += hours;" in S['TradeMath.cs']
+            and S['TradeMath.cs'].count("tally?.Count(") == 2
+            and S['TradeMath.cs'].count(", road[i].Ground, dark, wet, snow, slow);") == 2
+            and ordered(tick, "Settlement to = party.DefaultBehavior == AiBehavior.GoToSettlement ? party.TargetSettlement : null;",
+                        '"ride check: you turned away from "', "if (!_riding && to != null) SetOff(to, now);",
+                        "_ride.Moving += step;", "Travel.SkyOver(party, out bool wet, out bool snowy);",
+                        "int ground = Travel.GroundUnder(party);")
+            and ordered(off, "Travel.Said said = Travel.WhatWasSaidAbout(to);", "if (!said.Known) return;",
+                        '"ride check: set off for "')
+            and ordered(reached, "float off = TradeMath.RideOffBy(saidHours, moving);",
+                        '"ride check: reached "', '"  night: TradeLord counted "', '"  weather: TradeLord counted "',
+                        '"  ground: TradeLord counted "', '"  road: TradeLord put the road at "',
+                        '"  ceiling: "', '"  left out: "', '"  this session: "')
+            and '"caravan ride check: "' in check
+            and all(one in MATHTESTS for one in (
+                "A_ride_counts_the_hours_it_spent_on_each_kind_of_ground",)))
+
+
+chk("no release", "TradeLord.log judges every ride you set off on against the time TradeLord gave for it, breaking the ride down by night, weather, ground and road, and judges caravan arrivals the same way",
+    every_ride_is_judged_in_the_log_against_what_tradelord_said())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

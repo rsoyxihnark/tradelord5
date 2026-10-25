@@ -1527,11 +1527,13 @@ namespace TradeLord
         public sealed class Tally
         {
             public double Hours, Night, Wet, Snow, Slow;
+            public readonly double[] OnGround = new double[Grounds];
 
-            internal void Count(double hours, bool dark, bool wet, bool snow, bool slow)
+            internal void Count(double hours, int ground, bool dark, bool wet, bool snow, bool slow)
             {
                 if (!(hours > 0d)) return;
                 Hours += hours;
+                if (ground >= 0 && ground < Grounds) OnGround[ground] += hours;
                 if (dark) Night += hours;
                 if (wet) Wet += hours;
                 if (snow) Snow += hours;
@@ -1607,7 +1609,7 @@ namespace TradeLord
                 double done = t + left / perHour;
                 if (done <= next)
                 {
-                    tally?.Count(done - t, dark, wet, snow, slow);
+                    tally?.Count(done - t, road[i].Ground, dark, wet, snow, slow);
                     t = done;
                     int was = i;
                     i = NextRun(road, i + 1);
@@ -1627,7 +1629,7 @@ namespace TradeLord
                 }
                 else
                 {
-                    tally?.Count(next - t, dark, wet, snow, slow);
+                    tally?.Count(next - t, road[i].Ground, dark, wet, snow, slow);
                     left -= (next - t) * perHour;
                     if (left < 0d) left = 0d;
                     t = next;

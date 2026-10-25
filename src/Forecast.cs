@@ -257,6 +257,7 @@ namespace TradeLord
                 ItemRoster carried = party.ItemRoster;
                 if (carried == null) continue;
                 float days = Travel.DaysFor(party, bound);
+                RideCheck.Saw(party, bound, days);
                 if (caravan)
                 {
                     Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days));
