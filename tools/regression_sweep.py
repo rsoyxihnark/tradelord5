@@ -3959,20 +3959,16 @@ def kept_branch_named():
     return re.findall(r'keeps one more branch beside `main`: `([A-Za-z0-9._-]*)`', RULES)
 
 
-def the_kept_branch_is_named_once_and_publishes_only_debug_builds():
-    named = kept_branch_named()
-    if len(named) != 1 or named[0] == 'main':
-        return False
-    kept = named[0]
+def no_branch_is_named_as_a_debug_build_publisher():
     section = RULES[RULES.find('\n## This repository\n'):]
     where = between(WORKFLOW, "- name: Where this publishes", "- name: Publish release")
     publish = between(WORKFLOW, "- name: Publish release", "could not publish")
     return (RULES.find('\n## This repository\n') > 0
-            and 'keeps one more branch beside `main`: `' + kept + '`' in section
-            and '`' + kept + '` publishes debug builds alone.' in section
-            and 'whose name ends in `_debugbuild`, and a `[no release]` commit publishes nothing.' in section
+            and kept_branch_named() == []
+            and '`main` is the only branch that publishes.' in section
+            and 'No branch is named as a debug build publisher any more.' in section
+            and '`legacy` is never worked on, never pushed to and never published from.' in section
             and 'the game refuses to load a mod whose version carries anything else' in section
-            and '`git push -u origin HEAD:' + kept + '`' in section
             and ("KEPT=$(sed -n 's/.*keeps one more branch beside `main`: `\\([A-Za-z0-9._-]*\\)`.*/\\1/p' CLAUDE.md | head -1)"
                  in where)
             and ordered(where, 'if [ "$GITHUB_REF" = "refs/heads/main" ]; then',
@@ -3989,30 +3985,28 @@ def the_kept_branch_is_named_once_and_publishes_only_debug_builds():
             and ("name=$(sed -n 's/.*keeps one more branch beside `main`: `\\([A-Za-z0-9._-]*\\)`.*/\\1/p' \\\n"
                  '         "${CLAUDE_PROJECT_DIR:-${0%/*}/../..}/CLAUDE.md" 2>/dev/null | head -1)') in GUARD
             and '[ -n "$name" ] && [ "$name" != main ] && { [ "$1" = "$name" ] || [ "$1" = "refs/heads/$name" ]; }' in GUARD
-            and '         ! kept "$FIRST" &&\n' in GUARD
-            and GUARD.count('kept "') == 2)
+            and '         ! kept "$FIRST" &&\n' in GUARD)
 
-chk("no release", "the one branch kept beside main is named once, in the repository section, where the branch guard and the workflow read it, and it publishes only pre-releases named as debug builds",
-    the_kept_branch_is_named_once_and_publishes_only_debug_builds())
+chk("no release", "no branch is named as a debug build publisher, so only main publishes, and the wiring that would name one is still read by the rules, the workflow and the branch guard",
+    no_branch_is_named_as_a_debug_build_publisher())
 
 
-def the_release_check_holds_main_against_every_release():
+def the_release_check_holds_a_branch_against_the_releases_it_carries():
     loop = between(RELEASED, "    for version in sorted(live, key=order):\n", "        if version == shipping and (row['draft']")
     carried = between(RELEASED, "def tagsCarried():", "\n\n\n")
-    return ("    aside = os.environ.get('GITHUB_REF', 'refs/heads/main') != 'refs/heads/main'\n" in RELEASED
-            and "    tagged, carried = tagsCarried() if aside else (None, None)\n" in RELEASED
+    return ("    tagged, carried = tagsCarried()\n" in RELEASED
             and "the tags could not be read, so this branch was not held against the releases" in RELEASED
+            and 'aside' not in RELEASED
             and ordered(carried, "['git', 'tag', '--list']", "['git', 'tag', '--merged', sha]")
             and loop.startswith("        row = live[version]\n"
-                                "        if aside and version != shipping and row['tag'] not in tagged:\n")
+                                "        if version != shipping and row['tag'] not in tagged:\n")
             and ordered(loop, "' is not here to read')",
-                        "if aside and version != shipping and row['tag'] not in carried:", "elsewhere += 1")
+                        "if version != shipping and row['tag'] not in carried:", "elsewhere += 1")
             and loop.count("            continue\n") == 2
-            and RELEASED.count('aside') == 5
             and 'releases were published from commits this branch does not carry' in RELEASED)
 
-chk("no release", "on main every release is held against the changelog, and only a push to another branch leaves out the releases its own history does not carry, failing on a tag it cannot read",
-    the_release_check_holds_main_against_every_release())
+chk("no release", "every branch, main included, is held against the published releases its own history carries and sets the rest aside, failing on a tag it cannot read",
+    the_release_check_holds_a_branch_against_the_releases_it_carries())
 chk("1.7.0", "the cost-basis arithmetic lives beside the other money rules and needs nothing from the game",
     the_ledger_keeps_no_second_copy_of_the_cost_basis_rules())
 chk("1.7.0", "a good with no price you paid still falls through to the cheapest market known",
