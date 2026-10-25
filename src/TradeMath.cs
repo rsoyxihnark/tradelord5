@@ -1677,6 +1677,21 @@ namespace TradeLord
 
         public static bool LikeAStep(float step) => step > -0.9f && step < 0.5f;
 
+        public static void WeatherSteps(bool snowyBefore, bool wetBefore, bool snowyAfter, bool wetAfter,
+                                        float factorsBefore, float factorsAfter, float wetStepKnown,
+                                        out float snowStep, out float wetStep)
+        {
+            snowStep = float.NaN;
+            wetStep = float.NaN;
+            float change = factorsAfter - factorsBefore;
+            if (float.IsNaN(change) || float.IsInfinity(change)) return;
+            bool snowTurned = snowyBefore != snowyAfter, wetTurned = wetBefore != wetAfter;
+            if (wetTurned && !snowTurned) wetStep = wetAfter ? change : -change;
+            else if (snowTurned && !wetTurned) snowStep = snowyAfter ? change : -change;
+            else if (snowTurned && wetTurned && snowyAfter == wetAfter && !float.IsNaN(wetStepKnown))
+                snowStep = (snowyAfter ? change : -change) - wetStepKnown;
+        }
+
         public static float NightStepFrom(float paceBefore, float paceAfter, float factorsAfter, bool nightFell)
         {
             if (!(paceBefore > 0f) || !(paceAfter > 0f)) return float.NaN;

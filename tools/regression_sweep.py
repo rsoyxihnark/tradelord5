@@ -21486,10 +21486,19 @@ def the_log_checks_the_speeds_it_read_against_what_the_game_does():
     slow = method_body(check, "private static void ReadTheEndOfDisorder(MobileParty main)")
     clock = method_body(check, "private static void WatchTheClock(float dt)")
     read = method_body(check, "private static void SayWhatWasRead()")
-    return (check and night and slow and clock and read
+    turn = method_body(check, "private static void ReadTheTurn(MobileParty main, int now)")
+    return (check and night and slow and clock and read and turn
             and 'starter.AddBehavior(new SpeedWatchBehavior());' in S['SubModule.cs']
             and 'Guard.Run("GameEnd.SpeedCheck", SpeedCheck.Forget);' in S['SubModule.cs']
             and 'Guard.Run("SpeedCheck.Tick", dt, SpeedCheck.Tick);' in check
+            and 'Guard.Run("SpeedCheck.Weather", WatchTheWeather);' in check
+            and ordered(turn,
+                        "TradeMath.WeatherSteps(snowyBefore, wetBefore, snowyAfter, wetAfter, _sky.Factors,",
+                        "speed.SumOfFactors, pace.Wet, out snow, out wet);",
+                        '", a snow step of " + Step(snow) + "; TradeLord read " + Step(pace.Snow) +',
+                        '", a wet ground step of " + Step(wet) + "; TradeLord read " + Step(pace.Wet) +',
+                        '", which was not read as a step because snow and wet ground turned together, "')
+            and "A_weather_step_is_read_only_from_a_turn_that_changed_that_weather_alone" in MATHTESTS
             and "internal static TradeMath.Pace PaceNow()" in S['Travel.cs']
             and "internal static string PaceBecause() => _evenBecause;" in S['Travel.cs']
             and ordered(night, "TradeMath.NightStepFrom(_party.Speed, after, speed.SumOfFactors, nightFell)",
@@ -21512,7 +21521,7 @@ def the_log_checks_the_speeds_it_read_against_what_the_game_does():
             and "The_night_step_is_read_from_the_pace_the_game_gives_either_side_of_the_turn" in MATHTESTS)
 
 
-chk("no release", "TradeLord.log checks the night step, the Disorganized step, the game clock and the ground steps against what TradeLord read from the game, and changes nothing by what it finds",
+chk("no release", "TradeLord.log checks the night step, the snow and wet ground steps, the Disorganized step, the game clock and the ground steps against what TradeLord read from the game, and changes nothing by what it finds",
     the_log_checks_the_speeds_it_read_against_what_the_game_does())
 
 

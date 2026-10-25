@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.3
+
+- Fixed TradeLord.log losing the weather step check that reads the snow and wet ground steps as the weather turns over your party
+
 ## 2.3.2
 
 - Fixed TradeLord.log losing what the busiest frame spent on TradeLord's travel work

@@ -3630,5 +3630,20 @@ namespace TradeLord.Tests
             Assert.True(tally.OnGround[TradeMath.GroundDesert] > 0d);
             Assert.Equal(0d, tally.OnGround[TradeMath.GroundWater], 6);
         }
+
+        [Fact]
+        public void A_weather_step_is_read_only_from_a_turn_that_changed_that_weather_alone()
+        {
+            TradeMath.WeatherSteps(false, false, false, true, 0.1f, 0.05f, float.NaN, out float snow, out float wet);
+            Assert.True(float.IsNaN(snow));
+            Assert.Equal(-0.05f, wet, 4);
+            TradeMath.WeatherSteps(false, true, true, true, 0.05f, -0.075f, float.NaN, out snow, out wet);
+            Assert.Equal(-0.125f, snow, 4);
+            Assert.True(float.IsNaN(wet));
+            TradeMath.WeatherSteps(true, true, false, false, -0.175f, 0f, -0.05f, out snow, out wet);
+            Assert.Equal(-0.125f, snow, 4);
+            TradeMath.WeatherSteps(false, false, true, true, 0f, -0.175f, float.NaN, out snow, out wet);
+            Assert.True(float.IsNaN(snow) && float.IsNaN(wet));
+        }
 }
 }
