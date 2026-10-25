@@ -1298,21 +1298,6 @@ namespace TradeLord
             return OutOfReach(days) ? FurthestThereIs : days;
         }
 
-        public const float UsualNightStep = -0.25f;
-
-        public const float NightPaceUnread = 1f + UsualNightStep;
-
-        public const float SlowestNightPace = 0.05f;
-
-        public const float FastestNightPace = 4f;
-
-        public static float NightPaceKept(float nightPace) =>
-            Math.Min(Math.Max(Finite(nightPace, NightPaceUnread), SlowestNightPace), FastestNightPace);
-
-        public const float UsualSnowStep = -0.125f;
-
-        public const float SnowShareUnread = 1f + UsualSnowStep;
-
         public static int WhatVillagersSell(int amount, int till, int price) =>
             amount <= 0 || till <= 0 || price <= 0 ? 0 : Math.Min(amount, till / price);
 
@@ -1663,13 +1648,6 @@ namespace TradeLord
                 if (OutOfReach(DaysTaken(t))) return FurthestThereIs;
             }
             return DaysTaken(t);
-        }
-
-        public static float WithinLimits(float value, float least, float most)
-        {
-            float low = Finite(least, float.MinValue);
-            float high = Finite(most, float.MaxValue);
-            return value < low ? low : value > high ? high : value;
         }
 
         public static bool ClearOfLimits(float speed, float least, float most) =>
