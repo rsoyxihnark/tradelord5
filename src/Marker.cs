@@ -825,7 +825,7 @@ namespace TradeLord
                 said.Add("  ultralog: " + how.Weighed + " market(s) weighed, " + how.Told +
                          " priced, " + how.Refused + " would pay too little for anything you carry, " + how.TooPoor +
                          " have too little gold for one unit of anything that clears your margin, " +
-                         how.Left + " left unpriced once no purse left could beat " +
+                         how.Left + " left unpriced once no price they could pay would beat " +
                          how.Rate.ToString("0") + " gold a day, in " +
                          how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms");
                 said.Add("  ultralog: left out before pricing, " + how.NoTill +
@@ -927,6 +927,22 @@ namespace TradeLord
                     found.Next = one;
             }
             return found;
+        }
+
+        private static long MostThisCargoCouldFetch(
+            Settlement site, SettlementComponent market, MobileParty party,
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)
+        {
+            long most = 0L;
+            for (int at = 0; at < cargo.Count; at++)
+            {
+                int quoted = Options.Current.Omniscient
+                    ? Priced.At(market, cargo[at].item, party, true)
+                    : LedgerBehavior.Instance?.SeenSellPrice(cargo[at].item, site) ?? 0;
+                if (quoted <= 0) continue;
+                most += (long)TradeMath.MostAForecastCanReach(quoted) * cargo[at].amount;
+            }
+            return most;
         }
 
         private static Takings WhatItWouldFetch(
@@ -1201,6 +1217,8 @@ namespace TradeLord
             {
                 var (s, market, gold, ride) = reachable[at];
                 if (TradeMath.PerDay(gold, ride) <= bar) break;
+                if (s != holder && s != how.Intended &&
+                    TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;
                 ride = Travel.EstimateDaysFromParty(s);
                 if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }
                 how.Told++;
