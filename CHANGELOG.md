@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.3
+
+- TradeLord now reads the weather along a road with less work, so the map runs a little smoother
+
 ## 2.2.2
 
 - Fixed the campaign map stuttering worse the longer you played

@@ -19,6 +19,7 @@ namespace TradeLord
         private const byte Wet = 1;
         private const byte Snowy = 2;
         private const int MostWorkedKept = 200000;
+        private const long Spread = unchecked((long)0x9E3779B97F4A7C15UL);
         private const int MostSharesKept = 200;
         private const int FewestShares = 10;
         private const int CheckEvery = 4;
@@ -218,7 +219,7 @@ namespace TradeLord
         }
 
         private static long Key(int cell, double hours) =>
-            ((long)cell << 32) | (uint)(long)Math.Round(hours * 60d);
+            unchecked((((long)cell << 32) | (uint)(long)Math.Round(hours * 60d)) * Spread);
 
         private static byte SkyByte(MapWeatherModel.WeatherEvent sky, MapWeatherModel.WeatherEventEffectOnTerrain ground) =>
             (byte)((sky == MapWeatherModel.WeatherEvent.Snowy || sky == MapWeatherModel.WeatherEvent.Blizzard ? Snowy : 0) |
