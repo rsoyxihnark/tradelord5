@@ -3599,5 +3599,22 @@ namespace TradeLord.Tests
             TradeMath.RegionsAlong(length, stride, regionAt, pieces);
             return pieces;
         }
+
+        [Fact]
+        public void The_night_step_is_read_from_the_pace_the_game_gives_either_side_of_the_turn()
+        {
+            Assert.Equal(-0.25f, TradeMath.NightStepFrom(5f, 3.75f, -0.25f, true), 4);
+            Assert.Equal(-0.25f, TradeMath.NightStepFrom(3.75f, 5f, 0f, false), 4);
+            Assert.Equal(-0.15f, TradeMath.NightStepFrom(6f, 5.1f, -0.15f, true), 4);
+            Assert.True(float.IsNaN(TradeMath.NightStepFrom(0f, 5f, 0f, false)));
+            Assert.True(TradeMath.LikeAStep(-0.25f));
+            Assert.False(TradeMath.LikeAStep(-0.95f));
+            Assert.False(TradeMath.LikeAStep(float.NaN));
+            Assert.Equal(3.75f, TradeMath.PaceAfterTheTurn(5f, -0.25f, 3.75f, -0.25f, true), 4);
+            Assert.Equal(5f, TradeMath.PaceAfterTheTurn(3.75f, 0f, 5f, -0.25f, false), 4);
+            Assert.Equal(4f, TradeMath.PaceAfterTheTurn(5f, -0.25f, 3.75f, -0.2f, true), 4);
+            Assert.True(TradeMath.ClearOfLimits(5f, 1f, 100f));
+            Assert.False(TradeMath.ClearOfLimits(1f, 1f, 100f));
+        }
 }
 }

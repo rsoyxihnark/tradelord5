@@ -1675,6 +1675,25 @@ namespace TradeLord
 
         public static bool LikeAStep(float step) => step > -0.9f && step < 0.5f;
 
+        public static float NightStepFrom(float paceBefore, float paceAfter, float factorsAfter, bool nightFell)
+        {
+            if (!(paceBefore > 0f) || !(paceAfter > 0f)) return float.NaN;
+            float factorsBefore = (1f + factorsAfter) * (paceBefore / paceAfter) - 1f;
+            float step = nightFell ? factorsAfter - factorsBefore : factorsBefore - factorsAfter;
+            return float.IsNaN(step) || float.IsInfinity(step) ? float.NaN : step;
+        }
+
+        public static float PaceAfterTheTurn(float paceBefore, float factorsAfter, float paceAfter,
+                                             float nightStep, bool nightFell)
+        {
+            if (!(paceBefore > 0f) || !(paceAfter > 0f)) return float.NaN;
+            float factorsBefore = (1f + factorsAfter) * (paceBefore / paceAfter) - 1f;
+            float onePlus = 1f + factorsBefore;
+            if (!(onePlus > 0f)) return float.NaN;
+            float turned = 1f + factorsBefore + (nightFell ? nightStep : -nightStep);
+            return Finite(paceBefore * turned / onePlus, float.NaN);
+        }
+
         public static float Quantile(List<float> sorted, float share)
         {
             if (sorted == null || sorted.Count == 0) return float.NaN;
