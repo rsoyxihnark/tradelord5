@@ -43,7 +43,6 @@ namespace TradeLord.Compat
             ("TaleWorlds.CampaignSystem.CampaignBehaviors.FoodConsumptionBehavior", "MakeFoodConsumption", null),
             ("TaleWorlds.ScreenSystem.ScreenManager", "EarlyUpdate", null),
             ("TaleWorlds.Engine.MouseManager", "ActivateMouseCursor", null),
-            ("TaleWorlds.CampaignSystem.GameComponents.DefaultMapWeatherModel", "UpdateWeatherForPosition", null),
         };
 
         private static readonly (string type, string member)[] ReflectedMethods =
@@ -63,6 +62,7 @@ namespace TradeLord.Compat
             ("TaleWorlds.Engine.MouseManager", "ActivateMouseCursor"),
             ("TaleWorlds.CampaignSystem.Settlements.VillageMarketData", "get_ClosestTown"),
             ("TaleWorlds.CampaignSystem.ComponentInterfaces.PartySpeedModel", "get_BaseModel"),
+            ("TaleWorlds.CampaignSystem.ComponentInterfaces.MapWeatherModel", "get_BaseModel"),
         };
 
         private static readonly (string type, string member, string why)[] LotShape =
@@ -141,6 +141,30 @@ namespace TradeLord.Compat
             ("TaleWorlds.CampaignSystem.Conversation.ConversationManager", "_sentences"),
             ("TaleWorlds.CampaignSystem.Inventory.InventoryLogic", "_transactionHistory"),
             ("TaleWorlds.CampaignSystem.Inventory.InventoryLogic+TransactionHistory", "_transactionLogs"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "CavalryEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "DisorganizedEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MountedFootMenEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MovingAtForestEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MovingAtNightEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MovingAtWaterEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MovingInDesertEffect"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "MovingOnSnowEffect"),
+            ("TaleWorlds.CampaignSystem.MBCampaignEvent", "NextTriggerTime"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_desert"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_fordEffect"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.MapWeatherCampaignBehavior", "_lastUpdatedNodeIndex"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_movingInForest"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_night"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_snow"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_textCavalry"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_textCavalryWeatherPenalty"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_textDisorganized"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel", "_textMountedFootmen"),
+            ("TaleWorlds.CampaignSystem.GameComponents.DefaultPartySpeedCalculatingModel",
+             "_textMountedFootmenWeatherPenalty"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.MapWeatherCampaignBehavior",
+             "_weatherNodeDataShuffledIndices"),
+            ("TaleWorlds.CampaignSystem.CampaignBehaviors.MapWeatherCampaignBehavior", "_weatherTickEvent"),
         };
 
         private static readonly string[] Enums =

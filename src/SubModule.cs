@@ -42,7 +42,6 @@ namespace TradeLord
             Patcher.TryPatch(harmony, typeof(Patch_YourOwnFoodIsEatenFirst));
             Patcher.TryPatch(harmony, typeof(Patch_ThePointerTheEngineIsTold));
             Patcher.TryPatch(harmony, typeof(Patch_APointerSetElsewhere));
-            Patcher.TryPatch(harmony, typeof(Patch_WeatherCellRefreshed));
 
             Guard.Run("McmLoader", McmLoader.TryLoad);
             Config.Follow();
@@ -67,7 +66,6 @@ namespace TradeLord
             {
                 starter.AddBehavior(new LedgerBehavior());
                 starter.AddBehavior(new TradeActionBehavior());
-                starter.AddBehavior(new RideWatchBehavior());
             }
         }
 
@@ -86,6 +84,7 @@ namespace TradeLord
             Guard.Run("Tick.PointerReturn", PointerReturn.Tick);
             Guard.Run("Tick.PointerHome", PointerHome.Tick);
             Guard.Run("Tick.CursorWatch", CursorWatch.Tick);
+            Guard.Run("Tick.Roads", Travel.FillTheRoads);
         }
 
         public override void OnGameEnd(Game game)
@@ -94,10 +93,6 @@ namespace TradeLord
             Guard.Run("GameEnd.Panel", LedgerPanel.Reset);
             Guard.Run("GameEnd.CursorWatch", CursorWatch.Forget);
             Guard.Run("GameEnd.Travel", Travel.Forget);
-            Guard.Run("GameEnd.Nightfall", Nightfall.Forget);
-            Guard.Run("GameEnd.RideCheck", RideCheck.Forget);
-            Guard.Run("GameEnd.Skies", Skies.Forget);
-            Guard.Run("GameEnd.Ground", Ground.Forget);
             Guard.Run("GameEnd.Bulk", Bulk.Forget);
             Guard.Run("GameEnd.ScreenMarkets", ScreenMarkets.Forget);
             Guard.Run("GameEnd.Forecast", Forecast.Forget);

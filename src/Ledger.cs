@@ -1235,6 +1235,8 @@ namespace TradeLord
             ForgetMarketRankings();
         }
 
+        internal List<Settlement> MarketsInReach() => LiveCandidates((int)CampaignTime.Now.ToHours);
+
         private List<Settlement> LiveCandidates(int hour)
         {
             if (_candidates != null && Freshness.Fresh(ref _candStamp, hour)) return _candidates;

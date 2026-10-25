@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Travel times are now worked out along the road the game's own pathfinding would take, with the ground, the weather and the nights on the way
+- Fixed the ground and the weather on a ride being read along a straight line instead of the road your party would actually ride
+- Fixed the game freezing for many seconds the first time TradeLord looks for routes with Town travel ceiling at 0
+- On the campaign map, TradeLord now walks the roads between the markets within your travel ceilings in the background, nearest first
+
 ## 2.2.10
 
 - The ledger is worked out faster, as TradeLord now skips a market whose best possible price could never clear your Min profit margin
