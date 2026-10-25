@@ -16,6 +16,7 @@ namespace TradeLord
     {
         private const float SampleEvery = 0.5f;
         private const float StepLike = 0.5f;
+        private const long Spread = unchecked((long)0x9E3779B97F4A7C15UL);
 
         private static readonly Dictionary<long, byte> _seen = new Dictionary<long, byte>();
         private static readonly float[] _learned = Unlearned();
@@ -91,7 +92,8 @@ namespace TradeLord
 
         private static int At(Vec2 at)
         {
-            long key = ((long)(int)Math.Floor(at.x / SampleEvery) << 32) | (uint)(int)Math.Floor(at.y / SampleEvery);
+            long spot = ((long)(int)Math.Floor(at.x / SampleEvery) << 32) | (uint)(int)Math.Floor(at.y / SampleEvery);
+            long key = unchecked(spot * Spread);
             _looks++;
             if (_seen.TryGetValue(key, out byte known))
             {
