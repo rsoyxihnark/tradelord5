@@ -3616,5 +3616,19 @@ namespace TradeLord.Tests
             Assert.True(TradeMath.ClearOfLimits(5f, 1f, 100f));
             Assert.False(TradeMath.ClearOfLimits(1f, 1f, 100f));
         }
+
+        [Fact]
+        public void A_ride_counts_the_hours_it_spent_on_each_kind_of_ground()
+        {
+            var tally = new TradeMath.Tally();
+            var road = RoadOf((Plain, 1, 0, 6f), (Forest, 2, 0, 6f), (TradeMath.GroundDesert, 3, 0, 6f));
+            double hours = HoursAlong(road, PaceOf(6f), null, 10d, tally);
+            Assert.Equal(hours, tally.Hours, 3);
+            Assert.Equal(hours, tally.OnGround[Plain] + tally.OnGround[Forest] + tally.OnGround[TradeMath.GroundDesert], 3);
+            Assert.True(tally.OnGround[Plain] > 0d);
+            Assert.True(tally.OnGround[Forest] > 0d);
+            Assert.True(tally.OnGround[TradeMath.GroundDesert] > 0d);
+            Assert.Equal(0d, tally.OnGround[TradeMath.GroundWater], 6);
+        }
 }
 }

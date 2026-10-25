@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 2.3.1
 
 - Fixed TradeLord.log losing the night step, the Disorganized step, the game clock check and the ground step readings
+- Fixed TradeLord.log losing the ride check that weighs every ride you set off on against the time TradeLord gave for it
+- Fixed TradeLord.log losing the caravan ride check that weighs how close Count what is on its way came to when caravans arrived
 
 ## 2.3.0
 
