@@ -11141,7 +11141,9 @@ def the_ultralog_counts_what_the_marker_left_out_and_why():
                  "{ how.NoTill++; continue; }", "{ how.PastCeiling++; continue; }",
                  "{ how.NoRoad++; continue; }", "how.Told++;"))
             and scan.count("how.PastCeiling++") == 2
-            and "how.Left = reachable.Count - how.Told;" in scan
+            and "how.Left = reachable.Count - how.Told - roadless;" in scan
+            and scan.count("how.NoRoad++") == 2
+            and "{ how.NoRoad++; roadless++; continue; }" in scan
             and ordered(ultra, '" market(s) weighed, "', '" priced, "',
                         '" would pay too little for anything you carry, "',
                         '" left unpriced once no purse left could beat "',
@@ -14421,10 +14423,11 @@ def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
                 '                                       MobileParty party,\n'
                 '                                       List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)\n'
                 '        {\n'
-                '            Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null);\n'
+                '            float ride = Travel.EstimateDaysFromParty(one.s);\n'
+                '            Takings took = WhatItWouldFetch(one.s, one.market, party, ride, cargo, one.gold, null);\n'
                 '            if (took.Value <= 0L) return 0f;\n'
                 '            long total = took.Value > one.gold ? one.gold : took.Value;\n'
-                '            return TradeMath.PerDay(total - took.Cost, one.days);\n'
+                '            return TradeMath.PerDay(total - took.Cost, ride);\n'
                 '        }')
             and method_body(S['Rules.cs'], "internal static void OweAFairLook(") == ('internal static void OweAFairLook(ISet<string> owed, IList<string> compared, string here, string leftOutNow,\n'
                 '                                          bool markMoved)\n'
@@ -20415,7 +20418,9 @@ def every_market_is_held_to_its_own_ceiling_the_marked_one_included():
             and "CeilingTheMarkHolds" not in ALL and "WaitsPastTheCeiling" not in ALL
             and "PastAllowance" not in S['Marker.cs'] and "CeilingPassed" not in S['Marker.cs']
             and ordered(marker, "float cap = LedgerBehavior.TravelCeiling(s);",
-                        "if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) { how.PastCeiling++; continue; }",
+                        "float soonest = Travel.StraightDaysFromParty(s);",
+                        "if (cap <= 0f) { reachable.Add((s, market, purse, soonest)); continue; }",
+                        "if (soonest > cap) { how.PastCeiling++; continue; }",
                         "float ride = Travel.EstimateDaysFromParty(s);",
                         "if (TradeMath.OutOfReach(ride)) { how.NoRoad++; continue; }",
                         "if (!LedgerBehavior.WithinTravelCeiling(s, ride)) { how.PastCeiling++; continue; }")
@@ -21437,6 +21442,28 @@ def a_sell_market_is_passed_over_before_its_road_is_walked():
 
 chk("2.2.4", "a sell market whose best conceivable earnings over the shortest road cannot beat the route already found is passed over before TradeLord walks the road to it",
     a_sell_market_is_passed_over_before_its_road_is_walked())
+
+
+def the_marker_walks_a_road_only_to_a_market_still_in_the_running():
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    return (marker
+            and marker.count("Travel.EstimateDaysFromParty(s)") == 2
+            and "float ride = Travel.EstimateDaysFromParty(one.s);" in
+                method_body(S['Marker.cs'], "private static float RateThere(")
+            and ordered(marker,
+                        "float soonest = Travel.StraightDaysFromParty(s);",
+                        "if (cap <= 0f) { reachable.Add((s, market, purse, soonest)); continue; }",
+                        "reachable.Sort(FastestPurseFirst);",
+                        "if (TradeMath.PerDay(gold, ride) <= bar) break;\n"
+                        "                ride = Travel.EstimateDaysFromParty(s);\n"
+                        "                if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }\n"
+                        "                how.Told++;",
+                        "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);",
+                        "how.Left = reachable.Count - how.Told - roadless;"))
+
+
+chk("2.2.5", "the map marker walks the road to a market only once its purse over the shortest road can still beat the best it has found, so a market under no travel ceiling is reached for without its road being measured first",
+    the_marker_walks_a_road_only_to_a_market_still_in_the_running())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
