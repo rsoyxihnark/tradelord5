@@ -29,6 +29,8 @@ namespace TradeLord
             internal float AtHours;
             internal float WithinDays;
             internal int SellPrice;
+            internal int Quoted;
+            internal int Landed;
             internal int Units;
             internal float Confidence;
             internal TradeLord.Confidence.Parts Parts;
@@ -159,6 +161,8 @@ namespace TradeLord
                 AtHours = (float)CampaignTime.Now.ToHours,
                 WithinDays = route.TravelDays,
                 SellPrice = route.SellPrice,
+                Quoted = route.Leg?.SellQuoted ?? 0,
+                Landed = route.Leg?.LandedAtSell ?? 0,
                 Units = route.Quantity,
                 Confidence = route.Confidence,
                 Parts = route.Parts
@@ -236,7 +240,12 @@ namespace TradeLord
                           " day(s) at Conf " + Share(said.Confidence) +
                           (said.Parts.Haste > 0f ? " (" + Confidence.Spelled(said.Parts) + ")" : "") +
                           "; you walked in " + Figure(since) +
-                          " day(s) later and it pays " + found + ", " + Share(held) + " of what it promised");
+                          " day(s) later and it pays " + found + ", " + Share(held) + " of what it promised" +
+                          (said.Quoted > 0
+                              ? "; the promise came off the " + said.Quoted +
+                                " a unit TradeLord had for that market, with goods of that kind worth " + said.Landed +
+                                " denars landing by your arrival"
+                              : ""));
             }
             foreach (KeyValuePair<string, Promised> one in stillToCome) _promised.Put(site.StringId, one.Key, one.Value);
             if (scored > 0)

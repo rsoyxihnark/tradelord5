@@ -21514,5 +21514,25 @@ chk("2.2.7", "a quick right click on the campaign map writes down whether the ma
     a_quick_right_click_says_who_is_getting_the_mouse())
 
 
+def the_promise_check_says_where_a_promised_price_came_from():
+    h = S['Hindsight.cs']
+    promise = method_body(h, "private static void Promise(TradeRoute route)")
+    kept = method_body(h, "private static void Kept(Settlement site)")
+    return (promise and kept
+            and ordered(h, "internal int SellPrice;", "internal int Quoted;", "internal int Landed;")
+            and ordered(promise, "SellPrice = route.SellPrice,",
+                        "Quoted = route.Leg?.SellQuoted ?? 0,",
+                        "Landed = route.Leg?.LandedAtSell ?? 0,")
+            and "(said.Quoted > 0" in kept
+            and "\"; the promise came off the \" + said.Quoted +" in kept
+            and "\" a unit TradeLord had for that market, with goods of that kind worth \" + said.Landed +" in kept
+            and "internal int SellQuoted;" in S['Plan.cs']
+            and "internal int LandedAtSell;" in S['Plan.cs'])
+
+
+chk("2.2.8", "the promise check writes down the market's own price when a promise was made and the goods it counted as landing by your arrival, so a promise the forecast stretched can be told apart from a price that fell on the way",
+    the_promise_check_says_where_a_promised_price_came_from())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
