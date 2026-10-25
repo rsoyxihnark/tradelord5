@@ -11146,7 +11146,7 @@ def the_ultralog_counts_what_the_marker_left_out_and_why():
             and "{ how.NoRoad++; roadless++; continue; }" in scan
             and ordered(ultra, '" market(s) weighed, "', '" priced, "',
                         '" would pay too little for anything you carry, "',
-                        '" left unpriced once no purse left could beat "',
+                        '" left unpriced once no price they could pay would beat "',
                         '"  ultralog: left out before pricing, "', '" with nothing in the till, "',
                         '" past your travel ceilings, "', '" with no road it could find, "',
                         '" under siege, raided or shut, "', '" at war with you"'))
@@ -18377,7 +18377,11 @@ def with_live_world_prices_off_the_marker_goes_only_on_prices_you_have_seen():
                         "int purse = PurseOf(holder);")
             and "purse = PurseOf(s);" in method_body(marker, "private static bool InReach")
             and "Marker.HoldFor(_plan[at].EquipmentElement, YoursToSell(at), _pass.Site," in sell_pass()
-            and marker.count("Priced.At(") == 2
+            and marker.count("Priced.At(") == 3
+            and ordered(method_body(marker, "private static long MostThisCargoCouldFetch("),
+                        "int quoted = Options.Current.Omniscient",
+                        "? Priced.At(market, cargo[at].item, party, true)",
+                        ": LedgerBehavior.Instance?.SeenSellPrice(cargo[at].item, site) ?? 0;")
             and "int pays = Priced.At(market, meant.Item, MobileParty.MainParty, true);" in
                 method_body(marker, "internal static List<string> WhatWasBoughtFor(Settlement site, SettlementComponent market)")
             and "Marker.WhatWasBoughtFor(site, market)" in method_body(S['Hindsight.cs'], "private static void Kept")
@@ -21455,6 +21459,8 @@ def the_marker_walks_a_road_only_to_a_market_still_in_the_running():
                         "if (cap <= 0f) { reachable.Add((s, market, purse, soonest)); continue; }",
                         "reachable.Sort(FastestPurseFirst);",
                         "if (TradeMath.PerDay(gold, ride) <= bar) break;\n"
+                        "                if (s != holder && s != how.Intended &&\n"
+                        "                    TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;\n"
                         "                ride = Travel.EstimateDaysFromParty(s);\n"
                         "                if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }\n"
                         "                how.Told++;",
@@ -21464,6 +21470,27 @@ def the_marker_walks_a_road_only_to_a_market_still_in_the_running():
 
 chk("2.2.5", "the map marker walks the road to a market only once its purse over the shortest road can still beat the best it has found, so a market under no travel ceiling is reached for without its road being measured first",
     the_marker_walks_a_road_only_to_a_market_still_in_the_running())
+
+
+def a_market_that_could_not_pay_for_your_cargo_is_left_unpriced():
+    marker = S['Marker.cs']
+    most = method_body(marker, "private static long MostThisCargoCouldFetch(")
+    best = method_body(marker, "private static Settlement BestSellTownForCargo")
+    return (most and best
+            and ordered(most, "long most = 0L;",
+                        "int quoted = Options.Current.Omniscient",
+                        "if (quoted <= 0) continue;",
+                        "most += (long)TradeMath.MostAForecastCanReach(quoted) * cargo[at].amount;",
+                        "return most;")
+            and best.count("MostThisCargoCouldFetch(") == 1
+            and "if (s != holder && s != how.Intended &&\n"
+                "                    TradeMath.PerDay(MostThisCargoCouldFetch(s, market, party, cargo), ride) <= bar) continue;" in best
+            and '" left unpriced once no price they could pay would beat "' in
+                method_body(marker, "private static void Ultra"))
+
+
+chk("2.2.6", "a market whose best conceivable payment for the cargo you carry cannot beat the best market found is left unpriced and its road is never walked, while the marked market and the one its goods were meant for are always weighed",
+    a_market_that_could_not_pay_for_your_cargo_is_left_unpriced())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.6
+
+- The map now hitches less, as the map marker leaves out a market that could not pay enough for your cargo to beat the best it found
+
 ## 2.2.5
 
 - The map now hitches less with Town travel ceiling at 0, where the map marker weighs every market there is
