@@ -17,7 +17,7 @@ S = {f: io.open('src/' + f, encoding='utf-8').read() for f in
      ['Trading.cs', 'Drove.cs', 'Marker.cs', 'Notices.cs', 'Passes.cs', 'Ranking.cs', 'Policy.cs', 'Reasons.cs', 'Encounters.cs', 'Ledger.cs', 'LedgerCodec.cs', 'TradeMath.cs', 'Confidence.cs', 'Panel.cs',
       'Travel.cs', 'Support.cs', 'Options.cs', 'TooltipPatches.cs', 'SubModule.cs', 'Market.cs', 'Tongue.cs',
       'Config.cs', 'Migrate.cs', 'Books.cs', 'Rules.cs', 'Forecast.cs', 'Projection.cs', 'Hindsight.cs',
-      'Scoring.cs', 'Counter.cs', 'Workshops.cs', 'Plan.cs']}
+      'Scoring.cs', 'Counter.cs', 'Workshops.cs', 'Plan.cs', 'SpeedCheck.cs']}
 TESTS = io.open('tests/LedgerCodecTests.cs', encoding='utf-8').read()
 MATHTESTS = io.open('tests/TradeMathTests.cs', encoding='utf-8').read()
 ROUTETESTS = io.open('tests/RouteRulesTests.cs', encoding='utf-8').read()
@@ -2142,7 +2142,7 @@ chk("1.3.28", "both travel estimates take their speeds from one definition",
     S['TradeMath.cs'].count("sea = fleetSpeed <= StandingStill ? land : fleetSpeed;") == 1 and
     "TradeMath.SpeedsInEffect(LandSpeed(), SeaSpeed(), out float land, out float sea);" in
     method_body(S['Travel.cs'], "private static TradeMath.Pace PartyPace()") and
-    S['Travel.cs'].count("PartyPace()") == 5 and
+    S['Travel.cs'].count("PartyPace()") == 6 and
     "TradeMath.Pace pace = PartyPace();" in method_body(S['Travel.cs'], "private static void Speeds") and
     "road.Days = Ride(road, PartyPace(), _moment, 0d, false, null);" in
     method_body(S['Travel.cs'], "private static float RideFromParty") and
@@ -21478,6 +21478,42 @@ def a_sell_market_is_passed_over_before_its_price_is_worked_out():
 
 chk("2.2.10", "a sell market whose best conceivable price cannot clear your Min profit margin over what the goods cost is passed over before TradeLord works out what it would pay",
     a_sell_market_is_passed_over_before_its_price_is_worked_out())
+
+
+def the_log_checks_the_speeds_it_read_against_what_the_game_does():
+    check = S['SpeedCheck.cs']
+    night = method_body(check, "private static void ReadTheParty(bool nightFell)")
+    slow = method_body(check, "private static void ReadTheEndOfDisorder(MobileParty main)")
+    clock = method_body(check, "private static void WatchTheClock(float dt)")
+    read = method_body(check, "private static void SayWhatWasRead()")
+    return (check and night and slow and clock and read
+            and 'starter.AddBehavior(new SpeedWatchBehavior());' in S['SubModule.cs']
+            and 'Guard.Run("GameEnd.SpeedCheck", SpeedCheck.Forget);' in S['SubModule.cs']
+            and 'Guard.Run("SpeedCheck.Tick", dt, SpeedCheck.Tick);' in check
+            and "internal static TradeMath.Pace PaceNow()" in S['Travel.cs']
+            and "internal static string PaceBecause() => _evenBecause;" in S['Travel.cs']
+            and ordered(night, "TradeMath.NightStepFrom(_party.Speed, after, speed.SumOfFactors, nightFell)",
+                        'why = "the change did not look like the night alone";',
+                        "TradeMath.PaceAfterTheTurn(_party.Speed, speed.SumOfFactors, after, pace.Night, nightFell)",
+                        '"night check at " + turn + ": the game took your party from a Speed of "',
+                        '" of its pace; TradeLord read " + Step(pace.Night) + " from the game')
+            and ordered(slow, "float step = why == null ? _slowBefore.Factors - speed.SumOfFactors : float.NaN;",
+                        '"disorder check: Disorganized wore off; the game took your party\'s pace from a sum of "',
+                        '"; TradeLord read " + Step(pace.Slow) +')
+            and ordered(clock, '"game clock check: over the last "',
+                        "TradeMath.HoursAPartyTakesToCoverItsSpeed.ToString",
+                        '", so the two agree"', '", so the two disagree and every travel time is off by the difference"')
+            and ordered(read, '"ground step read: your party\'s pace moves by "',
+                        "Step(pace.OnGround[TradeMath.GroundForest]) +", "Step(pace.OnGround[TradeMath.GroundWater]) +",
+                        "Step(pace.OnGround[TradeMath.GroundDesert]) +", "Step(pace.OnGround[TradeMath.GroundPlain]) +",
+                        "Step(pace.Night) +", "Step(pace.Snow) +", "Step(pace.Wet) +", "Step(pace.Slow))")
+            and 'PartyStep' not in check
+            and 'ReadThePaceAgain' not in ALL
+            and "The_night_step_is_read_from_the_pace_the_game_gives_either_side_of_the_turn" in MATHTESTS)
+
+
+chk("no release", "TradeLord.log checks the night step, the Disorganized step, the game clock and the ground steps against what TradeLord read from the game, and changes nothing by what it finds",
+    the_log_checks_the_speeds_it_read_against_what_the_game_does())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

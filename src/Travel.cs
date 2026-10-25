@@ -515,6 +515,14 @@ namespace TradeLord
             return null;
         }
 
+        internal static TradeMath.Pace PaceNow()
+        {
+            try { return PartyPace(); }
+            catch { return null; }
+        }
+
+        internal static string PaceBecause() => _evenBecause;
+
         private static TradeMath.Pace PartyPace()
         {
             int hour = (int)CampaignTime.Now.ToHours;

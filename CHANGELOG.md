@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed TradeLord.log losing the night step, the Disorganized step, the game clock check and the ground step readings
+
 ## 2.3.0
 
 - Travel times are now worked out along the road the game's own pathfinding would take, with the ground, the weather and the nights on the way
