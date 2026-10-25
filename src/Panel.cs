@@ -1759,7 +1759,8 @@ namespace TradeLord
                 "  right after it the game draws " + Drawn(ScreenManager.FirstHitLayer) +
                     ", and under the mouse: " + Guard.Read("map cursor watch: under the mouse", map, Look, Unread).Said,
                 "  " + TheSignLastAsked(now),
-                "  " + Elsewhere(now) + "; " + OtherHands()
+                "  " + Elsewhere(now) + "; " + OtherHands(),
+                "  input: " + Guard.Read("map cursor watch: the input", map, WhoHasTheInput, "could not be read")
             };
         }
 
@@ -1785,11 +1786,9 @@ namespace TradeLord
             if (view == null || party == null) return new Ground { Said = "the map has no scene or no party to look from" };
             Vec3 near = Vec3.Zero, far = Vec3.Zero;
             view.TranslateMouse(ref near, ref far, -1f);
-            Vec3 along = far - near;
-            along.Normalize();
             Vec3 point = Vec3.Zero;
-            if (view.RayCastForClosestEntityOrTerrain(near, far, out float distance, out Vec3 _))
-                point = near + along * distance;
+            if (view.RayCastForClosestEntityOrTerrain(near, far, out float _, out Vec3 hit))
+                point = hit;
             var land = new CampaignVec2(point.AsVec2, true);
             bool onLand = land.Face.IsValid();
             CampaignVec2 spot = onLand ? land : new CampaignVec2(point.AsVec2, false);

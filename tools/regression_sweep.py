@@ -18809,7 +18809,9 @@ def the_watch_only_reads_the_campaign_map():
     w = cursor_watch()
     look = method_body(w, "private static Ground Look(MapScreen map)")
     return (w and look
-            and "view.RayCastForClosestEntityOrTerrain(near, far, out float distance, out Vec3 _)" in look
+            and "view.RayCastForClosestEntityOrTerrain(near, far, out float _, out Vec3 hit)" in look
+            and "point = hit;" in look
+            and "along" not in look
             and all(touch not in w for touch in
                     ("GetCursorIntersectionPoint", "ActiveCursor =", "SetInputRestrictions", "SetMouseVisible",
                      "MapCursor", "IsFocusLayer", "TrySetFocus")))
@@ -21491,6 +21493,25 @@ def a_market_that_could_not_pay_for_your_cargo_is_left_unpriced():
 
 chk("2.2.6", "a market whose best conceivable payment for the cargo you carry cannot beat the best market found is left unpriced and its road is never walked, while the marked market and the one its goods were meant for are always weighed",
     a_market_that_could_not_pay_for_your_cargo_is_left_unpriced())
+
+
+def a_quick_right_click_says_who_is_getting_the_mouse():
+    w = cursor_watch()
+    click = method_body(w, "private static List<string> AQuickRightClick(MapScreen map, float held)")
+    who = method_body(w, "private static string WhoHasTheInput")
+    return (click and who
+            and ordered(click, '"  " + TheSignLastAsked(now),',
+                        '"  " + Elsewhere(now) + "; " + OtherHands(),',
+                        '"  input: " + Guard.Read("map cursor watch: the input", map, WhoHasTheInput, "could not be read")')
+            and ordered(who, "the map's own layer ",
+                        "scene != null && scene.IsHitThisFrame ? \"gets\" : \"does not get\"",
+                        "TradeLord's layer takes ",
+                        "ours.InputRestrictions.InputUsageMask")
+            and w.count('WhoHasTheInput, "could not be read")') == 2)
+
+
+chk("2.2.7", "a quick right click on the campaign map writes down whether the map itself is getting the mouse and what TradeLord's own layer takes, so a click the map never sees can be told apart from one it saw",
+    a_quick_right_click_says_who_is_getting_the_mouse())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
