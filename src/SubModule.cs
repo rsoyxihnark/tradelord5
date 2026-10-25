@@ -86,6 +86,7 @@ namespace TradeLord
             Guard.Run("Tick.PointerReturn", PointerReturn.Tick);
             Guard.Run("Tick.PointerHome", PointerHome.Tick);
             Guard.Run("Tick.CursorWatch", CursorWatch.Tick);
+            Guard.Run("Tick.Frame", Travel.NewFrame);
             Guard.Run("Tick.Roads", Travel.FillTheRoads);
         }
 

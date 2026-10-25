@@ -263,6 +263,7 @@ namespace TradeLord
         private static int _walkedBehind;
         private static int _othersOnTheirPath, _othersOnAFreshPath, _othersGuessed;
         private static long _walkTicks, _pathTicks, _forecastTicks, _rideTicks, _slowestWalk;
+        private static long _frameTicks, _busiestFrame;
 
         private static int GroundOf(TerrainType terrain)
         {
@@ -777,7 +778,9 @@ namespace TradeLord
             MapWeatherModel.WeatherEvent sky = skies.Ahead.UpdateWeatherForPosition(place.Position, at);
             bool wet = skies.Ahead.GetWeatherEffectOnTerrainForPosition(place.Position.ToVec2()) ==
                        MapWeatherModel.WeatherEventEffectOnTerrain.Wet;
-            _forecastTicks += Stopwatch.GetTimestamp() - started;
+            long spent = Stopwatch.GetTimestamp() - started;
+            _forecastTicks += spent;
+            _frameTicks += spent;
             _forecasts++;
             byte worked = SkyByte(wet, sky == MapWeatherModel.WeatherEvent.Snowy || sky == MapWeatherModel.WeatherEvent.Blizzard);
             if (_worked.Count >= MostWeatherTurnsKept) _worked.Clear();
@@ -857,12 +860,16 @@ namespace TradeLord
             if (pace.Even) return TradeMath.DaysAtSpeed(road.Length, road.LandRatio, pace.Base, pace.Sea);
             TradeMath.ISky sky = SkyAt(moment, after);
             long started = Stopwatch.GetTimestamp();
+            long forecastBefore = _forecastTicks;
             double start = moment.ToHours + after;
             float days = TradeMath.DaysAlong(road.Runs, pace.After(start - pace.ReadAt), sky, start, CampaignTime.SunRise,
                                              CampaignTime.SunSet, fresh, tally);
+            long spent = Stopwatch.GetTimestamp() - started;
+            long inner = _forecastTicks - forecastBefore;
+            _frameTicks += spent > inner ? spent - inner : 0L;
             if (tally == null)
             {
-                _rideTicks += Stopwatch.GetTimestamp() - started;
+                _rideTicks += spent;
                 _rides++;
             }
             return days;
@@ -911,6 +918,7 @@ namespace TradeLord
             long took = Stopwatch.GetTimestamp() - started;
             walks++;
             _walkTicks += took;
+            _frameTicks += took;
             if (took > _slowestWalk) _slowestWalk = took;
         }
 
@@ -1090,6 +1098,12 @@ namespace TradeLord
             Campaign.Current != null && MobileParty.MainParty != null && Mission.Current == null &&
             Game.Current?.GameStateManager?.ActiveState is MapState;
 
+        internal static void NewFrame()
+        {
+            if (_frameTicks > _busiestFrame) _busiestFrame = _frameTicks;
+            _frameTicks = 0L;
+        }
+
         internal static void FillTheRoads()
         {
             if (_fillBroken) return;
@@ -1213,6 +1227,8 @@ namespace TradeLord
             _worked.Clear();
             _lines.Hour = -1;
             _lines.Whole = false;
+            _frameTicks = 0L;
+            _busiestFrame = 0L;
         }
 
         private static float Nearest(Vec2 from, Settlement to)
@@ -1451,7 +1467,8 @@ namespace TradeLord
                    (metered ? _forecasts : 0) + " weather turn(s) worked out in " +
                    Ms(metered ? _forecastTicks : 0L) + " ms, " +
                    (metered ? _rides : 0) + " ride(s) timed in " + Ms(metered ? _rideTicks : 0L) + " ms, the slowest walk " +
-                   Ms(metered ? _slowestWalk : 0L) + " ms";
+                   Ms(metered ? _slowestWalk : 0L) + " ms, the busiest frame this session " +
+                   Ms(_busiestFrame) + " ms";
         }
 
         internal static string TheRoadsOthersRide()

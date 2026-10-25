@@ -21554,5 +21554,35 @@ chk("no release", "TradeLord.log judges every ride you set off on against the ti
     every_ride_is_judged_in_the_log_against_what_tradelord_said())
 
 
+def the_log_says_what_the_busiest_frame_cost():
+    tr = S['Travel.cs']
+    ride = method_body(tr, "private static float Ride(")
+    work = method_body(tr, "private static byte WorkOut(Skies skies, int node, CampaignTime at)")
+    stop = method_body(tr, "private static void StopTheMeter(long started, ref int walks)")
+    frame = method_body(tr, "internal static void NewFrame()")
+    said = method_body(tr, "internal static string TheRideTo(Settlement target)")
+    fill = method_body(tr, "private static void FillTheRoadsNow()")
+    return (ride and work and stop and frame and said and fill
+            and tr.count("_frameTicks +=") == 3
+            and ordered(frame, "if (_frameTicks > _busiestFrame) _busiestFrame = _frameTicks;", "_frameTicks = 0L;")
+            and 'Guard.Run("Tick.Frame", Travel.NewFrame);' in S['SubModule.cs']
+            and ordered(S['SubModule.cs'], 'Guard.Run("Tick.Frame", Travel.NewFrame);',
+                        'Guard.Run("Tick.Roads", Travel.FillTheRoads);')
+            and "_frameTicks += took;" in stop
+            and "_frameTicks += spent;" in work
+            and ordered(ride, "long forecastBefore = _forecastTicks;",
+                        "long spent = Stopwatch.GetTimestamp() - started;",
+                        "long inner = _forecastTicks - forecastBefore;",
+                        "_frameTicks += spent > inner ? spent - inner : 0L;")
+            and "_frameTicks" not in fill
+            and "_pathTicks" not in frame
+            and '" ms, the busiest frame this session " +' in said
+            and "_busiestFrame = 0L;" in method_body(tr, "internal static void Forget"))
+
+
+chk("no release", "TradeLord.log says what the busiest frame cost, counting each road walk, each weather turn and each ride timing once and never the same work twice",
+    the_log_says_what_the_busiest_frame_cost())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
