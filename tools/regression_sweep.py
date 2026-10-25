@@ -21531,7 +21531,8 @@ def every_ride_is_judged_in_the_log_against_what_tradelord_said():
     off = method_body(check, "private static void SetOff(Settlement to, double now)")
     reached = method_body(check, "private static void Reached(Settlement at)")
     said = method_body(S['Travel.cs'], "internal static Said WhatWasSaidAbout(Settlement target)")
-    return (check and tick and off and reached and said
+    caravans = method_body(check, "internal static void SayTheCaravans()")
+    return (check and tick and off and reached and said and caravans
             and 'starter.AddBehavior(new RideWatchBehavior());' in S['SubModule.cs']
             and 'Guard.Run("GameEnd.RideCheck", RideCheck.Forget);' in S['SubModule.cs']
             and "RideCheck.Saw(party, bound, days);" in
@@ -21554,7 +21555,19 @@ def every_ride_is_judged_in_the_log_against_what_tradelord_said():
                         '"ride check: reached "', '"  night: TradeLord counted "', '"  weather: TradeLord counted "',
                         '"  ground: TradeLord counted "', '"  road: TradeLord put the road at "',
                         '"  ceiling: "', '"  left out: "', '"  this session: "')
-            and '"caravan ride check: "' in check
+            and ordered(caravans,
+                        'lines.Add("caravan ride check: no caravan or villager arrival was judged yet");',
+                        '"their ride ran a median " + Longer(TradeMath.Quantile(_arrived, 0.5f)) +',
+                        '" than said, the middle half from " + Longer(TradeMath.Quantile(_arrived, 0.25f)) +',
+                        'Within(_arrived) +', 'Later(_arrived) + " later than said");',
+                        '"  straight line: timed by a straight line to the town, the same rides would have run a "',
+                        'Later(_arrivedStraight) + " later than said");',
+                        '"  set aside: " + _dodged.Count +',
+                        'Longer(TradeMath.Quantile(_dodged, 0.25f)) +',
+                        "Log.WriteMany(lines);")
+            and check.count("TradeMath.Quantile(") == 9
+            and "Mean(" not in check
+            and "private static int Later(List<float> offs)" in check
             and all(one in MATHTESTS for one in (
                 "A_ride_counts_the_hours_it_spent_on_each_kind_of_ground",)))
 

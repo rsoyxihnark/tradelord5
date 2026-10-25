@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.3.4
+
+- Fixed the caravan ride check in TradeLord.log giving an average where the middle half and the count arriving late say more
+- The caravan ride check in TradeLord.log now says how far the caravans it set aside for fleeing or fighting ran from what was said
+
 ## 2.3.3
 
 - Fixed TradeLord.log losing the weather step check that reads the snow and wet ground steps as the weather turns over your party

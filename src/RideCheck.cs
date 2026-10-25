@@ -80,7 +80,7 @@ namespace TradeLord
         private static readonly Dictionary<string, Followed> _followed = new Dictionary<string, Followed>();
         private static readonly List<float> _arrived = new List<float>();
         private static readonly List<float> _arrivedStraight = new List<float>();
-        private static int _dodged;
+        private static readonly List<float> _dodged = new List<float>();
 
         internal static bool Writing => Options.Current.ExtendedDebugLogging;
 
@@ -96,7 +96,7 @@ namespace TradeLord
             _followed.Clear();
             _arrived.Clear();
             _arrivedStraight.Clear();
-            _dodged = 0;
+            _dodged.Clear();
         }
 
         internal static bool Dodging(MobileParty party) =>
@@ -278,7 +278,7 @@ namespace TradeLord
             if (float.IsNaN(off)) return;
             if (held.Dodged || Dodging(party))
             {
-                _dodged++;
+                _dodged.Add(off);
                 return;
             }
             _arrived.Add(off);
@@ -294,41 +294,38 @@ namespace TradeLord
             foreach (var one in _followed)
                 if (now - one.Value.At > CaravanKeptHours) stale.Add(one.Key);
             for (int i = 0; i < stale.Count; i++) _followed.Remove(stale[i]);
-            if (_arrived.Count == 0)
-            {
-                if (_dodged > 0)
-                    Log.Write("caravan ride check: no caravan or villager arrival was judged yet, and " + _dodged +
-                              " were set aside for fleeing or fighting on the way");
-                return;
-            }
+            if (_arrived.Count == 0 && _dodged.Count == 0) return;
             _arrived.Sort();
-            Log.Write("caravan ride check: " + _arrived.Count + " caravan and villager arrival(s) judged, " +
-                      "Count what is on its way came within " + Percent(Mean(_arrived)) + " on average and " +
-                      Within(_arrived) + " of them within " + Percent(CaravanCloseEnough) +
-                      ", a median of " + Longer(TradeMath.Quantile(_arrived, 0.5f)) + " than said" +
-                      (_arrivedStraight.Count > 0
-                          ? "; the same rides against a straight line ran a median of " +
-                            Longer(Median(_arrivedStraight)) + " than it"
-                          : "") +
-                      (_dodged > 0 ? "; " + _dodged + " set aside for fleeing or fighting on the way" : ""));
+            _arrivedStraight.Sort();
+            _dodged.Sort();
+            var lines = new List<string>();
+            if (_arrived.Count == 0)
+                lines.Add("caravan ride check: no caravan or villager arrival was judged yet");
+            else
+                lines.Add("caravan ride check: " + _arrived.Count + " caravan and villager arrival(s) reached the " +
+                          "town Count what is on its way had them bound for without fleeing or fighting on the way; " +
+                          "their ride ran a median " + Longer(TradeMath.Quantile(_arrived, 0.5f)) +
+                          " than said, the middle half from " + Longer(TradeMath.Quantile(_arrived, 0.25f)) +
+                          " to " + Longer(TradeMath.Quantile(_arrived, 0.75f)) + ", " + Within(_arrived) +
+                          " within " + Percent(CaravanCloseEnough) + " and " + Later(_arrived) + " later than said");
+            if (_arrivedStraight.Count > 0)
+                lines.Add("  straight line: timed by a straight line to the town, the same rides would have run a " +
+                          "median " + Longer(TradeMath.Quantile(_arrivedStraight, 0.5f)) +
+                          " than said, the middle half from " + Longer(TradeMath.Quantile(_arrivedStraight, 0.25f)) +
+                          " to " + Longer(TradeMath.Quantile(_arrivedStraight, 0.75f)) + ", " +
+                          Within(_arrivedStraight) + " within " + Percent(CaravanCloseEnough) + " and " +
+                          Later(_arrivedStraight) + " later than said");
+            if (_dodged.Count > 0)
+                lines.Add("  set aside: " + _dodged.Count + " caravan(s) and villager(s) were seen fleeing, going " +
+                          "around a band or fighting on the way, and ran a median " +
+                          Longer(TradeMath.Quantile(_dodged, 0.5f)) + " than said, the middle half from " +
+                          Longer(TradeMath.Quantile(_dodged, 0.25f)) + " to " +
+                          Longer(TradeMath.Quantile(_dodged, 0.75f)));
+            Log.WriteMany(lines);
         }
 
         private static float OnGround(TradeMath.Pace pace, int ground) =>
             pace == null || pace.Even ? float.NaN : pace.OnGround[ground];
-
-        private static float Mean(List<float> offs)
-        {
-            float total = 0f;
-            for (int i = 0; i < offs.Count; i++) total += Math.Abs(offs[i]);
-            return offs.Count == 0 ? float.NaN : total / offs.Count;
-        }
-
-        private static float Median(List<float> offs)
-        {
-            var sorted = new List<float>(offs);
-            sorted.Sort();
-            return TradeMath.Quantile(sorted, 0.5f);
-        }
 
         private static int Within(List<float> offs)
         {
@@ -336,6 +333,14 @@ namespace TradeLord
             for (int i = 0; i < offs.Count; i++)
                 if (Math.Abs(offs[i]) <= CaravanCloseEnough) close++;
             return close;
+        }
+
+        private static int Later(List<float> offs)
+        {
+            int late = 0;
+            for (int i = 0; i < offs.Count; i++)
+                if (offs[i] > 0f) late++;
+            return late;
         }
 
         private static string Figure(float value) =>
