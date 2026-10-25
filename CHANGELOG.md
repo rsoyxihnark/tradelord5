@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.3.0
 
 - Travel times are now worked out along the road the game's own pathfinding would take, with the ground, the weather and the nights on the way
 - Fixed the ground and the weather on a ride being read along a straight line instead of the road your party would actually ride
