@@ -217,7 +217,7 @@ namespace TradeLord
         internal static int StepsItIsReadOver(float withinDays)
         {
             float within = TradeMath.Finite(withinDays, 0f);
-            float upTo = (within > 0f ? within : 0f) * 2f + TradeMath.GraceDays;
+            float upTo = (within > 0f ? within : 0f) + TradeMath.GraceDays;
             if (upTo > LongestAFigureIsRead) upTo = LongestAFigureIsRead;
             return (int)Math.Ceiling(upTo / TradeMath.HorizonStep);
         }

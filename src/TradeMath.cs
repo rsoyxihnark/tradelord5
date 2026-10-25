@@ -2088,7 +2088,7 @@ namespace TradeLord
         public const float GraceDays = 1f;
 
         public static bool WorthScoring(float saidWithinDays, float daysSince) =>
-            daysSince <= (saidWithinDays < 0f ? 0f : saidWithinDays) * 2f + GraceDays;
+            daysSince <= (saidWithinDays < 0f ? 0f : saidWithinDays) + GraceDays;
 
         public const float SoonestAForecastIsJudged = 0.5f;
 

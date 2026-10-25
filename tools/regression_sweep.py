@@ -8111,7 +8111,7 @@ def a_promise_too_old_to_say_anything_is_dropped_rather_than_scored():
             and 'Log.Repeatable("promise check", "full",' in method_body(h, "private static void Promise")
             and all(one in MATHTESTS for one in
                     ('TradeMath.WorthScoring', 'TradeMath.HeldShare', 'TradeMath.BandOf'))
-            and "A_promise_stays_worth_scoring_for_twice_the_ride_and_a_day" in SCORINGTESTS
+            and "A_promise_stays_worth_scoring_for_the_ride_it_said_and_a_day" in SCORINGTESTS
             and "Clearing_out_old_promises_drops_a_market_it_no_longer_holds_any_for" in SCORINGTESTS
             and "A_full_store_that_can_free_nothing_says_there_is_no_room" in SCORINGTESTS)
 
@@ -13390,10 +13390,12 @@ def a_forecast_figure_is_judged_with_the_town_s_own_use_carried_to_your_walk_in(
                         "var (stock, worth) = Forecast.ShiftAt(site, item, Scoring.DaysAtStep(step));",
                         "worthAhead[step] = worth;",
                         "StockAhead = stockAhead,", "WorthAhead = worthAhead")
-            and "float upTo = (within > 0f ? within : 0f) * 2f + TradeMath.GraceDays;" in steps
+            and "float upTo = (within > 0f ? within : 0f) + TradeMath.GraceDays;" in steps
             and "TradeMath.WorthScoring(withinDays, since)" in
                 method_body(S['Scoring.cs'], "internal static bool TooOldToSay")
-            and "daysSince <= (saidWithinDays < 0f ? 0f : saidWithinDays) * 2f + GraceDays;" in S['TradeMath.cs']
+            and "daysSince <= (saidWithinDays < 0f ? 0f : saidWithinDays) + GraceDays;" in S['TradeMath.cs']
+            and "* 2f + GraceDays" not in S['TradeMath.cs']
+            and "* 2f + TradeMath.GraceDays" not in S['Scoring.cs']
             and ordered(written, "scored++;",
                         "var said = Scoring.AtTheWalkIn(kept.StockAhead, kept.WorthAhead, since,",
                         "kept.StockThen, kept.WorthThen);",
@@ -21532,6 +21534,24 @@ def the_promise_check_says_where_a_promised_price_came_from():
 
 chk("2.2.8", "the promise check writes down the market's own price when a promise was made and the goods it counted as landing by your arrival, so a promise the forecast stretched can be told apart from a price that fell on the way",
     the_promise_check_says_where_a_promised_price_came_from())
+
+
+def a_promise_is_scored_only_when_you_walked_in_near_the_day_it_said():
+    kept = method_body(S['Hindsight.cs'], "private static void Kept(Settlement site)")
+    steps = method_body(S['Scoring.cs'], "internal static int StepsItIsReadOver")
+    return (kept and steps
+            and "daysSince <= (saidWithinDays < 0f ? 0f : saidWithinDays) + GraceDays;" in S['TradeMath.cs']
+            and "float upTo = (within > 0f ? within : 0f) + TradeMath.GraceDays;" in steps
+            and "* 2f + GraceDays" not in S['TradeMath.cs']
+            and "* 2f + TradeMath.GraceDays" not in S['Scoring.cs']
+            and '" day(s) after it was promised and it pays "' in kept
+            and '" day(s) later and it pays "' not in kept
+            and "A_promise_is_only_worth_scoring_while_you_arrived_near_when_it_said_you_would" in MATHTESTS
+            and "A_promise_stays_worth_scoring_for_the_ride_it_said_and_a_day" in SCORINGTESTS)
+
+
+chk("2.2.9", "a promise is scored only where you walked in no later than the ride it said plus a day, so one left standing while the plan went elsewhere is passed over rather than counted as missed",
+    a_promise_is_scored_only_when_you_walked_in_near_the_day_it_said())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

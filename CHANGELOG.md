@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.9
+
+- Fixed a promise counting as missed, and its market losing trust, when you walked in long after the day it said
+- Fixed a forecast figure counting as missed when you walked in long after the day it said
+- TradeLord.log's promise check now says how many days after the promise was made you walked in
+
 ## 2.2.8
 
 - TradeLord.log's promise check now says the price TradeLord had for that market and what it counted as landing by your arrival
