@@ -1082,6 +1082,14 @@ namespace TradeLord
             return beaten && upper >= openingBuy && PerDay((float)(upper - openingBuy) * stocked, days) <= bestKey;
         }
 
+        public static bool NoRoadCouldMakeIt(int openingBuy, int quotedSell, int stocked, float soonest,
+                                             bool beaten, float bestKey)
+        {
+            if (!beaten || quotedSell <= 0 || stocked <= 0 || !(soonest >= 0f)) return false;
+            int upper = MostAForecastCanReach(quotedSell);
+            return upper >= openingBuy && PerDay((float)(upper - openingBuy) * stocked, soonest) <= bestKey;
+        }
+
         public static int LandingWithinReach(int live, int landed, int firstUnit, Func<int, int> firstUnitAt)
         {
             if (landed == 0 || ForecastWithin(live, firstUnit) == firstUnit) return landed;

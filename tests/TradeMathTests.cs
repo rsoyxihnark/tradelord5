@@ -3500,5 +3500,47 @@ namespace TradeLord.Tests
             Assert.False(TradeMath.JustLeftTheGate(1f, 0f));
             Assert.False(TradeMath.JustLeftTheGate(-1f, 100f));
         }
+
+        [Fact]
+        public void A_sell_market_the_shortest_road_could_not_make_pay_is_passed_over_before_its_road_is_walked()
+        {
+            Assert.True(TradeMath.NoRoadCouldMakeIt(100, 120, 4, 6f, true, 100f));
+            Assert.False(TradeMath.NoRoadCouldMakeIt(100, 120, 4, 6f, true, 10f));
+            Assert.False(TradeMath.NoRoadCouldMakeIt(100, 120, 4, 6f, false, 100f));
+            Assert.False(TradeMath.NoRoadCouldMakeIt(100, 0, 4, 6f, true, 100f));
+            Assert.False(TradeMath.NoRoadCouldMakeIt(100, 120, 0, 6f, true, 100f));
+            Assert.False(TradeMath.NoRoadCouldMakeIt(400, 120, 4, 6f, true, 100f));
+            Assert.False(TradeMath.NoRoadCouldMakeIt(100, 120, 4, float.NaN, true, 100f));
+            Assert.False(TradeMath.NoRoadCouldMakeIt(100, 120, 4, -1f, true, 100f));
+        }
+
+        [Fact]
+        public void A_sell_market_close_enough_to_beat_the_best_route_keeps_its_road_walked()
+        {
+            Assert.False(TradeMath.NoRoadCouldMakeIt(100, 400, 10, 0.5f, true, 1000f));
+            Assert.True(TradeMath.NoRoadCouldMakeIt(100, 400, 10, 40f, true, 1000f));
+        }
+
+        [Fact]
+        public void Passing_a_sell_market_over_on_the_shortest_road_never_drops_one_its_real_road_would_have_kept()
+        {
+            int looked = 0, passed = 0;
+            foreach (int openingBuy in new[] { 1, 40, 300, 2000 })
+                foreach (int quotedSell in new[] { 1, 50, 310, 2400 })
+                    foreach (int stocked in new[] { 1, 3, 20, 400 })
+                        foreach (float soonest in new[] { 0.01f, 0.4f, 2.5f, 19f })
+                            foreach (float longer in new[] { 0f, 0.3f, 4f, 55f })
+                                foreach (float bestKey in new[] { 0.01f, 7f, 180f, 9000f })
+                                {
+                                    looked++;
+                                    if (!TradeMath.NoRoadCouldMakeIt(openingBuy, quotedSell, stocked, soonest,
+                                                                     true, bestKey)) continue;
+                                    passed++;
+                                    float most = (float)(TradeMath.MostAForecastCanReach(quotedSell) - openingBuy) * stocked;
+                                    Assert.True(TradeMath.PerDay(most, soonest + longer) <= bestKey);
+                                }
+            Assert.Equal(4096, looked);
+            Assert.Equal(724, passed);
+        }
 }
 }

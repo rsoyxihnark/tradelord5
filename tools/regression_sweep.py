@@ -10288,7 +10288,7 @@ chk("1.79.2", "what a route could at best be worth is worked out from the same a
 
 def a_route_is_judged_only_on_what_that_market_will_charge_when_you_reach_it():
     scan = route_scan()
-    return (scan.count("sellPrice") == 4
+    return (scan.count("sellPrice") == 5
             and scan.count("buyPrice") == 7
             and "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);" in scan
             and "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);" in scan
@@ -18036,15 +18036,21 @@ def the_route_scan_passes_over_only_pairs_no_price_could_make_a_route():
             and ordered(method_body(S['Plan.cs'], "internal RouteScan(LedgerBehavior ledger, MobileParty party, Settlement here)"),
                         '_passOver = Guard.Read("Scan.PricedAsTheGame", 0, none => Priced.PricedAsTheGameItself(), false);',
                         "_safety = TradePolicy.ResaleSafety();")
-            and ordered(scan, "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);",
+            and ordered(scan,
+                        "if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))",
+                        "PassedOver++;",
+                        "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);",
                         "if (_passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,",
                         "stocked, days, beaten, key, _safety))",
-                        "PassedOver++;", "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
                         "Opened++;", "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; continue; }",
                         "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;",
                         "float ceiling = (float)(openingSell - openingBuy) * Math.Min(qtyCap, fits);")
             and "SayWhatTheScanCost(scan, kept.Count, took);" in scan
-            and scan.count("PassedOver++;") == 1
+            and scan.count("PassedOver++;") == 2
+            and scan.count("if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))") == 1
+            and between(scan, "stocked, days, beaten, key, _safety))",
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);").count("PassedOver++;") == 1
             and ordered(early, "if (landed == 0 || quotedSell <= 0 || stocked <= 0 || !(safety >= 0f)) return false;",
                         "int upper = MostAForecastCanReach(quotedSell);",
                         "if (!BuyAcceptable(openingBuy, Realizable(upper, safety), margin)) return true;",
@@ -21407,6 +21413,30 @@ def the_weather_already_worked_out_is_found_at_one_cost():
 
 chk("2.2.3", "the weather TradeLord has already worked out for a cell and an hour is looked up by a key spread across the whole of its memory",
     the_weather_already_worked_out_is_found_at_one_cost())
+
+
+def a_sell_market_is_passed_over_before_its_road_is_walked():
+    best = method_body(S['Plan.cs'],
+                       "internal TradeRoute Best(ItemObject item, Settlement from, int buyPrice, bool beaten, float bar,")
+    return (best
+            and "public static bool NoRoadCouldMakeIt(int openingBuy, int quotedSell, int stocked, float soonest," in S['TradeMath.cs']
+            and "if (!beaten || quotedSell <= 0 || stocked <= 0 || !(soonest >= 0f)) return false;" in S['TradeMath.cs']
+            and "return upper >= openingBuy && PerDay((float)(upper - openingBuy) * stocked, soonest) <= bestKey;" in S['TradeMath.cs']
+            and ordered(best,
+                        "float soonest = toBuy + Travel.StraightDaysBetween(from, to);",
+                        "if (!LedgerBehavior.WithinTravelCeiling(to, soonest)) continue;",
+                        "if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))",
+                        "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);",
+                        "if (_passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,",
+                        "if (beaten && TradeMath.PerDay(ceiling, days) <= key) { ThrownAway++; continue; }")
+            and all(one in MATHTESTS for one in (
+                "A_sell_market_the_shortest_road_could_not_make_pay_is_passed_over_before_its_road_is_walked",
+                "A_sell_market_close_enough_to_beat_the_best_route_keeps_its_road_walked",
+                "Passing_a_sell_market_over_on_the_shortest_road_never_drops_one_its_real_road_would_have_kept")))
+
+
+chk("2.2.4", "a sell market whose best conceivable earnings over the shortest road cannot beat the route already found is passed over before TradeLord walks the road to it",
+    a_sell_market_is_passed_over_before_its_road_is_walked())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
