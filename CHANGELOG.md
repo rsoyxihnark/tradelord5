@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.2
+
+- Fixed the campaign map stuttering worse the longer you played
+
 ## 2.2.1
 
 - Fixed Hold cargo for the best market holding a good for its Sell At when the marked market pays more for it

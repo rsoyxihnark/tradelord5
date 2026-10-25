@@ -21377,5 +21377,22 @@ chk("2.2.1", "each good in a villagers' offer is weighed once on what you pay, f
     a_villagers_offer_is_weighed_once_on_what_you_pay())
 
 
+def the_ground_already_read_is_found_at_one_cost():
+    g = S['Ground.cs']
+    at = method_body(g, "private static int At(Vec2 at)")
+    return (at
+            and "private const long Spread = unchecked((long)0x9E3779B97F4A7C15UL);" in g
+            and ordered(at,
+                        "long spot = ((long)(int)Math.Floor(at.x / SampleEvery) << 32) | (uint)(int)Math.Floor(at.y / SampleEvery);",
+                        "long key = unchecked(spot * Spread);",
+                        "if (_seen.TryGetValue(key, out byte known))",
+                        "_seen[key] = ground;")
+            and "long key = ((long)(int)Math.Floor(at.x / SampleEvery) << 32)" not in g)
+
+
+chk("2.2.2", "the ground TradeLord has already read is looked up by a key spread across the whole of its memory, so one look costs the same however much of the map it has walked",
+    the_ground_already_read_is_found_at_one_cost())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
