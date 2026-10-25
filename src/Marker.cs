@@ -1094,10 +1094,11 @@ namespace TradeLord
                                        MobileParty party,
                                        List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)
         {
-            Takings took = WhatItWouldFetch(one.s, one.market, party, one.days, cargo, one.gold, null);
+            float ride = Travel.EstimateDaysFromParty(one.s);
+            Takings took = WhatItWouldFetch(one.s, one.market, party, ride, cargo, one.gold, null);
             if (took.Value <= 0L) return 0f;
             long total = took.Value > one.gold ? one.gold : took.Value;
-            return TradeMath.PerDay(total - took.Cost, one.days);
+            return TradeMath.PerDay(total - took.Cost, ride);
         }
 
         private static Settlement OutEarnsTheMark(
@@ -1172,7 +1173,9 @@ namespace TradeLord
                 int purse = PurseOf(s);
                 if (purse <= 0) { how.NoTill++; continue; }
                 float cap = LedgerBehavior.TravelCeiling(s);
-                if (cap > 0f && Travel.StraightDaysFromParty(s) > cap) { how.PastCeiling++; continue; }
+                float soonest = Travel.StraightDaysFromParty(s);
+                if (cap <= 0f) { reachable.Add((s, market, purse, soonest)); continue; }
+                if (soonest > cap) { how.PastCeiling++; continue; }
                 float ride = Travel.EstimateDaysFromParty(s);
                 if (TradeMath.OutOfReach(ride)) { how.NoRoad++; continue; }
                 if (!LedgerBehavior.WithinTravelCeiling(s, ride)) { how.PastCeiling++; continue; }
@@ -1193,10 +1196,13 @@ namespace TradeLord
             if (ultra) how.Board = new List<Weighing>();
 
             float bar = 0f;
+            int roadless = 0;
             for (int at = 0; at < reachable.Count; at++)
             {
                 var (s, market, gold, ride) = reachable[at];
                 if (TradeMath.PerDay(gold, ride) <= bar) break;
+                ride = Travel.EstimateDaysFromParty(s);
+                if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }
                 how.Told++;
                 Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);
                 if (took.Value <= 0L && took.PurseCapped)
@@ -1256,7 +1262,7 @@ namespace TradeLord
             if (holder != null && !how.HolderPriced)
                 how.HolderLost = TheMarkLeftOut(holder, party, cargo, reachable, ref how);
             how.Held = how.Best != null && how.Best == holder && how.RunnerUpRate > how.Rate;
-            how.Left = reachable.Count - how.Told;
+            how.Left = reachable.Count - how.Told - roadless;
             if (ultra && how.Best != null)
             {
                 how.Bill = new List<Share>();

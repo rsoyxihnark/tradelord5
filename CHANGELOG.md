@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.5
+
+- The map now hitches less with Town travel ceiling at 0, where the map marker weighs every market there is
+
 ## 2.2.4
 
 - TradeLord now finds its routes quicker, so the map hitches less when you walk into a town
