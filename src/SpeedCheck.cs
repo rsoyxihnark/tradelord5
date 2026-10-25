@@ -47,8 +47,18 @@ namespace TradeLord
             internal bool Night;
         }
 
+        private struct SkyBefore
+        {
+            internal bool Held;
+            internal int Sky;
+            internal float Factors;
+            internal float Base;
+            internal int Face;
+        }
+
         private static PartyBefore _party;
         private static SlowBefore _slowBefore;
+        private static SkyBefore _sky;
         private static bool _wasSlowed, _slowWatching, _watching;
         private static bool? _wasNight;
         private static double _clockFrom = -1d, _movedFor;
@@ -61,6 +71,7 @@ namespace TradeLord
         {
             _party = default(PartyBefore);
             _slowBefore = default(SlowBefore);
+            _sky = default(SkyBefore);
             _wasSlowed = false;
             _slowWatching = false;
             _watching = false;
@@ -86,6 +97,7 @@ namespace TradeLord
             }
             _wasNight = night;
             Guard.Run("SpeedCheck.Disorder", WatchTheDisorder);
+            Guard.Run("SpeedCheck.Weather", WatchTheWeather);
             if (NearlyTurning(CampaignTime.Now.CurrentHourInDay))
             {
                 Guard.Run("SpeedCheck.Remember", Remember);
@@ -193,6 +205,74 @@ namespace TradeLord
                       Figure(_party.Speed) + " to " + Figure(after) + ", a night step of " + Step(step) +
                       " of its pace; TradeLord read " + Step(pace.Night) + " from the game, which would have made it " +
                       Figure(said) + ", " + Off(said, after) + " from what the game did");
+        }
+
+        private static int SkyBits(MobileParty party)
+        {
+            Travel.SkyOver(party, out bool wet, out bool snowy);
+            return (wet ? 1 : 0) | (snowy ? 2 : 0);
+        }
+
+        private static string Turned(bool snowyBefore, bool wetBefore, bool snowyAfter, bool wetAfter)
+        {
+            if (snowyBefore != snowyAfter) return snowyAfter ? "snow began" : "the snow stopped";
+            if (wetBefore != wetAfter) return wetAfter ? "the ground turned wet" : "the ground dried";
+            return "the weather turned";
+        }
+
+        private static void WatchTheWeather()
+        {
+            MobileParty main = MobileParty.MainParty;
+            bool steady = Steady(main);
+            if (_sky.Held && steady)
+            {
+                int now = SkyBits(main);
+                if (now != _sky.Sky) ReadTheTurn(main, now);
+            }
+            _sky.Held = steady;
+            if (!steady) return;
+            ExplainedNumber speed = Explained(main);
+            _sky.Sky = SkyBits(main);
+            _sky.Factors = speed.SumOfFactors;
+            _sky.Base = speed.BaseNumber;
+            _sky.Face = main.CurrentNavigationFace.FaceIndex;
+        }
+
+        private static void ReadTheTurn(MobileParty main, int now)
+        {
+            TradeMath.Pace pace = Travel.PaceNow();
+            string why = null;
+            if (pace == null || pace.Even) why = "your party's pace was not read from the game this hour";
+            else if (main.CurrentNavigationFace.FaceIndex != _sky.Face)
+                why = "your party crossed onto other ground as the weather turned";
+            ExplainedNumber speed = why == null ? Explained(main) : default(ExplainedNumber);
+            if (why == null && Math.Abs(speed.BaseNumber - _sky.Base) > PacesAgreeWithin)
+                why = "your party's own pace changed as the weather turned";
+            bool snowyBefore = (_sky.Sky & 2) != 0, wetBefore = (_sky.Sky & 1) != 0;
+            bool snowyAfter = (now & 2) != 0, wetAfter = (now & 1) != 0;
+            float snow = float.NaN, wet = float.NaN;
+            if (why == null)
+                TradeMath.WeatherSteps(snowyBefore, wetBefore, snowyAfter, wetAfter, _sky.Factors,
+                                       speed.SumOfFactors, pace.Wet, out snow, out wet);
+            if (!Writing) return;
+            string head = "weather step as " + Turned(snowyBefore, wetBefore, snowyAfter, wetAfter) +
+                          " over your party";
+            if (why != null)
+            {
+                Log.Write(head + ": the step was not read, because " + why);
+                return;
+            }
+            string said = head + ": the game took its pace from a sum of " + Step(_sky.Factors) + " to " +
+                          Step(speed.SumOfFactors);
+            if (!float.IsNaN(snow) && TradeMath.LikeAStep(snow))
+                Log.Write(said + ", a snow step of " + Step(snow) + "; TradeLord read " + Step(pace.Snow) +
+                          " from the game");
+            else if (!float.IsNaN(wet) && TradeMath.LikeAStep(wet))
+                Log.Write(said + ", a wet ground step of " + Step(wet) + "; TradeLord read " + Step(pace.Wet) +
+                          " from the game");
+            else
+                Log.Write(said + ", which was not read as a step because snow and wet ground turned together, " +
+                          "or the change did not look like the weather alone");
         }
 
         private static void WatchTheDisorder()
