@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.8
+
+- TradeLord.log's promise check now says the price TradeLord had for that market and what it counted as landing by your arrival
+
 ## 2.2.7
 
 - TradeLord.log's cursor notes now say whether the campaign map is getting your mouse and what TradeLord's own layer takes
