@@ -1519,28 +1519,6 @@ namespace TradeLord.Tests
 
         private const int Dawn = 2, Dusk = 22;
 
-        private static float Clock(float start, float land, float sea, float pace, bool seaFirst, out float night) =>
-            Clock(start, land, sea, pace, seaFirst, Dawn, Dusk, out night);
-
-        private static float Clock(float start, float land, float sea, float pace, bool seaFirst, int dawn, int dusk,
-                                   out float night)
-        {
-            float hours = TradeMath.HoursAlongTheRoad(start, land, null, sea, seaFirst, TradeMath.PacesFromShares(pace, 1f, 1f),
-                                                      TradeMath.ClearSky.Always, 0f, dawn, dusk, out TradeMath.RoadTally tally);
-            night = tally.Night;
-            return hours;
-        }
-
-        private static float ClockDays(float distance, float landRatio, float dayPace, float pace, float sea, float start,
-                                       out float night)
-        {
-            float days = TradeMath.DaysAlongTheRoad(distance, landRatio, dayPace, sea, null,
-                                                    TradeMath.PacesFromShares(pace, 1f, 1f), TradeMath.ClearSky.Always,
-                                                    0f, start, Dawn, Dusk, false, out TradeMath.RoadTally tally);
-            night = tally.Night;
-            return days;
-        }
-
         private sealed class Sky : TradeMath.ISky
         {
             private readonly Func<int, double, (bool snowy, bool wet, double until)> _read;
@@ -1557,126 +1535,6 @@ namespace TradeLord.Tests
                 wet = said.wet;
                 hoursToChange = said.until;
             }
-        }
-
-        [Fact]
-        public void A_road_through_snow_is_slowed_only_where_it_snows()
-        {
-            var sky = new Sky((cell, at) => (cell == 1, cell == 1, double.PositiveInfinity));
-            var pieces = new List<TradeMath.RoadPiece>
-            {
-                new TradeMath.RoadPiece { Cell = 0, Share = 0.5f }, new TradeMath.RoadPiece { Cell = 1, Share = 0.5f }
-            };
-            float hours = TradeMath.HoursAlongTheRoad(8f, 10f, pieces, 0f, false, TradeMath.PacesFromShares(0.75f, 0.8f, 1f),
-                                                      sky, 0f, Dawn, Dusk, out TradeMath.RoadTally tally);
-            Assert.Equal(5f + 5f / 0.8f, hours, 4);
-            Assert.Equal(5f / 0.8f, tally.Snow, 4);
-            Assert.Equal(5f / 0.8f, tally.Wet, 4);
-            Assert.Equal(0f, tally.Night, 4);
-        }
-
-        [Fact]
-        public void A_sky_that_turns_partway_is_read_from_the_hour_it_turns()
-        {
-            var sky = new Sky((cell, at) => at < 2d ? (true, true, 2d - at) : (false, false, double.PositiveInfinity));
-            float hours = TradeMath.HoursAlongTheRoad(8f, 6f, null, 0f, false, TradeMath.PacesFromShares(0.75f, 0.5f, 1f),
-                                                      sky, 0f, Dawn, Dusk, out TradeMath.RoadTally tally);
-            Assert.Equal(7f, hours, 4);
-            Assert.Equal(2f, tally.Snow, 4);
-        }
-
-        [Fact]
-        public void A_clear_road_is_timed_exactly_as_the_night_clock_alone()
-        {
-            var sky = new Sky((cell, at) => (false, false, 1d));
-            foreach (float start in new[] { 0f, 9.25f, 21.9f })
-                foreach (float land in new[] { 3f, 46f })
-                    Assert.Equal(Clock(start, land, 0f, 0.75f, false, out _),
-                                 TradeMath.HoursAlongTheRoad(start, land, null, 0f, false, TradeMath.PacesFromShares(0.75f, 1f, 1f),
-                                                             sky, 0f, Dawn, Dusk, out _), 3);
-        }
-
-        [Fact]
-        public void Night_snow_and_wet_ground_add_up_the_way_the_game_adds_them()
-        {
-            float[] paces = TradeMath.PacesFromTheGame(5f, 0f, 1f, 100f, -0.25f, -0.125f, -0.05f, -0.4f);
-            Assert.Equal(1f, paces[TradeMath.WeatherIndex(false, false, false)], 4);
-            Assert.Equal(0.75f, paces[TradeMath.WeatherIndex(true, false, false)], 4);
-            Assert.Equal(0.875f, paces[TradeMath.WeatherIndex(false, true, false)], 4);
-            Assert.Equal(0.95f, paces[TradeMath.WeatherIndex(false, false, true)], 4);
-            Assert.Equal(0.575f, paces[TradeMath.WeatherIndex(true, true, true)], 4);
-            float[] shares = TradeMath.PacesFromShares(0.75f, 0.8f, 0.9f);
-            Assert.Equal(0.75f * 0.8f * 0.9f, shares[TradeMath.WeatherIndex(true, true, true)], 4);
-            Assert.Equal(TradeMath.SnowShareUnread, TradeMath.PacesFromShares(0.75f, float.NaN, 1f)[TradeMath.WeatherIndex(false, true, false)], 4);
-        }
-
-        [Fact]
-        public void A_disorganized_party_is_slowed_only_for_the_hours_it_has_left()
-        {
-            float[] paces = TradeMath.PacesFromShares(0.75f, 1f, 1f, 0.6f);
-            float hours = TradeMath.HoursAlongTheRoad(8f, 10f, null, 0f, false, paces, TradeMath.ClearSky.Always, 2f,
-                                                      Dawn, Dusk, out TradeMath.RoadTally tally);
-            Assert.Equal(2f + (10f - 2f * 0.6f), hours, 4);
-            Assert.Equal(2f, tally.Slowed, 4);
-            Assert.Equal(TradeMath.HoursAlongTheRoad(8f, 10f, null, 0f, false, paces, TradeMath.ClearSky.Always, 0f, Dawn, Dusk, out _),
-                         TradeMath.HoursAlongTheRoad(8f, 10f, null, 0f, false, paces, TradeMath.ClearSky.Always, -3f, Dawn, Dusk, out _), 4);
-            Assert.Equal(10f, TradeMath.HoursAlongTheRoad(8f, 10f, null, 0f, false, paces, TradeMath.ClearSky.Always, 0f,
-                                                          Dawn, Dusk, out _), 4);
-            float atSea = TradeMath.HoursAlongTheRoad(8f, 4f, null, 3f, true, paces, TradeMath.ClearSky.Always, 2f, Dawn, Dusk,
-                                                      out TradeMath.RoadTally sea);
-            Assert.Equal(7f, atSea, 4);
-            Assert.Equal(0f, sea.Slowed, 4);
-        }
-
-        [Fact]
-        public void Disorganized_adds_to_night_snow_and_wet_ground_the_way_the_game_adds_it()
-        {
-            float[] paces = TradeMath.PacesFromTheGame(5f, 0f, 0.1f, 100f, -0.25f, -0.125f, -0.05f, -0.4f);
-            Assert.Equal(0.6f, paces[TradeMath.WeatherIndex(false, false, false, true)], 4);
-            Assert.Equal(0.35f, paces[TradeMath.WeatherIndex(true, false, false, true)], 4);
-            Assert.Equal(0.175f, paces[TradeMath.WeatherIndex(true, true, true, true)], 4);
-            Assert.Equal(0.6f * 0.75f, TradeMath.PacesFromShares(0.75f, 1f, 1f, 0.6f)[TradeMath.WeatherIndex(true, false, false, true)], 4);
-            Assert.Equal(TradeMath.WeatherIndex(true, true, true), TradeMath.WeatherIndex(true, true, true, false));
-        }
-
-        [Fact]
-        public void A_straight_road_is_cut_into_the_weather_cells_it_crosses()
-        {
-            var pieces = new List<TradeMath.RoadPiece>();
-            TradeMath.CellsAlong(5f, 5f, 35f, 5f, 10f, 10f, 4, pieces);
-            Assert.Equal(new[] { 0, 4, 8, 12 }, pieces.ConvertAll(p => p.Cell).ToArray());
-            Assert.Equal(1f / 6f, pieces[0].Share, 4);
-            Assert.Equal(1f / 3f, pieces[1].Share, 4);
-            Assert.Equal(1f / 6f, pieces[3].Share, 4);
-            TradeMath.CellsAlong(5f, 5f, 15f, 15f, 10f, 10f, 4, pieces);
-            Assert.Equal(new[] { 0, 5 }, pieces.ConvertAll(p => p.Cell).ToArray());
-            Assert.Equal(0.5f, pieces[1].Share, 4);
-            TradeMath.CellsAlong(25f, 25f, 25f, 25f, 10f, 10f, 4, pieces);
-            Assert.Single(pieces);
-            Assert.Equal(2 * 4 + 2, pieces[0].Cell);
-            TradeMath.CellsAlong(-5f, 5f, 55f, 5f, 10f, 10f, 4, pieces);
-            Assert.All(pieces, p => Assert.InRange(p.Cell, 0, 15));
-            float total = 0f;
-            foreach (var p in pieces) total += p.Share;
-            Assert.Equal(1f, total, 4);
-        }
-
-        [Fact]
-        public void A_weather_step_is_read_only_from_a_turn_that_changed_that_weather_alone()
-        {
-            TradeMath.WeatherSteps(false, false, false, true, 0.1f, 0.05f, float.NaN, out float snow, out float wet);
-            Assert.True(float.IsNaN(snow));
-            Assert.Equal(-0.05f, wet, 4);
-            TradeMath.WeatherSteps(false, true, true, true, 0.05f, -0.075f, float.NaN, out snow, out wet);
-            Assert.Equal(-0.125f, snow, 4);
-            Assert.True(float.IsNaN(wet));
-            TradeMath.WeatherSteps(true, true, false, false, -0.175f, 0f, -0.05f, out snow, out wet);
-            Assert.Equal(-0.125f, snow, 4);
-            TradeMath.WeatherSteps(false, false, true, true, 0f, -0.175f, float.NaN, out snow, out wet);
-            Assert.True(float.IsNaN(snow) && float.IsNaN(wet));
-            Assert.Equal(0.875f, TradeMath.WeatherShare(true, 0f, -0.125f), 4);
-            Assert.Equal(0.875f, TradeMath.WeatherShare(false, -0.125f, 0f), 4);
-            Assert.True(float.IsNaN(TradeMath.WeatherShare(true, -1f, 0f)));
         }
 
         private static float Walked(float start, float land, float sea, float pace, bool seaFirst, out float night)
@@ -1697,126 +1555,6 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void A_ride_all_by_day_is_not_slowed_by_the_night()
-        {
-            Assert.Equal(6f, Clock(8f, 6f, 0f, 0.75f, false, out float night), 4);
-            Assert.Equal(0f, night, 4);
-        }
-
-        [Fact]
-        public void A_ride_into_the_night_counts_its_night_hours_at_the_night_pace()
-        {
-            Assert.Equal(2f + 2f / 0.75f, Clock(20f, 4f, 0f, 0.75f, false, out float night), 4);
-            Assert.Equal(2f / 0.75f, night, 4);
-        }
-
-        [Fact]
-        public void A_ride_that_sets_off_at_night_keeps_the_night_pace_until_daybreak()
-        {
-            Assert.Equal(3.75f, Clock(23f, 3f, 0f, 0.75f, false, out float night), 4);
-            Assert.Equal(3f, night, 4);
-        }
-
-        [Fact]
-        public void A_whole_day_on_the_road_holds_the_four_hours_of_night_the_game_has()
-        {
-            Assert.Equal(24f, Clock(8f, 20f + 4f * 0.75f, 0f, 0.75f, false, out float night), 3);
-            Assert.Equal(4f, night, 3);
-        }
-
-        [Fact]
-        public void A_ride_of_many_days_comes_out_the_same_as_one_walked_an_instant_at_a_time()
-        {
-            foreach (float start in new[] { 0f, 1.5f, 2f, 9.25f, 21.9f, 22f, 23.5f })
-                foreach (float land in new[] { 0.5f, 3f, 17f, 46f, 230f })
-                    foreach (float pace in new[] { 0.6f, 0.75f, 1f })
-                    {
-                        float said = Clock(start, land, 0f, pace, false, out float night);
-                        float walked = Walked(start, land, 0f, pace, false, out float walkedNight);
-                        Assert.Equal(walked, said, 1);
-                        Assert.Equal(walkedNight, night, 1);
-                    }
-        }
-
-        [Fact]
-        public void A_sea_leg_is_never_slowed_by_the_night_and_keeps_its_place_in_the_ride()
-        {
-            Assert.Equal(5f, Clock(22f, 0f, 5f, 0.75f, false, out float none), 4);
-            Assert.Equal(0f, none, 4);
-            Assert.Equal(4f, Clock(20f, 2f, 2f, 0.75f, false, out _), 4);
-            Assert.Equal(2f + 2f / 0.75f, Clock(20f, 2f, 2f, 0.75f, true, out float night), 4);
-            Assert.Equal(2f / 0.75f, night, 4);
-            Assert.Equal(Walked(20f, 2f, 2f, 0.75f, true, out _), Clock(20f, 2f, 2f, 0.75f, true, out _), 2);
-        }
-
-        [Fact]
-        public void A_clock_with_no_night_or_a_pace_that_is_not_a_number_never_breaks_a_ride()
-        {
-            Assert.Equal(7f, Clock(23f, 5f, 2f, 0.75f, false, 6, 6, out float none), 4);
-            Assert.Equal(0f, none);
-            Assert.Equal(Clock(20f, 4f, 0f, TradeMath.NightPaceUnread, false, out _),
-                         Clock(20f, 4f, 0f, float.NaN, false, out _), 4);
-            Assert.Equal(TradeMath.FurthestThereIs, Clock(8f, float.NaN, 0f, 0.75f, false, out _));
-            Assert.Equal(TradeMath.FurthestThereIs, Clock(8f, float.MaxValue, 0f, 0.75f, false, out _));
-            Assert.Equal(0f, Clock(8f, 0f, 0f, 0.75f, false, out _));
-        }
-
-        [Fact]
-        public void A_ride_with_no_slower_night_is_timed_exactly_as_before_the_clock()
-        {
-            Assert.Equal(TradeMath.DaysAtSpeed(240f, 1f, 5f, 10f),
-                         ClockDays(240f, 1f, 5f, 1f, 10f, 13f, out _), 4);
-            Assert.Equal(TradeMath.DaysAtSpeed(240f, 0.5f, 5f, 10f),
-                         ClockDays(240f, 0.5f, 5f, 1f, 10f, 23f, out _), 4);
-            Assert.Equal(TradeMath.EtaDays(120f, 5f),
-                         TradeMath.EtaAlongTheRoad(120f, 5f, null, TradeMath.PacesFromShares(1f, 1f, 1f), TradeMath.ClearSky.Always, 0f, 21f, Dawn, Dusk, out _), 4);
-            Assert.Equal(0f, ClockDays(0f, 1f, 5f, 0.75f, 10f, 13f, out _));
-            Assert.Equal(TradeMath.FurthestThereIs,
-                         ClockDays(float.MaxValue, 1f, 5f, 0.75f, 10f, 13f, out _));
-        }
-
-        [Fact]
-        public void A_ride_that_crosses_a_night_takes_longer_than_one_timed_all_by_day()
-        {
-            float byDay = TradeMath.DaysAtSpeed(100f, 1f, 5f, 5f);
-            float clocked = ClockDays(100f, 1f, 5f, 0.75f, 5f, 8f, out float night);
-            Assert.True(clocked > byDay);
-            Assert.Equal(4f, night, 3);
-            Assert.Equal((24f + 4f * 0.25f) / 24f, clocked, 3);
-            Assert.True(TradeMath.DaysAtBestSpeed(100f, 5f, 5f) <= clocked);
-        }
-
-        [Fact]
-        public void The_night_pace_comes_from_the_game_s_own_speed_and_the_night_step_it_was_seen_to_take()
-        {
-            int night = TradeMath.WeatherIndex(true, false, false);
-            Func<float, float, float, float, float, float> nightOf = (b, clear, least, most, step) =>
-                TradeMath.PacesFromTheGame(b, clear, least, most, step, TradeMath.UsualSnowStep, 0f, TradeMath.UsualSlowStep)[night];
-            Assert.Equal(0.75f, nightOf(5f, 0f, 1f, 100f, -0.25f), 4);
-            Assert.Equal(0.55f / 0.8f, nightOf(5f, -0.2f, 1f, 100f, -0.25f), 4);
-            Assert.Equal(0.875f, nightOf(4f, 0f, 1f, 100f, -0.125f), 4);
-            Assert.Equal(1f / 4f, nightOf(4f, 0f, 1f, 100f, -0.9f), 4);
-            Assert.Equal(1f, nightOf(0f, 0f, 0f, 100f, -0.25f), 4);
-        }
-
-        [Fact]
-        public void The_night_step_is_read_from_the_pace_the_game_gives_either_side_of_the_turn()
-        {
-            Assert.Equal(-0.25f, TradeMath.NightStepFrom(5f, 3.75f, -0.25f, true), 4);
-            Assert.Equal(-0.25f, TradeMath.NightStepFrom(3.75f, 5f, 0f, false), 4);
-            Assert.Equal(-0.15f, TradeMath.NightStepFrom(6f, 5.1f, -0.15f, true), 4);
-            Assert.True(float.IsNaN(TradeMath.NightStepFrom(0f, 5f, 0f, false)));
-            Assert.True(TradeMath.LikeAStep(-0.25f));
-            Assert.False(TradeMath.LikeAStep(-0.95f));
-            Assert.False(TradeMath.LikeAStep(float.NaN));
-            Assert.Equal(3.75f, TradeMath.PaceAfterTheTurn(5f, -0.25f, 3.75f, -0.25f, true), 4);
-            Assert.Equal(5f, TradeMath.PaceAfterTheTurn(3.75f, 0f, 5f, -0.25f, false), 4);
-            Assert.Equal(4f, TradeMath.PaceAfterTheTurn(5f, -0.25f, 3.75f, -0.2f, true), 4);
-            Assert.True(TradeMath.ClearOfLimits(5f, 1f, 100f));
-            Assert.False(TradeMath.ClearOfLimits(1f, 1f, 100f));
-        }
-
-        [Fact]
         public void A_ride_check_weighs_the_time_taken_against_the_time_said()
         {
             Assert.Equal(0.1f, TradeMath.RideOffBy(10f, 11f), 4);
@@ -1827,38 +1565,6 @@ namespace TradeLord.Tests
             Assert.Equal(-0.025f, TradeMath.Quantile(sorted, 0.25f), 4);
             Assert.Equal(0.3f, TradeMath.Quantile(sorted, 1f), 4);
             Assert.True(float.IsNaN(TradeMath.Quantile(new List<float>(), 0.5f)));
-        }
-
-        [Fact]
-        public void A_caravan_on_the_road_from_where_it_set_off_keeps_that_road_detour_and_one_off_it_keeps_the_straight_line()
-        {
-            Assert.Equal(1.3f, TradeMath.DetourOnTheRoad(130f, 100f, 40f, 60f), 4);
-            Assert.Equal(1.3f, TradeMath.DetourOnTheRoad(130f, 100f, 0f, 100f), 4);
-            Assert.Equal(1.3f, TradeMath.DetourOnTheRoad(130f, 100f, 60f, 70f), 4);
-            Assert.Equal(0f, TradeMath.DetourOnTheRoad(130f, 100f, 80f, 70f));
-            Assert.Equal(1f, TradeMath.DetourOnTheRoad(98f, 100f, 40f, 58f), 4);
-            Assert.Equal(2.9f, TradeMath.DetourOnTheRoad(29f, 10f, 5f, 5f), 4);
-            Assert.Equal(0f, TradeMath.DetourOnTheRoad(1000f, 10f, 5f, 5f));
-            Assert.Equal(0f, TradeMath.DetourOnTheRoad(float.MaxValue, 10f, 5f, 5f));
-            Assert.Equal(0f, TradeMath.DetourOnTheRoad(0f, 100f, 10f, 90f));
-            Assert.Equal(0f, TradeMath.DetourOnTheRoad(130f, 0f, 0f, 0f));
-            Assert.Equal(0f, TradeMath.DetourOnTheRoad(float.NaN, 100f, 10f, 90f));
-            Assert.Equal(0f, TradeMath.DetourOnTheRoad(130f, 100f, float.PositiveInfinity, 1f));
-            Assert.Equal(0f, TradeMath.DetourOnTheRoad(130f, 100f, -1f, 60f));
-        }
-
-        [Fact]
-        public void A_caravan_halfway_along_a_bending_road_is_timed_closer_by_its_detour_than_by_the_straight_line()
-        {
-            float bend = (float)Math.Sqrt(50d * 50d + 30d * 30d);
-            float road = 2f * bend;
-            float gone = (float)Math.Sqrt(25d * 25d + 15d * 15d);
-            float left = (float)Math.Sqrt(75d * 75d + 15d * 15d);
-            float truth = gone + bend;
-            float detour = TradeMath.DetourOnTheRoad(road, 100f, gone, left);
-            Assert.True(detour > 1f);
-            Assert.True(Math.Abs(left * detour - truth) < Math.Abs(left - truth));
-            Assert.True(Math.Abs(left * detour - truth) / truth < 0.05f);
         }
 
         [Fact]
@@ -3413,96 +3119,6 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void The_games_terrain_types_fall_into_five_grounds()
-        {
-            Assert.Equal(TradeMath.PlainOrSteppe, TradeMath.GroundOf(1));
-            Assert.Equal(TradeMath.PlainOrSteppe, TradeMath.GroundOf(5));
-            Assert.Equal(TradeMath.ForestGround, TradeMath.GroundOf(4));
-            foreach (int water in new[] { 6, 10, 11, 17, 25 }) Assert.Equal(TradeMath.WaterGround, TradeMath.GroundOf(water));
-            Assert.Equal(TradeMath.DesertGround, TradeMath.GroundOf(2));
-            Assert.Equal(TradeMath.DesertGround, TradeMath.GroundOf(16));
-            foreach (int open in new[] { 3, 7, 8, 13, 14, 15, 18, 19, 20, 21, 0 }) Assert.Equal(TradeMath.OpenGround, TradeMath.GroundOf(open));
-        }
-
-        [Fact]
-        public void A_forest_road_takes_longer_than_the_same_road_on_open_ground()
-        {
-            float[] paces = TradeMath.PacesFromTheGame(5f, 0f, 1f, 50f, -0.6f, -0.125f, 0f, -0.4f, null);
-            Assert.Equal(TradeMath.Weathers * TradeMath.Grounds, paces.Length);
-            Assert.Equal(1f, paces[0]);
-            Assert.Equal(0.8f, paces[TradeMath.ForestGround * TradeMath.Weathers], 4);
-            Assert.Equal(0.7f, paces[TradeMath.WaterGround * TradeMath.Weathers], 4);
-            Assert.Equal(0.9f, paces[TradeMath.DesertGround * TradeMath.Weathers], 4);
-            var open = new List<TradeMath.RoadPiece> { new TradeMath.RoadPiece { Cell = 0, Share = 1f } };
-            var forest = new List<TradeMath.RoadPiece> { new TradeMath.RoadPiece { Cell = 0, Share = 1f, Ground = TradeMath.ForestGround } };
-            float onOpen = TradeMath.HoursAlongTheRoad(12f, 10f, open, 0f, false, paces, null, 0f, -1, -1, out _);
-            float inForest = TradeMath.HoursAlongTheRoad(12f, 10f, forest, 0f, false, paces, null, 0f, -1, -1, out var tally);
-            Assert.Equal(10f, onOpen, 3);
-            Assert.Equal(12.5f, inForest, 3);
-            Assert.Equal(12.5f, tally.Forest, 3);
-            Assert.Equal(0f, tally.Water);
-        }
-
-        [Fact]
-        public void A_ground_step_read_from_your_party_replaces_the_games_usual_one()
-        {
-            var steps = new[] { float.NaN, 0.05f, -0.1f, float.NaN, float.NaN };
-            Assert.Equal(-0.1f, TradeMath.GroundStep(steps, TradeMath.ForestGround));
-            Assert.Equal(-0.3f, TradeMath.GroundStep(steps, TradeMath.WaterGround));
-            Assert.Equal(0.05f, TradeMath.GroundStep(steps, TradeMath.PlainOrSteppe));
-            Assert.Equal(0f, TradeMath.GroundStep(steps, TradeMath.OpenGround));
-            Assert.Equal(-0.2f, TradeMath.GroundStep(null, TradeMath.ForestGround));
-        }
-
-        [Fact]
-        public void Caravan_paces_keep_their_weather_and_take_the_grounds_on_top()
-        {
-            float[] weather = TradeMath.PacesFromShares(0.5f, 0.8f, 0.9f);
-            float[] all = TradeMath.WithGrounds(weather, TradeMath.GroundSharesFromSteps(null));
-            Assert.Equal(TradeMath.Weathers * TradeMath.Grounds, all.Length);
-            for (int w = 0; w < TradeMath.Weathers; w++) Assert.Equal(weather[w], all[w], 5);
-            Assert.Equal(weather[4] * 0.8f, all[TradeMath.ForestGround * TradeMath.Weathers + 4], 5);
-            Assert.Equal(weather[1] * 0.7f, all[TradeMath.WaterGround * TradeMath.Weathers + 1], 5);
-            Assert.Null(TradeMath.WithGrounds(null, null));
-        }
-
-        [Fact]
-        public void A_road_is_split_by_ground_and_keeps_its_cells_and_its_length()
-        {
-            var cells = new List<TradeMath.RoadPiece>
-            {
-                new TradeMath.RoadPiece { Cell = 3, Share = 0.5f }, new TradeMath.RoadPiece { Cell = 4, Share = 0.5f }
-            };
-            var split = new List<TradeMath.RoadPiece>();
-            TradeMath.GroundsAlong(cells, 10f, 0.5f, t => t > 0.3f && t < 0.7f ? TradeMath.ForestGround : TradeMath.OpenGround, split);
-            float whole = 0f, forest = 0f;
-            foreach (var piece in split)
-            {
-                whole += piece.Share;
-                if (piece.Ground == TradeMath.ForestGround) forest += piece.Share;
-            }
-            Assert.Equal(1f, whole, 4);
-            Assert.Equal(0.4f, forest, 4);
-            Assert.Equal(3, split[0].Cell);
-            Assert.Equal(4, split[split.Count - 1].Cell);
-            var again = new List<TradeMath.RoadPiece>();
-            TradeMath.GroundsAlong(cells, 10f, 0.5f, t => t > 0.3f && t < 0.7f ? TradeMath.ForestGround : TradeMath.OpenGround, again);
-            Assert.Equal(split, again);
-            TradeMath.GroundsAlong(cells, 10f, 0.5f, null, again);
-            Assert.Equal(cells, again);
-        }
-
-        [Fact]
-        public void Just_outside_the_gate_the_game_measures_the_road_itself()
-        {
-            Assert.True(TradeMath.JustLeftTheGate(2.47f, 100f));
-            Assert.True(TradeMath.JustLeftTheGate(0f, 100f));
-            Assert.False(TradeMath.JustLeftTheGate(30f, 100f));
-            Assert.False(TradeMath.JustLeftTheGate(1f, 0f));
-            Assert.False(TradeMath.JustLeftTheGate(-1f, 100f));
-        }
-
-        [Fact]
         public void A_sell_market_no_price_could_make_clear_your_margin_is_passed_over_before_it_is_priced()
         {
             Assert.True(TradeMath.NoPriceCouldClearTheMargin(100, 60, 1f, 0.1f));
@@ -3576,6 +3192,412 @@ namespace TradeLord.Tests
                                 }
             Assert.Equal(4096, looked);
             Assert.Equal(724, passed);
+        }
+
+        [Fact]
+        public void A_face_and_a_weather_cell_are_kept_apart_in_one_region()
+        {
+            foreach (int face in new[] { -1, 0, 7, int.MaxValue })
+                foreach (int cell in new[] { -1, 0, 1023, int.MaxValue })
+                {
+                    long region = TradeMath.RegionOf(face, cell);
+                    Assert.Equal(face, TradeMath.FaceOfRegion(region));
+                    Assert.Equal(cell, TradeMath.CellOfRegion(region));
+                }
+        }
+
+        [Fact]
+        public void A_leg_that_stays_on_one_face_is_looked_up_once_for_each_step()
+        {
+            int lookups = 0;
+            List<TradeMath.Piece> pieces = PiecesAlong(10f, 1f, at => { lookups++; return 7; });
+            Assert.Single(pieces);
+            Assert.Equal(10f, pieces[0].Length, 4);
+            Assert.Equal(11, lookups);
+            Assert.Empty(PiecesAlong(0f, 1f, at => 7));
+            Assert.Empty(PiecesAlong(float.NaN, 1f, at => 7));
+            Assert.Single(PiecesAlong(0.004f, 1f, at => 7));
+        }
+
+        [Fact]
+        public void A_party_whose_snow_slowdown_has_not_caught_up_yet_keeps_its_speed_until_the_next_face()
+        {
+            var road = RoadOf((Else, 1, 0, 10f), (Else, 2, 0, 20f));
+            var sky = new SkyOf().Set(0, 0d, true, true);
+            TradeMath.Pace pace = PaceOf(6f, snow: -0.125f, wet: -0.09f);
+            pace.SnowAtStart = false;
+            Assert.Equal(10d / 4.55d + 20d / 3.925d, HoursAlong(road, pace, sky, 4d, null, false), 3);
+            Assert.Equal(30d / 3.925d, HoursAlong(road, pace, sky, 4d, null, true), 3);
+        }
+
+        [Fact]
+        public void A_party_whose_speed_could_not_be_read_rides_at_one_pace_everywhere()
+        {
+            TradeMath.Pace pace = TradeMath.Pace.AllAt(5f, 8f);
+            var road = RoadOf((Forest, 1, 0, 25f), (Sea, 2, 0, 40f));
+            var sky = new SkyOf().Set(0, 0d, true, true);
+            Assert.Equal(6d + 6d, HoursAlong(road, pace, sky, 20d), 3);
+            Assert.Equal(5f, pace.BestOnLand);
+        }
+
+        [Fact]
+        public void A_ride_into_the_night_slows_down_at_sunset()
+        {
+            var tally = new TradeMath.Tally();
+            var road = RoadOf((Else, 1, 0, 20f));
+            Assert.Equal(2d + 10d / 3.75d, HoursAlong(road, PaceOf(6f, night: -0.25f), null, 20d, tally), 3);
+            Assert.Equal(10d / 3.75d, tally.Night, 3);
+        }
+
+        [Fact]
+        public void A_ride_is_priced_at_the_speed_the_party_has_by_day()
+        {
+            Assert.Equal(5f, TradeMath.SpeedByDay(3.75f, 3.75f, 5f), 4);
+            Assert.Equal(6f, TradeMath.SpeedByDay(4.5f, 3.75f, 5f), 4);
+            Assert.Equal(4f, TradeMath.SpeedByDay(4f, 4f, 4f));
+        }
+
+        [Fact]
+        public void A_ride_looked_at_by_night_is_slowed_only_until_sunrise()
+        {
+            var road = RoadOf((Else, 1, 0, 20f));
+            Assert.Equal(2d + 12.5d / 5d, HoursAlong(road, PaceOf(6f, night: -0.25f), null, 0d), 3);
+        }
+
+        [Fact]
+        public void A_ride_of_several_days_counts_every_night_on_the_way()
+        {
+            var tally = new TradeMath.Tally();
+            var road = RoadOf((Else, 1, 0, 360f));
+            Assert.Equal(75d, HoursAlong(road, PaceOf(6f, night: -0.25f), null, 2d, tally), 3);
+            Assert.Equal(12d, tally.Night, 3);
+        }
+
+        [Fact]
+        public void A_ride_set_off_at_a_clock_too_far_ahead_to_tell_the_hours_apart_keeps_one_light_the_whole_way()
+        {
+            var road = RoadOf((Else, 1, 0, 50f));
+            TradeMath.Pace pace = PaceOf(6f, night: -0.25f);
+            foreach (double start in new[] { 1e17d, 1e5d + float.MaxValue * 24d })
+            {
+                double hours = HoursAlong(road, pace, null, start);
+                Assert.True(Math.Abs(hours - 10d) < 1e-3 || Math.Abs(hours - 50d / 3.75d) < 1e-3, hours.ToString());
+            }
+        }
+
+        [Fact]
+        public void A_ride_that_ends_before_sunset_is_all_at_the_day_speed()
+        {
+            var road = RoadOf((Else, 1, 0, 50f));
+            Assert.Equal(10d, HoursAlong(road, PaceOf(6f, night: -0.25f), TradeMath.ClearSky.Always, 4d), 3);
+        }
+
+        [Fact]
+        public void A_ride_that_starts_disorganized_is_slowed_only_while_it_lasts()
+        {
+            var tally = new TradeMath.Tally();
+            var road = RoadOf((Else, 1, 0, 20f));
+            TradeMath.Pace pace = PaceOf(6f, night: -0.25f, slow: -0.4f, slowHours: 2d);
+            Assert.Equal(2d + 14d / 5d, HoursAlong(road, pace, null, 4d, tally), 3);
+            Assert.Equal(2d, tally.Slow, 3);
+        }
+
+        [Fact]
+        public void A_second_leg_starts_with_only_what_is_left_of_the_disorganized_hours()
+        {
+            TradeMath.Pace pace = PaceOf(6f, slow: -0.4f, slowHours: 5d);
+            Assert.Same(pace, pace.After(0d));
+            Assert.Equal(2d, pace.After(3d).SlowHours, 6);
+            Assert.Equal(0d, pace.After(9d).SlowHours);
+            Assert.Equal(5d, pace.SlowHours);
+            Assert.Same(pace.OnGround, pace.After(3d).OnGround);
+            Assert.Equal(6d, pace.After(-1d).SlowHours, 6);
+            Assert.Same(pace, pace.After(double.NaN));
+            TradeMath.Pace calm = PaceOf(6f);
+            Assert.Same(calm, calm.After(3d));
+        }
+
+        [Fact]
+        public void A_weather_turn_handed_to_a_ride_is_always_found_again_at_the_moment_it_was_handed()
+        {
+            var at = new List<double> { double.NegativeInfinity, 0.1d, 0.7d, 4.1d, 8.1d };
+            foreach (double from in new[] { 0d, 0.3d, 1e-7d, 1234.567d, -2.2d })
+                for (int k = 1; k < at.Count; k++)
+                {
+                    double handed = at[k] - from;
+                    Assert.Equal(k, TradeMath.LastAtOrBefore(at, from, handed));
+                    Assert.Equal(k - 1, TradeMath.LastAtOrBefore(at, from, handed - 1e-6d));
+                }
+        }
+
+        [Fact]
+        public void Every_face_a_straight_leg_crosses_is_found_to_within_a_hundredth_of_a_step()
+        {
+            long RegionAt(float at) => at < 2.5f ? 1 : at < 2.53f ? 2 : at < 7f ? 3 : 4;
+            List<TradeMath.Piece> pieces = PiecesAlong(10f, 1f, RegionAt);
+            Assert.Equal(new long[] { 1, 2, 3, 4 }, pieces.ConvertAll(p => p.Region).ToArray());
+            Assert.Equal(2.5f, pieces[0].Length, 2);
+            Assert.Equal(0.03f, pieces[1].Length, 2);
+            Assert.Equal(4.47f, pieces[2].Length, 2);
+            Assert.Equal(3f, pieces[3].Length, 2);
+            float sum = 0f;
+            foreach (TradeMath.Piece piece in pieces) sum += piece.Length;
+            Assert.Equal(10f, sum, 4);
+        }
+
+        [Fact]
+        public void Every_ride_hands_back_a_real_number_whatever_it_is_handed()
+        {
+            float[] odd = { float.NaN, float.PositiveInfinity, float.NegativeInfinity, -3f, 0f, 1e-30f, 5f };
+            foreach (float a in odd)
+                foreach (float b in odd)
+                {
+                    TradeMath.Pace pace = PaceOf(a, night: b, wet: b, snow: a, slow: b, slowHours: a);
+                    pace.Sea = b;
+                    var road = RoadOf((Else, 1, 0, 10f), (Sea, 2, 1, 5f));
+                    road.Add(new TradeMath.Run { Length = a, Ground = Else, Face = 3, Cell = 1 });
+                    foreach (double start in new[] { double.NaN, double.PositiveInfinity, -7d, 23.99d })
+                    {
+                        float days = TradeMath.DaysAlong(road, pace, new SkyOf().Set(0, 1d, true, true), start, 2, 22,
+                                                         false, new TradeMath.Tally());
+                        Assert.False(float.IsNaN(days));
+                        Assert.True(days >= 0f);
+                        Assert.True(days == TradeMath.FurthestThereIs || !TradeMath.OutOfReach(days));
+                    }
+                }
+            Assert.Equal(0f, TradeMath.DaysAlong(null, PaceOf(5f), null, 3d, 2, 22, true, null));
+            Assert.Equal(0f, TradeMath.DaysAlong(RoadOf((Else, 1, 0, 5f)), null, null, 3d, 2, 22, true, null));
+        }
+
+        [Fact]
+        public void Night_falls_at_sunset_and_lifts_at_sunrise_as_the_game_has_it()
+        {
+            Assert.False(TradeMath.DarkAt(21.99, 2, 22));
+            Assert.True(TradeMath.DarkAt(22, 2, 22));
+            Assert.True(TradeMath.DarkAt(1.99, 2, 22));
+            Assert.False(TradeMath.DarkAt(2, 2, 22));
+            Assert.True(TradeMath.DarkAt(46, 2, 22));
+            Assert.True(TradeMath.DarkAt(10, 22, 2));
+            Assert.False(TradeMath.DarkAt(10, 0, 24));
+            Assert.Equal(22d, TradeMath.NextTurnOfLight(10, 2, 22));
+            Assert.Equal(26d, TradeMath.NextTurnOfLight(22, 2, 22));
+            Assert.Equal(2d, TradeMath.NextTurnOfLight(1, 2, 22));
+            Assert.Equal(26d, TradeMath.NextTurnOfLight(23.5, 2, 22));
+            Assert.Equal(double.PositiveInfinity, TradeMath.NextTurnOfLight(10, 0, 24));
+            Assert.Equal(double.PositiveInfinity, TradeMath.NextTurnOfLight(10, 22, 2));
+        }
+
+        [Fact]
+        public void Rain_that_falls_on_the_road_slows_a_mounted_party_from_the_moment_it_falls()
+        {
+            var tally = new TradeMath.Tally();
+            var road = RoadOf((Else, 1, 0, 30f));
+            var sky = new SkyOf().Set(0, 2d, true, false);
+            Assert.Equal(2d + 20d / 4.55d, HoursAlong(road, PaceOf(6f, wet: -0.09f), sky, 4d, tally), 3);
+            Assert.Equal(20d / 4.55d, tally.Wet, 3);
+        }
+
+        [Fact]
+        public void Riding_into_a_snowy_stretch_on_the_same_wet_ground_waits_for_the_next_face()
+        {
+            var road = RoadOf((Else, 1, 0, 10f), (Else, 1, 1, 5f), (Else, 2, 1, 10f));
+            var sky = new SkyOf().Set(0, 0d, true, false).Set(1, 0d, true, true);
+            TradeMath.Pace pace = PaceOf(6f, snow: -0.125f, wet: -0.09f);
+            Assert.Equal(15d / 4.55d + 10d / 3.925d, HoursAlong(road, pace, sky, 4d), 3);
+        }
+
+        [Fact]
+        public void Riding_out_of_the_rain_lifts_the_wet_ground_slowdown_at_the_edge_of_the_rain()
+        {
+            var tally = new TradeMath.Tally();
+            var road = RoadOf((Else, 1, 0, 9.1f), (Else, 1, 1, 10f));
+            var sky = new SkyOf().Set(0, 0d, true, false);
+            Assert.Equal(2d + 2d, HoursAlong(road, PaceOf(6f, wet: -0.09f), sky, 4d, tally), 3);
+            Assert.Equal(2d, tally.Wet, 3);
+        }
+
+        [Fact]
+        public void Snow_that_falls_on_dry_ground_slows_the_party_at_once()
+        {
+            var road = RoadOf((Else, 1, 0, 10f), (Else, 2, 0, 20f));
+            var sky = new SkyOf().Set(0, 1d, true, true);
+            TradeMath.Pace pace = PaceOf(6f, snow: -0.125f, wet: -0.09f);
+            Assert.Equal(1d + 25d / 3.925d, HoursAlong(road, pace, sky, 4d), 3);
+        }
+
+        [Fact]
+        public void Snow_that_falls_on_ground_already_wet_slows_the_party_from_the_next_face_as_the_game_does()
+        {
+            var road = RoadOf((Else, 1, 0, 10f), (Else, 2, 0, 20f));
+            var sky = new SkyOf().Set(0, 0d, true, false).Set(0, 1d, true, true);
+            TradeMath.Pace pace = PaceOf(6f, snow: -0.125f, wet: -0.09f);
+            Assert.Equal(10d / 4.55d + 20d / 3.925d, HoursAlong(road, pace, sky, 4d), 3);
+        }
+
+        [Fact]
+        public void The_forest_slows_the_party_down_only_on_the_stretch_that_runs_through_it()
+        {
+            var road = RoadOf((Plain, 1, 0, 10f), (Forest, 2, 0, 12f), (Plain, 3, 0, 5f));
+            Assert.Equal(2d + 3d + 1d, HoursAlong(road, PaceOf(6f, forest: -0.2f), null, 4d), 3);
+        }
+
+        [Fact]
+        public void The_ground_on_a_road_is_kept_in_order_with_each_run_of_one_kind_joined_up()
+        {
+            var road = RoadOf((Plain, 1, 0, 1f), (Plain, 1, 0, 0.5f), (Forest, 2, 0, 2f), (Forest, 2, 1, 1f),
+                              (Plain, 3, 1, 0f), (Plain, 3, 1, float.NaN), (Plain, 3, 1, 4f));
+            Assert.Equal(4, road.Count);
+            Assert.Equal(1.5f, road[0].Length);
+            Assert.Equal(TradeMath.GroundForest, road[1].Ground);
+            Assert.Equal(1, road[2].Cell);
+            Assert.Equal(5.5f, TradeMath.LengthOn(road, TradeMath.GroundPlain));
+            Assert.Equal(3f, TradeMath.LengthOn(road, TradeMath.GroundForest));
+            Assert.Equal(8.5f, TradeMath.LengthOn(road, -1));
+            Assert.Equal(0f, TradeMath.LengthOn(null, -1));
+        }
+
+        [Fact]
+        public void The_quick_estimate_never_says_a_road_takes_longer_than_riding_it_does()
+        {
+            TradeMath.Pace pace = PaceOf(6f, night: -0.25f, forest: -0.2f, snow: -0.125f, wet: -0.09f, slow: -0.4f,
+                                         slowHours: 3d);
+            pace.OnGround[TradeMath.GroundPlain] = 0.05f;
+            pace.Day = 0.02f;
+            pace.Sea = 4f;
+            var sky = new SkyOf().Set(0, 0d, true, false).Set(0, 5d, true, true).Set(1, 2d, false, false);
+            var roads = new[]
+            {
+                RoadOf((Plain, 1, 0, 40f)),
+                RoadOf((Else, 1, 0, 10f), (Forest, 2, 1, 8f), (Else, 3, 1, 20f)),
+                RoadOf((Forest, 1, 1, 200f), (Sea, 2, 1, 50f))
+            };
+            foreach (var road in roads)
+                for (int start = 0; start < 24; start += 3)
+                {
+                    float quick = TradeMath.DaysAtBestSpeed(TradeMath.LengthOn(road, -1), pace.BestOnLand, pace.Sea);
+                    Assert.True(quick <= TradeMath.DaysAlong(road, pace, sky, start, 2, 22, true, null) + 1e-5f);
+                }
+        }
+
+        [Fact]
+        public void The_sea_is_crossed_at_the_fleet_speed_whatever_the_hour()
+        {
+            TradeMath.Pace pace = PaceOf(6f, night: -0.25f);
+            pace.Sea = 9f;
+            var road = RoadOf((Sea, TradeMath.Unread, TradeMath.Unread, 30f));
+            Assert.Equal(4d, HoursAlong(road, pace, null, 21d), 3);
+        }
+
+        [Fact]
+        public void The_speed_by_day_never_slows_a_party_down_or_trusts_a_reading_that_is_not_a_number()
+        {
+            Assert.Equal(4f, TradeMath.SpeedByDay(4f, 4f, 3f));
+            Assert.Equal(4f, TradeMath.SpeedByDay(4f, 0f, 5f));
+            Assert.Equal(4f, TradeMath.SpeedByDay(4f, 3.75f, float.NaN));
+            Assert.Equal(4f, TradeMath.SpeedByDay(4f, 3.75f, float.PositiveInfinity));
+            Assert.Equal(0f, TradeMath.SpeedByDay(0f, 3.75f, 5f));
+            Assert.True(float.IsNaN(TradeMath.SpeedByDay(float.NaN, 3.75f, 5f)));
+        }
+
+        [Fact]
+        public void The_weather_comes_round_to_each_place_in_the_order_the_game_updates_it()
+        {
+            Assert.Equal(0, TradeMath.TurnsUntil(5, 5, 1024));
+            Assert.Equal(3, TradeMath.TurnsUntil(8, 5, 1024));
+            Assert.Equal(1021, TradeMath.TurnsUntil(2, 5, 1024));
+            Assert.Equal(0, TradeMath.TurnsUntil(2, 5, 0));
+            var at = new List<double> { 0d, 4d, 8d };
+            Assert.Equal(-1, TradeMath.LastAtOrBefore(at, 0d, -0.5d));
+            Assert.Equal(0, TradeMath.LastAtOrBefore(at, 0d, 0d));
+            Assert.Equal(1, TradeMath.LastAtOrBefore(at, 0d, 4d));
+            Assert.Equal(1, TradeMath.LastAtOrBefore(at, 0d, 7.9d));
+            Assert.Equal(2, TradeMath.LastAtOrBefore(at, 0d, 100d));
+            Assert.Equal(-1, TradeMath.LastAtOrBefore(at, 0d, double.NaN));
+            Assert.Equal(-1, TradeMath.LastAtOrBefore(new List<double>(), 0d, 3d));
+            Assert.Equal(2, TradeMath.LastAtOrBefore(at, 3d, 5d));
+            Assert.Equal(0, TradeMath.LastAtOrBefore(new List<double> { double.NegativeInfinity, 4d }, 2.5d, -9d));
+        }
+
+        [Fact]
+        public void Where_the_night_falls_on_the_road_changes_how_long_the_ride_takes()
+        {
+            TradeMath.Pace pace = PaceOf(6f, night: -0.25f, forest: -0.2f);
+            var there = RoadOf((Plain, 1, 0, 10f), (Forest, 2, 0, 8f), (Plain, 3, 0, 20f));
+            var back = RoadOf((Plain, 3, 0, 20f), (Forest, 2, 0, 8f), (Plain, 1, 0, 10f));
+            Assert.Equal(2d + 8d / 2.75d + (4d - 8d / 2.75d) + (20d - (4d - 8d / 2.75d) * 3.75d) / 5d,
+                         HoursAlong(there, pace, null, 20d), 3);
+            Assert.Equal(2d + 10d / 3.75d + (4d - 10d / 3.75d) + (8d - (4d - 10d / 3.75d) * 2.75d) / 4d + 2d,
+                         HoursAlong(back, pace, null, 20d), 3);
+        }
+
+        private const int Else = TradeMath.GroundElse;
+
+        private static double HoursAlong(List<TradeMath.Run> road, TradeMath.Pace pace, TradeMath.ISky sky,
+                                         double start, TradeMath.Tally tally = null, bool fresh = true) =>
+            TradeMath.DaysAlong(road, pace, sky, start, 2, 22, fresh, tally) * 24d;
+
+        private const int Plain = TradeMath.GroundPlain;
+
+        private sealed class SkyOf : TradeMath.ISky
+        {
+            private readonly Dictionary<int, List<(double At, bool Wet, bool Snowy)>> _cells =
+                new Dictionary<int, List<(double, bool, bool)>>();
+
+            public SkyOf Set(int cell, double at, bool wet, bool snowy)
+            {
+                if (!_cells.TryGetValue(cell, out var turns)) _cells[cell] = turns = new List<(double, bool, bool)>();
+                turns.Add((at, wet, snowy));
+                turns.Sort((a, b) => a.At.CompareTo(b.At));
+                return this;
+            }
+
+            public void Read(int cell, double hours, out bool wet, out bool snowy, out double changes)
+            {
+                wet = false;
+                snowy = false;
+                changes = double.PositiveInfinity;
+                if (!_cells.TryGetValue(cell, out var turns)) return;
+                foreach (var (at, w, s) in turns)
+                {
+                    if (at <= hours)
+                    {
+                        wet = w;
+                        snowy = s;
+                        continue;
+                    }
+                    changes = at;
+                    break;
+                }
+            }
+        }
+
+        private const int Forest = TradeMath.GroundForest;
+
+        private const int Sea = TradeMath.GroundSea;
+
+        private static TradeMath.Pace PaceOf(float speed, float night = 0f, float forest = 0f, float snow = 0f,
+                                             float wet = 0f, float slow = 0f, double slowHours = 0d)
+        {
+            var pace = new TradeMath.Pace
+            {
+                Base = speed, Night = night, Snow = snow, Wet = wet, Slow = slow, SlowHours = slowHours, Sea = speed
+            };
+            pace.OnGround[TradeMath.GroundForest] = forest;
+            return pace;
+        }
+
+        private static List<TradeMath.Run> RoadOf(params (int ground, int face, int cell, float length)[] runs)
+        {
+            var road = new List<TradeMath.Run>();
+            foreach (var (ground, face, cell, length) in runs) TradeMath.AddRun(road, ground, face, cell, length);
+            return road;
+        }
+
+        private static List<TradeMath.Piece> PiecesAlong(float length, float stride, Func<float, long> regionAt)
+        {
+            var pieces = new List<TradeMath.Piece>();
+            TradeMath.RegionsAlong(length, stride, regionAt, pieces);
+            return pieces;
         }
 }
 }

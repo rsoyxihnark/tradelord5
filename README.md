@@ -17,9 +17,8 @@
 - ✅ Which way each market is going, marked beside its price once you switch Mark a market rising or falling on, whenever it has moved 5% or more since the last day you looked there
 - ✅ Mark a market rising or falling needs Live world prices off, since that is when TradeLord records prices at all, and it ships off itself
 - ✅ Travel time to each of them, from wherever you are
-- ✅ That time worked out by the game's own pathfinding, not a straight line drawn across the map, and at your party's real speed with the cargo you are carrying
-- ✅ That time counts the nights, the snow and wet ground on the way and the hours your party stays Disorganized, the way the game slows you down
-- ✅ It counts the forests, rivers, fords, bridges and deserts on the way too, at the pace the game gives your party, caravans and villagers there
+- ✅ That time worked out along the road the game's own pathfinding would take, at your party's real speed with the cargo you are carrying, through every forest, river, desert, rainfall, snowfall and night on the way
+- ✅ That time counts the hours your party stays Disorganized too, and caravans and villagers on the road are timed the same way
 - ✅ Stock counts, so you know the deal is actually there
 - ✅ What you paid for a good, per unit, on its own tooltip once you have bought one, so you can see at a glance whether the market in front of you is beating it
 - ✅ Inventory rows tinted good to bad against the best price known
