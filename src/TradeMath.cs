@@ -1082,6 +1082,12 @@ namespace TradeLord
             return beaten && upper >= openingBuy && PerDay((float)(upper - openingBuy) * stocked, days) <= bestKey;
         }
 
+        public static bool NoPriceCouldClearTheMargin(int openingBuy, int quotedSell, float safety, float margin)
+        {
+            if (quotedSell <= 0 || !(safety >= 0f)) return false;
+            return !BuyAcceptable(openingBuy, Realizable(MostAForecastCanReach(quotedSell), safety), margin);
+        }
+
         public static bool NoRoadCouldMakeIt(int openingBuy, int quotedSell, int stocked, float soonest,
                                              bool beaten, float bestKey)
         {

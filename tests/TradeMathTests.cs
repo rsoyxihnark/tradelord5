@@ -3503,6 +3503,40 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_sell_market_no_price_could_make_clear_your_margin_is_passed_over_before_it_is_priced()
+        {
+            Assert.True(TradeMath.NoPriceCouldClearTheMargin(100, 60, 1f, 0.1f));
+            Assert.False(TradeMath.NoPriceCouldClearTheMargin(100, 200, 1f, 0.1f));
+            Assert.False(TradeMath.NoPriceCouldClearTheMargin(100, 0, 1f, 0.1f));
+            Assert.False(TradeMath.NoPriceCouldClearTheMargin(100, 60, float.NaN, 0.1f));
+            Assert.False(TradeMath.NoPriceCouldClearTheMargin(100, 60, -1f, 0.1f));
+            Assert.True(TradeMath.NoPriceCouldClearTheMargin(0, 60, 1f, 0.1f));
+        }
+
+        [Fact]
+        public void Passing_a_sell_market_over_on_the_most_a_price_could_reach_never_drops_one_its_real_price_would_keep()
+        {
+            int looked = 0, passed = 0;
+            foreach (int openingBuy in new[] { 1, 40, 300, 2000 })
+                foreach (int quotedSell in new[] { 1, 50, 310, 2400 })
+                    foreach (float safety in new[] { 0.5f, 0.9f, 1f })
+                        foreach (float margin in new[] { 0f, 0.1f, 0.5f })
+                        {
+                            looked++;
+                            if (!TradeMath.NoPriceCouldClearTheMargin(openingBuy, quotedSell, safety, margin)) continue;
+                            passed++;
+                            int upper = TradeMath.MostAForecastCanReach(quotedSell);
+                            for (int openingSell = 0; openingSell <= upper; openingSell += Math.Max(1, upper / 7))
+                                Assert.False(TradeMath.BuyAcceptable(openingBuy,
+                                                                     TradeMath.Realizable(openingSell, safety), margin));
+                        }
+            Assert.Equal(144, looked);
+            Assert.Equal(PassedOverOnTheMargin, passed);
+        }
+
+        private const int PassedOverOnTheMargin = 72;
+
+        [Fact]
         public void A_sell_market_the_shortest_road_could_not_make_pay_is_passed_over_before_its_road_is_walked()
         {
             Assert.True(TradeMath.NoRoadCouldMakeIt(100, 120, 4, 6f, true, 100f));
