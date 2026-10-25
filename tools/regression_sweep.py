@@ -993,10 +993,18 @@ def shipped_text_matches_the_fallback():
     return len(pairs) > 0 and all(shipped.get(sid) == unescape(text) for sid, text in pairs)
 
 def actions_are_off_the_node20_runtime():
-    floors = {'checkout': 5, 'setup-dotnet': 5, 'upload-artifact': 5}
+    floors = {'checkout': 5, 'upload-artifact': 5}
     majors = {n: int(v) for n, v in re.findall(r'uses: actions/([\w-]+)@v(\d+)', WORKFLOW)}
     return (set(majors) == set(floors)
-            and all(majors[n] >= f for n, f in floors.items()))
+            and all(majors[n] >= f for n, f in floors.items())
+            and 'actions/setup-dotnet' not in WORKFLOW
+            and ordered(WORKFLOW,
+                        "$feed = 'https://builds.dotnet.microsoft.com/dotnet'",
+                        "Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -OutFile $script",
+                        "& $script -Channel 8.0 -AzureFeed $feed -InstallDir $dir",
+                        '"DOTNET_ROOT=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8',
+                        "$dir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8",
+                        "& (Join-Path $dir 'dotnet.exe') --version"))
 
 def shipped_text_is_ascii():
     files = ['TradeLord/ModuleData/Languages/module_strings.xml',
