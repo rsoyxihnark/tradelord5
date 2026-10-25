@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.2
+
+- Fixed TradeLord.log losing what the busiest frame spent on TradeLord's travel work
+
 ## 2.3.1
 
 - Fixed TradeLord.log losing the night step, the Disorganized step, the game clock check and the ground step readings
