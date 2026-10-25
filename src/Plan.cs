@@ -237,6 +237,11 @@ namespace TradeLord
 
                 float soonest = toBuy + Travel.StraightDaysBetween(from, to);
                 if (!LedgerBehavior.WithinTravelCeiling(to, soonest)) continue;
+                if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))
+                {
+                    PassedOver++;
+                    continue;
+                }
 
                 // Intended-Behavior: Days runs from where your party stands to Buy From and on to Sell At, as the developer chose; it is not to be raised again.
                 float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);

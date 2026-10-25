@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.4
+
+- TradeLord now finds its routes quicker, so the map hitches less when you walk into a town
+
 ## 2.2.3
 
 - TradeLord now reads the weather along a road with less work, so the map runs a little smoother
