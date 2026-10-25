@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.7
+
+- TradeLord.log's cursor notes now say whether the campaign map is getting your mouse and what TradeLord's own layer takes
+- TradeLord.log's cursor notes now name the spot the game itself reports under your mouse
+
 ## 2.2.6
 
 - The map now hitches less, as the map marker leaves out a market that could not pay enough for your cargo to beat the best it found
