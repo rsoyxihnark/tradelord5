@@ -21394,5 +21394,20 @@ chk("2.2.2", "the ground TradeLord has already read is looked up by a key spread
     the_ground_already_read_is_found_at_one_cost())
 
 
+def the_weather_already_worked_out_is_found_at_one_cost():
+    w = S['Weather.cs']
+    return ("private const long Spread = unchecked((long)0x9E3779B97F4A7C15UL);" in w
+            and ordered(w, "private static long Key(int cell, double hours) =>",
+                        "unchecked((((long)cell << 32) | (uint)(long)Math.Round(hours * 60d)) * Spread);")
+            and "((long)cell << 32) | (uint)(long)Math.Round(hours * 60d);" not in w
+            and "if (_worked.TryGetValue(key, out sky)) _hits++;" in w
+            and "if (_worked.Count >= MostWorkedKept) _worked.Clear();" in w
+            and "_told.Add(key);" in w)
+
+
+chk("2.2.3", "the weather TradeLord has already worked out for a cell and an hour is looked up by a key spread across the whole of its memory",
+    the_weather_already_worked_out_is_found_at_one_cost())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)
