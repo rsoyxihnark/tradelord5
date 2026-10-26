@@ -18346,22 +18346,36 @@ chk("1.103.4", "What this means says a market's Score is lowered for paying less
     what_this_means_says_a_score_is_lowered_only_for_paying_less_than_promised())
 
 def the_carv_column_is_said_to_count_caravans_at_or_heading_for_those_towns():
-    pressure = method_body(S['Ledger.cs'], "internal static Dictionary<Settlement, int> CaravanPressure")
-    return (pressure
-            and ordered(pressure, "if (!p.IsCaravan && !p.IsVillager) continue;",
+    led = S['Ledger.cs']
+    traffic = method_body(led, "private static Dictionary<Settlement, int> TrafficAt")
+    both = method_body(led, "private static bool ItTradesThere")
+    plan = S['Plan.cs']
+    return (traffic and both
+            and "internal static Dictionary<Settlement, int> CaravanPressure() => TrafficAt(true);" in led
+            and "internal static Dictionary<Settlement, int> WhoTakesTheStock() => TrafficAt(false);" in led
+            and ordered(traffic, "if (!p.IsCaravan && !p.IsVillager) continue;",
                         "Settlement at = p.CurrentSettlement, to = p.TargetSettlement;",
-                        "if (at != null && ItTradesThere(p, at)) Bump(map, at);",
-                        "if (to != null && to != at && ItTradesThere(p, to)) Bump(map, to);")
-            and ("private static bool ItTradesThere(MobileParty p, Settlement s) => !p.IsVillager || !s.IsVillage;"
-                 in S['Ledger.cs'])
-            and ("| Carv. = caravans and villagers at or heading for those markets, not a village's own "
-                 "villagers\").ToString()" in S['Panel.cs'])
-            and "ya da o pazarlara giden kervanlar ve k\u00f6yl\u00fcler" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL70']
-            and "\u043a\u0430\u0440\u0430\u0432\u0430\u043d\u044b \u0438 \u0441\u0435\u043b\u044c\u0447\u0430\u043d\u0435" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL70']
-            and "\u0438\u043b\u0438 \u043d\u0430 \u043f\u0443\u0442\u0438 \u043a \u043d\u0438\u043c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL70']
-            and "\u6216\u6b63\u524d\u5f80\u90a3\u91cc\u7684\u5546\u961f\u548c\u6751\u6c11" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL70'])
+                        "if (at != null && ItTradesThere(p, at, selling)) Bump(map, at);",
+                        "if (to != null && to != at && ItTradesThere(p, to, selling)) Bump(map, to);")
+            and ordered(both, "if (!p.IsVillager) return true;",
+                        "return selling ? s.IsTown : s.IsVillage && p.ItemRoster.Count > 0;")
+            and "_takers = LedgerBehavior.WhoTakesTheStock();" in plan
+            and "private int Takers(Settlement s) => s != null && _takers.TryGetValue(s, out int n) ? n : 0;" in plan
+            and "Caravans = Takers(from) + Pressure(to)," in plan
+            and ("| Carv. = caravans and villagers taking stock from the buy market or bringing goods to the "
+                 "sell market\").ToString()" in S['Panel.cs'])
+            and all(one in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL70'] for one in
+                    ("al\u0131\u015f pazar\u0131ndan mal \u00e7eken", "sat\u0131\u015f pazar\u0131na mal getiren",
+                     "kervanlar ve k\u00f6yl\u00fcler"))
+            and all(one in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL70'] for one in
+                    ("\u043a\u0430\u0440\u0430\u0432\u0430\u043d\u044b \u0438 \u0441\u0435\u043b\u044c\u0447\u0430\u043d\u0435",
+                     "\u0437\u0430\u0431\u0438\u0440\u0430\u044e\u0449\u0438\u0435 \u0442\u043e\u0432\u0430\u0440 \u0441 \u0440\u044b\u043d\u043a\u0430 \u043f\u043e\u043a\u0443\u043f\u043a\u0438",
+                     "\u0432\u0435\u0437\u0443\u0449\u0438\u0435 \u0442\u043e\u0432\u0430\u0440 \u043d\u0430 \u0440\u044b\u043d\u043e\u043a \u043f\u0440\u043e\u0434\u0430\u0436\u0438"))
+            and all(one in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL70'] for one in
+                    ("\u4ece\u4e70\u5165\u5e02\u573a\u53d6\u8d27", "\u5411\u5356\u51fa\u5e02\u573a\u9001\u8d27",
+                     "\u5546\u961f\u548c\u6751\u6c11")))
 
-chk("1.103.4", "What this means says Carv. counts the caravans and villagers at or heading for a route's two markets and leaves out a village's own villagers, as the route scan counts them, in every language",
+chk("1.103.4", "What this means says Carv. counts whoever takes stock from the buy market and whoever brings goods into the sell market, as the route scan counts them on each side, in every language",
     the_carv_column_is_said_to_count_caravans_at_or_heading_for_those_towns())
 
 def the_resale_safety_line_counts_a_price_above_the_promise_as_the_promise():

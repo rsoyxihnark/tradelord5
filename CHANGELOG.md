@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.1
+
+- Fixed a villager walking home empty counting against its own village
+- A villager loading a village's goods counts against that village when you buy there, and against the town it carries them to when you sell there
+
 ## 2.5.0
 
 - Villagers heading home no longer count against a village in its Carv. count or the Conf it feeds, so villages are in the running again
