@@ -3967,16 +3967,22 @@ def no_branch_is_named_as_a_debug_build_publisher():
             and kept_branch_named() == []
             and '`main` is the only branch that publishes.' in section
             and 'No branch is named as a debug build publisher any more.' in section
+            and ('A commit on `main` whose subject ends `[test build]` publishes its version as a '
+                 'pre-release instead' in section)
             and '`legacy` is never worked on, never pushed to and never published from.' in section
             and 'the game refuses to load a mod whose version carries anything else' in section
             and ("KEPT=$(sed -n 's/.*keeps one more branch beside `main`: `\\([A-Za-z0-9._-]*\\)`.*/\\1/p' CLAUDE.md | head -1)"
                  in where)
-            and ordered(where, 'if [ "$GITHUB_REF" = "refs/heads/main" ]; then',
+            and ordered(where, 'SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")',
+                        'case "$SUBJECT" in *"[test build]") TESTBUILD=1 ;; esac',
+                        'if [ "$GITHUB_REF" = "refs/heads/main" ]; then',
+                        'if [ "$TESTBUILD" = 1 ]; then',
+                        'publishes its version as a pre-release',
                         'a push to main publishes its version as a release',
                         'elif [ -n "$KEPT" ] && [ "$GITHUB_REF" = "refs/heads/$KEPT" ]; then',
-                        'echo "debug=true" >> "$GITHUB_OUTPUT"',
                         'publishes its version as a debug build, marked as a pre-release', 'publishes nothing')
             and where.count('echo "publish=true" >> "$GITHUB_OUTPUT"') == 2
+            and where.count('echo "debug=true" >> "$GITHUB_OUTPUT"') == 2
             and ordered(publish, "if: steps.where.outputs.publish == 'true'",
                         'DEBUGBUILD: ${{ steps.where.outputs.debug }}',
                         'TITLE="TradeLord ${VERSION#v}"', 'if [ "$DEBUGBUILD" = "true" ]; then',
@@ -3987,7 +3993,7 @@ def no_branch_is_named_as_a_debug_build_publisher():
             and '[ -n "$name" ] && [ "$name" != main ] && { [ "$1" = "$name" ] || [ "$1" = "refs/heads/$name" ]; }' in GUARD
             and '         ! kept "$FIRST" &&\n' in GUARD)
 
-chk("no release", "no branch is named as a debug build publisher, so only main publishes, and the wiring that would name one is still read by the rules, the workflow and the branch guard",
+chk("no release", "no branch is named as a debug build publisher, so only main publishes, a commit subject ending [test build] is the one thing that marks a pre-release, and the wiring that would name a branch is still read by the rules, the workflow and the guard",
     no_branch_is_named_as_a_debug_build_publisher())
 
 
@@ -15213,10 +15219,10 @@ def a_release_is_published_from_main_and_nowhere_else():
     return ("        if: steps.where.outputs.publish == 'true'\n" in step
             and "github.ref" not in step
             and where.count('echo "publish=true" >> "$GITHUB_OUTPUT"') == 2
-            and where.count('echo "debug=true" >> "$GITHUB_OUTPUT"') == 1
+            and where.count('echo "debug=true" >> "$GITHUB_OUTPUT"') == 2
             and "workflow_dispatch" not in step and "workflow_dispatch" not in where)
 
-chk("1.95.2", "a release is published from main, and from the branch kept beside it only as a debug pre-release, whether the run came from a push or was started by hand",
+chk("1.95.2", "a release is published from main, marked a pre-release where its commit subject ends [test build], and from the branch kept beside it only as a debug pre-release, whether the run came from a push or was started by hand",
     a_release_is_published_from_main_and_nowhere_else())
 
 
@@ -20356,27 +20362,19 @@ def a_party_standing_still_keeps_the_roads_it_walked_and_markets_keep_theirs_for
                         "_unwalkable.Clear();", "_speedHour = -1;", "_moment = CampaignTime.Now;")
             and "float days = RideBetween(PairRoad(a, b), after, true);" in pair
             and "if (_pairDays.TryGetValue(key, out var known) && known.Moment == _moment && known.After == after)" in pair
-            and "var key = (a.StringId, b.StringId);" in method_body(tr, "private static Road PairRoad")
             and ordered(method_body(tr, "private static Road PairRoad"),
-                        "if (_pairDist.TryGetValue(key, out Road hit))",
-                        "if (!hit.Guessed) return hit;",
-                        "if (hit.Longer >= TheRoughRoadTakesLongerBy()) return hit;",
-                        "Road afresh = RoadBetween(a, b);",
+                        "var key = (a.StringId, b.StringId);",
+                        "if (!_pairDist.TryGetValue(key, out Road hit))",
                         "hit = RoadBetween(a, b);",
-                        "_pairGuesses++;", "WantThisRoadWalked(key);")
-            and method_body(tr, "private static Road PairRoad").count("_pairDays.Remove(key);") == 2
-            and method_body(tr, "private static Road PairRoad").count("hit = TheRoadAsTheGameMeasuresIt(a, b);") == 2
-            and ordered(method_body(tr, "private static Road TheRoadAsTheGameMeasuresIt"),
-                        "bool guess = landRatio >= AllOnLand && a != b;",
-                        "float longer = guess ? TheRoughRoadTakesLongerBy() : 1f;",
-                        "float length = dist * longer;",
-                        "Length = length,", "Runs = Unwalked(length, landRatio, false),",
-                        "Guessed = guess", "Longer = longer")
+                        "_pairDist[key] = hit;",
+                        "return hit;")
+            and "TheRoadAsTheGameMeasuresIt" not in method_body(tr, "private static Road PairRoad")
+            and "_pairDays.Remove(key);" not in method_body(tr, "private static Road PairRoad")
             and "_pairDist.Clear();" in method_body(tr, "internal static void Forget")
             and "_pairDays.Clear();" in method_body(tr, "internal static void Forget"))
 
 
-chk("1.105.1", "a road walked from where your party stands is kept for as long as it stands there, and a road between two markets is taken from the game's distance and queued for the background rather than walked while the ledger waits",
+chk("1.105.1", "a road walked from where your party stands is kept for as long as it stands there, and a road between two markets is walked the first time the ledger asks for it and kept for as long as the party stands",
     a_party_standing_still_keeps_the_roads_it_walked_and_markets_keep_theirs_for_the_session())
 
 def a_road_kept_from_an_earlier_hour_still_counts_as_found():
@@ -21659,7 +21657,7 @@ chk("no release", "TradeLord.log says what the busiest frame cost, counting each
 
 
 
-def the_ledger_never_waits_while_a_market_road_is_walked():
+def the_market_road_is_walked_when_it_is_asked_for_and_the_rough_guess_is_still_measured():
     tr = S['Travel.cs']
     pair = method_body(tr, "private static Road PairRoad")
     guess = method_body(tr, "private static Road TheRoadAsTheGameMeasuresIt")
@@ -21669,10 +21667,13 @@ def the_ledger_never_waits_while_a_market_road_is_walked():
     forget = method_body(tr, "private static void ForgetTheRoadsWalkedBehind")
     return (pair and guess and wanted and fill and said and forget
             and "internal bool Guessed;" in tr
-            and "if (!hit.Guessed) return hit;" in pair
-            and ordered(pair, "StartTheMeter();", "_pairGuesses++;", "WantThisRoadWalked(key);")
-            and "Runs = Unwalked(length, landRatio, false)," in guess
-            and "float longer = guess ? TheRoughRoadTakesLongerBy() : 1f;" in guess
+            and "hit = RoadBetween(a, b);" in pair
+            and "TheRoadAsTheGameMeasuresIt" not in pair
+            and ordered(guess, "bool guess = landRatio >= AllOnLand && a != b;",
+                        "float longer = guess ? TheRoughRoadTakesLongerBy() : 1f;",
+                        "float length = dist * longer;",
+                        "Length = length,", "Runs = Unwalked(length, landRatio, false),",
+                        "Guessed = guess", "Longer = longer")
             and "if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);" in method_body(tr, "private static Road RoadBetween")
             and "if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);" in method_body(tr, "private static Road RoadFromParty")
             and ordered(method_body(tr, "internal static float TheRoughRoadTakesLongerBy"),
@@ -21685,16 +21686,12 @@ def the_ledger_never_waits_while_a_market_road_is_walked():
                         "Runs = Unwalked(dist, landRatio, false)",
                         "TradeMath.HowMuchLongerTheRideIs(Ride(rough, pace, _moment, 0d, false, null),",
                         "Ride(walked, pace, _moment, 0d, false, null));")
-            and ordered(method_body(tr, "private static Road PairRoad"),
-                        "if (hit.Longer >= TheRoughRoadTakesLongerBy()) return hit;",
-                        "hit = TheRoadAsTheGameMeasuresIt(a, b);")
             and ordered(method_body(S['TradeMath.cs'], "public static float HowMuchLongerTheRideIs"),
                         "if (!(guessed > 0f) || !(real > 0f) || float.IsNaN(real) || float.IsInfinity(real)) return float.NaN;",
                         "if (float.IsNaN(longer) || longer > LongestARideRunsOver) return float.NaN;",
                         "return longer < 1f ? 1f : longer;")
             and "A_real_ride_is_never_counted_as_quicker_than_the_rough_guess_it_replaces" in MATHTESTS
             and "The_stretch_taken_for_unwalked_pairs_is_the_upper_quartile_of_what_was_walked" in MATHTESTS
-            and '" times longer for the ground it "' in method_body(tr, "internal static string TheRideTo(Settlement target)")
             and ordered(wanted, "while (_wantedAt < _wanted.Count)",
                         "if (_pairDist.TryGetValue(key, out Road held) && held.Guessed)",
                         "_behind = true;", "try { PairRoad(a, b); }",
@@ -21707,14 +21704,16 @@ def the_ledger_never_waits_while_a_market_road_is_walked():
             and "_pairDist.ContainsKey(" not in tr
             and "ForgetWhatTheLedgerWanted();" in forget
             and "ForgetTheRoadsWalkedBehind();" in method_body(tr, "private static void DropIfNavalChanged")
-            and '" more taken from the game\'s distance at "' in said
-            and '" times longer for the ground it "' in said
-            and '" still queued for the background"' in said
+            and ordered(said, '" more taken from the game\'s distance"',
+                        "(_ratios.Count > 0",
+                        '", a road the ledger has not walked counted at "',
+                        '" times longer for the ground it "',
+                        '" still queued for the background"')
             and "_pairGuesses = 0;" in method_body(tr, "private static void StartTheMeter"))
 
 
-chk("2.4.0", "a route scan never walks a market road while you wait on it: the road is taken from the game's distance, queued, and walked in the background a frame at a time, and TradeLord.log counts both",
-    the_ledger_never_waits_while_a_market_road_is_walked())
+chk("2.4.0", "a market road is walked the first time the ledger asks for it, the rest are walked in the background a frame at a time, and every walk measures how much longer the ground makes a ride than the game's distance makes it look, which TradeLord.log says",
+    the_market_road_is_walked_when_it_is_asked_for_and_the_rough_guess_is_still_measured())
 
 
 def the_ride_check_says_what_carried_you_at_both_ends():

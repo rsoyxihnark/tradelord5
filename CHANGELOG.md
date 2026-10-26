@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.4
+
+- The TradeLord ledger walks the road to every market again while it scans, so its times come from the road and the map can hold up a moment
+- TradeLord.log now says how much longer a road TradeLord has not walked takes even on an hour when the ledger walked every road it needed
+
 ## 2.4.3
 
 - Fixed the TradeLord ledger sending you to far markets for small profits
