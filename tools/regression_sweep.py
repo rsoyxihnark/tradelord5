@@ -10907,15 +10907,15 @@ def the_marker_picks_the_market_that_earns_fastest_not_the_one_paying_most():
             and "internal float Days;" in S['Marker.cs']
             and "float rate = TradeMath.PerDay(earned, ride);" in marker
             and "float weighed = TradeMath.RateTheMarkHolds(judged, s == holder);" in marker
-            and "? rate * Plan.SellSide(aged, s, ride, true," in marker
+            and "judged = rate * Plan.SellSide(aged, s, ride, true, caravans, till, worthThere," in marker
             and "if (weighed > bar)" in marker
             and "how.Days = ride;" in marker
             and "DearestPurseFirst" not in S['Marker.cs']
             and "Travel.EstimateDaysFromParty(how.Best)" not in why
             and 'how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away" +' in why
-            and '", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how) +' in why
-            and 'how.Rate.ToString("0") + " gold a day"' in why
-            and 'how.RunnerUpRate.ToString("0") + " gold a day for " +' in why
+            and '", so " + how.Rate.ToString("0") + " profit a day" + TheNextBest(how) +' in why
+            and 'how.Rate.ToString("0") + " profit a day"' in why
+            and 'how.RunnerUpRate.ToString("0") + " profit a day for " +' in why
             and all(one in MATHTESTS for one in
                     ("A_nearer_market_paying_less_in_all_still_earns_more_a_day",
                      "A_far_market_paying_far_more_still_wins",
@@ -11148,7 +11148,7 @@ def the_ultralog_lists_the_markets_the_marker_priced():
                         '" market(s) it priced, best first"',
                         "for (int i = 0; i < how.Board.Count; i++)",
                         '" day(s) "', '" unit(s) "',
-                        '" gold "', '" gold a day"', '", weighed "', '"  (marked)"'))
+                        '" gold "', '" profit a day"', '", weighed "', '"  (marked)"'))
 
 
 chk("1.84.0", "the ultralog lists the markets the marker priced, best first, with the days, the units, the gold and the rate of each",
@@ -14114,7 +14114,7 @@ def the_marker_writes_its_weighing_again_only_when_the_reckoning_moved():
                      "_toldNext = null;")))
 
 
-chk("1.93.11", "the map marker writes that it weighed your cargo again only when what it would fetch, the units or its hold on the mark changed, not each time the gold a day moves as you ride closer, and it keeps its own record of the last look exactly as before",
+chk("1.93.11", "the map marker writes that it weighed your cargo again only when what it would fetch, the units or its hold on the mark changed, not each time the profit a day moves as you ride closer, and it keeps its own record of the last look exactly as before",
     the_marker_writes_its_weighing_again_only_when_the_reckoning_moved())
 
 
@@ -14208,7 +14208,7 @@ def the_marker_and_the_buyer_say_in_the_log_what_their_numbers_rest_on():
                         "System.Diagnostics.Stopwatch.Frequency;")
             and "DateTime" not in update
             and ordered(ultra, 'how.Bar.ToString("0") +',
-                        '" gold a day as weighed at the Conf of selling there") + ", in " +',
+                        '" profit a day as weighed at the Conf of selling there") + ", in " +',
                         'how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms");',
                         '"  ultralog: left out before pricing, "')
             and "how.Bar = bar;" in method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
@@ -14314,7 +14314,7 @@ def the_marker_log_keeps_every_market_change_and_shows_todays_price():
                         "bool fresh = joined.Contains(id);",
                         "if (!fresh && !changed.Contains(id)) continue;",
                         'string row = Tongue.Named(one.Where.Name, id) + (fresh ? " newly priced, " : " now ") + one.Units +\n'
-                        '                             " unit(s) for " + one.Value + " gold at " + one.Rate.ToString("0") + " gold a day";',
+                        '                             " unit(s) for " + one.Value + " gold at " + one.Rate.ToString("0") + " profit a day";',
                         'if (!fresh) row += ", was " + _toldBoard[id].units + " unit(s) for " + _toldBoard[id].value + " gold";',
                         "said.Add(row);",
                         "for (int i = 0; i < gone.Count; i++)\n"
@@ -14324,12 +14324,12 @@ def the_marker_log_keeps_every_market_change_and_shows_todays_price():
                         "                said.Add(how.RunnerUp == null\n"
                         '                    ? "no other market it priced would take any of it now"\n'
                         '                    : "the next best is now " + how.RunnerUp.Name + " at " + how.RunnerUpRate.ToString("0") +\n'
-                        '                      " gold a day for " + how.RunnerUpValue + " gold");',
+                        '                      " profit a day for " + how.RunnerUpValue + " gold");',
                         'Log.Write(alongside\n'
                         '                ? "  and of the other markets it priced, " + string.Join("; ", said)\n'
                         '                : "map marker weighed your cargo again and stayed on " + target.Name + ", still " + how.Units +\n'
                         '                  " unit(s) for " + how.Value + " gold, now " + how.Rate.ToString("0") +\n'
-                        '                  " gold a day, and only other markets moved: " + string.Join("; ", said));',
+                        '                  " profit a day, and only other markets moved: " + string.Join("; ", said));',
                         "return true;")
             and moved.count("Log.Write(") == 1
             and ordered(told, "_toldValue = how.Board == null ? -1L : how.Value;", "_toldBoard.Clear();",
@@ -18344,14 +18344,16 @@ chk("1.103.4", "What this means says a market's Score is lowered for paying less
 def the_carv_column_is_said_to_count_caravans_at_or_heading_for_those_towns():
     pressure = method_body(S['Ledger.cs'], "internal static Dictionary<Settlement, int> CaravanPressure")
     return (pressure
-            and ordered(pressure, "Settlement at = p.CurrentSettlement, to = p.TargetSettlement;",
+            and ordered(pressure, "if (!p.IsCaravan && !p.IsVillager) continue;",
+                        "Settlement at = p.CurrentSettlement, to = p.TargetSettlement;",
                         "if (at != null) Bump(map, at);", "if (to != null && to != at) Bump(map, to);")
-            and "| Carv. = caravans at or heading for those markets\").ToString()" in S['Panel.cs']
-            and "ya da o pazarlara giden kervanlar" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL70']
+            and "| Carv. = caravans and villagers at or heading for those markets\").ToString()" in S['Panel.cs']
+            and "ya da o pazarlara giden kervanlar ve k\u00f6yl\u00fcler" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL70']
+            and "\u043a\u0430\u0440\u0430\u0432\u0430\u043d\u044b \u0438 \u0441\u0435\u043b\u044c\u0447\u0430\u043d\u0435" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL70']
             and "\u0438\u043b\u0438 \u043d\u0430 \u043f\u0443\u0442\u0438 \u043a \u043d\u0438\u043c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL70']
-            and "\u6216\u6b63\u524d\u5f80\u90a3\u91cc\u7684\u5546\u961f" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL70'])
+            and "\u6216\u6b63\u524d\u5f80\u90a3\u91cc\u7684\u5546\u961f\u548c\u6751\u6c11" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL70'])
 
-chk("1.103.4", "What this means says Carv. counts the caravans at or heading for a route's two markets, as the route scan counts them, in every language",
+chk("1.103.4", "What this means says Carv. counts the caravans and villagers at or heading for a route's two markets, as the route scan counts them, in every language",
     the_carv_column_is_said_to_count_caravans_at_or_heading_for_those_towns())
 
 def the_resale_safety_line_counts_a_price_above_the_promise_as_the_promise():
@@ -19857,7 +19859,7 @@ def the_marker_check_also_weighs_a_sale_against_what_it_said_on_the_way_out():
                         "float ride = TradeMath.DaysSince(_outAt, Freshness.Hour);",
                         "float aDay = TradeMath.PerDay(profit, ride);",
                         '"marker check on the way out of "', '" of the gold it said"',
-                        "Scoring.Share(aDay / _outRate)", '" of the gold a day it said"')
+                        "Scoring.Share(aDay / _outRate)", '" of the profit a day it said"')
             and all(one in forget for one in ("_walkedOutOf = null;", "_justWalkedOut = false;",
                                               "_outMarkId = null;", "_outAt = -1;"))
             and "if (HasAMarket(settlement)) Marker.NoteTheWayOut(settlement);" in
@@ -21035,7 +21037,7 @@ def the_map_marker_starts_from_where_your_goods_were_bought_for():
                         "how.Intended = IntendedTown(cargo, reachable, party, out how.IntendedGoods);",
                         "TheIntendedTownNext(reachable, how.Intended, holder);",
                         "bool oneBasis = how.Intended != null && Options.Current.ConfidenceRanking;",
-                        "? rate * Plan.SellSide(aged, s, ride, true,")
+                        "judged = rate * Plan.SellSide(aged, s, ride, true, caravans, till, worthThere,")
             and "reachable.Insert(to, meant);" in nxt
             and '"map marker chose " + target.Name + " over " + how.Intended.Name +' in S['Marker.cs'])
 
@@ -21732,6 +21734,46 @@ def the_panel_never_shows_an_older_scan_than_the_last_one():
 
 chk("2.4.0", "the ledger panel is drawn again as soon as a route scan finishes while it is open, so it never shows an older scan than the last one",
     the_panel_never_shows_an_older_scan_than_the_last_one())
+
+
+
+def a_markets_narrow_till_and_its_traffic_both_count_against_its_conf():
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    side = method_body(S['Plan.cs'], "internal static float SellSide")
+    tally = method_body(S['Plan.cs'], "internal static void SayTheDay")
+    ultra = method_body(S['Marker.cs'], "private static void Ultra")
+    update = method_body(S['Marker.cs'], "internal static void Update()")
+    pressure = method_body(S['Ledger.cs'], "internal static Dictionary<Settlement, int> CaravanPressure")
+    return (marker and side and tally and ultra and update and pressure
+            and ordered(marker, "int till = 0;", "long worthThere = 1L;",
+                        "if (oneBasis && took.PurseCapped)",
+                        "worthThere = WhatItWouldFetch(s, market, party, ride, cargo, int.MaxValue, null).Value;",
+                        "int caravans = pressure.TryGetValue(s, out int onTheRoad) ? onTheRoad : 0;",
+                        "judged = rate * Plan.SellSide(aged, s, ride, true, caravans, till, worthThere,",
+                        "EngineTally.ConfWeighed++;",
+                        "if (parts.Depth < 1f) EngineTally.TillCountedAgainst++;",
+                        "if (parts.Quiet < 1f) EngineTally.TrafficCountedAgainst++;",
+                        "confSaid = Confidence.Spelled(parts)")
+            and "parts = Confidence.PartsOf(simulated, 1, 1, till, wanted, days, caravans, age);" in side
+            and "float conf = Confidence.Of(simulated, 1, 1, till, wanted, days, caravans, age);" in side
+            and "int wanted = worthThere > int.MaxValue ? int.MaxValue : (int)worthThere;" in side
+            and "if (!p.IsCaravan && !p.IsVillager) continue;" in pressure
+            and ordered(tally, '"marker Conf today: "', '" of them on a village and "',
+                        '" had their till count against them and "',
+                        '" had caravan and villager traffic count against them"')
+            and '(one.Conf == null ? "" : ", " + one.Conf) +' in ultra
+            and ordered(update, "if (target.IsVillage) EngineTally.MarkedVillage++;",
+                        "else EngineTally.MarkedTown++;")
+            and "MarkedVillage = MarkedTown = ConfWeighed = TillCountedAgainst = TrafficCountedAgainst = 0;" in S['Plan.cs']
+            and S['Marker.cs'].count("gold a day") == 0
+            and all(one in EXPIRYTESTS for one in
+                    ("A_till_that_cannot_take_the_whole_cargo_counts_against_a_market",
+                     "More_traffic_at_or_heading_for_a_market_counts_against_it",
+                     "Conf_is_the_product_of_the_five_parts_the_log_names")))
+
+
+chk("2.4.2", "a market's Conf counts its till against it where the till cannot take the whole cargo and counts the caravans and villagers heading there, and TradeLord.log writes both for every market it priced and sums the day",
+    a_markets_narrow_till_and_its_traffic_both_count_against_its_conf())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

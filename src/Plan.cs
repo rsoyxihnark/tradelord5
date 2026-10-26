@@ -385,9 +385,20 @@ namespace TradeLord
         internal static int Tooltips;
         internal static int OffTheLedger;
         internal static double SlowestScan;
+        internal static int MarkedVillage;
+        internal static int MarkedTown;
+        internal static int ConfWeighed;
+        internal static int TillCountedAgainst;
+        internal static int TrafficCountedAgainst;
 
         internal static void SayTheDay()
         {
+            if (Options.Current.ExtendedDebugLogging && ConfWeighed > 0)
+                Log.Write("marker Conf today: " + (MarkedVillage + MarkedTown) + " weighing(s) left a mark, " +
+                          MarkedVillage + " of them on a village and " + MarkedTown + " on a town; of " +
+                          ConfWeighed + " market(s) weighed at the Conf of selling there, " + TillCountedAgainst +
+                          " had their till count against them and " + TrafficCountedAgainst +
+                          " had caravan and villager traffic count against them");
             if (Options.Current.ExtendedDebugLogging && Scans + Planned + OnTheRoad + Marker + HoldCargo + Tooltips > 0)
                 Log.Write("one engine today: " + Scans + " route scan(s), " + Planned + " good(s) the buying pass " +
                           "planned from the scan, " + OnTheRoad + " on the road, " + Marker + " map marker weighing(s), " +
@@ -396,6 +407,7 @@ namespace TradeLord
                           " time(s); slowest route scan " +
                           SlowestScan.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " ms");
             Scans = Planned = OnTheRoad = Marker = HoldCargo = Tooltips = OffTheLedger = 0;
+            MarkedVillage = MarkedTown = ConfWeighed = TillCountedAgainst = TrafficCountedAgainst = 0;
             SlowestScan = 0d;
         }
     }
@@ -416,14 +428,18 @@ namespace TradeLord
                 ? TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0, to.IsVillage)
                 : 0;
 
-        internal static float SellSide(ItemObject item, Settlement to, float days, bool simulated, int caravans)
+        internal static float SellSide(ItemObject item, Settlement to, float days, bool simulated, int caravans,
+                                       int till, long worthThere, out Confidence.Parts parts, out float trust)
         {
+            parts = default(Confidence.Parts);
+            trust = 1f;
             if (to == null || !Options.Current.ConfidenceRanking) return 1f;
             LedgerBehavior ledger = LedgerBehavior.Instance;
             float age = Options.Current.Omniscient || ledger == null ? -1f
                 : ledger.ObservationAgeDays(item, to);
-            float conf = Confidence.Of(simulated, 1, 1, 0, 1, days, caravans, age);
-            float trust = 1f;
+            int wanted = worthThere > int.MaxValue ? int.MaxValue : (int)worthThere;
+            parts = Confidence.PartsOf(simulated, 1, 1, till, wanted, days, caravans, age);
+            float conf = Confidence.Of(simulated, 1, 1, till, wanted, days, caravans, age);
             if (Options.Current.TrustWhatAMarketPaid && ledger != null &&
                 ledger.PromiseScoreAt(to.StringId, out int arrivals, out float held))
                 trust = Confidence.AsPromisesHaveHeld(1f, arrivals, held);

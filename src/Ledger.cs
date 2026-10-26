@@ -1418,7 +1418,7 @@ namespace TradeLord
             for (int i = 0; i < all.Count; i++)
             {
                 MobileParty p = all[i];
-                if (!p.IsCaravan) continue;
+                if (!p.IsCaravan && !p.IsVillager) continue;
                 Settlement at = p.CurrentSettlement, to = p.TargetSettlement;
                 if (at != null) Bump(map, at);
                 if (to != null && to != at) Bump(map, to);

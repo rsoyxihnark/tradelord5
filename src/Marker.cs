@@ -361,6 +361,7 @@ namespace TradeLord
             internal long Earned;
             internal float Rate;
             internal float Judged;
+            internal string Conf;
         }
 
         private struct Takings
@@ -458,6 +459,12 @@ namespace TradeLord
                 _heldCargo = _cargoHeld;
             }
 
+            if (target != null)
+            {
+                if (target.IsVillage) EngineTally.MarkedVillage++;
+                else EngineTally.MarkedTown++;
+            }
+
             WhatItSaidOnTheWayOut(target, how);
             if (on && how.Intended != null && target != null && target != how.Intended &&
                 Options.Current.ExtendedDebugLogging)
@@ -465,7 +472,7 @@ namespace TradeLord
                                "map marker chose " + target.Name + " over " + how.Intended.Name +
                                ", the Sell At the TradeLord ledger planned for your " + how.IntendedGoods + ": " +
                                (int)how.Rate + " against " + (int)how.IntendedRate +
-                               " gold a day for your whole cargo" +
+                               " profit a day for your whole cargo" +
                                (Options.Current.ConfidenceRanking
                                    ? ", each weighed at the Conf of selling there"
                                    : ""));
@@ -536,8 +543,8 @@ namespace TradeLord
             if (how.HolderLost != null) return how.HolderLost;
             if (!how.HolderPriced) return was.Name + " was not priced";
             if (target == null)
-                return was.Name + " would earn " + how.HolderRate.ToString("0") + " gold a day on what you carry";
-            string against = target.Name + " earns " + how.Rate.ToString("0") + " gold a day against " + was.Name + "'s " +
+                return was.Name + " would earn " + how.HolderRate.ToString("0") + " profit a day on what you carry";
+            string against = target.Name + " earns " + how.Rate.ToString("0") + " profit a day against " + was.Name + "'s " +
                              how.HolderRate.ToString("0");
             if (!cargoSame) return "your cargo changed and " + against;
             return lostBefore >= 0 ? against + " for a second hour in a row" : against;
@@ -604,7 +611,7 @@ namespace TradeLord
                 bool fresh = joined.Contains(id);
                 if (!fresh && !changed.Contains(id)) continue;
                 string row = Tongue.Named(one.Where.Name, id) + (fresh ? " newly priced, " : " now ") + one.Units +
-                             " unit(s) for " + one.Value + " gold at " + one.Rate.ToString("0") + " gold a day";
+                             " unit(s) for " + one.Value + " gold at " + one.Rate.ToString("0") + " profit a day";
                 if (!fresh) row += ", was " + _toldBoard[id].units + " unit(s) for " + _toldBoard[id].value + " gold";
                 said.Add(row);
             }
@@ -615,13 +622,13 @@ namespace TradeLord
                 said.Add(how.RunnerUp == null
                     ? "no other market it priced would take any of it now"
                     : "the next best is now " + how.RunnerUp.Name + " at " + how.RunnerUpRate.ToString("0") +
-                      " gold a day for " + how.RunnerUpValue + " gold");
+                      " profit a day for " + how.RunnerUpValue + " gold");
             if (said.Count == 0) return false;
             Log.Write(alongside
                 ? "  and of the other markets it priced, " + string.Join("; ", said)
                 : "map marker weighed your cargo again and stayed on " + target.Name + ", still " + how.Units +
                   " unit(s) for " + how.Value + " gold, now " + how.Rate.ToString("0") +
-                  " gold a day, and only other markets moved: " + string.Join("; ", said));
+                  " profit a day, and only other markets moved: " + string.Join("; ", said));
             return true;
         }
 
@@ -681,12 +688,12 @@ namespace TradeLord
             float aDay = TradeMath.PerDay(profit, ride);
             Log.Write("marker check on the way out of " + _walkedOutOf.Name + ": it marked " + site.Name + " for " +
                       _outUnits + " unit(s) worth " + said + " gold, " + _outEarned + " of it profit, " +
-                      _outRate.ToString("0") + " gold a day, about " +
+                      _outRate.ToString("0") + " profit a day, about " +
                       _outDays.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away; the ride took " +
                       Scoring.Figure(ride) + " day(s) and you sold " + units + " unit(s) for " + gold + " gold, " +
-                      profit + " of it profit, " + aDay.ToString("0") + " gold a day" +
+                      profit + " of it profit, " + aDay.ToString("0") + " profit a day" +
                       (held == TradeMath.NoShareToGive ? "" : ", " + Scoring.Share(held) + " of the gold it said") +
-                      (_outRate > 0f ? " and " + Scoring.Share(aDay / _outRate) + " of the gold a day it said" : ""));
+                      (_outRate > 0f ? " and " + Scoring.Share(aDay / _outRate) + " of the profit a day it said" : ""));
         }
 
         private static void ScoreTheFigureItHeld(Settlement site, int units, int gold)
@@ -711,7 +718,7 @@ namespace TradeLord
             Log.Write("marker check at " + site.Name + ": it marked this market for " + _markedUnits +
                       " unit(s) worth " + said + " gold, " + _markedEarned + " of it profit, " +
                       _markedRate.ToString("0") +
-                      " gold a day, about " + _markedDays.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away; you walked in " +
+                      " profit a day, about " + _markedDays.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away; you walked in " +
                       Scoring.Figure(since) + " day(s) later and sold " + units + " unit(s) for " + gold +
                       (held == TradeMath.NoShareToGive
                           ? ""
@@ -752,7 +759,7 @@ namespace TradeLord
                            ? ", its purse left unread as Live world prices is off"
                            : " against a " + MarketKind(how.Best) + " purse of " + how.Purse) +
                    ", about " + how.Days.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away" +
-                   ", so " + how.Rate.ToString("0") + " gold a day" + TheNextBest(how) +
+                   ", so " + how.Rate.ToString("0") + " profit a day" + TheNextBest(how) +
                    (how.Afresh != null && how.Unheld != null
                        ? ", marked afresh because " + how.Afresh.Name + ", left out while " + how.Unheld.Name +
                          " was marked, now earns more a day than it"
@@ -765,7 +772,7 @@ namespace TradeLord
         {
             if (how.RunnerUp == null) return ", and no other market it priced would take any of it";
             string next = how.RunnerUp.Name + ", the next best it priced, at " +
-                          how.RunnerUpRate.ToString("0") + " gold a day for " +
+                          how.RunnerUpRate.ToString("0") + " profit a day for " +
                           how.RunnerUpValue + " gold";
             if (how.HeldForASecondLook)
                 return ", and it holds the mark against " + next +
@@ -827,10 +834,11 @@ namespace TradeLord
                              one.Units.ToString().PadLeft(5) + " unit(s) " +
                              one.Value.ToString().PadLeft(9) + " gold " +
                              one.Earned.ToString().PadLeft(9) + " profit " +
-                             one.Rate.ToString("0").PadLeft(9) + " gold a day" +
+                             one.Rate.ToString("0").PadLeft(9) + " profit a day" +
                              (one.Judged.ToString("0") == one.Rate.ToString("0")
                                  ? ""
                                  : ", weighed " + one.Judged.ToString("0")) +
+                             (one.Conf == null ? "" : ", " + one.Conf) +
                              (one.Where == how.Best ? "  (marked)" : ""));
                 }
             }
@@ -842,8 +850,8 @@ namespace TradeLord
                          how.Left + " left unpriced once no price they could pay would beat " +
                          how.Bar.ToString("0") +
                          (how.Bar.ToString("0") == how.Rate.ToString("0")
-                             ? " gold a day"
-                             : " gold a day as weighed at the Conf of selling there") + ", in " +
+                             ? " profit a day"
+                             : " profit a day as weighed at the Conf of selling there") + ", in " +
                          how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms");
                 said.Add("  ultralog: left out before pricing, " + how.NoTill +
                          " with nothing in the till, " +
@@ -1251,9 +1259,31 @@ namespace TradeLord
                 long earned = total - took.Cost;
                 float rate = TradeMath.PerDay(earned, ride);
                 if (s == how.Intended) how.IntendedRate = rate;
-                float judged = oneBasis
-                    ? rate * Plan.SellSide(aged, s, ride, true, pressure.TryGetValue(s, out int caravans) ? caravans : 0)
-                    : rate;
+                int till = 0;
+                long worthThere = 1L;
+                if (oneBasis && took.PurseCapped)
+                {
+                    till = gold;
+                    worthThere = WhatItWouldFetch(s, market, party, ride, cargo, int.MaxValue, null).Value;
+                }
+                float judged = rate;
+                string confSaid = null;
+                if (oneBasis)
+                {
+                    int caravans = pressure.TryGetValue(s, out int onTheRoad) ? onTheRoad : 0;
+                    judged = rate * Plan.SellSide(aged, s, ride, true, caravans, till, worthThere,
+                                                  out Confidence.Parts parts, out float trust);
+                    EngineTally.ConfWeighed++;
+                    if (parts.Depth < 1f) EngineTally.TillCountedAgainst++;
+                    if (parts.Quiet < 1f) EngineTally.TrafficCountedAgainst++;
+                    if (ultra)
+                        confSaid = Confidence.Spelled(parts) + " x trust " + Scoring.Share(trust) +
+                                   (till > 0
+                                       ? ", its till " + till + " against the " + worthThere +
+                                         " your cargo would fetch there"
+                                       : ", its till covered the whole sale") +
+                                   ", " + caravans + " caravan(s) and villager(s) at or heading there";
+                }
                 float weighed = TradeMath.RateTheMarkHolds(judged, s == holder);
                 if (s == holder)
                 {
@@ -1271,7 +1301,7 @@ namespace TradeLord
                 how.Board?.Add(new Weighing
                 {
                     Where = s, Days = ride, Units = took.Units, Value = total,
-                    Earned = earned, Rate = rate, Judged = weighed
+                    Earned = earned, Rate = rate, Judged = weighed, Conf = confSaid
                 });
                 if (weighed > bar)
                 {
