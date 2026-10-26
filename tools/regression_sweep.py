@@ -2256,7 +2256,7 @@ chk("1.3.34", "both travel caches hold geometry and re-time it at the current sp
             "if (road.Hour == hour) return road.Days;", "road.Days = Ride(", "road.Hour = hour;") and
     "float days = RideBetween(PairRoad(a, b), after, true);" in
     method_body(S['Travel.cs'], "internal static float EstimateDaysBetween") and
-    ": RideBetween(PairRoad(inside, target), 0f, false);" in
+    "return RideBetween(PairRoad(inside, target), 0f, false);" in
     method_body(S['Travel.cs'], "private static float FromWhereYouStand"))
 chk("1.11.1", "one naval invalidation rule, read by every travel estimate it feeds",
     S['Travel.cs'].count("DropIfNavalChanged();") == 3 and
@@ -12525,7 +12525,8 @@ def the_feature_list_says_where_the_ledger_shows_what_it_shows():
     refresh = method_body(panel, "private void Refresh()")
     runs = method_body(panel, "public string RunsOut")
     road = method_body(S['Trading.cs'], "private static IMarketData PricedOnTheRoad")
-    return (ordered(refresh, "LegendText = (nothingFits", "+ HowThePromiseHasHeld()",
+    return (ordered(refresh, "string roadsComing = Tongue.Text(", "LegendText = (measuring && empty",
+                    "+ HowThePromiseHasHeld()",
                     "NothingHereYouCouldBuy(hero)", "LegendText = OneClauseToALine(LegendText);")
             and "The line under the routes says" not in README
             and "It says under the routes" not in README
@@ -13506,13 +13507,16 @@ def a_market_the_road_was_lost_to_is_asked_again_rather_than_kept_out_of_reach()
     return (party and here and top and prime and why
             and "internal static bool LostTheRoad => _roadsLost > 0 && _roadsFound == 0;" in tr
             and tr.count("_roadsLost = 0;") == 3 and tr.count("_roadsFound = 0;") == 3
-            and ordered(party, "hit = RoadFromParty(party, target);",
+            and ordered(party, "if (ThePartyRoadWaitsForTheBackground(party, target)) return TradeMath.FurthestThereIs;",
+                        "hit = RoadFromParty(party, target);",
                         "if (TradeMath.OutOfReach(RideFromParty(hit)))",
                         "float fromHere = FromWhereYouStand(party, target);",
                         "if (!TradeMath.OutOfReach(fromHere))", "_roadsFound++;", "return fromHere;",
                         "_roadsLost++;", "_partyDist[target.StringId] = hit;")
             and party.count("_partyDist[target.StringId] = hit;") == 1
-            and "return inside == null ? TradeMath.FurthestThereIs : RideBetween(PairRoad(inside, target), 0f, false);" in here
+            and ordered(here,
+                        "if (inside == null || ThePairRoadWaitsForTheBackground(inside, target)) return TradeMath.FurthestThereIs;",
+                        "return RideBetween(PairRoad(inside, target), 0f, false);")
             and "if (!atSea && landRatio >= AllOnLand && !_unwalkable.Contains(target.StringId))" in
                 method_body(tr, "private static Road RoadFromParty")
             and "if (!road.Walked) _unwalkable.Add(target.StringId);" in method_body(tr, "private static Road RoadFromParty")
@@ -17207,12 +17211,12 @@ def every_line_of_what_this_means_fits_its_window():
     built = "".join(method_body(panel, one) for one in (
         "private void Refresh", "private static string HowThePromiseHasHeld",
         "private static string ResaleSafetyInUse", "private static string NothingHereYouCouldBuy"))
-    legend = refresh[refresh.find("LegendText = (nothingFits"):refresh.find("LegendText = OneClauseToALine(LegendText);")]
+    legend = refresh[refresh.find("string roadsComing = Tongue.Text("):refresh.find("LegendText = OneClauseToALine(LegendText);")]
     ids = sorted(set(re.findall(r'\{=(TL\d+)\}', legend + "".join(method_body(panel, one) for one in (
         "private static string HowThePromiseHasHeld", "private static string ResaleSafetyInUse",
         "private static string NothingHereYouCouldBuy")))), key=lambda one: int(one[2:]))
     measured = ['TL69', 'TL70', 'TL71', 'TL72', 'TL73', 'TL90', 'TL377', 'TL393', 'TL394', 'TL397', 'TL399',
-                'TL417', 'TL445', 'TL447', 'TL476', 'TL485', 'TL508', 'TL509']
+                'TL417', 'TL445', 'TL447', 'TL476', 'TL485', 'TL508', 'TL509', 'TL514']
     widest = {'{GOLD}': '123,456', '{RESERVE}': '12,345', '{FLAT}': '12,345', '{WAGES}': '12,345',
               '{USED}': '100%', '{SET}': '100%', '{COUNT}': '1,234', '{HELD}': '100%'}
     def width(clause):
@@ -21693,10 +21697,28 @@ def the_market_road_is_walked_when_it_is_asked_for_and_the_rough_guess_is_still_
             and "A_real_ride_is_never_counted_as_quicker_than_the_rough_guess_it_replaces" in MATHTESTS
             and "The_stretch_taken_for_unwalked_pairs_is_the_upper_quartile_of_what_was_walked" in MATHTESTS
             and ordered(wanted, "while (_wantedAt < _wanted.Count)",
-                        "if (_pairDist.TryGetValue(key, out Road held) && held.Guessed)",
-                        "_behind = true;", "try { PairRoad(a, b); }",
+                        "bool walked = key.Item2 == null ? WalkThePartyRoadBehind(key.Item1) : WalkThePairRoadBehind(key);",
+                        "if (walked && ++_walkedForTheLedger >= RoadsBeforeTheLedgerLooksAgain) TheLedgerMayLookAgain();",
                         "if (Stopwatch.GetTimestamp() - started >= budget) return false;",
-                        "if (_wanted.Count > 0) ForgetWhatTheLedgerWanted();")
+                        "ForgetWhatTheLedgerWanted();")
+            and wanted.count("TheLedgerMayLookAgain();") == 2
+            and ordered(method_body(tr, "private static bool WalkThePairRoadBehind"),
+                        "if (_pairDist.TryGetValue(key, out Road _)) return false;",
+                        "_behind = true;", "try { PairRoad(a, b); }", "if (_justWalked) _fillWalked++;",
+                        "return true;")
+            and ordered(method_body(tr, "private static bool WalkThePartyRoadBehind"),
+                        "StandWhereYouAre(party);",
+                        "if (_partyDist.TryGetValue(id, out Road _)) return false;",
+                        "Road road = RoadFromParty(party, target);",
+                        "if (!TradeMath.OutOfReach(RideFromParty(road))) _partyDist[id] = road;",
+                        "return true;")
+            and "_fillWalked++" not in method_body(tr, "private static bool WalkThePartyRoadBehind")
+            and ordered(method_body(tr, "private static void TheLedgerMayLookAgain"),
+                        "_walkedForTheLedger = 0;", "LedgerBehavior.Instance?.MoreRoadsAreMeasuredNow();",
+                        "LedgerPanel.TheScanIsNew();")
+            and "internal void MoreRoadsAreMeasuredNow() => ForgetPricedRankings();" in S['Ledger.cs']
+            and ordered(method_body(S['Ledger.cs'], "private void ForgetPricedRankings"),
+                        "_marketCache.Clear();", "_routes = null;")
             and ordered(fill, "if (!WalkWhatTheLedgerWanted(started, budget)) return;",
                         "bool held = TheSameMarkets(reach, _fillFor) && _fillOrder != null;",
                         "if (!held)", "_fillShell = 0;",
@@ -21714,6 +21736,55 @@ def the_market_road_is_walked_when_it_is_asked_for_and_the_rough_guess_is_still_
 
 chk("2.4.0", "a market road is walked the first time the ledger asks for it, the rest are walked in the background a frame at a time, and every walk measures how much longer the ground makes a ride than the game's distance makes it look, which TradeLord.log says",
     the_market_road_is_walked_when_it_is_asked_for_and_the_rough_guess_is_still_measured())
+
+
+def a_route_scan_leaves_the_roads_it_cannot_afford_to_the_background():
+    tr = S['Travel.cs']
+    led = S['Ledger.cs']
+    panel = S['Panel.cs']
+    party = method_body(tr, "internal static float EstimateDaysFromParty")
+    here = method_body(tr, "private static float FromWhereYouStand")
+    between = method_body(tr, "internal static float EstimateDaysBetween")
+    scan = method_body(led, "private List<TradeRoute> ScanRoutes")
+    return (party and here and between and scan
+            and "private const double RoadsMsAScan = 20d;" in tr
+            and "private const int RoadsBeforeTheLedgerLooksAgain = 250;" in tr
+            and ordered(method_body(tr, "internal static void OpenTheScansRoadBudget"),
+                        "_scanRoads = true;", "_scanRoadTicks = 0L;",
+                        "_scanRoadBudget = (long)(RoadsMsAScan * Stopwatch.Frequency / 1000d);")
+            and "internal static void CloseTheScansRoadBudget() => _scanRoads = false;" in tr
+            and "internal static int RoadsStillToWalk() => _wanted.Count - _wantedAt;" in tr
+            and "private static bool TheRoadBudgetIsSpent() => _scanRoads && _scanRoadTicks >= _scanRoadBudget;" in tr
+            and "if (_scanRoads) _scanRoadTicks += took;" in method_body(tr, "private static void StopTheMeter")
+            and ordered(method_body(tr, "private static bool ThePairRoadWaitsForTheBackground"),
+                        "if (!TheRoadBudgetIsSpent() || a == null || b == null || a == b) return false;",
+                        "if (_pairDist.TryGetValue(key, out Road _)) return false;",
+                        "WantThisRoadWalked(key);", "return true;")
+            and ordered(method_body(tr, "private static bool ThePartyRoadWaitsForTheBackground"),
+                        "if (!TheRoadBudgetIsSpent() || party == null || target == null) return false;",
+                        "if (target == party.CurrentSettlement || _unwalkable.Contains(target.StringId)) return false;",
+                        "WantThisRoadWalked((target.StringId, null));", "return true;")
+            and "if (ThePartyRoadWaitsForTheBackground(party, target)) return TradeMath.FurthestThereIs;" in party
+            and "ThePairRoadWaitsForTheBackground(inside, target)" in here
+            and ordered(between, "if (ThePairRoadWaitsForTheBackground(a, b)) return TradeMath.FurthestThereIs;",
+                        "float days = RideBetween(PairRoad(a, b), after, true);")
+            and ordered(scan, "Travel.OpenTheScansRoadBudget();", "try { return ScanEveryRoute(); }",
+                        "Travel.CloseTheScansRoadBudget();")
+            and "road(s) left for the background rather than walked while " in led
+            and ordered(method_body(panel, "private void Refresh()"),
+                        "int roadsLeft = Travel.RoadsStillToWalk();", "bool measuring = roadsLeft > 0;",
+                        "bool nothingFits = empty && !measuring && ledger != null && ledger.NothingFitsYourCargo;",
+                        "bool nothingAffords = empty && !measuring && ledger != null && ledger.NothingFitsYourPurse;",
+                        '{=TL513}TradeLord is still measuring {COUNT} road(s)',
+                        '{=TL514}The ledger fills in as the roads are measured',
+                        'measuring && !empty ? " | " + roadsComing : ""')
+            and method_body(panel, "private void Refresh()").count("measuring && empty") == 2
+            and all(spoken(path).get('TL513') and spoken(path).get('TL514')
+                    for path in [ENGLISH] + list(TRANSLATIONS.values())))
+
+
+chk("2.4.5", "a route scan walks a road only while its own 20 ms budget holds, asks the background for the rest rather than holding the map up, and the ledger says it is still measuring them and looks again as they are walked",
+    a_route_scan_leaves_the_roads_it_cannot_afford_to_the_background())
 
 
 def the_ride_check_says_what_carried_you_at_both_ends():

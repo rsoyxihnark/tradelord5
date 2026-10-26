@@ -338,5 +338,7 @@
 		<string id="TL510" text=" | 数量受限于：载货空间 {CARGO}，钱袋 {PURSE}，在那里可花的金额 {LIMIT}"/>
 		<string id="TL511" text="没有符合你钱袋和可花金额的可盈利路线"/>
 		<string id="TL512" text=" | 来自 {MARKET} 的 {COUNT} 条路线暂放一边：你第一次回到那里时，到达即交易不会在那里交易"/>
+		<string id="TL513" text="TradeLord 仍在测量 {COUNT} 条道路"/>
+		<string id="TL514" text="账簿会随着道路被测量而陆续填满，每帧测一点，所以地图不会卡住"/>
 	</strings>
 </base>

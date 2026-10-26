@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.5
+
+- Fixed the map holding up for seconds while the TradeLord ledger scanned
+- The TradeLord ledger says when it is still measuring roads, and more routes appear as they are measured
+- TradeLord.log now says how many roads a route scan left for the background rather than walking them while you waited
+
 ## 2.4.4
 
 - The TradeLord ledger walks the road to every market again while it scans, so its times come from the road and the map can hold up a moment

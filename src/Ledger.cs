@@ -1498,6 +1498,8 @@ namespace TradeLord
             if (leaving != null) _leftFrom = leaving;
         }
 
+        internal void MoreRoadsAreMeasuredNow() => ForgetPricedRankings();
+
         internal TradeRoute Listed(Settlement here, ItemObject item)
         {
             if (here == null || item == null) return null;
@@ -1577,9 +1579,11 @@ namespace TradeLord
         {
             Bulk.Forget();
             _scanning = true;
+            Travel.OpenTheScansRoadBudget();
             try { return ScanEveryRoute(); }
             finally
             {
+                Travel.CloseTheScansRoadBudget();
                 _scanning = false;
                 Bulk.Forget();
             }
@@ -1789,6 +1793,10 @@ namespace TradeLord
                           System.Globalization.CultureInfo.InvariantCulture) + " ms" +
                       (scan.PassedOver > 0
                           ? ", and " + scan.PassedOver + " pair(s) passed over unpriced, as no opening price could make them a route"
+                          : "") +
+                      (Travel.RoadsStillToWalk() > 0
+                          ? "; " + Travel.RoadsStillToWalk() + " road(s) left for the background rather than walked while " +
+                            "you waited, so more routes come with the next look"
                           : "") +
                       (HeldByCargo + HeldByPurse + HeldByLimit > 0
                           ? "; " + HeldByCargo + " held back by your cargo, " + HeldByPurse + " by your purse and " +

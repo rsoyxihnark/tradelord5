@@ -338,5 +338,7 @@
 		<string id="TL510" text=" | Qty held back by: cargo {CARGO}, purse {PURSE}, what you may spend there {LIMIT}"/>
 		<string id="TL511" text="No profitable route fits your purse and what you may spend"/>
 		<string id="TL512" text=" | {COUNT} route(s) from {MARKET} set aside: trading on arrival leaves it alone the first time you come back"/>
+		<string id="TL513" text="TradeLord is still measuring {COUNT} road(s)"/>
+		<string id="TL514" text="The ledger fills in as the roads are measured, a little each frame, so the map never stops"/>
 	</strings>
 </base>

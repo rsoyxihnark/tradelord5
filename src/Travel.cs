@@ -977,6 +977,7 @@ namespace TradeLord
             walks++;
             _walkTicks += took;
             _frameTicks += took;
+            if (_scanRoads) _scanRoadTicks += took;
             if (took > _slowestWalk) _slowestWalk = took;
         }
 
@@ -1136,7 +1137,12 @@ namespace TradeLord
             return road;
         }
         private const double RoadsMsAFrame = 3d;
+        private const double RoadsMsAScan = 20d;
         private const int RoadsLooksAFrame = 4000;
+        private const int RoadsBeforeTheLedgerLooksAgain = 250;
+        private static long _scanRoadTicks, _scanRoadBudget;
+        private static bool _scanRoads;
+        private static int _walkedForTheLedger;
         private static bool _behind, _justWalked, _fillBroken;
         private static List<Settlement> _fillFor, _fillOrder;
         private static int _fillShell, _fillStep, _fillWalked;
@@ -1152,11 +1158,42 @@ namespace TradeLord
             if (_wantedHeld.Add(key)) _wanted.Add(key);
         }
 
+        internal static void OpenTheScansRoadBudget()
+        {
+            _scanRoads = true;
+            _scanRoadTicks = 0L;
+            _scanRoadBudget = (long)(RoadsMsAScan * Stopwatch.Frequency / 1000d);
+        }
+
+        internal static void CloseTheScansRoadBudget() => _scanRoads = false;
+
+        internal static int RoadsStillToWalk() => _wanted.Count - _wantedAt;
+
+        private static bool TheRoadBudgetIsSpent() => _scanRoads && _scanRoadTicks >= _scanRoadBudget;
+
+        private static bool ThePairRoadWaitsForTheBackground(Settlement a, Settlement b)
+        {
+            if (!TheRoadBudgetIsSpent() || a == null || b == null || a == b) return false;
+            var key = (a.StringId, b.StringId);
+            if (_pairDist.TryGetValue(key, out Road _)) return false;
+            WantThisRoadWalked(key);
+            return true;
+        }
+
+        private static bool ThePartyRoadWaitsForTheBackground(MobileParty party, Settlement target)
+        {
+            if (!TheRoadBudgetIsSpent() || party == null || target == null) return false;
+            if (target == party.CurrentSettlement || _unwalkable.Contains(target.StringId)) return false;
+            WantThisRoadWalked((target.StringId, null));
+            return true;
+        }
+
         private static void ForgetWhatTheLedgerWanted()
         {
             _wanted.Clear();
             _wantedHeld.Clear();
             _wantedAt = 0;
+            _walkedForTheLedger = 0;
         }
 
         private static bool TheSameMarkets(List<Settlement> now, List<Settlement> before)
@@ -1216,25 +1253,60 @@ namespace TradeLord
             while (_wantedAt < _wanted.Count)
             {
                 var key = _wanted[_wantedAt++];
-                if (_pairDist.TryGetValue(key, out Road held) && held.Guessed)
-                {
-                    Settlement a = Settlement.Find(key.Item1);
-                    Settlement b = Settlement.Find(key.Item2);
-                    if (a != null && b != null)
-                    {
-                        long before = Stopwatch.GetTimestamp();
-                        _justWalked = false;
-                        _behind = true;
-                        try { PairRoad(a, b); }
-                        finally { _behind = false; }
-                        if (_justWalked) _fillWalked++;
-                        _fillTicks += Stopwatch.GetTimestamp() - before;
-                    }
-                }
+                long before = Stopwatch.GetTimestamp();
+                bool walked = key.Item2 == null ? WalkThePartyRoadBehind(key.Item1) : WalkThePairRoadBehind(key);
+                _fillTicks += Stopwatch.GetTimestamp() - before;
+                if (walked && ++_walkedForTheLedger >= RoadsBeforeTheLedgerLooksAgain) TheLedgerMayLookAgain();
                 if (Stopwatch.GetTimestamp() - started >= budget) return false;
             }
-            if (_wanted.Count > 0) ForgetWhatTheLedgerWanted();
+            if (_wanted.Count > 0)
+            {
+                ForgetWhatTheLedgerWanted();
+                TheLedgerMayLookAgain();
+            }
             return true;
+        }
+
+        private static bool WalkThePairRoadBehind((string, string) key)
+        {
+            if (_pairDist.TryGetValue(key, out Road _)) return false;
+            Settlement a = Settlement.Find(key.Item1);
+            Settlement b = Settlement.Find(key.Item2);
+            if (a == null || b == null) return false;
+            _justWalked = false;
+            _behind = true;
+            try { PairRoad(a, b); }
+            finally { _behind = false; }
+            if (_justWalked) _fillWalked++;
+            return true;
+        }
+
+        private static bool WalkThePartyRoadBehind(string id)
+        {
+            MobileParty party = MobileParty.MainParty;
+            Settlement target = Settlement.Find(id);
+            if (party == null || target == null) return false;
+            StandWhereYouAre(party);
+            if (_partyDist.TryGetValue(id, out Road _)) return false;
+            _behind = true;
+            try
+            {
+                Road road = RoadFromParty(party, target);
+                if (!TradeMath.OutOfReach(RideFromParty(road))) _partyDist[id] = road;
+            }
+            finally { _behind = false; }
+            return true;
+        }
+
+        private static void TheLedgerMayLookAgain()
+        {
+            _walkedForTheLedger = 0;
+            try
+            {
+                LedgerBehavior.Instance?.MoreRoadsAreMeasuredNow();
+                LedgerPanel.TheScanIsNew();
+            }
+            catch { }
         }
 
         private static void FillTheRoadsNow()
@@ -1424,6 +1496,7 @@ namespace TradeLord
             StandWhereYouAre(party);
             if (!_partyDist.TryGetValue(target.StringId, out Road hit))
             {
+                if (ThePartyRoadWaitsForTheBackground(party, target)) return TradeMath.FurthestThereIs;
                 hit = RoadFromParty(party, target);
                 if (TradeMath.OutOfReach(RideFromParty(hit)))
                 {
@@ -1448,7 +1521,8 @@ namespace TradeLord
         private static float FromWhereYouStand(MobileParty party, Settlement target)
         {
             Settlement inside = party.CurrentSettlement;
-            return inside == null ? TradeMath.FurthestThereIs : RideBetween(PairRoad(inside, target), 0f, false);
+            if (inside == null || ThePairRoadWaitsForTheBackground(inside, target)) return TradeMath.FurthestThereIs;
+            return RideBetween(PairRoad(inside, target), 0f, false);
         }
 
         private static Road PairRoad(Settlement a, Settlement b)
@@ -1531,6 +1605,7 @@ namespace TradeLord
             var key = (a.StringId, b.StringId);
             if (_pairDays.TryGetValue(key, out var known) && known.Moment == _moment && known.After == after)
                 return known.Days;
+            if (ThePairRoadWaitsForTheBackground(a, b)) return TradeMath.FurthestThereIs;
             float days = RideBetween(PairRoad(a, b), after, true);
             _pairDays[key] = (_moment, after, days);
             return days;
