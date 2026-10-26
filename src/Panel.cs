@@ -492,10 +492,14 @@ namespace TradeLord
             Routes = rows;
             bool empty = rows.Count == 0;
             LedgerBehavior ledger = LedgerBehavior.Instance;
-            bool nothingFits = empty && ledger != null && ledger.NothingFitsYourCargo;
-            bool nothingAffords = empty && ledger != null && ledger.NothingFitsYourPurse;
+            int roadsLeft = Travel.RoadsStillToWalk();
+            bool measuring = roadsLeft > 0;
+            bool nothingFits = empty && !measuring && ledger != null && ledger.NothingFitsYourCargo;
+            bool nothingAffords = empty && !measuring && ledger != null && ledger.NothingFitsYourPurse;
             bool sized = ledger != null && ledger.HeldByCargo + ledger.HeldByPurse + ledger.HeldByLimit > 0;
-            StatusText = nothingFits
+            StatusText = measuring && empty
+                ? Line("{=TL513}TradeLord is still measuring {COUNT} road(s)", "COUNT", roadsLeft.ToString())
+                : nothingFits
                 ? Tongue.Text("{=TL507}No profitable route fits in your cargo").ToString()
                 : nothingAffords
                     ? Tongue.Text("{=TL511}No profitable route fits your purse and what you may spend").ToString()
@@ -504,7 +508,10 @@ namespace TradeLord
                     : sized
                         ? Line("{=TL506}{COUNT} profitable route(s), best first, sized to your cargo and what you may spend", "COUNT", rows.Count.ToString())
                         : Line("{=TL68}{COUNT} profitable route(s), best first", "COUNT", rows.Count.ToString());
-            LegendText = (nothingFits
+            string roadsComing = Tongue.Text("{=TL514}The ledger fills in as the roads are measured, a little each frame, so the map never stops").ToString();
+            LegendText = (measuring && empty
+                ? roadsComing
+                : nothingFits
                 ? Tongue.Text("{=TL508}Every profitable route needs room for cargo you will not have, even after selling at the buy market. | Sell some cargo, or make room with a haul animal.").ToString()
                 : empty
                 ? Tongue.Text(Options.Current.Omniscient
@@ -530,6 +537,7 @@ namespace TradeLord
                           + Tongue.Text("{=TL397} | Qty! = part of that amount is still on the road and lands before you would").ToString()
                           + Tongue.Text("{=TL417} | Left = how long from now that shelf still holds this Qty, and a shelf that empties first lowers Conf").ToString()
                         : ""))
+                + (measuring && !empty ? " | " + roadsComing : "")
                 + HowThePromiseHasHeld()
                 + ResaleSafetyInUse()
                 + (TradeActionBehavior.PurseForAVisit() > 0 ? "" : " | " + NothingHereYouCouldBuy(hero));

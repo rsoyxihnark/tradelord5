@@ -338,5 +338,7 @@
 		<string id="TL510" text=" | Adedi kısan: yük {CARGO}, kese {PURSE}, orada harcayabileceğiniz {LIMIT}"/>
 		<string id="TL511" text="Kesenize ve harcayabileceğinize uyan kârlı rota yok"/>
 		<string id="TL512" text=" | {MARKET} çıkışlı {COUNT} rota bir kenara kondu: varışta ticaret, oraya ilk dönüşünüzde orayı rahat bırakır"/>
+		<string id="TL513" text="TradeLord hâlâ {COUNT} yol ölçüyor"/>
+		<string id="TL514" text="Yollar ölçüldükçe defter dolar, her karede biraz, böylece harita hiç durmaz"/>
 	</strings>
 </base>
