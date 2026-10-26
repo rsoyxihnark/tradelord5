@@ -85,6 +85,7 @@ namespace TradeLord
         internal float Hauls;
         internal int Costs;
         internal float Key;
+        internal float KeyByDenar;
         internal PlannedSale Plan;
     }
 
@@ -112,6 +113,26 @@ namespace TradeLord
                 int byWorth = y.Worth.CompareTo(x.Worth);
                 return byWorth != 0 ? byWorth : x.At.CompareTo(y.At);
             });
+
+        internal static void LedgerFirstThenDenar(List<Pick> stock) =>
+            stock?.Sort((x, y) =>
+            {
+                bool xAsked = x.LedgerRank > 0, yAsked = y.LedgerRank > 0;
+                if (xAsked != yAsked) return xAsked ? -1 : 1;
+                if (xAsked && x.LedgerRank != y.LedgerRank) return x.LedgerRank.CompareTo(y.LedgerRank);
+                int byKey = y.KeyByDenar.CompareTo(x.KeyByDenar);
+                if (byKey != 0) return byKey;
+                int byWorth = y.Worth.CompareTo(x.Worth);
+                return byWorth != 0 ? byWorth : x.At.CompareTo(y.At);
+            });
+
+        internal static List<(int units, int cost, int profit, float hauls)> AsPlans(List<Pick> stock)
+        {
+            var plans = new List<(int units, int cost, int profit, float hauls)>(stock == null ? 0 : stock.Count);
+            for (int i = 0; stock != null && i < stock.Count; i++)
+                plans.Add((stock[i].Weighed, stock[i].Plan.Cost, stock[i].Plan.Profit, stock[i].Hauls));
+            return plans;
+        }
     }
 
     internal interface IBuyingMarket
@@ -275,11 +296,44 @@ namespace TradeLord
                 {
                     At = at, Good = good, LedgerRank = market.TheLedgerAsksFor(at),
                     Worth = plan.Profit, Weighed = plan.QtyUncut, Key = plan.Key,
+                    KeyByDenar = plan.KeyByDenar,
                     Hauls = plan.QtyUncut * good.Weight, Costs = plan.Cost, Plan = plan
                 });
             }
             Picks.LedgerFirstThenKey(stock);
+            TheOrderThatEarnsMore(stock, market, books, sim);
             return stock;
+        }
+
+        internal static bool OrderedByDenar { get; private set; }
+
+        internal static bool OrdersWereWeighed { get; private set; }
+
+        internal static long WouldMakeByDenar { get; private set; }
+
+        internal static long WouldMakeByWeight { get; private set; }
+
+        private static void TheOrderThatEarnsMore(List<Pick> stock, IBuyingMarket market, Books books, bool sim)
+        {
+            OrderedByDenar = false;
+            OrdersWereWeighed = false;
+            WouldMakeByDenar = 0L;
+            WouldMakeByWeight = 0L;
+            if (stock == null || stock.Count < 2) return;
+            int money = market.Spendable();
+            if (money <= 0) return;
+            float room = market.Room() - books.Weight(sim);
+            long byWeight = TradeMath.WhatThisOrderBuys(Picks.AsPlans(stock), money, room);
+            var tried = new List<Pick>(stock);
+            Picks.LedgerFirstThenDenar(tried);
+            long byDenar = TradeMath.WhatThisOrderBuys(Picks.AsPlans(tried), money, room);
+            OrdersWereWeighed = true;
+            WouldMakeByDenar = byDenar;
+            WouldMakeByWeight = byWeight;
+            if (byDenar <= byWeight) return;
+            stock.Clear();
+            stock.AddRange(tried);
+            OrderedByDenar = true;
         }
 
         internal static Traded BuyThem(List<Pick> stock, IBuyingMarket market, Books books, bool sim,

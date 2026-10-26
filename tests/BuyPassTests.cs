@@ -124,7 +124,8 @@ namespace TradeLord.Tests
                 plan = new PlannedSale
                 {
                     Qty = units, QtyUncut = units, Profit = profit, Cost = cost,
-                    Key = TradeMath.Key(profit, 1f, 1f, false, Stalls[at].Good.Weight, units, 1f)
+                    Key = TradeMath.Key(profit, 1f, 1f, false, Stalls[at].Good.Weight, units, 1f),
+                    KeyByDenar = TradeMath.KeyByDenar(profit, 1f, 1f, false, cost, 1f)
                 };
                 why = Block.None;
                 return true;
@@ -197,6 +198,45 @@ namespace TradeLord.Tests
                 Taken.Add(Stalls[at].Good.Id);
                 return true;
             }
+        }
+
+        private static FakeMarket TwoOrdersApart(float cargo) =>
+            new FakeMarket { Purse = 1000, Cargo = cargo };
+
+        private static void TheTwoGoodsThatSplitTheOrders(FakeMarket market)
+        {
+            market.Add(Cargo("velvet", weight: 0.5f), amount: 10, price: 100, resale: 300);
+            market.Add(Cargo("hardwood", weight: 5f), amount: 10, price: 30, resale: 150);
+        }
+
+        [Fact]
+        public void The_buying_order_turns_to_the_denar_when_the_purse_runs_out_first()
+        {
+            FakeMarket market = TwoOrdersApart(1000f);
+            TheTwoGoodsThatSplitTheOrders(market);
+            List<Pick> stock = TradePass.WhatToBuy(market, market.Ledger, false, 0f, market.Rules,
+                                                   new BlockTally());
+            Assert.True(TradePass.OrdersWereWeighed);
+            Assert.True(TradePass.OrderedByDenar);
+            Assert.Equal(2600L, TradePass.WouldMakeByDenar);
+            Assert.Equal(2000L, TradePass.WouldMakeByWeight);
+            Assert.Equal("hardwood", stock[0].Good.Id);
+            Assert.Equal("velvet", stock[1].Good.Id);
+        }
+
+        [Fact]
+        public void The_buying_order_stays_on_the_weight_when_the_cargo_room_runs_out_first()
+        {
+            FakeMarket market = TwoOrdersApart(10f);
+            TheTwoGoodsThatSplitTheOrders(market);
+            List<Pick> stock = TradePass.WhatToBuy(market, market.Ledger, false, 0f, market.Rules,
+                                                   new BlockTally());
+            Assert.True(TradePass.OrdersWereWeighed);
+            Assert.False(TradePass.OrderedByDenar);
+            Assert.Equal(240L, TradePass.WouldMakeByDenar);
+            Assert.Equal(2000L, TradePass.WouldMakeByWeight);
+            Assert.Equal("velvet", stock[0].Good.Id);
+            Assert.Equal("hardwood", stock[1].Good.Id);
         }
 
         private static Good Cargo(string id, float weight = 1f, int value = 100) =>
@@ -587,14 +627,16 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void When_the_purse_runs_short_the_good_with_the_most_profit_for_each_unit_of_weight_still_goes_first()
+        public void When_the_purse_runs_short_the_order_that_earns_more_is_the_one_bought()
         {
             var market = new FakeMarket { Purse = 300 };
             market.Add(Cargo("velvet"), amount: 3, price: 100, resale: 170);
             market.Add(Cargo("wool"), amount: 15, price: 10, resale: 20);
             Run run = Buy(market);
-            Assert.Equal("velvet", market.Taken[0]);
-            Assert.Equal(3, run.Units);
+            Assert.True(TradePass.OrderedByDenar);
+            Assert.Equal(220L, TradePass.WouldMakeByDenar);
+            Assert.Equal(210L, TradePass.WouldMakeByWeight);
+            Assert.Equal("wool", market.Taken[0]);
             Assert.True(run.Tally.Saw(Block.BudgetSpent));
         }
 

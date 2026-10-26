@@ -134,6 +134,7 @@ namespace TradeLord
             internal float LandRatio;
             internal List<TradeMath.Run> Runs;
             internal bool Walked;
+            internal bool Guessed;
             internal int Hour = -1;
             internal float Days;
         }
@@ -584,6 +585,61 @@ namespace TradeLord
 
         internal static string PaceBecause() => _evenBecause;
 
+        internal static string WhatCarriesYou(MobileParty party)
+        {
+            try { return TheLoadOnYou(party); }
+            catch { return null; }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static string TheLoadOnYou(MobileParty party)
+        {
+            if (Campaign.Current == null || party == null) return null;
+            TroopRoster roster = party.MemberRoster;
+            int men = roster.TotalManCount;
+            int mounted = party.Party.NumberOfMenWithHorse;
+            int walking = party.Party.NumberOfMenWithoutHorse;
+            int mounts = party.ItemRoster.NumberOfMounts;
+            int caught = party.PrisonRoster.TotalManCount;
+            int hurt = roster.TotalWounded;
+            foreach (MobileParty attached in party.AttachedParties)
+            {
+                men += attached.MemberRoster.TotalManCount;
+                mounted += attached.Party.NumberOfMenWithHorse;
+                walking += attached.Party.NumberOfMenWithoutHorse;
+                mounts += attached.ItemRoster.NumberOfMounts;
+                caught += attached.PrisonRoster.TotalManCount;
+                hurt += attached.MemberRoster.TotalWounded;
+            }
+            string head = men + " men, " + mounted + " mounted, " + walking + " afoot, " + mounts +
+                          " spare mount(s), " + caught + " prisoner(s), " + hurt + " wounded, morale " +
+                          party.Morale.ToString("0", CultureInfo.InvariantCulture);
+            PartySpeedModel model = Campaign.Current.Models.PartySpeedCalculatingModel;
+            if (model == null) return head;
+            ExplainedNumber speed = model.CalculateFinalSpeed(party, model.CalculateBaseSpeed(party, true));
+            float b = speed.BaseNumber;
+            if (!(b > 0f) || float.IsInfinity(b)) return head;
+            SpeedLines lines = Lines();
+            var kept = new List<string>();
+            foreach (var (name, number) in speed.GetLines())
+            {
+                if (TheGroundSaysThis(lines, name)) continue;
+                kept.Add(name + " " + (number / b).ToString("+0.000;-0.000;0.000", CultureInfo.InvariantCulture));
+            }
+            return head + "; base speed " + b.ToString("0.00", CultureInfo.InvariantCulture) +
+                   (kept.Count == 0 ? ", with no line of its own" : ", " + string.Join(", ", kept));
+        }
+
+        private static bool TheGroundSaysThis(SpeedLines lines, string name)
+        {
+            if (lines == null || name == null) return false;
+            return name == lines.ForestLine || name == lines.FordLine || name == lines.DesertLine ||
+                   name == lines.NightLine || name == lines.SnowLine || name == lines.SlowLine ||
+                   name == lines.CavalryWetLine || name == lines.FootmenWetLine || name == lines.Culture ||
+                   name == lines.Pathfinder || name == lines.DesertBorn || name == lines.NightRunner ||
+                   name == lines.DayTraveler || name == lines.Tracker;
+        }
+
         private static TradeMath.Pace PartyPace()
         {
             int hour = (int)CampaignTime.Now.ToHours;
@@ -897,6 +953,7 @@ namespace TradeLord
             _meterHour = hour;
             _partyWalks = 0;
             _pairWalks = 0;
+            _pairGuesses = 0;
             _otherWalks = 0;
             _paths = 0;
             _probes = 0;
@@ -1082,6 +1139,30 @@ namespace TradeLord
         private static int _fillShell, _fillStep, _fillWalked;
         private static long _fillTicks;
         private static bool _fillDone;
+        private static readonly List<(string, string)> _wanted = new List<(string, string)>();
+        private static readonly HashSet<(string, string)> _wantedHeld = new HashSet<(string, string)>();
+        private static int _wantedAt;
+        private static int _pairGuesses;
+
+        private static void WantThisRoadWalked((string, string) key)
+        {
+            if (_wantedHeld.Add(key)) _wanted.Add(key);
+        }
+
+        private static void ForgetWhatTheLedgerWanted()
+        {
+            _wanted.Clear();
+            _wantedHeld.Clear();
+            _wantedAt = 0;
+        }
+
+        private static bool TheSameMarkets(List<Settlement> now, List<Settlement> before)
+        {
+            if (now == null || before == null || now.Count != before.Count) return false;
+            for (int i = 0; i < now.Count; i++)
+                if (now[i] != before[i]) return false;
+            return true;
+        }
 
         private static double MsOf(long ticks) => ticks * 1000d / Stopwatch.Frequency;
 
@@ -1092,6 +1173,7 @@ namespace TradeLord
             _fillFor = null;
             _fillOrder = null;
             _fillDone = false;
+            ForgetWhatTheLedgerWanted();
         }
 
         private static bool OnTheMap() =>
@@ -1117,30 +1199,61 @@ namespace TradeLord
             }
         }
 
+        private static bool WalkWhatTheLedgerWanted(long started, long budget)
+        {
+            while (_wantedAt < _wanted.Count)
+            {
+                var key = _wanted[_wantedAt++];
+                if (_pairDist.TryGetValue(key, out Road held) && held.Guessed)
+                {
+                    Settlement a = Settlement.Find(key.Item1);
+                    Settlement b = Settlement.Find(key.Item2);
+                    if (a != null && b != null)
+                    {
+                        long before = Stopwatch.GetTimestamp();
+                        _justWalked = false;
+                        _behind = true;
+                        try { PairRoad(a, b); }
+                        finally { _behind = false; }
+                        if (_justWalked) _fillWalked++;
+                        _fillTicks += Stopwatch.GetTimestamp() - before;
+                    }
+                }
+                if (Stopwatch.GetTimestamp() - started >= budget) return false;
+            }
+            if (_wanted.Count > 0) ForgetWhatTheLedgerWanted();
+            return true;
+        }
+
         private static void FillTheRoadsNow()
         {
             if (!OnTheMap()) return;
+            long started = Stopwatch.GetTimestamp();
+            long budget = (long)(RoadsMsAFrame * Stopwatch.Frequency / 1000d);
+            if (!WalkWhatTheLedgerWanted(started, budget)) return;
             List<Settlement> reach = LedgerBehavior.Instance?.MarketsInReach();
             if (reach == null) return;
             if (!ReferenceEquals(reach, _fillFor))
             {
+                bool held = TheSameMarkets(reach, _fillFor) && _fillOrder != null;
                 _fillFor = reach;
-                var order = new List<(Settlement s, float days)>(reach.Count);
-                foreach (Settlement s in reach)
-                    if (s != null) order.Add((s, StraightDaysFromParty(s)));
-                order.Sort((x, y) => x.days.CompareTo(y.days));
-                _fillOrder = new List<Settlement>(order.Count);
-                foreach (var one in order) _fillOrder.Add(one.s);
-                _fillShell = 0;
-                _fillStep = 0;
-                _fillWalked = 0;
-                _fillTicks = 0L;
-                _fillDone = false;
+                if (!held)
+                {
+                    var order = new List<(Settlement s, float days)>(reach.Count);
+                    foreach (Settlement s in reach)
+                        if (s != null) order.Add((s, StraightDaysFromParty(s)));
+                    order.Sort((x, y) => x.days.CompareTo(y.days));
+                    _fillOrder = new List<Settlement>(order.Count);
+                    foreach (var one in order) _fillOrder.Add(one.s);
+                    _fillShell = 0;
+                    _fillStep = 0;
+                    _fillWalked = 0;
+                    _fillTicks = 0L;
+                    _fillDone = false;
+                }
             }
-            if (_fillDone) return;
+            if (_fillDone || _fillOrder == null) return;
             float cap = Options.Current.MaxTravelDaysTown;
-            long started = Stopwatch.GetTimestamp();
-            long budget = (long)(RoadsMsAFrame * Stopwatch.Frequency / 1000d);
             int n = _fillOrder.Count;
             for (int looks = 0; looks < RoadsLooksAFrame; looks++)
             {
@@ -1162,7 +1275,8 @@ namespace TradeLord
                     _fillShell++;
                     _fillStep = 0;
                 }
-                if (from == to || _pairDist.ContainsKey((from.StringId, to.StringId))) continue;
+                if (from == to) continue;
+                if (_pairDist.TryGetValue((from.StringId, to.StringId), out Road had) && !had.Guessed) continue;
                 if (cap > 0f && StraightDaysFromParty(from) + StraightDaysBetween(from, to) > cap) continue;
                 long before = Stopwatch.GetTimestamp();
                 _justWalked = false;
@@ -1192,6 +1306,7 @@ namespace TradeLord
             bool naval = NavalActive;
             if (naval == _cachedNaval) return;
             _cachedNaval = naval;
+            ForgetTheRoadsWalkedBehind();
             _speedHour = -1;
             _partyDist.Clear();
             _unwalkable.Clear();
@@ -1252,6 +1367,12 @@ namespace TradeLord
 
         internal static float StraightDaysBetween(Settlement a, Settlement b) =>
             a == null || b == null ? 0f : StraightDays(Nearest(a, b));
+
+        internal static float StraightDaysFor(MobileParty party, Settlement target)
+        {
+            if (party == null || target == null) return 0f;
+            return StraightDays(Nearest(party.GetPosition2D, target));
+        }
 
         private static float StraightDays(float distance)
         {
@@ -1316,12 +1437,40 @@ namespace TradeLord
         private static Road PairRoad(Settlement a, Settlement b)
         {
             var key = (a.StringId, b.StringId);
-            if (!_pairDist.TryGetValue(key, out Road hit))
+            if (_pairDist.TryGetValue(key, out Road hit))
+            {
+                if (!hit.Guessed || !_behind) return hit;
+                Road afresh = RoadBetween(a, b);
+                _pairDist[key] = afresh;
+                _pairDays.Remove(key);
+                return afresh;
+            }
+            if (_behind)
             {
                 hit = RoadBetween(a, b);
                 _pairDist[key] = hit;
+                return hit;
+            }
+            hit = TheRoadAsTheGameMeasuresIt(a, b);
+            _pairDist[key] = hit;
+            if (hit.Guessed)
+            {
+                _pairGuesses++;
+                WantThisRoadWalked(key);
             }
             return hit;
+        }
+
+        private static Road TheRoadAsTheGameMeasuresIt(Settlement a, Settlement b)
+        {
+            float dist = Between(a, b, out float landRatio);
+            return new Road
+            {
+                Length = dist,
+                LandRatio = landRatio,
+                Runs = Unwalked(dist, landRatio, false),
+                Guessed = landRatio >= AllOnLand && a != b
+            };
         }
 
         internal static float EstimateDaysBetween(Settlement a, Settlement b, float after)
@@ -1460,6 +1609,12 @@ namespace TradeLord
                    (metered ? _partyWalks : 0) + " road(s) walked from your party, " + (metered ? _pairWalks : 0) +
                    " between markets" +
                    (metered && _walkedBehind > 0 ? ", " + _walkedBehind + " of them in the background" : "") +
+                   (metered && _pairGuesses > 0
+                       ? ", " + _pairGuesses + " more taken from the game's distance rather than walked here"
+                       : "") +
+                   (_wanted.Count > _wantedAt
+                       ? ", " + (_wanted.Count - _wantedAt) + " still queued for the background"
+                       : "") +
                    " and " + (metered ? _otherWalks : 0) + " for caravans and villagers, " +
                    (metered ? _paths : 0) + " pathfinding call(s) in " + Ms(metered ? _pathTicks : 0L) + " ms, " +
                    (metered ? _probes : 0) + " ground probe(s) in " +
