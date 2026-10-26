@@ -1411,7 +1411,11 @@ namespace TradeLord
             return -1f;
         }
 
-        internal static Dictionary<Settlement, int> CaravanPressure()
+        internal static Dictionary<Settlement, int> CaravanPressure() => TrafficAt(true);
+
+        internal static Dictionary<Settlement, int> WhoTakesTheStock() => TrafficAt(false);
+
+        private static Dictionary<Settlement, int> TrafficAt(bool selling)
         {
             var map = new Dictionary<Settlement, int>();
             var all = MobileParty.All;
@@ -1420,13 +1424,17 @@ namespace TradeLord
                 MobileParty p = all[i];
                 if (!p.IsCaravan && !p.IsVillager) continue;
                 Settlement at = p.CurrentSettlement, to = p.TargetSettlement;
-                if (at != null && ItTradesThere(p, at)) Bump(map, at);
-                if (to != null && to != at && ItTradesThere(p, to)) Bump(map, to);
+                if (at != null && ItTradesThere(p, at, selling)) Bump(map, at);
+                if (to != null && to != at && ItTradesThere(p, to, selling)) Bump(map, to);
             }
             return map;
         }
 
-        private static bool ItTradesThere(MobileParty p, Settlement s) => !p.IsVillager || !s.IsVillage;
+        private static bool ItTradesThere(MobileParty p, Settlement s, bool selling)
+        {
+            if (!p.IsVillager) return true;
+            return selling ? s.IsTown : s.IsVillage && p.ItemRoster.Count > 0;
+        }
 
         private static void Bump(Dictionary<Settlement, int> map, Settlement s)
         {

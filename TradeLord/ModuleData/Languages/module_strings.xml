@@ -56,7 +56,7 @@
 		<string id="TL67" text="No profitable routes in reach"/>
 		<string id="TL68" text="{COUNT} profitable route(s), best first"/>
 		<string id="TL69" text="No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."/>
-		<string id="TL70" text="Click a market's name to jump to it and pin or unpin it | Days = you -&gt; buy market -&gt; sell market | Carv. = caravans and villagers at or heading for those markets, not a village&apos;s own villagers"/>
+		<string id="TL70" text="Click a market's name to jump to it and pin or unpin it | Days = you -&gt; buy market -&gt; sell market | Carv. = caravans and villagers taking stock from the buy market or bringing goods to the sell market"/>
 		<string id="TL71" text=" | Score = profit a day for each unit of weight carried or herd room taken, discounted by Conf"/>
 		<string id="TL72" text=" | Score = profit a day for each unit of weight carried or herd room taken"/>
 		<string id="TL73" text=" | resale safety factor applied"/>

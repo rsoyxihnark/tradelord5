@@ -73,6 +73,7 @@ namespace TradeLord
         private readonly bool _conservative;
         private readonly bool _trustWhatItPaid;
         private readonly Dictionary<Settlement, int> _pressure;
+        private readonly Dictionary<Settlement, int> _takers;
         private readonly MobileParty _party;
         private readonly Settlement _here;
         private readonly Books _books;
@@ -103,6 +104,7 @@ namespace TradeLord
             _conservative = Options.Current.ConservativeRouteProjection;
             _trustWhatItPaid = Options.Current.TrustWhatAMarketPaid;
             _pressure = LedgerBehavior.CaravanPressure();
+            _takers = LedgerBehavior.WhoTakesTheStock();
             _roomNow = party == null ? float.PositiveInfinity : Carry.Room(party);
             _purseNow = Hero.MainHero?.Gold ?? 0;
             _heldBack = TradeActionBehavior.GoldHeldBack();
@@ -286,7 +288,7 @@ namespace TradeLord
                     Shelf = shelf, OnTheShelfNow = onTheShelfNow, Held = held,
                     Age = s.Omniscient ? -1f
                         : Math.Max(_ledger.ObservationAgeDays(item, from), _ledger.ObservationAgeDays(item, to)),
-                    Caravans = Pressure(from) + Pressure(to),
+                    Caravans = Takers(from) + Pressure(to),
                     Trust = TrustAt(to)
                 };
                 TradeRoute route = Sized(leg, fits, at.Purse, Bound.Purse);
@@ -307,6 +309,8 @@ namespace TradeLord
         internal float ScoreToBeat(TradeRoute route) => route == null ? 0f : ScoreOf(route);
 
         private int Pressure(Settlement s) => s != null && _pressure.TryGetValue(s, out int n) ? n : 0;
+
+        private int Takers(Settlement s) => s != null && _takers.TryGetValue(s, out int n) ? n : 0;
 
         internal TradeRoute Sized(Leg leg, int fits, int money, Bound moneyBound)
         {
