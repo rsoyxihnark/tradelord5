@@ -704,6 +704,9 @@ namespace TradeLord
         private static bool _loggedArmed;
         private static int _spokenFor = -1;
         private static bool _dead;
+        private static bool _scanIsNew;
+
+        internal static void TheScanIsNew() => _scanIsNew = true;
 
         private static readonly HashSet<Settlement> _panelPins = new HashSet<Settlement>();
 
@@ -746,6 +749,12 @@ namespace TradeLord
             {
                 _spokenFor = Options.Current.Language;
                 Guard.Run("Panel.Respeak", _vm.Respeak);
+            }
+
+            if (_scanIsNew)
+            {
+                _scanIsNew = false;
+                if (_vm.IsVisible) Guard.Run("Panel.ScanIsNew", _vm.Respeak);
             }
 
             if (!_vm.IsVisible)

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.4.0
+
+- Fixed the map freezing for seconds when the TradeLord ledger scanned, as it no longer walks the road to every market while you wait
+- TradeLord now weighs both buying orders against your purse and your cargo room and buys in the one that earns more
+- TradeLord.log now says what carried you when TradeLord gave its time and again on arrival, with your prisoners, wounded, mounts and morale
+- TradeLord.log now writes the number the map marker chose on, so the market it marked is never listed behind one paying more a day
+- Fixed the TradeLord ledger panel showing an older scan than the last one while it was open
+- Fixed the caravan ride check never writing its straight line reading into TradeLord.log
+
 ## 2.3.4
 
 - Fixed the caravan ride check in TradeLord.log giving an average where the middle half and the count arriving late say more

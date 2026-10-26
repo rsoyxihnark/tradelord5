@@ -360,6 +360,7 @@ namespace TradeLord
             internal long Value;
             internal long Earned;
             internal float Rate;
+            internal float Judged;
         }
 
         private struct Takings
@@ -385,6 +386,10 @@ namespace TradeLord
             internal long Cost;
             internal float Rate;
             internal float RunnerUpRate;
+            internal float Judged;
+            internal float RunnerUpJudged;
+            internal float HolderJudged;
+            internal float Bar;
             internal float Days;
             internal int Units;
             internal int Kinds;
@@ -506,10 +511,12 @@ namespace TradeLord
             how.RunnerUp = how.Best;
             how.RunnerUpValue = how.Value;
             how.RunnerUpRate = how.Rate;
+            how.RunnerUpJudged = how.Judged;
             how.Best = _picked;
             how.Value = how.HolderValue;
             how.Cost = how.HolderCost;
             how.Rate = how.HolderRate;
+            how.Judged = how.HolderJudged;
             how.Days = how.HolderDays;
             how.Units = how.HolderUnits;
             how.Kinds = how.HolderKinds;
@@ -763,15 +770,18 @@ namespace TradeLord
             if (how.HeldForASecondLook)
                 return ", and it holds the mark against " + next +
                        ", until another market earns more in a later hour";
-            return how.Held
-                ? ", and it holds the mark against " + next +
-                  ", because the marker only moves for a clear gain"
-                : ", ahead of " + next;
+            if (how.Held)
+                return ", and it holds the mark against " + next +
+                       ", because the marker only moves for a clear gain";
+            if (how.RunnerUpRate > how.Rate)
+                return ", chosen over " + next + ", because once each is weighed at the Conf of selling there it " +
+                       "comes to " + how.Judged.ToString("0") + " against " + how.RunnerUpJudged.ToString("0");
+            return ", ahead of " + next;
         }
 
         private static readonly System.Comparison<Weighing> FastestFirst =
-            (x, y) => x.Rate != y.Rate ? y.Rate.CompareTo(x.Rate)
-                                       : string.CompareOrdinal(x.Where.StringId, y.Where.StringId);
+            (x, y) => x.Judged != y.Judged ? y.Judged.CompareTo(x.Judged)
+                                           : string.CompareOrdinal(x.Where.StringId, y.Where.StringId);
 
         private static void Ultra(in Reckoning how, bool board)
         {
@@ -818,6 +828,9 @@ namespace TradeLord
                              one.Value.ToString().PadLeft(9) + " gold " +
                              one.Earned.ToString().PadLeft(9) + " profit " +
                              one.Rate.ToString("0").PadLeft(9) + " gold a day" +
+                             (one.Judged.ToString("0") == one.Rate.ToString("0")
+                                 ? ""
+                                 : ", weighed " + one.Judged.ToString("0")) +
                              (one.Where == how.Best ? "  (marked)" : ""));
                 }
             }
@@ -827,7 +840,10 @@ namespace TradeLord
                          " priced, " + how.Refused + " would pay too little for anything you carry, " + how.TooPoor +
                          " have too little gold for one unit of anything that clears your margin, " +
                          how.Left + " left unpriced once no price they could pay would beat " +
-                         how.Rate.ToString("0") + " gold a day, in " +
+                         how.Bar.ToString("0") +
+                         (how.Bar.ToString("0") == how.Rate.ToString("0")
+                             ? " gold a day"
+                             : " gold a day as weighed at the Conf of selling there") + ", in " +
                          how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms");
                 said.Add("  ultralog: left out before pricing, " + how.NoTill +
                          " with nothing in the till, " +
@@ -1245,6 +1261,7 @@ namespace TradeLord
                     how.HolderValue = total;
                     how.HolderCost = took.Cost;
                     how.HolderRate = rate;
+                    how.HolderJudged = weighed;
                     how.HolderDays = ride;
                     how.HolderUnits = took.Units;
                     how.HolderKinds = took.Kinds;
@@ -1254,18 +1271,20 @@ namespace TradeLord
                 how.Board?.Add(new Weighing
                 {
                     Where = s, Days = ride, Units = took.Units, Value = total,
-                    Earned = earned, Rate = rate
+                    Earned = earned, Rate = rate, Judged = weighed
                 });
                 if (weighed > bar)
                 {
                     bar = weighed;
-                    if (how.Best != null && how.Rate > how.RunnerUpRate)
+                    if (how.Best != null && how.Judged > how.RunnerUpJudged)
                     {
                         how.RunnerUp = how.Best;
                         how.RunnerUpValue = how.Value;
                         how.RunnerUpRate = how.Rate;
+                        how.RunnerUpJudged = how.Judged;
                     }
                     how.Rate = rate;
+                    how.Judged = weighed;
                     how.Value = total;
                     how.Best = s;
                     how.Days = ride;
@@ -1275,9 +1294,15 @@ namespace TradeLord
                     how.PurseCapped = took.PurseCapped;
                     how.Cost = took.Cost;
                 }
-                else if (rate > how.RunnerUpRate)
-                { how.RunnerUpRate = rate; how.RunnerUpValue = total; how.RunnerUp = s; }
+                else if (weighed > how.RunnerUpJudged)
+                {
+                    how.RunnerUpJudged = weighed;
+                    how.RunnerUpRate = rate;
+                    how.RunnerUpValue = total;
+                    how.RunnerUp = s;
+                }
             }
+            how.Bar = bar;
             if (holder != null && !how.HolderPriced)
                 how.HolderLost = TheMarkLeftOut(holder, party, cargo, reachable, ref how);
             how.Held = how.Best != null && how.Best == holder && how.RunnerUpRate > how.Rate;

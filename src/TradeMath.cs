@@ -1785,29 +1785,33 @@ namespace TradeLord
         public static float PerDenarADay(long profit, int cost, float days) =>
             cost <= 0 ? 0f : PerDay(profit, days) / cost;
 
-        public static long WhatTheMoneyBuys(IList<(int units, int cost, int profit, float days)> plans, int money,
-                                            bool byDenar)
+        public static float KeyByDenar(long profit, float confidence, float trust, bool rankByConfidence,
+                                       int cost, float days)
+        {
+            if (profit <= 0L || cost <= 0 || float.IsNaN(days)) return 0f;
+            float over = days > NoTripCountsShorterThan ? days : NoTripCountsShorterThan;
+            double kept = rankByConfidence ? profit * (double)confidence * trust : profit;
+            return Finite((float)(kept / ((double)cost * over)), 0f);
+        }
+
+        public static long WhatThisOrderBuys(IList<(int units, int cost, int profit, float hauls)> plans,
+                                             int money, float room)
         {
             if (plans == null || money <= 0) return 0L;
-            var order = new List<int>(plans.Count);
-            for (int i = 0; i < plans.Count; i++)
-                if (plans[i].units > 0 && plans[i].cost > 0) order.Add(i);
-            if (byDenar)
-                order.Sort((x, y) =>
-                {
-                    float a = PerDenarADay(plans[x].profit, plans[x].cost, plans[x].days);
-                    float b = PerDenarADay(plans[y].profit, plans[y].cost, plans[y].days);
-                    return a != b ? b.CompareTo(a) : x.CompareTo(y);
-                });
             double left = money;
+            double space = room < 0f ? double.PositiveInfinity : room;
             long made = 0L;
-            foreach (int i in order)
+            for (int i = 0; i < plans.Count; i++)
             {
+                if (plans[i].units <= 0 || plans[i].cost <= 0) continue;
                 double each = (double)plans[i].cost / plans[i].units;
+                double heavy = plans[i].hauls > 0f ? (double)plans[i].hauls / plans[i].units : 0d;
                 int take = (int)Math.Min(plans[i].units, Math.Floor(left / each));
+                if (heavy > 0d) take = (int)Math.Min(take, Math.Floor(space / heavy));
                 if (take <= 0) continue;
                 made += (long)Math.Round((double)plans[i].profit * take / plans[i].units);
                 left -= each * take;
+                space -= heavy * take;
             }
             return made;
         }

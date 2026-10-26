@@ -4474,13 +4474,17 @@ chk("1.75.1", "a price model that could not be asked says so again in the next c
     "Priced.Forget();" in method_body(S['Trading.cs'], "internal static void ForgetVisit") and
     S['Trading.cs'].count("Priced.Forget();") == 1)
 
-chk("1.75.1", "the map marker names the market it beat as the next best it priced, never as the second best on the map",
+chk("1.75.1", "the map marker names the market it beat as the next best it priced, never as the second best on the map, and never calls a market that pays more a day the one it was ahead of",
     (lambda said, walk: '", and no other market it priced would take any of it"' in said
            and 'how.RunnerUp.Name + ", the next best it priced, at " +' in said
            and '", ahead of " + next' in said
+           and "if (how.RunnerUpRate > how.Rate)" in said
+           and '", chosen over " + next + ", because once each is weighed at the Conf of selling there it " +' in said
+           and 'how.Judged.ToString("0") + " against " + how.RunnerUpJudged.ToString("0")' in said
            and "if (TradeMath.PerDay(gold, ride) <= bar) break;" in walk
-           and "else if (rate > how.RunnerUpRate)\n"
-               "                { how.RunnerUpRate = rate; how.RunnerUpValue = total; how.RunnerUp = s; }" in walk)
+           and ordered(walk, "else if (weighed > how.RunnerUpJudged)",
+                       "how.RunnerUpJudged = weighed;", "how.RunnerUpRate = rate;",
+                       "how.RunnerUpValue = total;", "how.RunnerUp = s;"))
     (method_body(S['Marker.cs'], "private static string TheNextBest"),
      method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")))
 
@@ -11138,12 +11142,13 @@ def the_ultralog_lists_the_markets_the_marker_priced():
     return ("MostMarketsShown" not in S['Marker.cs']
             and "if (ultra) how.Board = new List<Weighing>();" in scan
             and "how.Board?.Add(new Weighing" in scan
-            and "y.Rate.CompareTo(x.Rate)" in S['Marker.cs']
+            and "y.Judged.CompareTo(x.Judged)" in S['Marker.cs']
+            and "Earned = earned, Rate = rate, Judged = weighed" in scan
             and ordered(ultra, "how.Board.Sort(FastestFirst);",
                         '" market(s) it priced, best first"',
                         "for (int i = 0; i < how.Board.Count; i++)",
                         '" day(s) "', '" unit(s) "',
-                        '" gold "', '" gold a day"', '"  (marked)"'))
+                        '" gold "', '" gold a day"', '", weighed "', '"  (marked)"'))
 
 
 chk("1.84.0", "the ultralog lists the markets the marker priced, best first, with the days, the units, the gold and the rate of each",
@@ -14202,9 +14207,11 @@ def the_marker_and_the_buyer_say_in_the_log_what_their_numbers_rest_on():
                         "how.Took = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000d /",
                         "System.Diagnostics.Stopwatch.Frequency;")
             and "DateTime" not in update
-            and ordered(ultra, '" gold a day, in " +',
+            and ordered(ultra, 'how.Bar.ToString("0") +',
+                        '" gold a day as weighed at the Conf of selling there") + ", in " +',
                         'how.Took.ToString("0.0", CultureInfo.InvariantCulture) + " ms");',
                         '"  ultralog: left out before pricing, "')
+            and "how.Bar = bar;" in method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
             and ordered(plan, "TradeRoute row = market.PlanFor(item);",
                         'one.Good.Id + " for " + row.To.Name + " at " + row.SellPrice +',
                         '" day(s), Conf " + Scoring.Share(row.Confidence) +')
@@ -15938,10 +15945,21 @@ def the_buy_shelf_puts_first_what_makes_the_most_for_whatever_runs_short():
             and "internal float Hauls;" in S['Passes.cs'] and "internal int Costs;" in S['Passes.cs']
             and ordered(want, "if (!market.Planned(at, out PlannedSale plan, out Block why)) { tally.Note(why); continue; }",
                         "Worth = plan.Profit, Weighed = plan.QtyUncut, Key = plan.Key,",
+                        "KeyByDenar = plan.KeyByDenar,",
                         "Hauls = plan.QtyUncut * good.Weight, Costs = plan.Cost, Plan = plan",
-                        "Picks.LedgerFirstThenKey(stock);")
+                        "Picks.LedgerFirstThenKey(stock);",
+                        "TheOrderThatEarnsMore(stock, market, books, sim);")
             and ordered(order, "int byKey = y.Key.CompareTo(x.Key);", "if (byKey != 0) return byKey;",
                         "int byWorth = y.Worth.CompareTo(x.Worth);")
+            and ordered(method_body(S['Passes.cs'], "internal static void LedgerFirstThenDenar"),
+                        "int byKey = y.KeyByDenar.CompareTo(x.KeyByDenar);", "if (byKey != 0) return byKey;",
+                        "int byWorth = y.Worth.CompareTo(x.Worth);")
+            and ordered(method_body(S['Passes.cs'], "private static void TheOrderThatEarnsMore"),
+                        "float room = market.Room() - books.Weight(sim);",
+                        "long byWeight = TradeMath.WhatThisOrderBuys(Picks.AsPlans(stock), money, room);",
+                        "Picks.LedgerFirstThenDenar(tried);",
+                        "long byDenar = TradeMath.WhatThisOrderBuys(Picks.AsPlans(tried), money, room);",
+                        "if (byDenar <= byWeight) return;", "OrderedByDenar = true;")
             and "MostForWhatRunsShortFirst" not in ALL
             and "ForWhatRunsShort" not in ALL
             and "MostMoneyFirst" not in ALL
@@ -15952,10 +15970,12 @@ def the_buy_shelf_puts_first_what_makes_the_most_for_whatever_runs_short():
                      "Nothing_is_lost_or_invented_however_the_shelf_arrives"))
             and all(one in BUYPASSTESTS for one in
                     ("When_the_hold_runs_short_the_good_that_makes_the_most_for_its_room_goes_first",
-                     "When_the_purse_runs_short_the_good_with_the_most_profit_for_each_unit_of_weight_still_goes_first",
+                     "When_the_purse_runs_short_the_order_that_earns_more_is_the_one_bought",
+                     "The_buying_order_turns_to_the_denar_when_the_purse_runs_out_first",
+                     "The_buying_order_stays_on_the_weight_when_the_cargo_room_runs_out_first",
                      "When_everything_fits_the_pick_with_the_most_profit_for_each_unit_of_weight_still_goes_first")))
 
-chk("1.97.0", "the good that makes the most profit a day for each unit of weight it takes is bought first, whether your cargo runs short, your purse runs short or everything fits",
+chk("1.97.0", "the two buying orders are weighed against each other under both your purse and your cargo room and the one that earns more is bought, so profit a day for each unit of weight stays the order unless buying by the denar earns more",
     the_buy_shelf_puts_first_what_makes_the_most_for_whatever_runs_short())
 
 def the_workshops_for_sale_come_soonest_to_pay_for_themselves_first():
@@ -19672,10 +19692,13 @@ def the_next_best_market_named_is_the_one_that_earns_the_most_after_the_mark():
     walk = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
     return (walk
             and ordered(walk, "if (weighed > bar)", "bar = weighed;",
-                        "if (how.Best != null && how.Rate > how.RunnerUpRate)",
-                        "how.RunnerUp = how.Best;", "how.Best = s;", "else if (rate > how.RunnerUpRate)")
+                        "if (how.Best != null && how.Judged > how.RunnerUpJudged)",
+                        "how.RunnerUp = how.Best;", "how.RunnerUpJudged = how.Judged;",
+                        "how.Judged = weighed;", "how.Best = s;", "else if (weighed > how.RunnerUpJudged)")
             and walk.count("how.RunnerUp = how.Best;") == 1
-            and walk.count("how.RunnerUp = s;") == 1)
+            and walk.count("how.RunnerUp = s;") == 1
+            and "how.RunnerUpJudged = how.Judged;" in method_body(S['Marker.cs'], "private static void TheHolderStays")
+            and "how.Judged = how.HolderJudged;" in method_body(S['Marker.cs'], "private static void TheHolderStays"))
 
 chk("1.104.14", "the next best market TradeLord.log names is the one that earns the most a day after the marked one, never a held mark that a market it priced earns more than",
     the_next_best_market_named_is_the_one_that_earns_the_most_after_the_mark())
@@ -20332,13 +20355,18 @@ def a_party_standing_still_keeps_the_roads_it_walked_and_markets_keep_theirs_for
             and "float days = RideBetween(PairRoad(a, b), after, true);" in pair
             and "if (_pairDays.TryGetValue(key, out var known) && known.Moment == _moment && known.After == after)" in pair
             and "var key = (a.StringId, b.StringId);" in method_body(tr, "private static Road PairRoad")
-            and ordered(method_body(tr, "private static Road PairRoad"), "hit = RoadBetween(a, b);",
-                        "_pairDist[key] = hit;", "return hit;")
+            and ordered(method_body(tr, "private static Road PairRoad"),
+                        "if (_pairDist.TryGetValue(key, out Road hit))",
+                        "if (!hit.Guessed || !_behind) return hit;",
+                        "Road afresh = RoadBetween(a, b);", "_pairDays.Remove(key);",
+                        "if (_behind)", "hit = RoadBetween(a, b);",
+                        "hit = TheRoadAsTheGameMeasuresIt(a, b);", "WantThisRoadWalked(key);")
+            and "Guessed = landRatio >= AllOnLand && a != b" in method_body(tr, "private static Road TheRoadAsTheGameMeasuresIt")
             and "_pairDist.Clear();" in method_body(tr, "internal static void Forget")
             and "_pairDays.Clear();" in method_body(tr, "internal static void Forget"))
 
 
-chk("1.105.1", "a road walked from where your party stands is kept for as long as it stands there, and a road between two markets is walked once a session, in the direction it is ridden",
+chk("1.105.1", "a road walked from where your party stands is kept for as long as it stands there, and a road between two markets is taken from the game's distance and queued for the background rather than walked while the ledger waits",
     a_party_standing_still_keeps_the_roads_it_walked_and_markets_keep_theirs_for_the_session())
 
 def a_road_kept_from_an_earlier_hour_still_counts_as_found():
@@ -21047,19 +21075,26 @@ chk("2.1.0", "with Enable extended debug logging on, TradeLord.log says when the
 
 def the_log_writes_each_buying_plan_and_what_became_of_it():
     said = method_body(S['Trading.cs'], "private static void SayWhatBecameOfThePlan(")
-    money = method_body(S['TradeMath.cs'], "public static long WhatTheMoneyBuys(")
-    return (said and money
+    order = method_body(S['TradeMath.cs'], "public static long WhatThisOrderBuys(")
+    return (said and order
             and "if (!Options.Current.ExtendedDebugLogging || stock.Count == 0) return;" in said
             and ordered(said, '"  buying plan " + pass.Where + ": "', '" short of the plan on " + why',
-                        '"not bought, " + why', "TradeMath.WhatTheMoneyBuys(plans, money, byDenar: true)",
-                        "TradeMath.WhatTheMoneyBuys(plans, money, byDenar: false)")
-            and "if (tally.Saw(Block.BudgetSpent) && !tally.Saw(Block.CarryWeight) && plans.Count > 1)" in said
+                        '"not bought, " + why', "if (TradePass.OrdersWereWeighed && planned > 1)",
+                        '"denar would make +" + TradePass.WouldMakeByDenar',
+                        'TradePass.WouldMakeByWeight + ", so TradeLord bought "',
+                        '(TradePass.OrderedByDenar ? "by the denar" : "by the weight")',
+                        '"your purse ran out before your cargo room"',
+                        '"your cargo room ran out before your purse"')
+            and 'double space = room < 0f ? double.PositiveInfinity : room;' in order
+            and "space -= heavy * take;" in order
+            and "WhatTheMoneyBuys" not in ALL
             and "SayWhatBecameOfThePlan(pass, market, stock, stoppedOn, tally, money, room);" in S['Trading.cs']
-            and all(one in MATHTESTS for one in ("What_the_money_buys_is_weighed_the_same_way_for_both_orders",
+            and all(one in MATHTESTS for one in ("What_an_order_buys_stops_at_the_purse_and_at_the_cargo_room",
+                                                 "The_key_by_denar_carries_the_same_numerator_over_what_it_cost",
                                                  "A_profit_a_day_for_each_denar_is_the_profit_a_day_over_what_it_cost")))
 
 
-chk("2.1.0", "with Enable extended debug logging on, TradeLord.log writes each buying plan, what became of every good in it, and what buying by the denar would have made",
+chk("2.1.0", "with Enable extended debug logging on, TradeLord.log writes each buying plan, what became of every good in it, and which of the two buying orders would earn more",
     the_log_writes_each_buying_plan_and_what_became_of_it())
 
 
@@ -21604,6 +21639,100 @@ def the_log_says_what_the_busiest_frame_cost():
 
 chk("no release", "TradeLord.log says what the busiest frame cost, counting each road walk, each weather turn and each ride timing once and never the same work twice",
     the_log_says_what_the_busiest_frame_cost())
+
+
+
+def the_ledger_never_waits_while_a_market_road_is_walked():
+    tr = S['Travel.cs']
+    pair = method_body(tr, "private static Road PairRoad")
+    guess = method_body(tr, "private static Road TheRoadAsTheGameMeasuresIt")
+    wanted = method_body(tr, "private static bool WalkWhatTheLedgerWanted(long started, long budget)")
+    fill = method_body(tr, "private static void FillTheRoadsNow()")
+    said = method_body(tr, "internal static string TheRideTo(Settlement target)")
+    forget = method_body(tr, "private static void ForgetTheRoadsWalkedBehind")
+    return (pair and guess and wanted and fill and said and forget
+            and "internal bool Guessed;" in tr
+            and "if (!hit.Guessed || !_behind) return hit;" in pair
+            and "_pairGuesses++;" in pair
+            and "WantThisRoadWalked(key);" in pair
+            and "Runs = Unwalked(dist, landRatio, false)," in guess
+            and ordered(wanted, "while (_wantedAt < _wanted.Count)",
+                        "if (_pairDist.TryGetValue(key, out Road held) && held.Guessed)",
+                        "_behind = true;", "try { PairRoad(a, b); }",
+                        "if (Stopwatch.GetTimestamp() - started >= budget) return false;",
+                        "if (_wanted.Count > 0) ForgetWhatTheLedgerWanted();")
+            and ordered(fill, "if (!WalkWhatTheLedgerWanted(started, budget)) return;",
+                        "bool held = TheSameMarkets(reach, _fillFor) && _fillOrder != null;",
+                        "if (!held)", "_fillShell = 0;",
+                        "if (_pairDist.TryGetValue((from.StringId, to.StringId), out Road had) && !had.Guessed) continue;")
+            and "_pairDist.ContainsKey(" not in tr
+            and "ForgetWhatTheLedgerWanted();" in forget
+            and "ForgetTheRoadsWalkedBehind();" in method_body(tr, "private static void DropIfNavalChanged")
+            and '" more taken from the game\'s distance rather than walked here"' in said
+            and '" still queued for the background"' in said
+            and "_pairGuesses = 0;" in method_body(tr, "private static void StartTheMeter"))
+
+
+chk("2.4.0", "a route scan never walks a market road while you wait on it: the road is taken from the game's distance, queued, and walked in the background a frame at a time, and TradeLord.log counts both",
+    the_ledger_never_waits_while_a_market_road_is_walked())
+
+
+def the_ride_check_says_what_carried_you_at_both_ends():
+    tr = S['Travel.cs']
+    load = method_body(tr, "private static string TheLoadOnYou")
+    ground = method_body(tr, "private static bool TheGroundSaysThis")
+    check = S['RideCheck.cs']
+    reached = method_body(check, "private static void Reached")
+    off = method_body(check, "private static void SetOff")
+    return (load and ground and reached and off
+            and ordered(load, "int men = roster.TotalManCount;",
+                        "int mounted = party.Party.NumberOfMenWithHorse;",
+                        "int walking = party.Party.NumberOfMenWithoutHorse;",
+                        "int mounts = party.ItemRoster.NumberOfMounts;",
+                        "int caught = party.PrisonRoster.TotalManCount;",
+                        "int hurt = roster.TotalWounded;",
+                        "foreach (MobileParty attached in party.AttachedParties)",
+                        '" prisoner(s), " + hurt + " wounded, morale "',
+                        "if (TheGroundSaysThis(lines, name)) continue;")
+            and all(one in ground for one in
+                    ("lines.ForestLine", "lines.FordLine", "lines.DesertLine", "lines.NightLine",
+                     "lines.SnowLine", "lines.SlowLine", "lines.CavalryWetLine", "lines.FootmenWetLine",
+                     "lines.Culture", "lines.Pathfinder", "lines.DesertBorn", "lines.NightRunner",
+                     "lines.DayTraveler", "lines.Tracker"))
+            and "lines.CavalryLine" not in ground
+            and "lines.FootmenLine" not in ground
+            and "Carried = Travel.WhatCarriesYou(MobileParty.MainParty)" in off
+            and '"  what carries you: " + _ride.Carried' in off
+            and ordered(reached, "string carries = Travel.WhatCarriesYou(MobileParty.MainParty);",
+                        "if (string.Equals(carries, _ride.Carried, StringComparison.Ordinal))",
+                        '"  what carried you, the same at both ends: "',
+                        '"  what carried you as TradeLord gave its time: "',
+                        '"  what carried you on arrival: "')
+            and "Travel.StraightDaysFor(party, bound) * 24f" in method_body(check, "internal static void Saw")
+            and "party.CurrentSettlement ?? bound" not in check)
+
+
+chk("2.4.0", "the ride check says what carried you when TradeLord gave its time and again on arrival, naming the prisoners, the wounded, the mounts and every line the game put on your speed that is not the ground under you",
+    the_ride_check_says_what_carried_you_at_both_ends())
+
+
+def the_panel_never_shows_an_older_scan_than_the_last_one():
+    panel = S['Panel.cs']
+    tick = method_body(panel, "private static void TickCore")
+    return (tick
+            and "internal static void TheScanIsNew() => _scanIsNew = true;" in panel
+            and ordered(tick, "_spokenFor = Options.Current.Language;", "if (_scanIsNew)",
+                        "_scanIsNew = false;",
+                        'if (_vm.IsVisible) Guard.Run("Panel.ScanIsNew", _vm.Respeak);',
+                        "if (!_vm.IsVisible)")
+            and ordered(method_body(S['Ledger.cs'], "private List<TradeRoute> ScanEveryRoute()"),
+                        "SayWhatTheScanCost(scan, kept.Count, took);", "LedgerPanel.TheScanIsNew();")
+            and S['Ledger.cs'].count("LedgerPanel.TheScanIsNew();") == 1
+            and "Refresh();" in method_body(panel, "public void Show"))
+
+
+chk("2.4.0", "the ledger panel is drawn again as soon as a route scan finishes while it is open, so it never shows an older scan than the last one",
+    the_panel_never_shows_an_older_scan_than_the_last_one())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

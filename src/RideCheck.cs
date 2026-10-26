@@ -61,6 +61,7 @@ namespace TradeLord
             internal double DesertMoving;
             internal float Moved;
             internal bool Fought;
+            internal string Carried;
         }
 
         private struct Followed
@@ -158,7 +159,8 @@ namespace TradeLord
                 From = now,
                 LastAt = now,
                 Said = said,
-                Ceiling = LedgerBehavior.TravelCeiling(to)
+                Ceiling = LedgerBehavior.TravelCeiling(to),
+                Carried = Travel.WhatCarriesYou(MobileParty.MainParty)
             };
             _riding = true;
             Log.Write("ride check: set off for " + Tongue.Named(to.Name, to.StringId) + "; TradeLord says " +
@@ -170,6 +172,7 @@ namespace TradeLord
                       " by night; " + Hours(said.Snow) + " h of it in snow and " + Hours(said.Wet) +
                       " h on wet ground by the weather forecast, and " + Hours(said.Slow) +
                       " h of it still Disorganized");
+            if (_ride.Carried != null) Log.Write("  what carries you: " + _ride.Carried);
         }
 
         internal static void Arrived(MobileParty party, Settlement at)
@@ -212,6 +215,18 @@ namespace TradeLord
                 Step(OnGround(pace, TradeMath.GroundWater)) + ", its desert step " +
                 Step(OnGround(pace, TradeMath.GroundDesert))
             };
+            string carries = Travel.WhatCarriesYou(MobileParty.MainParty);
+            if (_ride.Carried != null || carries != null)
+            {
+                if (string.Equals(carries, _ride.Carried, StringComparison.Ordinal))
+                    lines.Add("  what carried you, the same at both ends: " + _ride.Carried);
+                else
+                {
+                    lines.Add("  what carried you as TradeLord gave its time: " +
+                              (_ride.Carried ?? "it could not be read"));
+                    lines.Add("  what carried you on arrival: " + (carries ?? "it could not be read"));
+                }
+            }
             if (moving > 0f && _ride.Moved > 0f)
             {
                 float ran = _ride.Moved * TradeMath.HoursAPartyTakesToCoverItsSpeed / moving;
@@ -262,7 +277,7 @@ namespace TradeLord
                 To = bound.StringId,
                 At = CampaignTime.Now.ToHours,
                 SaidHours = days * 24f,
-                StraightHours = Travel.StraightDaysBetween(party.CurrentSettlement ?? bound, bound) * 24f,
+                StraightHours = Travel.StraightDaysFor(party, bound) * 24f,
                 Dodged = Dodging(party)
             };
         }

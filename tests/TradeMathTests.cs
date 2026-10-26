@@ -3095,20 +3095,40 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void What_the_money_buys_is_weighed_the_same_way_for_both_orders()
+        public void What_an_order_buys_stops_at_the_purse_and_at_the_cargo_room()
         {
-            var plans = new List<(int units, int cost, int profit, float days)>
+            var byWeight = new List<(int units, int cost, int profit, float hauls)>
             {
-                (3, 1239, 774, 0.7f), (9, 1647, 2160, 0.9f), (9, 882, 1233, 0.8f)
+                (3, 1239, 774, 3f), (9, 1647, 2160, 18f), (9, 882, 1233, 9f)
             };
-            Assert.Equal(774L + 960L + 137L, TradeMath.WhatTheMoneyBuys(plans, 2077, byDenar: false));
-            Assert.Equal(516L + 137L, TradeMath.WhatTheMoneyBuys(plans, 966, byDenar: false));
-            Assert.Equal(1233L, TradeMath.WhatTheMoneyBuys(plans, 966, byDenar: true));
-            Assert.True(TradeMath.WhatTheMoneyBuys(plans, 966, byDenar: true) >
-                        TradeMath.WhatTheMoneyBuys(plans, 966, byDenar: false));
-            Assert.Equal(0L, TradeMath.WhatTheMoneyBuys(plans, 0, byDenar: true));
-            Assert.Equal(0L, TradeMath.WhatTheMoneyBuys(null, 500, byDenar: true));
-            Assert.Equal(774L + 2160L + 1233L, TradeMath.WhatTheMoneyBuys(plans, 100000, byDenar: true));
+            var byDenar = new List<(int units, int cost, int profit, float hauls)>
+            {
+                (9, 882, 1233, 9f), (9, 1647, 2160, 18f), (3, 1239, 774, 3f)
+            };
+            Assert.Equal(774L + 960L + 137L, TradeMath.WhatThisOrderBuys(byWeight, 2077, -1f));
+            Assert.Equal(516L + 137L, TradeMath.WhatThisOrderBuys(byWeight, 966, -1f));
+            Assert.Equal(1233L, TradeMath.WhatThisOrderBuys(byDenar, 966, -1f));
+            Assert.True(TradeMath.WhatThisOrderBuys(byDenar, 966, -1f) >
+                        TradeMath.WhatThisOrderBuys(byWeight, 966, -1f));
+            Assert.Equal(774L + 2160L + 1233L, TradeMath.WhatThisOrderBuys(byDenar, 100000, -1f));
+            Assert.Equal(0L, TradeMath.WhatThisOrderBuys(byDenar, 0, -1f));
+            Assert.Equal(0L, TradeMath.WhatThisOrderBuys(null, 500, -1f));
+            Assert.Equal(0L, TradeMath.WhatThisOrderBuys(byDenar, 100000, 0f));
+            Assert.Equal(1233L, TradeMath.WhatThisOrderBuys(byDenar, 100000, 9f));
+            Assert.Equal(1233L + 2160L, TradeMath.WhatThisOrderBuys(byDenar, 100000, 27f));
+        }
+
+        [Fact]
+        public void The_key_by_denar_carries_the_same_numerator_over_what_it_cost()
+        {
+            Assert.Equal(2160f * 0.2f / (1647f * 0.9f), TradeMath.KeyByDenar(2160, 0.2f, 1f, true, 1647, 0.9f), 4);
+            Assert.Equal(2160f / (1647f * 0.9f), TradeMath.KeyByDenar(2160, 0.2f, 1f, false, 1647, 0.9f), 4);
+            Assert.Equal(2160f * 0.2f * 0.8f / (1647f * 0.9f),
+                         TradeMath.KeyByDenar(2160, 0.2f, 0.8f, true, 1647, 0.9f), 4);
+            Assert.Equal(0f, TradeMath.KeyByDenar(2160, 1f, 1f, true, 0, 0.9f));
+            Assert.Equal(0f, TradeMath.KeyByDenar(0, 1f, 1f, true, 1647, 0.9f));
+            Assert.Equal(TradeMath.KeyByDenar(100, 1f, 1f, true, 500, 0.5f),
+                         TradeMath.KeyByDenar(100, 1f, 1f, true, 500, 0.05f));
         }
 
         [Fact]

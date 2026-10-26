@@ -40,6 +40,7 @@ namespace TradeLord
         public TradeLord.Confidence.Parts Parts;
 
         public float Key;
+        public float KeyByDenar;
         public float Trust = 1f;
         public int QtyUncut;
         public int Shown;
@@ -1672,6 +1673,7 @@ namespace TradeLord
             NothingFitsYourPurse = kept.Count == 0 && routes.Count > 0;
             long took = System.Diagnostics.Stopwatch.GetTimestamp() - started;
             SayWhatTheScanCost(scan, kept.Count, took);
+            LedgerPanel.TheScanIsNew();
             int changed = SayWhatChangedItsMind(kept);
             EngineTally.Scans++;
             EngineTally.SlowestScan = Math.Max(EngineTally.SlowestScan,

@@ -3058,14 +3058,14 @@ namespace TradeLord
                 "  buying plan " + pass.Where + ": " + money + " to spend and " + (int)room +
                 " cargo room, in the order TradeLord buys"
             };
-            var plans = new List<(int units, int cost, int profit, float days)>(stock.Count);
+            int planned = 0;
             for (int i = 0; i < stock.Count; i++)
             {
                 Pick one = stock[i];
                 ItemObject item = market.ItemAt(one.At);
                 TradeRoute row = market.PlanFor(item);
                 if (item == null || row?.To == null) continue;
-                plans.Add((one.Weighed, one.Plan.Cost, one.Plan.Profit, row.TravelDays));
+                planned++;
                 pass.Detail.TryGetValue(item, out var took);
                 stoppedOn.TryGetValue(one.Good.Id ?? "", out Block stop);
                 string why = stop != Block.None ? stop.ToString()
@@ -3086,11 +3086,16 @@ namespace TradeLord
                                 (took.count < one.Plan.Qty ? ", " + (one.Plan.Qty - took.count) + " short of the plan on " + why : "")
                               : "not bought, " + why));
             }
-            if (tally.Saw(Block.BudgetSpent) && !tally.Saw(Block.CarryWeight) && plans.Count > 1)
-                lines.Add("    with the same " + money + ", buying by profit a day for each denar would have made +" +
-                          TradeMath.WhatTheMoneyBuys(plans, money, byDenar: true) + " against +" +
-                          TradeMath.WhatTheMoneyBuys(plans, money, byDenar: false) +
-                          " in this order, as your purse ran out before your cargo room");
+            if (TradePass.OrdersWereWeighed && planned > 1)
+                lines.Add("    with the same " + money + " and " + (int)room + " cargo room, profit a day for each " +
+                          "denar would make +" + TradePass.WouldMakeByDenar + " and profit a day for each unit of " +
+                          "weight +" + TradePass.WouldMakeByWeight + ", so TradeLord bought " +
+                          (TradePass.OrderedByDenar ? "by the denar" : "by the weight") + ", and " +
+                          (tally.Saw(Block.BudgetSpent)
+                              ? "your purse ran out before your cargo room"
+                              : tally.Saw(Block.CarryWeight)
+                                  ? "your cargo room ran out before your purse"
+                                  : "neither your purse nor your cargo room ran out"));
             Log.WriteMany(lines);
         }
 
@@ -3290,7 +3295,7 @@ namespace TradeLord
                 plan = new PlannedSale
                 {
                     Qty = row.Shown > 0 ? row.Shown : row.Quantity, QtyUncut = row.QtyUncut,
-                    Profit = row.TotalProfit, Cost = row.Cost, Key = row.Key
+                    Profit = row.TotalProfit, Cost = row.Cost, Key = row.Key, KeyByDenar = row.KeyByDenar
                 };
                 Aim(at, row.To, row.SellPrice, rungs, till);
                 if (_plans == null) _plans = new Dictionary<ItemObject, TradeRoute>();
