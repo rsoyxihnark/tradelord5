@@ -1293,13 +1293,21 @@ namespace TradeLord
                     EngineTally.ConfWeighed++;
                     if (parts.Depth < 1f) EngineTally.TillCountedAgainst++;
                     if (parts.Quiet < 1f) EngineTally.TrafficCountedAgainst++;
+                    int paysOut = Forecast.TillPaysOutBefore(s, ride);
+                    if (paysOut > 0) EngineTally.TillPaidOutFirst++;
                     if (ultra)
+                    {
                         confSaid = Confidence.Spelled(parts) + " x trust " + Scoring.Share(trust) +
                                    (till > 0
                                        ? ", its till " + till + " against the " + worthThere +
                                          " your cargo would fetch there"
                                        : ", its till covered the whole sale") +
+                                   (paysOut > 0
+                                       ? ", and the sellers already on the road draw " + paysOut +
+                                         " of that till before you arrive, which Conf does not count"
+                                       : "") +
                                    ", " + caravans + " caravan(s) and villager(s) at or heading there";
+                    }
                 }
                 float weighed = TradeMath.RateTheMarkHolds(judged, s == holder);
                 if (s == holder)

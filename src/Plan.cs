@@ -398,6 +398,7 @@ namespace TradeLord
         internal static int ConfWeighed;
         internal static int TillCountedAgainst;
         internal static int TrafficCountedAgainst;
+        internal static int TillPaidOutFirst;
 
         internal static void SayTheDay()
         {
@@ -406,7 +407,8 @@ namespace TradeLord
                           MarkedVillage + " of them on a village and " + MarkedTown + " on a town; of " +
                           ConfWeighed + " market(s) weighed at the Conf of selling there, " + TillCountedAgainst +
                           " had their till count against them and " + TrafficCountedAgainst +
-                          " had caravan and villager traffic count against them");
+                          " had caravan and villager traffic count against them; " + TillPaidOutFirst +
+                          " of them will pay sellers already on the road out of that till before you arrive");
             if (Options.Current.ExtendedDebugLogging && Scans + Planned + OnTheRoad + Marker + HoldCargo + Tooltips > 0)
                 Log.Write("one engine today: " + Scans + " route scan(s), " + Planned + " good(s) the buying pass " +
                           "planned from the scan, " + OnTheRoad + " on the road, " + Marker + " map marker weighing(s), " +
@@ -416,6 +418,7 @@ namespace TradeLord
                           SlowestScan.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " ms");
             Scans = Planned = OnTheRoad = Marker = HoldCargo = Tooltips = OffTheLedger = 0;
             MarkedVillage = MarkedTown = ConfWeighed = TillCountedAgainst = TrafficCountedAgainst = 0;
+            TillPaidOutFirst = 0;
             SlowestScan = 0d;
         }
     }

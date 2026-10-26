@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.2
+
+- TradeLord.log now says how much of a market's till the sellers already on the road will draw before you arrive
+
 ## 2.5.1
 
 - Fixed a villager walking home empty counting against its own village

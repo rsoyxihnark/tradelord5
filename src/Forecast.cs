@@ -27,6 +27,9 @@ namespace TradeLord
         private static readonly Dictionary<string, List<Draw>> _drawing =
             new Dictionary<string, List<Draw>>(StringComparer.Ordinal);
 
+        private static readonly Dictionary<string, List<(float days, int gold)>> _tillPays =
+            new Dictionary<string, List<(float, int)>>(StringComparer.Ordinal);
+
         private static readonly Dictionary<(string site, string kind), int> _usedUp =
             new Dictionary<(string, string), int>();
 
@@ -64,6 +67,7 @@ namespace TradeLord
             _landing.Clear();
             _spending.Clear();
             _drawing.Clear();
+            _tillPays.Clear();
             _usedUp.Clear();
             _indexes.Clear();
             _coastIndexes.Clear();
@@ -230,6 +234,7 @@ namespace TradeLord
             _landing.Clear();
             _spending.Clear();
             _drawing.Clear();
+            _tillPays.Clear();
             _usedUp.Clear();
             _indexes.Clear();
             _coastIndexes.Clear();
@@ -277,6 +282,7 @@ namespace TradeLord
                     int units = TradeMath.WhatVillagersSell(amount, till, price);
                     if (units <= 0) continue;
                     till -= units * price;
+                    NoteTheTillPays(bound, units * price, days);
                     if (TradePolicy.Priced(item))
                         Note(bound, item.StringId, item.ItemCategory, units, TradeMath.WorthOf(units, item.Value), days);
                 }
@@ -380,6 +386,7 @@ namespace TradeLord
                     if (units <= 0) continue;
                     sold[k] = units;
                     till -= units * price;
+                    NoteTheTillPays(bound, units * price, days);
                     earned += (long)units * price;
                     shed += units * item.Weight;
                     if (haul) hauling -= units;
@@ -719,6 +726,28 @@ namespace TradeLord
             if (!string.IsNullOrEmpty(name)) return name;
             ItemObject stands = StandsFor(category);
             return stands?.Name == null ? category.StringId : stands.Name.ToString();
+        }
+
+        private static void NoteTheTillPays(Settlement site, int gold, float days)
+        {
+            if (site == null || gold <= 0) return;
+            if (!_tillPays.TryGetValue(site.StringId, out List<(float days, int gold)> paid))
+            {
+                paid = new List<(float, int)>();
+                _tillPays[site.StringId] = paid;
+            }
+            paid.Add((days, gold));
+        }
+
+        internal static int TillPaysOutBefore(Settlement site, float withinDays)
+        {
+            if (!On || site == null) return 0;
+            Build();
+            if (!_tillPays.TryGetValue(site.StringId, out List<(float days, int gold)> paid)) return 0;
+            long sum = 0L;
+            for (int i = 0; i < paid.Count; i++)
+                if (paid[i].days <= withinDays) sum += paid[i].gold;
+            return (int)Math.Min(sum, int.MaxValue);
         }
 
         private static void NoteADraw(Settlement site, ItemCategory category, int worth, float days)
