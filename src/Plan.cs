@@ -57,6 +57,10 @@ namespace TradeLord
     {
         internal int Opened;
         internal int ThrownAway;
+        internal int ThrownByMargin;
+        internal int ThrownByTill;
+        internal int ThrownByCargo;
+        internal int ThrownByABetterRoute;
         internal int PassedOver;
         internal int CargoShut;
         internal int SetAsideRoutes;
@@ -263,14 +267,14 @@ namespace TradeLord
                 int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);
                 Opened++;
                 float realizable = TradePolicy.Realizable(openingSell);
-                if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; continue; }
+                if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; ThrownByMargin++; continue; }
 
                 int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;
-                if (qtyCap <= 0) { ThrownAway++; continue; }
-                if (fits <= 0) { ThrownAway++; CargoShut++; continue; }
+                if (qtyCap <= 0) { ThrownAway++; ThrownByTill++; continue; }
+                if (fits <= 0) { ThrownAway++; ThrownByCargo++; CargoShut++; continue; }
 
                 float ceiling = (float)(openingSell - openingBuy) * Math.Min(qtyCap, fits);
-                if (beaten && TradeMath.PerDay(ceiling, days) <= key) { ThrownAway++; continue; }
+                if (beaten && TradeMath.PerDay(ceiling, days) <= key) { ThrownAway++; ThrownByABetterRoute++; continue; }
 
                 var leg = new Leg
                 {

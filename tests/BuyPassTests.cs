@@ -315,20 +315,21 @@ namespace TradeLord.Tests
         }
 
         [Fact]
-        public void At_Poros_with_966_to_spend_the_ledgers_order_is_bought_and_wine_waits_behind_velvet()
+        public void At_Poros_with_966_to_spend_the_denar_order_earns_more_so_linen_goes_before_velvet()
         {
             FakeMarket market = Poros(966);
             TheLedgerPlans(market, ranked: true);
             Run run = Buy(market);
-            Assert.Equal("velvet", market.Taken[0]);
-            Assert.Equal("velvet", market.Taken[1]);
-            Assert.DoesNotContain("linen", market.Taken);
-            Assert.Single(market.Taken.FindAll(id => id == "wine"));
+            Assert.True(TradePass.OrderedByDenar);
+            Assert.Equal(3575L, TradePass.WouldMakeByDenar);
+            Assert.Equal(1679L, TradePass.WouldMakeByWeight);
+            Assert.Equal("linen", market.Taken[0]);
+            Assert.DoesNotContain("velvet", market.Taken);
             Assert.True(run.Tally.Saw(Block.BudgetSpent));
         }
 
         [Fact]
-        public void At_Poros_with_the_ledgers_expected_profit_as_the_limit_linen_and_velvet_are_bought_before_wine()
+        public void At_Poros_with_the_ledgers_expected_profit_as_the_limit_linen_is_bought_before_wine()
         {
             int limit = TradeMath.SpendLimit(1000, 2610 + 34, true, 2111);
             int left = TradeMath.Budget(2610, 300, limit, 34);
@@ -340,20 +341,22 @@ namespace TradeLord.Tests
             Buy(market);
             int lastLinen = market.Taken.LastIndexOf("linen");
             int firstWine = market.Taken.IndexOf("wine");
-            Assert.Equal(new[] { "velvet", "velvet", "velvet" }, market.Taken.GetRange(0, 3).ToArray());
-            Assert.True(lastLinen > 2);
-            Assert.True(firstWine < 0 || firstWine > lastLinen);
+            Assert.Equal(5526L, TradePass.WouldMakeByDenar);
+            Assert.Equal(4410L, TradePass.WouldMakeByWeight);
+            Assert.Equal(new[] { "linen", "linen", "linen" }, market.Taken.GetRange(0, 3).ToArray());
+            Assert.DoesNotContain("velvet", market.Taken);
+            Assert.True(firstWine > lastLinen);
         }
 
         [Fact]
-        public void At_Poros_the_pass_buys_on_the_ledgers_own_plan_and_never_asks_another_buyer()
+        public void At_Poros_the_pass_buys_on_the_plan_the_ledger_gave_it_and_never_asks_another_buyer()
         {
             FakeMarket market = Poros(2077);
             TheLedgerPlans(market, ranked: true);
             Run run = Buy(market);
             Assert.Equal(0, market.ResaleAsked);
             Assert.Contains("linen", market.Taken);
-            Assert.Contains("velvet", market.Taken);
+            Assert.Contains("wine", market.Taken);
             Assert.False(run.Tally.Saw(Block.NoResaleMarket));
         }
 

@@ -517,7 +517,7 @@ namespace TradeLord
                 ? Tongue.Text(Options.Current.Omniscient
                     ? "{=TL69}No routes are within your travel ceilings. | Raise the ceilings in the Trade Pool settings, or move nearer to more markets."
                     : "{=TL90}No routes are within your travel ceilings, from the prices you have recorded so far. | Walk more markets, or raise the ceilings in the Trade Pool settings.").ToString()
-                : Tongue.Text("{=TL70}Click a market's name to jump to it and pin or unpin it | Days = you -> buy market -> sell market | Carv. = caravans and villagers at or heading for those markets").ToString()
+                : Tongue.Text("{=TL70}Click a market's name to jump to it and pin or unpin it | Days = you -> buy market -> sell market | Carv. = caravans and villagers at or heading for those markets, not a village's own villagers").ToString()
                   + Tongue.Text("{=TL509} | Qty = what your cargo and what you may spend leave for it after the routes above it from the same market").ToString()
                   + WhatHeldQtyBack(ledger)
                   + WhatWasSetAside(ledger)
