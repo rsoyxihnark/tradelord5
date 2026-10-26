@@ -122,6 +122,28 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_till_that_cannot_take_the_whole_cargo_counts_against_a_market()
+        {
+            Assert.Equal(1f, Confidence.PartsOf(true, 1, 1, 0, 1, 0.5f, 0, -1f).Depth);
+            Assert.Equal(1f, Confidence.PartsOf(true, 1, 1, 40208, 2000, 0.5f, 0, -1f).Depth);
+            Assert.Equal(999f / (2841f * 1.5f),
+                         Confidence.PartsOf(true, 1, 1, 999, 2841, 0.5f, 0, -1f).Depth, 4);
+            Assert.True(Confidence.PartsOf(true, 1, 1, 999, 2841, 0.5f, 0, -1f).Depth <
+                        Confidence.PartsOf(true, 1, 1, 40208, 2000, 0.5f, 0, -1f).Depth);
+            Assert.True(Confidence.Of(true, 1, 1, 999, 2841, 0.5f, 0, -1f) <
+                        Confidence.Of(true, 1, 1, 0, 1, 0.5f, 0, -1f));
+        }
+
+        [Fact]
+        public void More_traffic_at_or_heading_for_a_market_counts_against_it()
+        {
+            Assert.Equal(1f, Confidence.PartsOf(true, 1, 1, 0, 1, 0.5f, 0, -1f).Quiet);
+            Assert.Equal(1f / 1.3f, Confidence.PartsOf(true, 1, 1, 0, 1, 0.5f, 2, -1f).Quiet, 4);
+            Assert.True(Confidence.PartsOf(true, 1, 1, 0, 1, 0.5f, 8, -1f).Quiet <
+                        Confidence.PartsOf(true, 1, 1, 0, 1, 0.5f, 2, -1f).Quiet);
+        }
+
+        [Fact]
         public void The_five_parts_of_Conf_are_spelled_out_in_the_order_they_multiply()
         {
             var parts = new Confidence.Parts { Resilience = 0.85f, Depth = 1f, Haste = 0.63f, Quiet = 0.8f, Fresh = 0.75f };

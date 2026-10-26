@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.2
+
+- Fixed TradeLord.log calling the map marker's profit a day figure gold a day
+- The map marker now counts a market's till against it where the till cannot take your whole cargo, so a village with a small purse falls behind
+- The Carv. count and the Conf it feeds now count villagers as well as caravans at or heading for a market
+- TradeLord.log now writes the Conf of every market the map marker priced, with its till and the traffic heading there, and sums the day
+
 ## 2.4.1
 
 - Fixed TradeLord.log sometimes counting none of the market roads taken from the game's distance rather than walked
