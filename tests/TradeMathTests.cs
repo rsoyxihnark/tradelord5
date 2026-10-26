@@ -3132,6 +3132,34 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_real_ride_is_never_counted_as_quicker_than_the_rough_guess_it_replaces()
+        {
+            Assert.Equal(1.25f, TradeMath.HowMuchLongerTheRideIs(0.8f, 1.0f), 4);
+            Assert.Equal(1f, TradeMath.HowMuchLongerTheRideIs(1.0f, 1.0f), 4);
+            Assert.Equal(1f, TradeMath.HowMuchLongerTheRideIs(1.0f, 0.9f), 4);
+            Assert.True(float.IsNaN(TradeMath.HowMuchLongerTheRideIs(0f, 1.0f)));
+            Assert.True(float.IsNaN(TradeMath.HowMuchLongerTheRideIs(-1f, 1.0f)));
+            Assert.True(float.IsNaN(TradeMath.HowMuchLongerTheRideIs(1.0f, 0f)));
+            Assert.True(float.IsNaN(TradeMath.HowMuchLongerTheRideIs(1.0f, float.NaN)));
+            Assert.True(float.IsNaN(TradeMath.HowMuchLongerTheRideIs(1.0f, float.PositiveInfinity)));
+            Assert.True(float.IsNaN(TradeMath.HowMuchLongerTheRideIs(1f, TradeMath.LongestARideRunsOver * 2f)));
+            Assert.Equal(TradeMath.LongestARideRunsOver,
+                         TradeMath.HowMuchLongerTheRideIs(1f, TradeMath.LongestARideRunsOver), 4);
+        }
+
+        [Fact]
+        public void The_stretch_taken_for_unwalked_pairs_is_the_upper_quartile_of_what_was_walked()
+        {
+            var walked = new List<float> { 1.02f, 1.05f, 1.10f, 1.18f, 1.25f, 1.31f, 1.44f, 1.60f };
+            walked.Sort();
+            float upper = TradeMath.Quantile(walked, 0.75f);
+            float middle = TradeMath.Quantile(walked, 0.5f);
+            Assert.True(upper > middle);
+            Assert.Equal(1.3425f, upper, 4);
+            Assert.True(upper >= 1f);
+        }
+
+        [Fact]
         public void A_profit_a_day_for_each_denar_is_the_profit_a_day_over_what_it_cost()
         {
             Assert.Equal(TradeMath.PerDay(960, 0.9f) / 732f, TradeMath.PerDenarADay(960, 732, 0.9f), 5);

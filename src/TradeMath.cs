@@ -1689,6 +1689,16 @@ namespace TradeLord
             return Finite(paceBefore * turned / onePlus, float.NaN);
         }
 
+        public const float LongestARideRunsOver = 10f;
+
+        public static float HowMuchLongerTheRideIs(float guessed, float real)
+        {
+            if (!(guessed > 0f) || !(real > 0f) || float.IsNaN(real) || float.IsInfinity(real)) return float.NaN;
+            float longer = real / guessed;
+            if (float.IsNaN(longer) || longer > LongestARideRunsOver) return float.NaN;
+            return longer < 1f ? 1f : longer;
+        }
+
         public static float Quantile(List<float> sorted, float share)
         {
             if (sorted == null || sorted.Count == 0) return float.NaN;

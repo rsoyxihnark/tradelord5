@@ -135,6 +135,7 @@ namespace TradeLord
             internal List<TradeMath.Run> Runs;
             internal bool Walked;
             internal bool Guessed;
+            internal float Longer;
             internal int Hour = -1;
             internal float Days;
         }
@@ -1099,6 +1100,7 @@ namespace TradeLord
                 try { WalkFromParty(party, target, road); }
                 catch { road.Walked = false; }
                 StopTheMeter(started, ref _partyWalks);
+                if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);
                 if (!road.Walked) _unwalkable.Add(target.StringId);
             }
             if (!road.Walked)
@@ -1121,6 +1123,7 @@ namespace TradeLord
                 try { WalkBetween(a, b, road); }
                 catch { road.Walked = false; }
                 StopTheMeter(started, ref _pairWalks);
+                if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);
                 _justWalked = true;
                 if (_behind) _walkedBehind++;
             }
@@ -1184,6 +1187,15 @@ namespace TradeLord
         {
             if (_frameTicks > _busiestFrame) _busiestFrame = _frameTicks;
             _frameTicks = 0L;
+        }
+
+        internal static long FrameTicksSoFar() => _frameTicks;
+
+        internal static void SpentOnAScan(long spent, long before)
+        {
+            long inner = _frameTicks - before;
+            if (inner < 0L) inner = 0L;
+            _frameTicks += spent > inner ? spent - inner : 0L;
         }
 
         internal static void FillTheRoads()
@@ -1344,6 +1356,11 @@ namespace TradeLord
             _lines.Whole = false;
             _frameTicks = 0L;
             _busiestFrame = 0L;
+            _ratios.Clear();
+            _ratioAt = 0;
+            _ratioSeen = 0;
+            _ratioFresh = -1;
+            _ratioHeld = 1f;
         }
 
         private static float Nearest(Vec2 from, Settlement to)
@@ -1439,7 +1456,15 @@ namespace TradeLord
             var key = (a.StringId, b.StringId);
             if (_pairDist.TryGetValue(key, out Road hit))
             {
-                if (!hit.Guessed || !_behind) return hit;
+                if (!hit.Guessed) return hit;
+                if (!_behind)
+                {
+                    if (hit.Longer >= TheRoughRoadTakesLongerBy()) return hit;
+                    hit = TheRoadAsTheGameMeasuresIt(a, b);
+                    _pairDist[key] = hit;
+                    _pairDays.Remove(key);
+                    return hit;
+                }
                 Road afresh = RoadBetween(a, b);
                 _pairDist[key] = afresh;
                 _pairDays.Remove(key);
@@ -1462,15 +1487,62 @@ namespace TradeLord
             return hit;
         }
 
+        private const int RoadRatiosKept = 512;
+        private const int LeastRatiosToTrust = 20;
+        private const int RoadRatioEveryNth = 16;
+        private const float RoadRatioShare = 0.75f;
+        private static readonly List<float> _ratios = new List<float>(RoadRatiosKept);
+        private static int _ratioAt, _ratioSeen, _ratioFresh = -1;
+        private static float _ratioHeld = 1f;
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void NoteHowRoughTheGuessWas(float dist, float landRatio, Road walked)
+        {
+            if (++_ratioSeen % RoadRatioEveryNth != 0) return;
+            try
+            {
+                TradeMath.Pace pace = PartyPace();
+                if (pace == null || pace.Even) return;
+                var rough = new Road
+                {
+                    Length = dist, LandRatio = landRatio, Runs = Unwalked(dist, landRatio, false)
+                };
+                float longer = TradeMath.HowMuchLongerTheRideIs(Ride(rough, pace, _moment, 0d, false, null),
+                                                                Ride(walked, pace, _moment, 0d, false, null));
+                if (float.IsNaN(longer)) return;
+                if (_ratios.Count < RoadRatiosKept) { _ratios.Add(longer); return; }
+                _ratios[_ratioAt] = longer;
+                _ratioAt = (_ratioAt + 1) % RoadRatiosKept;
+            }
+            catch { }
+        }
+
+        internal static float TheRoughRoadTakesLongerBy()
+        {
+            int hour = Campaign.Current == null ? -1 : (int)CampaignTime.Now.ToHours;
+            if (hour == _ratioFresh) return _ratioHeld;
+            _ratioFresh = hour;
+            if (_ratios.Count < LeastRatiosToTrust) { _ratioHeld = 1f; return 1f; }
+            var seen = new List<float>(_ratios);
+            seen.Sort();
+            float at = TradeMath.Quantile(seen, RoadRatioShare);
+            _ratioHeld = float.IsNaN(at) || at < 1f ? 1f : at;
+            return _ratioHeld;
+        }
+
         private static Road TheRoadAsTheGameMeasuresIt(Settlement a, Settlement b)
         {
             float dist = Between(a, b, out float landRatio);
+            bool guess = landRatio >= AllOnLand && a != b;
+            float longer = guess ? TheRoughRoadTakesLongerBy() : 1f;
+            float length = dist * longer;
             return new Road
             {
-                Length = dist,
+                Length = length,
                 LandRatio = landRatio,
-                Runs = Unwalked(dist, landRatio, false),
-                Guessed = landRatio >= AllOnLand && a != b
+                Runs = Unwalked(length, landRatio, false),
+                Guessed = guess,
+                Longer = longer
             };
         }
 
@@ -1611,7 +1683,9 @@ namespace TradeLord
                    " between markets" +
                    (metered && _walkedBehind > 0 ? ", " + _walkedBehind + " of them in the background" : "") +
                    (metered && _pairGuesses > 0
-                       ? ", " + _pairGuesses + " more taken from the game's distance rather than walked here"
+                       ? ", " + _pairGuesses + " more taken from the game's distance at " +
+                         TheRoughRoadTakesLongerBy().ToString("0.00", inv) + " times longer for the ground it " +
+                         "cannot read, the figure " + _ratios.Count + " walked road(s) give"
                        : "") +
                    (_wanted.Count > _wantedAt
                        ? ", " + (_wanted.Count - _wantedAt) + " still queued for the background"

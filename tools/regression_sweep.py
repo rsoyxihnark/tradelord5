@@ -2142,7 +2142,7 @@ chk("1.3.28", "both travel estimates take their speeds from one definition",
     S['TradeMath.cs'].count("sea = fleetSpeed <= StandingStill ? land : fleetSpeed;") == 1 and
     "TradeMath.SpeedsInEffect(LandSpeed(), SeaSpeed(), out float land, out float sea);" in
     method_body(S['Travel.cs'], "private static TradeMath.Pace PartyPace()") and
-    S['Travel.cs'].count("PartyPace()") == 7 and
+    S['Travel.cs'].count("PartyPace()") == 8 and
     "TradeMath.Pace pace = PartyPace();" in method_body(S['Travel.cs'], "private static void Speeds") and
     "road.Days = Ride(road, PartyPace(), _moment, 0d, false, null);" in
     method_body(S['Travel.cs'], "private static float RideFromParty") and
@@ -20359,11 +20359,19 @@ def a_party_standing_still_keeps_the_roads_it_walked_and_markets_keep_theirs_for
             and "var key = (a.StringId, b.StringId);" in method_body(tr, "private static Road PairRoad")
             and ordered(method_body(tr, "private static Road PairRoad"),
                         "if (_pairDist.TryGetValue(key, out Road hit))",
-                        "if (!hit.Guessed || !_behind) return hit;",
-                        "Road afresh = RoadBetween(a, b);", "_pairDays.Remove(key);",
-                        "if (_behind)", "hit = RoadBetween(a, b);",
-                        "hit = TheRoadAsTheGameMeasuresIt(a, b);", "WantThisRoadWalked(key);")
-            and "Guessed = landRatio >= AllOnLand && a != b" in method_body(tr, "private static Road TheRoadAsTheGameMeasuresIt")
+                        "if (!hit.Guessed) return hit;",
+                        "if (hit.Longer >= TheRoughRoadTakesLongerBy()) return hit;",
+                        "Road afresh = RoadBetween(a, b);",
+                        "hit = RoadBetween(a, b);",
+                        "_pairGuesses++;", "WantThisRoadWalked(key);")
+            and method_body(tr, "private static Road PairRoad").count("_pairDays.Remove(key);") == 2
+            and method_body(tr, "private static Road PairRoad").count("hit = TheRoadAsTheGameMeasuresIt(a, b);") == 2
+            and ordered(method_body(tr, "private static Road TheRoadAsTheGameMeasuresIt"),
+                        "bool guess = landRatio >= AllOnLand && a != b;",
+                        "float longer = guess ? TheRoughRoadTakesLongerBy() : 1f;",
+                        "float length = dist * longer;",
+                        "Length = length,", "Runs = Unwalked(length, landRatio, false),",
+                        "Guessed = guess", "Longer = longer")
             and "_pairDist.Clear();" in method_body(tr, "internal static void Forget")
             and "_pairDays.Clear();" in method_body(tr, "internal static void Forget"))
 
@@ -21622,7 +21630,14 @@ def the_log_says_what_the_busiest_frame_cost():
     said = method_body(tr, "internal static string TheRideTo(Settlement target)")
     fill = method_body(tr, "private static void FillTheRoadsNow()")
     return (ride and work and stop and frame and said and fill
-            and tr.count("_frameTicks +=") == 3
+            and tr.count("_frameTicks +=") == 4
+            and ordered(method_body(tr, "internal static void SpentOnAScan"),
+                        "long inner = _frameTicks - before;",
+                        "_frameTicks += spent > inner ? spent - inner : 0L;")
+            and "internal static long FrameTicksSoFar() => _frameTicks;" in tr
+            and ordered(method_body(S['Ledger.cs'], "private List<TradeRoute> ScanEveryRoute()"),
+                        "long frameBefore = Travel.FrameTicksSoFar();",
+                        "Travel.SpentOnAScan(took, frameBefore);")
             and ordered(frame, "if (_frameTicks > _busiestFrame) _busiestFrame = _frameTicks;", "_frameTicks = 0L;")
             and 'Guard.Run("Tick.Frame", Travel.NewFrame);' in S['SubModule.cs']
             and ordered(S['SubModule.cs'], 'Guard.Run("Tick.Frame", Travel.NewFrame);',
@@ -21654,9 +21669,32 @@ def the_ledger_never_waits_while_a_market_road_is_walked():
     forget = method_body(tr, "private static void ForgetTheRoadsWalkedBehind")
     return (pair and guess and wanted and fill and said and forget
             and "internal bool Guessed;" in tr
-            and "if (!hit.Guessed || !_behind) return hit;" in pair
+            and "if (!hit.Guessed) return hit;" in pair
             and ordered(pair, "StartTheMeter();", "_pairGuesses++;", "WantThisRoadWalked(key);")
-            and "Runs = Unwalked(dist, landRatio, false)," in guess
+            and "Runs = Unwalked(length, landRatio, false)," in guess
+            and "float longer = guess ? TheRoughRoadTakesLongerBy() : 1f;" in guess
+            and "if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);" in method_body(tr, "private static Road RoadBetween")
+            and "if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);" in method_body(tr, "private static Road RoadFromParty")
+            and ordered(method_body(tr, "internal static float TheRoughRoadTakesLongerBy"),
+                        "if (_ratios.Count < LeastRatiosToTrust) { _ratioHeld = 1f; return 1f; }",
+                        "seen.Sort();",
+                        "float at = TradeMath.Quantile(seen, RoadRatioShare);",
+                        "_ratioHeld = float.IsNaN(at) || at < 1f ? 1f : at;")
+            and ordered(method_body(tr, "private static void NoteHowRoughTheGuessWas"),
+                        "if (++_ratioSeen % RoadRatioEveryNth != 0) return;",
+                        "Runs = Unwalked(dist, landRatio, false)",
+                        "TradeMath.HowMuchLongerTheRideIs(Ride(rough, pace, _moment, 0d, false, null),",
+                        "Ride(walked, pace, _moment, 0d, false, null));")
+            and ordered(method_body(tr, "private static Road PairRoad"),
+                        "if (hit.Longer >= TheRoughRoadTakesLongerBy()) return hit;",
+                        "hit = TheRoadAsTheGameMeasuresIt(a, b);")
+            and ordered(method_body(S['TradeMath.cs'], "public static float HowMuchLongerTheRideIs"),
+                        "if (!(guessed > 0f) || !(real > 0f) || float.IsNaN(real) || float.IsInfinity(real)) return float.NaN;",
+                        "if (float.IsNaN(longer) || longer > LongestARideRunsOver) return float.NaN;",
+                        "return longer < 1f ? 1f : longer;")
+            and "A_real_ride_is_never_counted_as_quicker_than_the_rough_guess_it_replaces" in MATHTESTS
+            and "The_stretch_taken_for_unwalked_pairs_is_the_upper_quartile_of_what_was_walked" in MATHTESTS
+            and '" times longer for the ground it "' in method_body(tr, "internal static string TheRideTo(Settlement target)")
             and ordered(wanted, "while (_wantedAt < _wanted.Count)",
                         "if (_pairDist.TryGetValue(key, out Road held) && held.Guessed)",
                         "_behind = true;", "try { PairRoad(a, b); }",
@@ -21669,7 +21707,8 @@ def the_ledger_never_waits_while_a_market_road_is_walked():
             and "_pairDist.ContainsKey(" not in tr
             and "ForgetWhatTheLedgerWanted();" in forget
             and "ForgetTheRoadsWalkedBehind();" in method_body(tr, "private static void DropIfNavalChanged")
-            and '" more taken from the game\'s distance rather than walked here"' in said
+            and '" more taken from the game\'s distance at "' in said
+            and '" times longer for the ground it "' in said
             and '" still queued for the background"' in said
             and "_pairGuesses = 0;" in method_body(tr, "private static void StartTheMeter"))
 
