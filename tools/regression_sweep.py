@@ -21742,6 +21742,30 @@ chk("2.5.0", "TradeLord.log says which test threw an opening price away, what th
     the_log_says_what_threw_an_opening_away_and_what_the_slowest_walk_cost())
 
 
+def the_log_says_what_the_till_pays_out_before_you_arrive():
+    fc = S['Forecast.cs']
+    marker = method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo")
+    tally = method_body(S['Plan.cs'], "internal static void SayTheDay")
+    note = method_body(fc, "private static void NoteTheTillPays")
+    reads = method_body(fc, "internal static int TillPaysOutBefore")
+    return (marker and tally and note and reads
+            and fc.count("NoteTheTillPays(bound, units * price, days);") == 2
+            and ordered(note, "if (site == null || gold <= 0) return;",
+                        "paid.Add((days, gold));")
+            and ordered(reads, "if (!On || site == null) return 0;", "Build();",
+                        "if (paid[i].days <= withinDays) sum += paid[i].gold;")
+            and fc.count("_tillPays.Clear();") == 2
+            and ordered(marker, "int paysOut = Forecast.TillPaysOutBefore(s, ride);",
+                        "if (paysOut > 0) EngineTally.TillPaidOutFirst++;",
+                        "the sellers already on the road draw ",
+                        " of that till before you arrive, which Conf does not count")
+            and '" of them will pay sellers already on the road out of that till before you arrive"' in tally)
+
+
+chk("2.5.2", "TradeLord.log says how much of a market's till the sellers already on the road will draw out of it before you arrive, which the Conf of selling there does not count",
+    the_log_says_what_the_till_pays_out_before_you_arrive())
+
+
 
 def the_market_road_is_walked_when_it_is_asked_for_and_the_rough_guess_is_still_measured():
     tr = S['Travel.cs']
@@ -21934,7 +21958,7 @@ def a_markets_narrow_till_and_its_traffic_both_count_against_its_conf():
     tally = method_body(S['Plan.cs'], "internal static void SayTheDay")
     ultra = method_body(S['Marker.cs'], "private static void Ultra")
     update = method_body(S['Marker.cs'], "internal static void Update()")
-    pressure = method_body(S['Ledger.cs'], "internal static Dictionary<Settlement, int> CaravanPressure")
+    pressure = method_body(S['Ledger.cs'], "private static Dictionary<Settlement, int> TrafficAt")
     return (marker and side and tally and ultra and update and pressure
             and ordered(marker, "int till = 0;", "long worthThere = 1L;",
                         "if (oneBasis && took.PurseCapped)",
@@ -21951,11 +21975,13 @@ def a_markets_narrow_till_and_its_traffic_both_count_against_its_conf():
             and "if (!p.IsCaravan && !p.IsVillager) continue;" in pressure
             and ordered(tally, '"marker Conf today: "', '" of them on a village and "',
                         '" had their till count against them and "',
-                        '" had caravan and villager traffic count against them"')
+                        '" had caravan and villager traffic count against them; "',
+                        '" of them will pay sellers already on the road out of that till before you arrive"')
             and '(one.Conf == null ? "" : ", " + one.Conf) +' in ultra
             and ordered(update, "if (target.IsVillage) EngineTally.MarkedVillage++;",
                         "else EngineTally.MarkedTown++;")
             and "MarkedVillage = MarkedTown = ConfWeighed = TillCountedAgainst = TrafficCountedAgainst = 0;" in S['Plan.cs']
+            and "TillPaidOutFirst = 0;" in method_body(S['Plan.cs'], "internal static void SayTheDay")
             and S['Marker.cs'].count("gold a day") == 0
             and all(one in EXPIRYTESTS for one in
                     ("A_till_that_cannot_take_the_whole_cargo_counts_against_a_market",
