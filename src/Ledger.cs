@@ -1588,6 +1588,7 @@ namespace TradeLord
         private List<TradeRoute> ScanEveryRoute()
         {
             long started = System.Diagnostics.Stopwatch.GetTimestamp();
+            long frameBefore = Travel.FrameTicksSoFar();
             MobileParty party = MobileParty.MainParty;
             var scan = new RouteScan(this, party, party?.CurrentSettlement);
             Settlement here = scan.Here;
@@ -1672,6 +1673,7 @@ namespace TradeLord
             NothingFitsYourCargo = kept.Count == 0 && scan.CargoShut > 0;
             NothingFitsYourPurse = kept.Count == 0 && routes.Count > 0;
             long took = System.Diagnostics.Stopwatch.GetTimestamp() - started;
+            Travel.SpentOnAScan(took, frameBefore);
             SayWhatTheScanCost(scan, kept.Count, took);
             LedgerPanel.TheScanIsNew();
             int changed = SayWhatChangedItsMind(kept);

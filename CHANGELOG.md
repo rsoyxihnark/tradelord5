@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.3
+
+- Fixed the TradeLord ledger sending you to far markets for small profits
+- TradeLord.log now says how much longer a road it has not walked takes than the game's own distance makes it look
+- TradeLord.log now counts a route scan in the busiest frame, so a scan that holds the map up shows there
+
 ## 2.4.2
 
 - Fixed TradeLord.log calling the map marker's profit a day figure gold a day
