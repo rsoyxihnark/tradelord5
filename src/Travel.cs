@@ -1454,35 +1454,10 @@ namespace TradeLord
         private static Road PairRoad(Settlement a, Settlement b)
         {
             var key = (a.StringId, b.StringId);
-            if (_pairDist.TryGetValue(key, out Road hit))
-            {
-                if (!hit.Guessed) return hit;
-                if (!_behind)
-                {
-                    if (hit.Longer >= TheRoughRoadTakesLongerBy()) return hit;
-                    hit = TheRoadAsTheGameMeasuresIt(a, b);
-                    _pairDist[key] = hit;
-                    _pairDays.Remove(key);
-                    return hit;
-                }
-                Road afresh = RoadBetween(a, b);
-                _pairDist[key] = afresh;
-                _pairDays.Remove(key);
-                return afresh;
-            }
-            if (_behind)
+            if (!_pairDist.TryGetValue(key, out Road hit))
             {
                 hit = RoadBetween(a, b);
                 _pairDist[key] = hit;
-                return hit;
-            }
-            hit = TheRoadAsTheGameMeasuresIt(a, b);
-            _pairDist[key] = hit;
-            if (hit.Guessed)
-            {
-                StartTheMeter();
-                _pairGuesses++;
-                WantThisRoadWalked(key);
             }
             return hit;
         }
@@ -1683,7 +1658,10 @@ namespace TradeLord
                    " between markets" +
                    (metered && _walkedBehind > 0 ? ", " + _walkedBehind + " of them in the background" : "") +
                    (metered && _pairGuesses > 0
-                       ? ", " + _pairGuesses + " more taken from the game's distance at " +
+                       ? ", " + _pairGuesses + " more taken from the game's distance"
+                       : "") +
+                   (_ratios.Count > 0
+                       ? ", a road the ledger has not walked counted at " +
                          TheRoughRoadTakesLongerBy().ToString("0.00", inv) + " times longer for the ground it " +
                          "cannot read, the figure " + _ratios.Count + " walked road(s) give"
                        : "") +

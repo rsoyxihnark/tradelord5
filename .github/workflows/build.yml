@@ -223,9 +223,17 @@ jobs:
         shell: bash
         run: |
           KEPT=$(sed -n 's/.*keeps one more branch beside `main`: `\([A-Za-z0-9._-]*\)`.*/\1/p' CLAUDE.md | head -1)
+          SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")
+          TESTBUILD=0
+          case "$SUBJECT" in *"[test build]") TESTBUILD=1 ;; esac
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
-            echo "a push to main publishes its version as a release"
+            if [ "$TESTBUILD" = 1 ]; then
+              echo "debug=true" >> "$GITHUB_OUTPUT"
+              echo "a push to main whose subject ends [test build] publishes its version as a pre-release"
+            else
+              echo "a push to main publishes its version as a release"
+            fi
           elif [ -n "$KEPT" ] && [ "$GITHUB_REF" = "refs/heads/$KEPT" ]; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
             echo "debug=true" >> "$GITHUB_OUTPUT"
