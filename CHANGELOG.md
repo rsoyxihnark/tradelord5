@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.5.0
+
+- Villagers heading home no longer count against a village in its Carv. count or the Conf it feeds, so villages are in the running again
+- TradeLord now buys in the order that earns more even where that means taking the ledger's own rows out of their order
+- The map marker now counts the oldest price you have recorded for a market against it, not whichever good sat first in your cargo
+- Fixed a road TradeLord could not walk being timed as if the ground were flat
+- TradeLord.log now says which test threw an opening price away: your margin, the till, your cargo room or a better route
+- TradeLord.log now says what the slowest road walk of the hour was, how long it was and what it cost to walk
+- TradeLord.log now says how the game's own Speed ran while you rode, from the slowest reading to the quickest
+
 ## 2.4.5
 
 - Fixed the map holding up for seconds while the TradeLord ledger scanned

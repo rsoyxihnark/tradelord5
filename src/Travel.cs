@@ -262,6 +262,8 @@ namespace TradeLord
 
         private static int _meterHour = -1;
         private static int _partyWalks, _pairWalks, _otherWalks, _paths, _probes, _forecasts, _rides;
+        private static int _probesThisWalk, _pathsThisWalk;
+        private static string _slowestWalkSaid;
         private static int _walkedBehind;
         private static int _othersOnTheirPath, _othersOnAFreshPath, _othersGuessed;
         private static long _walkTicks, _pathTicks, _forecastTicks, _rideTicks, _slowestWalk;
@@ -969,16 +971,38 @@ namespace TradeLord
             _forecastTicks = 0L;
             _rideTicks = 0L;
             _slowestWalk = 0L;
+            _slowestWalkSaid = null;
         }
 
-        private static void StopTheMeter(long started, ref int walks)
+        private static float HowLongThatRoadWas(Road road)
+        {
+            if (road == null) return 0f;
+            if (road.Length > 0f) return road.Length;
+            return road.Runs == null ? 0f : TradeMath.LengthOn(road.Runs, -1);
+        }
+
+        private static long StartAWalk()
+        {
+            _probesThisWalk = _probes;
+            _pathsThisWalk = _paths;
+            return Stopwatch.GetTimestamp();
+        }
+
+        private static void StopTheMeter(long started, ref int walks, string kind = null, Road road = null)
         {
             long took = Stopwatch.GetTimestamp() - started;
             walks++;
             _walkTicks += took;
             _frameTicks += took;
             if (_scanRoads) _scanRoadTicks += took;
-            if (took > _slowestWalk) _slowestWalk = took;
+            if (took <= _slowestWalk) return;
+            _slowestWalk = took;
+            _slowestWalkSaid = kind == null
+                ? null
+                : kind + " of " + HowLongThatRoadWas(road).ToString("0.0", CultureInfo.InvariantCulture) +
+                  " over " + (road?.Runs == null ? 0 : road.Runs.Count) + " stretch(es), " +
+                  (_probes - _probesThisWalk) + " ground probe(s) and " + (_paths - _pathsThisWalk) +
+                  " pathfinding call(s)" + (road != null && !road.Walked ? ", and it would not walk" : "");
         }
 
         private static long RegionAt(IMapScene map, Vec2 at)
@@ -1097,18 +1121,20 @@ namespace TradeLord
             if (!atSea && landRatio >= AllOnLand && !_unwalkable.Contains(target.StringId))
             {
                 StartTheMeter();
-                long started = Stopwatch.GetTimestamp();
+                long started = StartAWalk();
                 try { WalkFromParty(party, target, road); }
                 catch { road.Walked = false; }
-                StopTheMeter(started, ref _partyWalks);
+                StopTheMeter(started, ref _partyWalks, "a road from your party", road);
                 if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);
                 if (!road.Walked) _unwalkable.Add(target.StringId);
             }
             if (!road.Walked)
             {
-                road.Length = dist;
+                float longer = !atSea && landRatio >= AllOnLand ? TheRoughRoadTakesLongerBy() : 1f;
+                road.Length = dist * longer;
                 road.LandRatio = landRatio;
-                road.Runs = Unwalked(dist, landRatio, atSea);
+                road.Runs = Unwalked(road.Length, landRatio, atSea);
+                road.Longer = longer;
             }
             return road;
         }
@@ -1120,19 +1146,21 @@ namespace TradeLord
             if (landRatio >= AllOnLand && a != b)
             {
                 StartTheMeter();
-                long started = Stopwatch.GetTimestamp();
+                long started = StartAWalk();
                 try { WalkBetween(a, b, road); }
                 catch { road.Walked = false; }
-                StopTheMeter(started, ref _pairWalks);
+                StopTheMeter(started, ref _pairWalks, "a road between markets", road);
                 if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);
                 _justWalked = true;
                 if (_behind) _walkedBehind++;
             }
             if (!road.Walked)
             {
-                road.Length = dist;
+                float longer = landRatio >= AllOnLand ? TheRoughRoadTakesLongerBy() : 1f;
+                road.Length = dist * longer;
                 road.LandRatio = landRatio;
-                road.Runs = Unwalked(dist, landRatio, false);
+                road.Runs = Unwalked(road.Length, landRatio, false);
+                road.Longer = longer;
             }
             return road;
         }
@@ -1642,9 +1670,10 @@ namespace TradeLord
             Grid();
             var road = new Road { Runs = new List<TradeMath.Run>() };
             bool sails = party.NavigationCapability != MobileParty.NavigationType.Default;
-            long started = Stopwatch.GetTimestamp();
+            long started = StartAWalk();
             bool walked = WalkItsRoad(party, bound, road.Runs, !sails, out _, out bool own);
-            StopTheMeter(started, ref _otherWalks);
+            road.Walked = walked;
+            StopTheMeter(started, ref _otherWalks, "a road for a caravan or villager", road);
             if (!walked) return float.NaN;
             if (sails)
                 foreach (TradeMath.Run run in road.Runs)
@@ -1750,8 +1779,9 @@ namespace TradeLord
                    (metered ? _forecasts : 0) + " weather turn(s) worked out in " +
                    Ms(metered ? _forecastTicks : 0L) + " ms, " +
                    (metered ? _rides : 0) + " ride(s) timed in " + Ms(metered ? _rideTicks : 0L) + " ms, the slowest walk " +
-                   Ms(metered ? _slowestWalk : 0L) + " ms, the busiest frame this session " +
-                   Ms(_busiestFrame) + " ms";
+                   Ms(metered ? _slowestWalk : 0L) + " ms" +
+                   (metered && _slowestWalkSaid != null ? " (" + _slowestWalkSaid + ")" : "") +
+                   ", the busiest frame this session " + Ms(_busiestFrame) + " ms";
         }
 
         internal static string TheRoadsOthersRide()

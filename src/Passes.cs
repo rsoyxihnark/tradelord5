@@ -114,12 +114,9 @@ namespace TradeLord
                 return byWorth != 0 ? byWorth : x.At.CompareTo(y.At);
             });
 
-        internal static void LedgerFirstThenDenar(List<Pick> stock) =>
+        internal static void ByDenarAlone(List<Pick> stock) =>
             stock?.Sort((x, y) =>
             {
-                bool xAsked = x.LedgerRank > 0, yAsked = y.LedgerRank > 0;
-                if (xAsked != yAsked) return xAsked ? -1 : 1;
-                if (xAsked && x.LedgerRank != y.LedgerRank) return x.LedgerRank.CompareTo(y.LedgerRank);
                 int byKey = y.KeyByDenar.CompareTo(x.KeyByDenar);
                 if (byKey != 0) return byKey;
                 int byWorth = y.Worth.CompareTo(x.Worth);
@@ -325,7 +322,7 @@ namespace TradeLord
             float room = market.Room() - books.Weight(sim);
             long byWeight = TradeMath.WhatThisOrderBuys(Picks.AsPlans(stock), money, room);
             var tried = new List<Pick>(stock);
-            Picks.LedgerFirstThenDenar(tried);
+            Picks.ByDenarAlone(tried);
             long byDenar = TradeMath.WhatThisOrderBuys(Picks.AsPlans(tried), money, room);
             OrdersWereWeighed = true;
             WouldMakeByDenar = byDenar;

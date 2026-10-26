@@ -1420,11 +1420,13 @@ namespace TradeLord
                 MobileParty p = all[i];
                 if (!p.IsCaravan && !p.IsVillager) continue;
                 Settlement at = p.CurrentSettlement, to = p.TargetSettlement;
-                if (at != null) Bump(map, at);
-                if (to != null && to != at) Bump(map, to);
+                if (at != null && ItTradesThere(p, at)) Bump(map, at);
+                if (to != null && to != at && ItTradesThere(p, to)) Bump(map, to);
             }
             return map;
         }
+
+        private static bool ItTradesThere(MobileParty p, Settlement s) => !p.IsVillager || !s.IsVillage;
 
         private static void Bump(Dictionary<Settlement, int> map, Settlement s)
         {
@@ -1791,6 +1793,11 @@ namespace TradeLord
                       " opening price(s), " + scan.ThrownAway + " of them thrown away by a later test, in " +
                       (ticks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString("0.0",
                           System.Globalization.CultureInfo.InvariantCulture) + " ms" +
+                      (scan.ThrownAway > 0
+                          ? "; of those thrown away, " + scan.ThrownByMargin + " missed your margin, " +
+                            scan.ThrownByTill + " had nothing the till could take, " + scan.ThrownByCargo +
+                            " had no cargo room and " + scan.ThrownByABetterRoute + " were beaten by a route already found"
+                          : "") +
                       (scan.PassedOver > 0
                           ? ", and " + scan.PassedOver + " pair(s) passed over unpriced, as no opening price could make them a route"
                           : "") +

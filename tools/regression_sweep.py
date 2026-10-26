@@ -1779,7 +1779,7 @@ chk("1.3.8", "the buying pass takes only what a market in reach pays more for, a
     (lambda b, plan, scan, far: "if (!market.Planned(at, out PlannedSale plan, out Block why)) { tally.Note(why); continue; }" in b
                and "row = ledger == null ? null : ledger.HereRow(_pass.Site, item, out why);" in plan
                and "if (row == null) { if (why == Block.None) why = Block.NoResaleMarket; return false; }" in plan
-               and "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; continue; }" in scan
+               and "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; ThrownByMargin++; continue; }" in scan
                and "if (!TradeMath.BuyAcceptable(price, TradeMath.Realizable(wouldDraw - drawn," in b
                and "{ tally.Note(Block.BelowMargin); break; }" in b
                and "if (to == null || quoted <= 0 || to == notHere) continue;" in far
@@ -2037,12 +2037,12 @@ chk("1.3.17", "the marker picks its town through the same ceiling as everything 
         method_body(S['Marker.cs'], "private static Settlement BestSellTownForCargo"))
 chk("1.3.17", "the haircut filters every route pair, on the prices that pair would really open at",
     "float realizable = TradePolicy.Realizable(openingSell);" in S['Plan.cs'] and
-    "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; continue; }" in S['Plan.cs'] and
+    "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; ThrownByMargin++; continue; }" in S['Plan.cs'] and
     "Realizable(sellPrice)" not in S['Ledger.cs'] + S['Plan.cs'] and
     "BuyAcceptable(buyPrice" not in S['Ledger.cs'] + S['Plan.cs'] and
     ordered(route_scan(),
             "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
-            "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; continue; }",
+            "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; ThrownByMargin++; continue; }",
             "Bulk.Walk(leg.From, leg.To, leg.Item"))
 chk("1.3.18", "denar cap reaches route quantities",
     "int valueCap = s.BuyValueCapPerItem > 0 ? Math.Max(0, s.BuyValueCapPerItem - taken.Item2) : 0;" in S['Plan.cs']
@@ -2110,7 +2110,7 @@ chk("1.3.26", "pathfinder calls are gated behind a straight-line lower bound",
     "float soonest = toBuy + Travel.StraightDaysBetween(from, to);" in S['Plan.cs'] and
     ordered(S['Plan.cs'], "float soonest = toBuy", "float days = toBuy + Travel.EstimateDaysBetween"))
 chk("1.3.26", "the best route so far prunes a pair before it costs a walk through every unit's price",
-    "if (beaten && TradeMath.PerDay(ceiling, days) <= key) { ThrownAway++; continue; }" in S['Plan.cs'] and
+    "if (beaten && TradeMath.PerDay(ceiling, days) <= key) { ThrownAway++; ThrownByABetterRoute++; continue; }" in S['Plan.cs'] and
     "float perDay = TradeMath.PerDay(profit, leg.Days);" in S['Plan.cs'] and
     "Math.Max(days, 0.25f)" not in S['Plan.cs'] and
     S['Plan.cs'].count("TradeMath.PerDay(ceiling, days)") == 1 and
@@ -3967,33 +3967,25 @@ def no_branch_is_named_as_a_debug_build_publisher():
             and kept_branch_named() == []
             and '`main` is the only branch that publishes.' in section
             and 'No branch is named as a debug build publisher any more.' in section
-            and ('A commit on `main` whose subject ends `[test build]` publishes its version as a '
-                 'pre-release instead' in section)
             and '`legacy` is never worked on, never pushed to and never published from.' in section
             and 'the game refuses to load a mod whose version carries anything else' in section
-            and ("KEPT=$(sed -n 's/.*keeps one more branch beside `main`: `\\([A-Za-z0-9._-]*\\)`.*/\\1/p' CLAUDE.md | head -1)"
-                 in where)
-            and ordered(where, 'SUBJECT=$(git log -1 --format=%s "$GITHUB_SHA")',
-                        'case "$SUBJECT" in *"[test build]") TESTBUILD=1 ;; esac',
-                        'if [ "$GITHUB_REF" = "refs/heads/main" ]; then',
-                        'if [ "$TESTBUILD" = 1 ]; then',
-                        'publishes its version as a pre-release',
-                        'a push to main publishes its version as a release',
-                        'elif [ -n "$KEPT" ] && [ "$GITHUB_REF" = "refs/heads/$KEPT" ]; then',
-                        'publishes its version as a debug build, marked as a pre-release', 'publishes nothing')
-            and where.count('echo "publish=true" >> "$GITHUB_OUTPUT"') == 2
-            and where.count('echo "debug=true" >> "$GITHUB_OUTPUT"') == 2
+            and 'test build' not in RULES
+            and ordered(where, 'if [ "$GITHUB_REF" = "refs/heads/main" ]; then',
+                        'a push to main publishes its version as a release', 'publishes nothing')
+            and where.count('echo "publish=true" >> "$GITHUB_OUTPUT"') == 1
+            and 'debug' not in where
+            and 'KEPT' not in where
             and ordered(publish, "if: steps.where.outputs.publish == 'true'",
-                        'DEBUGBUILD: ${{ steps.where.outputs.debug }}',
-                        'TITLE="TradeLord ${VERSION#v}"', 'if [ "$DEBUGBUILD" = "true" ]; then',
-                        'TITLE="${TITLE}_debugbuild"', 'AS="--prerelease"',
-                        '--title "$TITLE" $AS')
+                        'TITLE="TradeLord ${VERSION#v}"', '--title "$TITLE"')
+            and '--prerelease' not in WORKFLOW
+            and '_debugbuild' not in WORKFLOW
+            and '[test build]' not in WORKFLOW
             and ("name=$(sed -n 's/.*keeps one more branch beside `main`: `\\([A-Za-z0-9._-]*\\)`.*/\\1/p' \\\n"
                  '         "${CLAUDE_PROJECT_DIR:-${0%/*}/../..}/CLAUDE.md" 2>/dev/null | head -1)') in GUARD
             and '[ -n "$name" ] && [ "$name" != main ] && { [ "$1" = "$name" ] || [ "$1" = "refs/heads/$name" ]; }' in GUARD
             and '         ! kept "$FIRST" &&\n' in GUARD)
 
-chk("no release", "no branch is named as a debug build publisher, so only main publishes, a commit subject ending [test build] is the one thing that marks a pre-release, and the wiring that would name a branch is still read by the rules, the workflow and the guard",
+chk("no release", "no branch is named as a debug build publisher, nothing marks a release a pre-release any more, main is the only branch that publishes, and the wiring that would name a kept branch is still read by the rules and the branch guard",
     no_branch_is_named_as_a_debug_build_publisher())
 
 
@@ -10361,7 +10353,7 @@ chk("1.80.2", "a window a button on the campaign map opens holds the mouse while
 
 def the_till_is_never_divided_by_a_price_nothing_has_tested():
     scan = route_scan()
-    tested = scan.find("if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; continue; }")
+    tested = scan.find("if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; ThrownByMargin++; continue; }")
     divided = scan.find("till / openingSell")
     bounds = {name: (float(lo), float(hi)) for name, lo, hi in re.findall(
         r'\{\s*"(\w+)",\s*new double\[\]\s*\{\s*([-\d.]+),\s*([-\d.]+)\s*\}', S['Migrate.cs'])}
@@ -10913,7 +10905,7 @@ def the_marker_picks_the_market_that_earns_fastest_not_the_one_paying_most():
             and "internal float Days;" in S['Marker.cs']
             and "float rate = TradeMath.PerDay(earned, ride);" in marker
             and "float weighed = TradeMath.RateTheMarkHolds(judged, s == holder);" in marker
-            and "judged = rate * Plan.SellSide(aged, s, ride, true, caravans, till, worthThere," in marker
+            and "judged = rate * Plan.SellSide(TheStalestYouCarryAt(cargo, s), s, ride, true, caravans, till," in marker
             and "if (weighed > bar)" in marker
             and "how.Days = ride;" in marker
             and "DearestPurseFirst" not in S['Marker.cs']
@@ -14527,7 +14519,7 @@ def picking_a_buyer_and_the_route_scan_are_timed_with_the_fine_clock():
                         "SayWhatTheScanCost(scan, kept.Count, took);")
             and "(ticks * 1000d / System.Diagnostics.Stopwatch.Frequency).ToString(\"0.0\"," in cost
             and ordered(method_body(road, "private static Road RoadBetween(Settlement a, Settlement b)"),
-                        "long started = Stopwatch.GetTimestamp();", "StopTheMeter(started, ref _pairWalks);")
+                        "long started = StartAWalk();", 'StopTheMeter(started, ref _pairWalks, "a road between markets", road);')
             and "private static double MsOf(long ticks) => ticks * 1000d / Stopwatch.Frequency;" in road
             and "(ticks * 1000d / Stopwatch.Frequency).ToString(\"0.0\", CultureInfo.InvariantCulture)" in road
             and "BuyerTicks" not in ALL
@@ -15222,11 +15214,11 @@ def a_release_is_published_from_main_and_nowhere_else():
     where = between(WORKFLOW, "- name: Where this publishes", "- name: Publish release")
     return ("        if: steps.where.outputs.publish == 'true'\n" in step
             and "github.ref" not in step
-            and where.count('echo "publish=true" >> "$GITHUB_OUTPUT"') == 2
-            and where.count('echo "debug=true" >> "$GITHUB_OUTPUT"') == 2
+            and where.count('echo "publish=true" >> "$GITHUB_OUTPUT"') == 1
+            and where.count('echo "debug=true" >> "$GITHUB_OUTPUT"') == 0
             and "workflow_dispatch" not in step and "workflow_dispatch" not in where)
 
-chk("1.95.2", "a release is published from main, marked a pre-release where its commit subject ends [test build], and from the branch kept beside it only as a debug pre-release, whether the run came from a push or was started by hand",
+chk("1.95.2", "a release is published from main and from nowhere else, whether the run came from a push or was started by hand",
     a_release_is_published_from_main_and_nowhere_else())
 
 
@@ -15961,13 +15953,15 @@ def the_buy_shelf_puts_first_what_makes_the_most_for_whatever_runs_short():
                         "TheOrderThatEarnsMore(stock, market, books, sim);")
             and ordered(order, "int byKey = y.Key.CompareTo(x.Key);", "if (byKey != 0) return byKey;",
                         "int byWorth = y.Worth.CompareTo(x.Worth);")
-            and ordered(method_body(S['Passes.cs'], "internal static void LedgerFirstThenDenar"),
+            and ordered(method_body(S['Passes.cs'], "internal static void ByDenarAlone"),
                         "int byKey = y.KeyByDenar.CompareTo(x.KeyByDenar);", "if (byKey != 0) return byKey;",
                         "int byWorth = y.Worth.CompareTo(x.Worth);")
+            and "LedgerRank" not in method_body(S['Passes.cs'], "internal static void ByDenarAlone")
+            and S['Passes.cs'].count("bool xAsked = x.LedgerRank > 0, yAsked = y.LedgerRank > 0;") == 1
             and ordered(method_body(S['Passes.cs'], "private static void TheOrderThatEarnsMore"),
                         "float room = market.Room() - books.Weight(sim);",
                         "long byWeight = TradeMath.WhatThisOrderBuys(Picks.AsPlans(stock), money, room);",
-                        "Picks.LedgerFirstThenDenar(tried);",
+                        "Picks.ByDenarAlone(tried);",
                         "long byDenar = TradeMath.WhatThisOrderBuys(Picks.AsPlans(tried), money, room);",
                         "if (byDenar <= byWeight) return;", "OrderedByDenar = true;")
             and "MostForWhatRunsShortFirst" not in ALL
@@ -18105,7 +18099,7 @@ def the_route_scan_passes_over_only_pairs_no_price_could_make_a_route():
                         "if (_passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,",
                         "stocked, days, beaten, key, _safety))",
                         "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);",
-                        "Opened++;", "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; continue; }",
+                        "Opened++;", "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; ThrownByMargin++; continue; }",
                         "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;",
                         "float ceiling = (float)(openingSell - openingBuy) * Math.Min(qtyCap, fits);")
             and "SayWhatTheScanCost(scan, kept.Count, took);" in scan
@@ -18356,14 +18350,18 @@ def the_carv_column_is_said_to_count_caravans_at_or_heading_for_those_towns():
     return (pressure
             and ordered(pressure, "if (!p.IsCaravan && !p.IsVillager) continue;",
                         "Settlement at = p.CurrentSettlement, to = p.TargetSettlement;",
-                        "if (at != null) Bump(map, at);", "if (to != null && to != at) Bump(map, to);")
-            and "| Carv. = caravans and villagers at or heading for those markets\").ToString()" in S['Panel.cs']
+                        "if (at != null && ItTradesThere(p, at)) Bump(map, at);",
+                        "if (to != null && to != at && ItTradesThere(p, to)) Bump(map, to);")
+            and ("private static bool ItTradesThere(MobileParty p, Settlement s) => !p.IsVillager || !s.IsVillage;"
+                 in S['Ledger.cs'])
+            and ("| Carv. = caravans and villagers at or heading for those markets, not a village's own "
+                 "villagers\").ToString()" in S['Panel.cs'])
             and "ya da o pazarlara giden kervanlar ve k\u00f6yl\u00fcler" in spoken(TRANSLATIONS['T\u00fcrk\u00e7e'])['TL70']
             and "\u043a\u0430\u0440\u0430\u0432\u0430\u043d\u044b \u0438 \u0441\u0435\u043b\u044c\u0447\u0430\u043d\u0435" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL70']
             and "\u0438\u043b\u0438 \u043d\u0430 \u043f\u0443\u0442\u0438 \u043a \u043d\u0438\u043c" in spoken(TRANSLATIONS['\u0420\u0443\u0441\u0441\u043a\u0438\u0439'])['TL70']
             and "\u6216\u6b63\u524d\u5f80\u90a3\u91cc\u7684\u5546\u961f\u548c\u6751\u6c11" in spoken(TRANSLATIONS['\u7b80\u4f53\u4e2d\u6587'])['TL70'])
 
-chk("1.103.4", "What this means says Carv. counts the caravans and villagers at or heading for a route's two markets, as the route scan counts them, in every language",
+chk("1.103.4", "What this means says Carv. counts the caravans and villagers at or heading for a route's two markets and leaves out a village's own villagers, as the route scan counts them, in every language",
     the_carv_column_is_said_to_count_caravans_at_or_heading_for_those_towns())
 
 def the_resale_safety_line_counts_a_price_above_the_promise_as_the_promise():
@@ -20534,7 +20532,7 @@ def the_ledger_sizes_each_route_to_the_room_your_cargo_will_have():
                         "at.Room = _roomNow + freed.room;")
             and ordered(scan, "int fits = TradeMath.UnitsThatFit(at.Room, each);",
                         "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;",
-                        "if (fits <= 0) { ThrownAway++; CargoShut++; continue; }",
+                        "if (fits <= 0) { ThrownAway++; ThrownByCargo++; CargoShut++; continue; }",
                         "TradeRoute route = Sized(leg, fits, at.Purse, Bound.Purse);",
                         "int units = Math.Min(leg.Units, fits);",
                         "RouteQuote q = Bulk.Walk(leg.From, leg.To, leg.Item, units, leg.Till, spendCap,",
@@ -20838,7 +20836,7 @@ def one_engine_keeps_your_margin_and_your_projection():
     walk = method_body(S['Market.cs'], "internal static RouteQuote Walk")
     return (best and sized and walk
             and ordered(best, "float realizable = TradePolicy.Realizable(openingSell);",
-                        "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; continue; }")
+                        "if (!TradePolicy.BuyAcceptable(openingBuy, realizable)) { ThrownAway++; ThrownByMargin++; continue; }")
             and "if (!TradePolicy.BuyAcceptable(buyPrice, TradePolicy.Realizable(sellPrice))) break;" in walk
             and ordered(sized, "bool conservative = Options.Current.ConservativeRouteProjection;",
                         "int proceeds = conservative ? (int)TradePolicy.Realizable(q.SellTotal) : q.SellTotal;",
@@ -20937,9 +20935,9 @@ def the_buying_pass_buys_the_ledgers_plan():
                         "if (moved.Units - unitsBefore >= planned) break;")
             and all(one in BUYPASSTESTS for one in (
                 "At_Poros_velvet_and_linen_outrank_wine_on_profit_for_each_unit_of_weight",
-                "At_Poros_with_966_to_spend_the_ledgers_order_is_bought_and_wine_waits_behind_velvet",
-                "At_Poros_with_the_ledgers_expected_profit_as_the_limit_linen_and_velvet_are_bought_before_wine",
-                "At_Poros_the_pass_buys_on_the_ledgers_own_plan_and_never_asks_another_buyer",
+                "At_Poros_with_966_to_spend_the_denar_order_earns_more_so_linen_goes_before_velvet",
+                "At_Poros_with_the_ledgers_expected_profit_as_the_limit_linen_is_bought_before_wine",
+                "At_Poros_the_pass_buys_on_the_plan_the_ledger_gave_it_and_never_asks_another_buyer",
                 "A_good_the_ledger_offers_here_is_never_bought_after_one_it_does_not",
                 "Nothing_is_bought_past_the_quantity_the_plan_shows")))
 
@@ -21047,7 +21045,7 @@ def the_map_marker_starts_from_where_your_goods_were_bought_for():
                         "how.Intended = IntendedTown(cargo, reachable, party, out how.IntendedGoods);",
                         "TheIntendedTownNext(reachable, how.Intended, holder);",
                         "bool oneBasis = how.Intended != null && Options.Current.ConfidenceRanking;",
-                        "judged = rate * Plan.SellSide(aged, s, ride, true, caravans, till, worthThere,")
+                        "judged = rate * Plan.SellSide(TheStalestYouCarryAt(cargo, s), s, ride, true, caravans, till,")
             and "reachable.Insert(to, meant);" in nxt
             and '"map marker chose " + target.Name + " over " + how.Intended.Name +' in S['Marker.cs'])
 
@@ -21394,7 +21392,7 @@ def a_sell_market_is_passed_over_before_its_road_is_walked():
                         "if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))",
                         "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);",
                         "if (_passOver && TradePolicy.NoOpeningPriceCouldMakeIt(openingBuy, sellPrice, landedAtSellTown,",
-                        "if (beaten && TradeMath.PerDay(ceiling, days) <= key) { ThrownAway++; continue; }")
+                        "if (beaten && TradeMath.PerDay(ceiling, days) <= key) { ThrownAway++; ThrownByABetterRoute++; continue; }")
             and all(one in MATHTESTS for one in (
                 "A_sell_market_the_shortest_road_could_not_make_pay_is_passed_over_before_its_road_is_walked",
                 "A_sell_market_close_enough_to_beat_the_best_route_keeps_its_road_walked",
@@ -21627,7 +21625,7 @@ def the_log_says_what_the_busiest_frame_cost():
     tr = S['Travel.cs']
     ride = method_body(tr, "private static float Ride(")
     work = method_body(tr, "private static byte WorkOut(Skies skies, int node, CampaignTime at)")
-    stop = method_body(tr, "private static void StopTheMeter(long started, ref int walks)")
+    stop = method_body(tr, "private static void StopTheMeter(long started, ref int walks, string kind = null, Road road = null)")
     frame = method_body(tr, "internal static void NewFrame()")
     said = method_body(tr, "internal static string TheRideTo(Settlement target)")
     fill = method_body(tr, "private static void FillTheRoadsNow()")
@@ -21652,12 +21650,82 @@ def the_log_says_what_the_busiest_frame_cost():
                         "_frameTicks += spent > inner ? spent - inner : 0L;")
             and "_frameTicks" not in fill
             and "_pathTicks" not in frame
-            and '" ms, the busiest frame this session " +' in said
+            and '", the busiest frame this session " + Ms(_busiestFrame) + " ms";' in said
             and "_busiestFrame = 0L;" in method_body(tr, "internal static void Forget"))
 
 
 chk("no release", "TradeLord.log says what the busiest frame cost, counting each road walk, each weather turn and each ride timing once and never the same work twice",
     the_log_says_what_the_busiest_frame_cost())
+
+
+def a_road_that_would_not_walk_is_not_timed_as_flat_ground():
+    tr = S['Travel.cs']
+    party = method_body(tr, "private static Road RoadFromParty")
+    pair = method_body(tr, "private static Road RoadBetween")
+    stalest = method_body(S['Marker.cs'], "private static ItemObject TheStalestYouCarryAt")
+    return (party and pair and stalest
+            and ordered(party, 'StopTheMeter(started, ref _partyWalks, "a road from your party", road);',
+                        "float longer = !atSea && landRatio >= AllOnLand ? TheRoughRoadTakesLongerBy() : 1f;",
+                        "road.Length = dist * longer;",
+                        "road.Runs = Unwalked(road.Length, landRatio, atSea);", "road.Longer = longer;")
+            and ordered(pair, 'StopTheMeter(started, ref _pairWalks, "a road between markets", road);',
+                        "float longer = landRatio >= AllOnLand ? TheRoughRoadTakesLongerBy() : 1f;",
+                        "road.Length = dist * longer;",
+                        "road.Runs = Unwalked(road.Length, landRatio, false);", "road.Longer = longer;")
+            and "road.Runs = Unwalked(dist, landRatio" not in tr
+            and ordered(stalest, "ItemObject stalest = cargo[0].item.Item;",
+                        "if (Options.Current.Omniscient || ledger == null) return stalest;",
+                        "float oldest = ledger.ObservationAgeDays(stalest, s);",
+                        "for (int i = 1; i < cargo.Count; i++)",
+                        "if (age <= oldest) continue;", "stalest = one;")
+            and stalest.count("return stalest;") == 2
+            and S['Marker.cs'].count("cargo[0].item.Item") == 1)
+
+
+chk("2.5.0", "a road TradeLord could not walk is timed at the stretch walked roads measured rather than as flat ground, and the map marker weighs a market at the age of the stalest price you carry there",
+    a_road_that_would_not_walk_is_not_timed_as_flat_ground())
+
+
+def the_log_says_what_threw_an_opening_away_and_what_the_slowest_walk_cost():
+    tr = S['Travel.cs']
+    plan = S['Plan.cs']
+    said = method_body(tr, "internal static string TheRideTo(Settlement target)")
+    stop = method_body(tr, "private static void StopTheMeter(long started, ref int walks, string kind = null, Road road = null)")
+    cost = method_body(S['Ledger.cs'], "private void SayWhatTheScanCost")
+    tick = method_body(S['RideCheck.cs'], "internal static void Tick(float dt)")
+    return (said and stop and cost and tick
+            and plan.count("ThrownAway++;") == 4
+            and plan.count("ThrownByMargin++;") == 1 and plan.count("ThrownByTill++;") == 1
+            and plan.count("ThrownByCargo++;") == 1 and plan.count("ThrownByABetterRoute++;") == 1
+            and ordered(cost, "of those thrown away, ", "missed your margin, ",
+                        "had nothing the till could take, ", "had no cargo room and ",
+                        "were beaten by a route already found")
+            and ordered(method_body(tr, "private static long StartAWalk"),
+                        "_probesThisWalk = _probes;", "_pathsThisWalk = _paths;",
+                        "return Stopwatch.GetTimestamp();")
+            and ordered(stop, "if (took <= _slowestWalk) return;", "_slowestWalk = took;",
+                        "_slowestWalkSaid = kind == null", "HowLongThatRoadWas(road)",
+                        "(_probes - _probesThisWalk)", "(_paths - _pathsThisWalk)")
+            and ordered(method_body(tr, "private static float HowLongThatRoadWas"),
+                        "if (road.Length > 0f) return road.Length;",
+                        "return road.Runs == null ? 0f : TradeMath.LengthOn(road.Runs, -1);")
+            and tr.count("long started = StartAWalk();") == 3
+            and ordered(method_body(tr, "private static float AlongItsRoad"),
+                        "long started = StartAWalk();", "road.Walked = walked;",
+                        'StopTheMeter(started, ref _otherWalks, "a road for a caravan or villager", road);')
+            and "long started = Stopwatch.GetTimestamp();\n                try { Walk" not in tr
+            and "_slowestWalkSaid = null;" in method_body(tr, "private static void StartTheMeter")
+            and 'metered && _slowestWalkSaid != null ? " (" + _slowestWalkSaid + ")" : ""' in said
+            and ordered(tick, "if (pace > _ride.QuickestSeen) _ride.QuickestSeen = pace;",
+                        "if (pace < _ride.SlowestSeen)",
+                        "_ride.SlowestAt = now - _ride.From;")
+            and ordered(method_body(S['RideCheck.cs'], "private static void Reached"),
+                        "pace: the game's own Speed ran from ", "while you moved, the slowest reading ",
+                        " h into the ride"))
+
+
+chk("2.5.0", "TradeLord.log says which test threw an opening price away, what the hour's slowest road walk was and what it cost, and how the game's own Speed ran while you rode",
+    the_log_says_what_threw_an_opening_away_and_what_the_slowest_walk_cost())
 
 
 
@@ -21858,7 +21926,7 @@ def a_markets_narrow_till_and_its_traffic_both_count_against_its_conf():
                         "if (oneBasis && took.PurseCapped)",
                         "worthThere = WhatItWouldFetch(s, market, party, ride, cargo, int.MaxValue, null).Value;",
                         "int caravans = pressure.TryGetValue(s, out int onTheRoad) ? onTheRoad : 0;",
-                        "judged = rate * Plan.SellSide(aged, s, ride, true, caravans, till, worthThere,",
+                        "judged = rate * Plan.SellSide(TheStalestYouCarryAt(cargo, s), s, ride, true, caravans, till,",
                         "EngineTally.ConfWeighed++;",
                         "if (parts.Depth < 1f) EngineTally.TillCountedAgainst++;",
                         "if (parts.Quiet < 1f) EngineTally.TrafficCountedAgainst++;",

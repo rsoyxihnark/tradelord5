@@ -56,7 +56,7 @@
 		<string id="TL67" text="Menzilde kârlı rota yok"/>
 		<string id="TL68" text="{COUNT} kârlı rota, en iyisi başta"/>
 		<string id="TL69" text="Yol süresi sınırlarınız içinde rota yok. | Ticaret havuzu ayarlarından sınırları yükseltin ya da daha çok pazarın yakınına gidin."/>
-		<string id="TL70" text="Bir pazarın adına tıklayarak oraya gidin ve işaretini koyun ya da kaldırın | Gün = siz -&gt; alış pazarı -&gt; satış pazarı | Kerv. = o pazarlardaki ya da o pazarlara giden kervanlar ve köylüler"/>
+		<string id="TL70" text="Bir pazarın adına tıklayarak oraya gidin ve işaretini koyun ya da kaldırın | Gün = siz -&gt; alış pazarı -&gt; satış pazarı | Kerv. = o pazarlardaki ya da o pazarlara giden kervanlar ve köylüler, köyün kendi köylüleri hariç"/>
 		<string id="TL71" text=" | Puan = taşınan her ağırlık birimi ya da sürü yeri başına günlük kâr, Güven değerine göre indirilmiş"/>
 		<string id="TL72" text=" | Puan = taşınan her ağırlık birimi ya da sürü yeri başına günlük kâr"/>
 		<string id="TL73" text=" | yeniden satış güvenlik payı uygulandı"/>

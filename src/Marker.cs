@@ -866,6 +866,24 @@ namespace TradeLord
             if (said.Count > 0) Log.WriteMany(said);
         }
 
+        private static ItemObject TheStalestYouCarryAt(
+            List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo, Settlement s)
+        {
+            ItemObject stalest = cargo[0].item.Item;
+            LedgerBehavior ledger = LedgerBehavior.Instance;
+            if (Options.Current.Omniscient || ledger == null) return stalest;
+            float oldest = ledger.ObservationAgeDays(stalest, s);
+            for (int i = 1; i < cargo.Count; i++)
+            {
+                ItemObject one = cargo[i].item.Item;
+                float age = ledger.ObservationAgeDays(one, s);
+                if (age <= oldest) continue;
+                oldest = age;
+                stalest = one;
+            }
+            return stalest;
+        }
+
         private static List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> WhatYouCarryToSell(
             MobileParty party)
         {
@@ -1233,7 +1251,6 @@ namespace TradeLord
             TheIntendedTownNext(reachable, how.Intended, holder);
             bool oneBasis = how.Intended != null && Options.Current.ConfidenceRanking;
             var pressure = oneBasis ? LedgerBehavior.CaravanPressure() : null;
-            ItemObject aged = cargo[0].item.Item;
             if (ultra) how.Board = new List<Weighing>();
 
             float bar = 0f;
@@ -1271,8 +1288,8 @@ namespace TradeLord
                 if (oneBasis)
                 {
                     int caravans = pressure.TryGetValue(s, out int onTheRoad) ? onTheRoad : 0;
-                    judged = rate * Plan.SellSide(aged, s, ride, true, caravans, till, worthThere,
-                                                  out Confidence.Parts parts, out float trust);
+                    judged = rate * Plan.SellSide(TheStalestYouCarryAt(cargo, s), s, ride, true, caravans, till,
+                                                  worthThere, out Confidence.Parts parts, out float trust);
                     EngineTally.ConfWeighed++;
                     if (parts.Depth < 1f) EngineTally.TillCountedAgainst++;
                     if (parts.Quiet < 1f) EngineTally.TrafficCountedAgainst++;

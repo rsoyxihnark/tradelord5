@@ -62,6 +62,9 @@ namespace TradeLord
             internal float Moved;
             internal bool Fought;
             internal string Carried;
+            internal float SlowestSeen;
+            internal float QuickestSeen;
+            internal double SlowestAt;
         }
 
         private struct Followed
@@ -138,6 +141,13 @@ namespace TradeLord
             }
             _ride.Moving += step;
             _ride.Moved += party.Speed * dt;
+            float pace = party.Speed;
+            if (pace > _ride.QuickestSeen) _ride.QuickestSeen = pace;
+            if (pace < _ride.SlowestSeen)
+            {
+                _ride.SlowestSeen = pace;
+                _ride.SlowestAt = now - _ride.From;
+            }
             if (party.IsCurrentlyAtSea) return;
             if (Campaign.Current.IsNight) _ride.NightMoving += step;
             Travel.SkyOver(party, out bool wet, out bool snowy);
@@ -160,7 +170,8 @@ namespace TradeLord
                 LastAt = now,
                 Said = said,
                 Ceiling = LedgerBehavior.TravelCeiling(to),
-                Carried = Travel.WhatCarriesYou(MobileParty.MainParty)
+                Carried = Travel.WhatCarriesYou(MobileParty.MainParty),
+                SlowestSeen = float.MaxValue
             };
             _riding = true;
             Log.Write("ride check: set off for " + Tongue.Named(to.Name, to.StringId) + "; TradeLord says " +
@@ -236,6 +247,10 @@ namespace TradeLord
                           Longer(TradeMath.RideOffBy(said.Length, _ride.Moved)) + "; your Speed on the move came to " +
                           Figure(ran) + " where TradeLord counted " + Figure(said.DayPace) + " by day and " +
                           Figure(said.NightPace) + " by night");
+                if (_ride.QuickestSeen > 0f)
+                    lines.Add("  pace: the game's own Speed ran from " + Figure(_ride.SlowestSeen) + " to " +
+                              Figure(_ride.QuickestSeen) + " while you moved, the slowest reading " +
+                              Hours((float)_ride.SlowestAt) + " h into the ride");
             }
             bool overCeiling = false;
             if (_ride.Ceiling > 0f)
