@@ -1455,6 +1455,7 @@ namespace TradeLord
             _pairDist[key] = hit;
             if (hit.Guessed)
             {
+                StartTheMeter();
                 _pairGuesses++;
                 WantThisRoadWalked(key);
             }

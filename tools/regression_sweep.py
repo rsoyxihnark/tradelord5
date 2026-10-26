@@ -21653,8 +21653,7 @@ def the_ledger_never_waits_while_a_market_road_is_walked():
     return (pair and guess and wanted and fill and said and forget
             and "internal bool Guessed;" in tr
             and "if (!hit.Guessed || !_behind) return hit;" in pair
-            and "_pairGuesses++;" in pair
-            and "WantThisRoadWalked(key);" in pair
+            and ordered(pair, "StartTheMeter();", "_pairGuesses++;", "WantThisRoadWalked(key);")
             and "Runs = Unwalked(dist, landRatio, false)," in guess
             and ordered(wanted, "while (_wantedAt < _wanted.Count)",
                         "if (_pairDist.TryGetValue(key, out Road held) && held.Guessed)",

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.1
+
+- Fixed TradeLord.log sometimes counting none of the market roads taken from the game's distance rather than walked
+
 ## 2.4.0
 
 - Fixed the map freezing for seconds when the TradeLord ledger scanned, as it no longer walks the road to every market while you wait
