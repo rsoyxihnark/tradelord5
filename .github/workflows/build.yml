@@ -82,9 +82,9 @@ jobs:
             echo "the changelog carries this commit's entries"
             exit 0
           fi
-          OUTSIDE=$(printf '%s\n' "$CHANGED" | grep -Ev '^(tests/|tools/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$|README\.md$|COMPARISON\.md$)' || true)
+          OUTSIDE=$(printf '%s\n' "$CHANGED" | grep -Ev '^(tests/|tools/|DLLsNeeded/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$|README\.md$|COMPARISON\.md$)' || true)
           if [ -z "$OUTSIDE" ]; then
-            echo "this commit touches only the project's own checks, workflow, working rules, README or comparison, so it writes no changelog entry"
+            echo "this commit touches only the project's own checks, the game files they read, workflow, working rules, README or comparison, so it writes no changelog entry"
             exit 0
           fi
           case "$SUBJECT" in
@@ -192,7 +192,7 @@ jobs:
         shell: bash
         env:
           TRADELORD_GAME_BIN: ${{ github.workspace }}/DLLsNeeded
-        run: dotnet run --project tools/compat -c Release -- 1.5.5.124170-beta
+        run: dotnet run --project tools/compat -c Release -- 1.5.6.125053-beta
 
       - name: Assemble the module folder
         shell: bash
@@ -242,6 +242,11 @@ jobs:
               echo "this commit is marked [no release], so it publishes nothing"
               exit 0 ;;
           esac
+          CHANGED=$(git diff --name-only "$GITHUB_SHA^" "$GITHUB_SHA" 2>/dev/null | sed '/^$/d' || true)
+          if [ -n "$CHANGED" ] && [ -z "$(printf '%s\n' "$CHANGED" | grep -Ev '^(tests/|tools/|DLLsNeeded/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$|README\.md$|COMPARISON\.md$)' || true)" ]; then
+            echo "this commit touches only the project's own checks, the game files they read, workflow, working rules, README or comparison, so it publishes nothing"
+            exit 0
+          fi
           if gh release view "$VERSION" --json tagName -q .tagName >/dev/null 2>&1; then
             draft=$(gh release view "$VERSION" --json isDraft -q .isDraft 2>/dev/null || echo false)
             if [ "$draft" = "true" ]; then

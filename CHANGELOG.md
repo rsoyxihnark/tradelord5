@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.7.1
+
+- TradeLord now runs on game version 1.5.6.125053, and no longer on 1.5.5
+- Fixed every ride being timed at one pace, with no ground, night or weather, on game version 1.5.6
+- Fixed the campaign map stuttering every hour on game version 1.5.6
+- Fixed Count what is on its way to a market timing every caravan and villager in a straight line on game version 1.5.6
+- Fixed War Sails perks and your ships' speed at sea not being counted on game version 1.5.6
+- TradeLord.log now says once when a game update stops TradeLord reading a speed, and TradeLord stops trying until the game restarts
+
 ## 2.7.0
 
 - With War Sails, travel times at sea now count the Open Sea and River speed bonuses and Shallow Draft on every stretch your ships sail
