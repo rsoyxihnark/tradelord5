@@ -3088,8 +3088,10 @@ namespace TradeLord
             }
             if (TradePass.OrdersWereWeighed && planned > 1)
                 lines.Add("    with the same " + money + " and " + (int)room + " cargo room, profit a day for each " +
-                          "denar would make +" + TradePass.WouldMakeByDenar + " and profit a day for each unit of " +
-                          "weight +" + TradePass.WouldMakeByWeight + ", so TradeLord bought " +
+                          "denar would make +" + TradePass.WouldMakeByDenar + ", " + ADay(TradePass.WeighsByDenar) +
+                          (Options.Current.ConfidenceRanking ? " once each good is weighed at the Conf of selling there" : "") +
+                          ", and profit a day for each unit of weight +" + TradePass.WouldMakeByWeight + ", " +
+                          ADay(TradePass.WeighsByWeight) + ", so TradeLord bought " +
                           (TradePass.OrderedByDenar ? "by the denar" : "by the weight") + ", and " +
                           (tally.Saw(Block.BudgetSpent)
                               ? "your purse ran out before your cargo room"
@@ -3098,6 +3100,9 @@ namespace TradeLord
                                   : "neither your purse nor your cargo room ran out"));
             Log.WriteMany(lines);
         }
+
+        private static string ADay(double weighed) =>
+            weighed.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " a day";
 
         private static void LotPass(Pass pass, string why)
         {
@@ -3295,7 +3300,8 @@ namespace TradeLord
                 plan = new PlannedSale
                 {
                     Qty = row.Shown > 0 ? row.Shown : row.Quantity, QtyUncut = row.QtyUncut, Priced = row.Quantity,
-                    Profit = row.TotalProfit, Cost = row.Cost, Key = row.Key, KeyByDenar = row.KeyByDenar
+                    Profit = row.TotalProfit, Cost = row.Cost, Key = row.Key, KeyByDenar = row.KeyByDenar,
+                    KeyByProfit = row.KeyByProfit
                 };
                 Aim(at, row.To, row.SellPrice, rungs, till);
                 if (_plans == null) _plans = new Dictionary<ItemObject, TradeRoute>();

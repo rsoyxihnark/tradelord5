@@ -15985,10 +15985,11 @@ def the_buy_shelf_puts_first_what_makes_the_most_for_whatever_runs_short():
             and S['Passes.cs'].count("bool xAsked = x.LedgerRank > 0, yAsked = y.LedgerRank > 0;") == 1
             and ordered(method_body(S['Passes.cs'], "private static void TheOrderThatEarnsMore"),
                         "float room = market.Room() - books.Weight(sim);",
-                        "long byWeight = TradeMath.WhatThisOrderBuys(Picks.AsPlans(stock), money, room);",
+                        "long byWeight = TradeMath.WhatThisOrderBuys(Picks.AsPlans(stock), money, room, out double weighsByWeight);",
                         "Picks.ByDenarAlone(tried);",
-                        "long byDenar = TradeMath.WhatThisOrderBuys(Picks.AsPlans(tried), money, room);",
-                        "if (byDenar <= byWeight) return;", "OrderedByDenar = true;")
+                        "long byDenar = TradeMath.WhatThisOrderBuys(Picks.AsPlans(tried), money, room, out double weighsByDenar);",
+                        "if (!TradeMath.TheOtherOrderEarnsMore(weighsByWeight, byWeight, weighsByDenar, byDenar)) return;",
+                        "OrderedByDenar = true;")
             and "MostForWhatRunsShortFirst" not in ALL
             and "ForWhatRunsShort" not in ALL
             and "MostMoneyFirst" not in ALL
@@ -21132,7 +21133,8 @@ def the_log_writes_each_buying_plan_and_what_became_of_it():
             and ordered(said, '"  buying plan " + pass.Where + ": "', '" short of the plan on " + why',
                         '"not bought, " + why', "if (TradePass.OrdersWereWeighed && planned > 1)",
                         '"denar would make +" + TradePass.WouldMakeByDenar',
-                        'TradePass.WouldMakeByWeight + ", so TradeLord bought "',
+                        '", and profit a day for each unit of weight +" + TradePass.WouldMakeByWeight',
+                        'ADay(TradePass.WeighsByWeight) + ", so TradeLord bought "',
                         '(TradePass.OrderedByDenar ? "by the denar" : "by the weight")',
                         '"your purse ran out before your cargo room"',
                         '"your cargo room ran out before your purse"')
@@ -22043,18 +22045,19 @@ chk("2.5.3", "the map marker always prices the marked market and the Sell At you
 
 
 def the_buying_orders_are_weighed_on_what_each_good_was_priced_for():
-    plans = method_body(S['Passes.cs'], "internal static List<(int units, int cost, int profit, float hauls)> AsPlans")
+    plans = method_body(S['Passes.cs'],
+                        "internal static List<(int units, int cost, int profit, float hauls, float keyByProfit)> AsPlans")
     planned = method_body(S['Trading.cs'], "public bool Planned(int at, out PlannedSale plan, out Block why)")
     scaled = method_body(S['TradeMath.cs'], "public static int Scaled(int gold, int units, int pricedFor)")
     return (plans and planned and scaled
             and ordered(plans, "int priced = stock[i].Plan.Priced > 0 ? stock[i].Plan.Priced : stock[i].Weighed;",
                         "plans.Add((stock[i].Weighed, TradeMath.Scaled(stock[i].Plan.Cost, stock[i].Weighed, priced),",
-                        "TradeMath.Scaled(stock[i].Plan.Profit, stock[i].Weighed, priced), stock[i].Hauls));")
+                        "TradeMath.Scaled(stock[i].Plan.Profit, stock[i].Weighed, priced), stock[i].Hauls,")
             and "QtyUncut = row.QtyUncut, Priced = row.Quantity," in planned
             and "internal int Priced;" in S['Rules.cs']
             and ordered(scaled, "if (pricedFor <= 0 || units == pricedFor) return gold;",
                         "long scaled = (long)gold * units / pricedFor;")
-            and "long byWeight = TradeMath.WhatThisOrderBuys(Picks.AsPlans(stock), money, room);" in S['Passes.cs']
+            and "long byWeight = TradeMath.WhatThisOrderBuys(Picks.AsPlans(stock), money, room, out double weighsByWeight);" in S['Passes.cs']
             and "A_good_the_scan_cut_to_your_cargo_counts_at_the_profit_it_was_priced_for" in BUYPASSTESTS
             and "A_figure_priced_for_some_units_is_scaled_to_the_units_it_is_weighed_on" in MATHTESTS)
 
@@ -22232,6 +22235,43 @@ def the_mod_is_built_checked_and_described_for_one_game_version():
 
 chk("2.7.1", "the mod is built, fit checked by signature and every enum it uses, and described for one game version, and a speed the game will not bind is tried once and set aside, not every hour",
     the_mod_is_built_checked_and_described_for_one_game_version())
+
+
+def the_buying_orders_are_weighed_a_day_at_the_conf_of_selling_there():
+    m = S['TradeMath.cs']
+    key = method_body(m, "public static float KeyByProfit(")
+    order = method_body(m, "int money, float room, out double weighed)")
+    other = method_body(m, "public static bool TheOtherOrderEarnsMore(")
+    said = method_body(S['Trading.cs'], "private static void SayWhatBecameOfThePlan(")
+    plan = S['Plan.cs']
+    return (key and order and other and said
+            and ordered(key, "if (float.IsNaN(days)) return 0f;",
+                        "float over = days > NoTripCountsShorterThan ? days : NoTripCountsShorterThan;",
+                        "double kept = rankByConfidence ? (double)confidence * trust : 1d;",
+                        "return Finite((float)(kept / over), 0f);")
+            and ordered(order, "weighed = 0d;", "double profit = (double)plans[i].profit * take / plans[i].units;",
+                        "made += (long)Math.Round(profit);", "weighed += profit * plans[i].keyByProfit;")
+            and ordered(other, "if (Math.Abs(apart) > close) return apart > 0d;", "return otherMade > made;")
+            and "KeyByProfit = TradeMath.KeyByProfit(confidence, leg.Trust, _rankByScore, leg.Days)," in plan
+            and "KeyByProfit = TradeMath.KeyByProfit(confidence, trust, rank, days)," in plan
+            and "sized.KeyByProfit = row.KeyByProfit;" in plan
+            and "KeyByProfit = row.KeyByProfit" in method_body(S['Trading.cs'], "public bool Planned(int at, out PlannedSale plan, out Block why)")
+            and "stock[i].Plan.KeyByProfit));" in S['Passes.cs']
+            and "if (!TradeMath.TheOtherOrderEarnsMore(weighsByWeight, byWeight, weighsByDenar, byDenar)) return;" in
+                method_body(S['Passes.cs'], "private static void TheOrderThatEarnsMore")
+            and ordered(said, "ADay(TradePass.WeighsByDenar)",
+                        '(Options.Current.ConfidenceRanking ? " once each good is weighed at the Conf of selling there" : "")',
+                        "ADay(TradePass.WeighsByWeight)")
+            and "The_buying_order_that_earns_more_a_day_at_the_Conf_of_selling_there_wins_over_more_profit" in BUYPASSTESTS
+            and all(one in MATHTESTS for one in
+                    ("What_an_order_buys_is_weighed_on_each_goods_key_by_profit_for_the_units_it_takes",
+                     "An_order_that_makes_less_profit_wins_where_its_goods_earn_more_a_day_at_their_Conf",
+                     "A_goods_key_by_profit_is_its_Conf_and_trust_over_the_days_and_no_ride_counts_under_half_a_day",
+                     "The_other_buying_order_wins_only_on_more_weighed_and_on_more_profit_where_the_two_weigh_the_same")))
+
+
+chk("2.7.2", "the two buying orders are weighed on profit a day at the Conf of selling there, the measure each order is sorted by, and only where the two weigh the same does more profit decide",
+    the_buying_orders_are_weighed_a_day_at_the_conf_of_selling_there())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

@@ -48,6 +48,7 @@ namespace TradeLord
         internal int Cost;
         internal float Key;
         internal float KeyByDenar;
+        internal float KeyByProfit;
     }
 
     internal interface IWhatTheGameSays

@@ -347,6 +347,7 @@ namespace TradeLord
                 HeldBackBy = sized && q.Units >= fits ? Bound.Cargo : moneyCapped ? moneyBound : Bound.None,
                 Key = TradeMath.Key(profit, confidence, leg.Trust, _rankByScore, leg.Weighs, q.Units, leg.Days),
                 KeyByDenar = TradeMath.KeyByDenar(profit, confidence, leg.Trust, _rankByScore, q.BuyTotal, leg.Days),
+                KeyByProfit = TradeMath.KeyByProfit(confidence, leg.Trust, _rankByScore, leg.Days),
                 Cost = q.BuyTotal,
                 Leg = leg
             };
@@ -367,6 +368,7 @@ namespace TradeLord
             if (sized == null) return null;
             sized.Key = row.Key;
             sized.KeyByDenar = row.KeyByDenar;
+            sized.KeyByProfit = row.KeyByProfit;
             sized.QtyUncut = row.QtyUncut;
             return sized;
         }
@@ -536,6 +538,7 @@ namespace TradeLord
                     Score = score, Simulated = ladder.Walkable, Caravans = caravans, Cost = cost,
                     Key = TradeMath.Key(profit, confidence, trust, rank, each, bought, days),
                     KeyByDenar = TradeMath.KeyByDenar(profit, confidence, trust, rank, cost, days),
+                    KeyByProfit = TradeMath.KeyByProfit(confidence, trust, rank, days),
                     Leg = new Leg
                     {
                         Item = item, To = to, SellQuoted = quoted, LandedAtSell = landed, Till = purse,
