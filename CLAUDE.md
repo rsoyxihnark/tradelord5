@@ -206,9 +206,8 @@ These hold in this repository alone, alongside everything above.
 - The files in `archive/` are exempt from the Text length rules, the same way `CLAUDE.md` is.
 - `main` is the only branch that publishes. A commit on it that carries a version publishes that version as a release, and a `[no release]` commit publishes nothing. No branch is named as a debug build publisher any more.
 - The version in the source stays numbers alone, because the game refuses to load a mod whose version carries anything else.
-- `legacy` holds the versions from 1.104.14 to 1.106.0, shipped from the old `main` after the branch that is now `main` had set off from 1.104.13.
-- `legacy` is never worked on, never pushed to and never published from. Say in chat that it is there and leave it alone.
-- The versions on `legacy` have no section in `main`'s changelog, so the release check holds a branch against the published releases its own history carries and sets the rest aside.
+- The versions from 1.104.14 to 1.106.0 were shipped from the old `main` after the branch that is now `main` had set off from 1.104.13. Their tags and releases stay, and the branch that carried them is gone.
+- Those versions have no section in `main`'s changelog, so the release check holds a branch against the published releases its own history carries and sets the rest aside.
 - These are the owner's choices too, and a session treats them the way the Intentional, never reported section says:
   - Whether the one time settings reset is armed or disarmed.
   - That TradeLord puts 1000 denars, once a campaign, into every village purse the game has left empty. It mends a fault in the game itself.
