@@ -1896,10 +1896,9 @@ chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has 
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
     "return OutOfReach(days) ? FurthestThereIs : days;" in
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
-    ordered(method_body(S['Travel.cs'], "private static float Ride("), "if (pace.Even)",
-            "? TradeMath.DaysOnTheWinds(road.Runs, road.Push, road.Fair, pace)",
-            ": TradeMath.DaysAtSpeed(road.Length, road.LandRatio, pace.Base, pace.Sea);") and
-    "if (ground == GroundSea) return Finite(Sea, 0f);" in
+    ordered(method_body(S['Travel.cs'], "private static float Ride("), "if (pace.Even && road.Sails == null)",
+            "return TradeMath.DaysAtSpeed(road.Length, road.LandRatio, pace.Base, pace.Afloat);") and
+    "if (ground == GroundSea) return AtSea(WaterUnread, 0f, snow, slow);" in
     method_body(S['TradeMath.cs'], "public float On(int ground, bool dark, bool snow, bool wet, bool slow)") and
     "TradeMath.AddRun(runs, TradeMath.GroundSea, TradeMath.Unread, TradeMath.Unread, length * (1f - land));" in
     method_body(S['Travel.cs'], "private static List<TradeMath.Run> Unwalked") and
@@ -2144,7 +2143,7 @@ chk("1.3.28", "both travel estimates take their speeds from one definition",
     S['TradeMath.cs'].count("sea = fleetSpeed <= StandingStill ? land : fleetSpeed;") == 1 and
     "TradeMath.SpeedsInEffect(LandSpeed(), SeaSpeed(), out float land, out float sea);" in
     method_body(S['Travel.cs'], "private static TradeMath.Pace PartyPace()") and
-    S['Travel.cs'].count("PartyPace()") == 8 and
+    S['Travel.cs'].count("PartyPace()") == 10 and
     "TradeMath.Pace pace = PartyPace();" in method_body(S['Travel.cs'], "private static void Speeds") and
     "road.Days = Ride(road, PartyPace(), _moment, 0d, false, null);" in
     method_body(S['Travel.cs'], "private static float RideFromParty") and
@@ -6564,7 +6563,7 @@ def the_travel_arithmetic_is_covered_by_tests_the_build_runs():
                     ('TradeMath.SpeedsInEffect', 'TradeMath.FleetSpeed',
                      'TradeMath.DaysAtSpeed', 'TradeMath.DaysAtBestSpeed'))
             and 'TaleWorlds' not in S['TradeMath.cs']
-            and "return TradeMath.FleetSpeed(sum, ships.Count, min);" in
+            and "return count == 0 ? 0f : TradeMath.FleetSpeed(sum, count, min);" in
                 method_body(S['Travel.cs'], "private static float SeaSpeedCore")
             and "return TradeMath.DaysAtBestSpeed(distance, land, sea);" in
                 method_body(S['Travel.cs'], "private static float StraightDays"))
@@ -20184,7 +20183,7 @@ def every_night_on_the_way_is_counted_on_the_game_clock():
             and "return !(hour >= sunrise && hour < sunset);" in method_body(m, "public static bool DarkAt")
             and ordered(ride, "double start = moment.ToHours + after;",
                         "TradeMath.DaysAlong(road.Runs, pace.After(start - pace.ReadAt), sky, start, CampaignTime.SunRise,",
-                        "CampaignTime.SunSet, fresh, tally, road.Push, road.Fair);")
+                        "CampaignTime.SunSet, fresh, tally, road.Sails);")
             and "double later = TradeMath.Finite(after, 0f) > 0f ? after * 24d : 0d;" in
                 method_body(tr, "private static float RideBetween")
             and "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);" in
@@ -22064,7 +22063,7 @@ def a_ride_all_at_sea_is_timed_along_its_course_with_the_war_sails_wind():
     between = method_body(t, "private static Road RoadBetween(Settlement a, Settlement b)")
     party = method_body(t, "private static Road RoadFromParty(MobileParty party, Settlement target)")
     sail = method_body(t, "private static bool SailTheSea(")
-    along = method_body(t, "private static void WindAlong(")
+    along = method_body(t, "private static float ProbeAtSea(")
     why = method_body(t, "private static string WhyNoWinds()")
     behind = method_body(m, "public static float WindBehind(")
     wind = method_body(m, "public static void WindOnTheMap(")
@@ -22079,44 +22078,53 @@ def a_ride_all_at_sea_is_timed_along_its_course_with_the_war_sails_wind():
                         "if (!atSea && landRatio >= AllOnLand && !_unwalkable.Contains(target.StringId))")
             and "private static bool AllAtSea(float landRatio) => landRatio >= 0f && landRatio <= 1f - AllOnLand;" in t
             and ".GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Naval);" in sail
-            and "length += ProbeAtSea(winds, at, _path[i], runs, push, fair);" in sail
+            and "length += ProbeAtSea(map, winds, at, _path[i], runs, sails);" in sail
             and "fromFace = map.GetFaceIndex(new CampaignVec2(at, false));" in sail
-            and ordered(along, "Vec2 flow = winds.GetWindAtPosition(from + heading * (each * (k + 0.5f)));",
+            and ordered(along, "Vec2 at = from + heading * (each * (k + 0.5f));",
+                        "Vec2 flow = winds.GetWindAtPosition(at);",
                         "TradeMath.WindOnTheMap(flow.x, flow.y, out float windX, out float windY);",
-                        "float push = TradeMath.WindBehind(heading.x, heading.y, windX, windY, out bool before);",
-                        "time += each / (1d + push);", "lift = time > 0d ? (float)(length / time - 1d) : 0f;")
+                        "float push = TradeMath.WindBehind(heading.x, heading.y, windX, windY, out bool astern);",
+                        "TradeMath.AddRunAtSea(runs, sails,", "each, push, astern ? 1f : 0f);")
+            and ordered(method_body(m, "public static void AddRunAtSea("),
+                        "double time = before / (1d + held.Push) + length / (1d + up);",
+                        "held.Push = time > 0d ? (float)(joined.Length / time - 1d) : 0f;",
+                        "held.Fair = (before * held.Fair + length * behind) / joined.Length;")
             and ordered(why, "if (speed?.FullName != NavalSpeedModel)", "if (weather?.FullName != NavalWeatherModel)",
                         '"MinWindWithoutStormOnCampaignMap", TradeMath.WindAtLeast',
                         '"MaxWindWithoutStormOnCampaignMap", TradeMath.WindAtMost',
                         '"WindDeadZoneThresholdInDegrees", 180f - TradeMath.AWindPushesWithin',
                         '"MaximumNavalSpeed", TradeMath.ASailIsNeverFasterThan',
                         "if (!(campaign.MapSceneWrapper is MapScene map))")
-            and "!party.HasPerk(perk, BattleEnvironment.Naval, out _, secondary)" in
+            and "if (party == null || !HasNavalPerk(party, perk, secondary)) return 0f;" in
                 method_body(t, "private static float NavalPerkAtSea(string id, bool secondary)")
+            and "perk != null && party.HasPerk(perk, BattleEnvironment.Naval, out _, secondary);" in t
             and ordered(method_body(t, "private static TradeMath.Pace PartyPace()"),
                         "pace.FairWinds = NavalPerkAtSea(FairWindsPerk, false);",
                         "pace.ShockAndAwe = NavalPerkAtSea(ShockAndAwePerk, true);")
             and 'private const string FairWindsPerk = "FairWinds";' in t
             and 'private const string ShockAndAwePerk = "ShockAndAwe";' in t
-            and "(1f - behind) * Finite(ShockAndAwe, 0f);" in method_body(m, "public float AtSea(float push, float fair)")
-            and "sea = sailed && WindsBlow() ? pace.BestAtSea : pace.Sea;" in method_body(t, "private static void Speeds(")
+            and "(1f - fair) * Finite(ShockAndAwe, 0f);" in method_body(m, "public float LiftOf(Sail sail)")
+            and "sea = sailed && WindsBlow() ? pace.BestAtSea : pace.Afloat;" in method_body(t, "private static void Speeds(")
             and "target.HasPort && (party.IsCurrentlyAtSea || party.CurrentSettlement?.HasPort == true);" in t
             and "_windsHour = -1;" in method_body(t, "private static void DropIfNavalChanged")
-            and "public float BestAtSea => Math.Max(AtSea(WindAtMost * AWindPushesAtMostBy, 1f), AtSea(0f, 0f));" in m
+            and ordered(method_body(m, "public float BestAtSea"),
+                        "float lift = Math.Max(WindAtMost * AWindPushesAtMostBy + Finite(FairWinds, 0f),",
+                        "Finite(ShockAndAwe, 0f));",
+                        "for (int w = 0; w < Waters; w++) best = Math.Max(best, AtSea(w, lift, false, false));")
             and "float angle = Math.Abs((float)Math.Atan2(-bearingX, bearingY) - (float)Math.Atan2(-windX, windY)) * 57.29578f;" in behind
             and "if (!(angle < AWindPushesWithin)) return 0f;" in behind
             and "float strength = length < WindAtLeast ? WindAtLeast : length > WindAtMost ? WindAtMost : length;" in wind
             and "public const float WindAtLeast = 1f / 15f;" in m and "public const float WindAtMost = 0.46f;" in m
             and "public const float AWindPushesAtMostBy = 1.5f;" in m and "public const float ASailIsNeverFasterThan = 10f;" in m
-            and "CampaignTime.SunSet, fresh, tally, road.Push, road.Fair);" in method_body(t, "private static float Ride(")
-            and "WindOn(road, pace) +" in method_body(t, "internal static string TheRideTo(Settlement target)")
+            and "CampaignTime.SunSet, fresh, tally, road.Sails);" in method_body(t, "private static float Ride(")
+            and "SeaOn(road, pace) +" in method_body(t, "internal static string TheRideTo(Settlement target)")
             and "TradeLord.roads" not in ALL and "RoadAtlas" not in ALL
             and all(one in MATHTESTS for one in
                     ("The_wind_on_the_map_is_read_the_way_War_Sails_reads_it_with_no_storm",
                      "A_wind_behind_the_ships_pushes_them_by_up_to_one_and_a_half_times_its_strength",
                      "The_angle_to_the_wind_is_not_wrapped_round_just_as_War_Sails_leaves_it",
                      "Ships_sail_faster_with_the_wind_Fair_Winds_and_Shock_and_Awe_but_never_past_ten",
-                     "No_wind_on_the_map_takes_ships_past_the_soonest_a_ride_at_sea_is_counted_for",
+                     "No_wind_or_water_on_the_map_takes_ships_past_the_soonest_a_ride_at_sea_is_counted_for",
                      "Sea_stretches_joined_into_one_run_take_as_long_as_they_did_apart",
                      "A_sea_leg_with_the_wind_behind_takes_less_time_and_one_without_takes_what_it_did"))
             and "With War Sails, a ride all at sea is timed along the course your ships would sail" in README)
@@ -22124,6 +22132,74 @@ def a_ride_all_at_sea_is_timed_along_its_course_with_the_war_sails_wind():
 
 chk("2.6.0", "with War Sails a ride all at sea is timed along the course the ships would sail, each stretch with the map's wind as War Sails weighs it, Fair Winds and Shock and Awe on top, storms left out and no road file kept",
     a_ride_all_at_sea_is_timed_along_its_course_with_the_war_sails_wind())
+
+
+def the_ships_speed_at_sea_is_worked_out_as_war_sails_works_it_out():
+    t = S['Travel.cs']
+    m = S['TradeMath.cs']
+    seas = method_body(t, "private static string ReadSeas(MobileParty party, TradeMath.Pace pace)")
+    at = method_body(m, "public float AtSea(int water, float lift, bool snow, bool slow)")
+    water = method_body(t, "private static int WaterOf(TerrainType terrain)")
+    probe = method_body(t, "private static float ProbeAtSea(")
+    check = S['SpeedCheck.cs']
+    return (seas and at and water and probe
+            and ordered(seas, "if (!NavalActive) return \"your party has no ships\";",
+                        "if (speed?.FullName != NavalSpeedModel)",
+                        '"OpenSeaBonus", TradeMath.TheOpenSeaAdds', '"RiverBonus", TradeMath.ARiverAdds',
+                        '"PartyFleetSizeThreshold", TradeMath.AFleetSlowsPast',
+                        '"DisorganizedEffect", TradeMath.DisorganizedAtSea',
+                        '"MaximumNavalSpeed", TradeMath.ASailIsNeverFasterThan',
+                        'GetField("MovingOnSnowEffect", Hidden)',
+                        "CrewOf(party, chain, hold, ref ships, ref needed, ref most, ref men, ref crew, ref weight);",
+                        "foreach (MobileParty attached in party.AttachedParties)",
+                        "if (ship.ShipHull?.CanNavigateShallowWater == true) shallow += ship.GetCampaignSpeed();",
+                        "AddNavalPerk(FleetCommanderPerk, party, false, ref skeleton);",
+                        "AddNavalPerk(VeteransWisdomPerk, party, false, ref wisdom);",
+                        "(int)hold.CalculateInventoryCapacity(party, true).ResultNumber;",
+                        "TradeMath.Undermanned(crew, skeleton.RoundedResultNumber);",
+                        "SkillHelper.AddSkillBonusForParty(sailing, party, ref gains);",
+                        "AddNavalPerk(OldSaltsTouchPerk, party, true, ref gains);",
+                        "AddNavalPerk(FavorableTidePerk, party, true, ref gains);",
+                        "campaign.Options.IsIncreasedGlobalMovementSpeedEnabled ? TheFasterMapAdds : 0f;",
+                        "FeatHelper.ApplyCultureFeat(party.Party, nord, ref coast);",
+                        "-TradeMath.TheOpenSeaAdds * raider.PrimaryBonus",
+                        "pace.SeaAdd = burden + (gains.BaseNumber - 1f) + gunnar;",
+                        "pace.SeaRest = under + over + fleet + faster + gains.SumOfFactors;",
+                        "pace.SeaLeast = model.MinimumSpeed;")
+            and "crew += aboard + (HasNavalPerk(party, chain, true) ? party.PrisonRoster.TotalManCount : 0);" in
+                method_body(t, "private static void CrewOf(")
+            and "weight += hold.CalculateTotalWeightCarried(party, true).ResultNumber;" in method_body(t, "private static void CrewOf(")
+            and 'private const string NordShipsFeat = "nord_ship_movemenet_increase";' in t
+            and 'private const string SailingSpeedSkill = "WindBonus";' in t
+            and ordered(water, "case TerrainType.OpenSea: return TradeMath.WaterOpen;", "case TerrainType.CoastalSea:",
+                        "case TerrainType.UnderBridge: return TradeMath.WaterCoast;",
+                        "case TerrainType.River: return TradeMath.WaterRiver;", "default: return TradeMath.WaterElse;")
+            and "PathFaceRecord face = map.GetFaceIndex(new CampaignVec2(at, false));" in probe
+            and "WaterAt(map, face), each, push, astern ? 1f : 0f);" in probe
+            and ordered(at, "float hull = Finite(Sea, 0f) + Finite(SeaAdd, 0f) + Finite(AddOnWater[w], 0f);",
+                        "float sum = Finite(SeaRest, 0f) + Finite(OnWater[w], 0f) + (snow ? Finite(SeaSnow, 0f) : 0f) +",
+                        "float speed = hull * (1f + sum) * (1f + (up > 0f ? up : 0f));",
+                        "speed = speed < least ? least : speed > ASailIsNeverFasterThan ? ASailIsNeverFasterThan : speed;")
+            and "public const float TheOpenSeaAdds = 0.448f;" in m and "public const float ARiverAdds = 0.5f;" in m
+            and "public const float AShallowDraftMoves = 0.066f;" in m
+            and "public const float AnUndermannedFleetLosesUpTo = 0.4f;" in m
+            and "public const float DisorganizedAtSea = -0.4f;" in m
+            and "foreach (MobileParty attached in party.AttachedParties) FleetOf(attached.Ships, ref sum, ref min, ref count);" in
+                method_body(t, "private static float SeaSpeedCore")
+            and ordered(method_body(check, "private static void SayWhatTheSeasRead()"), "string seas = Travel.SeasRead();",
+                        "Log.Write(seas);", "main.IsInNavalAutoTravel",
+                        "string check = Travel.SeaCheck(main, Explained(main).ResultNumber);")
+            and 'Guard.Run("SpeedCheck.Seas", SayWhatTheSeasRead);' in method_body(check, "private static void SayWhatWasRead()")
+            and "Vec2 wind = Campaign.Current.Models.MapWeatherModel.GetWindForPosition(party.Position);" in
+                method_body(t, "internal static string SeaCheck(MobileParty party, float game)")
+            and all(one in MATHTESTS for one in
+                    ("The_ships_speed_at_sea_is_worked_out_the_way_War_Sails_works_it_out",
+                     "The_crew_the_cargo_and_the_size_of_the_fleet_slow_the_ships_as_War_Sails_has_it",
+                     "Ships_sail_Disorganized_only_while_it_lasts_and_slower_in_snow")))
+
+
+chk("2.7.0", "with War Sails your ships' speed at sea counts crew, cargo, fleet size, skill, perks, open sea, rivers, coasts, snow and Disorganized as War Sails does, and the log weighs it against the game's",
+    the_ships_speed_at_sea_is_worked_out_as_war_sails_works_it_out())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

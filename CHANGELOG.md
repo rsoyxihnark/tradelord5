@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.7.0
+
+- With War Sails, travel times at sea now count the Open Sea and River speed bonuses and Shallow Draft on every stretch your ships sail
+- With War Sails, travel times at sea now count an Undermanned or Overmanned crew, Overburdened ships and Over fleet size
+- With War Sails, travel times at sea now count your Navigator's Shipmaster skill and the Shipmaster perks that change sailing speed
+- With War Sails, travel times at sea now count snow on the way and the hours your party stays Disorganized
+- With War Sails, travel times at sea now count the ships and crews of the parties in your army
+- With War Sails, travel times at sea now count the game's option for faster movement on the campaign map
+- With Enable extended debug logging on, TradeLord.log now says each hour what makes up your ships' speed at sea
+- With Enable extended debug logging on, TradeLord.log now weighs your ships' speed against the game's own every hour at sea
+- With Enable extended debug logging on, TradeLord.log now says how much of a ride at sea runs through open sea, coastal waters and river
+
 ## 2.6.0
 
 - With War Sails, travel times now count the wind on a ride all at sea, along the course your ships would sail, leaving storms out

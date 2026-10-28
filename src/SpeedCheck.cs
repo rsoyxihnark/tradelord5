@@ -118,6 +118,7 @@ namespace TradeLord
             _readHour = hour;
             TradeMath.Pace pace = Travel.PaceNow();
             if (pace == null) return;
+            Guard.Run("SpeedCheck.Seas", SayWhatTheSeasRead);
             if (pace.Even)
             {
                 Log.Write("ground step read: your party's pace could not be read from the game, because " +
@@ -132,6 +133,19 @@ namespace TradeLord
                       Step(pace.Night) + " at night, with a snow step of " + Step(pace.Snow) +
                       ", a wet ground step of " + Step(pace.Wet) +
                       " and a Disorganized step of " + Step(pace.Slow));
+        }
+
+        private static void SayWhatTheSeasRead()
+        {
+            string seas = Travel.SeasRead();
+            if (seas == null) return;
+            Log.Write(seas);
+            MobileParty main = MobileParty.MainParty;
+            if (!main.IsActive || !main.IsCurrentlyAtSea || main.Army != null || main.MapEvent != null ||
+                main.IsInNavalAutoTravel)
+                return;
+            string check = Travel.SeaCheck(main, Explained(main).ResultNumber);
+            if (check != null) Log.Write(check);
         }
 
         private static bool NearlyTurning(float hour)

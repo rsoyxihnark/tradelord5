@@ -19,6 +19,7 @@
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out along the road the game's own pathfinding would take, at your party's real speed with the cargo you are carrying, through every forest, river, desert, rainfall, snowfall and night on the way
 - ✅ With War Sails, a ride all at sea is timed along the course your ships would sail, with the wind the map lays out on every stretch of it, and Fair Winds and Shock and Awe on top
+- ✅ At sea your ships' speed counts their crew, cargo and fleet size, your Shipmaster skill and perks, and every stretch of open sea, coast and river, as War Sails does
 - ✅ That time counts the hours your party stays Disorganized too, and caravans and villagers on the road are timed the same way
 - ✅ Stock counts, so you know the deal is actually there
 - ✅ What you paid for a good, per unit, on its own tooltip once you have bought one, so you can see at a glance whether the market in front of you is beating it
