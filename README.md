@@ -203,7 +203,7 @@
 - ✅ Either ceiling set to 0 takes that limit off, and the Town travel ceiling at 0 weighs every town in Calradia, which is the slowest TradeLord runs
 - ✅ The Village travel ceiling only ever holds villages closer: at 0, or set past the Town travel ceiling, villages go as far as the Town travel ceiling
 - ✅ A minimum stock before it calls something worth buying
-- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the workshops and what the town uses up into a route's price
+- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the goods the villages will send, the workshops and what the town uses up into a route's price
 - ✅ Count what is on its way to a market also goes into where TradeLord means to sell what it buys, into the market marked on your map and into Hold cargo for the best market
 - ✅ Count what is on its way to a market follows Live world prices, so turning those off turns this off too
 - ✅ The margin every trade has to clear, on the way in and on the way out

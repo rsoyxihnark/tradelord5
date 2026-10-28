@@ -1301,6 +1301,99 @@ namespace TradeLord
         public static int WhatVillagersSell(int amount, int till, int price) =>
             amount <= 0 || till <= 0 || price <= 0 ? 0 : Math.Min(amount, till / price);
 
+        public const float VillagersSetOutAnHourWith = 0.15f;
+
+        public const float VillagersLeaveATownAnHourWith = 0.2f;
+
+        public const float VillagersTakeEachPass = 0.2f;
+
+        public const int VillagersLoadInPasses = 4;
+
+        public const float AVillageWarehouseHoldsDays = 5f;
+
+        public const float AVillageStopsMakingPastItsWarehouseBy = 1.5f;
+
+        public const int MostLoadsAVillageIsFollowedFor = 3;
+
+        public struct VillageLoad
+        {
+            public float Days;
+            public float[] Units;
+        }
+
+        public static int AVillagesWarehouse(float madeADay) =>
+            (int)Math.Ceiling(Math.Max(1f, Finite(madeADay, 0f)) * AVillageWarehouseHoldsDays);
+
+        public static float ShareVillagersLoad() =>
+            1f - (float)Math.Pow(1d - VillagersTakeEachPass, VillagersLoadInPasses);
+
+        public static float DaysVillagersWaitFor(float chanceAnHour) =>
+            chanceAnHour > 0f ? 1f / chanceAnHour / 24f : float.PositiveInfinity;
+
+        public static float DaysUntilAVillageIsFull(float held, int warehouse, float madeADay)
+        {
+            if (held >= warehouse) return 0f;
+            return madeADay > 0f ? (warehouse - held) / madeADay : float.PositiveInfinity;
+        }
+
+        public static float HeldAfter(float held, float madeADay, float days, int warehouse)
+        {
+            float most = warehouse * AVillageStopsMakingPastItsWarehouseBy;
+            if (held >= most || !(madeADay > 0f) || !(days > 0f)) return held;
+            return Math.Min(most, held + madeADay * days);
+        }
+
+        public static List<VillageLoad> WhatAVillageSends(float[] held, float[] made, float[] weight, bool[] onHoof,
+                                                         int warehouse, float room, float home, bool raised,
+                                                         float ride, float watch)
+        {
+            var loads = new List<VillageLoad>();
+            if (held == null || made == null || weight == null || onHoof == null || warehouse <= 0) return loads;
+            int n = held.Length;
+            if (made.Length != n || weight.Length != n || onHoof.Length != n) return loads;
+            if (!(ride >= 0f) || float.IsInfinity(ride) || !(watch > 0f)) return loads;
+            var at = new float[n];
+            float heldAll = 0f, madeAll = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                at[i] = Math.Max(0f, Finite(held[i], 0f));
+                heldAll += at[i];
+                madeAll += Math.Max(0f, Finite(made[i], 0f));
+            }
+            float share = ShareVillagersLoad();
+            float wait = DaysVillagersWaitFor(VillagersSetOutAnHourWith);
+            float stay = DaysVillagersWaitFor(VillagersLeaveATownAnHourWith);
+            float since = 0f;
+            float back = Math.Max(0f, Finite(home, 0f));
+            for (int k = 0; k < MostLoadsAVillageIsFollowedFor; k++)
+            {
+                float full = since + DaysUntilAVillageIsFull(heldAll, warehouse, madeAll);
+                float setOut = Math.Max(back, full) + (k == 0 && !raised ? wait + wait : wait);
+                if (float.IsInfinity(setOut) || setOut + ride > watch) break;
+                float grown = HeldAfter(heldAll, madeAll, setOut - since, warehouse) - heldAll;
+                var units = new float[n];
+                float carried = 0f;
+                for (int i = 0; i < n; i++)
+                {
+                    if (grown > 0f && madeAll > 0f) at[i] += grown * Math.Max(0f, Finite(made[i], 0f)) / madeAll;
+                    units[i] = at[i] * share;
+                    if (!onHoof[i]) carried += units[i] * Math.Max(0f, Finite(weight[i], 0f));
+                }
+                float cut = room > 0f && carried > room ? room / carried : 1f;
+                heldAll = 0f;
+                for (int i = 0; i < n; i++)
+                {
+                    if (!onHoof[i]) units[i] *= cut;
+                    at[i] -= units[i];
+                    heldAll += at[i];
+                }
+                loads.Add(new VillageLoad { Days = setOut + ride, Units = units });
+                since = setOut;
+                back = setOut + ride + stay + ride;
+            }
+            return loads;
+        }
+
         public static float WetGroundStep(int men, int riders, int footmen, int spareMounts)
         {
             if (men <= 0) return 0f;

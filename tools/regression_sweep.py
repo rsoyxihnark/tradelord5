@@ -22274,5 +22274,56 @@ chk("2.7.2", "the two buying orders are weighed on profit a day at the Conf of s
     the_buying_orders_are_weighed_a_day_at_the_conf_of_selling_there())
 
 
+def the_forecast_counts_what_villages_will_send_before_you_arrive():
+    f = S['Forecast.cs']
+    m = S['TradeMath.cs']
+    build = method_body(f, "private static void Build()")
+    follow = method_body(f, "private static void FollowAVillage(Village village, float watch, float speed)")
+    home = method_body(f, "private static float WhenTheVillagersAreHome(")
+    sends = method_body(m, "public static List<VillageLoad> WhatAVillageSends(")
+    return (build and follow and home and sends
+            and ordered(build, 'Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);',
+                        'Guard.Run("Forecast.Villages", ReadWhatTheVillagesWillSend);',
+                        'Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);')
+            and "if (party.StringId != null) _villagersReach[party.StringId] = days;" in
+                method_body(f, "private static void ReadWhatIsOnTheRoad()")
+            and ordered(follow, "if (town == null || !town.IsTown || town.Town == null || town.IsUnderSiege) return;",
+                        "if (village.VillageState != Village.VillageStates.Normal || home.Party?.MapEvent != null) return;",
+                        "if (FactionManager.IsAtWarAgainstFaction(home.MapFaction, town.MapFaction)) return;",
+                        "? each * (village.GetHearthLevel() + 1) * 0.5f",
+                        ": model.CalculateDailyProductionAmount(village, item).ResultNumber;",
+                        "float ride = TradeMath.EtaDays(RoadBetween(home, town), speed);",
+                        "TradeMath.WhatAVillageSends(", "villagers != null, ride, watch);",
+                        "if (item.IsMountable || item.ItemCategory == null) continue;",
+                        "int sold = TradeMath.WhatVillagersSell(units, till, price);",
+                        "NoteTheTillPays(town, sold * price, load.Days);",
+                        "Note(town, item.StringId, item.ItemCategory, sold, worth, load.Days);")
+            and "GetWarehouseCapacity" not in f
+            and ordered(home, "if (villagers == null || villagers.CurrentSettlement == home) return 0f;",
+                        "if (villagers.CurrentSettlement == town) return stay + ride;",
+                        "return reach + stay + ride;")
+            and "public const float VillagersSetOutAnHourWith = 0.15f;" in m
+            and "public const float VillagersLeaveATownAnHourWith = 0.2f;" in m
+            and "public const float VillagersTakeEachPass = 0.2f;" in m
+            and "public const int VillagersLoadInPasses = 4;" in m
+            and "public const float AVillageWarehouseHoldsDays = 5f;" in m
+            and "public const float AVillageStopsMakingPastItsWarehouseBy = 1.5f;" in m
+            and ordered(sends, "float setOut = Math.Max(back, full) + (k == 0 && !raised ? wait + wait : wait);",
+                        "if (float.IsInfinity(setOut) || setOut + ride > watch) break;",
+                        "units[i] = at[i] * share;",
+                        "float cut = room > 0f && carried > room ? room / carried : 1f;",
+                        "back = setOut + ride + stay + ride;")
+            and "string villages = Forecast.TheVillagesSend();" in method_body(S['Marker.cs'], "private static void Ultra(")
+            and all(one in MATHTESTS for one in
+                    ("A_villages_warehouse_holds_five_days_of_what_it_makes_and_it_stops_making_past_half_again",
+                     "Villagers_take_three_fifths_of_each_good_and_set_out_about_seven_hours_after_the_warehouse_fills",
+                     "A_full_village_sends_its_goods_to_its_town_and_sends_again_once_its_warehouse_fills_again",
+                     "Villagers_away_from_home_or_short_of_room_send_later_or_less_and_a_village_that_cannot_fill_sends_nothing")))
+
+
+chk("2.7.3", "Count what is on its way to a market counts the goods each village will send its town before you arrive, as the game loads and sends its villagers, not only the villagers already on the road",
+    the_forecast_counts_what_villages_will_send_before_you_arrive())
+
+
 print(f"\n{sum(results)}/{len(results)} source checks passed")
 sys.exit(0 if all(results) else 1)

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CampaignBehaviors;
 using TaleWorlds.CampaignSystem.ComponentInterfaces;
@@ -59,6 +61,15 @@ namespace TradeLord
 
         private static bool _saidItCouldNotRead;
 
+        private static readonly Dictionary<string, float> _villagersReach =
+            new Dictionary<string, float>(StringComparer.Ordinal);
+
+        private static int _villagesFollowed, _villageLoads, _villageWorth;
+
+        private static float _villageSoonest;
+
+        private static long _villageTicks;
+
         internal static bool On => Options.Current.MarketForecast && Options.Current.Omniscient;
 
         internal static void Forget()
@@ -76,6 +87,7 @@ namespace TradeLord
             _standsForAt.Clear();
             _shelfAhead.Clear();
             _shifts.Clear();
+            _villagersReach.Clear();
             _saidItCouldNotRead = false;
         }
 
@@ -241,8 +253,10 @@ namespace TradeLord
             _standsForAt.Clear();
             _shelfAhead.Clear();
             _shifts.Clear();
+            _villagersReach.Clear();
             Guard.Run("Forecast.PriceIndexes", ReadThePriceIndexes);
             Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);
+            Guard.Run("Forecast.Villages", ReadWhatTheVillagesWillSend);
             Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
         }
 
@@ -268,6 +282,7 @@ namespace TradeLord
                     Guard.Run("Forecast.Caravan", bound, site => FollowACaravan(party, site, days));
                     continue;
                 }
+                if (party.StringId != null) _villagersReach[party.StringId] = days;
                 ItemObject ridden = ThePackAnimalVillagersKeep(carried);
                 Town town = bound.Town;
                 int till = town?.Gold ?? 0;
@@ -287,6 +302,175 @@ namespace TradeLord
                         Note(bound, item.StringId, item.ItemCategory, units, TradeMath.WorthOf(units, item.Value), days);
                 }
             }
+        }
+
+        private static void ReadWhatTheVillagesWillSend()
+        {
+            _villagesFollowed = 0;
+            _villageLoads = 0;
+            _villageWorth = 0;
+            _villageSoonest = float.PositiveInfinity;
+            _villageTicks = 0L;
+            MBReadOnlyList<Village> villages = Village.All;
+            if (villages == null) return;
+            long started = Stopwatch.GetTimestamp();
+            float watch = WorkshopRuns.Watch(MarketRank.Ceiling(false, Options.Current));
+            float speed = Campaign.Current.EstimatedAverageVillagerPartySpeed;
+            for (int i = 0; i < villages.Count; i++)
+            {
+                Village village = villages[i];
+                if (village?.Settlement == null) continue;
+                Guard.Run("Forecast.Village", village, one => FollowAVillage(one, watch, speed));
+            }
+            _villageTicks = Stopwatch.GetTimestamp() - started;
+        }
+
+        private static void FollowAVillage(Village village, float watch, float speed)
+        {
+            Settlement home = village.Settlement;
+            Settlement town = village.TradeBound;
+            if (town == null || !town.IsTown || town.Town == null || town.IsUnderSiege) return;
+            if (village.VillageState != Village.VillageStates.Normal || home.Party?.MapEvent != null) return;
+            if (FactionManager.IsAtWarAgainstFaction(home.MapFaction, town.MapFaction)) return;
+            MobileParty villagers = village.VillagerPartyComponent?.MobileParty;
+            if (villagers != null && (villagers.MapEvent != null || villagers.IsInRaftState)) return;
+            if (villagers == null &&
+                village.Hearth <= Campaign.Current.Models.PartySizeLimitModel.MinimumNumberOfVillagersAtVillagerParty)
+                return;
+            ItemRoster roster = home.ItemRoster;
+            if (roster == null) return;
+
+            var items = new List<ItemObject>();
+            var held = new List<float>();
+            var made = new List<float>();
+            int At(ItemObject item)
+            {
+                int at = items.IndexOf(item);
+                if (at >= 0) return at;
+                items.Add(item);
+                held.Add(0f);
+                made.Add(0f);
+                return items.Count - 1;
+            }
+            for (int k = 0; k < roster.Count; k++)
+            {
+                ItemObject item = roster.GetItemAtIndex(k);
+                int amount = roster.GetElementNumber(k);
+                if (item != null && amount > 0) held[At(item)] += amount;
+            }
+            VillageProductionCalculatorModel model = Campaign.Current.Models.VillageProductionCalculatorModel;
+            float madeADay = 0f;
+            foreach (var (item, each) in village.VillageType.Productions)
+            {
+                if (item == null) continue;
+                float rate = item.IsMountable
+                    ? each * (village.GetHearthLevel() + 1) * 0.5f
+                    : model.CalculateDailyProductionAmount(village, item).ResultNumber;
+                rate = TradeMath.Finite(rate, 0f);
+                if (rate <= 0f) continue;
+                made[At(item)] += rate;
+                madeADay += rate;
+            }
+            float food = TradeMath.Finite(model.CalculateDailyFoodProductionAmount(village), 0f);
+            IList<ItemObject> foods = Campaign.Current.DefaultVillageTypes?.ConsumableRawItems;
+            if (food > 0f && foods != null)
+            {
+                float rarity = 0f;
+                foreach (ItemObject one in foods) if (one != null && one.Value > 0) rarity += 1f / one.Value;
+                if (rarity > 0f)
+                    foreach (ItemObject one in foods)
+                        if (one != null && one.Value > 0) made[At(one)] += food * (1f / one.Value) / rarity;
+                madeADay += food;
+            }
+            if (items.Count == 0) return;
+
+            var weight = new float[items.Count];
+            var onHoof = new bool[items.Count];
+            for (int i = 0; i < items.Count; i++)
+            {
+                weight[i] = items[i].Weight;
+                onHoof[i] = items[i].HasHorseComponent;
+            }
+            float ride = TradeMath.EtaDays(RoadBetween(home, town), speed);
+            float back = WhenTheVillagersAreHome(villagers, home, town, ride, speed);
+            float room = villagers != null ? villagers.InventoryCapacity : 0f;
+            List<TradeMath.VillageLoad> loads = TradeMath.WhatAVillageSends(
+                held.ToArray(), made.ToArray(), weight, onHoof, TradeMath.AVillagesWarehouse(madeADay), room, back,
+                villagers != null, ride, watch);
+            if (loads.Count == 0) return;
+
+            _villagesFollowed++;
+            Town market = town.Town;
+            foreach (TradeMath.VillageLoad load in loads)
+            {
+                int till = market.Gold;
+                bool landed = false;
+                for (int i = 0; i < items.Count; i++)
+                {
+                    ItemObject item = items[i];
+                    if (item.IsMountable || item.ItemCategory == null) continue;
+                    int units = (int)Math.Round(load.Units[i], MidpointRounding.AwayFromZero);
+                    if (units <= 0) continue;
+                    int price = Priced.At(market, item, villagers, selling: true);
+                    int sold = TradeMath.WhatVillagersSell(units, till, price);
+                    if (sold <= 0) continue;
+                    till -= sold * price;
+                    NoteTheTillPays(town, sold * price, load.Days);
+                    if (!TradePolicy.Priced(item)) continue;
+                    int worth = TradeMath.WorthOf(sold, item.Value);
+                    Note(town, item.StringId, item.ItemCategory, sold, worth, load.Days);
+                    _villageWorth = TradeMath.AddedUp(_villageWorth, worth);
+                    landed = true;
+                }
+                if (!landed) continue;
+                _villageLoads++;
+                if (load.Days < _villageSoonest) _villageSoonest = load.Days;
+            }
+        }
+
+        private static float WhenTheVillagersAreHome(MobileParty villagers, Settlement home, Settlement town, float ride,
+                                                     float speed)
+        {
+            if (villagers == null || villagers.CurrentSettlement == home) return 0f;
+            float stay = TradeMath.DaysVillagersWaitFor(TradeMath.VillagersLeaveATownAnHourWith);
+            if (villagers.CurrentSettlement == town) return stay + ride;
+            if (villagers.TargetSettlement == town)
+            {
+                if (villagers.StringId == null || !_villagersReach.TryGetValue(villagers.StringId, out float reach) ||
+                    !(reach >= 0f) || TradeMath.OutOfReach(reach))
+                    reach = TradeMath.EtaDays(villagers.GetPosition2D.Distance(town.GetPosition2D), speed);
+                return reach + stay + ride;
+            }
+            if (villagers.TargetSettlement == home)
+                return TradeMath.EtaDays(villagers.GetPosition2D.Distance(home.GetPosition2D), speed);
+            return ride;
+        }
+
+        private static float RoadBetween(Settlement from, Settlement to)
+        {
+            try { return MappedRoadBetween(from, to); }
+            catch { return from.GetPosition2D.Distance(to.GetPosition2D); }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static float MappedRoadBetween(Settlement from, Settlement to) =>
+            Campaign.Current.Models.MapDistanceModel.GetDistance(from, to, false, false,
+                                                                 MobileParty.NavigationType.Default, out _);
+
+        internal static string TheVillagesSend()
+        {
+            if (!On) return null;
+            Build();
+            return "villages this hour: " + _villageLoads + " load(s) from " + _villagesFollowed +
+                   " village(s) whose villagers have not set out yet, goods worth " + _villageWorth +
+                   " denars for the towns they sell to" +
+                   (_villageLoads > 0
+                       ? ", the soonest landing in " +
+                         _villageSoonest.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " day(s)"
+                       : "") +
+                   ", worked out in " +
+                   (_villageTicks * 1000d / Stopwatch.Frequency)
+                       .ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " ms";
         }
 
         private static void ReadThePriceIndexes()
