@@ -1468,6 +1468,13 @@ namespace TradeLord
             public double ReadAt;
             public bool SnowAtStart;
             public float Sea;
+            public float SeaAdd;
+            public float SeaRest;
+            public readonly float[] OnWater = new float[Waters];
+            public readonly float[] AddOnWater = new float[Waters];
+            public float SeaSnow;
+            public float SeaSlow;
+            public float SeaLeast;
             public float FairWinds;
             public float ShockAndAwe;
             public bool Even;
@@ -1482,23 +1489,46 @@ namespace TradeLord
                 return later;
             }
 
-            public float AtSea(float push, float fair)
+            public float LiftOf(Sail sail)
             {
-                float sea = Finite(Sea, 0f);
-                float behind = Finite(fair, 0f);
-                float lift = Finite(push, 0f) + behind * Finite(FairWinds, 0f) +
-                             (1f - behind) * Finite(ShockAndAwe, 0f);
-                if (!(lift > 0f)) return sea;
-                float most = sea > ASailIsNeverFasterThan ? sea : ASailIsNeverFasterThan;
-                float speed = sea * (1f + lift);
-                return speed > most ? most : Finite(speed, sea);
+                float fair = Finite(sail.Fair, 0f);
+                fair = fair < 0f ? 0f : fair > 1f ? 1f : fair;
+                float lift = Finite(sail.Push, 0f) + fair * Finite(FairWinds, 0f) + (1f - fair) * Finite(ShockAndAwe, 0f);
+                return lift > 0f ? lift : 0f;
             }
 
-            public float BestAtSea => Math.Max(AtSea(WindAtMost * AWindPushesAtMostBy, 1f), AtSea(0f, 0f));
+            public float AtSea(int water, float lift, bool snow, bool slow)
+            {
+                int w = water >= 0 && water < Waters ? water : WaterUnread;
+                float hull = Finite(Sea, 0f) + Finite(SeaAdd, 0f) + Finite(AddOnWater[w], 0f);
+                float sum = Finite(SeaRest, 0f) + Finite(OnWater[w], 0f) + (snow ? Finite(SeaSnow, 0f) : 0f) +
+                            (slow ? Finite(SeaSlow, 0f) : 0f);
+                float up = Finite(lift, 0f);
+                float speed = hull * (1f + sum) * (1f + (up > 0f ? up : 0f));
+                float least = Finite(SeaLeast, 0f);
+                speed = speed < least ? least : speed > ASailIsNeverFasterThan ? ASailIsNeverFasterThan : speed;
+                return Finite(speed, 0f);
+            }
+
+            public float AtSea(Sail sail, bool snow, bool slow) => AtSea(sail.Water, LiftOf(sail), snow, slow);
+
+            public float Afloat => AtSea(WaterUnread, 0f, false, false);
+
+            public float BestAtSea
+            {
+                get
+                {
+                    float lift = Math.Max(WindAtMost * AWindPushesAtMostBy + Finite(FairWinds, 0f),
+                                          Finite(ShockAndAwe, 0f));
+                    float best = 0f;
+                    for (int w = 0; w < Waters; w++) best = Math.Max(best, AtSea(w, lift, false, false));
+                    return best;
+                }
+            }
 
             public float On(int ground, bool dark, bool snow, bool wet, bool slow)
             {
-                if (ground == GroundSea) return Finite(Sea, 0f);
+                if (ground == GroundSea) return AtSea(WaterUnread, 0f, snow, slow);
                 if (Even) return Finite(Base, 0f);
                 int g = ground >= 0 && ground < Grounds ? ground : GroundElse;
                 float sum = Rest + OnGround[g] + (dark ? Night : Day) + (snow ? Snow : 0f) + (wet ? Wet : 0f) +
@@ -1580,6 +1610,67 @@ namespace TradeLord
             return i;
         }
 
+        public const int WaterUnread = 0;
+        public const int WaterOpen = 1;
+        public const int WaterCoast = 2;
+        public const int WaterRiver = 3;
+        public const int WaterElse = 4;
+        public const int Waters = 5;
+
+        public struct Sail
+        {
+            public float Push;
+            public float Fair;
+            public int Water;
+        }
+
+        public const float TheOpenSeaAdds = 0.448f;
+
+        public const float ARiverAdds = 0.5f;
+
+        public const float AShallowDraftMoves = 0.066f;
+
+        public const float AnUndermannedFleetLosesUpTo = 0.4f;
+
+        public const int AFleetSlowsPast = 3;
+
+        public const float AFleetSlowsAtMostBy = 0.2f;
+
+        public const float AFleetSlowsThisSteeply = 0.5f;
+
+        public const float AFleetSlowsHalfwayAt = 3f;
+
+        public const float DisorganizedAtSea = -0.4f;
+
+        public static float Undermanned(int crew, int needed) =>
+            needed <= 0 || crew >= needed ? 0f : -(1f - crew / (float)needed) * AnUndermannedFleetLosesUpTo;
+
+        public static float Overmanned(int men, int most) =>
+            men <= most ? 0f : most <= 0 ? -1f : 1f / (men / (float)most) - 1f;
+
+        public static float OverFleetSize(int ships, float eased)
+        {
+            if (ships <= AFleetSlowsPast) return 0f;
+            double over = ships - AFleetSlowsPast;
+            double slows = AFleetSlowsAtMostBy / (1d + Math.Exp(-AFleetSlowsThisSteeply * (over - AFleetSlowsHalfwayAt)));
+            return Finite((float)(-slows * Finite(eased, 1f)), 0f);
+        }
+
+        public static float Overburdened(float weight, int capacity, float eased)
+        {
+            if (!(weight > capacity) || capacity <= 0) return 0f;
+            return Finite(-(weight - capacity) / capacity * Finite(eased, 1f), 0f);
+        }
+
+        public static float ShallowDraft(float shallowSpeeds, int ships, bool coastal)
+        {
+            if (ships <= 0) return 0f;
+            float moves = Finite(shallowSpeeds, 0f) * AShallowDraftMoves / ships;
+            return coastal ? moves : -moves;
+        }
+
+        public static bool Coastal(int water) => water == WaterCoast || water == WaterRiver;
+
         public const float WindAtLeast = 1f / 15f;
 
         public const float WindAtMost = 0.46f;
@@ -1621,49 +1712,33 @@ namespace TradeLord
             return push < 0f ? 0f : push > AWindPushesAtMostBy ? AWindPushesAtMostBy : push;
         }
 
-        public static void AddRunOnTheWinds(List<Run> road, List<float> push, List<float> fair, float length, float lift,
-                                            float astern)
+        public static void AddRunAtSea(List<Run> road, List<Sail> sails, int face, int cell, int water, float length,
+                                       float push, float astern)
         {
-            if (road == null || push == null || fair == null || !(length > 0f) || float.IsInfinity(length)) return;
-            float up = Finite(lift, 0f);
+            if (road == null || sails == null || !(length > 0f) || float.IsInfinity(length)) return;
+            float up = Finite(push, 0f);
             float behind = Finite(astern, 0f);
             int last = road.Count - 1;
-            if (last >= 0 && last < push.Count && last < fair.Count && road[last].Ground == GroundSea)
+            if (last >= 0 && last < sails.Count && road[last].Ground == GroundSea && road[last].Face == face &&
+                road[last].Cell == cell && sails[last].Water == water)
             {
                 Run joined = road[last];
+                Sail held = sails[last];
                 float before = joined.Length;
                 joined.Length += length;
                 road[last] = joined;
-                double time = before / (1d + push[last]) + length / (1d + up);
-                push[last] = time > 0d ? (float)(joined.Length / time - 1d) : 0f;
-                fair[last] = (before * fair[last] + length * behind) / joined.Length;
+                double time = before / (1d + held.Push) + length / (1d + up);
+                held.Push = time > 0d ? (float)(joined.Length / time - 1d) : 0f;
+                held.Fair = (before * held.Fair + length * behind) / joined.Length;
+                sails[last] = held;
                 return;
             }
-            road.Add(new Run { Length = length, Ground = GroundSea, Face = Unread, Cell = Unread });
-            push.Add(up);
-            fair.Add(behind);
-        }
-
-        public static float DaysOnTheWinds(IList<Run> road, IList<float> push, IList<float> fair, Pace pace)
-        {
-            if (road == null || pace == null) return 0f;
-            double hours = 0d;
-            for (int i = 0; i < road.Count; i++)
-            {
-                float length = road[i].Length;
-                if (float.IsNaN(length) || float.IsInfinity(length)) return FurthestThereIs;
-                if (!(length > 0f)) continue;
-                float speed = road[i].Ground == GroundSea
-                    ? pace.AtSea(push != null && i < push.Count ? push[i] : 0f, fair != null && i < fair.Count ? fair[i] : 0f)
-                    : Finite(pace.Base, 0f);
-                if (!(speed > 0f)) return FurthestThereIs;
-                hours += length / speed * HoursAPartyTakesToCoverItsSpeed;
-            }
-            return DaysTaken(hours);
+            road.Add(new Run { Length = length, Ground = GroundSea, Face = face, Cell = cell });
+            sails.Add(new Sail { Push = up, Fair = behind, Water = water });
         }
 
         public static float DaysAlong(IList<Run> road, Pace pace, ISky sky, double startClock, int sunrise, int sunset,
-                                      bool freshAtStart, Tally tally, IList<float> push = null, IList<float> fair = null)
+                                      bool freshAtStart, Tally tally, IList<Sail> sails = null)
         {
             if (road == null || pace == null) return 0f;
             for (int k = 0; k < road.Count; k++)
@@ -1686,8 +1761,8 @@ namespace TradeLord
             for (int steps = 0; ; steps++)
             {
                 if (steps >= MostStepsOnARoad) return FurthestThereIs;
-                float speed = push != null && road[i].Ground == GroundSea && i < push.Count
-                    ? pace.AtSea(push[i], fair != null && i < fair.Count ? fair[i] : 0f)
+                float speed = sails != null && road[i].Ground == GroundSea && i < sails.Count
+                    ? pace.AtSea(sails[i], snow, slow)
                     : pace.On(road[i].Ground, dark, snow, wet, slow);
                 double perHour = speed / (double)HoursAPartyTakesToCoverItsSpeed;
                 if (!(perHour > 0d) || double.IsInfinity(perHour)) return FurthestThereIs;
