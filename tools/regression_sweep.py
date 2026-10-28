@@ -1896,8 +1896,9 @@ chk("1.3.26", "travel time counts the sea leg, and refreshes when the party has 
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
     "return OutOfReach(days) ? FurthestThereIs : days;" in
     method_body(S['TradeMath.cs'], "public static float DaysAtSpeed") and
-    "if (pace.Even) return TradeMath.DaysAtSpeed(road.Length, road.LandRatio, pace.Base, pace.Sea);" in
-    method_body(S['Travel.cs'], "private static float Ride(") and
+    ordered(method_body(S['Travel.cs'], "private static float Ride("), "if (pace.Even)",
+            "? TradeMath.DaysOnTheWinds(road.Runs, road.Push, road.Fair, pace)",
+            ": TradeMath.DaysAtSpeed(road.Length, road.LandRatio, pace.Base, pace.Sea);") and
     "if (ground == GroundSea) return Finite(Sea, 0f);" in
     method_body(S['TradeMath.cs'], "public float On(int ground, bool dark, bool snow, bool wet, bool slow)") and
     "TradeMath.AddRun(runs, TradeMath.GroundSea, TradeMath.Unread, TradeMath.Unread, length * (1f - land));" in
@@ -2121,9 +2122,10 @@ chk("1.3.26", "a route's whole trip, from where you stand through the buy market
                        "if (!LedgerBehavior.WithinTravelCeiling(to, days)) continue;"))
     (route_scan()))
 chk("1.3.26", "both straight-line estimates share one implementation",
-    S['Travel.cs'].count("private static float StraightDays(float distance)") == 1 and
-    "return StraightDays(Nearest(party.GetPosition2D, target));" in S['Travel.cs'] and
-    "StraightDays(Nearest(a, b))" in S['Travel.cs'])
+    S['Travel.cs'].count("private static float StraightDays(float distance, bool sailed)") == 1 and
+    "return StraightDays(Nearest(party.GetPosition2D, target), MaySail(party, target));" in S['Travel.cs'] and
+    "return StraightDays(Nearest(party.GetPosition2D, target), false);" in S['Travel.cs'] and
+    "StraightDays(Nearest(a, b), a.HasPort && b.HasPort)" in S['Travel.cs'])
 
 chk("1.3.27", "tooltip postfix declares only the arguments it uses",
     "private static void Postfix(ItemMenuVM __instance, ItemVM item)" in S['TooltipPatches.cs'])
@@ -2148,7 +2150,7 @@ chk("1.3.28", "both travel estimates take their speeds from one definition",
     method_body(S['Travel.cs'], "private static float RideFromParty") and
     "return Ride(road, PartyPace(), _moment, later, fresh, null);" in
     method_body(S['Travel.cs'], "private static float RideBetween") and
-    "Speeds(out float land, out float sea);" in method_body(S['Travel.cs'], "private static float StraightDays"))
+    "Speeds(sailed, out float land, out float sea);" in method_body(S['Travel.cs'], "private static float StraightDays"))
 
 chk("1.3.29", "one buy-side margin rule, for the planner and the executor alike",
     S['Policy.cs'].count("internal static bool BuyAcceptable(int buyPrice, float realizable)") == 1 and
@@ -20176,13 +20178,13 @@ def every_night_on_the_way_is_counted_on_the_game_clock():
     along = method_body(m, "public static float DaysAlong")
     ride = method_body(tr, "private static float Ride(")
     return (along and ride
-            and "double perHour = pace.On(road[i].Ground, dark, snow, wet, slow) / (double)HoursAPartyTakesToCoverItsSpeed;"
-                in along
+            and ordered(along, ": pace.On(road[i].Ground, dark, snow, wet, slow);",
+                        "double perHour = speed / (double)HoursAPartyTakesToCoverItsSpeed;")
             and "double turnAt = NextTurnOfLight(start, sunrise, sunset);" in along
             and "return !(hour >= sunrise && hour < sunset);" in method_body(m, "public static bool DarkAt")
             and ordered(ride, "double start = moment.ToHours + after;",
                         "TradeMath.DaysAlong(road.Runs, pace.After(start - pace.ReadAt), sky, start, CampaignTime.SunRise,",
-                        "CampaignTime.SunSet, fresh, tally);")
+                        "CampaignTime.SunSet, fresh, tally, road.Push, road.Fair);")
             and "double later = TradeMath.Finite(after, 0f) > 0f ? after * 24d : 0d;" in
                 method_body(tr, "private static float RideBetween")
             and "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);" in
@@ -20472,7 +20474,7 @@ def no_night_shuts_out_a_market_the_full_time_lets_in():
                 method_body(S['Travel.cs'], "private static float LandSpeed()")
             and "float day = Finite(now * (byDay / atNight), now);" in byday
             and "return day > now ? day : now;" in byday
-            and "Speeds(out float land, out float sea);" in straight
+            and "Speeds(sailed, out float land, out float sea);" in straight
             and "return TradeMath.DaysAtBestSpeed(distance, land, sea);" in straight
             and "A_ride_is_priced_at_the_speed_the_party_has_by_day" in MATHTESTS
             and "The_speed_by_day_never_slows_a_party_down_or_trusts_a_reading_that_is_not_a_number" in MATHTESTS
@@ -21751,7 +21753,7 @@ def the_log_says_what_threw_an_opening_away_and_what_the_slowest_walk_cost():
             and ordered(method_body(tr, "private static float HowLongThatRoadWas"),
                         "if (road.Length > 0f) return road.Length;",
                         "return road.Runs == null ? 0f : TradeMath.LengthOn(road.Runs, -1);")
-            and tr.count("long started = StartAWalk();") == 3
+            and tr.count("long started = StartAWalk();") == 5
             and ordered(method_body(tr, "private static float AlongItsRoad"),
                         "long started = StartAWalk();", "road.Walked = walked;",
                         'StopTheMeter(started, ref _otherWalks, "a road for a caravan or villager", road);')
@@ -22054,6 +22056,74 @@ def the_buying_orders_are_weighed_on_what_each_good_was_priced_for():
 
 chk("2.5.3", "the two buying orders weigh each good on the cost and profit of the units the scan priced, scaled to the units before your cargo cut them, so a good cut to your cargo is not undervalued",
     the_buying_orders_are_weighed_on_what_each_good_was_priced_for())
+
+
+def a_ride_all_at_sea_is_timed_along_its_course_with_the_war_sails_wind():
+    t = S['Travel.cs']
+    m = S['TradeMath.cs']
+    between = method_body(t, "private static Road RoadBetween(Settlement a, Settlement b)")
+    party = method_body(t, "private static Road RoadFromParty(MobileParty party, Settlement target)")
+    sail = method_body(t, "private static bool SailTheSea(")
+    along = method_body(t, "private static void WindAlong(")
+    why = method_body(t, "private static string WhyNoWinds()")
+    behind = method_body(m, "public static float WindBehind(")
+    wind = method_body(m, "public static void WindOnTheMap(")
+    return (between and party and sail and along and why and behind and wind
+            and ordered(between, "if (a != b && a.HasPort && b.HasPort && AllAtSea(landRatio) && WindsBlow())",
+                        "try { SailBetween(a, b, road); }",
+                        'StopTheMeter(started, ref _pairWalks, "a course between ports", road);',
+                        "if (road.Walked)", "_seaWalks++;", "return road;",
+                        "if (landRatio >= AllOnLand && a != b)")
+            and ordered(party, "if (AllAtSea(landRatio) && target.HasPort && WindsBlow())",
+                        "Road sailed = SailedFromParty(party, target, atSea);", "if (sailed != null) return sailed;",
+                        "if (!atSea && landRatio >= AllOnLand && !_unwalkable.Contains(target.StringId))")
+            and "private static bool AllAtSea(float landRatio) => landRatio >= 0f && landRatio <= 1f - AllOnLand;" in t
+            and ".GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Naval);" in sail
+            and "length += ProbeAtSea(winds, at, _path[i], runs, push, fair);" in sail
+            and "fromFace = map.GetFaceIndex(new CampaignVec2(at, false));" in sail
+            and ordered(along, "Vec2 flow = winds.GetWindAtPosition(from + heading * (each * (k + 0.5f)));",
+                        "TradeMath.WindOnTheMap(flow.x, flow.y, out float windX, out float windY);",
+                        "float push = TradeMath.WindBehind(heading.x, heading.y, windX, windY, out bool before);",
+                        "time += each / (1d + push);", "lift = time > 0d ? (float)(length / time - 1d) : 0f;")
+            and ordered(why, "if (speed?.FullName != NavalSpeedModel)", "if (weather?.FullName != NavalWeatherModel)",
+                        '"MinWindWithoutStormOnCampaignMap", TradeMath.WindAtLeast',
+                        '"MaxWindWithoutStormOnCampaignMap", TradeMath.WindAtMost',
+                        '"WindDeadZoneThresholdInDegrees", 180f - TradeMath.AWindPushesWithin',
+                        '"MaximumNavalSpeed", TradeMath.ASailIsNeverFasterThan',
+                        "if (!(campaign.MapSceneWrapper is MapScene map))")
+            and "!party.HasPerk(perk, BattleEnvironment.Naval, out _, secondary)" in
+                method_body(t, "private static float NavalPerkAtSea(string id, bool secondary)")
+            and ordered(method_body(t, "private static TradeMath.Pace PartyPace()"),
+                        "pace.FairWinds = NavalPerkAtSea(FairWindsPerk, false);",
+                        "pace.ShockAndAwe = NavalPerkAtSea(ShockAndAwePerk, true);")
+            and 'private const string FairWindsPerk = "FairWinds";' in t
+            and 'private const string ShockAndAwePerk = "ShockAndAwe";' in t
+            and "(1f - behind) * Finite(ShockAndAwe, 0f);" in method_body(m, "public float AtSea(float push, float fair)")
+            and "sea = sailed && WindsBlow() ? pace.BestAtSea : pace.Sea;" in method_body(t, "private static void Speeds(")
+            and "target.HasPort && (party.IsCurrentlyAtSea || party.CurrentSettlement?.HasPort == true);" in t
+            and "_windsHour = -1;" in method_body(t, "private static void DropIfNavalChanged")
+            and "public float BestAtSea => Math.Max(AtSea(WindAtMost * AWindPushesAtMostBy, 1f), AtSea(0f, 0f));" in m
+            and "float angle = Math.Abs((float)Math.Atan2(-bearingX, bearingY) - (float)Math.Atan2(-windX, windY)) * 57.29578f;" in behind
+            and "if (!(angle < AWindPushesWithin)) return 0f;" in behind
+            and "float strength = length < WindAtLeast ? WindAtLeast : length > WindAtMost ? WindAtMost : length;" in wind
+            and "public const float WindAtLeast = 1f / 15f;" in m and "public const float WindAtMost = 0.46f;" in m
+            and "public const float AWindPushesAtMostBy = 1.5f;" in m and "public const float ASailIsNeverFasterThan = 10f;" in m
+            and "CampaignTime.SunSet, fresh, tally, road.Push, road.Fair);" in method_body(t, "private static float Ride(")
+            and "WindOn(road, pace) +" in method_body(t, "internal static string TheRideTo(Settlement target)")
+            and "TradeLord.roads" not in ALL and "RoadAtlas" not in ALL
+            and all(one in MATHTESTS for one in
+                    ("The_wind_on_the_map_is_read_the_way_War_Sails_reads_it_with_no_storm",
+                     "A_wind_behind_the_ships_pushes_them_by_up_to_one_and_a_half_times_its_strength",
+                     "The_angle_to_the_wind_is_not_wrapped_round_just_as_War_Sails_leaves_it",
+                     "Ships_sail_faster_with_the_wind_Fair_Winds_and_Shock_and_Awe_but_never_past_ten",
+                     "No_wind_on_the_map_takes_ships_past_the_soonest_a_ride_at_sea_is_counted_for",
+                     "Sea_stretches_joined_into_one_run_take_as_long_as_they_did_apart",
+                     "A_sea_leg_with_the_wind_behind_takes_less_time_and_one_without_takes_what_it_did"))
+            and "With War Sails, a ride all at sea is timed along the course your ships would sail" in README)
+
+
+chk("2.6.0", "with War Sails a ride all at sea is timed along the course the ships would sail, each stretch with the map's wind as War Sails weighs it, Fair Winds and Shock and Awe on top, storms left out and no road file kept",
+    a_ride_all_at_sea_is_timed_along_its_course_with_the_war_sails_wind())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")
