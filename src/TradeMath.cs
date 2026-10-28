@@ -1082,6 +1082,13 @@ namespace TradeLord
             return beaten && upper >= openingBuy && PerDay((float)(upper - openingBuy) * stocked, days) <= bestKey;
         }
 
+        public static bool LandingCannotLiftItPastTheMargin(int openingBuy, int quotedSell, int unlanded, int landed,
+                                                            float safety, float margin)
+        {
+            if (landed <= 0 || quotedSell <= 0 || unlanded <= 0 || !(safety >= 0f)) return false;
+            return !BuyAcceptable(openingBuy, Realizable(ForecastWithin(quotedSell, unlanded), safety), margin);
+        }
+
         public static bool NoPriceCouldClearTheMargin(int openingBuy, int quotedSell, float safety, float margin)
         {
             if (quotedSell <= 0 || !(safety >= 0f)) return false;
@@ -1301,6 +1308,40 @@ namespace TradeLord
         public static int WhatVillagersSell(int amount, int till, int price) =>
             amount <= 0 || till <= 0 || price <= 0 ? 0 : Math.Min(amount, till / price);
 
+        public const float ATownsPurseClosesItsGapADayBy = 0.25f;
+
+        public static int WhatATownsPurseWouldHold(int gold, int changeToday)
+        {
+            long held = gold + (long)Math.Round(changeToday / ATownsPurseClosesItsGapADayBy);
+            return (int)Math.Max(0L, Math.Min(int.MaxValue, held));
+        }
+
+        public static int TillWhenYouArrive(int gold, int wouldHold, IList<(float days, int gold)> paidInOrder,
+                                            float days)
+        {
+            double till = Math.Max(0, gold);
+            float until = Finite(days, 0f);
+            if (until <= 0f) return (int)till;
+            float at = 0f;
+            for (int i = 0; paidInOrder != null && i < paidInOrder.Count; i++)
+            {
+                float when = Math.Max(0f, Finite(paidInOrder[i].days, 0f));
+                if (when > until) break;
+                if (paidInOrder[i].gold <= 0) continue;
+                till = APurseClosesItsGap(till, wouldHold, when - at);
+                till = Math.Max(0d, till - paidInOrder[i].gold);
+                at = Math.Max(at, when);
+            }
+            till = APurseClosesItsGap(till, wouldHold, until - at);
+            return (int)Math.Min(int.MaxValue, Math.Round(till));
+        }
+
+        private static double APurseClosesItsGap(double till, int wouldHold, float days)
+        {
+            if (wouldHold <= 0 || !(days > 0f)) return till;
+            return wouldHold - (wouldHold - till) * Math.Pow(1d - ATownsPurseClosesItsGapADayBy, days);
+        }
+
         public const float VillagersSetOutAnHourWith = 0.15f;
 
         public const float VillagersLeaveATownAnHourWith = 0.2f;
@@ -1392,6 +1433,50 @@ namespace TradeLord
                 back = setOut + ride + stay + ride;
             }
             return loads;
+        }
+
+        public const float ACaravansTurnIsKeptFor = 7f;
+
+        public const float LeastDaysATurnIsWeighedOver = 1f;
+
+        public const float MostDaysTheUnseenDrawAPurse = 10f;
+
+        public static float HowOftenSuchATurnComes(float leadDays, float watchedDays)
+        {
+            float lead = Finite(leadDays, float.NaN);
+            if (!(lead >= 0f)) return 0f;
+            float span = Math.Min(ACaravansTurnIsKeptFor, Finite(watchedDays, 0f) - lead);
+            return span >= LeastDaysATurnIsWeighedOver ? 1f / span : 0f;
+        }
+
+        public static float WhatUnseenCaravansBring(IList<(float lead, float perDay)> turns, float withinDays)
+        {
+            float within = Finite(withinDays, 0f);
+            if (turns == null || !(within > 0f)) return 0f;
+            double brought = 0d;
+            for (int i = 0; i < turns.Count; i++)
+            {
+                float lead = Finite(turns[i].lead, float.NaN);
+                float perDay = Finite(turns[i].perDay, 0f);
+                if (!(lead >= 0f) || !(perDay > 0f) || lead >= within) continue;
+                brought += (double)perDay * (within - lead);
+            }
+            return brought > float.MaxValue ? float.MaxValue : (float)brought;
+        }
+
+        public static void UnseenDraws(IList<(float lead, float perDay)> draws, float horizonDays,
+                                       List<(float days, int gold)> into)
+        {
+            if (draws == null || into == null) return;
+            float horizon = Math.Min(Finite(horizonDays, 0f), MostDaysTheUnseenDrawAPurse);
+            float before = 0f;
+            for (float at = HorizonStep; at <= horizon + 1E-4f; at += HorizonStep)
+            {
+                float upTo = WhatUnseenCaravansBring(draws, at);
+                int gold = (int)Math.Min(int.MaxValue, Math.Round(upTo - before));
+                before = upTo;
+                if (gold > 0) into.Add((at - HorizonStep * 0.5f, gold));
+            }
         }
 
         public static float WetGroundStep(int men, int riders, int footmen, int spareMounts)
@@ -1917,6 +2002,40 @@ namespace TradeLord
                 if (OutOfReach(DaysTaken(t))) return FurthestThereIs;
             }
             return DaysTaken(t);
+        }
+
+        public sealed class SkyAfter : ISky
+        {
+            private readonly ISky _sky;
+            private readonly double _after;
+
+            public SkyAfter(ISky sky, double after)
+            {
+                _sky = sky ?? ClearSky.Always;
+                _after = double.IsNaN(after) || double.IsInfinity(after) ? 0d : after;
+            }
+
+            public void Read(int cell, double hours, out bool wet, out bool snowy, out double changes)
+            {
+                _sky.Read(cell, hours + _after, out wet, out snowy, out changes);
+                changes -= _after;
+            }
+        }
+
+        public static float DaysAfloatThenAshore(IList<Run> afloat, IList<Sail> sails, float hoursGoingAshore,
+                                                 IList<Run> ashore, Pace pace, ISky sky, double startClock, int sunrise,
+                                                 int sunset, bool freshAtStart, Tally tally)
+        {
+            if (pace == null) return 0f;
+            float atSea = DaysAlong(afloat, pace, sky, startClock, sunrise, sunset, freshAtStart, tally, sails);
+            if (OutOfReach(atSea)) return FurthestThereIs;
+            float going = Finite(hoursGoingAshore, 0f);
+            double landed = atSea * 24d + (going > 0f ? going : 0f);
+            double start = double.IsNaN(startClock) || double.IsInfinity(startClock) ? 0d : startClock;
+            float onLand = DaysAlong(ashore, pace.After(landed), new SkyAfter(sky, landed), start + landed, sunrise,
+                                     sunset, true, tally);
+            if (OutOfReach(onLand)) return FurthestThereIs;
+            return DaysTaken(landed + onLand * 24d);
         }
 
         public static bool ClearOfLimits(float speed, float least, float most) =>

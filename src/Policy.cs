@@ -536,6 +536,11 @@ namespace TradeLord
         internal static bool BuyAcceptable(int buyPrice, float realizable) =>
             TradeMath.BuyAcceptable(buyPrice, realizable, Options.Current.MinProfitMargin);
 
+        internal static bool LandingCannotLiftItPastTheMargin(int openingBuy, int quotedSell, int unlanded, int landed,
+                                                              float safety) =>
+            TradeMath.LandingCannotLiftItPastTheMargin(openingBuy, quotedSell, unlanded, landed, safety,
+                                                       Options.Current.MinProfitMargin);
+
         internal static bool NoOpeningPriceCouldMakeIt(int openingBuy, int quotedSell, int landed, int stocked,
                                                        float days, bool beaten, float bestKey, float safety) =>
             TradeMath.NoOpeningPriceCouldMakeIt(openingBuy, quotedSell, landed, stocked, days, beaten, bestKey, safety,

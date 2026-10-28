@@ -32,6 +32,9 @@ namespace TradeLord
         private static readonly Dictionary<string, List<(float days, int gold)>> _tillPays =
             new Dictionary<string, List<(float, int)>>(StringComparer.Ordinal);
 
+        private static readonly Dictionary<string, List<(float days, int gold)>> _tillAhead =
+            new Dictionary<string, List<(float, int)>>(StringComparer.Ordinal);
+
         private static readonly Dictionary<(string site, string kind), int> _usedUp =
             new Dictionary<(string, string), int>();
 
@@ -70,6 +73,54 @@ namespace TradeLord
 
         private static long _villageTicks;
 
+        private static readonly Dictionary<string, int> _wouldHold = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        private sealed class Turn
+        {
+            internal string Town;
+            internal double Since;
+            internal Dictionary<string, int> Cargo;
+            internal bool Traded;
+            internal int Seen;
+        }
+
+        private struct Came
+        {
+            internal double At;
+            internal float Lead;
+            internal bool Sold;
+            internal bool Priced;
+            internal string Item;
+            internal string Category;
+            internal int Units;
+            internal int Worth;
+            internal int Gold;
+        }
+
+        private const int HoursATurnIsKeptUnseen = 48;
+
+        private static readonly Dictionary<string, Turn> _turns = new Dictionary<string, Turn>(StringComparer.Ordinal);
+
+        private static readonly Dictionary<string, List<Came>> _came =
+            new Dictionary<string, List<Came>>(StringComparer.Ordinal);
+
+        private static double _watchedFrom = double.NaN;
+
+        private static int _turnsPrunedAt;
+
+        private static readonly Dictionary<(string site, string item), List<(float lead, float perDay)>> _unseenUnits =
+            new Dictionary<(string, string), List<(float, float)>>();
+
+        private static readonly Dictionary<(string site, string kind), List<(float lead, float perDay)>> _unseenWorth =
+            new Dictionary<(string, string), List<(float, float)>>();
+
+        private static readonly Dictionary<(string site, string kind), List<(float lead, float perDay)>> _unseenBought =
+            new Dictionary<(string, string), List<(float, float)>>();
+
+        private static int _unseenSales, _unseenBuys;
+
+        private static float _unseenWatched;
+
         internal static bool On => Options.Current.MarketForecast && Options.Current.Omniscient;
 
         internal static void Forget()
@@ -79,6 +130,7 @@ namespace TradeLord
             _spending.Clear();
             _drawing.Clear();
             _tillPays.Clear();
+            _tillAhead.Clear();
             _usedUp.Clear();
             _indexes.Clear();
             _coastIndexes.Clear();
@@ -88,13 +140,27 @@ namespace TradeLord
             _shelfAhead.Clear();
             _shifts.Clear();
             _villagersReach.Clear();
+            _wouldHold.Clear();
+            _unseenUnits.Clear();
+            _unseenWorth.Clear();
+            _unseenBought.Clear();
+            ForgetTheTurns();
             _saidItCouldNotRead = false;
+        }
+
+        private static void ForgetTheTurns()
+        {
+            _turns.Clear();
+            _came.Clear();
+            _watchedFrom = double.NaN;
+            _turnsPrunedAt = 0;
         }
 
         internal static int UnitsLanding(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null) return 0;
-            return Projection.UnitsLanding(Read(site), item.StringId, withinDays, graded: true);
+            int seen = Projection.UnitsLanding(Read(site), item.StringId, withinDays, graded: true);
+            return TradeMath.AddedUp(seen, Unseen(_unseenUnits, (site.StringId, item.StringId), withinDays));
         }
 
         internal static int UnitsLeaving(Settlement site, ItemObject item, float withinDays)
@@ -169,7 +235,9 @@ namespace TradeLord
         internal static int WorthLanding(Settlement site, ItemObject item, float withinDays)
         {
             if (!On || site == null || item == null || item.ItemCategory == null) return 0;
-            return Projection.WorthLanding(Read(site), item.ItemCategory.StringId, withinDays, graded: true);
+            int seen = Projection.WorthLanding(Read(site), item.ItemCategory.StringId, withinDays, graded: true);
+            return TradeMath.ShelfAfterLanding(seen, Unseen(_unseenWorth, (site.StringId, item.ItemCategory.StringId),
+                                                            withinDays));
         }
 
         internal static int WorthLeaving(Settlement site, ItemObject item, float withinDays)
@@ -194,9 +262,18 @@ namespace TradeLord
         }
 
         private static int WorthBought(Settlement site, ItemObject item, float withinDays) =>
-            _spending.TryGetValue(site.StringId, out List<Spending> coming)
-                ? Projection.WorthBought(coming, item.ItemCategory.StringId, withinDays, graded: true)
-                : 0;
+            TradeMath.AddedUp(_spending.TryGetValue(site.StringId, out List<Spending> coming)
+                                  ? Projection.WorthBought(coming, item.ItemCategory.StringId, withinDays, graded: true)
+                                  : 0,
+                              Unseen(_unseenBought, (site.StringId, item.ItemCategory.StringId), withinDays));
+
+        private static int Unseen<TKey>(Dictionary<TKey, List<(float lead, float perDay)>> from, TKey key,
+                                        float withinDays)
+        {
+            if (!from.TryGetValue(key, out List<(float lead, float perDay)> turns)) return 0;
+            float brought = TradeMath.WhatUnseenCaravansBring(turns, TradeMath.ARideToTheQuarterDay(withinDays));
+            return brought >= int.MaxValue ? int.MaxValue : (int)Math.Round(brought);
+        }
 
         private static int WorthUsedUp(Settlement site, ItemObject item, float withinDays, int most)
         {
@@ -247,6 +324,7 @@ namespace TradeLord
             _spending.Clear();
             _drawing.Clear();
             _tillPays.Clear();
+            _tillAhead.Clear();
             _usedUp.Clear();
             _indexes.Clear();
             _coastIndexes.Clear();
@@ -254,10 +332,17 @@ namespace TradeLord
             _shelfAhead.Clear();
             _shifts.Clear();
             _villagersReach.Clear();
+            _wouldHold.Clear();
+            _unseenUnits.Clear();
+            _unseenWorth.Clear();
+            _unseenBought.Clear();
             Guard.Run("Forecast.PriceIndexes", ReadThePriceIndexes);
             Guard.Run("Forecast.Caravans", ReadWhatIsOnTheRoad);
             Guard.Run("Forecast.Villages", ReadWhatTheVillagesWillSend);
             Guard.Run("Forecast.Workshops", ReadWhatTheShopsWillMake);
+            Guard.Run("Forecast.Unseen", ReadWhatUnseenCaravansBring);
+            foreach (List<(float days, int gold)> paid in _tillPays.Values) paid.Sort((x, y) => x.days.CompareTo(y.days));
+            foreach (List<(float days, int gold)> paid in _tillAhead.Values) paid.Sort((x, y) => x.days.CompareTo(y.days));
         }
 
         private static void ReadWhatIsOnTheRoad()
@@ -302,6 +387,199 @@ namespace TradeLord
                         Note(bound, item.StringId, item.ItemCategory, units, TradeMath.WorthOf(units, item.Value), days);
                 }
             }
+        }
+
+        internal static void WatchTheCaravansTurn()
+        {
+            if (!On || Campaign.Current == null)
+            {
+                if (!double.IsNaN(_watchedFrom)) ForgetTheTurns();
+                return;
+            }
+            double now = CampaignTime.Now.ToHours;
+            bool watching = !double.IsNaN(_watchedFrom);
+            int hour = (int)now;
+            if (!watching)
+            {
+                _watchedFrom = now;
+                _turnsPrunedAt = hour;
+            }
+            MBReadOnlyList<MobileParty> all = MobileParty.All;
+            for (int i = 0; all != null && i < all.Count; i++)
+            {
+                MobileParty party = all[i];
+                string id = party?.StringId;
+                if (id == null || !party.IsCaravan) continue;
+                _turns.TryGetValue(id, out Turn turn);
+                if (party.CurrentSettlement != null)
+                {
+                    if (turn != null) turn.Seen = hour;
+                    continue;
+                }
+                Settlement bound = party.TargetSettlement;
+                if (bound == null || !bound.IsTown)
+                {
+                    if (turn != null) _turns.Remove(id);
+                    continue;
+                }
+                if (turn != null && turn.Town == bound.StringId)
+                {
+                    turn.Seen = hour;
+                    continue;
+                }
+                _turns[id] = new Turn
+                {
+                    Town = bound.StringId,
+                    Since = watching ? now : double.NaN,
+                    Cargo = watching ? CargoOf(party.ItemRoster) : null,
+                    Seen = hour
+                };
+            }
+            if (hour - _turnsPrunedAt < HoursATurnIsKeptUnseen) return;
+            _turnsPrunedAt = hour;
+            var gone = new List<string>();
+            foreach (KeyValuePair<string, Turn> one in _turns)
+                if (hour - one.Value.Seen > HoursATurnIsKeptUnseen) gone.Add(one.Key);
+            foreach (string id in gone) _turns.Remove(id);
+        }
+
+        private static Dictionary<string, int> CargoOf(ItemRoster carried)
+        {
+            var cargo = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int k = 0; carried != null && k < carried.Count; k++)
+            {
+                ItemObject item = carried.GetItemAtIndex(k);
+                int amount = carried.GetElementNumber(k);
+                if (item?.StringId == null || amount <= 0) continue;
+                cargo.TryGetValue(item.StringId, out int had);
+                cargo[item.StringId] = had + amount;
+            }
+            return cargo;
+        }
+
+        private static bool TheyCameOff(Dictionary<string, int> before, Dictionary<string, int> after,
+                                        Dictionary<ItemObject, int> moved)
+        {
+            if (before == null || moved.Count == 0) return false;
+            foreach (KeyValuePair<ItemObject, int> one in moved)
+            {
+                before.TryGetValue(one.Key.StringId, out int had);
+                after.TryGetValue(one.Key.StringId, out int has);
+                if ((long)has + one.Value > had) return false;
+            }
+            return true;
+        }
+
+        internal static void ACaravanTraded(MobileParty caravan, Town town, List<(EquipmentElement, int)> traded)
+        {
+            if (!On || double.IsNaN(_watchedFrom) || caravan?.StringId == null || town?.Settlement == null ||
+                traded == null)
+                return;
+            Settlement site = town.Settlement;
+            if (!_turns.TryGetValue(caravan.StringId, out Turn turn) || turn.Town != site.StringId) return;
+            var moved = new Dictionary<ItemObject, int>();
+            foreach ((EquipmentElement element, int amount) in traded)
+            {
+                ItemObject item = element.Item;
+                if (item?.ItemCategory == null || item.StringId == null || amount <= 0) continue;
+                moved.TryGetValue(item, out int had);
+                moved[item] = had + amount;
+            }
+            bool sold = !turn.Traded && TheyCameOff(turn.Cargo, CargoOf(caravan.ItemRoster), moved);
+            turn.Traded = true;
+            if (double.IsNaN(turn.Since)) return;
+            double at = CampaignTime.Now.ToHours;
+            float lead = (float)((at - turn.Since) / 24d);
+            if (!_came.TryGetValue(site.StringId, out List<Came> came))
+            {
+                came = new List<Came>();
+                _came[site.StringId] = came;
+            }
+            foreach (KeyValuePair<ItemObject, int> one in moved)
+            {
+                ItemObject item = one.Key;
+                came.Add(new Came
+                {
+                    At = at,
+                    Lead = lead,
+                    Sold = sold,
+                    Priced = TradePolicy.Priced(item),
+                    Item = item.StringId,
+                    Category = item.ItemCategory.StringId,
+                    Units = one.Value,
+                    Worth = TradeMath.WorthOf(one.Value, item.Value),
+                    Gold = sold ? TradeMath.WorthOf(one.Value, Priced.At(town, item, caravan, selling: true)) : 0
+                });
+            }
+        }
+
+        private static void ReadWhatUnseenCaravansBring()
+        {
+            _unseenSales = 0;
+            _unseenBuys = 0;
+            _unseenWatched = 0f;
+            if (double.IsNaN(_watchedFrom)) return;
+            double now = CampaignTime.Now.ToHours;
+            float watched = (float)((now - _watchedFrom) / 24d);
+            _unseenWatched = watched;
+            double oldest = now - TradeMath.ACaravansTurnIsKeptFor * 24d;
+            var draws = new Dictionary<string, List<(float lead, float perDay)>>(StringComparer.Ordinal);
+            foreach (KeyValuePair<string, List<Came>> one in _came)
+            {
+                List<Came> came = one.Value;
+                came.RemoveAll(e => e.At < oldest);
+                for (int i = 0; i < came.Count; i++)
+                {
+                    Came e = came[i];
+                    float perDay = TradeMath.HowOftenSuchATurnComes(e.Lead, watched);
+                    if (!(perDay > 0f)) continue;
+                    if (!e.Sold)
+                    {
+                        _unseenBuys++;
+                        NoteUnseen(_unseenBought, (one.Key, e.Category), e.Lead, e.Worth * perDay);
+                        continue;
+                    }
+                    _unseenSales++;
+                    if (e.Priced)
+                    {
+                        NoteUnseen(_unseenUnits, (one.Key, e.Item), e.Lead, e.Units * perDay);
+                        NoteUnseen(_unseenWorth, (one.Key, e.Category), e.Lead, e.Worth * perDay);
+                    }
+                    NoteUnseen(draws, one.Key, e.Lead, e.Gold * perDay);
+                }
+            }
+            foreach (KeyValuePair<string, List<(float lead, float perDay)>> one in draws)
+            {
+                var ahead = _tillPays.TryGetValue(one.Key, out List<(float days, int gold)> paid)
+                    ? new List<(float, int)>(paid)
+                    : new List<(float, int)>();
+                TradeMath.UnseenDraws(one.Value, TradeMath.MostDaysTheUnseenDrawAPurse, ahead);
+                _tillAhead[one.Key] = ahead;
+            }
+        }
+
+        private static void NoteUnseen<TKey>(Dictionary<TKey, List<(float lead, float perDay)>> into, TKey key,
+                                             float lead, float perDay)
+        {
+            if (!(perDay > 0f)) return;
+            if (!into.TryGetValue(key, out List<(float lead, float perDay)> turns))
+            {
+                turns = new List<(float, float)>();
+                into[key] = turns;
+            }
+            turns.Add((lead, perDay));
+        }
+
+        internal static string TheCaravansNotYetBound()
+        {
+            if (!On) return null;
+            Build();
+            return "caravans not bound yet: worked out from " + _unseenSales + " good(s) sold and " + _unseenBuys +
+                   " bought by caravans after they chose a town, over " +
+                   _unseenWatched.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) +
+                   " day(s) watched, the last " +
+                   TradeMath.ACaravansTurnIsKeptFor.ToString("0", System.Globalization.CultureInfo.InvariantCulture) +
+                   " day(s) of them kept";
         }
 
         private static void ReadWhatTheVillagesWillSend()
@@ -921,6 +1199,38 @@ namespace TradeLord
                 _tillPays[site.StringId] = paid;
             }
             paid.Add((days, gold));
+        }
+
+        internal static int TillOnArrival(Settlement site, float withinDays)
+        {
+            SettlementComponent market = site?.SettlementComponent;
+            if (market == null) return 0;
+            int gold = market.Gold;
+            if (!On || !site.IsTown || site.Town == null) return gold;
+            Build();
+            if (!_tillAhead.TryGetValue(site.StringId, out List<(float days, int gold)> paid))
+                _tillPays.TryGetValue(site.StringId, out paid);
+            return TradeMath.TillWhenYouArrive(gold, WouldHold(site, gold), paid, withinDays);
+        }
+
+        internal static int TillAtMost(Settlement site)
+        {
+            SettlementComponent market = site?.SettlementComponent;
+            if (market == null) return 0;
+            int gold = market.Gold;
+            if (!On || !site.IsTown || site.Town == null) return gold;
+            Build();
+            return Math.Max(gold, WouldHold(site, gold));
+        }
+
+        private static int WouldHold(Settlement site, int gold)
+        {
+            if (_wouldHold.TryGetValue(site.StringId, out int wouldHold)) return wouldHold;
+            int change = Guard.Read("Forecast.TownGold", site.Town,
+                                    town => Campaign.Current.Models.SettlementEconomyModel.GetTownGoldChange(town), 0);
+            wouldHold = TradeMath.WhatATownsPurseWouldHold(gold, change);
+            _wouldHold[site.StringId] = wouldHold;
+            return wouldHold;
         }
 
         internal static int TillPaysOutBefore(Settlement site, float withinDays)

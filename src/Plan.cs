@@ -231,13 +231,6 @@ namespace TradeLord
             {
                 if (to == from) continue;
 
-                int till = 0;
-                if (s.Omniscient)
-                {
-                    till = TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0, to.IsVillage);
-                    if (till <= 0) continue;
-                }
-
                 float soonest = toBuy + Travel.StraightDaysBetween(from, to);
                 if (!LedgerBehavior.WithinTravelCeiling(to, soonest)) continue;
                 if (_passOver && TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin))
@@ -263,6 +256,22 @@ namespace TradeLord
                     PassedOver++;
                     continue;
                 }
+                if (_passOver && landedAtSellTown > 0 &&
+                    TradePolicy.LandingCannotLiftItPastTheMargin(openingBuy, sellPrice,
+                                                                 Bulk.Opening(to, item, true, sellPrice, 0),
+                                                                 landedAtSellTown, _safety))
+                {
+                    PassedOver++;
+                    continue;
+                }
+
+                int till = 0;
+                if (s.Omniscient)
+                {
+                    till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);
+                    if (till <= 0) continue;
+                }
+
                 int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);
                 Opened++;
                 float realizable = TradePolicy.Realizable(openingSell);
@@ -432,9 +441,9 @@ namespace TradeLord
         internal static Ladder SellLadder(Leg leg) =>
             leg == null ? null : SellLadder(leg.To, leg.Item, leg.SellQuoted, leg.LandedAtSell);
 
-        internal static int TillAt(Settlement to) =>
+        internal static int TillAt(Settlement to, float days) =>
             to != null && Options.Current.Omniscient
-                ? TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0, to.IsVillage)
+                ? TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage)
                 : 0;
 
         internal static float SellSide(ItemObject item, Settlement to, float days, bool simulated, int caravans,
@@ -494,7 +503,7 @@ namespace TradeLord
                 if (TradeMath.OutOfReach(days) || !LedgerBehavior.WithinTravelCeiling(to, days)) continue;
                 int landed = Forecast.WorthShiftAsItHasHeld(to, item, days);
                 Ladder ladder = SellLadder(to, item, quoted, landed);
-                int purse = TillAt(to);
+                int purse = TillAt(to, days);
                 int drawn = held > 0 ? ladder.Through(held) : 0;
                 int bought = 0, cost = 0, sold = 0, firstSell = 0, firstPaid = 0;
                 while (bought < units)

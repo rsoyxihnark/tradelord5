@@ -157,6 +157,8 @@ namespace TradeLord
             internal float LandRatio;
             internal List<TradeMath.Run> Runs;
             internal TradeMath.Sail[] Sails;
+            internal List<TradeMath.Run> Afloat, Ashore;
+            internal float GoingAshore;
             internal bool Walked;
             internal int Hour = -1;
             internal float Days;
@@ -253,6 +255,8 @@ namespace TradeLord
         private const float LinesAgreeWithin = 0.002f;
         private const float SpeedsAgreeWithin = 0.001f;
         private const float WetGroundTakesFromRiders = 0.3f;
+        private const float MostHoursGoingAshore = 48f;
+        private const float MostUnreadAshore = 2f * Stride;
         private const double LongestForecastHours = 720d;
         private const int MostWeatherTurnsKept = 200000;
         private const byte Wet = 1;
@@ -963,8 +967,12 @@ namespace TradeLord
             long started = Stopwatch.GetTimestamp();
             long forecastBefore = _forecastTicks;
             double start = moment.ToHours + after;
-            float days = TradeMath.DaysAlong(road.Runs, pace.After(start - pace.ReadAt), sky, start, CampaignTime.SunRise,
-                                             CampaignTime.SunSet, fresh, tally, road.Sails);
+            float days = road.Ashore != null
+                ? TradeMath.DaysAfloatThenAshore(road.Afloat, road.Sails, road.GoingAshore, road.Ashore,
+                                                 pace.After(start - pace.ReadAt), sky, start, CampaignTime.SunRise,
+                                                 CampaignTime.SunSet, fresh, tally)
+                : TradeMath.DaysAlong(road.Runs, pace.After(start - pace.ReadAt), sky, start, CampaignTime.SunRise,
+                                      CampaignTime.SunSet, fresh, tally, road.Sails);
             long spent = Stopwatch.GetTimestamp() - started;
             long inner = _forecastTicks - forecastBefore;
             _frameTicks += spent > inner ? spent - inner : 0L;
@@ -1165,14 +1173,20 @@ namespace TradeLord
                 Road sailed = SailedFromParty(party, target, atSea);
                 if (sailed != null) return sailed;
             }
-            if (!atSea && landRatio >= AllOnLand && !_unwalkable.Contains(target.StringId))
+            bool mixed = PartlyAtSea(landRatio);
+            if (atSea && mixed && !target.HasPort && WindsBlow() && !_unwalkable.Contains(target.StringId))
+            {
+                Road landed = LandedFromParty(party, target);
+                if (landed != null) return landed;
+            }
+            if (!atSea && (landRatio >= AllOnLand || mixed) && !_unwalkable.Contains(target.StringId))
             {
                 StartTheMeter();
                 long started = StartAWalk();
                 try { WalkFromParty(party, target, road); }
                 catch { road.Walked = false; }
                 StopTheMeter(started, ref _partyWalks, "a road from your party", road);
-                if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);
+                if (road.Walked && landRatio >= AllOnLand) NoteHowRoughTheGuessWas(dist, landRatio, road);
                 if (!road.Walked) _unwalkable.Add(target.StringId);
             }
             if (!road.Walked)
@@ -1189,7 +1203,24 @@ namespace TradeLord
         {
             float dist = Between(a, b, out float landRatio);
             var road = new Road { Length = dist, LandRatio = landRatio };
-            if (a != b && a.HasPort && b.HasPort && AllAtSea(landRatio) && WindsBlow())
+            bool mixed = PartlyAtSea(landRatio);
+            if (a != b && a.HasPort && mixed && !b.HasPort && WindsBlow())
+            {
+                StartTheMeter();
+                long started = StartAWalk();
+                try { SailToTheShore(a, b, road); }
+                catch { road.Walked = false; }
+                StopTheMeter(started, ref _pairWalks, "a course from a port to the shore", road);
+                _justWalked = true;
+                if (_behind) _walkedBehind++;
+                if (road.Walked)
+                {
+                    _seaWalks++;
+                    return road;
+                }
+                road = new Road { Length = dist, LandRatio = landRatio };
+            }
+            if (a != b && a.HasPort && b.HasPort && (AllAtSea(landRatio) || mixed) && WindsBlow())
             {
                 StartTheMeter();
                 long started = StartAWalk();
@@ -1205,14 +1236,14 @@ namespace TradeLord
                 }
                 road = new Road { Length = dist, LandRatio = landRatio };
             }
-            if (landRatio >= AllOnLand && a != b)
+            if ((landRatio >= AllOnLand || mixed) && a != b)
             {
                 StartTheMeter();
                 long started = StartAWalk();
                 try { WalkBetween(a, b, road); }
                 catch { road.Walked = false; }
                 StopTheMeter(started, ref _pairWalks, "a road between markets", road);
-                if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);
+                if (road.Walked && landRatio >= AllOnLand) NoteHowRoughTheGuessWas(dist, landRatio, road);
                 _justWalked = true;
                 if (_behind) _walkedBehind++;
             }
@@ -1228,11 +1259,14 @@ namespace TradeLord
 
         private static bool AllAtSea(float landRatio) => landRatio >= 0f && landRatio <= 1f - AllOnLand;
 
+        private static bool PartlyAtSea(float landRatio) => landRatio > 1f - AllOnLand && landRatio < AllOnLand;
+
         private static int _windsHour = -1;
         private static bool _windsBlow;
         private static MapScene _windsOf;
         private static string _seasSaid, _seasBecause;
         private static readonly Dictionary<int, int> _waterOfFace = new Dictionary<int, int>();
+        private static readonly Dictionary<int, TerrainType> _terrainOfFace = new Dictionary<int, TerrainType>();
 
         private static bool WindsBlow()
         {
@@ -1245,7 +1279,7 @@ namespace TradeLord
             _windsBlow = why == null;
             Log.Repeatable("sea legs", why ?? "winds",
                            why == null
-                               ? "sea legs: a ride all at sea is timed along the course your ships would sail, with the " +
+                               ? "sea legs: a ride all or partly at sea is timed along the course your ships would sail, with the " +
                                  "War Sails wind the map lays out on every stretch of it and storms left out"
                                : "sea legs: timed at your ships' speed alone, as " + why);
             return _windsBlow;
@@ -1577,6 +1611,146 @@ namespace TradeLord
             return null;
         }
 
+        private static bool Passable(IMapScene map, PathFaceRecord face, MobileParty.NavigationType way)
+        {
+            if (!face.IsValid()) return false;
+            if (!_terrainOfFace.TryGetValue(face.FaceIndex, out TerrainType terrain))
+                _terrainOfFace[face.FaceIndex] = terrain = map.GetFaceTerrainType(face);
+            return Campaign.Current.Models.PartyNavigationModel.IsTerrainTypeValidForNavigationType(terrain, way);
+        }
+
+        private static float ProbeAfloatThenAshore(IMapScene map, MapScene winds, Vec2 from, Vec2 to,
+                                                   List<TradeMath.Run> runs, List<TradeMath.Sail> sails, ref bool afloat)
+        {
+            if (!afloat) return Probe(map, from, to, runs);
+            float length = from.Distance(to);
+            if (!(length > 0f) || float.IsInfinity(length)) return 0f;
+            Vec2 heading = (to - from) * (1f / length);
+            int steps = (int)Math.Ceiling(length / Stride);
+            if (steps < 1) steps = 1;
+            float each = length / steps;
+            for (int k = 0; k < steps; k++)
+            {
+                _probes++;
+                Vec2 at = from + heading * (each * (k + 0.5f));
+                PathFaceRecord face = map.GetFaceIndex(new CampaignVec2(at, false));
+                if (!Passable(map, face, MobileParty.NavigationType.Naval) &&
+                    Passable(map, map.GetFaceIndex(new CampaignVec2(at, true)), MobileParty.NavigationType.Default))
+                {
+                    afloat = false;
+                    Probe(map, from + heading * (each * k), to, runs);
+                    return length;
+                }
+                Vec2 flow = winds.GetWindAtPosition(at);
+                TradeMath.WindOnTheMap(flow.x, flow.y, out float windX, out float windY);
+                float push = TradeMath.WindBehind(heading.x, heading.y, windX, windY, out bool astern);
+                TradeMath.AddRunAtSea(runs, sails, face.IsValid() ? face.FaceIndex : TradeMath.Unread, CellOf(at),
+                                      WaterAt(map, face), each, push, astern ? 1f : 0f);
+            }
+            return length;
+        }
+
+        private static float HoursGoingAshore(MobileParty party)
+        {
+            double hours = Campaign.Current.Models.PartyTransitionModel.GetTransitionTimeDisembarking(party).ToHours;
+            return hours >= 0d && hours <= MostHoursGoingAshore ? (float)hours : float.NaN;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static bool SailAndGoAshore(PathFaceRecord fromFace, Vec2 from, CampaignVec2 to, Road road)
+        {
+            MapScene winds = _windsOf;
+            MobileParty party = MobileParty.MainParty;
+            if (winds == null || party == null || !to.IsOnLand) return false;
+            float going = HoursGoingAshore(party);
+            if (float.IsNaN(going)) return false;
+            Grid();
+            IMapScene map = Campaign.Current.MapSceneWrapper;
+            PartyNavigationModel ways = Campaign.Current.Models.PartyNavigationModel;
+            int[] barred = ways.GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.All);
+            float wide = ways.GetEmbarkDisembarkThresholdDistance();
+            int seaToLand = party.GetRegionSwitchCostFromSeaToLand();
+            int landToSea = party.GetRegionSwitchCostFromLandToSea();
+            PathFaceRecord toFace = to.Face;
+            Vec2 end = to.ToVec2();
+            if (!fromFace.IsValid() || !toFace.IsValid()) return false;
+            var runs = new List<TradeMath.Run>();
+            var sails = new List<TradeMath.Sail>();
+            bool afloat = true;
+            float length = 0f;
+            for (int leg = 0; leg < MostPathsToOneRoad; leg++)
+            {
+                if (fromFace.FaceIndex == toFace.FaceIndex)
+                {
+                    length += ProbeAfloatThenAshore(map, winds, from, end, runs, sails, ref afloat);
+                    return WentAshore(road, runs, sails, length, afloat, going);
+                }
+                _path.Size = 0;
+                long asked = Stopwatch.GetTimestamp();
+                bool found = map.GetPathBetweenAIFaces(fromFace, toFace, from, end, afloat ? wide : 0.3f, _path, barred, 2f,
+                                                       seaToLand, landToSea);
+                _pathTicks += Stopwatch.GetTimestamp() - asked;
+                _paths++;
+                if (!found || _path.Size <= 0) return false;
+                Vec2 at = from;
+                for (int i = 0; i < _path.Size; i++)
+                {
+                    length += ProbeAfloatThenAshore(map, winds, at, _path[i], runs, sails, ref afloat);
+                    at = _path[i];
+                }
+                if (at.DistanceSquared(end) <= ReachedSquared) return WentAshore(road, runs, sails, length, afloat, going);
+                if (at.DistanceSquared(from) <= ReachedSquared) return false;
+                fromFace = map.GetFaceIndex(new CampaignVec2(at, !afloat));
+                if (!fromFace.IsValid()) return false;
+                from = at;
+            }
+            return false;
+        }
+
+        private static bool WentAshore(Road road, List<TradeMath.Run> runs, List<TradeMath.Sail> sails, float length,
+                                       bool afloat, float going)
+        {
+            int landfall = sails.Count;
+            if (afloat || !(length > 0f) || landfall <= 0 || landfall >= runs.Count) return false;
+            float unread = 0f;
+            for (int i = landfall; i < runs.Count; i++)
+                if (runs[i].Face == TradeMath.Unread) unread += runs[i].Length;
+            if (!(unread <= MostUnreadAshore)) return false;
+            float sea = TradeMath.LengthOn(runs, TradeMath.GroundSea);
+            road.Runs = runs;
+            road.Sails = sails.ToArray();
+            road.Afloat = runs.GetRange(0, landfall);
+            road.Ashore = runs.GetRange(landfall, runs.Count - landfall);
+            road.GoingAshore = going;
+            road.Length = length;
+            road.LandRatio = 1f - sea / length;
+            road.Walked = true;
+            return true;
+        }
+
+        private static void SailToTheShore(Settlement a, Settlement b, Road road)
+        {
+            CampaignVec2 port = a.PortPosition;
+            SailAndGoAshore(port.Face, port.ToVec2(), b.GatePosition, road);
+        }
+
+        private static Road LandedFromParty(MobileParty party, Settlement target)
+        {
+            StartTheMeter();
+            var road = new Road();
+            long started = StartAWalk();
+            try { SailAndGoAshore(party.CurrentNavigationFace, party.Position.ToVec2(), target.GatePosition, road); }
+            catch { road.Walked = false; }
+            StopTheMeter(started, ref _partyWalks, "a course from your ships to the shore", road);
+            if (road.Walked)
+            {
+                _seaWalks++;
+                return road;
+            }
+            _unwalkable.Add(target.StringId);
+            return null;
+        }
+
         private const double RoadsMsAFrame = 3d;
         private const double RoadsMsAScan = 20d;
         private const int RoadsLooksAFrame = 4000;
@@ -1850,6 +2024,7 @@ namespace TradeLord
             _seasSaid = null;
             _seasBecause = null;
             _waterOfFace.Clear();
+            _terrainOfFace.Clear();
             _partyDist.Clear();
             _unwalkable.Clear();
             _partyHour = -1;
@@ -1902,7 +2077,7 @@ namespace TradeLord
         }
 
         internal static float StraightDaysBetween(Settlement a, Settlement b) =>
-            a == null || b == null ? 0f : StraightDays(Nearest(a, b), a.HasPort && b.HasPort);
+            a == null || b == null ? 0f : StraightDays(Nearest(a, b), a.HasPort);
 
         internal static float StraightDaysFor(MobileParty party, Settlement target)
         {
@@ -1911,7 +2086,7 @@ namespace TradeLord
         }
 
         private static bool MaySail(MobileParty party, Settlement target) =>
-            target.HasPort && (party.IsCurrentlyAtSea || party.CurrentSettlement?.HasPort == true);
+            party.IsCurrentlyAtSea || target.HasPort && party.CurrentSettlement?.HasPort == true;
 
         private static float StraightDays(float distance, bool sailed)
         {
@@ -2157,7 +2332,11 @@ namespace TradeLord
                    Share((float)on[TradeMath.WaterRiver], (float)sea) + " river, where the War Sails wind adds " +
                    Scoring.Share((float)(calm / sailed - 1d)) + " to your ships' speed on average" +
                    (pace.FairWinds > 0f ? ", Fair Winds included" : "") +
-                   (pace.ShockAndAwe > 0f ? ", Shock and Awe included" : "");
+                   (pace.ShockAndAwe > 0f ? ", Shock and Awe included" : "") +
+                   (road.Ashore != null
+                       ? ", then " + road.GoingAshore.ToString("0.0", CultureInfo.InvariantCulture) +
+                         " hour(s) going ashore before the rest of the ride on land"
+                       : "");
         }
 
         internal static string SeasRead()
