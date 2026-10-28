@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.0
+
+- With War Sails, travel times now count the wind on a ride all at sea, along the course your ships would sail, leaving storms out
+- With War Sails, travel times at sea now count the Fair Winds perk while the wind is behind you
+- With War Sails, travel times at sea now count the Shock and Awe perk while the wind is against you
+- TradeLord.log now says how much of a ride is at sea and what the War Sails wind adds to your ships' speed there
+- TradeLord.log now says whether rides at sea are timed with the War Sails wind, and why not when they are not
+
 ## 2.5.3
 
 - Fixed the map marker missing a better market while the Sell At your goods were bought for was not the marked one
