@@ -3967,7 +3967,8 @@ def no_branch_is_named_as_a_debug_build_publisher():
             and kept_branch_named() == []
             and '`main` is the only branch that publishes.' in section
             and 'No branch is named as a debug build publisher any more.' in section
-            and '`legacy` is never worked on, never pushed to and never published from.' in section
+            and '`legacy`' not in RULES
+            and 'Their tags and releases stay, and the branch that carried them is gone.' in section
             and 'the game refuses to load a mod whose version carries anything else' in section
             and 'test build' not in RULES
             and ordered(where, 'if [ "$GITHUB_REF" = "refs/heads/main" ]; then',
