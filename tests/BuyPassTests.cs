@@ -239,6 +239,23 @@ namespace TradeLord.Tests
             Assert.Equal("hardwood", stock[1].Good.Id);
         }
 
+        [Fact]
+        public void A_good_the_scan_cut_to_your_cargo_counts_at_the_profit_it_was_priced_for()
+        {
+            var market = new FakeMarket { Purse = 100000, Cargo = 20f };
+            market.Add(Cargo("velvet"), amount: 100, price: 100, resale: 120);
+            market.Add(Cargo("hardwood"), amount: 20, price: 10, resale: 15);
+            market.LedgerAsksFor[0] = 1;
+            market.Plans[0] = new PlannedSale { Qty = 20, QtyUncut = 100, Priced = 20, Cost = 2000, Profit = 400, Key = 20f, KeyByDenar = 0.2f };
+            market.Plans[1] = new PlannedSale { Qty = 20, QtyUncut = 20, Priced = 20, Cost = 200, Profit = 100, Key = 5f, KeyByDenar = 0.5f };
+            List<Pick> stock = TradePass.WhatToBuy(market, market.Ledger, false, 0f, market.Rules, new BlockTally());
+            Assert.True(TradePass.OrdersWereWeighed);
+            Assert.Equal(400L, TradePass.WouldMakeByWeight);
+            Assert.Equal(100L, TradePass.WouldMakeByDenar);
+            Assert.False(TradePass.OrderedByDenar);
+            Assert.Equal("velvet", stock[0].Good.Id);
+        }
+
         private static Good Cargo(string id, float weight = 1f, int value = 100) =>
             new Good { Id = id, Name = id, IsTradeGood = true, Weight = weight, Value = value };
 

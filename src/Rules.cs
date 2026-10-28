@@ -43,6 +43,7 @@ namespace TradeLord
     {
         internal int Qty;
         internal int QtyUncut;
+        internal int Priced;
         internal int Profit;
         internal int Cost;
         internal float Key;

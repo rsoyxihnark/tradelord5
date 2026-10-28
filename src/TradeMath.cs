@@ -1826,6 +1826,13 @@ namespace TradeLord
             return made;
         }
 
+        public static int Scaled(int gold, int units, int pricedFor)
+        {
+            if (pricedFor <= 0 || units == pricedFor) return gold;
+            long scaled = (long)gold * units / pricedFor;
+            return scaled > int.MaxValue ? int.MaxValue : scaled < int.MinValue ? int.MinValue : (int)scaled;
+        }
+
         public static int PerUnit(int gold, int units) =>
             units <= 0 ? 0 : (int)Math.Round((double)gold / units, MidpointRounding.AwayFromZero);
 

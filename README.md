@@ -115,7 +115,7 @@
 - ✅ Buys only what it can resell at a profit somewhere within reach
 - ✅ How much of a price elsewhere it counts on is learned: with Learn the resale safety factor on, it starts at Resale safety factor and only ever lowers it, toward how much of the promised Sell price really held when you walked in
 - ✅ What this means says what share of a price elsewhere it counts on once your walk-ins have lowered it
-- ✅ It buys first what the TradeLord ledger offers at that market, then the good that makes the most profit a day for each unit of weight it carries
+- ✅ It buys first what the TradeLord ledger offers at that market, then the good that makes the most profit a day for each unit of weight it carries, unless buying by the most profit a day for each denar would earn more
 - ✅ It buys each good up to the Qty the TradeLord ledger shows, for the Sell At the TradeLord ledger shows
 - ✅ Adaptive spend limit lets your spending cap for the visit grow with your purse and only ever adds to it. On out of the box
 - ✅ Adaptive spend limit holds at Max spend per visit until your purse is five times that, then grows by one more Max spend per visit for every doubling of the purse, so 10000 in the purse allows 2000 and 20000 allows 3000

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.5.3
+
+- Fixed the map marker missing a better market while the Sell At your goods were bought for was not the marked one
+- Fixed TradeLord buying in the order that earns less when your cargo room ran out before your purse
+- Fixed the hint for Village travel ceiling giving its default as 1 where the slider shows 1.0
+
 ## 2.5.2
 
 - TradeLord.log now says how much of a market's till the sellers already on the road will draw before you arrive
@@ -21,18 +27,15 @@
 
 ## 2.4.5
 
-- Fixed the map holding up for seconds while the TradeLord ledger scanned
 - The TradeLord ledger says when it is still measuring roads, and more routes appear as they are measured
 - TradeLord.log now says how many roads a route scan left for the background rather than walking them while you waited
 
 ## 2.4.4
 
-- The TradeLord ledger walks the road to every market again while it scans, so its times come from the road and the map can hold up a moment
 - TradeLord.log now says how much longer a road TradeLord has not walked takes even on an hour when the ledger walked every road it needed
 
 ## 2.4.3
 
-- Fixed the TradeLord ledger sending you to far markets for small profits
 - TradeLord.log now says how much longer a road it has not walked takes than the game's own distance makes it look
 - TradeLord.log now counts a route scan in the busiest frame, so a scan that holds the map up shows there
 
@@ -42,10 +45,6 @@
 - The map marker now counts a market's till against it where the till cannot take your whole cargo, so a village with a small purse falls behind
 - The Carv. count and the Conf it feeds now count villagers as well as caravans at or heading for a market
 - TradeLord.log now writes the Conf of every market the map marker priced, with its till and the traffic heading there, and sums the day
-
-## 2.4.1
-
-- Fixed TradeLord.log sometimes counting none of the market roads taken from the game's distance rather than walked
 
 ## 2.4.0
 
@@ -1455,13 +1454,13 @@
 ## 1.76.3
 
 - Fixed selling 29 iron by hand for 1742 denars being written down as 1742 iron, wiping what your iron had cost
-- With the record of what you paid gone, Minimum profit margin could not stop TradeLord selling a good for less than you paid
+- Fixed TradeLord selling a good below what you paid once a hand sale had wiped the record of what it cost you
 - Fixed buying by hand being written down as far more of a good than you bought
 
 ## 1.76.2
 
 - Fixed Staged Trading reading a sale of 29 iron back as 1742 iron, with the gold running to hundreds of thousands of denars
-- Your Trade skill and the TradeLord profit on the ledger were both credited with that gold you never made, and now take the real figure
+- Fixed your Trade skill and the TradeLord profit on the ledger being credited with gold a misread Staged Trading sale never made
 - TradeLord now checks what it read off the trade screen against what your purse really did, and counts nothing when the two disagree
 - Profit from a sale can no longer be reported as more than the sale fetched
 - Fixed Recent trades dating a trade made today as Day 91,082, which now reads Today or how many days ago it was

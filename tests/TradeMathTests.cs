@@ -3119,6 +3119,19 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void A_figure_priced_for_some_units_is_scaled_to_the_units_it_is_weighed_on()
+        {
+            Assert.Equal(10000, TradeMath.Scaled(2000, 100, 20));
+            Assert.Equal(2000, TradeMath.Scaled(400, 100, 20));
+            Assert.Equal(200, TradeMath.Scaled(400, 10, 20));
+            Assert.Equal(400, TradeMath.Scaled(400, 20, 20));
+            Assert.Equal(400, TradeMath.Scaled(400, 100, 0));
+            Assert.Equal(-500, TradeMath.Scaled(-100, 10, 2));
+            Assert.Equal(int.MaxValue, TradeMath.Scaled(int.MaxValue, 3, 2));
+            Assert.Equal(int.MinValue, TradeMath.Scaled(int.MinValue, 3, 2));
+        }
+
+        [Fact]
         public void The_key_by_denar_carries_the_same_numerator_over_what_it_cost()
         {
             Assert.Equal(2160f * 0.2f / (1647f * 0.9f), TradeMath.KeyByDenar(2160, 0.2f, 1f, true, 1647, 0.9f), 4);
