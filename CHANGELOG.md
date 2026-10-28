@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.7.2
+
+- Fixed TradeLord buying goods with a low Conf just because they added up to more profit, when other goods earned more a day at their Conf
+- With Enable extended debug logging on, TradeLord.log's buying plan now says what each buying order earns a day at the Conf of selling there
+
 ## 2.7.1
 
 - TradeLord now runs on game version 1.5.6.125053, and no longer on 1.5.5

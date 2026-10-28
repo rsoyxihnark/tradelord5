@@ -123,14 +123,16 @@ namespace TradeLord
                 return byWorth != 0 ? byWorth : x.At.CompareTo(y.At);
             });
 
-        internal static List<(int units, int cost, int profit, float hauls)> AsPlans(List<Pick> stock)
+        internal static List<(int units, int cost, int profit, float hauls, float keyByProfit)> AsPlans(List<Pick> stock)
         {
-            var plans = new List<(int units, int cost, int profit, float hauls)>(stock == null ? 0 : stock.Count);
+            var plans = new List<(int units, int cost, int profit, float hauls, float keyByProfit)>(
+                stock == null ? 0 : stock.Count);
             for (int i = 0; stock != null && i < stock.Count; i++)
             {
                 int priced = stock[i].Plan.Priced > 0 ? stock[i].Plan.Priced : stock[i].Weighed;
                 plans.Add((stock[i].Weighed, TradeMath.Scaled(stock[i].Plan.Cost, stock[i].Weighed, priced),
-                           TradeMath.Scaled(stock[i].Plan.Profit, stock[i].Weighed, priced), stock[i].Hauls));
+                           TradeMath.Scaled(stock[i].Plan.Profit, stock[i].Weighed, priced), stock[i].Hauls,
+                           stock[i].Plan.KeyByProfit));
             }
             return plans;
         }
@@ -314,24 +316,32 @@ namespace TradeLord
 
         internal static long WouldMakeByWeight { get; private set; }
 
+        internal static double WeighsByDenar { get; private set; }
+
+        internal static double WeighsByWeight { get; private set; }
+
         private static void TheOrderThatEarnsMore(List<Pick> stock, IBuyingMarket market, Books books, bool sim)
         {
             OrderedByDenar = false;
             OrdersWereWeighed = false;
             WouldMakeByDenar = 0L;
             WouldMakeByWeight = 0L;
+            WeighsByDenar = 0d;
+            WeighsByWeight = 0d;
             if (stock == null || stock.Count < 2) return;
             int money = market.Spendable();
             if (money <= 0) return;
             float room = market.Room() - books.Weight(sim);
-            long byWeight = TradeMath.WhatThisOrderBuys(Picks.AsPlans(stock), money, room);
+            long byWeight = TradeMath.WhatThisOrderBuys(Picks.AsPlans(stock), money, room, out double weighsByWeight);
             var tried = new List<Pick>(stock);
             Picks.ByDenarAlone(tried);
-            long byDenar = TradeMath.WhatThisOrderBuys(Picks.AsPlans(tried), money, room);
+            long byDenar = TradeMath.WhatThisOrderBuys(Picks.AsPlans(tried), money, room, out double weighsByDenar);
             OrdersWereWeighed = true;
             WouldMakeByDenar = byDenar;
             WouldMakeByWeight = byWeight;
-            if (byDenar <= byWeight) return;
+            WeighsByDenar = weighsByDenar;
+            WeighsByWeight = weighsByWeight;
+            if (!TradeMath.TheOtherOrderEarnsMore(weighsByWeight, byWeight, weighsByDenar, byDenar)) return;
             stock.Clear();
             stock.AddRange(tried);
             OrderedByDenar = true;

@@ -3097,13 +3097,13 @@ namespace TradeLord.Tests
         [Fact]
         public void What_an_order_buys_stops_at_the_purse_and_at_the_cargo_room()
         {
-            var byWeight = new List<(int units, int cost, int profit, float hauls)>
+            var byWeight = new List<(int units, int cost, int profit, float hauls, float keyByProfit)>
             {
-                (3, 1239, 774, 3f), (9, 1647, 2160, 18f), (9, 882, 1233, 9f)
+                (3, 1239, 774, 3f, 1f), (9, 1647, 2160, 18f, 1f), (9, 882, 1233, 9f, 1f)
             };
-            var byDenar = new List<(int units, int cost, int profit, float hauls)>
+            var byDenar = new List<(int units, int cost, int profit, float hauls, float keyByProfit)>
             {
-                (9, 882, 1233, 9f), (9, 1647, 2160, 18f), (3, 1239, 774, 3f)
+                (9, 882, 1233, 9f, 1f), (9, 1647, 2160, 18f, 1f), (3, 1239, 774, 3f, 1f)
             };
             Assert.Equal(774L + 960L + 137L, TradeMath.WhatThisOrderBuys(byWeight, 2077, -1f));
             Assert.Equal(516L + 137L, TradeMath.WhatThisOrderBuys(byWeight, 966, -1f));
@@ -3116,6 +3116,67 @@ namespace TradeLord.Tests
             Assert.Equal(0L, TradeMath.WhatThisOrderBuys(byDenar, 100000, 0f));
             Assert.Equal(1233L, TradeMath.WhatThisOrderBuys(byDenar, 100000, 9f));
             Assert.Equal(1233L + 2160L, TradeMath.WhatThisOrderBuys(byDenar, 100000, 27f));
+        }
+
+        [Fact]
+        public void What_an_order_buys_is_weighed_on_each_goods_key_by_profit_for_the_units_it_takes()
+        {
+            float cotton = 0.29f / 0.6f, flax = 0.27f / 0.6f, silver = 0.17f / 1.1f, hardwood = 0.41f / 0.6f;
+            var order = new List<(int units, int cost, int profit, float hauls, float keyByProfit)>
+            {
+                (2, 131, 31, 0f, cotton), (22, 198, 215, 0f, flax), (3, 393, 462, 0f, silver), (7, 220, 81, 0f, hardwood)
+            };
+            Assert.Equal(31L + 215L + 154L + 12L, TradeMath.WhatThisOrderBuys(order, 509, -1f, out double weighed));
+            Assert.Equal(31d * cotton + 215d * flax + 154d * silver + 81d / 7 * hardwood, weighed, 3);
+            Assert.Equal(0L, TradeMath.WhatThisOrderBuys(order, 0, -1f, out weighed));
+            Assert.Equal(0d, weighed);
+            Assert.Equal(0L, TradeMath.WhatThisOrderBuys(null, 500, -1f, out weighed));
+            Assert.Equal(0d, weighed);
+        }
+
+        [Fact]
+        public void An_order_that_makes_less_profit_wins_where_its_goods_earn_more_a_day_at_their_Conf()
+        {
+            float cotton = 0.29f / 0.6f, flax = 0.27f / 0.6f, silver = 0.17f / 1.1f, hardwood = 0.41f / 0.6f,
+                  salt = 0.26f / 0.6f;
+            var byWeight = new List<(int units, int cost, int profit, float hauls, float keyByProfit)>
+            {
+                (2, 131, 31, 0f, cotton), (22, 198, 215, 0f, flax), (3, 393, 462, 0f, silver), (7, 220, 81, 0f, hardwood)
+            };
+            var byDenar = new List<(int units, int cost, int profit, float hauls, float keyByProfit)>
+            {
+                (22, 198, 215, 0f, flax), (7, 220, 81, 0f, hardwood), (11, 418, 127, 0f, salt),
+                (3, 393, 462, 0f, silver), (2, 131, 31, 0f, cotton)
+            };
+            long weight = TradeMath.WhatThisOrderBuys(byWeight, 509, -1f, out double weighsByWeight);
+            long denar = TradeMath.WhatThisOrderBuys(byDenar, 509, -1f, out double weighsByDenar);
+            Assert.Equal(412L, weight);
+            Assert.Equal(319L, denar);
+            Assert.True(weighsByDenar > weighsByWeight);
+            Assert.True(TradeMath.TheOtherOrderEarnsMore(weighsByWeight, weight, weighsByDenar, denar));
+        }
+
+        [Fact]
+        public void A_goods_key_by_profit_is_its_Conf_and_trust_over_the_days_and_no_ride_counts_under_half_a_day()
+        {
+            Assert.Equal(0.27f * 0.9f / 0.6f, TradeMath.KeyByProfit(0.27f, 0.9f, true, 0.6f), 5);
+            Assert.Equal(1f / 0.6f, TradeMath.KeyByProfit(0.27f, 0.9f, false, 0.6f), 5);
+            Assert.Equal(0.5f / TradeMath.NoTripCountsShorterThan, TradeMath.KeyByProfit(0.5f, 1f, true, 0.1f), 5);
+            Assert.Equal(0f, TradeMath.KeyByProfit(0.5f, 1f, true, float.NaN));
+            Assert.Equal(TradeMath.KeyByDenar(215, 0.27f, 0.9f, true, 198, 0.6f) * 198f / 215f,
+                         TradeMath.KeyByProfit(0.27f, 0.9f, true, 0.6f), 5);
+        }
+
+        [Fact]
+        public void The_other_buying_order_wins_only_on_more_weighed_and_on_more_profit_where_the_two_weigh_the_same()
+        {
+            Assert.True(TradeMath.TheOtherOrderEarnsMore(143.4, 412L, 162.2, 319L));
+            Assert.False(TradeMath.TheOtherOrderEarnsMore(162.2, 319L, 143.4, 412L));
+            Assert.True(TradeMath.TheOtherOrderEarnsMore(100d, 400L, 100d + 1e-9, 401L));
+            Assert.False(TradeMath.TheOtherOrderEarnsMore(100d + 1e-9, 401L, 100d, 400L));
+            Assert.False(TradeMath.TheOtherOrderEarnsMore(100d, 400L, 100d, 400L));
+            Assert.True(TradeMath.TheOtherOrderEarnsMore(0d, 300L, 0d, 319L));
+            Assert.False(TradeMath.TheOtherOrderEarnsMore(0d, 319L, 0d, 300L));
         }
 
         [Fact]

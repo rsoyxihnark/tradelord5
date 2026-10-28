@@ -125,7 +125,8 @@ namespace TradeLord.Tests
                 {
                     Qty = units, QtyUncut = units, Profit = profit, Cost = cost,
                     Key = TradeMath.Key(profit, 1f, 1f, false, Stalls[at].Good.Weight, units, 1f),
-                    KeyByDenar = TradeMath.KeyByDenar(profit, 1f, 1f, false, cost, 1f)
+                    KeyByDenar = TradeMath.KeyByDenar(profit, 1f, 1f, false, cost, 1f),
+                    KeyByProfit = TradeMath.KeyByProfit(1f, 1f, false, 1f)
                 };
                 why = Block.None;
                 return true;
@@ -240,18 +241,50 @@ namespace TradeLord.Tests
         }
 
         [Fact]
+        public void The_buying_order_that_earns_more_a_day_at_the_Conf_of_selling_there_wins_over_more_profit()
+        {
+            var market = new FakeMarket { Purse = 300, Cargo = 1000f };
+            market.Add(Cargo("silver", weight: 0.5f), amount: 3, price: 131, resale: 430);
+            market.Add(Cargo("hardwood", weight: 2f), amount: 20, price: 31, resale: 57);
+            market.Plans[0] = new PlannedSale
+            {
+                Qty = 3, QtyUncut = 3, Priced = 3, Cost = 393, Profit = 462,
+                Key = TradeMath.Key(462, 0.17f, 1f, true, 0.5f, 3, 1.1f),
+                KeyByDenar = TradeMath.KeyByDenar(462, 0.17f, 1f, true, 393, 1.1f),
+                KeyByProfit = TradeMath.KeyByProfit(0.17f, 1f, true, 1.1f)
+            };
+            market.Plans[1] = new PlannedSale
+            {
+                Qty = 20, QtyUncut = 20, Priced = 20, Cost = 628, Profit = 231,
+                Key = TradeMath.Key(231, 0.41f, 1f, true, 2f, 20, 0.6f),
+                KeyByDenar = TradeMath.KeyByDenar(231, 0.41f, 1f, true, 628, 0.6f),
+                KeyByProfit = TradeMath.KeyByProfit(0.41f, 1f, true, 0.6f)
+            };
+            List<Pick> stock = TradePass.WhatToBuy(market, market.Ledger, false, 0f, market.Rules,
+                                                   new BlockTally());
+            Assert.True(TradePass.OrdersWereWeighed);
+            Assert.True(TradePass.WouldMakeByWeight > TradePass.WouldMakeByDenar);
+            Assert.True(TradePass.WeighsByDenar > TradePass.WeighsByWeight);
+            Assert.True(TradePass.OrderedByDenar);
+            Assert.Equal("hardwood", stock[0].Good.Id);
+            Assert.Equal("silver", stock[1].Good.Id);
+        }
+
+        [Fact]
         public void A_good_the_scan_cut_to_your_cargo_counts_at_the_profit_it_was_priced_for()
         {
             var market = new FakeMarket { Purse = 100000, Cargo = 20f };
             market.Add(Cargo("velvet"), amount: 100, price: 100, resale: 120);
             market.Add(Cargo("hardwood"), amount: 20, price: 10, resale: 15);
             market.LedgerAsksFor[0] = 1;
-            market.Plans[0] = new PlannedSale { Qty = 20, QtyUncut = 100, Priced = 20, Cost = 2000, Profit = 400, Key = 20f, KeyByDenar = 0.2f };
-            market.Plans[1] = new PlannedSale { Qty = 20, QtyUncut = 20, Priced = 20, Cost = 200, Profit = 100, Key = 5f, KeyByDenar = 0.5f };
+            market.Plans[0] = new PlannedSale { Qty = 20, QtyUncut = 100, Priced = 20, Cost = 2000, Profit = 400, Key = 20f, KeyByDenar = 0.2f, KeyByProfit = 1f };
+            market.Plans[1] = new PlannedSale { Qty = 20, QtyUncut = 20, Priced = 20, Cost = 200, Profit = 100, Key = 5f, KeyByDenar = 0.5f, KeyByProfit = 1f };
             List<Pick> stock = TradePass.WhatToBuy(market, market.Ledger, false, 0f, market.Rules, new BlockTally());
             Assert.True(TradePass.OrdersWereWeighed);
             Assert.Equal(400L, TradePass.WouldMakeByWeight);
             Assert.Equal(100L, TradePass.WouldMakeByDenar);
+            Assert.Equal(400d, TradePass.WeighsByWeight, 3);
+            Assert.Equal(100d, TradePass.WeighsByDenar, 3);
             Assert.False(TradePass.OrderedByDenar);
             Assert.Equal("velvet", stock[0].Good.Id);
         }

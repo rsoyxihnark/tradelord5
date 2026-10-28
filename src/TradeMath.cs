@@ -1980,9 +1980,22 @@ namespace TradeLord
             return Finite((float)(kept / ((double)cost * over)), 0f);
         }
 
-        public static long WhatThisOrderBuys(IList<(int units, int cost, int profit, float hauls)> plans,
-                                             int money, float room)
+        public static float KeyByProfit(float confidence, float trust, bool rankByConfidence, float days)
         {
+            if (float.IsNaN(days)) return 0f;
+            float over = days > NoTripCountsShorterThan ? days : NoTripCountsShorterThan;
+            double kept = rankByConfidence ? (double)confidence * trust : 1d;
+            return Finite((float)(kept / over), 0f);
+        }
+
+        public static long WhatThisOrderBuys(IList<(int units, int cost, int profit, float hauls, float keyByProfit)> plans,
+                                             int money, float room) =>
+            WhatThisOrderBuys(plans, money, room, out _);
+
+        public static long WhatThisOrderBuys(IList<(int units, int cost, int profit, float hauls, float keyByProfit)> plans,
+                                             int money, float room, out double weighed)
+        {
+            weighed = 0d;
             if (plans == null || money <= 0) return 0L;
             double left = money;
             double space = room < 0f ? double.PositiveInfinity : room;
@@ -1995,11 +2008,23 @@ namespace TradeLord
                 int take = (int)Math.Min(plans[i].units, Math.Floor(left / each));
                 if (heavy > 0d) take = (int)Math.Min(take, Math.Floor(space / heavy));
                 if (take <= 0) continue;
-                made += (long)Math.Round((double)plans[i].profit * take / plans[i].units);
+                double profit = (double)plans[i].profit * take / plans[i].units;
+                made += (long)Math.Round(profit);
+                weighed += profit * plans[i].keyByProfit;
                 left -= each * take;
                 space -= heavy * take;
             }
             return made;
+        }
+
+        public const double OrdersWeighTheSameWithin = 1e-6;
+
+        public static bool TheOtherOrderEarnsMore(double weighed, long made, double otherWeighed, long otherMade)
+        {
+            double apart = otherWeighed - weighed;
+            double close = OrdersWeighTheSameWithin * Math.Max(1d, Math.Max(Math.Abs(weighed), Math.Abs(otherWeighed)));
+            if (Math.Abs(apart) > close) return apart > 0d;
+            return otherMade > made;
         }
 
         public static int Scaled(int gold, int units, int pricedFor)

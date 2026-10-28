@@ -40,6 +40,7 @@ namespace TradeLord
 
         public float Key;
         public float KeyByDenar;
+        public float KeyByProfit;
         public float Trust = 1f;
         public int QtyUncut;
         public int Shown;
