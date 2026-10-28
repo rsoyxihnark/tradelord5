@@ -11335,6 +11335,20 @@ chk("1.83.3", "a release and its tag are thrown away only where the changelog ca
     a_release_is_thrown_away_only_where_the_changelog_says_nothing_about_it())
 
 
+def the_release_note_sync_puts_each_title_and_pre_release_mark_in_line():
+    body = between(SYNC, "def main(argv):", "\nif __name__")
+    return (ordered(body, "fix['body'] = want", "if r.get('name') != 'TradeLord ' + version:",
+                    "fix['name'] = 'TradeLord ' + version", "if r.get('prerelease'):",
+                    "fix['prerelease'] = False", "fix['make_latest'] = 'false'",
+                    "json.dumps(fix).encode('utf-8'), 'PATCH'")
+            and "json.dumps({'body': want})" not in SYNC
+            and 'TITLE="TradeLord ${VERSION#v}"' in WORKFLOW)
+
+
+chk("no release", "the release note sync gives every release the title main publishes under and takes off any pre-release mark, without making an old release the latest one",
+    the_release_note_sync_puts_each_title_and_pre_release_mark_in_line())
+
+
 COMPAT = io.open('tools/compat/Program.cs', encoding='utf-8').read()
 
 

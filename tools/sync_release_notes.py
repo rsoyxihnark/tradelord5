@@ -125,9 +125,21 @@ def main(argv):
         return 1
     todo = []
     for r in rows:
-        want = '\n'.join('- ' + one for one in book[r['tag_name'].lstrip('v')])
+        version = r['tag_name'].lstrip('v')
+        want = '\n'.join('- ' + one for one in book[version])
+        fix, what = {}, []
         if (r.get('body') or '').strip() != want.strip():
-            todo.append((r['id'], r['tag_name'], want))
+            fix['body'] = want
+            what.append('notes')
+        if r.get('name') != 'TradeLord ' + version:
+            fix['name'] = 'TradeLord ' + version
+            what.append('title')
+        if r.get('prerelease'):
+            fix['prerelease'] = False
+            fix['make_latest'] = 'false'
+            what.append('pre-release mark')
+        if fix:
+            todo.append((r['id'], r['tag_name'] + ' (' + ', '.join(what) + ')', fix))
     print(str(len(rows)) + ' releases read, ' + str(len(todo)) + ' to bring in line')
     if not apply:
         for _, tag, _ in todo[:10]:
@@ -137,11 +149,11 @@ def main(argv):
         print('\nrun it again with --apply to write them')
         return 0
     done, failed = 0, []
-    for rid, tag, want in todo:
+    for rid, tag, fix in todo:
         for attempt in range(1, 5):
             try:
                 ask('https://api.github.com/repos/' + REPO + '/releases/' + str(rid),
-                    tok, json.dumps({'body': want}).encode('utf-8'), 'PATCH')
+                    tok, json.dumps(fix).encode('utf-8'), 'PATCH')
                 done += 1
                 break
             except Exception as why:
