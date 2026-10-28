@@ -3780,8 +3780,13 @@ def the_workflow_gates_the_changelog():
             and "fetch-depth: 0" in WORKFLOW)
 
 def the_gate_lets_a_checks_only_commit_through():
-    return (r"grep -Ev '^(tests/|tools/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$|README\.md$|COMPARISON\.md$)'" in WORKFLOW
-            and "so it writes no changelog entry" in WORKFLOW)
+    paths = r"grep -Ev '^(tests/|tools/|DLLsNeeded/|\.github/|\.claude/|\.gitignore$|CLAUDE\.md$|README\.md$|COMPARISON\.md$)'"
+    return (WORKFLOW.count(paths) == 2
+            and "so it writes no changelog entry" in WORKFLOW
+            and ordered(between(WORKFLOW, "- name: Publish release", "could not publish"),
+                        '"[no release]"*)', paths,
+                        "the game files they read, workflow, working rules, README or comparison, so it publishes nothing",
+                        'if gh release view "$VERSION" --json tagName'))
 
 def the_gate_lets_a_behaviour_neutral_change_through_but_never_a_version():
     return ('"[no release]"*) ;;' in WORKFLOW
@@ -20370,8 +20375,9 @@ def no_ride_is_priced_at_night_speed_from_end_to_end_because_you_look_at_night()
             and "A_ride_looked_at_by_night_is_slowed_only_until_sunrise" in MATHTESTS
             and "A_ride_into_the_night_slows_down_at_sunset" in MATHTESTS
             and "return SpeedByDay(MobileParty.MainParty);" in land
-            and ordered(party, "float now = party.Speed;",
-                        "try { return LandSpeedByDay(party, now); } catch { return now; }")
+            and ordered(party, "float now = party.Speed;", "if (_dayStepUnbound) return now;",
+                        "try { return LandSpeedByDay(party, now); }", "catch (Exception e) when (Unbound(e))",
+                        "catch { return now; }")
             and ordered(day, "if (Campaign.Current == null || !Campaign.Current.IsNight || party.IsCurrentlyAtSea) return now;",
                         "typeof(DefaultPartySpeedCalculatingModel).GetField(", '"_night"',
                         "DefaultPerks.Scouting.NightRunner?.Name?.ToString();",
@@ -22097,7 +22103,8 @@ def a_ride_all_at_sea_is_timed_along_its_course_with_the_war_sails_wind():
                         "if (!(campaign.MapSceneWrapper is MapScene map))")
             and "if (party == null || !HasNavalPerk(party, perk, secondary)) return 0f;" in
                 method_body(t, "private static float NavalPerkAtSea(string id, bool secondary)")
-            and "perk != null && party.HasPerk(perk, BattleEnvironment.Naval, out _, secondary);" in t
+            and "return PerkHelper.AddPerkBonusForParty(perk, party, !secondary, ref held, BattleEnvironment.Naval);" in
+                method_body(t, "private static bool HasNavalPerk(MobileParty party, PerkObject perk, bool secondary)")
             and ordered(method_body(t, "private static TradeMath.Pace PartyPace()"),
                         "pace.FairWinds = NavalPerkAtSea(FairWindsPerk, false);",
                         "pace.ShockAndAwe = NavalPerkAtSea(ShockAndAwePerk, true);")
@@ -22200,6 +22207,31 @@ def the_ships_speed_at_sea_is_worked_out_as_war_sails_works_it_out():
 
 chk("2.7.0", "with War Sails your ships' speed at sea counts crew, cargo, fleet size, skill, perks, open sea, rivers, coasts, snow and Disorganized as War Sails does, and the log weighs it against the game's",
     the_ships_speed_at_sea_is_worked_out_as_war_sails_works_it_out())
+
+
+def the_mod_is_built_checked_and_described_for_one_game_version():
+    t = S['Travel.cs']
+    built = set(re.findall(r'<PackageReference Include="Bannerlord.ReferenceAssemblies" Version="([^"]+)"/>', "\n".join(PROJ)))
+    fit = re.findall(r"dotnet run --project tools/compat -c Release -- (\S+)", WORKFLOW)
+    said = re.findall(r"The mod is supported on (\S+) only", README)
+    version = next(iter(built)) if len(built) == 1 else None
+    return (version is not None and fit == [version] and len(said) == 2
+            and all(one == version.replace("-beta", "") for one in said)
+            and "DecodeMethodSignature(spelled, null);" in COMPAT and "private static bool Matches(MemberInfo one, Bound bound)" in COMPAT
+            and 'name.StartsWith("Helpers.")' in COMPAT
+            and "if (found != null && found.IsEnum) named.Add(full);" in COMPAT
+            and ordered(method_body(t, "internal static float SpeedByDay(MobileParty party)"),
+                        "if (_dayStepUnbound) return now;", "catch (Exception e) when (Unbound(e))",
+                        "_dayStepUnbound = true;", "until the game restarts")
+            and ordered(method_body(t, "internal static float DaysFor(MobileParty party, Settlement bound)"),
+                        "if (!_othersUnbound)", "try { days = AlongItsRoad(party, bound); }",
+                        "catch (Exception e) when (Unbound(e))", "_othersUnbound = true;", "until the game restarts")
+            and "private static bool Unbound(Exception e) => e is MissingMemberException || e is TypeLoadException;" in t
+            and "PerkHelper.AddPerkBonusForParty(perk, party, primary, ref stat, BattleEnvironment.Naval);" in t)
+
+
+chk("2.7.1", "the mod is built, fit checked by signature and every enum it uses, and described for one game version, and a speed the game will not bind is tried once and set aside, not every hour",
+    the_mod_is_built_checked_and_described_for_one_game_version())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

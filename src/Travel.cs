@@ -111,8 +111,22 @@ namespace TradeLord
         internal static float SpeedByDay(MobileParty party)
         {
             float now = party.Speed;
-            try { return LandSpeedByDay(party, now); } catch { return now; }
+            if (_dayStepUnbound) return now;
+            try { return LandSpeedByDay(party, now); }
+            catch (Exception e) when (Unbound(e))
+            {
+                _dayStepUnbound = true;
+                Log.Write("binding: the speed a party has by day could not be read from this game version (" +
+                          e.GetType().Name + ": " + e.Message + "), so a party's speed is taken as it is now " +
+                          "until the game restarts");
+                return now;
+            }
+            catch { return now; }
         }
+
+        private static bool _dayStepUnbound, _othersUnbound;
+
+        private static bool Unbound(Exception e) => e is MissingMemberException || e is TypeLoadException;
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static float LandSpeedByDay(MobileParty party, float now)
@@ -1278,13 +1292,17 @@ namespace TradeLord
 
         private static PerkObject NavalPerk(string id) => Game.Current?.ObjectManager?.GetObject<PerkObject>(id);
 
-        private static bool HasNavalPerk(MobileParty party, PerkObject perk, bool secondary) =>
-            perk != null && party.HasPerk(perk, BattleEnvironment.Naval, out _, secondary);
+        private static bool HasNavalPerk(MobileParty party, PerkObject perk, bool secondary)
+        {
+            if (perk == null) return false;
+            var held = new ExplainedNumber();
+            return PerkHelper.AddPerkBonusForParty(perk, party, !secondary, ref held, BattleEnvironment.Naval);
+        }
 
         private static void AddNavalPerk(string id, MobileParty party, bool primary, ref ExplainedNumber stat)
         {
             PerkObject perk = NavalPerk(id);
-            if (perk != null) PerkHelper.AddPerkBonusForParty(perk, BattleEnvironment.Naval, party, primary, ref stat);
+            if (perk != null) PerkHelper.AddPerkBonusForParty(perk, party, primary, ref stat, BattleEnvironment.Naval);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -2040,9 +2058,17 @@ namespace TradeLord
         internal static float DaysFor(MobileParty party, Settlement bound)
         {
             if (party == null || bound == null) return 0f;
-            float days;
-            try { days = AlongItsRoad(party, bound); }
-            catch { days = float.NaN; }
+            float days = float.NaN;
+            if (!_othersUnbound)
+                try { days = AlongItsRoad(party, bound); }
+                catch (Exception e) when (Unbound(e))
+                {
+                    _othersUnbound = true;
+                    Log.Write("binding: a caravan's or villager's speed could not be read from this game version (" +
+                              e.GetType().Name + ": " + e.Message + "), so they are timed by straight distance " +
+                              "until the game restarts");
+                }
+                catch { }
             if (!float.IsNaN(days)) return days;
             _othersGuessed++;
             return TradeMath.EtaDays(party.GetPosition2D.Distance(bound.GetPosition2D), SpeedByDay(party));

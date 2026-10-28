@@ -338,7 +338,8 @@ namespace TradeLord.Compat
         }
 
         private static bool IsGame(string name) =>
-            name.StartsWith("TaleWorlds") || name.StartsWith("SandBox") || name.StartsWith("StoryMode");
+            name.StartsWith("TaleWorlds") || name.StartsWith("SandBox") || name.StartsWith("StoryMode") ||
+            name.StartsWith("Helpers.");
 
         private static Type Find(string version, string full)
         {
@@ -716,7 +717,18 @@ namespace TradeLord.Compat
         private static void CheckEnums(List<string> versions)
         {
             Console.WriteLine("== enum values - a renumbered enum keeps compiling and starts doing the wrong thing ==");
-            foreach (string full in Enums)
+            var named = new SortedSet<string>(Enums, StringComparer.Ordinal);
+            var types = new SortedSet<string>();
+            var members = new SortedDictionary<string, Bound>(StringComparer.Ordinal);
+            foreach (string rel in ModAssemblies) Read(Path.Combine(_repo, rel), types, members);
+            foreach (string full in types)
+                try
+                {
+                    Type found = Find(versions[0], full);
+                    if (found != null && found.IsEnum) named.Add(full);
+                }
+                catch { }
+            foreach (string full in named)
             {
                 string label = full.Split('+', '.').Last();
                 var baseline = Values(versions[0], full);
@@ -758,21 +770,23 @@ namespace TradeLord.Compat
         {
             Console.WriteLine("== every game type and member the compiled mod binds to ==");
             var types = new SortedSet<string>();
-            var members = new SortedSet<string>();
+            var members = new SortedDictionary<string, Bound>(StringComparer.Ordinal);
             foreach (string rel in ModAssemblies) Read(Path.Combine(_repo, rel), types, members);
-            Console.WriteLine("  the mod binds " + types.Count + " game types and " + members.Count + " distinct members");
+            Console.WriteLine("  the mod binds " + types.Count + " game types and " + members.Count +
+                              " distinct members, each held to the parameters and the type it was built against");
 
             foreach (string v in versions)
             {
                 var missingTypes = types.Where(t => Find(v, t) == null).ToList();
                 var missingMembers = new List<string>();
-                foreach (string entry in members)
+                foreach (Bound bound in members.Values)
                 {
-                    int split = entry.IndexOf("::", StringComparison.Ordinal);
-                    string owner = entry.Substring(0, split), name = entry.Substring(split + 2);
-                    Type t = Find(v, owner);
+                    Type t = Find(v, bound.Owner);
                     if (t == null) continue;
-                    if (!Has(t, name)) missingMembers.Add(entry);
+                    if (!Has(t, bound))
+                        missingMembers.Add(bound.Said + (Has(t, bound.Name)
+                            ? ", whose name is still there with other parameters or another type"
+                            : ""));
                 }
                 Line(missingTypes.Count + missingMembers.Count == 0,
                      v + " - " + missingTypes.Count + " unresolved type(s), " + missingMembers.Count + " unresolved member(s)");
@@ -782,38 +796,120 @@ namespace TradeLord.Compat
             Console.WriteLine();
         }
 
+        private sealed class Bound
+        {
+            internal string Owner, Name, Returns, Said;
+            internal string[] Takes;
+            internal int Generic;
+            internal bool Field;
+        }
+
+        private const BindingFlags Declared = BindingFlags.Public | BindingFlags.NonPublic |
+                                              BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+
         private static bool Has(Type type, string name)
         {
-            const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic |
-                                     BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
             for (Type t = type; t != null; t = t.BaseType)
                 try
                 {
-                    if (name == ".ctor" ? t.GetConstructors(All).Length > 0
-                                        : t.GetMethods(All).Any(x => x.Name == name)
-                                       || t.GetFields(All).Any(x => x.Name == name)
-                                       || t.GetProperties(All).Any(x => x.Name == name))
+                    if (name == ".ctor" ? t.GetConstructors(Declared).Length > 0
+                                        : t.GetMethods(Declared).Any(x => x.Name == name)
+                                       || t.GetFields(Declared).Any(x => x.Name == name)
+                                       || t.GetProperties(Declared).Any(x => x.Name == name))
                         return true;
                 }
                 catch { }
             return false;
         }
 
-        private static void Read(string dll, SortedSet<string> types, SortedSet<string> members)
+        private static bool Has(Type type, Bound bound)
         {
-            using var stream = File.OpenRead(dll);
-            using var pe = new PEReader(stream);
-            MetadataReader md = pe.GetMetadataReader();
+            for (Type t = type; t != null; t = t.BaseType)
+            {
+                MemberInfo[] named;
+                try { named = t.GetMember(bound.Name, Declared); }
+                catch { continue; }
+                foreach (MemberInfo one in named)
+                    if (Matches(one, bound)) return true;
+                if (bound.Name == ".ctor") return false;
+            }
+            return false;
+        }
 
-            string Name(TypeReferenceHandle h)
+        private static bool Matches(MemberInfo one, Bound bound)
+        {
+            try
+            {
+                switch (one)
+                {
+                    case FieldInfo f: return bound.Field && Shape(f.FieldType) == bound.Returns;
+                    case ConstructorInfo c: return !bound.Field && Takes(c.GetParameters(), bound.Takes);
+                    case MethodInfo m:
+                        return !bound.Field && (m.IsGenericMethodDefinition ? m.GetGenericArguments().Length : 0) == bound.Generic &&
+                               Shape(m.ReturnType) == bound.Returns && Takes(m.GetParameters(), bound.Takes);
+                    default: return false;
+                }
+            }
+            catch { return false; }
+        }
+
+        private static bool Takes(ParameterInfo[] given, string[] wanted) =>
+            given.Length == wanted.Length && given.Select(p => Shape(p.ParameterType)).SequenceEqual(wanted);
+
+        private static string Shape(Type t)
+        {
+            if (t.IsByRef) return Shape(t.GetElementType()) + "&";
+            if (t.IsPointer) return Shape(t.GetElementType()) + "*";
+            if (t.IsArray) return Shape(t.GetElementType()) + "[" + new string(',', t.GetArrayRank() - 1) + "]";
+            if (t.IsGenericParameter) return (t.DeclaringMethod != null ? "!!" : "!") + t.GenericParameterPosition;
+            if (t.IsConstructedGenericType)
+                return Shape(t.GetGenericTypeDefinition()) + "<" + string.Join(",", t.GenericTypeArguments.Select(Shape)) + ">";
+            return t.FullName ?? t.Name;
+        }
+
+        private sealed class Spelled : ISignatureTypeProvider<string, object>
+        {
+            public string GetPrimitiveType(PrimitiveTypeCode code) => "System." + code;
+            public string GetTypeFromDefinition(MetadataReader md, TypeDefinitionHandle h, byte kind)
+            {
+                TypeDefinition td = md.GetTypeDefinition(h);
+                string n = md.GetString(td.Name);
+                if (td.IsNested) return GetTypeFromDefinition(md, td.GetDeclaringType(), kind) + "+" + n;
+                string ns = md.GetString(td.Namespace);
+                return ns.Length > 0 ? ns + "." + n : n;
+            }
+            public string GetTypeFromReference(MetadataReader md, TypeReferenceHandle h, byte kind)
             {
                 TypeReference tr = md.GetTypeReference(h);
                 string n = md.GetString(tr.Name);
                 if (tr.ResolutionScope.Kind == HandleKind.TypeReference)
-                    return Name((TypeReferenceHandle)tr.ResolutionScope) + "+" + n;
+                    return GetTypeFromReference(md, (TypeReferenceHandle)tr.ResolutionScope, kind) + "+" + n;
                 string ns = tr.Namespace.IsNil ? "" : md.GetString(tr.Namespace);
                 return ns.Length > 0 ? ns + "." + n : n;
             }
+            public string GetTypeFromSpecification(MetadataReader md, object context, TypeSpecificationHandle h, byte kind) =>
+                md.GetTypeSpecification(h).DecodeSignature(this, context);
+            public string GetSZArrayType(string element) => element + "[]";
+            public string GetArrayType(string element, ArrayShape shape) => element + "[" + new string(',', shape.Rank - 1) + "]";
+            public string GetByReferenceType(string element) => element + "&";
+            public string GetPointerType(string element) => element + "*";
+            public string GetPinnedType(string element) => element;
+            public string GetModifiedType(string modifier, string unmodified, bool required) => unmodified;
+            public string GetGenericInstantiation(string generic, System.Collections.Immutable.ImmutableArray<string> args) =>
+                generic + "<" + string.Join(",", args) + ">";
+            public string GetGenericMethodParameter(object context, int index) => "!!" + index;
+            public string GetGenericTypeParameter(object context, int index) => "!" + index;
+            public string GetFunctionPointerType(MethodSignature<string> signature) => "fnptr";
+        }
+
+        private static void Read(string dll, SortedSet<string> types, SortedDictionary<string, Bound> members)
+        {
+            using var stream = File.OpenRead(dll);
+            using var pe = new PEReader(stream);
+            MetadataReader md = pe.GetMetadataReader();
+            var spelled = new Spelled();
+
+            string Name(TypeReferenceHandle h) => spelled.GetTypeFromReference(md, h, 0);
 
             foreach (TypeReferenceHandle h in md.TypeReferences)
             {
@@ -825,7 +921,24 @@ namespace TradeLord.Compat
                 MemberReference mr = md.GetMemberReference(h);
                 if (mr.Parent.Kind != HandleKind.TypeReference) continue;
                 string owner = Name((TypeReferenceHandle)mr.Parent);
-                if (IsGame(owner)) members.Add(owner + "::" + md.GetString(mr.Name));
+                if (!IsGame(owner)) continue;
+                var bound = new Bound { Owner = owner, Name = md.GetString(mr.Name) };
+                if (mr.GetKind() == MemberReferenceKind.Field)
+                {
+                    bound.Field = true;
+                    bound.Returns = mr.DecodeFieldSignature(spelled, null);
+                    bound.Takes = new string[0];
+                    bound.Said = owner + "::" + bound.Name + ":" + bound.Returns;
+                }
+                else
+                {
+                    MethodSignature<string> sig = mr.DecodeMethodSignature(spelled, null);
+                    bound.Returns = sig.ReturnType;
+                    bound.Takes = sig.ParameterTypes.ToArray();
+                    bound.Generic = sig.GenericParameterCount;
+                    bound.Said = owner + "::" + bound.Name + "(" + string.Join(",", bound.Takes) + "):" + bound.Returns;
+                }
+                members[bound.Said] = bound;
             }
         }
     }
