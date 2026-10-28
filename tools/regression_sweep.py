@@ -2124,7 +2124,7 @@ chk("1.3.26", "both straight-line estimates share one implementation",
     S['Travel.cs'].count("private static float StraightDays(float distance, bool sailed)") == 1 and
     "return StraightDays(Nearest(party.GetPosition2D, target), MaySail(party, target));" in S['Travel.cs'] and
     "return StraightDays(Nearest(party.GetPosition2D, target), false);" in S['Travel.cs'] and
-    "StraightDays(Nearest(a, b), a.HasPort && b.HasPort)" in S['Travel.cs'])
+    "StraightDays(Nearest(a, b), a.HasPort)" in S['Travel.cs'])
 
 chk("1.3.27", "tooltip postfix declares only the arguments it uses",
     "private static void Postfix(ItemMenuVM __instance, ItemVM item)" in S['TooltipPatches.cs'])
@@ -4533,7 +4533,7 @@ def a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till():
             and all(said in en.get('TL375', '') and said in README for said in
                     ('then your haul animals, and your war horses and noble horses last of all',
                      'keeps enough haul animals to carry what you are already carrying'))
-            and 'How much gold the market you would sell to actually has' in README)
+            and 'How much gold the market you would sell to will have when you get there' in README)
 
 chk("1.23.0", "nothing a player reads calls a haul animal a beast, a town's gold a till, or an overpayment a premium",
     a_pack_animal_is_an_animal_and_a_town_has_gold_not_a_till())
@@ -4625,9 +4625,12 @@ chk("1.14.3", "with Live world prices on, a market whose merchant has no gold is
     "var sells = _ledger.EverySell(item);" in route_scan() and
     "Settlement where = Marker.HoldFor(_plan[at].EquipmentElement, YoursToSell(at), _pass.Site," in
         sell_pass() and
-    "purse = PurseOf(s);" in method_body(S['Marker.cs'], "private static bool InReach") and
-    "? TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold, s.IsVillage)" in
-        between(S['Marker.cs'], "internal static int PurseOf(Settlement s) =>", ";") and
+    "purse = PurseOf(s, ride);" in method_body(S['Marker.cs'], "private static bool InReach") and
+    "? TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(s, days), s.IsVillage)" in
+        between(S['Marker.cs'], "internal static int PurseOf(Settlement s, float days) =>", ";") and
+    ordered(method_body(S['Forecast.cs'], "internal static int TillOnArrival"),
+            "int gold = market.Gold;", "if (!On || !site.IsTown || site.Town == null) return gold;",
+            "return TradeMath.TillWhenYouArrive(gold, WouldHold(site, gold), paid, withinDays);") and
     "return LedgerBehavior.WithinTravelCeiling(s, ride) && purse > 0;" in
         method_body(S['Marker.cs'], "private static bool InReach"))
 
@@ -6029,7 +6032,7 @@ def every_handler_the_game_calls_guards_its_own_work():
             if not body or "Guard.Run" not in body:
                 return False
             held += 1
-    return held == 13 and settled in S['Trading.cs']
+    return held == 15 and settled in S['Trading.cs']
 
 def a_save_is_never_failed_by_the_mods_own_bookkeeping():
     trade = method_body(S['Trading.cs'], "public override void SyncData")
@@ -10021,13 +10024,15 @@ def the_feature_list_says_which_purse_a_route_is_held_to():
     routes = route_scan()
     if not routes:
         return False
-    return ("till = TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0, to.IsVillage);" in routes
+    return ("till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);" in routes
             and "if (s.Omniscient)" in routes
             and routes.index("if (s.Omniscient)") < routes.index("till = TradeRules.WhatTheTillCanPay(")
             and "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;" in routes
             and code_only(S['Ledger.cs']).count("to.SettlementComponent?.Gold") == 0
-            and code_only(S['Plan.cs']).count("to.SettlementComponent?.Gold") == 2
-            and "to != null && Options.Current.Omniscient" in method_body(S['Plan.cs'], "internal static int TillAt(Settlement to)")
+            and code_only(S['Plan.cs']).count("to.SettlementComponent?.Gold") == 0
+            and code_only(S['Plan.cs']).count("Forecast.TillOnArrival(to, days)") == 2
+            and "int gold = market.Gold;" in method_body(S['Forecast.cs'], "internal static int TillOnArrival")
+            and "to != null && Options.Current.Omniscient" in method_body(S['Plan.cs'], "internal static int TillAt(Settlement to, float days)")
             and "It reads that purse live, so with Live world prices off it plans on the stock alone" in README)
 
 
@@ -10296,12 +10301,16 @@ def the_ceiling_and_the_quote_read_one_forecast_at_one_arrival():
     scan = route_scan()
     return (scan.count("Forecast.WorthShiftAsItHasHeld(to, item,") == 1
             and scan.count("Forecast.WorthShiftAsItHasHeld(from, item,") == 1
-            and scan.count("Bulk.Opening(") == 2
+            and scan.count("Bulk.Opening(") == 3
+            and scan.count("Bulk.Opening(to, item, true, sellPrice, 0),") == 1
             and ordered(scan,
                         "int landedAtBuyTown = Forecast.WorthShiftAsItHasHeld(from, item, toBuy);",
                         "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown)",
                         "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);",
                         "int landedAtSellTown = Forecast.WorthShiftAsItHasHeld(to, item, days);",
+                        "TradePolicy.LandingCannotLiftItPastTheMargin(openingBuy, sellPrice,",
+                        "Bulk.Opening(to, item, true, sellPrice, 0),",
+                        "landedAtSellTown, _safety))",
                         "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown)",
                         "float ceiling =",
                         "LandedAtBuy = landedAtBuyTown, LandedAtSell = landedAtSellTown,")
@@ -10314,7 +10323,9 @@ chk("1.79.2", "what a route could at best be worth is worked out from the same a
 
 def a_route_is_judged_only_on_what_that_market_will_charge_when_you_reach_it():
     scan = route_scan()
-    return (scan.count("sellPrice") == 6
+    return (scan.count("sellPrice") == 8
+            and between(scan, "TradePolicy.LandingCannotLiftItPastTheMargin(openingBuy, sellPrice,",
+                        "landedAtSellTown, _safety))").count("sellPrice") == 1
             and scan.count("buyPrice") == 7
             and "Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);" in scan
             and "Bulk.Opening(from, item, false, buyPrice, landedAtBuyTown);" in scan
@@ -10613,11 +10624,13 @@ def a_village_keeps_the_coin_that_keeps_its_shop_open():
             and (lambda herd: "TradeRules.WhatTheTillCanPay(pass.Sim ? simTill : pass.TillNow," in herd
                           and "settlement.IsVillage) < price) break;" in herd)
                 (method_body(S['Trading.cs'], "public static void ExecuteHerdRelief"))
-            and "till = TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0," in route_scan()
+            and "till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);" in route_scan()
             and "TradeRules.WhatTheTillCanPay(market.Gold, town.IsVillage) > 0;" in ledger
-            and "? TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold, s.IsVillage)" in
-                between(S['Marker.cs'], "internal static int PurseOf(Settlement s) =>", ";")
-            and "int purse = PurseOf(s);" in S['Marker.cs']
+            and "? TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(s, days), s.IsVillage)" in
+                between(S['Marker.cs'], "internal static int PurseOf(Settlement s, float days) =>", ";")
+            and "? TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(s), s.IsVillage)" in
+                between(S['Marker.cs'], "private static int PurseAtMost(Settlement s) =>", ";")
+            and "int purse = PurseAtMost(s);" in S['Marker.cs']
             and "reachable.Add((s, market, purse, ride));" in S['Marker.cs']
             and code_only(S['Trading.cs']).count("pass.TillNow") == 2
             and "A_village_is_left_its_last_coin" in SELLPASSTESTS
@@ -11069,17 +11082,17 @@ def the_buyers_gold_is_read_only_where_the_mod_reads_the_world_live():
     resale = method_body(S['Trading.cs'],
                               "public bool ResaleMarket(int at, int paid, int units, out int price)")
     scan = route_scan()
-    till = method_body(S['Plan.cs'], "internal static int TillAt(Settlement to)")
+    till = method_body(S['Plan.cs'], "internal static int TillAt(Settlement to, float days)")
     return (resale and till
             and "if (!clears) row = Plan.BestSale(item, null, units, 0, 0, units, _pass.Site, out rungs, out till);"
                 in resale
             and ordered(till, "to != null && Options.Current.Omniscient",
-                        "? TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0, to.IsVillage)",
+                        "? TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage)",
                         ": 0;")
-            and "int purse = TillAt(to);" in best_sale()
+            and "int purse = TillAt(to, days);" in best_sale()
             and "if (purse > 0 && (long)drawn + sold + price > purse) break;" in best_sale()
             and "if (s.Omniscient)" in scan
-            and "till = TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0," in scan
+            and "till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);" in scan
             and "internal static bool TheBuyerCouldNotPay(int drawnSoFar, int till) =>" in S['Rules.cs']
             and "till > 0 && drawnSoFar > till;" in S['Rules.cs'])
 
@@ -13534,7 +13547,7 @@ def a_market_the_road_was_lost_to_is_asked_again_rather_than_kept_out_of_reach()
             and ordered(here,
                         "if (inside == null || ThePairRoadWaitsForTheBackground(inside, target)) return TradeMath.FurthestThereIs;",
                         "return RideBetween(PairRoad(inside, target), 0f, false);")
-            and "if (!atSea && landRatio >= AllOnLand && !_unwalkable.Contains(target.StringId))" in
+            and "if (!atSea && (landRatio >= AllOnLand || mixed) && !_unwalkable.Contains(target.StringId))" in
                 method_body(tr, "private static Road RoadFromParty")
             and "if (!road.Walked) _unwalkable.Add(target.StringId);" in method_body(tr, "private static Road RoadFromParty")
             and tr.count("_unwalkable.Clear();") == 3
@@ -14485,9 +14498,11 @@ def a_market_back_in_the_running_gets_one_fair_look_against_the_mark():
                 '                                       List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)\n'
                 '        {\n'
                 '            float ride = Travel.EstimateDaysFromParty(one.s);\n'
-                '            Takings took = WhatItWouldFetch(one.s, one.market, party, ride, cargo, one.gold, null);\n'
+                '            int gold = PurseOf(one.s, ride);\n'
+                '            if (gold <= 0) return 0f;\n'
+                '            Takings took = WhatItWouldFetch(one.s, one.market, party, ride, cargo, gold, null);\n'
                 '            if (took.Value <= 0L) return 0f;\n'
-                '            long total = took.Value > one.gold ? one.gold : took.Value;\n'
+                '            long total = took.Value > gold ? gold : took.Value;\n'
                 '            return TradeMath.PerDay(total - took.Cost, ride);\n'
                 '        }')
             and method_body(S['Rules.cs'], "internal static void OweAFairLook(") == ('internal static void OweAFairLook(ISet<string> owed, IList<string> compared, string here, string leftOutNow,\n'
@@ -18000,7 +18015,8 @@ def the_log_says_why_the_mark_left_its_market():
                         "!TradeActionBehavior.IsMarket(holder)", "TradeActionBehavior.MarkerLeavesItOut(holder)",
                         "holder.IsUnderSiege", "holder.SiegeEvent?.BesiegerCamp?.LeaderParty", "holder.IsUnderRaid",
                         "LedgerBehavior.VillageShut(holder)", "LedgerBehavior.IsHostile(holder)",
-                        "if (purse <= 0)", '" could be found";', '" day(s) away, past your travel "')
+                        '" could be found";', "int purse = PurseOf(holder, ride);", "if (purse <= 0)",
+                        '"\'s purse would be empty when you get there, "', '" day(s) away, past your travel "')
             and "how.Best = " not in out and "bar" not in out
             and ordered(left, "if (how.HolderLost != null) return how.HolderLost;",
                         'return "your cargo changed and " + against;', '" for a second hour in a row"'))
@@ -18129,11 +18145,17 @@ def the_route_scan_passes_over_only_pairs_no_price_could_make_a_route():
                         "int qtyCap = till > 0 ? Math.Min(stocked, till / openingSell) : stocked;",
                         "float ceiling = (float)(openingSell - openingBuy) * Math.Min(qtyCap, fits);")
             and "SayWhatTheScanCost(scan, kept.Count, took);" in scan
-            and scan.count("PassedOver++;") == 3
+            and scan.count("PassedOver++;") == 4
             and scan.count("if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))") == 1
             and scan.count("if (_passOver && TradeMath.NoPriceCouldClearTheMargin(openingBuy, sellPrice, _safety, s.MinProfitMargin))") == 1
             and between(scan, "stocked, days, beaten, key, _safety))",
-                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);").count("PassedOver++;") == 1
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);").count("PassedOver++;") == 2
+            and ordered(between(scan, "stocked, days, beaten, key, _safety))",
+                                "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);"),
+                        "if (_passOver && landedAtSellTown > 0 &&",
+                        "TradePolicy.LandingCannotLiftItPastTheMargin(openingBuy, sellPrice,")
+            and between(scan, "Bulk.Opening(to, item, true, sellPrice, 0),",
+                        "int till = 0;").count("PassedOver++;") == 1
             and between(scan, "if (_passOver && TradeMath.NoRoadCouldMakeIt(openingBuy, sellPrice, stocked, soonest, beaten, key))",
                         "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);").count("PassedOver++;") == 1
             and ordered(early, "if (landed == 0 || quotedSell <= 0 || stocked <= 0 || !(safety >= 0f)) return false;",
@@ -18468,16 +18490,20 @@ def with_live_world_prices_off_the_marker_goes_only_on_prices_you_have_seen():
                         "if (!_ledger.TryGetValue(el.Item.StringId, out var byTown)) return 0;",
                         "seen.SellPrice > 0", "? seen.SellPrice")
             and "internal const int PurseUnread = int.MaxValue;" in marker
-            and ordered(between(marker, "internal static int PurseOf(Settlement s) =>", ";"),
+            and ordered(between(marker, "internal static int PurseOf(Settlement s, float days) =>", ";"),
                         "Options.Current.Omniscient",
-                        "? TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold, s.IsVillage)",
+                        "? TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(s, days), s.IsVillage)",
+                        ": PurseUnread")
+            and ordered(between(marker, "private static int PurseAtMost(Settlement s) =>", ";"),
+                        "Options.Current.Omniscient",
+                        "? TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(s), s.IsVillage)",
                         ": PurseUnread")
             and ordered(best, "how.Weighed++;",
                         "if (!Options.Current.Omniscient && !SeenAnyOf(cargo, s)) { how.Unseen++; continue; }",
-                        "int purse = PurseOf(s);", "if (purse <= 0) { how.NoTill++; continue; }")
+                        "int purse = PurseAtMost(s);", "if (purse <= 0) { how.NoTill++; continue; }")
             and ordered(left, "if (!Options.Current.Omniscient && !SeenAnyOf(cargo, holder))",
-                        "int purse = PurseOf(holder);")
-            and "purse = PurseOf(s);" in method_body(marker, "private static bool InReach")
+                        "int purse = PurseOf(holder, ride);")
+            and "purse = PurseOf(s, ride);" in method_body(marker, "private static bool InReach")
             and "Marker.HoldFor(_plan[at].EquipmentElement, YoursToSell(at), _pass.Site," in sell_pass()
             and marker.count("Priced.At(") == 3
             and ordered(method_body(marker, "private static long MostThisCargoCouldFetch("),
@@ -18487,7 +18513,9 @@ def with_live_world_prices_off_the_marker_goes_only_on_prices_you_have_seen():
             and "int pays = Priced.At(market, meant.Item, MobileParty.MainParty, true);" in
                 method_body(marker, "internal static List<string> WhatWasBoughtFor(Settlement site, SettlementComponent market)")
             and "Marker.WhatWasBoughtFor(site, market)" in method_body(S['Hindsight.cs'], "private static void Kept")
-            and marker.count(".Gold") == 2
+            and marker.count(".Gold") == 1
+            and ordered(method_body(marker, "private static string TheMarkLeftOut"),
+                        "int purse = PurseOf(holder, ride);", "if (purse <= 0)", "market.Gold + \" gold now\";")
             and '", its purse left unread as Live world prices is off"' in why
             and "OFF: only prices you have seen in person are used." in spoken(ENGLISH)['TL301']
             and ("With Live world prices off, it weighs only the markets where you have seen a price for what "
@@ -20860,7 +20888,7 @@ def one_engine_sizes_every_good_to_what_you_may_take():
                         "onTheShelfNow = LedgerBehavior.StockOf(from, item) - (at.Here ? _books.Stocked(_sim, id) : 0) -",
                         "(from.IsVillage ? 1 : 0);",
                         "int valueCap = s.BuyValueCapPerItem > 0 ? Math.Max(0, s.BuyValueCapPerItem - taken.Item2) : 0;",
-                        "till = TradeRules.WhatTheTillCanPay(to.SettlementComponent?.Gold ?? 0, to.IsVillage);",
+                        "till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);",
                         "TradeRoute route = Sized(leg, fits, at.Purse, Bound.Purse);")
             and "leg.BuyQuoted, leg.SellQuoted, leg.LandedAtBuy, leg.LandedAtSell, leg.Held);" in sized
             and "_shareCap = Options.Current.MaxHeldShare > 0f ? capacity * Options.Current.MaxHeldShare : 0f;" in ctor
@@ -21463,6 +21491,8 @@ def the_marker_walks_a_road_only_to_a_market_still_in_the_running():
                         "                }\n"
                         "                ride = Travel.EstimateDaysFromParty(s);\n"
                         "                if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }\n"
+                        "                gold = PurseOf(s, ride);\n"
+                        "                if (gold <= 0) { how.NoTill++; continue; }\n"
                         "                how.Told++;",
                         "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);",
                         "how.Left = reachable.Count - how.Told - roadless;"))
@@ -21760,7 +21790,9 @@ def the_log_says_what_threw_an_opening_away_and_what_the_slowest_walk_cost():
             and ordered(method_body(tr, "private static float HowLongThatRoadWas"),
                         "if (road.Length > 0f) return road.Length;",
                         "return road.Runs == null ? 0f : TradeMath.LengthOn(road.Runs, -1);")
-            and tr.count("long started = StartAWalk();") == 5
+            and tr.count("long started = StartAWalk();") == 7
+            and 'StopTheMeter(started, ref _partyWalks, "a course from your ships to the shore", road);' in tr
+            and 'StopTheMeter(started, ref _pairWalks, "a course from a port to the shore", road);' in tr
             and ordered(method_body(tr, "private static float AlongItsRoad"),
                         "long started = StartAWalk();", "road.Walked = walked;",
                         'StopTheMeter(started, ref _otherWalks, "a road for a caravan or villager", road);')
@@ -21795,7 +21827,8 @@ def the_log_says_what_the_till_pays_out_before_you_arrive():
             and ordered(marker, "int paysOut = Forecast.TillPaysOutBefore(s, ride);",
                         "if (paysOut > 0) EngineTally.TillPaidOutFirst++;",
                         "the sellers already on the road draw ",
-                        " of that till before you arrive, which Conf does not count")
+                        " of that till before you arrive, leaving it ",
+                        "Forecast.TillOnArrival(s, ride)", '" when you get there"')
             and '" of them will pay sellers already on the road out of that till before you arrive"' in tally)
 
 
@@ -21815,8 +21848,8 @@ def the_market_road_is_walked_when_it_is_asked_for_and_the_rough_guess_is_still_
             and "internal bool Guessed;" not in tr
             and "hit = RoadBetween(a, b);" in pair
             and "TheRoadAsTheGameMeasuresIt" not in tr
-            and "if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);" in method_body(tr, "private static Road RoadBetween")
-            and "if (road.Walked) NoteHowRoughTheGuessWas(dist, landRatio, road);" in method_body(tr, "private static Road RoadFromParty")
+            and "if (road.Walked && landRatio >= AllOnLand) NoteHowRoughTheGuessWas(dist, landRatio, road);" in method_body(tr, "private static Road RoadBetween")
+            and "if (road.Walked && landRatio >= AllOnLand) NoteHowRoughTheGuessWas(dist, landRatio, road);" in method_body(tr, "private static Road RoadFromParty")
             and ordered(method_body(tr, "internal static float TheRoughRoadTakesLongerBy"),
                         "if (_ratios.Count < LeastRatiosToTrust) { _ratioHeld = 1f; return 1f; }",
                         "seen.Sort();",
@@ -22077,14 +22110,15 @@ def a_ride_all_at_sea_is_timed_along_its_course_with_the_war_sails_wind():
     behind = method_body(m, "public static float WindBehind(")
     wind = method_body(m, "public static void WindOnTheMap(")
     return (between and party and sail and along and why and behind and wind
-            and ordered(between, "if (a != b && a.HasPort && b.HasPort && AllAtSea(landRatio) && WindsBlow())",
+            and ordered(between[between.find("if (a != b && a.HasPort && b.HasPort && (AllAtSea(landRatio) || mixed) && WindsBlow())"):],
+                        "if (a != b && a.HasPort && b.HasPort && (AllAtSea(landRatio) || mixed) && WindsBlow())",
                         "try { SailBetween(a, b, road); }",
                         'StopTheMeter(started, ref _pairWalks, "a course between ports", road);',
                         "if (road.Walked)", "_seaWalks++;", "return road;",
-                        "if (landRatio >= AllOnLand && a != b)")
+                        "if ((landRatio >= AllOnLand || mixed) && a != b)")
             and ordered(party, "if (AllAtSea(landRatio) && target.HasPort && WindsBlow())",
                         "Road sailed = SailedFromParty(party, target, atSea);", "if (sailed != null) return sailed;",
-                        "if (!atSea && landRatio >= AllOnLand && !_unwalkable.Contains(target.StringId))")
+                        "if (!atSea && (landRatio >= AllOnLand || mixed) && !_unwalkable.Contains(target.StringId))")
             and "private static bool AllAtSea(float landRatio) => landRatio >= 0f && landRatio <= 1f - AllOnLand;" in t
             and ".GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.Naval);" in sail
             and "length += ProbeAtSea(map, winds, at, _path[i], runs, sails);" in sail
@@ -22115,7 +22149,7 @@ def a_ride_all_at_sea_is_timed_along_its_course_with_the_war_sails_wind():
             and 'private const string ShockAndAwePerk = "ShockAndAwe";' in t
             and "(1f - fair) * Finite(ShockAndAwe, 0f);" in method_body(m, "public float LiftOf(Sail sail)")
             and "sea = sailed && WindsBlow() ? pace.BestAtSea : pace.Afloat;" in method_body(t, "private static void Speeds(")
-            and "target.HasPort && (party.IsCurrentlyAtSea || party.CurrentSettlement?.HasPort == true);" in t
+            and "party.IsCurrentlyAtSea || target.HasPort && party.CurrentSettlement?.HasPort == true;" in t
             and "_windsHour = -1;" in method_body(t, "private static void DropIfNavalChanged")
             and ordered(method_body(m, "public float BestAtSea"),
                         "float lift = Math.Max(WindAtMost * AWindPushesAtMostBy + Finite(FairWinds, 0f),",
@@ -22323,6 +22357,218 @@ def the_forecast_counts_what_villages_will_send_before_you_arrive():
 
 chk("2.7.3", "Count what is on its way to a market counts the goods each village will send its town before you arrive, as the game loads and sends its villagers, not only the villagers already on the road",
     the_forecast_counts_what_villages_will_send_before_you_arrive())
+
+
+def the_log_writes_the_weighed_figures_the_marker_chose_on():
+    marker = S['Marker.cs']
+    update = method_body(marker, "internal static void Update")
+    left = method_body(marker, "private static string LeftBecause")
+    best = method_body(marker, "private static Settlement BestSellTownForCargo")
+    return (update and left and best
+            and "internal float IntendedJudged;" in marker
+            and ordered(best, "float weighed = TradeMath.RateTheMarkHolds(judged, s == holder);",
+                        "if (s == how.Intended) how.IntendedJudged = weighed;")
+            and ordered(update, "(int)how.Rate + \" against \" + (int)how.IntendedRate +",
+                        "(Options.Current.ConfidenceRanking",
+                        "? \", and \" + (int)how.Judged + \" against \" + (int)how.IntendedJudged +",
+                        "\" once each is weighed at the Conf of selling there\"")
+            and ordered(left, "how.HolderRate.ToString(\"0\") +", "(Options.Current.ConfidenceRanking",
+                        "how.Judged.ToString(\"0\") + \" against \" + how.HolderJudged.ToString(\"0\") +",
+                        "\" once each is weighed at the Conf of selling there\"")
+            and ", each weighed at the Conf of selling there" not in marker)
+
+
+chk("2.7.4", "TradeLord.log writes the figures each market was weighed on, at the Conf of selling there, beside the profit a day the map marker chose between",
+    the_log_writes_the_weighed_figures_the_marker_chose_on())
+
+
+def a_markets_purse_is_counted_as_it_will_be_when_you_arrive():
+    f = S['Forecast.cs']
+    m = S['TradeMath.cs']
+    marker = S['Marker.cs']
+    till = method_body(m, "public static int TillWhenYouArrive(")
+    best = method_body(marker, "private static Settlement BestSellTownForCargo")
+    return (till and best
+            and "public const float ATownsPurseClosesItsGapADayBy = 0.25f;" in m
+            and "long held = gold + (long)Math.Round(changeToday / ATownsPurseClosesItsGapADayBy);" in
+                method_body(m, "public static int WhatATownsPurseWouldHold(")
+            and "return wouldHold - (wouldHold - till) * Math.Pow(1d - ATownsPurseClosesItsGapADayBy, days);" in
+                method_body(m, "private static double APurseClosesItsGap(")
+            and ordered(till, "if (when > until) break;", "till = APurseClosesItsGap(till, wouldHold, when - at);",
+                        "till = Math.Max(0d, till - paidInOrder[i].gold);",
+                        "till = APurseClosesItsGap(till, wouldHold, until - at);")
+            and "town => Campaign.Current.Models.SettlementEconomyModel.GetTownGoldChange(town), 0);" in
+                method_body(f, "private static int WouldHold(")
+            and "foreach (List<(float days, int gold)> paid in _tillPays.Values) paid.Sort((x, y) => x.days.CompareTo(y.days));" in
+                method_body(f, "private static void Build()")
+            and "return Math.Max(gold, WouldHold(site, gold));" in method_body(f, "internal static int TillAtMost(")
+            and ordered(best, "int purse = PurseAtMost(s);", "reachable.Sort(FastestPurseFirst);",
+                        "if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }",
+                        "gold = PurseOf(s, ride);",
+                        "if (gold <= 0) { how.NoTill++; continue; }",
+                        "Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);")
+            and "int gold = PurseOf(one.s, ride);" in method_body(marker, "private static float RateThere(")
+            and "int purse = PurseOf(town, ride);" in marker
+            and "int till = PurseOf(site, ride);" in marker
+            and "int purse = PurseOf(site, ride);" in method_body(marker, "internal static (float room, int gold) WhatYourCargoFrees")
+            and "int purse = TillAt(to, days);" in best_sale()
+            and ordered(route_scan(), "float days = toBuy + Travel.EstimateDaysBetween(from, to, toBuy);",
+                        "till = TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(to, days), to.IsVillage);",
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);")
+            and all(one in MATHTESTS for one in
+                    ("A_towns_purse_closes_a_quarter_of_its_gap_to_what_it_would_hold_each_day",
+                     "Sellers_on_the_road_draw_the_purse_in_the_order_they_arrive_and_it_refills_between_them")))
+
+
+chk("2.7.4", "a market's purse is counted as it will be when you arrive, after the sellers on the road ahead of you draw on it and the town's daily refill, in the route scan, on the map marker and in Hold cargo for the best market",
+    a_markets_purse_is_counted_as_it_will_be_when_you_arrive())
+
+
+def a_landing_that_cannot_lift_the_price_past_the_margin_is_passed_over_unpriced():
+    m = S['TradeMath.cs']
+    test = method_body(m, "public static bool LandingCannotLiftItPastTheMargin(")
+    scan = route_scan()
+    return (test and scan
+            and ordered(test, "if (landed <= 0 || quotedSell <= 0 || unlanded <= 0 || !(safety >= 0f)) return false;",
+                        "return !BuyAcceptable(openingBuy, Realizable(ForecastWithin(quotedSell, unlanded), safety), margin);")
+            and "TradeMath.LandingCannotLiftItPastTheMargin(openingBuy, quotedSell, unlanded, landed, safety," in
+                between(S['Policy.cs'], "internal static bool LandingCannotLiftItPastTheMargin(", ";")
+            and ordered(scan, "if (_passOver && TradePolicy.NoOpeningPriceCouldMakeIt(",
+                        "if (_passOver && landedAtSellTown > 0 &&",
+                        "TradePolicy.LandingCannotLiftItPastTheMargin(openingBuy, sellPrice,",
+                        "Bulk.Opening(to, item, true, sellPrice, 0),", "landedAtSellTown, _safety))", "int till = 0;",
+                        "int openingSell = Bulk.Opening(to, item, true, sellPrice, landedAtSellTown);")
+            and between(scan, "Bulk.Opening(to, item, true, sellPrice, 0),", "int till = 0;").count("PassedOver++;") == 1
+            and "A_landing_rules_out_a_route_only_when_even_the_price_before_it_lands_cannot_clear_the_margin" in MATHTESTS)
+
+
+chk("2.7.4", "the route scan passes over, unpriced, a pair whose sell price only falls as goods land there before you and is already too low to clear Minimum profit margin before they land",
+    a_landing_that_cannot_lift_the_price_past_the_margin_is_passed_over_unpriced())
+
+
+def a_ride_partly_at_sea_is_timed_along_the_game_s_own_course_ashore_and_afloat():
+    t = S['Travel.cs']
+    m = S['TradeMath.cs']
+    party = method_body(t, "private static Road RoadFromParty")
+    pair = method_body(t, "private static Road RoadBetween")
+    walk = method_body(t, "private static bool SailAndGoAshore(")
+    probe = method_body(t, "private static float ProbeAfloatThenAshore(")
+    went = method_body(t, "private static bool WentAshore(")
+    ride = method_body(t, "private static float Ride(")
+    split = method_body(m, "public static float DaysAfloatThenAshore(")
+    return (party and pair and walk and probe and went and ride and split
+            and "private static bool PartlyAtSea(float landRatio) => landRatio > 1f - AllOnLand && landRatio < AllOnLand;" in t
+            and ordered(party, "bool mixed = PartlyAtSea(landRatio);",
+                        "if (atSea && mixed && !target.HasPort && WindsBlow() && !_unwalkable.Contains(target.StringId))",
+                        "Road landed = LandedFromParty(party, target);",
+                        "if (!atSea && (landRatio >= AllOnLand || mixed) && !_unwalkable.Contains(target.StringId))")
+            and ordered(pair, "bool mixed = PartlyAtSea(landRatio);",
+                        "if (a != b && a.HasPort && mixed && !b.HasPort && WindsBlow())",
+                        "try { SailToTheShore(a, b, road); }",
+                        "if (a != b && a.HasPort && b.HasPort && (AllAtSea(landRatio) || mixed) && WindsBlow())",
+                        "if ((landRatio >= AllOnLand || mixed) && a != b)")
+            and "SailAndGoAshore(party.CurrentNavigationFace, party.Position.ToVec2(), target.GatePosition, road);" in
+                method_body(t, "private static Road LandedFromParty(")
+            and "SailAndGoAshore(port.Face, port.ToVec2(), b.GatePosition, road);" in
+                method_body(t, "private static void SailToTheShore(")
+            and ordered(walk, "float going = HoursGoingAshore(party);",
+                        "ways.GetInvalidTerrainTypesForNavigationType(MobileParty.NavigationType.All);",
+                        "float wide = ways.GetEmbarkDisembarkThresholdDistance();",
+                        "int seaToLand = party.GetRegionSwitchCostFromSeaToLand();",
+                        "int landToSea = party.GetRegionSwitchCostFromLandToSea();",
+                        "bool afloat = true;",
+                        "afloat ? wide : 0.3f, _path, barred, 2f,", "seaToLand, landToSea);",
+                        "fromFace = map.GetFaceIndex(new CampaignVec2(at, !afloat));")
+            and "Campaign.Current.Models.PartyTransitionModel.GetTransitionTimeDisembarking(party).ToHours;" in
+                method_body(t, "private static float HoursGoingAshore(")
+            and ordered(probe, "if (!afloat) return Probe(map, from, to, runs);",
+                        "PathFaceRecord face = map.GetFaceIndex(new CampaignVec2(at, false));",
+                        "if (!Passable(map, face, MobileParty.NavigationType.Naval) &&",
+                        "Passable(map, map.GetFaceIndex(new CampaignVec2(at, true)), MobileParty.NavigationType.Default))",
+                        "afloat = false;", "Probe(map, from + heading * (each * k), to, runs);",
+                        "Vec2 flow = winds.GetWindAtPosition(at);", "TradeMath.AddRunAtSea(runs, sails,")
+            and ordered(went, "int landfall = sails.Count;",
+                        "if (afloat || !(length > 0f) || landfall <= 0 || landfall >= runs.Count) return false;",
+                        "if (!(unread <= MostUnreadAshore)) return false;",
+                        "road.Afloat = runs.GetRange(0, landfall);",
+                        "road.Ashore = runs.GetRange(landfall, runs.Count - landfall);",
+                        "road.GoingAshore = going;")
+            and ordered(ride, "float days = road.Ashore != null", "? TradeMath.DaysAfloatThenAshore(road.Afloat, road.Sails, road.GoingAshore, road.Ashore,",
+                        ": TradeMath.DaysAlong(road.Runs,")
+            and ordered(split, "float atSea = DaysAlong(afloat, pace, sky, startClock, sunrise, sunset, freshAtStart, tally, sails);",
+                        "double landed = atSea * 24d + (going > 0f ? going : 0f);",
+                        "float onLand = DaysAlong(ashore, pace.After(landed), new SkyAfter(sky, landed), start + landed, sunrise,",
+                        "return DaysTaken(landed + onLand * 24d);")
+            and "changes -= _after;" in m
+            and "party.IsCurrentlyAtSea || target.HasPort && party.CurrentSettlement?.HasPort == true;" in t
+            and "StraightDays(Nearest(a, b), a.HasPort)" in t
+            and "_terrainOfFace.Clear();" in method_body(t, "internal static void Forget")
+            and '" hour(s) going ashore before the rest of the ride on land"' in method_body(t, "private static string SeaOn(")
+            and all(one in MATHTESTS for one in
+                    ("A_ride_that_sails_then_goes_ashore_waits_for_the_landing_and_walks_on_at_the_hour_it_lands",
+                     "The_walk_after_a_landing_reads_the_weather_and_Disorganized_hours_where_they_stand_by_then")))
+
+
+chk("2.7.4", "with War Sails a ride that sails then goes ashore is timed along the game's own course, the sea with wind and waters, the landing for as long as the game takes, the land with its ground, and a ride from land walks to the gate",
+    a_ride_partly_at_sea_is_timed_along_the_game_s_own_course_ashore_and_afloat())
+
+
+def count_what_is_on_its_way_counts_caravans_yet_to_choose_the_market():
+    f = S['Forecast.cs']
+    m = S['TradeMath.cs']
+    ledger = S['Ledger.cs']
+    watch = method_body(f, "internal static void WatchTheCaravansTurn()")
+    traded = method_body(f, "internal static void ACaravanTraded(")
+    read = method_body(f, "private static void ReadWhatUnseenCaravansBring()")
+    weighs = method_body(m, "public static float HowOftenSuchATurnComes(")
+    brings = method_body(m, "public static float WhatUnseenCaravansBring(")
+    return (watch and traded and read and weighs and brings
+            and "CampaignEvents.HourlyTickEvent.AddNonSerializedListener(this, OnHourlyTick);" in ledger
+            and "CampaignEvents.OnCaravanTransactionCompletedEvent.AddNonSerializedListener(this, OnCaravanTraded);" in ledger
+            and 'Guard.Run("Forecast.Watch", Forecast.WatchTheCaravansTurn);' in method_body(ledger, "private void OnHourlyTick")
+            and ordered(watch, "if (!On || Campaign.Current == null)", "if (!double.IsNaN(_watchedFrom)) ForgetTheTurns();",
+                        "_watchedFrom = now;", "if (id == null || !party.IsCaravan) continue;",
+                        "if (party.CurrentSettlement != null)", "if (turn != null && turn.Town == bound.StringId)",
+                        "Since = watching ? now : double.NaN,", "Cargo = watching ? CargoOf(party.ItemRoster) : null,")
+            and ordered(traded, "if (!_turns.TryGetValue(caravan.StringId, out Turn turn) || turn.Town != site.StringId) return;",
+                        "bool sold = !turn.Traded && TheyCameOff(turn.Cargo, CargoOf(caravan.ItemRoster), moved);",
+                        "turn.Traded = true;", "if (double.IsNaN(turn.Since)) return;",
+                        "float lead = (float)((at - turn.Since) / 24d);")
+            and "if ((long)has + one.Value > had) return false;" in method_body(f, "private static bool TheyCameOff(")
+            and ordered(read, "came.RemoveAll(e => e.At < oldest);",
+                        "float perDay = TradeMath.HowOftenSuchATurnComes(e.Lead, watched);",
+                        "NoteUnseen(_unseenBought, (one.Key, e.Category), e.Lead, e.Worth * perDay);",
+                        "NoteUnseen(_unseenUnits, (one.Key, e.Item), e.Lead, e.Units * perDay);",
+                        "NoteUnseen(_unseenWorth, (one.Key, e.Category), e.Lead, e.Worth * perDay);",
+                        "? new List<(float, int)>(paid)",
+                        "TradeMath.UnseenDraws(one.Value, TradeMath.MostDaysTheUnseenDrawAPurse, ahead);",
+                        "_tillAhead[one.Key] = ahead;")
+            and ordered(method_body(f, "internal static int TillOnArrival("),
+                        "if (!_tillAhead.TryGetValue(site.StringId, out List<(float days, int gold)> paid))",
+                        "_tillPays.TryGetValue(site.StringId, out paid);")
+            and "_tillAhead" not in method_body(f, "internal static int TillPaysOutBefore(")
+            and f.count("_tillAhead.Clear();") == 2
+            and ordered(method_body(f, "private static void Build()"), 'Guard.Run("Forecast.Unseen", ReadWhatUnseenCaravansBring);',
+                        "paid.Sort((x, y) => x.days.CompareTo(y.days));")
+            and "float span = Math.Min(ACaravansTurnIsKeptFor, Finite(watchedDays, 0f) - lead);" in weighs
+            and "return span >= LeastDaysATurnIsWeighedOver ? 1f / span : 0f;" in weighs
+            and "brought += (double)perDay * (within - lead);" in brings
+            and "return TradeMath.AddedUp(seen, Unseen(_unseenUnits, (site.StringId, item.StringId), withinDays));" in
+                method_body(f, "internal static int UnitsLanding(")
+            and "return TradeMath.ShelfAfterLanding(seen, Unseen(_unseenWorth, (site.StringId, item.ItemCategory.StringId)," in
+                method_body(f, "internal static int WorthLanding(")
+            and "Unseen(_unseenBought, (site.StringId, item.ItemCategory.StringId), withinDays));" in f
+            and "ForgetTheTurns();" in method_body(f, "internal static void Forget()")
+            and "string unseen = Forecast.TheCaravansNotYetBound();" in method_body(S['Marker.cs'], "private static void Ultra(")
+            and all(one in MATHTESTS for one in
+                    ("A_turn_seen_after_the_watch_began_counts_for_the_days_it_could_have_been_seen_in",
+                     "Caravans_yet_to_choose_a_market_land_what_their_turns_bring_in_the_days_left_after_their_ride",
+                     "What_is_seen_on_the_road_and_what_is_yet_to_choose_the_market_add_up_to_all_that_lands",
+                     "The_unseen_draw_on_a_purse_is_spread_over_each_quarter_day_it_comes_in")))
+
+
+chk("2.7.4", "Count what is on its way to a market counts the caravans yet to choose that market, from what caravans sold and bought there after choosing it while you watched",
+    count_what_is_on_its_way_counts_caravans_yet_to_choose_the_market())
 
 
 print(f"\n{sum(results)}/{len(results)} source checks passed")

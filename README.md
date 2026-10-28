@@ -19,6 +19,8 @@
 - ✅ Travel time to each of them, from wherever you are
 - ✅ That time worked out along the road the game's own pathfinding would take, at your party's real speed with the cargo you are carrying, through every forest, river, desert, rainfall, snowfall and night on the way
 - ✅ With War Sails, a ride all at sea is timed along the course your ships would sail, with the wind the map lays out on every stretch of it, and Fair Winds and Shock and Awe on top
+- ✅ A ride that sails and then goes ashore is timed the same way at sea, then for the hours your party takes to go ashore, then over the ground it walks
+- ✅ From land your party walks, as the game sends it, so a ride from ashore to a port town is timed along the road
 - ✅ At sea your ships' speed counts their crew, cargo and fleet size, your Shipmaster skill and perks, and every stretch of open sea, coast and river, as War Sails does
 - ✅ That time counts the hours your party stays Disorganized too, and caravans and villagers on the road are timed the same way
 - ✅ Stock counts, so you know the deal is actually there
@@ -42,6 +44,7 @@
 - ✅ How long each route lasts, under Left, which says how long the shelf still holds the amount the route quotes before the caravans heading there buy it out or the town and its workshops use it up, in hours, or in days from two days on
 - ✅ Left is blank when the shelf holds that amount through everything TradeLord can see taking from it, up to 30 days after you arrive
 - ✅ Prices and stock that count what is still on its way: the cargo the caravans will unload, what that town's workshops will make, and the purses those caravans are bringing to spend
+- ✅ Caravans yet to choose that market are counted too, from what caravans sold and bought there after choosing it, over up to the last seven days since you loaded your save
 - ✅ That purse is spread over the goods that are cheap there, which is what a trader would really take off the shelf
 - ✅ What leaves the shelf is counted too: what the town uses up every day and what its workshops take to make their goods
 - ✅ Every workshop is followed day by day, every line of it at the game's own pace, and a run counts only while the town holds its inputs and the run pays
@@ -54,7 +57,7 @@
 - ✅ The amount it quotes is what fits in your cargo once TradeLord has sold what it would sell at the buy market, and a good none of which would fit is left out
 - ✅ It also holds that amount to what your purse and what you may spend there leave for it after the better routes from the same market
 - ✅ Profit quoted with a safety margin, in case prices drift before you arrive
-- ✅ How much gold the market you would sell to actually has, counted in, so it never plans a sale nobody can pay for
+- ✅ How much gold the market you would sell to will have when you get there, after the sellers ahead of you and the town's daily refill, counted in, so it never plans a sale nobody can pay for
 - ✅ It reads that purse live, so with Live world prices off it plans on the stock alone
 - ✅ A route listed whether or not your purse could pay for it today, or your herd is already as large as your men can drive, so the panel always shows you where the profit is
 - ✅ What this means says when your gold reserve is what is stopping you buying
@@ -203,7 +206,7 @@
 - ✅ Either ceiling set to 0 takes that limit off, and the Town travel ceiling at 0 weighs every town in Calradia, which is the slowest TradeLord runs
 - ✅ The Village travel ceiling only ever holds villages closer: at 0, or set past the Town travel ceiling, villages go as far as the Town travel ceiling
 - ✅ A minimum stock before it calls something worth buying
-- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road, their purses, the goods the villages will send, the workshops and what the town uses up into a route's price
+- ✅ Count what is on its way to a market, on out of the box, which is what puts the caravans on the road and those yet to choose a market, their purses, the goods the villages will send, the workshops and what the town uses up into a route's price
 - ✅ Count what is on its way to a market also goes into where TradeLord means to sell what it buys, into the market marked on your map and into Hold cargo for the best market
 - ✅ Count what is on its way to a market follows Live world prices, so turning those off turns this off too
 - ✅ The margin every trade has to clear, on the way in and on the way out

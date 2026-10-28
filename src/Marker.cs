@@ -379,6 +379,7 @@ namespace TradeLord
             internal Settlement Intended;
             internal string IntendedGoods;
             internal float IntendedRate;
+            internal float IntendedJudged;
             internal Settlement Best;
             internal Settlement RunnerUp;
             internal bool Held;
@@ -474,7 +475,8 @@ namespace TradeLord
                                (int)how.Rate + " against " + (int)how.IntendedRate +
                                " profit a day for your whole cargo" +
                                (Options.Current.ConfidenceRanking
-                                   ? ", each weighed at the Conf of selling there"
+                                   ? ", and " + (int)how.Judged + " against " + (int)how.IntendedJudged +
+                                     " once each is weighed at the Conf of selling there"
                                    : ""));
 
             if (target == _picked)
@@ -545,7 +547,11 @@ namespace TradeLord
             if (target == null)
                 return was.Name + " would earn " + how.HolderRate.ToString("0") + " profit a day on what you carry";
             string against = target.Name + " earns " + how.Rate.ToString("0") + " profit a day against " + was.Name + "'s " +
-                             how.HolderRate.ToString("0");
+                             how.HolderRate.ToString("0") +
+                             (Options.Current.ConfidenceRanking
+                                 ? ", " + how.Judged.ToString("0") + " against " + how.HolderJudged.ToString("0") +
+                                   " once each is weighed at the Conf of selling there"
+                                 : "");
             if (!cargoSame) return "your cargo changed and " + against;
             return lostBefore >= 0 ? against + " for a second hour in a row" : against;
         }
@@ -801,6 +807,8 @@ namespace TradeLord
                 said.Add("    " + Travel.TheRoadsOthersRide());
                 string villages = Forecast.TheVillagesSend();
                 if (villages != null) said.Add("    " + villages);
+                string unseen = Forecast.TheCaravansNotYetBound();
+                if (unseen != null) said.Add("    " + unseen);
                 if (how.Bill != null)
                     for (int i = 0; i < how.Bill.Count; i++)
                     {
@@ -953,7 +961,7 @@ namespace TradeLord
                 if (market == null) continue;
                 float ride = Travel.EstimateDaysFromParty(town);
                 if (TradeMath.OutOfReach(ride) || !LedgerBehavior.WithinTravelCeiling(town, ride)) continue;
-                int purse = PurseOf(town);
+                int purse = PurseOf(town, ride);
                 Paying pays = WhatThatMarketPays(town, market, el, party, ride);
                 var one = new Buyer
                 {
@@ -1156,9 +1164,11 @@ namespace TradeLord
                                        List<(EquipmentElement item, int amount, int worth, TradeMath.DearFirst floors)> cargo)
         {
             float ride = Travel.EstimateDaysFromParty(one.s);
-            Takings took = WhatItWouldFetch(one.s, one.market, party, ride, cargo, one.gold, null);
+            int gold = PurseOf(one.s, ride);
+            if (gold <= 0) return 0f;
+            Takings took = WhatItWouldFetch(one.s, one.market, party, ride, cargo, gold, null);
             if (took.Value <= 0L) return 0f;
-            long total = took.Value > one.gold ? one.gold : took.Value;
+            long total = took.Value > gold ? gold : took.Value;
             return TradeMath.PerDay(total - took.Cost, ride);
         }
 
@@ -1191,9 +1201,14 @@ namespace TradeLord
 
         internal const int PurseUnread = int.MaxValue;
 
-        internal static int PurseOf(Settlement s) =>
+        internal static int PurseOf(Settlement s, float days) =>
             Options.Current.Omniscient
-                ? TradeRules.WhatTheTillCanPay(s.SettlementComponent.Gold, s.IsVillage)
+                ? TradeRules.WhatTheTillCanPay(Forecast.TillOnArrival(s, days), s.IsVillage)
+                : PurseUnread;
+
+        private static int PurseAtMost(Settlement s) =>
+            Options.Current.Omniscient
+                ? TradeRules.WhatTheTillCanPay(Forecast.TillAtMost(s), s.IsVillage)
                 : PurseUnread;
 
         private static bool SeenAnyOf(
@@ -1231,7 +1246,7 @@ namespace TradeLord
                 { how.AtWar++; continue; }
                 how.Weighed++;
                 if (!Options.Current.Omniscient && !SeenAnyOf(cargo, s)) { how.Unseen++; continue; }
-                int purse = PurseOf(s);
+                int purse = PurseAtMost(s);
                 if (purse <= 0) { how.NoTill++; continue; }
                 float cap = LedgerBehavior.TravelCeiling(s);
                 float soonest = Travel.StraightDaysFromParty(s);
@@ -1267,6 +1282,8 @@ namespace TradeLord
                 }
                 ride = Travel.EstimateDaysFromParty(s);
                 if (TradeMath.OutOfReach(ride)) { how.NoRoad++; roadless++; continue; }
+                gold = PurseOf(s, ride);
+                if (gold <= 0) { how.NoTill++; continue; }
                 how.Told++;
                 Takings took = WhatItWouldFetch(s, market, party, ride, cargo, gold, null);
                 if (took.Value <= 0L && took.PurseCapped)
@@ -1308,12 +1325,14 @@ namespace TradeLord
                                        : ", its till covered the whole sale") +
                                    (paysOut > 0
                                        ? ", and the sellers already on the road draw " + paysOut +
-                                         " of that till before you arrive, which Conf does not count"
+                                         " of that till before you arrive, leaving it " +
+                                         Forecast.TillOnArrival(s, ride) + " when you get there"
                                        : "") +
                                    ", " + caravans + " caravan(s) and villager(s) at or heading there";
                     }
                 }
                 float weighed = TradeMath.RateTheMarkHolds(judged, s == holder);
+                if (s == how.Intended) how.IntendedJudged = weighed;
                 if (s == holder)
                 {
                     how.HolderPriced = true;
@@ -1411,10 +1430,11 @@ namespace TradeLord
                 return holder.Name + " is at war with you";
             if (!Options.Current.Omniscient && !SeenAnyOf(cargo, holder))
                 return holder.Name + " has no price you have seen for anything you carry";
-            int purse = PurseOf(holder);
-            if (purse <= 0) return holder.Name + "'s purse is empty, " + market.Gold + " gold";
             float ride = Travel.EstimateDaysFromParty(holder);
             if (TradeMath.OutOfReach(ride)) return "no road to " + holder.Name + " could be found";
+            int purse = PurseOf(holder, ride);
+            if (purse <= 0)
+                return holder.Name + "'s purse would be empty when you get there, " + market.Gold + " gold now";
             if (LedgerBehavior.WithinTravelCeiling(holder, ride)) return null;
             return holder.Name + " is " + ride.ToString("0.#", CultureInfo.InvariantCulture) + " day(s) away, past your travel " +
                    "ceiling of " + LedgerBehavior.TravelCeiling(holder).ToString("0.#", CultureInfo.InvariantCulture) + " day(s)";
@@ -1512,7 +1532,7 @@ namespace TradeLord
         private static bool InReach(Settlement s, System.Func<Settlement, float> rideTo, out float ride, out int purse)
         {
             ride = rideTo(s);
-            purse = PurseOf(s);
+            purse = PurseOf(s, ride);
             return LedgerBehavior.WithinTravelCeiling(s, ride) && purse > 0;
         }
 
@@ -1523,10 +1543,10 @@ namespace TradeLord
             if (party == null || market == null) return (0f, 0);
             var cargo = WhatYouCarryToSell(party);
             if (cargo.Count == 0) return (0f, 0);
-            int purse = PurseOf(site);
-            if (purse <= 0) return (0f, 0);
             float ride = Travel.EstimateDaysFromParty(site);
             if (TradeMath.OutOfReach(ride)) return (0f, 0);
+            int purse = PurseOf(site, ride);
+            if (purse <= 0) return (0f, 0);
             Takings took = WhatItWouldFetch(site, market, party, ride, cargo, purse, null,
                                             WhatTheMarkWouldKeep(site, ride, cargo, holdShare), holdShare);
             long gold = took.Value > purse ? purse : took.Value;
@@ -1548,7 +1568,7 @@ namespace TradeLord
             var purses = new int[cargo.Count];
             var marks = new List<Settlement>();
             System.Func<Settlement, float> onwardTo = to => Travel.EstimateDaysBetween(site, to, ride);
-            int till = PurseOf(site);
+            int till = PurseOf(site, ride);
             for (int at = 0; at < cargo.Count; at++)
             {
                 heldFor[at] = -1;

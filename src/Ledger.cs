@@ -200,6 +200,18 @@ namespace TradeLord
             CampaignEvents.PlayerInventoryExchangeEvent.AddNonSerializedListener(this, OnPlayerInventoryExchange);
             CampaignEvents.OnPlayerTradeProfitEvent.AddNonSerializedListener(this, OnPlayerTradeProfit);
             CampaignEvents.ItemsLooted.AddNonSerializedListener(this, OnItemsLooted);
+            CampaignEvents.HourlyTickEvent.AddNonSerializedListener(this, OnHourlyTick);
+            CampaignEvents.OnCaravanTransactionCompletedEvent.AddNonSerializedListener(this, OnCaravanTraded);
+        }
+
+        private void OnHourlyTick()
+        {
+            Guard.Run("Forecast.Watch", Forecast.WatchTheCaravansTurn);
+        }
+
+        private void OnCaravanTraded(MobileParty caravan, Town town, List<(EquipmentElement, int)> traded)
+        {
+            Guard.Run("Forecast.CaravanTraded", () => Forecast.ACaravanTraded(caravan, town, traded));
         }
 
         public override void SyncData(IDataStore dataStore)

@@ -4097,5 +4097,182 @@ namespace TradeLord.Tests
             TradeMath.WeatherSteps(false, false, true, true, 0f, -0.175f, float.NaN, out snow, out wet);
             Assert.True(float.IsNaN(snow) && float.IsNaN(wet));
         }
+
+        [Fact]
+        public void A_towns_purse_closes_a_quarter_of_its_gap_to_what_it_would_hold_each_day()
+        {
+            Assert.Equal(40000, TradeMath.WhatATownsPurseWouldHold(20000, 5000));
+            Assert.Equal(40000, TradeMath.WhatATownsPurseWouldHold(50000, -2500));
+            Assert.Equal(0, TradeMath.WhatATownsPurseWouldHold(0, -100));
+            Assert.Equal(int.MaxValue, TradeMath.WhatATownsPurseWouldHold(int.MaxValue, int.MaxValue));
+            Assert.Equal(20000, TradeMath.TillWhenYouArrive(20000, 40000, null, 0f));
+            Assert.Equal(25000, TradeMath.TillWhenYouArrive(20000, 40000, null, 1f));
+            Assert.Equal(28750, TradeMath.TillWhenYouArrive(20000, 40000, null, 2f));
+            Assert.Equal(45625, TradeMath.TillWhenYouArrive(50000, 40000, null, 2f));
+            Assert.Equal(20000, TradeMath.TillWhenYouArrive(20000, 0, null, 3f));
+            Assert.Equal(0, TradeMath.TillWhenYouArrive(-5, 0, null, 3f));
+        }
+
+        [Fact]
+        public void Sellers_on_the_road_draw_the_purse_in_the_order_they_arrive_and_it_refills_between_them()
+        {
+            double Closed(double till, double days) => 40000d - (40000d - till) * Math.Pow(0.75d, days);
+            var paid = new List<(float days, int gold)> { (0.5f, 10000), (1f, 5000), (3f, 9000) };
+            double expected = Closed(Math.Max(0d, Closed(Math.Max(0d, Closed(20000d, 0.5d) - 10000d), 0.5d) - 5000d), 1d);
+            Assert.Equal((int)Math.Round(expected), TradeMath.TillWhenYouArrive(20000, 40000, paid, 2f));
+            Assert.Equal((int)Math.Round(Closed(20000d, 0.4d)), TradeMath.TillWhenYouArrive(20000, 40000, paid, 0.4f));
+            var flood = new List<(float days, int gold)> { (0.1f, 90000), (0.2f, 0), (0.2f, -50) };
+            Assert.Equal((int)Math.Round(Closed(0d, 0.9d)), TradeMath.TillWhenYouArrive(20000, 40000, flood, 1f));
+            Assert.Equal(0, TradeMath.TillWhenYouArrive(20000, 0, flood, 1f));
+            Assert.Equal(TradeMath.TillWhenYouArrive(20000, 40000, null, 2f),
+                         TradeMath.TillWhenYouArrive(20000, 40000, new List<(float, int)>(), 2f));
+        }
+
+        [Fact]
+        public void A_landing_rules_out_a_route_only_when_even_the_price_before_it_lands_cannot_clear_the_margin()
+        {
+            Assert.False(TradeMath.LandingCannotLiftItPastTheMargin(100, 200, 150, 50, 0.9f, 0.2f));
+            Assert.True(TradeMath.LandingCannotLiftItPastTheMargin(100, 200, 120, 50, 0.9f, 0.2f));
+            Assert.True(TradeMath.LandingCannotLiftItPastTheMargin(100, 200, 50, 50, 0.9f, 0.2f));
+            Assert.False(TradeMath.LandingCannotLiftItPastTheMargin(100, 200, 120, 0, 0.9f, 0.2f));
+            Assert.False(TradeMath.LandingCannotLiftItPastTheMargin(100, 200, 120, -40, 0.9f, 0.2f));
+            Assert.False(TradeMath.LandingCannotLiftItPastTheMargin(100, 200, 0, 50, 0.9f, 0.2f));
+            Assert.False(TradeMath.LandingCannotLiftItPastTheMargin(100, 0, 120, 50, 0.9f, 0.2f));
+            Assert.False(TradeMath.LandingCannotLiftItPastTheMargin(100, 200, 120, 50, float.NaN, 0.2f));
+            for (int unlanded = 1; unlanded <= 400; unlanded++)
+            {
+                if (!TradeMath.LandingCannotLiftItPastTheMargin(100, 200, unlanded, 30, 0.9f, 0.2f)) continue;
+                for (int landedPrice = 1; landedPrice <= unlanded; landedPrice++)
+                    Assert.False(TradeMath.BuyAcceptable(100, TradeMath.Realizable(
+                        TradeMath.ForecastWithin(200, landedPrice), 0.9f), 0.2f));
+            }
+        }
+
+        [Fact]
+        public void A_ride_that_sails_then_goes_ashore_waits_for_the_landing_and_walks_on_at_the_hour_it_lands()
+        {
+            TradeMath.Pace pace = PaceOf(4f, night: -0.25f);
+            pace.Sea = 6f;
+            var sea = RoadOf((Sea, 1, 0, 30f));
+            var sails = new[] { SailOf(0.5f, 1f) };
+            var land = RoadOf((Plain, 2, 0, 40f));
+            double afloat = TradeMath.DaysAlong(sea, pace, null, 3d, 2, 22, true, null, sails) * 24d;
+            Assert.Equal(30d * 1.2d / 9d, afloat, 3);
+            double walk = TradeMath.DaysAlong(land, pace, null, 3d + afloat + 2d, 2, 22, true, null) * 24d;
+            Assert.Equal(afloat + 2d + walk,
+                         TradeMath.DaysAfloatThenAshore(sea, sails, 2f, land, pace, null, 3d, 2, 22, true, null) * 24d, 3);
+            double late = TradeMath.DaysAlong(land, pace, null, 3d + afloat + 8d, 2, 22, true, null) * 24d;
+            Assert.True(late > walk);
+            Assert.Equal(afloat + 8d + late,
+                         TradeMath.DaysAfloatThenAshore(sea, sails, 8f, land, pace, null, 3d, 2, 22, true, null) * 24d, 3);
+            double straightOn = TradeMath.DaysAlong(land, pace, null, 3d + afloat, 2, 22, true, null) * 24d;
+            Assert.Equal(afloat + straightOn,
+                         TradeMath.DaysAfloatThenAshore(sea, sails, float.NaN, land, pace, null, 3d, 2, 22, true, null) * 24d, 3);
+            Assert.Equal(afloat + straightOn,
+                         TradeMath.DaysAfloatThenAshore(sea, sails, -5f, land, pace, null, 3d, 2, 22, true, null) * 24d, 3);
+            Assert.Equal(0f, TradeMath.DaysAfloatThenAshore(sea, sails, 2f, land, null, null, 3d, 2, 22, true, null));
+            Assert.Equal(TradeMath.FurthestThereIs,
+                         TradeMath.DaysAfloatThenAshore(sea, sails, 2f, land, PaceOf(0f), null, 3d, 2, 22, true, null));
+        }
+
+        [Fact]
+        public void The_walk_after_a_landing_reads_the_weather_and_Disorganized_hours_where_they_stand_by_then()
+        {
+            TradeMath.Pace pace = PaceOf(4f, snow: -0.5f, slow: -0.4f, slowHours: 6d);
+            pace.Sea = 6f;
+            var sea = RoadOf((Sea, 1, 5, 24f));
+            var sails = new[] { SailOf(0f, 1f) };
+            var land = RoadOf((Plain, 2, 9, 40f));
+            SkyOf sky = new SkyOf().Set(9, 0d, false, false).Set(9, 7d, true, true);
+            float alone = TradeMath.DaysAlong(sea, pace, sky, 3d, 2, 22, true, null, sails);
+            double landed = alone * 24d + 1d;
+            double walk = TradeMath.DaysAlong(land, pace.After(landed), new TradeMath.SkyAfter(sky, landed),
+                                              3d + landed, 2, 22, true, null) * 24d;
+            var tally = new TradeMath.Tally();
+            double ride = TradeMath.DaysAfloatThenAshore(sea, sails, 1f, land, pace, sky, 3d, 2, 22, true, tally) * 24d;
+            Assert.Equal(landed + walk, ride, 3);
+            Assert.True(tally.Snow > 0d);
+            Assert.Equal(tally.Snow, tally.Wet, 6);
+            Assert.Equal(ride - 1d, tally.Hours, 3);
+            Assert.True(walk > TradeMath.DaysAlong(land, pace.After(landed), null, 3d + landed, 2, 22, true, null) * 24d);
+            var later = new TradeMath.SkyAfter(sky, 5d);
+            later.Read(9, 1d, out bool wet, out bool snowy, out double changes);
+            Assert.False(snowy);
+            Assert.Equal(2d, changes, 6);
+            later.Read(9, 3d, out wet, out snowy, out changes);
+            Assert.True(snowy);
+            Assert.True(wet);
+        }
+
+        [Fact]
+        public void A_turn_seen_after_the_watch_began_counts_for_the_days_it_could_have_been_seen_in()
+        {
+            Assert.Equal(1f / 2.5f, TradeMath.HowOftenSuchATurnComes(0.5f, 3f), 5);
+            Assert.Equal(1f / 7f, TradeMath.HowOftenSuchATurnComes(0.5f, 20f), 5);
+            Assert.Equal(1f / 7f, TradeMath.HowOftenSuchATurnComes(3f, 20f), 5);
+            Assert.Equal(0f, TradeMath.HowOftenSuchATurnComes(0.5f, 1.2f));
+            Assert.Equal(1f, TradeMath.HowOftenSuchATurnComes(0f, 1f), 5);
+            Assert.Equal(0f, TradeMath.HowOftenSuchATurnComes(-0.1f, 5f));
+            Assert.Equal(0f, TradeMath.HowOftenSuchATurnComes(float.NaN, 5f));
+            Assert.Equal(0f, TradeMath.HowOftenSuchATurnComes(0.5f, float.NaN));
+        }
+
+        [Fact]
+        public void Caravans_yet_to_choose_a_market_land_what_their_turns_bring_in_the_days_left_after_their_ride()
+        {
+            var turns = new List<(float lead, float perDay)> { (0.5f, 2f), (1.5f, 1f), (float.NaN, 9f), (0.2f, -3f) };
+            Assert.Equal(2f * 1.5f + 1f * 0.5f, TradeMath.WhatUnseenCaravansBring(turns, 2f), 4);
+            Assert.Equal(2f * 0.5f, TradeMath.WhatUnseenCaravansBring(turns, 1f), 4);
+            Assert.Equal(0f, TradeMath.WhatUnseenCaravansBring(turns, 0.4f));
+            Assert.Equal(0f, TradeMath.WhatUnseenCaravansBring(turns, float.NaN));
+            Assert.Equal(0f, TradeMath.WhatUnseenCaravansBring(null, 2f));
+        }
+
+        [Fact]
+        public void What_is_seen_on_the_road_and_what_is_yet_to_choose_the_market_add_up_to_all_that_lands()
+        {
+            float[] legs = { 0.5f, 1.5f, 2.5f };
+            const int turnsADay = 10;
+            const int daysWatched = 30;
+            float rate = turnsADay;
+            var turns = new List<(float lead, float perDay)>();
+            for (int k = 0; k < turnsADay * daysWatched; k++)
+            {
+                float chose = k / (float)turnsADay;
+                float leg = legs[k % legs.Length];
+                float landed = chose + leg;
+                if (landed > daysWatched || landed < daysWatched - TradeMath.ACaravansTurnIsKeptFor) continue;
+                float perDay = TradeMath.HowOftenSuchATurnComes(leg, daysWatched);
+                if (perDay > 0f) turns.Add((leg, perDay));
+            }
+            foreach (float within in new[] { 0.5f, 1f, 2f, 3f })
+            {
+                float onTheRoad = 0f;
+                foreach (float leg in legs) onTheRoad += rate / legs.Length * Math.Min(within, leg);
+                float unseen = TradeMath.WhatUnseenCaravansBring(turns, within);
+                Assert.Equal(rate * within, onTheRoad + unseen, rate * within * 0.03f);
+            }
+        }
+
+        [Fact]
+        public void The_unseen_draw_on_a_purse_is_spread_over_each_quarter_day_it_comes_in()
+        {
+            var draws = new List<(float lead, float perDay)> { (0.5f, 400f) };
+            var into = new List<(float days, int gold)>();
+            TradeMath.UnseenDraws(draws, 1f, into);
+            Assert.Equal(2, into.Count);
+            Assert.Equal((0.625f, 100), into[0]);
+            Assert.Equal((0.875f, 100), into[1]);
+            into.Clear();
+            TradeMath.UnseenDraws(draws, 50f, into);
+            Assert.Equal(38, into.Count);
+            int all = 0;
+            foreach (var one in into) all += one.gold;
+            Assert.Equal((int)TradeMath.WhatUnseenCaravansBring(draws, 10f), all);
+            into.Clear();
+            TradeMath.UnseenDraws(draws, float.NaN, into);
+            TradeMath.UnseenDraws(null, 5f, into);
+            Assert.Empty(into);
+        }
 }
 }

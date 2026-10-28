@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.7.4
+
+- Fixed TradeLord expecting too much for goods it carries a day or more to a town that caravans will choose and restock before you arrive
+- Fixed TradeLord counting a market's gold as it is now instead of what it will have when you arrive
+- Fixed TradeLord timing your ride to a port town as partly at sea when you have ships but would walk there
+- With War Sails, travel times that sail and then go ashore now count the wind, the waters, the hours going ashore and the ground you walk
+- The route scan now drops sooner the routes whose sell price could never clear Minimum profit margin once goods land there
+- Fixed TradeLord.log showing the raw profit a day when it said the map marker weighed each market at the Conf of selling there
+- With Enable extended debug logging on, TradeLord.log now says how much gold a market will have when you get there
+- With Enable extended debug logging on, TradeLord.log now says the hours going ashore on a ride that sails and then walks
+- With Enable extended debug logging on, TradeLord.log now says what the count of caravans yet to choose a market is worked out from
+
 ## 2.7.3
 
 - Fixed TradeLord expecting too much for goods it carries a day or more to a town that its villages restock before you arrive
